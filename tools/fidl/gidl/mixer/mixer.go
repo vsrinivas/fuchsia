@@ -508,6 +508,12 @@ func (decl *TableDecl) Field(name string) (Declaration, bool) {
 func (decl *TableDecl) fieldByOrdinal(ordinal uint64) (Declaration, bool) {
 	for _, member := range decl.tableDecl.Members {
 		if uint64(member.Ordinal) == ordinal {
+			// Ignore reserved members. This means that it is valid to specify
+			// an unknown value for a reserved member, since they are treated
+			// the same as unknown ordinals.
+			if member.Reserved {
+				continue
+			}
 			return decl.schema.lookupDeclByType(member.Type)
 		}
 	}

@@ -224,7 +224,8 @@ success("ReverseOrdinalTable") {
 
 decode_success("TableWithUnknownReservedFieldsNotStored") {
     // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
-    // each binding, they should be added to the denylist here
+    // each binding, they should be added to the denylist here and added to
+    // the allowlist in the test below.
     bindings_denylist = [go],
     bytes = {
         v1 = [
@@ -253,9 +254,44 @@ decode_success("TableWithUnknownReservedFieldsNotStored") {
     },
 }
 
+// this test is the same as TableWithUnknownReservedFieldsNotStored, but expects
+// that the unknown data is stored in the value instead of discarded
+decode_success("TableWithUnknownReservedFields") {
+    bindings_allowlist = [go],
+    bytes = {
+        v1 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+    },
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            x: 42,
+            y: 67,
+            3: {
+                bytes = [1, 2, 3, 4, 5, 6, 7, 8]
+            },
+        },
+    },
+}
+
 decode_success("TableWithUnknownTrailingFieldsNotStored") {
     // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
-    // each binding, they should be added to the denylist here
+    // each binding, they should be added to the denylist here and added to
+    // the allowlist in the test below.
     bindings_denylist = [go],
     bytes = {
         v1 = [
@@ -286,6 +322,42 @@ decode_success("TableWithUnknownTrailingFieldsNotStored") {
     },
 }
 
+// this test is the same as TableWithUnknownTrailingFieldsNotStored, but expects
+// that the unknown data is stored in the value instead of discarded
+decode_success("TableWithUnknownTrailingFields") {
+    bindings_allowlist = [go],
+    bytes = {
+        v1 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+    },
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            x: 42,
+            y: 67,
+            6: {
+                bytes = [1, 2, 3, 4, 5, 6, 7, 8]
+            },
+        },
+    },
+}
+
 decode_success("TableWithUnknownTrailingFieldsAndHandlesNotStored") {
     // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
     // each binding, they should be removed from the allowlist here
@@ -298,6 +370,46 @@ decode_success("TableWithUnknownTrailingFieldsAndHandlesNotStored") {
     value = StructOfSimpleTable {
         table: SimpleTable {
             y: 67,
+        },
+    },
+    bytes = {
+        v1 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 2
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 3
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 4
+            num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
+            num(8):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(67):8, // field Y
+            0xde, 0xad, 0xbe, 0xef, padding:4, // unknown bytes
+        ],
+    },
+    handles = {
+        v1 = [
+            #0, #1, #2,
+        ]
+    }
+}
+
+
+// this test is the same as TableWithUnknownTrailingFieldsAndHandlesNotStored,
+// but expects that the unknown data is stored in the value instead of discarded
+decode_success("TableWithUnknownTrailingFieldsAndHandles") {
+    bindings_allowlist = [go],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            y: 67,
+            6: {
+                bytes = [0xde, 0xad, 0xbe, 0xef, padding:4],
+                handles = [#0, #1, #2],
+            },
         },
     },
     bytes = {

@@ -86,6 +86,24 @@ func buildHandleInfos(handles []gidlir.Handle) string {
 	return builder.String()
 }
 
+func buildUnknownTableData(fields []gidlir.Field) string {
+	if len(fields) == 0 {
+		return "nil"
+	}
+	var builder strings.Builder
+	builder.WriteString("map[uint64]fidl.UnknownData{\n")
+	for _, field := range fields {
+		unknownData := field.Value.(gidlir.UnknownData)
+		builder.WriteString(fmt.Sprintf(
+			"%d: fidl.UnknownData{\nBytes: %s, \nHandles: %s,\n},",
+			field.Key.UnknownOrdinal,
+			buildBytes(unknownData.Bytes),
+			buildHandleInfos(unknownData.Handles)))
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
 func visit(value interface{}, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool, int64, uint64, float64:
@@ -154,16 +172,18 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 			fmt.Sprintf("I_%sTag: %s", unqualifiedName, tagValue))
 	}
 	_, isTable := decl.(*gidlmixer.TableDecl)
+	var unknownTableFields []gidlir.Field
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
 			if isTable {
-				panic("Go does not store unknown data for tables")
+				unknownTableFields = append(unknownTableFields, field)
+			} else {
+				unknownData := field.Value.(gidlir.UnknownData)
+				fields = append(fields,
+					fmt.Sprintf("I_unknownData: %s", buildBytes(unknownData.Bytes)))
+				fields = append(fields,
+					fmt.Sprintf("I_unknownHandles: %s", buildHandleInfos(unknownData.Handles)))
 			}
-			unknownData := field.Value.(gidlir.UnknownData)
-			fields = append(fields,
-				fmt.Sprintf("I_unknownData: %s", buildBytes(unknownData.Bytes)))
-			fields = append(fields,
-				fmt.Sprintf("I_unknownHandles: %s", buildHandleInfos(unknownData.Handles)))
 			continue
 		}
 		fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
@@ -177,6 +197,11 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 			fields = append(fields, fmt.Sprintf("%sPresent: true", fieldName))
 		}
 	}
+	if len(unknownTableFields) > 0 {
+		fields = append(fields,
+			fmt.Sprintf("I_unknownData: %s", buildUnknownTableData(unknownTableFields)))
+	}
+
 	if len(fields) == 0 {
 		return fmt.Sprintf("%s{}", typeLiteral(decl))
 	}

@@ -513,6 +513,36 @@ func TestTableDeclConforms(t *testing.T) {
 					{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
 				},
 			}},
+			conformOk{gidlir.Record{
+				Name: "ExampleTable",
+				Fields: []gidlir.Field{
+					{
+						// 2 is a reserved field
+						Key:   gidlir.FieldKey{UnknownOrdinal: 2},
+						Value: gidlir.UnknownData{},
+					},
+				},
+			}},
+			conformOk{gidlir.Record{
+				Name: "ExampleTable",
+				Fields: []gidlir.Field{
+					{
+						// 3 is an unknown field
+						Key:   gidlir.FieldKey{UnknownOrdinal: 3},
+						Value: gidlir.UnknownData{},
+					},
+				},
+			}},
+			conformFail{gidlir.Record{
+				Name: "ExampleTable",
+				Fields: []gidlir.Field{
+					{
+						// 1 is a known field
+						Key:   gidlir.FieldKey{UnknownOrdinal: 1},
+						Value: gidlir.UnknownData{},
+					},
+				},
+			}, "field name must be used rather than ordinal 1"},
 			conformFail{gidlir.Record{
 				Name: "ExampleTable",
 				Fields: []gidlir.Field{
