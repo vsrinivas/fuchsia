@@ -93,7 +93,7 @@ The following capabilities can be routed:
     [runner][doc-runners].
 
 `protocol`, `directory` and `storage` capabilities are routed to components that
-`use` them. `runner` capabilities` are routed to [environments](#environments)
+`use` them. `runner` capabilities are routed to [environments](#environments)
 that include them.
 
 #### Routing terminology {#routing-terminology}
@@ -171,7 +171,7 @@ rights: ["connect", "enumerate", "read_bytes", "write_bytes", "execute_bytes",
 
 See [`fuchsia.io2.Rights`][fidl-io2-rights] for the equivalent FIDL definitions.
 
-However *rights aliases* should be prefered where possible for clarity.
+However *rights aliases* should be preferred where possible for clarity.
 
 ```json5
 rights: ["r*", "w*", "x*", "rw*", "rx*"]
@@ -355,7 +355,7 @@ collections: [
 
 ### environments {#environments}
 
-The `environments` section declares environments as describe in
+The `environments` section declares environments as described in
 [Environments][doc-environments].
 
 `environments` is an array of objects with the following properties:
