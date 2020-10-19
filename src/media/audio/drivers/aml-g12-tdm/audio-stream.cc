@@ -240,6 +240,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
   }
 
   if (!pdev_.is_valid()) {
+    zxlogf(ERROR, "%s could not get pdev", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -262,6 +263,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev_.MapMmio(0, &mmio);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could get mmio %d", __func__, status);
     return status;
   }
 
@@ -339,17 +341,21 @@ zx_status_t AmlG12TdmStream::InitPDev() {
 
   for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
     auto info = codecs_[i].GetInfo();
-    if (info.is_error())
+    if (info.is_error()) {
+      zxlogf(ERROR, "%s could get codec info %d", __func__, status);
       return info.error_value();
+    }
 
     // Reset and initialize codec after we have configured I2S.
     status = codecs_[i].Reset();
     if (status != ZX_OK) {
+      zxlogf(ERROR, "%s could not reset codec %d", __func__, status);
       return status;
     }
 
     auto supported_formats = codecs_[i].GetDaiFormats();
     if (supported_formats.is_error()) {
+      zxlogf(ERROR, "%s supported formats error %d", __func__, status);
       return supported_formats.error_value();
     }
 
@@ -360,11 +366,13 @@ zx_status_t AmlG12TdmStream::InitPDev() {
 
     status = codecs_[i].SetDaiFormat(dai_formats_[i]);
     if (status != ZX_OK) {
+      zxlogf(ERROR, "%s could not set DAI format %d", __func__, status);
       return status;
     }
 
     codecs_[i].Start();
     if (status != ZX_OK) {
+      zxlogf(ERROR, "%s could not start codec %d", __func__, status);
       return status;
     }
   }
@@ -704,6 +712,7 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
         fragments[FRAGMENT_ENABLE_GPIO] ? fragments[FRAGMENT_ENABLE_GPIO]
                                         : ddk::GpioProtocolClient());
     if (stream == nullptr) {
+      zxlogf(ERROR, "%s Could not create aml-g12-tdm driver", __FILE__);
       return ZX_ERR_NO_MEMORY;
     }
     __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
@@ -713,6 +722,7 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
         fragments[FRAGMENT_ENABLE_GPIO] ? fragments[FRAGMENT_ENABLE_GPIO]
                                         : ddk::GpioProtocolClient());
     if (stream == nullptr) {
+      zxlogf(ERROR, "%s Could not create aml-g12-tdm driver", __FILE__);
       return ZX_ERR_NO_MEMORY;
     }
     __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
