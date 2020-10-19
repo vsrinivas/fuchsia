@@ -116,7 +116,7 @@ void main(List<String> args) {
       if (body['method'] == 'component_facade.Search') {
         req.response.write(jsonEncode({
           'id': body['id'],
-          'result': 'NotFound',
+          'result': called ? 'Success' : 'NotFound',
           'error': null,
         }));
       } else {
@@ -144,7 +144,7 @@ void main(List<String> args) {
       if (body['method'] == 'component_facade.Search') {
         req.response.write(jsonEncode({
           'id': body['id'],
-          'result': 'NotFound',
+          'result': called ? 'Success' : 'NotFound',
           'error': null,
         }));
       } else {
@@ -235,24 +235,23 @@ void main(List<String> args) {
   });
 
   test('shutdown kills modular when it owns it', () async {
-    int searchCount = 0;
-    bool killed = false;
+    bool killed = true;
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
       if (body['method'] == 'component_facade.Search') {
         req.response.write(jsonEncode({
           'id': body['id'],
-          'result': searchCount != 1 ? 'NotFound' : 'Success',
+          'result': killed ? 'NotFound' : 'Success',
           'error': null,
         }));
-        searchCount++;
       } else if (body['method'] == 'basemgr_facade.StartBasemgr') {
         expect(
           body['params'],
           isNotNull,
         );
         expect(body['params'], isEmpty);
+        killed = false;
         req.response.write(
             jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
       } else {

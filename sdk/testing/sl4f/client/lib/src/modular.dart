@@ -5,6 +5,8 @@
 import 'dart:convert';
 
 import 'package:logging/logging.dart';
+import 'package:retry/retry.dart';
+
 import 'component.dart';
 import 'exceptions.dart';
 import 'sl4f_client.dart';
@@ -78,7 +80,14 @@ class Modular {
   /// Whether basemgr is currently running on the DUT.
   ///
   /// This works whether it was started by this class or not.
-  Future<bool> get isRunning => _component.search('basemgr.cmx');
+  ///
+  /// There are timing windows where [Component.search] can return a transient
+  /// error. Uses [retry] to capture the Exceptions for a small number of quick
+  /// attempts.
+  Future<bool> get isRunning => retry(
+        () => _component.search('basemgr.cmx'),
+        retryIf: (e) => e is JsonRpcException,
+      );
 
   /// Starts basemgr only if it isn't running yet.
   ///
@@ -96,7 +105,16 @@ class Modular {
     _log.info('Booting basemgr with ${(config != null) ? 'custom' : 'default'} '
         'configuration.');
     await startBasemgr(config);
-    await Future.delayed(Duration(seconds: 10));
+
+    // basemgr and all the agents can take some time to fully boot.
+    var retry = 0;
+    while (retry++ <= 60 && !await isRunning) {
+      await Future.delayed(const Duration(seconds: 2));
+    }
+
+    if (!await isRunning) {
+      throw Sl4fException('Timeout for waiting basemgr to boot.');
+    }
     if (assumeControl) {
       _controlsBasemgr = true;
     }
