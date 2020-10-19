@@ -7,8 +7,6 @@
 
 #include <string.h>
 
-#if !_ASM_MEMCPY
-
 typedef long word;
 
 #define lsize sizeof(word)
@@ -47,5 +45,3 @@ __attribute__((no_sanitize_address)) void *__unsanitized_memcpy(void *dest, cons
 
 // Make the function a weak symbol so asan can override it.
 __typeof(__unsanitized_memcpy) memcpy __attribute__((weak, alias("__unsanitized_memcpy")));
-
-#endif
