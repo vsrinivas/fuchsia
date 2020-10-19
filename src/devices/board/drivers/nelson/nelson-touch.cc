@@ -76,6 +76,35 @@ static const device_fragment_t goodix_fragments[] = {
 };
 
 zx_status_t Nelson::TouchInit() {
+  zxlogf(INFO, "Board rev: %u", GetBoardRev());
+
+  if (GetBoardRev() < BOARD_REV_P2) {
+    return TouchInitP1();
+  }
+
+  const zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOODIX},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GOODIX_GT6853},
+  };
+
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .fragments = goodix_fragments,
+      .fragments_count = countof(goodix_fragments),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+  zx_status_t status = DdkAddComposite("gt6853-touch", &comp_desc);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "nelson_touch_init(gt6853): composite_device_add failed: %d", status);
+    return status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t Nelson::TouchInitP1() {
   // Check the display ID pin to determine which driver device to add
   gpio_impl_.SetAltFunction(GPIO_PANEL_DETECT, 0);
   gpio_impl_.ConfigIn(GPIO_PANEL_DETECT, GPIO_NO_PULL);

@@ -32,24 +32,28 @@ static const pbus_dev_t rtc_dev = []() {
 }();
 
 uint32_t Nelson::GetBoardRev() {
-  uint32_t board_rev;
-  uint8_t id0, id1, id2;
+  if (!board_rev_) {
+    uint32_t board_rev;
+    uint8_t id0, id1, id2;
 
-  gpio_impl_.ConfigIn(GPIO_HW_ID0, GPIO_NO_PULL);
-  gpio_impl_.ConfigIn(GPIO_HW_ID1, GPIO_NO_PULL);
-  gpio_impl_.ConfigIn(GPIO_HW_ID2, GPIO_NO_PULL);
-  gpio_impl_.Read(GPIO_HW_ID0, &id0);
-  gpio_impl_.Read(GPIO_HW_ID1, &id1);
-  gpio_impl_.Read(GPIO_HW_ID2, &id2);
-  board_rev = id0 + (id1 << 1) + (id2 << 2);
+    gpio_impl_.ConfigIn(GPIO_HW_ID0, GPIO_NO_PULL);
+    gpio_impl_.ConfigIn(GPIO_HW_ID1, GPIO_NO_PULL);
+    gpio_impl_.ConfigIn(GPIO_HW_ID2, GPIO_NO_PULL);
+    gpio_impl_.Read(GPIO_HW_ID0, &id0);
+    gpio_impl_.Read(GPIO_HW_ID1, &id1);
+    gpio_impl_.Read(GPIO_HW_ID2, &id2);
+    board_rev = id0 + (id1 << 1) + (id2 << 2);
 
-  if (board_rev >= MAX_SUPPORTED_REV) {
-    // We have detected a new board rev. Print this warning just in case the
-    // new board rev requires additional support that we were not aware of
-    zxlogf(INFO, "Unsupported board revision detected (%d)", board_rev);
+    if (board_rev >= MAX_SUPPORTED_REV) {
+      // We have detected a new board rev. Print this warning just in case the
+      // new board rev requires additional support that we were not aware of
+      zxlogf(INFO, "Unsupported board revision detected (%d)", board_rev);
+    }
+
+    board_rev_.emplace(board_rev);
   }
 
-  return board_rev;
+  return *board_rev_;
 }
 
 int Nelson::Thread() {
@@ -114,10 +118,9 @@ int Nelson::Thread() {
     zxlogf(ERROR, "UsbInit failed: %d", status);
   }
 
-  // TODO(fxbug.dev/48099): Enable init once the touch driver has landed.
-  // if ((status = TouchInit()) != ZX_OK) {
-  //   zxlogf(ERROR, "TouchInit failed: %d", status);
-  // }
+  if ((status = TouchInit()) != ZX_OK) {
+    zxlogf(ERROR, "TouchInit failed: %d", status);
+  }
 
   if ((status = DsiInit()) != ZX_OK) {
     zxlogf(ERROR, "DsiInit failed: %d", status);

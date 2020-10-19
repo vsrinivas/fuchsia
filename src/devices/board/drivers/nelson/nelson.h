@@ -7,6 +7,8 @@
 
 #include <threads.h>
 
+#include <optional>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/clockimpl.h>
@@ -130,6 +132,7 @@ class Nelson : public NelsonType {
   zx_status_t TeeInit();
   zx_status_t ThermalInit();
   zx_status_t TouchInit();
+  zx_status_t TouchInitP1();
   zx_status_t UsbInit();
   zx_status_t VideoInit();
   zx_status_t BacklightInit();
@@ -146,6 +149,7 @@ class Nelson : public NelsonType {
   ddk::ClockImplProtocolClient clk_impl_;
 
   thrd_t thread_;
+  std::optional<uint32_t> board_rev_;
 };
 
 }  // namespace nelson
