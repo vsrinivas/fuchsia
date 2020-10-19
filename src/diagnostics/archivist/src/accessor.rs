@@ -96,14 +96,19 @@ impl ArchiveAccessor {
                     _ => Err(ServerError::InvalidSelectors("unrecognized selectors"))?,
                 };
 
-                let server = inspect::ReaderServer::new(
-                    diagnostics_repo,
-                    params.batch_retrieval_timeout_seconds,
-                    selectors,
-                    stats.clone(),
-                );
-
-                server.serve(mode, requests).await
+                AccessorServer::new(
+                    inspect::ReaderServer::stream(
+                        diagnostics_repo,
+                        params.batch_retrieval_timeout_seconds,
+                        selectors,
+                        stats.clone(),
+                    ),
+                    requests,
+                    mode,
+                    stats,
+                )?
+                .run()
+                .await
             }
             DataType::Lifecycle => {
                 // TODO(fxbug.dev/61350) support other modes
@@ -122,13 +127,13 @@ impl ArchiveAccessor {
 
                 let events = LifecycleServer::new(diagnostics_repo);
 
-                AccessorServer::new(events, requests, stats)?.run().await
+                AccessorServer::new(events, requests, mode, stats)?.run().await
             }
             DataType::Logs => {
                 let stats = Arc::new(DiagnosticsServerStats::for_logs(accessor_stats));
                 let logs = diagnostics_repo.read().log_manager();
 
-                AccessorServer::new_serving_arrays(logs.cursor(mode).await, requests, stats)?
+                AccessorServer::new_serving_arrays(logs.cursor(mode).await, requests, mode, stats)?
                     .run()
                     .await
             }

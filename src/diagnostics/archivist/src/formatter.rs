@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::{diagnostics::DiagnosticsServerStats, server::ServerError},
-    anyhow::Context as _,
-    fidl_fuchsia_diagnostics::{FormattedContent, MAXIMUM_ENTRIES_PER_BATCH},
+    fidl_fuchsia_diagnostics::{FormattedContent, StreamMode, MAXIMUM_ENTRIES_PER_BATCH},
     fuchsia_zircon as zx,
     futures::prelude::*,
     log::{error, warn},
@@ -18,22 +17,8 @@ use {
     },
 };
 
-/// Serialize the `contents` to JSON in a VMO, returned as a `FormattedContent`.
-pub fn serialize_to_formatted_json_content(
-    contents: impl Serialize,
-) -> Result<FormattedContent, anyhow::Error> {
-    let content_string = serde_json::to_string_pretty(&contents)?;
-    make_json_formatted_content(&content_string)
-}
-
-/// Produces a `FormattedContent` with the provided JSON string as its contents. Does not validate
-/// that `content_string` is JSON.
-fn make_json_formatted_content(content_string: &str) -> Result<FormattedContent, anyhow::Error> {
-    let size = content_string.len() as u64;
-    let vmo = zx::Vmo::create(size).context("error creating buffer")?;
-    vmo.write(content_string.as_bytes(), 0).context("error writing buffer")?;
-    Ok(FormattedContent::Json(fidl_fuchsia_mem::Buffer { vmo, size }))
-}
+pub type FormattedStream =
+    Pin<Box<dyn Stream<Item = Vec<Result<FormattedContent, ServerError>>> + Send>>;
 
 #[pin_project::pin_project]
 pub struct FormattedContentBatcher<C> {
@@ -42,19 +27,40 @@ pub struct FormattedContentBatcher<C> {
     stats: Arc<DiagnosticsServerStats>,
 }
 
-impl<I, E> FormattedContentBatcher<futures::stream::ReadyChunks<I>>
+/// Make a new `FormattedContentBatcher` with a chunking strategy depending on stream mode.
+///
+/// In snapshot mode, batched items will not be flushed to the client until the batch is complete
+/// or the underlying stream has terminated.
+///
+/// In subscribe or snapshot-then-subscribe mode, batched items will be flushed whenever the
+/// underlying stream is pending, ensuring clients always receive latest results.
+pub fn new_batcher<I, T, E>(
+    items: I,
+    stats: Arc<DiagnosticsServerStats>,
+    mode: StreamMode,
+) -> FormattedStream
 where
-    I: Stream<Item = Result<JsonString, E>>,
-    E: Into<ServerError>,
+    I: Stream<Item = Result<T, E>> + Send + 'static,
+    T: TryInto<FormattedContent, Error = ServerError> + Send,
+    E: Into<ServerError> + Send,
 {
-    pub fn new(items: I, stats: Arc<DiagnosticsServerStats>) -> Self {
-        Self { items: items.ready_chunks(MAXIMUM_ENTRIES_PER_BATCH as _), stats }
+    match mode {
+        StreamMode::Subscribe | StreamMode::SnapshotThenSubscribe => {
+            Box::pin(FormattedContentBatcher {
+                items: items.ready_chunks(MAXIMUM_ENTRIES_PER_BATCH as _),
+                stats,
+            })
+        }
+        StreamMode::Snapshot => Box::pin(FormattedContentBatcher {
+            items: items.chunks(MAXIMUM_ENTRIES_PER_BATCH as _),
+            stats,
+        }),
     }
 }
 
-impl<I, T, E> Stream for FormattedContentBatcher<futures::stream::ReadyChunks<I>>
+impl<I, T, E> Stream for FormattedContentBatcher<I>
 where
-    I: Stream<Item = Result<T, E>>,
+    I: Stream<Item = Vec<Result<T, E>>>,
     T: TryInto<FormattedContent, Error = ServerError>,
     E: Into<ServerError>,
 {

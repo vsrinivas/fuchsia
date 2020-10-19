@@ -69,7 +69,7 @@ mod tests {
         },
         fdio,
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_diagnostics::BatchIteratorMarker,
+        fidl_fuchsia_diagnostics::{BatchIteratorMarker, StreamMode},
         fuchsia_async::{self as fasync, Task},
         fuchsia_component::server::ServiceFs,
         fuchsia_inspect::Inspector,
@@ -208,7 +208,7 @@ mod tests {
         let (consumer, batch_iterator_requests) =
             create_proxy_and_stream::<BatchIteratorMarker>().unwrap();
         let _server = Task::spawn(async move {
-            AccessorServer::new(reader_server, batch_iterator_requests, stats)
+            AccessorServer::new(reader_server, batch_iterator_requests, StreamMode::Snapshot, stats)
                 .unwrap()
                 .run()
                 .await

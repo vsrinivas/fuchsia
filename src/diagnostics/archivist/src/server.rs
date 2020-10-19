@@ -6,18 +6,18 @@ use {
     crate::{
         constants::FORMATTED_CONTENT_CHUNK_SIZE_TARGET,
         diagnostics::DiagnosticsServerStats,
-        formatter::{FormattedContentBatcher, JsonPacketSerializer, JsonString},
+        formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
     },
     diagnostics_data::{Data, DiagnosticsData},
     fidl_fuchsia_diagnostics::{
         self, BatchIteratorControlHandle, BatchIteratorRequest, BatchIteratorRequestStream,
-        FormattedContent,
+        StreamMode,
     },
     fuchsia_zircon_status::Status as ZxStatus,
     futures::prelude::*,
     log::warn,
     serde::Serialize,
-    std::{ops::Deref, pin::Pin, sync::Arc},
+    std::{ops::Deref, sync::Arc},
     thiserror::Error,
 };
 
@@ -27,13 +27,11 @@ pub struct AccessorServer {
     data: FormattedStream,
 }
 
-type FormattedStream =
-    Pin<Box<dyn Stream<Item = Vec<Result<FormattedContent, ServerError>>> + Send>>;
-
 impl AccessorServer {
     pub fn new<Items, D>(
         data: Items,
         requests: BatchIteratorRequestStream,
+        mode: StreamMode,
         stats: Arc<DiagnosticsServerStats>,
     ) -> Result<Self, ServerError>
     where
@@ -53,13 +51,13 @@ impl AccessorServer {
             res
         });
 
-        let data = Box::pin(FormattedContentBatcher::new(data, stats.clone()));
-        Self::new_inner(data, requests, stats)
+        Self::new_inner(new_batcher(data, stats.clone(), mode), requests, stats)
     }
 
     pub fn new_serving_arrays<D, P, S>(
         data: S,
         requests: BatchIteratorRequestStream,
+        mode: StreamMode,
         stats: Arc<DiagnosticsServerStats>,
     ) -> Result<Self, ServerError>
     where
@@ -67,11 +65,9 @@ impl AccessorServer {
         D: Serialize,
         S: Stream<Item = P> + Send + Unpin + 'static,
     {
-        let serialized =
+        let data =
             JsonPacketSerializer::new(stats.clone(), FORMATTED_CONTENT_CHUNK_SIZE_TARGET, data);
-        let data = Box::pin(FormattedContentBatcher::new(serialized, stats.clone()));
-
-        Self::new_inner(data, requests, stats)
+        Self::new_inner(new_batcher(data, stats.clone(), mode), requests, stats)
     }
 
     fn new_inner(
