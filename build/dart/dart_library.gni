@@ -14,6 +14,9 @@ declare_args() {
   # Enable all dart analysis
   enable_dart_analysis = true
 
+  # Enable all strict deps.
+  disable_dart_strict_deps = false
+
   # Detect dart API changes
   # TODO(fxbug.dev/36723, fxbug.dev/6623) Remove this flag once issues are resolved
   enable_api_diff = false
@@ -524,7 +527,8 @@ if (current_toolchain == dart_toolchain) {
       # depended on.
       deps = dart_deps
 
-      if (!_package_excludes_contains_target && !_is_third_party_lib) {
+      if (!disable_dart_strict_deps && !_package_excludes_contains_target &&
+          !_is_third_party_lib) {
         deps += [ ":${invoker.target_name}_strict_deps" ]
       } else {
         not_needed([
