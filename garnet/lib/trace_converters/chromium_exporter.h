@@ -66,7 +66,7 @@ class ChromiumExporter {
   // The chromium/catapult trace file format doesn't support random blobs,
   // so we can't emit them inline. Save them for later emission.
   // LastBranch records will go to the lastBranch section.
-  std::vector<perfmon::LastBranchRecordBlob> last_branch_records_;
+  std::vector<const perfmon::LastBranchRecordBlob*> last_branch_records_;
 };
 
 }  // namespace tracing

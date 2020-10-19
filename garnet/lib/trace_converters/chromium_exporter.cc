@@ -161,8 +161,8 @@ void ChromiumExporter::Stop() {
     writer_.StartObject();
     writer_.Key("records");
     writer_.StartArray();
-    for (const auto& record : last_branch_records_) {
-      ExportLastBranchBlob(record);
+    for (const auto record : last_branch_records_) {
+      ExportLastBranchBlob(*record);
     }
     writer_.EndArray();
     writer_.EndObject();
@@ -191,7 +191,7 @@ void ChromiumExporter::ExportRecord(const trace::Record& record) {
       const auto& blob = record.GetBlob();
       if (blob.type == TRACE_BLOB_TYPE_LAST_BRANCH) {
         auto lbr = reinterpret_cast<const perfmon::LastBranchRecordBlob*>(blob.blob);
-        last_branch_records_.push_back(*lbr);
+        last_branch_records_.push_back(lbr);
       } else {
         // Drop the record.
         FX_LOGS(INFO) << "Dropping blob record: "
@@ -379,6 +379,10 @@ void ChromiumExporter::ExportLastBranchBlob(const perfmon::LastBranchRecordBlob&
   writer_.StartObject();
   writer_.Key("cpu");
   writer_.Uint(lbr.cpu);
+  writer_.Key("aspace");
+  writer_.Uint(lbr.aspace);
+  writer_.Key("event_time");
+  writer_.Uint(lbr.event_time);
   writer_.Key("branches");
   writer_.StartArray();
   for (unsigned i = 0; i < lbr.num_branches; ++i) {

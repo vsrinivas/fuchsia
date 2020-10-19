@@ -41,7 +41,8 @@ struct LastBranchRecordBlob {
 };
 
 static inline size_t LastBranchRecordBlobSize(uint16_t num_branches) {
-  return (sizeof(LastBranchRecordBlob) + (num_branches + sizeof(LastBranchRecordBlob)));
+  return (sizeof(LastBranchRecordBlob) +
+          (num_branches * sizeof(LastBranchRecordBlob::LastBranchEntry)));
 }
 
 }  // namespace perfmon

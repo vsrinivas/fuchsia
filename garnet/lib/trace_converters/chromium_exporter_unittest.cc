@@ -136,4 +136,45 @@ TEST(ChromiumExporterTest, EmptyTrace) {
             "],\"systemTraceEvents\":{\"type\":\"fuchsia\",\"events\":[]}}");
 }
 
+TEST(ChromiumExporterTest, LastBranchRecords) {
+  const unsigned num_branches = 4;
+  char blob[perfmon::LastBranchRecordBlobSize(num_branches)];
+  auto lbr = reinterpret_cast<perfmon::LastBranchRecordBlob*>(blob);
+  lbr->cpu = 1;
+  lbr->num_branches = num_branches;
+  lbr->reserved = 0;
+  lbr->event_time = 1234;
+  lbr->aspace = 4321;
+  for (unsigned i = 0; i < num_branches; i++) {
+    lbr->branches[i].from = 100 * i;
+    lbr->branches[i].to = 100 * i + 50;
+    lbr->branches[i].info = 69 * i;
+  }
+  trace::Record record(trace::Record::Blob{
+      TRACE_BLOB_TYPE_LAST_BRANCH,
+      fbl::String("cpu1"),
+      blob,
+      sizeof(blob),
+  });
+
+  std::ostringstream out_stream;
+
+  // Enclosing the exporter in its own scope ensures that its
+  // cleanup routines are called by the destructor before the
+  // output stream is read. This way, we can obtain the full
+  // output rather than a truncated version.
+  {
+    tracing::ChromiumExporter exporter(out_stream);
+    exporter.ExportRecord(record);
+  }
+
+  EXPECT_EQ(
+      out_stream.str(),
+      "{\"displayTimeUnit\":\"ns\",\"traceEvents\":[],\"systemTraceEvents\":{\"type\":"
+      "\"fuchsia\",\"events\":[]},\"lastBranch\":{\"records\":[{\"cpu\":1,\"aspace\":4321,"
+      "\"event_time\":1234,\"branches\":[{\"from\":0,\"to\":50,\"info\":0},{\"from\":100,\"to\":"
+      "150,\"info\":69},{\"from\":200,\"to\":250,\"info\":138},{\"from\":300,\"to\":350,\"info\":"
+      "207}]}]}}");
+}
+
 }  // namespace
