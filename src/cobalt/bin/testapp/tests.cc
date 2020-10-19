@@ -276,17 +276,30 @@ bool TestLogCobaltEvent(CobaltTestAppLogger* logger) {
 // |expected_num_obs| should be the elements of |kAggregatedReportIds|.
 bool GenerateObsAndCheckCount(uint32_t day_index,
                               fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                              std::map<uint32_t, uint64_t> expected_num_obs) {
+                              uint32_t project_id,
+                              std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs) {
   FX_LOGS(INFO) << "Generating locally aggregated observations for day index " << day_index;
+  std::vector<fuchsia::cobalt::ReportSpec> aggregatedReportSpecs;
+  std::vector<std::pair<uint32_t, uint32_t>> aggregatedReportIds;
+  for (const auto& [ids, expected] : expected_num_obs) {
+    const auto& [metric_id, report_id] = ids;
+    fuchsia::cobalt::ReportSpec report_spec = std::move(
+        fuchsia::cobalt::ReportSpec()
+            .set_customer_id(1).set_project_id(project_id)
+            .set_metric_id(metric_id).set_report_id(report_id));
+    aggregatedReportSpecs.push_back(std::move(report_spec));
+    aggregatedReportIds.push_back(ids);
+  }
   std::vector<uint64_t> num_obs;
-  (*cobalt_controller)->GenerateAggregatedObservations(day_index, kAggregatedReportIds, &num_obs);
-  for (size_t i = 0; i < kAggregatedReportIds.size(); i++) {
-    auto report_id = kAggregatedReportIds[i];
-    auto expected = expected_num_obs[report_id];
-    auto found = num_obs[i];
+  (*cobalt_controller)->GenerateAggregatedObservations(
+      day_index, std::move(aggregatedReportSpecs), &num_obs);
+  for (size_t i = 0; i < aggregatedReportIds.size(); i++) {
+    const auto& [metric_id, report_id] = aggregatedReportIds[i];
+    uint64_t expected = expected_num_obs[{metric_id, report_id}];
+    uint64_t found = num_obs[i];
     if (found != expected) {
-      FX_LOGS(INFO) << "Expected " << expected << " observations for report ID " << report_id
-                    << ", found " << found;
+      FX_LOGS(INFO) << "Expected " << expected << " observations for report MetricID "
+                    << metric_id << " ReportId " << report_id << ", found " << found;
       return false;
     }
   }
@@ -295,10 +308,10 @@ bool GenerateObsAndCheckCount(uint32_t day_index,
 
 bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                                  fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                 const size_t backfill_days) {
+                                 const size_t backfill_days, uint32_t project_id) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogEventWithAggregation";
-  auto day_index = CurrentDayIndex(clock);
+  uint32_t day_index = CurrentDayIndex(clock);
   for (uint32_t index : kFeaturesActiveIndices) {
     if (!logger->LogEvent(cobalt_registry::kFeaturesActiveMetricId, index)) {
       FX_LOGS(INFO) << "Failed to log event with index " << index << ".";
@@ -323,17 +336,17 @@ bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, SystemClockInterfa
   // Expect to generate |kNumAggregatedObservations| for each day in the
   // backfill period, plus the current day. Expect to generate no observations
   // when GenerateObservations is called for the second time on the same day.
-  std::map<uint32_t, uint64_t> expected_num_obs;
-  std::map<uint32_t, uint64_t> expect_no_obs;
-  for (const auto& pair : kNumAggregatedObservations) {
-    expected_num_obs[pair.first] = (1 + backfill_days) * pair.second;
-    expect_no_obs[pair.first] = 0;
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs;
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs;
+  for (const auto& [ids, expected] : kNumAggregatedObservations) {
+    expected_num_obs[ids] = (1 + backfill_days) * expected;
+    expect_no_obs[ids] = 0;
   }
-  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expected_num_obs)) {
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expected_num_obs)) {
     FX_LOGS(INFO) << "TestLogEventWithAggregation : FAIL";
     return false;
   }
-  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expect_no_obs)) {
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expect_no_obs)) {
     FX_LOGS(INFO) << "TestLogEventWithAggregation : FAIL";
     return false;
   }
@@ -342,16 +355,16 @@ bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, SystemClockInterfa
 
 bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                      const size_t backfill_days) {
+                                      const size_t backfill_days, uint32_t project_id) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogEventCountWithAggregation";
-  std::map<uint32_t, uint64_t> expected_num_obs;
-  std::map<uint32_t, uint64_t> expect_no_obs;
-  for (const auto& pair : kNumAggregatedObservations) {
-    expected_num_obs[pair.first] = (1 + backfill_days) * pair.second;
-    expect_no_obs[pair.first] = 0;
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs;
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs;
+  for (const auto& [ids, expected] : kNumAggregatedObservations) {
+    expected_num_obs[ids] = (1 + backfill_days) * expected;
+    expect_no_obs[ids] = 0;
   }
-  auto day_index = CurrentDayIndex(clock);
+  uint32_t day_index = CurrentDayIndex(clock);
   for (uint32_t index : kConnectionAttemptsIndices) {
     for (std::string component : kConnectionAttemptsComponentNames) {
       if (index != 0) {
@@ -365,7 +378,8 @@ bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, SystemClockIn
           return false;
         }
         expected_num_obs
-            [cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId] +=
+            [{cobalt_registry::kConnectionAttemptsMetricId,
+              cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId}] +=
             kConnectionAttemptsNumWindowSizes;
       }
     }
@@ -378,11 +392,11 @@ bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, SystemClockIn
     return false;
   }
 
-  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expected_num_obs)) {
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expected_num_obs)) {
     FX_LOGS(INFO) << "TestLogEventCountWithAggregation : FAIL";
     return false;
   }
-  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expect_no_obs)) {
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expect_no_obs)) {
     FX_LOGS(INFO) << "TestLogEventCountWithAggregation : FAIL";
     return false;
   }
@@ -391,20 +405,20 @@ bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, SystemClockIn
 
 bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                                        fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                       const size_t backfill_days) {
+                                       const size_t backfill_days, uint32_t project_id) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregation";
   // Expect to generate |kNumAggregatedObservations| for each day in the
   // backfill period, plus the current day. Expect to generate no observations
   // when GenerateObservations is called for the second time on the same day.
-  std::map<uint32_t, uint64_t> expected_num_obs;
-  std::map<uint32_t, uint64_t> expect_no_obs;
-  for (const auto& pair : kNumAggregatedObservations) {
-    expected_num_obs[pair.first] = (1 + backfill_days) * pair.second;
-    expect_no_obs[pair.first] = 0;
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs;
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs;
+  for (const auto& [ids, expected] : kNumAggregatedObservations) {
+    expected_num_obs[ids] = (1 + backfill_days) * expected;
+    expect_no_obs[ids] = 0;
   }
 
-  auto day_index = CurrentDayIndex(clock);
+  uint32_t day_index = CurrentDayIndex(clock);
   for (uint32_t index : kStreamingTimeIndices) {
     for (std::string component : kStreamingTimeComponentNames) {
       // Log a duration depending on the index.
@@ -417,7 +431,8 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockI
           FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
           return false;
         }
-        expected_num_obs[cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId] +=
+        expected_num_obs[{cobalt_registry::kStreamingTimeMetricId,
+                          cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId}] +=
             kStreamingTimeNumWindowSizes;
       }
     }
@@ -430,11 +445,11 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockI
     return false;
   }
 
-  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expected_num_obs)) {
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expected_num_obs)) {
     FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
     return false;
   }
-  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expect_no_obs)) {
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expect_no_obs)) {
     FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
     return false;
   }
@@ -446,20 +461,20 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockI
 // For each of the two event_codes, log one observation with an integer value.
 bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                      const size_t backfill_days) {
+                                      const size_t backfill_days, uint32_t project_id) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogInteger";
   // Expect to generate |kNumAggregatedObservations| for each day in the
   // backfill period, plus the current day. Expect to generate no observations
   // when GenerateObservations is called for the second time on the same day.
-  std::map<uint32_t, uint64_t> expected_num_obs;
-  std::map<uint32_t, uint64_t> expect_no_obs;
-  for (const auto& pair : kNumAggregatedObservations) {
-    expected_num_obs[pair.first] = (1 + backfill_days) * pair.second;
-    expect_no_obs[pair.first] = 0;
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs;
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs;
+  for (const auto& [ids, expected] : kNumAggregatedObservations) {
+    expected_num_obs[ids] = (1 + backfill_days) * expected;
+    expect_no_obs[ids] = 0;
   }
 
-  auto day_index = CurrentDayIndex(clock);
+  uint32_t day_index = CurrentDayIndex(clock);
   for (uint32_t errorNameIndex : kUpdateDurationNewErrorNameIndices) {
     for (uint32_t stageIndex : kUpdateDurationNewStageIndices) {
       for (int64_t value : kUpdateDurationNewValues) {
@@ -469,8 +484,6 @@ bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
           FX_LOGS(INFO) << "TestLogInteger : FAIL";
           return false;
         }
-        expected_num_obs[cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId] +=
-            kStreamingTimeNumWindowSizes;
       }
     }
   }
@@ -482,11 +495,11 @@ bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
     return false;
   }
 
-  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expected_num_obs)) {
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expected_num_obs)) {
     FX_LOGS(INFO) << "TestLogInteger : FAIL";
     return false;
   }
-  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expect_no_obs)) {
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expect_no_obs)) {
     FX_LOGS(INFO) << "TestLogInteger : FAIL";
     return false;
   }

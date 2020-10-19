@@ -57,21 +57,21 @@ bool TestLogCobaltEvent(CobaltTestAppLogger* logger);
 // invalid event code and checks for failure.
 bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
                                  fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                 const size_t backfill_days);
+                                 size_t backfill_days, uint32_t project_id);
 
 bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger,
                                       util::SystemClockInterface* clock,
                                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                      const size_t backfill_days);
+                                      size_t backfill_days, uint32_t project_id);
 
 bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger,
                                        util::SystemClockInterface* clock,
                                        fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                       const size_t backfill_days);
+                                       size_t backfill_days, uint32_t project_id);
 
 bool TestLogElapsedTimeWithAggregationWorkerRunning(
     CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
-    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller, const size_t backfill_days);
+    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller, size_t backfill_days, uint32_t project_id);
 
 // Tests of Cobalt 1.1 metrics, all of which use local aggregation.
 //
@@ -88,7 +88,7 @@ bool TestLogElapsedTimeWithAggregationWorkerRunning(
 // generated.
 bool TestLogInteger(CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
                                  fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                 size_t backfill_days);
+                                 size_t backfill_days, uint32_t project_id);
 
 }  // namespace testapp
 }  // namespace cobalt

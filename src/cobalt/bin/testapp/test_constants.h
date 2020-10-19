@@ -68,12 +68,6 @@ const int32_t kUpdateDurationNewErrorNameIndices[] = {0, 1, 2};
 const int32_t kUpdateDurationNewStageIndices[] = {0, 1, 2};
 const int64_t kUpdateDurationNewValues[] = {-1, 0, 1, 10, 702};
 
-// The report IDs of the locally aggregated reports in the testapp project.
-const std::vector<uint32_t> kAggregatedReportIds = {
-    cobalt_registry::kFeaturesActiveFeaturesActiveUniqueDevicesReportId,
-    cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId,
-    cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId};
-
 // The number of locally aggregated observations that should be generated for
 // each locally aggregated report in the test_app2 project for a day, assuming
 // that no events were logged for locally aggregated reports on that day.
@@ -84,10 +78,13 @@ const std::vector<uint32_t> kAggregatedReportIds = {
 //                  (10 event codes * 2 window sizes)
 // connection_attempts_per_device_count: 1 ReportParticipationObservation
 // streaming_time_per_device_total: 1 ReportParticipationObservation
-const std::map<uint32_t, uint64_t> kNumAggregatedObservations = {
-    {cobalt_registry::kFeaturesActiveFeaturesActiveUniqueDevicesReportId, 20},
-    {cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId, 1},
-    {cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId, 1}};
+std::map<std::pair<uint32_t, uint32_t>, uint64_t> kNumAggregatedObservations = {
+    {{cobalt_registry::kFeaturesActiveMetricId,
+      cobalt_registry::kFeaturesActiveFeaturesActiveUniqueDevicesReportId}, 20},
+    {{cobalt_registry::kConnectionAttemptsMetricId,
+      cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId}, 1},
+    {{cobalt_registry::kStreamingTimeMetricId,
+      cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId}, 1}};
 
 }  // namespace testapp
 }  // namespace cobalt

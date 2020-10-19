@@ -89,19 +89,21 @@ bool CobaltTestApp::RunTests() {
 }
 
 bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {
+  uint32_t project_id =
+    (test_for_prober_ ? cobalt_prober_registry::kProjectId : cobalt_registry::kProjectId);
   // TODO(fxbug.dev/52750): We try each of these tests twice in case the failure
   // reason is that the calendar date has changed mid-test.
   CONNECT_AND_TRY_TEST_TWICE(
-      TestLogEventWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days),
+      TestLogEventWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
       backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(
-      TestLogEventCountWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days),
+      TestLogEventCountWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
       backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(
-      TestLogElapsedTimeWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days),
+      TestLogElapsedTimeWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
       backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(
-      TestLogInteger(&logger_, clock_.get(), &cobalt_controller_, backfill_days),
+      TestLogInteger(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
       backfill_days);
 
   return true;

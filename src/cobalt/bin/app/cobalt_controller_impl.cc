@@ -49,15 +49,22 @@ void CobaltControllerImpl::GetNumEventAggregatorRuns(GetNumEventAggregatorRunsCa
 }
 
 void CobaltControllerImpl::GenerateAggregatedObservations(
-    uint32_t day_index, std::vector<uint32_t> report_ids,
+    uint32_t day_index, std::vector<fuchsia::cobalt::ReportSpec> report_specs,
     GenerateAggregatedObservationsCallback callback) {
+  std::vector<ReportSpec> core_report_specs;
+  for (const fuchsia::cobalt::ReportSpec& report_spec : report_specs) {
+    core_report_specs.push_back({.customer_id=report_spec.customer_id(),
+                                 .project_id=report_spec.project_id(),
+                                 .metric_id=report_spec.metric_id(),
+                                 .report_id=report_spec.report_id()});
+  }
   std::vector<uint64_t> num_obs_before =
-      cobalt_service_->num_observations_added_for_reports(report_ids);
+      cobalt_service_->num_observations_added_for_reports(core_report_specs);
   cobalt_service_->GenerateAggregatedObservations(day_index);
   std::vector<uint64_t> num_obs_after =
-      cobalt_service_->num_observations_added_for_reports(report_ids);
+      cobalt_service_->num_observations_added_for_reports(core_report_specs);
   std::vector<uint64_t> num_new_obs;
-  for (size_t i = 0; i < report_ids.size(); i++) {
+  for (size_t i = 0; i < report_specs.size(); i++) {
     num_new_obs.push_back(num_obs_after[i] - num_obs_before[i]);
   }
   callback(num_new_obs);

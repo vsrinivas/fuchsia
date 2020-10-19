@@ -4,6 +4,21 @@
 
 library fuchsia.cobalt;
 
+/// A specification to identify a single Cobalt report.
+table ReportSpec {
+    /// The customer ID, as specified in Cobalt's metrics registry.
+    1: uint32 customer_id;
+
+    /// The ID of the project, as specified in Cobalt's metrics registry.
+    2: uint32 project_id;
+
+    /// The ID of the metric, as specified in Cobalt's metrics registry.
+    3: uint32 metric_id;
+
+    /// The ID of the report, as specified in Cobalt's metrics registry.
+    4: uint32 report_id;
+};
+
 /// The Controller is primarily useful for testing the Cobalt service.
 /// Cobalt clients should use the Logger.
 [Discoverable]
@@ -44,12 +59,14 @@ protocol Controller {
     /// `day_index` The index of the day for which locally aggregated
     ///             Observations should be generated.
     ///
-    /// `report_ids` A vector of report IDs.
+    /// `report_specs` A vector of specifications identifying the reports to
+    ///                return the number of observations for.
     ///
     /// Returns a vector whose k-th element is the number of observations
-    /// generated for the k-th element of `report_ids`. If `report_ids`
+    /// generated for the k-th element of `report_specs`. If `report_specs`
     /// is the empty vector, then an empty vector is returned.
-    GenerateAggregatedObservations(uint32 day_index, vector<uint32>:MAX report_ids)
+    GenerateAggregatedObservations(uint32 day_index,
+                                   vector<ReportSpec>:MAX report_specs)
         -> (vector<uint64>:MAX num_obs);
 
     /// Requests that the caller be notified after the Cobalt FIDL service

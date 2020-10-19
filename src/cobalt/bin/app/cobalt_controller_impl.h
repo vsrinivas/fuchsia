@@ -33,7 +33,7 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
 
   void GetNumEventAggregatorRuns(GetNumEventAggregatorRunsCallback callback) override;
 
-  void GenerateAggregatedObservations(uint32_t day_index, std::vector<uint32_t> report_ids,
+  void GenerateAggregatedObservations(uint32_t day_index, std::vector<fuchsia::cobalt::ReportSpec> report_specs,
                                       GenerateAggregatedObservationsCallback callback) override;
 
   void ListenForInitialized(ListenForInitializedCallback callback) override;
