@@ -194,14 +194,14 @@ int timer_diag(int, const cmd_args*, uint32_t) {
 }
 
 struct timer_stress_args {
-  volatile int timer_stress_done;
-  volatile uint64_t num_set;
-  volatile uint64_t num_fired;
+  ktl::atomic<int> timer_stress_done;
+  ktl::atomic<uint64_t> num_set;
+  ktl::atomic<uint64_t> num_fired;
 };
 
 static void timer_stress_cb(Timer* t, zx_time_t now, void* void_arg) {
   timer_stress_args* args = reinterpret_cast<timer_stress_args*>(void_arg);
-  atomic_add_u64(&args->num_fired, 1);
+  args->num_fired++;
 }
 
 // Returns a random duration between 0 and max (inclusive).
@@ -211,7 +211,7 @@ static zx_duration_t rand_duration(zx_duration_t max) {
 
 static int timer_stress_worker(void* void_arg) {
   timer_stress_args* args = reinterpret_cast<timer_stress_args*>(void_arg);
-  while (!atomic_load(&args->timer_stress_done)) {
+  while (!args->timer_stress_done.load()) {
     Timer t;
     zx_duration_t timer_duration = rand_duration(ZX_MSEC(5));
 
@@ -227,7 +227,7 @@ static int timer_stress_worker(void* void_arg) {
 
     // We're now running on something other than timer_cpu.
 
-    atomic_add_u64(&args->num_set, 1);
+    args->num_set++;
 
     // Sleep for the timer duration so that this thread's timer_cancel races with the timer
     // callback. We want to race to ensure there are no synchronization or memory visibility
@@ -275,27 +275,28 @@ int timer_stress(int argc, const cmd_args* argv, uint32_t) {
   }
 
   Thread::Current::SleepRelative(ZX_SEC(argv[1].u));
-  atomic_store(&args.timer_stress_done, 1);
+  args.timer_stress_done.store(1);
 
   for (const auto& thread : threads) {
     thread->Join(nullptr, ZX_TIME_INFINITE);
   }
 
-  printf("timer stress done; timer set %zu, timer fired %zu\n", args.num_set, args.num_fired);
+  printf("timer stress done; timer set %zu, timer fired %zu\n", args.num_set.load(),
+         args.num_fired.load());
   return 0;
 }
 
 struct timer_args {
-  volatile int result;
-  volatile int timer_fired;
-  volatile int remaining;
-  volatile int wait;
+  ktl::atomic<int> result;
+  ktl::atomic<int> timer_fired;
+  ktl::atomic<int> remaining;
+  ktl::atomic<int> wait;
   SpinLock* lock;
 };
 
 static void timer_cb(Timer*, zx_time_t now, void* void_arg) {
   timer_args* arg = reinterpret_cast<timer_args*>(void_arg);
-  atomic_store(&arg->timer_fired, 1);
+  arg->timer_fired.store(1);
 }
 
 // Set a timer and cancel it before the deadline has elapsed.
@@ -306,7 +307,7 @@ static bool cancel_before_deadline() {
   const Deadline deadline = Deadline::after(ZX_HOUR(5));
   t.Set(deadline, timer_cb, &arg);
   ASSERT_TRUE(t.Cancel());
-  ASSERT_FALSE(atomic_load(&arg.timer_fired));
+  ASSERT_FALSE(arg.timer_fired.load());
   END_TEST;
 }
 
@@ -317,7 +318,7 @@ static bool cancel_after_fired() {
   Timer t;
   const Deadline deadline = Deadline::no_slack(current_time());
   t.Set(deadline, timer_cb, &arg);
-  while (!atomic_load(&arg.timer_fired)) {
+  while (!arg.timer_fired.load()) {
   }
   ASSERT_FALSE(t.Cancel());
   END_TEST;
@@ -325,8 +326,8 @@ static bool cancel_after_fired() {
 
 static void timer_cancel_cb(Timer* t, zx_time_t now, void* void_arg) {
   timer_args* arg = reinterpret_cast<timer_args*>(void_arg);
-  atomic_store(&arg->result, t->Cancel());
-  atomic_store(&arg->timer_fired, 1);
+  arg->result.store(t->Cancel());
+  arg->timer_fired.store(1);
 }
 
 // Set a timer and cancel it from its own callback.
@@ -337,7 +338,7 @@ static bool cancel_from_callback() {
   Timer t;
   const Deadline deadline = Deadline::no_slack(current_time());
   t.Set(deadline, timer_cancel_cb, &arg);
-  while (!atomic_load(&arg.timer_fired)) {
+  while (!arg.timer_fired.load()) {
   }
   ASSERT_FALSE(arg.result);
   ASSERT_FALSE(t.Cancel());
@@ -346,7 +347,7 @@ static bool cancel_from_callback() {
 
 static void timer_set_cb(Timer* t, zx_time_t now, void* void_arg) {
   timer_args* arg = reinterpret_cast<timer_args*>(void_arg);
-  if (atomic_add(&arg->remaining, -1) >= 1) {
+  if (arg->remaining.fetch_sub(1) >= 1) {
     const Deadline deadline = Deadline::after(ZX_USEC(10));
     t->Set(deadline, timer_set_cb, void_arg);
   }
@@ -360,7 +361,7 @@ static bool set_from_callback() {
   Timer t;
   const Deadline deadline = Deadline::no_slack(current_time());
   t.Set(deadline, timer_set_cb, &arg);
-  while (atomic_load(&arg.remaining) > 0) {
+  while (arg.remaining.load() > 0) {
   }
 
   // We cannot assert the return value below because we don't know if the last timer has fired.
@@ -371,8 +372,8 @@ static bool set_from_callback() {
 
 static void timer_trylock_cb(Timer* t, zx_time_t now, void* void_arg) {
   timer_args* arg = reinterpret_cast<timer_args*>(void_arg);
-  atomic_store(&arg->timer_fired, 1);
-  while (atomic_load(&arg->wait)) {
+  arg->timer_fired.store(1);
+  while (arg->wait.load()) {
   }
 
   int result = t->TrylockOrCancel(arg->lock);
@@ -380,7 +381,7 @@ static void timer_trylock_cb(Timer* t, zx_time_t now, void* void_arg) {
     arg->lock->Release();
   }
 
-  atomic_store(&arg->result, result);
+  arg->result.store(result);
 }
 
 // See that timer_trylock_or_cancel spins until the timer is canceled.
@@ -416,11 +417,11 @@ static bool trylock_or_cancel_canceled() {
   {
     AutoSpinLock guard(&lock);
 
-    while (!atomic_load(&arg.timer_fired)) {
+    while (!arg.timer_fired.load()) {
     }
 
     // Callback should now be running. Tell it to stop waiting and start trylocking.
-    atomic_store(&arg.wait, 0);
+    arg.wait.store(0);
 
     // See that timer_cancel returns false indicating that the timer ran.
     ASSERT_FALSE(t.Cancel());
@@ -464,11 +465,11 @@ static bool trylock_or_cancel_get_lock() {
   {
     AutoSpinLock guard(&lock);
 
-    while (!atomic_load(&arg.timer_fired)) {
+    while (!arg.timer_fired.load()) {
     }
 
     // Callback should now be running. Tell it to stop waiting and start trylocking.
-    atomic_store(&arg.wait, 0);
+    arg.wait.store(0);
   }
 
   // See that timer_cancel returns false indicating that the timer ran.
