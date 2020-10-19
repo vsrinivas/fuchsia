@@ -11,7 +11,13 @@ source_set("predicates") {
     "status.cc",
     "status.h",
   ]
-  public_deps = [ "//third_party/googletest:gtest" ]
+  public_deps = [
+    # "status.h" has #include <gtest/gtest.h>.
+    "//third_party/googletest:gtest",
+
+    # "status.h" has #include <zircon/status.h>.
+    "//zircon/system/ulib/zircon:zircon-headers",
+  ]
 }
 
 test("predicates-lib-unittests") {
