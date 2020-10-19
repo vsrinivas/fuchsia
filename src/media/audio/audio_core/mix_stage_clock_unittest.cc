@@ -38,7 +38,7 @@ const Format kDefaultFormat =
         .take_value();
 
 //
-// MixStageClockTest (MicroSrcClockTest)
+// MixStageClockTest (MicroSrcTest)
 //
 // This set of tests validates how MixStage handles clock synchronization
 //
@@ -46,7 +46,7 @@ const Format kDefaultFormat =
 // Most recent tuning occurred 10/15/2020, having moved from frames/fixed-subframes to time units.
 //
 // There are three synchronization scenarios to be validated:
-//  1) Client and device clocks are non-adjustable -- apply micro-SRC (MicroSrcClockTest)
+//  1) Client and device clocks are non-adjustable -- apply micro-SRC (MicroSrcTest)
 //  2) Client clock is adjustable -- tune this adjustable client clock (not yet implemented)
 //  3) Device clock is adjustable -- trim the hardware clock (not yet implemented).
 //
@@ -90,6 +90,8 @@ static constexpr int32_t kMicroSrcLimitMixCountOnePercentErr = 12;
 constexpr bool kDisplayForPidCoefficientsTuning = false;
 constexpr bool kTraceClockSyncConvergence = false;
 
+enum class Direction { Render, Capture };
+
 class MixStageClockTest : public testing::ThreadingModelFixture {
  protected:
   // We measure long-running position across mixes of 10ms (our block size).
@@ -101,7 +103,7 @@ class MixStageClockTest : public testing::ThreadingModelFixture {
   fbl::RefPtr<VersionedTimelineFunction> device_ref_to_fixed_;
   fbl::RefPtr<VersionedTimelineFunction> client_ref_to_fixed_;
 
-  void VerifySynchronization(ClockMode clock_mode, int32_t rate_adjust_ppm = 0);
+  void VerifySync(ClockMode clock_mode, int32_t rate_adjust_ppm = 0);
 
   virtual void SetRateLimits(int32_t rate_adjust_ppm);
   zx::duration PrimaryErrorLimit(int32_t rate_adjust_ppm) {
@@ -136,19 +138,31 @@ class MixStageClockTest : public testing::ThreadingModelFixture {
   zx::duration one_usec_err_;       // The smaller of one microsec, and our settled err value.
   zx::duration one_percent_err_;    // 1% of the maximum allowed primary error
   zx::duration limit_settled_err_;  // Largest err allowed during final kMixCountSettled mixes.
+
+  Direction direction_;  // Does data flow client->device (Render) or device->client (Capture)
 };
 
-// MicroSrcClockTest uses a custom client clock, with a default non-adjustable device clock. This
+// MicroSrcTest uses a custom client clock, with a default non-adjustable device clock. This
 // combination forces AudioCore to use "micro-SRC" to reconcile any rate differences.
-class MicroSrcClockTest : public MixStageClockTest {
+class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterface<Direction> {
   static constexpr zx::duration kClockOffset = zx::sec(42);
 
  protected:
+  void SetUp() override {
+    direction_ = GetParam();
+    MixStageClockTest::SetUp();
+  }
+
   void SetRateLimits(int32_t rate_adjust_ppm) override {
     wait_for_mixes_ = false;  // no zx::clock rate_adjust usage: runs faster than real-time
 
-    primary_err_ppm_multiplier_ = kMicroSrcPrimaryErrPpmMultiplier;
-    secondary_err_ppm_multiplier_ = kMicroSrcSecondaryErrPpmMultiplier;
+    if (direction_ == Direction::Render) {
+      primary_err_ppm_multiplier_ = kMicroSrcPrimaryErrPpmMultiplier;
+      secondary_err_ppm_multiplier_ = kMicroSrcSecondaryErrPpmMultiplier;
+    } else {
+      primary_err_ppm_multiplier_ = -kMicroSrcPrimaryErrPpmMultiplier;
+      secondary_err_ppm_multiplier_ = -kMicroSrcSecondaryErrPpmMultiplier;
+    }
 
     limit_mix_count_settled_ = kMicroSrcMixCountUntilSettled;
     total_mix_count_ = limit_mix_count_settled_ + kMicroSrcMixCountSettledVerificationPeriod;
@@ -218,20 +232,29 @@ void MixStageClockTest::SetRateLimits(int32_t rate_adjust_ppm) {
 
 void MixStageClockTest::ConnectStages() {
   std::shared_ptr<PacketQueue> packet_queue;
-  // Create a PacketQueue with the client timeline and clock, as the source.
-  packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, client_ref_to_fixed_,
-                                                std::move(client_clock_.value()));
 
-  // Pass the device timeline and clock to a mix stage, as the destination.
-  mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kFramesToMix, device_ref_to_fixed_,
-                                          device_clock_.value());
+  if (direction_ == Direction::Render) {
+    // Create a PacketQueue with the client timeline and clock, as the source.
+    // Pass the device timeline and clock to a mix stage, as the destination.
+    packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, client_ref_to_fixed_,
+                                                 std::move(client_clock_.value()));
+    mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kFramesToMix, device_ref_to_fixed_,
+                                            device_clock_.value());
+  } else {
+    // Create a PacketQueue with the device timeline and clock, as the source.
+    // Pass the client timeline and clock to a mix stage, as the destination.
+    packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, device_ref_to_fixed_,
+                                                 std::move(device_clock_.value()));
+    mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kFramesToMix, client_ref_to_fixed_,
+                                            client_clock_.value());
+  }
 
   // Connect packet queue to mix stage.
   mixer_ = mix_stage_->AddInput(packet_queue);
 }
 
 // Set up the various prerequisites of a clock synchronization test, then execute the test.
-void MixStageClockTest::VerifySynchronization(ClockMode clock_mode, int32_t rate_adjust_ppm) {
+void MixStageClockTest::VerifySync(ClockMode clock_mode, int32_t rate_adjust_ppm) {
   SetRateLimits(rate_adjust_ppm);
 
   SetClocks(clock_mode, rate_adjust_ppm);
@@ -363,32 +386,40 @@ void MixStageClockTest::SyncTest(int32_t rate_adjust_ppm) {
 }
 
 // Test cases that validate the MixStage+AudioClock "micro-SRC" synchronization path.
-TEST_F(MicroSrcClockTest, Basic) { VerifySynchronization(ClockMode::SAME); }
-TEST_F(MicroSrcClockTest, Offset) { VerifySynchronization(ClockMode::WITH_OFFSET); }
+TEST_P(MicroSrcTest, Basic) { VerifySync(ClockMode::SAME); }
+TEST_P(MicroSrcTest, Offset) { VerifySync(ClockMode::WITH_OFFSET); }
 
-TEST_F(MicroSrcClockTest, AdjustUp1) { VerifySynchronization(ClockMode::RATE_ADJUST, 1); }
-TEST_F(MicroSrcClockTest, AdjustDown1) { VerifySynchronization(ClockMode::RATE_ADJUST, -1); }
+TEST_P(MicroSrcTest, AdjustUp1) { VerifySync(ClockMode::RATE_ADJUST, 1); }
+TEST_P(MicroSrcTest, AdjustDown1) { VerifySync(ClockMode::RATE_ADJUST, -1); }
 
-TEST_F(MicroSrcClockTest, AdjustUp2) { VerifySynchronization(ClockMode::RATE_ADJUST, 2); }
-TEST_F(MicroSrcClockTest, AdjustDown2) { VerifySynchronization(ClockMode::RATE_ADJUST, -2); }
+TEST_P(MicroSrcTest, AdjustUp2) { VerifySync(ClockMode::RATE_ADJUST, 2); }
+TEST_P(MicroSrcTest, AdjustDown2) { VerifySync(ClockMode::RATE_ADJUST, -2); }
 
-TEST_F(MicroSrcClockTest, AdjustUp3) { VerifySynchronization(ClockMode::RATE_ADJUST, 3); }
-TEST_F(MicroSrcClockTest, AdjustDown3) { VerifySynchronization(ClockMode::RATE_ADJUST, -3); }
+TEST_P(MicroSrcTest, AdjustUp3) { VerifySync(ClockMode::RATE_ADJUST, 3); }
+TEST_P(MicroSrcTest, AdjustDown3) { VerifySync(ClockMode::RATE_ADJUST, -3); }
 
-TEST_F(MicroSrcClockTest, AdjustUp10) { VerifySynchronization(ClockMode::RATE_ADJUST, 10); }
-TEST_F(MicroSrcClockTest, AdjustDown10) { VerifySynchronization(ClockMode::RATE_ADJUST, -10); }
+TEST_P(MicroSrcTest, AdjustUp10) { VerifySync(ClockMode::RATE_ADJUST, 10); }
+TEST_P(MicroSrcTest, AdjustDown10) { VerifySync(ClockMode::RATE_ADJUST, -10); }
 
-TEST_F(MicroSrcClockTest, AdjustUp30) { VerifySynchronization(ClockMode::RATE_ADJUST, 30); }
-TEST_F(MicroSrcClockTest, AdjustDown30) { VerifySynchronization(ClockMode::RATE_ADJUST, -30); }
+TEST_P(MicroSrcTest, AdjustUp30) { VerifySync(ClockMode::RATE_ADJUST, 30); }
+TEST_P(MicroSrcTest, AdjustDown30) { VerifySync(ClockMode::RATE_ADJUST, -30); }
 
-TEST_F(MicroSrcClockTest, AdjustUp100) { VerifySynchronization(ClockMode::RATE_ADJUST, 100); }
-TEST_F(MicroSrcClockTest, AdjustDown100) { VerifySynchronization(ClockMode::RATE_ADJUST, -100); }
+TEST_P(MicroSrcTest, AdjustUp100) { VerifySync(ClockMode::RATE_ADJUST, 100); }
+TEST_P(MicroSrcTest, AdjustDown100) { VerifySync(ClockMode::RATE_ADJUST, -100); }
 
-TEST_F(MicroSrcClockTest, AdjustUp300) { VerifySynchronization(ClockMode::RATE_ADJUST, 300); }
-TEST_F(MicroSrcClockTest, AdjustDown300) { VerifySynchronization(ClockMode::RATE_ADJUST, -300); }
+TEST_P(MicroSrcTest, AdjustUp300) { VerifySync(ClockMode::RATE_ADJUST, 300); }
+TEST_P(MicroSrcTest, AdjustDown300) { VerifySync(ClockMode::RATE_ADJUST, -300); }
 
-TEST_F(MicroSrcClockTest, AdjustUp1000) { VerifySynchronization(ClockMode::RATE_ADJUST, 1000); }
-TEST_F(MicroSrcClockTest, AdjustDown1000) { VerifySynchronization(ClockMode::RATE_ADJUST, -1000); }
+TEST_P(MicroSrcTest, AdjustUp1000) { VerifySync(ClockMode::RATE_ADJUST, 1000); }
+TEST_P(MicroSrcTest, AdjustDown1000) { VerifySync(ClockMode::RATE_ADJUST, -1000); }
+
+std::string PrintDirectionParam(const ::testing::TestParamInfo<MicroSrcTest::ParamType>& info) {
+  return (info.param == Direction::Render ? "Render" : "Capture");
+}
+
+INSTANTIATE_TEST_SUITE_P(ClockSync, MicroSrcTest,
+                         ::testing::Values(Direction::Render, Direction::Capture),
+                         PrintDirectionParam);
 
 }  // namespace
 
