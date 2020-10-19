@@ -48,6 +48,10 @@ class PlatformManagerImpl final
  private:
   // ===== Methods that implement the PlatformManager abstract interface.
 
+  // Initializes the Weave stack.
+  //
+  // Precondition: Delegates have been set for ConfigurationManager, ConnectivityManager, and
+  // ThreadStackManager.
   WEAVE_ERROR _InitWeaveStack(void);
 
   // Posts an event to the dispatcher. The event will be handled asynchronously

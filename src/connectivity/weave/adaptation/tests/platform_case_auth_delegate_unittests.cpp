@@ -210,6 +210,7 @@ class PlatformCASEAuthDelegateTest : public WeaveTestFixture {
     WeaveTestFixture::SetUp();
     WeaveTestFixture::RunFixtureLoop();
 
+    ConfigurationMgrImpl().SetDelegate(nullptr);
     ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerTestDelegateImpl>());
     EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
     // Initialize dummy certificate and service configuration.

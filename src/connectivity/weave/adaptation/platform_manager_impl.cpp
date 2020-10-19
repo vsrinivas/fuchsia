@@ -14,6 +14,7 @@
 
 #include <lib/async/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 
 namespace nl {
 namespace Weave {
@@ -22,9 +23,12 @@ namespace DeviceLayer {
 PlatformManagerImpl PlatformManagerImpl::sInstance;
 
 WEAVE_ERROR PlatformManagerImpl::_InitWeaveStack(void) {
-  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
-  ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
-  ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
+  FX_CHECK(ConfigurationMgrImpl().GetDelegate() != nullptr)
+      << "ConfigurationManager delegate must be set before InitWeaveStack is called.";
+  FX_CHECK(ConnectivityMgrImpl().GetDelegate() != nullptr)
+      << "ConnectivityManager delegate must be set before InitWeaveStack is called.";
+  FX_CHECK(ThreadStackMgrImpl().GetDelegate() != nullptr)
+      << "ThreadStackManager delegate must be set before InitWeaveStack is called.";
   return Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_InitWeaveStack();
 }
 

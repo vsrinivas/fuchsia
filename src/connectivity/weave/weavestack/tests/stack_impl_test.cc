@@ -8,7 +8,15 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 
+// clang-format off
+#include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/PlatformManager.h>
+
+#include "generic_platform_manager_impl_fuchsia.ipp"
+#include "configuration_manager_delegate_impl.h"
+#include "connectivity_manager_delegate_impl.h"
+#include "thread_stack_manager_delegate_impl.h"
+// clang-format on
 
 #include <unordered_map>
 #include <gtest/gtest.h>
@@ -24,7 +32,13 @@ using fuchsia::weave::Stack_GetQrCode_Result;
 using fuchsia::weave::Stack_ResetConfig_Result;
 using fuchsia::weave::SvcDirectoryWatcherPtr;
 
+using nl::Weave::DeviceLayer::ConfigurationManagerDelegateImpl;
+using nl::Weave::DeviceLayer::ConfigurationMgrImpl;
+using nl::Weave::DeviceLayer::ConnectivityManagerDelegateImpl;
+using nl::Weave::DeviceLayer::ConnectivityMgrImpl;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
+using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
+using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
 using nl::Weave::Profiles::DeviceControl::DeviceControlDelegate;
 }  // namespace
 
@@ -179,6 +193,9 @@ class StackImplTest: public gtest::TestLoopFixture {
         fake_weave_factory_data_manager_.GetHandler(dispatcher()));
 
     // Initialize the weave stack
+    ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+    ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
+    ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
     ASSERT_EQ(PlatformMgrImpl().InitWeaveStack(), WEAVE_NO_ERROR);
 
     // Set up StackImpl

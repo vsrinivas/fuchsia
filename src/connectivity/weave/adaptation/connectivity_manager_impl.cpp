@@ -7,6 +7,8 @@
 #include <Weave/DeviceLayer/ConnectivityManager.h>
 // clang-format on
 
+#include <lib/syslog/cpp/macros.h>
+
 namespace nl {
 namespace Weave {
 namespace DeviceLayer {
@@ -14,6 +16,8 @@ namespace DeviceLayer {
 ConnectivityManagerImpl ConnectivityManagerImpl::sInstance;
 
 void ConnectivityManagerImpl::SetDelegate(std::unique_ptr<Delegate> delegate) {
+  FX_CHECK(!(delegate && delegate_)) << "Attempt to set an already set delegate. Must explicitly "
+                                        "clear the existing delegate first.";
   delegate_ = std::move(delegate);
   if (delegate_) {
     delegate_->SetConnectivityManagerImpl(this);
@@ -24,7 +28,10 @@ ConnectivityManagerImpl::Delegate* ConnectivityManagerImpl::GetDelegate() {
   return delegate_.get();
 }
 
-WEAVE_ERROR ConnectivityManagerImpl::_Init(void) { return delegate_->Init(); }
+WEAVE_ERROR ConnectivityManagerImpl::_Init(void) {
+  FX_CHECK(delegate_ != nullptr) << "ConnectivityManager delegate not set before Init.";
+  return delegate_->Init();
+}
 
 bool ConnectivityManagerImpl::_IsServiceTunnelConnected(void) {
   return delegate_->IsServiceTunnelConnected();

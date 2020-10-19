@@ -153,6 +153,10 @@ class BLEManagerTest : public WeaveTestFixture {
     event_loop_.Quit();
     WeaveTestFixture::StopFixtureLoop();
     WeaveTestFixture::TearDown();
+
+    ThreadStackMgrImpl().SetDelegate(nullptr);
+    ConfigurationMgrImpl().SetDelegate(nullptr);
+    ConnectivityMgrImpl().SetDelegate(nullptr);
   }
 
  protected:

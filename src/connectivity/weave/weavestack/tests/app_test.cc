@@ -7,25 +7,54 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 
+// clang-format off
+#include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/PlatformManager.h>
+
+#include "generic_platform_manager_impl_fuchsia.ipp"
+#include "configuration_manager_delegate_impl.h"
+#include "connectivity_manager_delegate_impl.h"
+#include "thread_stack_manager_delegate_impl.h"
+// clang-format on
+
 #include <gtest/gtest.h>
 
 namespace weavestack {
 namespace {
+using nl::Weave::DeviceLayer::ConfigurationManagerDelegateImpl;
+using nl::Weave::DeviceLayer::ConfigurationMgrImpl;
+using nl::Weave::DeviceLayer::ConnectivityManagerDelegateImpl;
+using nl::Weave::DeviceLayer::ConnectivityMgrImpl;
 using nl::Weave::DeviceLayer::PlatformMgr;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
+using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
+using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
+
+void SetDefaultDelegates() {
+  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+  ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
+  ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
+}
+
+void ClearDelegates() {
+  ConfigurationMgrImpl().SetDelegate(nullptr);
+  ConnectivityMgrImpl().SetDelegate(nullptr);
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+}
 }  // namespace
 
 class AppTest : public ::gtest::RealLoopFixture {
  public:
   void SetUp() {
     RealLoopFixture::SetUp();
+    SetDefaultDelegates();
     PlatformMgrImpl().SetDispatcher(dispatcher());
     PlatformMgr().InitWeaveStack();
   }
 
   void TearDown() {
     PlatformMgrImpl().ShutdownWeaveStack();
+    ClearDelegates();
     RealLoopFixture::TearDown();
   }
 
@@ -63,17 +92,21 @@ class AppTest : public ::gtest::RealLoopFixture {
 
 TEST(App, CanRunApp) {
   auto app = App();
+  SetDefaultDelegates();
   EXPECT_EQ(ZX_OK, app.Init());
   EXPECT_EQ(ZX_ERR_TIMED_OUT,
             app.Run(async::Now(app.loop()->dispatcher()) + zx::duration(ZX_SEC(1)), false));
   app.Quit();
+  ClearDelegates();
 }
 
 TEST(App, CallInitAgain) {
   auto app = App();
+  SetDefaultDelegates();
   EXPECT_EQ(ZX_OK, app.Init());
   EXPECT_EQ(ZX_ERR_BAD_STATE, app.Init());
   app.Quit();
+  ClearDelegates();
 }
 
 TEST_F(AppTest, WakeSelectTest) {

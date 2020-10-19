@@ -248,6 +248,8 @@ class ConfigurationManagerTest : public WeaveTestFixture {
   void TearDown() {
     WeaveTestFixture::StopFixtureLoop();
     WeaveTestFixture::TearDown();
+    ThreadStackMgrImpl().SetDelegate(nullptr);
+    ConfigurationMgrImpl().SetDelegate(nullptr);
   }
 
   bool CopyFileFromPkgToData(std::string filename) {
@@ -350,6 +352,7 @@ TEST_F(ConfigurationManagerTest, ReadFactoryFile) {
   char buf[kBufSize] = {};
   size_t out_len;
 
+  ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerTestDelegateImpl>());
 
   ConfigurationManagerTestDelegateImpl* delegate =
@@ -373,6 +376,7 @@ TEST_F(ConfigurationManagerTest, ReadFactoryFileLargerThanExpected) {
   char buf[kBufSize] = {};
   size_t out_len;
 
+  ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerTestDelegateImpl>());
 
   ConfigurationManagerTestDelegateImpl* delegate =
@@ -475,10 +479,12 @@ TEST_F(ConfigurationManagerTest, CacheFlagsOnInit) {
 
 TEST_F(ConfigurationManagerTest, IsFullyProvisioned) {
   auto cfg_mgr = new CfgMgrProvisionStatusDelegate();
+  ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::unique_ptr<ConfigurationManagerImpl::Delegate>(cfg_mgr));
   ASSERT_EQ(cfg_mgr->Init(), WEAVE_NO_ERROR);
 
   auto thread_mgr = new ThreadStackMgrProvisionStatusDelegate();
+  ThreadStackMgrImpl().SetDelegate(nullptr);
   ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerImpl::Delegate>(thread_mgr));
 
   // All false
@@ -582,6 +588,7 @@ TEST_F(ConfigurationManagerTest, GetLocalSerialNumber) {
   context_provider.service_directory_provider()->AddService(
         fake_weave_factory_store_provider_.GetHandler(dispatcher()));
   PlatformMgrImpl().SetComponentContextForProcess(context_provider.TakeContext());
+  ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
   EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
   EXPECT_EQ(ConfigurationMgr().GetSerialNumber(serial_num, sizeof(serial_num), serial_num_len),

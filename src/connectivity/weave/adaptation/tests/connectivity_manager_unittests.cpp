@@ -148,6 +148,10 @@ class ConnectivityManagerTest : public WeaveTestFixture {
   void TearDown() {
     Warm::Shutdown(FabricState);
     WeaveTestFixture::TearDown();
+
+    ConfigurationMgrImpl().SetDelegate(nullptr);
+    ConnectivityMgrImpl().SetDelegate(nullptr);
+    ThreadStackMgrImpl().SetDelegate(nullptr);
   }
 
  protected:

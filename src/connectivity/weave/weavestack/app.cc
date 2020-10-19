@@ -20,9 +20,7 @@ using nl::Weave::DeviceLayer::PlatformMgrImpl;
 // and revert this to 10 seconds.
 constexpr struct timeval MAX_SELECT_SLEEP_TIME = {.tv_sec = 1};
 
-App::App()
-    : stack_impl_(std::make_unique<StackImpl>(PlatformMgrImpl().GetComponentContextForProcess())) {}
-
+App::App() {}
 App::~App() { Quit(); }
 
 void App::ClearWaiters() {
@@ -94,6 +92,7 @@ zx_status_t App::Init() {
   // The stack implementation should remain the last member to be fully
   // initialized, as it will begin accepting FIDL requests after initialization
   // is complete, potentially interacting with the rest of WeaveStack.
+  stack_impl_ = std::make_unique<StackImpl>(PlatformMgrImpl().GetComponentContextForProcess());
   zx_status_t status = stack_impl_->Init();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "StackImpl Init() failed with status = " << zx_status_get_string(status);

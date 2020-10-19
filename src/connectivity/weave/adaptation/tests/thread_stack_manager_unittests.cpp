@@ -268,6 +268,7 @@ class ThreadStackManagerTest : public WeaveTestFixture {
   void TearDown() override {
     StopFixtureLoop();
     WeaveTestFixture::TearDown();
+    ThreadStackMgrImpl().SetDelegate(nullptr);
   }
 
  protected:
@@ -475,6 +476,7 @@ TEST_F(ThreadStackManagerTest, GetThreadDeviceType) {
 
 TEST_F(ThreadStackManagerTest, ClearProvisionWithDeviceNotBound) {
   // Create a new delegate with an unbound device.
+  ThreadStackMgrImpl().SetDelegate(nullptr);
   ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
   // ClearThreadProvision should not crash when called with an unbound device.
   ThreadStackMgrImpl()._ClearThreadProvision();

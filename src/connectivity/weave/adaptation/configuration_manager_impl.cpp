@@ -14,6 +14,8 @@
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.ipp>
 // clang-format on
 
+#include <lib/syslog/cpp/macros.h>
+
 namespace nl {
 namespace Weave {
 namespace DeviceLayer {
@@ -25,7 +27,10 @@ using Key = ::nl::Weave::Platform::PersistedStorage::Key;
 /* Singleton instance of the ConfigurationManager implementation object for the Fuchsia. */
 ConfigurationManagerImpl ConfigurationManagerImpl::sInstance;
 
-WEAVE_ERROR ConfigurationManagerImpl::_Init(void) { return delegate_->Init(); }
+WEAVE_ERROR ConfigurationManagerImpl::_Init(void) {
+  FX_CHECK(delegate_ != nullptr) << "ConfigurationManager delegate not set before Init.";
+  return delegate_->Init();
+}
 
 WEAVE_ERROR ConfigurationManagerImpl::_GetDeviceId(uint64_t& device_id) {
   return delegate_->GetDeviceId(device_id);
@@ -50,17 +55,11 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetVendorId(uint16_t& vendor_id) {
   return delegate_->GetVendorId(vendor_id);
 }
 
-bool ConfigurationManagerImpl::_IsFullyProvisioned() {
-  return delegate_->IsFullyProvisioned();
-}
+bool ConfigurationManagerImpl::_IsFullyProvisioned() { return delegate_->IsFullyProvisioned(); }
 
-bool ConfigurationManagerImpl::_IsPairedToAccount() {
-  return delegate_->IsPairedToAccount();
-}
+bool ConfigurationManagerImpl::_IsPairedToAccount() { return delegate_->IsPairedToAccount(); }
 
-bool ConfigurationManagerImpl::_IsMemberOfFabric() {
-  return delegate_->IsMemberOfFabric();
-}
+bool ConfigurationManagerImpl::_IsMemberOfFabric() { return delegate_->IsMemberOfFabric(); }
 
 GroupKeyStoreBase* ConfigurationManagerImpl::_GetGroupKeyStore(void) {
   return delegate_->GetGroupKeyStore();
@@ -84,6 +83,8 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetDeviceDescriptorTLV(uint8_t* buf, size
 }
 
 void ConfigurationManagerImpl::SetDelegate(std::unique_ptr<Delegate> delegate) {
+  FX_CHECK(!(delegate && delegate_)) << "Attempt to set an already set delegate. Must explicitly "
+                                        "clear the existing delegate first.";
   delegate_ = std::move(delegate);
   if (delegate_) {
     delegate_->SetConfigurationManagerImpl(this);
