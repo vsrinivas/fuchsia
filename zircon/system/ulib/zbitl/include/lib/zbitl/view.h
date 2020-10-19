@@ -20,10 +20,35 @@
 
 namespace zbitl {
 
-/// The zbitl::View template class provides an error-checking container view of
-/// a ZBI.  It satisfies the C++20 std::forward_range concept; it satisfies the
+/// The zbitl::View class provides functionality for processing ZBI items in various
+/// storage formats.
+///
+/// For example, the entries in a ZBI present in memory can be enumerated as follows:
+///
+///     void ProcessZbiEntries(std::string_view data) {
+///       // Create the view.
+///       zbitl::View<std::string_view> view{data};
+///
+///       // Iterate over entries.
+///       for (const auto& entry : view) {
+///         printf("Found entry of type %x with payload size %ld.\n",
+///                entry.header->type,     // entry.header has type similar to "zbi_header_t *".
+///                entry.payload.size());  // entry.payload has type "std::string_view".
+///       }
+///
+///       // Callers are required to check for errors (or call "ignore_error")
+///       // prior to object destruction. See "Error checking" below.
+///       if (auto error = view.take_error(); error.is_error()) {
+///         printf("Error encountered!\n");
+///         // ...
+///       }
+///     }
+///
+/// zbitl::View satisfies the C++20 std::forward_range concept; it satisfies the
 /// std::view concept if the Storage and Storage::error_type types support
 /// constant-time copy/move/assignment.
+///
+/// ## Error checking
 ///
 /// The "error-checking view" pattern means that the container/range/view API
 /// of begin() and end() iterators is supported, but when begin() or
@@ -36,11 +61,15 @@ namespace zbitl {
 /// zbitl::View object must be serialized and after begin() or operator++()
 /// yields end(), take_error() must be checked before using begin() again.
 ///
+/// ## Iteration
+///
 /// Each time begin() is called the underlying storage is examined afresh, so
 /// it's safe to reuse a zbitl::View object after changing the data.  Reducing
 /// the size of the underlying storage invalidates any iterators that pointed
 /// past the new end of the image.  It's simplest just to assume that changing
 /// the underlying storage always invalidates all iterators.
+///
+/// ## Storage
 ///
 /// The Storage type is some type that can be abstractly considered to have
 /// non-owning "view" semantics: it doesn't hold the storage of the ZBI, it
