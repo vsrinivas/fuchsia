@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import collections
 import json
 import os
 import pathlib
@@ -63,13 +64,27 @@ def main():
     # Index tests.json
     with open(os.path.join(args.out_dir, "tests.json")) as tests_json:
         tests = json.load(tests_json)
-    ninja_line_to_test_label = {
-        # Transform GN label to Ninja rule name, for example:
-        # //my/gn:path($my_toolchain) -> phony/my/gn/path
-        "ninja explain: phony/" +
-        label[2:].partition("(")[0].replace(":", "/") + " is dirty": label
-        for label in (entry["test"]["label"] for entry in tests)
-    }
+
+    phony_rule_to_test_name = collections.defaultdict(set)
+    for entry in tests:
+        label = entry["test"]["label"]
+        # Remove leading "//" and toolchain part
+        # "//my/gn:path(//build/toolchain:host_x64)" -> "my/gn:path"
+        no_toolchain = label[2:].partition("(")[0]
+        # Convert label to rule path
+        # "my/gn:path" -> "my/gn/path"
+        # "foo/bar:bar" -> "foo/bar"
+        directory, _, name = no_toolchain.partition(":")
+        if not name:
+            # "foo/bar" -> "foo/bar"
+            rule = directory
+        elif directory.rpartition("/")[2] == name:
+            # "foo/bar:bar" -> "foo/bar"
+            rule = directory
+        else:
+            # "foo/bar:qux" -> "foo/bar/qux"
+            rule = directory + "/" + name
+        phony_rule_to_test_name[rule + " is dirty"].add(entry["test"]["name"])
 
     # Touch all modified files so they're newer than any rules
     git_base = subprocess.check_output(
@@ -96,16 +111,23 @@ def main():
             stderr=subprocess.STDOUT,
         ).splitlines()
 
-    # Check stale rules against test labels
-    affected_labels = {ninja_line_to_test_label.get(line, None) for line in ninja}
-    affected_labels.discard(None)
-    if not affected_labels:
+    # Check stale rules against test names
+    affected_tests = set()
+    for line in ninja:
+        if not line.startswith("ninja explain: "):
+            continue
+        rule = line.partition("phony/")[2]
+        if not rule:
+            continue
+        affected_tests.update(phony_rule_to_test_name[rule])
+
+    if not affected_tests:
         if args.verbose:
             print("No affected tests")
         return 0
     if args.verbose:
         print("Affected tests:")
-        print("\n".join(sorted(affected_labels)))
+        print("\n".join(sorted(affected_tests)))
         print()
 
     # Run affected tests
@@ -115,7 +137,7 @@ def main():
         return 0
 
     return subprocess.run(
-        ["fx", "test"] + sorted(affected_labels) + args.test_args,
+        ["fx", "test"] + sorted(affected_tests) + args.test_args,
     ).returncode
 
 
