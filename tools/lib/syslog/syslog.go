@@ -11,6 +11,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
+	"go.fuchsia.dev/fuchsia/tools/lib/syslog/constants"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 )
 
@@ -75,6 +76,9 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 		if err := s.client.ReconnectWithBackoff(ctx, retry.NewConstantBackoff(defaultReconnectInterval)); err != nil {
 			// The context probably got cancelled before we were able to
 			// reconnect.
+			if ctx.Err() != nil {
+				logger.Errorf(ctx, "syslog: %s: %v", constants.CtxReconnectError, ctx.Err())
+			}
 			return err
 		}
 		// Start streaming from the beginning of the system's uptime again now that

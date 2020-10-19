@@ -10,6 +10,7 @@ go_library("lib") {
   deps = [
     "//tools/bootserver:bootserverconstants",
     "//tools/botanist:constants",
+    "//tools/lib/syslog:constants",
     "//tools/net/netutil:constants",
     "//tools/net/sshutil:constants",
     "//tools/testing/testparser",

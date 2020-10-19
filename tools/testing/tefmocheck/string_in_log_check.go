@@ -12,6 +12,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
 	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
+	syslogconstants "go.fuchsia.dev/fuchsia/tools/lib/syslog/constants"
 	netutilconstants "go.fuchsia.dev/fuchsia/tools/net/netutil/constants"
 	sshutilconstants "go.fuchsia.dev/fuchsia/tools/net/sshutil/constants"
 	testrunnerconstants "go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
@@ -203,6 +204,12 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// For fxbug.dev/61419.
 	// Error is being logged at https://fuchsia.googlesource.com/fuchsia/+/675c6b9cc2452cd7108f075d91e048218b92ae69/garnet/bin/run_test_component/main.cc#431
 	ret = append(ret, &stringInLogCheck{String: ".cmx canceled due to timeout.", Type: swarmingOutputType, OnlyOnStates: []string{"TIMED_OUT"}})
+	// For fxbug.dev/61420.
+	ret = append(ret, &stringInLogCheck{
+		String:       fmt.Sprintf("syslog: %s", syslogconstants.CtxReconnectError),
+		Type:         swarmingOutputType,
+		OnlyOnStates: []string{"TIMED_OUT"},
+	})
 	// For fxbug.dev/52719.
 	// Kernel panics and other low-level errors often cause crashes that
 	// manifest as SSH failures, so this check must come after all
