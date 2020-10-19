@@ -17,6 +17,13 @@ int main(int argc, const char** argv) {
   zx_status_t status, call_status;
   status = fdr->Reset(&call_status);
   if (status != ZX_OK) {
+    if (status == ZX_ERR_PEER_CLOSED) {
+      // "/svc/fuchsia.recovery.FactoryReset" may not be available if the cli
+      // is run from the serial console which does not depend on appmgr.
+      fprintf(stderr,
+              "If you're running this from the serial console, "
+              "that's unsupported -- try again from fx shell.\n");
+    }
     return status;
   }
   return call_status;
