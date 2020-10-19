@@ -404,6 +404,7 @@ mod tests {
                             w_env.add_search(proxy);
                         }
                         ProfileRequest::Connect { .. } => {}
+                        ProfileRequest::ConnectSco { .. } => {}
                     }
                 }
             }

@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::{
         Channel, ConnectParameters, ConnectionReceiverProxy, MockPeerRequest, PeerObserverMarker,
         ProfileAdvertiseResponder, ProfileRequest, ProfileRequestStream, ProfileTestRequest,
-        ProfileTestRequestStream, SearchResultsProxy, ServiceClassProfileIdentifier,
+        ProfileTestRequestStream, ScoErrorCode, SearchResultsProxy, ServiceClassProfileIdentifier,
         ServiceDefinition,
     },
     fidl_fuchsia_sys::EnvironmentOptions,
@@ -158,6 +158,11 @@ impl TestProfileServer {
             ProfileRequest::Search { service_uuid, attr_ids, results, .. } => {
                 let proxy = results.into_proxy().expect("couldn't get connection receiver");
                 self.new_search(id, service_uuid, attr_ids, proxy);
+            }
+            ProfileRequest::ConnectSco { receiver, .. } => {
+                let proxy = receiver.into_proxy().expect("couldn't get sco connection receiver");
+                let _ = proxy.error(ScoErrorCode::Failure);
+                error!("ConnectSco not implemented");
             }
         }
     }

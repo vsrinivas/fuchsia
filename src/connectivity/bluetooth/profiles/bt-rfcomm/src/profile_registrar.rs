@@ -399,6 +399,12 @@ impl ProfileRegistrar {
                 // Simply forward over the search to the Profile server.
                 let _ = self.profile_upstream.search(service_uuid, &attr_ids, results);
             }
+            bredr::ProfileRequest::ConnectSco {
+                mut peer_id, initiator, params, receiver, ..
+            } => {
+                let _ =
+                    self.profile_upstream.connect_sco(&mut peer_id, initiator, params, receiver);
+            }
         }
         None
     }
@@ -542,6 +548,30 @@ mod tests {
 
         match exec.run_until_stalled(&mut s.next()) {
             Poll::Ready(Some(Ok(x))) => (x, server),
+            x => panic!("Expected ProfileRequest but got: {:?}", x),
+        }
+    }
+
+    /// Creates a Profile::ConnectSco request.
+    fn generate_connect_sco_request(
+        exec: &mut fasync::Executor,
+    ) -> (bredr::ProfileRequest, bredr::ScoConnectionReceiverRequestStream) {
+        let (profile_proxy, mut profile_request_stream) =
+            create_proxy_and_stream::<bredr::ProfileMarker>().unwrap();
+        let (receiver_client, receiver_server) =
+            create_request_stream::<bredr::ScoConnectionReceiverMarker>().unwrap();
+
+        assert!(profile_proxy
+            .connect_sco(
+                &mut PeerId(1).into(),
+                /*initiator=*/ true,
+                bredr::ScoConnectionParameters::new_empty(),
+                receiver_client
+            )
+            .is_ok());
+
+        match exec.run_until_stalled(&mut profile_request_stream.next()) {
+            Poll::Ready(Some(Ok(request))) => (request, receiver_server),
             x => panic!("Expected ProfileRequest but got: {:?}", x),
         }
     }
@@ -921,6 +951,25 @@ mod tests {
         // The search request should be relayed directly to the Profile Server.
         match exec.run_until_stalled(&mut profile_requests.next()) {
             Poll::Ready(Some(Ok(bredr::ProfileRequest::Search { .. }))) => {}
+            x => panic!("Expected search request, got: {:?}", x),
+        }
+    }
+
+    /// This test validates that client ConnectSco requests are relayed directly upstream.
+    #[test]
+    fn test_handle_connect_sco_request() {
+        let (mut exec, mut server, mut profile_requests) = setup_server();
+
+        let (connect_sco_request, _receiver_server) = generate_connect_sco_request(&mut exec);
+
+        let handle_fut = server.handle_profile_request(connect_sco_request);
+        pin_mut!(handle_fut);
+
+        assert!(exec.run_until_stalled(&mut handle_fut).is_ready());
+
+        // The connect request should be relayed directly to the Profile Server.
+        match exec.run_until_stalled(&mut profile_requests.next()) {
+            Poll::Ready(Some(Ok(bredr::ProfileRequest::ConnectSco { .. }))) => {}
             x => panic!("Expected search request, got: {:?}", x),
         }
     }

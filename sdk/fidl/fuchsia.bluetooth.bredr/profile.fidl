@@ -173,4 +173,10 @@ const uint8 MAX_SERVICES_PER_ADVERTISEMENT = 32;
     /// be connected.
     Connect(fuchsia.bluetooth.PeerId peer_id, ConnectParameters connection)
         -> (Channel channel) error fuchsia.bluetooth.ErrorCode;
+
+    /// Attempt to establish a synchronous connection to `peer_id` configured using `params`.
+    /// If `initiator` is true, a connection request will be sent. If `initiator` is false, the host will
+    /// attempt to accept the next connection request.
+    /// The result of the connection attempt will be returned with `receiver`. Dropping `receiver` will cancel the request.
+    ConnectSco(fuchsia.bluetooth.PeerId peer_id, bool initiator, ScoConnectionParameters params, ScoConnectionReceiver receiver);
 };
