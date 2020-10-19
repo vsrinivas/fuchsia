@@ -12,6 +12,7 @@ import (
 
 	resultpb "go.chromium.org/luci/resultdb/proto/v1"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 func TestParseSummary(t *testing.T) {
@@ -33,10 +34,29 @@ func TestParseSummary(t *testing.T) {
 		t.Errorf(
 			"Incorrect number of TestResult in the first chunk, got %d, want %d",
 			len(requests[0].TestResults), testCount)
-
 	}
 	if requests[0].TestResults[0].TestId != "test_0" {
 		t.Errorf("Incorrect TestId parsed for first suite. got %s, want test_0", requests[0].TestResults[0].TestId)
+	}
+}
+
+func TestSetTestDetailsToResultSink(t *testing.T) {
+	detail := createTestDetailWithTestCase(5)
+	result, err := testDetailsToResultSink(detail, "")
+	if err != nil {
+		t.Fatalf("Cannot parse test detail. got %s", err)
+	}
+	foundTag := false
+	for _, tag := range result.Tags {
+		if tag.Key == "test_case_count" {
+			foundTag = true
+			if tag.Value != "5" {
+				t.Errorf("Found incorrect number of test cases in tag, got %s, want 5", tag.Value)
+			}
+		}
+	}
+	if !foundTag {
+		t.Error("Did not find test_case_count in tag")
 	}
 }
 
@@ -54,6 +74,29 @@ func createTestSummary(testCount int) *runtests.TestSummary {
 		})
 	}
 	return &runtests.TestSummary{Tests: t}
+}
+
+func createTestDetailWithTestCase(testCase int) *runtests.TestDetails {
+	t := []testparser.TestCaseResult{}
+	for i := 0; i < testCase; i++ {
+		t = append(t, testparser.TestCaseResult{
+			DisplayName: fmt.Sprintf("foo/bar_%d", i),
+			SuiteName:   "foo",
+			CaseName:    fmt.Sprintf("bar_%d", i),
+			Status:      testparser.Pass,
+			Format:      "Rust",
+		})
+	}
+	return &runtests.TestDetails{
+		Name:                 "foo",
+		GNLabel:              "some label",
+		OutputFile:           "some file path",
+		Result:               runtests.TestSuccess,
+		StartTime:            time.Now(),
+		DurationMillis:       39797,
+		IsTestingFailureMode: false,
+		Cases:                t,
+	}
 }
 
 func TestIsReadable(t *testing.T) {

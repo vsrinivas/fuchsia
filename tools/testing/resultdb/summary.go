@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -93,6 +94,7 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *run
 func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string) (*sinkpb.TestResult, error) {
 	r := sinkpb.TestResult{
 		TestId: testDetail.Name,
+		Tags:   []*resultpb.StringPair{{Key: "test_case_count", Value: strconv.Itoa(len(testDetail.Cases))}},
 	}
 	testStatus, err := testDetailResultToResultDBStatus(testDetail.Result)
 	if err != nil {
