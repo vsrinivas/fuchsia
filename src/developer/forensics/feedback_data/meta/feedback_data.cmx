@@ -22,8 +22,8 @@
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sysinfo.SysInfo",
-            "fuchsia.tracing.provider.Registry",
             "fuchsia.time.Utc",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.update.channel.Provider"
         ]

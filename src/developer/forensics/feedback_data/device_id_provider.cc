@@ -6,7 +6,10 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <memory>
 #include <optional>
+#include <tuple>
+#include <utility>
 
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/files/directory.h"
@@ -17,6 +20,37 @@
 namespace forensics {
 namespace feedback_data {
 namespace {
+
+// Server for |fuchsia.feedback.DeviceIdProvider| that only responds to the first call to GetId as
+// the ID never changes and the method is a hanging get.
+class DeviceIdProvider : public fuchsia::feedback::DeviceIdProvider {
+ public:
+  DeviceIdProvider(async_dispatcher_t* dispatcher,
+                   ::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request,
+                   ::fit::function<void(zx_status_t)> on_channel_close, std::string* device_id)
+      : connection_(this, std::move(request), dispatcher),
+        has_been_called_(false),
+        device_id_(device_id) {
+    connection_.set_error_handler(std::move(on_channel_close));
+  }
+
+  // |fuchsia.feedback.DeviceIdProvider|
+  void GetId(GetIdCallback callback) override {
+    // This is the second call on this connection and we want to leave it hanging forever.
+    if (has_been_called_) {
+      return;
+    }
+
+    callback(*device_id_);
+    has_been_called_ = true;
+  }
+
+ private:
+  ::fidl::Binding<fuchsia::feedback::DeviceIdProvider> connection_;
+
+  bool has_been_called_;
+  std::string* device_id_;
+};
 
 // Reads a device id from the file at |path|. If the device id doesn't exist or is invalid, return
 // a nullopt.
@@ -51,10 +85,25 @@ std::string InitializeDeviceId(const std::string& path) {
 
 }  // namespace
 
-DeviceIdProvider::DeviceIdProvider(const std::string& path)
-    : device_id_(InitializeDeviceId(path)) {}
+DeviceIdManager::DeviceIdManager(async_dispatcher_t* dispatcher, const std::string& path)
+    : dispatcher_(dispatcher), device_id_(InitializeDeviceId(path)), next_provider_idx_(0u) {}
 
-void DeviceIdProvider::GetId(GetIdCallback callback) { callback(device_id_); }
+void DeviceIdManager::AddBinding(
+    ::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request,
+    ::fit::function<void(zx_status_t)> on_channel_close) {
+  const size_t idx = next_provider_idx_++;
+  providers_.emplace(
+      idx,
+      std::make_unique<DeviceIdProvider>(
+          dispatcher_, std::move(request),
+          [this, idx, on_channel_close = std::move(on_channel_close)](const zx_status_t status) {
+            // Execute |on_channel_close| before removing the created DeviceIdProvider from
+            // |providers_|.
+            on_channel_close(status);
+            providers_.erase(idx);
+          },
+          &device_id_));
+}
 
 }  // namespace feedback_data
 }  // namespace forensics

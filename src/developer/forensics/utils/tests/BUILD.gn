@@ -125,6 +125,24 @@ executable("device_id_provider_ptr_unittest_exe") {
   ]
 }
 
+executable("hanging_get_ptr_unittest_exe") {
+  testonly = true
+
+  sources = [ "hanging_get_ptr_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:device_id_provider",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/fidl:hanging_get_ptr",
+    "//src/lib/fxl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
+  ]
+}
+
 executable("inspect_node_manager_unittest_exe") {
   testonly = true
 
@@ -315,6 +333,14 @@ fuchsia_component("device_id_provider_ptr_unittest") {
   deps = [ ":device_id_provider_ptr_unittest_exe" ]
 }
 
+fuchsia_component("hanging_get_ptr_unittest") {
+  testonly = true
+
+  manifest = "meta/hanging_get_ptr_unittest.cmx"
+
+  deps = [ ":hanging_get_ptr_unittest_exe" ]
+}
+
 fuchsia_component("inspect_node_manager_unittest") {
   testonly = true
 
@@ -391,6 +417,7 @@ fuchsia_test_package("feedback-utils-tests") {
     ":cobalt_unittest",
     ":component_unittest",
     ":device_id_provider_ptr_unittest",
+    ":hanging_get_ptr_unittest",
     ":inspect_node_manager_unittest",
     ":inspect_protocol_stats_unittest",
     ":log_format_unittest",

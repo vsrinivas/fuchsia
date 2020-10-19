@@ -45,7 +45,7 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       inspect_manager_(root_node),
       cobalt_(dispatcher_, services),
       clock_(),
-      device_id_provider_(kDeviceIdPath),
+      device_id_manager_(dispatcher_, kDeviceIdPath),
       datastore_(dispatcher_, services, &cobalt_, config.annotation_allowlist,
                  config.attachment_allowlist, is_first_instance),
       data_provider_(dispatcher_, services, &clock_, is_first_instance, config.annotation_allowlist,
@@ -86,11 +86,9 @@ void MainService::HandleDataProviderRequest(
 
 void MainService::HandleDeviceIdProviderRequest(
     ::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request) {
-  device_id_provider_connections_.AddBinding(&device_id_provider_, std::move(request), dispatcher_,
-                                             [this](const zx_status_t status) {
-                                               inspect_manager_.UpdateDeviceIdProviderProtocolStats(
-                                                   &InspectProtocolStats::CloseConnection);
-                                             });
+  device_id_manager_.AddBinding(std::move(request), [this](const zx_status_t status) {
+    inspect_manager_.UpdateDeviceIdProviderProtocolStats(&InspectProtocolStats::CloseConnection);
+  });
   inspect_manager_.UpdateDeviceIdProviderProtocolStats(&InspectProtocolStats::NewConnection);
 }
 

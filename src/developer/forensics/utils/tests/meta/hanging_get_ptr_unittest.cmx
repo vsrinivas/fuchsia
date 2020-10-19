@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/hanging_get_ptr_unittest_exe"
+    }
+}

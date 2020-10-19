@@ -172,6 +172,7 @@ executable("device_id_provider_unittest_exe") {
     "//src/developer/forensics/feedback_data:device_id_provider",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/utils:errors",
     "//src/lib/files:files",
     "//src/lib/uuid:uuid",

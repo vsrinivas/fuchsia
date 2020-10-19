@@ -10,7 +10,28 @@
 namespace forensics {
 namespace stubs {
 
-void DeviceIdProvider::GetId(GetIdCallback callback) { callback(device_id_); }
+void DeviceIdProviderBase::GetId(GetIdCallback callback) { GetIdInternal(std::move(callback)); }
+
+void DeviceIdProviderBase::GetIdInternal(GetIdCallback callback) {
+  callback_ = std::move(callback);
+  if (!dirty_) {
+    dirty_ = true;
+  } else {
+    FX_CHECK(device_id_.has_value());
+    callback_(device_id_.value());
+    dirty_ = false;
+  }
+}
+
+void DeviceIdProviderBase::SetDeviceId(std::string device_id) {
+  device_id_ = std::move(device_id);
+  if (dirty_ && callback_) {
+    callback_(device_id_.value());
+  }
+  dirty_ = false;
+}
+
+void DeviceIdProvider::GetId(GetIdCallback callback) { GetIdInternal(std::move(callback)); }
 
 DeviceIdProviderExpectsOneCall::~DeviceIdProviderExpectsOneCall() {
   FX_CHECK(!is_first_) << "Too few calls made to GetId, expecting 1 call";
@@ -19,7 +40,7 @@ DeviceIdProviderExpectsOneCall::~DeviceIdProviderExpectsOneCall() {
 void DeviceIdProviderExpectsOneCall::GetId(GetIdCallback callback) {
   FX_CHECK(is_first_) << "Too many calls made to GetId, expecting 1 call";
   is_first_ = false;
-  callback(device_id());
+  GetIdInternal(std::move(callback));
 }
 
 void DeviceIdProviderClosesFirstConnection::GetId(GetIdCallback callback) {
@@ -29,7 +50,7 @@ void DeviceIdProviderClosesFirstConnection::GetId(GetIdCallback callback) {
     return;
   }
 
-  callback(device_id());
+  GetIdInternal(std::move(callback));
 }
 
 }  // namespace stubs

@@ -51,7 +51,7 @@ source_set("device_id_provider_ptr") {
   ]
 
   public_deps = [
-    ":caching_ptr",
+    ":hanging_get_ptr",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/utils:errors",
@@ -61,6 +61,21 @@ source_set("device_id_provider_ptr") {
   ]
 
   deps = [ "//src/developer/forensics/utils:errors" ]
+}
+
+source_set("hanging_get_ptr") {
+  sources = [ "hanging_get_ptr.h" ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/fit",
+    "//src/lib/backoff",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
 }
 
 source_set("oneshot_ptr") {

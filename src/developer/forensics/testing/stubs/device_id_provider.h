@@ -15,20 +15,34 @@
 namespace forensics {
 namespace stubs {
 
-using DeviceIdProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, DeviceIdProvider);
-
-class DeviceIdProvider : public DeviceIdProviderBase {
+class DeviceIdProviderBase
+    : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, DeviceIdProvider) {
  public:
-  DeviceIdProvider(const std::string& device_id) : device_id_(device_id) {}
+  void SetDeviceId(std::string device_id);
 
   // |fuchsia::feedback::DeviceIdProvider|
   void GetId(GetIdCallback callback) override;
 
  protected:
-  const std::string& device_id() { return device_id_; }
+  DeviceIdProviderBase() : device_id_(std::nullopt), callback_(nullptr) {}
+  explicit DeviceIdProviderBase(const std::string& device_id)
+      : device_id_(device_id), callback_(nullptr) {}
+
+  void GetIdInternal(GetIdCallback callback);
 
  private:
-  const std::string device_id_;
+  std::optional<std::string> device_id_;
+
+  GetIdCallback callback_;
+  bool dirty_{true};
+};
+
+class DeviceIdProvider : public DeviceIdProviderBase {
+ public:
+  explicit DeviceIdProvider(const std::string& device_id) : DeviceIdProviderBase(device_id) {}
+
+  // |fuchsia::feedback::DeviceIdProvider|
+  void GetId(GetIdCallback callback) override;
 };
 
 class DeviceIdProviderNeverReturns : public DeviceIdProviderBase {
@@ -37,9 +51,10 @@ class DeviceIdProviderNeverReturns : public DeviceIdProviderBase {
   STUB_METHOD_DOES_NOT_RETURN(GetId, GetIdCallback);
 };
 
-class DeviceIdProviderExpectsOneCall : public DeviceIdProvider {
+class DeviceIdProviderExpectsOneCall : public DeviceIdProviderBase {
  public:
-  DeviceIdProviderExpectsOneCall(const std::string& device_id) : DeviceIdProvider(device_id) {}
+  explicit DeviceIdProviderExpectsOneCall(const std::string& device_id)
+      : DeviceIdProviderBase(device_id) {}
 
   ~DeviceIdProviderExpectsOneCall();
 
@@ -50,10 +65,10 @@ class DeviceIdProviderExpectsOneCall : public DeviceIdProvider {
   bool is_first_ = true;
 };
 
-class DeviceIdProviderClosesFirstConnection : public DeviceIdProvider {
+class DeviceIdProviderClosesFirstConnection : public DeviceIdProviderBase {
  public:
   DeviceIdProviderClosesFirstConnection(const std::string& device_id)
-      : DeviceIdProvider(device_id) {}
+      : DeviceIdProviderBase(device_id) {}
 
   // |fuchsia::feedback::DeviceIdProvider|
   void GetId(GetIdCallback callback) override;

@@ -59,8 +59,7 @@ class MainService {
   cobalt::Logger cobalt_;
   timekeeper::SystemClock clock_;
 
-  DeviceIdProvider device_id_provider_;
-  ::fidl::BindingSet<fuchsia::feedback::DeviceIdProvider> device_id_provider_connections_;
+  DeviceIdManager device_id_manager_;
 
   Datastore datastore_;
 

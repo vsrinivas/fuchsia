@@ -15,7 +15,7 @@
 #include <string>
 
 #include "src/developer/forensics/utils/errors.h"
-#include "src/developer/forensics/utils/fidl/caching_ptr.h"
+#include "src/developer/forensics/utils/fidl/hanging_get_ptr.h"
 
 namespace forensics {
 namespace fidl {
@@ -33,7 +33,7 @@ class DeviceIdProviderPtr {
   // Makes the unique call on |connection_|.
   void MakeCall();
 
-  CachingPtr<fuchsia::feedback::DeviceIdProvider, std::string> connection_;
+  HangingGetPtr<fuchsia::feedback::DeviceIdProvider, std::string> connection_;
 };
 
 }  // namespace fidl
