@@ -269,7 +269,7 @@ success("Uint64Max") {
 // Note: floats are tricky and there may be failures do to cpu architecture
 // and similar reasons.
 
-success("Float32Zero") {
+success("Float32PositiveZero") {
     value = MyFloat32 {
         value: 0.0,
     },
@@ -280,7 +280,18 @@ success("Float32Zero") {
     },
 }
 
-success("Float32One") {
+success("Float32NegativeZero") {
+    value = MyFloat32 {
+        value: raw_float(0b1_00000000_00000000000000000000000),
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0x00,0x80,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+success("Float32PositiveOne") {
     value = MyFloat32 {
         value: 1.0,
     },
@@ -291,7 +302,7 @@ success("Float32One") {
     },
 }
 
-success("Float32MinusOne") {
+success("Float32NegativeOne") {
     value = MyFloat32 {
         value: -1.0,
     },
@@ -302,6 +313,16 @@ success("Float32MinusOne") {
     },
 }
 
+success("Float32Min") {
+    value = MyFloat32 {
+        value: -3.40282346638528859811704183484516925440e+38,
+    },
+    bytes = {
+        v1 = [
+            0xff,0xff,0x7f,0xff,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
 success("Float32Max") {
     value = MyFloat32 {
         value: 3.40282346638528859811704183484516925440e+38,
@@ -313,7 +334,140 @@ success("Float32Max") {
     },
 }
 
-success("Float64Zero") {
+success("Float32SmallestNormalizedPositive") {
+    value = MyFloat32 {
+        value: 1.1754943508222875e-38,
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0x80,0x00,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+success("Float32SmallestNormalizedNegative") {
+    value = MyFloat32 {
+        value: -1.1754943508222875e-38,
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0x80,0x80,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+success("Float32LargestDenormalizedPositive") {
+    value = MyFloat32 {
+        value: 1.1754942106924411e-38,
+    },
+    bytes = {
+        v1 = [
+            0xff,0xff,0x7f,0x00,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+success("Float32LargestDenormalizedNegative") {
+    value = MyFloat32 {
+        value: -1.1754942106924411e-38,
+    },
+    bytes = {
+        v1 = [
+            0xff,0xff,0x7f,0x80,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+success("Float32SmallestDenormalizedPositive") {
+    value = MyFloat32 {
+        value: 1.401298464324817e-45,
+    },
+    bytes = {
+        v1 = [
+            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+success("Float32SmallestDenormalizedNegative") {
+    value = MyFloat32 {
+        value: -1.401298464324817e-45,
+    },
+    bytes = {
+        v1 = [
+            0x01,0x00,0x00,0x80,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+success("Float32PositiveInfinity") {
+    value = MyFloat32 {
+        value: raw_float(0b0_11111111_00000000000000000000000),
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0x80,0x7f,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+success("Float32NegativeInfinity") {
+    value = MyFloat32 {
+        value: raw_float(0b1_11111111_00000000000000000000000),
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0x80,0xff,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+// No decode_success because NaN != NaN.
+encode_success("Float32QuietNaN") {
+    value = MyFloat32 {
+        value: raw_float(0b0_11111111_10000000000000000000000),
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0xc0,0x7f,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+// No decode_success because NaN != NaN.
+encode_success("Float32SignallingNaN") {
+    bindings_denylist = [dart],
+    value = MyFloat32 {
+        value: raw_float(0b0_11111111_01000000000000000000000),
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0xa0,0x7f,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+// No decode_success because NaN != NaN.
+encode_success("Float32SignallingNaNCovertedToQuiet") {
+    // Dart only has double-precision floats. For FIDL float32, the bindings
+    // encode using ByteData.setFloat32 (takes a double) and decode using
+    // BytePart.getFloat32 (returns a double). For NaNs, these functions
+    // truncate/zero-extend the mantissa AND SET ITS MOST SIGNIFICANT BIT (the
+    // quiet bit). This effectively means that float32 signalling NaNs do not
+    // exist in Dart; they always get converted to quiet NaNs on encode/decode.
+    bindings_allowlist = [dart],
+    value = MyFloat32 {
+        value: raw_float(0b0_11111111_01000000000000000000000),
+    },
+    bytes = {
+        v1 = [
+            // 0xe0 instead of 0xa0: quiet bit set
+            0x00,0x00,0xe0,0x7f,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+success("Float64PositiveZero") {
     value = MyFloat64 {
         value: 0.0,
     },
@@ -324,7 +478,18 @@ success("Float64Zero") {
     },
 }
 
-success("Float64One") {
+success("Float64NegativeZero") {
+    value = MyFloat64 {
+        value: raw_float(0b1_00000000000_0000000000000000000000000000000000000000000000000000),
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x80,
+        ],
+    },
+}
+
+success("Float64PositiveOne") {
     value = MyFloat64 {
         value: 1.0,
     },
@@ -335,13 +500,24 @@ success("Float64One") {
     },
 }
 
-success("Float64MinusOne") {
+success("Float64NegativeOne") {
     value = MyFloat64 {
         value: -1.0,
     },
     bytes = {
         v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0xf0,0xbf,
+        ],
+    },
+}
+
+success("Float64Min") {
+    value = MyFloat64 {
+        value: -1.797693134862315708145274237317043567981e+308,
+    },
+    bytes = {
+        v1 = [
+            0xff,0xff,0xff,0xff,0xff,0xff,0xef,0xff,
         ],
     },
 }
@@ -353,6 +529,118 @@ success("Float64Max") {
     bytes = {
         v1 = [
             0xff,0xff,0xff,0xff,0xff,0xff,0xef,0x7f,
+        ],
+    },
+}
+
+success("Float64SmallestNormalizedPositive") {
+    value = MyFloat64 {
+        value: 2.2250738585072014e-308,
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0x00,0x00,0x00,0x00,0x10,0x00,
+        ],
+    },
+}
+
+success("Float64SmallestNormalizedNegative") {
+    value = MyFloat64 {
+        value: -2.2250738585072014e-308,
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0x00,0x00,0x00,0x00,0x10,0x80,
+        ],
+    },
+}
+
+success("Float64LargestDenormalizedPositive") {
+    value = MyFloat64 {
+        value: 2.225073858507201e-308,
+    },
+    bytes = {
+        v1 = [
+            0xff,0xff,0xff,0xff,0xff,0xff,0x0f,0x00,
+        ],
+    },
+}
+
+success("Float64LargestDenormalizedNegative") {
+    value = MyFloat64 {
+        value: -2.225073858507201e-308,
+    },
+    bytes = {
+        v1 = [
+            0xff,0xff,0xff,0xff,0xff,0xff,0x0f,0x80,
+        ],
+    },
+}
+
+success("Float64SmallestDenormalizedPositive") {
+    value = MyFloat64 {
+        value: 5.0e-324
+    },
+    bytes = {
+        v1 = [
+            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        ],
+    },
+}
+
+success("Float64SmallestDenormalizedNegative") {
+    value = MyFloat64 {
+        value: -5.0e-324
+    },
+    bytes = {
+        v1 = [
+            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x80,
+        ],
+    },
+}
+
+success("Float64PositiveInfinity") {
+    value = MyFloat64 {
+        value: raw_float(0b0_11111111111_0000000000000000000000000000000000000000000000000000),
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0x00,0x00,0x00,0x00,0xf0,0x7f,
+        ],
+    },
+}
+
+success("Float64NegativeInfinity") {
+    value = MyFloat64 {
+        value: raw_float(0b1_11111111111_0000000000000000000000000000000000000000000000000000),
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0x00,0x00,0x00,0x00,0xf0,0xff,
+        ],
+    },
+}
+
+// No decode_success because NaN != NaN.
+encode_success("Float64QuietNaN") {
+    value = MyFloat64 {
+        value: raw_float(0b0_11111111111_1000000000000000000000000000000000000000000000000000),
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0x00,0x00,0x00,0x00,0xf8,0x7f,
+        ],
+    },
+}
+
+// No decode_success because NaN != NaN.
+encode_success("Float64SignallingNaN") {
+    value = MyFloat64 {
+        value: raw_float(0b0_11111111111_0100000000000000000000000000000000000000000000000000),
+    },
+    bytes = {
+        v1 = [
+            0x00,0x00,0x00,0x00,0x00,0x00,0xf4,0x7f,
         ],
     },
 }

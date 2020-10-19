@@ -260,17 +260,28 @@ func TestFloatDeclConforms(t *testing.T) {
 		conformOk{0.0},
 		conformOk{1.5},
 		conformOk{-1.0},
+		conformOk{gidlir.RawFloat(0)},
 		conformFail{nil, "expecting float64"},
 		conformFail{float32(0.0), "expecting float64"},
 		conformFail{0, "expecting float64"},
 		conformFail{"foo", "expecting float64"},
-		// TODO(fxbug.dev/43020): Allow these once each backend supports them.
-		conformFail{math.Inf(1), "infinity not supported"},
-		conformFail{math.Inf(-1), "infinity not supported"},
-		conformFail{math.NaN(), "NaN not supported"},
+		conformFail{math.Inf(1), "must use raw_float"},
+		conformFail{math.Inf(-1), "must use raw_float"},
+		conformFail{math.NaN(), "must use raw_float"},
 	}
-	checkConforms(t, context{}, &FloatDecl{subtype: fidlir.Float32}, tests)
-	checkConforms(t, context{}, &FloatDecl{subtype: fidlir.Float64}, tests)
+	tests32 := []conformTest{
+		conformOk{math.MaxFloat32},
+		conformOk{gidlir.RawFloat(math.Float32bits(float32(math.Inf(1))))},
+		conformOk{gidlir.RawFloat(math.Float32bits(float32(math.NaN())))},
+		conformFail{gidlir.RawFloat(0x1122334455), "out of range"},
+	}
+	tests64 := []conformTest{
+		conformOk{math.MaxFloat64},
+		conformOk{gidlir.RawFloat(math.Float64bits(math.Inf(1)))},
+		conformOk{gidlir.RawFloat(math.Float64bits(math.NaN()))},
+	}
+	checkConforms(t, context{}, &FloatDecl{subtype: fidlir.Float32}, append(tests, tests32...))
+	checkConforms(t, context{}, &FloatDecl{subtype: fidlir.Float64}, append(tests, tests64...))
 }
 
 func TestStringDeclConforms(t *testing.T) {

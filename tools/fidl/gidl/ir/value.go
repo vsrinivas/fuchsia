@@ -7,9 +7,9 @@ package ir
 // Value represents any acceptable value used to represent a FIDL value.
 // This type may wrap one of:
 // - `string` for strings
-// - `int64` for negative numbers (of any size), bits, and enums
-// - `uint64` for positive numbers (of any size), bits, and enums
-// - `float64` for floating point numbers (of any size)
+// - `int64` for negative integers (of any size), bits, and enums
+// - `uint64` for nonnegative integers (of any size), bits, and enums
+// - `float64` or `RawFloat` for floating point numbers (of any size)
 // - `bool` for booleans
 // - `Handle` for handles
 // - `Record` for structs, tables, and unions
@@ -17,6 +17,11 @@ package ir
 // - `nil` for null values (only allowed for nullable types)
 // - `UnknownData` for unknown variants of unions
 type Value interface{}
+
+// A RawFloat is an integer whose bytes specify an IEEE 754 single or double
+// precision floating point number (sign bit = most significant bit). In the
+// single-precision case, the value should be within uint32 range.
+type RawFloat uint64
 
 // A Handle is an index into the test's []HandleDef.
 type Handle int

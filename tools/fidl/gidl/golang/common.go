@@ -113,6 +113,13 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		case *gidlmixer.BitsDecl, *gidlmixer.EnumDecl:
 			return fmt.Sprintf("%s(%d)", typeLiteral(decl), value)
 		}
+	case gidlir.RawFloat:
+		switch decl.(*gidlmixer.FloatDecl).Subtype() {
+		case fidlir.Float32:
+			return fmt.Sprintf("math.Float32frombits(%#b)", value)
+		case fidlir.Float64:
+			return fmt.Sprintf("math.Float64frombits(%#b)", value)
+		}
 	case string:
 		if decl.IsNullable() {
 			// Taking an address of a string literal is not allowed, so instead

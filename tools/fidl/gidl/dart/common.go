@@ -58,6 +58,13 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		case gidlmixer.NamedDeclaration:
 			return fmt.Sprintf("%s.ctor(%#v)", typeName(decl), value)
 		}
+	case gidlir.RawFloat:
+		switch decl.(*gidlmixer.FloatDecl).Subtype() {
+		case fidlir.Float32:
+			return fmt.Sprintf("Uint32List.fromList([%#x]).buffer.asByteData().getFloat32(0, Endian.host)", value)
+		case fidlir.Float64:
+			return fmt.Sprintf("Uint64List.fromList([%#x]).buffer.asByteData().getFloat64(0, Endian.host)", value)
+		}
 	case string:
 		return toDartStr(value)
 	case gidlir.Handle:

@@ -20,6 +20,7 @@ var conformanceTmpl = template.Must(template.New("conformanceTmpls").Parse(`
 package fidl_test
 
 import (
+	"math"
 	"reflect"
 	"testing"
 
@@ -29,8 +30,8 @@ import (
 	"syscall/zx/fidl"
 )
 
-// Introduce a dependency on reflect to avoid unused import errors if certain
-// GIDL tests are disabled.
+// Avoid unused import warnings if certain tests are disabled.
+var _ = math.Float32frombits
 var _ = reflect.Copy
 
 {{ if .EncodeSuccessCases }}

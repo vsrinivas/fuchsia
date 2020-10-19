@@ -109,6 +109,13 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			}
 			return fmt.Sprintf("%s::from_primitive(%v).unwrap()", declName(decl), primitive)
 		}
+	case gidlir.RawFloat:
+		switch decl.(*gidlmixer.FloatDecl).Subtype() {
+		case fidlir.Float32:
+			return fmt.Sprintf("f32::from_bits(%#b)", value)
+		case fidlir.Float64:
+			return fmt.Sprintf("f64::from_bits(%#b)", value)
+		}
 	case string:
 		var expr string
 		if fidlcommon.PrintableASCII(value) {

@@ -553,6 +553,9 @@ func (p *Parser) parseValue() (interface{}, error) {
 		if tok.value == "false" {
 			return false, nil
 		}
+		if tok.value == "raw_float" {
+			return p.parseRawFloat()
+		}
 		return p.parseRecord(tok.value)
 	case tLsquare:
 		return p.parseSlice()
@@ -604,6 +607,25 @@ func parseNum(tok token, neg bool) (interface{}, error) {
 			return uint64(val), nil
 		}
 	}
+}
+
+func (p *Parser) parseRawFloat() (interface{}, error) {
+	// Already parsed raw_float token.
+	if _, err := p.consumeToken(tLparen); err != nil {
+		return nil, err
+	}
+	tok, err := p.nextToken()
+	if err != nil {
+		return nil, err
+	}
+	raw, err := strconv.ParseUint(tok.value, 0, 64)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.consumeToken(tRparen); err != nil {
+		return nil, err
+	}
+	return ir.RawFloat(raw), nil
 }
 
 func (p *Parser) parseRecord(name string) (interface{}, error) {

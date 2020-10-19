@@ -220,7 +220,7 @@ func (decl *BoolDecl) Subtype() fidlir.PrimitiveSubtype {
 func (decl *BoolDecl) conforms(value interface{}, _ context) error {
 	switch value.(type) {
 	default:
-		return fmt.Errorf("expecting bool, found %T (%s)", value, value)
+		return fmt.Errorf("expecting bool, found %T (%v)", value, value)
 	case bool:
 		return nil
 	}
@@ -240,7 +240,7 @@ func (decl *IntegerDecl) Subtype() fidlir.PrimitiveSubtype {
 func (decl *IntegerDecl) conforms(value interface{}, _ context) error {
 	switch value := value.(type) {
 	default:
-		return fmt.Errorf("expecting int64 or uint64, found %T (%s)", value, value)
+		return fmt.Errorf("expecting int64 or uint64, found %T (%v)", value, value)
 	case int64:
 		if value < 0 {
 			if value < decl.lower {
@@ -274,12 +274,16 @@ func (decl *FloatDecl) conforms(value interface{}, _ context) error {
 	default:
 		return fmt.Errorf("expecting float64, found %T (%s)", value, value)
 	case float64:
-		// TODO(fxbug.dev/43020): Allow these once each backend supports them.
 		if math.IsNaN(value) {
-			return fmt.Errorf("NaN not supported: %v", value)
+			return fmt.Errorf("must use raw_float for NaN: %v", value)
 		}
 		if math.IsInf(value, 0) {
-			return fmt.Errorf("infinity not supported: %v", value)
+			return fmt.Errorf("must use raw_float for infinity: %v", value)
+		}
+		return nil
+	case gidlir.RawFloat:
+		if decl.subtype == fidlir.Float32 && value > math.MaxUint32 {
+			return fmt.Errorf("raw_float out of range for float32: %v", value)
 		}
 		return nil
 	}
@@ -297,7 +301,7 @@ func (decl *StringDecl) IsNullable() bool {
 func (decl *StringDecl) conforms(value interface{}, _ context) error {
 	switch value := value.(type) {
 	default:
-		return fmt.Errorf("expecting string, found %T (%s)", value, value)
+		return fmt.Errorf("expecting string, found %T (%v)", value, value)
 	case string:
 		if decl.bound == nil {
 			return nil
@@ -333,7 +337,7 @@ func (decl *HandleDecl) IsNullable() bool {
 func (decl *HandleDecl) conforms(value interface{}, ctx context) error {
 	switch value := value.(type) {
 	default:
-		return fmt.Errorf("expecting handle, found %T (%s)", value, value)
+		return fmt.Errorf("expecting handle, found %T (%v)", value, value)
 	case gidlir.Handle:
 		if v := int(value); v < 0 || v >= len(ctx.handleDefs) {
 			return fmt.Errorf("handle #%d out of range", value)

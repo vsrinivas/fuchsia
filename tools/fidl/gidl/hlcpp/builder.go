@@ -69,8 +69,6 @@ func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) s
 			return fmt.Sprintf("%s(%s)", typeName(decl), intString)
 		case *gidlmixer.EnumDecl:
 			return fmt.Sprintf("%s(%s)", typeName(decl), intString)
-		default:
-			panic(fmt.Sprintf("int64 value has non-integer decl: %T", decl))
 		}
 	case uint64:
 		switch decl := decl.(type) {
@@ -80,8 +78,6 @@ func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) s
 			return fmt.Sprintf("%s(%dull)", typeName(decl), value)
 		case *gidlmixer.EnumDecl:
 			return fmt.Sprintf("%s(%dull)", typeName(decl), value)
-		default:
-			panic(fmt.Sprintf("uint64 value has non-integer decl: %T", decl))
 		}
 	case float64:
 		switch decl := decl.(type) {
@@ -96,12 +92,14 @@ func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) s
 				}
 			case fidlir.Float64:
 				return fmt.Sprintf("%g", value)
-			default:
-				panic(fmt.Sprintf("unexpected floating point subtype %s", decl.Subtype()))
 			}
-		default:
-			panic(fmt.Sprintf("float64 value has non-floating-point decl: %T", decl))
-
+		}
+	case gidlir.RawFloat:
+		switch decl.(*gidlmixer.FloatDecl).Subtype() {
+		case fidlir.Float32:
+			return fmt.Sprintf("([] { uint32_t u = %#b; float f; memcpy(&f, &u, 4); return f; })()", value)
+		case fidlir.Float64:
+			return fmt.Sprintf("([] { uint64_t u = %#b; double d; memcpy(&d, &u, 8); return d; })()", value)
 		}
 	case string:
 		return fmt.Sprintf("%s(%s, %d)", typeName(decl), escapeStr(value), len(value))
@@ -115,14 +113,11 @@ func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) s
 			return b.visitArray(value, decl)
 		case *gidlmixer.VectorDecl:
 			return b.visitVector(value, decl)
-		default:
-			panic("unknown list decl type")
 		}
 	case nil:
 		return fmt.Sprintf("%s()", typeName(decl))
-	default:
-		panic(fmt.Sprintf("%T not implemented", value))
 	}
+	panic(fmt.Sprintf("not implemented: %T", value))
 }
 
 func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {

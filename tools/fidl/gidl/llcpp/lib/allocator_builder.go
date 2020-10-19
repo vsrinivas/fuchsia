@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
@@ -70,7 +71,7 @@ func formatPrimitive(value interface{}) string {
 	case uint64:
 		return fmt.Sprintf("%dull", value)
 	case float64:
-		return fmt.Sprintf("%f", value)
+		return fmt.Sprintf("%g", value)
 	}
 	panic("Unreachable")
 }
@@ -102,7 +103,13 @@ func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration, 
 			//
 			return fmt.Sprintf("([] { %s bits; *reinterpret_cast<%s*>(&bits) = %s; return bits; })()", declName(decl), primitiveTypeName(decl.Underlying.Subtype()), formatPrimitive(value))
 		}
-		panic(fmt.Errorf("Unsupported combination of value and decl: %v, %v", value, decl))
+	case gidlir.RawFloat:
+		switch decl.(*gidlmixer.FloatDecl).Subtype() {
+		case fidlir.Float32:
+			return fmt.Sprintf("([] { uint32_t u = %#b; float f; memcpy(&f, &u, 4); return f; })()", value)
+		case fidlir.Float64:
+			return fmt.Sprintf("([] { uint64_t u = %#b; double d; memcpy(&d, &u, 8); return d; })()", value)
+		}
 	case string:
 		if !isPointer {
 			// This clause is optional and simplifies the output.
@@ -119,8 +126,6 @@ func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration, 
 			return a.visitTable(value, decl, isPointer)
 		case *gidlmixer.UnionDecl:
 			return a.visitUnion(value, decl, isPointer)
-		default:
-			panic("unknown record decl type")
 		}
 	case []interface{}:
 		switch decl := decl.(type) {
@@ -128,14 +133,11 @@ func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration, 
 			return a.visitArray(value, decl, isPointer)
 		case *gidlmixer.VectorDecl:
 			return a.visitVector(value, decl, isPointer)
-		default:
-			panic("unknown list decl type")
 		}
 	case nil:
 		return a.construct(typeName(decl), false, "")
-	default:
-		panic(fmt.Sprintf("%T not implemented", value))
 	}
+	panic(fmt.Sprintf("not implemented: %T", value))
 }
 
 func (a *allocatorBuilder) visitStruct(value gidlir.Record, decl *gidlmixer.StructDecl, isPointer bool) string {

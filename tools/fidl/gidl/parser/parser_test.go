@@ -24,6 +24,8 @@ func TestParseValues(t *testing.T) {
 		{gidl: `-78`, expectedValue: int64(-78)},
 		{gidl: `3.14`, expectedValue: float64(3.14)},
 		{gidl: `-3.14`, expectedValue: float64(-3.14)},
+		{gidl: `raw_float(0)`, expectedValue: ir.RawFloat(0)},
+		{gidl: `raw_float(0b10_10)`, expectedValue: ir.RawFloat(0b10_10)},
 		{gidl: `"hello"`, expectedValue: "hello"},
 		{gidl: `"\x00"`, expectedValue: "\x00"},
 		{gidl: `"\""`, expectedValue: "\""},

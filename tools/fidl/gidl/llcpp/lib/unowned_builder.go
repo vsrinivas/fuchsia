@@ -70,17 +70,18 @@ func (b *unownedBuilder) visit(value interface{}, decl gidlmixer.Declaration) st
 				s := fmt.Sprintf("%g", value)
 				if strings.Contains(s, ".") {
 					return fmt.Sprintf("%sf", s)
-				} else {
-					return s
 				}
+				return s
 			case fidlir.Float64:
 				return fmt.Sprintf("%g", value)
-			default:
-				panic(fmt.Sprintf("unexpected floating point subtype %s", decl.Subtype()))
 			}
-		default:
-			panic(fmt.Sprintf("float64 value has non-floating-point decl: %T", decl))
-
+		}
+	case gidlir.RawFloat:
+		switch decl.(*gidlmixer.FloatDecl).Subtype() {
+		case fidlir.Float32:
+			return fmt.Sprintf("([] { uint32_t u = %#b; float f; memcpy(&f, &u, 4); return f; })()", value)
+		case fidlir.Float64:
+			return fmt.Sprintf("([] { uint64_t u = %#b; double d; memcpy(&d, &u, 8); return d; })()", value)
 		}
 	case string:
 		return fmt.Sprintf("fidl::StringView(%s, %d)", strconv.Quote(value), len(value))
@@ -94,8 +95,6 @@ func (b *unownedBuilder) visit(value interface{}, decl gidlmixer.Declaration) st
 			return b.visitTable(value, decl)
 		case *gidlmixer.UnionDecl:
 			return b.visitUnion(value, decl)
-		default:
-			panic("unknown record decl type")
 		}
 	case []interface{}:
 		switch decl := decl.(type) {
@@ -103,14 +102,11 @@ func (b *unownedBuilder) visit(value interface{}, decl gidlmixer.Declaration) st
 			return b.visitArray(value, decl)
 		case *gidlmixer.VectorDecl:
 			return b.visitVector(value, decl)
-		default:
-			panic("unknown list decl type")
 		}
 	case nil:
 		return fmt.Sprintf("%s{}", typeName(decl))
-	default:
-		panic(fmt.Sprintf("%T not implemented", value))
 	}
+	panic(fmt.Sprintf("not implemented: %T", value))
 }
 
 func (b *unownedBuilder) visitStruct(value gidlir.Record, decl *gidlmixer.StructDecl) string {
