@@ -146,6 +146,8 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
   auto parent_node = CreateTestNode(1u, "test_label_1", {2u});
   parent_node.set_transform({2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 1, 1, 1, 1});
   parent_node.set_location(std::move(parent_bounding_box));
+  fuchsia::accessibility::semantics::Node parent_copy;
+  parent_node.Clone(&parent_copy);  // Creates a copy for latter use.
   node_updates.emplace_back(std::move(parent_node));
 
   fuchsia::ui::gfx::BoundingBox child_bounding_box = {.min = {.x = 2.0, .y = 3.0, .z = 4.0},
@@ -161,7 +163,7 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
   ASSERT_TRUE(tree_ptr->Update(std::move(node_updates)));
   RunLoopUntilIdle();
 
-  // Highlight node 1.
+  // Highlight node 2.
   view_wrapper_->HighlightNode(2u);
 
   // Verify that annotation view received bounding_box (defined above) as parameter to
@@ -186,6 +188,43 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
   EXPECT_EQ((*highlight_scale)[0], 10.0f);
   EXPECT_EQ((*highlight_scale)[1], 15.0f);
   EXPECT_EQ((*highlight_scale)[2], 20.0f);
+
+  // Update the parent node to contain an offset. This will cause the child node, when it is
+  // highlighted again, to be scrolled in the x and y axis.
+  // Note that the scaling for x and y are still present, which are also applied here.
+  parent_copy.mutable_states()->set_viewport_offset({.x = 10, .y = 20});
+  std::vector<a11y::SemanticTree::TreeUpdate> second_node_updates;
+  second_node_updates.emplace_back(std::move(parent_copy));
+  ASSERT_TRUE(tree_ptr->Update(std::move(second_node_updates)));
+  RunLoopUntilIdle();
+
+  // Highlight node 2.
+  view_wrapper_->HighlightNode(2u);
+
+  {
+    // Verify again that the information received was correct, with the difference now that the
+    // offset must be applied to the translation vector. The rest stays the same.
+    const auto& highlight_bounding_box = annotation_view_->GetCurrentHighlight();
+    EXPECT_TRUE(highlight_bounding_box.has_value());
+    EXPECT_EQ(highlight_bounding_box->min.x, 2.0f);
+    EXPECT_EQ(highlight_bounding_box->min.y, 3.0f);
+    EXPECT_EQ(highlight_bounding_box->min.z, 4.0f);
+    EXPECT_EQ(highlight_bounding_box->max.x, 4.0f);
+    EXPECT_EQ(highlight_bounding_box->max.y, 5.0f);
+    EXPECT_EQ(highlight_bounding_box->max.z, 6.0f);
+
+    const auto& highlight_translation = annotation_view_->GetTranslationVector();
+    EXPECT_TRUE(highlight_translation.has_value());
+    EXPECT_EQ((*highlight_translation)[0], 41.0f);
+    EXPECT_EQ((*highlight_translation)[1], 121.0f);
+    EXPECT_EQ((*highlight_translation)[2], 121.0f);  // no change in z axis.
+
+    const auto& highlight_scale = annotation_view_->GetScaleVector();
+    EXPECT_TRUE(highlight_scale.has_value());
+    EXPECT_EQ((*highlight_scale)[0], 10.0f);
+    EXPECT_EQ((*highlight_scale)[1], 15.0f);
+    EXPECT_EQ((*highlight_scale)[2], 20.0f);
+  }
 
   // Clear highlights.
   view_wrapper_->ClearHighlights();

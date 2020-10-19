@@ -12,6 +12,27 @@
 #include "src/ui/a11y/lib/semantics/util/semantic_transform.h"
 
 namespace a11y {
+namespace {
+
+// Builds a transform of the form:
+// | 1  0  0  Tx |
+// | 0  1  0  Ty |
+// | 0  0  1  0 |
+// | 0  0  0  1  |
+// Where: Tx and Ty come from |offset|.
+fuchsia::ui::gfx::mat4 MakeTranslationTransform(const fuchsia::ui::gfx::vec2& offset) {
+  fuchsia::ui::gfx::mat4 transform;
+  transform.matrix[0] = 1;
+  transform.matrix[5] = 1;
+  transform.matrix[10] = 1;
+  transform.matrix[15] = 1;
+
+  transform.matrix[12] = offset.x;
+  transform.matrix[13] = offset.y;
+  return transform;
+}
+
+}  // namespace
 
 ViewWrapper::ViewWrapper(fuchsia::ui::views::ViewRef view_ref,
                          std::unique_ptr<ViewSemantics> view_semantics,
@@ -66,12 +87,25 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
   // The resulting transform will be of the same form as described above. Using
   // this matrix, we can simply extract the scaling and translation vectors
   // required by scenic: (Sx, Sy, Sz) and (Tx, Ty, Tz), respectively.
+  //
+  // Note that if a node has scroll offsets, it introduces a transform matrix filling only the
+  // translation values to account for the scrolling. This transform is part of the computation
+  // described above.
+
   uint32_t current_node_id = annotated_node->node_id();
   SemanticTransform transform;
   while (current_node_id != 0) {
     auto current_node = tree_weak_ptr->GetNode(current_node_id);
     FX_DCHECK(current_node);
-
+    // Don't apply scrolling that's on the target node, since scrolling affects
+    // the location of its children rather than it.  Apply scrolling before the
+    // node's transform, since the scrolling moves its children within it and
+    // then the transform moves the result to the parent's space.
+    if (current_node_id != node_id && current_node->has_states() &&
+        current_node->states().has_viewport_offset()) {
+      auto translation_matrix = MakeTranslationTransform(current_node->states().viewport_offset());
+      transform.ChainLocalTransform(translation_matrix);
+    }
     if (current_node->has_transform()) {
       transform.ChainLocalTransform(current_node->transform());
     }
