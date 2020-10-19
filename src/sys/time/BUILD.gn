@@ -15,6 +15,7 @@ group("tests") {
   deps = [
     "httpsdate_time_source:tests",
     "lib/httpdate-hyper:tests",
+    "lib/inspect-writable:tests",
     "lib/network_time:tests",
     "lib/push-source:tests",
     "network_time_service:tests",
