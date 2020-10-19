@@ -10,7 +10,7 @@ This guide provides instructions for the following tasks:
 The Fuchsia project requires `python`, `curl`, `unzip`, and `git` to be
 up-to-date:
 
-*   For Linux, install or update the following packages:
+*   For **Linux**, install or update the following packages:
 
     ```posix-terminal
     sudo apt-get install build-essential curl git python unzip
@@ -18,7 +18,7 @@ up-to-date:
 
     Note: Fuchsia recommends the version of Git to be 2.28 or higher.
 
-*   For macOS, install the Xcode command line tools:
+*   For **macOS**, install the Xcode command line tools:
 
     ```posix-terminal
     xcode-select --install
@@ -56,7 +56,8 @@ To download the Fuchsia source, do the following:
 
 ## Set up environment variables {#set-up-environment-variables}
 
-Setting up Fuchsia environment variables consists of the following:
+Fuchsia recommends updating your shell script to perform the following actions
+(see [Update your shell script](#update-your-shell-script) for the instructions):
 
 *   Add the `.jiri_root/bin` directory to your `PATH`.
 
@@ -88,13 +89,15 @@ Note: If you don't wish to update your environment variables, see
 The following steps use a `bash` terminal as an example. If you are using `zsh` replace
 `~/.bashrc` with `~/.zshrc` in the following example.
 
-1.  Use a text editor to open your `~/.bashrc` file:
+Do the following:
+
+1.  Use a text editor to open your `~/.bashrc` file, for example:
 
     ```posix-terminal
-    vim ~/.bashrc
+    nano ~/.bashrc
     ```
 
-1.  Add the following lines your `~/.bashrc` file and save the file:
+1.  Add the following lines your `~/.bashrc` file:
 
     Note: If your Fuchsia source code is not located in the `~/fuchsia`
     directory, replace `~/fuchsia` with your Fuchsia directory.
@@ -104,14 +107,16 @@ The following steps use a `bash` terminal as an example. If you are using `zsh` 
     source ~/fuchsia/scripts/fx-env.sh
     ```
 
-1.  Update your environment variables:
+1.  Save the file and exit the text editor.
+
+1.  To update your environment variables, run the following command:
 
     ```posix-terminal
     source ~/.bashrc
     ```
 
-1.  Verify that you can run the following commands from any directory without
-    error:
+1.  Verify that you can run the following commands from any directory
+    without error:
 
     ```posix-terminal
     jiri help
