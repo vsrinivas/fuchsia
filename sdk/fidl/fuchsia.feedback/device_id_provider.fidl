@@ -12,5 +12,8 @@ library fuchsia.feedback;
 [Discoverable]
 protocol DeviceIdProvider {
     /// Returns the device's feedback ID.
+    ///
+    /// This method follows the hanging-get pattern and won't return a value until the ID since the
+    /// last call has changed.
     GetId() -> (string:64 feedback_id);
 };
