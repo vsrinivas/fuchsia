@@ -1,0 +1,44 @@
+[
+    {
+        "name": "NETWORK",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
+            "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_NETWORK"
+        }
+    },
+    {
+        "name": "T_NETWORK",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
+            "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_T_NETWORK"
+        }
+    },
+    {
+        "name": "Missing Protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
+            "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_NETWORK"
+        }
+    },
+    {
+        "name": "Missing PCI VID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_NETWORK"
+        }
+    },
+    {
+        "name": "Missing PCI DID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO"
+        }
+    }
+]

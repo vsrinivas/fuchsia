@@ -2,9 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("virtio_ethernet_bind") {
+  rules = "virtio_ethernet.bind"
+  output = "virtio_ethernet-bind.h"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
 
 source_set("virtio_ethernet_lib") {
   configs += [ "//build/config:all_source" ]
@@ -12,7 +20,8 @@ source_set("virtio_ethernet_lib") {
     "ethernet.cc",
     "ethernet_driver.cc",
   ]
-  public_deps = [
+  deps = [
+    ":virtio_ethernet_bind",
     "//sdk/banjo/ddk.protocol.ethernet",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/dev-operation",
@@ -46,6 +55,7 @@ test("virtio-ethernet-test") {
   sources = [ "ethernet_test.cc" ]
   deps = [
     ":virtio_ethernet_lib",
+    "//src/devices/bus/lib/virtio",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
@@ -64,5 +74,13 @@ unittest_package("virtio-ethernet-test-package") {
       name = "virtio-ethernet-test"
       dest = "virtio-ethernet-test"
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":virtio-ethernet-test-package",
+    ":virtio_ethernet_bind_test",
   ]
 }
