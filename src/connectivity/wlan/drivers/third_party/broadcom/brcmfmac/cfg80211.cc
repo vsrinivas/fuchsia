@@ -114,14 +114,15 @@ struct parsed_vndr_ies {
   struct parsed_vndr_ie_info ie_info[VNDR_IE_PARSE_LIMIT];
 };
 
-#define BRCMF_CONNECT_STATUS_LIST            \
-  X(BRCMF_CONNECT_STATUS_CONNECTED)          \
-  X(BRCMF_CONNECT_STATUS_DEAUTHENTICATING)   \
-  X(BRCMF_CONNECT_STATUS_DISASSOCIATING)     \
-  X(BRCMF_CONNECT_STATUS_NO_NETWORK)         \
-  X(BRCMF_CONNECT_STATUS_LINK_FAILED)        \
-  X(BRCMF_CONNECT_STATUS_CONNECTING_TIMEOUT) \
-  X(BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED)
+#define BRCMF_CONNECT_STATUS_LIST               \
+  X(BRCMF_CONNECT_STATUS_CONNECTED)             \
+  X(BRCMF_CONNECT_STATUS_DEAUTHENTICATING)      \
+  X(BRCMF_CONNECT_STATUS_DISASSOCIATING)        \
+  X(BRCMF_CONNECT_STATUS_NO_NETWORK)            \
+  X(BRCMF_CONNECT_STATUS_LINK_FAILED)           \
+  X(BRCMF_CONNECT_STATUS_CONNECTING_TIMEOUT)    \
+  X(BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED) \
+  X(BRCMF_CONNECT_STATUS_ASSOC_REQ_FAILED)
 
 #define X(CONNECT_STATUS) CONNECT_STATUS,
 enum brcmf_connect_status_t : uint8_t { BRCMF_CONNECT_STATUS_LIST };
@@ -4539,6 +4540,28 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
   return err;
 }
 
+zx_status_t brcmf_get_ctrl_channel(brcmf_if* ifp, uint16_t* chanspec_out, uint8_t* ctl_chan_out) {
+  bcme_status_t fw_err;
+  zx_status_t err;
+
+  // Get chanspec of the given IF from firmware.
+  err = brcmf_fil_iovar_data_get(ifp, "chanspec", chanspec_out, sizeof(uint16_t), &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Failed to retrieve chanspec: %s, fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    return err;
+  }
+
+  // Get the control channel given chanspec
+  err = chspec_ctlchan(*chanspec_out, ctl_chan_out);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Failed to get control channel from chanspec: 0x%x status: %s", *chanspec_out,
+              zx_status_get_string(err));
+    return err;
+  }
+  return ZX_OK;
+}
+
 // Notify SME of channel switch
 zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                         void* data) {
@@ -4553,9 +4576,9 @@ zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf
   }
 
   uint16_t chanspec = 0;
+  uint8_t ctl_chan;
   wlanif_channel_switch_info_t info;
   zx_status_t err = ZX_OK;
-  bcme_status_t fw_err;
   struct brcmf_cfg80211_info* cfg = nullptr;
   struct wireless_dev* wdev = nullptr;
 
@@ -4576,24 +4599,9 @@ zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf
       return ZX_ERR_BAD_STATE;
     }
   }
-
-  // Get channel information from firmware.
-  err = brcmf_fil_iovar_data_get(ifp, "chanspec", &chanspec, sizeof(uint16_t), &fw_err);
-  if (err != ZX_OK) {
-    BRCMF_ERR("Failed to retrieve chanspec: %s, fw err %s\n", zx_status_get_string(err),
-              brcmf_fil_get_errstr(fw_err));
+  if ((err = brcmf_get_ctrl_channel(ifp, &chanspec, &ctl_chan)) != ZX_OK) {
     return err;
   }
-
-  // Get the control channel given chanspec
-  uint8_t ctl_chan;
-  err = chspec_ctlchan(chanspec, &ctl_chan);
-  if (err != ZX_OK) {
-    BRCMF_ERR("Failed to get control channel from chanspec: 0x%x status: %s", chanspec,
-              zx_status_get_string(err));
-    return err;
-  }
-
   BRCMF_DBG(CONN, "Channel switch ind IF: %d chanspec: 0x%x control channel: %d", ifp->ifidx,
             chanspec, ctl_chan);
   info.new_channel = ctl_chan;
@@ -4609,9 +4617,9 @@ static zx_status_t brcmf_notify_ap_started(struct brcmf_if* ifp, const struct br
   return brcmf_notify_channel_switch(ifp, e, data);
 }
 
-static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struct net_device* ndev,
-                                          brcmf_connect_status_t connect_status) {
-  struct brcmf_if* ifp = ndev_to_if(ndev);
+static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t connect_status) {
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+  struct net_device* ndev = ifp->ndev;
   BRCMF_DBG(TRACE, "Enter");
 
   if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
@@ -4623,7 +4631,7 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
       case BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED:
         brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);
         break;
-      case BRCMF_CONNECT_STATUS_CONNECTED:
+      case BRCMF_CONNECT_STATUS_CONNECTED: {
         brcmf_get_assoc_ies(cfg, ifp);
         brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
         if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
@@ -4644,9 +4652,20 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
             (void)brcmf_notify_channel_switch(iface, nullptr, nullptr);
           }
         }
+        if (BRCMF_IS_ON(CONN)) {
+          // Get channel information from firmware.
+          uint16_t chanspec = 0;
+          uint8_t ctl_chan;
+          zx_status_t err = brcmf_get_ctrl_channel(ifp, &chanspec, &ctl_chan);
+          if (err == ZX_OK) {
+            BRCMF_DBG(CONN, "Client IF Channel info: chanspec: 0x%x control channel: %d", chanspec,
+                      ctl_chan);
+          }
+        }
 
         brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_SUCCESS);
         break;
+      }
 
       default:
         BRCMF_WARN("Unsuccessful connect status: %s", brcmf_get_connect_status_str(connect_status));
@@ -4659,10 +4678,16 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
   return ZX_OK;
 }
 
+static void brcmf_connect_timeout_worker(WorkItem* work) {
+  struct brcmf_cfg80211_info* cfg =
+      containerof(work, struct brcmf_cfg80211_info, connect_timeout_work);
+  struct brcmf_if* ifp = cfg_to_if(cfg);
+
+  brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_CONNECTING_TIMEOUT);
+}
+
 static zx_status_t brcmf_indicate_client_connect(struct brcmf_if* ifp,
                                                  const struct brcmf_event_msg* e, void* data) {
-  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-  struct net_device* ndev = ifp->ndev;
   zx_status_t err = ZX_OK;
 
   BRCMF_DBG(TRACE, "Enter\n");
@@ -4670,7 +4695,7 @@ static zx_status_t brcmf_indicate_client_connect(struct brcmf_if* ifp,
             brcmf_fweh_get_event_status_str(e->status), e->reason,
             brcmf_fweh_get_auth_type_str(e->auth_type), e->flags);
   BRCMF_DBG(CONN, "Linkup\n");
-  brcmf_bss_connect_done(cfg, ndev, BRCMF_CONNECT_STATUS_CONNECTED);
+  brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_CONNECTED);
   brcmf_net_setcarrier(ifp, true);
 
   BRCMF_DBG(TRACE, "Exit\n");
@@ -4682,7 +4707,9 @@ static zx_status_t brcmf_handle_assoc_event(struct brcmf_if* ifp, const struct b
                                             void* data) {
   BRCMF_DBG_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
   ZX_DEBUG_ASSERT(!brcmf_is_apmode(ifp->vif));
-  return brcmf_indicate_client_connect(ifp, e, data);
+  return brcmf_bss_connect_done(ifp, (e->status == BRCMF_E_STATUS_SUCCESS)
+                                         ? BRCMF_CONNECT_STATUS_CONNECTED
+                                         : BRCMF_CONNECT_STATUS_ASSOC_REQ_FAILED);
 }
 
 // Handler to ASSOC_IND and REASSOC_IND events. These are explicitly meant for SoftAP
@@ -4768,15 +4795,12 @@ static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct b
   ZX_DEBUG_ASSERT(!brcmf_is_apmode(ifp->vif));
 
   if (e->status != BRCMF_E_STATUS_SUCCESS) {
-    struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-    struct net_device* ndev = ifp->ndev;
-
     BRCMF_ERR("Failed to authenticate with AP.");
     BRCMF_ERR("  auth %s", brcmf_fweh_get_auth_type_str(e->auth_type));
     BRCMF_ERR("  status %s", brcmf_fweh_get_event_status_str(e->status));
     BRCMF_ERR("  reason %s", wlan_status_code_str(static_cast<wlan_status_code_t>(e->reason)));
     BRCMF_ERR("  flags 0x%x", e->flags);
-    brcmf_bss_connect_done(cfg, ndev, BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED);
+    brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED);
   }
 
   return ZX_OK;
@@ -4828,10 +4852,9 @@ static zx_status_t brcmf_process_auth_ind_event(struct brcmf_if* ifp,
 
 static void brcmf_indicate_no_network(struct brcmf_if* ifp) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-  struct net_device* ndev = ifp->ndev;
 
   BRCMF_DBG(CONN, "No network\n");
-  brcmf_bss_connect_done(cfg, ndev, BRCMF_CONNECT_STATUS_NO_NETWORK);
+  brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_NO_NETWORK);
   brcmf_disconnect_done(cfg);
 }
 
@@ -4856,7 +4879,7 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
              ndev->last_known_snr_db);
   BRCMF_INFO_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
 
-  brcmf_bss_connect_done(cfg, ndev, connect_status);
+  brcmf_bss_connect_done(ifp, connect_status);
   brcmf_disconnect_done(cfg);
   brcmf_link_down(ifp->vif, e->reason, e->event_code);
   brcmf_init_prof(ndev_to_prof(ndev));
@@ -4966,7 +4989,6 @@ static zx_status_t brcmf_process_set_ssid_event(struct brcmf_if* ifp,
 
 static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp,
                                                const struct brcmf_event_msg* e, void* data) {
-  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   uint32_t event = e->event_code;
   brcmf_fweh_event_status_t status = e->status;
 
@@ -4976,7 +4998,7 @@ static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp,
     if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
       BRCMF_ERR("Received roaming notification - unsupported\n");
     } else {
-      brcmf_bss_connect_done(cfg, ifp->ndev, BRCMF_CONNECT_STATUS_CONNECTED);
+      brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_CONNECTED);
       brcmf_net_setcarrier(ifp, true);
     }
   }
@@ -5126,14 +5148,6 @@ init_priv_mem_out:
   brcmf_deinit_cfg_mem(cfg);
 
   return ZX_ERR_NO_MEMORY;
-}
-
-static void brcmf_connect_timeout_worker(WorkItem* work) {
-  struct brcmf_cfg80211_info* cfg =
-      containerof(work, struct brcmf_cfg80211_info, connect_timeout_work);
-  struct net_device* ndev = cfg_to_ndev(cfg);
-
-  brcmf_bss_connect_done(cfg, ndev, BRCMF_CONNECT_STATUS_CONNECTING_TIMEOUT);
 }
 
 static zx_status_t brcmf_init_cfg(struct brcmf_cfg80211_info* cfg) {

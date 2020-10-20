@@ -845,6 +845,8 @@ void SimFirmware::AssocHandleFailure() {
       // authentication challenge failure.
       || assoc_state_.state == AssocState::AUTHENTICATION_CHALLENGE_FAILURE) {
     BRCMF_DBG(SIM, "Assoc failed. Send E_SET_SSID with failure");
+    SendEventToDriver(0, nullptr, BRCMF_E_ASSOC, BRCMF_E_STATUS_FAIL, kClientIfidx, nullptr, 0, 30,
+                      assoc_state_.opts->bssid);
     SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL, kClientIfidx);
     AssocClearContext();
   } else {
