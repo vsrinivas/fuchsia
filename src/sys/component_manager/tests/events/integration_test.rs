@@ -362,12 +362,12 @@ async fn dir_capability_routed_test() {
         }
     };
     DirectoryInjector::new(pseudo_dir)
-        .inject(&event_source, EventMatcher::ok().capability_id("/foo"))
+        .inject(&event_source, EventMatcher::ok().capability_id("foo"))
         .await;
 
     // Connect the v2 component to a directory in the test namespace
     TestNamespaceInjector::new("/pkg")
-        .inject(&event_source, EventMatcher::ok().capability_id("/test_pkg"))
+        .inject(&event_source, EventMatcher::ok().capability_id("test_pkg"))
         .await;
 
     // Start the component tree

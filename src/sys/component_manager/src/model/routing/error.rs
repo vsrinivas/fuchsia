@@ -50,14 +50,11 @@ pub enum RoutingError {
     #[error("Source for storage capability must be a component, but was `{}`", source_type)]
     StorageSourceIsNotComponent { source_type: &'static str },
     #[error(
-        "Source for directory backing storage from `{}` must be a component, but was {}",
+        "Source for directory backing storage from `{}` must be a component or component manager's namespace, but was {}",
         storage_moniker,
         source_type
     )]
-    StorageDirectorySourceIsNotComponent {
-        source_type: &'static str,
-        storage_moniker: AbsoluteMoniker,
-    },
+    StorageDirectorySourceInvalid { source_type: &'static str, storage_moniker: AbsoluteMoniker },
 
     #[error(
         "Source for directory storage from `{}` was a child `{}`, but this child was not found",
@@ -311,11 +308,11 @@ impl RoutingError {
         Self::StorageSourceIsNotComponent { source_type }
     }
 
-    pub fn storage_directory_source_is_not_component(
+    pub fn storage_directory_source_invalid(
         source_type: &'static str,
         storage_moniker: &AbsoluteMoniker,
     ) -> Self {
-        Self::StorageDirectorySourceIsNotComponent {
+        Self::StorageDirectorySourceInvalid {
             source_type,
             storage_moniker: storage_moniker.clone(),
         }

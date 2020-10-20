@@ -48,9 +48,6 @@
         },
     ],
     offer: [
-        // Offer name-based capabilities from namespace to tests.
-        // TODO(56604): Stop offering the path-based capabilities once tests have converted to
-        // name-based.
         {
             protocol: [
                 "fuchsia.boot.WriteOnlyLog",
@@ -60,36 +57,6 @@
                 "fuchsia.sys2.EventSource",
             ],
             from: "parent",
-            to: [ "#tests" ],
-        },
-        {
-            protocol: "fuchsia.boot.WriteOnlyLog",
-            from: "parent",
-            as: "/svc/fuchsia.boot.WriteOnlyLog",
-            to: [ "#tests" ],
-        },
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
-            as: "/svc/fuchsia.logger.LogSink",
-            to: [ "#tests" ],
-        },
-        {
-            protocol: "fuchsia.sys2.BlockingEventSource",
-            from: "parent",
-            as: "/svc/fuchsia.sys2.BlockingEventSource",
-            to: [ "#tests" ],
-        },
-        {
-            protocol: "fuchsia.sys2.EventSource",
-            from: "parent",
-            as: "/svc/fuchsia.sys2.EventSource",
-            to: [ "#tests" ],
-        },
-        {
-            protocol: "fuchsia.process.Launcher",
-            from: "parent",
-            as: "/svc/fuchsia.process.Launcher",
             to: [ "#tests" ],
         },
         {
@@ -127,12 +94,6 @@
             from: "parent",
             to: [ "#tests" ],
         },
-        {
-            directory: "config-data",
-            from: "parent",
-            as: "/config/data",
-            to: [ "#tests" ],
-        },
 
         // temporary solution to provide /tmp. All tests will share same /tmp.
         {
@@ -141,25 +102,12 @@
             as: "tmp",
             to: [ "#tests" ],
         },
-        {
-            directory: "memfs",
-            from: "#test_tmpfs",
-            as: "/tmp",
-            to: [ "#tests" ],
-        },
 
         // fuchsia-pkg://fuchsia.com/input_session_tests#meta/input_session_bin_test.cm
         // needs access to /dev/class/input-report.
         {
             directory: "dev-input-report",
             from: "parent",
-            to: [ "#tests" ],
-            rights: [ "r*" ],
-        },
-        {
-            directory: "dev-input-report",
-            from: "parent",
-            as: "/dev/class/input-report",
             to: [ "#tests" ],
             rights: [ "r*" ],
         },

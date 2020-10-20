@@ -5,12 +5,14 @@
     use: [
         { runner: "elf" },
         {
-            directory: "/foo",
+            directory: "foo",
             rights: [ "r*" ],
+            path: "/foo",
         },
         {
-            directory: "/test_pkg",
+            directory: "test_pkg",
             rights: [ "r*" ],
+            path: "/test_pkg",
         },
         {
             protocol: "fidl.examples.routing.echo.Echo",

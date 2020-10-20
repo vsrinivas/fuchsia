@@ -494,28 +494,58 @@ impl ComponentCapability {
             (
                 ComponentCapability::Offer(OfferDecl::Protocol(parent_offer)),
                 ExposeDecl::Protocol(expose),
-            ) => parent_offer.source_path == expose.target_path,
+            ) => {
+                if let CapabilityNameOrPath::Path(_) = parent_offer.source_path {
+                    return false;
+                }
+                parent_offer.source_path == expose.target_path
+            }
             (
                 ComponentCapability::Expose(ExposeDecl::Protocol(parent_expose)),
                 ExposeDecl::Protocol(expose),
-            ) => parent_expose.source_path == expose.target_path,
+            ) => {
+                if let CapabilityNameOrPath::Path(_) = parent_expose.source_path {
+                    return false;
+                }
+                parent_expose.source_path == expose.target_path
+            }
             (
                 ComponentCapability::UsedExpose(ExposeDecl::Protocol(used_expose)),
                 ExposeDecl::Protocol(expose),
-            ) => used_expose.target_path == expose.target_path,
+            ) => {
+                if let CapabilityNameOrPath::Path(_) = used_expose.source_path {
+                    return false;
+                }
+                used_expose.target_path == expose.target_path
+            }
             // Directory exposed to me that matches a directory `expose` or `offer`.
             (
                 ComponentCapability::Offer(OfferDecl::Directory(parent_offer)),
                 ExposeDecl::Directory(expose),
-            ) => parent_offer.source_path == expose.target_path,
+            ) => {
+                if let CapabilityNameOrPath::Path(_) = parent_offer.source_path {
+                    return false;
+                }
+                parent_offer.source_path == expose.target_path
+            }
             (
                 ComponentCapability::Expose(ExposeDecl::Directory(parent_expose)),
                 ExposeDecl::Directory(expose),
-            ) => parent_expose.source_path == expose.target_path,
+            ) => {
+                if let CapabilityNameOrPath::Path(_) = parent_expose.source_path {
+                    return false;
+                }
+                parent_expose.source_path == expose.target_path
+            }
             (
                 ComponentCapability::UsedExpose(ExposeDecl::Directory(used_expose)),
                 ExposeDecl::Directory(expose),
-            ) => used_expose.target_path == expose.target_path,
+            ) => {
+                if let CapabilityNameOrPath::Path(_) = used_expose.source_path {
+                    return false;
+                }
+                used_expose.target_path == expose.target_path
+            }
             // Runner exposed to me that has a matching `expose` or `offer`.
             (
                 ComponentCapability::Offer(OfferDecl::Runner(parent_offer)),
@@ -533,6 +563,9 @@ impl ComponentCapability {
             ) => source_name == &expose.target_name,
             // Directory exposed to me that matches a `storage` declaration which consumes it.
             (ComponentCapability::Storage(parent_storage), ExposeDecl::Directory(expose)) => {
+                if let CapabilityNameOrPath::Path(_) = parent_storage.source_path {
+                    return false;
+                }
                 parent_storage.source_path == expose.target_path
             }
             _ => false,
@@ -726,6 +759,12 @@ impl ComponentCapability {
                 CapabilityNameOrPath::Name(n) => n == &d.name,
                 _ => false,
             },
+            (ComponentCapability::Storage(child_storage), CapabilityDecl::Directory(d)) => {
+                match &child_storage.source_path {
+                    CapabilityNameOrPath::Name(n) => n == &d.name,
+                    _ => false,
+                }
+            }
             _ => false,
         })
     }
@@ -797,6 +836,9 @@ impl ComponentCapability {
         target: &OfferTarget,
         target_path: &CapabilityNameOrPath,
     ) -> bool {
+        if let CapabilityNameOrPath::Path(_) = path {
+            return false;
+        }
         path == target_path && target_matches_moniker(target, child_moniker)
     }
 

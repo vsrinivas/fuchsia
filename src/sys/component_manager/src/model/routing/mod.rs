@@ -282,7 +282,11 @@ pub async fn open_capability_at_source(
                 // TODO(56604): Path-based namespace capabilities have a `Builtin` source instead
                 // of `Namespace`. This discrepancy will go away when we remove support for
                 // path-based capabilities.
-                Some(CapabilityNameOrPath::Path(path)) => path.clone(),
+                Some(CapabilityNameOrPath::Path(_)) => {
+                    return Err(ModelError::unsupported(
+                        "Path-based capabilities are no longer supported, use name-based instead",
+                    ));
+                }
                 _ => {
                     return Err(ModelError::from(
                         RoutingError::capability_from_component_manager_not_found(capability.id()),
@@ -397,23 +401,24 @@ async fn route_storage_capability<'a>(
     let storage_subdir = storage_decl.subdir.clone();
     let (dir_source_path, mut dir_subdir, dir_source_realm) = match storage_decl.source {
         StorageDirectorySource::Self_ => {
-            let source_path =
-                if let CapabilityNameOrPath::Path(source_path) = storage_decl.source_path {
-                    source_path.clone()
-                } else {
-                    let realm_state = source_realm.lock_resolved_state().await?;
-                    let decl = realm_state.decl();
-                    let capability = ComponentCapability::Storage(storage_decl.clone());
-                    let capability = pos.cap_state.finalize_directory_from_component(
-                        &capability,
-                        decl,
-                        None,
-                        None,
-                    )?;
-                    let source_path =
-                        capability.source_path().expect("directory has no source path?").clone();
-                    source_path
-                };
+            let source_path = if let CapabilityNameOrPath::Path(_) = storage_decl.source_path {
+                return Err(ModelError::unsupported(
+                    "Path-based capabilities are no longer supported, use name-based instead",
+                ));
+            } else {
+                let realm_state = source_realm.lock_resolved_state().await?;
+                let decl = realm_state.decl();
+                let capability = ComponentCapability::Storage(storage_decl.clone());
+                let capability = pos.cap_state.finalize_directory_from_component(
+                    &capability,
+                    decl,
+                    None,
+                    None,
+                )?;
+                let source_path =
+                    capability.source_path().expect("directory has no source path?").clone();
+                source_path
+            };
             (source_path, None, Some(source_realm))
         }
         StorageDirectorySource::Parent => {
@@ -428,33 +433,25 @@ async fn route_storage_capability<'a>(
                     (source_path, dir_subdir, Some(realm.upgrade()?))
                 }
                 CapabilitySource::Framework { .. } => {
-                    return Err(RoutingError::storage_directory_source_is_not_component(
+                    return Err(RoutingError::storage_directory_source_invalid(
                         "framework",
                         &source_realm.abs_moniker,
                     )
                     .into());
                 }
-                CapabilitySource::Builtin { capability } => {
-                    let source_path = match capability.name_or_path() {
-                        Some(CapabilityNameOrPath::Path(path)) => path.clone(),
-                        Some(CapabilityNameOrPath::Name(_)) => {
-                            // TODO(fxbug.dev/56604): Come up with a solution to route name-based
-                            // capabilities from component manager's namespace.
-                            return Err(RoutingError::storage_directory_source_is_not_component(
-                                "component manager's namespace",
-                                &source_realm.abs_moniker,
-                            )
-                            .into());
-                        }
-                        None => {
-                            unreachable!("Invalid capability source for storage: {:?}", capability);
-                        }
-                    };
-                    let dir_subdir = cap_state.get_subdir().map(Clone::clone);
-                    (source_path, dir_subdir, None)
+                CapabilitySource::Builtin { .. } => {
+                    return Err(RoutingError::storage_directory_source_invalid(
+                        "component manager builtin",
+                        &source_realm.abs_moniker,
+                    )
+                    .into());
                 }
                 CapabilitySource::Namespace { capability } => {
-                    unreachable!("Invalid capability source for storage: {:?}", capability);
+                    let source_path =
+                        capability.source_path().expect("directory has no source path?").clone();
+                    let dir_subdir = cap_state.get_subdir().map(Clone::clone);
+
+                    (source_path, dir_subdir, None)
                 }
             }
         }
@@ -484,15 +481,17 @@ async fn route_storage_capability<'a>(
                     let dir_subdir = pos.cap_state.get_subdir().map(Clone::clone);
                     (source_path, dir_subdir, Some(realm.upgrade()?))
                 }
-                CapabilitySource::Framework { .. } | CapabilitySource::Builtin { .. } => {
-                    return Err(RoutingError::storage_directory_source_is_not_component(
+                CapabilitySource::Framework { .. } => {
+                    return Err(RoutingError::storage_directory_source_invalid(
                         "framework",
                         &source_realm.abs_moniker,
                     )
                     .into());
                 }
-                CapabilitySource::Namespace { capability } => {
-                    unreachable!("Invalid capability source for storage: {:?}", capability);
+                CapabilitySource::Builtin { .. } | CapabilitySource::Namespace { .. } => {
+                    unreachable!(
+                        "Invalid capability source for storage with backing dir from child"
+                    );
                 }
             }
         }
@@ -1535,6 +1534,7 @@ fn routing_epitaph(err: &ModelError) -> zx::Status {
     match err {
         ModelError::RoutingError { err } => err.as_zx_status(),
         ModelError::RightsError { err } => err.as_zx_status(),
+        ModelError::Unsupported { .. } => zx::Status::NOT_SUPPORTED,
         // Any other type of error is not expected.
         _ => zx::Status::INTERNAL,
     }

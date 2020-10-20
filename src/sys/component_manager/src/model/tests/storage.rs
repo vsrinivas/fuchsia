@@ -9,7 +9,7 @@ use {
         testing::{routing_test_helpers::*, test_helpers::*},
     },
     cm_rust::*,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     std::{convert::TryInto, fs, path::PathBuf},
 };
 
@@ -37,7 +37,7 @@ async fn storage_dir_from_cm_namespace() {
                 .add_lazy_child("b")
                 .storage(StorageDecl {
                     name: "cache".into(),
-                    source_path: "/tmp".try_into().unwrap(),
+                    source_path: "tmp".try_into().unwrap(),
                     source: StorageDirectorySource::Parent,
                     subdir: Some(PathBuf::from("cache")),
                 })
@@ -53,7 +53,16 @@ async fn storage_dir_from_cm_namespace() {
                 .build(),
         ),
     ];
-    let test = RoutingTest::new("a", components).await;
+    let namespace_capabilities = vec![CapabilityDecl::Directory(
+        DirectoryDeclBuilder::new("tmp")
+            .path("/tmp")
+            .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+            .build(),
+    )];
+    let test = RoutingTestBuilder::new("a", components)
+        .set_namespace_capabilities(namespace_capabilities)
+        .build()
+        .await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Storage {
@@ -61,6 +70,7 @@ async fn storage_dir_from_cm_namespace() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
             from_cm_namespace: true,
             storage_subdir: Some("cache".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -121,6 +131,7 @@ async fn storage_and_dir_from_parent() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
             from_cm_namespace: false,
             storage_subdir: None,
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -180,6 +191,7 @@ async fn storage_and_dir_from_parent_with_subdir() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("cache".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -229,9 +241,10 @@ async fn storage_and_dir_from_parent_legacy_path_based() {
         vec!["b:0"].into(),
         CheckUse::Storage {
             path: "/storage".try_into().unwrap(),
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
+            storage_relation: None, // expected to fail
             from_cm_namespace: false,
             storage_subdir: None,
+            expected_res: ExpectedResult::Err(zx::Status::NOT_SUPPORTED),
         },
     )
     .await;
@@ -290,6 +303,7 @@ async fn storage_and_dir_from_parent_rights_invalid() {
             storage_relation: None,
             from_cm_namespace: false,
             storage_subdir: None,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -365,6 +379,7 @@ async fn storage_from_parent_dir_from_grandparent() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
             from_cm_namespace: false,
             storage_subdir: None,
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -442,6 +457,7 @@ async fn storage_from_parent_dir_from_grandparent_with_subdirs() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("subdir_1/subdir_2".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -520,6 +536,7 @@ async fn storage_from_parent_dir_from_grandparent_with_subdir() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("bar".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -587,9 +604,10 @@ async fn storage_from_parent_dir_from_grandparent_legacy_path_based() {
         vec!["b:0", "c:0"].into(),
         CheckUse::Storage {
             path: "/storage".try_into().unwrap(),
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
+            storage_relation: None, // expected to fail
             from_cm_namespace: false,
             storage_subdir: None,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -662,6 +680,7 @@ async fn storage_and_dir_from_grandparent() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into(), "c:0".into()])),
             from_cm_namespace: false,
             storage_subdir: None,
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -734,6 +753,7 @@ async fn storage_from_parent_dir_from_sibling() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
             from_cm_namespace: false,
             storage_subdir: None,
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -808,6 +828,7 @@ async fn storage_from_parent_dir_from_sibling_with_subdir() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("subdir_1/subdir_2".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -874,9 +895,10 @@ async fn storage_from_parent_dir_from_sibling_legacy_path_based() {
         vec!["c:0"].into(),
         CheckUse::Storage {
             path: "/storage".try_into().unwrap(),
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
+            storage_relation: None, // expected to fail
             from_cm_namespace: false,
             storage_subdir: None,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -987,6 +1009,7 @@ async fn use_in_collection_from_parent() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("data".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -997,6 +1020,7 @@ async fn use_in_collection_from_parent() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("cache".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -1137,6 +1161,7 @@ async fn use_in_collection_from_grandparent() {
             )),
             from_cm_namespace: false,
             storage_subdir: Some("data".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -1150,6 +1175,7 @@ async fn use_in_collection_from_grandparent() {
             )),
             from_cm_namespace: false,
             storage_subdir: Some("cache".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -1307,6 +1333,7 @@ async fn storage_multiple_types() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("data".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -1317,6 +1344,7 @@ async fn storage_multiple_types() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("cache".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -1327,6 +1355,7 @@ async fn storage_multiple_types() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into(), "d:0".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("data".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -1337,6 +1366,7 @@ async fn storage_multiple_types() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into(), "d:0".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("cache".to_string()),
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
@@ -1395,6 +1425,7 @@ async fn use_the_wrong_type_of_storage() {
             storage_relation: None,
             from_cm_namespace: false,
             storage_subdir: None,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -1448,6 +1479,7 @@ async fn directories_are_not_storage() {
             storage_relation: None,
             from_cm_namespace: false,
             storage_subdir: None,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -1499,6 +1531,7 @@ async fn use_storage_when_not_offered() {
             storage_relation: None,
             from_cm_namespace: false,
             storage_subdir: None,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -1574,6 +1607,7 @@ async fn dir_offered_from_nonexecutable() {
             storage_relation: None,
             from_cm_namespace: false,
             storage_subdir: None,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;

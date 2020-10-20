@@ -130,7 +130,11 @@ async fn offer_incompatible_rights() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
+    test.check_use(
+        vec!["c:0"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -238,7 +242,11 @@ async fn expose_incompatible_rights() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
+    test.check_use(
+        vec!["c:0"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -344,7 +352,11 @@ async fn capability_incompatible_rights() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
+    test.check_use(
+        vec!["c:0"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
 }
 
 struct MockFrameworkDirectoryProvider {
@@ -498,7 +510,11 @@ async fn framework_directory_incompatible_rights() {
             Arc::downgrade(&directory_host) as Weak<dyn Hook>,
         )])
         .await;
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
 }
 
 ///  component manager's namespace
@@ -551,5 +567,9 @@ async fn offer_from_component_manager_namespace_directory_incompatible_rights() 
         .build()
         .await;
     let _ns_dir = ScopedNamespaceDir::new(&test, "/offer_from_cm_namespace");
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
 }

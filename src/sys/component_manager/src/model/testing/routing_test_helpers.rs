@@ -60,7 +60,7 @@ pub fn default_directory_capability() -> CapabilityPath {
 #[derive(Debug)]
 pub enum ExpectedResult {
     Ok,
-    Err,
+    Err(zx::Status),
     ErrWithNoEpitaph,
 }
 
@@ -76,14 +76,14 @@ pub enum CheckUse {
     },
     Storage {
         path: CapabilityPath,
-        // The relative moniker from the storage declaration to the use declaration. If None, this
-        // storage use is expected to fail.
+        // The relative moniker from the storage declaration to the use declaration. Only
+        // used if `expected_res` is Ok.
         storage_relation: Option<RelativeMoniker>,
         // The backing directory for this storage is in component manager's namsepace, not the
         // test's isolated test directory.
         from_cm_namespace: bool,
-
         storage_subdir: Option<String>,
+        expected_res: ExpectedResult,
     },
     Event {
         names: Vec<CapabilityName>,
@@ -356,11 +356,19 @@ impl RoutingTest {
                 capability_util::read_data_from_namespace(&namespace, path, &file, expected_res)
                     .await
             }
-            CheckUse::Storage { path, storage_relation, from_cm_namespace, storage_subdir } => {
-                let expected_res = match storage_relation {
-                    Some(_) => ExpectedResult::Ok,
-                    None => ExpectedResult::Err,
-                };
+            CheckUse::Storage {
+                path,
+                storage_relation,
+                from_cm_namespace,
+                storage_subdir,
+                expected_res,
+            } => {
+                if let ExpectedResult::Ok = &expected_res {
+                    assert!(
+                        storage_relation.is_some(),
+                        "relative moniker required if expected result is ok"
+                    );
+                }
                 capability_util::write_file_to_storage(&namespace, path, expected_res).await;
 
                 if let Some(relative_moniker) = storage_relation {
@@ -720,14 +728,14 @@ pub mod capability_util {
                 "hello",
                 res.expect(&format!("failed to read file {}", path.to_string()))
             ),
-            ExpectedResult::Err => {
+            ExpectedResult::Err(s) => {
                 assert!(res.is_err(), "read file successfully when it should fail");
                 let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
                     epitaph,
                     Err(fidl::Error::ClientChannelClosed {
-                        status: zx::Status::UNAVAILABLE, ..
-                    })
+                        status, ..
+                    }) if status == s
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
@@ -771,14 +779,14 @@ pub mod capability_util {
                 let (s, _) = res.expect("failed to write file");
                 assert_matches!(zx::Status::from_raw(s), zx::Status::OK);
             }
-            ExpectedResult::Err => {
+            ExpectedResult::Err(s) => {
                 res.expect_err("unexpectedly succeeded writing file");
                 let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
                     epitaph,
                     Err(fidl::Error::ClientChannelClosed {
-                        status: zx::Status::UNAVAILABLE, ..
-                    })
+                        status, ..
+                    }) if status == s
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
@@ -858,7 +866,7 @@ pub mod capability_util {
             (Err(e), ExpectedResult::Ok) => {
                 panic!("unexpected failure {}", e);
             }
-            (Ok(_), ExpectedResult::Err) | (Ok(_), ExpectedResult::ErrWithNoEpitaph) => {
+            (Ok(_), ExpectedResult::Err(_)) | (Ok(_), ExpectedResult::ErrWithNoEpitaph) => {
                 panic!("unexpected success");
             }
             _ => {}
@@ -898,15 +906,15 @@ pub mod capability_util {
             ExpectedResult::Ok => {
                 assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()))
             }
-            ExpectedResult::Err => {
+            ExpectedResult::Err(s) => {
                 let err = res.expect_err("used echo service successfully when it should fail");
                 assert!(err.is_closed(), "expected file closed error, got: {:?}", err);
                 let epitaph = echo_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
                     epitaph,
                     Err(fidl::Error::ClientChannelClosed {
-                        status: zx::Status::UNAVAILABLE, ..
-                    })
+                        status, ..
+                    }) if status == s
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
@@ -963,15 +971,15 @@ pub mod capability_util {
                 let res = io_util::read_file(&file_proxy).await;
                 assert_eq!("hello", res.expect("failed to read file"));
             }
-            ExpectedResult::Err => {
+            ExpectedResult::Err(s) => {
                 io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
                     .expect_err("opened file successfully when it should fail");
                 let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
                     epitaph,
                     Err(fidl::Error::ClientChannelClosed {
-                        status: zx::Status::UNAVAILABLE, ..
-                    })
+                        status, ..
+                    }) if status == s
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
@@ -998,15 +1006,15 @@ pub mod capability_util {
             ExpectedResult::Ok => {
                 assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()))
             }
-            ExpectedResult::Err => {
+            ExpectedResult::Err(s) => {
                 let err = res.expect_err("used echo service successfully when it should fail");
                 assert!(err.is_closed(), "expected file closed error, got: {:?}", err);
                 let epitaph = echo_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
                     epitaph,
                     Err(fidl::Error::ClientChannelClosed {
-                        status: zx::Status::UNAVAILABLE, ..
-                    })
+                        status, ..
+                    }) if status == s
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {

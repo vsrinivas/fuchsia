@@ -40,8 +40,6 @@
         },
     ],
     offer: [
-        // TODO(56604): Stop offering path-based capabilities once all sessions have
-        // converted to name-based.
         {
             protocol: [
                 "fuchsia.accessibility.SettingsManager",
@@ -101,65 +99,6 @@
             from: "parent",
             to: [ "#session" ],
         },
-        {
-            protocol: [
-                "/svc/fuchsia.accessibility.SettingsManager",
-                "/svc/fuchsia.bluetooth.control.Control",
-                "/svc/fuchsia.bluetooth.gatt.Server",
-                "/svc/fuchsia.bluetooth.le.Peripheral",
-                "/svc/fuchsia.castauth.CastKeySigner",
-                "/svc/fuchsia.castconfig.Provider",
-                "/svc/fuchsia.deprecatedtimezone.Timezone",
-                "/svc/fuchsia.device.NameProvider",
-                "/svc/fuchsia.devicesettings.DeviceSettingsManager",
-                "/svc/fuchsia.feedback.CrashReporter",
-                "/svc/fuchsia.feedback.DataProvider",
-                "/svc/fuchsia.hardware.power.statecontrol.Admin",
-                "/svc/fuchsia.hwinfo.Board",
-                "/svc/fuchsia.hwinfo.Device",
-                "/svc/fuchsia.hwinfo.Product",
-                "/svc/fuchsia.intl.PropertyProvider",
-                "/svc/fuchsia.location.namedplace.RegulatoryRegionConfigurator",
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.media.Audio",
-                "/svc/fuchsia.media.audio.VolumeControl",
-                "/svc/fuchsia.media.AudioCore",
-                "/svc/fuchsia.media.sessions2.Discovery",
-                "/svc/fuchsia.media.sessions2.Publisher",
-                "/svc/fuchsia.media.sounds.Player",
-                "/svc/fuchsia.media.UsageReporter",
-                "/svc/fuchsia.net.mdns.Publisher",
-                "/svc/fuchsia.net.mdns.Subscriber",
-                "/svc/fuchsia.net.NameLookup",
-                "/svc/fuchsia.netstack.Netstack",
-                "/svc/fuchsia.posix.socket.Provider",
-                "/svc/fuchsia.settings.Accessibility",
-                "/svc/fuchsia.settings.Audio",
-                "/svc/fuchsia.settings.DoNotDisturb",
-                "/svc/fuchsia.settings.Input",
-                "/svc/fuchsia.settings.Privacy",
-                "/svc/fuchsia.settings.Setup",
-                "/svc/fuchsia.stash.Store",
-                "/svc/fuchsia.sys.Environment",
-                "/svc/fuchsia.sys.Launcher", // so that the session can launch cmx components
-                "/svc/fuchsia.sys2.Realm",
-                "/svc/fuchsia.timezone.Timezone",
-                "/svc/fuchsia.tracing.provider.Registry",
-                "/svc/fuchsia.ui.brightness.Control",
-                "/svc/fuchsia.ui.focus.FocusChainListenerRegistry",
-                "/svc/fuchsia.ui.input.ImeService",
-                "/svc/fuchsia.ui.input2.Keyboard",
-                "/svc/fuchsia.ui.lifecycle.LifecycleController", // to kill scenic if restarting
-                "/svc/fuchsia.ui.scenic.Scenic", // sessions use Scenic to display images
-                "/svc/fuchsia.ui.shortcut.Manager",
-                "/svc/fuchsia.ui.views.ViewRefInstalled",
-                "/svc/fuchsia.update.channel.Provider",
-                "/svc/fuchsia.update.channelcontrol.ChannelControl",
-                "/svc/fuchsia.wlan.service.Wlan",
-            ],
-            from: "parent",
-            to: [ "#session" ],
-        },
 
         // features: build-info
         {
@@ -167,22 +106,10 @@
             from: "parent",
             to: [ "#session" ],
         },
-        {
-            directory: "/config/build-info",
-            from: "parent",
-            to: [ "#session" ],
-            rights: [ "r*" ],
-        },
 
         // features: root-ssl-certificates
         {
             directory: "config-ssl",
-            from: "parent",
-            to: [ "#session" ],
-            rights: [ "r*" ],
-        },
-        {
-            directory: "/config/ssl",
             from: "parent",
             to: [ "#session" ],
             rights: [ "r*" ],
@@ -194,12 +121,6 @@
             from: "parent",
             to: [ "#session" ],
         },
-        {
-            directory: "/data",
-            from: "parent",
-            to: [ "#session" ],
-            rights: [ "rw*" ],
-        },
 
         // devices
         {
@@ -208,21 +129,9 @@
             to: [ "#session" ],
         },
         {
-            directory: "/dev/class/input",
-            from: "parent",
-            to: [ "#session" ],
-            rights: [ "r*" ],
-        },
-        {
             directory: "dev-input-report",
             from: "parent",
             to: [ "#session" ],
-        },
-        {
-            directory: "/dev/class/input-report",
-            from: "parent",
-            to: [ "#session" ],
-            rights: [ "r*" ],
         },
         {
             directory: "dev-null",
@@ -230,21 +139,9 @@
             to: [ "#session" ],
         },
         {
-            directory: "/dev/null",
-            from: "parent",
-            to: [ "#session" ],
-            rights: [ "rw*" ],
-        },
-        {
             directory: "dev-zero",
             from: "parent",
             to: [ "#session" ],
-        },
-        {
-            directory: "/dev/zero",
-            from: "parent",
-            to: [ "#session" ],
-            rights: [ "rw*" ],
         },
 
         // features: config-data
@@ -253,41 +150,12 @@
             from: "parent",
             to: [ "#session" ],
         },
-        {
-            // features: config-data for cast_agent
-            directory: "/pkgfs/packages/config-data/0/meta/data/cast_agent",
-
-            // There is an approved Component Framework design to support
-            // offering subdirectories.
-            //
-            // WHEN AVAILABLE, THIS SHOULD BE CHANGED TO JUST:
-            //   directory: "/pkgfs/packages/config-data/0/meta/data",
-            //   as: "/pkgfs-config-data"
-            // and then share "/pkgfs-config-data/cast_agent" with the
-            // cast_agent component.
-            from: "parent",
-            to: [ "#session" ],
-            rights: [ "r*" ],
-        },
-        {
-            // features: config-data for setui_service (see above)
-            directory: "/pkgfs/packages/config-data/0/meta/data/setui_service",
-            from: "parent",
-            to: [ "#session" ],
-            rights: [ "r*" ],
-        },
 
         // features: isolated-temp
         {
             directory: "tmp",
             from: "parent",
             to: [ "#session" ],
-        },
-        {
-            directory: "/tmp",
-            from: "parent",
-            to: [ "#session" ],
-            rights: [ "rw*" ],
         },
     ],
     expose: [

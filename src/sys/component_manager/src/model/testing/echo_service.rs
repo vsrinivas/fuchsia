@@ -20,7 +20,7 @@ use {
 };
 
 lazy_static! {
-    pub static ref ECHO_CAPABILITY_PATH: CapabilityPath = "/svc/builtin.Echo".try_into().unwrap();
+    pub static ref ECHO_CAPABILITY: CapabilityName = "builtin.Echo".try_into().unwrap();
 }
 
 struct EchoCapabilityProvider;
@@ -77,8 +77,8 @@ impl EchoService {
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path))
-                if *capability_path == *ECHO_CAPABILITY_PATH =>
+            InternalCapability::Protocol(CapabilityNameOrPath::Name(name))
+                if *name == *ECHO_CAPABILITY =>
             {
                 Ok(Some(Box::new(EchoCapabilityProvider::new()) as Box<dyn CapabilityProvider>))
             }

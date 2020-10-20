@@ -477,8 +477,8 @@ async fn use_builtin_from_grandparent() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/builtin.Echo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/builtin.Echo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("builtin.Echo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("builtin.Echo").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -490,8 +490,8 @@ async fn use_builtin_from_grandparent() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/builtin.Echo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/builtin.Echo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("builtin.Echo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("builtin.Echo").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -503,7 +503,7 @@ async fn use_builtin_from_grandparent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/builtin.Echo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("builtin.Echo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -583,11 +583,17 @@ async fn route_by_path_legacy() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok))
-        .await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
     )
     .await;
 }
@@ -1121,10 +1127,17 @@ async fn use_from_component_manager_namespace_legacy_path_based() {
     )];
     let test = RoutingTest::new("a", components).await;
     let _ns_dir = ScopedNamespaceDir::new(&test, "/use_from_cm_namespace");
-    test.check_use(vec![].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
     test.check_use(
         vec![].into(),
-        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::NOT_SUPPORTED)),
+    )
+    .await;
+    test.check_use(
+        vec![].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::NOT_SUPPORTED),
+        },
     )
     .await;
 }
@@ -1262,10 +1275,17 @@ async fn offer_from_component_manager_namespace_legacy_path_based() {
     ];
     let test = RoutingTest::new("a", components).await;
     let _ns_dir = ScopedNamespaceDir::new(&test, "/offer_from_cm_namespace");
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
     )
     .await;
 }
@@ -1299,12 +1319,16 @@ async fn use_not_offered() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
-            expected_res: ExpectedResult::Err,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -1364,12 +1388,16 @@ async fn use_offer_source_not_exposed() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
+    test.check_use(
+        vec!["c:0"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
-            expected_res: ExpectedResult::Err,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -1430,13 +1458,16 @@ async fn use_offer_source_not_offered() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(ExpectedResult::Err))
-        .await;
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
-            expected_res: ExpectedResult::Err,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -1497,12 +1528,16 @@ async fn use_from_expose() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
-            expected_res: ExpectedResult::Err,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -1581,12 +1616,16 @@ async fn use_from_expose_to_framework() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
+    test.check_use(
+        vec!["c:0"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
-            expected_res: ExpectedResult::Err,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -1646,12 +1685,16 @@ async fn offer_from_non_executable() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
-            expected_res: ExpectedResult::Err,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -1853,14 +1896,14 @@ async fn use_in_collection_not_offered() {
     .await;
     test.check_use(
         vec!["b:0", "coll:c:1"].into(),
-        CheckUse::default_directory(ExpectedResult::Err),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
     )
     .await;
     test.check_use(
         vec!["b:0", "coll:c:1"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
-            expected_res: ExpectedResult::Err,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
@@ -2762,7 +2805,7 @@ async fn invalid_use_from_component_manager() {
         ComponentDeclBuilder::new()
             .use_(UseDecl::Protocol(UseProtocolDecl {
                 source: UseSource::Parent,
-                source_path: CapabilityNameOrPath::try_from("/invalid").unwrap(),
+                source_path: CapabilityNameOrPath::try_from("invalid").unwrap(),
                 target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
             }))
             .build(),
@@ -2775,7 +2818,7 @@ async fn invalid_use_from_component_manager() {
             vec![].into(),
             CheckUse::Protocol {
                 path: CapabilityPath::try_from("/svc/valid").unwrap(),
-                expected_res: ExpectedResult::ErrWithNoEpitaph,
+                expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
             },
         )
         .await;
@@ -2796,9 +2839,9 @@ async fn invalid_offer_from_component_manager() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source_path: CapabilityNameOrPath::try_from("/invalid").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("invalid").unwrap(),
                     source: OfferServiceSource::Parent,
-                    target_path: CapabilityNameOrPath::try_from("/svc/valid").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("valid").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -2810,7 +2853,7 @@ async fn invalid_offer_from_component_manager() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/valid").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("valid").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
                 }))
                 .build(),
@@ -2824,7 +2867,7 @@ async fn invalid_offer_from_component_manager() {
             vec!["b:0"].into(),
             CheckUse::Protocol {
                 path: CapabilityPath::try_from("/svc/valid").unwrap(),
-                expected_res: ExpectedResult::ErrWithNoEpitaph,
+                expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
             },
         )
         .await;
@@ -3122,7 +3165,10 @@ async fn use_event_from_grandparent() {
     .await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Event { names: vec!["stopped".into()], expected_res: ExpectedResult::Err },
+        CheckUse::Event {
+            names: vec!["stopped".into()],
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
     )
     .await;
 }
@@ -3299,7 +3345,7 @@ async fn event_filter_routing() {
         vec!["b:0", "d:0"].into(),
         CheckUse::Event {
             names: vec!["capability_ready_baz".into()],
-            expected_res: ExpectedResult::Err,
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
     .await;
