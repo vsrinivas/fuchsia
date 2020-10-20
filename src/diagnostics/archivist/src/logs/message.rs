@@ -118,7 +118,7 @@ impl Message {
     /// takes a `&[u8]` and is why we don't implement this as `TryFrom`.
     ///
     /// [logger/syslog wire format]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/syslog/include/lib/syslog/wire_format.h
-    pub(super) fn from_logger(source: &SourceIdentity, bytes: &[u8]) -> Result<Self, StreamError> {
+    pub fn from_logger(source: &SourceIdentity, bytes: &[u8]) -> Result<Self, StreamError> {
         if bytes.len() < MIN_PACKET_SIZE {
             return Err(StreamError::ShortRead { len: bytes.len() });
         }

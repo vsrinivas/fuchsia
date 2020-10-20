@@ -49,4 +49,11 @@ extern "C" {
         tag: *const c_char,
         msg: *const c_char,
     ) -> zx_status_t;
+
+    pub fn fx_logger_create(
+        config: *const fx_logger_config_t,
+        logger_ptr: *const *mut fx_logger_t,
+    ) -> zx_status_t;
+
+    pub fn fx_logger_destroy(logger: *const fx_logger_t);
 }

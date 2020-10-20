@@ -8,7 +8,7 @@
 use fuchsia_zircon::{self as zx, sys::*, HandleBased};
 use lazy_static::lazy_static;
 use log::{Level, LevelFilter, Metadata, Record};
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::fmt::Arguments;
 use std::os::raw::c_char;
 use std::panic;
@@ -92,9 +92,7 @@ fn get_log_filter(level: levels::LogLevel) -> LevelFilter {
 macro_rules! fx_log {
     (tag: $tag:expr, $lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
-        if $crate::LOGGER.is_enabled(lvl) {
-            $crate::log_helper(format_args!($($arg)+), lvl, $tag);
-        }
+        $crate::log_helper(format_args!($($arg)+), lvl, $tag);
     });
     ($lvl:expr, $($arg:tt)+) => ($crate::fx_log!(tag: "", $lvl, $($arg)+))
 }
@@ -213,6 +211,14 @@ pub struct Logger {
     logger: *mut syslog::fx_logger_t,
 }
 
+impl Drop for Logger {
+    fn drop(&mut self) {
+        unsafe {
+            syslog::fx_logger_destroy(self.logger);
+        }
+    }
+}
+
 impl Logger {
     /// Wrapper around C API `fx_logger_get_min_severity`.
     fn get_severity(&self) -> syslog::fx_log_severity_t {
@@ -227,15 +233,34 @@ impl Logger {
         false
     }
 
-    #[doc(hidden)]
-    /// Wrapper around C API `fx_logger_log`.
-    pub fn log_c(
-        &self,
-        severity: syslog::fx_log_severity_t,
-        tag: &CStr,
-        msg: &CStr,
-    ) -> zx_status_t {
-        unsafe { syslog::fx_logger_log(self.logger, severity, tag.as_ptr(), msg.as_ptr()) }
+    /// Returns whether or not the underlying logger is valid
+    pub fn is_valid(&self) -> bool {
+        !self.logger.is_null()
+    }
+
+    /// Wrapper around C API `fx_logger_log`. Consider using `fx_log_*` macros
+    /// instead of calling this function directly. Calling this function
+    /// directly is almost certainly not what you want to do unless you are
+    /// writing a custom logging integration.
+    pub fn log_f(&self, level: levels::LogLevel, args: Arguments<'_>, tag: Option<&str>) {
+        if !self.is_enabled(level) {
+            return;
+        }
+        let s = std::fmt::format(args);
+        let c_msg = CString::new(s).unwrap();
+        match tag {
+            Some(t) => {
+                let c_tag = CString::new(t).unwrap();
+                unsafe {
+                    syslog::fx_logger_log(self.logger, level, c_tag.as_ptr(), c_msg.as_ptr())
+                };
+            }
+            None => {
+                unsafe {
+                    syslog::fx_logger_log(self.logger, level, std::ptr::null(), c_msg.as_ptr());
+                };
+            }
+        }
     }
 
     /// Set logger severity. Returns false if internal logger is null.
@@ -259,10 +284,7 @@ lazy_static! {
 
 /// macro helper function to convert strings and call log
 pub fn log_helper(args: Arguments<'_>, lvl: i32, tag: &str) {
-    let s = std::fmt::format(args);
-    let c_msg = CString::new(s).unwrap();
-    let c_tag = CString::new(tag).unwrap();
-    LOGGER.log_c(lvl, &c_tag, &c_msg);
+    LOGGER.log_f(lvl, args, Some(tag));
 }
 
 /// Gets default logger.
@@ -312,6 +334,44 @@ pub fn init_with_socket_and_name(sink: zx::Socket, name: &str) -> Result<(), zx:
 /// Initializes syslogger with tags. Max number of tags can be 4
 /// and max length of each tag can be 63 characters.
 fn init_with_tags_and_handle(handle: zx_handle_t, tags: &[&str]) -> Result<(), zx::Status> {
+    with_default_config_with_tags_and_handle(handle, tags, |config| -> Result<(), zx::Status> {
+        let status = unsafe { syslog::fx_log_reconfigure(config) };
+        if status == zx::Status::OK.into_raw() {
+            log::set_logger(&*LOGGER).expect("Attempted to initialize multiple loggers");
+            log::set_max_level(get_log_filter(config.severity));
+        }
+        zx::ok(status)
+    })
+}
+
+/// Initialize and return a syslogger that uses the `sink` socket.
+pub fn build_with_tags_and_socket(sink: zx::Socket, tags: &[&str]) -> Result<Logger, zx::Status> {
+    with_default_config_with_tags_and_handle(
+        sink.into_raw(),
+        tags,
+        |config| -> Result<Logger, zx::Status> {
+            let logger = unsafe {
+                let logger_ptr: *mut syslog::fx_logger_t = std::ptr::null_mut();
+                let status = syslog::fx_logger_create(config, &logger_ptr);
+                if status != zx::Status::OK.into_raw() {
+                    return Err(zx::Status::from_raw(status));
+                }
+                logger_ptr
+            };
+            Ok(Logger { logger })
+        },
+    )
+}
+
+/// Create a default configuration that incorporates the provided handle and
+/// tags. After that config is created it is passed to `build_logger_fn`.
+/// Callers will likely want to construct a Logger in their `build_logger_fn`
+/// implementation.
+fn with_default_config_with_tags_and_handle<R>(
+    handle: zx_handle_t,
+    tags: &[&str],
+    build_logger_fn: impl FnOnce(&syslog::fx_logger_config_t) -> R,
+) -> R {
     let cstr_vec: Vec<CString> = tags
         .iter()
         .map(|x| CString::new(x.to_owned()).expect("Cannot create tag with interior null"))
@@ -324,12 +384,7 @@ fn init_with_tags_and_handle(handle: zx_handle_t, tags: &[&str]) -> Result<(), z
         tags: c_tags.as_ptr(),
         num_tags: c_tags.len(),
     };
-    let status = unsafe { syslog::fx_log_reconfigure(&config) };
-    if status == zx::Status::OK.into_raw() {
-        log::set_logger(&*LOGGER).expect("Attempted to initialize multiple loggers");
-        log::set_max_level(get_log_filter(config.severity));
-    }
-    zx::ok(status)
+    build_logger_fn(&config)
 }
 
 /// Installs a new panic hook to send the panic message to the log service, since v2 components
@@ -387,12 +442,59 @@ pub fn is_enabled(severity: levels::LogLevel) -> bool {
 mod test {
     use super::*;
 
+    use archivist_lib::logs::Message;
+    use diagnostics_data::Severity;
+    use diagnostics_testing::assert_data_tree;
+    use fidl_fuchsia_sys_internal::SourceIdentity;
     use log::{debug, error, info, trace, warn};
     use std::fs::File;
     use std::io::Read;
     use std::os::unix::io::AsRawFd;
     use std::ptr;
     use tempfile::TempDir;
+
+    #[test]
+    /// Validate that using `build_with_tags_and_socket` results in log packets
+    /// with the expected data being passed through the supplied socket.
+    fn test_build_with_socket() {
+        // Create the socket and logger with a couple of tags
+        // and write a simple message to it.
+        let (tx, rx) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
+            .expect("Datagram socket could not be made");
+        let tags: [&str; 1] = ["[testing]"];
+        let logger = build_with_tags_and_socket(rx, &tags).expect("failed to create logger");
+        logger.log_f(levels::ERROR, format_args!("{}-{}", "hello", "world"), None);
+
+        // Read out of the socket into a `Message`, but using a fake
+        // component identity.
+        let mut buffer: [u8; 1024] = [0; 1024];
+        let read_len = tx.read(&mut buffer).expect("socket read failed");
+        let src_id: SourceIdentity = {
+            let mut identity = SourceIdentity::empty();
+            identity.realm_path = Some(vec!["fake-test-env".to_string()]);
+            identity.component_name = Some("test-component.cm".to_string());
+            identity.component_url =
+                Some("fuchsia-pkg://fuchsia.com/testing123#test-component.cm".to_string());
+            identity
+        };
+
+        let msg = Message::from_logger(&src_id, &buffer[..read_len])
+            .expect("couldn't decode message from buffer");
+
+        // Check metadata and payload
+        assert_eq!(msg.metadata.errors, None);
+        assert_eq!(msg.metadata.component_url, src_id.component_url.unwrap());
+        assert_eq!(msg.metadata.severity, Severity::Error);
+        // For some reason the socket read size does *not* match the recorded
+        // metadata size
+        assert_eq!(msg.metadata.size_bytes, read_len - 2);
+        assert_data_tree!(msg.payload.as_ref().expect("message had no payload"),
+            root: contains {
+                "tag": tags[0],
+                "message": "hello-world"
+            }
+        );
+    }
 
     #[test]
     fn test() {

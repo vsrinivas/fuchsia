@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -15,7 +16,6 @@ rustc_library("syslog") {
   name = "fuchsia_syslog"
   version = "0.1.0"
   edition = "2018"
-  with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -25,6 +25,31 @@ rustc_library("syslog") {
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 
+  sources = [
+    "src/lib.rs",
+    "src/syslog.rs",
+  ]
+}
+
+rustc_test("syslog-tests") {
+  edition = "2018"
+  version = "0.1.0"
+  name = "fuchsia_syslog_lib_test"
+  deps = [
+    ":syslog",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
+    "//src/diagnostics/archivist:lib",
+    "//src/lib/diagnostics/data/rust:lib",
+    "//src/lib/diagnostics/inspect/node-hierarchy/rust:fuchsia-inspect-node-hierarchy",
+    "//src/lib/diagnostics/testing",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tempfile",
+  ]
+
+  source_root = "src/lib.rs"
   sources = [
     "src/lib.rs",
     "src/syslog.rs",
@@ -53,13 +78,13 @@ rustc_library("syslog-listener") {
 group("tests") {
   testonly = true
   deps = [
-    ":fuchsia-syslog-tests",
+    ":syslog-tests",
     "tests",
   ]
 }
 
 test_package("fuchsia-syslog-tests") {
-  deps = [ ":syslog_test" ]
+  deps = [ ":syslog-tests" ]
 
   tests = [
     {
