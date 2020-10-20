@@ -18,6 +18,7 @@ namespace {{ . }} {
 {{ "" }}
 
 {{- range .Decls }}
+{{- if Eq .Kind Kinds.Bits }}{{ template "BitsDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDefinition" . }}{{- end }}

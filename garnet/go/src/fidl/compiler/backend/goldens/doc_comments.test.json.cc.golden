@@ -406,6 +406,15 @@ zx_status_t Interface_SyncProxy::Method() {
 
 #endif  // __Fuchsia__
 
+#if (__cplusplus < 201703)
+constexpr const ::test::name::MyFlexibleBits MyFlexibleBits::MY_FIRST_BIT =
+    ::test::name::MyFlexibleBits(1u);
+constexpr const ::test::name::MyFlexibleBits MyFlexibleBits::MY_OTHER_BIT =
+    ::test::name::MyFlexibleBits(2u);
+constexpr const ::test::name::MyFlexibleBits MyFlexibleBits::kMask =
+    ::test::name::MyFlexibleBits(3u);
+
+#endif  // (__cplusplus < 201703)
 extern "C" const fidl_type_t test_name_FlexibleUnionTable;
 const fidl_type_t* FlexibleUnion::FidlType = &test_name_FlexibleUnionTable;
 

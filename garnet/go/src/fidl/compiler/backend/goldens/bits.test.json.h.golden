@@ -18,12 +18,6 @@ enum class StrictBits : uint64_t {
 const static StrictBits StrictBitsMask =
     static_cast<StrictBits>(9223372036854775809u);
 
-inline zx_status_t Clone(::fidl::test::json::StrictBits value,
-                         ::fidl::test::json::StrictBits* result) {
-  *result = value;
-  return ZX_OK;
-}
-
 constexpr inline ::fidl::test::json::StrictBits operator|(
     ::fidl::test::json::StrictBits _lhs, ::fidl::test::json::StrictBits _rhs) {
   return static_cast<::fidl::test::json::StrictBits>(
@@ -66,6 +60,11 @@ constexpr inline ::fidl::test::json::StrictBits operator~(
       ~static_cast<uint64_t>(_value) & static_cast<uint64_t>(StrictBitsMask));
 }
 
+inline zx_status_t Clone(::fidl::test::json::StrictBits value,
+                         ::fidl::test::json::StrictBits* result) {
+  *result = value;
+  return ZX_OK;
+}
 enum class MyBits : uint32_t {
 
   MY_FIRST_BIT = 1u,
@@ -76,12 +75,6 @@ enum class MyBits : uint32_t {
 };
 
 const static MyBits MyBitsMask = static_cast<MyBits>(7u);
-
-inline zx_status_t Clone(::fidl::test::json::MyBits value,
-                         ::fidl::test::json::MyBits* result) {
-  *result = value;
-  return ZX_OK;
-}
 
 constexpr inline ::fidl::test::json::MyBits operator|(
     ::fidl::test::json::MyBits _lhs, ::fidl::test::json::MyBits _rhs) {
@@ -125,70 +118,123 @@ constexpr inline ::fidl::test::json::MyBits operator~(
       ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(MyBitsMask));
 }
 
-enum class FlexibleBits : uint64_t {
+inline zx_status_t Clone(::fidl::test::json::MyBits value,
+                         ::fidl::test::json::MyBits* result) {
+  *result = value;
+  return ZX_OK;
+}
+// |FlexibleBits| is flexible, hence may contain unknown members not
+// defined in the FIDL schema.
+class FlexibleBits final {
+ public:
+  constexpr FlexibleBits() = default;
+  constexpr FlexibleBits(const FlexibleBits& other) = default;
 
-  SMALLEST = 1u,
+  // Constructs an instance of |FlexibleBits| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |fit::nullopt|.
+  constexpr inline static fit::optional<FlexibleBits> TryFrom(uint64_t value) {
+    if (value & ~kMask.value_) {
+      return fit::nullopt;
+    }
+    return FlexibleBits(value & FlexibleBits::kMask.value_);
+  }
 
-  BIGGEST = 9223372036854775808u,
+  // Constructs an instance of |FlexibleBits| from an underlying primitive
+  // value, clearing any bit member not defined in the FIDL schema.
+  constexpr inline static FlexibleBits TruncatingUnknown(uint64_t value) {
+    return FlexibleBits(value & FlexibleBits::kMask.value_);
+  }
+
+  // Constructs an instance of |FlexibleBits| from an underlying primitive
+  // value, preserving any bit member not defined in the FIDL schema.
+  constexpr explicit FlexibleBits(uint64_t value) : value_(value) {}
+  const static FlexibleBits SMALLEST;
+  const static FlexibleBits BIGGEST;
+  const static FlexibleBits kMask;
+
+  explicit constexpr inline operator uint64_t() const { return value_; }
+  explicit constexpr inline operator bool() const {
+    return static_cast<bool>(value_);
+  }
+  constexpr inline bool operator==(const FlexibleBits& other) const {
+    return value_ == other.value_;
+  }
+  constexpr inline bool operator!=(const FlexibleBits& other) const {
+    return value_ != other.value_;
+  }
+  constexpr inline FlexibleBits operator~() const;
+  constexpr inline FlexibleBits operator|(const FlexibleBits& other) const;
+  constexpr inline FlexibleBits operator&(const FlexibleBits& other) const;
+  constexpr inline FlexibleBits operator^(const FlexibleBits& other) const;
+  constexpr inline void operator|=(const FlexibleBits& other);
+  constexpr inline void operator&=(const FlexibleBits& other);
+  constexpr inline void operator^=(const FlexibleBits& other);
+  constexpr inline FlexibleBits unknown_bits() const {
+    return *this & FlexibleBits(~kMask.value_);
+  }
+  constexpr inline bool has_unknown_bits() const {
+    return static_cast<bool>(unknown_bits());
+  }
+
+ private:
+  uint64_t value_ = 0;
 };
 
-const static FlexibleBits FlexibleBitsMask =
-    static_cast<FlexibleBits>(9223372036854775809u);
+#if !(__cplusplus < 201703)
+constexpr const ::fidl::test::json::FlexibleBits FlexibleBits::SMALLEST =
+    ::fidl::test::json::FlexibleBits(1u);
+constexpr const ::fidl::test::json::FlexibleBits FlexibleBits::BIGGEST =
+    ::fidl::test::json::FlexibleBits(9223372036854775808u);
+constexpr const ::fidl::test::json::FlexibleBits FlexibleBits::kMask =
+    ::fidl::test::json::FlexibleBits(9223372036854775809u);
+
+#endif  // !(__cplusplus < 201703)
+
+constexpr inline ::fidl::test::json::FlexibleBits FlexibleBits::operator~()
+    const {
+  return ::fidl::test::json::FlexibleBits(
+      static_cast<uint64_t>(~this->value_ & kMask.value_));
+}
+
+constexpr inline ::fidl::test::json::FlexibleBits FlexibleBits::operator|(
+    const ::fidl::test::json::FlexibleBits& other) const {
+  return ::fidl::test::json::FlexibleBits(
+      static_cast<uint64_t>(this->value_ | other.value_));
+}
+
+constexpr inline ::fidl::test::json::FlexibleBits FlexibleBits::operator&(
+    const ::fidl::test::json::FlexibleBits& other) const {
+  return ::fidl::test::json::FlexibleBits(
+      static_cast<uint64_t>(this->value_ & other.value_));
+}
+
+constexpr inline ::fidl::test::json::FlexibleBits FlexibleBits::operator^(
+    const ::fidl::test::json::FlexibleBits& other) const {
+  return ::fidl::test::json::FlexibleBits(
+      static_cast<uint64_t>(this->value_ ^ other.value_));
+}
+
+constexpr inline void FlexibleBits::operator|=(
+    const ::fidl::test::json::FlexibleBits& other) {
+  this->value_ |= other.value_;
+}
+
+constexpr inline void FlexibleBits::operator&=(
+    const ::fidl::test::json::FlexibleBits& other) {
+  this->value_ &= other.value_;
+}
+
+constexpr inline void FlexibleBits::operator^=(
+    const ::fidl::test::json::FlexibleBits& other) {
+  this->value_ ^= other.value_;
+}
 
 inline zx_status_t Clone(::fidl::test::json::FlexibleBits value,
                          ::fidl::test::json::FlexibleBits* result) {
   *result = value;
   return ZX_OK;
 }
-
-constexpr inline ::fidl::test::json::FlexibleBits operator|(
-    ::fidl::test::json::FlexibleBits _lhs,
-    ::fidl::test::json::FlexibleBits _rhs) {
-  return static_cast<::fidl::test::json::FlexibleBits>(
-      static_cast<uint64_t>(_lhs) | static_cast<uint64_t>(_rhs));
-}
-
-constexpr inline ::fidl::test::json::FlexibleBits& operator|=(
-    ::fidl::test::json::FlexibleBits& _lhs,
-    ::fidl::test::json::FlexibleBits _rhs) {
-  _lhs = _lhs | _rhs;
-  return _lhs;
-}
-
-constexpr inline ::fidl::test::json::FlexibleBits operator&(
-    ::fidl::test::json::FlexibleBits _lhs,
-    ::fidl::test::json::FlexibleBits _rhs) {
-  return static_cast<::fidl::test::json::FlexibleBits>(
-      static_cast<uint64_t>(_lhs) & static_cast<uint64_t>(_rhs));
-}
-
-constexpr inline ::fidl::test::json::FlexibleBits& operator&=(
-    ::fidl::test::json::FlexibleBits& _lhs,
-    ::fidl::test::json::FlexibleBits _rhs) {
-  _lhs = _lhs & _rhs;
-  return _lhs;
-}
-
-constexpr inline ::fidl::test::json::FlexibleBits operator^(
-    ::fidl::test::json::FlexibleBits _lhs,
-    ::fidl::test::json::FlexibleBits _rhs) {
-  return static_cast<::fidl::test::json::FlexibleBits>(
-      static_cast<uint64_t>(_lhs) ^ static_cast<uint64_t>(_rhs));
-}
-
-constexpr inline ::fidl::test::json::FlexibleBits& operator^=(
-    ::fidl::test::json::FlexibleBits& _lhs,
-    ::fidl::test::json::FlexibleBits _rhs) {
-  _lhs = _lhs ^ _rhs;
-  return _lhs;
-}
-
-constexpr inline ::fidl::test::json::FlexibleBits operator~(
-    ::fidl::test::json::FlexibleBits _value) {
-  return static_cast<::fidl::test::json::FlexibleBits>(
-      ~static_cast<uint64_t>(_value) & static_cast<uint64_t>(FlexibleBitsMask));
-}
-
 }  // namespace json
 }  // namespace test
 }  // namespace fidl

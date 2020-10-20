@@ -47,12 +47,6 @@ enum class ExampleBits : uint32_t {
 
 const static ExampleBits ExampleBitsMask = static_cast<ExampleBits>(1u);
 
-inline zx_status_t Clone(::example::ExampleBits value,
-                         ::example::ExampleBits* result) {
-  *result = value;
-  return ZX_OK;
-}
-
 constexpr inline ::example::ExampleBits operator|(::example::ExampleBits _lhs,
                                                   ::example::ExampleBits _rhs) {
   return static_cast<::example::ExampleBits>(static_cast<uint32_t>(_lhs) |
@@ -95,6 +89,11 @@ constexpr inline ::example::ExampleBits operator~(
       ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(ExampleBitsMask));
 }
 
+inline zx_status_t Clone(::example::ExampleBits value,
+                         ::example::ExampleBits* result) {
+  *result = value;
+  return ZX_OK;
+}
 #ifdef __Fuchsia__
 
 class ExampleProtocol {

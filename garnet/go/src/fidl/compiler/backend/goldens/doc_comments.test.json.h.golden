@@ -74,12 +74,6 @@ enum class MyStrictBits : uint32_t {
 
 const static MyStrictBits MyStrictBitsMask = static_cast<MyStrictBits>(3u);
 
-inline zx_status_t Clone(::test::name::MyStrictBits value,
-                         ::test::name::MyStrictBits* result) {
-  *result = value;
-  return ZX_OK;
-}
-
 constexpr inline ::test::name::MyStrictBits operator|(
     ::test::name::MyStrictBits _lhs, ::test::name::MyStrictBits _rhs) {
   return static_cast<::test::name::MyStrictBits>(static_cast<uint32_t>(_lhs) |
@@ -122,6 +116,12 @@ constexpr inline ::test::name::MyStrictBits operator~(
       ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(MyStrictBitsMask));
 }
 
+inline zx_status_t Clone(::test::name::MyStrictBits value,
+                         ::test::name::MyStrictBits* result) {
+  *result = value;
+  return ZX_OK;
+}
+
 /// flexible enum comment #1.
 ///
 /// flexible enum comment #2.
@@ -144,74 +144,122 @@ inline zx_status_t Clone(::test::name::MyFlexibleEnum value,
   return ZX_OK;
 }
 
-/// flexible bits comment #1
-///
-/// flexible bits comment #2
-enum class MyFlexibleBits : uint32_t {
+// flexible bits comment #1
+//
+// flexible bits comment #2
+// |MyFlexibleBits| is flexible, hence may contain unknown members not
+// defined in the FIDL schema.
+class MyFlexibleBits final {
+ public:
+  constexpr MyFlexibleBits() = default;
+  constexpr MyFlexibleBits(const MyFlexibleBits& other) = default;
 
-  /// MY_FIRST_BIT member comment #1
-  ///
-  /// MY_FIRST_BIT member comment #3
-  MY_FIRST_BIT = 1u,
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
+  // value if the primitive does not contain any unknown members not defined in
+  // the FIDL schema. Otherwise, returns |fit::nullopt|.
+  constexpr inline static fit::optional<MyFlexibleBits> TryFrom(
+      uint32_t value) {
+    if (value & ~kMask.value_) {
+      return fit::nullopt;
+    }
+    return MyFlexibleBits(value & MyFlexibleBits::kMask.value_);
+  }
 
-  /// MY_OTHER_BIT member comment #1
-  ///
-  /// MY_OTHER_BIT member comment #3
-  MY_OTHER_BIT = 2u,
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
+  // value, clearing any bit member not defined in the FIDL schema.
+  constexpr inline static MyFlexibleBits TruncatingUnknown(uint32_t value) {
+    return MyFlexibleBits(value & MyFlexibleBits::kMask.value_);
+  }
+
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
+  // value, preserving any bit member not defined in the FIDL schema.
+  constexpr explicit MyFlexibleBits(uint32_t value) : value_(value) {}
+  const static MyFlexibleBits MY_FIRST_BIT;
+  const static MyFlexibleBits MY_OTHER_BIT;
+  const static MyFlexibleBits kMask;
+
+  explicit constexpr inline operator uint32_t() const { return value_; }
+  explicit constexpr inline operator bool() const {
+    return static_cast<bool>(value_);
+  }
+  constexpr inline bool operator==(const MyFlexibleBits& other) const {
+    return value_ == other.value_;
+  }
+  constexpr inline bool operator!=(const MyFlexibleBits& other) const {
+    return value_ != other.value_;
+  }
+  constexpr inline MyFlexibleBits operator~() const;
+  constexpr inline MyFlexibleBits operator|(const MyFlexibleBits& other) const;
+  constexpr inline MyFlexibleBits operator&(const MyFlexibleBits& other) const;
+  constexpr inline MyFlexibleBits operator^(const MyFlexibleBits& other) const;
+  constexpr inline void operator|=(const MyFlexibleBits& other);
+  constexpr inline void operator&=(const MyFlexibleBits& other);
+  constexpr inline void operator^=(const MyFlexibleBits& other);
+  constexpr inline MyFlexibleBits unknown_bits() const {
+    return *this & MyFlexibleBits(~kMask.value_);
+  }
+  constexpr inline bool has_unknown_bits() const {
+    return static_cast<bool>(unknown_bits());
+  }
+
+ private:
+  uint32_t value_ = 0;
 };
 
-const static MyFlexibleBits MyFlexibleBitsMask =
-    static_cast<MyFlexibleBits>(3u);
+#if !(__cplusplus < 201703)
+constexpr const ::test::name::MyFlexibleBits MyFlexibleBits::MY_FIRST_BIT =
+    ::test::name::MyFlexibleBits(1u);
+constexpr const ::test::name::MyFlexibleBits MyFlexibleBits::MY_OTHER_BIT =
+    ::test::name::MyFlexibleBits(2u);
+constexpr const ::test::name::MyFlexibleBits MyFlexibleBits::kMask =
+    ::test::name::MyFlexibleBits(3u);
+
+#endif  // !(__cplusplus < 201703)
+
+constexpr inline ::test::name::MyFlexibleBits MyFlexibleBits::operator~()
+    const {
+  return ::test::name::MyFlexibleBits(
+      static_cast<uint32_t>(~this->value_ & kMask.value_));
+}
+
+constexpr inline ::test::name::MyFlexibleBits MyFlexibleBits::operator|(
+    const ::test::name::MyFlexibleBits& other) const {
+  return ::test::name::MyFlexibleBits(
+      static_cast<uint32_t>(this->value_ | other.value_));
+}
+
+constexpr inline ::test::name::MyFlexibleBits MyFlexibleBits::operator&(
+    const ::test::name::MyFlexibleBits& other) const {
+  return ::test::name::MyFlexibleBits(
+      static_cast<uint32_t>(this->value_ & other.value_));
+}
+
+constexpr inline ::test::name::MyFlexibleBits MyFlexibleBits::operator^(
+    const ::test::name::MyFlexibleBits& other) const {
+  return ::test::name::MyFlexibleBits(
+      static_cast<uint32_t>(this->value_ ^ other.value_));
+}
+
+constexpr inline void MyFlexibleBits::operator|=(
+    const ::test::name::MyFlexibleBits& other) {
+  this->value_ |= other.value_;
+}
+
+constexpr inline void MyFlexibleBits::operator&=(
+    const ::test::name::MyFlexibleBits& other) {
+  this->value_ &= other.value_;
+}
+
+constexpr inline void MyFlexibleBits::operator^=(
+    const ::test::name::MyFlexibleBits& other) {
+  this->value_ ^= other.value_;
+}
 
 inline zx_status_t Clone(::test::name::MyFlexibleBits value,
                          ::test::name::MyFlexibleBits* result) {
   *result = value;
   return ZX_OK;
 }
-
-constexpr inline ::test::name::MyFlexibleBits operator|(
-    ::test::name::MyFlexibleBits _lhs, ::test::name::MyFlexibleBits _rhs) {
-  return static_cast<::test::name::MyFlexibleBits>(static_cast<uint32_t>(_lhs) |
-                                                   static_cast<uint32_t>(_rhs));
-}
-
-constexpr inline ::test::name::MyFlexibleBits& operator|=(
-    ::test::name::MyFlexibleBits& _lhs, ::test::name::MyFlexibleBits _rhs) {
-  _lhs = _lhs | _rhs;
-  return _lhs;
-}
-
-constexpr inline ::test::name::MyFlexibleBits operator&(
-    ::test::name::MyFlexibleBits _lhs, ::test::name::MyFlexibleBits _rhs) {
-  return static_cast<::test::name::MyFlexibleBits>(static_cast<uint32_t>(_lhs) &
-                                                   static_cast<uint32_t>(_rhs));
-}
-
-constexpr inline ::test::name::MyFlexibleBits& operator&=(
-    ::test::name::MyFlexibleBits& _lhs, ::test::name::MyFlexibleBits _rhs) {
-  _lhs = _lhs & _rhs;
-  return _lhs;
-}
-
-constexpr inline ::test::name::MyFlexibleBits operator^(
-    ::test::name::MyFlexibleBits _lhs, ::test::name::MyFlexibleBits _rhs) {
-  return static_cast<::test::name::MyFlexibleBits>(static_cast<uint32_t>(_lhs) ^
-                                                   static_cast<uint32_t>(_rhs));
-}
-
-constexpr inline ::test::name::MyFlexibleBits& operator^=(
-    ::test::name::MyFlexibleBits& _lhs, ::test::name::MyFlexibleBits _rhs) {
-  _lhs = _lhs ^ _rhs;
-  return _lhs;
-}
-
-constexpr inline ::test::name::MyFlexibleBits operator~(
-    ::test::name::MyFlexibleBits _value) {
-  return static_cast<::test::name::MyFlexibleBits>(
-      ~static_cast<uint32_t>(_value) &
-      static_cast<uint32_t>(MyFlexibleBitsMask));
-}
-
 class FlexibleUnion;
 
 /// table comment #1

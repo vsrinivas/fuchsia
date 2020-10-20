@@ -29,12 +29,6 @@ enum class BitsType : uint32_t {
 
 const static BitsType BitsTypeMask = static_cast<BitsType>(3u);
 
-inline zx_status_t Clone(::test::name::BitsType value,
-                         ::test::name::BitsType* result) {
-  *result = value;
-  return ZX_OK;
-}
-
 constexpr inline ::test::name::BitsType operator|(::test::name::BitsType _lhs,
                                                   ::test::name::BitsType _rhs) {
   return static_cast<::test::name::BitsType>(static_cast<uint32_t>(_lhs) |
@@ -75,6 +69,12 @@ constexpr inline ::test::name::BitsType operator~(
     ::test::name::BitsType _value) {
   return static_cast<::test::name::BitsType>(
       ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(BitsTypeMask));
+}
+
+inline zx_status_t Clone(::test::name::BitsType value,
+                         ::test::name::BitsType* result) {
+  *result = value;
+  return ZX_OK;
 }
 
 extern const char USERNAME[];
