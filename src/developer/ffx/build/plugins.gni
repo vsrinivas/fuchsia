@@ -11,12 +11,12 @@ template("plugins") {
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
   }
-  includes_subcommands = "false"
+  includes_subcommands = false
   if (defined(invoker.plugin_deps)) {
-    includes_subcommands = "true"
+    includes_subcommands = true
   }
 
-  includes_execution = "false"
+  includes_execution = false
   if (defined(invoker.includes_execution)) {
     includes_execution = invoker.includes_execution
   }
@@ -28,13 +28,21 @@ template("plugins") {
     rebase_path(generated_file),
     "--args",
     invoker.args,
-    "--includes_execution",
-    invoker.includes_execution,
-    "--includes_subcommands",
-    includes_subcommands,
     "--execution_lib",
     invoker.execution_lib,
   ]
+  if (includes_execution) {
+    script_args += [
+      "--includes_execution",
+      "true",
+    ]
+  }
+  if (includes_subcommands) {
+    script_args += [
+      "--includes_subcommands",
+      "true",
+    ]
+  }
   if (defined(invoker.plugin_deps)) {
     libraries = []
     foreach(dep, invoker.plugin_deps) {

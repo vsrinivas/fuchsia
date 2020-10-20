@@ -1,5 +1,5 @@
 pub async fn ffx_plugin_impl<D, DFut, R, RFut, E, EFut, F, FFut>(
-{% if includes_execution == "false" and includes_subcommands == "false" %}
+{% if not includes_execution and not includes_subcommands %}
   _daemon_factory: D,
   _remote_factory: R,
   _fastboot_factory: F,
@@ -31,8 +31,8 @@ pub async fn ffx_plugin_impl<D, DFut, R, RFut, E, EFut, F, FFut>(
     E: FnOnce(&'static str) -> EFut,
     EFut: std::future::Future<Output = bool>,
 {
-{% if includes_execution == "true" %}
-{% if includes_subcommands == "true" %}
+{% if includes_execution %}
+{% if includes_subcommands %}
   match cmd.subcommand {
       Some(sub) => match sub {
 {% for plugin in plugins %}
@@ -46,7 +46,7 @@ pub async fn ffx_plugin_impl<D, DFut, R, RFut, E, EFut, F, FFut>(
 {% endif %}
 
 {% else %}
-{% if includes_subcommands == "true" %}
+{% if includes_subcommands %}
     match cmd.subcommand {
 {% for plugin in plugins %}
       {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(daemon_factory, remote_factory, fastboot_factory, is_experiment, c).await,

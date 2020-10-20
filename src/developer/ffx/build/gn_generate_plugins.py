@@ -41,10 +41,10 @@ def main(args_list=None):
     parser.add_argument('--sub_command', help='sub command lib', required=False)
 
     parser.add_argument(
-        '--includes_execution', help='includes execution code', required=True)
+        '--includes_execution', help='includes execution code', default=False)
 
     parser.add_argument(
-        '--includes_subcommands', help='includes subcommands', required=True)
+        '--includes_subcommands', help='includes subcommands', default=False)
 
     parser.add_argument(
         '--execution_lib', help='name of execution lib', required=True)
