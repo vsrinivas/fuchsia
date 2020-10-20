@@ -137,11 +137,9 @@ zx_status_t As370AudioStreamOut::InitPdev() {
     return status;
   }
 
-  uint32_t channels[] = {0, 1};
   dai_format_t format = {};
   format.number_of_channels = 2;
-  format.channels_to_use_list = channels;
-  format.channels_to_use_count = countof(channels);
+  format.channels_to_use_bitmask = 3;
   format.sample_format = kWantedSampleFormat;
   format.frame_format = kWantedFrameFormat;
   format.frame_rate = kWantedFrameRate;
