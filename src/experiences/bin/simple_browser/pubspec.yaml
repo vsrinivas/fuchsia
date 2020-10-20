@@ -6,3 +6,8 @@ name: simple_browser
 description: A simple browser for Fuchsia
 
 flutter:
+  fonts:
+    - family: MaterialIcons
+      fonts:
+        - asset: fonts/MaterialIcons-Regular.otf 
+  uses-material-design: true
