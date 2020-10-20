@@ -44,7 +44,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value, zx_signals_t signals, 
 
   auto up = ProcessDispatcher::GetCurrent();
   {
-    Guard<BrwLockPi, BrwLockPi::Reader> guard{up->handle_table().handle_table_lock()};
+    Guard<BrwLockPi, BrwLockPi::Reader> guard{up->handle_table().get_lock()};
 
     Handle* handle = up->handle_table().GetHandleLocked(handle_value);
     if (!handle)
@@ -133,7 +133,7 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
   zx_status_t result = ZX_OK;
   size_t num_added = 0;
   {
-    Guard<BrwLockPi, BrwLockPi::Reader> guard{up->handle_table().handle_table_lock()};
+    Guard<BrwLockPi, BrwLockPi::Reader> guard{up->handle_table().get_lock()};
 
     for (; num_added != count; ++num_added) {
       Handle* handle = up->handle_table().GetHandleLocked(items[num_added].handle);
@@ -206,7 +206,7 @@ zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_han
   auto up = ProcessDispatcher::GetCurrent();
 
   {
-    Guard<BrwLockPi, BrwLockPi::Reader> guard{up->handle_table().handle_table_lock()};
+    Guard<BrwLockPi, BrwLockPi::Reader> guard{up->handle_table().get_lock()};
 
     // Note, we're doing this all while holding the handle table lock for two reasons.
     //

@@ -257,7 +257,7 @@ zx_status_t sys_vmo_replace_as_executable(zx_handle_t handle, zx_handle_t vmex,
     vmex_status = up->EnforceBasicPolicy(ZX_POL_AMBIENT_MARK_VMO_EXEC);
   }
 
-  Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table().handle_table_lock()};
+  Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table().get_lock()};
   auto source = up->handle_table().GetHandleLocked(handle);
   if (!source)
     return ZX_ERR_BAD_HANDLE;

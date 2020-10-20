@@ -54,8 +54,7 @@ class HandleTable {
   // Maps a handle value into a Handle as long we can verify that
   // it belongs to this handle table. Use |skip_policy = true| for testing that
   // a handle is valid without potentially triggering a job policy exception.
-  Handle* GetHandleLocked(zx_handle_t handle_value, bool skip_policy = false)
-      TA_REQ_SHARED(handle_table_lock_);
+  Handle* GetHandleLocked(zx_handle_t handle_value, bool skip_policy = false) TA_REQ_SHARED(lock_);
 
   // Returns the number of outstanding handles in this handle table.
   uint32_t HandleCount() const;
@@ -63,12 +62,12 @@ class HandleTable {
   // Adds |handle| to this handle table. The handle->process_id() is
   // set to process_'s koid.
   void AddHandle(HandleOwner handle);
-  void AddHandleLocked(HandleOwner handle) TA_REQ(handle_table_lock_);
+  void AddHandleLocked(HandleOwner handle) TA_REQ(lock_);
 
   // Set of overloads that remove the |handle| or |handle_value| from this
   // handle table and returns ownership to the handle.
-  HandleOwner RemoveHandleLocked(Handle* handle) TA_REQ(handle_table_lock_);
-  HandleOwner RemoveHandleLocked(zx_handle_t handle_value) TA_REQ(handle_table_lock_);
+  HandleOwner RemoveHandleLocked(Handle* handle) TA_REQ(lock_);
+  HandleOwner RemoveHandleLocked(zx_handle_t handle_value) TA_REQ(lock_);
   HandleOwner RemoveHandle(zx_handle_t handle_value);
 
   // Remove all of an array of |handles| from the handle table. Returns ZX_OK if all of the
@@ -127,14 +126,14 @@ class HandleTable {
   // returning the error value.
   template <typename T>
   zx_status_t ForEachHandle(T func) const {
-    Guard<BrwLockPi, BrwLockPi::Reader> guard{&handle_table_lock_};
+    Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
     return ForEachHandleLocked(func);
   }
 
-  // Similar to |ForEachHandle|, but requires the caller to be holding the |handle_table_lock_|
+  // Similar to |ForEachHandle|, but requires the caller to be holding the |lock_|
   template <typename T>
-  zx_status_t ForEachHandleLocked(T func) const TA_REQ_SHARED(handle_table_lock_) {
-    for (const auto& handle : handle_table_) {
+  zx_status_t ForEachHandleLocked(T func) const TA_REQ_SHARED(lock_) {
+    for (const auto& handle : handles_) {
       const Dispatcher* dispatcher = handle.dispatcher().get();
       zx_status_t s = func(MapHandleToValue(&handle), handle.rights(), dispatcher);
       if (s != ZX_OK) {
@@ -175,9 +174,7 @@ class HandleTable {
   void Clean();
 
   // accessors
-  Lock<BrwLockPi>* handle_table_lock() const TA_RET_CAP(handle_table_lock_) {
-    return &handle_table_lock_;
-  }
+  Lock<BrwLockPi>* get_lock() const TA_RET_CAP(lock_) { return &lock_; }
 
  private:
   using HandleList = fbl::DoublyLinkedListCustomTraits<Handle*, Handle::NodeListTraits>;
@@ -193,20 +190,20 @@ class HandleTable {
     //
     // Once invalidated |Next| will return nullptr and |AdvanceIf| will be a no-op.
     //
-    // The caller must hold the |handle_table_lock_| in Writer mode.
-    void Invalidate() TA_REQ(&handle_table_lock_);
+    // The caller must hold the |lock_| in Writer mode.
+    void Invalidate() TA_REQ(&lock_);
 
     // Advance the cursor and return the next Handle or nullptr if at the end of the list.
     //
     // Once |Next| has returned nullptr, all subsequent calls will return nullptr.
     //
-    // The caller must hold the |handle_table_lock_| in Reader mode.
-    Handle* Next() TA_REQ_SHARED(&handle_table_lock_);
+    // The caller must hold the |lock_| in Reader mode.
+    Handle* Next() TA_REQ_SHARED(&lock_);
 
     // If the next element is |h|, advance the cursor past it.
     //
-    // The caller must hold the |handle_table_lock_| in Writer mode.
-    void AdvanceIf(const Handle* h) TA_REQ(&handle_table_lock_);
+    // The caller must hold the |lock_| in Writer mode.
+    void AdvanceIf(const Handle* h) TA_REQ(&lock_);
 
    private:
     HandleCursor(const HandleCursor&) = delete;
@@ -215,7 +212,7 @@ class HandleTable {
     HandleCursor& operator=(HandleCursor&&) = delete;
 
     HandleTable* const handle_table_;
-    HandleTable::HandleList::iterator iter_ TA_GUARDED(&handle_table_lock_);
+    HandleTable::HandleList::iterator iter_ TA_GUARDED(&lock_);
   };
 
   // Get the dispatcher corresponding to this handle value, after
@@ -236,7 +233,7 @@ class HandleTable {
 
     {
       // Scope utilized to reduce lock duration.
-      Guard<BrwLockPi, BrwLockPi::Reader> guard{&handle_table_lock_};
+      Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
       Handle* handle = GetHandleLocked(handle_value, skip_policy);
       if (!handle)
         return ZX_ERR_BAD_HANDLE;
@@ -269,22 +266,22 @@ class HandleTable {
   // TODO(fxbug.dev/54938): Allow multiple handle table locks to be acquired at once.
   // Right now, this is required when a process closes the last handle to
   // another process, during the destruction of the handle table.
-  mutable DECLARE_BRWLOCK_PI(HandleTable, lockdep::LockFlagsMultiAcquire) handle_table_lock_;
+  mutable DECLARE_BRWLOCK_PI(HandleTable, lockdep::LockFlagsMultiAcquire) lock_;
 
   // Each handle table provides pseudorandom userspace handle
   // values. This is the per-handle-table pseudorandom state.
-  uint32_t handle_rand_ = 0;
+  uint32_t random_value_ = 0;
 
   // The actual handle table.  When removing one or more handles from this list, be sure to
   // advance or invalidate any cursors that might point to the handles being removed.
-  uint32_t handle_table_count_ TA_GUARDED(handle_table_lock_) = 0;
-  HandleList handle_table_ TA_GUARDED(handle_table_lock_);
+  uint32_t count_ TA_GUARDED(lock_) = 0;
+  HandleList handles_ TA_GUARDED(lock_);
 
   // The containing ProcessDispatcher.
   ProcessDispatcher* const process_;
 
-  // A list of cursors that contain pointers to elements of handle_table_.
-  fbl::DoublyLinkedList<HandleCursor*> handle_table_cursors_ TA_GUARDED(handle_table_lock_);
+  // A list of cursors that contain pointers to elements of handles_.
+  fbl::DoublyLinkedList<HandleCursor*> cursors_ TA_GUARDED(lock_);
 };
 
 template <typename Func>
@@ -311,7 +308,7 @@ zx_status_t HandleTable::ForEachHandleBatched(Func&& func) {
     // Gather a batch of arguments while holding the handle table lock.
     size_t count = 0;
     {
-      Guard<BrwLockPi, BrwLockPi::Reader> guard{&handle_table_lock_};
+      Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
       for (; count < kMaxBatchSize; ++count) {
         Handle* handle = cursor.Next();
         if (!handle) {

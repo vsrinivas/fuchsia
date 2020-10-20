@@ -270,7 +270,7 @@ static __WARN_UNUSED_RESULT zx_status_t msg_put_handles(ProcessDispatcher* up, M
     return status;
 
   {
-    Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table().handle_table_lock()};
+    Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table().get_lock()};
 
     for (size_t ix = 0; ix != num_handles; ++ix) {
       zx::status<Handle*> inner_status = get_handle_for_message_locked(up, channel, &handles[ix]);
