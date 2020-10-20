@@ -20,10 +20,13 @@ main () {
         exit
     fi
 
-    rm -f "${FUCHSIA_DIR}/compile_commands.json"
     fx-gen
-    ${FUCHSIA_DIR}/scripts/editors/cat_compile_commands.py ${ZIRCON_BUILDROOT}/compile_commands.json \
-    ${FUCHSIA_BUILD_DIR}/compile_commands.json > ${FUCHSIA_DIR}/compile_commands.json
+    local concat_filename="${FUCHSIA_BUILD_DIR}/compile_commands.zircon-and-build.json"
+    "${FUCHSIA_DIR}/scripts/editors/cat_compile_commands.py" \
+        "${ZIRCON_BUILDROOT}/compile_commands.json" \
+        "${FUCHSIA_BUILD_DIR}/compile_commands.json" \
+            > "${concat_filename}"
+    ln -sf "${concat_filename}" "${FUCHSIA_DIR}/compile_commands.json"
 }
 
 main "$@"
