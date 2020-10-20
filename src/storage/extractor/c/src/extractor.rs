@@ -12,7 +12,6 @@ use std::{
 
 /// A simple structure to convert rust result into C compatible error type.
 #[repr(C)]
-#[no_mangle]
 #[derive(Copy, Clone, Debug)]
 #[must_use]
 pub struct CResult {

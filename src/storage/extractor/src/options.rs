@@ -7,7 +7,6 @@ use crate::properties::DEFAULT_ALIGNMENT;
 /// `ExtractorOptions` tells what types of extents should be extracted and
 /// controls the contents of the extracted image.
 #[repr(C)]
-#[no_mangle]
 #[derive(PartialEq, Debug, PartialOrd, Clone, Copy)]
 pub struct ExtractorOptions {
     /// If `true`, forces dumping of blocks that are considered pii by the

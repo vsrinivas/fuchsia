@@ -10,7 +10,6 @@ use thiserror::Error;
 /// Defines errors used in the crate.
 /// Enum defines types of errors and their human readable messages.
 #[repr(C)]
-#[no_mangle]
 #[derive(Debug, Copy, Clone, Error, PartialEq)]
 pub enum Error {
     /// Given extent cannot override already added extent. This may happen

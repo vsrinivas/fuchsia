@@ -169,7 +169,6 @@ pub const EXTENT_KIND_PII: u8 = 3;
 
 bitfield! {
 #[repr(C)]
-#[no_mangle]
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Debug, FromBytes, AsBytes)]
 /// ExtentKind describes the type of the extent.
 ///
@@ -236,7 +235,6 @@ bitfield! {
 /// DataKind describes the type of the data within an extent.
 /// DataKind priority is Skipped<Zeroes<Unmodified<Modified.
 #[repr(C)]
-#[no_mangle]
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Debug, FromBytes, AsBytes)]
 pub struct DataKindInfo(u8);
 pub u8, kind, set_kind: 1, 0;
