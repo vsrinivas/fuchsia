@@ -216,10 +216,10 @@ bool DebugRegisters::RemoveWatchpoint(const debug_ipc::AddressRange& range,
                                       uint32_t watchpoint_count) {
   FX_DCHECK(watchpoint_count <= 16);
 
-  uint32_t base_address = ValidateRange(range);
+  uint64_t base_address = ValidateRange(range);
   if (base_address == 0) {
     DEBUG_LOG(ArchArm64) << "Range is not valid for removed watchpoint: " << range.ToString();
-    return ZX_ERR_OUT_OF_RANGE;
+    return false;
   }
 
   // Search for a slot that matches.

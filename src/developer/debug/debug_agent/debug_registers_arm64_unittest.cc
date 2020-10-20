@@ -866,4 +866,22 @@ TEST(DebugRegistersArm64, SetupRemoveWatchpoint) {
   ASSERT_TRUE(CheckTypes(regs, {0, 0, 0, 0}));
 }
 
+TEST(DebugRegistersArm64, RemoveLargeAddress) {
+  constexpr uint64_t kBigAddress = 0x1'0000'0000;
+  DebugRegisters regs;
+
+  ASSERT_TRUE(Check(regs, kBigAddress, 8, debug_ipc::BreakpointType::kWrite,
+                    WatchpointInfo({kBigAddress, kBigAddress + 8}, 0), 0b11111111));
+  EXPECT_TRUE(CheckAddresses(regs, {kBigAddress, 0, 0, 0}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 0, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {8, 0, 0, 0}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
+
+  ASSERT_TRUE(regs.RemoveWatchpoint({kBigAddress, kBigAddress + 8}, kWatchpointCount));
+  EXPECT_TRUE(CheckAddresses(regs, {0, 0, 0, 0}));
+  EXPECT_TRUE(CheckEnabled(regs, {0, 0, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {0, 0, 0, 0}));
+  EXPECT_TRUE(CheckTypes(regs, {0, 0, 0, 0}));
+}
+
 }  // namespace debug_agent
