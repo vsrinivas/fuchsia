@@ -75,11 +75,12 @@ mod tests {
         assert_eq!(futures::future::ready(()).replace_value(value).await, value);
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn is_terminated() {
+    #[test]
+    fn is_terminated() {
+        use super::FutureExt as _;
         use futures::future::{FusedFuture as _, FutureExt as _};
 
-        let fut = &mut futures::future::ready(());
+        let fut = &mut futures::future::ready(()).replace_value(());
         assert!(!fut.is_terminated());
         assert_eq!(fut.now_or_never(), Some(()));
         assert!(fut.is_terminated());
