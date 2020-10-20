@@ -19,7 +19,7 @@ use {
     euclid::default::{Point2D, Rect, Size2D, Vector2D},
     fuchsia_trace::{self, counter, duration},
     fuchsia_trace_provider,
-    fuchsia_zircon::{self as zx, AsHandleRef, ClockId, Event, Signals, Time},
+    fuchsia_zircon::{self as zx, AsHandleRef, Event, Signals, Time},
     lazy_static::lazy_static,
     lipsum::{lipsum_title, lipsum_words},
     rand::{thread_rng, Rng},

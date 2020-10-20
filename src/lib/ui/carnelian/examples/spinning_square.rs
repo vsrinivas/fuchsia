@@ -19,7 +19,7 @@ use euclid::{Angle, Transform2D, Vector2D};
 use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
-use fuchsia_zircon::{AsHandleRef, ClockId, Event, Signals, Time};
+use fuchsia_zircon::{AsHandleRef, Event, Signals, Time};
 use futures::prelude::*;
 use std::f32::consts::PI;
 

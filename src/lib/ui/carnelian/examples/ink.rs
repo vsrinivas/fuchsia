@@ -20,7 +20,7 @@ use {
     fidl_fuchsia_hardware_input as hid,
     fuchsia_trace::{self, duration},
     fuchsia_trace_provider,
-    fuchsia_zircon::{self as zx, AsHandleRef, ClockId, Event, Signals, Time},
+    fuchsia_zircon::{self as zx, AsHandleRef, Event, Signals, Time},
     itertools::izip,
     rand::{thread_rng, Rng},
     std::{

@@ -24,7 +24,7 @@ use carnelian::{
     ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::default::Transform2D;
-use fuchsia_zircon::{AsHandleRef, ClockId, Event, Signals, Time};
+use fuchsia_zircon::{AsHandleRef, Event, Signals, Time};
 use lazy_static::lazy_static;
 
 // This font creation method isn't ideal. The correct method would be to ask the Fuchsia
