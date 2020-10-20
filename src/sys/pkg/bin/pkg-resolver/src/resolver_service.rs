@@ -5,13 +5,13 @@
 use {
     crate::{
         cache::{
-            BasePackageIndex, BlobFetcher, CacheError, MerkleForError, PackageCache,
-            ToResolveStatus as _,
+            BasePackageIndex, BlobFetcher, CacheError::*, MerkleForError, MerkleForError::*,
+            PackageCache, ToResolveStatus as _,
         },
         font_package_manager::FontPackageManager,
         queue,
         repository_manager::RepositoryManager,
-        repository_manager::{GetPackageError, GetPackageHashError},
+        repository_manager::{GetPackageError, GetPackageError::*, GetPackageHashError},
         rewrite_manager::RewriteManager,
     },
     anyhow::{anyhow, Error},
@@ -331,7 +331,7 @@ async fn package_from_repo_or_cache(
     let fut = repo_manager.read().get_package(&rewritten_url, &cache, &blob_fetcher);
     match fut.await {
         Ok(b) => Ok(HashSource::Tuf(b)),
-        Err(e @ GetPackageError::Cache(CacheError::MerkleFor(MerkleForError::NotFound))) => {
+        Err(e @ Cache(MerkleFor(NotFound))) => {
             // If we can get metadata but the repo doesn't know about the package,
             // it shouldn't be in the cache, BUT some SDK customers currently rely on this behavior.
             // TODO(fxbug.dev/50764): remove this behavior.
@@ -345,7 +345,14 @@ async fn package_from_repo_or_cache(
                 None => Err(e),
             }
         }
-        Err(e) => {
+        Err(e @ RepoNotFound(..))
+        | Err(e @ OpenRepo(..))
+        | Err(e @ Cache(Fidl(..)))
+        | Err(e @ Cache(ListNeeds(..)))
+        | Err(e @ Cache(MerkleFor(FetchTargetDescription(..))))
+        | Err(e @ Cache(MerkleFor(InvalidTargetPath(..))))
+        | Err(e @ Cache(MerkleFor(NoCustomMetadata)))
+        | Err(e @ Cache(MerkleFor(SerdeError(..)))) => {
             // If we couldn't get TUF metadata, we might not have networking. Check in
             // system/data/cache_packages (not to be confused with pkg-cache). The cache_packages
             // manifest pkg URLs are for fuchsia.com, so do not use the rewritten URL.
@@ -353,6 +360,19 @@ async fn package_from_repo_or_cache(
                 Some(blob) => Ok(HashSource::SystemImageCachePackages(blob, e)),
                 None => Err(e),
             }
+        }
+        Err(e @ Cache(FetchContentBlob(..))) | Err(e @ Cache(FetchMetaFar(..))) => {
+            // We could talk to TUF and we know there's a new version of this package,
+            // but we coldn't retrieve its blobs for some reason. Refuse to fall back to
+            // cache_packages and instead return an error for the resolve, which is consistent with
+            // the path for packages which are not in cache_packages.
+            //
+            // We don't use cache_packages in production, and when developers resolve a package on
+            // a bench they expect the newest version, or a failure. cache_packages are great for
+            // running packages before networking is up, but for these two error conditions,
+            // we know we have networking because we could talk to TUF.
+            fx_log_err!("wittrock: got resolver error {:?}", e);
+            Err(e)
         }
     }
 }

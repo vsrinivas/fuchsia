@@ -287,6 +287,9 @@ impl ToResolveStatus for pkgfs::install::BlobTruncateError {
     fn to_resolve_status(&self) -> Status {
         match self {
             pkgfs::install::BlobTruncateError::Fidl(_) => Status::IO,
+            pkgfs::install::BlobTruncateError::UnexpectedResponse(Status::NO_SPACE) => {
+                Status::NO_SPACE
+            }
             pkgfs::install::BlobTruncateError::UnexpectedResponse(_) => Status::IO,
         }
     }
@@ -296,6 +299,9 @@ impl ToResolveStatus for pkgfs::install::BlobWriteError {
         match self {
             pkgfs::install::BlobWriteError::Fidl(_) => Status::IO,
             pkgfs::install::BlobWriteError::Overwrite => Status::IO,
+            pkgfs::install::BlobWriteError::UnexpectedResponse(Status::NO_SPACE) => {
+                Status::NO_SPACE
+            }
             pkgfs::install::BlobWriteError::UnexpectedResponse(_) => Status::IO,
         }
     }

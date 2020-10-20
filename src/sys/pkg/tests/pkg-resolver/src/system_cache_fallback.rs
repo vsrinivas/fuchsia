@@ -261,11 +261,13 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
     env.stop().await;
 }
 
-// If pkgfs is out of space, pkg-resolver currently falls back to cache_packages if it's asked
-// to resolve a new version of a package in that list.
+// If pkgfs is out of space, pkg-resolver currently should not fall back to cache_packages if it's
+// asked to resolve a new version of a package in that list, if that package has a very large meta/
+// directory
 #[fasync::run_singlethreaded(test)]
-async fn test_pkgfs_out_of_space_falls_back_to_cache_packages() {
-    let pkg_name = "test_pkgfs_out_of_space_fallback_to_cache_packages";
+async fn test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages_with_large_meta_far() {
+    let pkg_name =
+        "test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages_with_large_meta_far";
 
     // A very small package to cache.
     let cache_pkg = test_package(pkg_name, "cache").await;
@@ -294,8 +296,76 @@ async fn test_pkgfs_out_of_space_falls_back_to_cache_packages() {
         .expect("started pkgfs");
 
     // A very large version of the same package, to put in the repo.
-    // Critically, this package contains an incompressible 4MB blob, which is larger than our
-    // blobfs, and attempting to resolve this package will result in blobfs returning out of space.
+    // Critically, this package contains an incompressible 4MB asset in the meta.far,
+    // which is larger than our blobfs, and attempting to resolve this package will result in
+    // blobfs returning out of space.
+    const LARGE_ASSET_FILE_SIZE: u64 = 4 * 1024 * 1024;
+    let mut rng = StdRng::from_seed([0u8; 32]);
+    let rng = &mut rng as &mut dyn RngCore;
+    let repo_pkg = PackageBuilder::new(pkg_name)
+        .add_resource_at("meta/asset", rng.take(LARGE_ASSET_FILE_SIZE))
+        .build()
+        .await
+        .expect("build large package");
+
+    // The size of the meta far should be the size of our asset, plus two 4k-aligned files:
+    // meta/package
+    // Content chunks in FARs are 4KiB-aligned, so the most empty FAR we can get is 8KiB:
+    // meta/package at one alignment boundary, and meta/contents is empty.
+    // This FAR should be 8KiB + the size of our asset file.
+    assert_eq!(
+        repo_pkg.meta_far().unwrap().metadata().unwrap().len(),
+        LARGE_ASSET_FILE_SIZE + 4096 + 4096
+    );
+
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&repo_pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    let served_repository = repo.server().start().unwrap();
+    env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
+
+    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
+    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::NO_SPACE));
+
+    env.stop().await;
+}
+
+// If pkgfs is out of space, pkg-resolver currently should not fall back to cache_packages if it's
+// asked to resolve a new version of a package in that list.
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages() {
+    let pkg_name = "test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages";
+
+    // A very small package to cache.
+    let cache_pkg = test_package(pkg_name, "cache").await;
+
+    let system_image_package =
+        SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
+
+    let very_small_blobfs = Ramdisk::builder()
+        .block_count(4096)
+        .into_blobfs_builder()
+        .expect("made blobfs builder")
+        .start()
+        .expect("started blobfs");
+    system_image_package
+        .write_to_blobfs_dir(&very_small_blobfs.root_dir().expect("wrote system image to blobfs"));
+    cache_pkg
+        .write_to_blobfs_dir(&very_small_blobfs.root_dir().expect("wrote cache package to blobfs"));
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(very_small_blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .expect("started pkgfs");
+
+    // A very large version of the same package, to put in the repo.
     let mut rng = StdRng::from_seed([0u8; 32]);
     let rng = &mut rng as &mut dyn RngCore;
     let repo_pkg = PackageBuilder::new(pkg_name)
@@ -317,12 +387,7 @@ async fn test_pkgfs_out_of_space_falls_back_to_cache_packages() {
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
-
-    // We should have fallen back to the package which was cached on the device.
-    // This behavior will change with fxbug.dev/60507, which will refuse to fall back if there's a
-    // resolve error due to pkgfs out of space.
-    cache_pkg.verify_contents(&package_dir).await.unwrap();
+    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::NO_SPACE));
 
     env.stop().await;
 }
@@ -363,8 +428,6 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packag
     let () = served_repository.stop().await;
 
     // A very large version of the same package, to put in the repo.
-    // Critically, this package contains an incompressible 4MB blob, which is larger than our
-    // blobfs, and attempting to resolve this package will result in blobfs returning out of space.
     let mut rng = StdRng::from_seed([0u8; 32]);
     let rng = &mut rng as &mut dyn RngCore;
     let large_pkg = PackageBuilder::new(pkg_name)
@@ -384,9 +447,9 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packag
     let served_repository = repo_with_large_package.server().start().unwrap();
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
 
-    // pkg-resolver should refuse to fall back to a previous version of the package.
-    // TODO(60507): make this error status more representative of a NO_SPACE error.
-    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::IO));
+    // pkg-resolver should refuse to fall back to a previous version of the package, and fail
+    // with NO_SPACE
+    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::NO_SPACE));
 
     env.stop().await;
 }
