@@ -92,6 +92,10 @@ class AudioAdmin {
   bool IsActive(fuchsia::media::AudioCaptureUsage usage);
 
  private:
+  using RendererPolicies = std::array<fuchsia::media::Behavior, fuchsia::media::RENDER_USAGE_COUNT>;
+  using CapturerPolicies =
+      std::array<fuchsia::media::Behavior, fuchsia::media::CAPTURE_USAGE_COUNT>;
+
   const BehaviorGain behavior_gain_;
   StreamVolumeManager& stream_volume_manager_ FXL_GUARDED_BY(fidl_thread_checker_);
   PolicyActionReporter& policy_action_reporter_ FXL_GUARDED_BY(fidl_thread_checker_);
@@ -116,16 +120,8 @@ class AudioAdmin {
   void SetUsageDuck(fuchsia::media::AudioRenderUsage usage);
   void SetUsageDuck(fuchsia::media::AudioCaptureUsage usage);
 
-  bool IsUsageMuted(fuchsia::media::AudioRenderUsage usage);
-  bool IsUsageMuted(fuchsia::media::AudioCaptureUsage usage);
-
-  bool IsUsageDucked(fuchsia::media::AudioRenderUsage usage);
-  bool IsUsageDucked(fuchsia::media::AudioCaptureUsage usage);
-
-  void InitPolicies();
-
-  void ApplyPolicies(fuchsia::media::AudioCaptureUsage category);
-  void ApplyPolicies(fuchsia::media::AudioRenderUsage category);
+  void ApplyNewPolicies(const RendererPolicies& new_renderer_policies,
+                        const CapturerPolicies& new_capturer_policies);
 
   class PolicyRules {
    public:
