@@ -87,7 +87,7 @@ impl DataController for ZbiExtractController {
                 info!("Attempting to load FvmPartitions");
                 let mut fvm_reader = FvmReader::new(section.buffer.clone());
                 if let Ok(fvm_partitions) = fvm_reader.parse() {
-                    info!("Found {} Partitions in StorageRamdisk", fvm_partitions.len());
+                    info!("Extracting {} Partitions in StorageRamdisk", fvm_partitions.len());
                     let mut fvm_dir = output_path.clone();
                     fvm_dir.push("fvm");
                     fs::create_dir_all(fvm_dir.clone())?;
@@ -107,6 +107,23 @@ impl DataController for ZbiExtractController {
                         fvm_partition_path.push(file_name);
                         let mut fvm_file = File::create(fvm_partition_path)?;
                         fvm_file.write_all(&partition.buffer)?;
+
+                        // Write out the blobfs data.
+                        if partition.partition_type == FvmPartitionType::BlobFs {
+                            info!("Extracting BlobFs FVM partiion");
+                            let mut blobfs_dir = fvm_dir.clone();
+                            blobfs_dir.push("blobfs");
+                            fs::create_dir_all(blobfs_dir.clone())?;
+                            let mut reader = BlobFsReader::new(partition.buffer.clone());
+                            let blobs = reader.parse()?;
+
+                            for blob in blobs {
+                                let mut path = blobfs_dir.clone();
+                                path.push(blob.merkle.clone());
+                                let mut file = File::create(path)?;
+                                file.write_all(&blob.buffer)?;
+                            }
+                        }
                     }
                 } else {
                     info!("No FvmPartitions found in StorageRamdisk");
