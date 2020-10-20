@@ -98,6 +98,8 @@ TEST_F(SystemInstanceTest, CheckBootArgParsing) {
   boot_args_server_->SetBool("console.is_virtio", true);
   boot_args_server_->SetString("console.path", "/test/path");
   boot_args_server_->SetString("TERM", "FAKE_TERM");
+  boot_args_server_->SetString("zircon.autorun.boot", "ls+/dev/class/");
+  boot_args_server_->SetString("zircon.autorun.system", "ls+/system-delayed");
 
   std::optional<console_launcher::Arguments> args =
       console_launcher::GetArguments(&boot_args_client_);
@@ -107,6 +109,8 @@ TEST_F(SystemInstanceTest, CheckBootArgParsing) {
   ASSERT_TRUE(args->is_virtio);
   ASSERT_EQ(args->term.compare("TERM=FAKE_TERM"), 0);
   ASSERT_EQ(args->device.compare("/test/path"), 0);
+  ASSERT_EQ(args->autorun_boot.compare("ls+/dev/class/"), 0);
+  ASSERT_EQ(args->autorun_system.compare("ls+/system-delayed"), 0);
 }
 
 TEST_F(SystemInstanceTest, CheckBootArgDefaultStrings) {
@@ -122,4 +126,6 @@ TEST_F(SystemInstanceTest, CheckBootArgDefaultStrings) {
   ASSERT_FALSE(args->is_virtio);
   ASSERT_EQ(args->term.compare("TERM=uart"), 0);
   ASSERT_EQ(args->device.compare("/svc/console"), 0);
+  ASSERT_EQ(args->autorun_boot.compare(""), 0);
+  ASSERT_EQ(args->autorun_system.compare(""), 0);
 }

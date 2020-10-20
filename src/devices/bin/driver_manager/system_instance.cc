@@ -45,7 +45,6 @@ struct ServiceStarterArgs {
 struct ServiceStarterParams {
   std::string netsvc_interface;
   std::string clock_backstop;
-  std::string autorun_boot;
   bool netsvc_disable = true;
   bool netsvc_netboot = false;
   bool netsvc_advertise = true;
@@ -63,7 +62,6 @@ ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::Sy
   fidl::StringView string_keys[]{
       "netsvc.interface",
       "clock.backstop",
-      "zircon.autorun.boot",
   };
 
   auto string_resp = client->GetStrings(fidl::unowned_vec(string_keys));
@@ -72,7 +70,6 @@ ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::Sy
     auto& values = string_resp->values;
     ret.netsvc_interface = std::string{values[0].data(), values[0].size()};
     ret.clock_backstop = std::string{values[1].data(), values[1].size()};
-    ret.autorun_boot = std::string{values[2].data(), values[2].size()};
   }
 
   llcpp::fuchsia::boot::BoolPair bool_keys[]{
@@ -213,36 +210,6 @@ zx_status_t SystemInstance::CreateDriverHostJob(const zx::job& root_job,
     return status;
   }
   *driver_host_job_out = std::move(driver_host_job);
-  return ZX_OK;
-}
-
-zx_status_t SystemInstance::MaybeCreateShellJob(
-    const zx::job& root_job, llcpp::fuchsia::boot::Arguments::SyncClient& boot_args) {
-  // WARNING: This job is created directly from the root job with no additional job policy
-  // restrictions. We only create it when 'console.shell' is enabled to help protect against
-  // accidental usage.
-  auto console_resp = boot_args.GetBool(fidl::StringView{"console.shell"}, false);
-  if (!console_resp.ok() || !console_resp->value) {
-    LOGF(INFO, "console.shell: disabled");
-    return ZX_OK;
-  } else {
-    LOGF(INFO, "console.shell: enabled");
-  }
-
-  zx::job shell_job;
-  zx_status_t status = zx::job::create(root_job, 0u, &shell_job);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to create shell_job: %s", zx_status_get_string(status));
-    return status;
-  }
-  status = shell_job.set_property(ZX_PROP_NAME, "zircon-shell", 16);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to set shell_job job name: %s", zx_status_get_string(status));
-    return status;
-  }
-
-  // Set member variable now that we're sure all job creation steps succeeded.
-  shell_job_ = std::move(shell_job);
   return ZX_OK;
 }
 
@@ -587,9 +554,6 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
     }
   }
 
-  do_autorun("autorun:boot", params.autorun_boot.empty() ? nullptr : params.autorun_boot.data(),
-             coordinator->root_resource());
-
   auto starter_args = std::make_unique<ServiceStarterArgs>();
   starter_args->instance = this;
   starter_args->coordinator = coordinator;
@@ -612,8 +576,7 @@ int SystemInstance::WaitForSystemAvailable(Coordinator* coordinator) {
   // this should switch to use that
   int fd = open("/system-delayed", O_RDONLY);
   if (fd < 0) {
-    LOGF(WARNING,
-         "Unabled to open '/system-delayed', system drivers and autorun:system are disabled");
+    LOGF(WARNING, "Unabled to open '/system-delayed', system drivers are disabled");
     return ZX_ERR_IO;
   }
   close(fd);
@@ -621,14 +584,6 @@ int SystemInstance::WaitForSystemAvailable(Coordinator* coordinator) {
   // Load in drivers from /system
   coordinator->set_system_available(true);
   coordinator->ScanSystemDrivers();
-
-  auto resp = coordinator->boot_args()->GetString(fidl::StringView{"zircon.autorun.system"});
-  std::string autorun;
-  if (resp.ok() && !resp->value.is_null()) {
-    autorun = std::string{resp->value.data(), resp->value.size()};
-  }
-  do_autorun("autorun:system", autorun.empty() ? nullptr : autorun.data(),
-             coordinator->root_resource());
 
   zx::channel system_state_transition_client, system_state_transition_server;
   zx_status_t status =
@@ -674,35 +629,6 @@ zx_status_t SystemInstance::clone_fshost_ldsvc(zx::channel* loader) {
     return status;
   }
   return fdio_service_connect("/svc/fuchsia.fshost.Loader", remote.release());
-}
-
-void SystemInstance::do_autorun(const char* name, const char* cmd,
-                                const zx::resource& root_resource) {
-  if (cmd == nullptr) {
-    return;
-  }
-
-  auto args = ArgumentVector::FromCmdline(cmd);
-  if (!shell_job_.is_valid()) {
-    LOGF(ERROR, "Couldn't launch autorun command '%s', shell job disabled", args.argv()[0]);
-    return;
-  }
-  args.Print("autorun");
-
-  zx::channel ldsvc;
-  zx_status_t status = clone_fshost_ldsvc(&ldsvc);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to clone loader service for %s '%s': %s", name, args.argv()[0],
-         zx_status_get_string(status));
-    return;
-  }
-
-  status =
-      launcher_.LaunchWithLoader(shell_job_, name, zx::vmo(), std::move(ldsvc), args.argv(),
-                                 nullptr, -1, root_resource, nullptr, nullptr, 0, nullptr, FS_ALL);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed %s '%s': %s", name, args.argv()[0], zx_status_get_string(status));
-  }
 }
 
 zx_status_t DirectoryFilter::Initialize(const zx::channel& forwarding_directory,

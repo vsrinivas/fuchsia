@@ -86,7 +86,6 @@ class FakeBootArgsServer final : public fboot::Arguments::Interface {
 class SystemInstanceForTest : public SystemInstance {
  public:
   using SystemInstance::launcher;
-  using SystemInstance::shell_job;
   using SystemInstance::svc_job;
 };
 
@@ -197,63 +196,6 @@ TEST_F(SystemInstanceTest, DriverHostJobLacksNewProcess) {
   // A return code of 1 from the util process indicates the process_create call failed with
   // ACCESS_DENIED.
   ASSERT_EQ(proc_info.return_code, 1);
-}
-
-TEST_F(SystemInstanceTest, ShellJobNotCreatedIfShellDisabled) {
-  zx::job root_job;
-  ASSERT_OK(get_root_job(&root_job));
-
-  // Check that the shell job is not created by default, if no 'console.shell' value is set.
-  ASSERT_OK(under_test_->MaybeCreateShellJob(root_job, boot_args_client_));
-  ASSERT_FALSE(under_test_->shell_job().is_valid());
-
-  boot_args_server_->SetBool("console.shell", false);
-  ASSERT_OK(under_test_->MaybeCreateShellJob(root_job, boot_args_client_));
-  ASSERT_FALSE(under_test_->shell_job().is_valid());
-}
-
-// Verify that the shell_job which SystemInstance creates does still have
-// ZX_POL_AMBIENT_MARK_VMO_EXEC, as required by some of the remaining non-packaged bringup tests.
-TEST_F(SystemInstanceTest, ShellJobHasAmbientVmex) {
-  zx::job root_job;
-  ASSERT_OK(get_root_job(&root_job));
-
-  boot_args_server_->SetBool("console.shell", true);
-  ASSERT_OK(under_test_->MaybeCreateShellJob(root_job, boot_args_client_));
-  ASSERT_TRUE(under_test_->shell_job().is_valid());
-
-  zx::process proc;
-  const char* args[] = {"/pkg/bin/ambient_vmex_test_util", nullptr};
-  ASSERT_OK(under_test_->launcher().Launch(under_test_->shell_job(), args[0], args, nullptr, -1,
-                                           zx::resource(), nullptr, nullptr, 0, &proc, 0));
-
-  ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
-  zx_info_process_t proc_info;
-  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
-  ASSERT_TRUE(proc_info.exited);
-  // A return code of 0 from the util process indicates the replace_as_executable call succeeded.
-  ASSERT_EQ(proc_info.return_code, 0);
-}
-
-TEST_F(SystemInstanceTest, ShellJobHasNewProcess) {
-  zx::job root_job;
-  ASSERT_OK(get_root_job(&root_job));
-
-  boot_args_server_->SetBool("console.shell", true);
-  ASSERT_OK(under_test_->MaybeCreateShellJob(root_job, boot_args_client_));
-  ASSERT_TRUE(under_test_->shell_job().is_valid());
-
-  zx::process proc;
-  const char* args[] = {"/pkg/bin/new_process_test_util", nullptr};
-  ASSERT_OK(under_test_->launcher().Launch(under_test_->shell_job(), args[0], args, nullptr, -1,
-                                           zx::resource(), nullptr, nullptr, 0, &proc, 0));
-
-  ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
-  zx_info_process_t proc_info;
-  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
-  ASSERT_TRUE(proc_info.exited);
-  // A return code of 0 from the util process indicates the process_create call succeeded.
-  ASSERT_EQ(proc_info.return_code, 0);
 }
 
 }  // namespace

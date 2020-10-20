@@ -81,25 +81,6 @@ class DevmgrLauncher {
   FsProvider* fs_provider_;
 };
 
-// Returns the result of splitting |args| into an argument vector.
-class ArgumentVector {
- public:
-  static ArgumentVector FromCmdline(const char* cmdline);
-
-  // Returns a nullptr-terminated list of arguments.  Only valid for the
-  // lifetime of |this|.
-  const char* const* argv() const { return argv_; }
-
-  void Print(const char* prefix) const;
-
- private:
-  ArgumentVector() = default;
-
-  static constexpr size_t kMaxArgs = 8;
-  const char* argv_[kMaxArgs + 1];
-  std::unique_ptr<char[]> raw_bytes_;
-};
-
 // The variable to set on the kernel command line to enable ld.so tracing
 // of the processes we launch.
 #define LDSO_TRACE_CMDLINE "ldso.trace"

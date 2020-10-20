@@ -21,6 +21,8 @@ group("tests") {
 
 source_set("lib") {
   sources = [
+    "autorun.cc",
+    "autorun.h",
     "console_launcher.cc",
     "console_launcher.h",
   ]

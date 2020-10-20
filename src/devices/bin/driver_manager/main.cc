@@ -344,11 +344,6 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  status = system_instance.MaybeCreateShellJob(root_job, boot_args);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   if (devmgr_args.start_svchost) {
     zx::channel root_server, root_client;
     status = zx::channel::create(0, &root_server, &root_client);

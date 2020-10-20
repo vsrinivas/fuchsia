@@ -80,12 +80,24 @@ zx_status_t WaitForFile(const char* path, zx::time deadline) {
 zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
   ConsoleLauncher launcher;
 
+  zx::job root_job;
   // TODO(fxbug.dev/33957): Remove all uses of the root job.
-  zx_status_t status = GetRootJob(&launcher.root_job_);
+  zx_status_t status = GetRootJob(&root_job);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "Failed to get root job: %s", zx_status_get_string(status));
     return zx::error(status);
   }
+  status = zx::job::create(root_job, 0u, &launcher.shell_job_);
+  if (status != ZX_OK) {
+    FX_LOGF(ERROR, "Failed to create shell_job: %s", zx_status_get_string(status));
+    return zx::error(status);
+  }
+  status = launcher.shell_job_.set_property(ZX_PROP_NAME, "zircon-shell", 16);
+  if (status != ZX_OK) {
+    FX_LOGF(ERROR, "Failed to set shell_job job name: %s", zx_status_get_string(status));
+    return zx::error(status);
+  }
+
   return zx::ok(std::move(launcher));
 }
 
@@ -110,7 +122,12 @@ std::optional<Arguments> GetArguments(llcpp::fuchsia::boot::Arguments::SyncClien
   ret.is_virtio = bool_resp->values[2];
   ret.log_to_debuglog = bool_resp->values[3];
 
-  fidl::StringView vars[]{fidl::StringView{"TERM"}, fidl::StringView{"console.path"}};
+  fidl::StringView vars[]{
+      fidl::StringView{"TERM"},
+      fidl::StringView{"console.path"},
+      fidl::StringView{"zircon.autorun.boot"},
+      fidl::StringView{"zircon.autorun.system"},
+  };
   auto resp = client->GetStrings(fidl::unowned_vec(vars));
   if (!resp.ok()) {
     printf("console-launcher: failed to get console path\n");
@@ -124,6 +141,12 @@ std::optional<Arguments> GetArguments(llcpp::fuchsia::boot::Arguments::SyncClien
   }
   if (!resp->values[1].is_null()) {
     ret.device = std::string{resp->values[1].data(), resp->values[1].size()};
+  }
+  if (!resp->values[2].is_null()) {
+    ret.autorun_boot = std::string{resp->values[2].data(), resp->values[2].size()};
+  }
+  if (!resp->values[3].is_null()) {
+    ret.autorun_system = std::string{resp->values[3].data(), resp->values[3].size()};
   }
 
   return ret;
@@ -210,11 +233,8 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
   uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
 
   FX_LOGF(INFO, nullptr, "Launching %s (%s)\n", argv[0], actions[0].name.data);
-  // WARNING: This process is created directly from the root job with no additional job policy
-  // restrictions. We only create it when 'console.shell' is enabled to help protect against
-  // accidental usage.
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  status = fdio_spawn_etc(root_job_.get(), flags, argv[0], argv, environ, 2, actions,
+  status = fdio_spawn_etc(shell_job_.get(), flags, argv[0], argv, environ, 2, actions,
                           shell_process_.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     printf("console-launcher: failed to launch console shell: %s: %d (%s)\n", err_msg, status,

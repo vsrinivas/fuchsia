@@ -53,8 +53,6 @@ class SystemInstance : public FsProvider {
   // startup.
   zx_status_t CreateDriverHostJob(const zx::job& root_job, zx::job* driver_host_job_out);
   zx_status_t CreateSvcJob(const zx::job& root_job);
-  zx_status_t MaybeCreateShellJob(const zx::job& root_job,
-                                  llcpp::fuchsia::boot::Arguments::SyncClient& boot_args);
 
   zx_status_t StartSvchost(const zx::job& root_job, const zx::channel& root_dir,
                            bool require_system, Coordinator* coordinator);
@@ -72,12 +70,8 @@ class SystemInstance : public FsProvider {
  protected:
   DevmgrLauncher& launcher() { return launcher_; }
   zx::job& svc_job() { return svc_job_; }
-  zx::job& shell_job() { return shell_job_; }
 
  private:
-  // Private helper functions.
-  void do_autorun(const char* name, const char* cmd, const zx::resource& root_resource);
-
   zx_status_t InitializeDriverHostSvcDir();
 
   // The outgoing (exposed) connection to the svchost.
@@ -85,14 +79,6 @@ class SystemInstance : public FsProvider {
 
   // The job in which we run "svc" realm services, like svchost, netsvc, etc.
   zx::job svc_job_;
-
-  // The job in which we run shell processes like consoles and autorun.
-  // WARNING: This job is created directly from the root job with no additional job policy
-  // restrictions. Specifically, it has ZX_POL_AMBIENT_MARK_VMO_EXEC allowed. It should only be used
-  // to launch processes like the shell, autorun processes, and other debug-only functions that are
-  // disabled on userdebug/user build types. Because of this, we only create it when the
-  // 'console.shell' kernel command line argument is enabled.
-  zx::job shell_job_;
 
   // Used to bind the svchost to the virtual-console binary to provide fidl
   // services.

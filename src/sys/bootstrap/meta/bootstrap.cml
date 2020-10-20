@@ -197,6 +197,7 @@
                 "fuchsia.paver.Paver",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.kernel.Controller",
                 "fuchsia.virtualconsole.SessionManager",
             ],
             from: "#driver_manager",
@@ -234,7 +235,10 @@
         {
             directory: "system-delayed",
             from: "#fshost",
-            to: [ "#driver_manager" ],
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
             dependency: "weak_for_migration",
         },
         {

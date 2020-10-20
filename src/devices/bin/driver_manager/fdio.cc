@@ -218,28 +218,3 @@ zx_status_t DevmgrLauncher::Launch(const zx::job& job, const char* name, const c
   return LaunchWithLoader(job, name, zx::vmo(), zx::channel(), argv, initial_envp, stdiofd,
                           root_resource, handles, types, hcount, out_proc, flags);
 }
-
-ArgumentVector ArgumentVector::FromCmdline(const char* cmdline) {
-  ArgumentVector argv;
-  const size_t cmdline_len = strlen(cmdline) + 1;
-  argv.raw_bytes_.reset(new char[cmdline_len]);
-  memcpy(argv.raw_bytes_.get(), cmdline, cmdline_len);
-
-  // Get the full commandline by splitting on '+'.
-  size_t argc = 0;
-  char* token;
-  char* rest = argv.raw_bytes_.get();
-  while (argc < std::size(argv.argv_) && (token = strtok_r(rest, "+", &rest))) {
-    argv.argv_[argc++] = token;
-  }
-  argv.argv_[argc] = nullptr;
-  return argv;
-}
-
-void ArgumentVector::Print(const char* prefix) const {
-  fbl::StringBuffer<llcpp::fuchsia::boot::MAX_ARGS_VALUE_LENGTH> buf;
-  for (const char* const* arg = argv_; *arg != nullptr; ++arg) {
-    buf.AppendPrintf(" '%s'", *arg);
-  }
-  FX_LOGF(INFO, prefix, "Starting%s...", buf.data());
-}

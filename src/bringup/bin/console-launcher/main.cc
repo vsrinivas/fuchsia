@@ -12,23 +12,16 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include "src/bringup/bin/console-launcher/autorun.h"
 #include "src/bringup/bin/console-launcher/console_launcher.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 namespace {
 
-zx_status_t log_to_debuglog() {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = fdio_service_connect("/svc/fuchsia.boot.WriteOnlyLog", remote.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-  llcpp::fuchsia::boot::WriteOnlyLog::SyncClient write_only_log(std::move(local));
-  auto result = write_only_log.Get();
+#define LOGF(severity, message...) FX_LOGF(severity, nullptr, message)
+
+zx_status_t log_to_debuglog(llcpp::fuchsia::boot::WriteOnlyLog::SyncClient* log_client) {
+  auto result = log_client->Get();
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -42,11 +35,41 @@ zx_status_t log_to_debuglog() {
       .tags = &tag,
       .num_tags = 1,
   };
-  status = fdio_fd_create(result.Unwrap()->log.release(), &logger_config.console_fd);
+  zx_status_t status = fdio_fd_create(result.Unwrap()->log.release(), &logger_config.console_fd);
   if (status != ZX_OK) {
     return status;
   }
   return fx_log_reconfigure(&logger_config);
+}
+
+zx_status_t ConnectToBootArgs(llcpp::fuchsia::boot::Arguments::SyncClient* out_client) {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fdio_service_connect("/svc/fuchsia.boot.Arguments", remote.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  *out_client = llcpp::fuchsia::boot::Arguments::SyncClient(std::move(local));
+  return ZX_OK;
+}
+
+zx_status_t ConnectToWriteLog(llcpp::fuchsia::boot::WriteOnlyLog::SyncClient* out_client) {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fdio_service_connect("/svc/fuchsia.boot.WriteOnlyLog", remote.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  *out_client = llcpp::fuchsia::boot::WriteOnlyLog::SyncClient(std::move(local));
+  return ZX_OK;
 }
 
 }  // namespace
@@ -57,39 +80,71 @@ int main(int argv, char** argc) {
     FX_LOGS(ERROR)
         << "Failed to redirect stdout to debuglog, assuming test environment and continuing";
   }
-  zx::channel local, remote;
-  status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return 1;
-  }
-  status = fdio_service_connect("/svc/fuchsia.boot.Arguments", remote.release());
+
+  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  status = ConnectToBootArgs(&boot_args);
   if (status != ZX_OK) {
     return 1;
   }
 
-  llcpp::fuchsia::boot::Arguments::SyncClient client(std::move(local));
-  std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(&client);
+  llcpp::fuchsia::boot::WriteOnlyLog::SyncClient log_client;
+  status = ConnectToWriteLog(&log_client);
+  if (status != ZX_OK) {
+    return 1;
+  }
+
+  std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(&boot_args);
   if (!args) {
     FX_LOGS(ERROR) << "console-launcher: Failed to get arguments";
     return 1;
   }
 
   if (args->log_to_debuglog) {
-    zx_status_t status = log_to_debuglog();
+    zx_status_t status = log_to_debuglog(&log_client);
     if (status != ZX_OK) {
-      FX_LOGF(ERROR, "Failed to reconfigure logger to use debuglog: %s",
-              zx_status_get_string(status));
+      LOGF(ERROR, "Failed to reconfigure logger to use debuglog: %s", zx_status_get_string(status));
       return status;
     }
+  }
+
+  if (!args->run_shell) {
+    if (!args->autorun_boot.empty()) {
+      LOGF(ERROR, "Couldn't launch autorun command '%s'", args->autorun_boot.c_str());
+    }
+    return 0;
   }
 
   zx::status<console_launcher::ConsoleLauncher> result =
       console_launcher::ConsoleLauncher::Create();
   if (!result.is_ok()) {
-    FX_LOGF(ERROR, "Failed to create ConsoleLauncher: %s", result.status_string());
+    LOGF(ERROR, "Failed to create ConsoleLauncher: %s", result.status_string());
     return result.status_value();
   }
   auto& launcher = result.value();
+  LOGF(INFO, "console.shell: enabled");
+
+  autorun::AutoRun autorun;
+  if (!args->autorun_boot.empty()) {
+    auto result = log_client.Get();
+    if (result.status() != ZX_OK) {
+      return result.status();
+    }
+    status = autorun.SetupBootCmd(args->autorun_boot, launcher.shell_job(), std::move(result->log));
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Autorun: Failed to setup boot command: %s", zx_status_get_string(status));
+    }
+  }
+  if (!args->autorun_system.empty()) {
+    auto result = log_client.Get();
+    if (result.status() != ZX_OK) {
+      return result.status();
+    }
+    status =
+        autorun.SetupSystemCmd(args->autorun_system, launcher.shell_job(), std::move(result->log));
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Autorun: Failed to setup system command: %s", zx_status_get_string(status));
+    }
+  }
 
   while (true) {
     status = launcher.LaunchShell(*args);
