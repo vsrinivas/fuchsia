@@ -6,7 +6,6 @@ import("//build/rust/rustc_library.gni")
 
 if (!is_fuchsia) {
   rustc_library("frontend") {
-    testonly = true
     name = "scrutiny_frontend"
     with_unit_tests = true
     edition = "2018"
