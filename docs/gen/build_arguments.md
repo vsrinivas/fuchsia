@@ -3169,12 +3169,3 @@ From //build/config/arm.gni:28
 
 From //build/config/arm.gni:12
 
-### rtc_c
-This is used to temporarily enable building with the C driver
-and will be removed once cpp driver is stabilized.
-See fxb/62176.
-
-**Current value (from the default):** `false`
-
-From //src/devices/rtc/drivers/pl031-rtc/BUILD.gn:11
-
