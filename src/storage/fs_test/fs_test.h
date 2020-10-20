@@ -70,7 +70,7 @@ class FilesystemInstance {
   virtual ~FilesystemInstance() = default;
 
   virtual zx::status<> Mount(const std::string& mount_path) = 0;
-  virtual zx::status<> Unmount(const std::string& mount_path) = 0;
+  virtual zx::status<> Unmount(const std::string& mount_path);
   virtual zx::status<> Fsck() = 0;
 
   // Returns path of the device on which the filesystem is created. For filesystem that are not

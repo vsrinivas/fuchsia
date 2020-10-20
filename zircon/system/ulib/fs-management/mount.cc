@@ -11,6 +11,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/channel.h>
 #include <string.h>
@@ -147,6 +148,7 @@ const mount_options_t default_mount_options = {
     .fsck_after_every_transaction = false,
     .admin = true,
     .outgoing_directory = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID},
+    .bind_to_namespace = false,
 };
 
 const mkfs_options_t default_mkfs_options = {
@@ -272,6 +274,10 @@ disk_format_t detect_disk_format_log_unknown(int fd) {
 __EXPORT
 zx_status_t fmount(int dev_fd, int mount_fd, disk_format_t df, const mount_options_t* options,
                    LaunchCallback cb) {
+  if (options->bind_to_namespace) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   zx_status_t status;
   zx::channel data_root;
   fbl::unique_fd device_fd(dev_fd);
@@ -341,12 +347,20 @@ zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df,
     return status;
   }
 
-  // mount the channel in the requested location
-  if (options->create_mountpoint) {
-    return fs_management::MakeDirAndRemoteMount(mount_path, std::move(data_root));
-  }
+  if (options->bind_to_namespace) {
+    fdio_ns_t* ns;
+    if ((status = fdio_ns_get_installed(&ns)) != ZX_OK) {
+      return status;
+    }
+    return fdio_ns_bind(ns, mount_path, data_root.release());
+  } else {
+    // mount the channel in the requested location
+    if (options->create_mountpoint) {
+      return fs_management::MakeDirAndRemoteMount(mount_path, std::move(data_root));
+    }
 
-  return mount_root_handle(data_root.release(), mount_path);
+    return mount_root_handle(data_root.release(), mount_path);
+  }
 }
 
 __EXPORT

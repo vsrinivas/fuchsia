@@ -42,6 +42,8 @@ typedef struct mount_options {
   struct {
     zx_handle_t client, server;
   } outgoing_directory;
+  // If true, bind to the namespace rather than using a remote-mount.
+  bool bind_to_namespace;
 } mount_options_t;
 
 __EXPORT

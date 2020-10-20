@@ -21,14 +21,6 @@
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
-        {
-            directory: "tmp",
-            rights: [
-                "admin",
-                "rw*",
-            ],
-            path: "/tmp",
-        },
     ],
     offer: [
         {

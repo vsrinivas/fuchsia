@@ -12,6 +12,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
@@ -29,6 +30,7 @@
 #include <fs-management/format.h>
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
+#include <fs/vfs.h>
 
 #include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
 #include "src/lib/isolated_devmgr/v2_component/fvm.h"
@@ -36,11 +38,20 @@
 #include "src/storage/fs_test/minfs_test.h"
 
 namespace fs_test {
+namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
+std::string StripTrailingSlash(const std::string in) {
+  if (!in.empty() && in.back() == '/') {
+    return in.substr(0, in.length() - 1);
+  } else {
+    return in;
+  }
+}
+
 // Creates a ram-disk with an optional FVM partition. Returns the ram-disk and the device path.
-static zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDisk(
+zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDisk(
     const TestFilesystemOptions& options) {
   zx::vmo vmo;
   fzl::VmoMapper mapper;
@@ -82,7 +93,7 @@ static zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDis
 }
 
 // Creates a ram-nand device.  It does not create an FVM partition; that is left to the caller.
-static zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
+zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
     const TestFilesystemOptions& options) {
   auto status = isolated_devmgr::OneTimeSetUp();
   if (status.is_error()) {
@@ -153,9 +164,9 @@ static zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNa
 }
 
 // A wrapper around fs-management that can be used by filesytems if they so wish.
-static zx::status<> FsMount(const std::string& device_path, const std::string& mount_path,
-                            disk_format_t format, const mount_options_t& mount_options,
-                            zx::channel* outgoing_directory = nullptr) {
+zx::status<> FsMount(const std::string& device_path, const std::string& mount_path,
+                     disk_format_t format, const mount_options_t& mount_options,
+                     zx::channel* outgoing_directory = nullptr) {
   auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
     std::cerr << "Could not open device: " << device_path << ": errno=" << errno;
@@ -164,6 +175,7 @@ static zx::status<> FsMount(const std::string& device_path, const std::string& m
 
   mount_options_t options = mount_options;
   options.register_fs = false;
+  options.bind_to_namespace = true;
   if (outgoing_directory) {
     zx::channel server;
     auto status = zx::make_status(zx::channel::create(0, outgoing_directory, &server));
@@ -180,8 +192,8 @@ static zx::status<> FsMount(const std::string& device_path, const std::string& m
   // options.fsck_after_every_transaction = true;
 
   // |fd| is consumed by mount.
-  auto status = zx::make_status(
-      mount(fd.release(), mount_path.c_str(), format, &options, launch_stdio_async));
+  auto status = zx::make_status(mount(fd.release(), StripTrailingSlash(mount_path).c_str(), format,
+                                      &options, launch_stdio_async));
   if (status.is_error()) {
     std::cerr << "Could not mount " << disk_format_string(format)
               << " file system: " << status.status_string();
@@ -189,6 +201,43 @@ static zx::status<> FsMount(const std::string& device_path, const std::string& m
   }
   return zx::ok();
 }
+
+zx::status<> FsUnbind(const std::string& mount_path) {
+  fdio_ns_t* ns;
+  if (auto status = zx::make_status(fdio_ns_get_installed(&ns)); status.is_error()) {
+    return status;
+  }
+  if (auto status = zx::make_status(fdio_ns_unbind(ns, StripTrailingSlash(mount_path).c_str()));
+      status.is_error()) {
+    std::cerr << "Unable to unbind: " << status.status_string() << std::endl;
+    return status;
+  }
+  return zx::ok();
+}
+
+zx::status<> FsDirectoryAdminUnmount(const std::string& mount_path) {
+  // O_ADMIN is not part of the SDK.  Eventually, this should switch to using fs.Admin.
+  constexpr int kAdmin = 0x0000'0004;
+  int fd = open(mount_path.c_str(), O_DIRECTORY | kAdmin);
+  if (fd < 0) {
+    std::cerr << "Unable to open mount point: " << strerror(errno) << std::endl;
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+  zx_handle_t handle;
+  if (auto status = zx::make_status(fdio_get_service_handle(fd, &handle)); status.is_error()) {
+    std::cerr << "Unable to get service handle: " << status.status_string() << std::endl;
+    return status;
+  }
+  if (auto status =
+          zx::make_status(fs::Vfs::UnmountHandle(zx::channel(handle), zx::time::infinite()));
+      status.is_error()) {
+    std::cerr << "Unable to unmount: " << status.status_string() << std::endl;
+    return status;
+  }
+  return zx::ok();
+}
+
+}  // namespace
 
 TestFilesystemOptions TestFilesystemOptions::DefaultMinfs() {
   return TestFilesystemOptions{.description = "MinfsWithFvm",
@@ -277,6 +326,16 @@ zx::status<> Filesystem::Format(const std::string& device_path, disk_format_t fo
   return zx::ok();
 }
 
+// -- FilesystemInstance --
+
+// Default implementation
+zx::status<> FilesystemInstance::Unmount(const std::string& mount_path) {
+  if (auto status = FsDirectoryAdminUnmount(mount_path); status.is_error()) {
+    return status;
+  }
+  return FsUnbind(mount_path);
+}
+
 // -- Minfs --
 
 class MinfsInstance : public FilesystemInstance {
@@ -288,10 +347,6 @@ class MinfsInstance : public FilesystemInstance {
 
   zx::status<> Mount(const std::string& mount_path) override {
     return FsMount(device_path_, mount_path, DISK_FORMAT_MINFS, default_mount_options);
-  }
-
-  zx::status<> Unmount(const std::string& mount_path) override {
-    return zx::make_status(umount(mount_path.c_str()));
   }
 
   zx::status<> Fsck() override {
@@ -428,19 +483,15 @@ class MemfsInstance : public FilesystemInstance {
       // Already mounted.
       return zx::error(ZX_ERR_BAD_STATE);
     }
-    auto status = zx::make_status(mount_root_handle(root_.release(), mount_path.c_str()));
-    if (status.is_error())
-      std::cerr << "Unable to mount: " << status.status_string();
-    return status;
+    fdio_ns_t* ns;
+    if (auto status = zx::make_status(fdio_ns_get_installed(&ns)); status.is_error()) {
+      return status;
+    }
+    return zx::make_status(
+        fdio_ns_bind(ns, StripTrailingSlash(mount_path).c_str(), root_.release()));
   }
 
-  zx::status<> Unmount(const std::string& mount_path) override {
-    // We can't use fs-management here because it also shuts down the file system, which we don't
-    // want to do because then we wouldn't be able to remount. O_ADMIN and O_NOREMOTE are not
-    // available in the SDK, which makes detaching the remote mount ourselves difficult.  So, for
-    // now, just do nothing; we don't really need to test this.
-    return zx::ok();
-  }
+  zx::status<> Unmount(const std::string& mount_path) override { return FsUnbind(mount_path); }
 
   zx::status<> Fsck() override { return zx::ok(); }
 
@@ -477,29 +528,8 @@ class FatfsInstance : public FilesystemInstance {
   }
 
   zx::status<> Unmount(const std::string& mount_path) override {
-    // O_ADMIN & O_NO_REMOTE are not part of the SDK and O_ADMIN, at least, is deprecated, so for
-    // now, we hard code their values until we get around to fixing fs-management. fatfs doesn't
-    // support O_ADMIN.
-
-    // First detach the node.
-    constexpr int kAdmin = 0x0000'0004;
-    constexpr int kNoRemote = 0x0020'0000;
-    auto fd = fbl::unique_fd(open(mount_path.c_str(), O_DIRECTORY | kNoRemote | kAdmin));
-    if (!fd) {
-      std::cerr << "Unable to open mount point for unmount: " << strerror(errno);
-      return zx::error(ZX_ERR_IO);
-    }
-    fdio_cpp::FdioCaller caller(std::move(fd));
-    auto response = fio::DirectoryAdmin::Call::UnmountNode(caller.channel());
-    caller.release().release();
-    if (!response.ok()) {
-      auto status = zx::make_status(response.status());
-      std::cerr << "UnmountNode failed with fidl error: " << status.status_string();
-      return status;
-    }
-    if (response.value().s != ZX_OK) {
-      auto status = zx::make_status(response.value().s);
-      std::cerr << "UnmountNode failed: " << status.status_string();
+    // Detach from the namespace.
+    if (auto status = FsUnbind(mount_path); status.is_error()) {
       return status;
     }
 
@@ -518,7 +548,6 @@ class FatfsInstance : public FilesystemInstance {
       return status;
     }
     outgoing_directory_.reset();
-
     return zx::ok();
   }
 
@@ -567,10 +596,6 @@ class BlobfsInstance : public FilesystemInstance {
     return FsMount(device_path_, mount_path, DISK_FORMAT_BLOBFS, default_mount_options);
   }
 
-  zx::status<> Unmount(const std::string& mount_path) override {
-    return zx::make_status(umount(mount_path.c_str()));
-  }
-
   zx::status<> Fsck() override {
     fsck_options_t options{
         .verbose = false,
@@ -609,13 +634,9 @@ zx::status<std::unique_ptr<FilesystemInstance>> BlobfsFilesystem::Make(
 
 zx::status<TestFilesystem> TestFilesystem::FromInstance(
     const TestFilesystemOptions& options, std::unique_ptr<FilesystemInstance> instance) {
-  // Mount the file system.
-  char mount_path_c_str[] = "/tmp/fs_test.XXXXXX";
-  if (mkdtemp(mount_path_c_str) == nullptr) {
-    std::cerr << "Unable to create mount point: " << errno;
-    return zx::error(ZX_ERR_BAD_STATE);
-  }
-  TestFilesystem filesystem(options, std::move(instance), std::string(mount_path_c_str) + "/");
+  static uint32_t mount_index;
+  TestFilesystem filesystem(options, std::move(instance),
+                            std::string("/fs_test." + std::to_string(mount_index++) + "/"));
   auto status = filesystem.Mount();
   if (status.is_error()) {
     return status.take_error();

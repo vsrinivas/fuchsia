@@ -89,7 +89,13 @@ pub fn new_connection_validate_flags(
             0
         })
         // allowed_flags takes precedence over prohibited_flags.
-        & !allowed_flags;
+        & !allowed_flags
+        // TRUNCATE is only allowed if the file is writable.
+        | if flags & OPEN_RIGHT_WRITABLE == 0 {
+            OPEN_FLAG_TRUNCATE
+        } else {
+            0
+        };
 
     if !readable && flags & OPEN_RIGHT_READABLE != 0 {
         return Err(Status::ACCESS_DENIED);
@@ -254,13 +260,7 @@ mod tests {
 
     #[test]
     fn new_connection_validate_flags_truncate() {
-        ncvf_ok!(
-            OPEN_RIGHT_READABLE | OPEN_FLAG_TRUNCATE,
-            0,
-            true,
-            true,
-            OPEN_RIGHT_READABLE | OPEN_FLAG_TRUNCATE
-        );
+        ncvf_err!(OPEN_RIGHT_READABLE | OPEN_FLAG_TRUNCATE, 0, true, true, Status::INVALID_ARGS);
         ncvf_ok!(
             OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE,
             0,
