@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async::Executor executor(loop.dispatcher());
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  auto context = sys::ComponentContext::Create();
 
   // Verify arguments.
   if (argc != 2 || argv[1][0] == '\0') {
@@ -88,6 +88,7 @@ int main(int argc, char* argv[]) {
           loop.Quit();
           return;
         }
+        context->outgoing()->ServeFromStartupInfo();
       }));
 
   loop.Run();
