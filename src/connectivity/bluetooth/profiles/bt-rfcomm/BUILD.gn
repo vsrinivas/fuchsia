@@ -50,7 +50,8 @@ rustc_binary("bin") {
     "src/rfcomm/frame/mux_commands/test_command.rs",
     "src/rfcomm/mod.rs",
     "src/rfcomm/server.rs",
-    "src/rfcomm/session.rs",
+    "src/rfcomm/session/mod.rs",
+    "src/rfcomm/session/multiplexer.rs",
     "src/rfcomm/types.rs",
     "src/types.rs",
   ]
