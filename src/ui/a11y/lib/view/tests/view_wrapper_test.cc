@@ -138,6 +138,7 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
   fuchsia::ui::gfx::BoundingBox root_bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
                                                      .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
   auto root_node = CreateTestNode(0u, "test_label_0", {1u});
+  root_node.set_transform({10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 50, 60, 70, 1});
   root_node.set_location(std::move(root_bounding_box));
   node_updates.emplace_back(std::move(root_node));
 
@@ -179,15 +180,15 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
 
   const auto& highlight_translation = annotation_view_->GetTranslationVector();
   EXPECT_TRUE(highlight_translation.has_value());
-  EXPECT_EQ((*highlight_translation)[0], 21.0f);
-  EXPECT_EQ((*highlight_translation)[1], 61.0f);
-  EXPECT_EQ((*highlight_translation)[2], 121.0f);
+  EXPECT_EQ((*highlight_translation)[0], 260.0f);
+  EXPECT_EQ((*highlight_translation)[1], 670.0f);
+  EXPECT_EQ((*highlight_translation)[2], 1280.0f);
 
   const auto& highlight_scale = annotation_view_->GetScaleVector();
   EXPECT_TRUE(highlight_scale.has_value());
-  EXPECT_EQ((*highlight_scale)[0], 10.0f);
-  EXPECT_EQ((*highlight_scale)[1], 15.0f);
-  EXPECT_EQ((*highlight_scale)[2], 20.0f);
+  EXPECT_EQ((*highlight_scale)[0], 100.0f);
+  EXPECT_EQ((*highlight_scale)[1], 150.0f);
+  EXPECT_EQ((*highlight_scale)[2], 200.0f);
 
   // Update the parent node to contain an offset. This will cause the child node, when it is
   // highlighted again, to be scrolled in the x and y axis.
@@ -215,15 +216,15 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
 
     const auto& highlight_translation = annotation_view_->GetTranslationVector();
     EXPECT_TRUE(highlight_translation.has_value());
-    EXPECT_EQ((*highlight_translation)[0], 41.0f);
-    EXPECT_EQ((*highlight_translation)[1], 121.0f);
-    EXPECT_EQ((*highlight_translation)[2], 121.0f);  // no change in z axis.
+    EXPECT_EQ((*highlight_translation)[0], 460.0f);
+    EXPECT_EQ((*highlight_translation)[1], 1270.0f);
+    EXPECT_EQ((*highlight_translation)[2], 1280.0f);  // no change in z axis.
 
     const auto& highlight_scale = annotation_view_->GetScaleVector();
     EXPECT_TRUE(highlight_scale.has_value());
-    EXPECT_EQ((*highlight_scale)[0], 10.0f);
-    EXPECT_EQ((*highlight_scale)[1], 15.0f);
-    EXPECT_EQ((*highlight_scale)[2], 20.0f);
+    EXPECT_EQ((*highlight_scale)[0], 100.0f);
+    EXPECT_EQ((*highlight_scale)[1], 150.0f);
+    EXPECT_EQ((*highlight_scale)[2], 200.0f);
   }
 
   // Clear highlights.

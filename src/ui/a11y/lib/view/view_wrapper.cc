@@ -81,7 +81,7 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
   // beginning at the focused node and up to the minimum-depth non-root ancestor
   // (the root does not have a parent, so it does not need a transform).
   //
-  // [Focused node to root transform] = [depth 1 ancestor transform] x
+  // [Focused node to scenic view] = [root transform] x [depth 1 ancestor transform] x
   //   [depth 2 ancestor transform] x ...  x [parent transform] x [focused node transform]
   //
   // The resulting transform will be of the same form as described above. Using
@@ -94,7 +94,7 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
 
   uint32_t current_node_id = annotated_node->node_id();
   SemanticTransform transform;
-  while (current_node_id != 0) {
+  while (true) {
     auto current_node = tree_weak_ptr->GetNode(current_node_id);
     FX_DCHECK(current_node);
     // Don't apply scrolling that's on the target node, since scrolling affects
@@ -108,6 +108,11 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
     }
     if (current_node->has_transform()) {
       transform.ChainLocalTransform(current_node->transform());
+    }
+
+    // Once we have applied the root node's tranform, we shoud exit the loop.
+    if (current_node_id == 0) {
+      break;
     }
 
     auto parent_node = tree_weak_ptr->GetParentNode(current_node_id);
