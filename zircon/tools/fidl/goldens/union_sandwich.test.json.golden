@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "test.fidl.unionsandwich",
+  "name": "fidl.test.unionsandwich",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -10,7 +10,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "test.fidl.unionsandwich/SandwichUnionSize8Alignment4",
+      "name": "fidl.test.unionsandwich/SandwichUnionSize8Alignment4",
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 14,
@@ -39,7 +39,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.fidl.unionsandwich/UnionSize8Alignment4",
+            "identifier": "fidl.test.unionsandwich/UnionSize8Alignment4",
             "nullable": false
           },
           "name": "union",
@@ -85,7 +85,7 @@
       }
     },
     {
-      "name": "test.fidl.unionsandwich/SandwichUnionSize12Alignment4",
+      "name": "fidl.test.unionsandwich/SandwichUnionSize12Alignment4",
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 24,
@@ -114,7 +114,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.fidl.unionsandwich/UnionSize12Alignment4",
+            "identifier": "fidl.test.unionsandwich/UnionSize12Alignment4",
             "nullable": false
           },
           "name": "union",
@@ -160,7 +160,7 @@
       }
     },
     {
-      "name": "test.fidl.unionsandwich/StructSize16Alignment8",
+      "name": "fidl.test.unionsandwich/StructSize16Alignment8",
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 30,
@@ -217,7 +217,7 @@
       }
     },
     {
-      "name": "test.fidl.unionsandwich/SandwichUnionSize24Alignment8",
+      "name": "fidl.test.unionsandwich/SandwichUnionSize24Alignment8",
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 39,
@@ -246,7 +246,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.fidl.unionsandwich/UnionSize24Alignment8",
+            "identifier": "fidl.test.unionsandwich/UnionSize24Alignment8",
             "nullable": false
           },
           "name": "union",
@@ -292,7 +292,7 @@
       }
     },
     {
-      "name": "test.fidl.unionsandwich/SandwichUnionSize36Alignment4",
+      "name": "fidl.test.unionsandwich/SandwichUnionSize36Alignment4",
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 49,
@@ -321,7 +321,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.fidl.unionsandwich/UnionSize36Alignment4",
+            "identifier": "fidl.test.unionsandwich/UnionSize36Alignment4",
             "nullable": false
           },
           "name": "union",
@@ -370,7 +370,7 @@
   "table_declarations": [],
   "union_declarations": [
     {
-      "name": "test.fidl.unionsandwich/UnionSize8Alignment4",
+      "name": "fidl.test.unionsandwich/UnionSize8Alignment4",
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 10,
@@ -408,7 +408,7 @@
       }
     },
     {
-      "name": "test.fidl.unionsandwich/UnionSize12Alignment4",
+      "name": "fidl.test.unionsandwich/UnionSize12Alignment4",
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 20,
@@ -450,7 +450,7 @@
       }
     },
     {
-      "name": "test.fidl.unionsandwich/UnionSize24Alignment8",
+      "name": "fidl.test.unionsandwich/UnionSize24Alignment8",
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 35,
@@ -464,7 +464,7 @@
           "name": "variant",
           "type": {
             "kind": "identifier",
-            "identifier": "test.fidl.unionsandwich/StructSize16Alignment8",
+            "identifier": "fidl.test.unionsandwich/StructSize16Alignment8",
             "nullable": false
           },
           "location": {
@@ -489,7 +489,7 @@
       }
     },
     {
-      "name": "test.fidl.unionsandwich/UnionSize36Alignment4",
+      "name": "fidl.test.unionsandwich/UnionSize36Alignment4",
       "location": {
         "filename": "union_sandwich.test.fidl",
         "line": 45,
@@ -533,25 +533,25 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.fidl.unionsandwich/UnionSize8Alignment4",
-    "test.fidl.unionsandwich/SandwichUnionSize8Alignment4",
-    "test.fidl.unionsandwich/UnionSize36Alignment4",
-    "test.fidl.unionsandwich/SandwichUnionSize36Alignment4",
-    "test.fidl.unionsandwich/UnionSize12Alignment4",
-    "test.fidl.unionsandwich/SandwichUnionSize12Alignment4",
-    "test.fidl.unionsandwich/StructSize16Alignment8",
-    "test.fidl.unionsandwich/UnionSize24Alignment8",
-    "test.fidl.unionsandwich/SandwichUnionSize24Alignment8"
+    "fidl.test.unionsandwich/UnionSize8Alignment4",
+    "fidl.test.unionsandwich/SandwichUnionSize8Alignment4",
+    "fidl.test.unionsandwich/UnionSize36Alignment4",
+    "fidl.test.unionsandwich/SandwichUnionSize36Alignment4",
+    "fidl.test.unionsandwich/UnionSize12Alignment4",
+    "fidl.test.unionsandwich/SandwichUnionSize12Alignment4",
+    "fidl.test.unionsandwich/StructSize16Alignment8",
+    "fidl.test.unionsandwich/UnionSize24Alignment8",
+    "fidl.test.unionsandwich/SandwichUnionSize24Alignment8"
   ],
   "declarations": {
-    "test.fidl.unionsandwich/SandwichUnionSize8Alignment4": "struct",
-    "test.fidl.unionsandwich/SandwichUnionSize12Alignment4": "struct",
-    "test.fidl.unionsandwich/StructSize16Alignment8": "struct",
-    "test.fidl.unionsandwich/SandwichUnionSize24Alignment8": "struct",
-    "test.fidl.unionsandwich/SandwichUnionSize36Alignment4": "struct",
-    "test.fidl.unionsandwich/UnionSize8Alignment4": "union",
-    "test.fidl.unionsandwich/UnionSize12Alignment4": "union",
-    "test.fidl.unionsandwich/UnionSize24Alignment8": "union",
-    "test.fidl.unionsandwich/UnionSize36Alignment4": "union"
+    "fidl.test.unionsandwich/SandwichUnionSize8Alignment4": "struct",
+    "fidl.test.unionsandwich/SandwichUnionSize12Alignment4": "struct",
+    "fidl.test.unionsandwich/StructSize16Alignment8": "struct",
+    "fidl.test.unionsandwich/SandwichUnionSize24Alignment8": "struct",
+    "fidl.test.unionsandwich/SandwichUnionSize36Alignment4": "struct",
+    "fidl.test.unionsandwich/UnionSize8Alignment4": "union",
+    "fidl.test.unionsandwich/UnionSize12Alignment4": "union",
+    "fidl.test.unionsandwich/UnionSize24Alignment8": "union",
+    "fidl.test.unionsandwich/UnionSize36Alignment4": "union"
   }
 }

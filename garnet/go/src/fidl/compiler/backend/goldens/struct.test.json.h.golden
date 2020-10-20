@@ -6,7 +6,7 @@
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace structs {
 
 class Simple;
 class BasicStruct;
@@ -28,8 +28,8 @@ class Simple final {
   zx_status_t Clone(Simple* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::json::Simple& _value,
-                         ::fidl::test::json::Simple* _result) {
+inline zx_status_t Clone(const ::fidl::test::structs::Simple& _value,
+                         ::fidl::test::structs::Simple* _result) {
   return _value.Clone(_result);
 }
 
@@ -53,37 +53,37 @@ class BasicStruct final {
   zx_status_t Clone(BasicStruct* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::json::BasicStruct& _value,
-                         ::fidl::test::json::BasicStruct* _result) {
+inline zx_status_t Clone(const ::fidl::test::structs::BasicStruct& _value,
+                         ::fidl::test::structs::BasicStruct* _result) {
   return _value.Clone(_result);
 }
 
 using BasicStructPtr = ::std::unique_ptr<BasicStruct>;
-}  // namespace json
+}  // namespace structs
 }  // namespace test
 }  // namespace fidl
 namespace fidl {
 
 template <>
-struct CodingTraits<::fidl::test::json::Simple>
-    : public EncodableCodingTraits<::fidl::test::json::Simple, 2> {};
+struct CodingTraits<::fidl::test::structs::Simple>
+    : public EncodableCodingTraits<::fidl::test::structs::Simple, 2> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::json::Simple>
+struct IsMemcpyCompatible<::fidl::test::structs::Simple>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::json::Simple>::value &&
+          !HasPadding<::fidl::test::structs::Simple>::value &&
           IsMemcpyCompatible<bool>::value &&
           IsMemcpyCompatible<uint8_t>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::json::Simple& value,
-                         ::fidl::test::json::Simple* result) {
-  return ::fidl::test::json::Clone(value, result);
+inline zx_status_t Clone(const ::fidl::test::structs::Simple& value,
+                         ::fidl::test::structs::Simple* result) {
+  return ::fidl::test::structs::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::json::Simple> {
-  bool operator()(const ::fidl::test::json::Simple& _lhs,
-                  const ::fidl::test::json::Simple& _rhs) const {
+struct Equality<::fidl::test::structs::Simple> {
+  bool operator()(const ::fidl::test::structs::Simple& _lhs,
+                  const ::fidl::test::structs::Simple& _rhs) const {
     if (!::fidl::Equals(_lhs.f1, _rhs.f1)) {
       return false;
     }
@@ -94,28 +94,29 @@ struct Equality<::fidl::test::json::Simple> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::json::BasicStruct>
-    : public EncodableCodingTraits<::fidl::test::json::BasicStruct, 24> {};
+struct CodingTraits<::fidl::test::structs::BasicStruct>
+    : public EncodableCodingTraits<::fidl::test::structs::BasicStruct, 24> {};
 
 template <>
-struct HasPadding<::fidl::test::json::BasicStruct> : public std::true_type {};
+struct HasPadding<::fidl::test::structs::BasicStruct> : public std::true_type {
+};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::json::BasicStruct>
+struct IsMemcpyCompatible<::fidl::test::structs::BasicStruct>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::json::BasicStruct>::value &&
+          !HasPadding<::fidl::test::structs::BasicStruct>::value &&
           IsMemcpyCompatible<::std::string>::value &&
           IsMemcpyCompatible<uint32_t>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::json::BasicStruct& value,
-                         ::fidl::test::json::BasicStruct* result) {
-  return ::fidl::test::json::Clone(value, result);
+inline zx_status_t Clone(const ::fidl::test::structs::BasicStruct& value,
+                         ::fidl::test::structs::BasicStruct* result) {
+  return ::fidl::test::structs::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::json::BasicStruct> {
-  bool operator()(const ::fidl::test::json::BasicStruct& _lhs,
-                  const ::fidl::test::json::BasicStruct& _rhs) const {
+struct Equality<::fidl::test::structs::BasicStruct> {
+  bool operator()(const ::fidl::test::structs::BasicStruct& _lhs,
+                  const ::fidl::test::structs::BasicStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.x, _rhs.x)) {
       return false;
     }

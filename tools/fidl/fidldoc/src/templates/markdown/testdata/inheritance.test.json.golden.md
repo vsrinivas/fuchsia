@@ -1,15 +1,15 @@
 [TOC]
 
-# fidl.test.json
+# fidl.test.inheritance
 
 
 ## **PROTOCOLS**
 
 ## super {#super}
-*Defined in [fidl.test.json/inheritance.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/inheritance.test.fidl#3)*
+*Defined in [fidl.test.inheritance/inheritance.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/inheritance.test.fidl#3)*
 
 
-### foo {#fidl.test.json/super.foo}
+### foo {#fidl.test.inheritance/super.foo}
 
 
 #### Request
@@ -34,10 +34,10 @@
         </tr></table>
 
 ## sub {#sub}
-*Defined in [fidl.test.json/inheritance.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/inheritance.test.fidl#7)*
+*Defined in [fidl.test.inheritance/inheritance.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/inheritance.test.fidl#7)*
 
 
-### foo {#fidl.test.json/sub.foo}
+### foo {#fidl.test.inheritance/sub.foo}
 
 
 #### Request

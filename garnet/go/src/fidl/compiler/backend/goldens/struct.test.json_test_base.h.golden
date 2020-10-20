@@ -5,8 +5,8 @@
 #include <struct.test.json.h>
 namespace fidl {
 namespace test {
-namespace json {
+namespace structs {
 namespace testing {}  // namespace testing
-}  // namespace json
+}  // namespace structs
 }  // namespace test
 }  // namespace fidl

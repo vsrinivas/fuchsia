@@ -1,25 +1,15 @@
 [TOC]
 
-# test.name
+# fidl.test.protocols
 
 
 ## **PROTOCOLS**
 
 ## WithAndWithoutRequestResponse {#WithAndWithoutRequestResponse}
-*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#17)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#17)*
 
 
-### NoRequestNoResponse {#test.name/WithAndWithoutRequestResponse.NoRequestNoResponse}
-
-
-#### Request
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
-
-
-
-### NoRequestEmptyResponse {#test.name/WithAndWithoutRequestResponse.NoRequestEmptyResponse}
+### NoRequestNoResponse {#fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestNoResponse}
 
 
 #### Request
@@ -28,12 +18,8 @@
     </table>
 
 
-#### Response
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    </table>
 
-### NoRequestWithResponse {#test.name/WithAndWithoutRequestResponse.NoRequestWithResponse}
+### NoRequestEmptyResponse {#fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestEmptyResponse}
 
 
 #### Request
@@ -45,59 +31,15 @@
 #### Response
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
-            <td><code>ret</code></td>
-            <td>
-                <code>string</code>
-            </td>
-        </tr></table>
+    </table>
 
-### WithRequestNoResponse {#test.name/WithAndWithoutRequestResponse.WithRequestNoResponse}
+### NoRequestWithResponse {#fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestWithResponse}
 
 
 #### Request
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    <tr>
-            <td><code>arg</code></td>
-            <td>
-                <code>string</code>
-            </td>
-        </tr></table>
-
-
-
-### WithRequestEmptyResponse {#test.name/WithAndWithoutRequestResponse.WithRequestEmptyResponse}
-
-
-#### Request
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    <tr>
-            <td><code>arg</code></td>
-            <td>
-                <code>string</code>
-            </td>
-        </tr></table>
-
-
-#### Response
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
-
-### WithRequestWithResponse {#test.name/WithAndWithoutRequestResponse.WithRequestWithResponse}
-
-
-#### Request
-<table>
-    <tr><th>Name</th><th>Type</th></tr>
-    <tr>
-            <td><code>arg</code></td>
-            <td>
-                <code>string</code>
-            </td>
-        </tr></table>
 
 
 #### Response
@@ -110,7 +52,65 @@
             </td>
         </tr></table>
 
-### OnEmptyResponse {#test.name/WithAndWithoutRequestResponse.OnEmptyResponse}
+### WithRequestNoResponse {#fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestNoResponse}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>arg</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+
+
+### WithRequestEmptyResponse {#fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestEmptyResponse}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>arg</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+
+#### Response
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    </table>
+
+### WithRequestWithResponse {#fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestWithResponse}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>arg</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+
+#### Response
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>ret</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+### OnEmptyResponse {#fidl.test.protocols/WithAndWithoutRequestResponse.OnEmptyResponse}
 
 
 
@@ -120,7 +120,7 @@
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
-### OnWithResponse {#test.name/WithAndWithoutRequestResponse.OnWithResponse}
+### OnWithResponse {#fidl.test.protocols/WithAndWithoutRequestResponse.OnWithResponse}
 
 
 
@@ -136,10 +136,10 @@
         </tr></table>
 
 ## WithErrorSyntax {#WithErrorSyntax}
-*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#33)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#33)*
 
 
-### ResponseAsStruct {#test.name/WithErrorSyntax.ResponseAsStruct}
+### ResponseAsStruct {#fidl.test.protocols/WithErrorSyntax.ResponseAsStruct}
 
 
 #### Request
@@ -158,7 +158,7 @@
             </td>
         </tr></table>
 
-### ErrorAsPrimitive {#test.name/WithErrorSyntax.ErrorAsPrimitive}
+### ErrorAsPrimitive {#fidl.test.protocols/WithErrorSyntax.ErrorAsPrimitive}
 
 
 #### Request
@@ -177,7 +177,7 @@
             </td>
         </tr></table>
 
-### ErrorAsEnum {#test.name/WithErrorSyntax.ErrorAsEnum}
+### ErrorAsEnum {#fidl.test.protocols/WithErrorSyntax.ErrorAsEnum}
 
 
 #### Request
@@ -197,10 +197,10 @@
         </tr></table>
 
 ## ChannelProtocol {#ChannelProtocol}
-*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#40)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#40)*
 
 
-### MethodA {#test.name/ChannelProtocol.MethodA}
+### MethodA {#fidl.test.protocols/ChannelProtocol.MethodA}
 
 
 #### Request
@@ -220,7 +220,7 @@
 
 
 
-### EventA {#test.name/ChannelProtocol.EventA}
+### EventA {#fidl.test.protocols/ChannelProtocol.EventA}
 
 
 
@@ -240,7 +240,7 @@
             </td>
         </tr></table>
 
-### MethodB {#test.name/ChannelProtocol.MethodB}
+### MethodB {#fidl.test.protocols/ChannelProtocol.MethodB}
 
 
 #### Request
@@ -269,7 +269,7 @@
             </td>
         </tr></table>
 
-### MutateSocket {#test.name/ChannelProtocol.MutateSocket}
+### MutateSocket {#fidl.test.protocols/ChannelProtocol.MutateSocket}
 
 
 #### Request
@@ -294,10 +294,10 @@
         </tr></table>
 
 ## Transitional {#Transitional}
-*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#47)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#47)*
 
 
-### Request {#test.name/Transitional.Request}
+### Request {#fidl.test.protocols/Transitional.Request}
 
 
 #### Request
@@ -321,7 +321,7 @@
             </td>
         </tr></table>
 
-### OneWay {#test.name/Transitional.OneWay}
+### OneWay {#fidl.test.protocols/Transitional.OneWay}
 
 
 #### Request
@@ -336,7 +336,7 @@
 
 
 
-### Event {#test.name/Transitional.Event}
+### Event {#fidl.test.protocols/Transitional.Event}
 
 
 
@@ -356,7 +356,7 @@
 ## **STRUCTS**
 
 ### WithErrorSyntax_ResponseAsStruct_Response {#WithErrorSyntax_ResponseAsStruct_Response}
-*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#34)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#34)*
 
 
 
@@ -386,7 +386,7 @@
 </table>
 
 ### WithErrorSyntax_ErrorAsPrimitive_Response {#WithErrorSyntax_ErrorAsPrimitive_Response}
-*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#35)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#35)*
 
 
 
@@ -395,7 +395,7 @@
 </table>
 
 ### WithErrorSyntax_ErrorAsEnum_Response {#WithErrorSyntax_ErrorAsEnum_Response}
-*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#36)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#36)*
 
 
 
@@ -410,7 +410,7 @@
 ### obj_type {#obj_type}
 Type: <code>uint32</code>
 
-*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#6)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#6)*
 
 
 
@@ -428,7 +428,7 @@ Type: <code>uint32</code>
 ### ErrorEnun {#ErrorEnun}
 Type: <code>uint32</code>
 
-*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#28)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#28)*
 
 
 
@@ -450,7 +450,7 @@ Type: <code>uint32</code>
 ## **UNIONS**
 
 ### WithErrorSyntax_ResponseAsStruct_Result {#WithErrorSyntax_ResponseAsStruct_Result}
-*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#34)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#34)*
 
 
 <table>
@@ -469,7 +469,7 @@ Type: <code>uint32</code>
         </tr></table>
 
 ### WithErrorSyntax_ErrorAsPrimitive_Result {#WithErrorSyntax_ErrorAsPrimitive_Result}
-*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#35)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#35)*
 
 
 <table>
@@ -488,7 +488,7 @@ Type: <code>uint32</code>
         </tr></table>
 
 ### WithErrorSyntax_ErrorAsEnum_Result {#WithErrorSyntax_ErrorAsEnum_Result}
-*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#36)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#36)*
 
 
 <table>

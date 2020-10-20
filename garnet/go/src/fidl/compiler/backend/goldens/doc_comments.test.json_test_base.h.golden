@@ -3,8 +3,9 @@
 #pragma once
 
 #include <doc_comments.test.json.h>
+namespace fidl {
 namespace test {
-namespace name {
+namespace doccomments {
 namespace testing {
 
 class Interface_TestBase : public Interface {
@@ -14,5 +15,6 @@ class Interface_TestBase : public Interface {
   void Method() override { NotImplemented_("Method"); }
 };
 }  // namespace testing
-}  // namespace name
+}  // namespace doccomments
 }  // namespace test
+}  // namespace fidl

@@ -5,10 +5,10 @@
 
 
 
-extern const struct FidlCodedStruct test_name_SecondProtocolMethodOnSecondRequestTable;
-const struct FidlCodedStruct test_name_SecondProtocolMethodOnSecondRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="test.name/SecondProtocolMethodOnSecondRequest"};
+extern const struct FidlCodedStruct fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
+const struct FidlCodedStruct fidl_test_service_SecondProtocolMethodOnSecondRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.service/SecondProtocolMethodOnSecondRequest"};
 
-extern const struct FidlCodedStruct test_name_FirstProtocolMethodOnFirstRequestTable;
-const struct FidlCodedStruct test_name_FirstProtocolMethodOnFirstRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="test.name/FirstProtocolMethodOnFirstRequest"};
+extern const struct FidlCodedStruct fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
+const struct FidlCodedStruct fidl_test_service_FirstProtocolMethodOnFirstRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.service/FirstProtocolMethodOnFirstRequest"};
 
 

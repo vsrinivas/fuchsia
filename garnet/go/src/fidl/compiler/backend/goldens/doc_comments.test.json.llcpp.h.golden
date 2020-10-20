@@ -35,8 +35,9 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace doccomments {
 
 class Table;
 struct Struct;
@@ -112,49 +113,54 @@ class MyStrictBits final {
 
   uint32_t value_ = 0;
 };
-constexpr const ::llcpp::test::name::MyStrictBits MyStrictBits::MY_FIRST_BIT =
-    ::llcpp::test::name::MyStrictBits(1u);
-constexpr const ::llcpp::test::name::MyStrictBits MyStrictBits::MY_OTHER_BIT =
-    ::llcpp::test::name::MyStrictBits(2u);
-constexpr const ::llcpp::test::name::MyStrictBits MyStrictBits::mask =
-    ::llcpp::test::name::MyStrictBits(3u);
+constexpr const ::llcpp::fidl::test::doccomments::MyStrictBits
+    MyStrictBits::MY_FIRST_BIT =
+        ::llcpp::fidl::test::doccomments::MyStrictBits(1u);
+constexpr const ::llcpp::fidl::test::doccomments::MyStrictBits
+    MyStrictBits::MY_OTHER_BIT =
+        ::llcpp::fidl::test::doccomments::MyStrictBits(2u);
+constexpr const ::llcpp::fidl::test::doccomments::MyStrictBits
+    MyStrictBits::mask = ::llcpp::fidl::test::doccomments::MyStrictBits(3u);
 
-constexpr inline ::llcpp::test::name::MyStrictBits MyStrictBits::operator~()
-    const {
-  return ::llcpp::test::name::MyStrictBits(
+constexpr inline ::llcpp::fidl::test::doccomments::MyStrictBits
+MyStrictBits::operator~() const {
+  return ::llcpp::fidl::test::doccomments::MyStrictBits(
       static_cast<uint32_t>(~this->value_ & mask.value_));
 }
 
-constexpr inline ::llcpp::test::name::MyStrictBits MyStrictBits::operator|(
-    const ::llcpp::test::name::MyStrictBits& other) const {
-  return ::llcpp::test::name::MyStrictBits(
+constexpr inline ::llcpp::fidl::test::doccomments::MyStrictBits
+MyStrictBits::operator|(
+    const ::llcpp::fidl::test::doccomments::MyStrictBits& other) const {
+  return ::llcpp::fidl::test::doccomments::MyStrictBits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::test::name::MyStrictBits MyStrictBits::operator&(
-    const ::llcpp::test::name::MyStrictBits& other) const {
-  return ::llcpp::test::name::MyStrictBits(
+constexpr inline ::llcpp::fidl::test::doccomments::MyStrictBits
+MyStrictBits::operator&(
+    const ::llcpp::fidl::test::doccomments::MyStrictBits& other) const {
+  return ::llcpp::fidl::test::doccomments::MyStrictBits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::test::name::MyStrictBits MyStrictBits::operator^(
-    const ::llcpp::test::name::MyStrictBits& other) const {
-  return ::llcpp::test::name::MyStrictBits(
+constexpr inline ::llcpp::fidl::test::doccomments::MyStrictBits
+MyStrictBits::operator^(
+    const ::llcpp::fidl::test::doccomments::MyStrictBits& other) const {
+  return ::llcpp::fidl::test::doccomments::MyStrictBits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void MyStrictBits::operator|=(
-    const ::llcpp::test::name::MyStrictBits& other) {
+    const ::llcpp::fidl::test::doccomments::MyStrictBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void MyStrictBits::operator&=(
-    const ::llcpp::test::name::MyStrictBits& other) {
+    const ::llcpp::fidl::test::doccomments::MyStrictBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void MyStrictBits::operator^=(
-    const ::llcpp::test::name::MyStrictBits& other) {
+    const ::llcpp::fidl::test::doccomments::MyStrictBits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -197,10 +203,10 @@ class MyFlexibleEnum final {
  private:
   uint32_t value_;
 };
-constexpr const ::llcpp::test::name::MyFlexibleEnum MyFlexibleEnum::FOO =
-    ::llcpp::test::name::MyFlexibleEnum(1u);
-constexpr const ::llcpp::test::name::MyFlexibleEnum MyFlexibleEnum::BAR =
-    ::llcpp::test::name::MyFlexibleEnum(2u);
+constexpr const ::llcpp::fidl::test::doccomments::MyFlexibleEnum
+    MyFlexibleEnum::FOO = ::llcpp::fidl::test::doccomments::MyFlexibleEnum(1u);
+constexpr const ::llcpp::fidl::test::doccomments::MyFlexibleEnum
+    MyFlexibleEnum::BAR = ::llcpp::fidl::test::doccomments::MyFlexibleEnum(2u);
 
 // flexible bits comment #1
 //
@@ -267,55 +273,60 @@ class MyFlexibleBits final {
 
   uint32_t value_ = 0;
 };
-constexpr const ::llcpp::test::name::MyFlexibleBits
-    MyFlexibleBits::MY_FIRST_BIT = ::llcpp::test::name::MyFlexibleBits(1u);
-constexpr const ::llcpp::test::name::MyFlexibleBits
-    MyFlexibleBits::MY_OTHER_BIT = ::llcpp::test::name::MyFlexibleBits(2u);
-constexpr const ::llcpp::test::name::MyFlexibleBits MyFlexibleBits::mask =
-    ::llcpp::test::name::MyFlexibleBits(3u);
+constexpr const ::llcpp::fidl::test::doccomments::MyFlexibleBits
+    MyFlexibleBits::MY_FIRST_BIT =
+        ::llcpp::fidl::test::doccomments::MyFlexibleBits(1u);
+constexpr const ::llcpp::fidl::test::doccomments::MyFlexibleBits
+    MyFlexibleBits::MY_OTHER_BIT =
+        ::llcpp::fidl::test::doccomments::MyFlexibleBits(2u);
+constexpr const ::llcpp::fidl::test::doccomments::MyFlexibleBits
+    MyFlexibleBits::mask = ::llcpp::fidl::test::doccomments::MyFlexibleBits(3u);
 
-constexpr inline ::llcpp::test::name::MyFlexibleBits MyFlexibleBits::operator~()
-    const {
-  return ::llcpp::test::name::MyFlexibleBits(
+constexpr inline ::llcpp::fidl::test::doccomments::MyFlexibleBits
+MyFlexibleBits::operator~() const {
+  return ::llcpp::fidl::test::doccomments::MyFlexibleBits(
       static_cast<uint32_t>(~this->value_ & mask.value_));
 }
 
-constexpr inline ::llcpp::test::name::MyFlexibleBits MyFlexibleBits::operator|(
-    const ::llcpp::test::name::MyFlexibleBits& other) const {
-  return ::llcpp::test::name::MyFlexibleBits(
+constexpr inline ::llcpp::fidl::test::doccomments::MyFlexibleBits
+MyFlexibleBits::operator|(
+    const ::llcpp::fidl::test::doccomments::MyFlexibleBits& other) const {
+  return ::llcpp::fidl::test::doccomments::MyFlexibleBits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::test::name::MyFlexibleBits MyFlexibleBits::operator&(
-    const ::llcpp::test::name::MyFlexibleBits& other) const {
-  return ::llcpp::test::name::MyFlexibleBits(
+constexpr inline ::llcpp::fidl::test::doccomments::MyFlexibleBits
+MyFlexibleBits::operator&(
+    const ::llcpp::fidl::test::doccomments::MyFlexibleBits& other) const {
+  return ::llcpp::fidl::test::doccomments::MyFlexibleBits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::test::name::MyFlexibleBits MyFlexibleBits::operator^(
-    const ::llcpp::test::name::MyFlexibleBits& other) const {
-  return ::llcpp::test::name::MyFlexibleBits(
+constexpr inline ::llcpp::fidl::test::doccomments::MyFlexibleBits
+MyFlexibleBits::operator^(
+    const ::llcpp::fidl::test::doccomments::MyFlexibleBits& other) const {
+  return ::llcpp::fidl::test::doccomments::MyFlexibleBits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void MyFlexibleBits::operator|=(
-    const ::llcpp::test::name::MyFlexibleBits& other) {
+    const ::llcpp::fidl::test::doccomments::MyFlexibleBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void MyFlexibleBits::operator&=(
-    const ::llcpp::test::name::MyFlexibleBits& other) {
+    const ::llcpp::fidl::test::doccomments::MyFlexibleBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void MyFlexibleBits::operator^=(
-    const ::llcpp::test::name::MyFlexibleBits& other) {
+    const ::llcpp::fidl::test::doccomments::MyFlexibleBits& other) {
   this->value_ ^= other.value_;
 }
 
 class FlexibleUnion;
 
-extern "C" const fidl_type_t test_name_TableTable;
+extern "C" const fidl_type_t fidl_test_doccomments_TableTable;
 
 // table comment #1
 //
@@ -345,7 +356,7 @@ class Table final {
   Table(Table&& other) noexcept = default;
   Table& operator=(Table&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &test_name_TableTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_doccomments_TableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
@@ -478,7 +489,7 @@ class Table::UnownedBuilder final {
   Table::Frame frame_;
 };
 
-extern "C" const fidl_type_t test_name_StrictUnionTable;
+extern "C" const fidl_type_t fidl_test_doccomments_StrictUnionTable;
 
 // strict union comment #1
 //
@@ -530,7 +541,8 @@ class StrictUnion {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_name_StrictUnionTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_doccomments_StrictUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -565,7 +577,7 @@ class StrictUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t test_name_FlexibleUnionTable;
+extern "C" const fidl_type_t fidl_test_doccomments_FlexibleUnionTable;
 
 // flexible union comment #1
 //
@@ -615,7 +627,8 @@ class FlexibleUnion {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &test_name_FlexibleUnionTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_doccomments_FlexibleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -650,13 +663,13 @@ class FlexibleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t test_name_StructTable;
+extern "C" const fidl_type_t fidl_test_doccomments_StructTable;
 
 // struct comment #1
 //
 // struct comment #3
 struct Struct {
-  static constexpr const fidl_type_t* Type = &test_name_StructTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_doccomments_StructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -747,10 +760,10 @@ struct Struct {
   };
 };
 
-extern "C" const fidl_type_t test_name_InterfaceMethodRequestTable;
-extern "C" const fidl_type_t test_name_InterfaceMethodResponseTable;
-extern "C" const fidl_type_t test_name_InterfaceOnEventRequestTable;
-extern "C" const fidl_type_t test_name_InterfaceOnEventEventTable;
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodResponseTable;
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventRequestTable;
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 // interface comment #1
 //
 // interface comment #3
@@ -1155,7 +1168,7 @@ class Service final {
   Service() = default;
 
  public:
-  static constexpr char Name[] = "test.name.Service";
+  static constexpr char Name[] = "fidl.test.doccomments.Service";
 
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
@@ -1228,85 +1241,107 @@ class Service final {
 // const comment #3
 constexpr int32_t C = 4u;
 
-}  // namespace name
+}  // namespace doccomments
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::test::name::Table> : public std::true_type {};
-template <>
-struct IsTable<::llcpp::test::name::Table> : public std::true_type {};
-template <>
-struct IsTableBuilder<::llcpp::test::name::Table::Builder>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::Table>);
-
-template <>
-struct IsFidlType<::llcpp::test::name::Struct> : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::test::name::Struct> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::Struct>);
-static_assert(offsetof(::llcpp::test::name::Struct, Field) == 0);
-static_assert(sizeof(::llcpp::test::name::Struct) ==
-              ::llcpp::test::name::Struct::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::StrictUnion> : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::test::name::StrictUnion> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::StrictUnion>);
-
-template <>
-struct IsFidlType<::llcpp::test::name::Interface::MethodRequest>
+struct IsFidlType<::llcpp::fidl::test::doccomments::Table>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::Interface::MethodRequest>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::Interface::MethodRequest) ==
-              ::llcpp::test::name::Interface::MethodRequest::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::Interface::OnEventResponse>
+struct IsTable<::llcpp::fidl::test::doccomments::Table>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::Interface::OnEventResponse>
+struct IsTableBuilder<::llcpp::fidl::test::doccomments::Table::Builder>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::Interface::OnEventResponse) ==
-              ::llcpp::test::name::Interface::OnEventResponse::PrimarySize);
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::doccomments::Table>);
 
 template <>
-struct IsFidlType<::llcpp::test::name::MyStrictEnum> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::doccomments::Struct>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::doccomments::Struct>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::doccomments::Struct>);
+static_assert(offsetof(::llcpp::fidl::test::doccomments::Struct, Field) == 0);
+static_assert(sizeof(::llcpp::fidl::test::doccomments::Struct) ==
+              ::llcpp::fidl::test::doccomments::Struct::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::test::name::MyStrictBits> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::MyStrictBits>);
-static_assert(sizeof(::llcpp::test::name::MyStrictBits) == sizeof(uint32_t));
+struct IsFidlType<::llcpp::fidl::test::doccomments::StrictUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::doccomments::StrictUnion>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::doccomments::StrictUnion>);
 
 template <>
-struct IsFidlType<::llcpp::test::name::MyFlexibleEnum> : public std::true_type {
-};
+struct IsFidlType<::llcpp::fidl::test::doccomments::Interface::MethodRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fidl::test::doccomments::Interface::MethodRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::doccomments::Interface::MethodRequest) ==
+    ::llcpp::fidl::test::doccomments::Interface::MethodRequest::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::test::name::MyFlexibleBits> : public std::true_type {
-};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::MyFlexibleBits>);
-static_assert(sizeof(::llcpp::test::name::MyFlexibleBits) == sizeof(uint32_t));
+struct IsFidlType<::llcpp::fidl::test::doccomments::Interface::OnEventResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::doccomments::Interface::OnEventResponse>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::doccomments::Interface::OnEventResponse) ==
+    ::llcpp::fidl::test::doccomments::Interface::OnEventResponse::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::test::name::FlexibleUnion> : public std::true_type {
-};
+struct IsFidlType<::llcpp::fidl::test::doccomments::MyStrictEnum>
+    : public std::true_type {};
+
 template <>
-struct IsUnion<::llcpp::test::name::FlexibleUnion> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::FlexibleUnion>);
+struct IsFidlType<::llcpp::fidl::test::doccomments::MyStrictBits>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::doccomments::MyStrictBits>);
+static_assert(sizeof(::llcpp::fidl::test::doccomments::MyStrictBits) ==
+              sizeof(uint32_t));
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::doccomments::MyFlexibleEnum>
+    : public std::true_type {};
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::doccomments::MyFlexibleBits>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::doccomments::MyFlexibleBits>);
+static_assert(sizeof(::llcpp::fidl::test::doccomments::MyFlexibleBits) ==
+              sizeof(uint32_t));
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::doccomments::FlexibleUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::doccomments::FlexibleUnion>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::doccomments::FlexibleUnion>);
 
 }  // namespace fidl
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace doccomments {
 
 struct Interface::AsyncEventHandlers {
   // event comment #1
@@ -1355,6 +1390,7 @@ class Interface::EventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
-}  // namespace name
+}  // namespace doccomments
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

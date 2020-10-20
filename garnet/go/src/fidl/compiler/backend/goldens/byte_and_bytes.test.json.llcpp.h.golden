@@ -34,14 +34,17 @@
 
 namespace llcpp {
 
-namespace example {
+namespace fidl {
+namespace test {
+namespace byteandbytes {
 
 struct ByteAndBytes;
 
-extern "C" const fidl_type_t example_ByteAndBytesTable;
+extern "C" const fidl_type_t fidl_test_byteandbytes_ByteAndBytesTable;
 
 struct ByteAndBytes {
-  static constexpr const fidl_type_t* Type = &example_ByteAndBytesTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_byteandbytes_ByteAndBytesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -138,27 +141,39 @@ struct ByteAndBytes {
   };
 };
 
-}  // namespace example
+}  // namespace byteandbytes
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::example::ByteAndBytes> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::byteandbytes::ByteAndBytes>
+    : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::example::ByteAndBytes> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::example::ByteAndBytes>);
-static_assert(offsetof(::llcpp::example::ByteAndBytes, single_byte) == 0);
-static_assert(offsetof(::llcpp::example::ByteAndBytes, many_bytes) == 8);
-static_assert(offsetof(::llcpp::example::ByteAndBytes, only_one_k_bytes) == 24);
-static_assert(offsetof(::llcpp::example::ByteAndBytes, opt_only_one_k_bytes) ==
-              40);
-static_assert(sizeof(::llcpp::example::ByteAndBytes) ==
-              ::llcpp::example::ByteAndBytes::PrimarySize);
+struct IsStruct<::llcpp::fidl::test::byteandbytes::ByteAndBytes>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::byteandbytes::ByteAndBytes>);
+static_assert(offsetof(::llcpp::fidl::test::byteandbytes::ByteAndBytes,
+                       single_byte) == 0);
+static_assert(offsetof(::llcpp::fidl::test::byteandbytes::ByteAndBytes,
+                       many_bytes) == 8);
+static_assert(offsetof(::llcpp::fidl::test::byteandbytes::ByteAndBytes,
+                       only_one_k_bytes) == 24);
+static_assert(offsetof(::llcpp::fidl::test::byteandbytes::ByteAndBytes,
+                       opt_only_one_k_bytes) == 40);
+static_assert(sizeof(::llcpp::fidl::test::byteandbytes::ByteAndBytes) ==
+              ::llcpp::fidl::test::byteandbytes::ByteAndBytes::PrimarySize);
 
 }  // namespace fidl
 
 namespace llcpp {
 
-namespace example {}  // namespace example
+namespace fidl {
+namespace test {
+namespace byteandbytes {}  // namespace byteandbytes
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

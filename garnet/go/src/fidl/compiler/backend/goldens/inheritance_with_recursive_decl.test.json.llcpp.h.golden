@@ -37,13 +37,15 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace inheritancewithrecursivedecl {
 
 class Parent;
 class Child;
 
-extern "C" const fidl_type_t fidl_test_json_ParentFirstRequestTable;
-extern "C" const fidl_type_t fidl_test_json_ParentFirstResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_inheritancewithrecursivedecl_ParentFirstResponseTable;
 
 class Parent final {
   Parent() = delete;
@@ -60,7 +62,7 @@ class Parent final {
     explicit FirstRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_ParentFirstRequestTable;
+        &fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -317,10 +319,14 @@ class Parent final {
   class EventSender;
 };
 
-extern "C" const fidl_type_t fidl_test_json_ChildFirstRequestTable;
-extern "C" const fidl_type_t fidl_test_json_ChildFirstResponseTable;
-extern "C" const fidl_type_t fidl_test_json_ChildSecondRequestTable;
-extern "C" const fidl_type_t fidl_test_json_ChildSecondResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_inheritancewithrecursivedecl_ChildFirstResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_inheritancewithrecursivedecl_ChildSecondResponseTable;
 
 class Child final {
   Child() = delete;
@@ -337,7 +343,7 @@ class Child final {
     explicit FirstRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_ChildFirstRequestTable;
+        &fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -466,7 +472,7 @@ class Child final {
     explicit SecondRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_ChildSecondRequestTable;
+        &fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -782,7 +788,7 @@ class Child final {
   class EventSender;
 };
 
-}  // namespace json
+}  // namespace inheritancewithrecursivedecl
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
@@ -790,37 +796,55 @@ class Child final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Parent::FirstRequest>
+struct IsFidlType<
+    ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Parent::FirstRequest>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Parent::FirstRequest) ==
-              ::llcpp::fidl::test::json::Parent::FirstRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Parent::FirstRequest,
-                       request) == 16);
+static_assert(sizeof(::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::
+                         FirstRequest) ==
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::
+                  FirstRequest::PrimarySize);
+static_assert(
+    offsetof(
+        ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent::FirstRequest,
+        request) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Child::FirstRequest>
+struct IsFidlType<
+    ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::FirstRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Child::FirstRequest>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::FirstRequest>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Child::FirstRequest) ==
-              ::llcpp::fidl::test::json::Child::FirstRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Child::FirstRequest,
-                       request) == 16);
+static_assert(sizeof(::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
+                         FirstRequest) ==
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
+                  FirstRequest::PrimarySize);
+static_assert(
+    offsetof(
+        ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::FirstRequest,
+        request) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Child::SecondRequest>
+struct IsFidlType<
+    ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::SecondRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Child::SecondRequest>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::SecondRequest>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Child::SecondRequest) ==
-              ::llcpp::fidl::test::json::Child::SecondRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Child::SecondRequest,
-                       request) == 16);
+static_assert(sizeof(::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
+                         SecondRequest) ==
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::
+                  SecondRequest::PrimarySize);
+static_assert(
+    offsetof(
+        ::llcpp::fidl::test::inheritancewithrecursivedecl::Child::SecondRequest,
+        request) == 16);
 
 }  // namespace fidl
 
@@ -828,7 +852,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace inheritancewithrecursivedecl {
 
 struct Parent::AsyncEventHandlers {};
 
@@ -911,7 +935,7 @@ class Child::EventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
-}  // namespace json
+}  // namespace inheritancewithrecursivedecl
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

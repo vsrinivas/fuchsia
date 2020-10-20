@@ -6,7 +6,7 @@
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace bits {
 
 enum class StrictBits : uint64_t {
 
@@ -18,50 +18,50 @@ enum class StrictBits : uint64_t {
 const static StrictBits StrictBitsMask =
     static_cast<StrictBits>(9223372036854775809u);
 
-constexpr inline ::fidl::test::json::StrictBits operator|(
-    ::fidl::test::json::StrictBits _lhs, ::fidl::test::json::StrictBits _rhs) {
-  return static_cast<::fidl::test::json::StrictBits>(
+constexpr inline ::fidl::test::bits::StrictBits operator|(
+    ::fidl::test::bits::StrictBits _lhs, ::fidl::test::bits::StrictBits _rhs) {
+  return static_cast<::fidl::test::bits::StrictBits>(
       static_cast<uint64_t>(_lhs) | static_cast<uint64_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::json::StrictBits& operator|=(
-    ::fidl::test::json::StrictBits& _lhs, ::fidl::test::json::StrictBits _rhs) {
+constexpr inline ::fidl::test::bits::StrictBits& operator|=(
+    ::fidl::test::bits::StrictBits& _lhs, ::fidl::test::bits::StrictBits _rhs) {
   _lhs = _lhs | _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::json::StrictBits operator&(
-    ::fidl::test::json::StrictBits _lhs, ::fidl::test::json::StrictBits _rhs) {
-  return static_cast<::fidl::test::json::StrictBits>(
+constexpr inline ::fidl::test::bits::StrictBits operator&(
+    ::fidl::test::bits::StrictBits _lhs, ::fidl::test::bits::StrictBits _rhs) {
+  return static_cast<::fidl::test::bits::StrictBits>(
       static_cast<uint64_t>(_lhs) & static_cast<uint64_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::json::StrictBits& operator&=(
-    ::fidl::test::json::StrictBits& _lhs, ::fidl::test::json::StrictBits _rhs) {
+constexpr inline ::fidl::test::bits::StrictBits& operator&=(
+    ::fidl::test::bits::StrictBits& _lhs, ::fidl::test::bits::StrictBits _rhs) {
   _lhs = _lhs & _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::json::StrictBits operator^(
-    ::fidl::test::json::StrictBits _lhs, ::fidl::test::json::StrictBits _rhs) {
-  return static_cast<::fidl::test::json::StrictBits>(
+constexpr inline ::fidl::test::bits::StrictBits operator^(
+    ::fidl::test::bits::StrictBits _lhs, ::fidl::test::bits::StrictBits _rhs) {
+  return static_cast<::fidl::test::bits::StrictBits>(
       static_cast<uint64_t>(_lhs) ^ static_cast<uint64_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::json::StrictBits& operator^=(
-    ::fidl::test::json::StrictBits& _lhs, ::fidl::test::json::StrictBits _rhs) {
+constexpr inline ::fidl::test::bits::StrictBits& operator^=(
+    ::fidl::test::bits::StrictBits& _lhs, ::fidl::test::bits::StrictBits _rhs) {
   _lhs = _lhs ^ _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::json::StrictBits operator~(
-    ::fidl::test::json::StrictBits _value) {
-  return static_cast<::fidl::test::json::StrictBits>(
+constexpr inline ::fidl::test::bits::StrictBits operator~(
+    ::fidl::test::bits::StrictBits _value) {
+  return static_cast<::fidl::test::bits::StrictBits>(
       ~static_cast<uint64_t>(_value) & static_cast<uint64_t>(StrictBitsMask));
 }
 
-inline zx_status_t Clone(::fidl::test::json::StrictBits value,
-                         ::fidl::test::json::StrictBits* result) {
+inline zx_status_t Clone(::fidl::test::bits::StrictBits value,
+                         ::fidl::test::bits::StrictBits* result) {
   *result = value;
   return ZX_OK;
 }
@@ -76,50 +76,50 @@ enum class MyBits : uint32_t {
 
 const static MyBits MyBitsMask = static_cast<MyBits>(7u);
 
-constexpr inline ::fidl::test::json::MyBits operator|(
-    ::fidl::test::json::MyBits _lhs, ::fidl::test::json::MyBits _rhs) {
-  return static_cast<::fidl::test::json::MyBits>(static_cast<uint32_t>(_lhs) |
+constexpr inline ::fidl::test::bits::MyBits operator|(
+    ::fidl::test::bits::MyBits _lhs, ::fidl::test::bits::MyBits _rhs) {
+  return static_cast<::fidl::test::bits::MyBits>(static_cast<uint32_t>(_lhs) |
                                                  static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::json::MyBits& operator|=(
-    ::fidl::test::json::MyBits& _lhs, ::fidl::test::json::MyBits _rhs) {
+constexpr inline ::fidl::test::bits::MyBits& operator|=(
+    ::fidl::test::bits::MyBits& _lhs, ::fidl::test::bits::MyBits _rhs) {
   _lhs = _lhs | _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::json::MyBits operator&(
-    ::fidl::test::json::MyBits _lhs, ::fidl::test::json::MyBits _rhs) {
-  return static_cast<::fidl::test::json::MyBits>(static_cast<uint32_t>(_lhs) &
+constexpr inline ::fidl::test::bits::MyBits operator&(
+    ::fidl::test::bits::MyBits _lhs, ::fidl::test::bits::MyBits _rhs) {
+  return static_cast<::fidl::test::bits::MyBits>(static_cast<uint32_t>(_lhs) &
                                                  static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::json::MyBits& operator&=(
-    ::fidl::test::json::MyBits& _lhs, ::fidl::test::json::MyBits _rhs) {
+constexpr inline ::fidl::test::bits::MyBits& operator&=(
+    ::fidl::test::bits::MyBits& _lhs, ::fidl::test::bits::MyBits _rhs) {
   _lhs = _lhs & _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::json::MyBits operator^(
-    ::fidl::test::json::MyBits _lhs, ::fidl::test::json::MyBits _rhs) {
-  return static_cast<::fidl::test::json::MyBits>(static_cast<uint32_t>(_lhs) ^
+constexpr inline ::fidl::test::bits::MyBits operator^(
+    ::fidl::test::bits::MyBits _lhs, ::fidl::test::bits::MyBits _rhs) {
+  return static_cast<::fidl::test::bits::MyBits>(static_cast<uint32_t>(_lhs) ^
                                                  static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::json::MyBits& operator^=(
-    ::fidl::test::json::MyBits& _lhs, ::fidl::test::json::MyBits _rhs) {
+constexpr inline ::fidl::test::bits::MyBits& operator^=(
+    ::fidl::test::bits::MyBits& _lhs, ::fidl::test::bits::MyBits _rhs) {
   _lhs = _lhs ^ _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::json::MyBits operator~(
-    ::fidl::test::json::MyBits _value) {
-  return static_cast<::fidl::test::json::MyBits>(
+constexpr inline ::fidl::test::bits::MyBits operator~(
+    ::fidl::test::bits::MyBits _value) {
+  return static_cast<::fidl::test::bits::MyBits>(
       ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(MyBitsMask));
 }
 
-inline zx_status_t Clone(::fidl::test::json::MyBits value,
-                         ::fidl::test::json::MyBits* result) {
+inline zx_status_t Clone(::fidl::test::bits::MyBits value,
+                         ::fidl::test::bits::MyBits* result) {
   *result = value;
   return ZX_OK;
 }
@@ -182,157 +182,157 @@ class FlexibleBits final {
 };
 
 #if !(__cplusplus < 201703)
-constexpr const ::fidl::test::json::FlexibleBits FlexibleBits::SMALLEST =
-    ::fidl::test::json::FlexibleBits(1u);
-constexpr const ::fidl::test::json::FlexibleBits FlexibleBits::BIGGEST =
-    ::fidl::test::json::FlexibleBits(9223372036854775808u);
-constexpr const ::fidl::test::json::FlexibleBits FlexibleBits::kMask =
-    ::fidl::test::json::FlexibleBits(9223372036854775809u);
+constexpr const ::fidl::test::bits::FlexibleBits FlexibleBits::SMALLEST =
+    ::fidl::test::bits::FlexibleBits(1u);
+constexpr const ::fidl::test::bits::FlexibleBits FlexibleBits::BIGGEST =
+    ::fidl::test::bits::FlexibleBits(9223372036854775808u);
+constexpr const ::fidl::test::bits::FlexibleBits FlexibleBits::kMask =
+    ::fidl::test::bits::FlexibleBits(9223372036854775809u);
 
 #endif  // !(__cplusplus < 201703)
 
-constexpr inline ::fidl::test::json::FlexibleBits FlexibleBits::operator~()
+constexpr inline ::fidl::test::bits::FlexibleBits FlexibleBits::operator~()
     const {
-  return ::fidl::test::json::FlexibleBits(
+  return ::fidl::test::bits::FlexibleBits(
       static_cast<uint64_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::fidl::test::json::FlexibleBits FlexibleBits::operator|(
-    const ::fidl::test::json::FlexibleBits& other) const {
-  return ::fidl::test::json::FlexibleBits(
+constexpr inline ::fidl::test::bits::FlexibleBits FlexibleBits::operator|(
+    const ::fidl::test::bits::FlexibleBits& other) const {
+  return ::fidl::test::bits::FlexibleBits(
       static_cast<uint64_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::fidl::test::json::FlexibleBits FlexibleBits::operator&(
-    const ::fidl::test::json::FlexibleBits& other) const {
-  return ::fidl::test::json::FlexibleBits(
+constexpr inline ::fidl::test::bits::FlexibleBits FlexibleBits::operator&(
+    const ::fidl::test::bits::FlexibleBits& other) const {
+  return ::fidl::test::bits::FlexibleBits(
       static_cast<uint64_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::fidl::test::json::FlexibleBits FlexibleBits::operator^(
-    const ::fidl::test::json::FlexibleBits& other) const {
-  return ::fidl::test::json::FlexibleBits(
+constexpr inline ::fidl::test::bits::FlexibleBits FlexibleBits::operator^(
+    const ::fidl::test::bits::FlexibleBits& other) const {
+  return ::fidl::test::bits::FlexibleBits(
       static_cast<uint64_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void FlexibleBits::operator|=(
-    const ::fidl::test::json::FlexibleBits& other) {
+    const ::fidl::test::bits::FlexibleBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void FlexibleBits::operator&=(
-    const ::fidl::test::json::FlexibleBits& other) {
+    const ::fidl::test::bits::FlexibleBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void FlexibleBits::operator^=(
-    const ::fidl::test::json::FlexibleBits& other) {
+    const ::fidl::test::bits::FlexibleBits& other) {
   this->value_ ^= other.value_;
 }
 
-inline zx_status_t Clone(::fidl::test::json::FlexibleBits value,
-                         ::fidl::test::json::FlexibleBits* result) {
+inline zx_status_t Clone(::fidl::test::bits::FlexibleBits value,
+                         ::fidl::test::bits::FlexibleBits* result) {
   *result = value;
   return ZX_OK;
 }
-}  // namespace json
+}  // namespace bits
 }  // namespace test
 }  // namespace fidl
 namespace fidl {
 
 template <>
-struct CodingTraits<::fidl::test::json::StrictBits> {
+struct CodingTraits<::fidl::test::bits::StrictBits> {
   static constexpr size_t inline_size_old =
-      sizeof(::fidl::test::json::StrictBits);
+      sizeof(::fidl::test::bits::StrictBits);
   static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::json::StrictBits);
-  static void Encode(Encoder* encoder, ::fidl::test::json::StrictBits* value,
+      sizeof(::fidl::test::bits::StrictBits);
+  static void Encode(Encoder* encoder, ::fidl::test::bits::StrictBits* value,
                      size_t offset) {
     uint64_t underlying = static_cast<uint64_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::fidl::test::json::StrictBits* value,
+  static void Decode(Decoder* decoder, ::fidl::test::bits::StrictBits* value,
                      size_t offset) {
     uint64_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::json::StrictBits>(underlying);
+    *value = static_cast<::fidl::test::bits::StrictBits>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::json::StrictBits value,
-                         ::fidl::test::json::StrictBits* result) {
-  return ::fidl::test::json::Clone(value, result);
+inline zx_status_t Clone(::fidl::test::bits::StrictBits value,
+                         ::fidl::test::bits::StrictBits* result) {
+  return ::fidl::test::bits::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::json::StrictBits> {
-  bool operator()(const ::fidl::test::json::StrictBits& _lhs,
-                  const ::fidl::test::json::StrictBits& _rhs) const {
+struct Equality<::fidl::test::bits::StrictBits> {
+  bool operator()(const ::fidl::test::bits::StrictBits& _lhs,
+                  const ::fidl::test::bits::StrictBits& _rhs) const {
     uint64_t _lhs_underlying = static_cast<uint64_t>(_lhs);
     uint64_t _rhs_underlying = static_cast<uint64_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
 };
 template <>
-struct CodingTraits<::fidl::test::json::MyBits> {
-  static constexpr size_t inline_size_old = sizeof(::fidl::test::json::MyBits);
+struct CodingTraits<::fidl::test::bits::MyBits> {
+  static constexpr size_t inline_size_old = sizeof(::fidl::test::bits::MyBits);
   static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::json::MyBits);
-  static void Encode(Encoder* encoder, ::fidl::test::json::MyBits* value,
+      sizeof(::fidl::test::bits::MyBits);
+  static void Encode(Encoder* encoder, ::fidl::test::bits::MyBits* value,
                      size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::fidl::test::json::MyBits* value,
+  static void Decode(Decoder* decoder, ::fidl::test::bits::MyBits* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::json::MyBits>(underlying);
+    *value = static_cast<::fidl::test::bits::MyBits>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::json::MyBits value,
-                         ::fidl::test::json::MyBits* result) {
-  return ::fidl::test::json::Clone(value, result);
+inline zx_status_t Clone(::fidl::test::bits::MyBits value,
+                         ::fidl::test::bits::MyBits* result) {
+  return ::fidl::test::bits::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::json::MyBits> {
-  bool operator()(const ::fidl::test::json::MyBits& _lhs,
-                  const ::fidl::test::json::MyBits& _rhs) const {
+struct Equality<::fidl::test::bits::MyBits> {
+  bool operator()(const ::fidl::test::bits::MyBits& _lhs,
+                  const ::fidl::test::bits::MyBits& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
 };
 template <>
-struct CodingTraits<::fidl::test::json::FlexibleBits> {
+struct CodingTraits<::fidl::test::bits::FlexibleBits> {
   static constexpr size_t inline_size_old =
-      sizeof(::fidl::test::json::FlexibleBits);
+      sizeof(::fidl::test::bits::FlexibleBits);
   static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::json::FlexibleBits);
-  static void Encode(Encoder* encoder, ::fidl::test::json::FlexibleBits* value,
+      sizeof(::fidl::test::bits::FlexibleBits);
+  static void Encode(Encoder* encoder, ::fidl::test::bits::FlexibleBits* value,
                      size_t offset) {
     uint64_t underlying = static_cast<uint64_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::fidl::test::json::FlexibleBits* value,
+  static void Decode(Decoder* decoder, ::fidl::test::bits::FlexibleBits* value,
                      size_t offset) {
     uint64_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::json::FlexibleBits>(underlying);
+    *value = static_cast<::fidl::test::bits::FlexibleBits>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::json::FlexibleBits value,
-                         ::fidl::test::json::FlexibleBits* result) {
-  return ::fidl::test::json::Clone(value, result);
+inline zx_status_t Clone(::fidl::test::bits::FlexibleBits value,
+                         ::fidl::test::bits::FlexibleBits* result) {
+  return ::fidl::test::bits::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::json::FlexibleBits> {
-  bool operator()(const ::fidl::test::json::FlexibleBits& _lhs,
-                  const ::fidl::test::json::FlexibleBits& _rhs) const {
+struct Equality<::fidl::test::bits::FlexibleBits> {
+  bool operator()(const ::fidl::test::bits::FlexibleBits& _lhs,
+                  const ::fidl::test::bits::FlexibleBits& _rhs) const {
     uint64_t _lhs_underlying = static_cast<uint64_t>(_lhs);
     uint64_t _rhs_underlying = static_cast<uint64_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);

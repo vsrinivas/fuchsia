@@ -1,4 +1,4 @@
-library fidl.test.json;
+library fidl.test.requestflexibleenvelope;
 
 flexible union FlexibleFoo {
     1: string s;

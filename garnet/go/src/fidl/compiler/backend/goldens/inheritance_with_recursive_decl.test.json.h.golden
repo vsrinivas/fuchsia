@@ -6,7 +6,7 @@
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace inheritancewithrecursivedecl {
 
 #ifdef __Fuchsia__
 
@@ -20,7 +20,7 @@ using ParentSyncPtr = ::fidl::SynchronousInterfacePtr<Parent>;
 class Parent_SyncProxy;
 using ParentHandle = ::fidl::InterfaceHandle<Parent>;
 namespace internal {
-constexpr uint64_t kParent_First_Ordinal = 0x239f8fdea8de880clu;
+constexpr uint64_t kParent_First_Ordinal = 0x2a592d0a81dac39blu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -36,8 +36,8 @@ using ChildSyncPtr = ::fidl::SynchronousInterfacePtr<Child>;
 class Child_SyncProxy;
 using ChildHandle = ::fidl::InterfaceHandle<Child>;
 namespace internal {
-constexpr uint64_t kChild_First_Ordinal = 0x239f8fdea8de880clu;
-constexpr uint64_t kChild_Second_Ordinal = 0x24799ea8916d88aflu;
+constexpr uint64_t kChild_First_Ordinal = 0x2a592d0a81dac39blu;
+constexpr uint64_t kChild_Second_Ordinal = 0x6cba5c5e01fee86lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -51,8 +51,9 @@ class Parent {
   using Sync_ = Parent_Sync;
   virtual ~Parent();
 
-  virtual void First(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
+  virtual void First(::fidl::InterfaceRequest<
+                     ::fidl::test::inheritancewithrecursivedecl::Parent>
+                         request) = 0;
 };
 
 class Parent_RequestDecoder {
@@ -76,8 +77,8 @@ class Parent_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::kParent_First_Ordinal: {
-        First(::fidl::DecodeAs<
-              ::fidl::InterfaceRequest<::fidl::test::json::Parent>>(
+        First(::fidl::DecodeAs<::fidl::InterfaceRequest<
+                  ::fidl::test::inheritancewithrecursivedecl::Parent>>(
             &request_decoder, 16));
         break;
       }
@@ -88,15 +89,17 @@ class Parent_RequestDecoder {
     }
     return status;
   }
-  virtual void First(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
+  virtual void First(::fidl::InterfaceRequest<
+                     ::fidl::test::inheritancewithrecursivedecl::Parent>
+                         request) = 0;
 };
 
 class Parent_RequestEncoder {
  public:
   static ::fidl::Message First(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent>* request) {
+      ::fidl::InterfaceRequest<
+          ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, request, 16);
@@ -151,8 +154,9 @@ class Parent_Sync {
  public:
   using Proxy_ = Parent_SyncProxy;
   virtual ~Parent_Sync();
-  virtual zx_status_t First(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
+  virtual zx_status_t First(::fidl::InterfaceRequest<
+                            ::fidl::test::inheritancewithrecursivedecl::Parent>
+                                request) = 0;
 };
 
 class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
@@ -161,8 +165,9 @@ class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
   ~Parent_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::Message message) override;
-  void First(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override;
+  void First(::fidl::InterfaceRequest<
+             ::fidl::test::inheritancewithrecursivedecl::Parent>
+                 request) override;
 
  private:
   Parent_Proxy(const Parent_Proxy&) = delete;
@@ -174,7 +179,7 @@ class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
 class Parent_Stub final : public ::fidl::internal::Stub,
                           public Parent_EventSender {
  public:
-  typedef class ::fidl::test::json::Parent Parent_clazz;
+  typedef class ::fidl::test::inheritancewithrecursivedecl::Parent Parent_clazz;
   explicit Parent_Stub(Parent_clazz* impl);
   ~Parent_Stub() override;
 
@@ -189,8 +194,9 @@ class Parent_SyncProxy : public Parent_Sync {
  public:
   explicit Parent_SyncProxy(::zx::channel channel);
   ~Parent_SyncProxy() override;
-  zx_status_t First(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override;
+  zx_status_t First(::fidl::InterfaceRequest<
+                    ::fidl::test::inheritancewithrecursivedecl::Parent>
+                        request) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;
@@ -207,11 +213,13 @@ class Child {
   using Sync_ = Child_Sync;
   virtual ~Child();
 
-  virtual void First(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
+  virtual void First(::fidl::InterfaceRequest<
+                     ::fidl::test::inheritancewithrecursivedecl::Parent>
+                         request) = 0;
 
-  virtual void Second(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
+  virtual void Second(::fidl::InterfaceRequest<
+                      ::fidl::test::inheritancewithrecursivedecl::Parent>
+                          request) = 0;
 };
 
 class Child_RequestDecoder {
@@ -235,14 +243,14 @@ class Child_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::kChild_First_Ordinal: {
-        First(::fidl::DecodeAs<
-              ::fidl::InterfaceRequest<::fidl::test::json::Parent>>(
+        First(::fidl::DecodeAs<::fidl::InterfaceRequest<
+                  ::fidl::test::inheritancewithrecursivedecl::Parent>>(
             &request_decoder, 16));
         break;
       }
       case internal::kChild_Second_Ordinal: {
-        Second(::fidl::DecodeAs<
-               ::fidl::InterfaceRequest<::fidl::test::json::Parent>>(
+        Second(::fidl::DecodeAs<::fidl::InterfaceRequest<
+                   ::fidl::test::inheritancewithrecursivedecl::Parent>>(
             &request_decoder, 16));
         break;
       }
@@ -253,17 +261,20 @@ class Child_RequestDecoder {
     }
     return status;
   }
-  virtual void First(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
-  virtual void Second(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
+  virtual void First(::fidl::InterfaceRequest<
+                     ::fidl::test::inheritancewithrecursivedecl::Parent>
+                         request) = 0;
+  virtual void Second(::fidl::InterfaceRequest<
+                      ::fidl::test::inheritancewithrecursivedecl::Parent>
+                          request) = 0;
 };
 
 class Child_RequestEncoder {
  public:
   static ::fidl::Message First(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent>* request) {
+      ::fidl::InterfaceRequest<
+          ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, request, 16);
@@ -279,7 +290,8 @@ class Child_RequestEncoder {
   }
   static ::fidl::Message Second(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent>* request) {
+      ::fidl::InterfaceRequest<
+          ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, request, 16);
@@ -334,10 +346,12 @@ class Child_Sync {
  public:
   using Proxy_ = Child_SyncProxy;
   virtual ~Child_Sync();
-  virtual zx_status_t First(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
-  virtual zx_status_t Second(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
+  virtual zx_status_t First(::fidl::InterfaceRequest<
+                            ::fidl::test::inheritancewithrecursivedecl::Parent>
+                                request) = 0;
+  virtual zx_status_t Second(::fidl::InterfaceRequest<
+                             ::fidl::test::inheritancewithrecursivedecl::Parent>
+                                 request) = 0;
 };
 
 class Child_Proxy final : public ::fidl::internal::Proxy, public Child {
@@ -346,10 +360,12 @@ class Child_Proxy final : public ::fidl::internal::Proxy, public Child {
   ~Child_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::Message message) override;
-  void First(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override;
-  void Second(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override;
+  void First(::fidl::InterfaceRequest<
+             ::fidl::test::inheritancewithrecursivedecl::Parent>
+                 request) override;
+  void Second(::fidl::InterfaceRequest<
+              ::fidl::test::inheritancewithrecursivedecl::Parent>
+                  request) override;
 
  private:
   Child_Proxy(const Child_Proxy&) = delete;
@@ -361,7 +377,7 @@ class Child_Proxy final : public ::fidl::internal::Proxy, public Child {
 class Child_Stub final : public ::fidl::internal::Stub,
                          public Child_EventSender {
  public:
-  typedef class ::fidl::test::json::Child Child_clazz;
+  typedef class ::fidl::test::inheritancewithrecursivedecl::Child Child_clazz;
   explicit Child_Stub(Child_clazz* impl);
   ~Child_Stub() override;
 
@@ -376,17 +392,19 @@ class Child_SyncProxy : public Child_Sync {
  public:
   explicit Child_SyncProxy(::zx::channel channel);
   ~Child_SyncProxy() override;
-  zx_status_t First(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override;
-  zx_status_t Second(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override;
+  zx_status_t First(::fidl::InterfaceRequest<
+                    ::fidl::test::inheritancewithrecursivedecl::Parent>
+                        request) override;
+  zx_status_t Second(::fidl::InterfaceRequest<
+                     ::fidl::test::inheritancewithrecursivedecl::Parent>
+                         request) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Child>;
 };
 #endif  // __Fuchsia__
-}  // namespace json
+}  // namespace inheritancewithrecursivedecl
 }  // namespace test
 }  // namespace fidl
 namespace fidl {}  // namespace fidl

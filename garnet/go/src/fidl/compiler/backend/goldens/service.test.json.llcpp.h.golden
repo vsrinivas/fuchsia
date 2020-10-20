@@ -35,8 +35,9 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace service {
 
 class SecondProtocol;
 class FirstProtocol;
@@ -44,9 +45,10 @@ class SingleMemberService;
 class MultiHomogeneousMemberService;
 class MultiHeterogeneousMemberService;
 
-extern "C" const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable;
 extern "C" const fidl_type_t
-    test_name_SecondProtocolMethodOnSecondResponseTable;
+    fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_service_SecondProtocolMethodOnSecondResponseTable;
 class SecondProtocol final {
   SecondProtocol() = delete;
 
@@ -292,8 +294,10 @@ class SecondProtocol final {
   class EventSender;
 };
 
-extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
-extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_service_FirstProtocolMethodOnFirstResponseTable;
 class FirstProtocol final {
   FirstProtocol() = delete;
 
@@ -543,7 +547,7 @@ class SingleMemberService final {
   SingleMemberService() = default;
 
  public:
-  static constexpr char Name[] = "test.name.SingleMemberService";
+  static constexpr char Name[] = "fidl.test.service.SingleMemberService";
 
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
@@ -616,7 +620,8 @@ class MultiHomogeneousMemberService final {
   MultiHomogeneousMemberService() = default;
 
  public:
-  static constexpr char Name[] = "test.name.MultiHomogeneousMemberService";
+  static constexpr char Name[] =
+      "fidl.test.service.MultiHomogeneousMemberService";
 
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
@@ -729,7 +734,8 @@ class MultiHeterogeneousMemberService final {
   MultiHeterogeneousMemberService() = default;
 
  public:
-  static constexpr char Name[] = "test.name.MultiHeterogeneousMemberService";
+  static constexpr char Name[] =
+      "fidl.test.service.MultiHeterogeneousMemberService";
 
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
@@ -838,38 +844,47 @@ class MultiHeterogeneousMemberService final {
   };
 };
 
-}  // namespace name
+}  // namespace service
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::test::name::SecondProtocol::MethodOnSecondRequest>
+struct IsFidlType<
+    ::llcpp::fidl::test::service::SecondProtocol::MethodOnSecondRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::SecondProtocol::MethodOnSecondRequest>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::service::SecondProtocol::MethodOnSecondRequest>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::test::name::SecondProtocol::MethodOnSecondRequest) ==
-    ::llcpp::test::name::SecondProtocol::MethodOnSecondRequest::PrimarySize);
+    sizeof(
+        ::llcpp::fidl::test::service::SecondProtocol::MethodOnSecondRequest) ==
+    ::llcpp::fidl::test::service::SecondProtocol::MethodOnSecondRequest::
+        PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::test::name::FirstProtocol::MethodOnFirstRequest>
+struct IsFidlType<
+    ::llcpp::fidl::test::service::FirstProtocol::MethodOnFirstRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::FirstProtocol::MethodOnFirstRequest>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::service::FirstProtocol::MethodOnFirstRequest>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::test::name::FirstProtocol::MethodOnFirstRequest) ==
-    ::llcpp::test::name::FirstProtocol::MethodOnFirstRequest::PrimarySize);
+    sizeof(::llcpp::fidl::test::service::FirstProtocol::MethodOnFirstRequest) ==
+    ::llcpp::fidl::test::service::FirstProtocol::MethodOnFirstRequest::
+        PrimarySize);
 
 }  // namespace fidl
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace service {
 
 struct SecondProtocol::AsyncEventHandlers {};
 
@@ -935,6 +950,7 @@ class FirstProtocol::EventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
-}  // namespace name
+}  // namespace service
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

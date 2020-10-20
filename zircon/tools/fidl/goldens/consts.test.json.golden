@@ -1,10 +1,10 @@
 {
   "version": "0.0.1",
-  "name": "test.name",
+  "name": "fidl.test.consts",
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "test.name/BitsType",
+      "name": "fidl.test.consts/BitsType",
       "location": {
         "filename": "consts.test.fidl",
         "line": 23,
@@ -61,7 +61,7 @@
   ],
   "const_declarations": [
     {
-      "name": "test.name/ENABLED_FLAG",
+      "name": "fidl.test.consts/ENABLED_FLAG",
       "location": {
         "filename": "consts.test.fidl",
         "line": 3,
@@ -84,7 +84,7 @@
       }
     },
     {
-      "name": "test.name/OFFSET",
+      "name": "fidl.test.consts/OFFSET",
       "location": {
         "filename": "consts.test.fidl",
         "line": 4,
@@ -107,7 +107,7 @@
       }
     },
     {
-      "name": "test.name/ANSWER",
+      "name": "fidl.test.consts/ANSWER",
       "location": {
         "filename": "consts.test.fidl",
         "line": 5,
@@ -130,7 +130,7 @@
       }
     },
     {
-      "name": "test.name/ANSWER_IN_BINARY",
+      "name": "fidl.test.consts/ANSWER_IN_BINARY",
       "location": {
         "filename": "consts.test.fidl",
         "line": 6,
@@ -153,7 +153,7 @@
       }
     },
     {
-      "name": "test.name/POPULATION_USA_2018",
+      "name": "fidl.test.consts/POPULATION_USA_2018",
       "location": {
         "filename": "consts.test.fidl",
         "line": 7,
@@ -176,7 +176,7 @@
       }
     },
     {
-      "name": "test.name/DIAMOND",
+      "name": "fidl.test.consts/DIAMOND",
       "location": {
         "filename": "consts.test.fidl",
         "line": 8,
@@ -199,7 +199,7 @@
       }
     },
     {
-      "name": "test.name/FUCHSIA",
+      "name": "fidl.test.consts/FUCHSIA",
       "location": {
         "filename": "consts.test.fidl",
         "line": 9,
@@ -222,7 +222,7 @@
       }
     },
     {
-      "name": "test.name/USERNAME",
+      "name": "fidl.test.consts/USERNAME",
       "location": {
         "filename": "consts.test.fidl",
         "line": 10,
@@ -245,7 +245,7 @@
       }
     },
     {
-      "name": "test.name/MIN_TEMP",
+      "name": "fidl.test.consts/MIN_TEMP",
       "location": {
         "filename": "consts.test.fidl",
         "line": 11,
@@ -268,7 +268,7 @@
       }
     },
     {
-      "name": "test.name/CONVERSION_FACTOR",
+      "name": "fidl.test.consts/CONVERSION_FACTOR",
       "location": {
         "filename": "consts.test.fidl",
         "line": 12,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "name": "test.name/enumVal",
+      "name": "fidl.test.consts/enumVal",
       "location": {
         "filename": "consts.test.fidl",
         "line": 18,
@@ -300,18 +300,18 @@
       },
       "type": {
         "kind": "identifier",
-        "identifier": "test.name/EnumType",
+        "identifier": "fidl.test.consts/EnumType",
         "nullable": false
       },
       "value": {
         "kind": "identifier",
         "value": "1",
         "expression": "EnumType.VALUE",
-        "identifier": "test.name/EnumType.VALUE"
+        "identifier": "fidl.test.consts/EnumType.VALUE"
       }
     },
     {
-      "name": "test.name/enumPrimitiveVal",
+      "name": "fidl.test.consts/enumPrimitiveVal",
       "location": {
         "filename": "consts.test.fidl",
         "line": 19,
@@ -326,11 +326,11 @@
         "kind": "identifier",
         "value": "1",
         "expression": "EnumType.VALUE",
-        "identifier": "test.name/EnumType.VALUE"
+        "identifier": "fidl.test.consts/EnumType.VALUE"
       }
     },
     {
-      "name": "test.name/enumTrue",
+      "name": "fidl.test.consts/enumTrue",
       "location": {
         "filename": "consts.test.fidl",
         "line": 20,
@@ -339,18 +339,18 @@
       },
       "type": {
         "kind": "identifier",
-        "identifier": "test.name/EnumType",
+        "identifier": "fidl.test.consts/EnumType",
         "nullable": false
       },
       "value": {
         "kind": "identifier",
         "value": "2",
         "expression": "EnumType.true",
-        "identifier": "test.name/EnumType.true"
+        "identifier": "fidl.test.consts/EnumType.true"
       }
     },
     {
-      "name": "test.name/enumPrimitiveTrue",
+      "name": "fidl.test.consts/enumPrimitiveTrue",
       "location": {
         "filename": "consts.test.fidl",
         "line": 21,
@@ -365,11 +365,11 @@
         "kind": "identifier",
         "value": "2",
         "expression": "EnumType.true",
-        "identifier": "test.name/EnumType.true"
+        "identifier": "fidl.test.consts/EnumType.true"
       }
     },
     {
-      "name": "test.name/bitsVal",
+      "name": "fidl.test.consts/bitsVal",
       "location": {
         "filename": "consts.test.fidl",
         "line": 27,
@@ -378,18 +378,18 @@
       },
       "type": {
         "kind": "identifier",
-        "identifier": "test.name/BitsType",
+        "identifier": "fidl.test.consts/BitsType",
         "nullable": false
       },
       "value": {
         "kind": "identifier",
         "value": "1",
         "expression": "BitsType.VALUE",
-        "identifier": "test.name/BitsType.VALUE"
+        "identifier": "fidl.test.consts/BitsType.VALUE"
       }
     },
     {
-      "name": "test.name/bitsPrimitiveVal",
+      "name": "fidl.test.consts/bitsPrimitiveVal",
       "location": {
         "filename": "consts.test.fidl",
         "line": 28,
@@ -404,11 +404,11 @@
         "kind": "identifier",
         "value": "1",
         "expression": "BitsType.VALUE",
-        "identifier": "test.name/BitsType.VALUE"
+        "identifier": "fidl.test.consts/BitsType.VALUE"
       }
     },
     {
-      "name": "test.name/bitsTrue",
+      "name": "fidl.test.consts/bitsTrue",
       "location": {
         "filename": "consts.test.fidl",
         "line": 29,
@@ -417,18 +417,18 @@
       },
       "type": {
         "kind": "identifier",
-        "identifier": "test.name/BitsType",
+        "identifier": "fidl.test.consts/BitsType",
         "nullable": false
       },
       "value": {
         "kind": "identifier",
         "value": "2",
         "expression": "BitsType.true",
-        "identifier": "test.name/BitsType.true"
+        "identifier": "fidl.test.consts/BitsType.true"
       }
     },
     {
-      "name": "test.name/bitsPrimitiveTrue",
+      "name": "fidl.test.consts/bitsPrimitiveTrue",
       "location": {
         "filename": "consts.test.fidl",
         "line": 30,
@@ -443,13 +443,13 @@
         "kind": "identifier",
         "value": "2",
         "expression": "BitsType.true",
-        "identifier": "test.name/BitsType.true"
+        "identifier": "fidl.test.consts/BitsType.true"
       }
     }
   ],
   "enum_declarations": [
     {
-      "name": "test.name/EnumType",
+      "name": "fidl.test.consts/EnumType",
       "location": {
         "filename": "consts.test.fidl",
         "line": 14,
@@ -508,47 +508,47 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.name/USERNAME",
-    "test.name/POPULATION_USA_2018",
-    "test.name/OFFSET",
-    "test.name/MIN_TEMP",
-    "test.name/FUCHSIA",
-    "test.name/EnumType",
-    "test.name/enumVal",
-    "test.name/enumTrue",
-    "test.name/enumPrimitiveVal",
-    "test.name/enumPrimitiveTrue",
-    "test.name/ENABLED_FLAG",
-    "test.name/DIAMOND",
-    "test.name/CONVERSION_FACTOR",
-    "test.name/BitsType",
-    "test.name/bitsVal",
-    "test.name/bitsTrue",
-    "test.name/bitsPrimitiveVal",
-    "test.name/bitsPrimitiveTrue",
-    "test.name/ANSWER_IN_BINARY",
-    "test.name/ANSWER"
+    "fidl.test.consts/USERNAME",
+    "fidl.test.consts/POPULATION_USA_2018",
+    "fidl.test.consts/OFFSET",
+    "fidl.test.consts/MIN_TEMP",
+    "fidl.test.consts/FUCHSIA",
+    "fidl.test.consts/EnumType",
+    "fidl.test.consts/enumVal",
+    "fidl.test.consts/enumTrue",
+    "fidl.test.consts/enumPrimitiveVal",
+    "fidl.test.consts/enumPrimitiveTrue",
+    "fidl.test.consts/ENABLED_FLAG",
+    "fidl.test.consts/DIAMOND",
+    "fidl.test.consts/CONVERSION_FACTOR",
+    "fidl.test.consts/BitsType",
+    "fidl.test.consts/bitsVal",
+    "fidl.test.consts/bitsTrue",
+    "fidl.test.consts/bitsPrimitiveVal",
+    "fidl.test.consts/bitsPrimitiveTrue",
+    "fidl.test.consts/ANSWER_IN_BINARY",
+    "fidl.test.consts/ANSWER"
   ],
   "declarations": {
-    "test.name/BitsType": "bits",
-    "test.name/ENABLED_FLAG": "const",
-    "test.name/OFFSET": "const",
-    "test.name/ANSWER": "const",
-    "test.name/ANSWER_IN_BINARY": "const",
-    "test.name/POPULATION_USA_2018": "const",
-    "test.name/DIAMOND": "const",
-    "test.name/FUCHSIA": "const",
-    "test.name/USERNAME": "const",
-    "test.name/MIN_TEMP": "const",
-    "test.name/CONVERSION_FACTOR": "const",
-    "test.name/enumVal": "const",
-    "test.name/enumPrimitiveVal": "const",
-    "test.name/enumTrue": "const",
-    "test.name/enumPrimitiveTrue": "const",
-    "test.name/bitsVal": "const",
-    "test.name/bitsPrimitiveVal": "const",
-    "test.name/bitsTrue": "const",
-    "test.name/bitsPrimitiveTrue": "const",
-    "test.name/EnumType": "enum"
+    "fidl.test.consts/BitsType": "bits",
+    "fidl.test.consts/ENABLED_FLAG": "const",
+    "fidl.test.consts/OFFSET": "const",
+    "fidl.test.consts/ANSWER": "const",
+    "fidl.test.consts/ANSWER_IN_BINARY": "const",
+    "fidl.test.consts/POPULATION_USA_2018": "const",
+    "fidl.test.consts/DIAMOND": "const",
+    "fidl.test.consts/FUCHSIA": "const",
+    "fidl.test.consts/USERNAME": "const",
+    "fidl.test.consts/MIN_TEMP": "const",
+    "fidl.test.consts/CONVERSION_FACTOR": "const",
+    "fidl.test.consts/enumVal": "const",
+    "fidl.test.consts/enumPrimitiveVal": "const",
+    "fidl.test.consts/enumTrue": "const",
+    "fidl.test.consts/enumPrimitiveTrue": "const",
+    "fidl.test.consts/bitsVal": "const",
+    "fidl.test.consts/bitsPrimitiveVal": "const",
+    "fidl.test.consts/bitsTrue": "const",
+    "fidl.test.consts/bitsPrimitiveTrue": "const",
+    "fidl.test.consts/EnumType": "enum"
   }
 }

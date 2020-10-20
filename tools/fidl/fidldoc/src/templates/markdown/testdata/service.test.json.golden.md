@@ -1,15 +1,15 @@
 [TOC]
 
-# test.name
+# fidl.test.service
 
 
 ## **PROTOCOLS**
 
 ## FirstProtocol {#FirstProtocol}
-*Defined in [test.name/service.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/service.test.fidl#7)*
+*Defined in [fidl.test.service/service.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/service.test.fidl#7)*
 
 
-### MethodOnFirst {#test.name/FirstProtocol.MethodOnFirst}
+### MethodOnFirst {#fidl.test.service/FirstProtocol.MethodOnFirst}
 
 
 #### Request
@@ -20,10 +20,10 @@
 
 
 ## SecondProtocol {#SecondProtocol}
-*Defined in [test.name/service.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/service.test.fidl#15)*
+*Defined in [fidl.test.service/service.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/service.test.fidl#15)*
 
 
-### MethodOnSecond {#test.name/SecondProtocol.MethodOnSecond}
+### MethodOnSecond {#fidl.test.service/SecondProtocol.MethodOnSecond}
 
 
 #### Request

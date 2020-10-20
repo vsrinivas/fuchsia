@@ -3,8 +3,10 @@
 #pragma once
 
 #include <bindings_denylist.test.json.h>
+namespace fidl {
 namespace test {
-namespace name {
+namespace bindingsdenylist {
 namespace testing {}  // namespace testing
-}  // namespace name
+}  // namespace bindingsdenylist
 }  // namespace test
+}  // namespace fidl

@@ -3,8 +3,9 @@
 #pragma once
 
 #include <protocols.test.json.h>
+namespace fidl {
 namespace test {
-namespace name {
+namespace protocols {
 namespace testing {
 
 class Transitional_TestBase : public Transitional {
@@ -73,5 +74,6 @@ class WithErrorSyntax_TestBase : public WithErrorSyntax {
   }
 };
 }  // namespace testing
-}  // namespace name
+}  // namespace protocols
 }  // namespace test
+}  // namespace fidl

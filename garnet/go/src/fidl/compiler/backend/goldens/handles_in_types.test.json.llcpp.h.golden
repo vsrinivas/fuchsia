@@ -35,8 +35,9 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace handlesintypes {
 
 enum class obj_type : uint32_t {
 
@@ -49,7 +50,7 @@ class UnionWithHandle;
 class TableWithHandle;
 struct HandlesInTypes;
 
-extern "C" const fidl_type_t test_name_UnionWithHandleTable;
+extern "C" const fidl_type_t fidl_test_handlesintypes_UnionWithHandleTable;
 
 class UnionWithHandle {
  public:
@@ -90,7 +91,8 @@ class UnionWithHandle {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &test_name_UnionWithHandleTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_handlesintypes_UnionWithHandleTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -125,7 +127,7 @@ class UnionWithHandle {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t test_name_TableWithHandleTable;
+extern "C" const fidl_type_t fidl_test_handlesintypes_TableWithHandleTable;
 
 class TableWithHandle final {
  public:
@@ -149,7 +151,8 @@ class TableWithHandle final {
   TableWithHandle(TableWithHandle&& other) noexcept = default;
   TableWithHandle& operator=(TableWithHandle&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &test_name_TableWithHandleTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_handlesintypes_TableWithHandleTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
@@ -279,10 +282,11 @@ class TableWithHandle::UnownedBuilder final {
   TableWithHandle::Frame frame_;
 };
 
-extern "C" const fidl_type_t test_name_HandlesInTypesTable;
+extern "C" const fidl_type_t fidl_test_handlesintypes_HandlesInTypesTable;
 
 struct HandlesInTypes {
-  static constexpr const fidl_type_t* Type = &test_name_HandlesInTypesTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_handlesintypes_HandlesInTypesTable;
   static constexpr uint32_t MaxNumHandles = 4294967295;
   static constexpr uint32_t PrimarySize = 104;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -298,9 +302,9 @@ struct HandlesInTypes {
   ::fidl::VectorView<::fidl::Array<::zx::vmo, 5>> handle_in_mixed_vec_array =
       {};
 
-  ::llcpp::test::name::TableWithHandle table_with_handle = {};
+  ::llcpp::fidl::test::handlesintypes::TableWithHandle table_with_handle = {};
 
-  ::llcpp::test::name::UnionWithHandle union_with_handle = {};
+  ::llcpp::fidl::test::handlesintypes::UnionWithHandle union_with_handle = {};
   void _CloseHandles();
 
   class UnownedOutgoingMessage final {
@@ -388,58 +392,69 @@ struct HandlesInTypes {
   };
 };
 
-}  // namespace name
+}  // namespace handlesintypes
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::test::name::obj_type> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::handlesintypes::obj_type>
+    : public std::true_type {};
 
 template <>
-struct IsFidlType<::llcpp::test::name::UnionWithHandle>
+struct IsFidlType<::llcpp::fidl::test::handlesintypes::UnionWithHandle>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::test::name::UnionWithHandle> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::UnionWithHandle>);
+struct IsUnion<::llcpp::fidl::test::handlesintypes::UnionWithHandle>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::handlesintypes::UnionWithHandle>);
 
 template <>
-struct IsFidlType<::llcpp::test::name::TableWithHandle>
+struct IsFidlType<::llcpp::fidl::test::handlesintypes::TableWithHandle>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::test::name::TableWithHandle> : public std::true_type {};
-template <>
-struct IsTableBuilder<::llcpp::test::name::TableWithHandle::Builder>
+struct IsTable<::llcpp::fidl::test::handlesintypes::TableWithHandle>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::TableWithHandle>);
+template <>
+struct IsTableBuilder<
+    ::llcpp::fidl::test::handlesintypes::TableWithHandle::Builder>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::handlesintypes::TableWithHandle>);
 
 template <>
-struct IsFidlType<::llcpp::test::name::HandlesInTypes> : public std::true_type {
-};
+struct IsFidlType<::llcpp::fidl::test::handlesintypes::HandlesInTypes>
+    : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::test::name::HandlesInTypes> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::HandlesInTypes>);
-static_assert(offsetof(::llcpp::test::name::HandlesInTypes, normal_handle) ==
-              0);
-static_assert(offsetof(::llcpp::test::name::HandlesInTypes, handle_in_vec) ==
-              8);
-static_assert(offsetof(::llcpp::test::name::HandlesInTypes, handle_in_array) ==
-              24);
-static_assert(offsetof(::llcpp::test::name::HandlesInTypes,
+struct IsStruct<::llcpp::fidl::test::handlesintypes::HandlesInTypes>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::handlesintypes::HandlesInTypes>);
+static_assert(offsetof(::llcpp::fidl::test::handlesintypes::HandlesInTypes,
+                       normal_handle) == 0);
+static_assert(offsetof(::llcpp::fidl::test::handlesintypes::HandlesInTypes,
+                       handle_in_vec) == 8);
+static_assert(offsetof(::llcpp::fidl::test::handlesintypes::HandlesInTypes,
+                       handle_in_array) == 24);
+static_assert(offsetof(::llcpp::fidl::test::handlesintypes::HandlesInTypes,
                        handle_in_mixed_vec_array) == 48);
-static_assert(offsetof(::llcpp::test::name::HandlesInTypes,
+static_assert(offsetof(::llcpp::fidl::test::handlesintypes::HandlesInTypes,
                        table_with_handle) == 64);
-static_assert(offsetof(::llcpp::test::name::HandlesInTypes,
+static_assert(offsetof(::llcpp::fidl::test::handlesintypes::HandlesInTypes,
                        union_with_handle) == 80);
-static_assert(sizeof(::llcpp::test::name::HandlesInTypes) ==
-              ::llcpp::test::name::HandlesInTypes::PrimarySize);
+static_assert(sizeof(::llcpp::fidl::test::handlesintypes::HandlesInTypes) ==
+              ::llcpp::fidl::test::handlesintypes::HandlesInTypes::PrimarySize);
 
 }  // namespace fidl
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {}  // namespace name
+namespace handlesintypes {}  // namespace handlesintypes
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

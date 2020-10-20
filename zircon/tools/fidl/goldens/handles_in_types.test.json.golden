@@ -1,12 +1,12 @@
 {
   "version": "0.0.1",
-  "name": "test.name",
+  "name": "fidl.test.handlesintypes",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [
     {
-      "name": "test.name/obj_type",
+      "name": "fidl.test.handlesintypes/obj_type",
       "location": {
         "filename": "handles_in_types.test.fidl",
         "line": 6,
@@ -59,7 +59,7 @@
   ],
   "experimental_resource_declarations": [
     {
-      "name": "test.name/handle",
+      "name": "fidl.test.handlesintypes/handle",
       "location": {
         "filename": "handles_in_types.test.fidl",
         "line": 11,
@@ -81,7 +81,7 @@
           },
           "type": {
             "kind": "identifier",
-            "identifier": "test.name/obj_type",
+            "identifier": "fidl.test.handlesintypes/obj_type",
             "nullable": false
           }
         }
@@ -92,7 +92,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "test.name/HandlesInTypes",
+      "name": "fidl.test.handlesintypes/HandlesInTypes",
       "location": {
         "filename": "handles_in_types.test.fidl",
         "line": 25,
@@ -196,7 +196,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.name/TableWithHandle",
+            "identifier": "fidl.test.handlesintypes/TableWithHandle",
             "nullable": false
           },
           "name": "table_with_handle",
@@ -214,7 +214,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.name/UnionWithHandle",
+            "identifier": "fidl.test.handlesintypes/UnionWithHandle",
             "nullable": false
           },
           "name": "union_with_handle",
@@ -245,7 +245,7 @@
   ],
   "table_declarations": [
     {
-      "name": "test.name/TableWithHandle",
+      "name": "fidl.test.handlesintypes/TableWithHandle",
       "location": {
         "filename": "handles_in_types.test.fidl",
         "line": 17,
@@ -287,7 +287,7 @@
   ],
   "union_declarations": [
     {
-      "name": "test.name/UnionWithHandle",
+      "name": "fidl.test.handlesintypes/UnionWithHandle",
       "location": {
         "filename": "handles_in_types.test.fidl",
         "line": 21,
@@ -329,17 +329,17 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.name/obj_type",
-    "test.name/handle",
-    "test.name/UnionWithHandle",
-    "test.name/TableWithHandle",
-    "test.name/HandlesInTypes"
+    "fidl.test.handlesintypes/obj_type",
+    "fidl.test.handlesintypes/handle",
+    "fidl.test.handlesintypes/UnionWithHandle",
+    "fidl.test.handlesintypes/TableWithHandle",
+    "fidl.test.handlesintypes/HandlesInTypes"
   ],
   "declarations": {
-    "test.name/obj_type": "enum",
-    "test.name/handle": "experimental_resource",
-    "test.name/HandlesInTypes": "struct",
-    "test.name/TableWithHandle": "table",
-    "test.name/UnionWithHandle": "union"
+    "fidl.test.handlesintypes/obj_type": "enum",
+    "fidl.test.handlesintypes/handle": "experimental_resource",
+    "fidl.test.handlesintypes/HandlesInTypes": "struct",
+    "fidl.test.handlesintypes/TableWithHandle": "table",
+    "fidl.test.handlesintypes/UnionWithHandle": "union"
   }
 }

@@ -5,7 +5,7 @@
 #include <union.test.json.h>
 namespace fidl {
 namespace test {
-namespace json {
+namespace union_ {
 namespace testing {
 
 class TestProtocol_TestBase : public TestProtocol {
@@ -23,6 +23,6 @@ class TestProtocol_TestBase : public TestProtocol {
   }
 };
 }  // namespace testing
-}  // namespace json
+}  // namespace union_
 }  // namespace test
 }  // namespace fidl

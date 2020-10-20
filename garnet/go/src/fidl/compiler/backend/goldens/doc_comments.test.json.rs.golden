@@ -251,7 +251,7 @@ impl InterfaceSynchronousProxy {
     ///
     /// method comment #3
     pub fn method(&mut self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x60e700e002995ef8)
+        self.client.send(&mut (), 0x5c492542705b4265)
     }
 }
 
@@ -304,7 +304,7 @@ impl InterfaceProxy {
 
 impl InterfaceProxyInterface for InterfaceProxy {
     fn method(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x60e700e002995ef8)
+        self.client.send(&mut (), 0x5c492542705b4265)
     }
     type OnEventResponseFut = fidl::client::QueryResponseFut<()>;
 }
@@ -339,9 +339,9 @@ impl futures::Stream for InterfaceEventStream {
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
         std::task::Poll::Ready(Some(match tx_header.ordinal() {
-            0x914c226136244ed => {
+            0x37812b697096f6fa => {
                 let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/InterfaceOnEventEvent");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.doccomments/InterfaceOnEventEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &tx_header,
@@ -480,9 +480,9 @@ impl futures::Stream for InterfaceRequestStream {
             }
 
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x60e700e002995ef8 => {
+                0x5c492542705b4265 => {
                     let mut req: () = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/InterfaceMethodRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.doccomments/InterfaceMethodRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -520,9 +520,9 @@ impl InterfaceRequestMessage {
         let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
         match header.ordinal() {
-            0x60e700e002995ef8 => {
+            0x5c492542705b4265 => {
                 let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/InterfaceMethodRequest");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.doccomments/InterfaceMethodRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &header,
@@ -577,10 +577,10 @@ impl InterfaceEncoder {
         out_bytes: &'a mut Vec<u8>,
         out_handles: &'a mut Vec<fidl::Handle>,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x60e700e002995ef8);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x5c492542705b4265);
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/InterfaceMethodRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.doccomments/InterfaceMethodRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -590,11 +590,11 @@ impl InterfaceEncoder {
         out_bytes: &'a mut Vec<u8>,
         out_handles: &'a mut Vec<fidl::Handle>,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x914c226136244ed);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x37812b697096f6fa);
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/InterfaceOnEventResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.doccomments/InterfaceOnEventResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -620,7 +620,7 @@ impl InterfaceControlHandle {
         let mut response = ();
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(0, 0x914c226136244ed),
+            header: fidl::encoding::TransactionHeader::new(0, 0x37812b697096f6fa),
             body: &mut response,
         };
 
@@ -642,7 +642,7 @@ pub struct ServiceMarker;
 impl fidl::endpoints::UnifiedServiceMarker for ServiceMarker {
     type Proxy = ServiceProxy;
     type Request = ServiceRequest;
-    const SERVICE_NAME: &'static str = "test.name.Service";
+    const SERVICE_NAME: &'static str = "fidl.test.doccomments.Service";
 }
 
 /// A request for one of the member protocols of Service.

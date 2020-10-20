@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.json",
+  "name": "fidl.test.vectors",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -10,7 +10,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.json/ExampleUseOfVectors",
+      "name": "fidl.test.vectors/ExampleUseOfVectors",
       "location": {
         "filename": "vectors.test.fidl",
         "line": 7,
@@ -83,9 +83,9 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.json/ExampleUseOfVectors"
+    "fidl.test.vectors/ExampleUseOfVectors"
   ],
   "declarations": {
-    "fidl.test.json/ExampleUseOfVectors": "struct"
+    "fidl.test.vectors/ExampleUseOfVectors": "struct"
   }
 }

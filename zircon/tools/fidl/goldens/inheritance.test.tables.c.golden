@@ -7,22 +7,22 @@
 
 static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
-extern const struct FidlCodedStruct fidl_test_json_superfooRequestTable;
-static const struct FidlStructElement Fields30fidl_test_json_superfooRequest[] = {
+extern const struct FidlCodedStruct fidl_test_inheritance_superfooRequestTable;
+static const struct FidlStructElement Fields37fidl_test_inheritance_superfooRequest[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
-const struct FidlCodedStruct fidl_test_json_superfooRequestTable = {.tag=kFidlTypeStruct, .elements=Fields30fidl_test_json_superfooRequest, .element_count=1u, .size=32u, .name="fidl.test.json/superfooRequest"};
+const struct FidlCodedStruct fidl_test_inheritance_superfooRequestTable = {.tag=kFidlTypeStruct, .elements=Fields37fidl_test_inheritance_superfooRequest, .element_count=1u, .size=32u, .name="fidl.test.inheritance/superfooRequest"};
 
-extern const struct FidlCodedStruct fidl_test_json_superfooResponseTable;
-const struct FidlCodedStruct fidl_test_json_superfooResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=24u, .name="fidl.test.json/superfooResponse"};
+extern const struct FidlCodedStruct fidl_test_inheritance_superfooResponseTable;
+const struct FidlCodedStruct fidl_test_inheritance_superfooResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=24u, .name="fidl.test.inheritance/superfooResponse"};
 
-extern const struct FidlCodedStruct fidl_test_json_subfooRequestTable;
-static const struct FidlStructElement Fields28fidl_test_json_subfooRequest[] = {
+extern const struct FidlCodedStruct fidl_test_inheritance_subfooRequestTable;
+static const struct FidlStructElement Fields35fidl_test_inheritance_subfooRequest[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
-const struct FidlCodedStruct fidl_test_json_subfooRequestTable = {.tag=kFidlTypeStruct, .elements=Fields28fidl_test_json_subfooRequest, .element_count=1u, .size=32u, .name="fidl.test.json/subfooRequest"};
+const struct FidlCodedStruct fidl_test_inheritance_subfooRequestTable = {.tag=kFidlTypeStruct, .elements=Fields35fidl_test_inheritance_subfooRequest, .element_count=1u, .size=32u, .name="fidl.test.inheritance/subfooRequest"};
 
-extern const struct FidlCodedStruct fidl_test_json_subfooResponseTable;
-const struct FidlCodedStruct fidl_test_json_subfooResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=24u, .name="fidl.test.json/subfooResponse"};
+extern const struct FidlCodedStruct fidl_test_inheritance_subfooResponseTable;
+const struct FidlCodedStruct fidl_test_inheritance_subfooResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=24u, .name="fidl.test.inheritance/subfooResponse"};
 
 

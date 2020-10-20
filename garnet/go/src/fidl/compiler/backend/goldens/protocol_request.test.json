@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "test.name",
+  "name": "fidl.test.protocolrequest",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "test.name/Child",
+      "name": "fidl.test.protocolrequest/Child",
       "location": {
         "filename": "protocol_request.test.fidl",
         "line": 3,
@@ -18,7 +18,7 @@
       "methods": []
     },
     {
-      "name": "test.name/Parent",
+      "name": "fidl.test.protocolrequest/Parent",
       "location": {
         "filename": "protocol_request.test.fidl",
         "line": 6,
@@ -27,7 +27,7 @@
       },
       "methods": [
         {
-          "ordinal": 6332745893922832518,
+          "ordinal": 7929845654914578302,
           "name": "GetChild",
           "location": {
             "filename": "protocol_request.test.fidl",
@@ -52,7 +52,7 @@
             {
               "type": {
                 "kind": "identifier",
-                "identifier": "test.name/Child",
+                "identifier": "fidl.test.protocolrequest/Child",
                 "nullable": false
               },
               "name": "c",
@@ -68,7 +68,7 @@
               }
             }
           ],
-          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.protocolrequest/SomeLongAnonymousPrefix1",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -82,7 +82,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 26635226975931008,
+          "ordinal": 1819029190665166744,
           "name": "GetChildRequest",
           "location": {
             "filename": "protocol_request.test.fidl",
@@ -107,7 +107,7 @@
             {
               "type": {
                 "kind": "request",
-                "subtype": "test.name/Child",
+                "subtype": "fidl.test.protocolrequest/Child",
                 "nullable": false
               },
               "name": "r",
@@ -123,7 +123,7 @@
               }
             }
           ],
-          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix3",
+          "maybe_response_payload": "fidl.test.protocolrequest/SomeLongAnonymousPrefix3",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -137,7 +137,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 7680932945371199613,
+          "ordinal": 374110854839013230,
           "name": "TakeChild",
           "location": {
             "filename": "protocol_request.test.fidl",
@@ -150,7 +150,7 @@
             {
               "type": {
                 "kind": "identifier",
-                "identifier": "test.name/Child",
+                "identifier": "fidl.test.protocolrequest/Child",
                 "nullable": false
               },
               "name": "c",
@@ -166,7 +166,7 @@
               }
             }
           ],
-          "maybe_request_payload": "test.name/SomeLongAnonymousPrefix4",
+          "maybe_request_payload": "fidl.test.protocolrequest/SomeLongAnonymousPrefix4",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -181,7 +181,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 7803173423056840247,
+          "ordinal": 1574820689302890956,
           "name": "TakeChildRequest",
           "location": {
             "filename": "protocol_request.test.fidl",
@@ -194,7 +194,7 @@
             {
               "type": {
                 "kind": "request",
-                "subtype": "test.name/Child",
+                "subtype": "fidl.test.protocolrequest/Child",
                 "nullable": false
               },
               "name": "r",
@@ -210,7 +210,7 @@
               }
             }
           ],
-          "maybe_request_payload": "test.name/SomeLongAnonymousPrefix5",
+          "maybe_request_payload": "fidl.test.protocolrequest/SomeLongAnonymousPrefix5",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -230,7 +230,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "test.name/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "protocol_request.test.fidl",
         "line": 7,
@@ -242,7 +242,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.name/Child",
+            "identifier": "fidl.test.protocolrequest/Child",
             "nullable": false
           },
           "name": "c",
@@ -271,7 +271,7 @@
       }
     },
     {
-      "name": "test.name/SomeLongAnonymousPrefix3",
+      "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix3",
       "location": {
         "filename": "protocol_request.test.fidl",
         "line": 8,
@@ -283,7 +283,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "test.name/Child",
+            "subtype": "fidl.test.protocolrequest/Child",
             "nullable": false
           },
           "name": "r",
@@ -312,7 +312,7 @@
       }
     },
     {
-      "name": "test.name/SomeLongAnonymousPrefix4",
+      "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix4",
       "location": {
         "filename": "protocol_request.test.fidl",
         "line": 9,
@@ -324,7 +324,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.name/Child",
+            "identifier": "fidl.test.protocolrequest/Child",
             "nullable": false
           },
           "name": "c",
@@ -353,7 +353,7 @@
       }
     },
     {
-      "name": "test.name/SomeLongAnonymousPrefix5",
+      "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix5",
       "location": {
         "filename": "protocol_request.test.fidl",
         "line": 10,
@@ -365,7 +365,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "test.name/Child",
+            "subtype": "fidl.test.protocolrequest/Child",
             "nullable": false
           },
           "name": "r",
@@ -398,17 +398,17 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.name/Parent",
-    "test.name/Child"
+    "fidl.test.protocolrequest/Parent",
+    "fidl.test.protocolrequest/Child"
   ],
   "declarations": {
-    "test.name/Child": "interface",
-    "test.name/Parent": "interface",
-    "test.name/SomeLongAnonymousPrefix0": "struct",
-    "test.name/SomeLongAnonymousPrefix1": "struct",
-    "test.name/SomeLongAnonymousPrefix2": "struct",
-    "test.name/SomeLongAnonymousPrefix3": "struct",
-    "test.name/SomeLongAnonymousPrefix4": "struct",
-    "test.name/SomeLongAnonymousPrefix5": "struct"
+    "fidl.test.protocolrequest/Child": "interface",
+    "fidl.test.protocolrequest/Parent": "interface",
+    "fidl.test.protocolrequest/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.protocolrequest/SomeLongAnonymousPrefix1": "struct",
+    "fidl.test.protocolrequest/SomeLongAnonymousPrefix2": "struct",
+    "fidl.test.protocolrequest/SomeLongAnonymousPrefix3": "struct",
+    "fidl.test.protocolrequest/SomeLongAnonymousPrefix4": "struct",
+    "fidl.test.protocolrequest/SomeLongAnonymousPrefix5": "struct"
   }
 }

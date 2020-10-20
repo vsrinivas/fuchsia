@@ -1,4 +1,4 @@
-library fidl.test.json;
+library fidl.test.inheritance;
 
 protocol super {
     foo(string s) -> (int64 y);

@@ -1,4 +1,4 @@
-library fidl.test.json;
+library fidl.test.emptystruct;
 
 struct Empty {
 };

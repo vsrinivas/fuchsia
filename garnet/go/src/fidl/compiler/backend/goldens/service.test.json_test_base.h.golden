@@ -3,8 +3,9 @@
 #pragma once
 
 #include <service.test.json.h>
+namespace fidl {
 namespace test {
-namespace name {
+namespace service {
 namespace testing {
 
 class SecondProtocol_TestBase : public SecondProtocol {
@@ -21,5 +22,6 @@ class FirstProtocol_TestBase : public FirstProtocol {
   void MethodOnFirst() override { NotImplemented_("MethodOnFirst"); }
 };
 }  // namespace testing
-}  // namespace name
+}  // namespace service
 }  // namespace test
+}  // namespace fidl

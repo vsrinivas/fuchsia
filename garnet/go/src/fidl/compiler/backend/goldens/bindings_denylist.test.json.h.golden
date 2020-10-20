@@ -4,8 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace bindingsdenylist {
 
 #ifdef __Fuchsia__
 class OnlyHlcpp;
@@ -16,7 +17,7 @@ class OnlyHlcpp final {
  public:
   class Handler;
 
-  static constexpr char Name[] = "test.name.OnlyHlcpp";
+  static constexpr char Name[] = "fidl.test.bindingsdenylist.OnlyHlcpp";
 
   explicit OnlyHlcpp(std::unique_ptr<::fidl::ServiceConnector> service)
       : service_(std::move(service)) {}
@@ -39,6 +40,7 @@ class OnlyHlcpp::Handler final {
 #endif  // __Fuchsia
 
 constexpr uint32_t AllBindings = 0u;
-}  // namespace name
+}  // namespace bindingsdenylist
 }  // namespace test
+}  // namespace fidl
 namespace fidl {}  // namespace fidl

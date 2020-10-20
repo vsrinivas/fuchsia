@@ -3,6 +3,10 @@
 #pragma once
 
 #include <escaping.test.json.h>
-namespace escapeme {
+namespace fidl {
+namespace test {
+namespace escaping {
 namespace testing {}  // namespace testing
-}  // namespace escapeme
+}  // namespace escaping
+}  // namespace test
+}  // namespace fidl

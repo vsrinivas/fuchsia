@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "test.name",
+  "name": "fidl.test.service",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "test.name/FirstProtocol",
+      "name": "fidl.test.service/FirstProtocol",
       "location": {
         "filename": "service.test.fidl",
         "line": 7,
@@ -17,7 +17,7 @@
       },
       "methods": [
         {
-          "ordinal": 6344653839727902267,
+          "ordinal": 6590661047173168036,
           "name": "MethodOnFirst",
           "location": {
             "filename": "service.test.fidl",
@@ -43,7 +43,7 @@
       ]
     },
     {
-      "name": "test.name/SecondProtocol",
+      "name": "fidl.test.service/SecondProtocol",
       "location": {
         "filename": "service.test.fidl",
         "line": 15,
@@ -52,7 +52,7 @@
       },
       "methods": [
         {
-          "ordinal": 6306721464597794337,
+          "ordinal": 6118813307380259369,
           "name": "MethodOnSecond",
           "location": {
             "filename": "service.test.fidl",
@@ -80,7 +80,7 @@
   ],
   "service_declarations": [
     {
-      "name": "test.name/SingleMemberService",
+      "name": "fidl.test.service/SingleMemberService",
       "location": {
         "filename": "service.test.fidl",
         "line": 11,
@@ -91,7 +91,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.name/FirstProtocol",
+            "identifier": "fidl.test.service/FirstProtocol",
             "nullable": false
           },
           "name": "single_member",
@@ -105,7 +105,7 @@
       ]
     },
     {
-      "name": "test.name/MultiHeterogeneousMemberService",
+      "name": "fidl.test.service/MultiHeterogeneousMemberService",
       "location": {
         "filename": "service.test.fidl",
         "line": 19,
@@ -116,7 +116,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.name/FirstProtocol",
+            "identifier": "fidl.test.service/FirstProtocol",
             "nullable": false
           },
           "name": "first_member",
@@ -130,7 +130,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.name/SecondProtocol",
+            "identifier": "fidl.test.service/SecondProtocol",
             "nullable": false
           },
           "name": "second_member",
@@ -144,7 +144,7 @@
       ]
     },
     {
-      "name": "test.name/MultiHomogeneousMemberService",
+      "name": "fidl.test.service/MultiHomogeneousMemberService",
       "location": {
         "filename": "service.test.fidl",
         "line": 24,
@@ -155,7 +155,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.name/FirstProtocol",
+            "identifier": "fidl.test.service/FirstProtocol",
             "nullable": false
           },
           "name": "first_member",
@@ -169,7 +169,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.name/FirstProtocol",
+            "identifier": "fidl.test.service/FirstProtocol",
             "nullable": false
           },
           "name": "second_member",
@@ -188,19 +188,19 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.name/SecondProtocol",
-    "test.name/FirstProtocol",
-    "test.name/SingleMemberService",
-    "test.name/MultiHomogeneousMemberService",
-    "test.name/MultiHeterogeneousMemberService"
+    "fidl.test.service/SecondProtocol",
+    "fidl.test.service/FirstProtocol",
+    "fidl.test.service/SingleMemberService",
+    "fidl.test.service/MultiHomogeneousMemberService",
+    "fidl.test.service/MultiHeterogeneousMemberService"
   ],
   "declarations": {
-    "test.name/FirstProtocol": "interface",
-    "test.name/SecondProtocol": "interface",
-    "test.name/SingleMemberService": "service",
-    "test.name/MultiHeterogeneousMemberService": "service",
-    "test.name/MultiHomogeneousMemberService": "service",
-    "test.name/SomeLongAnonymousPrefix0": "struct",
-    "test.name/SomeLongAnonymousPrefix1": "struct"
+    "fidl.test.service/FirstProtocol": "interface",
+    "fidl.test.service/SecondProtocol": "interface",
+    "fidl.test.service/SingleMemberService": "service",
+    "fidl.test.service/MultiHeterogeneousMemberService": "service",
+    "fidl.test.service/MultiHomogeneousMemberService": "service",
+    "fidl.test.service/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.service/SomeLongAnonymousPrefix1": "struct"
   }
 }

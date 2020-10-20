@@ -6,7 +6,7 @@
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace inheritance {
 
 #ifdef __Fuchsia__
 
@@ -20,7 +20,7 @@ using superSyncPtr = ::fidl::SynchronousInterfacePtr<super>;
 class super_SyncProxy;
 using superHandle = ::fidl::InterfaceHandle<super>;
 namespace internal {
-constexpr uint64_t ksuper_foo_Ordinal = 0x4f6c089228ba7c92lu;
+constexpr uint64_t ksuper_foo_Ordinal = 0x45602cf3b581d6ablu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -36,7 +36,7 @@ using subSyncPtr = ::fidl::SynchronousInterfacePtr<sub>;
 class sub_SyncProxy;
 using subHandle = ::fidl::InterfaceHandle<sub>;
 namespace internal {
-constexpr uint64_t ksub_foo_Ordinal = 0x4f6c089228ba7c92lu;
+constexpr uint64_t ksub_foo_Ordinal = 0x45602cf3b581d6ablu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -182,7 +182,7 @@ class super_Proxy final : public ::fidl::internal::Proxy, public super {
 class super_Stub final : public ::fidl::internal::Stub,
                          public super_EventSender {
  public:
-  typedef class ::fidl::test::json::super super_clazz;
+  typedef class ::fidl::test::inheritance::super super_clazz;
   explicit super_Stub(super_clazz* impl);
   ~super_Stub() override;
 
@@ -345,7 +345,7 @@ class sub_Proxy final : public ::fidl::internal::Proxy, public sub {
 
 class sub_Stub final : public ::fidl::internal::Stub, public sub_EventSender {
  public:
-  typedef class ::fidl::test::json::sub sub_clazz;
+  typedef class ::fidl::test::inheritance::sub sub_clazz;
   explicit sub_Stub(sub_clazz* impl);
   ~sub_Stub() override;
 
@@ -367,7 +367,7 @@ class sub_SyncProxy : public sub_Sync {
   friend class ::fidl::SynchronousInterfacePtr<sub>;
 };
 #endif  // __Fuchsia__
-}  // namespace json
+}  // namespace inheritance
 }  // namespace test
 }  // namespace fidl
 namespace fidl {}  // namespace fidl

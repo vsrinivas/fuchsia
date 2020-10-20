@@ -1,4 +1,4 @@
-library test.name;
+library fidl.test.bindingsdenylist;
 
 // This file tests that all the bindings respect BindingsDenylist, and that the
 // attribute works on all declaration kinds. Each binding should include the

@@ -37,7 +37,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace union_ {
 
 class Union;
 struct StructWithNullableXUnion;
@@ -66,7 +66,7 @@ class ExplicitFoo;
 struct Empty;
 class XUnionContainingEmptyStruct;
 
-extern "C" const fidl_type_t fidl_test_json_UnionTable;
+extern "C" const fidl_type_t fidl_test_union_UnionTable;
 
 class Union {
  public:
@@ -167,7 +167,7 @@ class Union {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fidl_test_json_UnionTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_union_UnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -217,7 +217,7 @@ class Union {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_StrictUnionTable;
+extern "C" const fidl_type_t fidl_test_union_StrictUnionTable;
 
 class StrictUnion {
  public:
@@ -318,7 +318,7 @@ class StrictUnion {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fidl_test_json_StrictUnionTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_union_StrictUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -368,7 +368,7 @@ class StrictUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_StrictSimpleXUnionTable;
+extern "C" const fidl_type_t fidl_test_union_StrictSimpleXUnionTable;
 
 class StrictSimpleXUnion {
  public:
@@ -459,7 +459,7 @@ class StrictSimpleXUnion {
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_StrictSimpleXUnionTable;
+      &fidl_test_union_StrictSimpleXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -507,7 +507,7 @@ class StrictSimpleXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_StrictFooTable;
+extern "C" const fidl_type_t fidl_test_union_StrictFooTable;
 
 class StrictFoo {
  public:
@@ -573,7 +573,7 @@ class StrictFoo {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fidl_test_json_StrictFooTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_union_StrictFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -615,7 +615,7 @@ class StrictFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_StrictBoundedXUnionTable;
+extern "C" const fidl_type_t fidl_test_union_StrictBoundedXUnionTable;
 
 class StrictBoundedXUnion {
  public:
@@ -660,7 +660,7 @@ class StrictBoundedXUnion {
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_StrictBoundedXUnionTable;
+      &fidl_test_union_StrictBoundedXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 32;
@@ -695,7 +695,7 @@ class StrictBoundedXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_ReverseOrdinalUnionTable;
+extern "C" const fidl_type_t fidl_test_union_ReverseOrdinalUnionTable;
 
 class ReverseOrdinalUnion {
  public:
@@ -762,7 +762,7 @@ class ReverseOrdinalUnion {
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_ReverseOrdinalUnionTable;
+      &fidl_test_union_ReverseOrdinalUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -804,7 +804,7 @@ class ReverseOrdinalUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_StrictPizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_union_StrictPizzaOrPastaTable;
 
 class StrictPizzaOrPasta {
  public:
@@ -825,52 +825,52 @@ class StrictPizzaOrPasta {
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static StrictPizzaOrPasta WithPizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& val) {
     StrictPizzaOrPasta result;
     result.set_pizza(std::move(val));
     return result;
   }
 
   void set_pizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::json::Pizza& mutable_pizza() {
+  ::llcpp::fidl::test::union ::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::json::Pizza& pizza() const {
+  const ::llcpp::fidl::test::union ::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
         envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static StrictPizzaOrPasta WithPasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& val) {
     StrictPizzaOrPasta result;
     result.set_pasta(std::move(val));
     return result;
   }
 
   void set_pasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::json::Pasta& mutable_pasta() {
+  ::llcpp::fidl::test::union ::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::json::Pasta& pasta() const {
+  const ::llcpp::fidl::test::union ::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
         envelope_.data.get());
   }
   Tag which() const {
@@ -879,7 +879,7 @@ class StrictPizzaOrPasta {
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_StrictPizzaOrPastaTable;
+      &fidl_test_union_StrictPizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -899,14 +899,16 @@ class StrictPizzaOrPasta {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza> to_destroy =
-            static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>>(
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza> to_destroy =
+            static_cast<
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>>(
                 std::move(envelope_.data));
         break;
       }
       case 2: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta> to_destroy =
-            static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>>(
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta> to_destroy =
+            static_cast<
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>>(
                 std::move(envelope_.data));
         break;
       }
@@ -921,7 +923,7 @@ class StrictPizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_PizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_union_PizzaOrPastaTable;
 
 class PizzaOrPasta {
  public:
@@ -942,52 +944,52 @@ class PizzaOrPasta {
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static PizzaOrPasta WithPizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& val) {
     PizzaOrPasta result;
     result.set_pizza(std::move(val));
     return result;
   }
 
   void set_pizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::json::Pizza& mutable_pizza() {
+  ::llcpp::fidl::test::union ::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::json::Pizza& pizza() const {
+  const ::llcpp::fidl::test::union ::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
         envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static PizzaOrPasta WithPasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& val) {
     PizzaOrPasta result;
     result.set_pasta(std::move(val));
     return result;
   }
 
   void set_pasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::json::Pasta& mutable_pasta() {
+  ::llcpp::fidl::test::union ::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::json::Pasta& pasta() const {
+  const ::llcpp::fidl::test::union ::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
         envelope_.data.get());
   }
   Tag which() const {
@@ -995,7 +997,7 @@ class PizzaOrPasta {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fidl_test_json_PizzaOrPastaTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_union_PizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1015,14 +1017,16 @@ class PizzaOrPasta {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza> to_destroy =
-            static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>>(
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza> to_destroy =
+            static_cast<
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>>(
                 std::move(envelope_.data));
         break;
       }
       case 2: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta> to_destroy =
-            static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>>(
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta> to_destroy =
+            static_cast<
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>>(
                 std::move(envelope_.data));
         break;
       }
@@ -1037,7 +1041,7 @@ class PizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_FlexiblePizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_union_FlexiblePizzaOrPastaTable;
 
 class FlexiblePizzaOrPasta {
  public:
@@ -1059,58 +1063,58 @@ class FlexiblePizzaOrPasta {
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static FlexiblePizzaOrPasta WithPizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& val) {
     FlexiblePizzaOrPasta result;
     result.set_pizza(std::move(val));
     return result;
   }
 
   void set_pizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::json::Pizza& mutable_pizza() {
+  ::llcpp::fidl::test::union ::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::json::Pizza& pizza() const {
+  const ::llcpp::fidl::test::union ::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
         envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static FlexiblePizzaOrPasta WithPasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& val) {
     FlexiblePizzaOrPasta result;
     result.set_pasta(std::move(val));
     return result;
   }
 
   void set_pasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::json::Pasta& mutable_pasta() {
+  ::llcpp::fidl::test::union ::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::json::Pasta& pasta() const {
+  const ::llcpp::fidl::test::union ::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
         envelope_.data.get());
   }
   Tag which() const;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_FlexiblePizzaOrPastaTable;
+      &fidl_test_union_FlexiblePizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1130,14 +1134,16 @@ class FlexiblePizzaOrPasta {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza> to_destroy =
-            static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>>(
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza> to_destroy =
+            static_cast<
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>>(
                 std::move(envelope_.data));
         break;
       }
       case 2: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta> to_destroy =
-            static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>>(
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta> to_destroy =
+            static_cast<
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>>(
                 std::move(envelope_.data));
         break;
       }
@@ -1152,7 +1158,7 @@ class FlexiblePizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_ExplicitPizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_union_ExplicitPizzaOrPastaTable;
 
 class ExplicitPizzaOrPasta {
  public:
@@ -1173,52 +1179,52 @@ class ExplicitPizzaOrPasta {
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static ExplicitPizzaOrPasta WithPizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& val) {
     ExplicitPizzaOrPasta result;
     result.set_pizza(std::move(val));
     return result;
   }
 
   void set_pizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::json::Pizza& mutable_pizza() {
+  ::llcpp::fidl::test::union ::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::json::Pizza& pizza() const {
+  const ::llcpp::fidl::test::union ::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
         envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static ExplicitPizzaOrPasta WithPasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& val) {
     ExplicitPizzaOrPasta result;
     result.set_pasta(std::move(val));
     return result;
   }
 
   void set_pasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::json::Pasta& mutable_pasta() {
+  ::llcpp::fidl::test::union ::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::json::Pasta& pasta() const {
+  const ::llcpp::fidl::test::union ::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
         envelope_.data.get());
   }
   Tag which() const {
@@ -1227,7 +1233,7 @@ class ExplicitPizzaOrPasta {
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_ExplicitPizzaOrPastaTable;
+      &fidl_test_union_ExplicitPizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1247,14 +1253,16 @@ class ExplicitPizzaOrPasta {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza> to_destroy =
-            static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>>(
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza> to_destroy =
+            static_cast<
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>>(
                 std::move(envelope_.data));
         break;
       }
       case 4: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta> to_destroy =
-            static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>>(
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta> to_destroy =
+            static_cast<
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>>(
                 std::move(envelope_.data));
         break;
       }
@@ -1269,7 +1277,7 @@ class ExplicitPizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_OlderSimpleUnionTable;
+extern "C" const fidl_type_t fidl_test_union_OlderSimpleUnionTable;
 
 class OlderSimpleUnion {
  public:
@@ -1334,7 +1342,7 @@ class OlderSimpleUnion {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_OlderSimpleUnionTable;
+      &fidl_test_union_OlderSimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -1375,7 +1383,7 @@ class OlderSimpleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_NewerSimpleUnionTable;
+extern "C" const fidl_type_t fidl_test_union_NewerSimpleUnionTable;
 
 class NewerSimpleUnion {
  public:
@@ -1468,7 +1476,7 @@ class NewerSimpleUnion {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_NewerSimpleUnionTable;
+      &fidl_test_union_NewerSimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1518,7 +1526,7 @@ class NewerSimpleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_FlexibleUnionTable;
+extern "C" const fidl_type_t fidl_test_union_FlexibleUnionTable;
 
 class FlexibleUnion {
  public:
@@ -1617,7 +1625,8 @@ class FlexibleUnion {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &fidl_test_json_FlexibleUnionTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_union_FlexibleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1667,7 +1676,7 @@ class FlexibleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_FlexibleFooTable;
+extern "C" const fidl_type_t fidl_test_union_FlexibleFooTable;
 
 class FlexibleFoo {
  public:
@@ -1731,7 +1740,7 @@ class FlexibleFoo {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &fidl_test_json_FlexibleFooTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_union_FlexibleFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1773,7 +1782,7 @@ class FlexibleFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_FieldCollisionTable;
+extern "C" const fidl_type_t fidl_test_union_FieldCollisionTable;
 
 class FieldCollision {
  public:
@@ -1820,7 +1829,7 @@ class FieldCollision {
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_FieldCollisionTable;
+      &fidl_test_union_FieldCollisionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -1855,7 +1864,7 @@ class FieldCollision {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_ExplicitXUnionTable;
+extern "C" const fidl_type_t fidl_test_union_ExplicitXUnionTable;
 
 class ExplicitXUnion {
  public:
@@ -1920,7 +1929,7 @@ class ExplicitXUnion {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_ExplicitXUnionTable;
+      &fidl_test_union_ExplicitXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -1961,7 +1970,7 @@ class ExplicitXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_ExplicitUnionTable;
+extern "C" const fidl_type_t fidl_test_union_ExplicitUnionTable;
 
 class ExplicitUnion {
  public:
@@ -2031,7 +2040,8 @@ class ExplicitUnion {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fidl_test_json_ExplicitUnionTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_union_ExplicitUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -2073,7 +2083,7 @@ class ExplicitUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_ExplicitStrictFooTable;
+extern "C" const fidl_type_t fidl_test_union_ExplicitStrictFooTable;
 
 class ExplicitStrictFoo {
  public:
@@ -2141,7 +2151,7 @@ class ExplicitStrictFoo {
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_ExplicitStrictFooTable;
+      &fidl_test_union_ExplicitStrictFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -2183,7 +2193,7 @@ class ExplicitStrictFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_ExplicitFooTable;
+extern "C" const fidl_type_t fidl_test_union_ExplicitFooTable;
 
 class ExplicitFoo {
  public:
@@ -2247,7 +2257,7 @@ class ExplicitFoo {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &fidl_test_json_ExplicitFooTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_union_ExplicitFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -2289,7 +2299,7 @@ class ExplicitFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_XUnionContainingEmptyStructTable;
+extern "C" const fidl_type_t fidl_test_union_XUnionContainingEmptyStructTable;
 
 class XUnionContainingEmptyStruct {
  public:
@@ -2311,32 +2321,32 @@ class XUnionContainingEmptyStruct {
   bool is_empty() const { return ordinal_ == Ordinal::kEmpty; }
 
   static XUnionContainingEmptyStruct WithEmpty(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Empty>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Empty>&& val) {
     XUnionContainingEmptyStruct result;
     result.set_empty(std::move(val));
     return result;
   }
 
   void set_empty(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Empty>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Empty>&& elem) {
     ordinal_ = Ordinal::kEmpty;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::json::Empty& mutable_empty() {
+  ::llcpp::fidl::test::union ::Empty& mutable_empty() {
     ZX_ASSERT(ordinal_ == Ordinal::kEmpty);
-    return *static_cast<::llcpp::fidl::test::json::Empty*>(
+    return *static_cast<::llcpp::fidl::test::union ::Empty*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::json::Empty& empty() const {
+  const ::llcpp::fidl::test::union ::Empty& empty() const {
     ZX_ASSERT(ordinal_ == Ordinal::kEmpty);
-    return *static_cast<::llcpp::fidl::test::json::Empty*>(
+    return *static_cast<::llcpp::fidl::test::union ::Empty*>(
         envelope_.data.get());
   }
   Tag which() const;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_XUnionContainingEmptyStructTable;
+      &fidl_test_union_XUnionContainingEmptyStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -2355,8 +2365,9 @@ class XUnionContainingEmptyStruct {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::json::Empty> to_destroy =
-            static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Empty>>(
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Empty> to_destroy =
+            static_cast<
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Empty>>(
                 std::move(envelope_.data));
         break;
       }
@@ -2371,18 +2382,18 @@ class XUnionContainingEmptyStruct {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_StructWithNullableXUnionTable;
+extern "C" const fidl_type_t fidl_test_union_StructWithNullableXUnionTable;
 
 struct StructWithNullableXUnion {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_StructWithNullableXUnionTable;
+      &fidl_test_union_StructWithNullableXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
-  ::llcpp::fidl::test::json::OlderSimpleUnion x1 = {};
+  ::llcpp::fidl::test::union ::OlderSimpleUnion x1 = {};
   void _CloseHandles();
 
   class UnownedOutgoingMessage final {
@@ -2465,10 +2476,10 @@ struct StructWithNullableXUnion {
   };
 };
 
-extern "C" const fidl_type_t fidl_test_json_PizzaTable;
+extern "C" const fidl_type_t fidl_test_union_PizzaTable;
 
 struct Pizza {
-  static constexpr const fidl_type_t* Type = &fidl_test_json_PizzaTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_union_PizzaTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -2558,10 +2569,10 @@ struct Pizza {
   };
 };
 
-extern "C" const fidl_type_t fidl_test_json_PastaTable;
+extern "C" const fidl_type_t fidl_test_union_PastaTable;
 
 struct Pasta {
-  static constexpr const fidl_type_t* Type = &fidl_test_json_PastaTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_union_PastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
@@ -2650,13 +2661,13 @@ struct Pasta {
 };
 
 extern "C" const fidl_type_t
-    fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 extern "C" const fidl_type_t
-    fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 extern "C" const fidl_type_t
-    fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 extern "C" const fidl_type_t
-    fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 class TestProtocol final {
   TestProtocol() = delete;
@@ -2665,16 +2676,16 @@ class TestProtocol final {
   struct StrictXUnionHenceResponseMayBeStackAllocatedResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::json::StrictBoundedXUnion xu;
+    ::llcpp::fidl::test::union ::StrictBoundedXUnion xu;
     explicit StrictXUnionHenceResponseMayBeStackAllocatedResponse(
-        ::llcpp::fidl::test::json::StrictBoundedXUnion& xu)
+        ::llcpp::fidl::test::union ::StrictBoundedXUnion& xu)
         : xu(std::move(xu)) {
       _InitHeader();
     }
     StrictXUnionHenceResponseMayBeStackAllocatedResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+        &fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
@@ -2686,8 +2697,9 @@ class TestProtocol final {
 
     class UnownedOutgoingMessage final {
      public:
-      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
-                             ::llcpp::fidl::test::json::StrictBoundedXUnion& xu)
+      UnownedOutgoingMessage(
+          uint8_t* _bytes, uint32_t _byte_size,
+          ::llcpp::fidl::test::union ::StrictBoundedXUnion& xu)
           : message_(
                 _bytes, _byte_size,
                 sizeof(StrictXUnionHenceResponseMayBeStackAllocatedResponse),
@@ -2732,7 +2744,7 @@ class TestProtocol final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
-          ::llcpp::fidl::test::json::StrictBoundedXUnion& xu)
+          ::llcpp::fidl::test::union ::StrictBoundedXUnion& xu)
           : message_(bytes_, sizeof(bytes_), xu) {}
       explicit OwnedOutgoingMessage(
           StrictXUnionHenceResponseMayBeStackAllocatedResponse* response)
@@ -2936,16 +2948,16 @@ class TestProtocol final {
   struct FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::json::OlderSimpleUnion xu;
+    ::llcpp::fidl::test::union ::OlderSimpleUnion xu;
     explicit FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
-        ::llcpp::fidl::test::json::OlderSimpleUnion& xu)
+        ::llcpp::fidl::test::union ::OlderSimpleUnion& xu)
         : xu(std::move(xu)) {
       _InitHeader();
     }
     FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+        &fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -2958,7 +2970,7 @@ class TestProtocol final {
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
-                             ::llcpp::fidl::test::json::OlderSimpleUnion& xu)
+                             ::llcpp::fidl::test::union ::OlderSimpleUnion& xu)
           : message_(
                 _bytes, _byte_size,
                 sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse),
@@ -3003,7 +3015,7 @@ class TestProtocol final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
-          ::llcpp::fidl::test::json::OlderSimpleUnion& xu)
+          ::llcpp::fidl::test::union ::OlderSimpleUnion& xu)
           : message_(bytes_, sizeof(bytes_), xu) {}
       explicit OwnedOutgoingMessage(
           FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* response)
@@ -3586,9 +3598,9 @@ class TestProtocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(::llcpp::fidl::test::json::StrictBoundedXUnion xu);
+      ::fidl::Result Reply(::llcpp::fidl::test::union ::StrictBoundedXUnion xu);
       ::fidl::Result Reply(::fidl::BytePart _buffer,
-                           ::llcpp::fidl::test::json::StrictBoundedXUnion xu);
+                           ::llcpp::fidl::test::union ::StrictBoundedXUnion xu);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -3615,9 +3627,9 @@ class TestProtocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(::llcpp::fidl::test::json::OlderSimpleUnion xu);
+      ::fidl::Result Reply(::llcpp::fidl::test::union ::OlderSimpleUnion xu);
       ::fidl::Result Reply(::fidl::BytePart _buffer,
-                           ::llcpp::fidl::test::json::OlderSimpleUnion xu);
+                           ::llcpp::fidl::test::union ::OlderSimpleUnion xu);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -3661,18 +3673,18 @@ class TestProtocol final {
   class EventSender;
 };
 
-extern "C" const fidl_type_t fidl_test_json_NullableUnionStructTable;
+extern "C" const fidl_type_t fidl_test_union_NullableUnionStructTable;
 
 struct NullableUnionStruct {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_NullableUnionStructTable;
+      &fidl_test_union_NullableUnionStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
-  ::llcpp::fidl::test::json::Union the_union = {};
+  ::llcpp::fidl::test::union ::Union the_union = {};
   void _CloseHandles();
 
   class UnownedOutgoingMessage final {
@@ -3757,10 +3769,10 @@ struct NullableUnionStruct {
   };
 };
 
-extern "C" const fidl_type_t fidl_test_json_EmptyTable;
+extern "C" const fidl_type_t fidl_test_union_EmptyTable;
 
 struct Empty {
-  static constexpr const fidl_type_t* Type = &fidl_test_json_EmptyTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_union_EmptyTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -3848,7 +3860,7 @@ struct Empty {
   };
 };
 
-}  // namespace json
+}  // namespace union_
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
@@ -3856,295 +3868,302 @@ struct Empty {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Union> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::union_::Union> : public std::true_type {
+};
 template <>
-struct IsUnion<::llcpp::fidl::test::json::Union> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Union>);
+struct IsUnion<::llcpp::fidl::test::union_::Union> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fidl::test::union_::Union>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::StructWithNullableXUnion>
+struct IsFidlType<::llcpp::fidl::test::union_::StructWithNullableXUnion>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::json::StructWithNullableXUnion>
+struct IsStruct<::llcpp::fidl::test::union_::StructWithNullableXUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::json::StructWithNullableXUnion>);
-static_assert(offsetof(::llcpp::fidl::test::json::StructWithNullableXUnion,
+              ::llcpp::fidl::test::union_::StructWithNullableXUnion>);
+static_assert(offsetof(::llcpp::fidl::test::union_::StructWithNullableXUnion,
                        x1) == 0);
-static_assert(sizeof(::llcpp::fidl::test::json::StructWithNullableXUnion) ==
-              ::llcpp::fidl::test::json::StructWithNullableXUnion::PrimarySize);
+static_assert(
+    sizeof(::llcpp::fidl::test::union_::StructWithNullableXUnion) ==
+    ::llcpp::fidl::test::union_::StructWithNullableXUnion::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::StrictUnion>
+struct IsFidlType<::llcpp::fidl::test::union_::StrictUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::json::StrictUnion> : public std::true_type {
+struct IsUnion<::llcpp::fidl::test::union_::StrictUnion>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::StrictUnion>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::StrictSimpleXUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::StrictSimpleXUnion>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::StrictSimpleXUnion>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::StrictFoo>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::StrictFoo> : public std::true_type {
 };
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::StrictUnion>);
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::StrictFoo>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::StrictSimpleXUnion>
+struct IsFidlType<::llcpp::fidl::test::union_::StrictBoundedXUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::json::StrictSimpleXUnion>
+struct IsUnion<::llcpp::fidl::test::union_::StrictBoundedXUnion>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::StrictBoundedXUnion>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::ReverseOrdinalUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::ReverseOrdinalUnion>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::ReverseOrdinalUnion>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::Pizza> : public std::true_type {
+};
+template <>
+struct IsStruct<::llcpp::fidl::test::union_::Pizza> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fidl::test::union_::Pizza>);
+static_assert(offsetof(::llcpp::fidl::test::union_::Pizza, toppings) == 0);
+static_assert(sizeof(::llcpp::fidl::test::union_::Pizza) ==
+              ::llcpp::fidl::test::union_::Pizza::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::Pasta> : public std::true_type {
+};
+template <>
+struct IsStruct<::llcpp::fidl::test::union_::Pasta> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fidl::test::union_::Pasta>);
+static_assert(offsetof(::llcpp::fidl::test::union_::Pasta, sauce) == 0);
+static_assert(sizeof(::llcpp::fidl::test::union_::Pasta) ==
+              ::llcpp::fidl::test::union_::Pasta::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::StrictPizzaOrPasta>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::StrictPizzaOrPasta>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::StrictSimpleXUnion>);
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::StrictPizzaOrPasta>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::StrictFoo>
+struct IsFidlType<::llcpp::fidl::test::union_::PizzaOrPasta>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::json::StrictFoo> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::StrictFoo>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::StrictBoundedXUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::StrictBoundedXUnion>
+struct IsUnion<::llcpp::fidl::test::union_::PizzaOrPasta>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::StrictBoundedXUnion>);
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::PizzaOrPasta>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::ReverseOrdinalUnion>
+struct IsFidlType<::llcpp::fidl::test::union_::FlexiblePizzaOrPasta>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::json::ReverseOrdinalUnion>
+struct IsUnion<::llcpp::fidl::test::union_::FlexiblePizzaOrPasta>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::FlexiblePizzaOrPasta>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::ExplicitPizzaOrPasta>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::ExplicitPizzaOrPasta>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::ExplicitPizzaOrPasta>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::OlderSimpleUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::OlderSimpleUnion>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::ReverseOrdinalUnion>);
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::OlderSimpleUnion>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Pizza> : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::fidl::test::json::Pizza> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Pizza>);
-static_assert(offsetof(::llcpp::fidl::test::json::Pizza, toppings) == 0);
-static_assert(sizeof(::llcpp::fidl::test::json::Pizza) ==
-              ::llcpp::fidl::test::json::Pizza::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::Pasta> : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::fidl::test::json::Pasta> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Pasta>);
-static_assert(offsetof(::llcpp::fidl::test::json::Pasta, sauce) == 0);
-static_assert(sizeof(::llcpp::fidl::test::json::Pasta) ==
-              ::llcpp::fidl::test::json::Pasta::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::StrictPizzaOrPasta>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::StrictPizzaOrPasta>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::StrictPizzaOrPasta>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::PizzaOrPasta>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::PizzaOrPasta>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::PizzaOrPasta>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::FlexiblePizzaOrPasta>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::FlexiblePizzaOrPasta>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::FlexiblePizzaOrPasta>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::ExplicitPizzaOrPasta>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::ExplicitPizzaOrPasta>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::ExplicitPizzaOrPasta>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::OlderSimpleUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::OlderSimpleUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::OlderSimpleUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::TestProtocol::
+struct IsFidlType<::llcpp::fidl::test::union_::TestProtocol::
                       StrictXUnionHenceResponseMayBeStackAllocatedRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::TestProtocol::
+struct IsFidlMessage<::llcpp::fidl::test::union_::TestProtocol::
                          StrictXUnionHenceResponseMayBeStackAllocatedRequest>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::fidl::test::json::TestProtocol::
+    sizeof(::llcpp::fidl::test::union_::TestProtocol::
                StrictXUnionHenceResponseMayBeStackAllocatedRequest) ==
-    ::llcpp::fidl::test::json::TestProtocol::
+    ::llcpp::fidl::test::union_::TestProtocol::
         StrictXUnionHenceResponseMayBeStackAllocatedRequest::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::TestProtocol::
+struct IsFidlType<::llcpp::fidl::test::union_::TestProtocol::
                       StrictXUnionHenceResponseMayBeStackAllocatedResponse>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::TestProtocol::
+struct IsFidlMessage<::llcpp::fidl::test::union_::TestProtocol::
                          StrictXUnionHenceResponseMayBeStackAllocatedResponse>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::fidl::test::json::TestProtocol::
+    sizeof(::llcpp::fidl::test::union_::TestProtocol::
                StrictXUnionHenceResponseMayBeStackAllocatedResponse) ==
-    ::llcpp::fidl::test::json::TestProtocol::
+    ::llcpp::fidl::test::union_::TestProtocol::
         StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::TestProtocol::
+static_assert(offsetof(::llcpp::fidl::test::union_::TestProtocol::
                            StrictXUnionHenceResponseMayBeStackAllocatedResponse,
                        xu) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::TestProtocol::
+struct IsFidlType<::llcpp::fidl::test::union_::TestProtocol::
                       FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::TestProtocol::
+struct IsFidlMessage<::llcpp::fidl::test::union_::TestProtocol::
                          FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::fidl::test::json::TestProtocol::
+    sizeof(::llcpp::fidl::test::union_::TestProtocol::
                FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest) ==
-    ::llcpp::fidl::test::json::TestProtocol::
+    ::llcpp::fidl::test::union_::TestProtocol::
         FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::TestProtocol::
+struct IsFidlType<::llcpp::fidl::test::union_::TestProtocol::
                       FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::TestProtocol::
+struct IsFidlMessage<::llcpp::fidl::test::union_::TestProtocol::
                          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::fidl::test::json::TestProtocol::
+    sizeof(::llcpp::fidl::test::union_::TestProtocol::
                FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse) ==
-    ::llcpp::fidl::test::json::TestProtocol::
+    ::llcpp::fidl::test::union_::TestProtocol::
         FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::PrimarySize);
 static_assert(
-    offsetof(::llcpp::fidl::test::json::TestProtocol::
+    offsetof(::llcpp::fidl::test::union_::TestProtocol::
                  FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse,
              xu) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::NullableUnionStruct>
+struct IsFidlType<::llcpp::fidl::test::union_::NullableUnionStruct>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::json::NullableUnionStruct>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::NullableUnionStruct>);
-static_assert(offsetof(::llcpp::fidl::test::json::NullableUnionStruct,
-                       the_union) == 0);
-static_assert(sizeof(::llcpp::fidl::test::json::NullableUnionStruct) ==
-              ::llcpp::fidl::test::json::NullableUnionStruct::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::NewerSimpleUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::NewerSimpleUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::NewerSimpleUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::FlexibleUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::FlexibleUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::FlexibleUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::FlexibleFoo>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::FlexibleFoo> : public std::true_type {
-};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::FlexibleFoo>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::FieldCollision>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::FieldCollision>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::FieldCollision>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::ExplicitXUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::ExplicitXUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::ExplicitXUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::ExplicitUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::ExplicitUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::ExplicitUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::ExplicitStrictFoo>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::ExplicitStrictFoo>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::ExplicitStrictFoo>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::ExplicitFoo>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::ExplicitFoo> : public std::true_type {
-};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::ExplicitFoo>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::Empty> : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::fidl::test::json::Empty> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Empty>);
-static_assert(offsetof(::llcpp::fidl::test::json::Empty, __reserved) == 0);
-static_assert(sizeof(::llcpp::fidl::test::json::Empty) ==
-              ::llcpp::fidl::test::json::Empty::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::XUnionContainingEmptyStruct>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::json::XUnionContainingEmptyStruct>
+struct IsStruct<::llcpp::fidl::test::union_::NullableUnionStruct>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::json::XUnionContainingEmptyStruct>);
+              ::llcpp::fidl::test::union_::NullableUnionStruct>);
+static_assert(offsetof(::llcpp::fidl::test::union_::NullableUnionStruct,
+                       the_union) == 0);
+static_assert(sizeof(::llcpp::fidl::test::union_::NullableUnionStruct) ==
+              ::llcpp::fidl::test::union_::NullableUnionStruct::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::NewerSimpleUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::NewerSimpleUnion>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::NewerSimpleUnion>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::FlexibleUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::FlexibleUnion>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::FlexibleUnion>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::FlexibleFoo>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::FlexibleFoo>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::FlexibleFoo>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::FieldCollision>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::FieldCollision>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::FieldCollision>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::ExplicitXUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::ExplicitXUnion>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::ExplicitXUnion>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::ExplicitUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::ExplicitUnion>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::ExplicitUnion>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::ExplicitStrictFoo>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::ExplicitStrictFoo>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::ExplicitStrictFoo>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::ExplicitFoo>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::ExplicitFoo>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::ExplicitFoo>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::Empty> : public std::true_type {
+};
+template <>
+struct IsStruct<::llcpp::fidl::test::union_::Empty> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fidl::test::union_::Empty>);
+static_assert(offsetof(::llcpp::fidl::test::union_::Empty, __reserved) == 0);
+static_assert(sizeof(::llcpp::fidl::test::union_::Empty) ==
+              ::llcpp::fidl::test::union_::Empty::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::XUnionContainingEmptyStruct>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::XUnionContainingEmptyStruct>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::XUnionContainingEmptyStruct>);
 
 }  // namespace fidl
 
@@ -4152,7 +4171,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace union_ {
 
 struct TestProtocol::AsyncEventHandlers {};
 
@@ -4189,7 +4208,7 @@ class TestProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Allocates 16
   // bytes of request buffer on the stack. The callback is stored on the heap.
   ::fidl::Result StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fit::callback<void(::llcpp::fidl::test::json::StrictBoundedXUnion xu)>
+      ::fit::callback<void(::llcpp::fidl::test::union ::StrictBoundedXUnion xu)>
           _cb);
   // Asynchronous variant of
   // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Caller
@@ -4217,7 +4236,7 @@ class TestProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // 16 bytes of request buffer on the stack. The callback is stored on the
   // heap.
   ::fidl::Result FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fit::callback<void(::llcpp::fidl::test::json::OlderSimpleUnion xu)>
+      ::fit::callback<void(::llcpp::fidl::test::union ::OlderSimpleUnion xu)>
           _cb);
   // Asynchronous variant of
   // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Caller
@@ -4264,7 +4283,7 @@ class TestProtocol::EventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
-}  // namespace json
+}  // namespace union_
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

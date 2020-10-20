@@ -3,8 +3,10 @@
 #pragma once
 
 #include <handles_in_types.test.json.h>
+namespace fidl {
 namespace test {
-namespace name {
+namespace handlesintypes {
 namespace testing {}  // namespace testing
-}  // namespace name
+}  // namespace handlesintypes
 }  // namespace test
+}  // namespace fidl

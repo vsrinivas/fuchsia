@@ -3,10 +3,10 @@
 #pragma once
 
 #include <union_sandwich.test.json.h>
-namespace test {
 namespace fidl {
+namespace test {
 namespace unionsandwich {
 namespace testing {}  // namespace testing
 }  // namespace unionsandwich
-}  // namespace fidl
 }  // namespace test
+}  // namespace fidl

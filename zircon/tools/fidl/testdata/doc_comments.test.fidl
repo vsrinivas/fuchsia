@@ -1,7 +1,7 @@
 /// library comment #1
 ///
 /// library comment #2
-library test.name;
+library fidl.test.doccomments;
 
 /// strict bits comment #1
 ///

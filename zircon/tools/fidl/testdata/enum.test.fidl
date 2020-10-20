@@ -1,4 +1,4 @@
-library test.name;
+library fidl.test.enum;
 
 strict enum MyStrictEnum : uint32 {
     FOO = 1;

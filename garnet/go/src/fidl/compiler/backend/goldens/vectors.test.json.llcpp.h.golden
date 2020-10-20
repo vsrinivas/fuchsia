@@ -36,15 +36,15 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace vectors {
 
 struct ExampleUseOfVectors;
 
-extern "C" const fidl_type_t fidl_test_json_ExampleUseOfVectorsTable;
+extern "C" const fidl_type_t fidl_test_vectors_ExampleUseOfVectorsTable;
 
 struct ExampleUseOfVectors {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_ExampleUseOfVectorsTable;
+      &fidl_test_vectors_ExampleUseOfVectorsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -138,7 +138,7 @@ struct ExampleUseOfVectors {
   };
 };
 
-}  // namespace json
+}  // namespace vectors
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
@@ -146,19 +146,19 @@ struct ExampleUseOfVectors {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::ExampleUseOfVectors>
+struct IsFidlType<::llcpp::fidl::test::vectors::ExampleUseOfVectors>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::json::ExampleUseOfVectors>
+struct IsStruct<::llcpp::fidl::test::vectors::ExampleUseOfVectors>
     : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::ExampleUseOfVectors>);
-static_assert(offsetof(::llcpp::fidl::test::json::ExampleUseOfVectors,
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::vectors::ExampleUseOfVectors>);
+static_assert(offsetof(::llcpp::fidl::test::vectors::ExampleUseOfVectors,
                        vector_of_uint8) == 0);
-static_assert(offsetof(::llcpp::fidl::test::json::ExampleUseOfVectors,
+static_assert(offsetof(::llcpp::fidl::test::vectors::ExampleUseOfVectors,
                        vector_of_vector_of_bool) == 16);
-static_assert(sizeof(::llcpp::fidl::test::json::ExampleUseOfVectors) ==
-              ::llcpp::fidl::test::json::ExampleUseOfVectors::PrimarySize);
+static_assert(sizeof(::llcpp::fidl::test::vectors::ExampleUseOfVectors) ==
+              ::llcpp::fidl::test::vectors::ExampleUseOfVectors::PrimarySize);
 
 }  // namespace fidl
 
@@ -166,7 +166,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {}  // namespace json
+namespace vectors {}  // namespace vectors
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

@@ -6,7 +6,7 @@
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace vectors {
 
 class ExampleUseOfVectors;
 
@@ -28,42 +28,45 @@ class ExampleUseOfVectors final {
   zx_status_t Clone(ExampleUseOfVectors* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::json::ExampleUseOfVectors& _value,
-                         ::fidl::test::json::ExampleUseOfVectors* _result) {
+inline zx_status_t Clone(
+    const ::fidl::test::vectors::ExampleUseOfVectors& _value,
+    ::fidl::test::vectors::ExampleUseOfVectors* _result) {
   return _value.Clone(_result);
 }
 
 using ExampleUseOfVectorsPtr = ::std::unique_ptr<ExampleUseOfVectors>;
-}  // namespace json
+}  // namespace vectors
 }  // namespace test
 }  // namespace fidl
 namespace fidl {
 
 template <>
-struct CodingTraits<::fidl::test::json::ExampleUseOfVectors>
-    : public EncodableCodingTraits<::fidl::test::json::ExampleUseOfVectors,
+struct CodingTraits<::fidl::test::vectors::ExampleUseOfVectors>
+    : public EncodableCodingTraits<::fidl::test::vectors::ExampleUseOfVectors,
                                    32> {};
 
 template <>
-struct HasPadding<::fidl::test::json::ExampleUseOfVectors>
+struct HasPadding<::fidl::test::vectors::ExampleUseOfVectors>
     : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::json::ExampleUseOfVectors>
+struct IsMemcpyCompatible<::fidl::test::vectors::ExampleUseOfVectors>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::json::ExampleUseOfVectors>::value &&
+          !HasPadding<::fidl::test::vectors::ExampleUseOfVectors>::value &&
           IsMemcpyCompatible<::std::vector<::std::vector<bool>>>::value &&
           IsMemcpyCompatible<::std::vector<uint8_t>>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::json::ExampleUseOfVectors& value,
-                         ::fidl::test::json::ExampleUseOfVectors* result) {
-  return ::fidl::test::json::Clone(value, result);
+inline zx_status_t Clone(
+    const ::fidl::test::vectors::ExampleUseOfVectors& value,
+    ::fidl::test::vectors::ExampleUseOfVectors* result) {
+  return ::fidl::test::vectors::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::json::ExampleUseOfVectors> {
-  bool operator()(const ::fidl::test::json::ExampleUseOfVectors& _lhs,
-                  const ::fidl::test::json::ExampleUseOfVectors& _rhs) const {
+struct Equality<::fidl::test::vectors::ExampleUseOfVectors> {
+  bool operator()(
+      const ::fidl::test::vectors::ExampleUseOfVectors& _lhs,
+      const ::fidl::test::vectors::ExampleUseOfVectors& _rhs) const {
     if (!::fidl::Equals(_lhs.vector_of_uint8, _rhs.vector_of_uint8)) {
       return false;
     }

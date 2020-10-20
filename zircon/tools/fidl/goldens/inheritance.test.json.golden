@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.json",
+  "name": "fidl.test.inheritance",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.json/super",
+      "name": "fidl.test.inheritance/super",
       "location": {
         "filename": "inheritance.test.fidl",
         "line": 3,
@@ -17,7 +17,7 @@
       },
       "methods": [
         {
-          "ordinal": 5722958650322615442,
+          "ordinal": 4999045011615110827,
           "name": "foo",
           "location": {
             "filename": "inheritance.test.fidl",
@@ -45,7 +45,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.inheritance/SomeLongAnonymousPrefix0",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -76,7 +76,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.json/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.inheritance/SomeLongAnonymousPrefix1",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -92,7 +92,7 @@
       ]
     },
     {
-      "name": "fidl.test.json/sub",
+      "name": "fidl.test.inheritance/sub",
       "location": {
         "filename": "inheritance.test.fidl",
         "line": 7,
@@ -101,7 +101,7 @@
       },
       "methods": [
         {
-          "ordinal": 5722958650322615442,
+          "ordinal": 4999045011615110827,
           "name": "foo",
           "location": {
             "filename": "inheritance.test.fidl",
@@ -129,7 +129,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.inheritance/SomeLongAnonymousPrefix0",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -160,7 +160,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.json/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.inheritance/SomeLongAnonymousPrefix1",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -179,7 +179,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.inheritance/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "inheritance.test.fidl",
         "line": 4,
@@ -219,7 +219,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.inheritance/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "inheritance.test.fidl",
         "line": 4,
@@ -259,7 +259,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.inheritance/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "inheritance.test.fidl",
         "line": 4,
@@ -299,7 +299,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.inheritance/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "inheritance.test.fidl",
         "line": 4,
@@ -343,13 +343,13 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.json/super",
-    "fidl.test.json/sub"
+    "fidl.test.inheritance/super",
+    "fidl.test.inheritance/sub"
   ],
   "declarations": {
-    "fidl.test.json/super": "interface",
-    "fidl.test.json/sub": "interface",
-    "fidl.test.json/SomeLongAnonymousPrefix0": "struct",
-    "fidl.test.json/SomeLongAnonymousPrefix1": "struct"
+    "fidl.test.inheritance/super": "interface",
+    "fidl.test.inheritance/sub": "interface",
+    "fidl.test.inheritance/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.inheritance/SomeLongAnonymousPrefix1": "struct"
   }
 }

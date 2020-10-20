@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "test.name",
+  "name": "fidl.test.doccomments",
   "maybe_attributes": [
     {
       "name": "Doc",
@@ -10,7 +10,7 @@
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "test.name/MyStrictBits",
+      "name": "fidl.test.doccomments/MyStrictBits",
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 9,
@@ -83,7 +83,7 @@
       "strict": true
     },
     {
-      "name": "test.name/MyFlexibleBits",
+      "name": "fidl.test.doccomments/MyFlexibleBits",
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 23,
@@ -158,7 +158,7 @@
   ],
   "const_declarations": [
     {
-      "name": "test.name/C",
+      "name": "fidl.test.doccomments/C",
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 37,
@@ -189,7 +189,7 @@
   ],
   "enum_declarations": [
     {
-      "name": "test.name/MyStrictEnum",
+      "name": "fidl.test.doccomments/MyStrictEnum",
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 42,
@@ -258,7 +258,7 @@
       "strict": true
     },
     {
-      "name": "test.name/MyFlexibleEnum",
+      "name": "fidl.test.doccomments/MyFlexibleEnum",
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 57,
@@ -331,7 +331,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "test.name/Interface",
+      "name": "fidl.test.doccomments/Interface",
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 112,
@@ -346,7 +346,7 @@
       ],
       "methods": [
         {
-          "ordinal": 6982550709377523448,
+          "ordinal": 6649887292072346213,
           "name": "Method",
           "location": {
             "filename": "doc_comments.test.fidl",
@@ -376,7 +376,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 654361314665317613,
+          "ordinal": 3999525675942213370,
           "name": "OnEvent",
           "location": {
             "filename": "doc_comments.test.fidl",
@@ -410,7 +410,7 @@
   ],
   "service_declarations": [
     {
-      "name": "test.name/Service",
+      "name": "fidl.test.doccomments/Service",
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 127,
@@ -427,7 +427,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.name/Interface",
+            "identifier": "fidl.test.doccomments/Interface",
             "nullable": false
           },
           "name": "interface",
@@ -449,7 +449,7 @@
   ],
   "struct_declarations": [
     {
-      "name": "test.name/Struct",
+      "name": "fidl.test.doccomments/Struct",
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 72,
@@ -503,7 +503,7 @@
   ],
   "table_declarations": [
     {
-      "name": "test.name/Table",
+      "name": "fidl.test.doccomments/Table",
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 102,
@@ -555,7 +555,7 @@
   ],
   "union_declarations": [
     {
-      "name": "test.name/StrictUnion",
+      "name": "fidl.test.doccomments/StrictUnion",
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 82,
@@ -605,7 +605,7 @@
       }
     },
     {
-      "name": "test.name/FlexibleUnion",
+      "name": "fidl.test.doccomments/FlexibleUnion",
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 92,
@@ -657,31 +657,31 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.name/Table",
-    "test.name/Struct",
-    "test.name/StrictUnion",
-    "test.name/Interface",
-    "test.name/Service",
-    "test.name/MyStrictEnum",
-    "test.name/MyStrictBits",
-    "test.name/MyFlexibleEnum",
-    "test.name/MyFlexibleBits",
-    "test.name/FlexibleUnion",
-    "test.name/C"
+    "fidl.test.doccomments/Table",
+    "fidl.test.doccomments/Struct",
+    "fidl.test.doccomments/StrictUnion",
+    "fidl.test.doccomments/Interface",
+    "fidl.test.doccomments/Service",
+    "fidl.test.doccomments/MyStrictEnum",
+    "fidl.test.doccomments/MyStrictBits",
+    "fidl.test.doccomments/MyFlexibleEnum",
+    "fidl.test.doccomments/MyFlexibleBits",
+    "fidl.test.doccomments/FlexibleUnion",
+    "fidl.test.doccomments/C"
   ],
   "declarations": {
-    "test.name/MyStrictBits": "bits",
-    "test.name/MyFlexibleBits": "bits",
-    "test.name/C": "const",
-    "test.name/MyStrictEnum": "enum",
-    "test.name/MyFlexibleEnum": "enum",
-    "test.name/Interface": "interface",
-    "test.name/Service": "service",
-    "test.name/SomeLongAnonymousPrefix0": "struct",
-    "test.name/SomeLongAnonymousPrefix1": "struct",
-    "test.name/Struct": "struct",
-    "test.name/Table": "table",
-    "test.name/StrictUnion": "union",
-    "test.name/FlexibleUnion": "union"
+    "fidl.test.doccomments/MyStrictBits": "bits",
+    "fidl.test.doccomments/MyFlexibleBits": "bits",
+    "fidl.test.doccomments/C": "const",
+    "fidl.test.doccomments/MyStrictEnum": "enum",
+    "fidl.test.doccomments/MyFlexibleEnum": "enum",
+    "fidl.test.doccomments/Interface": "interface",
+    "fidl.test.doccomments/Service": "service",
+    "fidl.test.doccomments/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.doccomments/SomeLongAnonymousPrefix1": "struct",
+    "fidl.test.doccomments/Struct": "struct",
+    "fidl.test.doccomments/Table": "table",
+    "fidl.test.doccomments/StrictUnion": "union",
+    "fidl.test.doccomments/FlexibleUnion": "union"
   }
 }

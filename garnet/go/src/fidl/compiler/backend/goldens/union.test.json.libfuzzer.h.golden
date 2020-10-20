@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/json/cpp/fidl.h>
+#include <fidl/test/union/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -13,32 +13,32 @@
 
 namespace fuzzing {
 
-using Union = ::fidl::test::json::Union;
-using StructWithNullableXUnion = ::fidl::test::json::StructWithNullableXUnion;
-using StrictUnion = ::fidl::test::json::StrictUnion;
-using StrictSimpleXUnion = ::fidl::test::json::StrictSimpleXUnion;
-using StrictFoo = ::fidl::test::json::StrictFoo;
-using StrictBoundedXUnion = ::fidl::test::json::StrictBoundedXUnion;
-using ReverseOrdinalUnion = ::fidl::test::json::ReverseOrdinalUnion;
-using Pizza = ::fidl::test::json::Pizza;
-using Pasta = ::fidl::test::json::Pasta;
-using StrictPizzaOrPasta = ::fidl::test::json::StrictPizzaOrPasta;
-using PizzaOrPasta = ::fidl::test::json::PizzaOrPasta;
-using FlexiblePizzaOrPasta = ::fidl::test::json::FlexiblePizzaOrPasta;
-using ExplicitPizzaOrPasta = ::fidl::test::json::ExplicitPizzaOrPasta;
-using OlderSimpleUnion = ::fidl::test::json::OlderSimpleUnion;
-using NullableUnionStruct = ::fidl::test::json::NullableUnionStruct;
-using NewerSimpleUnion = ::fidl::test::json::NewerSimpleUnion;
-using FlexibleUnion = ::fidl::test::json::FlexibleUnion;
-using FlexibleFoo = ::fidl::test::json::FlexibleFoo;
-using FieldCollision = ::fidl::test::json::FieldCollision;
-using ExplicitXUnion = ::fidl::test::json::ExplicitXUnion;
-using ExplicitUnion = ::fidl::test::json::ExplicitUnion;
-using ExplicitStrictFoo = ::fidl::test::json::ExplicitStrictFoo;
-using ExplicitFoo = ::fidl::test::json::ExplicitFoo;
-using Empty = ::fidl::test::json::Empty;
+using Union = ::fidl::test::union_::Union;
+using StructWithNullableXUnion = ::fidl::test::union_::StructWithNullableXUnion;
+using StrictUnion = ::fidl::test::union_::StrictUnion;
+using StrictSimpleXUnion = ::fidl::test::union_::StrictSimpleXUnion;
+using StrictFoo = ::fidl::test::union_::StrictFoo;
+using StrictBoundedXUnion = ::fidl::test::union_::StrictBoundedXUnion;
+using ReverseOrdinalUnion = ::fidl::test::union_::ReverseOrdinalUnion;
+using Pizza = ::fidl::test::union_::Pizza;
+using Pasta = ::fidl::test::union_::Pasta;
+using StrictPizzaOrPasta = ::fidl::test::union_::StrictPizzaOrPasta;
+using PizzaOrPasta = ::fidl::test::union_::PizzaOrPasta;
+using FlexiblePizzaOrPasta = ::fidl::test::union_::FlexiblePizzaOrPasta;
+using ExplicitPizzaOrPasta = ::fidl::test::union_::ExplicitPizzaOrPasta;
+using OlderSimpleUnion = ::fidl::test::union_::OlderSimpleUnion;
+using NullableUnionStruct = ::fidl::test::union_::NullableUnionStruct;
+using NewerSimpleUnion = ::fidl::test::union_::NewerSimpleUnion;
+using FlexibleUnion = ::fidl::test::union_::FlexibleUnion;
+using FlexibleFoo = ::fidl::test::union_::FlexibleFoo;
+using FieldCollision = ::fidl::test::union_::FieldCollision;
+using ExplicitXUnion = ::fidl::test::union_::ExplicitXUnion;
+using ExplicitUnion = ::fidl::test::union_::ExplicitUnion;
+using ExplicitStrictFoo = ::fidl::test::union_::ExplicitStrictFoo;
+using ExplicitFoo = ::fidl::test::union_::ExplicitFoo;
+using Empty = ::fidl::test::union_::Empty;
 using XUnionContainingEmptyStruct =
-    ::fidl::test::json::XUnionContainingEmptyStruct;
+    ::fidl::test::union_::XUnionContainingEmptyStruct;
 
 template <>
 struct MinSize<Union> {

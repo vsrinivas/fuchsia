@@ -6,7 +6,7 @@
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace arrays {
 
 class UnionSmallArray;
 class UnionLargeArray;
@@ -63,7 +63,7 @@ class UnionSmallArray final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  friend ::fidl::Equality<::fidl::test::json::UnionSmallArray>;
+  friend ::fidl::Equality<::fidl::test::arrays::UnionSmallArray>;
 
  private:
   void Destroy();
@@ -75,8 +75,8 @@ class UnionSmallArray final {
   };
 };
 
-inline zx_status_t Clone(const ::fidl::test::json::UnionSmallArray& value,
-                         ::fidl::test::json::UnionSmallArray* result) {
+inline zx_status_t Clone(const ::fidl::test::arrays::UnionSmallArray& value,
+                         ::fidl::test::arrays::UnionSmallArray* result) {
   return value.Clone(result);
 }
 
@@ -130,7 +130,7 @@ class UnionLargeArray final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  friend ::fidl::Equality<::fidl::test::json::UnionLargeArray>;
+  friend ::fidl::Equality<::fidl::test::arrays::UnionLargeArray>;
 
  private:
   void Destroy();
@@ -142,8 +142,8 @@ class UnionLargeArray final {
   };
 };
 
-inline zx_status_t Clone(const ::fidl::test::json::UnionLargeArray& value,
-                         ::fidl::test::json::UnionLargeArray* result) {
+inline zx_status_t Clone(const ::fidl::test::arrays::UnionLargeArray& value,
+                         ::fidl::test::arrays::UnionLargeArray* result) {
   return value.Clone(result);
 }
 
@@ -311,8 +311,8 @@ class StructSmallArray final {
   zx_status_t Clone(StructSmallArray* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::json::StructSmallArray& _value,
-                         ::fidl::test::json::StructSmallArray* _result) {
+inline zx_status_t Clone(const ::fidl::test::arrays::StructSmallArray& _value,
+                         ::fidl::test::arrays::StructSmallArray* _result) {
   return _value.Clone(_result);
 }
 
@@ -334,32 +334,33 @@ class StructLargeArray final {
   zx_status_t Clone(StructLargeArray* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::json::StructLargeArray& _value,
-                         ::fidl::test::json::StructLargeArray* _result) {
+inline zx_status_t Clone(const ::fidl::test::arrays::StructLargeArray& _value,
+                         ::fidl::test::arrays::StructLargeArray* _result) {
   return _value.Clone(_result);
 }
 
 using StructLargeArrayPtr = ::std::unique_ptr<StructLargeArray>;
-}  // namespace json
+}  // namespace arrays
 }  // namespace test
 }  // namespace fidl
 namespace fidl {
 
 template <>
-struct IsFidlXUnion<::fidl::test::json::UnionSmallArray>
+struct IsFidlXUnion<::fidl::test::arrays::UnionSmallArray>
     : public std::true_type {};
 
 template <>
-struct CodingTraits<::fidl::test::json::UnionSmallArray>
-    : public EncodableCodingTraits<::fidl::test::json::UnionSmallArray, 24> {};
+struct CodingTraits<::fidl::test::arrays::UnionSmallArray>
+    : public EncodableCodingTraits<::fidl::test::arrays::UnionSmallArray, 24> {
+};
 
 template <>
-struct CodingTraits<std::unique_ptr<::fidl::test::json::UnionSmallArray>> {
+struct CodingTraits<std::unique_ptr<::fidl::test::arrays::UnionSmallArray>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
   static void Encode(
       Encoder* encoder,
-      std::unique_ptr<::fidl::test::json::UnionSmallArray>* value,
+      std::unique_ptr<::fidl::test::arrays::UnionSmallArray>* value,
       size_t offset) {
     auto&& p_xunion = *value;
     if (p_xunion) {
@@ -369,7 +370,7 @@ struct CodingTraits<std::unique_ptr<::fidl::test::json::UnionSmallArray>> {
 
   static void Decode(
       Decoder* decoder,
-      std::unique_ptr<::fidl::test::json::UnionSmallArray>* value,
+      std::unique_ptr<::fidl::test::arrays::UnionSmallArray>* value,
       size_t offset) {
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
@@ -377,30 +378,31 @@ struct CodingTraits<std::unique_ptr<::fidl::test::json::UnionSmallArray>> {
       return;
     }
 
-    value->reset(new ::fidl::test::json::UnionSmallArray);
+    value->reset(new ::fidl::test::arrays::UnionSmallArray);
 
-    ::fidl::test::json::UnionSmallArray::Decode(decoder, value->get(), offset);
+    ::fidl::test::arrays::UnionSmallArray::Decode(decoder, value->get(),
+                                                  offset);
   }
 };
 
-inline zx_status_t Clone(const ::fidl::test::json::UnionSmallArray& value,
-                         ::fidl::test::json::UnionSmallArray* result) {
-  return ::fidl::test::json::Clone(value, result);
+inline zx_status_t Clone(const ::fidl::test::arrays::UnionSmallArray& value,
+                         ::fidl::test::arrays::UnionSmallArray* result) {
+  return ::fidl::test::arrays::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::json::UnionSmallArray> {
-  bool operator()(const ::fidl::test::json::UnionSmallArray& _lhs,
-                  const ::fidl::test::json::UnionSmallArray& _rhs) const {
+struct Equality<::fidl::test::arrays::UnionSmallArray> {
+  bool operator()(const ::fidl::test::arrays::UnionSmallArray& _lhs,
+                  const ::fidl::test::arrays::UnionSmallArray& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(
-          ::fidl::test::json::UnionSmallArray::Tag::Invalid):
+          ::fidl::test::arrays::UnionSmallArray::Tag::Invalid):
         return true;
-      case ::fidl::test::json::UnionSmallArray::Tag::kA:
+      case ::fidl::test::arrays::UnionSmallArray::Tag::kA:
         return ::fidl::Equals(_lhs.a_, _rhs.a_);
 
       default:
@@ -409,20 +411,21 @@ struct Equality<::fidl::test::json::UnionSmallArray> {
   }
 };
 template <>
-struct IsFidlXUnion<::fidl::test::json::UnionLargeArray>
+struct IsFidlXUnion<::fidl::test::arrays::UnionLargeArray>
     : public std::true_type {};
 
 template <>
-struct CodingTraits<::fidl::test::json::UnionLargeArray>
-    : public EncodableCodingTraits<::fidl::test::json::UnionLargeArray, 24> {};
+struct CodingTraits<::fidl::test::arrays::UnionLargeArray>
+    : public EncodableCodingTraits<::fidl::test::arrays::UnionLargeArray, 24> {
+};
 
 template <>
-struct CodingTraits<std::unique_ptr<::fidl::test::json::UnionLargeArray>> {
+struct CodingTraits<std::unique_ptr<::fidl::test::arrays::UnionLargeArray>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
   static void Encode(
       Encoder* encoder,
-      std::unique_ptr<::fidl::test::json::UnionLargeArray>* value,
+      std::unique_ptr<::fidl::test::arrays::UnionLargeArray>* value,
       size_t offset) {
     auto&& p_xunion = *value;
     if (p_xunion) {
@@ -432,7 +435,7 @@ struct CodingTraits<std::unique_ptr<::fidl::test::json::UnionLargeArray>> {
 
   static void Decode(
       Decoder* decoder,
-      std::unique_ptr<::fidl::test::json::UnionLargeArray>* value,
+      std::unique_ptr<::fidl::test::arrays::UnionLargeArray>* value,
       size_t offset) {
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
@@ -440,30 +443,31 @@ struct CodingTraits<std::unique_ptr<::fidl::test::json::UnionLargeArray>> {
       return;
     }
 
-    value->reset(new ::fidl::test::json::UnionLargeArray);
+    value->reset(new ::fidl::test::arrays::UnionLargeArray);
 
-    ::fidl::test::json::UnionLargeArray::Decode(decoder, value->get(), offset);
+    ::fidl::test::arrays::UnionLargeArray::Decode(decoder, value->get(),
+                                                  offset);
   }
 };
 
-inline zx_status_t Clone(const ::fidl::test::json::UnionLargeArray& value,
-                         ::fidl::test::json::UnionLargeArray* result) {
-  return ::fidl::test::json::Clone(value, result);
+inline zx_status_t Clone(const ::fidl::test::arrays::UnionLargeArray& value,
+                         ::fidl::test::arrays::UnionLargeArray* result) {
+  return ::fidl::test::arrays::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::json::UnionLargeArray> {
-  bool operator()(const ::fidl::test::json::UnionLargeArray& _lhs,
-                  const ::fidl::test::json::UnionLargeArray& _rhs) const {
+struct Equality<::fidl::test::arrays::UnionLargeArray> {
+  bool operator()(const ::fidl::test::arrays::UnionLargeArray& _lhs,
+                  const ::fidl::test::arrays::UnionLargeArray& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(
-          ::fidl::test::json::UnionLargeArray::Tag::Invalid):
+          ::fidl::test::arrays::UnionLargeArray::Tag::Invalid):
         return true;
-      case ::fidl::test::json::UnionLargeArray::Tag::kA:
+      case ::fidl::test::arrays::UnionLargeArray::Tag::kA:
         return ::fidl::Equals(_lhs.a_, _rhs.a_);
 
       default:
@@ -472,17 +476,18 @@ struct Equality<::fidl::test::json::UnionLargeArray> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::json::TableSmallArray>
-    : public EncodableCodingTraits<::fidl::test::json::TableSmallArray, 16> {};
+struct CodingTraits<::fidl::test::arrays::TableSmallArray>
+    : public EncodableCodingTraits<::fidl::test::arrays::TableSmallArray, 16> {
+};
 
-inline zx_status_t Clone(const ::fidl::test::json::TableSmallArray& _value,
-                         ::fidl::test::json::TableSmallArray* result) {
+inline zx_status_t Clone(const ::fidl::test::arrays::TableSmallArray& _value,
+                         ::fidl::test::arrays::TableSmallArray* result) {
   return _value.Clone(result);
 }
 template <>
-struct Equality<::fidl::test::json::TableSmallArray> {
-  bool operator()(const ::fidl::test::json::TableSmallArray& _lhs,
-                  const ::fidl::test::json::TableSmallArray& _rhs) const {
+struct Equality<::fidl::test::arrays::TableSmallArray> {
+  bool operator()(const ::fidl::test::arrays::TableSmallArray& _lhs,
+                  const ::fidl::test::arrays::TableSmallArray& _rhs) const {
     if (_lhs.has_a()) {
       if (!_rhs.has_a()) {
         return false;
@@ -497,17 +502,18 @@ struct Equality<::fidl::test::json::TableSmallArray> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::json::TableLargeArray>
-    : public EncodableCodingTraits<::fidl::test::json::TableLargeArray, 16> {};
+struct CodingTraits<::fidl::test::arrays::TableLargeArray>
+    : public EncodableCodingTraits<::fidl::test::arrays::TableLargeArray, 16> {
+};
 
-inline zx_status_t Clone(const ::fidl::test::json::TableLargeArray& _value,
-                         ::fidl::test::json::TableLargeArray* result) {
+inline zx_status_t Clone(const ::fidl::test::arrays::TableLargeArray& _value,
+                         ::fidl::test::arrays::TableLargeArray* result) {
   return _value.Clone(result);
 }
 template <>
-struct Equality<::fidl::test::json::TableLargeArray> {
-  bool operator()(const ::fidl::test::json::TableLargeArray& _lhs,
-                  const ::fidl::test::json::TableLargeArray& _rhs) const {
+struct Equality<::fidl::test::arrays::TableLargeArray> {
+  bool operator()(const ::fidl::test::arrays::TableLargeArray& _lhs,
+                  const ::fidl::test::arrays::TableLargeArray& _rhs) const {
     if (_lhs.has_a()) {
       if (!_rhs.has_a()) {
         return false;
@@ -522,24 +528,25 @@ struct Equality<::fidl::test::json::TableLargeArray> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::json::StructSmallArray>
-    : public EncodableCodingTraits<::fidl::test::json::StructSmallArray, 8> {};
+struct CodingTraits<::fidl::test::arrays::StructSmallArray>
+    : public EncodableCodingTraits<::fidl::test::arrays::StructSmallArray, 8> {
+};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::json::StructSmallArray>
+struct IsMemcpyCompatible<::fidl::test::arrays::StructSmallArray>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::json::StructSmallArray>::value &&
+          !HasPadding<::fidl::test::arrays::StructSmallArray>::value &&
           IsMemcpyCompatible<::std::array<uint32_t, 2>>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::json::StructSmallArray& value,
-                         ::fidl::test::json::StructSmallArray* result) {
-  return ::fidl::test::json::Clone(value, result);
+inline zx_status_t Clone(const ::fidl::test::arrays::StructSmallArray& value,
+                         ::fidl::test::arrays::StructSmallArray* result) {
+  return ::fidl::test::arrays::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::json::StructSmallArray> {
-  bool operator()(const ::fidl::test::json::StructSmallArray& _lhs,
-                  const ::fidl::test::json::StructSmallArray& _rhs) const {
+struct Equality<::fidl::test::arrays::StructSmallArray> {
+  bool operator()(const ::fidl::test::arrays::StructSmallArray& _lhs,
+                  const ::fidl::test::arrays::StructSmallArray& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -547,25 +554,25 @@ struct Equality<::fidl::test::json::StructSmallArray> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::json::StructLargeArray>
-    : public EncodableCodingTraits<::fidl::test::json::StructLargeArray, 400> {
-};
+struct CodingTraits<::fidl::test::arrays::StructLargeArray>
+    : public EncodableCodingTraits<::fidl::test::arrays::StructLargeArray,
+                                   400> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::json::StructLargeArray>
+struct IsMemcpyCompatible<::fidl::test::arrays::StructLargeArray>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::json::StructLargeArray>::value &&
+          !HasPadding<::fidl::test::arrays::StructLargeArray>::value &&
           IsMemcpyCompatible<::std::array<uint32_t, 100>>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::json::StructLargeArray& value,
-                         ::fidl::test::json::StructLargeArray* result) {
-  return ::fidl::test::json::Clone(value, result);
+inline zx_status_t Clone(const ::fidl::test::arrays::StructLargeArray& value,
+                         ::fidl::test::arrays::StructLargeArray* result) {
+  return ::fidl::test::arrays::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::json::StructLargeArray> {
-  bool operator()(const ::fidl::test::json::StructLargeArray& _lhs,
-                  const ::fidl::test::json::StructLargeArray& _rhs) const {
+struct Equality<::fidl::test::arrays::StructLargeArray> {
+  bool operator()(const ::fidl::test::arrays::StructLargeArray& _lhs,
+                  const ::fidl::test::arrays::StructLargeArray& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }

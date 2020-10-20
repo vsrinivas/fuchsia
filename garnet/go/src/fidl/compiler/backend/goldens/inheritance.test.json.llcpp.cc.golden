@@ -8,13 +8,13 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace inheritance {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t ksuper_foo_Ordinal = 5722958650322615442lu;
-extern "C" const fidl_type_t fidl_test_json_superfooRequestTable;
-extern "C" const fidl_type_t fidl_test_json_superfooResponseTable;
+[[maybe_unused]] constexpr uint64_t ksuper_foo_Ordinal = 4999045011615110827lu;
+extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
+extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
 
 }  // namespace
 super::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
@@ -186,9 +186,9 @@ void super::fooResponse::_InitHeader() {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t ksub_foo_Ordinal = 5722958650322615442lu;
-extern "C" const fidl_type_t fidl_test_json_subfooRequestTable;
-extern "C" const fidl_type_t fidl_test_json_subfooResponseTable;
+[[maybe_unused]] constexpr uint64_t ksub_foo_Ordinal = 4999045011615110827lu;
+extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
+extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 
 }  // namespace
 sub::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
@@ -356,7 +356,7 @@ void sub::fooResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, ksub_foo_Ordinal);
 }
 
-}  // namespace json
+}  // namespace inheritance
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

@@ -6,27 +6,36 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace protocolrequest {
 
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kParent_GetChild_Ordinal =
-    6332745893922832518lu;
-extern "C" const fidl_type_t test_name_ParentGetChildRequestTable;
-extern "C" const fidl_type_t test_name_ParentGetChildResponseTable;
+    7929845654914578302lu;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentGetChildRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentGetChildResponseTable;
 [[maybe_unused]] constexpr uint64_t kParent_GetChildRequest_Ordinal =
-    26635226975931008lu;
-extern "C" const fidl_type_t test_name_ParentGetChildRequestRequestTable;
-extern "C" const fidl_type_t test_name_ParentGetChildRequestResponseTable;
+    1819029190665166744lu;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentGetChildRequestRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
 [[maybe_unused]] constexpr uint64_t kParent_TakeChild_Ordinal =
-    7680932945371199613lu;
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestTable;
-extern "C" const fidl_type_t test_name_ParentTakeChildResponseTable;
+    374110854839013230lu;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentTakeChildRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentTakeChildResponseTable;
 [[maybe_unused]] constexpr uint64_t kParent_TakeChildRequest_Ordinal =
-    7803173423056840247lu;
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestResponseTable;
+    1574820689302890956lu;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentTakeChildRequestResponseTable;
 
 }  // namespace
 Parent::ResultOf::GetChild::GetChild(zx_handle_t _client) {
@@ -462,6 +471,7 @@ namespace entries {
   return ::fidl::DispatchResult::kNotFound;
 }
 
-}  // namespace name
+}  // namespace protocolrequest
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

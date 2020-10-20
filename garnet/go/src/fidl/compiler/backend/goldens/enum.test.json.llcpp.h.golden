@@ -34,8 +34,9 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace enum_ {
 
 enum class MyStrictEnum : uint32_t {
 
@@ -78,15 +79,15 @@ class MyFlexibleEnumWithCustomUnknown final {
  private:
   uint32_t value_;
 };
-constexpr const ::llcpp::test::name::MyFlexibleEnumWithCustomUnknown
+constexpr const ::llcpp::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown
     MyFlexibleEnumWithCustomUnknown::FOO =
-        ::llcpp::test::name::MyFlexibleEnumWithCustomUnknown(1u);
-constexpr const ::llcpp::test::name::MyFlexibleEnumWithCustomUnknown
+        ::llcpp::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown(1u);
+constexpr const ::llcpp::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown
     MyFlexibleEnumWithCustomUnknown::BAR =
-        ::llcpp::test::name::MyFlexibleEnumWithCustomUnknown(2u);
-constexpr const ::llcpp::test::name::MyFlexibleEnumWithCustomUnknown
+        ::llcpp::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown(2u);
+constexpr const ::llcpp::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown
     MyFlexibleEnumWithCustomUnknown::CUSTOM_UNKNOWN =
-        ::llcpp::test::name::MyFlexibleEnumWithCustomUnknown(3u);
+        ::llcpp::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown(3u);
 
 class MyFlexibleEnum final {
  public:
@@ -118,33 +119,37 @@ class MyFlexibleEnum final {
  private:
   uint32_t value_;
 };
-constexpr const ::llcpp::test::name::MyFlexibleEnum MyFlexibleEnum::FOO =
-    ::llcpp::test::name::MyFlexibleEnum(1u);
-constexpr const ::llcpp::test::name::MyFlexibleEnum MyFlexibleEnum::BAR =
-    ::llcpp::test::name::MyFlexibleEnum(2u);
+constexpr const ::llcpp::fidl::test::enum_::MyFlexibleEnum MyFlexibleEnum::FOO =
+    ::llcpp::fidl::test::enum_::MyFlexibleEnum(1u);
+constexpr const ::llcpp::fidl::test::enum_::MyFlexibleEnum MyFlexibleEnum::BAR =
+    ::llcpp::fidl::test::enum_::MyFlexibleEnum(2u);
 
-}  // namespace name
+}  // namespace enum_
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::test::name::MyStrictEnum> : public std::true_type {};
-
-template <>
-struct IsFidlType<::llcpp::test::name::MyFlexibleEnumWithCustomUnknown>
+struct IsFidlType<::llcpp::fidl::test::enum_::MyStrictEnum>
     : public std::true_type {};
 
 template <>
-struct IsFidlType<::llcpp::test::name::MyFlexibleEnum> : public std::true_type {
-};
+struct IsFidlType<::llcpp::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown>
+    : public std::true_type {};
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::enum_::MyFlexibleEnum>
+    : public std::true_type {};
 
 }  // namespace fidl
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {}  // namespace name
+namespace enum_ {}  // namespace enum_
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

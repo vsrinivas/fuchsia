@@ -37,13 +37,13 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace error {
 
 struct Example_foo_Response;
 class Example_foo_Result;
 class Example;
 
-extern "C" const fidl_type_t fidl_test_json_Example_foo_ResultTable;
+extern "C" const fidl_type_t fidl_test_error_Example_foo_ResultTable;
 
 class Example_foo_Result {
  public:
@@ -64,7 +64,7 @@ class Example_foo_Result {
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   static Example_foo_Result WithResponse(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Example_foo_Response>&&
+      ::fidl::tracking_ptr<::llcpp::fidl::test::error::Example_foo_Response>&&
           val) {
     Example_foo_Result result;
     result.set_response(std::move(val));
@@ -72,20 +72,20 @@ class Example_foo_Result {
   }
 
   void set_response(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Example_foo_Response>&&
+      ::fidl::tracking_ptr<::llcpp::fidl::test::error::Example_foo_Response>&&
           elem) {
     ordinal_ = Ordinal::kResponse;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::json::Example_foo_Response& mutable_response() {
+  ::llcpp::fidl::test::error::Example_foo_Response& mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::fidl::test::json::Example_foo_Response*>(
+    return *static_cast<::llcpp::fidl::test::error::Example_foo_Response*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::json::Example_foo_Response& response() const {
+  const ::llcpp::fidl::test::error::Example_foo_Response& response() const {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::fidl::test::json::Example_foo_Response*>(
+    return *static_cast<::llcpp::fidl::test::error::Example_foo_Response*>(
         envelope_.data.get());
   }
 
@@ -116,7 +116,7 @@ class Example_foo_Result {
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_Example_foo_ResultTable;
+      &fidl_test_error_Example_foo_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -136,9 +136,9 @@ class Example_foo_Result {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::json::Example_foo_Response>
+        ::fidl::tracking_ptr<::llcpp::fidl::test::error::Example_foo_Response>
             to_destroy = static_cast<::fidl::tracking_ptr<
-                ::llcpp::fidl::test::json::Example_foo_Response>>(
+                ::llcpp::fidl::test::error::Example_foo_Response>>(
                 std::move(envelope_.data));
         break;
       }
@@ -159,11 +159,11 @@ class Example_foo_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_Example_foo_ResponseTable;
+extern "C" const fidl_type_t fidl_test_error_Example_foo_ResponseTable;
 
 struct Example_foo_Response {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_Example_foo_ResponseTable;
+      &fidl_test_error_Example_foo_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -253,8 +253,8 @@ struct Example_foo_Response {
   };
 };
 
-extern "C" const fidl_type_t fidl_test_json_ExamplefooRequestTable;
-extern "C" const fidl_type_t fidl_test_json_ExamplefooResponseTable;
+extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
+extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 
 class Example final {
   Example() = delete;
@@ -263,15 +263,15 @@ class Example final {
   struct fooResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::json::Example_foo_Result result;
-    explicit fooResponse(::llcpp::fidl::test::json::Example_foo_Result& result)
+    ::llcpp::fidl::test::error::Example_foo_Result result;
+    explicit fooResponse(::llcpp::fidl::test::error::Example_foo_Result& result)
         : result(std::move(result)) {
       _InitHeader();
     }
     fooResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_ExamplefooResponseTable;
+        &fidl_test_error_ExamplefooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -285,7 +285,7 @@ class Example final {
      public:
       UnownedOutgoingMessage(
           uint8_t* _bytes, uint32_t _byte_size,
-          ::llcpp::fidl::test::json::Example_foo_Result& result)
+          ::llcpp::fidl::test::error::Example_foo_Result& result)
           : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
         FIDL_ALIGNDECL fooResponse _response(result);
         message_.LinearizeAndEncode<fooResponse>(&_response);
@@ -318,7 +318,7 @@ class Example final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
-          ::llcpp::fidl::test::json::Example_foo_Result& result)
+          ::llcpp::fidl::test::error::Example_foo_Result& result)
           : message_(bytes_, sizeof(bytes_), result) {}
       explicit OwnedOutgoingMessage(fooResponse* response)
           : message_(bytes_, sizeof(bytes_), response) {}
@@ -390,7 +390,7 @@ class Example final {
     explicit fooRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_ExamplefooRequestTable;
+        &fidl_test_error_ExamplefooRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -672,12 +672,12 @@ class Example final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(
-          ::llcpp::fidl::test::json::Example_foo_Result result);
+          ::llcpp::fidl::test::error::Example_foo_Result result);
       ::fidl::Result ReplySuccess(int64_t y);
       ::fidl::Result ReplyError(uint32_t error);
       ::fidl::Result Reply(
           ::fidl::BytePart _buffer,
-          ::llcpp::fidl::test::json::Example_foo_Result result);
+          ::llcpp::fidl::test::error::Example_foo_Result result);
       ::fidl::Result ReplySuccess(::fidl::BytePart _buffer, int64_t y);
 
      protected:
@@ -718,7 +718,7 @@ class Example final {
   class EventSender;
 };
 
-}  // namespace json
+}  // namespace error
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
@@ -726,47 +726,47 @@ class Example final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Example_foo_Response>
+struct IsFidlType<::llcpp::fidl::test::error::Example_foo_Response>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::json::Example_foo_Response>
+struct IsStruct<::llcpp::fidl::test::error::Example_foo_Response>
     : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::Example_foo_Response>);
-static_assert(offsetof(::llcpp::fidl::test::json::Example_foo_Response, y) ==
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::error::Example_foo_Response>);
+static_assert(offsetof(::llcpp::fidl::test::error::Example_foo_Response, y) ==
               0);
-static_assert(sizeof(::llcpp::fidl::test::json::Example_foo_Response) ==
-              ::llcpp::fidl::test::json::Example_foo_Response::PrimarySize);
+static_assert(sizeof(::llcpp::fidl::test::error::Example_foo_Response) ==
+              ::llcpp::fidl::test::error::Example_foo_Response::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Example_foo_Result>
+struct IsFidlType<::llcpp::fidl::test::error::Example_foo_Result>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::json::Example_foo_Result>
+struct IsUnion<::llcpp::fidl::test::error::Example_foo_Result>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::Example_foo_Result>);
+    std::is_standard_layout_v<::llcpp::fidl::test::error::Example_foo_Result>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Example::fooRequest>
+struct IsFidlType<::llcpp::fidl::test::error::Example::fooRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Example::fooRequest>
+struct IsFidlMessage<::llcpp::fidl::test::error::Example::fooRequest>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Example::fooRequest) ==
-              ::llcpp::fidl::test::json::Example::fooRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Example::fooRequest, s) ==
+static_assert(sizeof(::llcpp::fidl::test::error::Example::fooRequest) ==
+              ::llcpp::fidl::test::error::Example::fooRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::error::Example::fooRequest, s) ==
               16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Example::fooResponse>
+struct IsFidlType<::llcpp::fidl::test::error::Example::fooResponse>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Example::fooResponse>
+struct IsFidlMessage<::llcpp::fidl::test::error::Example::fooResponse>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Example::fooResponse) ==
-              ::llcpp::fidl::test::json::Example::fooResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Example::fooResponse,
+static_assert(sizeof(::llcpp::fidl::test::error::Example::fooResponse) ==
+              ::llcpp::fidl::test::error::Example::fooResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::error::Example::fooResponse,
                        result) == 16);
 
 }  // namespace fidl
@@ -775,7 +775,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace error {
 
 struct Example::AsyncEventHandlers {};
 
@@ -795,7 +795,7 @@ class Example::ClientImpl final : private ::fidl::internal::ClientBase {
   // allocated on the heap.
   ::fidl::Result foo(::fidl::StringView s,
                      ::fit::callback<void(
-                         ::llcpp::fidl::test::json::Example_foo_Result result)>
+                         ::llcpp::fidl::test::error::Example_foo_Result result)>
                          _cb);
   // Asynchronous variant of |Example.foo()|. Caller provides the backing
   // storage for FIDL message via request buffer. Ownership of _context is given
@@ -836,7 +836,7 @@ class Example::EventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
-}  // namespace json
+}  // namespace error
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

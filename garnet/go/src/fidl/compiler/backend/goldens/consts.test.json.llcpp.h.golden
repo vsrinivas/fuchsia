@@ -34,8 +34,9 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace consts {
 
 enum class EnumType : int32_t {
 
@@ -93,48 +94,49 @@ class BitsType final {
 
   uint32_t value_ = 0;
 };
-constexpr const ::llcpp::test::name::BitsType BitsType::VALUE =
-    ::llcpp::test::name::BitsType(1u);
-constexpr const ::llcpp::test::name::BitsType BitsType::true_ =
-    ::llcpp::test::name::BitsType(2u);
-constexpr const ::llcpp::test::name::BitsType BitsType::mask =
-    ::llcpp::test::name::BitsType(3u);
+constexpr const ::llcpp::fidl::test::consts::BitsType BitsType::VALUE =
+    ::llcpp::fidl::test::consts::BitsType(1u);
+constexpr const ::llcpp::fidl::test::consts::BitsType BitsType::true_ =
+    ::llcpp::fidl::test::consts::BitsType(2u);
+constexpr const ::llcpp::fidl::test::consts::BitsType BitsType::mask =
+    ::llcpp::fidl::test::consts::BitsType(3u);
 
-constexpr inline ::llcpp::test::name::BitsType BitsType::operator~() const {
-  return ::llcpp::test::name::BitsType(
+constexpr inline ::llcpp::fidl::test::consts::BitsType BitsType::operator~()
+    const {
+  return ::llcpp::fidl::test::consts::BitsType(
       static_cast<uint32_t>(~this->value_ & mask.value_));
 }
 
-constexpr inline ::llcpp::test::name::BitsType BitsType::operator|(
-    const ::llcpp::test::name::BitsType& other) const {
-  return ::llcpp::test::name::BitsType(
+constexpr inline ::llcpp::fidl::test::consts::BitsType BitsType::operator|(
+    const ::llcpp::fidl::test::consts::BitsType& other) const {
+  return ::llcpp::fidl::test::consts::BitsType(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::test::name::BitsType BitsType::operator&(
-    const ::llcpp::test::name::BitsType& other) const {
-  return ::llcpp::test::name::BitsType(
+constexpr inline ::llcpp::fidl::test::consts::BitsType BitsType::operator&(
+    const ::llcpp::fidl::test::consts::BitsType& other) const {
+  return ::llcpp::fidl::test::consts::BitsType(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::test::name::BitsType BitsType::operator^(
-    const ::llcpp::test::name::BitsType& other) const {
-  return ::llcpp::test::name::BitsType(
+constexpr inline ::llcpp::fidl::test::consts::BitsType BitsType::operator^(
+    const ::llcpp::fidl::test::consts::BitsType& other) const {
+  return ::llcpp::fidl::test::consts::BitsType(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void BitsType::operator|=(
-    const ::llcpp::test::name::BitsType& other) {
+    const ::llcpp::fidl::test::consts::BitsType& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void BitsType::operator&=(
-    const ::llcpp::test::name::BitsType& other) {
+    const ::llcpp::fidl::test::consts::BitsType& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void BitsType::operator^=(
-    const ::llcpp::test::name::BitsType& other) {
+    const ::llcpp::fidl::test::consts::BitsType& other) {
   this->value_ ^= other.value_;
 }
 
@@ -148,9 +150,9 @@ constexpr float MIN_TEMP = -273.15f;
 
 constexpr uint64_t FUCHSIA = 4054509061583223046u;
 
-constexpr ::llcpp::test::name::EnumType enumVal = EnumType::VALUE;
+constexpr ::llcpp::fidl::test::consts::EnumType enumVal = EnumType::VALUE;
 
-constexpr ::llcpp::test::name::EnumType enumTrue = EnumType::true_;
+constexpr ::llcpp::fidl::test::consts::EnumType enumTrue = EnumType::true_;
 
 constexpr int32_t enumPrimitiveVal = EnumType::VALUE;
 
@@ -162,9 +164,9 @@ constexpr uint64_t DIAMOND = 1746410393481133080u;
 
 constexpr double CONVERSION_FACTOR = 1.41421;
 
-constexpr ::llcpp::test::name::BitsType bitsVal = BitsType::VALUE;
+constexpr ::llcpp::fidl::test::consts::BitsType bitsVal = BitsType::VALUE;
 
-constexpr ::llcpp::test::name::BitsType bitsTrue = BitsType::true_;
+constexpr ::llcpp::fidl::test::consts::BitsType bitsTrue = BitsType::true_;
 
 constexpr int32_t bitsPrimitiveVal = BitsType::VALUE;
 
@@ -174,25 +176,31 @@ constexpr uint16_t ANSWER_IN_BINARY = 42u;
 
 constexpr uint16_t ANSWER = 42u;
 
-}  // namespace name
+}  // namespace consts
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::test::name::EnumType> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::consts::EnumType>
+    : public std::true_type {};
 
 template <>
-struct IsFidlType<::llcpp::test::name::BitsType> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::BitsType>);
-static_assert(sizeof(::llcpp::test::name::BitsType) == sizeof(uint32_t));
+struct IsFidlType<::llcpp::fidl::test::consts::BitsType>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fidl::test::consts::BitsType>);
+static_assert(sizeof(::llcpp::fidl::test::consts::BitsType) ==
+              sizeof(uint32_t));
 
 }  // namespace fidl
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {}  // namespace name
+namespace consts {}  // namespace consts
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

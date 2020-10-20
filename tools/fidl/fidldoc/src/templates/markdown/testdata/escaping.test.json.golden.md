@@ -1,6 +1,6 @@
 [TOC]
 
-# escapeme
+# fidl.test.escaping
 
 
 
@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### DocCommentWithQuotes {#DocCommentWithQuotes}
-*Defined in [escapeme/escaping.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/escaping.test.fidl#4)*
+*Defined in [fidl.test.escaping/escaping.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/escaping.test.fidl#4)*
 
 <p>&quot;pleaseescapethisdocommentproperly&quot;</p>
 

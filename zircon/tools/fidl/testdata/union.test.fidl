@@ -1,4 +1,4 @@
-library fidl.test.json;
+library fidl.test.union;
 
 struct Pizza {
     vector<string:16> toppings;

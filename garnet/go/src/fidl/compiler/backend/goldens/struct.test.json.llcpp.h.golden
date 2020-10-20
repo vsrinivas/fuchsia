@@ -36,15 +36,15 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace structs {
 
 struct Simple;
 struct BasicStruct;
 
-extern "C" const fidl_type_t fidl_test_json_SimpleTable;
+extern "C" const fidl_type_t fidl_test_structs_SimpleTable;
 
 struct Simple {
-  static constexpr const fidl_type_t* Type = &fidl_test_json_SimpleTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_structs_SimpleTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -134,10 +134,11 @@ struct Simple {
   };
 };
 
-extern "C" const fidl_type_t fidl_test_json_BasicStructTable;
+extern "C" const fidl_type_t fidl_test_structs_BasicStructTable;
 
 struct BasicStruct {
-  static constexpr const fidl_type_t* Type = &fidl_test_json_BasicStructTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_structs_BasicStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -230,7 +231,7 @@ struct BasicStruct {
   };
 };
 
-}  // namespace json
+}  // namespace structs
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
@@ -238,27 +239,29 @@ struct BasicStruct {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Simple> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::structs::Simple>
+    : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::json::Simple> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Simple>);
-static_assert(offsetof(::llcpp::fidl::test::json::Simple, f1) == 0);
-static_assert(offsetof(::llcpp::fidl::test::json::Simple, f2) == 1);
-static_assert(sizeof(::llcpp::fidl::test::json::Simple) ==
-              ::llcpp::fidl::test::json::Simple::PrimarySize);
+struct IsStruct<::llcpp::fidl::test::structs::Simple> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::llcpp::fidl::test::structs::Simple>);
+static_assert(offsetof(::llcpp::fidl::test::structs::Simple, f1) == 0);
+static_assert(offsetof(::llcpp::fidl::test::structs::Simple, f2) == 1);
+static_assert(sizeof(::llcpp::fidl::test::structs::Simple) ==
+              ::llcpp::fidl::test::structs::Simple::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::BasicStruct>
+struct IsFidlType<::llcpp::fidl::test::structs::BasicStruct>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::json::BasicStruct>
+struct IsStruct<::llcpp::fidl::test::structs::BasicStruct>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::BasicStruct>);
-static_assert(offsetof(::llcpp::fidl::test::json::BasicStruct, x) == 0);
-static_assert(offsetof(::llcpp::fidl::test::json::BasicStruct, y) == 8);
-static_assert(sizeof(::llcpp::fidl::test::json::BasicStruct) ==
-              ::llcpp::fidl::test::json::BasicStruct::PrimarySize);
+    std::is_standard_layout_v<::llcpp::fidl::test::structs::BasicStruct>);
+static_assert(offsetof(::llcpp::fidl::test::structs::BasicStruct, x) == 0);
+static_assert(offsetof(::llcpp::fidl::test::structs::BasicStruct, y) == 8);
+static_assert(sizeof(::llcpp::fidl::test::structs::BasicStruct) ==
+              ::llcpp::fidl::test::structs::BasicStruct::PrimarySize);
 
 }  // namespace fidl
 
@@ -266,7 +269,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {}  // namespace json
+namespace structs {}  // namespace structs
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

@@ -1,15 +1,15 @@
 [TOC]
 
-# test.name
+# fidl.test.bindingsdenylist
 
 
 ## **PROTOCOLS**
 
 ## OnlyLibfuzzer {#OnlyLibfuzzer}
-*Defined in [test.name/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#36)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#36)*
 
 
-### LibfuzzerNeedsNonemptyProtocol {#test.name/OnlyLibfuzzer.LibfuzzerNeedsNonemptyProtocol}
+### LibfuzzerNeedsNonemptyProtocol {#fidl.test.bindingsdenylist/OnlyLibfuzzer.LibfuzzerNeedsNonemptyProtocol}
 
 
 #### Request
@@ -28,7 +28,7 @@
 ## **STRUCTS**
 
 ### OnlyGo {#OnlyGo}
-*Defined in [test.name/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#23)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#23)*
 
 
 
@@ -43,7 +43,7 @@
 ### OnlyDart {#OnlyDart}
 Type: <code>uint32</code>
 
-*Defined in [test.name/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#18)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#18)*
 
 
 
@@ -61,7 +61,7 @@ Type: <code>uint32</code>
 ### OnlyRust {#OnlyRust}
 
 
-*Defined in [test.name/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#27)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#27)*
 
 
 
@@ -74,7 +74,7 @@ Type: <code>uint32</code>
 ## **UNIONS**
 
 ### OnlyLlcpp {#OnlyLlcpp}
-*Defined in [test.name/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#31)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#31)*
 
 
 <table>
@@ -93,7 +93,7 @@ Type: <code>uint32</code>
 ### OnlySyzkaller {#OnlySyzkaller}
 Type: <code>uint32</code>
 
-*Defined in [test.name/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#13)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/bindings_denylist.test.fidl#13)*
 
 
 

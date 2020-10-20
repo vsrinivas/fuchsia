@@ -1,4 +1,4 @@
-library test.fidl.unionsandwich;
+library fidl.test.unionsandwich;
 
 // These are various unions and structs-containing-unions of different sizes and alignments,
 // explicitly designed as test cases for the wire format migration where the FIDL union type is

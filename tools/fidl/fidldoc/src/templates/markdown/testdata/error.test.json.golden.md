@@ -1,15 +1,15 @@
 [TOC]
 
-# fidl.test.json
+# fidl.test.error
 
 
 ## **PROTOCOLS**
 
 ## Example {#Example}
-*Defined in [fidl.test.json/error.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/error.test.fidl#3)*
+*Defined in [fidl.test.error/error.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/error.test.fidl#3)*
 
 
-### foo {#fidl.test.json/Example.foo}
+### foo {#fidl.test.error/Example.foo}
 
 
 #### Request
@@ -38,7 +38,7 @@
 ## **STRUCTS**
 
 ### Example_foo_Response {#Example_foo_Response}
-*Defined in [fidl.test.json/error.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/error.test.fidl#4)*
+*Defined in [fidl.test.error/error.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/error.test.fidl#4)*
 
 
 
@@ -62,7 +62,7 @@
 ## **UNIONS**
 
 ### Example_foo_Result {#Example_foo_Result}
-*Defined in [fidl.test.json/error.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/error.test.fidl#4)*
+*Defined in [fidl.test.error/error.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/error.test.fidl#4)*
 
 
 <table>

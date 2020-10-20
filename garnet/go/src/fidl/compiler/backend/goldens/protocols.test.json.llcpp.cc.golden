@@ -6,12 +6,13 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace protocols {
 
 void WithErrorSyntax_ResponseAsStruct_Response::_CloseHandles() {}
 
-void ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::
+void ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntax_ResponseAsStruct_Result) ==
                 sizeof(fidl_xunion_t));
@@ -25,7 +26,7 @@ void WithErrorSyntax_ResponseAsStruct_Result::_CloseHandles() {}
 
 void WithErrorSyntax_ErrorAsPrimitive_Response::_CloseHandles() {}
 
-void ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::
+void ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntax_ErrorAsPrimitive_Result) ==
                 sizeof(fidl_xunion_t));
@@ -42,17 +43,20 @@ void WithErrorSyntax_ErrorAsEnum_Response::_CloseHandles() {}
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kTransitional_Request_Ordinal =
-    8417059970765918690lu;
-extern "C" const fidl_type_t test_name_TransitionalRequestRequestTable;
-extern "C" const fidl_type_t test_name_TransitionalRequestResponseTable;
+    7121112290509197032lu;
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestResponseTable;
 [[maybe_unused]] constexpr uint64_t kTransitional_OneWay_Ordinal =
-    4736529736500432226lu;
-extern "C" const fidl_type_t test_name_TransitionalOneWayRequestTable;
-extern "C" const fidl_type_t test_name_TransitionalOneWayResponseTable;
+    1124136612964114085lu;
+extern "C" const fidl_type_t fidl_test_protocols_TransitionalOneWayRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalOneWayResponseTable;
 [[maybe_unused]] constexpr uint64_t kTransitional_Event_Ordinal =
-    1744293851714922796lu;
-extern "C" const fidl_type_t test_name_TransitionalEventRequestTable;
-extern "C" const fidl_type_t test_name_TransitionalEventEventTable;
+    6033576734966581606lu;
+extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventRequestTable;
+extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
 
 }  // namespace
 Transitional::ResultOf::Request::Request(zx_handle_t _client, int64_t x) {
@@ -389,21 +393,29 @@ void Transitional::EventResponse::_InitHeader() {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MethodA_Ordinal =
-    1954005452660588540lu;
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodAResponseTable;
+    565531679656837166lu;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodARequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodAResponseTable;
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_EventA_Ordinal =
-    2691096518916888736lu;
-extern "C" const fidl_type_t test_name_ChannelProtocolEventARequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolEventAEventTable;
+    5963604044179602938lu;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolEventARequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolEventAEventTable;
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MethodB_Ordinal =
-    6751311874614576291lu;
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
+    6746905632127147242lu;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBResponseTable;
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal =
-    3948151641640179063lu;
-extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
+    9065806117349865322lu;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
 
 }  // namespace
 ChannelProtocol::ResultOf::MethodA::MethodA(zx_handle_t _client, int64_t a,
@@ -884,60 +896,60 @@ namespace {
 
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
-        257584335957785512lu;
+        7699066378708085668lu;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal =
-        8101632395109729785lu;
+        4641225961522096302lu;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal =
-        5054636755429784136lu;
+        4935493674668456948lu;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal =
-        5108499630221504549lu;
+        8985942600963248509lu;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal =
-        108302452954061159lu;
+        7344052883704365182lu;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal =
-        383797738148261568lu;
+        2103802322332450033lu;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal =
-        301337558307652787lu;
+        1323081535741489193lu;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_OnWithResponse_Ordinal =
-        3069035692499413769lu;
+        1691906546593908418lu;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseOnWithResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace
 WithAndWithoutRequestResponse::ResultOf::NoRequestNoResponse::
@@ -1788,7 +1800,7 @@ void WithAndWithoutRequestResponse::OnWithResponseResponse::_InitHeader() {
                        kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
 }
 
-void ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::
+void ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntax_ErrorAsEnum_Result) ==
                 sizeof(fidl_xunion_t));
@@ -1803,21 +1815,23 @@ void WithErrorSyntax_ErrorAsEnum_Result::_CloseHandles() {}
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal =
-    6422511116044938191lu;
+    4000554951765344912lu;
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntaxResponseAsStructRequestTable;
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntaxResponseAsStructResponseTable;
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal =
-    2364249812017832126lu;
+    3421672554503271630lu;
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal =
-    4597390537870356095lu;
-extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable;
-extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+    627496610701472780lu;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
 
 }  // namespace
 WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
@@ -1951,16 +1965,15 @@ void WithErrorSyntax::ResponseAsStructResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result WithErrorSyntax::ClientImpl::ResponseAsStruct(
-    ::fit::callback<void(
-        ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result)>
+    ::fit::callback<void(::llcpp::fidl::test::protocols::
+                             WithErrorSyntax_ResponseAsStruct_Result result)>
         _cb) {
   class ResponseContext final : public ResponseAsStructResponseContext {
    public:
-    ResponseContext(
-        ::fit::callback<
-            void(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result
-                     result)>
-            cb)
+    ResponseContext(::fit::callback<
+                    void(::llcpp::fidl::test::protocols::
+                             WithErrorSyntax_ResponseAsStruct_Result result)>
+                        cb)
         : cb_(std::move(cb)) {}
 
     void OnReply(ResponseAsStructResponse* message) override {
@@ -1973,7 +1986,8 @@ void WithErrorSyntax::ResponseAsStructResponseContext::OnReply(uint8_t* reply) {
 
    private:
     ::fit::callback<void(
-        ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result)>
+        ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
+            result)>
         cb_;
   };
 
@@ -2023,16 +2037,15 @@ void WithErrorSyntax::ErrorAsPrimitiveResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result WithErrorSyntax::ClientImpl::ErrorAsPrimitive(
-    ::fit::callback<void(
-        ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result)>
+    ::fit::callback<void(::llcpp::fidl::test::protocols::
+                             WithErrorSyntax_ErrorAsPrimitive_Result result)>
         _cb) {
   class ResponseContext final : public ErrorAsPrimitiveResponseContext {
    public:
-    ResponseContext(
-        ::fit::callback<
-            void(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result
-                     result)>
-            cb)
+    ResponseContext(::fit::callback<
+                    void(::llcpp::fidl::test::protocols::
+                             WithErrorSyntax_ErrorAsPrimitive_Result result)>
+                        cb)
         : cb_(std::move(cb)) {}
 
     void OnReply(ErrorAsPrimitiveResponse* message) override {
@@ -2045,7 +2058,8 @@ void WithErrorSyntax::ErrorAsPrimitiveResponseContext::OnReply(uint8_t* reply) {
 
    private:
     ::fit::callback<void(
-        ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result)>
+        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
+            result)>
         cb_;
   };
 
@@ -2093,14 +2107,14 @@ void WithErrorSyntax::ErrorAsEnumResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result WithErrorSyntax::ClientImpl::ErrorAsEnum(
-    ::fit::callback<
-        void(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result)>
+    ::fit::callback<void(::llcpp::fidl::test::protocols::
+                             WithErrorSyntax_ErrorAsEnum_Result result)>
         _cb) {
   class ResponseContext final : public ErrorAsEnumResponseContext {
    public:
     ResponseContext(
-        ::fit::callback<void(
-            ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result)>
+        ::fit::callback<void(::llcpp::fidl::test::protocols::
+                                 WithErrorSyntax_ErrorAsEnum_Result result)>
             cb)
         : cb_(std::move(cb)) {}
 
@@ -2114,7 +2128,8 @@ void WithErrorSyntax::ErrorAsEnumResponseContext::OnReply(uint8_t* reply) {
 
    private:
     ::fit::callback<void(
-        ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result)>
+        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result
+            result)>
         cb_;
   };
 
@@ -2208,7 +2223,8 @@ namespace entries {
 }
 
 ::fidl::Result WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
-    ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
+        result) {
   ResponseAsStructResponse::OwnedOutgoingMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
@@ -2232,7 +2248,8 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplyError(
 
 ::fidl::Result WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
     ::fidl::BytePart _buffer,
-    ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
+        result) {
   ResponseAsStructResponse::UnownedOutgoingMessage _response(
       _buffer.data(), _buffer.capacity(), result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -2251,7 +2268,8 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
 }
 
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
-    ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
+        result) {
   ErrorAsPrimitiveResponse::OwnedOutgoingMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
@@ -2271,7 +2289,8 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplyError(
 
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
     ::fidl::BytePart _buffer,
-    ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
+        result) {
   ErrorAsPrimitiveResponse::UnownedOutgoingMessage _response(
       _buffer.data(), _buffer.capacity(), result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -2287,7 +2306,7 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
 }
 
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
-    ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result) {
   ErrorAsEnumResponse::OwnedOutgoingMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
@@ -2306,7 +2325,7 @@ WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
 
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
     ::fidl::BytePart _buffer,
-    ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result) {
   ErrorAsEnumResponse::UnownedOutgoingMessage _response(
       _buffer.data(), _buffer.capacity(), result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -2345,6 +2364,7 @@ void WithErrorSyntax::ErrorAsEnumResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kWithErrorSyntax_ErrorAsEnum_Ordinal);
 }
 
-}  // namespace name
+}  // namespace protocols
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

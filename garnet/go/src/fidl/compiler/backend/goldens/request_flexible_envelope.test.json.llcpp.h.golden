@@ -37,13 +37,13 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace requestflexibleenvelope {
 
 class StrictFoo;
 class FlexibleFoo;
 class Protocol;
 
-extern "C" const fidl_type_t fidl_test_json_StrictFooTable;
+extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_StrictFooTable;
 
 class StrictFoo {
  public:
@@ -109,7 +109,8 @@ class StrictFoo {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fidl_test_json_StrictFooTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_requestflexibleenvelope_StrictFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -151,7 +152,7 @@ class StrictFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_FlexibleFooTable;
+extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_FlexibleFooTable;
 
 class FlexibleFoo {
  public:
@@ -215,7 +216,8 @@ class FlexibleFoo {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &fidl_test_json_FlexibleFooTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_requestflexibleenvelope_FlexibleFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -258,13 +260,13 @@ class FlexibleFoo {
 };
 
 extern "C" const fidl_type_t
-    fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 extern "C" const fidl_type_t
-    fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 extern "C" const fidl_type_t
-    fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 extern "C" const fidl_type_t
-    fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 class Protocol final {
   Protocol() = delete;
@@ -273,16 +275,16 @@ class Protocol final {
   struct RequestStrictResponseFlexibleResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::json::FlexibleFoo f;
+    ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f;
     explicit RequestStrictResponseFlexibleResponse(
-        ::llcpp::fidl::test::json::FlexibleFoo& f)
+        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& f)
         : f(std::move(f)) {
       _InitHeader();
     }
     RequestStrictResponseFlexibleResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
+        &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -294,8 +296,9 @@ class Protocol final {
 
     class UnownedOutgoingMessage final {
      public:
-      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
-                             ::llcpp::fidl::test::json::FlexibleFoo& f)
+      UnownedOutgoingMessage(
+          uint8_t* _bytes, uint32_t _byte_size,
+          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& f)
           : message_(_bytes, _byte_size,
                      sizeof(RequestStrictResponseFlexibleResponse), nullptr, 0,
                      0) {
@@ -334,7 +337,8 @@ class Protocol final {
 
     class OwnedOutgoingMessage final {
      public:
-      explicit OwnedOutgoingMessage(::llcpp::fidl::test::json::FlexibleFoo& f)
+      explicit OwnedOutgoingMessage(
+          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& f)
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, f) {}
@@ -404,9 +408,10 @@ class Protocol final {
   struct RequestStrictResponseFlexibleRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::json::StrictFoo s;
+    ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s;
     explicit RequestStrictResponseFlexibleRequest(
-        zx_txid_t _txid, ::llcpp::fidl::test::json::StrictFoo& s)
+        zx_txid_t _txid,
+        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s)
         : s(std::move(s)) {
       _InitHeader(_txid);
     }
@@ -415,7 +420,7 @@ class Protocol final {
     }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
+        &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -430,9 +435,9 @@ class Protocol final {
 
     class UnownedOutgoingMessage final {
      public:
-      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
-                             zx_txid_t _txid,
-                             ::llcpp::fidl::test::json::StrictFoo& s)
+      UnownedOutgoingMessage(
+          uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s)
           : message_(_bytes, _byte_size,
                      sizeof(RequestStrictResponseFlexibleRequest), nullptr, 0,
                      0) {
@@ -471,8 +476,9 @@ class Protocol final {
 
     class OwnedOutgoingMessage final {
      public:
-      explicit OwnedOutgoingMessage(zx_txid_t _txid,
-                                    ::llcpp::fidl::test::json::StrictFoo& s)
+      explicit OwnedOutgoingMessage(
+          zx_txid_t _txid,
+          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s)
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, s) {}
@@ -542,16 +548,16 @@ class Protocol final {
   struct RequestFlexibleResponseStrictResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::json::StrictFoo f;
+    ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f;
     explicit RequestFlexibleResponseStrictResponse(
-        ::llcpp::fidl::test::json::StrictFoo& f)
+        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& f)
         : f(std::move(f)) {
       _InitHeader();
     }
     RequestFlexibleResponseStrictResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
+        &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -563,8 +569,9 @@ class Protocol final {
 
     class UnownedOutgoingMessage final {
      public:
-      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
-                             ::llcpp::fidl::test::json::StrictFoo& f)
+      UnownedOutgoingMessage(
+          uint8_t* _bytes, uint32_t _byte_size,
+          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& f)
           : message_(_bytes, _byte_size,
                      sizeof(RequestFlexibleResponseStrictResponse), nullptr, 0,
                      0) {
@@ -603,7 +610,8 @@ class Protocol final {
 
     class OwnedOutgoingMessage final {
      public:
-      explicit OwnedOutgoingMessage(::llcpp::fidl::test::json::StrictFoo& f)
+      explicit OwnedOutgoingMessage(
+          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& f)
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, f) {}
@@ -673,9 +681,10 @@ class Protocol final {
   struct RequestFlexibleResponseStrictRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::json::FlexibleFoo s;
+    ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s;
     explicit RequestFlexibleResponseStrictRequest(
-        zx_txid_t _txid, ::llcpp::fidl::test::json::FlexibleFoo& s)
+        zx_txid_t _txid,
+        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s)
         : s(std::move(s)) {
       _InitHeader(_txid);
     }
@@ -684,7 +693,7 @@ class Protocol final {
     }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
+        &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -699,9 +708,9 @@ class Protocol final {
 
     class UnownedOutgoingMessage final {
      public:
-      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
-                             zx_txid_t _txid,
-                             ::llcpp::fidl::test::json::FlexibleFoo& s)
+      UnownedOutgoingMessage(
+          uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s)
           : message_(_bytes, _byte_size,
                      sizeof(RequestFlexibleResponseStrictRequest), nullptr, 0,
                      0) {
@@ -740,8 +749,9 @@ class Protocol final {
 
     class OwnedOutgoingMessage final {
      public:
-      explicit OwnedOutgoingMessage(zx_txid_t _txid,
-                                    ::llcpp::fidl::test::json::FlexibleFoo& s)
+      explicit OwnedOutgoingMessage(
+          zx_txid_t _txid,
+          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s)
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, s) {}
@@ -816,10 +826,12 @@ class Protocol final {
     class RequestStrictResponseFlexible final : public ::fidl::Result {
      public:
       explicit RequestStrictResponseFlexible(
-          zx_handle_t _client, ::llcpp::fidl::test::json::StrictFoo& s);
-      RequestStrictResponseFlexible(zx_handle_t _client,
-                                    ::llcpp::fidl::test::json::StrictFoo& s,
-                                    zx_time_t _deadline);
+          zx_handle_t _client,
+          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s);
+      RequestStrictResponseFlexible(
+          zx_handle_t _client,
+          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s,
+          zx_time_t _deadline);
       explicit RequestStrictResponseFlexible(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       RequestStrictResponseFlexible(RequestStrictResponseFlexible&&) = delete;
@@ -864,10 +876,12 @@ class Protocol final {
     class RequestFlexibleResponseStrict final : public ::fidl::Result {
      public:
       explicit RequestFlexibleResponseStrict(
-          zx_handle_t _client, ::llcpp::fidl::test::json::FlexibleFoo& s);
-      RequestFlexibleResponseStrict(zx_handle_t _client,
-                                    ::llcpp::fidl::test::json::FlexibleFoo& s,
-                                    zx_time_t _deadline);
+          zx_handle_t _client,
+          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s);
+      RequestFlexibleResponseStrict(
+          zx_handle_t _client,
+          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s,
+          zx_time_t _deadline);
       explicit RequestFlexibleResponseStrict(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       RequestFlexibleResponseStrict(RequestFlexibleResponseStrict&&) = delete;
@@ -922,8 +936,8 @@ class Protocol final {
       explicit RequestStrictResponseFlexible(
           zx_handle_t _client, uint8_t* _request_bytes,
           uint32_t _request_byte_capacity,
-          ::llcpp::fidl::test::json::StrictFoo& s, uint8_t* _response_bytes,
-          uint32_t _response_byte_capacity);
+          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s,
+          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit RequestStrictResponseFlexible(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       RequestStrictResponseFlexible(RequestStrictResponseFlexible&&) = delete;
@@ -968,8 +982,8 @@ class Protocol final {
       explicit RequestFlexibleResponseStrict(
           zx_handle_t _client, uint8_t* _request_bytes,
           uint32_t _request_byte_capacity,
-          ::llcpp::fidl::test::json::FlexibleFoo& s, uint8_t* _response_bytes,
-          uint32_t _response_byte_capacity);
+          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s,
+          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit RequestFlexibleResponseStrict(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       RequestFlexibleResponseStrict(RequestFlexibleResponseStrict&&) = delete;
@@ -1019,18 +1033,19 @@ class Protocol final {
    public:
     // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::RequestStrictResponseFlexible
-    RequestStrictResponseFlexible(::zx::unowned_channel _client_end,
-                                  ::llcpp::fidl::test::json::StrictFoo s) {
+    RequestStrictResponseFlexible(
+        ::zx::unowned_channel _client_end,
+        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s) {
       return ResultOf::RequestStrictResponseFlexible(_client_end->get(), s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::RequestStrictResponseFlexible
-    RequestStrictResponseFlexible(::zx::unowned_channel _client_end,
-                                  ::fidl::BytePart _request_buffer,
-                                  ::llcpp::fidl::test::json::StrictFoo s,
-                                  ::fidl::BytePart _response_buffer) {
+    RequestStrictResponseFlexible(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
+        ::fidl::BytePart _response_buffer) {
       return UnownedResultOf::RequestStrictResponseFlexible(
           _client_end->get(), _request_buffer.data(),
           _request_buffer.capacity(), s, _response_buffer.data(),
@@ -1039,18 +1054,19 @@ class Protocol final {
 
     // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::RequestFlexibleResponseStrict
-    RequestFlexibleResponseStrict(::zx::unowned_channel _client_end,
-                                  ::llcpp::fidl::test::json::FlexibleFoo s) {
+    RequestFlexibleResponseStrict(
+        ::zx::unowned_channel _client_end,
+        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s) {
       return ResultOf::RequestFlexibleResponseStrict(_client_end->get(), s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::RequestFlexibleResponseStrict
-    RequestFlexibleResponseStrict(::zx::unowned_channel _client_end,
-                                  ::fidl::BytePart _request_buffer,
-                                  ::llcpp::fidl::test::json::FlexibleFoo s,
-                                  ::fidl::BytePart _response_buffer) {
+    RequestFlexibleResponseStrict(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+        ::fidl::BytePart _response_buffer) {
       return UnownedResultOf::RequestFlexibleResponseStrict(
           _client_end->get(), _request_buffer.data(),
           _request_buffer.capacity(), s, _response_buffer.data(),
@@ -1072,16 +1088,17 @@ class Protocol final {
 
     // Request is heap-allocated. Response is heap-allocated.
     ResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible(
-        ::llcpp::fidl::test::json::StrictFoo s) {
+        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s) {
       return ResultOf::RequestStrictResponseFlexible(this->channel().get(), s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::RequestStrictResponseFlexible
-    RequestStrictResponseFlexible(::fidl::BytePart _request_buffer,
-                                  ::llcpp::fidl::test::json::StrictFoo s,
-                                  ::fidl::BytePart _response_buffer) {
+    RequestStrictResponseFlexible(
+        ::fidl::BytePart _request_buffer,
+        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
+        ::fidl::BytePart _response_buffer) {
       return UnownedResultOf::RequestStrictResponseFlexible(
           this->channel().get(), _request_buffer.data(),
           _request_buffer.capacity(), s, _response_buffer.data(),
@@ -1090,16 +1107,17 @@ class Protocol final {
 
     // Request is heap-allocated. Response is heap-allocated.
     ResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict(
-        ::llcpp::fidl::test::json::FlexibleFoo s) {
+        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s) {
       return ResultOf::RequestFlexibleResponseStrict(this->channel().get(), s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::RequestFlexibleResponseStrict
-    RequestFlexibleResponseStrict(::fidl::BytePart _request_buffer,
-                                  ::llcpp::fidl::test::json::FlexibleFoo s,
-                                  ::fidl::BytePart _response_buffer) {
+    RequestFlexibleResponseStrict(
+        ::fidl::BytePart _request_buffer,
+        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+        ::fidl::BytePart _response_buffer) {
       return UnownedResultOf::RequestFlexibleResponseStrict(
           this->channel().get(), _request_buffer.data(),
           _request_buffer.capacity(), s, _response_buffer.data(),
@@ -1137,9 +1155,11 @@ class Protocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(::llcpp::fidl::test::json::FlexibleFoo f);
-      ::fidl::Result Reply(::fidl::BytePart _buffer,
-                           ::llcpp::fidl::test::json::FlexibleFoo f);
+      ::fidl::Result Reply(
+          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f);
+      ::fidl::Result Reply(
+          ::fidl::BytePart _buffer,
+          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -1149,7 +1169,7 @@ class Protocol final {
         ::fidl::Completer<RequestStrictResponseFlexibleCompleterBase>;
 
     virtual void RequestStrictResponseFlexible(
-        ::llcpp::fidl::test::json::StrictFoo s,
+        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
         RequestStrictResponseFlexibleCompleter::Sync& _completer) = 0;
 
     class RequestFlexibleResponseStrictCompleterBase
@@ -1165,9 +1185,11 @@ class Protocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(::llcpp::fidl::test::json::StrictFoo f);
-      ::fidl::Result Reply(::fidl::BytePart _buffer,
-                           ::llcpp::fidl::test::json::StrictFoo f);
+      ::fidl::Result Reply(
+          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f);
+      ::fidl::Result Reply(
+          ::fidl::BytePart _buffer,
+          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -1177,7 +1199,7 @@ class Protocol final {
         ::fidl::Completer<RequestFlexibleResponseStrictCompleterBase>;
 
     virtual void RequestFlexibleResponseStrict(
-        ::llcpp::fidl::test::json::FlexibleFoo s,
+        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
         RequestFlexibleResponseStrictCompleter::Sync& _completer) = 0;
   };
 
@@ -1210,7 +1232,7 @@ class Protocol final {
   class EventSender;
 };
 
-}  // namespace json
+}  // namespace requestflexibleenvelope
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
@@ -1218,82 +1240,84 @@ class Protocol final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::StrictFoo>
+struct IsFidlType<::llcpp::fidl::test::requestflexibleenvelope::StrictFoo>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::json::StrictFoo> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::StrictFoo>);
+struct IsUnion<::llcpp::fidl::test::requestflexibleenvelope::StrictFoo>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::FlexibleFoo>
+struct IsFidlType<::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::json::FlexibleFoo> : public std::true_type {
-};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::FlexibleFoo>);
+struct IsUnion<::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo>);
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleRequest>
+struct IsFidlType<::llcpp::fidl::test::requestflexibleenvelope::Protocol::
+                      RequestStrictResponseFlexibleRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleRequest>
+struct IsFidlMessage<::llcpp::fidl::test::requestflexibleenvelope::Protocol::
+                         RequestStrictResponseFlexibleRequest>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Protocol::
+static_assert(sizeof(::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                          RequestStrictResponseFlexibleRequest) ==
-              ::llcpp::fidl::test::json::Protocol::
+              ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                   RequestStrictResponseFlexibleRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Protocol::
+static_assert(offsetof(::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                            RequestStrictResponseFlexibleRequest,
                        s) == 16);
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleResponse>
+struct IsFidlType<::llcpp::fidl::test::requestflexibleenvelope::Protocol::
+                      RequestStrictResponseFlexibleResponse>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleResponse>
+struct IsFidlMessage<::llcpp::fidl::test::requestflexibleenvelope::Protocol::
+                         RequestStrictResponseFlexibleResponse>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Protocol::
+static_assert(sizeof(::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                          RequestStrictResponseFlexibleResponse) ==
-              ::llcpp::fidl::test::json::Protocol::
+              ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                   RequestStrictResponseFlexibleResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Protocol::
+static_assert(offsetof(::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                            RequestStrictResponseFlexibleResponse,
                        f) == 16);
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictRequest>
+struct IsFidlType<::llcpp::fidl::test::requestflexibleenvelope::Protocol::
+                      RequestFlexibleResponseStrictRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictRequest>
+struct IsFidlMessage<::llcpp::fidl::test::requestflexibleenvelope::Protocol::
+                         RequestFlexibleResponseStrictRequest>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Protocol::
+static_assert(sizeof(::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                          RequestFlexibleResponseStrictRequest) ==
-              ::llcpp::fidl::test::json::Protocol::
+              ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                   RequestFlexibleResponseStrictRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Protocol::
+static_assert(offsetof(::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                            RequestFlexibleResponseStrictRequest,
                        s) == 16);
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictResponse>
+struct IsFidlType<::llcpp::fidl::test::requestflexibleenvelope::Protocol::
+                      RequestFlexibleResponseStrictResponse>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictResponse>
+struct IsFidlMessage<::llcpp::fidl::test::requestflexibleenvelope::Protocol::
+                         RequestFlexibleResponseStrictResponse>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Protocol::
+static_assert(sizeof(::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                          RequestFlexibleResponseStrictResponse) ==
-              ::llcpp::fidl::test::json::Protocol::
+              ::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                   RequestFlexibleResponseStrictResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Protocol::
+static_assert(offsetof(::llcpp::fidl::test::requestflexibleenvelope::Protocol::
                            RequestFlexibleResponseStrictResponse,
                        f) == 16);
 
@@ -1303,7 +1327,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace requestflexibleenvelope {
 
 struct Protocol::AsyncEventHandlers {};
 
@@ -1336,53 +1360,60 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|. The
   // request and callback are allocated on the heap.
   ::fidl::Result RequestStrictResponseFlexible(
-      ::llcpp::fidl::test::json::StrictFoo s,
-      ::fit::callback<void(::llcpp::fidl::test::json::FlexibleFoo f)> _cb);
+      ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
+      ::fit::callback<
+          void(::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f)>
+          _cb);
   // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|. Caller
   // provides the backing storage for FIDL message via request buffer. Ownership
   // of _context is given unsafely to the binding until OnError() or OnReply()
   // are called on it.
   ::fidl::Result RequestStrictResponseFlexible(
-      ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::StrictFoo s,
+      ::fidl::BytePart _request_buffer,
+      ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
       RequestStrictResponseFlexibleResponseContext* _context);
   // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|. Request
   // is heap-allocated. Response is heap-allocated.
   ResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible_Sync(
-      ::llcpp::fidl::test::json::StrictFoo s);
+      ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s);
 
   // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|. Caller
   // provides the backing storage for FIDL message via request and response
   // buffers.
   UnownedResultOf::RequestStrictResponseFlexible
-  RequestStrictResponseFlexible_Sync(::fidl::BytePart _request_buffer,
-                                     ::llcpp::fidl::test::json::StrictFoo s,
-                                     ::fidl::BytePart _response_buffer);
+  RequestStrictResponseFlexible_Sync(
+      ::fidl::BytePart _request_buffer,
+      ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
+      ::fidl::BytePart _response_buffer);
 
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|. The
   // request and callback are allocated on the heap.
   ::fidl::Result RequestFlexibleResponseStrict(
-      ::llcpp::fidl::test::json::FlexibleFoo s,
-      ::fit::callback<void(::llcpp::fidl::test::json::StrictFoo f)> _cb);
+      ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+      ::fit::callback<
+          void(::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f)>
+          _cb);
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|. Caller
   // provides the backing storage for FIDL message via request buffer. Ownership
   // of _context is given unsafely to the binding until OnError() or OnReply()
   // are called on it.
   ::fidl::Result RequestFlexibleResponseStrict(
       ::fidl::BytePart _request_buffer,
-      ::llcpp::fidl::test::json::FlexibleFoo s,
+      ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
       RequestFlexibleResponseStrictResponseContext* _context);
   // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|. Request
   // is heap-allocated. Response is heap-allocated.
   ResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict_Sync(
-      ::llcpp::fidl::test::json::FlexibleFoo s);
+      ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s);
 
   // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|. Caller
   // provides the backing storage for FIDL message via request and response
   // buffers.
   UnownedResultOf::RequestFlexibleResponseStrict
-  RequestFlexibleResponseStrict_Sync(::fidl::BytePart _request_buffer,
-                                     ::llcpp::fidl::test::json::FlexibleFoo s,
-                                     ::fidl::BytePart _response_buffer);
+  RequestFlexibleResponseStrict_Sync(
+      ::fidl::BytePart _request_buffer,
+      ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+      ::fidl::BytePart _response_buffer);
 
  private:
   friend class ::fidl::Client<Protocol>;
@@ -1408,7 +1439,7 @@ class Protocol::EventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
-}  // namespace json
+}  // namespace requestflexibleenvelope
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

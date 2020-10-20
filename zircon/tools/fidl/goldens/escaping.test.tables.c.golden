@@ -3,9 +3,9 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedStruct escapeme_DocCommentWithQuotesTable;
+extern const struct FidlCodedStruct fidl_test_escaping_DocCommentWithQuotesTable;
 
 
 
-const struct FidlCodedStruct escapeme_DocCommentWithQuotesTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=1u, .name="escapeme/DocCommentWithQuotes"};
+const struct FidlCodedStruct fidl_test_escaping_DocCommentWithQuotesTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=1u, .name="fidl.test.escaping/DocCommentWithQuotes"};
 

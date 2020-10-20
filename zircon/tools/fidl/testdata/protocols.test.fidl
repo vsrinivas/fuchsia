@@ -1,4 +1,4 @@
-library test.name;
+library fidl.test.protocols;
 
 // This is not a reference to library zx to avoid complexity in the test data.
 // A local handle is defined here that contains subtypes that this test cares

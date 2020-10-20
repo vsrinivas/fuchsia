@@ -5,7 +5,7 @@
 #include <error.test.json.h>
 namespace fidl {
 namespace test {
-namespace json {
+namespace error {
 namespace testing {
 
 class Example_TestBase : public Example {
@@ -17,6 +17,6 @@ class Example_TestBase : public Example {
   }
 };
 }  // namespace testing
-}  // namespace json
+}  // namespace error
 }  // namespace test
 }  // namespace fidl

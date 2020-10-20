@@ -1,19 +1,19 @@
 [TOC]
 
-# test.name
+# fidl.test.protocolrequest
 
 
 ## **PROTOCOLS**
 
 ## Child {#Child}
-*Defined in [test.name/protocol_request.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocol_request.test.fidl#3)*
+*Defined in [fidl.test.protocolrequest/protocol_request.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocol_request.test.fidl#3)*
 
 
 ## Parent {#Parent}
-*Defined in [test.name/protocol_request.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocol_request.test.fidl#6)*
+*Defined in [fidl.test.protocolrequest/protocol_request.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocol_request.test.fidl#6)*
 
 
-### GetChild {#test.name/Parent.GetChild}
+### GetChild {#fidl.test.protocolrequest/Parent.GetChild}
 
 
 #### Request
@@ -32,7 +32,7 @@
             </td>
         </tr></table>
 
-### GetChildRequest {#test.name/Parent.GetChildRequest}
+### GetChildRequest {#fidl.test.protocolrequest/Parent.GetChildRequest}
 
 
 #### Request
@@ -51,7 +51,7 @@
             </td>
         </tr></table>
 
-### TakeChild {#test.name/Parent.TakeChild}
+### TakeChild {#fidl.test.protocolrequest/Parent.TakeChild}
 
 
 #### Request
@@ -66,7 +66,7 @@
 
 
 
-### TakeChildRequest {#test.name/Parent.TakeChildRequest}
+### TakeChildRequest {#fidl.test.protocolrequest/Parent.TakeChildRequest}
 
 
 #### Request

@@ -5,10 +5,11 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace fidl {
 namespace test {
-namespace json {
+namespace requestflexibleenvelope {
 
-extern "C" const fidl_type_t fidl_test_json_StrictFooTable;
-const fidl_type_t* StrictFoo::FidlType = &fidl_test_json_StrictFooTable;
+extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_StrictFooTable;
+const fidl_type_t* StrictFoo::FidlType =
+    &fidl_test_requestflexibleenvelope_StrictFooTable;
 
 StrictFoo::StrictFoo() {}
 
@@ -181,8 +182,9 @@ void StrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_FlexibleFooTable;
-const fidl_type_t* FlexibleFoo::FidlType = &fidl_test_json_FlexibleFooTable;
+extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_FlexibleFooTable;
+const fidl_type_t* FlexibleFoo::FidlType =
+    &fidl_test_requestflexibleenvelope_FlexibleFooTable;
 
 FlexibleFoo::FlexibleFoo() {}
 
@@ -385,14 +387,14 @@ void FlexibleFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 namespace {
 
 extern "C" const fidl_type_t
-    fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 extern "C" const fidl_type_t
-    fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 
 extern "C" const fidl_type_t
-    fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 extern "C" const fidl_type_t
-    fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 }  // namespace
 
@@ -403,10 +405,10 @@ const fidl_type_t* Protocol_RequestDecoder::GetType(uint64_t ordinal,
   switch (ordinal) {
     case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
       *out_needs_response = true;
-      return &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
+      return &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
     case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
       *out_needs_response = true;
-      return &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
+      return &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -416,9 +418,9 @@ const fidl_type_t* Protocol_RequestDecoder::GetType(uint64_t ordinal,
 const fidl_type_t* Protocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
-      return &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
+      return &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
     case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
-      return &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
+      return &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
     default:
       return nullptr;
   }
@@ -457,21 +459,22 @@ Protocol_RequestStrictResponseFlexible_ResponseHandler(
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(
-            ::fidl::DecodeAs<::fidl::test::json::FlexibleFoo>(&decoder, 16));
+        callback_(::fidl::DecodeAs<
+                  ::fidl::test::requestflexibleenvelope::FlexibleFoo>(&decoder,
+                                                                      16));
         return ZX_OK;
       },
-      &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable);
+      &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable);
 }
 
 }  // namespace
 void Protocol_Proxy::RequestStrictResponseFlexible(
-    ::fidl::test::json::StrictFoo s,
+    ::fidl::test::requestflexibleenvelope::StrictFoo s,
     RequestStrictResponseFlexibleCallback callback) {
   ::fidl::Encoder _encoder(
       internal::kProtocol_RequestStrictResponseFlexible_Ordinal);
   controller_->Send(
-      &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable,
+      &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable,
       Protocol_RequestEncoder::RequestStrictResponseFlexible(&_encoder, &s),
       Protocol_RequestStrictResponseFlexible_ResponseHandler(
           std::move(callback)));
@@ -488,20 +491,21 @@ Protocol_RequestFlexibleResponseStrict_ResponseHandler(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(
-            ::fidl::DecodeAs<::fidl::test::json::StrictFoo>(&decoder, 16));
+            ::fidl::DecodeAs<::fidl::test::requestflexibleenvelope::StrictFoo>(
+                &decoder, 16));
         return ZX_OK;
       },
-      &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable);
+      &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable);
 }
 
 }  // namespace
 void Protocol_Proxy::RequestFlexibleResponseStrict(
-    ::fidl::test::json::FlexibleFoo s,
+    ::fidl::test::requestflexibleenvelope::FlexibleFoo s,
     RequestFlexibleResponseStrictCallback callback) {
   ::fidl::Encoder _encoder(
       internal::kProtocol_RequestFlexibleResponseStrict_Ordinal);
   controller_->Send(
-      &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable,
+      &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable,
       Protocol_RequestEncoder::RequestFlexibleResponseStrict(&_encoder, &s),
       Protocol_RequestFlexibleResponseStrict_ResponseHandler(
           std::move(callback)));
@@ -521,11 +525,11 @@ class Protocol_RequestStrictResponseFlexible_Responder final {
       ::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(::fidl::test::json::FlexibleFoo f) {
+  void operator()(::fidl::test::requestflexibleenvelope::FlexibleFoo f) {
     ::fidl::Encoder _encoder(
         internal::kProtocol_RequestStrictResponseFlexible_Ordinal);
     response_.Send(
-        &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
+        &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable,
         Protocol_ResponseEncoder::RequestStrictResponseFlexible(&_encoder, &f));
   }
 
@@ -539,11 +543,11 @@ class Protocol_RequestFlexibleResponseStrict_Responder final {
       ::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(::fidl::test::json::StrictFoo f) {
+  void operator()(::fidl::test::requestflexibleenvelope::StrictFoo f) {
     ::fidl::Encoder _encoder(
         internal::kProtocol_RequestFlexibleResponseStrict_Ordinal);
     response_.Send(
-        &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
+        &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable,
         Protocol_ResponseEncoder::RequestFlexibleResponseStrict(&_encoder, &f));
   }
 
@@ -582,7 +586,8 @@ zx_status_t Protocol_Stub::Dispatch_(
     case internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->RequestStrictResponseFlexible(
-          ::fidl::DecodeAs<::fidl::test::json::StrictFoo>(&decoder, 16),
+          ::fidl::DecodeAs<::fidl::test::requestflexibleenvelope::StrictFoo>(
+              &decoder, 16),
           Protocol_RequestStrictResponseFlexible_Responder(
               std::move(response)));
       break;
@@ -590,7 +595,8 @@ zx_status_t Protocol_Stub::Dispatch_(
     case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->RequestFlexibleResponseStrict(
-          ::fidl::DecodeAs<::fidl::test::json::FlexibleFoo>(&decoder, 16),
+          ::fidl::DecodeAs<::fidl::test::requestflexibleenvelope::FlexibleFoo>(
+              &decoder, 16),
           Protocol_RequestFlexibleResponseStrict_Responder(
               std::move(response)));
       break;
@@ -609,41 +615,45 @@ Protocol_SyncProxy::Protocol_SyncProxy(::zx::channel channel)
 Protocol_SyncProxy::~Protocol_SyncProxy() = default;
 
 zx_status_t Protocol_SyncProxy::RequestStrictResponseFlexible(
-    ::fidl::test::json::StrictFoo s, ::fidl::test::json::FlexibleFoo* out_f) {
+    ::fidl::test::requestflexibleenvelope::StrictFoo s,
+    ::fidl::test::requestflexibleenvelope::FlexibleFoo* out_f) {
   ::fidl::Encoder _encoder(
       internal::kProtocol_RequestStrictResponseFlexible_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable,
-      &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
+      &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable,
+      &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable,
       Protocol_RequestEncoder::RequestStrictResponseFlexible(&_encoder, &s),
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_f = ::fidl::DecodeAs<::fidl::test::json::FlexibleFoo>(&decoder_, 16);
+  *out_f = ::fidl::DecodeAs<::fidl::test::requestflexibleenvelope::FlexibleFoo>(
+      &decoder_, 16);
   return ZX_OK;
 }
 
 zx_status_t Protocol_SyncProxy::RequestFlexibleResponseStrict(
-    ::fidl::test::json::FlexibleFoo s, ::fidl::test::json::StrictFoo* out_f) {
+    ::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+    ::fidl::test::requestflexibleenvelope::StrictFoo* out_f) {
   ::fidl::Encoder _encoder(
       internal::kProtocol_RequestFlexibleResponseStrict_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable,
-      &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
+      &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable,
+      &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable,
       Protocol_RequestEncoder::RequestFlexibleResponseStrict(&_encoder, &s),
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_f = ::fidl::DecodeAs<::fidl::test::json::StrictFoo>(&decoder_, 16);
+  *out_f = ::fidl::DecodeAs<::fidl::test::requestflexibleenvelope::StrictFoo>(
+      &decoder_, 16);
   return ZX_OK;
 }
 
 #endif  // __Fuchsia__
 
-}  // namespace json
+}  // namespace requestflexibleenvelope
 }  // namespace test
 }  // namespace fidl

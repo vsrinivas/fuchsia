@@ -3,8 +3,9 @@
 #pragma once
 
 #include <protocol_request.test.json.h>
+namespace fidl {
 namespace test {
-namespace name {
+namespace protocolrequest {
 namespace testing {
 
 class Parent_TestBase : public Parent {
@@ -18,11 +19,13 @@ class Parent_TestBase : public Parent {
     NotImplemented_("GetChildRequest");
   }
   void TakeChild(
-      ::fidl::InterfaceHandle<class ::test::name::Child> c) override {
+      ::fidl::InterfaceHandle<class ::fidl::test::protocolrequest::Child> c)
+      override {
     NotImplemented_("TakeChild");
   }
   void TakeChildRequest(
-      ::fidl::InterfaceRequest<::test::name::Child> r) override {
+      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r)
+      override {
     NotImplemented_("TakeChildRequest");
   }
 };
@@ -33,5 +36,6 @@ class Child_TestBase : public Child {
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing
-}  // namespace name
+}  // namespace protocolrequest
 }  // namespace test
+}  // namespace fidl

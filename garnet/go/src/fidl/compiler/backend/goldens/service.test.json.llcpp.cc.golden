@@ -6,16 +6,18 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace service {
 
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
-    6306721464597794337lu;
-extern "C" const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable;
+    6118813307380259369lu;
 extern "C" const fidl_type_t
-    test_name_SecondProtocolMethodOnSecondResponseTable;
+    fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_service_SecondProtocolMethodOnSecondResponseTable;
 
 }  // namespace
 SecondProtocol::ResultOf::MethodOnSecond::MethodOnSecond(zx_handle_t _client) {
@@ -95,9 +97,11 @@ void SecondProtocol::MethodOnSecondRequest::_InitHeader(zx_txid_t _txid) {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal =
-    6344653839727902267lu;
-extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
-extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstResponseTable;
+    6590661047173168036lu;
+extern "C" const fidl_type_t
+    fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_service_FirstProtocolMethodOnFirstResponseTable;
 
 }  // namespace
 FirstProtocol::ResultOf::MethodOnFirst::MethodOnFirst(zx_handle_t _client) {
@@ -174,6 +178,7 @@ void FirstProtocol::MethodOnFirstRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kFirstProtocol_MethodOnFirst_Ordinal);
 }
 
-}  // namespace name
+}  // namespace service
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

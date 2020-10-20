@@ -3,7 +3,7 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedStruct example_ByteAndBytesTable;
+extern const struct FidlCodedStruct fidl_test_byteandbytes_ByteAndBytesTable;
 
 
 static const struct FidlCodedVector Vector4294967295nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=4294967295u, .element_size=1u, .nullable=kFidlNullability_Nonnullable};
@@ -13,11 +13,11 @@ static const struct FidlCodedVector Vector1024nonnullable5uint8Table = {.tag=kFi
 static const struct FidlCodedVector Vector1024nullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=1024u, .element_size=1u, .nullable=kFidlNullability_Nullable};
 
 
-static const struct FidlStructElement Fields20example_ByteAndBytes[] = {
+static const struct FidlStructElement Fields35fidl_test_byteandbytes_ByteAndBytes[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=8u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable5uint8Table)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=24u, .field_type=(fidl_type_t*)(&Vector1024nonnullable5uint8Table)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=40u, .field_type=(fidl_type_t*)(&Vector1024nullable5uint8Table)}}
 };
-const struct FidlCodedStruct example_ByteAndBytesTable = {.tag=kFidlTypeStruct, .elements=Fields20example_ByteAndBytes, .element_count=4u, .size=56u, .name="example/ByteAndBytes"};
+const struct FidlCodedStruct fidl_test_byteandbytes_ByteAndBytesTable = {.tag=kFidlTypeStruct, .elements=Fields35fidl_test_byteandbytes_ByteAndBytes, .element_count=4u, .size=56u, .name="fidl.test.byteandbytes/ByteAndBytes"};
 

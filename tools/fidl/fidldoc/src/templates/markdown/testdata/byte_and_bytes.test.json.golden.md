@@ -1,6 +1,6 @@
 [TOC]
 
-# example
+# fidl.test.byteandbytes
 
 
 
@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### ByteAndBytes {#ByteAndBytes}
-*Defined in [example/byte_and_bytes.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/byte_and_bytes.test.fidl#3)*
+*Defined in [fidl.test.byteandbytes/byte_and_bytes.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/byte_and_bytes.test.fidl#3)*
 
 
 

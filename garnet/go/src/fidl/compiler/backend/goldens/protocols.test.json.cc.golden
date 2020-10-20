@@ -3,13 +3,14 @@
 #include <protocols.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+namespace fidl {
 namespace test {
-namespace name {
+namespace protocols {
 
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+    fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 const fidl_type_t* WithErrorSyntax_ResponseAsStruct_Response::FidlType =
-    &test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+    &fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
 void WithErrorSyntax_ResponseAsStruct_Response::Encode(
     ::fidl::Encoder* _encoder, size_t _offset) {
@@ -52,9 +53,9 @@ zx_status_t WithErrorSyntax_ResponseAsStruct_Response::Clone(
   return ZX_OK;
 }
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+    fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
 const fidl_type_t* WithErrorSyntax_ResponseAsStruct_Result::FidlType =
-    &test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+    &fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
 
 WithErrorSyntax_ResponseAsStruct_Result::
     WithErrorSyntax_ResponseAsStruct_Result() {}
@@ -70,7 +71,8 @@ WithErrorSyntax_ResponseAsStruct_Result::
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kResponse:
-      new (&response_)::test::name::WithErrorSyntax_ResponseAsStruct_Response();
+      new (&response_)::fidl::test::protocols::
+          WithErrorSyntax_ResponseAsStruct_Response();
       response_ = std::move(other.response_);
       break;
     case Tag::kErr:
@@ -89,7 +91,7 @@ WithErrorSyntax_ResponseAsStruct_Result::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kResponse:
-        new (&response_)::test::name::
+        new (&response_)::fidl::test::protocols::
             WithErrorSyntax_ResponseAsStruct_Response();
         response_ = std::move(other.response_);
         break;
@@ -105,7 +107,7 @@ WithErrorSyntax_ResponseAsStruct_Result::operator=(
 
 WithErrorSyntax_ResponseAsStruct_Result
 WithErrorSyntax_ResponseAsStruct_Result::WithResponse(
-    ::test::name::WithErrorSyntax_ResponseAsStruct_Response&& val) {
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&& val) {
   WithErrorSyntax_ResponseAsStruct_Result result;
   result.set_response(std::move(val));
   return result;
@@ -126,10 +128,11 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(::fidl::Encoder* encoder,
 
   switch (Which()) {
     case Tag::kResponse: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<
-              ::test::name::WithErrorSyntax_ResponseAsStruct_Response,
-              ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<
+                         ::fidl::test::protocols::
+                             WithErrorSyntax_ResponseAsStruct_Response,
+                         ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &response_, envelope_offset);
       break;
     }
@@ -173,7 +176,7 @@ void WithErrorSyntax_ResponseAsStruct_Result::Decode(
 
   switch (value->tag_) {
     case Tag::kResponse:
-      new (&value->response_)::test::name::
+      new (&value->response_)::fidl::test::protocols::
           WithErrorSyntax_ResponseAsStruct_Response();
       ::fidl::Decode(decoder, &value->response_, envelope_offset);
       break;
@@ -193,7 +196,7 @@ zx_status_t WithErrorSyntax_ResponseAsStruct_Result::Clone(
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kResponse:
-      new (&result->response_)::test::name::
+      new (&result->response_)::fidl::test::protocols::
           WithErrorSyntax_ResponseAsStruct_Response();
       return ::fidl::Clone(response_, &result->response_);
     case Tag::kErr:
@@ -205,7 +208,7 @@ zx_status_t WithErrorSyntax_ResponseAsStruct_Result::Clone(
 
 WithErrorSyntax_ResponseAsStruct_Result&
 WithErrorSyntax_ResponseAsStruct_Result::set_response(
-    ::test::name::WithErrorSyntax_ResponseAsStruct_Response value) {
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response value) {
   EnsureStorageInitialized(Tag::kResponse);
   response_ = std::move(value);
   return *this;
@@ -241,7 +244,7 @@ void WithErrorSyntax_ResponseAsStruct_Result::EnsureStorageInitialized(
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kResponse:
-        new (&response_)::test::name::
+        new (&response_)::fidl::test::protocols::
             WithErrorSyntax_ResponseAsStruct_Response();
         break;
       case Tag::kErr:
@@ -253,9 +256,9 @@ void WithErrorSyntax_ResponseAsStruct_Result::EnsureStorageInitialized(
   }
 }
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+    fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 const fidl_type_t* WithErrorSyntax_ErrorAsPrimitive_Response::FidlType =
-    &test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+    &fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
 void WithErrorSyntax_ErrorAsPrimitive_Response::Encode(
     ::fidl::Encoder* _encoder, size_t _offset) {
@@ -290,9 +293,9 @@ zx_status_t WithErrorSyntax_ErrorAsPrimitive_Response::Clone(
   return ZX_OK;
 }
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+    fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 const fidl_type_t* WithErrorSyntax_ErrorAsPrimitive_Result::FidlType =
-    &test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+    &fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 
 WithErrorSyntax_ErrorAsPrimitive_Result::
     WithErrorSyntax_ErrorAsPrimitive_Result() {}
@@ -308,7 +311,8 @@ WithErrorSyntax_ErrorAsPrimitive_Result::
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kResponse:
-      new (&response_)::test::name::WithErrorSyntax_ErrorAsPrimitive_Response();
+      new (&response_)::fidl::test::protocols::
+          WithErrorSyntax_ErrorAsPrimitive_Response();
       response_ = std::move(other.response_);
       break;
     case Tag::kErr:
@@ -327,7 +331,7 @@ WithErrorSyntax_ErrorAsPrimitive_Result::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kResponse:
-        new (&response_)::test::name::
+        new (&response_)::fidl::test::protocols::
             WithErrorSyntax_ErrorAsPrimitive_Response();
         response_ = std::move(other.response_);
         break;
@@ -343,7 +347,7 @@ WithErrorSyntax_ErrorAsPrimitive_Result::operator=(
 
 WithErrorSyntax_ErrorAsPrimitive_Result
 WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(
-    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response&& val) {
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&& val) {
   WithErrorSyntax_ErrorAsPrimitive_Result result;
   result.set_response(std::move(val));
   return result;
@@ -364,10 +368,11 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(::fidl::Encoder* encoder,
 
   switch (Which()) {
     case Tag::kResponse: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<
-              ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response,
-              ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<
+                         ::fidl::test::protocols::
+                             WithErrorSyntax_ErrorAsPrimitive_Response,
+                         ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &response_, envelope_offset);
       break;
     }
@@ -411,7 +416,7 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Decode(
 
   switch (value->tag_) {
     case Tag::kResponse:
-      new (&value->response_)::test::name::
+      new (&value->response_)::fidl::test::protocols::
           WithErrorSyntax_ErrorAsPrimitive_Response();
       ::fidl::Decode(decoder, &value->response_, envelope_offset);
       break;
@@ -431,7 +436,7 @@ zx_status_t WithErrorSyntax_ErrorAsPrimitive_Result::Clone(
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kResponse:
-      new (&result->response_)::test::name::
+      new (&result->response_)::fidl::test::protocols::
           WithErrorSyntax_ErrorAsPrimitive_Response();
       return ::fidl::Clone(response_, &result->response_);
     case Tag::kErr:
@@ -443,7 +448,7 @@ zx_status_t WithErrorSyntax_ErrorAsPrimitive_Result::Clone(
 
 WithErrorSyntax_ErrorAsPrimitive_Result&
 WithErrorSyntax_ErrorAsPrimitive_Result::set_response(
-    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response value) {
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response value) {
   EnsureStorageInitialized(Tag::kResponse);
   response_ = std::move(value);
   return *this;
@@ -479,7 +484,7 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::EnsureStorageInitialized(
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kResponse:
-        new (&response_)::test::name::
+        new (&response_)::fidl::test::protocols::
             WithErrorSyntax_ErrorAsPrimitive_Response();
         break;
       case Tag::kErr:
@@ -491,9 +496,9 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::EnsureStorageInitialized(
   }
 }
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+    fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 const fidl_type_t* WithErrorSyntax_ErrorAsEnum_Response::FidlType =
-    &test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+    &fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
 void WithErrorSyntax_ErrorAsEnum_Response::Encode(::fidl::Encoder* _encoder,
                                                   size_t _offset) {
@@ -528,12 +533,14 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Response::Clone(
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t test_name_TransitionalRequestRequestTable;
-extern "C" const fidl_type_t test_name_TransitionalRequestResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestResponseTable;
 
-extern "C" const fidl_type_t test_name_TransitionalOneWayRequestTable;
+extern "C" const fidl_type_t fidl_test_protocols_TransitionalOneWayRequestTable;
 
-extern "C" const fidl_type_t test_name_TransitionalEventEventTable;
+extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
 
 }  // namespace
 
@@ -544,10 +551,10 @@ const fidl_type_t* Transitional_RequestDecoder::GetType(
   switch (ordinal) {
     case internal::kTransitional_Request_Ordinal:
       *out_needs_response = true;
-      return &test_name_TransitionalRequestRequestTable;
+      return &fidl_test_protocols_TransitionalRequestRequestTable;
     case internal::kTransitional_OneWay_Ordinal:
       *out_needs_response = false;
-      return &test_name_TransitionalOneWayRequestTable;
+      return &fidl_test_protocols_TransitionalOneWayRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -557,9 +564,9 @@ const fidl_type_t* Transitional_RequestDecoder::GetType(
 const fidl_type_t* Transitional_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kTransitional_Request_Ordinal:
-      return &test_name_TransitionalRequestResponseTable;
+      return &fidl_test_protocols_TransitionalRequestResponseTable;
     case internal::kTransitional_Event_Ordinal:
-      return &test_name_TransitionalEventEventTable;
+      return &fidl_test_protocols_TransitionalEventEventTable;
     default:
       return nullptr;
   }
@@ -586,11 +593,12 @@ zx_status_t Transitional_Proxy::Dispatch_(::fidl::Message message) {
         break;
       }
       const char* error_msg = nullptr;
-      status =
-          message.Decode(&test_name_TransitionalEventEventTable, &error_msg);
+      status = message.Decode(&fidl_test_protocols_TransitionalEventEventTable,
+                              &error_msg);
       if (status != ZX_OK) {
         FIDL_REPORT_DECODING_ERROR(
-            message, &test_name_TransitionalEventEventTable, error_msg);
+            message, &fidl_test_protocols_TransitionalEventEventTable,
+            error_msg);
         break;
       }
       ::fidl::Decoder decoder(std::move(message));
@@ -617,19 +625,19 @@ Transitional_Request_ResponseHandler(Transitional::RequestCallback&& callback) {
         callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
         return ZX_OK;
       },
-      &test_name_TransitionalRequestResponseTable);
+      &fidl_test_protocols_TransitionalRequestResponseTable);
 }
 
 }  // namespace
 void Transitional_Proxy::Request(int64_t x, RequestCallback callback) {
   ::fidl::Encoder _encoder(internal::kTransitional_Request_Ordinal);
-  controller_->Send(&test_name_TransitionalRequestRequestTable,
+  controller_->Send(&fidl_test_protocols_TransitionalRequestRequestTable,
                     Transitional_RequestEncoder::Request(&_encoder, &x),
                     Transitional_Request_ResponseHandler(std::move(callback)));
 }
 void Transitional_Proxy::OneWay(int64_t x) {
   ::fidl::Encoder _encoder(internal::kTransitional_OneWay_Ordinal);
-  controller_->Send(&test_name_TransitionalOneWayRequestTable,
+  controller_->Send(&fidl_test_protocols_TransitionalOneWayRequestTable,
                     Transitional_RequestEncoder::OneWay(&_encoder, &x),
                     nullptr);
 }
@@ -649,7 +657,7 @@ class Transitional_Request_Responder final {
 
   void operator()(int64_t y) {
     ::fidl::Encoder _encoder(internal::kTransitional_Request_Ordinal);
-    response_.Send(&test_name_TransitionalRequestResponseTable,
+    response_.Send(&fidl_test_protocols_TransitionalRequestResponseTable,
                    Transitional_ResponseEncoder::Request(&_encoder, &y));
   }
 
@@ -705,7 +713,7 @@ zx_status_t Transitional_Stub::Dispatch_(
 }
 void Transitional_Stub::Event(int64_t x) {
   ::fidl::Encoder _encoder(internal::kTransitional_Event_Ordinal);
-  sender_()->Send(&test_name_TransitionalEventEventTable,
+  sender_()->Send(&fidl_test_protocols_TransitionalEventEventTable,
                   Transitional_ResponseEncoder::Event(&_encoder, &x));
 }
 
@@ -719,8 +727,8 @@ zx_status_t Transitional_SyncProxy::Request(int64_t x, int64_t* out_y) {
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &test_name_TransitionalRequestRequestTable,
-      &test_name_TransitionalRequestResponseTable,
+      &fidl_test_protocols_TransitionalRequestRequestTable,
+      &fidl_test_protocols_TransitionalRequestResponseTable,
       Transitional_RequestEncoder::Request(&_encoder, &x), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
@@ -730,7 +738,7 @@ zx_status_t Transitional_SyncProxy::Request(int64_t x, int64_t* out_y) {
 
 zx_status_t Transitional_SyncProxy::OneWay(int64_t x) {
   ::fidl::Encoder _encoder(internal::kTransitional_OneWay_Ordinal);
-  return proxy_.Send(&test_name_TransitionalOneWayRequestTable,
+  return proxy_.Send(&fidl_test_protocols_TransitionalOneWayRequestTable,
                      Transitional_RequestEncoder::OneWay(&_encoder, &x));
 }
 
@@ -739,15 +747,21 @@ zx_status_t Transitional_SyncProxy::OneWay(int64_t x) {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodARequestTable;
 
-extern "C" const fidl_type_t test_name_ChannelProtocolEventAEventTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolEventAEventTable;
 
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBResponseTable;
 
-extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
 
 }  // namespace
 
@@ -758,13 +772,13 @@ const fidl_type_t* ChannelProtocol_RequestDecoder::GetType(
   switch (ordinal) {
     case internal::kChannelProtocol_MethodA_Ordinal:
       *out_needs_response = false;
-      return &test_name_ChannelProtocolMethodARequestTable;
+      return &fidl_test_protocols_ChannelProtocolMethodARequestTable;
     case internal::kChannelProtocol_MethodB_Ordinal:
       *out_needs_response = true;
-      return &test_name_ChannelProtocolMethodBRequestTable;
+      return &fidl_test_protocols_ChannelProtocolMethodBRequestTable;
     case internal::kChannelProtocol_MutateSocket_Ordinal:
       *out_needs_response = true;
-      return &test_name_ChannelProtocolMutateSocketRequestTable;
+      return &fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -774,11 +788,11 @@ const fidl_type_t* ChannelProtocol_RequestDecoder::GetType(
 const fidl_type_t* ChannelProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kChannelProtocol_EventA_Ordinal:
-      return &test_name_ChannelProtocolEventAEventTable;
+      return &fidl_test_protocols_ChannelProtocolEventAEventTable;
     case internal::kChannelProtocol_MethodB_Ordinal:
-      return &test_name_ChannelProtocolMethodBResponseTable;
+      return &fidl_test_protocols_ChannelProtocolMethodBResponseTable;
     case internal::kChannelProtocol_MutateSocket_Ordinal:
-      return &test_name_ChannelProtocolMutateSocketResponseTable;
+      return &fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
     default:
       return nullptr;
   }
@@ -805,11 +819,12 @@ zx_status_t ChannelProtocol_Proxy::Dispatch_(::fidl::Message message) {
         break;
       }
       const char* error_msg = nullptr;
-      status = message.Decode(&test_name_ChannelProtocolEventAEventTable,
-                              &error_msg);
+      status = message.Decode(
+          &fidl_test_protocols_ChannelProtocolEventAEventTable, &error_msg);
       if (status != ZX_OK) {
         FIDL_REPORT_DECODING_ERROR(
-            message, &test_name_ChannelProtocolEventAEventTable, error_msg);
+            message, &fidl_test_protocols_ChannelProtocolEventAEventTable,
+            error_msg);
         break;
       }
       ::fidl::Decoder decoder(std::move(message));
@@ -827,7 +842,7 @@ zx_status_t ChannelProtocol_Proxy::Dispatch_(::fidl::Message message) {
 
 void ChannelProtocol_Proxy::MethodA(int64_t a, int64_t b) {
   ::fidl::Encoder _encoder(internal::kChannelProtocol_MethodA_Ordinal);
-  controller_->Send(&test_name_ChannelProtocolMethodARequestTable,
+  controller_->Send(&fidl_test_protocols_ChannelProtocolMethodARequestTable,
                     ChannelProtocol_RequestEncoder::MethodA(&_encoder, &a, &b),
                     nullptr);
 }
@@ -844,7 +859,7 @@ ChannelProtocol_MethodB_ResponseHandler(
         callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
         return ZX_OK;
       },
-      &test_name_ChannelProtocolMethodBResponseTable);
+      &fidl_test_protocols_ChannelProtocolMethodBResponseTable);
 }
 
 }  // namespace
@@ -852,7 +867,7 @@ void ChannelProtocol_Proxy::MethodB(int64_t a, int64_t b,
                                     MethodBCallback callback) {
   ::fidl::Encoder _encoder(internal::kChannelProtocol_MethodB_Ordinal);
   controller_->Send(
-      &test_name_ChannelProtocolMethodBRequestTable,
+      &fidl_test_protocols_ChannelProtocolMethodBRequestTable,
       ChannelProtocol_RequestEncoder::MethodB(&_encoder, &a, &b),
       ChannelProtocol_MethodB_ResponseHandler(std::move(callback)));
 }
@@ -870,7 +885,7 @@ ChannelProtocol_MutateSocket_ResponseHandler(
         callback_(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
         return ZX_OK;
       },
-      &test_name_ChannelProtocolMutateSocketResponseTable);
+      &fidl_test_protocols_ChannelProtocolMutateSocketResponseTable);
 }
 
 }  // namespace
@@ -878,7 +893,7 @@ void ChannelProtocol_Proxy::MutateSocket(::zx::socket a,
                                          MutateSocketCallback callback) {
   ::fidl::Encoder _encoder(internal::kChannelProtocol_MutateSocket_Ordinal);
   controller_->Send(
-      &test_name_ChannelProtocolMutateSocketRequestTable,
+      &fidl_test_protocols_ChannelProtocolMutateSocketRequestTable,
       ChannelProtocol_RequestEncoder::MutateSocket(&_encoder, &a),
       ChannelProtocol_MutateSocket_ResponseHandler(std::move(callback)));
 }
@@ -900,7 +915,7 @@ class ChannelProtocol_MethodB_Responder final {
   void operator()(int64_t result) {
     ::fidl::Encoder _encoder(internal::kChannelProtocol_MethodB_Ordinal);
     response_.Send(
-        &test_name_ChannelProtocolMethodBResponseTable,
+        &fidl_test_protocols_ChannelProtocolMethodBResponseTable,
         ChannelProtocol_ResponseEncoder::MethodB(&_encoder, &result));
   }
 
@@ -917,7 +932,7 @@ class ChannelProtocol_MutateSocket_Responder final {
   void operator()(::zx::socket b) {
     ::fidl::Encoder _encoder(internal::kChannelProtocol_MutateSocket_Ordinal);
     response_.Send(
-        &test_name_ChannelProtocolMutateSocketResponseTable,
+        &fidl_test_protocols_ChannelProtocolMutateSocketResponseTable,
         ChannelProtocol_ResponseEncoder::MutateSocket(&_encoder, &b));
   }
 
@@ -982,7 +997,7 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
 }
 void ChannelProtocol_Stub::EventA(int64_t a, int64_t b) {
   ::fidl::Encoder _encoder(internal::kChannelProtocol_EventA_Ordinal);
-  sender_()->Send(&test_name_ChannelProtocolEventAEventTable,
+  sender_()->Send(&fidl_test_protocols_ChannelProtocolEventAEventTable,
                   ChannelProtocol_ResponseEncoder::EventA(&_encoder, &a, &b));
 }
 
@@ -994,7 +1009,7 @@ ChannelProtocol_SyncProxy::~ChannelProtocol_SyncProxy() = default;
 zx_status_t ChannelProtocol_SyncProxy::MethodA(int64_t a, int64_t b) {
   ::fidl::Encoder _encoder(internal::kChannelProtocol_MethodA_Ordinal);
   return proxy_.Send(
-      &test_name_ChannelProtocolMethodARequestTable,
+      &fidl_test_protocols_ChannelProtocolMethodARequestTable,
       ChannelProtocol_RequestEncoder::MethodA(&_encoder, &a, &b));
 }
 
@@ -1004,8 +1019,8 @@ zx_status_t ChannelProtocol_SyncProxy::MethodB(int64_t a, int64_t b,
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &test_name_ChannelProtocolMethodBRequestTable,
-      &test_name_ChannelProtocolMethodBResponseTable,
+      &fidl_test_protocols_ChannelProtocolMethodBRequestTable,
+      &fidl_test_protocols_ChannelProtocolMethodBResponseTable,
       ChannelProtocol_RequestEncoder::MethodB(&_encoder, &a, &b), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
@@ -1019,8 +1034,8 @@ zx_status_t ChannelProtocol_SyncProxy::MutateSocket(::zx::socket a,
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &test_name_ChannelProtocolMutateSocketRequestTable,
-      &test_name_ChannelProtocolMutateSocketResponseTable,
+      &fidl_test_protocols_ChannelProtocolMutateSocketRequestTable,
+      &fidl_test_protocols_ChannelProtocolMutateSocketResponseTable,
       ChannelProtocol_RequestEncoder::MutateSocket(&_encoder, &a), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
@@ -1034,36 +1049,36 @@ zx_status_t ChannelProtocol_SyncProxy::MutateSocket(::zx::socket a,
 namespace {
 
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
 
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
 
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
 
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
 
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace
 
@@ -1074,25 +1089,25 @@ const fidl_type_t* WithAndWithoutRequestResponse_RequestDecoder::GetType(
   switch (ordinal) {
     case internal::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal:
       *out_needs_response = false;
-      return &test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+      return &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
     case internal::
         kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal:
       *out_needs_response = true;
-      return &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+      return &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
     case internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
       *out_needs_response = true;
-      return &test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
+      return &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
     case internal::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal:
       *out_needs_response = false;
-      return &test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+      return &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
     case internal::
         kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
       *out_needs_response = true;
-      return &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+      return &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
     case internal::
         kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
       *out_needs_response = true;
-      return &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+      return &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -1104,19 +1119,19 @@ const fidl_type_t* WithAndWithoutRequestResponse_ResponseDecoder::GetType(
   switch (ordinal) {
     case internal::
         kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal:
-      return &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+      return &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
     case internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
-      return &test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+      return &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
     case internal::
         kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
-      return &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+      return &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
     case internal::
         kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
-      return &test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+      return &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
     case internal::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal:
-      return &test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+      return &fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
     case internal::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal:
-      return &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+      return &fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
     default:
       return nullptr;
   }
@@ -1148,12 +1163,12 @@ zx_status_t WithAndWithoutRequestResponse_Proxy::Dispatch_(
       }
       const char* error_msg = nullptr;
       status = message.Decode(
-          &test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable,
+          &fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable,
           &error_msg);
       if (status != ZX_OK) {
         FIDL_REPORT_DECODING_ERROR(
             message,
-            &test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable,
+            &fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable,
             error_msg);
         break;
       }
@@ -1167,12 +1182,12 @@ zx_status_t WithAndWithoutRequestResponse_Proxy::Dispatch_(
       }
       const char* error_msg = nullptr;
       status = message.Decode(
-          &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable,
+          &fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable,
           &error_msg);
       if (status != ZX_OK) {
         FIDL_REPORT_DECODING_ERROR(
             message,
-            &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable,
+            &fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable,
             error_msg);
         break;
       }
@@ -1192,7 +1207,7 @@ void WithAndWithoutRequestResponse_Proxy::NoRequestNoResponse() {
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal);
   controller_->Send(
-      &test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable,
       WithAndWithoutRequestResponse_RequestEncoder::NoRequestNoResponse(
           &_encoder),
       nullptr);
@@ -1211,7 +1226,7 @@ WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler(
         callback_();
         return ZX_OK;
       },
-      &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable);
+      &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable);
 }
 
 }  // namespace
@@ -1220,7 +1235,7 @@ void WithAndWithoutRequestResponse_Proxy::NoRequestEmptyResponse(
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
   controller_->Send(
-      &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable,
       WithAndWithoutRequestResponse_RequestEncoder::NoRequestEmptyResponse(
           &_encoder),
       WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler(
@@ -1240,7 +1255,7 @@ WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler(
         callback_(::fidl::DecodeAs<::std::string>(&decoder, 16));
         return ZX_OK;
       },
-      &test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable);
+      &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable);
 }
 
 }  // namespace
@@ -1249,7 +1264,7 @@ void WithAndWithoutRequestResponse_Proxy::NoRequestWithResponse(
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
   controller_->Send(
-      &test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable,
       WithAndWithoutRequestResponse_RequestEncoder::NoRequestWithResponse(
           &_encoder),
       WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler(
@@ -1260,7 +1275,7 @@ void WithAndWithoutRequestResponse_Proxy::WithRequestNoResponse(
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
   controller_->Send(
-      &test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable,
       WithAndWithoutRequestResponse_RequestEncoder::WithRequestNoResponse(
           &_encoder, &arg),
       nullptr);
@@ -1280,7 +1295,7 @@ WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler(
         callback_();
         return ZX_OK;
       },
-      &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable);
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable);
 }
 
 }  // namespace
@@ -1290,7 +1305,7 @@ void WithAndWithoutRequestResponse_Proxy::WithRequestEmptyResponse(
       internal::
           kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
   controller_->Send(
-      &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable,
       WithAndWithoutRequestResponse_RequestEncoder::WithRequestEmptyResponse(
           &_encoder, &arg),
       WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler(
@@ -1311,7 +1326,7 @@ WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler(
         callback_(::fidl::DecodeAs<::std::string>(&decoder, 16));
         return ZX_OK;
       },
-      &test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable);
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable);
 }
 
 }  // namespace
@@ -1320,7 +1335,7 @@ void WithAndWithoutRequestResponse_Proxy::WithRequestWithResponse(
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
   controller_->Send(
-      &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable,
       WithAndWithoutRequestResponse_RequestEncoder::WithRequestWithResponse(
           &_encoder, &arg),
       WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler(
@@ -1349,7 +1364,7 @@ class WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder final {
         internal::
             kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
     response_.Send(
-        &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable,
+        &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable,
         WithAndWithoutRequestResponse_ResponseEncoder::NoRequestEmptyResponse(
             &_encoder));
   }
@@ -1368,7 +1383,7 @@ class WithAndWithoutRequestResponse_NoRequestWithResponse_Responder final {
     ::fidl::Encoder _encoder(
         internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
     response_.Send(
-        &test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable,
+        &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable,
         WithAndWithoutRequestResponse_ResponseEncoder::NoRequestWithResponse(
             &_encoder, &ret));
   }
@@ -1388,7 +1403,7 @@ class WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder final {
         internal::
             kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
     response_.Send(
-        &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable,
+        &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable,
         WithAndWithoutRequestResponse_ResponseEncoder::WithRequestEmptyResponse(
             &_encoder));
   }
@@ -1408,7 +1423,7 @@ class WithAndWithoutRequestResponse_WithRequestWithResponse_Responder final {
         internal::
             kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
     response_.Send(
-        &test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable,
+        &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable,
         WithAndWithoutRequestResponse_ResponseEncoder::WithRequestWithResponse(
             &_encoder, &ret));
   }
@@ -1500,7 +1515,7 @@ void WithAndWithoutRequestResponse_Stub::OnEmptyResponse() {
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal);
   sender_()->Send(
-      &test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable,
       WithAndWithoutRequestResponse_ResponseEncoder::OnEmptyResponse(
           &_encoder));
 }
@@ -1508,7 +1523,7 @@ void WithAndWithoutRequestResponse_Stub::OnWithResponse(::std::string ret) {
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
   sender_()->Send(
-      &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable,
       WithAndWithoutRequestResponse_ResponseEncoder::OnWithResponse(&_encoder,
                                                                     &ret));
 }
@@ -1524,7 +1539,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestNoResponse() {
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal);
   return proxy_.Send(
-      &test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable,
       WithAndWithoutRequestResponse_RequestEncoder::NoRequestNoResponse(
           &_encoder));
 }
@@ -1535,8 +1550,8 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestEmptyResponse() {
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable,
-      &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable,
       WithAndWithoutRequestResponse_RequestEncoder::NoRequestEmptyResponse(
           &_encoder),
       &response_);
@@ -1551,8 +1566,8 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestWithResponse(
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable,
-      &test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable,
       WithAndWithoutRequestResponse_RequestEncoder::NoRequestWithResponse(
           &_encoder),
       &response_);
@@ -1567,7 +1582,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestNoResponse(
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
   return proxy_.Send(
-      &test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable,
       WithAndWithoutRequestResponse_RequestEncoder::WithRequestNoResponse(
           &_encoder, &arg));
 }
@@ -1580,8 +1595,8 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestEmptyResponse(
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable,
-      &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable,
       WithAndWithoutRequestResponse_RequestEncoder::WithRequestEmptyResponse(
           &_encoder, &arg),
       &response_);
@@ -1596,8 +1611,8 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestWithResponse(
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable,
-      &test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable,
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable,
       WithAndWithoutRequestResponse_RequestEncoder::WithRequestWithResponse(
           &_encoder, &arg),
       &response_);
@@ -1609,9 +1624,10 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestWithResponse(
 
 #endif  // __Fuchsia__
 
-extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 const fidl_type_t* WithErrorSyntax_ErrorAsEnum_Result::FidlType =
-    &test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+    &fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
 WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result() {}
 
@@ -1624,11 +1640,12 @@ WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result(
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kResponse:
-      new (&response_)::test::name::WithErrorSyntax_ErrorAsEnum_Response();
+      new (&response_)::fidl::test::protocols::
+          WithErrorSyntax_ErrorAsEnum_Response();
       response_ = std::move(other.response_);
       break;
     case Tag::kErr:
-      new (&err_)::test::name::ErrorEnun();
+      new (&err_)::fidl::test::protocols::ErrorEnun();
       err_ = std::move(other.err_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1644,11 +1661,12 @@ WithErrorSyntax_ErrorAsEnum_Result::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kResponse:
-        new (&response_)::test::name::WithErrorSyntax_ErrorAsEnum_Response();
+        new (&response_)::fidl::test::protocols::
+            WithErrorSyntax_ErrorAsEnum_Response();
         response_ = std::move(other.response_);
         break;
       case Tag::kErr:
-        new (&err_)::test::name::ErrorEnun();
+        new (&err_)::fidl::test::protocols::ErrorEnun();
         err_ = std::move(other.err_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1660,13 +1678,13 @@ WithErrorSyntax_ErrorAsEnum_Result::operator=(
 
 WithErrorSyntax_ErrorAsEnum_Result
 WithErrorSyntax_ErrorAsEnum_Result::WithResponse(
-    ::test::name::WithErrorSyntax_ErrorAsEnum_Response&& val) {
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response&& val) {
   WithErrorSyntax_ErrorAsEnum_Result result;
   result.set_response(std::move(val));
   return result;
 }
 WithErrorSyntax_ErrorAsEnum_Result WithErrorSyntax_ErrorAsEnum_Result::WithErr(
-    ::test::name::ErrorEnun&& val) {
+    ::fidl::test::protocols::ErrorEnun&& val) {
   WithErrorSyntax_ErrorAsEnum_Result result;
   result.set_err(std::move(val));
   return result;
@@ -1681,17 +1699,17 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(::fidl::Encoder* encoder,
 
   switch (Which()) {
     case Tag::kResponse: {
-      envelope_offset =
-          encoder->Alloc(::fidl::EncodingInlineSize<
-                         ::test::name::WithErrorSyntax_ErrorAsEnum_Response,
-                         ::fidl::Encoder>(encoder));
+      envelope_offset = encoder->Alloc(
+          ::fidl::EncodingInlineSize<
+              ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response,
+              ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &response_, envelope_offset);
       break;
     }
     case Tag::kErr: {
       envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<::test::name::ErrorEnun, ::fidl::Encoder>(
-              encoder));
+          ::fidl::EncodingInlineSize<::fidl::test::protocols::ErrorEnun,
+                                     ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &err_, envelope_offset);
       break;
     }
@@ -1729,13 +1747,12 @@ void WithErrorSyntax_ErrorAsEnum_Result::Decode(
 
   switch (value->tag_) {
     case Tag::kResponse:
-      new (
-          &value
-               ->response_)::test::name::WithErrorSyntax_ErrorAsEnum_Response();
+      new (&value->response_)::fidl::test::protocols::
+          WithErrorSyntax_ErrorAsEnum_Response();
       ::fidl::Decode(decoder, &value->response_, envelope_offset);
       break;
     case Tag::kErr:
-      new (&value->err_)::test::name::ErrorEnun();
+      new (&value->err_)::fidl::test::protocols::ErrorEnun();
       ::fidl::Decode(decoder, &value->err_, envelope_offset);
       break;
     default:
@@ -1751,12 +1768,11 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Result::Clone(
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kResponse:
-      new (
-          &result
-               ->response_)::test::name::WithErrorSyntax_ErrorAsEnum_Response();
+      new (&result->response_)::fidl::test::protocols::
+          WithErrorSyntax_ErrorAsEnum_Response();
       return ::fidl::Clone(response_, &result->response_);
     case Tag::kErr:
-      new (&result->err_)::test::name::ErrorEnun();
+      new (&result->err_)::fidl::test::protocols::ErrorEnun();
       return ::fidl::Clone(err_, &result->err_);
     default:
       return ZX_OK;
@@ -1765,14 +1781,14 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Result::Clone(
 
 WithErrorSyntax_ErrorAsEnum_Result&
 WithErrorSyntax_ErrorAsEnum_Result::set_response(
-    ::test::name::WithErrorSyntax_ErrorAsEnum_Response value) {
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response value) {
   EnsureStorageInitialized(Tag::kResponse);
   response_ = std::move(value);
   return *this;
 }
 
 WithErrorSyntax_ErrorAsEnum_Result& WithErrorSyntax_ErrorAsEnum_Result::set_err(
-    ::test::name::ErrorEnun value) {
+    ::fidl::test::protocols::ErrorEnun value) {
   EnsureStorageInitialized(Tag::kErr);
   err_ = std::move(value);
   return *this;
@@ -1802,10 +1818,11 @@ void WithErrorSyntax_ErrorAsEnum_Result::EnsureStorageInitialized(
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kResponse:
-        new (&response_)::test::name::WithErrorSyntax_ErrorAsEnum_Response();
+        new (&response_)::fidl::test::protocols::
+            WithErrorSyntax_ErrorAsEnum_Response();
         break;
       case Tag::kErr:
-        new (&err_)::test::name::ErrorEnun();
+        new (&err_)::fidl::test::protocols::ErrorEnun();
         break;
       default:
         break;
@@ -1816,17 +1833,19 @@ void WithErrorSyntax_ErrorAsEnum_Result::EnsureStorageInitialized(
 namespace {
 
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntaxResponseAsStructRequestTable;
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntaxResponseAsStructResponseTable;
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
 
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 
-extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable;
-extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
 
 }  // namespace
 
@@ -1837,13 +1856,13 @@ const fidl_type_t* WithErrorSyntax_RequestDecoder::GetType(
   switch (ordinal) {
     case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal:
       *out_needs_response = true;
-      return &test_name_WithErrorSyntaxResponseAsStructRequestTable;
+      return &fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
     case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
       *out_needs_response = true;
-      return &test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
+      return &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable;
     case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal:
       *out_needs_response = true;
-      return &test_name_WithErrorSyntaxErrorAsEnumRequestTable;
+      return &fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -1853,11 +1872,11 @@ const fidl_type_t* WithErrorSyntax_RequestDecoder::GetType(
 const fidl_type_t* WithErrorSyntax_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal:
-      return &test_name_WithErrorSyntaxResponseAsStructResponseTable;
+      return &fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
     case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
-      return &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+      return &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
     case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal:
-      return &test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+      return &fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
     default:
       return nullptr;
   }
@@ -1897,12 +1916,12 @@ WithErrorSyntax_ResponseAsStruct_ResponseHandler(
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<
-                  ::test::name::WithErrorSyntax_ResponseAsStruct_Result>(
+        callback_(::fidl::DecodeAs<::fidl::test::protocols::
+                                       WithErrorSyntax_ResponseAsStruct_Result>(
             &decoder, 16));
         return ZX_OK;
       },
-      &test_name_WithErrorSyntaxResponseAsStructResponseTable);
+      &fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable);
 }
 
 }  // namespace
@@ -1910,7 +1929,7 @@ void WithErrorSyntax_Proxy::ResponseAsStruct(
     ResponseAsStructCallback callback) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ResponseAsStruct_Ordinal);
   controller_->Send(
-      &test_name_WithErrorSyntaxResponseAsStructRequestTable,
+      &fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable,
       WithErrorSyntax_RequestEncoder::ResponseAsStruct(&_encoder),
       WithErrorSyntax_ResponseAsStruct_ResponseHandler(std::move(callback)));
 }
@@ -1925,12 +1944,12 @@ WithErrorSyntax_ErrorAsPrimitive_ResponseHandler(
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<
-                  ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>(
+        callback_(::fidl::DecodeAs<::fidl::test::protocols::
+                                       WithErrorSyntax_ErrorAsPrimitive_Result>(
             &decoder, 16));
         return ZX_OK;
       },
-      &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable);
+      &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable);
 }
 
 }  // namespace
@@ -1938,7 +1957,7 @@ void WithErrorSyntax_Proxy::ErrorAsPrimitive(
     ErrorAsPrimitiveCallback callback) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
   controller_->Send(
-      &test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable,
+      &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable,
       WithErrorSyntax_RequestEncoder::ErrorAsPrimitive(&_encoder),
       WithErrorSyntax_ErrorAsPrimitive_ResponseHandler(std::move(callback)));
 }
@@ -1953,19 +1972,19 @@ WithErrorSyntax_ErrorAsEnum_ResponseHandler(
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(
-            ::fidl::DecodeAs<::test::name::WithErrorSyntax_ErrorAsEnum_Result>(
-                &decoder, 16));
+        callback_(::fidl::DecodeAs<
+                  ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>(
+            &decoder, 16));
         return ZX_OK;
       },
-      &test_name_WithErrorSyntaxErrorAsEnumResponseTable);
+      &fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable);
 }
 
 }  // namespace
 void WithErrorSyntax_Proxy::ErrorAsEnum(ErrorAsEnumCallback callback) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ErrorAsEnum_Ordinal);
   controller_->Send(
-      &test_name_WithErrorSyntaxErrorAsEnumRequestTable,
+      &fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable,
       WithErrorSyntax_RequestEncoder::ErrorAsEnum(&_encoder),
       WithErrorSyntax_ErrorAsEnum_ResponseHandler(std::move(callback)));
 }
@@ -1986,11 +2005,11 @@ class WithErrorSyntax_ResponseAsStruct_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(
-      ::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result result) {
     ::fidl::Encoder _encoder(
         internal::kWithErrorSyntax_ResponseAsStruct_Ordinal);
     response_.Send(
-        &test_name_WithErrorSyntaxResponseAsStructResponseTable,
+        &fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable,
         WithErrorSyntax_ResponseEncoder::ResponseAsStruct(&_encoder, &result));
   }
 
@@ -2005,11 +2024,11 @@ class WithErrorSyntax_ErrorAsPrimitive_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(
-      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result result) {
     ::fidl::Encoder _encoder(
         internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
     response_.Send(
-        &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable,
+        &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable,
         WithErrorSyntax_ResponseEncoder::ErrorAsPrimitive(&_encoder, &result));
   }
 
@@ -2023,10 +2042,11 @@ class WithErrorSyntax_ErrorAsEnum_Responder final {
       ::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
+  void operator()(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result) {
     ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ErrorAsEnum_Ordinal);
     response_.Send(
-        &test_name_WithErrorSyntaxErrorAsEnumResponseTable,
+        &fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable,
         WithErrorSyntax_ResponseEncoder::ErrorAsEnum(&_encoder, &result));
   }
 
@@ -2091,57 +2111,60 @@ WithErrorSyntax_SyncProxy::WithErrorSyntax_SyncProxy(::zx::channel channel)
 WithErrorSyntax_SyncProxy::~WithErrorSyntax_SyncProxy() = default;
 
 zx_status_t WithErrorSyntax_SyncProxy::ResponseAsStruct(
-    ::test::name::WithErrorSyntax_ResponseAsStruct_Result* out_result) {
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
+        out_result) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ResponseAsStruct_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &test_name_WithErrorSyntaxResponseAsStructRequestTable,
-      &test_name_WithErrorSyntaxResponseAsStructResponseTable,
+      &fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable,
+      &fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable,
       WithErrorSyntax_RequestEncoder::ResponseAsStruct(&_encoder), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_result =
-      ::fidl::DecodeAs<::test::name::WithErrorSyntax_ResponseAsStruct_Result>(
-          &decoder_, 16);
+  *out_result = ::fidl::DecodeAs<
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>(
+      &decoder_, 16);
   return ZX_OK;
 }
 
 zx_status_t WithErrorSyntax_SyncProxy::ErrorAsPrimitive(
-    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* out_result) {
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
+        out_result) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable,
-      &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable,
+      &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable,
+      &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable,
       WithErrorSyntax_RequestEncoder::ErrorAsPrimitive(&_encoder), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_result =
-      ::fidl::DecodeAs<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>(
-          &decoder_, 16);
+  *out_result = ::fidl::DecodeAs<
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>(
+      &decoder_, 16);
   return ZX_OK;
 }
 
 zx_status_t WithErrorSyntax_SyncProxy::ErrorAsEnum(
-    ::test::name::WithErrorSyntax_ErrorAsEnum_Result* out_result) {
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* out_result) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ErrorAsEnum_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &test_name_WithErrorSyntaxErrorAsEnumRequestTable,
-      &test_name_WithErrorSyntaxErrorAsEnumResponseTable,
+      &fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable,
+      &fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable,
       WithErrorSyntax_RequestEncoder::ErrorAsEnum(&_encoder), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_result =
-      ::fidl::DecodeAs<::test::name::WithErrorSyntax_ErrorAsEnum_Result>(
-          &decoder_, 16);
+  *out_result = ::fidl::DecodeAs<
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>(&decoder_,
+                                                                   16);
   return ZX_OK;
 }
 
 #endif  // __Fuchsia__
 
-}  // namespace name
+}  // namespace protocols
 }  // namespace test
+}  // namespace fidl

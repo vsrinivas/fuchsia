@@ -6,7 +6,7 @@
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace table {
 
 class SimpleTable;
 class ReverseOrdinalTable;
@@ -526,23 +526,23 @@ class EmptyTable final {
 };
 
 using EmptyTablePtr = ::std::unique_ptr<EmptyTable>;
-}  // namespace json
+}  // namespace table
 }  // namespace test
 }  // namespace fidl
 namespace fidl {
 
 template <>
-struct CodingTraits<::fidl::test::json::SimpleTable>
-    : public EncodableCodingTraits<::fidl::test::json::SimpleTable, 16> {};
+struct CodingTraits<::fidl::test::table::SimpleTable>
+    : public EncodableCodingTraits<::fidl::test::table::SimpleTable, 16> {};
 
-inline zx_status_t Clone(const ::fidl::test::json::SimpleTable& _value,
-                         ::fidl::test::json::SimpleTable* result) {
+inline zx_status_t Clone(const ::fidl::test::table::SimpleTable& _value,
+                         ::fidl::test::table::SimpleTable* result) {
   return _value.Clone(result);
 }
 template <>
-struct Equality<::fidl::test::json::SimpleTable> {
-  bool operator()(const ::fidl::test::json::SimpleTable& _lhs,
-                  const ::fidl::test::json::SimpleTable& _rhs) const {
+struct Equality<::fidl::test::table::SimpleTable> {
+  bool operator()(const ::fidl::test::table::SimpleTable& _lhs,
+                  const ::fidl::test::table::SimpleTable& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
         return false;
@@ -567,18 +567,18 @@ struct Equality<::fidl::test::json::SimpleTable> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::json::ReverseOrdinalTable>
-    : public EncodableCodingTraits<::fidl::test::json::ReverseOrdinalTable,
+struct CodingTraits<::fidl::test::table::ReverseOrdinalTable>
+    : public EncodableCodingTraits<::fidl::test::table::ReverseOrdinalTable,
                                    16> {};
 
-inline zx_status_t Clone(const ::fidl::test::json::ReverseOrdinalTable& _value,
-                         ::fidl::test::json::ReverseOrdinalTable* result) {
+inline zx_status_t Clone(const ::fidl::test::table::ReverseOrdinalTable& _value,
+                         ::fidl::test::table::ReverseOrdinalTable* result) {
   return _value.Clone(result);
 }
 template <>
-struct Equality<::fidl::test::json::ReverseOrdinalTable> {
-  bool operator()(const ::fidl::test::json::ReverseOrdinalTable& _lhs,
-                  const ::fidl::test::json::ReverseOrdinalTable& _rhs) const {
+struct Equality<::fidl::test::table::ReverseOrdinalTable> {
+  bool operator()(const ::fidl::test::table::ReverseOrdinalTable& _lhs,
+                  const ::fidl::test::table::ReverseOrdinalTable& _rhs) const {
     if (_lhs.has_z()) {
       if (!_rhs.has_z()) {
         return false;
@@ -613,17 +613,18 @@ struct Equality<::fidl::test::json::ReverseOrdinalTable> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::json::OlderSimpleTable>
-    : public EncodableCodingTraits<::fidl::test::json::OlderSimpleTable, 16> {};
+struct CodingTraits<::fidl::test::table::OlderSimpleTable>
+    : public EncodableCodingTraits<::fidl::test::table::OlderSimpleTable, 16> {
+};
 
-inline zx_status_t Clone(const ::fidl::test::json::OlderSimpleTable& _value,
-                         ::fidl::test::json::OlderSimpleTable* result) {
+inline zx_status_t Clone(const ::fidl::test::table::OlderSimpleTable& _value,
+                         ::fidl::test::table::OlderSimpleTable* result) {
   return _value.Clone(result);
 }
 template <>
-struct Equality<::fidl::test::json::OlderSimpleTable> {
-  bool operator()(const ::fidl::test::json::OlderSimpleTable& _lhs,
-                  const ::fidl::test::json::OlderSimpleTable& _rhs) const {
+struct Equality<::fidl::test::table::OlderSimpleTable> {
+  bool operator()(const ::fidl::test::table::OlderSimpleTable& _lhs,
+                  const ::fidl::test::table::OlderSimpleTable& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
         return false;
@@ -638,17 +639,18 @@ struct Equality<::fidl::test::json::OlderSimpleTable> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::json::NewerSimpleTable>
-    : public EncodableCodingTraits<::fidl::test::json::NewerSimpleTable, 16> {};
+struct CodingTraits<::fidl::test::table::NewerSimpleTable>
+    : public EncodableCodingTraits<::fidl::test::table::NewerSimpleTable, 16> {
+};
 
-inline zx_status_t Clone(const ::fidl::test::json::NewerSimpleTable& _value,
-                         ::fidl::test::json::NewerSimpleTable* result) {
+inline zx_status_t Clone(const ::fidl::test::table::NewerSimpleTable& _value,
+                         ::fidl::test::table::NewerSimpleTable* result) {
   return _value.Clone(result);
 }
 template <>
-struct Equality<::fidl::test::json::NewerSimpleTable> {
-  bool operator()(const ::fidl::test::json::NewerSimpleTable& _lhs,
-                  const ::fidl::test::json::NewerSimpleTable& _rhs) const {
+struct Equality<::fidl::test::table::NewerSimpleTable> {
+  bool operator()(const ::fidl::test::table::NewerSimpleTable& _lhs,
+                  const ::fidl::test::table::NewerSimpleTable& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
         return false;
@@ -683,17 +685,17 @@ struct Equality<::fidl::test::json::NewerSimpleTable> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::json::EmptyTable>
-    : public EncodableCodingTraits<::fidl::test::json::EmptyTable, 16> {};
+struct CodingTraits<::fidl::test::table::EmptyTable>
+    : public EncodableCodingTraits<::fidl::test::table::EmptyTable, 16> {};
 
-inline zx_status_t Clone(const ::fidl::test::json::EmptyTable& _value,
-                         ::fidl::test::json::EmptyTable* result) {
+inline zx_status_t Clone(const ::fidl::test::table::EmptyTable& _value,
+                         ::fidl::test::table::EmptyTable* result) {
   return _value.Clone(result);
 }
 template <>
-struct Equality<::fidl::test::json::EmptyTable> {
-  bool operator()(const ::fidl::test::json::EmptyTable& _lhs,
-                  const ::fidl::test::json::EmptyTable& _rhs) const {
+struct Equality<::fidl::test::table::EmptyTable> {
+  bool operator()(const ::fidl::test::table::EmptyTable& _lhs,
+                  const ::fidl::test::table::EmptyTable& _rhs) const {
     return true;
   }
 };

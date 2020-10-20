@@ -36,7 +36,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace arrays {
 
 class UnionSmallArray;
 class UnionLargeArray;
@@ -45,7 +45,7 @@ class TableLargeArray;
 struct StructSmallArray;
 struct StructLargeArray;
 
-extern "C" const fidl_type_t fidl_test_json_UnionSmallArrayTable;
+extern "C" const fidl_type_t fidl_test_arrays_UnionSmallArrayTable;
 
 class UnionSmallArray {
  public:
@@ -90,7 +90,7 @@ class UnionSmallArray {
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_UnionSmallArrayTable;
+      &fidl_test_arrays_UnionSmallArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -125,7 +125,7 @@ class UnionSmallArray {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_UnionLargeArrayTable;
+extern "C" const fidl_type_t fidl_test_arrays_UnionLargeArrayTable;
 
 class UnionLargeArray {
  public:
@@ -170,7 +170,7 @@ class UnionLargeArray {
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_UnionLargeArrayTable;
+      &fidl_test_arrays_UnionLargeArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 400;
@@ -205,7 +205,7 @@ class UnionLargeArray {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_TableSmallArrayTable;
+extern "C" const fidl_type_t fidl_test_arrays_TableSmallArrayTable;
 
 class TableSmallArray final {
  public:
@@ -230,7 +230,7 @@ class TableSmallArray final {
   TableSmallArray& operator=(TableSmallArray&& other) noexcept = default;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_TableSmallArrayTable;
+      &fidl_test_arrays_TableSmallArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
@@ -361,7 +361,7 @@ class TableSmallArray::UnownedBuilder final {
   TableSmallArray::Frame frame_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_TableLargeArrayTable;
+extern "C" const fidl_type_t fidl_test_arrays_TableLargeArrayTable;
 
 class TableLargeArray final {
  public:
@@ -386,7 +386,7 @@ class TableLargeArray final {
   TableLargeArray& operator=(TableLargeArray&& other) noexcept = default;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_TableLargeArrayTable;
+      &fidl_test_arrays_TableLargeArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 416;
@@ -517,11 +517,11 @@ class TableLargeArray::UnownedBuilder final {
   TableLargeArray::Frame frame_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_StructSmallArrayTable;
+extern "C" const fidl_type_t fidl_test_arrays_StructSmallArrayTable;
 
 struct StructSmallArray {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_StructSmallArrayTable;
+      &fidl_test_arrays_StructSmallArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -610,11 +610,11 @@ struct StructSmallArray {
   };
 };
 
-extern "C" const fidl_type_t fidl_test_json_StructLargeArrayTable;
+extern "C" const fidl_type_t fidl_test_arrays_StructLargeArrayTable;
 
 struct StructLargeArray {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_StructLargeArrayTable;
+      &fidl_test_arrays_StructLargeArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 400;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -703,7 +703,7 @@ struct StructLargeArray {
   };
 };
 
-}  // namespace json
+}  // namespace arrays
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
@@ -711,70 +711,70 @@ struct StructLargeArray {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::UnionSmallArray>
+struct IsFidlType<::llcpp::fidl::test::arrays::UnionSmallArray>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::json::UnionSmallArray>
+struct IsUnion<::llcpp::fidl::test::arrays::UnionSmallArray>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::UnionSmallArray>);
+    std::is_standard_layout_v<::llcpp::fidl::test::arrays::UnionSmallArray>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::UnionLargeArray>
+struct IsFidlType<::llcpp::fidl::test::arrays::UnionLargeArray>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::json::UnionLargeArray>
+struct IsUnion<::llcpp::fidl::test::arrays::UnionLargeArray>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::UnionLargeArray>);
+    std::is_standard_layout_v<::llcpp::fidl::test::arrays::UnionLargeArray>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::TableSmallArray>
+struct IsFidlType<::llcpp::fidl::test::arrays::TableSmallArray>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::json::TableSmallArray>
+struct IsTable<::llcpp::fidl::test::arrays::TableSmallArray>
     : public std::true_type {};
 template <>
-struct IsTableBuilder<::llcpp::fidl::test::json::TableSmallArray::Builder>
+struct IsTableBuilder<::llcpp::fidl::test::arrays::TableSmallArray::Builder>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::TableSmallArray>);
+    std::is_standard_layout_v<::llcpp::fidl::test::arrays::TableSmallArray>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::TableLargeArray>
+struct IsFidlType<::llcpp::fidl::test::arrays::TableLargeArray>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::json::TableLargeArray>
+struct IsTable<::llcpp::fidl::test::arrays::TableLargeArray>
     : public std::true_type {};
 template <>
-struct IsTableBuilder<::llcpp::fidl::test::json::TableLargeArray::Builder>
+struct IsTableBuilder<::llcpp::fidl::test::arrays::TableLargeArray::Builder>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::TableLargeArray>);
+    std::is_standard_layout_v<::llcpp::fidl::test::arrays::TableLargeArray>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::StructSmallArray>
+struct IsFidlType<::llcpp::fidl::test::arrays::StructSmallArray>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::json::StructSmallArray>
+struct IsStruct<::llcpp::fidl::test::arrays::StructSmallArray>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::StructSmallArray>);
-static_assert(offsetof(::llcpp::fidl::test::json::StructSmallArray, a) == 0);
-static_assert(sizeof(::llcpp::fidl::test::json::StructSmallArray) ==
-              ::llcpp::fidl::test::json::StructSmallArray::PrimarySize);
+    std::is_standard_layout_v<::llcpp::fidl::test::arrays::StructSmallArray>);
+static_assert(offsetof(::llcpp::fidl::test::arrays::StructSmallArray, a) == 0);
+static_assert(sizeof(::llcpp::fidl::test::arrays::StructSmallArray) ==
+              ::llcpp::fidl::test::arrays::StructSmallArray::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::StructLargeArray>
+struct IsFidlType<::llcpp::fidl::test::arrays::StructLargeArray>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::json::StructLargeArray>
+struct IsStruct<::llcpp::fidl::test::arrays::StructLargeArray>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::StructLargeArray>);
-static_assert(offsetof(::llcpp::fidl::test::json::StructLargeArray, a) == 0);
-static_assert(sizeof(::llcpp::fidl::test::json::StructLargeArray) ==
-              ::llcpp::fidl::test::json::StructLargeArray::PrimarySize);
+    std::is_standard_layout_v<::llcpp::fidl::test::arrays::StructLargeArray>);
+static_assert(offsetof(::llcpp::fidl::test::arrays::StructLargeArray, a) == 0);
+static_assert(sizeof(::llcpp::fidl::test::arrays::StructLargeArray) ==
+              ::llcpp::fidl::test::arrays::StructLargeArray::PrimarySize);
 
 }  // namespace fidl
 
@@ -782,7 +782,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {}  // namespace json
+namespace arrays {}  // namespace arrays
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

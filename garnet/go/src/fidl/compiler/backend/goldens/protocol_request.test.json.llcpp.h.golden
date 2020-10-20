@@ -35,20 +35,29 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace protocolrequest {
 
 class Parent;
 class Child;
 
-extern "C" const fidl_type_t test_name_ParentGetChildRequestTable;
-extern "C" const fidl_type_t test_name_ParentGetChildResponseTable;
-extern "C" const fidl_type_t test_name_ParentGetChildRequestRequestTable;
-extern "C" const fidl_type_t test_name_ParentGetChildRequestResponseTable;
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestTable;
-extern "C" const fidl_type_t test_name_ParentTakeChildResponseTable;
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentGetChildRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentGetChildResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentGetChildRequestRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentTakeChildRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentTakeChildResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentTakeChildRequestResponseTable;
 
 class Parent final {
   Parent() = delete;
@@ -64,7 +73,7 @@ class Parent final {
     GetChildResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_ParentGetChildResponseTable;
+        &fidl_test_protocolrequest_ParentGetChildResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -310,7 +319,7 @@ class Parent final {
     GetChildRequestResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_ParentGetChildRequestResponseTable;
+        &fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -561,7 +570,7 @@ class Parent final {
     explicit TakeChildRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_ParentTakeChildRequestTable;
+        &fidl_test_protocolrequest_ParentTakeChildRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -690,7 +699,7 @@ class Parent final {
     explicit TakeChildRequestRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_ParentTakeChildRequestRequestTable;
+        &fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1363,80 +1372,111 @@ class Child final {
   class EventSender;
 };
 
-}  // namespace name
+}  // namespace protocolrequest
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::test::name::Parent::GetChildRequest>
+struct IsFidlType<::llcpp::fidl::test::protocolrequest::Parent::GetChildRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::Parent::GetChildRequest>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::Parent::GetChildRequest) ==
-              ::llcpp::test::name::Parent::GetChildRequest::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::Parent::GetChildResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::Parent::GetChildResponse>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::Parent::GetChildResponse) ==
-              ::llcpp::test::name::Parent::GetChildResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::Parent::GetChildResponse, c) == 16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::Parent::GetChildRequestRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::Parent::GetChildRequestRequest>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::Parent::GetChildRequestRequest) ==
-              ::llcpp::test::name::Parent::GetChildRequestRequest::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::Parent::GetChildRequestResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::Parent::GetChildRequestResponse>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequest>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::test::name::Parent::GetChildRequestResponse) ==
-    ::llcpp::test::name::Parent::GetChildRequestResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::Parent::GetChildRequestResponse,
-                       r) == 16);
+    sizeof(::llcpp::fidl::test::protocolrequest::Parent::GetChildRequest) ==
+    ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequest::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::test::name::Parent::TakeChildRequest>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocolrequest::Parent::GetChildResponse>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::Parent::TakeChildRequest>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::Parent::TakeChildRequest) ==
-              ::llcpp::test::name::Parent::TakeChildRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::Parent::TakeChildRequest, c) == 16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::Parent::TakeChildRequestRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::Parent::TakeChildRequestRequest>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocolrequest::Parent::GetChildResponse>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::test::name::Parent::TakeChildRequestRequest) ==
-    ::llcpp::test::name::Parent::TakeChildRequestRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::Parent::TakeChildRequestRequest,
-                       r) == 16);
+    sizeof(::llcpp::fidl::test::protocolrequest::Parent::GetChildResponse) ==
+    ::llcpp::fidl::test::protocolrequest::Parent::GetChildResponse::
+        PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocolrequest::Parent::GetChildResponse,
+             c) == 16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequestRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequestRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(
+        ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequestRequest) ==
+    ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequestRequest::
+        PrimarySize);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequestResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequestResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::protocolrequest::Parent::
+                         GetChildRequestResponse) ==
+              ::llcpp::fidl::test::protocolrequest::Parent::
+                  GetChildRequestResponse::PrimarySize);
+static_assert(
+    offsetof(
+        ::llcpp::fidl::test::protocolrequest::Parent::GetChildRequestResponse,
+        r) == 16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequest) ==
+    ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequest::
+        PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequest,
+             c) == 16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequestRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequestRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::protocolrequest::Parent::
+                         TakeChildRequestRequest) ==
+              ::llcpp::fidl::test::protocolrequest::Parent::
+                  TakeChildRequestRequest::PrimarySize);
+static_assert(
+    offsetof(
+        ::llcpp::fidl::test::protocolrequest::Parent::TakeChildRequestRequest,
+        r) == 16);
 
 }  // namespace fidl
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace protocolrequest {
 
 struct Parent::AsyncEventHandlers {};
 
@@ -1565,6 +1605,7 @@ class Child::EventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
-}  // namespace name
+}  // namespace protocolrequest
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

@@ -8,11 +8,11 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace error {
 
 void Example_foo_Response::_CloseHandles() {}
 
-void ::llcpp::fidl::test::json::Example_foo_Result::
+void ::llcpp::fidl::test::error::Example_foo_Result::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(Example_foo_Result) == sizeof(fidl_xunion_t));
   static_assert(offsetof(Example_foo_Result, ordinal_) ==
@@ -25,9 +25,10 @@ void Example_foo_Result::_CloseHandles() {}
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kExample_foo_Ordinal = 841977834905137819lu;
-extern "C" const fidl_type_t fidl_test_json_ExamplefooRequestTable;
-extern "C" const fidl_type_t fidl_test_json_ExamplefooResponseTable;
+[[maybe_unused]] constexpr uint64_t kExample_foo_Ordinal =
+    6333213382893778862lu;
+extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
+extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 
 }  // namespace
 Example::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
@@ -92,12 +93,12 @@ void Example::fooResponseContext::OnReply(uint8_t* reply) {
 
 ::fidl::Result Example::ClientImpl::foo(
     ::fidl::StringView s,
-    ::fit::callback<void(::llcpp::fidl::test::json::Example_foo_Result result)>
+    ::fit::callback<void(::llcpp::fidl::test::error::Example_foo_Result result)>
         _cb) {
   class ResponseContext final : public fooResponseContext {
    public:
     ResponseContext(::fit::callback<
-                    void(::llcpp::fidl::test::json::Example_foo_Result result)>
+                    void(::llcpp::fidl::test::error::Example_foo_Result result)>
                         cb)
         : cb_(std::move(cb)) {}
 
@@ -110,7 +111,7 @@ void Example::fooResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(::llcpp::fidl::test::json::Example_foo_Result result)>
+    ::fit::callback<void(::llcpp::fidl::test::error::Example_foo_Result result)>
         cb_;
   };
 
@@ -186,7 +187,7 @@ namespace entries {
 }
 
 ::fidl::Result Example::Interface::fooCompleterBase::Reply(
-    ::llcpp::fidl::test::json::Example_foo_Result result) {
+    ::llcpp::fidl::test::error::Example_foo_Result result) {
   fooResponse::OwnedOutgoingMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
@@ -204,7 +205,7 @@ namespace entries {
 
 ::fidl::Result Example::Interface::fooCompleterBase::Reply(
     ::fidl::BytePart _buffer,
-    ::llcpp::fidl::test::json::Example_foo_Result result) {
+    ::llcpp::fidl::test::error::Example_foo_Result result) {
   fooResponse::UnownedOutgoingMessage _response(_buffer.data(),
                                                 _buffer.capacity(), result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -226,7 +227,7 @@ void Example::fooResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kExample_foo_Ordinal);
 }
 
-}  // namespace json
+}  // namespace error
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

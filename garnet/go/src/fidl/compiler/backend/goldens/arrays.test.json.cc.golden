@@ -5,11 +5,11 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace fidl {
 namespace test {
-namespace json {
+namespace arrays {
 
-extern "C" const fidl_type_t fidl_test_json_UnionSmallArrayTable;
+extern "C" const fidl_type_t fidl_test_arrays_UnionSmallArrayTable;
 const fidl_type_t* UnionSmallArray::FidlType =
-    &fidl_test_json_UnionSmallArrayTable;
+    &fidl_test_arrays_UnionSmallArrayTable;
 
 UnionSmallArray::UnionSmallArray() {}
 
@@ -150,9 +150,9 @@ void UnionSmallArray::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_UnionLargeArrayTable;
+extern "C" const fidl_type_t fidl_test_arrays_UnionLargeArrayTable;
 const fidl_type_t* UnionLargeArray::FidlType =
-    &fidl_test_json_UnionLargeArrayTable;
+    &fidl_test_arrays_UnionLargeArrayTable;
 
 UnionLargeArray::UnionLargeArray() {}
 
@@ -293,9 +293,9 @@ void UnionLargeArray::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_TableSmallArrayTable;
+extern "C" const fidl_type_t fidl_test_arrays_TableSmallArrayTable;
 const fidl_type_t* TableSmallArray::FidlType =
-    &fidl_test_json_TableSmallArrayTable;
+    &fidl_test_arrays_TableSmallArrayTable;
 
 TableSmallArray::TableSmallArray() {}
 
@@ -394,9 +394,9 @@ zx_status_t TableSmallArray::Clone(TableSmallArray* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t fidl_test_json_TableLargeArrayTable;
+extern "C" const fidl_type_t fidl_test_arrays_TableLargeArrayTable;
 const fidl_type_t* TableLargeArray::FidlType =
-    &fidl_test_json_TableLargeArrayTable;
+    &fidl_test_arrays_TableLargeArrayTable;
 
 TableLargeArray::TableLargeArray() {}
 
@@ -495,9 +495,9 @@ zx_status_t TableLargeArray::Clone(TableLargeArray* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t fidl_test_json_StructSmallArrayTable;
+extern "C" const fidl_type_t fidl_test_arrays_StructSmallArrayTable;
 const fidl_type_t* StructSmallArray::FidlType =
-    &fidl_test_json_StructSmallArrayTable;
+    &fidl_test_arrays_StructSmallArrayTable;
 
 void StructSmallArray::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<StructSmallArray>::value) {
@@ -523,9 +523,9 @@ zx_status_t StructSmallArray::Clone(StructSmallArray* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t fidl_test_json_StructLargeArrayTable;
+extern "C" const fidl_type_t fidl_test_arrays_StructLargeArrayTable;
 const fidl_type_t* StructLargeArray::FidlType =
-    &fidl_test_json_StructLargeArrayTable;
+    &fidl_test_arrays_StructLargeArrayTable;
 
 void StructLargeArray::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<StructLargeArray>::value) {
@@ -551,6 +551,6 @@ zx_status_t StructLargeArray::Clone(StructLargeArray* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-}  // namespace json
+}  // namespace arrays
 }  // namespace test
 }  // namespace fidl

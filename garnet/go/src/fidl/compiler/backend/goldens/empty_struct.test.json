@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.json",
+  "name": "fidl.test.emptystruct",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.json/EmptyProtocol",
+      "name": "fidl.test.emptystruct/EmptyProtocol",
       "location": {
         "filename": "empty_struct.test.fidl",
         "line": 6,
@@ -17,7 +17,7 @@
       },
       "methods": [
         {
-          "ordinal": 550167292114688515,
+          "ordinal": 2183815705502904104,
           "name": "Send",
           "location": {
             "filename": "empty_struct.test.fidl",
@@ -30,7 +30,7 @@
             {
               "type": {
                 "kind": "identifier",
-                "identifier": "fidl.test.json/Empty",
+                "identifier": "fidl.test.emptystruct/Empty",
                 "nullable": false
               },
               "name": "e",
@@ -46,7 +46,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.emptystruct/SomeLongAnonymousPrefix0",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -61,7 +61,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 7186107129703123093,
+          "ordinal": 5025214662316626400,
           "name": "Receive",
           "location": {
             "filename": "empty_struct.test.fidl",
@@ -75,7 +75,7 @@
             {
               "type": {
                 "kind": "identifier",
-                "identifier": "fidl.test.json/Empty",
+                "identifier": "fidl.test.emptystruct/Empty",
                 "nullable": false
               },
               "name": "e",
@@ -91,7 +91,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.json/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.emptystruct/SomeLongAnonymousPrefix1",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -105,7 +105,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 2187042876758414869,
+          "ordinal": 6253929606062814577,
           "name": "SendAndReceive",
           "location": {
             "filename": "empty_struct.test.fidl",
@@ -118,7 +118,7 @@
             {
               "type": {
                 "kind": "identifier",
-                "identifier": "fidl.test.json/Empty",
+                "identifier": "fidl.test.emptystruct/Empty",
                 "nullable": false
               },
               "name": "e",
@@ -134,7 +134,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix2",
+          "maybe_request_payload": "fidl.test.emptystruct/SomeLongAnonymousPrefix2",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -150,7 +150,7 @@
             {
               "type": {
                 "kind": "identifier",
-                "identifier": "fidl.test.json/Empty",
+                "identifier": "fidl.test.emptystruct/Empty",
                 "nullable": false
               },
               "name": "e",
@@ -166,7 +166,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.json/SomeLongAnonymousPrefix3",
+          "maybe_response_payload": "fidl.test.emptystruct/SomeLongAnonymousPrefix3",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -185,7 +185,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.emptystruct/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "empty_struct.test.fidl",
         "line": 7,
@@ -197,7 +197,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.json/Empty",
+            "identifier": "fidl.test.emptystruct/Empty",
             "nullable": false
           },
           "name": "e",
@@ -226,7 +226,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.emptystruct/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "empty_struct.test.fidl",
         "line": 8,
@@ -238,7 +238,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.json/Empty",
+            "identifier": "fidl.test.emptystruct/Empty",
             "nullable": false
           },
           "name": "e",
@@ -267,7 +267,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix2",
+      "name": "fidl.test.emptystruct/SomeLongAnonymousPrefix2",
       "location": {
         "filename": "empty_struct.test.fidl",
         "line": 9,
@@ -279,7 +279,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.json/Empty",
+            "identifier": "fidl.test.emptystruct/Empty",
             "nullable": false
           },
           "name": "e",
@@ -308,7 +308,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix3",
+      "name": "fidl.test.emptystruct/SomeLongAnonymousPrefix3",
       "location": {
         "filename": "empty_struct.test.fidl",
         "line": 9,
@@ -320,7 +320,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.json/Empty",
+            "identifier": "fidl.test.emptystruct/Empty",
             "nullable": false
           },
           "name": "e",
@@ -349,7 +349,7 @@
       }
     },
     {
-      "name": "fidl.test.json/Empty",
+      "name": "fidl.test.emptystruct/Empty",
       "location": {
         "filename": "empty_struct.test.fidl",
         "line": 3,
@@ -375,15 +375,15 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.json/Empty",
-    "fidl.test.json/EmptyProtocol"
+    "fidl.test.emptystruct/Empty",
+    "fidl.test.emptystruct/EmptyProtocol"
   ],
   "declarations": {
-    "fidl.test.json/EmptyProtocol": "interface",
-    "fidl.test.json/SomeLongAnonymousPrefix0": "struct",
-    "fidl.test.json/SomeLongAnonymousPrefix1": "struct",
-    "fidl.test.json/SomeLongAnonymousPrefix2": "struct",
-    "fidl.test.json/SomeLongAnonymousPrefix3": "struct",
-    "fidl.test.json/Empty": "struct"
+    "fidl.test.emptystruct/EmptyProtocol": "interface",
+    "fidl.test.emptystruct/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.emptystruct/SomeLongAnonymousPrefix1": "struct",
+    "fidl.test.emptystruct/SomeLongAnonymousPrefix2": "struct",
+    "fidl.test.emptystruct/SomeLongAnonymousPrefix3": "struct",
+    "fidl.test.emptystruct/Empty": "struct"
   }
 }

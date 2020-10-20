@@ -3,13 +3,13 @@
 #include <union_sandwich.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
-namespace test {
 namespace fidl {
+namespace test {
 namespace unionsandwich {
 
-extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize8Alignment4Table;
+extern "C" const fidl_type_t fidl_test_unionsandwich_UnionSize8Alignment4Table;
 const fidl_type_t* UnionSize8Alignment4::FidlType =
-    &test_fidl_unionsandwich_UnionSize8Alignment4Table;
+    &fidl_test_unionsandwich_UnionSize8Alignment4Table;
 
 UnionSize8Alignment4::UnionSize8Alignment4() {}
 
@@ -147,9 +147,9 @@ void UnionSize8Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 extern "C" const fidl_type_t
-    test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
+    fidl_test_unionsandwich_SandwichUnionSize8Alignment4Table;
 const fidl_type_t* SandwichUnionSize8Alignment4::FidlType =
-    &test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
+    &fidl_test_unionsandwich_SandwichUnionSize8Alignment4Table;
 
 void SandwichUnionSize8Alignment4::Encode(::fidl::Encoder* _encoder,
                                           size_t _offset) {
@@ -187,9 +187,9 @@ zx_status_t SandwichUnionSize8Alignment4::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize36Alignment4Table;
+extern "C" const fidl_type_t fidl_test_unionsandwich_UnionSize36Alignment4Table;
 const fidl_type_t* UnionSize36Alignment4::FidlType =
-    &test_fidl_unionsandwich_UnionSize36Alignment4Table;
+    &fidl_test_unionsandwich_UnionSize36Alignment4Table;
 
 UnionSize36Alignment4::UnionSize36Alignment4() {}
 
@@ -336,9 +336,9 @@ void UnionSize36Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 extern "C" const fidl_type_t
-    test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
+    fidl_test_unionsandwich_SandwichUnionSize36Alignment4Table;
 const fidl_type_t* SandwichUnionSize36Alignment4::FidlType =
-    &test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
+    &fidl_test_unionsandwich_SandwichUnionSize36Alignment4Table;
 
 void SandwichUnionSize36Alignment4::Encode(::fidl::Encoder* _encoder,
                                            size_t _offset) {
@@ -376,9 +376,9 @@ zx_status_t SandwichUnionSize36Alignment4::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize12Alignment4Table;
+extern "C" const fidl_type_t fidl_test_unionsandwich_UnionSize12Alignment4Table;
 const fidl_type_t* UnionSize12Alignment4::FidlType =
-    &test_fidl_unionsandwich_UnionSize12Alignment4Table;
+    &fidl_test_unionsandwich_UnionSize12Alignment4Table;
 
 UnionSize12Alignment4::UnionSize12Alignment4() {}
 
@@ -525,9 +525,9 @@ void UnionSize12Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 extern "C" const fidl_type_t
-    test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
+    fidl_test_unionsandwich_SandwichUnionSize12Alignment4Table;
 const fidl_type_t* SandwichUnionSize12Alignment4::FidlType =
-    &test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
+    &fidl_test_unionsandwich_SandwichUnionSize12Alignment4Table;
 
 void SandwichUnionSize12Alignment4::Encode(::fidl::Encoder* _encoder,
                                            size_t _offset) {
@@ -566,9 +566,9 @@ zx_status_t SandwichUnionSize12Alignment4::Clone(
   return ZX_OK;
 }
 extern "C" const fidl_type_t
-    test_fidl_unionsandwich_StructSize16Alignment8Table;
+    fidl_test_unionsandwich_StructSize16Alignment8Table;
 const fidl_type_t* StructSize16Alignment8::FidlType =
-    &test_fidl_unionsandwich_StructSize16Alignment8Table;
+    &fidl_test_unionsandwich_StructSize16Alignment8Table;
 
 void StructSize16Alignment8::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<StructSize16Alignment8>::value) {
@@ -600,9 +600,9 @@ zx_status_t StructSize16Alignment8::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize24Alignment8Table;
+extern "C" const fidl_type_t fidl_test_unionsandwich_UnionSize24Alignment8Table;
 const fidl_type_t* UnionSize24Alignment8::FidlType =
-    &test_fidl_unionsandwich_UnionSize24Alignment8Table;
+    &fidl_test_unionsandwich_UnionSize24Alignment8Table;
 
 UnionSize24Alignment8::UnionSize24Alignment8() {}
 
@@ -612,7 +612,7 @@ UnionSize24Alignment8::UnionSize24Alignment8(UnionSize24Alignment8&& other)
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kVariant:
-      new (&variant_)::test::fidl::unionsandwich::StructSize16Alignment8();
+      new (&variant_)::fidl::test::unionsandwich::StructSize16Alignment8();
       variant_ = std::move(other.variant_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -627,7 +627,7 @@ UnionSize24Alignment8& UnionSize24Alignment8::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kVariant:
-        new (&variant_)::test::fidl::unionsandwich::StructSize16Alignment8();
+        new (&variant_)::fidl::test::unionsandwich::StructSize16Alignment8();
         variant_ = std::move(other.variant_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -638,7 +638,7 @@ UnionSize24Alignment8& UnionSize24Alignment8::operator=(
 }
 
 UnionSize24Alignment8 UnionSize24Alignment8::WithVariant(
-    ::test::fidl::unionsandwich::StructSize16Alignment8&& val) {
+    ::fidl::test::unionsandwich::StructSize16Alignment8&& val) {
   UnionSize24Alignment8 result;
   result.set_variant(std::move(val));
   return result;
@@ -654,7 +654,7 @@ void UnionSize24Alignment8::Encode(::fidl::Encoder* encoder, size_t offset) {
     case Tag::kVariant: {
       envelope_offset =
           encoder->Alloc(::fidl::EncodingInlineSize<
-                         ::test::fidl::unionsandwich::StructSize16Alignment8,
+                         ::fidl::test::unionsandwich::StructSize16Alignment8,
                          ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &variant_, envelope_offset);
       break;
@@ -695,7 +695,7 @@ void UnionSize24Alignment8::Decode(::fidl::Decoder* decoder,
     case Tag::kVariant:
       new (
           &value
-               ->variant_)::test::fidl::unionsandwich::StructSize16Alignment8();
+               ->variant_)::fidl::test::unionsandwich::StructSize16Alignment8();
       ::fidl::Decode(decoder, &value->variant_, envelope_offset);
       break;
     default:
@@ -712,7 +712,7 @@ zx_status_t UnionSize24Alignment8::Clone(UnionSize24Alignment8* result) const {
     case Tag::kVariant:
       new (
           &result
-               ->variant_)::test::fidl::unionsandwich::StructSize16Alignment8();
+               ->variant_)::fidl::test::unionsandwich::StructSize16Alignment8();
       return ::fidl::Clone(variant_, &result->variant_);
     default:
       return ZX_OK;
@@ -720,7 +720,7 @@ zx_status_t UnionSize24Alignment8::Clone(UnionSize24Alignment8* result) const {
 }
 
 UnionSize24Alignment8& UnionSize24Alignment8::set_variant(
-    ::test::fidl::unionsandwich::StructSize16Alignment8 value) {
+    ::fidl::test::unionsandwich::StructSize16Alignment8 value) {
   EnsureStorageInitialized(Tag::kVariant);
   variant_ = std::move(value);
   return *this;
@@ -746,7 +746,7 @@ void UnionSize24Alignment8::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kVariant:
-        new (&variant_)::test::fidl::unionsandwich::StructSize16Alignment8();
+        new (&variant_)::fidl::test::unionsandwich::StructSize16Alignment8();
         break;
       default:
         break;
@@ -754,9 +754,9 @@ void UnionSize24Alignment8::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 extern "C" const fidl_type_t
-    test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
+    fidl_test_unionsandwich_SandwichUnionSize24Alignment8Table;
 const fidl_type_t* SandwichUnionSize24Alignment8::FidlType =
-    &test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
+    &fidl_test_unionsandwich_SandwichUnionSize24Alignment8Table;
 
 void SandwichUnionSize24Alignment8::Encode(::fidl::Encoder* _encoder,
                                            size_t _offset) {
@@ -795,5 +795,5 @@ zx_status_t SandwichUnionSize24Alignment8::Clone(
   return ZX_OK;
 }
 }  // namespace unionsandwich
-}  // namespace fidl
 }  // namespace test
+}  // namespace fidl

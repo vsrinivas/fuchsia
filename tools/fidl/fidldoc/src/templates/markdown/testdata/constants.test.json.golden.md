@@ -1,6 +1,6 @@
 [TOC]
 
-# values
+# fidl.test.constants
 
 
 
@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### Struct {#Struct}
-*Defined in [values/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#41)*
+*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#41)*
 
 
 
@@ -58,7 +58,7 @@
 ### EnumType {#EnumType}
 Type: <code>int32</code>
 
-*Defined in [values/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#16)*
+*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#16)*
 
 
 
@@ -72,7 +72,7 @@ Type: <code>int32</code>
 ### Enum {#Enum}
 Type: <code>uint32</code>
 
-*Defined in [values/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#33)*
+*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#33)*
 
 
 
@@ -94,7 +94,7 @@ Type: <code>uint32</code>
 ### BitsType {#BitsType}
 Type: <code>uint32</code>
 
-*Defined in [values/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#22)*
+*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#22)*
 
 
 
@@ -116,7 +116,7 @@ Type: <code>uint32</code>
 ### Bits {#Bits}
 Type: <code>uint32</code>
 
-*Defined in [values/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#37)*
+*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#37)*
 
 
 

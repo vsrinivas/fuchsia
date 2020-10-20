@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <test/name/cpp/fidl.h>
+#include <fidl/test/protocols/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -13,20 +13,20 @@
 
 namespace fuzzing {
 
-using obj_type = ::test::name::obj_type;
+using obj_type = ::fidl::test::protocols::obj_type;
 using WithErrorSyntax_ResponseAsStruct_Response =
-    ::test::name::WithErrorSyntax_ResponseAsStruct_Response;
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response;
 using WithErrorSyntax_ResponseAsStruct_Result =
-    ::test::name::WithErrorSyntax_ResponseAsStruct_Result;
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result;
 using WithErrorSyntax_ErrorAsPrimitive_Response =
-    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response;
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response;
 using WithErrorSyntax_ErrorAsPrimitive_Result =
-    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result;
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result;
 using WithErrorSyntax_ErrorAsEnum_Response =
-    ::test::name::WithErrorSyntax_ErrorAsEnum_Response;
-using ErrorEnun = ::test::name::ErrorEnun;
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response;
+using ErrorEnun = ::fidl::test::protocols::ErrorEnun;
 using WithErrorSyntax_ErrorAsEnum_Result =
-    ::test::name::WithErrorSyntax_ErrorAsEnum_Result;
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result;
 
 template <>
 struct MinSize<obj_type> {

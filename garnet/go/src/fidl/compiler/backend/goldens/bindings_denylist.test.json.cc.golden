@@ -3,6 +3,8 @@
 #include <bindings_denylist.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+namespace fidl {
 namespace test {
-namespace name {}  // namespace name
+namespace bindingsdenylist {}  // namespace bindingsdenylist
 }  // namespace test
+}  // namespace fidl

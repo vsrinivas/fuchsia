@@ -1,4 +1,4 @@
-library escapeme;
+library fidl.test.escaping;
 
 /// "pleaseescapethisdocommentproperly"
 struct DocCommentWithQuotes {

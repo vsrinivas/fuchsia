@@ -6,7 +6,9 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {}  // namespace name
+namespace enum_ {}  // namespace enum_
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

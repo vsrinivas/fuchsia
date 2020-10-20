@@ -5,11 +5,11 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace fidl {
 namespace test {
-namespace json {
+namespace error {
 
-extern "C" const fidl_type_t fidl_test_json_Example_foo_ResponseTable;
+extern "C" const fidl_type_t fidl_test_error_Example_foo_ResponseTable;
 const fidl_type_t* Example_foo_Response::FidlType =
-    &fidl_test_json_Example_foo_ResponseTable;
+    &fidl_test_error_Example_foo_ResponseTable;
 
 void Example_foo_Response::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<Example_foo_Response>::value) {
@@ -36,9 +36,9 @@ zx_status_t Example_foo_Response::Clone(Example_foo_Response* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t fidl_test_json_Example_foo_ResultTable;
+extern "C" const fidl_type_t fidl_test_error_Example_foo_ResultTable;
 const fidl_type_t* Example_foo_Result::FidlType =
-    &fidl_test_json_Example_foo_ResultTable;
+    &fidl_test_error_Example_foo_ResultTable;
 
 Example_foo_Result::Example_foo_Result() {}
 
@@ -48,7 +48,7 @@ Example_foo_Result::Example_foo_Result(Example_foo_Result&& other)
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kResponse:
-      new (&response_)::fidl::test::json::Example_foo_Response();
+      new (&response_)::fidl::test::error::Example_foo_Response();
       response_ = std::move(other.response_);
       break;
     case Tag::kErr:
@@ -65,7 +65,7 @@ Example_foo_Result& Example_foo_Result::operator=(Example_foo_Result&& other) {
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kResponse:
-        new (&response_)::fidl::test::json::Example_foo_Response();
+        new (&response_)::fidl::test::error::Example_foo_Response();
         response_ = std::move(other.response_);
         break;
       case Tag::kErr:
@@ -79,7 +79,7 @@ Example_foo_Result& Example_foo_Result::operator=(Example_foo_Result&& other) {
 }
 
 Example_foo_Result Example_foo_Result::WithResponse(
-    ::fidl::test::json::Example_foo_Response&& val) {
+    ::fidl::test::error::Example_foo_Response&& val) {
   Example_foo_Result result;
   result.set_response(std::move(val));
   return result;
@@ -99,7 +99,7 @@ void Example_foo_Result::Encode(::fidl::Encoder* encoder, size_t offset) {
   switch (Which()) {
     case Tag::kResponse: {
       envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<::fidl::test::json::Example_foo_Response,
+          ::fidl::EncodingInlineSize<::fidl::test::error::Example_foo_Response,
                                      ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &response_, envelope_offset);
       break;
@@ -143,7 +143,7 @@ void Example_foo_Result::Decode(::fidl::Decoder* decoder,
 
   switch (value->tag_) {
     case Tag::kResponse:
-      new (&value->response_)::fidl::test::json::Example_foo_Response();
+      new (&value->response_)::fidl::test::error::Example_foo_Response();
       ::fidl::Decode(decoder, &value->response_, envelope_offset);
       break;
     case Tag::kErr:
@@ -161,7 +161,7 @@ zx_status_t Example_foo_Result::Clone(Example_foo_Result* result) const {
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kResponse:
-      new (&result->response_)::fidl::test::json::Example_foo_Response();
+      new (&result->response_)::fidl::test::error::Example_foo_Response();
       return ::fidl::Clone(response_, &result->response_);
     case Tag::kErr:
       return ::fidl::Clone(err_, &result->err_);
@@ -171,7 +171,7 @@ zx_status_t Example_foo_Result::Clone(Example_foo_Result* result) const {
 }
 
 Example_foo_Result& Example_foo_Result::set_response(
-    ::fidl::test::json::Example_foo_Response value) {
+    ::fidl::test::error::Example_foo_Response value) {
   EnsureStorageInitialized(Tag::kResponse);
   response_ = std::move(value);
   return *this;
@@ -205,7 +205,7 @@ void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kResponse:
-        new (&response_)::fidl::test::json::Example_foo_Response();
+        new (&response_)::fidl::test::error::Example_foo_Response();
         break;
       case Tag::kErr:
         new (&err_) uint32_t();
@@ -218,8 +218,8 @@ void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t fidl_test_json_ExamplefooRequestTable;
-extern "C" const fidl_type_t fidl_test_json_ExamplefooResponseTable;
+extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
+extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 
 }  // namespace
 
@@ -230,7 +230,7 @@ const fidl_type_t* Example_RequestDecoder::GetType(uint64_t ordinal,
   switch (ordinal) {
     case internal::kExample_foo_Ordinal:
       *out_needs_response = true;
-      return &fidl_test_json_ExamplefooRequestTable;
+      return &fidl_test_error_ExamplefooRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -240,7 +240,7 @@ const fidl_type_t* Example_RequestDecoder::GetType(uint64_t ordinal,
 const fidl_type_t* Example_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kExample_foo_Ordinal:
-      return &fidl_test_json_ExamplefooResponseTable;
+      return &fidl_test_error_ExamplefooResponseTable;
     default:
       return nullptr;
   }
@@ -277,17 +277,17 @@ Example_foo_ResponseHandler(Example::fooCallback&& callback) {
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::fidl::test::json::Example_foo_Result>(
+        callback_(::fidl::DecodeAs<::fidl::test::error::Example_foo_Result>(
             &decoder, 16));
         return ZX_OK;
       },
-      &fidl_test_json_ExamplefooResponseTable);
+      &fidl_test_error_ExamplefooResponseTable);
 }
 
 }  // namespace
 void Example_Proxy::foo(::std::string s, fooCallback callback) {
   ::fidl::Encoder _encoder(internal::kExample_foo_Ordinal);
-  controller_->Send(&fidl_test_json_ExamplefooRequestTable,
+  controller_->Send(&fidl_test_error_ExamplefooRequestTable,
                     Example_RequestEncoder::foo(&_encoder, &s),
                     Example_foo_ResponseHandler(std::move(callback)));
 }
@@ -303,9 +303,9 @@ class Example_foo_Responder final {
   Example_foo_Responder(::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(::fidl::test::json::Example_foo_Result result) {
+  void operator()(::fidl::test::error::Example_foo_Result result) {
     ::fidl::Encoder _encoder(internal::kExample_foo_Ordinal);
-    response_.Send(&fidl_test_json_ExamplefooResponseTable,
+    response_.Send(&fidl_test_error_ExamplefooResponseTable,
                    Example_ResponseEncoder::foo(&_encoder, &result));
   }
 
@@ -361,23 +361,23 @@ Example_SyncProxy::Example_SyncProxy(::zx::channel channel)
 Example_SyncProxy::~Example_SyncProxy() = default;
 
 zx_status_t Example_SyncProxy::foo(
-    ::std::string s, ::fidl::test::json::Example_foo_Result* out_result) {
+    ::std::string s, ::fidl::test::error::Example_foo_Result* out_result) {
   ::fidl::Encoder _encoder(internal::kExample_foo_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ =
-      proxy_.Call(&fidl_test_json_ExamplefooRequestTable,
-                  &fidl_test_json_ExamplefooResponseTable,
+      proxy_.Call(&fidl_test_error_ExamplefooRequestTable,
+                  &fidl_test_error_ExamplefooResponseTable,
                   Example_RequestEncoder::foo(&_encoder, &s), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result =
-      ::fidl::DecodeAs<::fidl::test::json::Example_foo_Result>(&decoder_, 16);
+      ::fidl::DecodeAs<::fidl::test::error::Example_foo_Result>(&decoder_, 16);
   return ZX_OK;
 }
 
 #endif  // __Fuchsia__
 
-}  // namespace json
+}  // namespace error
 }  // namespace test
 }  // namespace fidl

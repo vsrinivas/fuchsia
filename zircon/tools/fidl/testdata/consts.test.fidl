@@ -1,4 +1,4 @@
-library test.name;
+library fidl.test.consts;
 
 const bool ENABLED_FLAG = true;
 const int8 OFFSET = -33;

@@ -6,11 +6,11 @@
 
 namespace llcpp {
 
-namespace test {
 namespace fidl {
+namespace test {
 namespace unionsandwich {
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::
+void ::llcpp::fidl::test::unionsandwich::UnionSize8Alignment4::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionSize8Alignment4) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionSize8Alignment4, ordinal_) ==
@@ -23,7 +23,7 @@ void UnionSize8Alignment4::_CloseHandles() {}
 
 void SandwichUnionSize8Alignment4::_CloseHandles() {}
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::
+void ::llcpp::fidl::test::unionsandwich::UnionSize36Alignment4::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionSize36Alignment4) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionSize36Alignment4, ordinal_) ==
@@ -36,7 +36,7 @@ void UnionSize36Alignment4::_CloseHandles() {}
 
 void SandwichUnionSize36Alignment4::_CloseHandles() {}
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::
+void ::llcpp::fidl::test::unionsandwich::UnionSize12Alignment4::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionSize12Alignment4) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionSize12Alignment4, ordinal_) ==
@@ -51,7 +51,7 @@ void SandwichUnionSize12Alignment4::_CloseHandles() {}
 
 void StructSize16Alignment8::_CloseHandles() {}
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8::
+void ::llcpp::fidl::test::unionsandwich::UnionSize24Alignment8::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionSize24Alignment8) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionSize24Alignment8, ordinal_) ==
@@ -65,6 +65,6 @@ void UnionSize24Alignment8::_CloseHandles() {}
 void SandwichUnionSize24Alignment8::_CloseHandles() {}
 
 }  // namespace unionsandwich
-}  // namespace fidl
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

@@ -1,6 +1,6 @@
 [TOC]
 
-# test.name
+# fidl.test.consts
 
 
 
@@ -12,7 +12,7 @@
 ### EnumType {#EnumType}
 Type: <code>int32</code>
 
-*Defined in [test.name/consts.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#14)*
+*Defined in [fidl.test.consts/consts.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#14)*
 
 
 
@@ -38,7 +38,7 @@ Type: <code>int32</code>
 ### BitsType {#BitsType}
 Type: <code>uint32</code>
 
-*Defined in [test.name/consts.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#23)*
+*Defined in [fidl.test.consts/consts.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/consts.test.fidl#23)*
 
 
 

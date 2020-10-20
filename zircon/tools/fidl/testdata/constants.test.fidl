@@ -1,4 +1,4 @@
-library values;
+library fidl.test.constants;
 
 const uint8 UINT8 = 0b100;
 const uint16 UINT16 = 0b100;

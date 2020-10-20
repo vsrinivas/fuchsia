@@ -8,9 +8,9 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace arrays {
 
-void ::llcpp::fidl::test::json::UnionSmallArray::
+void ::llcpp::fidl::test::arrays::UnionSmallArray::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionSmallArray) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionSmallArray, ordinal_) ==
@@ -21,7 +21,7 @@ void ::llcpp::fidl::test::json::UnionSmallArray::
 
 void UnionSmallArray::_CloseHandles() {}
 
-void ::llcpp::fidl::test::json::UnionLargeArray::
+void ::llcpp::fidl::test::arrays::UnionLargeArray::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionLargeArray) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionLargeArray, ordinal_) ==
@@ -40,7 +40,7 @@ void StructSmallArray::_CloseHandles() {}
 
 void StructLargeArray::_CloseHandles() {}
 
-}  // namespace json
+}  // namespace arrays
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

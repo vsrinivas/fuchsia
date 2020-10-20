@@ -6,10 +6,12 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace bindingsdenylist {
 
-void ::llcpp::test::name::OnlyLlcpp::SizeAndOffsetAssertionHelper() {
+void ::llcpp::fidl::test::bindingsdenylist::OnlyLlcpp::
+    SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(OnlyLlcpp) == sizeof(fidl_xunion_t));
   static_assert(offsetof(OnlyLlcpp, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(OnlyLlcpp, envelope_) ==
@@ -18,6 +20,7 @@ void ::llcpp::test::name::OnlyLlcpp::SizeAndOffsetAssertionHelper() {
 
 void OnlyLlcpp::_CloseHandles() {}
 
-}  // namespace name
+}  // namespace bindingsdenylist
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

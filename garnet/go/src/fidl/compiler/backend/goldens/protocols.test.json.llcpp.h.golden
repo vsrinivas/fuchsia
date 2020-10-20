@@ -36,8 +36,9 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace protocols {
 
 enum class obj_type : uint32_t {
 
@@ -66,7 +67,7 @@ class WithErrorSyntax_ErrorAsEnum_Result;
 class WithErrorSyntax;
 
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+    fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
 
 class WithErrorSyntax_ResponseAsStruct_Result {
  public:
@@ -90,34 +91,34 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   static WithErrorSyntax_ResponseAsStruct_Result WithResponse(
-      ::fidl::tracking_ptr<
-          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>&&
+      ::fidl::tracking_ptr<::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ResponseAsStruct_Response>&&
           val) {
     WithErrorSyntax_ResponseAsStruct_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  void set_response(
-      ::fidl::tracking_ptr<
-          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>&&
-          elem) {
+  void set_response(::fidl::tracking_ptr<
+                    ::llcpp::fidl::test::protocols::
+                        WithErrorSyntax_ResponseAsStruct_Response>&& elem) {
     ordinal_ = Ordinal::kResponse;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response&
+  ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
   mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<
-        ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response*>(
+    return *static_cast<::llcpp::fidl::test::protocols::
+                            WithErrorSyntax_ResponseAsStruct_Response*>(
         envelope_.data.get());
   }
-  const ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response&
-  response() const {
+  const ::llcpp::fidl::test::protocols::
+      WithErrorSyntax_ResponseAsStruct_Response&
+      response() const {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<
-        ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response*>(
+    return *static_cast<::llcpp::fidl::test::protocols::
+                            WithErrorSyntax_ResponseAsStruct_Response*>(
         envelope_.data.get());
   }
 
@@ -149,7 +150,7 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   }
 
   static constexpr const fidl_type_t* Type =
-      &test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+      &fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
@@ -169,10 +170,10 @@ class WithErrorSyntax_ResponseAsStruct_Result {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<
-            ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>
+        ::fidl::tracking_ptr<::llcpp::fidl::test::protocols::
+                                 WithErrorSyntax_ResponseAsStruct_Response>
             to_destroy = static_cast<::fidl::tracking_ptr<
-                ::llcpp::test::name::
+                ::llcpp::fidl::test::protocols::
                     WithErrorSyntax_ResponseAsStruct_Response>>(
                 std::move(envelope_.data));
         break;
@@ -195,7 +196,7 @@ class WithErrorSyntax_ResponseAsStruct_Result {
 };
 
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+    fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 
 class WithErrorSyntax_ErrorAsPrimitive_Result {
  public:
@@ -219,34 +220,34 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(
-      ::fidl::tracking_ptr<
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>&&
+      ::fidl::tracking_ptr<::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ErrorAsPrimitive_Response>&&
           val) {
     WithErrorSyntax_ErrorAsPrimitive_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  void set_response(
-      ::fidl::tracking_ptr<
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>&&
-          elem) {
+  void set_response(::fidl::tracking_ptr<
+                    ::llcpp::fidl::test::protocols::
+                        WithErrorSyntax_ErrorAsPrimitive_Response>&& elem) {
     ordinal_ = Ordinal::kResponse;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response&
+  ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
   mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<
-        ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response*>(
+    return *static_cast<::llcpp::fidl::test::protocols::
+                            WithErrorSyntax_ErrorAsPrimitive_Response*>(
         envelope_.data.get());
   }
-  const ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response&
-  response() const {
+  const ::llcpp::fidl::test::protocols::
+      WithErrorSyntax_ErrorAsPrimitive_Response&
+      response() const {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<
-        ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response*>(
+    return *static_cast<::llcpp::fidl::test::protocols::
+                            WithErrorSyntax_ErrorAsPrimitive_Response*>(
         envelope_.data.get());
   }
 
@@ -278,7 +279,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   }
 
   static constexpr const fidl_type_t* Type =
-      &test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+      &fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -298,10 +299,10 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<
-            ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
+        ::fidl::tracking_ptr<::llcpp::fidl::test::protocols::
+                                 WithErrorSyntax_ErrorAsPrimitive_Response>
             to_destroy = static_cast<::fidl::tracking_ptr<
-                ::llcpp::test::name::
+                ::llcpp::fidl::test::protocols::
                     WithErrorSyntax_ErrorAsPrimitive_Response>>(
                 std::move(envelope_.data));
         break;
@@ -323,7 +324,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
 class WithErrorSyntax_ErrorAsEnum_Result {
  public:
@@ -347,56 +349,59 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   static WithErrorSyntax_ErrorAsEnum_Result WithResponse(
-      ::fidl::tracking_ptr<
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ErrorAsEnum_Response>&& val) {
     WithErrorSyntax_ErrorAsEnum_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
   void set_response(
-      ::fidl::tracking_ptr<
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ErrorAsEnum_Response>&& elem) {
     ordinal_ = Ordinal::kResponse;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response&
+  ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response&
   mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
     return *static_cast<
-        ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response*>(
+        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response*>(
         envelope_.data.get());
   }
-  const ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response& response()
-      const {
+  const ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response&
+  response() const {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
     return *static_cast<
-        ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response*>(
+        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response*>(
         envelope_.data.get());
   }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   static WithErrorSyntax_ErrorAsEnum_Result WithErr(
-      ::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::protocols::ErrorEnun>&& val) {
     WithErrorSyntax_ErrorAsEnum_Result result;
     result.set_err(std::move(val));
     return result;
   }
 
-  void set_err(::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun>&& elem) {
+  void set_err(
+      ::fidl::tracking_ptr<::llcpp::fidl::test::protocols::ErrorEnun>&& elem) {
     ordinal_ = Ordinal::kErr;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::test::name::ErrorEnun& mutable_err() {
+  ::llcpp::fidl::test::protocols::ErrorEnun& mutable_err() {
     ZX_ASSERT(ordinal_ == Ordinal::kErr);
-    return *static_cast<::llcpp::test::name::ErrorEnun*>(envelope_.data.get());
+    return *static_cast<::llcpp::fidl::test::protocols::ErrorEnun*>(
+        envelope_.data.get());
   }
-  const ::llcpp::test::name::ErrorEnun& err() const {
+  const ::llcpp::fidl::test::protocols::ErrorEnun& err() const {
     ZX_ASSERT(ordinal_ == Ordinal::kErr);
-    return *static_cast<::llcpp::test::name::ErrorEnun*>(envelope_.data.get());
+    return *static_cast<::llcpp::fidl::test::protocols::ErrorEnun*>(
+        envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -404,7 +409,7 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   }
 
   static constexpr const fidl_type_t* Type =
-      &test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+      &fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -424,16 +429,18 @@ class WithErrorSyntax_ErrorAsEnum_Result {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<
-            ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>
-            to_destroy = static_cast<::fidl::tracking_ptr<
-                ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>>(
+        ::fidl::tracking_ptr<::llcpp::fidl::test::protocols::
+                                 WithErrorSyntax_ErrorAsEnum_Response>
+            to_destroy = static_cast<
+                ::fidl::tracking_ptr<::llcpp::fidl::test::protocols::
+                                         WithErrorSyntax_ErrorAsEnum_Response>>(
                 std::move(envelope_.data));
         break;
       }
       case 2: {
-        ::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun> to_destroy =
-            static_cast<::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun>>(
+        ::fidl::tracking_ptr<::llcpp::fidl::test::protocols::ErrorEnun>
+            to_destroy = static_cast<::fidl::tracking_ptr<
+                ::llcpp::fidl::test::protocols::ErrorEnun>>(
                 std::move(envelope_.data));
         break;
       }
@@ -449,11 +456,11 @@ class WithErrorSyntax_ErrorAsEnum_Result {
 };
 
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+    fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
 struct WithErrorSyntax_ResponseAsStruct_Response {
   static constexpr const fidl_type_t* Type =
-      &test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+      &fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -552,11 +559,11 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
 };
 
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+    fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
 struct WithErrorSyntax_ErrorAsPrimitive_Response {
   static constexpr const fidl_type_t* Type =
-      &test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+      &fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -651,11 +658,11 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
 };
 
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+    fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
 struct WithErrorSyntax_ErrorAsEnum_Response {
   static constexpr const fidl_type_t* Type =
-      &test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+      &fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -747,12 +754,15 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
   };
 };
 
-extern "C" const fidl_type_t test_name_TransitionalRequestRequestTable;
-extern "C" const fidl_type_t test_name_TransitionalRequestResponseTable;
-extern "C" const fidl_type_t test_name_TransitionalOneWayRequestTable;
-extern "C" const fidl_type_t test_name_TransitionalOneWayResponseTable;
-extern "C" const fidl_type_t test_name_TransitionalEventRequestTable;
-extern "C" const fidl_type_t test_name_TransitionalEventEventTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestResponseTable;
+extern "C" const fidl_type_t fidl_test_protocols_TransitionalOneWayRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalOneWayResponseTable;
+extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventRequestTable;
+extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
 
 class Transitional final {
   Transitional() = delete;
@@ -766,7 +776,7 @@ class Transitional final {
     RequestResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_TransitionalRequestResponseTable;
+        &fidl_test_protocols_TransitionalRequestResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -885,7 +895,7 @@ class Transitional final {
     explicit RequestRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_TransitionalRequestRequestTable;
+        &fidl_test_protocols_TransitionalRequestRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1009,7 +1019,7 @@ class Transitional final {
     explicit OneWayRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_TransitionalOneWayRequestTable;
+        &fidl_test_protocols_TransitionalOneWayRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1129,7 +1139,7 @@ class Transitional final {
     EventResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_TransitionalEventEventTable;
+        &fidl_test_protocols_TransitionalEventEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1539,14 +1549,22 @@ class Transitional final {
   class EventSender;
 };
 
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodAResponseTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolEventARequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolEventAEventTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodARequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodAResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolEventARequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolEventAEventTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
 
 class ChannelProtocol final {
   ChannelProtocol() = delete;
@@ -1564,7 +1582,7 @@ class ChannelProtocol final {
     explicit MethodARequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_ChannelProtocolMethodARequestTable;
+        &fidl_test_protocols_ChannelProtocolMethodARequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1688,7 +1706,7 @@ class ChannelProtocol final {
     EventAResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_ChannelProtocolEventAEventTable;
+        &fidl_test_protocols_ChannelProtocolEventAEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1806,7 +1824,7 @@ class ChannelProtocol final {
     MethodBResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_ChannelProtocolMethodBResponseTable;
+        &fidl_test_protocols_ChannelProtocolMethodBResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1928,7 +1946,7 @@ class ChannelProtocol final {
     explicit MethodBRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_ChannelProtocolMethodBRequestTable;
+        &fidl_test_protocols_ChannelProtocolMethodBRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2052,7 +2070,7 @@ class ChannelProtocol final {
     MutateSocketResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_ChannelProtocolMutateSocketResponseTable;
+        &fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2179,7 +2197,7 @@ class ChannelProtocol final {
     explicit MutateSocketRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_ChannelProtocolMutateSocketRequestTable;
+        &fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2739,37 +2757,37 @@ class ChannelProtocol final {
 };
 
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseOnWithResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 class WithAndWithoutRequestResponse final {
   WithAndWithoutRequestResponse() = delete;
@@ -3151,7 +3169,7 @@ class WithAndWithoutRequestResponse final {
     NoRequestWithResponseResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+        &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -3404,7 +3422,7 @@ class WithAndWithoutRequestResponse final {
     }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+        &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -3654,7 +3672,7 @@ class WithAndWithoutRequestResponse final {
     }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+        &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -3782,7 +3800,7 @@ class WithAndWithoutRequestResponse final {
     WithRequestWithResponseResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+        &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -3910,7 +3928,7 @@ class WithAndWithoutRequestResponse final {
     }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+        &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -4155,7 +4173,7 @@ class WithAndWithoutRequestResponse final {
     OnWithResponseResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+        &fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -5039,15 +5057,17 @@ class WithAndWithoutRequestResponse final {
 };
 
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntaxResponseAsStructRequestTable;
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntaxResponseAsStructResponseTable;
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable;
 extern "C" const fidl_type_t
-    test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
-extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable;
-extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
 
 class WithErrorSyntax final {
   WithErrorSyntax() = delete;
@@ -5056,16 +5076,18 @@ class WithErrorSyntax final {
   struct ResponseAsStructResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result;
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
+        result;
     explicit ResponseAsStructResponse(
-        ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result& result)
+        ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result&
+            result)
         : result(std::move(result)) {
       _InitHeader();
     }
     ResponseAsStructResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_WithErrorSyntaxResponseAsStructResponseTable;
+        &fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 24;
@@ -5079,7 +5101,8 @@ class WithErrorSyntax final {
      public:
       UnownedOutgoingMessage(
           uint8_t* _bytes, uint32_t _byte_size,
-          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result& result)
+          ::llcpp::fidl::test::protocols::
+              WithErrorSyntax_ResponseAsStruct_Result& result)
           : message_(_bytes, _byte_size, sizeof(ResponseAsStructResponse),
                      nullptr, 0, 0) {
         FIDL_ALIGNDECL ResponseAsStructResponse _response(result);
@@ -5114,7 +5137,8 @@ class WithErrorSyntax final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
-          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result& result)
+          ::llcpp::fidl::test::protocols::
+              WithErrorSyntax_ResponseAsStruct_Result& result)
           : message_(bytes_, sizeof(bytes_), result) {}
       explicit OwnedOutgoingMessage(ResponseAsStructResponse* response)
           : message_(bytes_, sizeof(bytes_), response) {}
@@ -5299,16 +5323,18 @@ class WithErrorSyntax final {
   struct ErrorAsPrimitiveResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result;
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
+        result;
     explicit ErrorAsPrimitiveResponse(
-        ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& result)
+        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result&
+            result)
         : result(std::move(result)) {
       _InitHeader();
     }
     ErrorAsPrimitiveResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+        &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -5322,7 +5348,8 @@ class WithErrorSyntax final {
      public:
       UnownedOutgoingMessage(
           uint8_t* _bytes, uint32_t _byte_size,
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& result)
+          ::llcpp::fidl::test::protocols::
+              WithErrorSyntax_ErrorAsPrimitive_Result& result)
           : message_(_bytes, _byte_size, sizeof(ErrorAsPrimitiveResponse),
                      nullptr, 0, 0) {
         FIDL_ALIGNDECL ErrorAsPrimitiveResponse _response(result);
@@ -5357,7 +5384,8 @@ class WithErrorSyntax final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& result)
+          ::llcpp::fidl::test::protocols::
+              WithErrorSyntax_ErrorAsPrimitive_Result& result)
           : message_(bytes_, sizeof(bytes_), result) {}
       explicit OwnedOutgoingMessage(ErrorAsPrimitiveResponse* response)
           : message_(bytes_, sizeof(bytes_), response) {}
@@ -5542,16 +5570,17 @@ class WithErrorSyntax final {
   struct ErrorAsEnumResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result;
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result;
     explicit ErrorAsEnumResponse(
-        ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result& result)
+        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result&
+            result)
         : result(std::move(result)) {
       _InitHeader();
     }
     ErrorAsEnumResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+        &fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -5565,7 +5594,8 @@ class WithErrorSyntax final {
      public:
       UnownedOutgoingMessage(
           uint8_t* _bytes, uint32_t _byte_size,
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result& result)
+          ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result&
+              result)
           : message_(_bytes, _byte_size, sizeof(ErrorAsEnumResponse), nullptr,
                      0, 0) {
         FIDL_ALIGNDECL ErrorAsEnumResponse _response(result);
@@ -5600,7 +5630,8 @@ class WithErrorSyntax final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result& result)
+          ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result&
+              result)
           : message_(bytes_, sizeof(bytes_), result) {}
       explicit OwnedOutgoingMessage(ErrorAsEnumResponse* response)
           : message_(bytes_, sizeof(bytes_), response) {}
@@ -6144,13 +6175,13 @@ class WithErrorSyntax final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(
-          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
+      ::fidl::Result Reply(::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ResponseAsStruct_Result result);
       ::fidl::Result ReplySuccess(int64_t a, int64_t b, int64_t c);
       ::fidl::Result ReplyError(uint32_t error);
-      ::fidl::Result Reply(
-          ::fidl::BytePart _buffer,
-          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
+      ::fidl::Result Reply(::fidl::BytePart _buffer,
+                           ::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ResponseAsStruct_Result result);
       ::fidl::Result ReplySuccess(::fidl::BytePart _buffer, int64_t a,
                                   int64_t b, int64_t c);
 
@@ -6176,13 +6207,13 @@ class WithErrorSyntax final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
+      ::fidl::Result Reply(::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ErrorAsPrimitive_Result result);
       ::fidl::Result ReplySuccess();
       ::fidl::Result ReplyError(uint32_t error);
-      ::fidl::Result Reply(
-          ::fidl::BytePart _buffer,
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
+      ::fidl::Result Reply(::fidl::BytePart _buffer,
+                           ::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ErrorAsPrimitive_Result result);
       ::fidl::Result ReplySuccess(::fidl::BytePart _buffer);
 
      protected:
@@ -6208,12 +6239,14 @@ class WithErrorSyntax final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
+          ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result
+              result);
       ::fidl::Result ReplySuccess();
       ::fidl::Result ReplyError(ErrorEnun error);
       ::fidl::Result Reply(
           ::fidl::BytePart _buffer,
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
+          ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result
+              result);
       ::fidl::Result ReplySuccess(::fidl::BytePart _buffer);
 
      protected:
@@ -6254,475 +6287,575 @@ class WithErrorSyntax final {
   class EventSender;
 };
 
-}  // namespace name
+}  // namespace protocols
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::test::name::obj_type> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::protocols::obj_type>
+    : public std::true_type {};
 
 template <>
 struct IsFidlType<
-    ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>
+struct IsStruct<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>);
 static_assert(
-    offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response,
-             a) == 0);
-static_assert(
-    offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response,
-             b) == 8);
-static_assert(
-    offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response,
-             c) == 16);
-static_assert(
-    sizeof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response) ==
-    ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response::
-        PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result>);
+    std::is_standard_layout_v<::llcpp::fidl::test::protocols::
+                                  WithErrorSyntax_ResponseAsStruct_Response>);
+static_assert(offsetof(::llcpp::fidl::test::protocols::
+                           WithErrorSyntax_ResponseAsStruct_Response,
+                       a) == 0);
+static_assert(offsetof(::llcpp::fidl::test::protocols::
+                           WithErrorSyntax_ResponseAsStruct_Response,
+                       b) == 8);
+static_assert(offsetof(::llcpp::fidl::test::protocols::
+                           WithErrorSyntax_ResponseAsStruct_Response,
+                       c) == 16);
+static_assert(sizeof(::llcpp::fidl::test::protocols::
+                         WithErrorSyntax_ResponseAsStruct_Response) ==
+              ::llcpp::fidl::test::protocols::
+                  WithErrorSyntax_ResponseAsStruct_Response::PrimarySize);
 
 template <>
 struct IsFidlType<
-    ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
+struct IsUnion<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>);
 static_assert(
-    offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response,
-             __reserved) == 0);
+    std::is_standard_layout_v<::llcpp::fidl::test::protocols::
+                                  WithErrorSyntax_ResponseAsStruct_Result>);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+    : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response) ==
-    ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response::
+    std::is_standard_layout_v<::llcpp::fidl::test::protocols::
+                                  WithErrorSyntax_ErrorAsPrimitive_Response>);
+static_assert(offsetof(::llcpp::fidl::test::protocols::
+                           WithErrorSyntax_ErrorAsPrimitive_Response,
+                       __reserved) == 0);
+static_assert(sizeof(::llcpp::fidl::test::protocols::
+                         WithErrorSyntax_ErrorAsPrimitive_Response) ==
+              ::llcpp::fidl::test::protocols::
+                  WithErrorSyntax_ErrorAsPrimitive_Response::PrimarySize);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::protocols::
+                                  WithErrorSyntax_ErrorAsPrimitive_Result>);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>);
+static_assert(
+    offsetof(
+        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response,
+        __reserved) == 0);
+static_assert(
+    sizeof(
+        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response) ==
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response::
         PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>
+struct IsFidlType<::llcpp::fidl::test::protocols::Transitional::RequestRequest>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>
-    : public std::true_type {};
-template <>
-struct IsStruct<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>);
-static_assert(
-    offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response,
-             __reserved) == 0);
-static_assert(
-    sizeof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response) ==
-    ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::Transitional::RequestRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::Transitional::RequestRequest>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::Transitional::RequestRequest) ==
-              ::llcpp::test::name::Transitional::RequestRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::Transitional::RequestRequest, x) ==
-              16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::Transitional::RequestResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::Transitional::RequestResponse>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::Transitional::RequestResponse) ==
-              ::llcpp::test::name::Transitional::RequestResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::Transitional::RequestResponse, y) ==
-              16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::Transitional::OneWayRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::Transitional::OneWayRequest>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::Transitional::OneWayRequest) ==
-              ::llcpp::test::name::Transitional::OneWayRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::Transitional::OneWayRequest, x) ==
-              16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::Transitional::EventResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::Transitional::EventResponse>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::Transitional::EventResponse) ==
-              ::llcpp::test::name::Transitional::EventResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::Transitional::EventResponse, x) ==
-              16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::ChannelProtocol::MethodARequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MethodARequest>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::Transitional::RequestRequest>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::test::name::ChannelProtocol::MethodARequest) ==
-    ::llcpp::test::name::ChannelProtocol::MethodARequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodARequest,
-                       a) == 16);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodARequest,
-                       b) == 24);
+    sizeof(::llcpp::fidl::test::protocols::Transitional::RequestRequest) ==
+    ::llcpp::fidl::test::protocols::Transitional::RequestRequest::PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::Transitional::RequestRequest, x) ==
+    16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::ChannelProtocol::EventAResponse>
+struct IsFidlType<::llcpp::fidl::test::protocols::Transitional::RequestResponse>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::EventAResponse>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::Transitional::RequestResponse>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::test::name::ChannelProtocol::EventAResponse) ==
-    ::llcpp::test::name::ChannelProtocol::EventAResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::EventAResponse,
-                       a) == 16);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::EventAResponse,
-                       b) == 24);
+    sizeof(::llcpp::fidl::test::protocols::Transitional::RequestResponse) ==
+    ::llcpp::fidl::test::protocols::Transitional::RequestResponse::PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::Transitional::RequestResponse,
+             y) == 16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::ChannelProtocol::MethodBRequest>
+struct IsFidlType<::llcpp::fidl::test::protocols::Transitional::OneWayRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MethodBRequest>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::Transitional::OneWayRequest>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::test::name::ChannelProtocol::MethodBRequest) ==
-    ::llcpp::test::name::ChannelProtocol::MethodBRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodBRequest,
-                       a) == 16);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodBRequest,
-                       b) == 24);
+    sizeof(::llcpp::fidl::test::protocols::Transitional::OneWayRequest) ==
+    ::llcpp::fidl::test::protocols::Transitional::OneWayRequest::PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::Transitional::OneWayRequest, x) ==
+    16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::ChannelProtocol::MethodBResponse>
+struct IsFidlType<::llcpp::fidl::test::protocols::Transitional::EventResponse>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MethodBResponse>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::Transitional::EventResponse>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::test::name::ChannelProtocol::MethodBResponse) ==
-    ::llcpp::test::name::ChannelProtocol::MethodBResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodBResponse,
+    sizeof(::llcpp::fidl::test::protocols::Transitional::EventResponse) ==
+    ::llcpp::fidl::test::protocols::Transitional::EventResponse::PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::Transitional::EventResponse, x) ==
+    16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MethodARequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MethodARequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::ChannelProtocol::MethodARequest) ==
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MethodARequest::
+        PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::ChannelProtocol::MethodARequest,
+             a) == 16);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::ChannelProtocol::MethodARequest,
+             b) == 24);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::EventAResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::EventAResponse>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::ChannelProtocol::EventAResponse) ==
+    ::llcpp::fidl::test::protocols::ChannelProtocol::EventAResponse::
+        PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::ChannelProtocol::EventAResponse,
+             a) == 16);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::ChannelProtocol::EventAResponse,
+             b) == 24);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::ChannelProtocol::MethodBRequest) ==
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBRequest::
+        PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::ChannelProtocol::MethodBRequest,
+             a) == 16);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::ChannelProtocol::MethodBRequest,
+             b) == 24);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBResponse>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::ChannelProtocol::MethodBResponse) ==
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MethodBResponse::
+        PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::ChannelProtocol::MethodBResponse,
+             result) == 16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(
+        ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketRequest) ==
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketRequest::
+        PrimarySize);
+static_assert(
+    offsetof(
+        ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketRequest,
+        a) == 16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::protocols::ChannelProtocol::
+                         MutateSocketResponse) ==
+              ::llcpp::fidl::test::protocols::ChannelProtocol::
+                  MutateSocketResponse::PrimarySize);
+static_assert(
+    offsetof(
+        ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketResponse,
+        b) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::protocols::
+                      WithAndWithoutRequestResponse::NoRequestNoResponseRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestNoResponseRequest> : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+               NoRequestNoResponseRequest) ==
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestNoResponseRequest::PrimarySize);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestEmptyResponseRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestEmptyResponseRequest> : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+               NoRequestEmptyResponseRequest) ==
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestEmptyResponseRequest::PrimarySize);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestEmptyResponseResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestEmptyResponseResponse> : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+               NoRequestEmptyResponseResponse) ==
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestEmptyResponseResponse::PrimarySize);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestWithResponseRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestWithResponseRequest> : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+               NoRequestWithResponseRequest) ==
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestWithResponseRequest::PrimarySize);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestWithResponseResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestWithResponseResponse> : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+               NoRequestWithResponseResponse) ==
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        NoRequestWithResponseResponse::PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+                 NoRequestWithResponseResponse,
+             ret) == 16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestNoResponseRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestNoResponseRequest> : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+               WithRequestNoResponseRequest) ==
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestNoResponseRequest::PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+                 WithRequestNoResponseRequest,
+             arg) == 16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestEmptyResponseRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestEmptyResponseRequest> : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+               WithRequestEmptyResponseRequest) ==
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestEmptyResponseRequest::PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+                 WithRequestEmptyResponseRequest,
+             arg) == 16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestEmptyResponseResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestEmptyResponseResponse> : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+               WithRequestEmptyResponseResponse) ==
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestEmptyResponseResponse::PrimarySize);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestWithResponseRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestWithResponseRequest> : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+               WithRequestWithResponseRequest) ==
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestWithResponseRequest::PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+                 WithRequestWithResponseRequest,
+             arg) == 16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestWithResponseResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestWithResponseResponse> : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+               WithRequestWithResponseResponse) ==
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        WithRequestWithResponseResponse::PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+                 WithRequestWithResponseResponse,
+             ret) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::protocols::
+                      WithAndWithoutRequestResponse::OnEmptyResponseResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fidl::test::protocols::
+                         WithAndWithoutRequestResponse::OnEmptyResponseResponse>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+               OnEmptyResponseResponse) ==
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        OnEmptyResponseResponse::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::protocols::
+                      WithAndWithoutRequestResponse::OnWithResponseResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fidl::test::protocols::
+                         WithAndWithoutRequestResponse::OnWithResponseResponse>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+               OnWithResponseResponse) ==
+    ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+        OnWithResponseResponse::PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse::
+                 OnWithResponseResponse,
+             ret) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::protocols::ErrorEnun>
+    : public std::true_type {};
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ResponseAsStructRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ResponseAsStructRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::protocols::WithErrorSyntax::
+                         ResponseAsStructRequest) ==
+              ::llcpp::fidl::test::protocols::WithErrorSyntax::
+                  ResponseAsStructRequest::PrimarySize);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ResponseAsStructResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ResponseAsStructResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::protocols::WithErrorSyntax::
+                         ResponseAsStructResponse) ==
+              ::llcpp::fidl::test::protocols::WithErrorSyntax::
+                  ResponseAsStructResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::protocols::WithErrorSyntax::
+                           ResponseAsStructResponse,
                        result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::ChannelProtocol::MutateSocketRequest>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsPrimitiveRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MutateSocketRequest>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsPrimitiveRequest>
     : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::test::name::ChannelProtocol::MutateSocketRequest) ==
-    ::llcpp::test::name::ChannelProtocol::MutateSocketRequest::PrimarySize);
-static_assert(
-    offsetof(::llcpp::test::name::ChannelProtocol::MutateSocketRequest, a) ==
-    16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::ChannelProtocol::MutateSocketResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MutateSocketResponse>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::test::name::ChannelProtocol::MutateSocketResponse) ==
-    ::llcpp::test::name::ChannelProtocol::MutateSocketResponse::PrimarySize);
-static_assert(
-    offsetof(::llcpp::test::name::ChannelProtocol::MutateSocketResponse, b) ==
-    16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
-                      NoRequestNoResponseRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
-                         NoRequestNoResponseRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                         NoRequestNoResponseRequest) ==
-              ::llcpp::test::name::WithAndWithoutRequestResponse::
-                  NoRequestNoResponseRequest::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
-                      NoRequestEmptyResponseRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
-                         NoRequestEmptyResponseRequest>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                         NoRequestEmptyResponseRequest) ==
-              ::llcpp::test::name::WithAndWithoutRequestResponse::
-                  NoRequestEmptyResponseRequest::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
-                      NoRequestEmptyResponseResponse> : public std::true_type {
-};
-template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
-                         NoRequestEmptyResponseResponse>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                         NoRequestEmptyResponseResponse) ==
-              ::llcpp::test::name::WithAndWithoutRequestResponse::
-                  NoRequestEmptyResponseResponse::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
-                      NoRequestWithResponseRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
-                         NoRequestWithResponseRequest> : public std::true_type {
-};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                         NoRequestWithResponseRequest) ==
-              ::llcpp::test::name::WithAndWithoutRequestResponse::
-                  NoRequestWithResponseRequest::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
-                      NoRequestWithResponseResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
-                         NoRequestWithResponseResponse>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                         NoRequestWithResponseResponse) ==
-              ::llcpp::test::name::WithAndWithoutRequestResponse::
-                  NoRequestWithResponseResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                           NoRequestWithResponseResponse,
-                       ret) == 16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
-                      WithRequestNoResponseRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
-                         WithRequestNoResponseRequest> : public std::true_type {
-};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                         WithRequestNoResponseRequest) ==
-              ::llcpp::test::name::WithAndWithoutRequestResponse::
-                  WithRequestNoResponseRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                           WithRequestNoResponseRequest,
-                       arg) == 16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
-                      WithRequestEmptyResponseRequest> : public std::true_type {
-};
-template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
-                         WithRequestEmptyResponseRequest>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                         WithRequestEmptyResponseRequest) ==
-              ::llcpp::test::name::WithAndWithoutRequestResponse::
-                  WithRequestEmptyResponseRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                           WithRequestEmptyResponseRequest,
-                       arg) == 16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
-                      WithRequestEmptyResponseResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
-                         WithRequestEmptyResponseResponse>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                         WithRequestEmptyResponseResponse) ==
-              ::llcpp::test::name::WithAndWithoutRequestResponse::
-                  WithRequestEmptyResponseResponse::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
-                      WithRequestWithResponseRequest> : public std::true_type {
-};
-template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
-                         WithRequestWithResponseRequest>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                         WithRequestWithResponseRequest) ==
-              ::llcpp::test::name::WithAndWithoutRequestResponse::
-                  WithRequestWithResponseRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                           WithRequestWithResponseRequest,
-                       arg) == 16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
-                      WithRequestWithResponseResponse> : public std::true_type {
-};
-template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
-                         WithRequestWithResponseResponse>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                         WithRequestWithResponseResponse) ==
-              ::llcpp::test::name::WithAndWithoutRequestResponse::
-                  WithRequestWithResponseResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                           WithRequestWithResponseResponse,
-                       ret) == 16);
+static_assert(sizeof(::llcpp::fidl::test::protocols::WithErrorSyntax::
+                         ErrorAsPrimitiveRequest) ==
+              ::llcpp::fidl::test::protocols::WithErrorSyntax::
+                  ErrorAsPrimitiveRequest::PrimarySize);
 
 template <>
 struct IsFidlType<
-    ::llcpp::test::name::WithAndWithoutRequestResponse::OnEmptyResponseResponse>
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsPrimitiveResponse>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::llcpp::test::name::WithAndWithoutRequestResponse::OnEmptyResponseResponse>
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsPrimitiveResponse>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                         OnEmptyResponseResponse) ==
-              ::llcpp::test::name::WithAndWithoutRequestResponse::
-                  OnEmptyResponseResponse::PrimarySize);
+static_assert(sizeof(::llcpp::fidl::test::protocols::WithErrorSyntax::
+                         ErrorAsPrimitiveResponse) ==
+              ::llcpp::fidl::test::protocols::WithErrorSyntax::
+                  ErrorAsPrimitiveResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::protocols::WithErrorSyntax::
+                           ErrorAsPrimitiveResponse,
+                       result) == 16);
 
 template <>
 struct IsFidlType<
-    ::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse>
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumRequest>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse>
-    : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                         OnWithResponseResponse) ==
-              ::llcpp::test::name::WithAndWithoutRequestResponse::
-                  OnWithResponseResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
-                           OnWithResponseResponse,
-                       ret) == 16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::ErrorEnun> : public std::true_type {};
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result>);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax::ResponseAsStructRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::llcpp::test::name::WithErrorSyntax::ResponseAsStructRequest>
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumRequest>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::test::name::WithErrorSyntax::ResponseAsStructRequest) ==
-    ::llcpp::test::name::WithErrorSyntax::ResponseAsStructRequest::PrimarySize);
+    sizeof(
+        ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumRequest) ==
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumRequest::
+        PrimarySize);
 
 template <>
 struct IsFidlType<
-    ::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse>
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumResponse>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse>
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumResponse>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse) ==
-    ::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse::
+    sizeof(
+        ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumResponse) ==
+    ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumResponse::
         PrimarySize);
 static_assert(
-    offsetof(::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse,
-             result) == 16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveRequest>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveRequest) ==
-    ::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveRequest::PrimarySize);
-
-template <>
-struct IsFidlType<
-    ::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse) ==
-    ::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse::
-        PrimarySize);
-static_assert(
-    offsetof(::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse,
-             result) == 16);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax::ErrorAsEnumRequest>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::WithErrorSyntax::ErrorAsEnumRequest>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::test::name::WithErrorSyntax::ErrorAsEnumRequest) ==
-    ::llcpp::test::name::WithErrorSyntax::ErrorAsEnumRequest::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse) ==
-    ::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse::PrimarySize);
-static_assert(
-    offsetof(::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse,
-             result) == 16);
+    offsetof(
+        ::llcpp::fidl::test::protocols::WithErrorSyntax::ErrorAsEnumResponse,
+        result) == 16);
 
 }  // namespace fidl
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace protocols {
 
 struct Transitional::AsyncEventHandlers {
   ::fit::function<void(EventResponse* msg)> event;
@@ -7175,8 +7308,8 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|. Allocates 16
   // bytes of request buffer on the stack. The callback is stored on the heap.
   ::fidl::Result ResponseAsStruct(
-      ::fit::callback<void(
-          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result)>
+      ::fit::callback<void(::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ResponseAsStruct_Result result)>
           _cb);
   // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|. Caller
   // provides the backing storage for FIDL message via request buffer. Ownership
@@ -7196,8 +7329,8 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|. Allocates 16
   // bytes of request buffer on the stack. The callback is stored on the heap.
   ::fidl::Result ErrorAsPrimitive(
-      ::fit::callback<void(
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result)>
+      ::fit::callback<void(::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ErrorAsPrimitive_Result result)>
           _cb);
   // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|. Caller
   // provides the backing storage for FIDL message via request buffer. Ownership
@@ -7217,8 +7350,8 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|. Allocates 16 bytes
   // of request buffer on the stack. The callback is stored on the heap.
   ::fidl::Result ErrorAsEnum(
-      ::fit::callback<
-          void(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result)>
+      ::fit::callback<void(::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ErrorAsEnum_Result result)>
           _cb);
   // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|. Caller provides
   // the backing storage for FIDL message via request buffer. Ownership of
@@ -7258,6 +7391,7 @@ class WithErrorSyntax::EventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
-}  // namespace name
+}  // namespace protocols
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

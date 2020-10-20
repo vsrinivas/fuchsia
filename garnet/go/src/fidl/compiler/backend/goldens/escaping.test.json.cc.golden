@@ -3,11 +3,13 @@
 #include <escaping.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
-namespace escapeme {
+namespace fidl {
+namespace test {
+namespace escaping {
 
-extern "C" const fidl_type_t escapeme_DocCommentWithQuotesTable;
+extern "C" const fidl_type_t fidl_test_escaping_DocCommentWithQuotesTable;
 const fidl_type_t* DocCommentWithQuotes::FidlType =
-    &escapeme_DocCommentWithQuotesTable;
+    &fidl_test_escaping_DocCommentWithQuotesTable;
 
 void DocCommentWithQuotes::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<DocCommentWithQuotes>::value) {
@@ -34,4 +36,6 @@ zx_status_t DocCommentWithQuotes::Clone(DocCommentWithQuotes* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-}  // namespace escapeme
+}  // namespace escaping
+}  // namespace test
+}  // namespace fidl

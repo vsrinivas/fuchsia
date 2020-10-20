@@ -8,7 +8,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace table {
 
 void SimpleTable::_CloseHandles() {}
 
@@ -20,7 +20,7 @@ void NewerSimpleTable::_CloseHandles() {}
 
 void EmptyTable::_CloseHandles() {}
 
-}  // namespace json
+}  // namespace table
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

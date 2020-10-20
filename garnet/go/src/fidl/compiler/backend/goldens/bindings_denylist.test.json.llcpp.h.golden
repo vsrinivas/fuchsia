@@ -34,12 +34,13 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace bindingsdenylist {
 
 class OnlyLlcpp;
 
-extern "C" const fidl_type_t test_name_OnlyLlcppTable;
+extern "C" const fidl_type_t fidl_test_bindingsdenylist_OnlyLlcppTable;
 
 class OnlyLlcpp {
  public:
@@ -82,7 +83,8 @@ class OnlyLlcpp {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_name_OnlyLlcppTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_bindingsdenylist_OnlyLlcppTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -119,23 +121,29 @@ class OnlyLlcpp {
 
 constexpr uint32_t AllBindings = 0u;
 
-}  // namespace name
+}  // namespace bindingsdenylist
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::test::name::OnlyLlcpp> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::bindingsdenylist::OnlyLlcpp>
+    : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::test::name::OnlyLlcpp> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::OnlyLlcpp>);
+struct IsUnion<::llcpp::fidl::test::bindingsdenylist::OnlyLlcpp>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::bindingsdenylist::OnlyLlcpp>);
 
 }  // namespace fidl
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {}  // namespace name
+namespace bindingsdenylist {}  // namespace bindingsdenylist
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

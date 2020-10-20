@@ -3,11 +3,12 @@
 #include <doc_comments.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+namespace fidl {
 namespace test {
-namespace name {
+namespace doccomments {
 
-extern "C" const fidl_type_t test_name_TableTable;
-const fidl_type_t* Table::FidlType = &test_name_TableTable;
+extern "C" const fidl_type_t fidl_test_doccomments_TableTable;
+const fidl_type_t* Table::FidlType = &fidl_test_doccomments_TableTable;
 
 Table::Table() {}
 
@@ -106,8 +107,8 @@ zx_status_t Table::Clone(Table* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t test_name_StructTable;
-const fidl_type_t* Struct::FidlType = &test_name_StructTable;
+extern "C" const fidl_type_t fidl_test_doccomments_StructTable;
+const fidl_type_t* Struct::FidlType = &fidl_test_doccomments_StructTable;
 
 void Struct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<Struct>::value) {
@@ -130,8 +131,9 @@ zx_status_t Struct::Clone(Struct* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t test_name_StrictUnionTable;
-const fidl_type_t* StrictUnion::FidlType = &test_name_StrictUnionTable;
+extern "C" const fidl_type_t fidl_test_doccomments_StrictUnionTable;
+const fidl_type_t* StrictUnion::FidlType =
+    &fidl_test_doccomments_StrictUnionTable;
 
 StrictUnion::StrictUnion() {}
 
@@ -269,9 +271,9 @@ void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t test_name_InterfaceMethodRequestTable;
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
 
-extern "C" const fidl_type_t test_name_InterfaceOnEventEventTable;
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 
 }  // namespace
 
@@ -282,7 +284,7 @@ const fidl_type_t* Interface_RequestDecoder::GetType(uint64_t ordinal,
   switch (ordinal) {
     case internal::kInterface_Method_Ordinal:
       *out_needs_response = false;
-      return &test_name_InterfaceMethodRequestTable;
+      return &fidl_test_doccomments_InterfaceMethodRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -292,7 +294,7 @@ const fidl_type_t* Interface_RequestDecoder::GetType(uint64_t ordinal,
 const fidl_type_t* Interface_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kInterface_OnEvent_Ordinal:
-      return &test_name_InterfaceOnEventEventTable;
+      return &fidl_test_doccomments_InterfaceOnEventEventTable;
     default:
       return nullptr;
   }
@@ -318,11 +320,12 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
         break;
       }
       const char* error_msg = nullptr;
-      status =
-          message.Decode(&test_name_InterfaceOnEventEventTable, &error_msg);
+      status = message.Decode(&fidl_test_doccomments_InterfaceOnEventEventTable,
+                              &error_msg);
       if (status != ZX_OK) {
         FIDL_REPORT_DECODING_ERROR(
-            message, &test_name_InterfaceOnEventEventTable, error_msg);
+            message, &fidl_test_doccomments_InterfaceOnEventEventTable,
+            error_msg);
         break;
       }
       OnEvent();
@@ -338,7 +341,7 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
 
 void Interface_Proxy::Method() {
   ::fidl::Encoder _encoder(internal::kInterface_Method_Ordinal);
-  controller_->Send(&test_name_InterfaceMethodRequestTable,
+  controller_->Send(&fidl_test_doccomments_InterfaceMethodRequestTable,
                     Interface_RequestEncoder::Method(&_encoder), nullptr);
 }
 
@@ -389,7 +392,7 @@ zx_status_t Interface_Stub::Dispatch_(
 }
 void Interface_Stub::OnEvent() {
   ::fidl::Encoder _encoder(internal::kInterface_OnEvent_Ordinal);
-  sender_()->Send(&test_name_InterfaceOnEventEventTable,
+  sender_()->Send(&fidl_test_doccomments_InterfaceOnEventEventTable,
                   Interface_ResponseEncoder::OnEvent(&_encoder));
 }
 
@@ -400,23 +403,26 @@ Interface_SyncProxy::~Interface_SyncProxy() = default;
 
 zx_status_t Interface_SyncProxy::Method() {
   ::fidl::Encoder _encoder(internal::kInterface_Method_Ordinal);
-  return proxy_.Send(&test_name_InterfaceMethodRequestTable,
+  return proxy_.Send(&fidl_test_doccomments_InterfaceMethodRequestTable,
                      Interface_RequestEncoder::Method(&_encoder));
 }
 
 #endif  // __Fuchsia__
 
 #if (__cplusplus < 201703)
-constexpr const ::test::name::MyFlexibleBits MyFlexibleBits::MY_FIRST_BIT =
-    ::test::name::MyFlexibleBits(1u);
-constexpr const ::test::name::MyFlexibleBits MyFlexibleBits::MY_OTHER_BIT =
-    ::test::name::MyFlexibleBits(2u);
-constexpr const ::test::name::MyFlexibleBits MyFlexibleBits::kMask =
-    ::test::name::MyFlexibleBits(3u);
+constexpr const ::fidl::test::doccomments::MyFlexibleBits
+    MyFlexibleBits::MY_FIRST_BIT =
+        ::fidl::test::doccomments::MyFlexibleBits(1u);
+constexpr const ::fidl::test::doccomments::MyFlexibleBits
+    MyFlexibleBits::MY_OTHER_BIT =
+        ::fidl::test::doccomments::MyFlexibleBits(2u);
+constexpr const ::fidl::test::doccomments::MyFlexibleBits
+    MyFlexibleBits::kMask = ::fidl::test::doccomments::MyFlexibleBits(3u);
 
 #endif  // (__cplusplus < 201703)
-extern "C" const fidl_type_t test_name_FlexibleUnionTable;
-const fidl_type_t* FlexibleUnion::FidlType = &test_name_FlexibleUnionTable;
+extern "C" const fidl_type_t fidl_test_doccomments_FlexibleUnionTable;
+const fidl_type_t* FlexibleUnion::FidlType =
+    &fidl_test_doccomments_FlexibleUnionTable;
 
 FlexibleUnion::FlexibleUnion() {}
 
@@ -577,5 +583,6 @@ void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-}  // namespace name
+}  // namespace doccomments
 }  // namespace test
+}  // namespace fidl

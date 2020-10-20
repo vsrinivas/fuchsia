@@ -37,15 +37,15 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace emptystruct {
 
 struct Empty;
 class EmptyProtocol;
 
-extern "C" const fidl_type_t fidl_test_json_EmptyTable;
+extern "C" const fidl_type_t fidl_test_emptystruct_EmptyTable;
 
 struct Empty {
-  static constexpr const fidl_type_t* Type = &fidl_test_json_EmptyTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_emptystruct_EmptyTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -133,14 +133,18 @@ struct Empty {
   };
 };
 
-extern "C" const fidl_type_t fidl_test_json_EmptyProtocolSendRequestTable;
-extern "C" const fidl_type_t fidl_test_json_EmptyProtocolSendResponseTable;
-extern "C" const fidl_type_t fidl_test_json_EmptyProtocolReceiveRequestTable;
-extern "C" const fidl_type_t fidl_test_json_EmptyProtocolReceiveEventTable;
 extern "C" const fidl_type_t
-    fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
+    fidl_test_emptystruct_EmptyProtocolSendRequestTable;
 extern "C" const fidl_type_t
-    fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
+    fidl_test_emptystruct_EmptyProtocolSendResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_emptystruct_EmptyProtocolReceiveRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
+extern "C" const fidl_type_t
+    fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 
 class EmptyProtocol final {
   EmptyProtocol() = delete;
@@ -149,15 +153,16 @@ class EmptyProtocol final {
   struct SendRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::json::Empty e;
-    explicit SendRequest(zx_txid_t _txid, ::llcpp::fidl::test::json::Empty& e)
+    ::llcpp::fidl::test::emptystruct::Empty e;
+    explicit SendRequest(zx_txid_t _txid,
+                         ::llcpp::fidl::test::emptystruct::Empty& e)
         : e(std::move(e)) {
       _InitHeader(_txid);
     }
     explicit SendRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_EmptyProtocolSendRequestTable;
+        &fidl_test_emptystruct_EmptyProtocolSendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -173,7 +178,7 @@ class EmptyProtocol final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
                              zx_txid_t _txid,
-                             ::llcpp::fidl::test::json::Empty& e)
+                             ::llcpp::fidl::test::emptystruct::Empty& e)
           : message_(_bytes, _byte_size, sizeof(SendRequest), nullptr, 0, 0) {
         // Destructors can't be called because it will lead to handle double
         // close (here and in fidl::Encode).
@@ -209,7 +214,7 @@ class EmptyProtocol final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid,
-                                    ::llcpp::fidl::test::json::Empty& e)
+                                    ::llcpp::fidl::test::emptystruct::Empty& e)
           : message_(bytes_, sizeof(bytes_), _txid, e) {}
       explicit OwnedOutgoingMessage(SendRequest* request)
           : message_(bytes_, sizeof(bytes_), request) {}
@@ -274,15 +279,15 @@ class EmptyProtocol final {
   struct ReceiveResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::json::Empty e;
-    explicit ReceiveResponse(::llcpp::fidl::test::json::Empty& e)
+    ::llcpp::fidl::test::emptystruct::Empty e;
+    explicit ReceiveResponse(::llcpp::fidl::test::emptystruct::Empty& e)
         : e(std::move(e)) {
       _InitHeader();
     }
     ReceiveResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_EmptyProtocolReceiveEventTable;
+        &fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -295,7 +300,7 @@ class EmptyProtocol final {
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
-                             ::llcpp::fidl::test::json::Empty& e)
+                             ::llcpp::fidl::test::emptystruct::Empty& e)
           : message_(_bytes, _byte_size, sizeof(ReceiveResponse), nullptr, 0,
                      0) {
         // Destructors can't be called because it will lead to handle double
@@ -331,7 +336,7 @@ class EmptyProtocol final {
 
     class OwnedOutgoingMessage final {
      public:
-      explicit OwnedOutgoingMessage(::llcpp::fidl::test::json::Empty& e)
+      explicit OwnedOutgoingMessage(::llcpp::fidl::test::emptystruct::Empty& e)
           : message_(bytes_, sizeof(bytes_), e) {}
       explicit OwnedOutgoingMessage(ReceiveResponse* response)
           : message_(bytes_, sizeof(bytes_), response) {}
@@ -395,15 +400,15 @@ class EmptyProtocol final {
   struct SendAndReceiveResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::json::Empty e;
-    explicit SendAndReceiveResponse(::llcpp::fidl::test::json::Empty& e)
+    ::llcpp::fidl::test::emptystruct::Empty e;
+    explicit SendAndReceiveResponse(::llcpp::fidl::test::emptystruct::Empty& e)
         : e(std::move(e)) {
       _InitHeader();
     }
     SendAndReceiveResponse() { _InitHeader(); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
+        &fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -416,7 +421,7 @@ class EmptyProtocol final {
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
-                             ::llcpp::fidl::test::json::Empty& e)
+                             ::llcpp::fidl::test::emptystruct::Empty& e)
           : message_(_bytes, _byte_size, sizeof(SendAndReceiveResponse),
                      nullptr, 0, 0) {
         // Destructors can't be called because it will lead to handle double
@@ -453,7 +458,7 @@ class EmptyProtocol final {
 
     class OwnedOutgoingMessage final {
      public:
-      explicit OwnedOutgoingMessage(::llcpp::fidl::test::json::Empty& e)
+      explicit OwnedOutgoingMessage(::llcpp::fidl::test::emptystruct::Empty& e)
           : message_(bytes_, sizeof(bytes_), e) {}
       explicit OwnedOutgoingMessage(SendAndReceiveResponse* response)
           : message_(bytes_, sizeof(bytes_), response) {}
@@ -517,16 +522,16 @@ class EmptyProtocol final {
   struct SendAndReceiveRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::json::Empty e;
+    ::llcpp::fidl::test::emptystruct::Empty e;
     explicit SendAndReceiveRequest(zx_txid_t _txid,
-                                   ::llcpp::fidl::test::json::Empty& e)
+                                   ::llcpp::fidl::test::emptystruct::Empty& e)
         : e(std::move(e)) {
       _InitHeader(_txid);
     }
     explicit SendAndReceiveRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
+        &fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -543,7 +548,7 @@ class EmptyProtocol final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
                              zx_txid_t _txid,
-                             ::llcpp::fidl::test::json::Empty& e)
+                             ::llcpp::fidl::test::emptystruct::Empty& e)
           : message_(_bytes, _byte_size, sizeof(SendAndReceiveRequest), nullptr,
                      0, 0) {
         // Destructors can't be called because it will lead to handle double
@@ -581,7 +586,7 @@ class EmptyProtocol final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid,
-                                    ::llcpp::fidl::test::json::Empty& e)
+                                    ::llcpp::fidl::test::emptystruct::Empty& e)
           : message_(bytes_, sizeof(bytes_), _txid, e) {}
       explicit OwnedOutgoingMessage(SendAndReceiveRequest* request)
           : message_(bytes_, sizeof(bytes_), request) {}
@@ -658,7 +663,8 @@ class EmptyProtocol final {
    public:
     class Send final : public ::fidl::Result {
      public:
-      explicit Send(zx_handle_t _client, ::llcpp::fidl::test::json::Empty& e);
+      explicit Send(zx_handle_t _client,
+                    ::llcpp::fidl::test::emptystruct::Empty& e);
       explicit Send(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Send(Send&&) = delete;
       Send(const Send&) = delete;
@@ -671,8 +677,9 @@ class EmptyProtocol final {
     class SendAndReceive final : public ::fidl::Result {
      public:
       explicit SendAndReceive(zx_handle_t _client,
-                              ::llcpp::fidl::test::json::Empty& e);
-      SendAndReceive(zx_handle_t _client, ::llcpp::fidl::test::json::Empty& e,
+                              ::llcpp::fidl::test::emptystruct::Empty& e);
+      SendAndReceive(zx_handle_t _client,
+                     ::llcpp::fidl::test::emptystruct::Empty& e,
                      zx_time_t _deadline);
       explicit SendAndReceive(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
@@ -717,7 +724,7 @@ class EmptyProtocol final {
      public:
       explicit Send(zx_handle_t _client, uint8_t* _request_bytes,
                     uint32_t _request_byte_capacity,
-                    ::llcpp::fidl::test::json::Empty& e);
+                    ::llcpp::fidl::test::emptystruct::Empty& e);
       explicit Send(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Send(Send&&) = delete;
       Send(const Send&) = delete;
@@ -729,7 +736,7 @@ class EmptyProtocol final {
      public:
       explicit SendAndReceive(zx_handle_t _client, uint8_t* _request_bytes,
                               uint32_t _request_byte_capacity,
-                              ::llcpp::fidl::test::json::Empty& e,
+                              ::llcpp::fidl::test::emptystruct::Empty& e,
                               uint8_t* _response_bytes,
                               uint32_t _response_byte_capacity);
       explicit SendAndReceive(const ::fidl::Result& result)
@@ -772,15 +779,15 @@ class EmptyProtocol final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::Send Send(::zx::unowned_channel _client_end,
-                               ::llcpp::fidl::test::json::Empty e) {
+                               ::llcpp::fidl::test::emptystruct::Empty e) {
       return ResultOf::Send(_client_end->get(), e);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    static UnownedResultOf::Send Send(::zx::unowned_channel _client_end,
-                                      ::fidl::BytePart _request_buffer,
-                                      ::llcpp::fidl::test::json::Empty e) {
+    static UnownedResultOf::Send Send(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::llcpp::fidl::test::emptystruct::Empty e) {
       return UnownedResultOf::Send(_client_end->get(), _request_buffer.data(),
                                    _request_buffer.capacity(), e);
     }
@@ -788,7 +795,8 @@ class EmptyProtocol final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::SendAndReceive SendAndReceive(
-        ::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::Empty e) {
+        ::zx::unowned_channel _client_end,
+        ::llcpp::fidl::test::emptystruct::Empty e) {
       return ResultOf::SendAndReceive(_client_end->get(), e);
     }
 
@@ -796,7 +804,8 @@ class EmptyProtocol final {
     // response buffers.
     static UnownedResultOf::SendAndReceive SendAndReceive(
         ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-        ::llcpp::fidl::test::json::Empty e, ::fidl::BytePart _response_buffer) {
+        ::llcpp::fidl::test::emptystruct::Empty e,
+        ::fidl::BytePart _response_buffer) {
       return UnownedResultOf::SendAndReceive(
           _client_end->get(), _request_buffer.data(),
           _request_buffer.capacity(), e, _response_buffer.data(),
@@ -826,14 +835,14 @@ class EmptyProtocol final {
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    ResultOf::Send Send(::llcpp::fidl::test::json::Empty e) {
+    ResultOf::Send Send(::llcpp::fidl::test::emptystruct::Empty e) {
       return ResultOf::Send(this->channel().get(), e);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::Send Send(::fidl::BytePart _request_buffer,
-                               ::llcpp::fidl::test::json::Empty e) {
+                               ::llcpp::fidl::test::emptystruct::Empty e) {
       return UnownedResultOf::Send(this->channel().get(),
                                    _request_buffer.data(),
                                    _request_buffer.capacity(), e);
@@ -842,14 +851,15 @@ class EmptyProtocol final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::SendAndReceive SendAndReceive(
-        ::llcpp::fidl::test::json::Empty e) {
+        ::llcpp::fidl::test::emptystruct::Empty e) {
       return ResultOf::SendAndReceive(this->channel().get(), e);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::SendAndReceive SendAndReceive(
-        ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::Empty e,
+        ::fidl::BytePart _request_buffer,
+        ::llcpp::fidl::test::emptystruct::Empty e,
         ::fidl::BytePart _response_buffer) {
       return UnownedResultOf::SendAndReceive(
           this->channel().get(), _request_buffer.data(),
@@ -885,7 +895,7 @@ class EmptyProtocol final {
 
     using SendCompleter = ::fidl::Completer<>;
 
-    virtual void Send(::llcpp::fidl::test::json::Empty e,
+    virtual void Send(::llcpp::fidl::test::emptystruct::Empty e,
                       SendCompleter::Sync& _completer) = 0;
 
     class SendAndReceiveCompleterBase : public ::fidl::CompleterBase {
@@ -900,9 +910,9 @@ class EmptyProtocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(::llcpp::fidl::test::json::Empty e);
+      ::fidl::Result Reply(::llcpp::fidl::test::emptystruct::Empty e);
       ::fidl::Result Reply(::fidl::BytePart _buffer,
-                           ::llcpp::fidl::test::json::Empty e);
+                           ::llcpp::fidl::test::emptystruct::Empty e);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -911,7 +921,7 @@ class EmptyProtocol final {
     using SendAndReceiveCompleter =
         ::fidl::Completer<SendAndReceiveCompleterBase>;
 
-    virtual void SendAndReceive(::llcpp::fidl::test::json::Empty e,
+    virtual void SendAndReceive(::llcpp::fidl::test::emptystruct::Empty e,
                                 SendAndReceiveCompleter::Sync& _completer) = 0;
   };
 
@@ -941,18 +951,19 @@ class EmptyProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t SendReceiveEvent(::zx::unowned_channel _channel,
-                                      ::llcpp::fidl::test::json::Empty e);
+  static zx_status_t SendReceiveEvent(
+      ::zx::unowned_channel _channel,
+      ::llcpp::fidl::test::emptystruct::Empty e);
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendReceiveEvent(::zx::unowned_channel _channel,
-                                      ::fidl::BytePart _buffer,
-                                      ::llcpp::fidl::test::json::Empty e);
+  static zx_status_t SendReceiveEvent(
+      ::zx::unowned_channel _channel, ::fidl::BytePart _buffer,
+      ::llcpp::fidl::test::emptystruct::Empty e);
 
   class EventSender;
 };
 
-}  // namespace json
+}  // namespace emptystruct
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
@@ -960,70 +971,81 @@ class EmptyProtocol final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Empty> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::emptystruct::Empty>
+    : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::json::Empty> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Empty>);
-static_assert(offsetof(::llcpp::fidl::test::json::Empty, __reserved) == 0);
-static_assert(sizeof(::llcpp::fidl::test::json::Empty) ==
-              ::llcpp::fidl::test::json::Empty::PrimarySize);
+struct IsStruct<::llcpp::fidl::test::emptystruct::Empty>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::emptystruct::Empty>);
+static_assert(offsetof(::llcpp::fidl::test::emptystruct::Empty, __reserved) ==
+              0);
+static_assert(sizeof(::llcpp::fidl::test::emptystruct::Empty) ==
+              ::llcpp::fidl::test::emptystruct::Empty::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::EmptyProtocol::SendRequest>
+struct IsFidlType<::llcpp::fidl::test::emptystruct::EmptyProtocol::SendRequest>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::EmptyProtocol::SendRequest>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::emptystruct::EmptyProtocol::SendRequest>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::fidl::test::json::EmptyProtocol::SendRequest) ==
-    ::llcpp::fidl::test::json::EmptyProtocol::SendRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::EmptyProtocol::SendRequest,
-                       e) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::EmptyProtocol::ReceiveResponse>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::EmptyProtocol::ReceiveResponse>
-    : public std::true_type {};
+    sizeof(::llcpp::fidl::test::emptystruct::EmptyProtocol::SendRequest) ==
+    ::llcpp::fidl::test::emptystruct::EmptyProtocol::SendRequest::PrimarySize);
 static_assert(
-    sizeof(::llcpp::fidl::test::json::EmptyProtocol::ReceiveResponse) ==
-    ::llcpp::fidl::test::json::EmptyProtocol::ReceiveResponse::PrimarySize);
-static_assert(
-    offsetof(::llcpp::fidl::test::json::EmptyProtocol::ReceiveResponse, e) ==
+    offsetof(::llcpp::fidl::test::emptystruct::EmptyProtocol::SendRequest, e) ==
     16);
 
 template <>
 struct IsFidlType<
-    ::llcpp::fidl::test::json::EmptyProtocol::SendAndReceiveRequest>
+    ::llcpp::fidl::test::emptystruct::EmptyProtocol::ReceiveResponse>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::llcpp::fidl::test::json::EmptyProtocol::SendAndReceiveRequest>
+    ::llcpp::fidl::test::emptystruct::EmptyProtocol::ReceiveResponse>
     : public std::true_type {};
 static_assert(
-    sizeof(::llcpp::fidl::test::json::EmptyProtocol::SendAndReceiveRequest) ==
-    ::llcpp::fidl::test::json::EmptyProtocol::SendAndReceiveRequest::
+    sizeof(::llcpp::fidl::test::emptystruct::EmptyProtocol::ReceiveResponse) ==
+    ::llcpp::fidl::test::emptystruct::EmptyProtocol::ReceiveResponse::
         PrimarySize);
 static_assert(
-    offsetof(::llcpp::fidl::test::json::EmptyProtocol::SendAndReceiveRequest,
+    offsetof(::llcpp::fidl::test::emptystruct::EmptyProtocol::ReceiveResponse,
              e) == 16);
 
 template <>
 struct IsFidlType<
-    ::llcpp::fidl::test::json::EmptyProtocol::SendAndReceiveResponse>
+    ::llcpp::fidl::test::emptystruct::EmptyProtocol::SendAndReceiveRequest>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::llcpp::fidl::test::json::EmptyProtocol::SendAndReceiveResponse>
+    ::llcpp::fidl::test::emptystruct::EmptyProtocol::SendAndReceiveRequest>
     : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::emptystruct::EmptyProtocol::
+                         SendAndReceiveRequest) ==
+              ::llcpp::fidl::test::emptystruct::EmptyProtocol::
+                  SendAndReceiveRequest::PrimarySize);
 static_assert(
-    sizeof(::llcpp::fidl::test::json::EmptyProtocol::SendAndReceiveResponse) ==
-    ::llcpp::fidl::test::json::EmptyProtocol::SendAndReceiveResponse::
-        PrimarySize);
+    offsetof(
+        ::llcpp::fidl::test::emptystruct::EmptyProtocol::SendAndReceiveRequest,
+        e) == 16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::emptystruct::EmptyProtocol::SendAndReceiveResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::emptystruct::EmptyProtocol::SendAndReceiveResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::emptystruct::EmptyProtocol::
+                         SendAndReceiveResponse) ==
+              ::llcpp::fidl::test::emptystruct::EmptyProtocol::
+                  SendAndReceiveResponse::PrimarySize);
 static_assert(
-    offsetof(::llcpp::fidl::test::json::EmptyProtocol::SendAndReceiveResponse,
-             e) == 16);
+    offsetof(
+        ::llcpp::fidl::test::emptystruct::EmptyProtocol::SendAndReceiveResponse,
+        e) == 16);
 
 }  // namespace fidl
 
@@ -1031,7 +1053,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace emptystruct {
 
 struct EmptyProtocol::AsyncEventHandlers {
   ::fit::function<void(ReceiveResponse* msg)> receive;
@@ -1052,34 +1074,35 @@ class EmptyProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result Send(::llcpp::fidl::test::json::Empty e);
+  ::fidl::Result Send(::llcpp::fidl::test::emptystruct::Empty e);
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::Result Send(::fidl::BytePart _request_buffer,
-                      ::llcpp::fidl::test::json::Empty e);
+                      ::llcpp::fidl::test::emptystruct::Empty e);
 
   // Asynchronous variant of |EmptyProtocol.SendAndReceive()|. Allocates 24
   // bytes of request buffer on the stack. The callback is stored on the heap.
   ::fidl::Result SendAndReceive(
-      ::llcpp::fidl::test::json::Empty e,
-      ::fit::callback<void(::llcpp::fidl::test::json::Empty e)> _cb);
+      ::llcpp::fidl::test::emptystruct::Empty e,
+      ::fit::callback<void(::llcpp::fidl::test::emptystruct::Empty e)> _cb);
   // Asynchronous variant of |EmptyProtocol.SendAndReceive()|. Caller provides
   // the backing storage for FIDL message via request buffer. Ownership of
   // _context is given unsafely to the binding until OnError() or OnReply() are
   // called on it.
   ::fidl::Result SendAndReceive(::fidl::BytePart _request_buffer,
-                                ::llcpp::fidl::test::json::Empty e,
+                                ::llcpp::fidl::test::emptystruct::Empty e,
                                 SendAndReceiveResponseContext* _context);
   // Synchronous variant of |EmptyProtocol.SendAndReceive()|. Allocates 48 bytes
   // of message buffer on the stack. No heap allocation necessary.
   ResultOf::SendAndReceive SendAndReceive_Sync(
-      ::llcpp::fidl::test::json::Empty e);
+      ::llcpp::fidl::test::emptystruct::Empty e);
 
   // Synchronous variant of |EmptyProtocol.SendAndReceive()|. Caller provides
   // the backing storage for FIDL message via request and response buffers.
   UnownedResultOf::SendAndReceive SendAndReceive_Sync(
-      ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::Empty e,
+      ::fidl::BytePart _request_buffer,
+      ::llcpp::fidl::test::emptystruct::Empty e,
       ::fidl::BytePart _response_buffer);
 
  private:
@@ -1096,7 +1119,7 @@ class EmptyProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
 class EmptyProtocol::EventSender {
  public:
-  zx_status_t Receive(::llcpp::fidl::test::json::Empty e) const {
+  zx_status_t Receive(::llcpp::fidl::test::emptystruct::Empty e) const {
     if (auto _binding = binding_.lock()) {
       return SendReceiveEvent(_binding->channel(), std::move(e));
     }
@@ -1104,7 +1127,7 @@ class EmptyProtocol::EventSender {
   }
 
   zx_status_t Receive(::fidl::BytePart _buffer,
-                      ::llcpp::fidl::test::json::Empty e) const {
+                      ::llcpp::fidl::test::emptystruct::Empty e) const {
     if (auto _binding = binding_.lock()) {
       return SendReceiveEvent(_binding->channel(), std::move(_buffer),
                               std::move(e));
@@ -1122,7 +1145,7 @@ class EmptyProtocol::EventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
-}  // namespace json
+}  // namespace emptystruct
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

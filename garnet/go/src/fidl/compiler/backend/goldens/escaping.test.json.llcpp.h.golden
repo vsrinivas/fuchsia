@@ -34,16 +34,18 @@
 
 namespace llcpp {
 
-namespace escapeme {
+namespace fidl {
+namespace test {
+namespace escaping {
 
 struct DocCommentWithQuotes;
 
-extern "C" const fidl_type_t escapeme_DocCommentWithQuotesTable;
+extern "C" const fidl_type_t fidl_test_escaping_DocCommentWithQuotesTable;
 
 // "pleaseescapethisdocommentproperly"
 struct DocCommentWithQuotes {
   static constexpr const fidl_type_t* Type =
-      &escapeme_DocCommentWithQuotesTable;
+      &fidl_test_escaping_DocCommentWithQuotesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -133,27 +135,33 @@ struct DocCommentWithQuotes {
   };
 };
 
-}  // namespace escapeme
+}  // namespace escaping
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::escapeme::DocCommentWithQuotes>
+struct IsFidlType<::llcpp::fidl::test::escaping::DocCommentWithQuotes>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::escapeme::DocCommentWithQuotes>
+struct IsStruct<::llcpp::fidl::test::escaping::DocCommentWithQuotes>
     : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::escapeme::DocCommentWithQuotes>);
-static_assert(offsetof(::llcpp::escapeme::DocCommentWithQuotes, __reserved) ==
-              0);
-static_assert(sizeof(::llcpp::escapeme::DocCommentWithQuotes) ==
-              ::llcpp::escapeme::DocCommentWithQuotes::PrimarySize);
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::escaping::DocCommentWithQuotes>);
+static_assert(offsetof(::llcpp::fidl::test::escaping::DocCommentWithQuotes,
+                       __reserved) == 0);
+static_assert(sizeof(::llcpp::fidl::test::escaping::DocCommentWithQuotes) ==
+              ::llcpp::fidl::test::escaping::DocCommentWithQuotes::PrimarySize);
 
 }  // namespace fidl
 
 namespace llcpp {
 
-namespace escapeme {}  // namespace escapeme
+namespace fidl {
+namespace test {
+namespace escaping {}  // namespace escaping
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

@@ -5,10 +5,10 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace fidl {
 namespace test {
-namespace json {
+namespace emptystruct {
 
-extern "C" const fidl_type_t fidl_test_json_EmptyTable;
-const fidl_type_t* Empty::FidlType = &fidl_test_json_EmptyTable;
+extern "C" const fidl_type_t fidl_test_emptystruct_EmptyTable;
+const fidl_type_t* Empty::FidlType = &fidl_test_emptystruct_EmptyTable;
 
 void Empty::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<Empty>::value) {
@@ -34,14 +34,16 @@ zx_status_t Empty::Clone(Empty* _result) const {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t fidl_test_json_EmptyProtocolSendRequestTable;
-
-extern "C" const fidl_type_t fidl_test_json_EmptyProtocolReceiveEventTable;
+extern "C" const fidl_type_t
+    fidl_test_emptystruct_EmptyProtocolSendRequestTable;
 
 extern "C" const fidl_type_t
-    fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
+    fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
+
 extern "C" const fidl_type_t
-    fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
+    fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 
 }  // namespace
 
@@ -52,10 +54,10 @@ const fidl_type_t* EmptyProtocol_RequestDecoder::GetType(
   switch (ordinal) {
     case internal::kEmptyProtocol_Send_Ordinal:
       *out_needs_response = false;
-      return &fidl_test_json_EmptyProtocolSendRequestTable;
+      return &fidl_test_emptystruct_EmptyProtocolSendRequestTable;
     case internal::kEmptyProtocol_SendAndReceive_Ordinal:
       *out_needs_response = true;
-      return &fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
+      return &fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -65,9 +67,9 @@ const fidl_type_t* EmptyProtocol_RequestDecoder::GetType(
 const fidl_type_t* EmptyProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kEmptyProtocol_Receive_Ordinal:
-      return &fidl_test_json_EmptyProtocolReceiveEventTable;
+      return &fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
     case internal::kEmptyProtocol_SendAndReceive_Ordinal:
-      return &fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
+      return &fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
     default:
       return nullptr;
   }
@@ -94,15 +96,16 @@ zx_status_t EmptyProtocol_Proxy::Dispatch_(::fidl::Message message) {
         break;
       }
       const char* error_msg = nullptr;
-      status = message.Decode(&fidl_test_json_EmptyProtocolReceiveEventTable,
-                              &error_msg);
+      status = message.Decode(
+          &fidl_test_emptystruct_EmptyProtocolReceiveEventTable, &error_msg);
       if (status != ZX_OK) {
         FIDL_REPORT_DECODING_ERROR(
-            message, &fidl_test_json_EmptyProtocolReceiveEventTable, error_msg);
+            message, &fidl_test_emptystruct_EmptyProtocolReceiveEventTable,
+            error_msg);
         break;
       }
       ::fidl::Decoder decoder(std::move(message));
-      Receive(::fidl::DecodeAs<::fidl::test::json::Empty>(&decoder, 16));
+      Receive(::fidl::DecodeAs<::fidl::test::emptystruct::Empty>(&decoder, 16));
       break;
     }
     default: {
@@ -113,9 +116,9 @@ zx_status_t EmptyProtocol_Proxy::Dispatch_(::fidl::Message message) {
   return status;
 }
 
-void EmptyProtocol_Proxy::Send(::fidl::test::json::Empty e) {
+void EmptyProtocol_Proxy::Send(::fidl::test::emptystruct::Empty e) {
   ::fidl::Encoder _encoder(internal::kEmptyProtocol_Send_Ordinal);
-  controller_->Send(&fidl_test_json_EmptyProtocolSendRequestTable,
+  controller_->Send(&fidl_test_emptystruct_EmptyProtocolSendRequestTable,
                     EmptyProtocol_RequestEncoder::Send(&_encoder, &e), nullptr);
 }
 namespace {
@@ -129,18 +132,19 @@ EmptyProtocol_SendAndReceive_ResponseHandler(
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::fidl::test::json::Empty>(&decoder, 16));
+        callback_(
+            ::fidl::DecodeAs<::fidl::test::emptystruct::Empty>(&decoder, 16));
         return ZX_OK;
       },
-      &fidl_test_json_EmptyProtocolSendAndReceiveResponseTable);
+      &fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable);
 }
 
 }  // namespace
-void EmptyProtocol_Proxy::SendAndReceive(::fidl::test::json::Empty e,
+void EmptyProtocol_Proxy::SendAndReceive(::fidl::test::emptystruct::Empty e,
                                          SendAndReceiveCallback callback) {
   ::fidl::Encoder _encoder(internal::kEmptyProtocol_SendAndReceive_Ordinal);
   controller_->Send(
-      &fidl_test_json_EmptyProtocolSendAndReceiveRequestTable,
+      &fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable,
       EmptyProtocol_RequestEncoder::SendAndReceive(&_encoder, &e),
       EmptyProtocol_SendAndReceive_ResponseHandler(std::move(callback)));
 }
@@ -160,10 +164,10 @@ class EmptyProtocol_SendAndReceive_Responder final {
       ::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(::fidl::test::json::Empty e) {
+  void operator()(::fidl::test::emptystruct::Empty e) {
     ::fidl::Encoder _encoder(internal::kEmptyProtocol_SendAndReceive_Ordinal);
     response_.Send(
-        &fidl_test_json_EmptyProtocolSendAndReceiveResponseTable,
+        &fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable,
         EmptyProtocol_ResponseEncoder::SendAndReceive(&_encoder, &e));
   }
 
@@ -201,13 +205,14 @@ zx_status_t EmptyProtocol_Stub::Dispatch_(
   switch (ordinal) {
     case internal::kEmptyProtocol_Send_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->Send(::fidl::DecodeAs<::fidl::test::json::Empty>(&decoder, 16));
+      impl_->Send(
+          ::fidl::DecodeAs<::fidl::test::emptystruct::Empty>(&decoder, 16));
       break;
     }
     case internal::kEmptyProtocol_SendAndReceive_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->SendAndReceive(
-          ::fidl::DecodeAs<::fidl::test::json::Empty>(&decoder, 16),
+          ::fidl::DecodeAs<::fidl::test::emptystruct::Empty>(&decoder, 16),
           EmptyProtocol_SendAndReceive_Responder(std::move(response)));
       break;
     }
@@ -218,9 +223,9 @@ zx_status_t EmptyProtocol_Stub::Dispatch_(
   }
   return status;
 }
-void EmptyProtocol_Stub::Receive(::fidl::test::json::Empty e) {
+void EmptyProtocol_Stub::Receive(::fidl::test::emptystruct::Empty e) {
   ::fidl::Encoder _encoder(internal::kEmptyProtocol_Receive_Ordinal);
-  sender_()->Send(&fidl_test_json_EmptyProtocolReceiveEventTable,
+  sender_()->Send(&fidl_test_emptystruct_EmptyProtocolReceiveEventTable,
                   EmptyProtocol_ResponseEncoder::Receive(&_encoder, &e));
 }
 
@@ -229,29 +234,30 @@ EmptyProtocol_SyncProxy::EmptyProtocol_SyncProxy(::zx::channel channel)
 
 EmptyProtocol_SyncProxy::~EmptyProtocol_SyncProxy() = default;
 
-zx_status_t EmptyProtocol_SyncProxy::Send(::fidl::test::json::Empty e) {
+zx_status_t EmptyProtocol_SyncProxy::Send(::fidl::test::emptystruct::Empty e) {
   ::fidl::Encoder _encoder(internal::kEmptyProtocol_Send_Ordinal);
-  return proxy_.Send(&fidl_test_json_EmptyProtocolSendRequestTable,
+  return proxy_.Send(&fidl_test_emptystruct_EmptyProtocolSendRequestTable,
                      EmptyProtocol_RequestEncoder::Send(&_encoder, &e));
 }
 
 zx_status_t EmptyProtocol_SyncProxy::SendAndReceive(
-    ::fidl::test::json::Empty e, ::fidl::test::json::Empty* out_e) {
+    ::fidl::test::emptystruct::Empty e,
+    ::fidl::test::emptystruct::Empty* out_e) {
   ::fidl::Encoder _encoder(internal::kEmptyProtocol_SendAndReceive_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &fidl_test_json_EmptyProtocolSendAndReceiveRequestTable,
-      &fidl_test_json_EmptyProtocolSendAndReceiveResponseTable,
+      &fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable,
+      &fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable,
       EmptyProtocol_RequestEncoder::SendAndReceive(&_encoder, &e), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_e = ::fidl::DecodeAs<::fidl::test::json::Empty>(&decoder_, 16);
+  *out_e = ::fidl::DecodeAs<::fidl::test::emptystruct::Empty>(&decoder_, 16);
   return ZX_OK;
 }
 
 #endif  // __Fuchsia__
 
-}  // namespace json
+}  // namespace emptystruct
 }  // namespace test
 }  // namespace fidl

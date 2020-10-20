@@ -5,27 +5,27 @@
 
 
 
-static const struct FidlCodedHandle Request21fidl_test_json_ParentnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedHandle Request45fidl_test_inheritancewithrecursivedecl_ParentnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
 
-extern const struct FidlCodedStruct fidl_test_json_ParentFirstRequestTable;
-static const struct FidlStructElement Fields33fidl_test_json_ParentFirstRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&Request21fidl_test_json_ParentnonnullableTable)}},
+extern const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+static const struct FidlStructElement Fields57fidl_test_inheritancewithrecursivedecl_ParentFirstRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&Request45fidl_test_inheritancewithrecursivedecl_ParentnonnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct fidl_test_json_ParentFirstRequestTable = {.tag=kFidlTypeStruct, .elements=Fields33fidl_test_json_ParentFirstRequest, .element_count=2u, .size=24u, .name="fidl.test.json/ParentFirstRequest"};
+const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable = {.tag=kFidlTypeStruct, .elements=Fields57fidl_test_inheritancewithrecursivedecl_ParentFirstRequest, .element_count=2u, .size=24u, .name="fidl.test.inheritancewithrecursivedecl/ParentFirstRequest"};
 
-extern const struct FidlCodedStruct fidl_test_json_ChildFirstRequestTable;
-static const struct FidlStructElement Fields32fidl_test_json_ChildFirstRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&Request21fidl_test_json_ParentnonnullableTable)}},
+extern const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
+static const struct FidlStructElement Fields56fidl_test_inheritancewithrecursivedecl_ChildFirstRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&Request45fidl_test_inheritancewithrecursivedecl_ParentnonnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct fidl_test_json_ChildFirstRequestTable = {.tag=kFidlTypeStruct, .elements=Fields32fidl_test_json_ChildFirstRequest, .element_count=2u, .size=24u, .name="fidl.test.json/ChildFirstRequest"};
+const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable = {.tag=kFidlTypeStruct, .elements=Fields56fidl_test_inheritancewithrecursivedecl_ChildFirstRequest, .element_count=2u, .size=24u, .name="fidl.test.inheritancewithrecursivedecl/ChildFirstRequest"};
 
-extern const struct FidlCodedStruct fidl_test_json_ChildSecondRequestTable;
-static const struct FidlStructElement Fields33fidl_test_json_ChildSecondRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&Request21fidl_test_json_ParentnonnullableTable)}},
+extern const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+static const struct FidlStructElement Fields57fidl_test_inheritancewithrecursivedecl_ChildSecondRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&Request45fidl_test_inheritancewithrecursivedecl_ParentnonnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct fidl_test_json_ChildSecondRequestTable = {.tag=kFidlTypeStruct, .elements=Fields33fidl_test_json_ChildSecondRequest, .element_count=2u, .size=24u, .name="fidl.test.json/ChildSecondRequest"};
+const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable = {.tag=kFidlTypeStruct, .elements=Fields57fidl_test_inheritancewithrecursivedecl_ChildSecondRequest, .element_count=2u, .size=24u, .name="fidl.test.inheritancewithrecursivedecl/ChildSecondRequest"};
 
 

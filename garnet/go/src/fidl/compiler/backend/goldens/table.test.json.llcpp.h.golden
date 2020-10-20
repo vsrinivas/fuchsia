@@ -36,7 +36,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace table {
 
 class SimpleTable;
 class ReverseOrdinalTable;
@@ -44,7 +44,7 @@ class OlderSimpleTable;
 class NewerSimpleTable;
 class EmptyTable;
 
-extern "C" const fidl_type_t fidl_test_json_SimpleTableTable;
+extern "C" const fidl_type_t fidl_test_table_SimpleTableTable;
 
 class SimpleTable final {
  public:
@@ -80,7 +80,7 @@ class SimpleTable final {
   SimpleTable(SimpleTable&& other) noexcept = default;
   SimpleTable& operator=(SimpleTable&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &fidl_test_json_SimpleTableTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_table_SimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 96;
@@ -252,7 +252,7 @@ class SimpleTable::UnownedBuilder final {
   SimpleTable::Frame frame_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_ReverseOrdinalTableTable;
+extern "C" const fidl_type_t fidl_test_table_ReverseOrdinalTableTable;
 
 class ReverseOrdinalTable final {
  public:
@@ -302,7 +302,7 @@ class ReverseOrdinalTable final {
       default;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_ReverseOrdinalTableTable;
+      &fidl_test_table_ReverseOrdinalTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 72;
@@ -513,7 +513,7 @@ class ReverseOrdinalTable::UnownedBuilder final {
   ReverseOrdinalTable::Frame frame_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_OlderSimpleTableTable;
+extern "C" const fidl_type_t fidl_test_table_OlderSimpleTableTable;
 
 class OlderSimpleTable final {
  public:
@@ -538,7 +538,7 @@ class OlderSimpleTable final {
   OlderSimpleTable& operator=(OlderSimpleTable&& other) noexcept = default;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_OlderSimpleTableTable;
+      &fidl_test_table_OlderSimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
@@ -669,7 +669,7 @@ class OlderSimpleTable::UnownedBuilder final {
   OlderSimpleTable::Frame frame_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_NewerSimpleTableTable;
+extern "C" const fidl_type_t fidl_test_table_NewerSimpleTableTable;
 
 class NewerSimpleTable final {
  public:
@@ -718,7 +718,7 @@ class NewerSimpleTable final {
   NewerSimpleTable& operator=(NewerSimpleTable&& other) noexcept = default;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_json_NewerSimpleTableTable;
+      &fidl_test_table_NewerSimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 120;
@@ -932,7 +932,7 @@ class NewerSimpleTable::UnownedBuilder final {
   NewerSimpleTable::Frame frame_;
 };
 
-extern "C" const fidl_type_t fidl_test_json_EmptyTableTable;
+extern "C" const fidl_type_t fidl_test_table_EmptyTableTable;
 
 class EmptyTable final {
  public:
@@ -944,7 +944,7 @@ class EmptyTable final {
   EmptyTable(EmptyTable&& other) noexcept = default;
   EmptyTable& operator=(EmptyTable&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &fidl_test_json_EmptyTableTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_table_EmptyTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -1028,7 +1028,7 @@ class EmptyTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
 };
 
-}  // namespace json
+}  // namespace table
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
@@ -1036,63 +1036,64 @@ class EmptyTable::UnownedBuilder final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::SimpleTable>
+struct IsFidlType<::llcpp::fidl::test::table::SimpleTable>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::json::SimpleTable> : public std::true_type {
+struct IsTable<::llcpp::fidl::test::table::SimpleTable>
+    : public std::true_type {};
+template <>
+struct IsTableBuilder<::llcpp::fidl::test::table::SimpleTable::Builder>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::table::SimpleTable>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::table::ReverseOrdinalTable>
+    : public std::true_type {};
+template <>
+struct IsTable<::llcpp::fidl::test::table::ReverseOrdinalTable>
+    : public std::true_type {};
+template <>
+struct IsTableBuilder<::llcpp::fidl::test::table::ReverseOrdinalTable::Builder>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::table::ReverseOrdinalTable>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::table::OlderSimpleTable>
+    : public std::true_type {};
+template <>
+struct IsTable<::llcpp::fidl::test::table::OlderSimpleTable>
+    : public std::true_type {};
+template <>
+struct IsTableBuilder<::llcpp::fidl::test::table::OlderSimpleTable::Builder>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::table::OlderSimpleTable>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::table::NewerSimpleTable>
+    : public std::true_type {};
+template <>
+struct IsTable<::llcpp::fidl::test::table::NewerSimpleTable>
+    : public std::true_type {};
+template <>
+struct IsTableBuilder<::llcpp::fidl::test::table::NewerSimpleTable::Builder>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::table::NewerSimpleTable>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::table::EmptyTable>
+    : public std::true_type {};
+template <>
+struct IsTable<::llcpp::fidl::test::table::EmptyTable> : public std::true_type {
 };
 template <>
-struct IsTableBuilder<::llcpp::fidl::test::json::SimpleTable::Builder>
+struct IsTableBuilder<::llcpp::fidl::test::table::EmptyTable::Builder>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::SimpleTable>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::ReverseOrdinalTable>
-    : public std::true_type {};
-template <>
-struct IsTable<::llcpp::fidl::test::json::ReverseOrdinalTable>
-    : public std::true_type {};
-template <>
-struct IsTableBuilder<::llcpp::fidl::test::json::ReverseOrdinalTable::Builder>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::ReverseOrdinalTable>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::OlderSimpleTable>
-    : public std::true_type {};
-template <>
-struct IsTable<::llcpp::fidl::test::json::OlderSimpleTable>
-    : public std::true_type {};
-template <>
-struct IsTableBuilder<::llcpp::fidl::test::json::OlderSimpleTable::Builder>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::OlderSimpleTable>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::NewerSimpleTable>
-    : public std::true_type {};
-template <>
-struct IsTable<::llcpp::fidl::test::json::NewerSimpleTable>
-    : public std::true_type {};
-template <>
-struct IsTableBuilder<::llcpp::fidl::test::json::NewerSimpleTable::Builder>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::NewerSimpleTable>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::json::EmptyTable>
-    : public std::true_type {};
-template <>
-struct IsTable<::llcpp::fidl::test::json::EmptyTable> : public std::true_type {
-};
-template <>
-struct IsTableBuilder<::llcpp::fidl::test::json::EmptyTable::Builder>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::EmptyTable>);
+    std::is_standard_layout_v<::llcpp::fidl::test::table::EmptyTable>);
 
 }  // namespace fidl
 
@@ -1100,7 +1101,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {}  // namespace json
+namespace table {}  // namespace table
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

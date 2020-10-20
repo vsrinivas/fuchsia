@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.json",
+  "name": "fidl.test.error",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.json/Example",
+      "name": "fidl.test.error/Example",
       "location": {
         "filename": "error.test.fidl",
         "line": 3,
@@ -17,7 +17,7 @@
       },
       "methods": [
         {
-          "ordinal": 841977834905137819,
+          "ordinal": 6333213382893778862,
           "name": "foo",
           "location": {
             "filename": "error.test.fidl",
@@ -45,7 +45,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.error/SomeLongAnonymousPrefix0",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -61,7 +61,7 @@
             {
               "type": {
                 "kind": "identifier",
-                "identifier": "fidl.test.json/Example_foo_Result",
+                "identifier": "fidl.test.error/Example_foo_Result",
                 "nullable": false
               },
               "name": "result",
@@ -77,7 +77,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.json/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.error/SomeLongAnonymousPrefix1",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -96,7 +96,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.error/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "error.test.fidl",
         "line": 4,
@@ -136,7 +136,7 @@
       }
     },
     {
-      "name": "fidl.test.json/Example_foo_Response",
+      "name": "fidl.test.error/Example_foo_Response",
       "location": {
         "filename": "error.test.fidl",
         "line": 4,
@@ -176,7 +176,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.error/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "error.test.fidl",
         "line": 4,
@@ -188,7 +188,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.json/Example_foo_Result",
+            "identifier": "fidl.test.error/Example_foo_Result",
             "nullable": false
           },
           "name": "result",
@@ -220,7 +220,7 @@
   "table_declarations": [],
   "union_declarations": [
     {
-      "name": "fidl.test.json/Example_foo_Result",
+      "name": "fidl.test.error/Example_foo_Result",
       "location": {
         "filename": "error.test.fidl",
         "line": 4,
@@ -240,7 +240,7 @@
           "name": "response",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.json/Example_foo_Response",
+            "identifier": "fidl.test.error/Example_foo_Response",
             "nullable": false
           },
           "location": {
@@ -282,15 +282,15 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.json/Example_foo_Response",
-    "fidl.test.json/Example_foo_Result",
-    "fidl.test.json/Example"
+    "fidl.test.error/Example_foo_Response",
+    "fidl.test.error/Example_foo_Result",
+    "fidl.test.error/Example"
   ],
   "declarations": {
-    "fidl.test.json/Example": "interface",
-    "fidl.test.json/SomeLongAnonymousPrefix0": "struct",
-    "fidl.test.json/Example_foo_Response": "struct",
-    "fidl.test.json/SomeLongAnonymousPrefix1": "struct",
-    "fidl.test.json/Example_foo_Result": "union"
+    "fidl.test.error/Example": "interface",
+    "fidl.test.error/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.error/Example_foo_Response": "struct",
+    "fidl.test.error/SomeLongAnonymousPrefix1": "struct",
+    "fidl.test.error/Example_foo_Result": "union"
   }
 }

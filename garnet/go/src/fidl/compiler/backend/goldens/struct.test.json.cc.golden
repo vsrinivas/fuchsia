@@ -5,10 +5,10 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace fidl {
 namespace test {
-namespace json {
+namespace structs {
 
-extern "C" const fidl_type_t fidl_test_json_SimpleTable;
-const fidl_type_t* Simple::FidlType = &fidl_test_json_SimpleTable;
+extern "C" const fidl_type_t fidl_test_structs_SimpleTable;
+const fidl_type_t* Simple::FidlType = &fidl_test_structs_SimpleTable;
 
 void Simple::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<Simple>::value) {
@@ -35,8 +35,8 @@ zx_status_t Simple::Clone(Simple* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t fidl_test_json_BasicStructTable;
-const fidl_type_t* BasicStruct::FidlType = &fidl_test_json_BasicStructTable;
+extern "C" const fidl_type_t fidl_test_structs_BasicStructTable;
+const fidl_type_t* BasicStruct::FidlType = &fidl_test_structs_BasicStructTable;
 
 void BasicStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<BasicStruct>::value) {
@@ -66,6 +66,6 @@ zx_status_t BasicStruct::Clone(BasicStruct* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-}  // namespace json
+}  // namespace structs
 }  // namespace test
 }  // namespace fidl

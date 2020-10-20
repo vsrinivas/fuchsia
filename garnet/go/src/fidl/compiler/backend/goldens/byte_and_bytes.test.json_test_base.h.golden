@@ -3,6 +3,10 @@
 #pragma once
 
 #include <byte_and_bytes.test.json.h>
-namespace example {
+namespace fidl {
+namespace test {
+namespace byteandbytes {
 namespace testing {}  // namespace testing
-}  // namespace example
+}  // namespace byteandbytes
+}  // namespace test
+}  // namespace fidl

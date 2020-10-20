@@ -3,8 +3,10 @@
 #pragma once
 
 #include <consts.test.json.h>
+namespace fidl {
 namespace test {
-namespace name {
+namespace consts {
 namespace testing {}  // namespace testing
-}  // namespace name
+}  // namespace consts
 }  // namespace test
+}  // namespace fidl

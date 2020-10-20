@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "example",
+  "name": "fidl.test.byteandbytes",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -10,7 +10,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "example/ByteAndBytes",
+      "name": "fidl.test.byteandbytes/ByteAndBytes",
       "location": {
         "filename": "byte_and_bytes.test.fidl",
         "line": 3,
@@ -119,9 +119,9 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "example/ByteAndBytes"
+    "fidl.test.byteandbytes/ByteAndBytes"
   ],
   "declarations": {
-    "example/ByteAndBytes": "struct"
+    "fidl.test.byteandbytes/ByteAndBytes": "struct"
   }
 }

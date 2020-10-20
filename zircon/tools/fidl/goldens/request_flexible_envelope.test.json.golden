@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.json",
+  "name": "fidl.test.requestflexibleenvelope",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.json/Protocol",
+      "name": "fidl.test.requestflexibleenvelope/Protocol",
       "location": {
         "filename": "request_flexible_envelope.test.fidl",
         "line": 13,
@@ -17,7 +17,7 @@
       },
       "methods": [
         {
-          "ordinal": 8264567585134801538,
+          "ordinal": 4346871690266280218,
           "name": "RequestStrictResponseFlexible",
           "location": {
             "filename": "request_flexible_envelope.test.fidl",
@@ -30,7 +30,7 @@
             {
               "type": {
                 "kind": "identifier",
-                "identifier": "fidl.test.json/StrictFoo",
+                "identifier": "fidl.test.requestflexibleenvelope/StrictFoo",
                 "nullable": false
               },
               "name": "s",
@@ -46,7 +46,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix0",
           "maybe_request_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -62,7 +62,7 @@
             {
               "type": {
                 "kind": "identifier",
-                "identifier": "fidl.test.json/FlexibleFoo",
+                "identifier": "fidl.test.requestflexibleenvelope/FlexibleFoo",
                 "nullable": false
               },
               "name": "f",
@@ -78,7 +78,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.json/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix1",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -92,7 +92,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 4801763909694511442,
+          "ordinal": 4374294377437089654,
           "name": "RequestFlexibleResponseStrict",
           "location": {
             "filename": "request_flexible_envelope.test.fidl",
@@ -105,7 +105,7 @@
             {
               "type": {
                 "kind": "identifier",
-                "identifier": "fidl.test.json/FlexibleFoo",
+                "identifier": "fidl.test.requestflexibleenvelope/FlexibleFoo",
                 "nullable": false
               },
               "name": "s",
@@ -121,7 +121,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix2",
+          "maybe_request_payload": "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix2",
           "maybe_request_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -137,7 +137,7 @@
             {
               "type": {
                 "kind": "identifier",
-                "identifier": "fidl.test.json/StrictFoo",
+                "identifier": "fidl.test.requestflexibleenvelope/StrictFoo",
                 "nullable": false
               },
               "name": "f",
@@ -153,7 +153,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.json/SomeLongAnonymousPrefix3",
+          "maybe_response_payload": "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix3",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -172,7 +172,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "request_flexible_envelope.test.fidl",
         "line": 14,
@@ -184,7 +184,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.json/StrictFoo",
+            "identifier": "fidl.test.requestflexibleenvelope/StrictFoo",
             "nullable": false
           },
           "name": "s",
@@ -213,7 +213,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "request_flexible_envelope.test.fidl",
         "line": 14,
@@ -225,7 +225,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.json/FlexibleFoo",
+            "identifier": "fidl.test.requestflexibleenvelope/FlexibleFoo",
             "nullable": false
           },
           "name": "f",
@@ -254,7 +254,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix2",
+      "name": "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix2",
       "location": {
         "filename": "request_flexible_envelope.test.fidl",
         "line": 15,
@@ -266,7 +266,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.json/FlexibleFoo",
+            "identifier": "fidl.test.requestflexibleenvelope/FlexibleFoo",
             "nullable": false
           },
           "name": "s",
@@ -295,7 +295,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix3",
+      "name": "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix3",
       "location": {
         "filename": "request_flexible_envelope.test.fidl",
         "line": 15,
@@ -307,7 +307,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.json/StrictFoo",
+            "identifier": "fidl.test.requestflexibleenvelope/StrictFoo",
             "nullable": false
           },
           "name": "f",
@@ -339,7 +339,7 @@
   "table_declarations": [],
   "union_declarations": [
     {
-      "name": "fidl.test.json/FlexibleFoo",
+      "name": "fidl.test.requestflexibleenvelope/FlexibleFoo",
       "location": {
         "filename": "request_flexible_envelope.test.fidl",
         "line": 3,
@@ -392,7 +392,7 @@
       }
     },
     {
-      "name": "fidl.test.json/StrictFoo",
+      "name": "fidl.test.requestflexibleenvelope/StrictFoo",
       "location": {
         "filename": "request_flexible_envelope.test.fidl",
         "line": 8,
@@ -447,17 +447,17 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.json/StrictFoo",
-    "fidl.test.json/FlexibleFoo",
-    "fidl.test.json/Protocol"
+    "fidl.test.requestflexibleenvelope/StrictFoo",
+    "fidl.test.requestflexibleenvelope/FlexibleFoo",
+    "fidl.test.requestflexibleenvelope/Protocol"
   ],
   "declarations": {
-    "fidl.test.json/Protocol": "interface",
-    "fidl.test.json/SomeLongAnonymousPrefix0": "struct",
-    "fidl.test.json/SomeLongAnonymousPrefix1": "struct",
-    "fidl.test.json/SomeLongAnonymousPrefix2": "struct",
-    "fidl.test.json/SomeLongAnonymousPrefix3": "struct",
-    "fidl.test.json/FlexibleFoo": "union",
-    "fidl.test.json/StrictFoo": "union"
+    "fidl.test.requestflexibleenvelope/Protocol": "interface",
+    "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix1": "struct",
+    "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix2": "struct",
+    "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix3": "struct",
+    "fidl.test.requestflexibleenvelope/FlexibleFoo": "union",
+    "fidl.test.requestflexibleenvelope/StrictFoo": "union"
   }
 }

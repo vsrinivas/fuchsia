@@ -5,7 +5,7 @@
 #include <inheritance.test.json.h>
 namespace fidl {
 namespace test {
-namespace json {
+namespace inheritance {
 namespace testing {
 
 class super_TestBase : public super {
@@ -26,6 +26,6 @@ class sub_TestBase : public sub {
   }
 };
 }  // namespace testing
-}  // namespace json
+}  // namespace inheritance
 }  // namespace test
 }  // namespace fidl

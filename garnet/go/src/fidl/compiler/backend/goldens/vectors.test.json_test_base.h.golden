@@ -5,8 +5,8 @@
 #include <vectors.test.json.h>
 namespace fidl {
 namespace test {
-namespace json {
+namespace vectors {
 namespace testing {}  // namespace testing
-}  // namespace json
+}  // namespace vectors
 }  // namespace test
 }  // namespace fidl

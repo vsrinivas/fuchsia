@@ -3,6 +3,8 @@
 #include <enum.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+namespace fidl {
 namespace test {
-namespace name {}  // namespace name
+namespace enum_ {}  // namespace enum_
 }  // namespace test
+}  // namespace fidl

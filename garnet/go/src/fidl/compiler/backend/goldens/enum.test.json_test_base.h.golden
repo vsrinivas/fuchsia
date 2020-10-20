@@ -3,8 +3,10 @@
 #pragma once
 
 #include <enum.test.json.h>
+namespace fidl {
 namespace test {
-namespace name {
+namespace enum_ {
 namespace testing {}  // namespace testing
-}  // namespace name
+}  // namespace enum_
 }  // namespace test
+}  // namespace fidl

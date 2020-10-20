@@ -146,33 +146,33 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
         self.client.into_channel()
     }
     pub fn no_request_no_response(&mut self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x3931f96bc77fba8)
+        self.client.send(&mut (), 0x6ad894147d0c6ba4)
     }
     pub fn no_request_empty_response(&mut self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
-        self.client.send_query(&mut (), 0x706ec7bd335005f9, ___deadline)
+        self.client.send_query(&mut (), 0x4068f26bf6d868ae, ___deadline)
     }
     pub fn no_request_with_response(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(String), fidl::Error> {
-        self.client.send_query(&mut (), 0x4625ad5934067a48, ___deadline)
+        self.client.send_query(&mut (), 0x447e655905ccfbf4, ___deadline)
     }
     pub fn with_request_no_response(&mut self, mut arg: &str) -> Result<(), fidl::Error> {
-        self.client.send(&mut (arg), 0x46e5095902913025)
+        self.client.send(&mut (arg), 0x7cb47b2f9e76d17d)
     }
     pub fn with_request_empty_response(
         &mut self,
         mut arg: &str,
         ___deadline: zx::Time,
     ) -> Result<(), fidl::Error> {
-        self.client.send_query(&mut (arg), 0x180c481d4a15967, ___deadline)
+        self.client.send_query(&mut (arg), 0x65eb512ff0e1c07e, ___deadline)
     }
     pub fn with_request_with_response(
         &mut self,
         mut arg: &str,
         ___deadline: zx::Time,
     ) -> Result<(String), fidl::Error> {
-        self.client.send_query(&mut (arg), 0x553860267eceec0, ___deadline)
+        self.client.send_query(&mut (arg), 0x1d323510d4447cf1, ___deadline)
     }
 }
 
@@ -243,32 +243,32 @@ impl WithAndWithoutRequestResponseProxy {
 
 impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestResponseProxy {
     fn no_request_no_response(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x3931f96bc77fba8)
+        self.client.send(&mut (), 0x6ad894147d0c6ba4)
     }
     type NoRequestEmptyResponseResponseFut = fidl::client::QueryResponseFut<()>;
     fn no_request_empty_response(&self) -> Self::NoRequestEmptyResponseResponseFut {
-        self.client.send_query(&mut (), 0x706ec7bd335005f9)
+        self.client.send_query(&mut (), 0x4068f26bf6d868ae)
     }
     type NoRequestWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;
     fn no_request_with_response(&self) -> Self::NoRequestWithResponseResponseFut {
-        self.client.send_query(&mut (), 0x4625ad5934067a48)
+        self.client.send_query(&mut (), 0x447e655905ccfbf4)
     }
     fn with_request_no_response(&self, mut arg: &str) -> Result<(), fidl::Error> {
-        self.client.send(&mut (arg), 0x46e5095902913025)
+        self.client.send(&mut (arg), 0x7cb47b2f9e76d17d)
     }
     type WithRequestEmptyResponseResponseFut = fidl::client::QueryResponseFut<()>;
     fn with_request_empty_response(
         &self,
         mut arg: &str,
     ) -> Self::WithRequestEmptyResponseResponseFut {
-        self.client.send_query(&mut (arg), 0x180c481d4a15967)
+        self.client.send_query(&mut (arg), 0x65eb512ff0e1c07e)
     }
     type WithRequestWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;
     fn with_request_with_response(
         &self,
         mut arg: &str,
     ) -> Self::WithRequestWithResponseResponseFut {
-        self.client.send_query(&mut (arg), 0x553860267eceec0)
+        self.client.send_query(&mut (arg), 0x1d323510d4447cf1)
     }
     type OnEmptyResponseResponseFut = fidl::client::QueryResponseFut<()>;
     type OnWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;
@@ -304,9 +304,9 @@ impl futures::Stream for WithAndWithoutRequestResponseEventStream {
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
         std::task::Poll::Ready(Some(match tx_header.ordinal() {
-			0x42e90e9a86944b3 => {
+			0x125c87a592bff029 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseOnEmptyResponseEvent");
+				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseOnEmptyResponseEvent");
 				fidl::trace_blob!("fidl:blob", "decode", bytes);
 				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
 				fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
@@ -314,9 +314,9 @@ impl futures::Stream for WithAndWithoutRequestResponseEventStream {
 					WithAndWithoutRequestResponseEvent::OnEmptyResponse {}
 				))
 			}
-			0x2a9767b3ae6c2b09 => {
+			0x177adc0a3ee346c2 => {
 				let mut out_tuple: (String,) = fidl::encoding::Decodable::new_empty();
-				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseOnWithResponseEvent");
+				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseOnWithResponseEvent");
 				fidl::trace_blob!("fidl:blob", "decode", bytes);
 				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
 				fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
@@ -544,9 +544,9 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
             }
 
             std::task::Poll::Ready(Some(match header.ordinal() {
-				0x3931f96bc77fba8 => {
+				0x6ad894147d0c6ba4 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestNoResponseRequest");
+					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestNoResponseRequest");
 					fidl::trace_blob!("fidl:blob", "decode", bytes);
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -556,9 +556,9 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 
 					Ok(WithAndWithoutRequestResponseRequest::NoRequestNoResponse {control_handle,})
 				}
-				0x706ec7bd335005f9 => {
+				0x4068f26bf6d868ae => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseRequest");
+					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestEmptyResponseRequest");
 					fidl::trace_blob!("fidl:blob", "decode", bytes);
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -572,9 +572,9 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 								ordinal: header.ordinal(),
 							},})
 				}
-				0x4625ad5934067a48 => {
+				0x447e655905ccfbf4 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestWithResponseRequest");
+					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseRequest");
 					fidl::trace_blob!("fidl:blob", "decode", bytes);
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -588,9 +588,9 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 								ordinal: header.ordinal(),
 							},})
 				}
-				0x46e5095902913025 => {
+				0x7cb47b2f9e76d17d => {
 					let mut req: (String) = fidl::encoding::Decodable::new_empty();
-					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestNoResponseRequest");
+					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest");
 					fidl::trace_blob!("fidl:blob", "decode", bytes);
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -600,9 +600,9 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 
 					Ok(WithAndWithoutRequestResponseRequest::WithRequestNoResponse {arg: req,control_handle,})
 				}
-				0x180c481d4a15967 => {
+				0x65eb512ff0e1c07e => {
 					let mut req: (String) = fidl::encoding::Decodable::new_empty();
-					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest");
+					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest");
 					fidl::trace_blob!("fidl:blob", "decode", bytes);
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -616,9 +616,9 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 								ordinal: header.ordinal(),
 							},})
 				}
-				0x553860267eceec0 => {
+				0x1d323510d4447cf1 => {
 					let mut req: (String) = fidl::encoding::Decodable::new_empty();
-					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestWithResponseRequest");
+					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest");
 					fidl::trace_blob!("fidl:blob", "decode", bytes);
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -664,54 +664,54 @@ impl WithAndWithoutRequestResponseRequestMessage {
         let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
         match header.ordinal() {
-			0x3931f96bc77fba8 => {
+			0x6ad894147d0c6ba4 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestNoResponseRequest");
+				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestNoResponseRequest");
 				fidl::trace_blob!("fidl:blob", "decode", bytes);
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 				fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
 				Ok(WithAndWithoutRequestResponseRequestMessage::NoRequestNoResponse {})
 			}
-			0x706ec7bd335005f9 => {
+			0x4068f26bf6d868ae => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseRequest");
+				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestEmptyResponseRequest");
 				fidl::trace_blob!("fidl:blob", "decode", bytes);
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 				fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
 				Ok(WithAndWithoutRequestResponseRequestMessage::NoRequestEmptyResponse {tx_id: header.tx_id().into(),})
 			}
-			0x4625ad5934067a48 => {
+			0x447e655905ccfbf4 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestWithResponseRequest");
+				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseRequest");
 				fidl::trace_blob!("fidl:blob", "decode", bytes);
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 				fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
 				Ok(WithAndWithoutRequestResponseRequestMessage::NoRequestWithResponse {tx_id: header.tx_id().into(),})
 			}
-			0x46e5095902913025 => {
+			0x7cb47b2f9e76d17d => {
 				let mut out_tuple: (String,) = fidl::encoding::Decodable::new_empty();
-				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestNoResponseRequest");
+				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest");
 				fidl::trace_blob!("fidl:blob", "decode", bytes);
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 				fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
 				Ok(WithAndWithoutRequestResponseRequestMessage::WithRequestNoResponse {arg: out_tuple.0,})
 			}
-			0x180c481d4a15967 => {
+			0x65eb512ff0e1c07e => {
 				let mut out_tuple: (String,) = fidl::encoding::Decodable::new_empty();
-				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest");
+				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest");
 				fidl::trace_blob!("fidl:blob", "decode", bytes);
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 				fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
 				Ok(WithAndWithoutRequestResponseRequestMessage::WithRequestEmptyResponse {arg: out_tuple.0,tx_id: header.tx_id().into(),})
 			}
-			0x553860267eceec0 => {
+			0x1d323510d4447cf1 => {
 				let mut out_tuple: (String,) = fidl::encoding::Decodable::new_empty();
-				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestWithResponseRequest");
+				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest");
 				fidl::trace_blob!("fidl:blob", "decode", bytes);
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 				fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
@@ -855,10 +855,10 @@ impl WithAndWithoutRequestResponseEncoder {
         out_bytes: &'a mut Vec<u8>,
         out_handles: &'a mut Vec<fidl::Handle>,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x3931f96bc77fba8);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x6ad894147d0c6ba4);
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestNoResponseRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestNoResponseRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -869,10 +869,10 @@ impl WithAndWithoutRequestResponseEncoder {
         out_handles: &'a mut Vec<fidl::Handle>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x706ec7bd335005f9);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x4068f26bf6d868ae);
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestEmptyResponseRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -883,11 +883,11 @@ impl WithAndWithoutRequestResponseEncoder {
         out_handles: &'a mut Vec<fidl::Handle>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x706ec7bd335005f9);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x4068f26bf6d868ae);
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestEmptyResponseResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -899,10 +899,10 @@ impl WithAndWithoutRequestResponseEncoder {
         out_handles: &'a mut Vec<fidl::Handle>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x4625ad5934067a48);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x447e655905ccfbf4);
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestWithResponseRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -914,11 +914,11 @@ impl WithAndWithoutRequestResponseEncoder {
         tx_id: u32,
         mut in_ret: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x4625ad5934067a48);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x447e655905ccfbf4);
         let mut body = (in_ret,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestWithResponseResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -930,10 +930,10 @@ impl WithAndWithoutRequestResponseEncoder {
         out_handles: &'a mut Vec<fidl::Handle>,
         mut in_arg: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x46e5095902913025);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x7cb47b2f9e76d17d);
         let mut body = (in_arg,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestNoResponseRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -945,10 +945,10 @@ impl WithAndWithoutRequestResponseEncoder {
         tx_id: u32,
         mut in_arg: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x180c481d4a15967);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x65eb512ff0e1c07e);
         let mut body = (in_arg,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -959,11 +959,11 @@ impl WithAndWithoutRequestResponseEncoder {
         out_handles: &'a mut Vec<fidl::Handle>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x180c481d4a15967);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x65eb512ff0e1c07e);
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -976,10 +976,10 @@ impl WithAndWithoutRequestResponseEncoder {
         tx_id: u32,
         mut in_arg: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x553860267eceec0);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x1d323510d4447cf1);
         let mut body = (in_arg,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestWithResponseRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -991,11 +991,11 @@ impl WithAndWithoutRequestResponseEncoder {
         tx_id: u32,
         mut in_ret: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x553860267eceec0);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x1d323510d4447cf1);
         let mut body = (in_ret,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestWithResponseResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -1006,11 +1006,11 @@ impl WithAndWithoutRequestResponseEncoder {
         out_bytes: &'a mut Vec<u8>,
         out_handles: &'a mut Vec<fidl::Handle>,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x42e90e9a86944b3);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x125c87a592bff029);
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseOnEmptyResponseResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseOnEmptyResponseResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -1022,11 +1022,11 @@ impl WithAndWithoutRequestResponseEncoder {
         out_handles: &'a mut Vec<fidl::Handle>,
         mut in_ret: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x2a9767b3ae6c2b09);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x177adc0a3ee346c2);
         let mut body = (in_ret,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseOnWithResponseResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseOnWithResponseResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -1052,7 +1052,7 @@ impl WithAndWithoutRequestResponseControlHandle {
         let mut response = ();
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(0, 0x42e90e9a86944b3),
+            header: fidl::encoding::TransactionHeader::new(0, 0x125c87a592bff029),
             body: &mut response,
         };
 
@@ -1070,7 +1070,7 @@ impl WithAndWithoutRequestResponseControlHandle {
         let mut response = (ret);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(0, 0x2a9767b3ae6c2b09),
+            header: fidl::encoding::TransactionHeader::new(0, 0x177adc0a3ee346c2),
             body: &mut response,
         };
 
@@ -1148,7 +1148,7 @@ impl WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestEmptyResponseResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -1226,7 +1226,7 @@ impl WithAndWithoutRequestResponseNoRequestWithResponseResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestWithResponseResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -1304,7 +1304,7 @@ impl WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -1382,7 +1382,7 @@ impl WithAndWithoutRequestResponseWithRequestWithResponseResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestWithResponseResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -1437,19 +1437,19 @@ impl WithErrorSyntaxSynchronousProxy {
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error> {
-        self.client.send_query(&mut (), 0x592157d505db2bcf, ___deadline)
+        self.client.send_query(&mut (), 0x3784d38864674290, ___deadline)
     }
     pub fn error_as_primitive(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {
-        self.client.send_query(&mut (), 0x20cf80ad7d9b60be, ___deadline)
+        self.client.send_query(&mut (), 0x2f7c390f3cdef4ce, ___deadline)
     }
     pub fn error_as_enum(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error> {
-        self.client.send_query(&mut (), 0x3fcd36560f812e7f, ___deadline)
+        self.client.send_query(&mut (), 0x8b550d7c29f740c, ___deadline)
     }
 }
 
@@ -1513,17 +1513,17 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
     type ResponseAsStructResponseFut =
         fidl::client::QueryResponseFut<(WithErrorSyntaxResponseAsStructResult)>;
     fn response_as_struct(&self) -> Self::ResponseAsStructResponseFut {
-        self.client.send_query(&mut (), 0x592157d505db2bcf)
+        self.client.send_query(&mut (), 0x3784d38864674290)
     }
     type ErrorAsPrimitiveResponseFut =
         fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsPrimitiveResult)>;
     fn error_as_primitive(&self) -> Self::ErrorAsPrimitiveResponseFut {
-        self.client.send_query(&mut (), 0x20cf80ad7d9b60be)
+        self.client.send_query(&mut (), 0x2f7c390f3cdef4ce)
     }
     type ErrorAsEnumResponseFut =
         fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsEnumResult)>;
     fn error_as_enum(&self) -> Self::ErrorAsEnumResponseFut {
-        self.client.send_query(&mut (), 0x3fcd36560f812e7f)
+        self.client.send_query(&mut (), 0x8b550d7c29f740c)
     }
 }
 
@@ -1719,9 +1719,9 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
             }
 
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x592157d505db2bcf => {
+                0x3784d38864674290 => {
                     let mut req: () = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxResponseAsStructRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxResponseAsStructRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -1735,9 +1735,9 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
                         },
                     })
                 }
-                0x20cf80ad7d9b60be => {
+                0x2f7c390f3cdef4ce => {
                     let mut req: () = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxErrorAsPrimitiveRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxErrorAsPrimitiveRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -1751,9 +1751,9 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
                         },
                     })
                 }
-                0x3fcd36560f812e7f => {
+                0x8b550d7c29f740c => {
                     let mut req: () = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxErrorAsEnumRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxErrorAsEnumRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -1797,9 +1797,9 @@ impl WithErrorSyntaxRequestMessage {
         let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
         match header.ordinal() {
-            0x592157d505db2bcf => {
+            0x3784d38864674290 => {
                 let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxResponseAsStructRequest");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxResponseAsStructRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &header,
@@ -1811,9 +1811,9 @@ impl WithErrorSyntaxRequestMessage {
 
                 Ok(WithErrorSyntaxRequestMessage::ResponseAsStruct { tx_id: header.tx_id().into() })
             }
-            0x20cf80ad7d9b60be => {
+            0x2f7c390f3cdef4ce => {
                 let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxErrorAsPrimitiveRequest");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxErrorAsPrimitiveRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &header,
@@ -1825,9 +1825,9 @@ impl WithErrorSyntaxRequestMessage {
 
                 Ok(WithErrorSyntaxRequestMessage::ErrorAsPrimitive { tx_id: header.tx_id().into() })
             }
-            0x3fcd36560f812e7f => {
+            0x8b550d7c29f740c => {
                 let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxErrorAsEnumRequest");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxErrorAsEnumRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &header,
@@ -1899,10 +1899,10 @@ impl WithErrorSyntaxEncoder {
         out_handles: &'a mut Vec<fidl::Handle>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x592157d505db2bcf);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3784d38864674290);
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxResponseAsStructRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxResponseAsStructRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -1914,11 +1914,11 @@ impl WithErrorSyntaxEncoder {
         tx_id: u32,
         mut in_result: &mut WithErrorSyntaxResponseAsStructResult,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x592157d505db2bcf);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3784d38864674290);
         let mut body = (in_result,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxResponseAsStructResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxResponseAsStructResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -1930,10 +1930,10 @@ impl WithErrorSyntaxEncoder {
         out_handles: &'a mut Vec<fidl::Handle>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x20cf80ad7d9b60be);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x2f7c390f3cdef4ce);
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxErrorAsPrimitiveRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxErrorAsPrimitiveRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -1945,11 +1945,11 @@ impl WithErrorSyntaxEncoder {
         tx_id: u32,
         mut in_result: &mut WithErrorSyntaxErrorAsPrimitiveResult,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x20cf80ad7d9b60be);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x2f7c390f3cdef4ce);
         let mut body = (in_result,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxErrorAsPrimitiveResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxErrorAsPrimitiveResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -1961,10 +1961,10 @@ impl WithErrorSyntaxEncoder {
         out_handles: &'a mut Vec<fidl::Handle>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3fcd36560f812e7f);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x8b550d7c29f740c);
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxErrorAsEnumRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxErrorAsEnumRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -1976,11 +1976,11 @@ impl WithErrorSyntaxEncoder {
         tx_id: u32,
         mut in_result: &mut WithErrorSyntaxErrorAsEnumResult,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3fcd36560f812e7f);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x8b550d7c29f740c);
         let mut body = (in_result,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxErrorAsEnumResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxErrorAsEnumResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -2076,7 +2076,7 @@ impl WithErrorSyntaxResponseAsStructResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxResponseAsStructResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxResponseAsStructResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -2163,7 +2163,7 @@ impl WithErrorSyntaxErrorAsPrimitiveResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxErrorAsPrimitiveResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxErrorAsPrimitiveResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -2250,7 +2250,7 @@ impl WithErrorSyntaxErrorAsEnumResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxErrorAsEnumResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithErrorSyntaxErrorAsEnumResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -2300,7 +2300,7 @@ impl ChannelProtocolSynchronousProxy {
         self.client.into_channel()
     }
     pub fn method_a(&mut self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
-        self.client.send(&mut (a, b), 0x1b1e059b3f02bffc)
+        self.client.send(&mut (a, b), 0x7d92c10fb2d002e)
     }
     pub fn method_b(
         &mut self,
@@ -2308,14 +2308,14 @@ impl ChannelProtocolSynchronousProxy {
         mut b: i64,
         ___deadline: zx::Time,
     ) -> Result<(i64), fidl::Error> {
-        self.client.send_query(&mut (a, b), 0x5db17a61464744a3, ___deadline)
+        self.client.send_query(&mut (a, b), 0x5da1d2ed00055cea, ___deadline)
     }
     pub fn mutate_socket(
         &mut self,
         mut a: fidl::Socket,
         ___deadline: zx::Time,
     ) -> Result<(fidl::Socket), fidl::Error> {
-        self.client.send_query(&mut (a), 0x36caa6fff7569577, ___deadline)
+        self.client.send_query(&mut (a), 0x7dd036a18b33b76a, ___deadline)
     }
 }
 
@@ -2374,16 +2374,16 @@ impl ChannelProtocolProxy {
 
 impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
     fn method_a(&self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
-        self.client.send(&mut (a, b), 0x1b1e059b3f02bffc)
+        self.client.send(&mut (a, b), 0x7d92c10fb2d002e)
     }
     type EventAResponseFut = fidl::client::QueryResponseFut<(i64, i64)>;
     type MethodBResponseFut = fidl::client::QueryResponseFut<(i64)>;
     fn method_b(&self, mut a: i64, mut b: i64) -> Self::MethodBResponseFut {
-        self.client.send_query(&mut (a, b), 0x5db17a61464744a3)
+        self.client.send_query(&mut (a, b), 0x5da1d2ed00055cea)
     }
     type MutateSocketResponseFut = fidl::client::QueryResponseFut<(fidl::Socket)>;
     fn mutate_socket(&self, mut a: fidl::Socket) -> Self::MutateSocketResponseFut {
-        self.client.send_query(&mut (a), 0x36caa6fff7569577)
+        self.client.send_query(&mut (a), 0x7dd036a18b33b76a)
     }
 }
 
@@ -2417,9 +2417,9 @@ impl futures::Stream for ChannelProtocolEventStream {
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
         std::task::Poll::Ready(Some(match tx_header.ordinal() {
-            0x2558b206a254d8a0 => {
+            0x52c2fa481a687dfa => {
                 let mut out_tuple: (i64, i64) = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolEventAEvent");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolEventAEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &tx_header,
@@ -2594,9 +2594,9 @@ impl futures::Stream for ChannelProtocolRequestStream {
             }
 
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x1b1e059b3f02bffc => {
+                0x7d92c10fb2d002e => {
                     let mut req: (i64, i64) = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMethodARequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMethodARequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -2604,9 +2604,9 @@ impl futures::Stream for ChannelProtocolRequestStream {
 
                     Ok(ChannelProtocolRequest::MethodA { a: req.0, b: req.1, control_handle })
                 }
-                0x5db17a61464744a3 => {
+                0x5da1d2ed00055cea => {
                     let mut req: (i64, i64) = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMethodBRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMethodBRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -2622,9 +2622,9 @@ impl futures::Stream for ChannelProtocolRequestStream {
                         },
                     })
                 }
-                0x36caa6fff7569577 => {
+                0x7dd036a18b33b76a => {
                     let mut req: (fidl::Socket) = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMutateSocketRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMutateSocketRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -2669,9 +2669,9 @@ impl ChannelProtocolRequestMessage {
         let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
         match header.ordinal() {
-            0x1b1e059b3f02bffc => {
+            0x7d92c10fb2d002e => {
                 let mut out_tuple: (i64, i64) = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMethodARequest");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMethodARequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &header,
@@ -2683,9 +2683,9 @@ impl ChannelProtocolRequestMessage {
 
                 Ok(ChannelProtocolRequestMessage::MethodA { a: out_tuple.0, b: out_tuple.1 })
             }
-            0x5db17a61464744a3 => {
+            0x5da1d2ed00055cea => {
                 let mut out_tuple: (i64, i64) = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMethodBRequest");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMethodBRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &header,
@@ -2701,9 +2701,9 @@ impl ChannelProtocolRequestMessage {
                     tx_id: header.tx_id().into(),
                 })
             }
-            0x36caa6fff7569577 => {
+            0x7dd036a18b33b76a => {
                 let mut out_tuple: (fidl::Socket,) = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMutateSocketRequest");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMutateSocketRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &header,
@@ -2781,10 +2781,10 @@ impl ChannelProtocolEncoder {
         mut in_a: i64,
         mut in_b: i64,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x1b1e059b3f02bffc);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x7d92c10fb2d002e);
         let mut body = (in_a, in_b);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMethodARequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMethodARequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -2796,11 +2796,11 @@ impl ChannelProtocolEncoder {
         mut in_a: i64,
         mut in_b: i64,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x2558b206a254d8a0);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x52c2fa481a687dfa);
         let mut body = (in_a, in_b);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolEventAResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolEventAResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -2814,10 +2814,10 @@ impl ChannelProtocolEncoder {
         mut in_a: i64,
         mut in_b: i64,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x5db17a61464744a3);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x5da1d2ed00055cea);
         let mut body = (in_a, in_b);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMethodBRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMethodBRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -2829,11 +2829,11 @@ impl ChannelProtocolEncoder {
         tx_id: u32,
         mut in_result: i64,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x5db17a61464744a3);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x5da1d2ed00055cea);
         let mut body = (in_result,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMethodBResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMethodBResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -2846,10 +2846,10 @@ impl ChannelProtocolEncoder {
         tx_id: u32,
         mut in_a: fidl::Socket,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x36caa6fff7569577);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x7dd036a18b33b76a);
         let mut body = (in_a,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMutateSocketRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMutateSocketRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -2861,11 +2861,11 @@ impl ChannelProtocolEncoder {
         tx_id: u32,
         mut in_b: fidl::Socket,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x36caa6fff7569577);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x7dd036a18b33b76a);
         let mut body = (in_b,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMutateSocketResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMutateSocketResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -2891,7 +2891,7 @@ impl ChannelProtocolControlHandle {
         let mut response = (a, b);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(0, 0x2558b206a254d8a0),
+            header: fidl::encoding::TransactionHeader::new(0, 0x52c2fa481a687dfa),
             body: &mut response,
         };
 
@@ -2969,7 +2969,7 @@ impl ChannelProtocolMethodBResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMethodBResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMethodBResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -3047,7 +3047,7 @@ impl ChannelProtocolMutateSocketResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMutateSocketResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMutateSocketResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -3100,10 +3100,10 @@ impl TransitionalSynchronousProxy {
         self.client.into_channel()
     }
     pub fn request(&mut self, mut x: i64, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
-        self.client.send_query(&mut (x), 0x74cf6772aaa991e2, ___deadline)
+        self.client.send_query(&mut (x), 0x62d345e621780ee8, ___deadline)
     }
     pub fn one_way(&mut self, mut x: i64) -> Result<(), fidl::Error> {
-        self.client.send(&mut (x), 0x41bb88b33c2ecd62)
+        self.client.send(&mut (x), 0xf99bc4b26bc9ea5)
     }
 }
 
@@ -3157,10 +3157,10 @@ impl TransitionalProxy {
 impl TransitionalProxyInterface for TransitionalProxy {
     type RequestResponseFut = fidl::client::QueryResponseFut<(i64)>;
     fn request(&self, mut x: i64) -> Self::RequestResponseFut {
-        self.client.send_query(&mut (x), 0x74cf6772aaa991e2)
+        self.client.send_query(&mut (x), 0x62d345e621780ee8)
     }
     fn one_way(&self, mut x: i64) -> Result<(), fidl::Error> {
-        self.client.send(&mut (x), 0x41bb88b33c2ecd62)
+        self.client.send(&mut (x), 0xf99bc4b26bc9ea5)
     }
     type EventResponseFut = fidl::client::QueryResponseFut<(i64)>;
 }
@@ -3195,9 +3195,9 @@ impl futures::Stream for TransitionalEventStream {
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
         std::task::Poll::Ready(Some(match tx_header.ordinal() {
-            0x1834fa04375da92c => {
+            0x53bb9212bcbe8966 => {
                 let mut out_tuple: (i64,) = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/TransitionalEventEvent");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/TransitionalEventEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &tx_header,
@@ -3349,9 +3349,9 @@ impl futures::Stream for TransitionalRequestStream {
             }
 
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x74cf6772aaa991e2 => {
+                0x62d345e621780ee8 => {
                     let mut req: (i64) = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/TransitionalRequestRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/TransitionalRequestRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -3366,9 +3366,9 @@ impl futures::Stream for TransitionalRequestStream {
                         },
                     })
                 }
-                0x41bb88b33c2ecd62 => {
+                0xf99bc4b26bc9ea5 => {
                     let mut req: (i64) = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/TransitionalOneWayRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/TransitionalOneWayRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -3405,9 +3405,9 @@ impl TransitionalRequestMessage {
         let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
         match header.ordinal() {
-            0x74cf6772aaa991e2 => {
+            0x62d345e621780ee8 => {
                 let mut out_tuple: (i64,) = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/TransitionalRequestRequest");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/TransitionalRequestRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &header,
@@ -3422,9 +3422,9 @@ impl TransitionalRequestMessage {
                     tx_id: header.tx_id().into(),
                 })
             }
-            0x41bb88b33c2ecd62 => {
+            0xf99bc4b26bc9ea5 => {
                 let mut out_tuple: (i64,) = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/TransitionalOneWayRequest");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/TransitionalOneWayRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &header,
@@ -3486,10 +3486,10 @@ impl TransitionalEncoder {
         tx_id: u32,
         mut in_x: i64,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x74cf6772aaa991e2);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x62d345e621780ee8);
         let mut body = (in_x,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/TransitionalRequestRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/TransitionalRequestRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -3501,11 +3501,11 @@ impl TransitionalEncoder {
         tx_id: u32,
         mut in_y: i64,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x74cf6772aaa991e2);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x62d345e621780ee8);
         let mut body = (in_y,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/TransitionalRequestResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/TransitionalRequestResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -3517,10 +3517,10 @@ impl TransitionalEncoder {
         out_handles: &'a mut Vec<fidl::Handle>,
         mut in_x: i64,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x41bb88b33c2ecd62);
+        let header = fidl::encoding::TransactionHeader::new(0, 0xf99bc4b26bc9ea5);
         let mut body = (in_x,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/TransitionalOneWayRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/TransitionalOneWayRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -3531,11 +3531,11 @@ impl TransitionalEncoder {
         out_handles: &'a mut Vec<fidl::Handle>,
         mut in_x: i64,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x1834fa04375da92c);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x53bb9212bcbe8966);
         let mut body = (in_x,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/TransitionalEventResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/TransitionalEventResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -3561,7 +3561,7 @@ impl TransitionalControlHandle {
         let mut response = (x);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(0, 0x1834fa04375da92c),
+            header: fidl::encoding::TransactionHeader::new(0, 0x53bb9212bcbe8966),
             body: &mut response,
         };
 
@@ -3639,7 +3639,7 @@ impl TransitionalRequestResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/TransitionalRequestResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/TransitionalRequestResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);

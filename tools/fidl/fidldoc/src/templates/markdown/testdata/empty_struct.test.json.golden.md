@@ -1,15 +1,15 @@
 [TOC]
 
-# fidl.test.json
+# fidl.test.emptystruct
 
 
 ## **PROTOCOLS**
 
 ## EmptyProtocol {#EmptyProtocol}
-*Defined in [fidl.test.json/empty_struct.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/empty_struct.test.fidl#6)*
+*Defined in [fidl.test.emptystruct/empty_struct.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/empty_struct.test.fidl#6)*
 
 
-### Send {#fidl.test.json/EmptyProtocol.Send}
+### Send {#fidl.test.emptystruct/EmptyProtocol.Send}
 
 
 #### Request
@@ -24,7 +24,7 @@
 
 
 
-### Receive {#fidl.test.json/EmptyProtocol.Receive}
+### Receive {#fidl.test.emptystruct/EmptyProtocol.Receive}
 
 
 
@@ -39,7 +39,7 @@
             </td>
         </tr></table>
 
-### SendAndReceive {#fidl.test.json/EmptyProtocol.SendAndReceive}
+### SendAndReceive {#fidl.test.emptystruct/EmptyProtocol.SendAndReceive}
 
 
 #### Request
@@ -68,7 +68,7 @@
 ## **STRUCTS**
 
 ### Empty {#Empty}
-*Defined in [fidl.test.json/empty_struct.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/empty_struct.test.fidl#3)*
+*Defined in [fidl.test.emptystruct/empty_struct.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/empty_struct.test.fidl#3)*
 
 
 

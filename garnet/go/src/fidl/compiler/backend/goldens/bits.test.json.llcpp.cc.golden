@@ -8,7 +8,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {}  // namespace json
+namespace bits {}  // namespace bits
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

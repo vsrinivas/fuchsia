@@ -1,10 +1,10 @@
 {
   "version": "0.0.1",
-  "name": "test.name",
+  "name": "fidl.test.bindingsdenylist",
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "test.name/OnlySyzkaller",
+      "name": "fidl.test.bindingsdenylist/OnlySyzkaller",
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 13,
@@ -48,7 +48,7 @@
   ],
   "const_declarations": [
     {
-      "name": "test.name/AllBindings",
+      "name": "fidl.test.bindingsdenylist/AllBindings",
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 10,
@@ -79,7 +79,7 @@
   ],
   "enum_declarations": [
     {
-      "name": "test.name/OnlyDart",
+      "name": "fidl.test.bindingsdenylist/OnlyDart",
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 18,
@@ -120,7 +120,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "test.name/OnlyLibfuzzer",
+      "name": "fidl.test.bindingsdenylist/OnlyLibfuzzer",
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 36,
@@ -135,7 +135,7 @@
       ],
       "methods": [
         {
-          "ordinal": 6908179439377953782,
+          "ordinal": 6837315459284345174,
           "name": "LibfuzzerNeedsNonemptyProtocol",
           "location": {
             "filename": "bindings_denylist.test.fidl",
@@ -174,7 +174,7 @@
   ],
   "service_declarations": [
     {
-      "name": "test.name/OnlyHlcpp",
+      "name": "fidl.test.bindingsdenylist/OnlyHlcpp",
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 41,
@@ -192,7 +192,7 @@
   ],
   "struct_declarations": [
     {
-      "name": "test.name/OnlyGo",
+      "name": "fidl.test.bindingsdenylist/OnlyGo",
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 23,
@@ -222,7 +222,7 @@
   ],
   "table_declarations": [
     {
-      "name": "test.name/OnlyRust",
+      "name": "fidl.test.bindingsdenylist/OnlyRust",
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 27,
@@ -252,7 +252,7 @@
   ],
   "union_declarations": [
     {
-      "name": "test.name/OnlyLlcpp",
+      "name": "fidl.test.bindingsdenylist/OnlyLlcpp",
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 31,
@@ -298,25 +298,25 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.name/OnlyLibfuzzer",
-    "test.name/OnlySyzkaller",
-    "test.name/OnlyRust",
-    "test.name/OnlyLlcpp",
-    "test.name/OnlyHlcpp",
-    "test.name/OnlyGo",
-    "test.name/OnlyDart",
-    "test.name/AllBindings"
+    "fidl.test.bindingsdenylist/OnlyLibfuzzer",
+    "fidl.test.bindingsdenylist/OnlySyzkaller",
+    "fidl.test.bindingsdenylist/OnlyRust",
+    "fidl.test.bindingsdenylist/OnlyLlcpp",
+    "fidl.test.bindingsdenylist/OnlyHlcpp",
+    "fidl.test.bindingsdenylist/OnlyGo",
+    "fidl.test.bindingsdenylist/OnlyDart",
+    "fidl.test.bindingsdenylist/AllBindings"
   ],
   "declarations": {
-    "test.name/OnlySyzkaller": "bits",
-    "test.name/AllBindings": "const",
-    "test.name/OnlyDart": "enum",
-    "test.name/OnlyLibfuzzer": "interface",
-    "test.name/OnlyHlcpp": "service",
-    "test.name/SomeLongAnonymousPrefix0": "struct",
-    "test.name/SomeLongAnonymousPrefix1": "struct",
-    "test.name/OnlyGo": "struct",
-    "test.name/OnlyRust": "table",
-    "test.name/OnlyLlcpp": "union"
+    "fidl.test.bindingsdenylist/OnlySyzkaller": "bits",
+    "fidl.test.bindingsdenylist/AllBindings": "const",
+    "fidl.test.bindingsdenylist/OnlyDart": "enum",
+    "fidl.test.bindingsdenylist/OnlyLibfuzzer": "interface",
+    "fidl.test.bindingsdenylist/OnlyHlcpp": "service",
+    "fidl.test.bindingsdenylist/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.bindingsdenylist/SomeLongAnonymousPrefix1": "struct",
+    "fidl.test.bindingsdenylist/OnlyGo": "struct",
+    "fidl.test.bindingsdenylist/OnlyRust": "table",
+    "fidl.test.bindingsdenylist/OnlyLlcpp": "union"
   }
 }

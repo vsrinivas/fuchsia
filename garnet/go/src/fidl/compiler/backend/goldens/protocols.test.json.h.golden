@@ -4,8 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace protocols {
 
 enum class obj_type : uint32_t {
 
@@ -14,8 +15,8 @@ enum class obj_type : uint32_t {
   SOCKET = 14u,
 };
 
-inline zx_status_t Clone(::test::name::obj_type value,
-                         ::test::name::obj_type* result) {
+inline zx_status_t Clone(::fidl::test::protocols::obj_type value,
+                         ::fidl::test::protocols::obj_type* result) {
   *result = value;
   return ZX_OK;
 }
@@ -37,9 +38,9 @@ using TransitionalSyncPtr = ::fidl::SynchronousInterfacePtr<Transitional>;
 class Transitional_SyncProxy;
 using TransitionalHandle = ::fidl::InterfaceHandle<Transitional>;
 namespace internal {
-constexpr uint64_t kTransitional_Request_Ordinal = 0x74cf6772aaa991e2lu;
-constexpr uint64_t kTransitional_OneWay_Ordinal = 0x41bb88b33c2ecd62lu;
-constexpr uint64_t kTransitional_Event_Ordinal = 0x1834fa04375da92clu;
+constexpr uint64_t kTransitional_Request_Ordinal = 0x62d345e621780ee8lu;
+constexpr uint64_t kTransitional_OneWay_Ordinal = 0xf99bc4b26bc9ea5lu;
+constexpr uint64_t kTransitional_Event_Ordinal = 0x53bb9212bcbe8966lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -55,10 +56,10 @@ using ChannelProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
 class ChannelProtocol_SyncProxy;
 using ChannelProtocolHandle = ::fidl::InterfaceHandle<ChannelProtocol>;
 namespace internal {
-constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x1b1e059b3f02bffclu;
-constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x2558b206a254d8a0lu;
-constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0x5db17a61464744a3lu;
-constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x36caa6fff7569577lu;
+constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x7d92c10fb2d002elu;
+constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x52c2fa481a687dfalu;
+constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0x5da1d2ed00055cealu;
+constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x7dd036a18b33b76alu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -78,26 +79,26 @@ using WithAndWithoutRequestResponseHandle =
     ::fidl::InterfaceHandle<WithAndWithoutRequestResponse>;
 namespace internal {
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
-    0x3931f96bc77fba8lu;
+    0x6ad894147d0c6ba4lu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal =
-        0x706ec7bd335005f9lu;
+        0x4068f26bf6d868aelu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal =
-        0x4625ad5934067a48lu;
+        0x447e655905ccfbf4lu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal =
-        0x46e5095902913025lu;
+        0x7cb47b2f9e76d17dlu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal =
-        0x180c481d4a15967lu;
+        0x65eb512ff0e1c07elu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal =
-        0x553860267eceec0lu;
+        0x1d323510d4447cf1lu;
 constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal =
-    0x42e90e9a86944b3lu;
+    0x125c87a592bff029lu;
 constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal =
-    0x2a9767b3ae6c2b09lu;
+    0x177adc0a3ee346c2lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -109,8 +110,8 @@ enum class ErrorEnun : uint32_t {
   ERR_BAR = 2u,
 };
 
-inline zx_status_t Clone(::test::name::ErrorEnun value,
-                         ::test::name::ErrorEnun* result) {
+inline zx_status_t Clone(::fidl::test::protocols::ErrorEnun value,
+                         ::fidl::test::protocols::ErrorEnun* result) {
   *result = value;
   return ZX_OK;
 }
@@ -129,10 +130,10 @@ class WithErrorSyntax_SyncProxy;
 using WithErrorSyntaxHandle = ::fidl::InterfaceHandle<WithErrorSyntax>;
 namespace internal {
 constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal =
-    0x592157d505db2bcflu;
+    0x3784d38864674290lu;
 constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal =
-    0x20cf80ad7d9b60belu;
-constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x3fcd36560f812e7flu;
+    0x2f7c390f3cdef4celu;
+constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x8b550d7c29f740clu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -168,8 +169,10 @@ class WithErrorSyntax_ResponseAsStruct_Response final {
 };
 
 inline zx_status_t Clone(
-    const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& _value,
-    ::test::name::WithErrorSyntax_ResponseAsStruct_Response* _result) {
+    const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
+        _value,
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response*
+        _result) {
   return _value.Clone(_result);
 }
 
@@ -189,7 +192,7 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
       WithErrorSyntax_ResponseAsStruct_Result&&);
 
   static WithErrorSyntax_ResponseAsStruct_Result WithResponse(
-      ::test::name::WithErrorSyntax_ResponseAsStruct_Response&&);
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&&);
   static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -214,18 +217,19 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  ::test::name::WithErrorSyntax_ResponseAsStruct_Response& response() {
+  ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
+  response() {
     EnsureStorageInitialized(Tag::kResponse);
     return response_;
   }
 
-  const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& response()
-      const {
+  const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
+  response() const {
     ZX_ASSERT(is_response());
     return response_;
   }
   WithErrorSyntax_ResponseAsStruct_Result& set_response(
-      ::test::name::WithErrorSyntax_ResponseAsStruct_Response value);
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response value);
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -247,7 +251,7 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
   friend ::fidl::Equality<
-      ::test::name::WithErrorSyntax_ResponseAsStruct_Result>;
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>;
   WithErrorSyntax_ResponseAsStruct_Result(
       fit::result<std::tuple<int64_t, int64_t, int64_t>, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
@@ -280,14 +284,16 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    ::test::name::WithErrorSyntax_ResponseAsStruct_Response response_;
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response
+        response_;
     uint32_t err_;
   };
 };
 
 inline zx_status_t Clone(
-    const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& value,
-    ::test::name::WithErrorSyntax_ResponseAsStruct_Result* result) {
+    const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result&
+        value,
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result* result) {
   return value.Clone(result);
 }
 
@@ -320,8 +326,10 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final {
 };
 
 inline zx_status_t Clone(
-    const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _value,
-    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* _result) {
+    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
+        _value,
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response*
+        _result) {
   return _value.Clone(_result);
 }
 
@@ -341,7 +349,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
       WithErrorSyntax_ErrorAsPrimitive_Result&&);
 
   static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(
-      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response&&);
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&&);
   static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -366,18 +374,19 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& response() {
+  ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
+  response() {
     EnsureStorageInitialized(Tag::kResponse);
     return response_;
   }
 
-  const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& response()
-      const {
+  const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
+  response() const {
     ZX_ASSERT(is_response());
     return response_;
   }
   WithErrorSyntax_ErrorAsPrimitive_Result& set_response(
-      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response value);
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response value);
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -399,7 +408,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
   friend ::fidl::Equality<
-      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>;
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>;
   WithErrorSyntax_ErrorAsPrimitive_Result(
       fit::result<void, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
@@ -428,14 +437,16 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response response_;
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response
+        response_;
     uint32_t err_;
   };
 };
 
 inline zx_status_t Clone(
-    const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& value,
-    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
+    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result&
+        value,
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
   return value.Clone(result);
 }
 
@@ -466,8 +477,8 @@ class WithErrorSyntax_ErrorAsEnum_Response final {
 };
 
 inline zx_status_t Clone(
-    const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _value,
-    ::test::name::WithErrorSyntax_ErrorAsEnum_Response* _result) {
+    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& _value,
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response* _result) {
   return _value.Clone(_result);
 }
 
@@ -660,7 +671,7 @@ class Transitional_Proxy final : public ::fidl::internal::Proxy,
 class Transitional_Stub final : public ::fidl::internal::Stub,
                                 public Transitional_EventSender {
  public:
-  typedef class ::test::name::Transitional Transitional_clazz;
+  typedef class ::fidl::test::protocols::Transitional Transitional_clazz;
   explicit Transitional_Stub(Transitional_clazz* impl);
   ~Transitional_Stub() override;
 
@@ -924,7 +935,7 @@ class ChannelProtocol_Proxy final : public ::fidl::internal::Proxy,
 class ChannelProtocol_Stub final : public ::fidl::internal::Stub,
                                    public ChannelProtocol_EventSender {
  public:
-  typedef class ::test::name::ChannelProtocol ChannelProtocol_clazz;
+  typedef class ::fidl::test::protocols::ChannelProtocol ChannelProtocol_clazz;
   explicit ChannelProtocol_Stub(ChannelProtocol_clazz* impl);
   ~ChannelProtocol_Stub() override;
 
@@ -1357,7 +1368,7 @@ class WithAndWithoutRequestResponse_Stub final
     : public ::fidl::internal::Stub,
       public WithAndWithoutRequestResponse_EventSender {
  public:
-  typedef class ::test::name::WithAndWithoutRequestResponse
+  typedef class ::fidl::test::protocols::WithAndWithoutRequestResponse
       WithAndWithoutRequestResponse_clazz;
   explicit WithAndWithoutRequestResponse_Stub(
       WithAndWithoutRequestResponse_clazz* impl);
@@ -1403,8 +1414,9 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
       WithErrorSyntax_ErrorAsEnum_Result&&);
 
   static WithErrorSyntax_ErrorAsEnum_Result WithResponse(
-      ::test::name::WithErrorSyntax_ErrorAsEnum_Response&&);
-  static WithErrorSyntax_ErrorAsEnum_Result WithErr(::test::name::ErrorEnun&&);
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response&&);
+  static WithErrorSyntax_ErrorAsEnum_Result WithErr(
+      ::fidl::test::protocols::ErrorEnun&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
 
@@ -1426,30 +1438,32 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  ::test::name::WithErrorSyntax_ErrorAsEnum_Response& response() {
+  ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& response() {
     EnsureStorageInitialized(Tag::kResponse);
     return response_;
   }
 
-  const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& response() const {
+  const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response&
+  response() const {
     ZX_ASSERT(is_response());
     return response_;
   }
   WithErrorSyntax_ErrorAsEnum_Result& set_response(
-      ::test::name::WithErrorSyntax_ErrorAsEnum_Response value);
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response value);
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
-  ::test::name::ErrorEnun& err() {
+  ::fidl::test::protocols::ErrorEnun& err() {
     EnsureStorageInitialized(Tag::kErr);
     return err_;
   }
 
-  const ::test::name::ErrorEnun& err() const {
+  const ::fidl::test::protocols::ErrorEnun& err() const {
     ZX_ASSERT(is_err());
     return err_;
   }
-  WithErrorSyntax_ErrorAsEnum_Result& set_err(::test::name::ErrorEnun value);
+  WithErrorSyntax_ErrorAsEnum_Result& set_err(
+      ::fidl::test::protocols::ErrorEnun value);
 
   Tag Which() const { return Tag(tag_); }
 
@@ -1457,7 +1471,8 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  friend ::fidl::Equality<::test::name::WithErrorSyntax_ErrorAsEnum_Result>;
+  friend ::fidl::Equality<
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>;
   WithErrorSyntax_ErrorAsEnum_Result(fit::result<void, ErrorEnun>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
@@ -1485,14 +1500,14 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    ::test::name::WithErrorSyntax_ErrorAsEnum_Response response_;
-    ::test::name::ErrorEnun err_;
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response response_;
+    ::fidl::test::protocols::ErrorEnun err_;
   };
 };
 
 inline zx_status_t Clone(
-    const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& value,
-    ::test::name::WithErrorSyntax_ErrorAsEnum_Result* result) {
+    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result& value,
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
   return value.Clone(result);
 }
 
@@ -1508,15 +1523,15 @@ class WithErrorSyntax {
   using Sync_ = WithErrorSyntax_Sync;
   virtual ~WithErrorSyntax();
   using ResponseAsStructCallback = fit::function<void(
-      ::test::name::WithErrorSyntax_ResponseAsStruct_Result)>;
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result)>;
 
   virtual void ResponseAsStruct(ResponseAsStructCallback callback) = 0;
   using ErrorAsPrimitiveCallback = fit::function<void(
-      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result)>;
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result)>;
 
   virtual void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) = 0;
-  using ErrorAsEnumCallback =
-      fit::function<void(::test::name::WithErrorSyntax_ErrorAsEnum_Result)>;
+  using ErrorAsEnumCallback = fit::function<void(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result)>;
 
   virtual void ErrorAsEnum(ErrorAsEnumCallback callback) = 0;
 };
@@ -1630,20 +1645,23 @@ class WithErrorSyntax_ResponseDecoder {
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
       case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal: {
-        ResponseAsStruct(::fidl::DecodeAs<
-                         ::test::name::WithErrorSyntax_ResponseAsStruct_Result>(
-            &response_decoder, 16));
+        ResponseAsStruct(
+            ::fidl::DecodeAs<::fidl::test::protocols::
+                                 WithErrorSyntax_ResponseAsStruct_Result>(
+                &response_decoder, 16));
         break;
       }
       case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
-        ErrorAsPrimitive(::fidl::DecodeAs<
-                         ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>(
-            &response_decoder, 16));
+        ErrorAsPrimitive(
+            ::fidl::DecodeAs<::fidl::test::protocols::
+                                 WithErrorSyntax_ErrorAsPrimitive_Result>(
+                &response_decoder, 16));
         break;
       }
       case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal: {
         ErrorAsEnum(
-            ::fidl::DecodeAs<::test::name::WithErrorSyntax_ErrorAsEnum_Result>(
+            ::fidl::DecodeAs<
+                ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>(
                 &response_decoder, 16));
         break;
       }
@@ -1654,18 +1672,21 @@ class WithErrorSyntax_ResponseDecoder {
     return ZX_OK;
   }
   virtual void ResponseAsStruct(
-      ::test::name::WithErrorSyntax_ResponseAsStruct_Result result) = 0;
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
+          result) = 0;
   virtual void ErrorAsPrimitive(
-      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) = 0;
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
+          result) = 0;
   virtual void ErrorAsEnum(
-      ::test::name::WithErrorSyntax_ErrorAsEnum_Result result) = 0;
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result) = 0;
 };
 
 class WithErrorSyntax_ResponseEncoder {
  public:
   static ::fidl::Message ResponseAsStruct(
       ::fidl::Encoder* _encoder,
-      ::test::name::WithErrorSyntax_ResponseAsStruct_Result* result) {
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
+          result) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
@@ -1679,7 +1700,8 @@ class WithErrorSyntax_ResponseEncoder {
   }
   static ::fidl::Message ErrorAsPrimitive(
       ::fidl::Encoder* _encoder,
-      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
+          result) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
@@ -1693,7 +1715,7 @@ class WithErrorSyntax_ResponseEncoder {
   }
   static ::fidl::Message ErrorAsEnum(
       ::fidl::Encoder* _encoder,
-      ::test::name::WithErrorSyntax_ErrorAsEnum_Result* result) {
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
@@ -1717,11 +1739,14 @@ class WithErrorSyntax_Sync {
   using Proxy_ = WithErrorSyntax_SyncProxy;
   virtual ~WithErrorSyntax_Sync();
   virtual zx_status_t ResponseAsStruct(
-      ::test::name::WithErrorSyntax_ResponseAsStruct_Result* out_result) = 0;
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
+          out_result) = 0;
   virtual zx_status_t ErrorAsPrimitive(
-      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* out_result) = 0;
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
+          out_result) = 0;
   virtual zx_status_t ErrorAsEnum(
-      ::test::name::WithErrorSyntax_ErrorAsEnum_Result* out_result) = 0;
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result*
+          out_result) = 0;
 };
 
 class WithErrorSyntax_Proxy final : public ::fidl::internal::Proxy,
@@ -1745,7 +1770,7 @@ class WithErrorSyntax_Proxy final : public ::fidl::internal::Proxy,
 class WithErrorSyntax_Stub final : public ::fidl::internal::Stub,
                                    public WithErrorSyntax_EventSender {
  public:
-  typedef class ::test::name::WithErrorSyntax WithErrorSyntax_clazz;
+  typedef class ::fidl::test::protocols::WithErrorSyntax WithErrorSyntax_clazz;
   explicit WithErrorSyntax_Stub(WithErrorSyntax_clazz* impl);
   ~WithErrorSyntax_Stub() override;
 
@@ -1761,77 +1786,87 @@ class WithErrorSyntax_SyncProxy : public WithErrorSyntax_Sync {
   explicit WithErrorSyntax_SyncProxy(::zx::channel channel);
   ~WithErrorSyntax_SyncProxy() override;
   zx_status_t ResponseAsStruct(
-      ::test::name::WithErrorSyntax_ResponseAsStruct_Result* out_result)
-      override;
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
+          out_result) override;
   zx_status_t ErrorAsPrimitive(
-      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* out_result)
-      override;
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
+          out_result) override;
   zx_status_t ErrorAsEnum(
-      ::test::name::WithErrorSyntax_ErrorAsEnum_Result* out_result) override;
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* out_result)
+      override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<WithErrorSyntax>;
 };
 #endif  // __Fuchsia__
-}  // namespace name
+}  // namespace protocols
 }  // namespace test
+}  // namespace fidl
 namespace fidl {
 
 template <>
-struct CodingTraits<::test::name::obj_type> {
-  static constexpr size_t inline_size_old = sizeof(::test::name::obj_type);
-  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::obj_type);
-  static void Encode(Encoder* encoder, ::test::name::obj_type* value,
+struct CodingTraits<::fidl::test::protocols::obj_type> {
+  static constexpr size_t inline_size_old =
+      sizeof(::fidl::test::protocols::obj_type);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::protocols::obj_type);
+  static void Encode(Encoder* encoder, ::fidl::test::protocols::obj_type* value,
                      size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::name::obj_type* value,
+  static void Decode(Decoder* decoder, ::fidl::test::protocols::obj_type* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::test::name::obj_type>(underlying);
+    *value = static_cast<::fidl::test::protocols::obj_type>(underlying);
   }
 };
 
-inline zx_status_t Clone(::test::name::obj_type value,
-                         ::test::name::obj_type* result) {
-  return ::test::name::Clone(value, result);
+inline zx_status_t Clone(::fidl::test::protocols::obj_type value,
+                         ::fidl::test::protocols::obj_type* result) {
+  return ::fidl::test::protocols::Clone(value, result);
 }
 template <>
-struct Equality<::test::name::obj_type> {
-  bool operator()(const ::test::name::obj_type& _lhs,
-                  const ::test::name::obj_type& _rhs) const {
+struct Equality<::fidl::test::protocols::obj_type> {
+  bool operator()(const ::fidl::test::protocols::obj_type& _lhs,
+                  const ::fidl::test::protocols::obj_type& _rhs) const {
     return _lhs == _rhs;
   }
 };
 
 template <>
-struct CodingTraits<::test::name::WithErrorSyntax_ResponseAsStruct_Response>
+struct CodingTraits<
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
     : public EncodableCodingTraits<
-          ::test::name::WithErrorSyntax_ResponseAsStruct_Response, 24> {};
+          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response,
+          24> {};
 
 template <>
 struct IsMemcpyCompatible<
-    ::test::name::WithErrorSyntax_ResponseAsStruct_Response>
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
     : public internal::BoolConstant<
-          !HasPadding<
-              ::test::name::WithErrorSyntax_ResponseAsStruct_Response>::value &&
+          !HasPadding<::fidl::test::protocols::
+                          WithErrorSyntax_ResponseAsStruct_Response>::value &&
           IsMemcpyCompatible<int64_t>::value> {};
 
 inline zx_status_t Clone(
-    const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& value,
-    ::test::name::WithErrorSyntax_ResponseAsStruct_Response* result) {
-  return ::test::name::Clone(value, result);
+    const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
+        value,
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response*
+        result) {
+  return ::fidl::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Response> {
+struct Equality<
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response> {
   bool operator()(
-      const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& _lhs,
-      const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& _rhs)
-      const {
+      const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
+          _lhs,
+      const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
+          _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -1845,22 +1880,26 @@ struct Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Response> {
   }
 };
 template <>
-struct IsFidlXUnion<::test::name::WithErrorSyntax_ResponseAsStruct_Result>
+struct IsFidlXUnion<
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
     : public std::true_type {};
 
 template <>
-struct CodingTraits<::test::name::WithErrorSyntax_ResponseAsStruct_Result>
+struct CodingTraits<
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
     : public EncodableCodingTraits<
-          ::test::name::WithErrorSyntax_ResponseAsStruct_Result, 24> {};
+          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result,
+          24> {};
 
 template <>
-struct CodingTraits<
-    std::unique_ptr<::test::name::WithErrorSyntax_ResponseAsStruct_Result>> {
+struct CodingTraits<std::unique_ptr<
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
   static void Encode(
       Encoder* encoder,
-      std::unique_ptr<::test::name::WithErrorSyntax_ResponseAsStruct_Result>*
+      std::unique_ptr<
+          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>*
           value,
       size_t offset) {
     auto&& p_xunion = *value;
@@ -1871,7 +1910,8 @@ struct CodingTraits<
 
   static void Decode(
       Decoder* decoder,
-      std::unique_ptr<::test::name::WithErrorSyntax_ResponseAsStruct_Result>*
+      std::unique_ptr<
+          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>*
           value,
       size_t offset) {
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
@@ -1880,36 +1920,43 @@ struct CodingTraits<
       return;
     }
 
-    value->reset(new ::test::name::WithErrorSyntax_ResponseAsStruct_Result);
+    value->reset(
+        new ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result);
 
-    ::test::name::WithErrorSyntax_ResponseAsStruct_Result::Decode(
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Decode(
         decoder, value->get(), offset);
   }
 };
 
 inline zx_status_t Clone(
-    const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& value,
-    ::test::name::WithErrorSyntax_ResponseAsStruct_Result* result) {
-  return ::test::name::Clone(value, result);
+    const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result&
+        value,
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result* result) {
+  return ::fidl::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Result> {
+struct Equality<
+    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result> {
   bool operator()(
-      const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& _lhs,
-      const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& _rhs) const {
+      const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result&
+          _lhs,
+      const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result&
+          _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(
-          ::test::name::WithErrorSyntax_ResponseAsStruct_Result::Tag::Invalid):
+          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
+              Tag::Invalid):
         return true;
-      case ::test::name::WithErrorSyntax_ResponseAsStruct_Result::Tag::
-          kResponse:
+      case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
+          Tag::kResponse:
         return ::fidl::Equals(_lhs.response_, _rhs.response_);
-      case ::test::name::WithErrorSyntax_ResponseAsStruct_Result::Tag::kErr:
+      case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
+          Tag::kErr:
         return ::fidl::Equals(_lhs.err_, _rhs.err_);
 
       default:
@@ -1918,29 +1965,152 @@ struct Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Result> {
   }
 };
 template <>
-struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
+struct CodingTraits<
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
     : public EncodableCodingTraits<
-          ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response, 1> {};
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response,
+          1> {};
 
 template <>
 struct IsMemcpyCompatible<
-    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
     : public internal::BoolConstant<
-          !HasPadding<
-              ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>::value &&
+          !HasPadding<::fidl::test::protocols::
+                          WithErrorSyntax_ErrorAsPrimitive_Response>::value &&
           IsMemcpyCompatible<uint8_t>::value> {};
 
 inline zx_status_t Clone(
-    const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& value,
-    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* result) {
-  return ::test::name::Clone(value, result);
+    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
+        value,
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response*
+        result) {
+  return ::fidl::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response> {
+struct Equality<
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response> {
   bool operator()(
-      const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _lhs,
-      const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _rhs)
+      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
+          _lhs,
+      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
+          _rhs) const {
+    if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct IsFidlXUnion<
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
+    : public EncodableCodingTraits<
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result,
+          24> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+
+  static void Encode(
+      Encoder* encoder,
+      std::unique_ptr<
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>*
+          value,
+      size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(
+      Decoder* decoder,
+      std::unique_ptr<
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>*
+          value,
+      size_t offset) {
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(
+        new ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result);
+
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Decode(
+        decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(
+    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result&
+        value,
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
+  return ::fidl::test::protocols::Clone(value, result);
+}
+
+template <>
+struct Equality<
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result> {
+  bool operator()(
+      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result&
+          _lhs,
+      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result&
+          _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+              Tag::Invalid):
+        return true;
+      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+          Tag::kResponse:
+        return ::fidl::Equals(_lhs.response_, _rhs.response_);
+      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+          Tag::kErr:
+        return ::fidl::Equals(_lhs.err_, _rhs.err_);
+
+      default:
+        return false;
+    }
+  }
+};
+template <>
+struct CodingTraits<
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    : public EncodableCodingTraits<
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response, 1> {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::protocols::
+                          WithErrorSyntax_ErrorAsEnum_Response>::value &&
+          IsMemcpyCompatible<uint8_t>::value> {};
+
+inline zx_status_t Clone(
+    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& value,
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response* result) {
+  return ::fidl::test::protocols::Clone(value, result);
+}
+
+template <>
+struct Equality<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response> {
+  bool operator()(
+      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& _lhs,
+      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& _rhs)
       const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
@@ -1949,154 +2119,54 @@ struct Equality<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response> {
   }
 };
 template <>
-struct IsFidlXUnion<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>
-    : public EncodableCodingTraits<
-          ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, 24> {};
-
-template <>
-struct CodingTraits<
-    std::unique_ptr<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-
-  static void Encode(
-      Encoder* encoder,
-      std::unique_ptr<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>*
-          value,
-      size_t offset) {
-    auto&& p_xunion = *value;
-    if (p_xunion) {
-      p_xunion->Encode(encoder, offset);
-    }
-  }
-
-  static void Decode(
-      Decoder* decoder,
-      std::unique_ptr<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>*
-          value,
-      size_t offset) {
-    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
-    if (encoded->tag == 0) {
-      value->reset(nullptr);
-      return;
-    }
-
-    value->reset(new ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result);
-
-    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Decode(
-        decoder, value->get(), offset);
-  }
-};
-
-inline zx_status_t Clone(
-    const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& value,
-    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
-  return ::test::name::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result> {
-  bool operator()(
-      const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& _lhs,
-      const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& _rhs) const {
-    if (_lhs.Ordinal() != _rhs.Ordinal()) {
-      return false;
-    }
-
-    switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::Invalid):
-        return true;
-      case ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
-          kResponse:
-        return ::fidl::Equals(_lhs.response_, _rhs.response_);
-      case ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::kErr:
-        return ::fidl::Equals(_lhs.err_, _rhs.err_);
-
-      default:
-        return false;
-    }
-  }
-};
-template <>
-struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Response>
-    : public EncodableCodingTraits<
-          ::test::name::WithErrorSyntax_ErrorAsEnum_Response, 1> {};
-
-template <>
-struct IsMemcpyCompatible<::test::name::WithErrorSyntax_ErrorAsEnum_Response>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test::name::WithErrorSyntax_ErrorAsEnum_Response>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
-
-inline zx_status_t Clone(
-    const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& value,
-    ::test::name::WithErrorSyntax_ErrorAsEnum_Response* result) {
-  return ::test::name::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::name::WithErrorSyntax_ErrorAsEnum_Response> {
-  bool operator()(
-      const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _lhs,
-      const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _rhs) const {
-    if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::name::ErrorEnun> {
-  static constexpr size_t inline_size_old = sizeof(::test::name::ErrorEnun);
+struct CodingTraits<::fidl::test::protocols::ErrorEnun> {
+  static constexpr size_t inline_size_old =
+      sizeof(::fidl::test::protocols::ErrorEnun);
   static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::name::ErrorEnun);
-  static void Encode(Encoder* encoder, ::test::name::ErrorEnun* value,
-                     size_t offset) {
+      sizeof(::fidl::test::protocols::ErrorEnun);
+  static void Encode(Encoder* encoder,
+                     ::fidl::test::protocols::ErrorEnun* value, size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::name::ErrorEnun* value,
-                     size_t offset) {
+  static void Decode(Decoder* decoder,
+                     ::fidl::test::protocols::ErrorEnun* value, size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::test::name::ErrorEnun>(underlying);
+    *value = static_cast<::fidl::test::protocols::ErrorEnun>(underlying);
   }
 };
 
-inline zx_status_t Clone(::test::name::ErrorEnun value,
-                         ::test::name::ErrorEnun* result) {
-  return ::test::name::Clone(value, result);
+inline zx_status_t Clone(::fidl::test::protocols::ErrorEnun value,
+                         ::fidl::test::protocols::ErrorEnun* result) {
+  return ::fidl::test::protocols::Clone(value, result);
 }
 template <>
-struct Equality<::test::name::ErrorEnun> {
-  bool operator()(const ::test::name::ErrorEnun& _lhs,
-                  const ::test::name::ErrorEnun& _rhs) const {
+struct Equality<::fidl::test::protocols::ErrorEnun> {
+  bool operator()(const ::fidl::test::protocols::ErrorEnun& _lhs,
+                  const ::fidl::test::protocols::ErrorEnun& _rhs) const {
     return _lhs == _rhs;
   }
 };
 
 template <>
-struct IsFidlXUnion<::test::name::WithErrorSyntax_ErrorAsEnum_Result>
+struct IsFidlXUnion<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
     : public std::true_type {};
 
 template <>
-struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Result>
+struct CodingTraits<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
     : public EncodableCodingTraits<
-          ::test::name::WithErrorSyntax_ErrorAsEnum_Result, 24> {};
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result, 24> {};
 
 template <>
-struct CodingTraits<
-    std::unique_ptr<::test::name::WithErrorSyntax_ErrorAsEnum_Result>> {
+struct CodingTraits<std::unique_ptr<
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
   static void Encode(
       Encoder* encoder,
-      std::unique_ptr<::test::name::WithErrorSyntax_ErrorAsEnum_Result>* value,
+      std::unique_ptr<
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>* value,
       size_t offset) {
     auto&& p_xunion = *value;
     if (p_xunion) {
@@ -2106,7 +2176,8 @@ struct CodingTraits<
 
   static void Decode(
       Decoder* decoder,
-      std::unique_ptr<::test::name::WithErrorSyntax_ErrorAsEnum_Result>* value,
+      std::unique_ptr<
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>* value,
       size_t offset) {
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
@@ -2114,35 +2185,40 @@ struct CodingTraits<
       return;
     }
 
-    value->reset(new ::test::name::WithErrorSyntax_ErrorAsEnum_Result);
+    value->reset(
+        new ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result);
 
-    ::test::name::WithErrorSyntax_ErrorAsEnum_Result::Decode(
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Decode(
         decoder, value->get(), offset);
   }
 };
 
 inline zx_status_t Clone(
-    const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& value,
-    ::test::name::WithErrorSyntax_ErrorAsEnum_Result* result) {
-  return ::test::name::Clone(value, result);
+    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result& value,
+    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
+  return ::fidl::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::name::WithErrorSyntax_ErrorAsEnum_Result> {
+struct Equality<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result> {
   bool operator()(
-      const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& _lhs,
-      const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& _rhs) const {
+      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result& _lhs,
+      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result& _rhs)
+      const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(
-          ::test::name::WithErrorSyntax_ErrorAsEnum_Result::Tag::Invalid):
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+              Invalid):
         return true;
-      case ::test::name::WithErrorSyntax_ErrorAsEnum_Result::Tag::kResponse:
+      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+          kResponse:
         return ::fidl::Equals(_lhs.response_, _rhs.response_);
-      case ::test::name::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr:
+      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+          kErr:
         return ::fidl::Equals(_lhs.err_, _rhs.err_);
 
       default:

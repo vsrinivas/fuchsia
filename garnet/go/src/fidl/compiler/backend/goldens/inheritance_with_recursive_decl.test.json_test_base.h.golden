@@ -5,15 +5,16 @@
 #include <inheritance_with_recursive_decl.test.json.h>
 namespace fidl {
 namespace test {
-namespace json {
+namespace inheritancewithrecursivedecl {
 namespace testing {
 
 class Parent_TestBase : public Parent {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void First(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override {
+  void First(::fidl::InterfaceRequest<
+             ::fidl::test::inheritancewithrecursivedecl::Parent>
+                 request) override {
     NotImplemented_("First");
   }
 };
@@ -22,16 +23,18 @@ class Child_TestBase : public Child {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void First(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override {
+  void First(::fidl::InterfaceRequest<
+             ::fidl::test::inheritancewithrecursivedecl::Parent>
+                 request) override {
     NotImplemented_("First");
   }
-  void Second(
-      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override {
+  void Second(::fidl::InterfaceRequest<
+              ::fidl::test::inheritancewithrecursivedecl::Parent>
+                  request) override {
     NotImplemented_("Second");
   }
 };
 }  // namespace testing
-}  // namespace json
+}  // namespace inheritancewithrecursivedecl
 }  // namespace test
 }  // namespace fidl

@@ -1,4 +1,4 @@
-library fidl.test.json;
+library fidl.test.structs;
 
 struct Simple {
     uint8 f1;

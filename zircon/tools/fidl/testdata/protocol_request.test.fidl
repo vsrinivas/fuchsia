@@ -1,4 +1,4 @@
-library test.name;
+library fidl.test.protocolrequest;
 
 protocol Child {
 };

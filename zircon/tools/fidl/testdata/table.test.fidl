@@ -1,4 +1,4 @@
-library fidl.test.json;
+library fidl.test.table;
 
 table EmptyTable {
 };

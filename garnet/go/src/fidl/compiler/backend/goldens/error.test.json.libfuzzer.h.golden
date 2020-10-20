@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/json/cpp/fidl.h>
+#include <fidl/test/error/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -13,8 +13,8 @@
 
 namespace fuzzing {
 
-using Example_foo_Response = ::fidl::test::json::Example_foo_Response;
-using Example_foo_Result = ::fidl::test::json::Example_foo_Result;
+using Example_foo_Response = ::fidl::test::error::Example_foo_Response;
+using Example_foo_Result = ::fidl::test::error::Example_foo_Result;
 
 template <>
 struct MinSize<Example_foo_Response> {

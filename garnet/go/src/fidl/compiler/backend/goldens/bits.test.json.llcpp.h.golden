@@ -36,7 +36,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {
+namespace bits {
 
 // |StrictBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema.
@@ -87,49 +87,49 @@ class StrictBits final {
 
   uint64_t value_ = 0;
 };
-constexpr const ::llcpp::fidl::test::json::StrictBits StrictBits::SMALLEST =
-    ::llcpp::fidl::test::json::StrictBits(1u);
-constexpr const ::llcpp::fidl::test::json::StrictBits StrictBits::BIGGEST =
-    ::llcpp::fidl::test::json::StrictBits(9223372036854775808u);
-constexpr const ::llcpp::fidl::test::json::StrictBits StrictBits::mask =
-    ::llcpp::fidl::test::json::StrictBits(9223372036854775809u);
+constexpr const ::llcpp::fidl::test::bits::StrictBits StrictBits::SMALLEST =
+    ::llcpp::fidl::test::bits::StrictBits(1u);
+constexpr const ::llcpp::fidl::test::bits::StrictBits StrictBits::BIGGEST =
+    ::llcpp::fidl::test::bits::StrictBits(9223372036854775808u);
+constexpr const ::llcpp::fidl::test::bits::StrictBits StrictBits::mask =
+    ::llcpp::fidl::test::bits::StrictBits(9223372036854775809u);
 
-constexpr inline ::llcpp::fidl::test::json::StrictBits StrictBits::operator~()
+constexpr inline ::llcpp::fidl::test::bits::StrictBits StrictBits::operator~()
     const {
-  return ::llcpp::fidl::test::json::StrictBits(
+  return ::llcpp::fidl::test::bits::StrictBits(
       static_cast<uint64_t>(~this->value_ & mask.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::json::StrictBits StrictBits::operator|(
-    const ::llcpp::fidl::test::json::StrictBits& other) const {
-  return ::llcpp::fidl::test::json::StrictBits(
+constexpr inline ::llcpp::fidl::test::bits::StrictBits StrictBits::operator|(
+    const ::llcpp::fidl::test::bits::StrictBits& other) const {
+  return ::llcpp::fidl::test::bits::StrictBits(
       static_cast<uint64_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::json::StrictBits StrictBits::operator&(
-    const ::llcpp::fidl::test::json::StrictBits& other) const {
-  return ::llcpp::fidl::test::json::StrictBits(
+constexpr inline ::llcpp::fidl::test::bits::StrictBits StrictBits::operator&(
+    const ::llcpp::fidl::test::bits::StrictBits& other) const {
+  return ::llcpp::fidl::test::bits::StrictBits(
       static_cast<uint64_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::json::StrictBits StrictBits::operator^(
-    const ::llcpp::fidl::test::json::StrictBits& other) const {
-  return ::llcpp::fidl::test::json::StrictBits(
+constexpr inline ::llcpp::fidl::test::bits::StrictBits StrictBits::operator^(
+    const ::llcpp::fidl::test::bits::StrictBits& other) const {
+  return ::llcpp::fidl::test::bits::StrictBits(
       static_cast<uint64_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void StrictBits::operator|=(
-    const ::llcpp::fidl::test::json::StrictBits& other) {
+    const ::llcpp::fidl::test::bits::StrictBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void StrictBits::operator&=(
-    const ::llcpp::fidl::test::json::StrictBits& other) {
+    const ::llcpp::fidl::test::bits::StrictBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void StrictBits::operator^=(
-    const ::llcpp::fidl::test::json::StrictBits& other) {
+    const ::llcpp::fidl::test::bits::StrictBits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -183,50 +183,50 @@ class MyBits final {
 
   uint32_t value_ = 0;
 };
-constexpr const ::llcpp::fidl::test::json::MyBits MyBits::MY_FIRST_BIT =
-    ::llcpp::fidl::test::json::MyBits(1u);
-constexpr const ::llcpp::fidl::test::json::MyBits MyBits::MY_OTHER_BIT =
-    ::llcpp::fidl::test::json::MyBits(2u);
-constexpr const ::llcpp::fidl::test::json::MyBits MyBits::MASK =
-    ::llcpp::fidl::test::json::MyBits(4u);
-constexpr const ::llcpp::fidl::test::json::MyBits MyBits::mask =
-    ::llcpp::fidl::test::json::MyBits(7u);
+constexpr const ::llcpp::fidl::test::bits::MyBits MyBits::MY_FIRST_BIT =
+    ::llcpp::fidl::test::bits::MyBits(1u);
+constexpr const ::llcpp::fidl::test::bits::MyBits MyBits::MY_OTHER_BIT =
+    ::llcpp::fidl::test::bits::MyBits(2u);
+constexpr const ::llcpp::fidl::test::bits::MyBits MyBits::MASK =
+    ::llcpp::fidl::test::bits::MyBits(4u);
+constexpr const ::llcpp::fidl::test::bits::MyBits MyBits::mask =
+    ::llcpp::fidl::test::bits::MyBits(7u);
 
-constexpr inline ::llcpp::fidl::test::json::MyBits MyBits::operator~() const {
-  return ::llcpp::fidl::test::json::MyBits(
+constexpr inline ::llcpp::fidl::test::bits::MyBits MyBits::operator~() const {
+  return ::llcpp::fidl::test::bits::MyBits(
       static_cast<uint32_t>(~this->value_ & mask.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::json::MyBits MyBits::operator|(
-    const ::llcpp::fidl::test::json::MyBits& other) const {
-  return ::llcpp::fidl::test::json::MyBits(
+constexpr inline ::llcpp::fidl::test::bits::MyBits MyBits::operator|(
+    const ::llcpp::fidl::test::bits::MyBits& other) const {
+  return ::llcpp::fidl::test::bits::MyBits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::json::MyBits MyBits::operator&(
-    const ::llcpp::fidl::test::json::MyBits& other) const {
-  return ::llcpp::fidl::test::json::MyBits(
+constexpr inline ::llcpp::fidl::test::bits::MyBits MyBits::operator&(
+    const ::llcpp::fidl::test::bits::MyBits& other) const {
+  return ::llcpp::fidl::test::bits::MyBits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::json::MyBits MyBits::operator^(
-    const ::llcpp::fidl::test::json::MyBits& other) const {
-  return ::llcpp::fidl::test::json::MyBits(
+constexpr inline ::llcpp::fidl::test::bits::MyBits MyBits::operator^(
+    const ::llcpp::fidl::test::bits::MyBits& other) const {
+  return ::llcpp::fidl::test::bits::MyBits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void MyBits::operator|=(
-    const ::llcpp::fidl::test::json::MyBits& other) {
+    const ::llcpp::fidl::test::bits::MyBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void MyBits::operator&=(
-    const ::llcpp::fidl::test::json::MyBits& other) {
+    const ::llcpp::fidl::test::bits::MyBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void MyBits::operator^=(
-    const ::llcpp::fidl::test::json::MyBits& other) {
+    const ::llcpp::fidl::test::bits::MyBits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -291,56 +291,56 @@ class FlexibleBits final {
 
   uint64_t value_ = 0;
 };
-constexpr const ::llcpp::fidl::test::json::FlexibleBits FlexibleBits::SMALLEST =
-    ::llcpp::fidl::test::json::FlexibleBits(1u);
-constexpr const ::llcpp::fidl::test::json::FlexibleBits FlexibleBits::BIGGEST =
-    ::llcpp::fidl::test::json::FlexibleBits(9223372036854775808u);
-constexpr const ::llcpp::fidl::test::json::FlexibleBits FlexibleBits::mask =
-    ::llcpp::fidl::test::json::FlexibleBits(9223372036854775809u);
+constexpr const ::llcpp::fidl::test::bits::FlexibleBits FlexibleBits::SMALLEST =
+    ::llcpp::fidl::test::bits::FlexibleBits(1u);
+constexpr const ::llcpp::fidl::test::bits::FlexibleBits FlexibleBits::BIGGEST =
+    ::llcpp::fidl::test::bits::FlexibleBits(9223372036854775808u);
+constexpr const ::llcpp::fidl::test::bits::FlexibleBits FlexibleBits::mask =
+    ::llcpp::fidl::test::bits::FlexibleBits(9223372036854775809u);
 
-constexpr inline ::llcpp::fidl::test::json::FlexibleBits
+constexpr inline ::llcpp::fidl::test::bits::FlexibleBits
 FlexibleBits::operator~() const {
-  return ::llcpp::fidl::test::json::FlexibleBits(
+  return ::llcpp::fidl::test::bits::FlexibleBits(
       static_cast<uint64_t>(~this->value_ & mask.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::json::FlexibleBits
+constexpr inline ::llcpp::fidl::test::bits::FlexibleBits
 FlexibleBits::operator|(
-    const ::llcpp::fidl::test::json::FlexibleBits& other) const {
-  return ::llcpp::fidl::test::json::FlexibleBits(
+    const ::llcpp::fidl::test::bits::FlexibleBits& other) const {
+  return ::llcpp::fidl::test::bits::FlexibleBits(
       static_cast<uint64_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::json::FlexibleBits
+constexpr inline ::llcpp::fidl::test::bits::FlexibleBits
 FlexibleBits::operator&(
-    const ::llcpp::fidl::test::json::FlexibleBits& other) const {
-  return ::llcpp::fidl::test::json::FlexibleBits(
+    const ::llcpp::fidl::test::bits::FlexibleBits& other) const {
+  return ::llcpp::fidl::test::bits::FlexibleBits(
       static_cast<uint64_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::json::FlexibleBits
+constexpr inline ::llcpp::fidl::test::bits::FlexibleBits
 FlexibleBits::operator^(
-    const ::llcpp::fidl::test::json::FlexibleBits& other) const {
-  return ::llcpp::fidl::test::json::FlexibleBits(
+    const ::llcpp::fidl::test::bits::FlexibleBits& other) const {
+  return ::llcpp::fidl::test::bits::FlexibleBits(
       static_cast<uint64_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void FlexibleBits::operator|=(
-    const ::llcpp::fidl::test::json::FlexibleBits& other) {
+    const ::llcpp::fidl::test::bits::FlexibleBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void FlexibleBits::operator&=(
-    const ::llcpp::fidl::test::json::FlexibleBits& other) {
+    const ::llcpp::fidl::test::bits::FlexibleBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void FlexibleBits::operator^=(
-    const ::llcpp::fidl::test::json::FlexibleBits& other) {
+    const ::llcpp::fidl::test::bits::FlexibleBits& other) {
   this->value_ ^= other.value_;
 }
 
-}  // namespace json
+}  // namespace bits
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
@@ -348,23 +348,23 @@ constexpr inline void FlexibleBits::operator^=(
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::StrictBits>
+struct IsFidlType<::llcpp::fidl::test::bits::StrictBits>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::StrictBits>);
-static_assert(sizeof(::llcpp::fidl::test::json::StrictBits) ==
+static_assert(std::is_standard_layout_v<::llcpp::fidl::test::bits::StrictBits>);
+static_assert(sizeof(::llcpp::fidl::test::bits::StrictBits) ==
               sizeof(uint64_t));
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::MyBits> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::MyBits>);
-static_assert(sizeof(::llcpp::fidl::test::json::MyBits) == sizeof(uint32_t));
+struct IsFidlType<::llcpp::fidl::test::bits::MyBits> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fidl::test::bits::MyBits>);
+static_assert(sizeof(::llcpp::fidl::test::bits::MyBits) == sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::FlexibleBits>
+struct IsFidlType<::llcpp::fidl::test::bits::FlexibleBits>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::json::FlexibleBits>);
-static_assert(sizeof(::llcpp::fidl::test::json::FlexibleBits) ==
+    std::is_standard_layout_v<::llcpp::fidl::test::bits::FlexibleBits>);
+static_assert(sizeof(::llcpp::fidl::test::bits::FlexibleBits) ==
               sizeof(uint64_t));
 
 }  // namespace fidl
@@ -373,7 +373,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace json {}  // namespace json
+namespace bits {}  // namespace bits
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

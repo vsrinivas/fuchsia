@@ -6,9 +6,13 @@
 
 namespace llcpp {
 
-namespace escapeme {
+namespace fidl {
+namespace test {
+namespace escaping {
 
 void DocCommentWithQuotes::_CloseHandles() {}
 
-}  // namespace escapeme
+}  // namespace escaping
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

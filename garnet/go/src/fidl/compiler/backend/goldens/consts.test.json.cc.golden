@@ -3,9 +3,11 @@
 #include <consts.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+namespace fidl {
 namespace test {
-namespace name {
+namespace consts {
 
 const char USERNAME[] = "\"squeenze\"";
-}  // namespace name
+}  // namespace consts
 }  // namespace test
+}  // namespace fidl

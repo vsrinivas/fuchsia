@@ -5,8 +5,8 @@
 #include <bits.test.json.h>
 namespace fidl {
 namespace test {
-namespace json {
+namespace bits {
 namespace testing {}  // namespace testing
-}  // namespace json
+}  // namespace bits
 }  // namespace test
 }  // namespace fidl

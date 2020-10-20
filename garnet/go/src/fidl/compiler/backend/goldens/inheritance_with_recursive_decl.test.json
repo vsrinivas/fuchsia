@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.json",
+  "name": "fidl.test.inheritancewithrecursivedecl",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.json/Parent",
+      "name": "fidl.test.inheritancewithrecursivedecl/Parent",
       "location": {
         "filename": "inheritance_with_recursive_decl.test.fidl",
         "line": 3,
@@ -17,7 +17,7 @@
       },
       "methods": [
         {
-          "ordinal": 2566928499103139852,
+          "ordinal": 3051519745671742363,
           "name": "First",
           "location": {
             "filename": "inheritance_with_recursive_decl.test.fidl",
@@ -30,7 +30,7 @@
             {
               "type": {
                 "kind": "request",
-                "subtype": "fidl.test.json/Parent",
+                "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
                 "nullable": false
               },
               "name": "request",
@@ -46,7 +46,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix0",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -63,7 +63,7 @@
       ]
     },
     {
-      "name": "fidl.test.json/Child",
+      "name": "fidl.test.inheritancewithrecursivedecl/Child",
       "location": {
         "filename": "inheritance_with_recursive_decl.test.fidl",
         "line": 7,
@@ -72,7 +72,7 @@
       },
       "methods": [
         {
-          "ordinal": 2566928499103139852,
+          "ordinal": 3051519745671742363,
           "name": "First",
           "location": {
             "filename": "inheritance_with_recursive_decl.test.fidl",
@@ -85,7 +85,7 @@
             {
               "type": {
                 "kind": "request",
-                "subtype": "fidl.test.json/Parent",
+                "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
                 "nullable": false
               },
               "name": "request",
@@ -101,7 +101,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix0",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -116,7 +116,7 @@
           "is_composed": true
         },
         {
-          "ordinal": 2628306304378964143,
+          "ordinal": 489667253787160198,
           "name": "Second",
           "location": {
             "filename": "inheritance_with_recursive_decl.test.fidl",
@@ -129,7 +129,7 @@
             {
               "type": {
                 "kind": "request",
-                "subtype": "fidl.test.json/Parent",
+                "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
                 "nullable": false
               },
               "name": "request",
@@ -145,7 +145,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix1",
+          "maybe_request_payload": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix1",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -165,7 +165,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "inheritance_with_recursive_decl.test.fidl",
         "line": 4,
@@ -177,7 +177,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.json/Parent",
+            "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
             "nullable": false
           },
           "name": "request",
@@ -206,7 +206,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "inheritance_with_recursive_decl.test.fidl",
         "line": 9,
@@ -218,7 +218,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.json/Parent",
+            "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
             "nullable": false
           },
           "name": "request",
@@ -247,7 +247,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "inheritance_with_recursive_decl.test.fidl",
         "line": 4,
@@ -259,7 +259,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.json/Parent",
+            "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
             "nullable": false
           },
           "name": "request",
@@ -292,13 +292,13 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.json/Parent",
-    "fidl.test.json/Child"
+    "fidl.test.inheritancewithrecursivedecl/Parent",
+    "fidl.test.inheritancewithrecursivedecl/Child"
   ],
   "declarations": {
-    "fidl.test.json/Parent": "interface",
-    "fidl.test.json/Child": "interface",
-    "fidl.test.json/SomeLongAnonymousPrefix0": "struct",
-    "fidl.test.json/SomeLongAnonymousPrefix1": "struct"
+    "fidl.test.inheritancewithrecursivedecl/Parent": "interface",
+    "fidl.test.inheritancewithrecursivedecl/Child": "interface",
+    "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix1": "struct"
   }
 }

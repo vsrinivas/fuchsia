@@ -6,9 +6,11 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
-auto ::llcpp::test::name::UnionWithHandle::which() const -> Tag {
+namespace handlesintypes {
+auto ::llcpp::fidl::test::handlesintypes::UnionWithHandle::which() const
+    -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kH:
@@ -18,7 +20,8 @@ auto ::llcpp::test::name::UnionWithHandle::which() const -> Tag {
   }
 }
 
-void ::llcpp::test::name::UnionWithHandle::SizeAndOffsetAssertionHelper() {
+void ::llcpp::fidl::test::handlesintypes::UnionWithHandle::
+    SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionWithHandle) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionWithHandle, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
@@ -78,6 +81,7 @@ void HandlesInTypes::_CloseHandles() {
   union_with_handle._CloseHandles();
 }
 
-}  // namespace name
+}  // namespace handlesintypes
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

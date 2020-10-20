@@ -5,8 +5,8 @@
 #include <arrays.test.json.h>
 namespace fidl {
 namespace test {
-namespace json {
+namespace arrays {
 namespace testing {}  // namespace testing
-}  // namespace json
+}  // namespace arrays
 }  // namespace test
 }  // namespace fidl

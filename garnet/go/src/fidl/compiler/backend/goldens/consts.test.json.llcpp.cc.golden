@@ -6,10 +6,12 @@
 
 namespace llcpp {
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace consts {
 const char USERNAME[] = "\"squeenze\"";
 
-}  // namespace name
+}  // namespace consts
 }  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

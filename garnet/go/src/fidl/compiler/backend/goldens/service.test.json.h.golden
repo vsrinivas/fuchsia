@@ -4,8 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+namespace fidl {
 namespace test {
-namespace name {
+namespace service {
 
 #ifdef __Fuchsia__
 
@@ -20,7 +21,7 @@ class SecondProtocol_SyncProxy;
 using SecondProtocolHandle = ::fidl::InterfaceHandle<SecondProtocol>;
 namespace internal {
 constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
-    0x5785f9c1f2aece21lu;
+    0x54ea6448c1555a29lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -36,7 +37,7 @@ using FirstProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<FirstProtocol>;
 class FirstProtocol_SyncProxy;
 using FirstProtocolHandle = ::fidl::InterfaceHandle<FirstProtocol>;
 namespace internal {
-constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 0x580cbd0d43ccbe3blu;
+constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 0x5b76bb4db7c2bba4lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -175,7 +176,7 @@ class SecondProtocol_Proxy final : public ::fidl::internal::Proxy,
 class SecondProtocol_Stub final : public ::fidl::internal::Stub,
                                   public SecondProtocol_EventSender {
  public:
-  typedef class ::test::name::SecondProtocol SecondProtocol_clazz;
+  typedef class ::fidl::test::service::SecondProtocol SecondProtocol_clazz;
   explicit SecondProtocol_Stub(SecondProtocol_clazz* impl);
   ~SecondProtocol_Stub() override;
 
@@ -323,7 +324,7 @@ class FirstProtocol_Proxy final : public ::fidl::internal::Proxy,
 class FirstProtocol_Stub final : public ::fidl::internal::Stub,
                                  public FirstProtocol_EventSender {
  public:
-  typedef class ::test::name::FirstProtocol FirstProtocol_clazz;
+  typedef class ::fidl::test::service::FirstProtocol FirstProtocol_clazz;
   explicit FirstProtocol_Stub(FirstProtocol_clazz* impl);
   ~FirstProtocol_Stub() override;
 
@@ -351,7 +352,7 @@ class SingleMemberService final {
  public:
   class Handler;
 
-  static constexpr char Name[] = "test.name.SingleMemberService";
+  static constexpr char Name[] = "fidl.test.service.SingleMemberService";
 
   explicit SingleMemberService(
       std::unique_ptr<::fidl::ServiceConnector> service)
@@ -395,7 +396,8 @@ class MultiHomogeneousMemberService final {
  public:
   class Handler;
 
-  static constexpr char Name[] = "test.name.MultiHomogeneousMemberService";
+  static constexpr char Name[] =
+      "fidl.test.service.MultiHomogeneousMemberService";
 
   explicit MultiHomogeneousMemberService(
       std::unique_ptr<::fidl::ServiceConnector> service)
@@ -455,7 +457,8 @@ class MultiHeterogeneousMemberService final {
  public:
   class Handler;
 
-  static constexpr char Name[] = "test.name.MultiHeterogeneousMemberService";
+  static constexpr char Name[] =
+      "fidl.test.service.MultiHeterogeneousMemberService";
 
   explicit MultiHeterogeneousMemberService(
       std::unique_ptr<::fidl::ServiceConnector> service)
@@ -509,6 +512,7 @@ class MultiHeterogeneousMemberService::Handler final {
   ::fidl::ServiceHandlerBase* const service_;
 };
 #endif  // __Fuchsia
-}  // namespace name
+}  // namespace service
 }  // namespace test
+}  // namespace fidl
 namespace fidl {}  // namespace fidl

@@ -3,11 +3,13 @@
 #include <handles_in_types.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+namespace fidl {
 namespace test {
-namespace name {
+namespace handlesintypes {
 
-extern "C" const fidl_type_t test_name_UnionWithHandleTable;
-const fidl_type_t* UnionWithHandle::FidlType = &test_name_UnionWithHandleTable;
+extern "C" const fidl_type_t fidl_test_handlesintypes_UnionWithHandleTable;
+const fidl_type_t* UnionWithHandle::FidlType =
+    &fidl_test_handlesintypes_UnionWithHandleTable;
 
 UnionWithHandle::UnionWithHandle() {}
 
@@ -176,8 +178,9 @@ void UnionWithHandle::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t test_name_TableWithHandleTable;
-const fidl_type_t* TableWithHandle::FidlType = &test_name_TableWithHandleTable;
+extern "C" const fidl_type_t fidl_test_handlesintypes_TableWithHandleTable;
+const fidl_type_t* TableWithHandle::FidlType =
+    &fidl_test_handlesintypes_TableWithHandleTable;
 
 TableWithHandle::TableWithHandle() {}
 
@@ -276,8 +279,9 @@ zx_status_t TableWithHandle::Clone(TableWithHandle* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t test_name_HandlesInTypesTable;
-const fidl_type_t* HandlesInTypes::FidlType = &test_name_HandlesInTypesTable;
+extern "C" const fidl_type_t fidl_test_handlesintypes_HandlesInTypesTable;
+const fidl_type_t* HandlesInTypes::FidlType =
+    &fidl_test_handlesintypes_HandlesInTypesTable;
 
 void HandlesInTypes::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<HandlesInTypes>::value) {
@@ -324,5 +328,6 @@ zx_status_t HandlesInTypes::Clone(HandlesInTypes* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-}  // namespace name
+}  // namespace handlesintypes
 }  // namespace test
+}  // namespace fidl

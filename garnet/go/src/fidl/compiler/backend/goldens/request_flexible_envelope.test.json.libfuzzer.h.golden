@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/json/cpp/fidl.h>
+#include <fidl/test/requestflexibleenvelope/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -13,8 +13,8 @@
 
 namespace fuzzing {
 
-using StrictFoo = ::fidl::test::json::StrictFoo;
-using FlexibleFoo = ::fidl::test::json::FlexibleFoo;
+using StrictFoo = ::fidl::test::requestflexibleenvelope::StrictFoo;
+using FlexibleFoo = ::fidl::test::requestflexibleenvelope::FlexibleFoo;
 
 template <>
 struct MinSize<StrictFoo> {

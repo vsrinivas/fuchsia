@@ -1,15 +1,15 @@
 [TOC]
 
-# fidl.test.json
+# fidl.test.inheritancewithrecursivedecl
 
 
 ## **PROTOCOLS**
 
 ## Parent {#Parent}
-*Defined in [fidl.test.json/inheritance_with_recursive_decl.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/inheritance_with_recursive_decl.test.fidl#3)*
+*Defined in [fidl.test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/inheritance_with_recursive_decl.test.fidl#3)*
 
 
-### First {#fidl.test.json/Parent.First}
+### First {#fidl.test.inheritancewithrecursivedecl/Parent.First}
 
 
 #### Request
@@ -25,10 +25,10 @@
 
 
 ## Child {#Child}
-*Defined in [fidl.test.json/inheritance_with_recursive_decl.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/inheritance_with_recursive_decl.test.fidl#7)*
+*Defined in [fidl.test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/inheritance_with_recursive_decl.test.fidl#7)*
 
 
-### First {#fidl.test.json/Child.First}
+### First {#fidl.test.inheritancewithrecursivedecl/Child.First}
 
 
 #### Request
@@ -43,7 +43,7 @@
 
 
 
-### Second {#fidl.test.json/Child.Second}
+### Second {#fidl.test.inheritancewithrecursivedecl/Child.Second}
 
 
 #### Request

@@ -5,10 +5,10 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace fidl {
 namespace test {
-namespace json {
+namespace union_ {
 
-extern "C" const fidl_type_t fidl_test_json_UnionTable;
-const fidl_type_t* Union::FidlType = &fidl_test_json_UnionTable;
+extern "C" const fidl_type_t fidl_test_union_UnionTable;
+const fidl_type_t* Union::FidlType = &fidl_test_union_UnionTable;
 
 Union::Union() {}
 
@@ -230,9 +230,9 @@ void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_StructWithNullableXUnionTable;
+extern "C" const fidl_type_t fidl_test_union_StructWithNullableXUnionTable;
 const fidl_type_t* StructWithNullableXUnion::FidlType =
-    &fidl_test_json_StructWithNullableXUnionTable;
+    &fidl_test_union_StructWithNullableXUnionTable;
 
 void StructWithNullableXUnion::Encode(::fidl::Encoder* _encoder,
                                       size_t _offset) {
@@ -261,8 +261,8 @@ zx_status_t StructWithNullableXUnion::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t fidl_test_json_StrictUnionTable;
-const fidl_type_t* StrictUnion::FidlType = &fidl_test_json_StrictUnionTable;
+extern "C" const fidl_type_t fidl_test_union_StrictUnionTable;
+const fidl_type_t* StrictUnion::FidlType = &fidl_test_union_StrictUnionTable;
 
 StrictUnion::StrictUnion() {}
 
@@ -485,9 +485,9 @@ void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_StrictSimpleXUnionTable;
+extern "C" const fidl_type_t fidl_test_union_StrictSimpleXUnionTable;
 const fidl_type_t* StrictSimpleXUnion::FidlType =
-    &fidl_test_json_StrictSimpleXUnionTable;
+    &fidl_test_union_StrictSimpleXUnionTable;
 
 StrictSimpleXUnion::StrictSimpleXUnion() {}
 
@@ -694,8 +694,8 @@ void StrictSimpleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_StrictFooTable;
-const fidl_type_t* StrictFoo::FidlType = &fidl_test_json_StrictFooTable;
+extern "C" const fidl_type_t fidl_test_union_StrictFooTable;
+const fidl_type_t* StrictFoo::FidlType = &fidl_test_union_StrictFooTable;
 
 StrictFoo::StrictFoo() {}
 
@@ -868,9 +868,9 @@ void StrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_StrictBoundedXUnionTable;
+extern "C" const fidl_type_t fidl_test_union_StrictBoundedXUnionTable;
 const fidl_type_t* StrictBoundedXUnion::FidlType =
-    &fidl_test_json_StrictBoundedXUnionTable;
+    &fidl_test_union_StrictBoundedXUnionTable;
 
 StrictBoundedXUnion::StrictBoundedXUnion() {}
 
@@ -1013,9 +1013,9 @@ void StrictBoundedXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_ReverseOrdinalUnionTable;
+extern "C" const fidl_type_t fidl_test_union_ReverseOrdinalUnionTable;
 const fidl_type_t* ReverseOrdinalUnion::FidlType =
-    &fidl_test_json_ReverseOrdinalUnionTable;
+    &fidl_test_union_ReverseOrdinalUnionTable;
 
 ReverseOrdinalUnion::ReverseOrdinalUnion() {}
 
@@ -1185,8 +1185,8 @@ void ReverseOrdinalUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_PizzaTable;
-const fidl_type_t* Pizza::FidlType = &fidl_test_json_PizzaTable;
+extern "C" const fidl_type_t fidl_test_union_PizzaTable;
+const fidl_type_t* Pizza::FidlType = &fidl_test_union_PizzaTable;
 
 void Pizza::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<Pizza>::value) {
@@ -1209,8 +1209,8 @@ zx_status_t Pizza::Clone(Pizza* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t fidl_test_json_PastaTable;
-const fidl_type_t* Pasta::FidlType = &fidl_test_json_PastaTable;
+extern "C" const fidl_type_t fidl_test_union_PastaTable;
+const fidl_type_t* Pasta::FidlType = &fidl_test_union_PastaTable;
 
 void Pasta::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<Pasta>::value) {
@@ -1233,9 +1233,9 @@ zx_status_t Pasta::Clone(Pasta* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t fidl_test_json_StrictPizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_union_StrictPizzaOrPastaTable;
 const fidl_type_t* StrictPizzaOrPasta::FidlType =
-    &fidl_test_json_StrictPizzaOrPastaTable;
+    &fidl_test_union_StrictPizzaOrPastaTable;
 
 StrictPizzaOrPasta::StrictPizzaOrPasta() {}
 
@@ -1245,11 +1245,11 @@ StrictPizzaOrPasta::StrictPizzaOrPasta(StrictPizzaOrPasta&& other)
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPizza:
-      new (&pizza_)::fidl::test::json::Pizza();
+      new (&pizza_)::fidl::test::union ::Pizza();
       pizza_ = std::move(other.pizza_);
       break;
     case Tag::kPasta:
-      new (&pasta_)::fidl::test::json::Pasta();
+      new (&pasta_)::fidl::test::union ::Pasta();
       pasta_ = std::move(other.pasta_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1263,11 +1263,11 @@ StrictPizzaOrPasta& StrictPizzaOrPasta::operator=(StrictPizzaOrPasta&& other) {
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPizza:
-        new (&pizza_)::fidl::test::json::Pizza();
+        new (&pizza_)::fidl::test::union ::Pizza();
         pizza_ = std::move(other.pizza_);
         break;
       case Tag::kPasta:
-        new (&pasta_)::fidl::test::json::Pasta();
+        new (&pasta_)::fidl::test::union ::Pasta();
         pasta_ = std::move(other.pasta_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1278,13 +1278,13 @@ StrictPizzaOrPasta& StrictPizzaOrPasta::operator=(StrictPizzaOrPasta&& other) {
 }
 
 StrictPizzaOrPasta StrictPizzaOrPasta::WithPizza(
-    ::fidl::test::json::Pizza&& val) {
+    ::fidl::test::union ::Pizza&& val) {
   StrictPizzaOrPasta result;
   result.set_pizza(std::move(val));
   return result;
 }
 StrictPizzaOrPasta StrictPizzaOrPasta::WithPasta(
-    ::fidl::test::json::Pasta&& val) {
+    ::fidl::test::union ::Pasta&& val) {
   StrictPizzaOrPasta result;
   result.set_pasta(std::move(val));
   return result;
@@ -1299,14 +1299,14 @@ void StrictPizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
   switch (Which()) {
     case Tag::kPizza: {
       envelope_offset =
-          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pizza,
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::union ::Pizza,
                                                     ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pizza_, envelope_offset);
       break;
     }
     case Tag::kPasta: {
       envelope_offset =
-          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pasta,
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::union ::Pasta,
                                                     ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pasta_, envelope_offset);
       break;
@@ -1344,11 +1344,11 @@ void StrictPizzaOrPasta::Decode(::fidl::Decoder* decoder,
 
   switch (value->tag_) {
     case Tag::kPizza:
-      new (&value->pizza_)::fidl::test::json::Pizza();
+      new (&value->pizza_)::fidl::test::union ::Pizza();
       ::fidl::Decode(decoder, &value->pizza_, envelope_offset);
       break;
     case Tag::kPasta:
-      new (&value->pasta_)::fidl::test::json::Pasta();
+      new (&value->pasta_)::fidl::test::union ::Pasta();
       ::fidl::Decode(decoder, &value->pasta_, envelope_offset);
       break;
     default:
@@ -1363,10 +1363,10 @@ zx_status_t StrictPizzaOrPasta::Clone(StrictPizzaOrPasta* result) const {
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kPizza:
-      new (&result->pizza_)::fidl::test::json::Pizza();
+      new (&result->pizza_)::fidl::test::union ::Pizza();
       return ::fidl::Clone(pizza_, &result->pizza_);
     case Tag::kPasta:
-      new (&result->pasta_)::fidl::test::json::Pasta();
+      new (&result->pasta_)::fidl::test::union ::Pasta();
       return ::fidl::Clone(pasta_, &result->pasta_);
     default:
       return ZX_OK;
@@ -1374,14 +1374,14 @@ zx_status_t StrictPizzaOrPasta::Clone(StrictPizzaOrPasta* result) const {
 }
 
 StrictPizzaOrPasta& StrictPizzaOrPasta::set_pizza(
-    ::fidl::test::json::Pizza value) {
+    ::fidl::test::union ::Pizza value) {
   EnsureStorageInitialized(Tag::kPizza);
   pizza_ = std::move(value);
   return *this;
 }
 
 StrictPizzaOrPasta& StrictPizzaOrPasta::set_pasta(
-    ::fidl::test::json::Pasta value) {
+    ::fidl::test::union ::Pasta value) {
   EnsureStorageInitialized(Tag::kPasta);
   pasta_ = std::move(value);
   return *this;
@@ -1410,18 +1410,18 @@ void StrictPizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kPizza:
-        new (&pizza_)::fidl::test::json::Pizza();
+        new (&pizza_)::fidl::test::union ::Pizza();
         break;
       case Tag::kPasta:
-        new (&pasta_)::fidl::test::json::Pasta();
+        new (&pasta_)::fidl::test::union ::Pasta();
         break;
       default:
         break;
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_PizzaOrPastaTable;
-const fidl_type_t* PizzaOrPasta::FidlType = &fidl_test_json_PizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_union_PizzaOrPastaTable;
+const fidl_type_t* PizzaOrPasta::FidlType = &fidl_test_union_PizzaOrPastaTable;
 
 PizzaOrPasta::PizzaOrPasta() {}
 
@@ -1430,11 +1430,11 @@ PizzaOrPasta::~PizzaOrPasta() { Destroy(); }
 PizzaOrPasta::PizzaOrPasta(PizzaOrPasta&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPizza:
-      new (&pizza_)::fidl::test::json::Pizza();
+      new (&pizza_)::fidl::test::union ::Pizza();
       pizza_ = std::move(other.pizza_);
       break;
     case Tag::kPasta:
-      new (&pasta_)::fidl::test::json::Pasta();
+      new (&pasta_)::fidl::test::union ::Pasta();
       pasta_ = std::move(other.pasta_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1448,11 +1448,11 @@ PizzaOrPasta& PizzaOrPasta::operator=(PizzaOrPasta&& other) {
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPizza:
-        new (&pizza_)::fidl::test::json::Pizza();
+        new (&pizza_)::fidl::test::union ::Pizza();
         pizza_ = std::move(other.pizza_);
         break;
       case Tag::kPasta:
-        new (&pasta_)::fidl::test::json::Pasta();
+        new (&pasta_)::fidl::test::union ::Pasta();
         pasta_ = std::move(other.pasta_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1462,12 +1462,12 @@ PizzaOrPasta& PizzaOrPasta::operator=(PizzaOrPasta&& other) {
   return *this;
 }
 
-PizzaOrPasta PizzaOrPasta::WithPizza(::fidl::test::json::Pizza&& val) {
+PizzaOrPasta PizzaOrPasta::WithPizza(::fidl::test::union ::Pizza&& val) {
   PizzaOrPasta result;
   result.set_pizza(std::move(val));
   return result;
 }
-PizzaOrPasta PizzaOrPasta::WithPasta(::fidl::test::json::Pasta&& val) {
+PizzaOrPasta PizzaOrPasta::WithPasta(::fidl::test::union ::Pasta&& val) {
   PizzaOrPasta result;
   result.set_pasta(std::move(val));
   return result;
@@ -1482,14 +1482,14 @@ void PizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
   switch (Which()) {
     case Tag::kPizza: {
       envelope_offset =
-          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pizza,
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::union ::Pizza,
                                                     ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pizza_, envelope_offset);
       break;
     }
     case Tag::kPasta: {
       envelope_offset =
-          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pasta,
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::union ::Pasta,
                                                     ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pasta_, envelope_offset);
       break;
@@ -1527,11 +1527,11 @@ void PizzaOrPasta::Decode(::fidl::Decoder* decoder, PizzaOrPasta* value,
 
   switch (value->tag_) {
     case Tag::kPizza:
-      new (&value->pizza_)::fidl::test::json::Pizza();
+      new (&value->pizza_)::fidl::test::union ::Pizza();
       ::fidl::Decode(decoder, &value->pizza_, envelope_offset);
       break;
     case Tag::kPasta:
-      new (&value->pasta_)::fidl::test::json::Pasta();
+      new (&value->pasta_)::fidl::test::union ::Pasta();
       ::fidl::Decode(decoder, &value->pasta_, envelope_offset);
       break;
     default:
@@ -1546,23 +1546,23 @@ zx_status_t PizzaOrPasta::Clone(PizzaOrPasta* result) const {
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kPizza:
-      new (&result->pizza_)::fidl::test::json::Pizza();
+      new (&result->pizza_)::fidl::test::union ::Pizza();
       return ::fidl::Clone(pizza_, &result->pizza_);
     case Tag::kPasta:
-      new (&result->pasta_)::fidl::test::json::Pasta();
+      new (&result->pasta_)::fidl::test::union ::Pasta();
       return ::fidl::Clone(pasta_, &result->pasta_);
     default:
       return ZX_OK;
   }
 }
 
-PizzaOrPasta& PizzaOrPasta::set_pizza(::fidl::test::json::Pizza value) {
+PizzaOrPasta& PizzaOrPasta::set_pizza(::fidl::test::union ::Pizza value) {
   EnsureStorageInitialized(Tag::kPizza);
   pizza_ = std::move(value);
   return *this;
 }
 
-PizzaOrPasta& PizzaOrPasta::set_pasta(::fidl::test::json::Pasta value) {
+PizzaOrPasta& PizzaOrPasta::set_pasta(::fidl::test::union ::Pasta value) {
   EnsureStorageInitialized(Tag::kPasta);
   pasta_ = std::move(value);
   return *this;
@@ -1591,19 +1591,19 @@ void PizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kPizza:
-        new (&pizza_)::fidl::test::json::Pizza();
+        new (&pizza_)::fidl::test::union ::Pizza();
         break;
       case Tag::kPasta:
-        new (&pasta_)::fidl::test::json::Pasta();
+        new (&pasta_)::fidl::test::union ::Pasta();
         break;
       default:
         break;
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_FlexiblePizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_union_FlexiblePizzaOrPastaTable;
 const fidl_type_t* FlexiblePizzaOrPasta::FidlType =
-    &fidl_test_json_FlexiblePizzaOrPastaTable;
+    &fidl_test_union_FlexiblePizzaOrPastaTable;
 
 FlexiblePizzaOrPasta::FlexiblePizzaOrPasta() {}
 
@@ -1613,11 +1613,11 @@ FlexiblePizzaOrPasta::FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&& other)
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPizza:
-      new (&pizza_)::fidl::test::json::Pizza();
+      new (&pizza_)::fidl::test::union ::Pizza();
       pizza_ = std::move(other.pizza_);
       break;
     case Tag::kPasta:
-      new (&pasta_)::fidl::test::json::Pasta();
+      new (&pasta_)::fidl::test::union ::Pasta();
       pasta_ = std::move(other.pasta_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1636,11 +1636,11 @@ FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPizza:
-        new (&pizza_)::fidl::test::json::Pizza();
+        new (&pizza_)::fidl::test::union ::Pizza();
         pizza_ = std::move(other.pizza_);
         break;
       case Tag::kPasta:
-        new (&pasta_)::fidl::test::json::Pasta();
+        new (&pasta_)::fidl::test::union ::Pasta();
         pasta_ = std::move(other.pasta_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1655,13 +1655,13 @@ FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::operator=(
 }
 
 FlexiblePizzaOrPasta FlexiblePizzaOrPasta::WithPizza(
-    ::fidl::test::json::Pizza&& val) {
+    ::fidl::test::union ::Pizza&& val) {
   FlexiblePizzaOrPasta result;
   result.set_pizza(std::move(val));
   return result;
 }
 FlexiblePizzaOrPasta FlexiblePizzaOrPasta::WithPasta(
-    ::fidl::test::json::Pasta&& val) {
+    ::fidl::test::union ::Pasta&& val) {
   FlexiblePizzaOrPasta result;
   result.set_pasta(std::move(val));
   return result;
@@ -1676,14 +1676,14 @@ void FlexiblePizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
   switch (Which()) {
     case Tag::kPizza: {
       envelope_offset =
-          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pizza,
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::union ::Pizza,
                                                     ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pizza_, envelope_offset);
       break;
     }
     case Tag::kPasta: {
       envelope_offset =
-          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pasta,
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::union ::Pasta,
                                                     ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pasta_, envelope_offset);
       break;
@@ -1725,11 +1725,11 @@ void FlexiblePizzaOrPasta::Decode(::fidl::Decoder* decoder,
 
   switch (value->tag_) {
     case Tag::kPizza:
-      new (&value->pizza_)::fidl::test::json::Pizza();
+      new (&value->pizza_)::fidl::test::union ::Pizza();
       ::fidl::Decode(decoder, &value->pizza_, envelope_offset);
       break;
     case Tag::kPasta:
-      new (&value->pasta_)::fidl::test::json::Pasta();
+      new (&value->pasta_)::fidl::test::union ::Pasta();
       ::fidl::Decode(decoder, &value->pasta_, envelope_offset);
       break;
     default:
@@ -1746,10 +1746,10 @@ zx_status_t FlexiblePizzaOrPasta::Clone(FlexiblePizzaOrPasta* result) const {
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kPizza:
-      new (&result->pizza_)::fidl::test::json::Pizza();
+      new (&result->pizza_)::fidl::test::union ::Pizza();
       return ::fidl::Clone(pizza_, &result->pizza_);
     case Tag::kPasta:
-      new (&result->pasta_)::fidl::test::json::Pasta();
+      new (&result->pasta_)::fidl::test::union ::Pasta();
       return ::fidl::Clone(pasta_, &result->pasta_);
     default:
       new (&result->unknown_data_) decltype(unknown_data_);
@@ -1759,14 +1759,14 @@ zx_status_t FlexiblePizzaOrPasta::Clone(FlexiblePizzaOrPasta* result) const {
 }
 
 FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::set_pizza(
-    ::fidl::test::json::Pizza value) {
+    ::fidl::test::union ::Pizza value) {
   EnsureStorageInitialized(Tag::kPizza);
   pizza_ = std::move(value);
   return *this;
 }
 
 FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::set_pasta(
-    ::fidl::test::json::Pasta value) {
+    ::fidl::test::union ::Pasta value) {
   EnsureStorageInitialized(Tag::kPasta);
   pasta_ = std::move(value);
   return *this;
@@ -1804,10 +1804,10 @@ void FlexiblePizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kPizza:
-        new (&pizza_)::fidl::test::json::Pizza();
+        new (&pizza_)::fidl::test::union ::Pizza();
         break;
       case Tag::kPasta:
-        new (&pasta_)::fidl::test::json::Pasta();
+        new (&pasta_)::fidl::test::union ::Pasta();
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -1815,9 +1815,9 @@ void FlexiblePizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_ExplicitPizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_union_ExplicitPizzaOrPastaTable;
 const fidl_type_t* ExplicitPizzaOrPasta::FidlType =
-    &fidl_test_json_ExplicitPizzaOrPastaTable;
+    &fidl_test_union_ExplicitPizzaOrPastaTable;
 
 ExplicitPizzaOrPasta::ExplicitPizzaOrPasta() {}
 
@@ -1827,11 +1827,11 @@ ExplicitPizzaOrPasta::ExplicitPizzaOrPasta(ExplicitPizzaOrPasta&& other)
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPizza:
-      new (&pizza_)::fidl::test::json::Pizza();
+      new (&pizza_)::fidl::test::union ::Pizza();
       pizza_ = std::move(other.pizza_);
       break;
     case Tag::kPasta:
-      new (&pasta_)::fidl::test::json::Pasta();
+      new (&pasta_)::fidl::test::union ::Pasta();
       pasta_ = std::move(other.pasta_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1846,11 +1846,11 @@ ExplicitPizzaOrPasta& ExplicitPizzaOrPasta::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPizza:
-        new (&pizza_)::fidl::test::json::Pizza();
+        new (&pizza_)::fidl::test::union ::Pizza();
         pizza_ = std::move(other.pizza_);
         break;
       case Tag::kPasta:
-        new (&pasta_)::fidl::test::json::Pasta();
+        new (&pasta_)::fidl::test::union ::Pasta();
         pasta_ = std::move(other.pasta_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1861,13 +1861,13 @@ ExplicitPizzaOrPasta& ExplicitPizzaOrPasta::operator=(
 }
 
 ExplicitPizzaOrPasta ExplicitPizzaOrPasta::WithPizza(
-    ::fidl::test::json::Pizza&& val) {
+    ::fidl::test::union ::Pizza&& val) {
   ExplicitPizzaOrPasta result;
   result.set_pizza(std::move(val));
   return result;
 }
 ExplicitPizzaOrPasta ExplicitPizzaOrPasta::WithPasta(
-    ::fidl::test::json::Pasta&& val) {
+    ::fidl::test::union ::Pasta&& val) {
   ExplicitPizzaOrPasta result;
   result.set_pasta(std::move(val));
   return result;
@@ -1882,14 +1882,14 @@ void ExplicitPizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
   switch (Which()) {
     case Tag::kPizza: {
       envelope_offset =
-          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pizza,
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::union ::Pizza,
                                                     ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pizza_, envelope_offset);
       break;
     }
     case Tag::kPasta: {
       envelope_offset =
-          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pasta,
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::union ::Pasta,
                                                     ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pasta_, envelope_offset);
       break;
@@ -1927,11 +1927,11 @@ void ExplicitPizzaOrPasta::Decode(::fidl::Decoder* decoder,
 
   switch (value->tag_) {
     case Tag::kPizza:
-      new (&value->pizza_)::fidl::test::json::Pizza();
+      new (&value->pizza_)::fidl::test::union ::Pizza();
       ::fidl::Decode(decoder, &value->pizza_, envelope_offset);
       break;
     case Tag::kPasta:
-      new (&value->pasta_)::fidl::test::json::Pasta();
+      new (&value->pasta_)::fidl::test::union ::Pasta();
       ::fidl::Decode(decoder, &value->pasta_, envelope_offset);
       break;
     default:
@@ -1946,10 +1946,10 @@ zx_status_t ExplicitPizzaOrPasta::Clone(ExplicitPizzaOrPasta* result) const {
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kPizza:
-      new (&result->pizza_)::fidl::test::json::Pizza();
+      new (&result->pizza_)::fidl::test::union ::Pizza();
       return ::fidl::Clone(pizza_, &result->pizza_);
     case Tag::kPasta:
-      new (&result->pasta_)::fidl::test::json::Pasta();
+      new (&result->pasta_)::fidl::test::union ::Pasta();
       return ::fidl::Clone(pasta_, &result->pasta_);
     default:
       return ZX_OK;
@@ -1957,14 +1957,14 @@ zx_status_t ExplicitPizzaOrPasta::Clone(ExplicitPizzaOrPasta* result) const {
 }
 
 ExplicitPizzaOrPasta& ExplicitPizzaOrPasta::set_pizza(
-    ::fidl::test::json::Pizza value) {
+    ::fidl::test::union ::Pizza value) {
   EnsureStorageInitialized(Tag::kPizza);
   pizza_ = std::move(value);
   return *this;
 }
 
 ExplicitPizzaOrPasta& ExplicitPizzaOrPasta::set_pasta(
-    ::fidl::test::json::Pasta value) {
+    ::fidl::test::union ::Pasta value) {
   EnsureStorageInitialized(Tag::kPasta);
   pasta_ = std::move(value);
   return *this;
@@ -1993,19 +1993,19 @@ void ExplicitPizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kPizza:
-        new (&pizza_)::fidl::test::json::Pizza();
+        new (&pizza_)::fidl::test::union ::Pizza();
         break;
       case Tag::kPasta:
-        new (&pasta_)::fidl::test::json::Pasta();
+        new (&pasta_)::fidl::test::union ::Pasta();
         break;
       default:
         break;
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_OlderSimpleUnionTable;
+extern "C" const fidl_type_t fidl_test_union_OlderSimpleUnionTable;
 const fidl_type_t* OlderSimpleUnion::FidlType =
-    &fidl_test_json_OlderSimpleUnionTable;
+    &fidl_test_union_OlderSimpleUnionTable;
 
 OlderSimpleUnion::OlderSimpleUnion() {}
 
@@ -2204,14 +2204,14 @@ void OlderSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 namespace {
 
 extern "C" const fidl_type_t
-    fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 extern "C" const fidl_type_t
-    fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 
 extern "C" const fidl_type_t
-    fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 extern "C" const fidl_type_t
-    fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 }  // namespace
 
@@ -2223,11 +2223,11 @@ const fidl_type_t* TestProtocol_RequestDecoder::GetType(
     case internal::
         kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
       *out_needs_response = true;
-      return &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+      return &fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
     case internal::
         kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
       *out_needs_response = true;
-      return &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+      return &fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -2238,10 +2238,10 @@ const fidl_type_t* TestProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::
         kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
-      return &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+      return &fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
     case internal::
         kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
-      return &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+      return &fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
     default:
       return nullptr;
   }
@@ -2283,11 +2283,11 @@ TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler(
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::fidl::test::json::StrictBoundedXUnion>(
+        callback_(::fidl::DecodeAs<::fidl::test::union ::StrictBoundedXUnion>(
             &decoder, 16));
         return ZX_OK;
       },
-      &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable);
+      &fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable);
 }
 
 }  // namespace
@@ -2297,7 +2297,7 @@ void TestProtocol_Proxy::StrictXUnionHenceResponseMayBeStackAllocated(
       internal::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
   controller_->Send(
-      &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable,
+      &fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable,
       TestProtocol_RequestEncoder::StrictXUnionHenceResponseMayBeStackAllocated(
           &_encoder),
       TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler(
@@ -2316,11 +2316,11 @@ TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler(
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::fidl::test::json::OlderSimpleUnion>(
+        callback_(::fidl::DecodeAs<::fidl::test::union ::OlderSimpleUnion>(
             &decoder, 16));
         return ZX_OK;
       },
-      &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable);
+      &fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable);
 }
 
 }  // namespace
@@ -2330,7 +2330,7 @@ void TestProtocol_Proxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
       internal::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
   controller_->Send(
-      &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable,
+      &fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable,
       TestProtocol_RequestEncoder::
           FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder),
       TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler(
@@ -2352,12 +2352,12 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Responder
       ::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(::fidl::test::json::StrictBoundedXUnion xu) {
+  void operator()(::fidl::test::union ::StrictBoundedXUnion xu) {
     ::fidl::Encoder _encoder(
         internal::
             kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
     response_.Send(
-        &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
+        &fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
         TestProtocol_ResponseEncoder::
             StrictXUnionHenceResponseMayBeStackAllocated(&_encoder, &xu));
   }
@@ -2373,12 +2373,12 @@ class TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Responder
       ::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(::fidl::test::json::OlderSimpleUnion xu) {
+  void operator()(::fidl::test::union ::OlderSimpleUnion xu) {
     ::fidl::Encoder _encoder(
         internal::
             kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
     response_.Send(
-        &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
+        &fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
         TestProtocol_ResponseEncoder::
             FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder, &xu));
   }
@@ -2444,51 +2444,51 @@ TestProtocol_SyncProxy::~TestProtocol_SyncProxy() = default;
 
 zx_status_t
 TestProtocol_SyncProxy::StrictXUnionHenceResponseMayBeStackAllocated(
-    ::fidl::test::json::StrictBoundedXUnion* out_xu) {
+    ::fidl::test::union ::StrictBoundedXUnion* out_xu) {
   ::fidl::Encoder _encoder(
       internal::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable,
-      &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
+      &fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable,
+      &fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
       TestProtocol_RequestEncoder::StrictXUnionHenceResponseMayBeStackAllocated(
           &_encoder),
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_xu =
-      ::fidl::DecodeAs<::fidl::test::json::StrictBoundedXUnion>(&decoder_, 16);
+  *out_xu = ::fidl::DecodeAs<::fidl::test::union ::StrictBoundedXUnion>(
+      &decoder_, 16);
   return ZX_OK;
 }
 
 zx_status_t
 TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-    ::fidl::test::json::OlderSimpleUnion* out_xu) {
+    ::fidl::test::union ::OlderSimpleUnion* out_xu) {
   ::fidl::Encoder _encoder(
       internal::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable,
-      &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
+      &fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable,
+      &fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
       TestProtocol_RequestEncoder::
           FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder),
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_xu =
-      ::fidl::DecodeAs<::fidl::test::json::OlderSimpleUnion>(&decoder_, 16);
+      ::fidl::DecodeAs<::fidl::test::union ::OlderSimpleUnion>(&decoder_, 16);
   return ZX_OK;
 }
 
 #endif  // __Fuchsia__
 
-extern "C" const fidl_type_t fidl_test_json_NullableUnionStructTable;
+extern "C" const fidl_type_t fidl_test_union_NullableUnionStructTable;
 const fidl_type_t* NullableUnionStruct::FidlType =
-    &fidl_test_json_NullableUnionStructTable;
+    &fidl_test_union_NullableUnionStructTable;
 
 void NullableUnionStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<NullableUnionStruct>::value) {
@@ -2514,9 +2514,9 @@ zx_status_t NullableUnionStruct::Clone(NullableUnionStruct* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t fidl_test_json_NewerSimpleUnionTable;
+extern "C" const fidl_type_t fidl_test_union_NewerSimpleUnionTable;
 const fidl_type_t* NewerSimpleUnion::FidlType =
-    &fidl_test_json_NewerSimpleUnionTable;
+    &fidl_test_union_NewerSimpleUnionTable;
 
 NewerSimpleUnion::NewerSimpleUnion() {}
 
@@ -2755,8 +2755,9 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_FlexibleUnionTable;
-const fidl_type_t* FlexibleUnion::FidlType = &fidl_test_json_FlexibleUnionTable;
+extern "C" const fidl_type_t fidl_test_union_FlexibleUnionTable;
+const fidl_type_t* FlexibleUnion::FidlType =
+    &fidl_test_union_FlexibleUnionTable;
 
 FlexibleUnion::FlexibleUnion() {}
 
@@ -3005,8 +3006,8 @@ void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_FlexibleFooTable;
-const fidl_type_t* FlexibleFoo::FidlType = &fidl_test_json_FlexibleFooTable;
+extern "C" const fidl_type_t fidl_test_union_FlexibleFooTable;
+const fidl_type_t* FlexibleFoo::FidlType = &fidl_test_union_FlexibleFooTable;
 
 FlexibleFoo::FlexibleFoo() {}
 
@@ -3205,9 +3206,9 @@ void FlexibleFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_FieldCollisionTable;
+extern "C" const fidl_type_t fidl_test_union_FieldCollisionTable;
 const fidl_type_t* FieldCollision::FidlType =
-    &fidl_test_json_FieldCollisionTable;
+    &fidl_test_union_FieldCollisionTable;
 
 FieldCollision::FieldCollision() {}
 
@@ -3342,9 +3343,9 @@ void FieldCollision::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_ExplicitXUnionTable;
+extern "C" const fidl_type_t fidl_test_union_ExplicitXUnionTable;
 const fidl_type_t* ExplicitXUnion::FidlType =
-    &fidl_test_json_ExplicitXUnionTable;
+    &fidl_test_union_ExplicitXUnionTable;
 
 ExplicitXUnion::ExplicitXUnion() {}
 
@@ -3538,8 +3539,9 @@ void ExplicitXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_ExplicitUnionTable;
-const fidl_type_t* ExplicitUnion::FidlType = &fidl_test_json_ExplicitUnionTable;
+extern "C" const fidl_type_t fidl_test_union_ExplicitUnionTable;
+const fidl_type_t* ExplicitUnion::FidlType =
+    &fidl_test_union_ExplicitUnionTable;
 
 ExplicitUnion::ExplicitUnion() {}
 
@@ -3713,9 +3715,9 @@ void ExplicitUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_ExplicitStrictFooTable;
+extern "C" const fidl_type_t fidl_test_union_ExplicitStrictFooTable;
 const fidl_type_t* ExplicitStrictFoo::FidlType =
-    &fidl_test_json_ExplicitStrictFooTable;
+    &fidl_test_union_ExplicitStrictFooTable;
 
 ExplicitStrictFoo::ExplicitStrictFoo() {}
 
@@ -3889,8 +3891,8 @@ void ExplicitStrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_ExplicitFooTable;
-const fidl_type_t* ExplicitFoo::FidlType = &fidl_test_json_ExplicitFooTable;
+extern "C" const fidl_type_t fidl_test_union_ExplicitFooTable;
+const fidl_type_t* ExplicitFoo::FidlType = &fidl_test_union_ExplicitFooTable;
 
 ExplicitFoo::ExplicitFoo() {}
 
@@ -4089,8 +4091,8 @@ void ExplicitFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t fidl_test_json_EmptyTable;
-const fidl_type_t* Empty::FidlType = &fidl_test_json_EmptyTable;
+extern "C" const fidl_type_t fidl_test_union_EmptyTable;
+const fidl_type_t* Empty::FidlType = &fidl_test_union_EmptyTable;
 
 void Empty::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<Empty>::value) {
@@ -4113,9 +4115,9 @@ zx_status_t Empty::Clone(Empty* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t fidl_test_json_XUnionContainingEmptyStructTable;
+extern "C" const fidl_type_t fidl_test_union_XUnionContainingEmptyStructTable;
 const fidl_type_t* XUnionContainingEmptyStruct::FidlType =
-    &fidl_test_json_XUnionContainingEmptyStructTable;
+    &fidl_test_union_XUnionContainingEmptyStructTable;
 
 XUnionContainingEmptyStruct::XUnionContainingEmptyStruct() {}
 
@@ -4126,7 +4128,7 @@ XUnionContainingEmptyStruct::XUnionContainingEmptyStruct(
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kEmpty:
-      new (&empty_)::fidl::test::json::Empty();
+      new (&empty_)::fidl::test::union ::Empty();
       empty_ = std::move(other.empty_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -4145,7 +4147,7 @@ XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kEmpty:
-        new (&empty_)::fidl::test::json::Empty();
+        new (&empty_)::fidl::test::union ::Empty();
         empty_ = std::move(other.empty_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -4160,7 +4162,7 @@ XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::operator=(
 }
 
 XUnionContainingEmptyStruct XUnionContainingEmptyStruct::WithEmpty(
-    ::fidl::test::json::Empty&& val) {
+    ::fidl::test::union ::Empty&& val) {
   XUnionContainingEmptyStruct result;
   result.set_empty(std::move(val));
   return result;
@@ -4176,7 +4178,7 @@ void XUnionContainingEmptyStruct::Encode(::fidl::Encoder* encoder,
   switch (Which()) {
     case Tag::kEmpty: {
       envelope_offset =
-          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Empty,
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::union ::Empty,
                                                     ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &empty_, envelope_offset);
       break;
@@ -4219,7 +4221,7 @@ void XUnionContainingEmptyStruct::Decode(::fidl::Decoder* decoder,
 
   switch (value->tag_) {
     case Tag::kEmpty:
-      new (&value->empty_)::fidl::test::json::Empty();
+      new (&value->empty_)::fidl::test::union ::Empty();
       ::fidl::Decode(decoder, &value->empty_, envelope_offset);
       break;
     default:
@@ -4237,7 +4239,7 @@ zx_status_t XUnionContainingEmptyStruct::Clone(
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kEmpty:
-      new (&result->empty_)::fidl::test::json::Empty();
+      new (&result->empty_)::fidl::test::union ::Empty();
       return ::fidl::Clone(empty_, &result->empty_);
     default:
       new (&result->unknown_data_) decltype(unknown_data_);
@@ -4247,7 +4249,7 @@ zx_status_t XUnionContainingEmptyStruct::Clone(
 }
 
 XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::set_empty(
-    ::fidl::test::json::Empty value) {
+    ::fidl::test::union ::Empty value) {
   EnsureStorageInitialized(Tag::kEmpty);
   empty_ = std::move(value);
   return *this;
@@ -4284,7 +4286,7 @@ void XUnionContainingEmptyStruct::EnsureStorageInitialized(
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kEmpty:
-        new (&empty_)::fidl::test::json::Empty();
+        new (&empty_)::fidl::test::union ::Empty();
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -4292,6 +4294,6 @@ void XUnionContainingEmptyStruct::EnsureStorageInitialized(
     }
   }
 }
-}  // namespace json
+}  // namespace union_
 }  // namespace test
 }  // namespace fidl

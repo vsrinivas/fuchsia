@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/json/cpp/fidl.h>
+#include <fidl/test/inheritancewithrecursivedecl/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"

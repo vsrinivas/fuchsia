@@ -1,4 +1,4 @@
-library fidl.test.json;
+library fidl.test.arrays;
 
 struct StructSmallArray {
     array<uint32>:2 a;

@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.json",
+  "name": "fidl.test.table",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -11,7 +11,7 @@
   "struct_declarations": [],
   "table_declarations": [
     {
-      "name": "fidl.test.json/EmptyTable",
+      "name": "fidl.test.table/EmptyTable",
       "location": {
         "filename": "table.test.fidl",
         "line": 3,
@@ -33,7 +33,7 @@
       }
     },
     {
-      "name": "fidl.test.json/SimpleTable",
+      "name": "fidl.test.table/SimpleTable",
       "location": {
         "filename": "table.test.fidl",
         "line": 6,
@@ -116,7 +116,7 @@
       }
     },
     {
-      "name": "fidl.test.json/OlderSimpleTable",
+      "name": "fidl.test.table/OlderSimpleTable",
       "location": {
         "filename": "table.test.fidl",
         "line": 14,
@@ -164,7 +164,7 @@
       }
     },
     {
-      "name": "fidl.test.json/NewerSimpleTable",
+      "name": "fidl.test.table/NewerSimpleTable",
       "location": {
         "filename": "table.test.fidl",
         "line": 19,
@@ -272,7 +272,7 @@
       }
     },
     {
-      "name": "fidl.test.json/ReverseOrdinalTable",
+      "name": "fidl.test.table/ReverseOrdinalTable",
       "location": {
         "filename": "table.test.fidl",
         "line": 29,
@@ -343,17 +343,17 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.json/SimpleTable",
-    "fidl.test.json/ReverseOrdinalTable",
-    "fidl.test.json/OlderSimpleTable",
-    "fidl.test.json/NewerSimpleTable",
-    "fidl.test.json/EmptyTable"
+    "fidl.test.table/SimpleTable",
+    "fidl.test.table/ReverseOrdinalTable",
+    "fidl.test.table/OlderSimpleTable",
+    "fidl.test.table/NewerSimpleTable",
+    "fidl.test.table/EmptyTable"
   ],
   "declarations": {
-    "fidl.test.json/EmptyTable": "table",
-    "fidl.test.json/SimpleTable": "table",
-    "fidl.test.json/OlderSimpleTable": "table",
-    "fidl.test.json/NewerSimpleTable": "table",
-    "fidl.test.json/ReverseOrdinalTable": "table"
+    "fidl.test.table/EmptyTable": "table",
+    "fidl.test.table/SimpleTable": "table",
+    "fidl.test.table/OlderSimpleTable": "table",
+    "fidl.test.table/NewerSimpleTable": "table",
+    "fidl.test.table/ReverseOrdinalTable": "table"
   }
 }

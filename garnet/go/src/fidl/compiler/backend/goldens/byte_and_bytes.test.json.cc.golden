@@ -3,10 +3,13 @@
 #include <byte_and_bytes.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
-namespace example {
+namespace fidl {
+namespace test {
+namespace byteandbytes {
 
-extern "C" const fidl_type_t example_ByteAndBytesTable;
-const fidl_type_t* ByteAndBytes::FidlType = &example_ByteAndBytesTable;
+extern "C" const fidl_type_t fidl_test_byteandbytes_ByteAndBytesTable;
+const fidl_type_t* ByteAndBytes::FidlType =
+    &fidl_test_byteandbytes_ByteAndBytesTable;
 
 void ByteAndBytes::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<ByteAndBytes>::value) {
@@ -44,4 +47,6 @@ zx_status_t ByteAndBytes::Clone(ByteAndBytes* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-}  // namespace example
+}  // namespace byteandbytes
+}  // namespace test
+}  // namespace fidl

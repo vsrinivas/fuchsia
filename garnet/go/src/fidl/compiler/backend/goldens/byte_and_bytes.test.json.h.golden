@@ -4,7 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-namespace example {
+namespace fidl {
+namespace test {
+namespace byteandbytes {
 
 class ByteAndBytes;
 
@@ -30,39 +32,43 @@ class ByteAndBytes final {
   zx_status_t Clone(ByteAndBytes* result) const;
 };
 
-inline zx_status_t Clone(const ::example::ByteAndBytes& _value,
-                         ::example::ByteAndBytes* _result) {
+inline zx_status_t Clone(const ::fidl::test::byteandbytes::ByteAndBytes& _value,
+                         ::fidl::test::byteandbytes::ByteAndBytes* _result) {
   return _value.Clone(_result);
 }
 
 using ByteAndBytesPtr = ::std::unique_ptr<ByteAndBytes>;
-}  // namespace example
+}  // namespace byteandbytes
+}  // namespace test
+}  // namespace fidl
 namespace fidl {
 
 template <>
-struct CodingTraits<::example::ByteAndBytes>
-    : public EncodableCodingTraits<::example::ByteAndBytes, 56> {};
+struct CodingTraits<::fidl::test::byteandbytes::ByteAndBytes>
+    : public EncodableCodingTraits<::fidl::test::byteandbytes::ByteAndBytes,
+                                   56> {};
 
 template <>
-struct HasPadding<::example::ByteAndBytes> : public std::true_type {};
+struct HasPadding<::fidl::test::byteandbytes::ByteAndBytes>
+    : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::example::ByteAndBytes>
+struct IsMemcpyCompatible<::fidl::test::byteandbytes::ByteAndBytes>
     : public internal::BoolConstant<
-          !HasPadding<::example::ByteAndBytes>::value &&
+          !HasPadding<::fidl::test::byteandbytes::ByteAndBytes>::value &&
           IsMemcpyCompatible<::fidl::VectorPtr<uint8_t>>::value &&
           IsMemcpyCompatible<::std::vector<uint8_t>>::value &&
           IsMemcpyCompatible<uint8_t>::value> {};
 
-inline zx_status_t Clone(const ::example::ByteAndBytes& value,
-                         ::example::ByteAndBytes* result) {
-  return ::example::Clone(value, result);
+inline zx_status_t Clone(const ::fidl::test::byteandbytes::ByteAndBytes& value,
+                         ::fidl::test::byteandbytes::ByteAndBytes* result) {
+  return ::fidl::test::byteandbytes::Clone(value, result);
 }
 
 template <>
-struct Equality<::example::ByteAndBytes> {
-  bool operator()(const ::example::ByteAndBytes& _lhs,
-                  const ::example::ByteAndBytes& _rhs) const {
+struct Equality<::fidl::test::byteandbytes::ByteAndBytes> {
+  bool operator()(const ::fidl::test::byteandbytes::ByteAndBytes& _lhs,
+                  const ::fidl::test::byteandbytes::ByteAndBytes& _rhs) const {
     if (!::fidl::Equals(_lhs.single_byte, _rhs.single_byte)) {
       return false;
     }

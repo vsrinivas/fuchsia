@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <test/name/cpp/fidl.h>
+#include <fidl/test/doccomments/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -13,15 +13,15 @@
 
 namespace fuzzing {
 
-using Table = ::test::name::Table;
-using Struct = ::test::name::Struct;
-using StrictUnion = ::test::name::StrictUnion;
-using Service = ::test::name::Service;
-using MyStrictEnum = ::test::name::MyStrictEnum;
-using MyStrictBits = ::test::name::MyStrictBits;
-using MyFlexibleEnum = ::test::name::MyFlexibleEnum;
-using MyFlexibleBits = ::test::name::MyFlexibleBits;
-using FlexibleUnion = ::test::name::FlexibleUnion;
+using Table = ::fidl::test::doccomments::Table;
+using Struct = ::fidl::test::doccomments::Struct;
+using StrictUnion = ::fidl::test::doccomments::StrictUnion;
+using Service = ::fidl::test::doccomments::Service;
+using MyStrictEnum = ::fidl::test::doccomments::MyStrictEnum;
+using MyStrictBits = ::fidl::test::doccomments::MyStrictBits;
+using MyFlexibleEnum = ::fidl::test::doccomments::MyFlexibleEnum;
+using MyFlexibleBits = ::fidl::test::doccomments::MyFlexibleBits;
+using FlexibleUnion = ::fidl::test::doccomments::FlexibleUnion;
 
 template <>
 struct MinSize<Table> {

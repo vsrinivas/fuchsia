@@ -5,11 +5,11 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace fidl {
 namespace test {
-namespace json {
+namespace vectors {
 
-extern "C" const fidl_type_t fidl_test_json_ExampleUseOfVectorsTable;
+extern "C" const fidl_type_t fidl_test_vectors_ExampleUseOfVectorsTable;
 const fidl_type_t* ExampleUseOfVectors::FidlType =
-    &fidl_test_json_ExampleUseOfVectorsTable;
+    &fidl_test_vectors_ExampleUseOfVectorsTable;
 
 void ExampleUseOfVectors::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<ExampleUseOfVectors>::value) {
@@ -41,6 +41,6 @@ zx_status_t ExampleUseOfVectors::Clone(ExampleUseOfVectors* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-}  // namespace json
+}  // namespace vectors
 }  // namespace test
 }  // namespace fidl
