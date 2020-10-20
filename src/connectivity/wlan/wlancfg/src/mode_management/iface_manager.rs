@@ -3797,6 +3797,9 @@ mod tests {
                     rssi: -15,
                     frequency: 2400,
                     timestamp_nanos: 0,
+                    compatible: true,
+                    observed_in_passive_scan: false,
+                    snr_db: 20,
                 }],
                 compatibility: client_types::Compatibility::Supported,
             }];

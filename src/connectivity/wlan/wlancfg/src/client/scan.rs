@@ -28,17 +28,6 @@ pub trait ScanResultUpdate: Sync + Send {
     async fn update_scan_results(&mut self, scan_results: &Vec<types::ScanResult>);
 }
 
-impl From<&fidl_sme::BssInfo> for types::Bss {
-    fn from(bss: &fidl_sme::BssInfo) -> types::Bss {
-        types::Bss {
-            bssid: bss.bssid,
-            rssi: bss.rx_dbm,
-            frequency: 0,       // TODO(mnck): convert channel to freq
-            timestamp_nanos: 0, // TODO(mnck): find where this comes from
-        }
-    }
-}
-
 /// Requests a new SME scan and returns the results.
 async fn sme_scan(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
@@ -89,13 +78,20 @@ pub(crate) async fn perform_scan<F>(
     mut location_sensor_updater: impl ScanResultUpdate,
     active_scan_decider: F,
 ) where
-    F: FnOnce(Vec<types::ScanResult>) -> Option<Vec<Vec<u8>>>,
+    F: FnOnce(&Vec<types::ScanResult>) -> Option<Vec<Vec<u8>>>,
 {
+    let mut bss_by_network: HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>> =
+        HashMap::new();
+
+    // Perform an initial passive scan
     let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
     let sme_result = sme_scan(Arc::clone(&iface_manager), scan_request).await;
-    let mut scan_results = match sme_result {
-        Ok(results) => results,
+    match sme_result {
+        Ok(results) => {
+            insert_bss_to_network_bss_map(&mut bss_by_network, &results, true);
+        }
         Err(()) => {
+            // The passive scan failed. Send an error to the requester and return early.
             if let Some(output_iterator) = output_iterator {
                 send_scan_error(output_iterator, fidl_policy::ScanErrorCode::GeneralError)
                     .await
@@ -106,14 +102,18 @@ pub(crate) async fn perform_scan<F>(
     };
 
     // Determine which active scans to perform by asking the active_scan_decider()
-    if let Some(ssids) = active_scan_decider(convert_scan_info(&scan_results)) {
+    if let Some(requested_active_scan_ssids) =
+        active_scan_decider(&network_bss_map_to_scan_result(&bss_by_network))
+    {
         let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: ssids,
+            ssids: requested_active_scan_ssids,
             channels: vec![],
         });
         let sme_result = sme_scan(iface_manager, scan_request).await;
-        let mut active_scan_results = match sme_result {
-            Ok(results) => results,
+        match sme_result {
+            Ok(results) => {
+                insert_bss_to_network_bss_map(&mut bss_by_network, &results, false);
+            }
             Err(()) => {
                 // There was an error in the active scan. For the FIDL interface, send an error. We
                 // `.take()` the output_iterator here, so it won't be used for sending results below.
@@ -122,18 +122,12 @@ pub(crate) async fn perform_scan<F>(
                         .await
                         .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
                 };
-                // Also return an empty vec![], so that the other consumers of scan results at least
-                // get the passive scan results.
-                info!("Proceeding with passive scan results for non-FIDL scan result consumers");
-                vec![]
+                info!("Proceeding with passive scan results for non-FIDL scan consumers");
             }
-        };
-        // TODO(35920): scan results returned need to include passive vs active annotation
-        scan_results.append(&mut active_scan_results);
-    }
+        }
+    };
 
-    let scan_results = convert_scan_info(&scan_results);
-
+    let scan_results = network_bss_map_to_scan_result(&bss_by_network);
     let mut scan_result_consumers = FuturesUnordered::new();
 
     // Send scan results to the location sensor
@@ -186,28 +180,41 @@ impl ScanResultUpdate for LocationSensorUpdater {
     }
 }
 
-/// Converts array of fidl_sme::BssInfo to array of internal ScanResult.
-/// There is one BssInfo per BSSID. In contrast, there is one ScanResult per
-/// SSID, with information for multiple BSSs contained within it.
-fn convert_scan_info(scanned_networks: &[fidl_sme::BssInfo]) -> Vec<types::ScanResult> {
-    let mut bss_by_network: HashMap<fidl_policy::NetworkIdentifier, Vec<fidl_sme::BssInfo>> =
-        HashMap::new();
-    for bss in scanned_networks.iter() {
+/// Converts sme::BssInfo to our internal BSS type, then adds it to the provided bss_by_network map.
+fn insert_bss_to_network_bss_map(
+    bss_by_network: &mut HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>>,
+    new_bss: &[fidl_sme::BssInfo],
+    observed_in_passive_scan: bool,
+) {
+    for bss in new_bss {
         if let Some(security) = security_from_sme_protection(bss.protection) {
             bss_by_network
                 .entry(fidl_policy::NetworkIdentifier { ssid: bss.ssid.to_vec(), type_: security })
                 .or_insert(vec![])
-                .push(bss.clone());
+                .push(types::Bss {
+                    bssid: bss.bssid,
+                    rssi: bss.rx_dbm,
+                    snr_db: bss.snr_db,
+                    frequency: 0,       // TODO(mnck): convert channel to freq
+                    timestamp_nanos: 0, // TODO(mnck): find where this comes from
+                    observed_in_passive_scan,
+                    compatible: bss.compatible,
+                });
         } else {
             // TODO(mnck): log a metric here
             debug!("Unknown security type present in scan results: {:?}", bss.protection);
         }
     }
+}
+
+fn network_bss_map_to_scan_result(
+    bss_by_network: &HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>>,
+) -> Vec<types::ScanResult> {
     let mut scan_results: Vec<types::ScanResult> = bss_by_network
         .iter()
         .map(|(network, bss_infos)| types::ScanResult {
             id: network.clone(),
-            entries: bss_infos.iter().map(types::Bss::from).collect(),
+            entries: bss_infos.to_vec(),
             compatibility: if bss_infos.iter().any(|bss| bss.compatible) {
                 fidl_policy::Compatibility::Supported
             } else {
@@ -446,7 +453,7 @@ mod tests {
                 bssid: [0, 0, 0, 0, 0, 0],
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rx_dbm: 0,
-                snr_db: 0,
+                snr_db: 1,
                 channel: 0,
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
@@ -455,7 +462,7 @@ mod tests {
                 bssid: [1, 2, 3, 4, 5, 6],
                 ssid: "unique ssid".as_bytes().to_vec(),
                 rx_dbm: 7,
-                snr_db: 0,
+                snr_db: 2,
                 channel: 8,
                 protection: fidl_sme::Protection::Wpa2Personal,
                 compatible: true,
@@ -464,7 +471,7 @@ mod tests {
                 bssid: [7, 8, 9, 10, 11, 12],
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rx_dbm: 13,
-                snr_db: 0,
+                snr_db: 3,
                 channel: 14,
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: false,
@@ -484,12 +491,18 @@ mod tests {
                         rssi: 0,
                         frequency: 0,
                         timestamp_nanos: 0,
+                        snr_db: 1,
+                        observed_in_passive_scan: true,
+                        compatible: true,
                     },
                     types::Bss {
                         bssid: [7, 8, 9, 10, 11, 12],
                         rssi: 13,
                         frequency: 0,
                         timestamp_nanos: 0,
+                        snr_db: 3,
+                        observed_in_passive_scan: true,
+                        compatible: false,
                     },
                 ],
                 compatibility: types::Compatibility::Supported,
@@ -504,6 +517,9 @@ mod tests {
                     rssi: 7,
                     frequency: 0,
                     timestamp_nanos: 0,
+                    snr_db: 2,
+                    observed_in_passive_scan: true,
+                    compatible: true,
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -550,7 +566,7 @@ mod tests {
                 bssid: [9, 9, 9, 9, 9, 9],
                 ssid: "foo active ssid".as_bytes().to_vec(),
                 rx_dbm: 0,
-                snr_db: 0,
+                snr_db: 8,
                 channel: 0,
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
@@ -559,7 +575,7 @@ mod tests {
                 bssid: [8, 8, 8, 8, 8, 8],
                 ssid: "misc ssid".as_bytes().to_vec(),
                 rx_dbm: 7,
-                snr_db: 0,
+                snr_db: 9,
                 channel: 8,
                 protection: fidl_sme::Protection::Wpa2Personal,
                 compatible: true,
@@ -577,12 +593,18 @@ mod tests {
                         rssi: 0,
                         frequency: 0,
                         timestamp_nanos: 0,
+                        snr_db: 1,
+                        observed_in_passive_scan: true,
+                        compatible: true,
                     },
                     types::Bss {
                         bssid: [7, 8, 9, 10, 11, 12],
                         rssi: 13,
                         frequency: 0,
                         timestamp_nanos: 0,
+                        snr_db: 3,
+                        observed_in_passive_scan: true,
+                        compatible: false,
                     },
                 ],
                 compatibility: types::Compatibility::Supported,
@@ -597,6 +619,9 @@ mod tests {
                     rssi: 0,
                     frequency: 0,
                     timestamp_nanos: 0,
+                    snr_db: 8,
+                    observed_in_passive_scan: false,
+                    compatible: true,
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -610,6 +635,9 @@ mod tests {
                     rssi: 7,
                     frequency: 0,
                     timestamp_nanos: 0,
+                    snr_db: 9,
+                    observed_in_passive_scan: false,
+                    compatible: true,
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -623,6 +651,9 @@ mod tests {
                     rssi: 7,
                     frequency: 0,
                     timestamp_nanos: 0,
+                    snr_db: 2,
+                    observed_in_passive_scan: true,
+                    compatible: true,
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -941,7 +972,7 @@ mod tests {
             network_selector,
             location_sensor,
             |passive_results| {
-                assert_eq!(passive_results, expected_passive_results);
+                assert_eq!(*passive_results, expected_passive_results);
                 Some(vec!["foo active ssid".as_bytes().to_vec()])
             },
         );
@@ -1040,7 +1071,7 @@ mod tests {
             network_selector,
             location_sensor,
             |passive_results| {
-                assert_eq!(passive_results, expected_passive_results);
+                assert_eq!(*passive_results, expected_passive_results);
                 Some(vec!["foo active ssid".as_bytes().to_vec()])
             },
         );
@@ -1348,7 +1379,7 @@ mod tests {
             network_selector2,
             location_sensor2,
             |passive_results| {
-                assert_eq!(passive_results, passive_internal_aps);
+                assert_eq!(*passive_results, passive_internal_aps);
                 Some(vec!["foo active ssid".as_bytes().to_vec()])
             },
         );
@@ -1451,14 +1482,19 @@ mod tests {
         set_logger_for_test();
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let MockScanData {
-            passive_input_aps: input_aps,
+            passive_input_aps,
             passive_internal_aps: _,
-            passive_fidl_aps: fidl_aps,
-            active_input_aps: _,
+            passive_fidl_aps: _,
+            active_input_aps,
             combined_internal_aps: _,
-            combined_fidl_aps: _,
+            combined_fidl_aps: fidl_aps,
         } = create_scan_ap_data();
-        let scan_results = convert_scan_info(&input_aps);
+
+        let mut bss_by_network: HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>> =
+            HashMap::new();
+        insert_bss_to_network_bss_map(&mut bss_by_network, &passive_input_aps, true);
+        insert_bss_to_network_bss_map(&mut bss_by_network, &active_input_aps, false);
+        let scan_results = network_bss_map_to_scan_result(&bss_by_network);
 
         // Create an iterator and send scan results
         let (iter, iter_server) =
@@ -1495,14 +1531,19 @@ mod tests {
         set_logger_for_test();
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let MockScanData {
-            passive_input_aps: input_aps,
+            passive_input_aps,
             passive_internal_aps: _,
             passive_fidl_aps: _,
-            active_input_aps: _,
+            active_input_aps,
             combined_internal_aps: _,
             combined_fidl_aps: _,
         } = create_scan_ap_data();
-        let scan_results = convert_scan_info(&input_aps);
+
+        let mut bss_by_network: HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>> =
+            HashMap::new();
+        insert_bss_to_network_bss_map(&mut bss_by_network, &passive_input_aps, true);
+        insert_bss_to_network_bss_map(&mut bss_by_network, &active_input_aps, false);
+        let scan_results = network_bss_map_to_scan_result(&bss_by_network);
 
         // Create an iterator and send scan results
         let (iter, iter_server) =

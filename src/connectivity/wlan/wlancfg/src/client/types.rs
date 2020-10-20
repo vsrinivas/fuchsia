@@ -31,17 +31,23 @@ impl From<ScanResult> for fidl_policy::ScanResult {
     }
 }
 
-// An internal version of fidl_policy::Bss that can be cloned
+// An internal version of fidl_policy::Bss with extended information
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bss {
     /// MAC address for the AP interface.
     pub bssid: [u8; 6],
     /// Calculated received signal strength for the beacon/probe response.
     pub rssi: i8,
+    /// Signal to noise ratio  for the beacon/probe response.
+    pub snr_db: i8,
     /// Operating frequency for this network (in MHz).
     pub frequency: u32,
     /// Realtime timestamp for this scan result entry.
     pub timestamp_nanos: i64,
+    /// Seen in a passive scan.
+    pub observed_in_passive_scan: bool,
+    /// Compatible with this device's network stack.
+    pub compatible: bool,
 }
 impl From<Bss> for fidl_policy::Bss {
     fn from(input: Bss) -> Self {
