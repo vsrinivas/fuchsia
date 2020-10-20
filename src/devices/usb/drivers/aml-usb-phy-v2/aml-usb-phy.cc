@@ -301,8 +301,8 @@ zx_status_t AmlUsbPhy::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void AmlUsbPhy::WriteRegister(uint64_t address, uint32_t value,
-                              WriteRegisterCompleter::Sync& completer) {
+void AmlUsbPhy::WriteRegister32(uint64_t address, uint32_t mask, uint32_t value,
+                                WriteRegister32Completer::Sync& completer) {
   if (!factory_mmio_.has_value()) {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
     return;
@@ -312,7 +312,7 @@ void AmlUsbPhy::WriteRegister(uint64_t address, uint32_t value,
     completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
     return;
   }
-  factory_mmio_->Write32(value, address - kUsbBaseAddress);
+  factory_mmio_->ModifyBits32(value, mask, address - kUsbBaseAddress);
   completer.ReplySuccess();
 }
 

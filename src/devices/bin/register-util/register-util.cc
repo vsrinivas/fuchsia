@@ -14,14 +14,29 @@
 int run(int argc, const char** argv, zx::channel channel) {
   llcpp::fuchsia::hardware::registers::Device::SyncClient device(std::move(channel));
   size_t address = strtoul(argv[2], nullptr, 16);
-  uint32_t value = static_cast<uint32_t>(strtoul(argv[3], nullptr, 16));
   zx_status_t status = ZX_OK;
-  auto result = device.WriteRegister(address, value);
-  if (result->result.is_err()) {
-    status = result->result.err();
-  }
-  if (status != ZX_OK) {
-    fprintf(stderr, "Write failed due to error %s\n", zx_status_get_string(status));
+  if (argc == 4) {
+    uint32_t value = static_cast<uint32_t>(strtoul(argv[3], nullptr, 16));
+    auto result = device.WriteRegister32(address, 0xFFFFFFFF, value);
+    if (result->result.is_err()) {
+      status = result->result.err();
+    }
+    if (status != ZX_OK) {
+      fprintf(stderr, "Write failed due to error %s\n", zx_status_get_string(status));
+    }
+  } else if (argc == 3) {
+    auto result = device.ReadRegister32(address, 0xFFFFFFFF);
+    if (result->result.is_err()) {
+      status = result->result.err();
+    }
+    if (status != ZX_OK) {
+      fprintf(stderr, "Read failed due to error %s\n", zx_status_get_string(status));
+    } else {
+      printf("Register 0x%08zx: 0x%08x", address, result->result.response().value);
+    }
+  } else {
+    fprintf(stderr, "Invalid args\n");
+    status = ZX_ERR_NOT_SUPPORTED;
   }
   return status;
 }

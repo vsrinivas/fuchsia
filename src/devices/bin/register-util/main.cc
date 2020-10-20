@@ -13,11 +13,13 @@
 #include "register-util.h"
 
 int main(int argc, const char** argv) {
-  if (argc < 4) {
-    fprintf(stderr,
-            "Usage: %s /path/to/device registeraddr registervalue\nregisteraddr and registervalue "
-            "must both be formatted in hex.\n",
-            argv[0]);
+  if (argc < 3) {
+    fprintf(
+        stderr,
+        "Usage: %s /path/to/device registeraddr [registervalue]\nregisteraddr and registervalue "
+        "must both be formatted in hex.\nregistervalue is optional. if it exists, write, "
+        "otherwise, read.\n",
+        argv[0]);
     return 0;
   }
   int fd = open(argv[1], O_RDWR);

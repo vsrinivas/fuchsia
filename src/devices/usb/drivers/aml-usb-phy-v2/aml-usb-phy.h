@@ -51,8 +51,36 @@ class AmlUsbPhy : public AmlUsbPhyType,
   void DdkRelease();
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
-  void WriteRegister(uint64_t address, uint32_t value,
-                     WriteRegisterCompleter::Sync& completer) override;
+  void ReadRegister8(uint64_t address, uint8_t mask,
+                     ReadRegister8Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void ReadRegister16(uint64_t address, uint16_t mask,
+                      ReadRegister16Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void ReadRegister32(uint64_t address, uint32_t mask,
+                      ReadRegister32Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void ReadRegister64(uint64_t address, uint64_t mask,
+                      ReadRegister64Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void WriteRegister8(uint64_t address, uint8_t mask, uint8_t value,
+                      WriteRegister8Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void WriteRegister16(uint64_t address, uint16_t mask, uint16_t value,
+                       WriteRegister16Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void WriteRegister32(uint64_t address, uint32_t mask, uint32_t value,
+                       WriteRegister32Completer::Sync& completer) override;
+  void WriteRegister64(uint64_t address, uint64_t mask, uint64_t value,
+                       WriteRegister64Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
 
   // Public for testing.
   UsbMode mode() {

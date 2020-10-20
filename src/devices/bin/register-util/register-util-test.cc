@@ -34,11 +34,40 @@ class PhyServer : public llcpp::fuchsia::hardware::registers::Device::Interface 
     fidl::BindServer(loop_.dispatcher(), std::move(channels[0]), this);
     loop_.StartThread();
   }
-  void WriteRegister(uint64_t address, uint32_t value,
-                     WriteRegisterCompleter::Sync& completer) override {
+  void ReadRegister8(uint64_t address, uint8_t mask,
+                     ReadRegister8Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void ReadRegister16(uint64_t address, uint16_t mask,
+                      ReadRegister16Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void ReadRegister32(uint64_t address, uint32_t mask,
+                      ReadRegister32Completer::Sync& completer) override {
+    address_ = address;
+    completer.ReplySuccess(value_);
+  }
+  void ReadRegister64(uint64_t address, uint64_t mask,
+                      ReadRegister64Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void WriteRegister8(uint64_t address, uint8_t mask, uint8_t value,
+                      WriteRegister8Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void WriteRegister16(uint64_t address, uint16_t mask, uint16_t value,
+                       WriteRegister16Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void WriteRegister32(uint64_t address, uint32_t mask, uint32_t value,
+                       WriteRegister32Completer::Sync& completer) override {
     address_ = address;
     value_ = value;
     completer.ReplySuccess();
+  }
+  void WriteRegister64(uint64_t address, uint64_t mask, uint64_t value,
+                       WriteRegister64Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   zx::channel TakeChannel() { return std::move(channel_); }
   uint64_t address() { return address_; }
@@ -47,15 +76,22 @@ class PhyServer : public llcpp::fuchsia::hardware::registers::Device::Interface 
 
  private:
   uint64_t address_ = 0;
-  uint64_t value_ = 0;
+  uint32_t value_ = 0;
   async::Loop loop_;
   zx::channel channel_;
 };
 
+TEST(RegisterUtil, RegisterReadTest) {
+  const char* args[] = {"", "/bin/register-util", "50"};
+  PhyServer server;
+  ASSERT_EQ(run(3, args, server.TakeChannel()), 0);
+  ASSERT_EQ(server.address(), 0x50);
+}
+
 TEST(RegisterUtil, RegisterWriteTest) {
   const char* args[] = {"", "/bin/register-util", "50", "90"};
   PhyServer server;
-  ASSERT_EQ(run(3, args, server.TakeChannel()), 0);
+  ASSERT_EQ(run(4, args, server.TakeChannel()), 0);
   ASSERT_EQ(server.address(), 0x50);
   ASSERT_EQ(server.value(), 0x90);
 }

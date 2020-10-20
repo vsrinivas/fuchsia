@@ -285,7 +285,7 @@ TEST(AmlUsbPhy, FIDLWrites) {
 
   llcpp::fuchsia::hardware::registers::Device::SyncClient device(std::move(fidl.local()));
   constexpr auto kUsbBaseAddress = 0xff400000;
-  ASSERT_OK(device.WriteRegister(kUsbBaseAddress + (5 * 4), 42));
+  ASSERT_OK(device.WriteRegister32(kUsbBaseAddress + (5 * 4), 0xFFFFFFFF, 42));
   ASSERT_TRUE(written);
   ddk.DestroyDevices(root_device.get());
 }

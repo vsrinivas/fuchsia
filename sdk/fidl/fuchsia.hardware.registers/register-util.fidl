@@ -7,6 +7,29 @@ library fuchsia.hardware.registers;
 using zx;
 
 protocol Device {
-    /// Writes to the register at the specified address
-    WriteRegister(uint64 address, uint32 value) -> () error zx.status;
+    /// Reads from the register at the specified address in register width equal to 8, 16, 32, and
+    /// 64 bit variants.
+    /// |address| : Address to read from. Address must be aligned to beginning of register. For
+    ///             example, for 32 bits, address must be divisible by 4, and for 64 bits, address
+    ///             must be divisible by 8. If this is not satisfied, read will fail.
+    /// |mask| : Mask of bits to read. For example, to read the lower 2 bytes of data in a 32 bit
+    ///          register, mask should be 0x0000FFFF.
+    /// @Returns: |value| : Value of register at the specified address.
+    ReadRegister8(uint64 address, uint8 mask) -> (uint8 value) error zx.status;
+    ReadRegister16(uint64 address, uint16 mask) -> (uint16 value) error zx.status;
+    ReadRegister32(uint64 address, uint32 mask) -> (uint32 value) error zx.status;
+    ReadRegister64(uint64 address, uint64 mask) -> (uint64 value) error zx.status;
+
+    /// Writes to the register at the specified address in register width equal to 8, 16, 32, and
+    /// 64 bit variants
+    /// |address| : Address to read from. Address must be aligned to beginning of register. For
+    ///             example, for 32 bits, address must be divisible by 4, and for 64 bits, address
+    ///             must be divisile by 8. If this is not satisfied, write will fail.
+    /// |mask| : Mask of bits to write. For example, to write to the lower 2 bytes of data in a 32
+    ///          bit register, mask should be 0x0000FFFF.
+    /// |value| : Value of register at the specified address.
+    WriteRegister8(uint64 address, uint8 mask, uint8 value) -> () error zx.status;
+    WriteRegister16(uint64 address, uint16 mask, uint16 value) -> () error zx.status;
+    WriteRegister32(uint64 address, uint32 mask, uint32 value) -> () error zx.status;
+    WriteRegister64(uint64 address, uint64 mask, uint64 value) -> () error zx.status;
 };
