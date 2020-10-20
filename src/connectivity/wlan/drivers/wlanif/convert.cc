@@ -91,10 +91,22 @@ void CopySSID(const ::std::vector<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid) {
   out_ssid->len = ssid_len;
 }
 
+void CopyCountry(const ::std::vector<uint8_t>& in_country, uint8_t* out_country,
+                 size_t* out_country_len) {
+  if (in_country.size() > WLAN_IE_BODY_MAX_LEN) {
+    warnf("wlanif: Country length truncated from %lu to %d\n", in_country.size(),
+          WLAN_IE_BODY_MAX_LEN);
+    *out_country_len = WLAN_IE_BODY_MAX_LEN;
+  } else {
+    *out_country_len = in_country.size();
+  }
+  std::memcpy(out_country, in_country.data(), *out_country_len);
+}
+
 void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len) {
-  if (in_rsne.size() > WLAN_RSNE_MAX_LEN) {
-    warnf("wlanif: RSNE length truncated from %lu to %d\n", in_rsne.size(), WLAN_RSNE_MAX_LEN);
-    *out_rsne_len = WLAN_RSNE_MAX_LEN;
+  if (in_rsne.size() > WLAN_IE_BODY_MAX_LEN) {
+    warnf("wlanif: RSNE length truncated from %lu to %d\n", in_rsne.size(), WLAN_IE_BODY_MAX_LEN);
+    *out_rsne_len = WLAN_IE_BODY_MAX_LEN;
   } else {
     *out_rsne_len = in_rsne.size();
   }
@@ -151,6 +163,10 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
 
   // basic_rate_set and op_rate_set
   ConvertRateSets(wlanif_desc, fidl_desc);
+
+  // country
+  CopyCountry(fidl_desc.country.value_or(std::vector<uint8_t>{}), wlanif_desc->country,
+              &wlanif_desc->country_len);
 
   // rsne
   if (wlanif_desc->rsne_len)
@@ -266,6 +282,9 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
 
   // basic_rate_set and op_rate_set
   ConvertRates(&fidl_desc->rates, wlanif_desc);
+
+  // country
+  ArrayToVector(&fidl_desc->country, wlanif_desc.country, wlanif_desc.country_len);
 
   // rsne
   ArrayToVector(&fidl_desc->rsne, wlanif_desc.rsne, wlanif_desc.rsne_len);

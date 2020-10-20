@@ -24,6 +24,7 @@ TEST(Cfg80211, ExtractIes) {
   const uint8_t ies[] = {
       0x00, 0x03, 0x66, 0x6f, 0x6f,                                // SSID
       0x01, 0x08, 0x8c, 0x12, 0x98, 0x24, 0xb0, 0x48, 0x60, 0x6c,  // Supported rates
+      0x07, 0x06, 0x55, 0x53, 0x20, 0x01, 0x0b, 0x1e,              // Country
       0x32, 0x01, 0x55,  // Extended supported rates. Note: Couldn't find a packet capture with
                          // this IE. Made up a value, so it's probably invalid.
       0x30, 0x02, 0x88, 0x99,  // RSNE (note: invalid, but good enough for testing)
@@ -47,8 +48,12 @@ TEST(Cfg80211, ExtractIes) {
   ASSERT_EQ(bss.num_rates, sizeof(rates_bytes));  // 8 supported rates, 1 extended supported rate
   EXPECT_EQ(std::memcmp(bss.rates, rates_bytes, sizeof(rates_bytes)), 0);
 
+  const uint8_t country_bytes[] = {0x55, 0x53, 0x20, 0x01, 0x0b, 0x1e};
+  EXPECT_EQ(bss.country_len, sizeof(country_bytes));
+  EXPECT_EQ(std::memcmp(bss.country, country_bytes, sizeof(country_bytes)), 0);
+
   const uint8_t rsne_bytes[] = {0x30, 0x02, 0x88, 0x99};
-  ASSERT_EQ(bss.rsne_len, sizeof(rsne_bytes));
+  EXPECT_EQ(bss.rsne_len, sizeof(rsne_bytes));
   EXPECT_EQ(std::memcmp(bss.rsne, rsne_bytes, sizeof(rsne_bytes)), 0);
 
   const uint8_t vendor_ie_bytes[] = {0xdd, 0x05, 0x00, 0x50, 0xf2, 0x01, 0xaa,
@@ -199,7 +204,7 @@ TEST(Cfg80211, SetAssocConfWmmParam_WmmParamNotPresent) {
 TEST(Cfg80211, ChannelSwitchTest) {
   // The second and third arguments aren't required or used, so this is intended to test
   // a NULL first parameter.
-  EXPECT_EQ(brcmf_notify_channel_switch(nullptr,  nullptr, nullptr), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(brcmf_notify_channel_switch(nullptr, nullptr, nullptr), ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace

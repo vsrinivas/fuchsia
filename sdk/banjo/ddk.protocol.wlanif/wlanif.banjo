@@ -47,7 +47,10 @@ struct WlanifScanReq {
 };
 
 /// IEEE Std 802.11-2016, 9.4.2.25.1
-const uint32 WLAN_RSNE_MAX_LEN = 255;
+/// IEEE mentions that an element body maximum length is 255 octets in the RSN element
+/// section, but not in a dedicated section.
+const uint32 WLAN_IE_BODY_MAX_LEN = 255;
+
 const uint32 WLAN_VIE_MAX_LEN = 510;  // max length for two elements (WPA and WSC)
 
 struct WlanifBssDescription {
@@ -64,8 +67,10 @@ struct WlanifBssDescription {
     array<uint8>:WLAN_MAC_MAX_RATES rates;
     uint16 num_rates;
 
+    usize country_len;
+    array<uint8>:WLAN_IE_BODY_MAX_LEN country;
     usize rsne_len;
-    array<uint8>:WLAN_RSNE_MAX_LEN rsne;
+    array<uint8>:WLAN_IE_BODY_MAX_LEN rsne;
     usize vendor_ie_len;
     array<uint8>:WLAN_VIE_MAX_LEN vendor_ie;
 
@@ -184,7 +189,7 @@ struct WlanifDeauthReq {
 struct WlanifAssocReq {
     array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     usize rsne_len;
-    array<uint8>:WLAN_RSNE_MAX_LEN rsne;
+    array<uint8>:WLAN_IE_BODY_MAX_LEN rsne;
     usize vendor_ie_len;
     array<uint8>:WLAN_VIE_MAX_LEN vendor_ie;
 };
@@ -194,7 +199,7 @@ struct WlanifAssocInd {
     uint16 listen_interval;
     WlanifSsid ssid;
     usize rsne_len;
-    array<uint8>:WLAN_RSNE_MAX_LEN rsne;
+    array<uint8>:WLAN_IE_BODY_MAX_LEN rsne;
     usize vendor_ie_len;
     array<uint8>:WLAN_VIE_MAX_LEN vendor_ie;
 };
@@ -216,7 +221,7 @@ struct WlanifStartReq {
     uint32 dtim_period;
     uint8 channel;
     usize rsne_len;
-    array<uint8>:WLAN_RSNE_MAX_LEN rsne;
+    array<uint8>:WLAN_IE_BODY_MAX_LEN rsne;
     usize vendor_ie_len;
     array<uint8>:WLAN_VIE_MAX_LEN vendor_ie;
 };

@@ -13,6 +13,8 @@
 #include <src/connectivity/wlan/drivers/wlanif/convert.h>
 #include <wlan/common/element.h>
 
+#include "ddk/protocol/wlanif.h"
+
 namespace wlanif {
 namespace {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
@@ -70,6 +72,23 @@ TEST(ConvertTest, ToFidlBSSDescription_SsidMaxLength) {
 TEST(ConvertTest, ToFidlBSSDescription_SsidTooLong) {
   wlan_mlme::BSSDescription fidl_desc = {};
   ConvertBSSDescription(&fidl_desc, FakeBssWithSsidLen(33));
+  auto status = ValidateMessage(&fidl_desc);
+  EXPECT_EQ(status, ZX_OK);
+}
+
+TEST(ConvertTest, ToFidlBSSDescription_Country) {
+  uint8_t country[] = {0x55, 0x53, 0x20, 0x01, 0x0b, 0x1e};
+  wlanif_bss_description_t wlanif_desc = {};
+  wlanif_desc.bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE;
+  memcpy(wlanif_desc.country, country, sizeof(country));
+  wlanif_desc.country_len = sizeof(country);
+
+  wlan_mlme::BSSDescription fidl_desc = {};
+  ConvertBSSDescription(&fidl_desc, wlanif_desc);
+
+  EXPECT_EQ(fidl_desc.country->size(), sizeof(country));
+  EXPECT_EQ(memcmp(fidl_desc.country->data(), country, sizeof(country)), 0);
+
   auto status = ValidateMessage(&fidl_desc);
   EXPECT_EQ(status, ZX_OK);
 }
@@ -479,6 +498,19 @@ TEST(ConvertTest, ToFidlPmkInfo) {
   ConvertPmkInfo(&fidl_info, info);
   EXPECT_EQ(fidl_info.pmk, pmk);
   EXPECT_EQ(fidl_info.pmkid, pmkid);
+}
+
+TEST(ConvertTest, ToWlanifBssDescription_Country) {
+  wlan_mlme::BSSDescription fidl_desc = {};
+  uint8_t country[] = {0x55, 0x53, 0x20, 0x01, 0x0b, 0x1e};
+  fidl_desc.country = std::vector<uint8_t>(country, country + sizeof(country));
+  fidl_desc.bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE;
+
+  wlanif_bss_description_t wlanif_desc = {};
+  ConvertBSSDescription(&wlanif_desc, fidl_desc);
+
+  EXPECT_EQ(wlanif_desc.country_len, sizeof(country));
+  EXPECT_EQ(memcmp(wlanif_desc.country, country, sizeof(country)), 0);
 }
 
 }  // namespace

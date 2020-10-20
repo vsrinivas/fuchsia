@@ -2221,6 +2221,11 @@ void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_description_
         bss->num_rates += num_ext_supp_rates;
         break;
       }
+      case WLAN_IE_TYPE_COUNTRY: {
+        bss->country_len = length;
+        memcpy(bss->country, ie + offset + TLV_HDR_LEN, bss->country_len);
+        break;
+      }
       case WLAN_IE_TYPE_RSNE: {
         bss->rsne_len = length + TLV_HDR_LEN;
         memcpy(bss->rsne, ie + offset, bss->rsne_len);
@@ -4749,7 +4754,7 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
   }
 
   const struct brcmf_tlv* rsn_ie = brcmf_parse_tlvs(data, e->datalen, WLAN_IE_TYPE_RSNE);
-  if (rsn_ie && rsn_ie->len > WLAN_RSNE_MAX_LEN) {
+  if (rsn_ie && rsn_ie->len > WLAN_IE_BODY_MAX_LEN) {
     BRCMF_ERR("Received ASSOC_IND with invalid RSN IE\n");
     return ZX_ERR_INVALID_ARGS;
   }
