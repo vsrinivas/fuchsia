@@ -6,14 +6,13 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::pin::Pin;
 
+use async_utils::futures::{FutureExt as _, ReplaceValue};
 use fuchsia_async as fasync;
 use futures::{
     channel::mpsc,
     future::{AbortHandle, Abortable, Aborted},
     stream::{FuturesUnordered, StreamExt},
-    task, Future,
 };
 use log::debug;
 
@@ -62,42 +61,7 @@ pub(crate) trait TimerHandler<T: Hash + Eq>: Sized + Send + Sync + 'static {
     fn get_timer_dispatcher(&mut self) -> &mut TimerDispatcher<T>;
 }
 
-/// A future that waits on an [`fasync::Timer`] and always resolves with some
-/// value `T`.
-#[derive(Debug)]
-#[must_use = "futures do nothing unless you `.await` or poll them"]
-struct TimerFut<T> {
-    id: Option<T>,
-    timer: fasync::Timer,
-}
-
-/// `TimerFut` can `Unpin` because `fasync::Timer` is `Unpin`.
-impl<T> Unpin for TimerFut<T> {}
-
-impl<T> TimerFut<T> {
-    pin_utils::unsafe_pinned!(timer: fasync::Timer);
-    pin_utils::unsafe_unpinned!(id: Option<T>);
-
-    fn new(id: T, time: fasync::Time) -> Self {
-        Self { id: Some(id), timer: fasync::Timer::new(time) }
-    }
-}
-
-impl<T> Future for TimerFut<T> {
-    type Output = T;
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> task::Poll<Self::Output> {
-        match self.as_mut().timer().poll(cx) {
-            task::Poll::Ready(()) => task::Poll::Ready(
-                self.as_mut()
-                    .id()
-                    .take()
-                    .expect("TimerFut must not be polled after it returned `Poll::Ready`"),
-            ),
-            task::Poll::Pending => task::Poll::Pending,
-        }
-    }
-}
+type TimerFut<T> = ReplaceValue<fasync::Timer, T>;
 
 /// Shorthand for the type of futures used by [`TimerDispatcher`] internally.
 type InternalFut<T> = Abortable<TimerFut<TimerEvent<T>>>;
@@ -125,7 +89,7 @@ pub(crate) struct TimerDispatcher<T: Hash + Eq> {
 
 impl<T> TimerDispatcher<T>
 where
-    T: Hash + Debug + Eq + Clone + Send + Sync + 'static,
+    T: Hash + Debug + Eq + Clone + Send + Sync + Unpin + 'static,
 {
     /// Creates a new `TimerDispatcher` that sends [`TimerEvent`]s over
     /// `sender`.
@@ -240,7 +204,10 @@ where
         let event = TimerEvent { inner: timer_id.clone(), id: next_id };
 
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        let timeout = Abortable::new(TimerFut::new(event, time.0), abort_registration);
+        let timeout = {
+            let StackTime(time) = time;
+            Abortable::new(fasync::Timer::new(time).replace_value(event), abort_registration)
+        };
 
         sender.unbounded_send(timeout).expect("TimerDispatcher's task receiver is gone");
 

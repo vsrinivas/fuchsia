@@ -13,6 +13,7 @@ rustc_library("async-utils") {
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:slab",
   ]
 
@@ -21,13 +22,13 @@ rustc_library("async-utils") {
   sources = [
     "src/event.rs",
     "src/fold.rs",
+    "src/futures.rs",
     "src/hanging_get/client.rs",
     "src/hanging_get/mod.rs",
     "src/lib.rs",
     "src/stream_epitaph.rs",
     "src/traits.rs",
   ]
-
 }
 
 test_package("async-utils-tests") {

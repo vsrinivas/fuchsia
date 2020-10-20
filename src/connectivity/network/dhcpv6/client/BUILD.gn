@@ -15,6 +15,7 @@ rustc_binary("dhcpv6_client") {
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/network/dhcpv6/core",
     "//src/connectivity/network/lib/dns_server_watcher",
+    "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -31,10 +32,7 @@ rustc_binary("dhcpv6_client") {
     "//third_party/rust_crates:socket2",
     "//third_party/rust_crates:thiserror",
   ]
-  test_deps = [
-    "//src/lib/async-utils",
-    "//third_party/rust_crates:matches",
-  ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
 
   sources = [
     "src/client.rs",

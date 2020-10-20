@@ -5,6 +5,7 @@
 ///! Implements a DHCPv6 client.
 use {
     anyhow::{Context as _, Result},
+    async_utils::futures::{FutureExt as _, ReplaceValue},
     dhcpv6_core,
     dns_server_watcher::DEFAULT_DNS_PORT,
     fidl::endpoints::ServerEnd,
@@ -20,7 +21,7 @@ use {
         future::{AbortHandle, Abortable},
         select, stream,
         stream::futures_unordered::FuturesUnordered,
-        task, Future, FutureExt as _, StreamExt as _, TryStreamExt as _,
+        Future, FutureExt as _, StreamExt as _, TryStreamExt as _,
     },
     packet::ParsablePacket,
     packet_formats_dhcp::v6,
@@ -34,7 +35,6 @@ use {
         hash::{Hash, Hasher},
         net::{IpAddr, Ipv6Addr, SocketAddr},
         num::TryFromIntError,
-        pin::Pin,
         str::FromStr as _,
         time::Duration,
     },
@@ -61,38 +61,7 @@ pub enum ClientError {
 /// NOTE: This does not take [jumbograms](https://tools.ietf.org/html/rfc2675) into account.
 const MAX_UDP_DATAGRAM_SIZE: usize = 65_535;
 
-/// A future that waits on a timer and always resolves to a `dhcpv6_core::client::ClientTimerType`.
-// TODO(http://fxbug.dev/53611): pull TimerFut to a common place, there's an templated version of
-// this struct in netstack3.
-#[derive(Debug)]
-#[must_use = "futures do nothing unless you `.await` or poll them"]
-struct TimerFut {
-    timer_type: Option<dhcpv6_core::client::ClientTimerType>,
-    timer: fasync::Timer,
-}
-
-impl TimerFut {
-    pin_utils::unsafe_pinned!(timer: fasync::Timer);
-
-    fn new(timer_type: dhcpv6_core::client::ClientTimerType, time: fasync::Time) -> Self {
-        Self { timer_type: Some(timer_type), timer: fasync::Timer::new(time) }
-    }
-}
-
-impl Future for TimerFut {
-    type Output = dhcpv6_core::client::ClientTimerType;
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> task::Poll<Self::Output> {
-        match self.as_mut().timer().poll(cx) {
-            task::Poll::Ready(()) => task::Poll::Ready(
-                self.timer_type
-                    .take()
-                    .expect("TimerFut must not be polled after it returned `Poll::Ready`"),
-            ),
-            task::Poll::Pending => task::Poll::Pending,
-        }
-    }
-}
+type TimerFut = ReplaceValue<fasync::Timer, dhcpv6_core::client::ClientTimerType>;
 
 /// A DHCPv6 client.
 pub(crate) struct Client<S: for<'a> AsyncSocket<'a>> {
@@ -304,18 +273,20 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                 let (handle, reg) = AbortHandle::new_pair();
                 let _: &mut AbortHandle = entry.insert(handle);
                 let () = self.timer_futs.push(Abortable::new(
-                    TimerFut::new(
-                        timer_type,
-                        fasync::Time::after(
-                            i64::try_from(timeout.as_nanos())
+                    fasync::Timer::new(fasync::Time::after(
+                        i64::try_from(timeout.as_nanos())
                             .map(zx::Duration::from_nanos)
                             .unwrap_or_else(|_: TryFromIntError| {
                                 let duration = zx::Duration::from_nanos(i64::MAX);
-                                let () = log::warn!("time duration {:?} overflows zx::Duration, truncating to {:?}", timeout, duration);
+                                let () = log::warn!(
+                                    "time duration {:?} overflows zx::Duration, truncating to {:?}",
+                                    timeout,
+                                    duration
+                                );
                                 duration
                             }),
-                        ),
-                    ),
+                    ))
+                    .replace_value(timer_type),
                     reg,
                 ));
                 Ok(())
