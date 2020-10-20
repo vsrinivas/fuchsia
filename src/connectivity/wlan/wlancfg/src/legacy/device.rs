@@ -72,6 +72,7 @@ async fn on_phy_added(listener: &Listener, phy_id: u16) {
     let mut phy_manager = listener.phy_manager.lock().await;
     if let Err(e) = phy_manager.add_phy(phy_id).await {
         info!("error adding new phy {}: {}", phy_id, e);
+        phy_manager.log_phy_add_failure();
     }
 
     if let Err(e) = phy_manager.create_all_client_ifaces().await {

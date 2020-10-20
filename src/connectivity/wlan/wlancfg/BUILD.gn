@@ -42,6 +42,7 @@ rustc_binary("bin") {
     "//src/connectivity/wlan/lib/common/rust/:wlan-common",
     "//src/connectivity/wlan/lib/stash/:wlan-stash",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

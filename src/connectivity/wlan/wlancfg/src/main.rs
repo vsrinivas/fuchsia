@@ -29,6 +29,7 @@ use {
     fuchsia_async::DurationExt,
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::component,
     fuchsia_zircon::prelude::*,
     futures::{
         self,
@@ -57,6 +58,9 @@ async fn serve_fidl(
     ap_listener_msgs: mpsc::UnboundedReceiver<util::listener::ApMessage>,
 ) -> Result<Void, Error> {
     let mut fs = ServiceFs::new();
+
+    component::inspector().serve(&mut fs)?;
+
     let client_sender1 = client_sender.clone();
     let client_sender2 = client_sender.clone();
 
@@ -162,7 +166,11 @@ fn main() -> Result<(), Error> {
     let saved_networks =
         Arc::new(executor.run_singlethreaded(SavedNetworksManager::new(cobalt_api.clone()))?);
     let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks), cobalt_api));
-    let phy_manager = Arc::new(Mutex::new(PhyManager::new(wlan_svc.clone())));
+
+    let phy_manager = Arc::new(Mutex::new(PhyManager::new(
+        wlan_svc.clone(),
+        component::inspector().root().create_child("phy_manager"),
+    )));
     let configurator =
         legacy::deprecated_configuration::DeprecatedConfigurator::new(phy_manager.clone());
 

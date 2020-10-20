@@ -711,6 +711,10 @@ mod tests {
         fn get_phy_ids(&self) -> Vec<u16> {
             self.phy_ids.clone()
         }
+
+        fn log_phy_add_failure(&mut self) {
+            unimplemented!();
+        }
     }
 
     struct StubIfaceManager<

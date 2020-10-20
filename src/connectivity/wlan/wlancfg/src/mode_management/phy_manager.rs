@@ -7,7 +7,9 @@ use {
     eui48::MacAddress,
     fidl_fuchsia_wlan_device as fidl_device,
     fidl_fuchsia_wlan_device::MacRole,
-    fidl_fuchsia_wlan_device_service as fidl_service, fuchsia_zircon,
+    fidl_fuchsia_wlan_device_service as fidl_service,
+    fuchsia_inspect::{self as inspect, NumericProperty},
+    fuchsia_zircon,
     log::{info, warn},
     std::collections::{HashMap, HashSet},
     thiserror::Error,
@@ -84,6 +86,9 @@ pub(crate) trait PhyManagerApi {
 
     /// Returns the IDs for all currently known PHYs.
     fn get_phy_ids(&self) -> Vec<u16>;
+
+    /// Logs phy add failure inspect metrics.
+    fn log_phy_add_failure(&mut self);
 }
 
 /// Maintains a record of all PHYs that are present and their associated interfaces.
@@ -92,6 +97,8 @@ pub(crate) struct PhyManager {
     device_service: fidl_service::DeviceServiceProxy,
     client_connections_enabled: bool,
     suggested_ap_mac: Option<MacAddress>,
+    _node: inspect::Node,
+    phy_add_fail_count: inspect::UintProperty,
 }
 
 impl PhyContainer {
@@ -112,12 +119,15 @@ impl PhyContainer {
 impl PhyManager {
     /// Internally stores a DeviceServiceProxy to query PHY and interface properties and create and
     /// destroy interfaces as requested.
-    pub fn new(device_service: fidl_service::DeviceServiceProxy) -> Self {
+    pub fn new(device_service: fidl_service::DeviceServiceProxy, node: inspect::Node) -> Self {
+        let phy_add_fail_count = node.create_uint("phy_add_fail_count", 0);
         PhyManager {
             phys: HashMap::new(),
             device_service,
             client_connections_enabled: false,
             suggested_ap_mac: None,
+            _node: node,
+            phy_add_fail_count,
         }
     }
     /// Verifies that a given PHY ID is accounted for and, if not, adds a new entry for it.
@@ -382,6 +392,10 @@ impl PhyManagerApi for PhyManager {
     fn get_phy_ids(&self) -> Vec<u16> {
         self.phys.keys().cloned().collect()
     }
+
+    fn log_phy_add_failure(&mut self) {
+        self.phy_add_fail_count.add(1);
+    }
 }
 
 /// Creates an interface of the requested role for the requested PHY ID.  Returns either the
@@ -436,6 +450,7 @@ mod tests {
         fidl::endpoints,
         fidl_fuchsia_wlan_device as fidl_device, fidl_fuchsia_wlan_device_service as fidl_service,
         fuchsia_async::{run_singlethreaded, Executor},
+        fuchsia_inspect::{self as inspect, assert_inspect_tree},
         fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK},
         futures::stream::StreamExt,
         futures::task::Poll,
@@ -448,6 +463,8 @@ mod tests {
     struct TestValues {
         proxy: fidl_service::DeviceServiceProxy,
         stream: fidl_service::DeviceServiceRequestStream,
+        inspector: inspect::Inspector,
+        node: inspect::Node,
     }
 
     /// Create a TestValues for a unit test.
@@ -455,8 +472,10 @@ mod tests {
         let (proxy, requests) = endpoints::create_proxy::<fidl_service::DeviceServiceMarker>()
             .expect("failed to create SeviceService proxy");
         let stream = requests.into_stream().expect("failed to create stream");
+        let inspector = inspect::Inspector::new();
+        let node = inspector.root().create_child("phy_manager");
 
-        TestValues { proxy: proxy, stream: stream }
+        TestValues { proxy: proxy, stream: stream, inspector: inspector, node: node }
     }
 
     /// Take in the service side of a DeviceService::QueryPhy request and respond with the given
@@ -601,7 +620,7 @@ mod tests {
         let fake_mac_roles = Vec::new();
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
 
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
         {
             let add_phy_fut = phy_manager.add_phy(phy_info.id);
             pin_mut!(add_phy_fut);
@@ -626,7 +645,7 @@ mod tests {
     fn add_invalid_phy() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         {
             let add_phy_fut = phy_manager.add_phy(1);
@@ -647,7 +666,7 @@ mod tests {
     fn add_duplicate_phy() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         let fake_phy_id = 1;
         let fake_mac_roles = Vec::new();
@@ -699,7 +718,7 @@ mod tests {
     fn add_phy_after_create_all_client_ifaces() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         let fake_iface_id = 1;
         let fake_phy_id = 1;
@@ -736,7 +755,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn remove_valid_phy() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         let fake_phy_id = 1;
         let fake_mac_roles = Vec::new();
@@ -755,7 +774,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn remove_nonexistent_phy() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         let fake_phy_id = 1;
         let fake_mac_roles = Vec::new();
@@ -774,7 +793,7 @@ mod tests {
     fn on_iface_added() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -830,7 +849,7 @@ mod tests {
     fn on_iface_added_missing_phy() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -892,7 +911,7 @@ mod tests {
     fn add_duplicate_iface() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -948,7 +967,7 @@ mod tests {
     fn add_nonexistent_iface() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         {
             // Add the non-existent iface
@@ -973,7 +992,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn test_on_iface_removed() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1001,7 +1020,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn remove_missing_iface() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1030,7 +1049,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_client_no_phys() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         let client = phy_manager.get_client();
         assert!(client.is_none());
@@ -1042,7 +1061,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_unconfigured_client() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1064,7 +1083,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_configured_client() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1091,7 +1110,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_client_no_compatible_phys() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1116,7 +1135,7 @@ mod tests {
     fn destroy_all_client_ifaces() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1157,7 +1176,7 @@ mod tests {
     fn destroy_all_client_ifaces_no_clients() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1195,7 +1214,7 @@ mod tests {
     fn get_ap_no_phys() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         let get_ap_future = phy_manager.create_or_get_ap_iface();
 
@@ -1210,7 +1229,7 @@ mod tests {
     fn get_unconfigured_ap() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1246,7 +1265,7 @@ mod tests {
     fn get_configured_ap() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1277,7 +1296,7 @@ mod tests {
     fn get_ap_no_compatible_phys() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1300,7 +1319,7 @@ mod tests {
     fn stop_valid_ap_iface() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1351,7 +1370,7 @@ mod tests {
     fn stop_invalid_ap_iface() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1392,7 +1411,7 @@ mod tests {
     fn stop_all_ap_ifaces() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // ifaces are added.
@@ -1436,7 +1455,7 @@ mod tests {
     fn stop_all_ap_ifaces_with_client() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1473,7 +1492,7 @@ mod tests {
     fn test_suggest_ap_mac() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1524,7 +1543,7 @@ mod tests {
     fn test_suggested_mac_does_not_apply_to_client() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1569,7 +1588,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_phy_ids_no_phys() {
         let test_values = test_setup();
-        let phy_manager = PhyManager::new(test_values.proxy);
+        let phy_manager = PhyManager::new(test_values.proxy, test_values.node);
         assert_eq!(phy_manager.get_phy_ids(), Vec::<u16>::new());
     }
 
@@ -1579,7 +1598,7 @@ mod tests {
     fn get_phy_ids_single_phy() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         {
             let phy_info = fake_phy_info(1, vec![]);
@@ -1599,7 +1618,7 @@ mod tests {
     fn get_phy_ids_two_phys() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.proxy);
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         {
             let phy_info = fake_phy_info(1, Vec::new());
@@ -1622,5 +1641,25 @@ mod tests {
         let phy_ids = phy_manager.get_phy_ids();
         assert!(phy_ids.contains(&1), "expected phy_ids to contain `1`, but phy_ids={:?}", phy_ids);
         assert!(phy_ids.contains(&2), "expected phy_ids to contain `2`, but phy_ids={:?}", phy_ids);
+    }
+
+    /// Tests log_phy_add_failure() to ensure the appropriate inspect count is incremented by 1.
+    #[run_singlethreaded(test)]
+    async fn log_phy_add_failure() {
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
+
+        assert_inspect_tree!(test_values.inspector, root: {
+            phy_manager: {
+                phy_add_fail_count: 0u64,
+            },
+        });
+
+        phy_manager.log_phy_add_failure();
+        assert_inspect_tree!(test_values.inspector, root: {
+            phy_manager: {
+                phy_add_fail_count: 1u64,
+            },
+        });
     }
 }
