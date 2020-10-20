@@ -37,7 +37,7 @@ receive the suspend token and would be unable to resume execution.
 
 ## RESUMING
 
-The allow the task to resume, close the suspend token handle. The task will
+To allow the task to resume, close the suspend token handle. The task will
 remain suspended as long as there are any open suspend tokens. Like suspending,
 resuming is asynchronous so the thread may not be in a running state when the
 [`zx_handle_close()`] call returns, even if no other suspend tokens
