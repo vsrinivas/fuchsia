@@ -738,6 +738,10 @@ zx_status_t UsbPeripheral::UsbDciInterfaceControl(const usb_setup_t* setup,
         // Delegate to one of the function drivers.
         // USB_RECIP_DEVICE should only be used when there is a single active interface.
         // But just to be conservative, try all the available interfaces.
+        if (configuration_ == 0) {
+          return ZX_ERR_BAD_STATE;
+        }
+        ZX_ASSERT(configuration_ <= configurations_.size());
         auto configuration = configurations_[configuration_ - 1];
         auto& interface_map = configuration->interface_map;
         for (size_t i = 0; i < countof(interface_map); i++) {

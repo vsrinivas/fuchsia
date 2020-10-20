@@ -22,11 +22,11 @@
 #include <ddk/metadata.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/usb/dci.h>
+#include <ddk/usb-peripheral-config.h>
 #include <ddktl/protocol/usb/dci.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
-#include <ddk/usb-peripheral-config.h>
 #include "usb-function.h"
 
 struct zx_device : std::enable_shared_from_this<zx_device> {
@@ -161,18 +161,31 @@ class Ddk : public fake_ddk::Bind {
   std::map<uint32_t, std::vector<uint8_t>> metadata_;
 };
 
-TEST(UsbPeripheral, AddsCorrectSerialNumberMetadata) {
-  Ddk ddk;
-  auto dci = std::make_unique<FakeDevice>();
-  auto root_device = std::make_shared<zx_device_t>();
-  root_device->proto_ops = dci->proto();
-  root_device->ctx = dci.get();
-  root_device->proto_id = ZX_PROTOCOL_USB_DCI;
-  zx::interrupt irq;
-  ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
-  ASSERT_OK(usb_peripheral::UsbPeripheral::Create(nullptr, root_device.get()));
-  auto dev = root_device->devices.front();
-  ddk::UsbDciInterfaceProtocolClient client(dci->interface());
+class UsbPeripheralHarness : public zxtest::Test {
+ public:
+  void SetUp() override {
+    dci_ = std::make_unique<FakeDevice>();
+    root_device_ = std::make_shared<zx_device_t>();
+    root_device_->proto_ops = dci_->proto();
+    root_device_->ctx = dci_.get();
+    root_device_->proto_id = ZX_PROTOCOL_USB_DCI;
+    zx::interrupt irq;
+    ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
+    ASSERT_OK(usb_peripheral::UsbPeripheral::Create(nullptr, root_device_.get()));
+    auto dev = root_device_->devices.front();
+    client_ = ddk::UsbDciInterfaceProtocolClient(dci_->interface());
+  }
+
+  void TearDown() override {}
+
+ protected:
+  std::unique_ptr<FakeDevice> dci_;
+  std::shared_ptr<zx_device_t> root_device_;
+  Ddk ddk_;
+  ddk::UsbDciInterfaceProtocolClient client_;
+};
+
+TEST_F(UsbPeripheralHarness, AddsCorrectSerialNumberMetadata) {
   char serial[256];
   usb_setup_t setup;
   setup.wLength = sizeof(serial);
@@ -180,11 +193,24 @@ TEST(UsbPeripheral, AddsCorrectSerialNumberMetadata) {
   setup.bmRequestType = USB_DIR_IN | USB_RECIP_DEVICE | USB_TYPE_STANDARD;
   setup.bRequest = USB_REQ_GET_DESCRIPTOR;
   size_t actual;
-  ASSERT_OK(client.Control(&setup, nullptr, 0, &serial, sizeof(serial), &actual));
+  ASSERT_OK(client_.Control(&setup, nullptr, 0, &serial, sizeof(serial), &actual));
   ASSERT_EQ(serial[0], sizeof(kSerialNumber) * 2);
   ASSERT_EQ(serial[1], USB_DT_STRING);
   for (size_t i = 0; i < sizeof(kSerialNumber) - 1; i++) {
     ASSERT_EQ(serial[2 + (i * 2)], kSerialNumber[i]);
   }
-  DestroyDevices(root_device.get());
+  DestroyDevices(root_device_.get());
+}
+
+TEST_F(UsbPeripheralHarness, WorksWithVendorSpecificCommandWhenConfigurationIsZero) {
+  char serial[256];
+  usb_setup_t setup;
+  setup.wLength = sizeof(serial);
+  setup.wValue = 0x3 | (USB_DT_STRING << 8);
+  setup.bmRequestType = USB_DIR_IN | USB_RECIP_DEVICE | USB_TYPE_VENDOR;
+  setup.bRequest = USB_REQ_GET_DESCRIPTOR;
+  size_t actual;
+  ASSERT_EQ(client_.Control(&setup, nullptr, 0, &serial, sizeof(serial), &actual),
+            ZX_ERR_BAD_STATE);
+  DestroyDevices(root_device_.get());
 }

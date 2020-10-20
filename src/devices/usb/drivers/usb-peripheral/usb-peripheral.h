@@ -211,11 +211,13 @@ class UsbPeripheral : public UsbPeripheralType,
   bool shutting_down_ = false;
   // Current configuration number selected via USB_REQ_SET_CONFIGURATION
   // (will be 0 or 1 since we currently do not support multiple configurations).
-  uint8_t configuration_;
+  // 0 indicates that the device is unconfigured and should not accept USB requests
+  // other than USB_REQ_SET_CONFIGURATION or requests targetting descriptors
+  uint8_t configuration_ = 0;
   // USB connection speed.
-  usb_speed_t speed_;
+  usb_speed_t speed_ = 0;
   // Size of our parent's usb_request_t.
-  size_t parent_request_size_;
+  size_t parent_request_size_ = 0;
   // Registered listener
   zx::channel listener_;
 
