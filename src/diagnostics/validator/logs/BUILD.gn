@@ -44,7 +44,11 @@ rustc_binary("log-validator-bin") {
   edition = "2018"
   deps = validator_deps
 
-  sources = [ "src/main.rs" ]
+  sources = [
+    "src/encoding.rs",
+    "src/main.rs",
+    "src/sink.rs",
+  ]
 }
 
 rustc_test("log-validator-bin-test") {
@@ -52,7 +56,11 @@ rustc_test("log-validator-bin-test") {
   source_root = "src/main.rs"
   deps = validator_deps + [ "//src/lib/fuchsia-async" ]
 
-  sources = [ "src/main.rs" ]
+  sources = [
+    "src/encoding.rs",
+    "src/main.rs",
+    "src/sink.rs",
+  ]
 }
 
 test_package("log-validator-tests") {
