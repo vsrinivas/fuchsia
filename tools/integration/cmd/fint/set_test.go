@@ -122,6 +122,8 @@ func TestGenArgs(t *testing.T) {
 		// Args that are expected to be included in the return value. Order does
 		// not matter.
 		expectedArgs []string
+		// Whether we expect genArgs to return an error.
+		expectErr bool
 		// Relative paths to files to create in the checkout dir prior to
 		// running the test case.
 		checkoutFiles []string
@@ -143,26 +145,38 @@ func TestGenArgs(t *testing.T) {
 			contextSpec: fintpb.Context{
 				ClangToolchainDir: "/tmp/clang_toolchain",
 			},
+			expectedArgs: []string{
+				`clang_prefix="/tmp/clang_toolchain/bin"`,
+			},
+		},
+		{
+			name: "clang toolchain with goma not allowed",
+			contextSpec: fintpb.Context{
+				ClangToolchainDir: "/tmp/clang_toolchain",
+			},
 			staticSpec: fintpb.Static{
 				UseGoma: true,
 			},
-			expectedArgs: []string{
-				`clang_prefix="/tmp/clang_toolchain/bin"`,
-				`use_goma=false`,
-			},
+			expectErr: true,
 		},
 		{
 			name: "gcc toolchain",
 			contextSpec: fintpb.Context{
 				GccToolchainDir: "/tmp/gcc_toolchain",
 			},
+			expectedArgs: []string{
+				`zircon_extra_args.gcc_tool_dir="/tmp/gcc_toolchain/bin"`,
+			},
+		},
+		{
+			name: "gcc toolchain with goma not allowed",
+			contextSpec: fintpb.Context{
+				GccToolchainDir: "/tmp/gcc_toolchain",
+			},
 			staticSpec: fintpb.Static{
 				UseGoma: true,
 			},
-			expectedArgs: []string{
-				`zircon_extra_args.gcc_tool_dir="/tmp/gcc_toolchain/bin"`,
-				`use_goma=false`,
-			},
+			expectErr: true,
 		},
 		{
 			name: "rust toolchain with goma",
@@ -301,7 +315,12 @@ func TestGenArgs(t *testing.T) {
 
 			args, err := genArgs(&tc.staticSpec, &tc.contextSpec, platform)
 			if err != nil {
+				if tc.expectErr {
+					return
+				}
 				t.Fatalf("Unexpected genArgs() error: %v", err)
+			} else if tc.expectErr {
+				t.Fatalf("Expected genArgs() to return an error, but got nil")
 			}
 
 			assertContains(t, args, tc.expectedArgs)

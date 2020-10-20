@@ -154,15 +154,16 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 	}
 	vars["is_debug"] = staticSpec.Optimize == fintpb.Static_DEBUG
 
-	useGoma := staticSpec.UseGoma
-	// TODO(olivernewman): Fail if clang or gcc toolchain is overridden and
-	// UseGoma is set, rather than modifying UseGoma.
 	if contextSpec.ClangToolchainDir != "" {
-		useGoma = false
+		if staticSpec.UseGoma {
+			return nil, fmt.Errorf("goma is not supported for builds using a custom clang toolchain")
+		}
 		vars["clang_prefix"] = filepath.Join(contextSpec.ClangToolchainDir, "bin")
 	}
 	if contextSpec.GccToolchainDir != "" {
-		useGoma = false
+		if staticSpec.UseGoma {
+			return nil, fmt.Errorf("goma is not supported for builds using a custom gcc toolchain")
+		}
 		// TODO(olivernewman): Do we need to check if `zircon_extra_args` is
 		// undefined and initialize it to an empty scope if so? The recipes pass
 		// this as an arg, but it's ugly and may be unnecessary:
@@ -173,8 +174,8 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 		vars["rustc_prefix"] = filepath.Join(contextSpec.RustToolchainDir, "bin")
 	}
 
-	vars["use_goma"] = useGoma
-	if useGoma {
+	vars["use_goma"] = staticSpec.UseGoma
+	if staticSpec.UseGoma {
 		vars["goma_dir"] = filepath.Join(
 			contextSpec.CheckoutDir, "prebuilt", "third_party", "goma", platform,
 		)
