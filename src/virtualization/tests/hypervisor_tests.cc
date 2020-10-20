@@ -59,6 +59,7 @@ DECLARE_TEST_FUNCTION(vcpu_wfi_pending_interrupt_gicv3)
 DECLARE_TEST_FUNCTION(vcpu_wfi_aarch32)
 DECLARE_TEST_FUNCTION(vcpu_fp)
 DECLARE_TEST_FUNCTION(vcpu_fp_aarch32)
+DECLARE_TEST_FUNCTION(vcpu_psci_system_off)
 #elif __x86_64__
 DECLARE_TEST_FUNCTION(vcpu_hlt)
 DECLARE_TEST_FUNCTION(vcpu_pause)
@@ -606,6 +607,18 @@ TEST(Guest, vcpu_fp_aarch32) {
   EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
   EXPECT_EQ(packet.guest_mem.read, false);
   EXPECT_EQ(packet.guest_mem.data, 0);
+}
+
+TEST(Guest, vcpu_psci_system_off) {
+  test_t test;
+  ASSERT_NO_FATAL_FAILURES(setup(&test, vcpu_psci_system_off_start, vcpu_psci_system_off_end));
+  if (!test.supported) {
+    // The hypervisor isn't supported, so don't run the test.
+    return;
+  }
+
+  zx_port_packet_t packet = {};
+  ASSERT_EQ(test.vcpu.resume(&packet), ZX_ERR_UNAVAILABLE);
 }
 
 TEST(Guest, vcpu_write_state_io_aarch32) {

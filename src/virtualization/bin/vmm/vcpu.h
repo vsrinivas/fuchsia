@@ -5,11 +5,11 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_VCPU_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_VCPU_H_
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/vcpu.h>
 #include <zircon/syscalls/port.h>
 
 #include <future>
-#include <shared_mutex>
 
 typedef struct zx_vcpu_state zx_vcpu_state_t;
 
@@ -17,13 +17,10 @@ class Guest;
 
 class Vcpu {
  public:
-  Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr);
+  Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr, async::Loop* loop);
 
   // Begins VCPU execution.
   zx_status_t Start();
-
-  // Waits for the VCPU to transition to a terminal state.
-  zx_status_t Join();
 
   // Send virtual interrupt to the VCPU.
   zx_status_t Interrupt(uint32_t vector);
@@ -48,11 +45,11 @@ class Vcpu {
   zx_status_t HandleVcpu(const zx_packet_guest_vcpu_t& packet, uint64_t trap_key);
 
   const uint64_t id_;
-  Guest* guest_;
+  Guest* const guest_;
   const zx_gpaddr_t entry_;
   const zx_gpaddr_t boot_ptr_;
+  async::Loop* const loop_;
 
-  std::future<zx_status_t> future_;
   zx::vcpu vcpu_;
 };
 

@@ -7,7 +7,6 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/zx/guest.h>
 #include <lib/zx/vmar.h>
 
@@ -27,7 +26,6 @@ enum class TrapType {
 
 class Guest {
  public:
-
 #ifdef __aarch64__
   // hypervisor::IdAllocator<uint16_t, 8>
   static constexpr size_t kMaxVcpus = 8u;
@@ -51,13 +49,10 @@ class Guest {
   zx_status_t CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar);
 
   // Starts a VCPU. The first VCPU must have an |id| of 0.
-  zx_status_t StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr);
+  zx_status_t StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr, async::Loop* loop);
 
   // Signals an interrupt to the VCPUs indicated by |mask|.
   zx_status_t Interrupt(uint64_t mask, uint8_t vector);
-
-  // Waits for all VCPUs associated with the guest to finish executing.
-  zx_status_t Join();
 
   const IoMappingList& mappings() const { return mappings_; }
   const VcpuArray& vcpus() const { return vcpus_; }

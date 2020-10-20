@@ -151,11 +151,12 @@ zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size, uint
 
 zx_status_t Guest::CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar) {
   uintptr_t guest_addr;
-  return vmar_.allocate2(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC, addr, size, vmar,
-                         &guest_addr);
+  return vmar_.allocate2(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC, addr, size,
+                         vmar, &guest_addr);
 }
 
-zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr) {
+zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr,
+                             async::Loop* loop) {
   if (id >= kMaxVcpus) {
     FX_LOGS(ERROR) << "Failed to start VCPU-" << id << ", up to " << kMaxVcpus
                    << " VCPUs are supported";
@@ -173,7 +174,7 @@ zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_pt
     // on the first. So, we ignore subsequent requests.
     return ZX_OK;
   }
-  vcpus_[id] = std::make_unique<Vcpu>(id, this, entry, boot_ptr);
+  vcpus_[id] = std::make_unique<Vcpu>(id, this, entry, boot_ptr, loop);
   return vcpus_[id]->Start();
 }
 
@@ -194,23 +195,4 @@ zx_status_t Guest::Interrupt(uint64_t mask, uint8_t vector) {
 #endif
   }
   return ZX_OK;
-}
-
-zx_status_t Guest::Join() {
-  std::shared_lock<std::shared_mutex> lock(mutex_);
-  // We assume that the VCPU-0 thread will be started first, and that no
-  // additional VCPUs will be brought up after it terminates.
-  zx_status_t status = vcpus_[0]->Join();
-
-  // Once the initial VCPU has terminated, wait for any additional VCPUs.
-  for (size_t id = 1; id != kMaxVcpus; ++id) {
-    if (vcpus_[id] != nullptr) {
-      zx_status_t vcpu_status = vcpus_[id]->Join();
-      if (vcpu_status != ZX_OK) {
-        status = vcpu_status;
-      }
-    }
-  }
-
-  return status;
 }

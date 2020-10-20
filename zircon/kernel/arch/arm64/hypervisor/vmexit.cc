@@ -146,6 +146,8 @@ static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
       return ZX_ERR_NEXT;
     case PSCI64_CPU_OFF:
       return ZX_ERR_STOP;
+    case PSCI64_SYSTEM_OFF:
+      return ZX_ERR_UNAVAILABLE;
     default:
       dprintf(CRITICAL, "Unhandled SMC PSCI Instruction %#lx\n", guest_state->x[0]);
       guest_state->x[0] = PSCI_NOT_SUPPORTED;
@@ -375,13 +377,14 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
     case ZX_OK:
     case ZX_ERR_NEXT:
     case ZX_ERR_STOP:
+    case ZX_ERR_UNAVAILABLE:
     case ZX_ERR_CANCELED:
       break;
     default:
       dprintf(CRITICAL, "VM exit handler for %u (%s) in EL%u at %#lx returned %d\n",
-            static_cast<uint32_t>(syndrome.ec), exception_class_name(syndrome.ec),
-            BITS_SHIFT(guest_state->system_state.spsr_el2, 3, 2), guest_state->system_state.elr_el2,
-            status);
+              static_cast<uint32_t>(syndrome.ec), exception_class_name(syndrome.ec),
+              BITS_SHIFT(guest_state->system_state.spsr_el2, 3, 2),
+              guest_state->system_state.elr_el2, status);
   }
   return status;
 }

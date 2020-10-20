@@ -4,6 +4,7 @@
 
 #include "src/virtualization/bin/vmm/vcpu.h"
 
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
@@ -106,18 +107,16 @@ static zx_status_t HandleMemX86(const zx_packet_guest_mem_t& mem, uint64_t trap_
 }
 #endif
 
-Vcpu::Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr)
-    : id_(id), guest_(guest), entry_(entry), boot_ptr_(boot_ptr) {}
+Vcpu::Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr, async::Loop* loop)
+    : id_(id), guest_(guest), entry_(entry), boot_ptr_(boot_ptr), loop_(loop) {}
 
 zx_status_t Vcpu::Start() {
   std::promise<zx_status_t> barrier;
   std::future<zx_status_t> barrier_future = barrier.get_future();
-  future_ = std::async(std::launch::async, fit::bind_member(this, &Vcpu::Loop), std::move(barrier));
+  std::thread(fit::bind_member(this, &Vcpu::Loop), std::move(barrier)).detach();
   barrier_future.wait();
   return barrier_future.get();
 }
-
-zx_status_t Vcpu::Join() { return future_.get(); }
 
 Vcpu* Vcpu::GetCurrent() {
   FX_DCHECK(thread_vcpu != nullptr) << "Thread does not have a VCPU";
@@ -133,7 +132,7 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
     auto name = fxl::StringPrintf("vcpu-%lu", id_);
     zx_status_t status = zx::thread::self()->set_property(ZX_PROP_NAME, name.c_str(), name.size());
     if (status != ZX_OK) {
-      FX_LOGS(WARNING) << "Failed to set VCPU " << id_ << " thread name " << status;
+      FX_PLOGS(WARNING, status) << "Failed to set VCPU " << id_ << " thread name";
     }
   }
 
@@ -141,7 +140,7 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
   {
     zx_status_t status = zx::vcpu::create(guest_->object(), 0, entry_, &vcpu_);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to create VCPU " << id_ << " " << status;
+      FX_PLOGS(ERROR, status) << "Failed to create VCPU " << id_;
       barrier.set_value(status);
       return status;
     }
@@ -158,7 +157,7 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
 
     zx_status_t status = vcpu_.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to set VCPU " << id_ << " state " << status;
+      FX_PLOGS(ERROR, status) << "Failed to set VCPU " << id_ << " state";
       barrier.set_value(status);
       return status;
     }
@@ -167,31 +166,42 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
   // Unblock VCPU startup barrier.
   barrier.set_value(ZX_OK);
 
+  // Quit the main loop if we return.
+  auto deferred = fit::defer([this] { loop_->Quit(); });
+
   while (true) {
     zx_port_packet_t packet;
     zx_status_t status = vcpu_.resume(&packet);
-    if (status == ZX_ERR_STOP) {
-      return ZX_OK;
-    }
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to resume VCPU " << id_ << " " << status;
-      exit(status);
+    switch (status) {
+      case ZX_OK:
+        break;
+      case ZX_ERR_STOP:
+        // Only stop this VCPU.
+        deferred.cancel();
+        return ZX_OK;
+      case ZX_ERR_UNAVAILABLE:
+        return ZX_OK;
+      default:
+        FX_PLOGS(ERROR, status) << "Failed to resume VCPU " << id_;
+        return status;
     }
 
     status = HandlePacketLocked(packet);
-    if (status == ZX_ERR_STOP) {
-      return ZX_OK;
-    }
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to handle packet " << packet.type << " " << status;
-      exit(status);
+    switch (status) {
+      case ZX_OK:
+        break;
+      case ZX_ERR_STOP:
+        // Only stop this VCPU.
+        deferred.cancel();
+        return ZX_OK;
+      default:
+        FX_PLOGS(ERROR, status) << "Failed to handle packet " << packet.type;
+        return status;
     }
   }
 }
 
-zx_status_t Vcpu::Interrupt(uint32_t vector) {
-  return vcpu_.interrupt(vector);
-}
+zx_status_t Vcpu::Interrupt(uint32_t vector) { return vcpu_.interrupt(vector); }
 
 zx_status_t Vcpu::HandlePacketLocked(const zx_port_packet_t& packet) {
   switch (packet.type) {
@@ -257,8 +267,7 @@ zx_status_t Vcpu::HandleInput(const zx_packet_guest_io_t& io, uint64_t trap_key)
   value.access_size = io.access_size;
   zx_status_t status = IoMapping::FromPortKey(trap_key)->Read(io.port, &value);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to handle port in 0x" << std::hex << io.port << " " << std::dec
-                   << status;
+    FX_PLOGS(ERROR, status) << "Failed to handle port in 0x" << std::hex << io.port;
     return status;
   }
 
@@ -282,8 +291,7 @@ zx_status_t Vcpu::HandleOutput(const zx_packet_guest_io_t& io, uint64_t trap_key
   value.u32 = io.u32;
   zx_status_t status = IoMapping::FromPortKey(trap_key)->Write(io.port, value);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to handle port out 0x" << std::hex << io.port << " " << std::dec
-                   << status;
+    FX_PLOGS(ERROR, status) << "Failed to handle port out 0x" << std::hex << io.port;
   }
   return status;
 }
@@ -298,7 +306,7 @@ zx_status_t Vcpu::HandleVcpu(const zx_packet_guest_vcpu_t& packet, uint64_t trap
     case ZX_PKT_GUEST_VCPU_INTERRUPT:
       return guest_->Interrupt(packet.interrupt.mask, packet.interrupt.vector);
     case ZX_PKT_GUEST_VCPU_STARTUP:
-      return guest_->StartVcpu(packet.startup.id, packet.startup.entry, boot_ptr_);
+      return guest_->StartVcpu(packet.startup.id, packet.startup.entry, boot_ptr_, loop_);
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

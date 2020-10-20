@@ -4,25 +4,27 @@
 
 #include "hypervisor_tests_constants.h"
 
-#define ICC_IAR1_EL1 S3_0_C12_C12_0
+.set ICC_IAR1_EL1,              S3_0_C12_C12_0
 
-.set CPACR_EL1_FPEN_NO_TRAP, (3 << 20)
+.set CPACR_EL1_FPEN_NO_TRAP,    (3 << 20)
 
 // See ARM ARM Table D1.10.2 for more details.
-.set CURRENT_EL_EL0_BASE,    0x000
-.set CURRENT_EL_ELx_BASE,    0x200
-.set LOWER_EL_ARCH64_BASE,   0x400
-.set LOWER_EL_ARCH32_BASE,   0x600
-.set SYNC_EXC_OFFSET,        0x000
-.set IRQ_EXC_OFFSET,         0x080
-.set FIQ_EXC_OFFSET,         0x100
-.set SERROR_EXC_OFFSET,      0x180
+.set CURRENT_EL_EL0_BASE,       0x000
+.set CURRENT_EL_ELx_BASE,       0x200
+.set LOWER_EL_ARCH64_BASE,      0x400
+.set LOWER_EL_ARCH32_BASE,      0x600
+.set SYNC_EXC_OFFSET,           0x000
+.set IRQ_EXC_OFFSET,            0x080
+.set FIQ_EXC_OFFSET,            0x100
+.set SERROR_EXC_OFFSET,         0x180
 
-.set SPSR_DAIF_AARCH64,      0x3c0
-.set SPSR_AIFM_AARCH32,      0x1d0
+.set SPSR_DAIF_AARCH64,         0x3c0
+.set SPSR_AIFM_AARCH32,         0x1d0
 
-.set GICC_BASE,              0x800001000
-.set GICC_IAR_OFFSET,        0xc
+.set GICC_BASE,                 0x800001000
+.set GICC_IAR_OFFSET,           0xc
+
+.set PSCI64_SYSTEM_OFF,         0x84000008
 
 .macro movlit reg, literal
 mov \reg, #((\literal) & 0xffff)
@@ -244,3 +246,8 @@ FUNCTION vcpu_fp_aarch32_start
     msr cpacr_el1, x0
     eret
 FUNCTION vcpu_fp_aarch32_end
+
+FUNCTION vcpu_psci_system_off_start
+    movlit x0, PSCI64_SYSTEM_OFF
+    smc #0
+FUNCTION vcpu_psci_system_off_end

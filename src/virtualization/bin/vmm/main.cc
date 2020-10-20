@@ -468,7 +468,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup primary VCPU.
-  status = guest.StartVcpu(0 /* id */, entry, boot_ptr);
+  status = guest.StartVcpu(0 /* id */, entry, boot_ptr, &loop);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to start VCPU-0 " << status;
     loop.Quit();
@@ -494,5 +494,5 @@ int main(int argc, char** argv) {
   }
 
   loop.Run();
-  return guest.Join();
+  return ZX_OK;
 }
