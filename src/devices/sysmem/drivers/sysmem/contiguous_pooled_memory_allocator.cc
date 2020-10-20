@@ -84,7 +84,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Init(uint32_t alignment_log2) {
   zx_status_t status = zx::vmo::create_contiguous(parent_device_->bti(), size_, alignment_log2,
                                                   &local_contiguous_vmo);
   if (status != ZX_OK) {
-    DRIVER_ERROR("Could not allocate contiguous memory, status %d allocation_name_: %s", status,
+    LOG(ERROR, "Could not allocate contiguous memory, status %d allocation_name_: %s", status,
                  allocation_name_);
     return status;
   }
@@ -96,7 +96,7 @@ zx_status_t ContiguousPooledMemoryAllocator::InitPhysical(zx_paddr_t paddr) {
   zx::vmo local_contiguous_vmo;
   zx_status_t status = parent_device_->CreatePhysicalVmo(paddr, size_, &local_contiguous_vmo);
   if (status != ZX_OK) {
-    DRIVER_ERROR("Failed to create physical VMO: %d allocation_name_: %s", status,
+    LOG(ERROR, "Failed to create physical VMO: %d allocation_name_: %s", status,
                  allocation_name_);
     return status;
   }
@@ -108,14 +108,14 @@ zx_status_t ContiguousPooledMemoryAllocator::InitCommon(zx::vmo local_contiguous
   zx_status_t status =
       local_contiguous_vmo.set_property(ZX_PROP_NAME, allocation_name_, strlen(allocation_name_));
   if (status != ZX_OK) {
-    DRIVER_ERROR("Failed vmo.set_property(ZX_PROP_NAME, ...): %d", status);
+    LOG(ERROR, "Failed vmo.set_property(ZX_PROP_NAME, ...): %d", status);
     return status;
   }
 
   zx_info_vmo_t info;
   status = local_contiguous_vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    DRIVER_ERROR("Failed local_contiguous_vmo.get_info(ZX_INFO_VMO, ...) - status: %d", status);
+    LOG(ERROR, "Failed local_contiguous_vmo.get_info(ZX_INFO_VMO, ...) - status: %d", status);
     return status;
   }
   // Only secure/protected RAM ever uses a physical VMO.  Not all secure/protected RAM uses a
@@ -156,14 +156,14 @@ zx_status_t ContiguousPooledMemoryAllocator::InitCommon(zx::vmo local_contiguous
       // has pages.  Cases where !is_cpu_accessible_ include both Init() and InitPhysical(), so we
       // can't rely on local_contiguous_vmo being a physical VMO.
       if (ZX_INFO_VMO_TYPE(info.flags) == ZX_INFO_VMO_TYPE_PAGED) {
-        DRIVER_ERROR(
+        LOG(ERROR,
             "Ignoring failure to set_cache_policy() on contig VMO - see fxbug.dev/34580 - status: "
             "%d",
             status);
         status = ZX_OK;
         goto keepGoing;
       }
-      DRIVER_ERROR("Failed to set_cache_policy(): %d", status);
+      LOG(ERROR, "Failed to set_cache_policy(): %d", status);
       return status;
     }
   }
@@ -177,7 +177,7 @@ keepGoing:;
   status = parent_device_->bti().pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,
                                      local_contiguous_vmo, 0, size_, &addrs, 1, &pmt);
   if (status != ZX_OK) {
-    DRIVER_ERROR("Could not pin memory, status %d", status);
+    LOG(ERROR, "Could not pin memory, status %d", status);
     return status;
   }
 
@@ -193,7 +193,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
                                                       std::optional<std::string> name,
                                                       zx::vmo* parent_vmo) {
   if (!is_ready_) {
-    DRIVER_ERROR("allocation_name_: %s is not ready_, failing", allocation_name_);
+    LOG(ERROR, "allocation_name_: %s is not ready_, failing", allocation_name_);
     return ZX_ERR_BAD_STATE;
   }
   RegionAllocator::Region::UPtr region;
@@ -204,7 +204,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
   // The "region" param is an out ref.
   zx_status_t status = region_allocator_.GetRegion(size, ZX_PAGE_SIZE, region);
   if (status != ZX_OK) {
-    DRIVER_INFO("GetRegion failed (out of space?) - size: %zu status: %d", size, status);
+    LOG(WARNING, "GetRegion failed (out of space?) - size: %zu status: %d", size, status);
     DumpPoolStats();
     allocations_failed_property_.Add(1);
     uint64_t unused_size = 0;
@@ -225,7 +225,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
   // The result_parent_vmo created here is a VMO window to a sub-region of contiguous_vmo_.
   status = contiguous_vmo_.create_child(ZX_VMO_CHILD_SLICE, region->base, size, &result_parent_vmo);
   if (status != ZX_OK) {
-    DRIVER_ERROR("Failed vmo.create_child(ZX_VMO_CHILD_SLICE, ...): %d", status);
+    LOG(ERROR, "Failed vmo.create_child(ZX_VMO_CHILD_SLICE, ...): %d", status);
     return status;
   }
 
@@ -233,7 +233,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
   // take up any space, because the same memory is backed by contiguous_vmo_.
   status = result_parent_vmo.set_property(ZX_PROP_NAME, child_name_, strlen(child_name_));
   if (status != ZX_OK) {
-    DRIVER_ERROR("Failed vmo.set_property(ZX_PROP_NAME, ...): %d", status);
+    LOG(ERROR, "Failed vmo.set_property(ZX_PROP_NAME, ...): %d", status);
     return status;
   }
 
@@ -253,8 +253,8 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
   data.koid_property = data.node.CreateUint("koid", handle_info.koid);
   data.ptr = std::move(region);
   regions_.emplace(std::make_pair(result_parent_vmo.get(), std::move(data)));
-  *parent_vmo = std::move(result_parent_vmo);
 
+  *parent_vmo = std::move(result_parent_vmo);
   return ZX_OK;
 }
 
@@ -292,6 +292,7 @@ void ContiguousPooledMemoryAllocator::TraceObserverCallback(async_dispatcher_t* 
   trace_notify_observer_updated(trace_observer_event_.get());
   wait_.Begin(dispatcher);
 }
+
 void ContiguousPooledMemoryAllocator::DumpPoolStats() {
   uint64_t unused_size = 0;
   uint64_t max_free_size = 0;
@@ -302,15 +303,22 @@ void ContiguousPooledMemoryAllocator::DumpPoolStats() {
         return true;
       });
 
-  DRIVER_ERROR(
+  LOG(INFO,
       "%s unused total: %ld bytes, max free size %ld bytes "
       "AllocatedRegionCount(): %zu AvailableRegionCount(): %zu",
       allocation_name_, unused_size, max_free_size, region_allocator_.AllocatedRegionCount(),
       region_allocator_.AvailableRegionCount());
   for (auto& [vmo, region] : regions_) {
-    DRIVER_ERROR("Region koid %ld name %s size %zu", region.koid, region.name.c_str(),
+    LOG(INFO, "Region koid %ld name %s size %zu", region.koid, region.name.c_str(),
                  region.ptr->size);
   }
+}
+
+void ContiguousPooledMemoryAllocator::DumpPoolHighWaterMark() {
+  LOG(INFO,
+      "%s high_water_mark_used_size_: %ld bytes, max_free_size_at_high_water_mark_ %ld bytes "
+      "(not including any failed allocations)",
+      allocation_name_, high_water_mark_used_size_, max_free_size_at_high_water_mark_);
 }
 
 void ContiguousPooledMemoryAllocator::TracePoolSize(bool initial_trace) {
@@ -322,20 +330,23 @@ void ContiguousPooledMemoryAllocator::TracePoolSize(bool initial_trace) {
   used_size_property_.Set(used_size);
   TRACE_COUNTER("gfx", "Contiguous pool size", pool_id_, "size", used_size);
   bool trace_high_water_mark = initial_trace;
-  if (used_size > high_water_mark_) {
-    high_water_mark_ = used_size;
+  if (used_size > high_water_mark_used_size_) {
+    high_water_mark_used_size_ = used_size;
     trace_high_water_mark = true;
-    high_water_mark_property_.Set(high_water_mark_);
+    high_water_mark_property_.Set(high_water_mark_used_size_);
     uint64_t max_free_size = 0;
     region_allocator_.WalkAvailableRegions([&max_free_size](const ralloc_region_t* r) -> bool {
       max_free_size = std::max(max_free_size, r->size);
       return true;
     });
-    max_free_at_high_water_property_.Set(max_free_size);
+    max_free_size_at_high_water_mark_ = max_free_size;
+    max_free_at_high_water_property_.Set(max_free_size_at_high_water_mark_);
+    // This can be a bit noisy at first, but then settles down quickly.
+    DumpPoolHighWaterMark();
   }
   if (trace_high_water_mark) {
     TRACE_INSTANT("gfx", "Increased high water mark", TRACE_SCOPE_THREAD, "allocation_name",
-                  allocation_name_, "size", high_water_mark_);
+                  allocation_name_, "size", high_water_mark_used_size_);
   }
 }
 
