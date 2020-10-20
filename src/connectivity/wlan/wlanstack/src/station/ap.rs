@@ -121,10 +121,7 @@ async fn start(sme: &Mutex<Sme>, config: fidl_sme::ApConfig) -> fidl_sme::StartA
         error!("Responder for AP Start command was dropped without sending a response");
         ap_sme::StartResult::InternalError
     });
-    convert_start_result_code(r)
-}
 
-fn convert_start_result_code(r: ap_sme::StartResult) -> fidl_sme::StartApResultCode {
     match r {
         ap_sme::StartResult::Success => fidl_sme::StartApResultCode::Success,
         ap_sme::StartResult::AlreadyStarted => fidl_sme::StartApResultCode::AlreadyStarted,
@@ -134,7 +131,10 @@ fn convert_start_result_code(r: ap_sme::StartResult) -> fidl_sme::StartApResultC
         ap_sme::StartResult::PreviousStartInProgress => {
             fidl_sme::StartApResultCode::PreviousStartInProgress
         }
-        ap_sme::StartResult::InvalidArguments => fidl_sme::StartApResultCode::InvalidArguments,
+        ap_sme::StartResult::InvalidArguments(e) => {
+            error!("Invalid arguments for AP start: {}", e);
+            fidl_sme::StartApResultCode::InvalidArguments
+        }
         ap_sme::StartResult::DfsUnsupported => fidl_sme::StartApResultCode::DfsUnsupported,
     }
 }

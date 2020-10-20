@@ -351,9 +351,6 @@ async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             };
             let r = sme.start(&mut config).await?;
             match r {
-                fidl_sme::StartApResultCode::InvalidArguments => {
-                    println!("{:?}: Channel {:?} is invalid", r, config.radio_cfg.primary_chan);
-                }
                 fidl_sme::StartApResultCode::DfsUnsupported => {
                     println!(
                         "{:?}: The specified role does not support DFS channel {:?}",
@@ -381,9 +378,6 @@ async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let mut config = fidl_sme::MeshConfig { mesh_id: mesh_id.as_bytes().to_vec(), channel };
             let r = sme.join(&mut config).await?;
             match r {
-                fidl_sme::JoinMeshResultCode::InvalidArguments => {
-                    println!("{:?}: Channel {:?} is invalid", r, config.channel);
-                }
                 fidl_sme::JoinMeshResultCode::DfsUnsupported => {
                     println!(
                         "{:?}: The specified role does not support DFS channel {:?}",

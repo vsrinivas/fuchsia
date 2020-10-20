@@ -20,7 +20,6 @@ use {
         timer::{self, EventId, TimedEvent, Timer},
         MacAddr, MlmeRequest, Ssid,
     },
-    anyhow::format_err,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
     fidl_fuchsia_wlan_sme as fidl_sme,
     futures::channel::{mpsc, oneshot},
@@ -109,13 +108,13 @@ pub struct ApSme {
 #[derive(Debug, PartialEq)]
 pub enum StartResult {
     Success,
-    AlreadyStarted,
-    InternalError,
     Canceled,
     TimedOut,
-    PreviousStartInProgress,
-    InvalidArguments,
+    InvalidArguments(String),
     DfsUnsupported,
+    PreviousStartInProgress,
+    AlreadyStarted,
+    InternalError,
 }
 
 impl ApSme {
@@ -142,30 +141,30 @@ impl ApSme {
                 let op_result = adapt_operation(&ctx.device_info, &config.radio_cfg);
                 let op = match op_result {
                     Err(e) => {
-                        error!("error in adapting to device capabilities. operation not accepted: {:?}", e);
-                        responder.respond(StartResult::InternalError);
+                        responder.respond(e);
                         return State::Idle { ctx };
-                    },
-                    Ok(o) => o
+                    }
+                    Ok(o) => o,
                 };
 
                 let rsn_cfg_result = create_rsn_cfg(&config.ssid[..], &config.password[..]);
                 let rsn_cfg = match rsn_cfg_result {
                     Err(e) => {
-                        error!("error configuring RSN: {}", e);
-                        responder.respond(StartResult::InternalError);
+                        responder.respond(e);
                         return State::Idle { ctx };
-                    },
-                    Ok(rsn_cfg) => rsn_cfg
+                    }
+                    Ok(rsn_cfg) => rsn_cfg,
                 };
 
                 let band_cap = match get_device_band_info(&ctx.device_info, op.chan.primary) {
                     None => {
-                        error!("band info for channel {} not found", op.chan);
-                        responder.respond(StartResult::InternalError);
+                        responder.respond(StartResult::InvalidArguments(format!(
+                            "band info for channel {} not found",
+                            op.chan
+                        )));
                         return State::Idle { ctx };
-                    },
-                    Some(band_cap) => band_cap
+                    }
+                    Some(band_cap) => band_cap,
                 };
 
                 let capabilities = mac::CapabilityInfo(band_cap.cap)
@@ -203,15 +202,15 @@ impl ApSme {
                     start_timeout,
                     op_radio_cfg: op,
                 }
-            },
+            }
             s @ State::Starting { .. } => {
                 responder.respond(StartResult::PreviousStartInProgress);
                 s
-            },
+            }
             s @ State::Stopping { .. } => {
                 responder.respond(StartResult::Canceled);
                 s
-            },
+            }
             s @ State::Started { .. } => {
                 responder.respond(StartResult::AlreadyStarted);
                 s
@@ -296,17 +295,20 @@ fn send_stop_req(ctx: &mut Context, stop_req: fidl_mlme::StopRequest) -> EventId
 fn adapt_operation(
     device_info: &DeviceInfo,
     usr_cfg: &RadioConfig,
-) -> Result<OpRadioConfig, anyhow::Error> {
+) -> Result<OpRadioConfig, StartResult> {
     // TODO(porce): .expect() may go way, if wlantool absorbs the default value,
     // eg. CBW20 in HT. But doing so would hinder later control from WLANCFG.
     if usr_cfg.phy.is_none() || usr_cfg.cbw.is_none() || usr_cfg.primary_chan.is_none() {
-        return Err(format_err!("Incomplete user config: {:?}", usr_cfg));
+        return Err(StartResult::InvalidArguments(format!(
+            "Incomplete user config: {:?}",
+            usr_cfg
+        )));
     }
 
     let phy = usr_cfg.phy.unwrap();
     let chan = Channel::new(usr_cfg.primary_chan.unwrap(), usr_cfg.cbw.unwrap());
     if !chan.is_valid() {
-        return Err(format_err!("Invalid channel: {:?}", usr_cfg));
+        return Err(StartResult::InvalidArguments(format!("Invalid channel: {}", chan)));
     }
 
     let (phy_adapted, cbw_adapted) = derive_phy_cbw_for_ap(device_info, &phy, &chan);
@@ -498,11 +500,11 @@ impl super::Station for ApSme {
 fn validate_config(config: &Config) -> Result<(), StartResult> {
     let rc = &config.radio_cfg;
     if rc.phy.is_none() || rc.cbw.is_none() || rc.primary_chan.is_none() {
-        return Err(StartResult::InvalidArguments);
+        return Err(StartResult::InvalidArguments("Invalid radio config".to_string()));
     }
     let c = Channel::new(rc.primary_chan.unwrap(), config.radio_cfg.cbw.unwrap());
     if !c.is_valid() {
-        Err(StartResult::InvalidArguments)
+        Err(StartResult::InvalidArguments("Invalid channel".to_string()))
     } else if c.is_dfs() {
         Err(StartResult::DfsUnsupported)
     } else {
@@ -709,11 +711,18 @@ impl InfraBss {
     }
 }
 
-fn create_rsn_cfg(ssid: &[u8], password: &[u8]) -> Result<Option<RsnCfg>, anyhow::Error> {
+fn create_rsn_cfg(ssid: &[u8], password: &[u8]) -> Result<Option<RsnCfg>, StartResult> {
     if password.is_empty() {
         Ok(None)
     } else {
-        let psk = psk::compute(password, ssid)?;
+        let psk_result = psk::compute(password, ssid);
+        let psk = match psk_result {
+            Err(e) => {
+                return Err(StartResult::InvalidArguments(e.to_string()));
+            }
+            Ok(o) => o,
+        };
+
         // Note: TKIP is legacy and considered insecure. Only allow CCMP usage
         // for group and pairwise ciphers.
         Ok(Some(RsnCfg { psk, rsne: Rsne::wpa2_psk_ccmp_rsne() }))
@@ -814,9 +823,9 @@ mod tests {
 
     #[test]
     fn test_validate_config() {
-        assert_eq!(
-            Err(StartResult::InvalidArguments),
-            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(15) })
+        assert_variant!(
+            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(15) }),
+            Err(e) => { assert!(matches!(e, StartResult::InvalidArguments { .. })); }
         );
         assert_eq!(
             Err(StartResult::DfsUnsupported),
