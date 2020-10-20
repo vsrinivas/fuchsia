@@ -196,7 +196,7 @@ async fn hash_from_base_or_repo_or_cache(
     pkg_url: &PkgUrl,
     inspect_state: &ResolverServiceInspectState,
 ) -> Result<BlobId, Status> {
-    if let Some(blob) = unpinned_base_package(pkg_url, base_package_index) {
+    if let Some(blob) = base_package_index.is_unpinned_base_package(pkg_url) {
         fx_log_info!("get_hash for {} to {} with base pin", pkg_url, blob);
         return Ok(blob);
     }
@@ -276,7 +276,7 @@ async fn package_from_base_or_repo_or_cache(
     inspect: &ResolverServiceInspectState,
 ) -> Result<BlobId, Status> {
     let package_inspect = inspect.resolve(pkg_url);
-    if let Some(blob) = unpinned_base_package(pkg_url, base_package_index) {
+    if let Some(blob) = base_package_index.is_unpinned_base_package(pkg_url) {
         fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
         return Ok(blob);
     }
@@ -377,30 +377,6 @@ async fn package_from_repo_or_cache(
     }
 }
 
-fn unpinned_base_package(
-    pkg_url: &PkgUrl,
-    base_package_index: &BasePackageIndex,
-) -> Option<BlobId> {
-    // Always send Merkle-pinned requests through the resolver.
-    // TODO: consider checking the Merkle pin to see if it matches the base hash.
-    if pkg_url.package_hash().is_some() {
-        return None;
-    }
-    // Make sure to strip off a "/0" variant before checking the base index.
-    let stripped_url;
-    let base_url = match pkg_url.variant() {
-        Some("0") => {
-            stripped_url = pkg_url.strip_variant();
-            &stripped_url
-        }
-        _ => pkg_url,
-    };
-    match base_package_index.get(&base_url) {
-        Some(base_merkle) => Some(base_merkle.clone()),
-        None => None,
-    }
-}
-
 // Attempts to lookup the hash of a package from `system_cache_list`, which is populated from the
 // cache_packages manifest of the system_image package. The cache_packages manifest only includes
 // the package path and assumes all hosts are "fuchsia.com", so this fn can only succeed on
@@ -449,12 +425,7 @@ async fn get_hash(
     url: &str,
     inspect_state: &ResolverServiceInspectState,
 ) -> Result<BlobId, Status> {
-    let pkg_url = match PkgUrl::parse(url) {
-        Ok(url) => url,
-        Err(err) => {
-            return Err(handle_bad_package_url(err, url));
-        }
-    };
+    let pkg_url = PkgUrl::parse(url).map_err(|e| handle_bad_package_url(e, url))?;
     // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
     // given one.
     if pkg_url.resource().is_some() {
@@ -486,12 +457,7 @@ async fn resolve(
     dir_request: ServerEnd<DirectoryMarker>,
 ) -> Result<(), Status> {
     trace::duration_begin!("app", "resolve", "url" => url.as_str());
-    let pkg_url = match PkgUrl::parse(&url) {
-        Ok(url) => url,
-        Err(err) => {
-            return Err(handle_bad_package_url(err, &url));
-        }
-    };
+    let pkg_url = PkgUrl::parse(&url).map_err(|e| handle_bad_package_url(e, &url))?;
     // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
     // given one.
     if pkg_url.resource().is_some() {
@@ -571,30 +537,25 @@ async fn resolve_font<'a>(
     package_url: String,
     directory_request: ServerEnd<DirectoryMarker>,
     mut cobalt_sender: CobaltSender,
-) -> Result<(), Status>
-where
-{
-    match PkgUrl::parse(&package_url) {
-        Err(err) => Err(handle_bad_package_url(err, &package_url)),
-        Ok(parsed_package_url) => {
-            let is_font_package = font_package_manager.is_font_package(&parsed_package_url);
-            cobalt_sender.log_event_count(
-                metrics::IS_FONT_PACKAGE_CHECK_METRIC_ID,
-                if is_font_package {
-                    metrics::IsFontPackageCheckMetricDimensionResult::Font
-                } else {
-                    metrics::IsFontPackageCheckMetricDimensionResult::NotFont
-                },
-                0,
-                1,
-            );
-            if is_font_package {
-                resolve(&cache, &package_fetcher, package_url, directory_request).await
-            } else {
-                fx_log_err!("font resolver asked to resolve non-font package: {}", package_url);
-                Err(Status::NOT_FOUND)
-            }
-        }
+) -> Result<(), Status> {
+    let parsed_package_url =
+        PkgUrl::parse(&package_url).map_err(|e| handle_bad_package_url(e, &package_url))?;
+    let is_font_package = font_package_manager.is_font_package(&parsed_package_url);
+    cobalt_sender.log_event_count(
+        metrics::IS_FONT_PACKAGE_CHECK_METRIC_ID,
+        if is_font_package {
+            metrics::IsFontPackageCheckMetricDimensionResult::Font
+        } else {
+            metrics::IsFontPackageCheckMetricDimensionResult::NotFont
+        },
+        0,
+        1,
+    );
+    if is_font_package {
+        resolve(&cache, &package_fetcher, package_url, directory_request).await
+    } else {
+        fx_log_err!("font resolver asked to resolve non-font package: {}", package_url);
+        Err(Status::NOT_FOUND)
     }
 }
 

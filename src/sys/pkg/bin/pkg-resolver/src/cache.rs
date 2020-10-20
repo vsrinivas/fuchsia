@@ -22,7 +22,7 @@ use {
     parking_lot::Mutex,
     pkgfs::install::BlobKind,
     std::{
-        collections::{HashMap, HashSet},
+        collections::HashSet,
         hash::Hash,
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -33,11 +33,12 @@ use {
 };
 
 mod base_package_index;
+pub use base_package_index::BasePackageIndex;
+
 mod inspect;
 mod retry;
 
 pub type BlobFetcher = queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>;
-pub type BasePackageIndex = HashMap<PkgUrl, BlobId>;
 
 /// Provides access to the package cache components.
 #[derive(Clone)]
@@ -90,7 +91,7 @@ impl PackageCache {
 
     /// Loads the base package index from pkg-cache.
     pub async fn base_package_index(&self) -> Result<BasePackageIndex, anyhow::Error> {
-        base_package_index::base_package_index_impl(self.cache.clone()).await
+        BasePackageIndex::from_proxy(self.cache.clone()).await
     }
 
     /// Create a new blob with the given install intent.

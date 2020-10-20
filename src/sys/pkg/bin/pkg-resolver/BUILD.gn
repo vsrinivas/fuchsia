@@ -68,7 +68,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:url",
   ]
 
-  test_deps = [ "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc" ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//third_party/rust_crates:maplit",
+  ]
 
   non_rust_deps =
       [ "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client-c" ]
