@@ -43,6 +43,7 @@ rustc_library("lib") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/icu_data/rust/icu_data",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/ui/fuchsia-scenic",

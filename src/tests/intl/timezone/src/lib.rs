@@ -14,6 +14,7 @@ use fidl_fuchsia_ui_app::ViewProviderMarker;
 use fuchsia_async as fasync;
 use fuchsia_async::DurationExt;
 use fuchsia_component::client;
+use fuchsia_runtime as runtime;
 use fuchsia_scenic as scenic;
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon as zx;
@@ -191,6 +192,17 @@ async fn loop_until_matching_time(
             break;
         }
         if (date_time != vm_time) && attempt == MAX_ATTEMPTS {
+            let clock = runtime::duplicate_utc_clock_handle(zx::Rights::READ)
+                .map_err(|stat| anyhow::anyhow!("Error retreiving clock: {}", stat));
+            let userspace_utc_sec = match clock {
+                Ok(clk) => clk
+                    .read()
+                    .map_err(|stat| anyhow::anyhow!("Error reading clock: {}", stat))
+                    .map(|zx_time| zx_time.into_nanos() / 1_000_000_000),
+                Err(err) => Err(err),
+            };
+            let kernel_utc_sec = zx::Time::get(zx::ClockId::UTC).into_nanos() / 1_000_000_000;
+
             return Err(anyhow::anyhow!(
                 "dart VM time and test fixture time mismatch:\n\t\
                 dart VM says the time is:               {:?}\n\t\
@@ -198,13 +210,17 @@ async fn loop_until_matching_time(
                 expected test fixture timezone:         {}\n\t\
                 the test fixutre local time is:         {}\n\t\
                 test fixture says UTC time is:          {}\n\t\
-                test fixture timestamp is:              {} sec since epoch",
+                test fixture ucal timestamp is:         {} sec since epoch\n\t\
+                test fixture userspace timestamp is:    {:?} sec since epoch\n\t\
+                test fixture kernel timestamp is:       {} sec since epoch",
                 vm_time,
                 date_time,
                 timezone_name,
                 detailed_format.format(now)?,
                 utc_format.format(now)?,
                 now / 1000.0,
+                userspace_utc_sec,
+                kernel_utc_sec,
             ));
         }
         fasync::Timer::new(sleep.after_now()).await;
