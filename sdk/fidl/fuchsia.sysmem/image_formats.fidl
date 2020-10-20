@@ -87,10 +87,18 @@ enum PixelFormatType {
     /// Compatible with ZX_PIXEL_FORMAT_RGB_2220.
     RGB2220 = 111;
 
-    /// 8bpp, Luminance-only.
+    /// 8bpp, Luminance-only (red, green and blue have identical values.)
     /// Compatible with VK_FORMAT_R8_UNORM.
     /// Compatible with ZX_PIXEL_FORMAT_GRAY_8 and ZX_PIXEL_FORMAT_MONO_8.
     L8 = 112;
+
+    /// 8bpp, Red-only (Green and Blue are to be interpreted as 0).
+    /// Compatible with VK_FORMAT_R8_UNORM.
+    R8 = 113;
+
+    /// 16bpp RG, 1 plane. 8 bits R, 8 bits G.
+    /// Compatible with VK_FORMAT_R8G8_UNORM.
+    R8G8 = 114;
 };
 
 /// Describes how the pixels within an image are meant to be presented.

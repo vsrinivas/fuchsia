@@ -21,50 +21,11 @@ namespace camera {
 static fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(fuchsia::sysmem::PixelFormat format) {
   fuchsia_sysmem_PixelFormat ret;
   ret.has_format_modifier = format.has_format_modifier;
-  switch (format.type) {
-    case fuchsia::sysmem::PixelFormatType::INVALID:
-      ret.type = fuchsia_sysmem_PixelFormatType_INVALID;
-      break;
-    case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
-      ret.type = fuchsia_sysmem_PixelFormatType_R8G8B8A8;
-      break;
-    case fuchsia::sysmem::PixelFormatType::BGRA32:
-      ret.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-      break;
-    case fuchsia::sysmem::PixelFormatType::I420:
-      ret.type = fuchsia_sysmem_PixelFormatType_I420;
-      break;
-    case fuchsia::sysmem::PixelFormatType::M420:
-      ret.type = fuchsia_sysmem_PixelFormatType_M420;
-      break;
-    case fuchsia::sysmem::PixelFormatType::NV12:
-      ret.type = fuchsia_sysmem_PixelFormatType_NV12;
-      break;
-    case fuchsia::sysmem::PixelFormatType::YUY2:
-      ret.type = fuchsia_sysmem_PixelFormatType_YUY2;
-      break;
-    case fuchsia::sysmem::PixelFormatType::MJPEG:
-      ret.type = fuchsia_sysmem_PixelFormatType_MJPEG;
-      break;
-    case fuchsia::sysmem::PixelFormatType::YV12:
-      ret.type = fuchsia_sysmem_PixelFormatType_YV12;
-      break;
-    case fuchsia::sysmem::PixelFormatType::BGR24:
-      ret.type = fuchsia_sysmem_PixelFormatType_BGR24;
-      break;
-    case fuchsia::sysmem::PixelFormatType::RGB565:
-      ret.type = fuchsia_sysmem_PixelFormatType_RGB565;
-      break;
-    case fuchsia::sysmem::PixelFormatType::RGB332:
-      ret.type = fuchsia_sysmem_PixelFormatType_RGB332;
-      break;
-    case fuchsia::sysmem::PixelFormatType::RGB2220:
-      ret.type = fuchsia_sysmem_PixelFormatType_RGB2220;
-      break;
-    case fuchsia::sysmem::PixelFormatType::L8:
-      ret.type = fuchsia_sysmem_PixelFormatType_L8;
-      break;
-  }
+  // HLCPP and C enum values should always match. Spot-check a single one.
+  static_assert(static_cast<fuchsia_sysmem_PixelFormatType>(
+                    fuchsia::sysmem::PixelFormatType::YUY2) == fuchsia_sysmem_PixelFormatType_YUY2,
+                "HLCPP and C pixel format types don't match.");
+  ret.type = static_cast<fuchsia_sysmem_PixelFormatType>(format.type);
   return ret;
 }
 

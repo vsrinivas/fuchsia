@@ -175,6 +175,12 @@ std::ostream& operator<<(std::ostream& os, fuchsia::sysmem::PixelFormatType valu
       return os << "fuchsia::sysmem::PixelFormatType::RGB2220";
     case fuchsia::sysmem::PixelFormatType::L8:
       return os << "fuchsia::sysmem::PixelFormatType::L8";
+    case fuchsia::sysmem::PixelFormatType::R8:
+      return os << "fuchsia::sysmem::PixelFormatType::R8";
+    case fuchsia::sysmem::PixelFormatType::R8G8:
+      return os << "fuchsia::sysmem::PixelFormatType::R8G8";
+    default:
+      return os << "Unknown format";
   }
 }
 

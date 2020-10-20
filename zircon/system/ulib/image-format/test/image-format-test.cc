@@ -712,3 +712,33 @@ TEST(ImageFormat, AfbcFlagFormats_V1_LLCPP) {
   constexpr uint32_t kMinHeight = 128;
   EXPECT_EQ(kMinHeaderOffset + kMinWidth * kMinHeight * 4, ImageFormatImageSize(image_format));
 }
+
+TEST(ImageFormat, R8G8Formats_V1_LLCPP) {
+  sysmem_v1::PixelFormat format = {
+      .type = sysmem_v1::PixelFormatType::R8G8,
+      .has_format_modifier = true,
+      .format_modifier.value = sysmem_v1::FORMAT_MODIFIER_LINEAR,
+  };
+
+  sysmem_v1::ImageFormatConstraints constraints = {
+      .pixel_format = format,
+      .min_coded_width = 12,
+      .max_coded_width = 100,
+      .min_coded_height = 12,
+      .max_coded_height = 100,
+      .max_bytes_per_row = 100000,
+      .bytes_per_row_divisor = 1,
+  };
+
+  auto optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
+  EXPECT_TRUE(optional_format);
+  EXPECT_EQ(18u * 2, optional_format->bytes_per_row);
+  EXPECT_EQ(18u * 17u * 2, ImageFormatImageSize(*optional_format));
+
+  constraints.pixel_format.type = sysmem_v1::PixelFormatType::R8;
+
+  optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
+  EXPECT_TRUE(optional_format);
+  EXPECT_EQ(18u * 1, optional_format->bytes_per_row);
+  EXPECT_EQ(18u * 17u * 1, ImageFormatImageSize(*optional_format));
+}

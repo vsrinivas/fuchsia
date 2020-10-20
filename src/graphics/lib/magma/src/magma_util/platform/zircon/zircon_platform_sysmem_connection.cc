@@ -200,6 +200,15 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
         constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::I420;
         is_yuv = true;
         break;
+      case MAGMA_FORMAT_R8:
+        constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::R8;
+        break;
+      case MAGMA_FORMAT_L8:
+        constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::L8;
+        break;
+      case MAGMA_FORMAT_R8G8:
+        constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::R8G8;
+        break;
       default:
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid format: %d",
                         format_constraints->image_format);

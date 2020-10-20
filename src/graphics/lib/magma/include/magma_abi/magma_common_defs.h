@@ -82,6 +82,8 @@ enum {
   MAGMA_FORMAT_RGB332 = 110,
   MAGMA_FORMAT_RGB2220 = 111,
   MAGMA_FORMAT_L8 = 112,
+  MAGMA_FORMAT_R8 = 113,
+  MAGMA_FORMAT_R8G8 = 114,
 };
 
 // These must match the fuchsia.sysmem format modifier values.
