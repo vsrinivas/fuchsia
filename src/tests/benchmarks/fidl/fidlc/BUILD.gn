@@ -1,0 +1,29 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+executable("bin") {
+  output_name = "fidlc_microbenchmarks"
+  testonly = true
+  sources = [ "main.cc" ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/perftest",
+    "//zircon/tools/fidl:fidl",
+  ]
+}
+
+package("fidlc") {
+  testonly = true
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "fidlc_microbenchmarks"
+      shell = true
+    },
+  ]
+}

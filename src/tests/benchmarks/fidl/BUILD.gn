@@ -5,6 +5,7 @@
 group("benchmarks") {
   testonly = true
   deps = [
+    "fidlc",
     "go",
     "hlcpp",
     "lib-fidl",

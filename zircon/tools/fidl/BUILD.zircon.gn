@@ -97,101 +97,105 @@ action("gen-json-schema") {
 }
 
 group("tools") {
-  deps = [
-    ":fidl-format",
-    ":fidl-lint",
-    ":fidlc",
-  ]
-}
-
-zx_host_tool("fidlc") {
-  sources = [ "compiler/main.cc" ]
-  deps = [ ":fidl" ]
-  sdk_migrated = true
-}
-
-zx_host_tool("fidl-format") {
-  sources = [ "formatter/main.cc" ]
-  deps = [ ":fidl" ]
-  sdk_migrated = true
-}
-
-zx_host_tool("fidl-lint") {
-  sources = [
-    "linter/command_line_options.cc",
-    "linter/main.cc",
-  ]
-  deps = [ ":fidl" ]
-  sdk_migrated = true
-}
-
-template("fidlgen_executable") {
-  assert(current_os != "fuchsia")
-  assert(defined(invoker.go_path))
-  assert(defined(invoker.go_package))
-
-  if (defined(invoker.output_name)) {
-    output_name = invoker.output_name
-  } else {
-    output_name = target_name
-  }
-  output_path = "${target_gen_dir}/${output_name}"
-  depfile_path = "${output_path}.d"
-
-  go_root = "$zx/../prebuilt/third_party/go/${host_platform}"
-  go_executable = "${go_root}/bin/go"
-  godepfile_executable =
-      "$zx/../prebuilt/tools/godepfile/${host_platform}/godepfile"
-
-  go_cache = "${root_build_dir}/gocache"
-
-  if (current_os == "mac") {
-    go_os = "darwin"
-  } else {
-    go_os = current_os
-  }
-  if (current_cpu == "x64") {
-    go_arch = "amd64"
-  } else {
-    go_arch = current_cpu
-  }
-
-  action(target_name) {
-    script = "build_fidlgen_executable.sh"
-
-    # go_root, go_path, go_cache must be absolute.
-    args = [
-      rebase_path(go_executable, root_build_dir),
-      rebase_path(godepfile_executable, root_build_dir),
-      rebase_path(go_root),
-      rebase_path(invoker.go_path),
-      invoker.go_package,
-      go_os,
-      go_arch,
-      rebase_path(depfile_path, root_build_dir),
-      rebase_path(output_path, root_build_dir),
-      rebase_path(go_cache),
+  if (current_os != "fuchsia") {
+    deps = [
+      ":fidl-format",
+      ":fidl-lint",
+      ":fidlc",
     ]
-    depfile = depfile_path
-    inputs = [
-      go_executable,
-      godepfile_executable,
+  }
+}
+
+if (current_os != "fuchsia") {
+  zx_host_tool("fidlc") {
+    sources = [ "compiler/main.cc" ]
+    deps = [ ":fidl" ]
+    sdk_migrated = true
+  }
+
+  zx_host_tool("fidl-format") {
+    sources = [ "formatter/main.cc" ]
+    deps = [ ":fidl" ]
+    sdk_migrated = true
+  }
+
+  zx_host_tool("fidl-lint") {
+    sources = [
+      "linter/command_line_options.cc",
+      "linter/main.cc",
     ]
-    outputs = [ output_path ]
+    deps = [ ":fidl" ]
+    sdk_migrated = true
+  }
 
-    # See host_tool_action().
-    metadata = {
-      # Dependencies come before the "--".
-      host_tool_rspfile = rebase_path(inputs, root_build_dir)
-      host_tool_rspfile += [ "--" ]
+  template("fidlgen_executable") {
+    assert(current_os != "fuchsia")
+    assert(defined(invoker.go_path))
+    assert(defined(invoker.go_package))
 
-      # The command line to run comes after the "--".
-      host_tool_rspfile += [ rebase_path(output_path, root_build_dir) ]
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
+    } else {
+      output_name = target_name
+    }
+    output_path = "${target_gen_dir}/${output_name}"
+    depfile_path = "${output_path}.d"
+
+    go_root = "$zx/../prebuilt/third_party/go/${host_platform}"
+    go_executable = "${go_root}/bin/go"
+    godepfile_executable =
+        "$zx/../prebuilt/tools/godepfile/${host_platform}/godepfile"
+
+    go_cache = "${root_build_dir}/gocache"
+
+    if (current_os == "mac") {
+      go_os = "darwin"
+    } else {
+      go_os = current_os
+    }
+    if (current_cpu == "x64") {
+      go_arch = "amd64"
+    } else {
+      go_arch = current_cpu
+    }
+
+    action(target_name) {
+      script = "build_fidlgen_executable.sh"
+
+      # go_root, go_path, go_cache must be absolute.
+      args = [
+        rebase_path(go_executable, root_build_dir),
+        rebase_path(godepfile_executable, root_build_dir),
+        rebase_path(go_root),
+        rebase_path(invoker.go_path),
+        invoker.go_package,
+        go_os,
+        go_arch,
+        rebase_path(depfile_path, root_build_dir),
+        rebase_path(output_path, root_build_dir),
+        rebase_path(go_cache),
+      ]
+      depfile = depfile_path
+      inputs = [
+        go_executable,
+        godepfile_executable,
+      ]
+      outputs = [ output_path ]
+
+      # See host_tool_action().
+      metadata = {
+        # Dependencies come before the "--".
+        host_tool_rspfile = rebase_path(inputs, root_build_dir)
+        host_tool_rspfile += [ "--" ]
+
+        # The command line to run comes after the "--".
+        host_tool_rspfile += [ rebase_path(output_path, root_build_dir) ]
+      }
     }
   }
-}
 
-fidlgen_executable("fidlgen_llcpp") {
-  go_path = "$zx/../tools/fidl/fidlgen_llcpp"
-  go_package = "fidl/compiler/llcpp_backend"
+  fidlgen_executable("fidlgen_llcpp") {
+    go_path = "$zx/../tools/fidl/fidlgen_llcpp"
+    go_package = "fidl/compiler/llcpp_backend"
+  }
 }

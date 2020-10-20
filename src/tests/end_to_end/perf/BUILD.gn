@@ -19,6 +19,7 @@ test_list = [
   "dart_inspect_benchmarks_test",
   "garnet_input_latency_benchmarks_test",
   "kernel_boot_timeline_test",
+  "fidlc_microbenchmarks_test",
   "microbenchmarks_test",
   "netstack_benchmarks_test",
   "rust_inspect_benchmarks_test",
