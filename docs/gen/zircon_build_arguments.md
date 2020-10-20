@@ -240,12 +240,6 @@ If true, excludes syscalls with the [testonly] attribute.
 
 From //vdso/vdso.gni:7
 
-### fidl_write_v1_wireformat
-
-**Current value (from the default):** `false`
-
-From //system/ulib/fidl/BUILD.zircon.gn:14
-
 ### gcc_tool_dir
 Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are
 found.  If this is "", then the behavior depends on $use_prebuilt_gcc.

@@ -679,7 +679,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/6e4c252bb455f30a3465ca3bfa7e288c284b7009/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/c0c54e4f400fcc562025546905155d74294c529c/runtime/dart/dart_component.gni#24)
 
 ### dart_default_build_cfg
 Non-product JIT
@@ -704,14 +704,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/6e4c252bb455f30a3465ca3bfa7e288c284b7009/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/c0c54e4f400fcc562025546905155d74294c529c/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/6e4c252bb455f30a3465ca3bfa7e288c284b7009/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/c0c54e4f400fcc562025546905155d74294c529c/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -766,6 +766,13 @@ These come after synthesized arguments to configure blobfs and pkgfs.
 
 From //build/images/args.gni:18
 
+### disable_dart_strict_deps
+Enable all strict deps.
+
+**Current value (from the default):** `false`
+
+From //build/dart/dart_library.gni:18
+
 ### disable_kernel_pci
 Disable kernel PCI driver support. A counterpart of the the build
 flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
@@ -780,7 +787,7 @@ TODO(fxbug.dev/36723, fxbug.dev/6623) Remove this flag once issues are resolved
 
 **Current value (from the default):** `false`
 
-From //build/dart/dart_library.gni:19
+From //build/dart/dart_library.gni:22
 
 ### enable_dart_analysis
 Enable all dart analysis
@@ -928,12 +935,6 @@ From //build/images/args.gni:88
 
 From //build/fidl/args.gni:8
 
-### fidl_write_v1_wireformat
-
-**Current value (from the default):** `false`
-
-From //zircon/system/ulib/fidl/BUILD.gn:14
-
 ### firmware_prebuilts
 List of prebuilt firmware blobs to include in update packages.
 
@@ -960,7 +961,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/6e4c252bb455f30a3465ca3bfa7e288c284b7009/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/c0c54e4f400fcc562025546905155d74294c529c/runtime/dart/dart_component.gni#13)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1000,14 +1001,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/6e4c252bb455f30a3465ca3bfa7e288c284b7009/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/c0c54e4f400fcc562025546905155d74294c529c/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/6e4c252bb455f30a3465ca3bfa7e288c284b7009/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/c0c54e4f400fcc562025546905155d74294c529c/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -1288,7 +1289,7 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:12](https://fuchsia.googlesource.com/third_party/icu/+/014c08a1e8b74eaffcd44a319dfc4893beda9e08/config.gni#12)
+From [//third_party/icu/config.gni:12](https://fuchsia.googlesource.com/third_party/icu/+/c1863f755f0dfbaa3a3f8bc548cd24b27117b47b/config.gni#12)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
@@ -1297,7 +1298,7 @@ is only useful in Fuchsia.
 
 **Current value (from the default):** `"67"`
 
-From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/014c08a1e8b74eaffcd44a319dfc4893beda9e08/version.gni#9)
+From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/c1863f755f0dfbaa3a3f8bc548cd24b27117b47b/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1305,7 +1306,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/014c08a1e8b74eaffcd44a319dfc4893beda9e08/config.gni#8)
+From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/c1863f755f0dfbaa3a3f8bc548cd24b27117b47b/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
@@ -3167,4 +3168,13 @@ From //build/config/arm.gni:28
 **Current value (from the default):** `8`
 
 From //build/config/arm.gni:12
+
+### rtc_c
+This is used to temporarily enable building with the C driver
+and will be removed once cpp driver is stabilized.
+See fxb/62176.
+
+**Current value (from the default):** `false`
+
+From //src/devices/rtc/drivers/pl031-rtc/BUILD.gn:11
 
