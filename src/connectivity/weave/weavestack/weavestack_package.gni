@@ -1,0 +1,137 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//tools/cmc/build/cmx.gni")
+
+template("_weavestack_package") {
+  forward_variables_from(invoker, [ "extra_cmx" ])
+  cmx_deps = []
+  processed_meta = []
+  if (!defined(extra_cmx)) {
+    processed_meta = invoker.meta
+  } else {
+    processed_meta = []
+    foreach(manifest, invoker.meta) {
+      cmx_name = get_path_info(manifest.path, "file")
+      manifest_merge_target = "${cmx_name}_merge"
+      cmx_merge(manifest_merge_target) {
+        sources = [ manifest.path ]
+        sources += extra_cmx
+        output_name = "${cmx_name}.merged.cmx"
+      }
+
+      merged_manifest = get_target_outputs(":${manifest_merge_target}")
+      merged_manifest = merged_manifest[0]
+      cmx_deps += [ ":${manifest_merge_target}" ]
+      processed_meta += [
+        {
+          path = rebase_path(merged_manifest)
+          dest = manifest.dest
+        },
+      ]
+    }
+  }
+
+  package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "applets",
+                             "package_name",
+                             "testonly",
+                             "resources",
+                           ])
+    deps = [ "//src/connectivity/weave/weavestack:bin" ]
+    deps += cmx_deps
+    meta = processed_meta
+
+    binaries = [
+      {
+        name = "weavestack"
+      },
+    ]
+
+    if (defined(applets)) {
+      assert(defined(applets.target))
+      assert(defined(applets.name))
+
+      deps += [ applets.target ]
+
+      loadable_modules = [
+        {
+          name = applets.name
+        },
+      ]
+    }
+  }
+}
+
+# Creates a 'weavestack' package. All packages created with this template will be identical, except
+# for the addition of selected applet modules.
+#
+# Example:
+# ```
+#   weavestack_package("foo_weave") {
+#     package_name = "weave_package"
+#     test_package_name = "test_weave_package"
+#     applets = {
+#       target = "//path/to/applets/module"
+#       name = "module_name.so"
+#     }
+#     extra_cmx = [
+#       "meta/manifest.cmx",
+#     ]
+#   }
+# ```
+#
+# Parameters
+#     applets (optional)
+#       A scope defining a loadable module that implements weave applets.
+#       Type: scope with the entries:
+#
+#         target (required)
+#           The GN `loadable_module` target that builds the applets module.
+#           Type: path
+#
+#         name (required)
+#           The name of the loadable module.
+#           Type: string
+#
+#     package_name (optional)
+#       The name of the weavestack package. Defaults to 'target_name'.
+#       Type: string
+#       Default: ${target_name}
+#
+#     extra_cmx (optional)
+#       Additional CMX manifests that will be merged with the base weavestack.cmx manifest.
+#       This can be used to add additional services or features that may be needed by different
+#       weave applets.
+#       Type: list(path)
+template("weavestack_package") {
+  forward_variables_from(invoker, [ "package_name" ])
+
+  _weavestack_package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "applets",
+                             "extra_cmx",
+                             "package_name",
+                           ])
+    meta = [
+      {
+        path = rebase_path("//src/connectivity/weave/meta/weavestack.cmx")
+        dest = "weavestack.cmx"
+      },
+    ]
+
+    resources = [
+      {
+        path = rebase_path(
+                "//src/connectivity/weave/weavestack/data/default_environment_schema.json")
+        dest = "default_environment_schema.json"
+      },
+    ]
+  }
+}

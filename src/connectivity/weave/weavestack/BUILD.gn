@@ -7,6 +7,8 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 
+import("//src/connectivity/weave/weavestack/weavestack_package.gni")
+
 source_set("lib") {
   sources = [
     "app.cc",
@@ -39,33 +41,8 @@ executable("bin") {
   deps = [ ":lib" ]
 }
 
-group("weavestack") {
-  public_deps = [ ":pkg" ]
-}
-
-package("pkg") {
-  package_name = "weavestack"
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "weavestack"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("../meta/weavestack.cmx")
-      dest = "weavestack.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("data/default_environment_schema.json")
-      dest = "default_environment_schema.json"
-    },
-  ]
+# The default weavestack package contains no applets.
+weavestack_package("weavestack") {
 }
 
 config_data("config") {
