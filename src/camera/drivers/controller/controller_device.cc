@@ -9,9 +9,10 @@
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+
+#include "src/camera/drivers/controller/bind.h"
 
 namespace camera {
 
@@ -181,8 +182,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace camera
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(camera_controller, camera::driver_ops, "camera_ctrl", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_CAMERA_CONTROLLER),
-ZIRCON_DRIVER_END(camera_controller)
+ZIRCON_DRIVER(camera_controller, camera::driver_ops, "fuchsia", "0.1");

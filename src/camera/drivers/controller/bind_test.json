@@ -1,0 +1,17 @@
+[
+    {
+      "name": "Protocol",
+      "expected": "abort",
+      "device": {
+        "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+      }
+    },
+    {
+      "name": "Camera Controller",
+      "expected": "match",
+      "device": {
+        "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+        "fuchsia.BIND_PLATFORM_DEV_DID": "0x21"
+      }
+    }
+]

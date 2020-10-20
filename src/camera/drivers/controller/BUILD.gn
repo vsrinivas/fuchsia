@@ -2,7 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//src/camera/debug.gni")
+
+bind_rules("camera_controller_bind") {
+  rules = "camera_controller.bind"
+  output = "bind.h"
+  tests = "bind_test.json"
+  deps = [ "//src/devices/bind/fuchsia.composite" ]
+}
+
+group("bind_test") {
+  testonly = true
+  deps = [ ":camera_controller_bind_test" ]
+}
 
 source_set("source") {
   defines = [ camera_debug_define ]
@@ -31,6 +44,7 @@ source_set("source") {
     "stream_protocol.cc",
     "stream_protocol.h",
   ]
+  deps = [ ":camera_controller_bind" ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.camerahwaccel",
     "//sdk/banjo/ddk.protocol.composite",
@@ -51,9 +65,6 @@ source_set("source") {
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/lib/fsl",
     "//src/lib/fxl",

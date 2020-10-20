@@ -90,7 +90,6 @@ zx_library("ddk-deprecated-binding-headers") {
   public_deps = [ ":ddk" ]
   visibility = [
     "//examples/drivers/fifo:*",
-    "//src/camera/drivers/controller:*",
     "//src/connectivity/bluetooth/core/bt-host:*",
     "//src/connectivity/bluetooth/core/bt-host:driver",
     "//src/connectivity/bluetooth/hci/emulator:*",
