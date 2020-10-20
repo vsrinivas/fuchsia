@@ -251,8 +251,8 @@ A *reference* is a string of the form `#<reference-name>`, where
 
 A reference may refer to:
 
--   A [static child instance][static-children] whose name is `<reference-name>`.
--   A [collection][collections] whose name is `<reference-name>`.
+-   A [static child instance][doc-static-children] whose name is `<reference-name>`.
+-   A [collection][doc-collections] whose name is `<reference-name>`.
 
 ### program {#program}
 
@@ -289,8 +289,8 @@ it expects to receive, and how it interprets them.
 
 ### children {#children}
 
-The `children` section declares child component instances as described in [Child
-component instances][children]
+The `children` section declares child component instances as described in
+[Child component instances][doc-children]
 
 `children` is an array of objects with the following properties:
 
