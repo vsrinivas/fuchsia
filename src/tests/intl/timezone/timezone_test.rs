@@ -25,7 +25,7 @@ mod tests {
     /// We do this twice, to ensure that runtime timezone changes are reflected in the time
     /// reported by the dart VM.
     #[fasync::run_singlethreaded(test)]
-    #[ignore] // See http://fxbug.dev/60635
+    #[cfg_attr(target_arch = "aarch64", ignore)] // See http://fxbug.dev/60635
     async fn check_reported_time_in_dart_vm() -> Result<(), Error> {
         fuchsia_syslog::init_with_tags(&[
             "e2e",
