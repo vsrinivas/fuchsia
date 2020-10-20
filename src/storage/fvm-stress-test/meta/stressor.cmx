@@ -1,0 +1,20 @@
+{
+    "program": {
+        "binary": "test/stressor"
+    },
+    "sandbox": {
+        "features": [
+            "hub"
+        ],
+        "services": [
+            "fuchsia.boot.Arguments",
+            "fuchsia.boot.Items",
+            "fuchsia.boot.WriteOnlyLog",
+            "fuchsia.ldsvc.Loader",
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

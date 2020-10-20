@@ -8,8 +8,8 @@ use {
     crate::DEFAULT_SERVICE_INSTANCE,
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::{
-        self, DiscoverableService, MemberOpener, Proxy, ServerEnd, UnifiedServiceMarker,
-        UnifiedServiceProxy,
+        self, DiscoverableService, MemberOpener, Proxy, ServerEnd, ServiceMarker,
+        UnifiedServiceMarker, UnifiedServiceProxy,
     },
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys::{
@@ -171,9 +171,7 @@ pub fn connect_to_service_at<S: DiscoverableService>(
 }
 
 /// Connect to a FIDL service using the provided path.
-pub fn connect_to_service_at_path<S: DiscoverableService>(
-    service_path: &str,
-) -> Result<S::Proxy, Error> {
+pub fn connect_to_service_at_path<S: ServiceMarker>(service_path: &str) -> Result<S::Proxy, Error> {
     let (proxy, server) = zx::Channel::create()?;
     connect_channel_to_service_at_path(server, service_path)?;
     let proxy = fasync::Channel::from_channel(proxy)?;

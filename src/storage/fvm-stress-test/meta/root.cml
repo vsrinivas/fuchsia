@@ -1,0 +1,35 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "isolated_devmgr",
+            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated_devmgr.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            runner: "elf",
+            from: "parent",
+            to: [ "#isolated_devmgr" ],
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: [ "#isolated_devmgr" ],
+        },
+    ],
+    expose: [
+        {
+            directory: "dev",
+            from: "#isolated_devmgr",
+            rights: [ "rw*" ],
+        },
+    ],
+}
