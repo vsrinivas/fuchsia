@@ -250,12 +250,7 @@ mod tests {
     // This test will fail to compile if this is not the case.
     #[test]
     fn serial_implements_drop_trait() {
-        fn assert_drop()
-        where
-            Serial: Drop,
-        {
-        }
-        assert_drop();
+        assert!(std::mem::needs_drop::<Serial>());
     }
 
     #[test]
