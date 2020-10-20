@@ -43,7 +43,7 @@ fuchsia_component("ipv6-forward-test") {
   deps = [ ":ip-forward" ]
 }
 
-fuchsia_test_package("netemul-ip-forward-test") {
+fuchsia_test_package("netemul-ip-forward-tests") {
   test_components = [
     ":ipv4-forward-test",
     ":ipv6-forward-test",
@@ -51,5 +51,6 @@ fuchsia_test_package("netemul-ip-forward-test") {
   deps = [
     # netstack is under test.
     "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
   ]
 }

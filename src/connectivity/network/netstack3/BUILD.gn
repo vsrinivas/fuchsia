@@ -104,6 +104,7 @@ fuchsia_test_package("netstack3-tests") {
     ":core-lib-test",
     ":specialize-ip-macro-test-lib-test",
   ]
+  deps = [ "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component" ]
 }
 
 group("tests") {

@@ -1,7 +1,7 @@
 {
     "facets": {
         "fuchsia.netemul": {
-            "default_url": "fuchsia-pkg://fuchsia.com/overnet_examples_tests#meta/overnet_interface_passing.cmx",
+            "default_url": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/overnet_interface_passing.cmx",
             "environment": {
                 "children": [
                     {
@@ -20,22 +20,22 @@
                                     "--nodename",
                                     "overnet-test-device-server"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/device_name_provider.cmx"
                             },
                             "fuchsia.devicesettings.DeviceSettingsManager": {
                                 "arguments": [
                                     "-s",
                                     "DeviceName=overnet-test-device-server"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/mock-device-settings.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/mock-device-settings.cmx"
                             },
-                            "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                            "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
-                            "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
-                            "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                            "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnetstack-with-udp#meta/overnetstack-with-udp.cmx",
-                            "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnetstack-with-udp#meta/overnetstack-with-udp.cmx",
-                            "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                            "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-debug.cmx",
+                            "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/mdns.cmx",
+                            "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/mdns.cmx",
+                            "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-debug.cmx",
+                            "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/overnetstack-with-udp.cmx",
+                            "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/overnetstack-with-udp.cmx",
+                            "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-debug.cmx"
                         },
                         "setup": [
                             {
@@ -45,7 +45,7 @@
                                     "-i",
                                     "192.168.0.1/24"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-cfg.cmx"
                             }
                         ]
                     }
@@ -57,22 +57,22 @@
                             "--nodename",
                             "overnet-test-device-client"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/device_name_provider.cmx"
                     },
                     "fuchsia.devicesettings.DeviceSettingsManager": {
                         "arguments": [
                             "-s",
                             "DeviceName=overnet-test-device-client"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/mock-device-settings.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/mock-device-settings.cmx"
                     },
-                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                    "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
-                    "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
-                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                    "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnetstack-with-udp#meta/overnetstack-with-udp.cmx",
-                    "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnetstack-with-udp#meta/overnetstack-with-udp.cmx",
-                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-debug.cmx",
+                    "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/mdns.cmx",
+                    "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/mdns.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-debug.cmx",
+                    "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/overnetstack-with-udp.cmx",
+                    "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/overnetstack-with-udp.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-debug.cmx"
                 },
                 "setup": [
                     {
@@ -82,7 +82,7 @@
                             "-i",
                             "192.168.0.2/24"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-cfg.cmx"
                     }
                 ],
                 "test": [

@@ -6,8 +6,6 @@ import("//build/config.gni")
 import("//build/rust/rustc_macro.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 group("tests") {
@@ -141,8 +139,8 @@ fuchsia_component("netstack_integration_test") {
   deps = [
     ":netstack_integration_test_bin",
 
-    # netemul is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul",
+    # netemul-sandbox is used to create hermetic environments.
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
   ]
 }
 
@@ -152,28 +150,40 @@ fuchsia_component("netstack_cobalt_integration_test") {
   deps = [ ":netstack_cobalt_integration_test_bin" ]
 }
 
-package("device_name_provider") {
+fuchsia_component("device_name_provider") {
+  testonly = true
+  manifest = "meta/device_name_provider.cmx"
   deps = [ "//src/bringup/bin/device-name-provider" ]
-  binaries = [
-    {
-      name = "device-name-provider"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/device_name_provider.cmx")
-      dest = "device_name_provider.cmx"
-    },
-  ]
 }
 
-fuchsia_test_package("netstack-integration-tests-inner") {
+fuchsia_component("mock_cobalt") {
+  testonly = true
+  manifest = "//src/cobalt/bin/testing/mock_cobalt/meta/mock_cobalt.cmx"
+  deps = [ "//src/cobalt/bin/testing/mock_cobalt:bin" ]
+}
+
+fuchsia_component("stash_secure") {
+  testonly = true
+  manifest = "//src/sys/stash/meta/stash_secure.cmx"
+  deps = [ "//src/sys/stash:bin" ]
+}
+
+fuchsia_test_package("netstack-integration-tests") {
   package_name = "netstack-integration-tests"
   test_components = [
     ":netstack_cobalt_integration_test",
     ":netstack_integration_test",
   ]
   deps = [
+    # device_name_provider provides fuchsia.device.NameProvider.
+    ":device_name_provider",
+
+    # mock_cobalt provides fuchsia.cobalt.LoggerFactory and fuchsia.cobalt.test.LoggerQuerier.
+    ":mock_cobalt",
+
+    # stash_secure is used by dhcpd and netstack.
+    ":stash_secure",
+
     # dhcpd is used to test DHCP address acquisition.
     ":dhcpd-testing-configs",
     "//src/connectivity/network/dhcp:component",
@@ -216,27 +226,6 @@ config_data("netcfg-netemul-config") {
   for_pkg = "netstack-integration-tests"
   sources = [ "//src/connectivity/network/netcfg/config/empty.json" ]
   outputs = [ "netcfg/empty.json" ]
-}
-
-# This target contains the test package netstack-integration-tests and the
-# package dependencies needed in the image/universe to run the tests within it.
-# We can remove this once all the dependencies move to the new build templates
-# so we can include dependent components in the test package. Note, there's
-# currently no way to express a dependency between packages in the build
-# system, so we aggregate all the package dependencies in this group target.
-# See bug 36293 for more details.
-group("netstack-integration-tests") {
-  testonly = true
-
-  deps = [
-    ":netstack-integration-tests-inner",
-
-    # device_name_provider provides fuchsia.device.NameProvider.
-    ":device_name_provider",
-
-    # mock_cobalt provides fuchsia.cobalt.LoggerFactory and fuchsia.cobalt.test.LoggerQuerier.
-    "//src/cobalt/bin/testing/mock_cobalt",
-  ]
 }
 
 test("netstack_bsdsocket_c_api_test") {
@@ -296,7 +285,6 @@ test("name_provider_service_not_present_test") {
   sources = [ "name_provider_service_not_present_test.cc" ]
 
   deps = [
-    ":device_name_provider",
     "//sdk/fidl/fuchsia.device",
     "//src/lib/fxl/test:gtest_main",
   ]
@@ -314,11 +302,8 @@ group("netstack_c_api_tests") {
   deps = [
     ":netstack_c_api_tests_inner",
 
-    # device_name_provider provides fuchsia.device.NameProvider.
-    ":device_name_provider",
-
-    # netemul is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul",
+    # netemul_runner is used to create hermetic test environments.
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",
 
     # cat is used to test FD passing.
     "//third_party/sbase:cat",
@@ -393,13 +378,18 @@ fuchsia_test_package("netstack_c_api_tests_inner") {
   ]
 
   deps = [
+    # device_name_provider provides fuchsia.device.NameProvider.
+    ":device_name_provider",
+
+    # dns_resolver is under test.
+    "//src/connectivity/network/dns:component",
+
     # netstack is under test.
     "//src/connectivity/network/netstack:component-debug",
-  ]
 
-  test_specs = {
-    environments = [ emu_env ]
-  }
+    # netstack-cfg is used to configure netstack in test environments.
+    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
+  ]
 
   visibility = [ ":*" ]
 }

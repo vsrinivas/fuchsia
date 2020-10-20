@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 rustc_test("http_client_integration_test") {
@@ -29,18 +28,16 @@ fuchsia_component("component") {
   deps = [ ":http_client_integration_test" ]
 }
 
-fuchsia_test_package("http-client-integration-test") {
+fuchsia_test_package("http-client-integration-tests") {
   test_components = [ ":component" ]
   deps = [
     # The component under test.
     "../:component",
+    "//src/connectivity/network/netstack:component-debug",
   ]
-  test_specs = {
-    environments = [ emu_env ]
-  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":http-client-integration-test" ]
+  deps = [ ":http-client-integration-tests" ]
 }

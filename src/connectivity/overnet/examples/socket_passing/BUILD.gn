@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 group("socket_passing") {
   testonly = true
@@ -35,19 +35,12 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("overnet-socket-passing") {
+fuchsia_component("component") {
+  component_name = "overnet_socket_passing"
   deps = [ ":bin" ]
+  manifest = "meta/overnet_socket_passing.cmx"
+}
 
-  binaries = [
-    {
-      name = "overnet_socket_passing"
-      dest = "overnet_example"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("../meta/overnet_example.cmx")
-      dest = "overnet_socket_passing.cmx"
-    },
-  ]
+fuchsia_package("overnet-socket-passing") {
+  deps = [ ":component" ]
 }

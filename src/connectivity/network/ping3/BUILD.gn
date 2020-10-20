@@ -47,32 +47,37 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("ping3-component") {
+fuchsia_component("component") {
   component_name = "ping3"
   manifest = "meta/ping3.cmx"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("ping3") {
-  deps = [ ":ping3-component" ]
+  deps = [ ":component" ]
 }
 
-fuchsia_unittest_package("ping3-tests") {
-  manifest = "meta/ping3-tests.cmx"
+fuchsia_component("ping3_bin_test") {
+  testonly = true
   deps = [ ":bin_test" ]
+  manifest = "meta/ping3_bin_test.cmx"
+}
+
+fuchsia_test_package("ping3-tests") {
+  test_components = [ ":ping3_bin_test" ]
+  deps = [
+    # The component under test.
+    ":component",
+
+    # ping3-tests lauches netstack3.
+    "//src/connectivity/network/netstack3:component",
+
+    # ping3-tests uses netemul to create hermetic test environment.
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":ping3",
-    ":ping3-tests",
-
-    # ping3-tests lauches netstack3.
-    "//src/connectivity/network/netstack3",
-
-    # ping3-tests uses netemul to create hermetic test environment.
-    # TODO(brunodalbo): move this to component level when netemul can handle it.
-    "//src/connectivity/network/testing/netemul",
-  ]
+  deps = [ ":ping3-tests" ]
 }

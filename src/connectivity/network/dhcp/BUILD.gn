@@ -44,9 +44,10 @@ rustc_library("lib") {
   ]
 }
 
-fuchsia_unittest_package("dhcp-tests") {
-  manifest = "meta/dhcp_lib_test.cmx"
+fuchsia_component("dhcp_lib_test") {
+  testonly = true
   deps = [ ":lib_test" ]
+  manifest = "meta/dhcp_lib_test.cmx"
 }
 
 rustc_binary("bin") {
@@ -84,9 +85,18 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_unittest_package("dhcpd-tests") {
-  manifest = "meta/dhcpd_bin_test.cmx"
+fuchsia_component("dhcpd_bin_test") {
+  testonly = true
   deps = [ ":bin_test" ]
+  manifest = "meta/dhcpd_bin_test.cmx"
+}
+
+fuchsia_test_package("dhcp-tests") {
+  test_components = [
+    ":dhcp_lib_test",
+    ":dhcpd_bin_test",
+  ]
+  deps = [ "//src/connectivity/network/tests:stash_secure" ]
 }
 
 config_data("config-default") {
@@ -115,10 +125,7 @@ group("dhcp") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":dhcp-tests",
-    ":dhcpd-tests",
-  ]
+  deps = [ ":dhcp-tests" ]
 }
 
 config_data("configs-testing") {

@@ -2,102 +2,52 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-import("//build/testing/test_spec.gni")
+import("//src/sys/build/components.gni")
 
 group("examples") {
   testonly = true
   deps = [
-    ":overnet_examples_tests",
     "echo",
     "interface_passing",
     "socket_passing",
   ]
 }
 
-test_spec("overnet_echo_test") {
-  target = ":overnet_examples_tests"
-  package_url = "fuchsia-pkg://fuchsia.com/overnet_examples_tests#meta/overnet_echo_test.cmx"
+fuchsia_unittest_component("overnet_echo_test") {
+  manifest = "meta/overnet_echo_test.cmx"
 }
 
-test_spec("overnet_interface_passing_test") {
-  target = ":overnet_examples_tests"
-  package_url = "fuchsia-pkg://fuchsia.com/overnet_examples_tests#meta/overnet_interface_passing_test.cmx"
+fuchsia_unittest_component("overnet_interface_passing_test") {
+  manifest = "meta/overnet_interface_passing_test.cmx"
 }
 
-test_spec("overnet_socket_passing_test") {
-  target = ":overnet_examples_tests"
-  package_url = "fuchsia-pkg://fuchsia.com/overnet_examples_tests#meta/overnet_socket_passing_test.cmx"
+fuchsia_unittest_component("overnet_socket_passing_test") {
+  manifest = "meta/overnet_socket_passing_test.cmx"
 }
 
-group("netemul_tests") {
-  testonly = true
-  deps = [
+fuchsia_test_package("overnet-examples-tests") {
+  test_components = [
     ":overnet_echo_test",
     ":overnet_interface_passing_test",
     ":overnet_socket_passing_test",
   ]
-}
-
-test_package("overnet_examples_tests") {
   deps = [
-    "echo:bin",
-    "interface_passing:bin",
-    "socket_passing:bin",
+    "echo:component",
+    "interface_passing:component",
+    "socket_passing:component",
+    "//src/connectivity/network/mdns/service:component",
+    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/testing/netemul/runner:mock-device-settings",
+    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
     "//src/connectivity/network/tests:device_name_provider",
-    "//src/connectivity/overnet/overnetstack:overnetstack-with-udp",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/overnet_echo.cmx")
-      dest = "overnet_echo.cmx"
-    },
-    {
-      path = rebase_path("meta/overnet_interface_passing.cmx")
-      dest = "overnet_interface_passing.cmx"
-    },
-    {
-      path = rebase_path("meta/overnet_socket_passing.cmx")
-      dest = "overnet_socket_passing.cmx"
-    },
-    {
-      path = rebase_path("meta/overnet_echo_test.cmx")
-      dest = "overnet_echo_test.cmx"
-    },
-    {
-      path = rebase_path("meta/overnet_interface_passing_test.cmx")
-      dest = "overnet_interface_passing_test.cmx"
-    },
-    {
-      path = rebase_path("meta/overnet_socket_passing_test.cmx")
-      dest = "overnet_socket_passing_test.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "overnet_echo"
-    },
-    {
-      name = "overnet_interface_passing"
-    },
-    {
-      name = "overnet_socket_passing"
-    },
+    "//src/connectivity/overnet/overnetstack:component-with-udp",
   ]
 }
 
-# expose a "tests" group that includes the tests package and runtime dependencies
 group("tests") {
   testonly = true
-  public_deps = [
-    ":netemul_tests",
-    ":overnet_examples_tests",
-    "//src/connectivity/network/mdns/service:mdns",
-    "//src/connectivity/network/testing/netemul",
-    "//src/connectivity/network/tests:device_name_provider",
-    "//src/connectivity/overnet/overnetstack",
-    "//src/connectivity/overnet/overnetstack:overnetstack-with-udp",
+  deps = [
+    ":overnet-examples-tests",
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",
   ]
 }

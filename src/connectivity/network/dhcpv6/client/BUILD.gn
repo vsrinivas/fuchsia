@@ -55,7 +55,7 @@ group("client") {
   deps = [ ":dhcpv6-client" ]
 }
 
-fuchsia_unittest_package("dhcpv6-client-test") {
+fuchsia_unittest_package("dhcpv6-client-tests") {
   manifest = "meta/dhcpv6-client-test.cmx"
   deps = [
     ":dhcpv6_client_test",
@@ -68,5 +68,5 @@ fuchsia_unittest_package("dhcpv6-client-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":dhcpv6-client-test" ]
+  deps = [ ":dhcpv6-client-tests" ]
 }

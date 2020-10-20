@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/testing/test_spec.gni")
+import("//src/sys/build/components.gni")
 
 group("echo") {
   testonly = true
@@ -36,19 +35,12 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("overnet-echo") {
+fuchsia_component("component") {
+  component_name = "overnet_echo"
   deps = [ ":bin" ]
+  manifest = "meta/overnet_echo.cmx"
+}
 
-  binaries = [
-    {
-      name = "overnet_echo"
-      dest = "overnet_example"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("../meta/overnet_example.cmx")
-      dest = "echo.cmx"
-    },
-  ]
+fuchsia_package("overnet-echo") {
+  deps = [ ":component" ]
 }

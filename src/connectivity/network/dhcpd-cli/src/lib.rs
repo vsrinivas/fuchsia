@@ -5,9 +5,7 @@
 #![cfg(test)]
 
 use {
-    fuchsia_component::{
-        client::AppBuilder, fuchsia_single_component_package_url, server::ServiceFs,
-    },
+    fuchsia_component::{client::AppBuilder, server::ServiceFs},
     futures::{FutureExt, StreamExt},
 };
 
@@ -20,9 +18,10 @@ struct Command<'a> {
 async fn test_cli_with_config(config: &'static str, commands: Vec<Command<'_>>) {
     let mut fs = ServiceFs::new_local();
 
-    let mut netstack_builder = AppBuilder::new(fuchsia_single_component_package_url!("netstack"));
+    let mut netstack_builder =
+        AppBuilder::new("fuchsia-pkg://fuchsia.com/dhcpd-cli-tests#meta/netstack-debug.cmx");
     let mut stash_builder =
-        AppBuilder::new("fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx");
+        AppBuilder::new("fuchsia-pkg://fuchsia.com/dhcpd-cli-tests#meta/stash_secure.cmx");
     let mut dhcpd_builder =
         AppBuilder::new("fuchsia-pkg://fuchsia.com/dhcpd-testing#meta/dhcpd.cmx")
             .args(vec!["--config".to_string(), format!("/config/data/{}.json", config)]);
@@ -57,10 +56,11 @@ async fn test_cli_with_config(config: &'static str, commands: Vec<Command<'_>>) 
     let _netstack = netstack_builder.spawn(env.launcher()).expect("failed to launch test netstack");
 
     for Command { args, expected_stdout, expected_stderr } in commands {
-        let output = AppBuilder::new(fuchsia_single_component_package_url!("dhcpd-cli"))
-            .args(args)
-            .output(env.launcher())
-            .expect("failed to launch dhcpd-cli");
+        let output =
+            AppBuilder::new("fuchsia-pkg://fuchsia.com/dhcpd-cli-tests#meta/dhcpd-cli.cmx")
+                .args(args)
+                .output(env.launcher())
+                .expect("failed to launch dhcpd-cli");
 
         let output = futures::select! {
             () = fs => panic!("request stream terminated"),

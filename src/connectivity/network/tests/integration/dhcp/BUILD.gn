@@ -8,8 +8,9 @@ group("dhcp_integration_tests") {
   testonly = true
   public_deps = [
     ":netemul-dhcp-tests",
-    "//src/connectivity/network/dhcpv6/client",
     "//src/connectivity/network/testing/netemul:guest",
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",
+    "//src/virtualization/packages/debian_guest",
   ]
 }
 
@@ -58,9 +59,12 @@ fuchsia_component("dhcp-validity-test") {
 fuchsia_test_package("netemul-dhcp-tests") {
   test_components = [ ":dhcp-validity-test" ]
   deps = [
+    "//src/connectivity/network/dhcpv6/client:component",
+
     # DHCP is implemented in-stack in netstack2. This will change when DHCP is
     # implemented out-of-stack.
     "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
   ]
 
   # TODO(fxbug.dev/48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].

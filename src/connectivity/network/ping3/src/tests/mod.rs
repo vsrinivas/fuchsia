@@ -10,13 +10,12 @@ use fidl_fuchsia_net_icmp as fnet_icmp;
 use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul_environment as netemul_environment;
-use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 
-const NETSTACK_URL: &'static str = fuchsia_single_component_package_url!("netstack3");
-const PING_URL: &'static str = fuchsia_single_component_package_url!("ping3");
+const NETSTACK_URL: &'static str = "fuchsia-pkg://fuchsia.com/ping3-tests#meta/netstack3.cmx";
+const PING_URL: &'static str = "fuchsia-pkg://fuchsia.com/ping3-tests#meta/ping3.cmx";
 
 /// Configuration for an environment.
 struct EnvConfig {

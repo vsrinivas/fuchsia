@@ -4,8 +4,7 @@
 
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 config_data("overnetstack_config") {
   for_pkg = "sysmgr"
@@ -46,103 +45,50 @@ rustc_binary("bin") {
   ]
 }
 
-package("overnetstack") {
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "overnetstack"
-    },
+# TODO(ctiller): This is clearly not great and we should not be hardcoding certificates
+# and private keys into the overnetstack package. Design and implement security.
+resource("certificates") {
+  sources = [
+    "//third_party/rust-mirrors/quiche/examples/cert.crt",
+    "//third_party/rust-mirrors/quiche/examples/cert.key",
+    "//third_party/rust-mirrors/quiche/examples/rootca.crt",
   ]
-  meta = [
-    {
-      path = rebase_path("meta/overnetstack.cmx")
-      dest = "overnetstack.cmx"
-    },
-  ]
-
-  # TODO(ctiller): This is clearly not great and we should not be hardcoding certificates
-  # and private keys into the overnetstack package. Design and implement security.
-  resources = [
-    {
-      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.crt")
-      dest = "cert.crt"
-    },
-    {
-      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.key")
-      dest = "cert.key"
-    },
-    {
-      path =
-          rebase_path("//third_party/rust-mirrors/quiche/examples/rootca.crt")
-      dest = "root.crt"
-    },
-  ]
+  outputs = [ "data/{{source_file_part}}" ]
 }
 
-package("overnetstack-with-udp") {
-  deps = [ ":bin" ]
+fuchsia_component("component") {
+  component_name = "overnetstack"
 
-  binaries = [
-    {
-      name = "overnetstack"
-    },
+  deps = [
+    ":bin",
+    ":certificates",
   ]
-  meta = [
-    {
-      path = rebase_path("meta/overnetstack-with-udp.cmx")
-      dest = "overnetstack-with-udp.cmx"
-    },
-  ]
-
-  # TODO(ctiller): This is clearly not great and we should not be hardcoding certificates
-  # and private keys into the overnetstack package. Design and implement security.
-  resources = [
-    {
-      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.crt")
-      dest = "cert.crt"
-    },
-    {
-      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.key")
-      dest = "cert.key"
-    },
-    {
-      path =
-          rebase_path("//third_party/rust-mirrors/quiche/examples/rootca.crt")
-      dest = "root.crt"
-    },
-  ]
+  manifest = "meta/overnetstack.cmx"
 }
 
-test_package("overnetstack-tests") {
-  deps = [ ":bin_test" ]
+fuchsia_package("overnetstack") {
+  deps = [ ":component" ]
+}
 
-  tests = [
-    {
-      name = "overnetstack_bin_test"
-      environments = [ emu_env ]
-    },
-  ]
+fuchsia_component("component-with-udp") {
+  component_name = "overnetstack-with-udp"
 
-  #Use quiche example certs for unit tests
-  resources = [
-    {
-      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.crt")
-      dest = "cert.crt"
-    },
-    {
-      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.key")
-      dest = "cert.key"
-    },
-    {
-      path =
-          rebase_path("//third_party/rust-mirrors/quiche/examples/rootca.crt")
-      dest = "root.crt"
-    },
+  deps = [
+    ":bin",
+    ":certificates",
   ]
+  manifest = "meta/overnetstack-with-udp.cmx"
+}
+
+fuchsia_unittest_package("overnetstack-tests") {
+  deps = [
+    ":bin_test",
+    ":certificates",
+  ]
+  manifest = "meta/overnetstack_bin_test.cmx"
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ ":overnetstack-tests" ]
+  deps = [ ":overnetstack-tests" ]
 }

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/dhcpd_cli_test"
+        "binary": "bin/dhcpd_cli_test"
     },
     "sandbox": {
         "services": [

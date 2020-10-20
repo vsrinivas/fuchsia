@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.netemul": {
             "capture": true,
-            "default_url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-test#meta/ip-forward.cmx",
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/ip-forward.cmx",
             "environment": {
                 "children": [
                     {
@@ -17,7 +17,7 @@
                                     "-g",
                                     "192.168.1.1"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [
@@ -39,7 +39,7 @@
                                     "-i",
                                     "192.168.1.1/24"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/netstack-cfg.cmx"
                             },
                             {
                                 "arguments": [
@@ -48,7 +48,7 @@
                                     "-i",
                                     "192.168.0.1/24"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [
@@ -62,10 +62,10 @@
                 ],
                 "name": "server",
                 "services": {
-                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-test#meta/netstack-debug.cmx",
-                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-test#meta/netstack-debug.cmx",
-                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-test#meta/netstack-debug.cmx",
-                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-test#meta/netstack-debug.cmx"
+                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/netstack-debug.cmx",
+                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/netstack-debug.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/netstack-debug.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/netstack-debug.cmx"
                 },
                 "setup": [
                     {
@@ -77,7 +77,7 @@
                             "-g",
                             "192.168.0.1"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/netstack-cfg.cmx"
                     }
                 ],
                 "test": [

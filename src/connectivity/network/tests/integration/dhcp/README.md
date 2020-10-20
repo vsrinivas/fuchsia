@@ -29,63 +29,7 @@ The key pieces to this test are
 
 ## DHCP Validity Test Setup Notes
 
-### Network Setup
-
-```
-"networks": [
-    {
-        "endpoints": [
-            {
-                "name": "client-ep"
-            }
-        ],
-        "name": "net"
-    }
-]
-```
-
-This block describes all ethertap networks available to this test.
-
-*   This test calls for a single network (named `net`).
-*   One client endpoint will be created initially.
-
-### Fuchsia Environment Setup
-
-```
-"children": [
-    {
-        "name": "dhcp_server",
-        "services": {
-            "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx",
-            "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx",
-            "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx"
-        },
-        "setup": [
-            {
-                "arguments": [
-                    "-e",
-                    "client-ep"
-                ],
-                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
-            }
-        ],
-        "test": [
-            {
-                "arguments": [],
-                "url": "fuchsia-pkg://fuchsia.com/netemul_dhcp_tests#meta/dhcp_validity.cmx"
-            }
-        ]
-    }
-]
-```
-
-*   `setup` contains all components and their arguments that run before the
-    test. For this test `client-ep`, the endpoint connected to `net`, is added
-    to the environment so that netstack can interact with the tap network.
-*   `test` describes the components that constitute the test and any arguments
-    that need to be provided.
-*   `services` has all services on which `setup` and `test` rely.
-*   `name` names the environment that netemul creates.
+See [`meta/dhcp_validity_test.cmx`](meta/dhcp_validity_test.cmx).
 
 ### Guest Creation
 

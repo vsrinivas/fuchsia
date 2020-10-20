@@ -1,7 +1,7 @@
 {
     "facets": {
         "fuchsia.netemul": {
-            "default_url": "fuchsia-pkg://fuchsia.com/mdns_netemul_tests#meta/mdns_netemul_test_agent.cmx",
+            "default_url": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/mdns_netemul_test_agent.cmx",
             "environment": {
                 "children": [
                     {
@@ -20,19 +20,19 @@
                                     "--nodename",
                                     "mdns-test-device-remote"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/device_name_provider.cmx"
                             },
                             "fuchsia.devicesettings.DeviceSettingsManager": {
                                 "arguments": [
                                     "-s",
                                     "DeviceName=mdns-test-device-remote"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/mock-device-settings.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/mock-device-settings.cmx"
                             },
-                            "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                            "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
-                            "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                            "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                            "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx",
+                            "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/mdns.cmx",
+                            "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx",
+                            "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx"
                         },
                         "setup": [
                             {
@@ -42,7 +42,7 @@
                                     "-i",
                                     "192.168.0.1/24"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-cfg.cmx"
                             }
                         ]
                     }
@@ -54,20 +54,20 @@
                             "--nodename",
                             "mdns-test-device-local"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/device_name_provider.cmx"
                     },
                     "fuchsia.devicesettings.DeviceSettingsManager": {
                         "arguments": [
                             "-s",
                             "DeviceName=mdns-test-device-local"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/mock-device-settings.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/mock-device-settings.cmx"
                     },
-                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                    "fuchsia.net.mdns.Resolver": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
-                    "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
-                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx",
+                    "fuchsia.net.mdns.Resolver": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/mdns.cmx",
+                    "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/mdns.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx"
                 },
                 "setup": [
                     {
@@ -77,7 +77,7 @@
                             "-i",
                             "192.168.0.2/24"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-cfg.cmx"
                     },
                     {
                         "arguments": [
@@ -86,7 +86,7 @@
                             "-i",
                             "192.168.0.3/24"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-cfg.cmx"
                     }
                 ],
                 "test": [

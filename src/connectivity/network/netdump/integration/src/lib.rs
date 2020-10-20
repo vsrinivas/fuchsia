@@ -31,7 +31,7 @@ const PACKET_COUNT: usize = 10;
 const NETDUMP_DUMPFILE_DIR: &str = "/out";
 const NETDUMP_DUMPFILE_NAME: &str = "dump";
 
-const NETDUMP_URL: &str = fuchsia_component::fuchsia_single_component_package_url!("netdump");
+const NETDUMP_URL: &str = "fuchsia-pkg://fuchsia.com/netdump-integration-tests#meta/netdump.cmx";
 
 /// Default source IPv4 address used in tests.
 const SRC_IP_V4: std::net::Ipv4Addr = net_declare::std_ip_v4!(192.168.0.1);

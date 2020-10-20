@@ -8,7 +8,7 @@ import("//src/sys/build/components.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":netdump-integration-test",
+    ":netdump-integration-tests",
     "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
   ]
 }
@@ -42,13 +42,16 @@ rustc_test("test_bin") {
   ]
 }
 
-fuchsia_component("integration_test") {
+fuchsia_component("netdump_integration_test") {
   testonly = true
-  component_name = "netdump-integration-test"
   manifest = "meta/netdump-integration-test.cmx"
   deps = [ ":test_bin" ]
 }
 
-fuchsia_test_package("netdump-integration-test") {
-  test_components = [ ":integration_test" ]
+fuchsia_test_package("netdump-integration-tests") {
+  test_components = [ ":netdump_integration_test" ]
+  deps = [
+    "../:component",
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+  ]
 }

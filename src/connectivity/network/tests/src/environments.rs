@@ -54,7 +54,6 @@ pub enum KnownServices {
     RoutesState(NetstackVersion),
     InterfaceState(NetstackVersion),
     Log(NetstackVersion),
-    Stash,
     MockCobalt,
     SecureStash,
     DhcpServer,
@@ -69,30 +68,27 @@ impl KnownServices {
             KnownServices::Stack(v) => (<net_stack::StackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                         v.get_url()),
             KnownServices::MockCobalt => (<fidl_fuchsia_cobalt::LoggerFactoryMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                          fuchsia_component::fuchsia_single_component_package_url!("mock_cobalt")),
+                                          "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/mock_cobalt.cmx"),
             KnownServices::Netstack(v) => (<fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                            v.get_url()),
-            KnownServices::Stash => (
-                <fidl_fuchsia_stash::StoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                fuchsia_component::fuchsia_single_component_package_url!("stash")),
             KnownServices::SocketProvider(v) => (<fidl_fuchsia_posix_socket::ProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                                  v.get_url()),
             KnownServices::Filter(v) => (<fidl_fuchsia_net_filter::FilterMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                                 v.get_url()),
-            KnownServices::RoutesState(v) => (<fidl_fuchsia_net_routes::StateMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                          v.get_url()),
+            KnownServices::RoutesState(v) => (<fidl_fuchsia_net_routes::StateMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+                                              v.get_url()),
             KnownServices::InterfaceState(v) => (<fidl_fuchsia_net_interfaces::StateMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                                  v.get_url()),
             KnownServices::Log(v) => (<fidl_fuchsia_net_stack::LogMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                         v.get_url()),
+                                      v.get_url()),
             KnownServices::SecureStash => (<fidl_fuchsia_stash::SecureStoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                           "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx"),
+                                           "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/stash_secure.cmx"),
             KnownServices::DhcpServer => (<fidl_fuchsia_net_dhcp::Server_Marker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                           "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dhcpd.cmx"),
             KnownServices::Dhcpv6Client => (<fidl_fuchsia_net_dhcpv6::ClientProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                          "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dhcpv6-client.cmx"),
+                                            "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dhcpv6-client.cmx"),
             KnownServices::LookupAdmin => (<fidl_fuchsia_net_name::LookupAdminMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                            "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dns-resolver.cmx")
+                                           "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dns-resolver.cmx")
         }
     }
 
@@ -280,7 +276,6 @@ impl TestSandboxExt for netemul::TestSandbox {
                 KnownServices::InterfaceState(N::VERSION),
                 KnownServices::Log(N::VERSION),
                 KnownServices::MockCobalt,
-                KnownServices::Stash,
             ]
             .iter()
             .map(netemul_environment::LaunchService::from)

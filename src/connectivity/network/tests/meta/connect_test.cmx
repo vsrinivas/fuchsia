@@ -13,7 +13,7 @@
                                     "-i",
                                     "192.168.0.2/24"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [
@@ -37,7 +37,7 @@
                                     "-i",
                                     "192.168.0.1/24"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [

@@ -246,7 +246,7 @@ async fn main() -> Result<(), Error> {
         Box::new(SimpleSecurityContext {
             node_cert: "/pkg/data/cert.crt",
             node_private_key: "/pkg/data/cert.key",
-            root_cert: "/pkg/data/root.crt",
+            root_cert: "/pkg/data/rootca.crt",
         }),
     )?;
 
@@ -321,7 +321,7 @@ mod tests {
             Box::new(SimpleSecurityContext {
                 node_cert: "/pkg/data/cert.crt",
                 node_private_key: "/pkg/data/cert.key",
-                root_cert: "/pkg/data/root.crt",
+                root_cert: "/pkg/data/rootca.crt",
             }),
         )
         .unwrap();

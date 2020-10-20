@@ -26,7 +26,10 @@ fuchsia_component("getifaddrs-netemul-test") {
 
 fuchsia_test_package("getifaddrs-tests") {
   test_components = [ ":getifaddrs-netemul-test" ]
-  deps = [ "//src/connectivity/network/netstack:component-debug" ]
+  deps = [
+    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
+  ]
 }
 
 group("tests") {
@@ -37,6 +40,6 @@ group("tests") {
     ":getifaddrs-tests",
 
     # TODO(brunodalbo): move this to component level when netemul can handle it.
-    "//src/connectivity/network/testing/netemul",
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",
   ]
 }

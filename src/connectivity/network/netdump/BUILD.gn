@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "netdump"
@@ -54,18 +54,18 @@ group("tests") {
 
   deps = [
     ":netdump",
-    ":netdump_unit_tests",
+    ":netdump-unit-tests",
     "integration:tests",
   ]
 }
 
+fuchsia_component("component") {
+  component_name = "netdump"
+  deps = [ ":bin" ]
+  manifest = "meta/netdump.cmx"
+}
+
 package("netdump") {
-  meta = [
-    {
-      path = rebase_path("meta/netdump.cmx")
-      dest = "netdump.cmx"
-    },
-  ]
   deps = [ ":bin" ]
 
   binaries = [
@@ -76,13 +76,7 @@ package("netdump") {
   ]
 }
 
-unittest_package("netdump_unit_tests") {
+fuchsia_unittest_package("netdump-unit-tests") {
   deps = [ ":unit_tests" ]
-
-  tests = [
-    {
-      name = "netdump_unit_tests"
-      environments = basic_envs
-    },
-  ]
+  manifest = "meta/netdump_unit_tests.cmx"
 }

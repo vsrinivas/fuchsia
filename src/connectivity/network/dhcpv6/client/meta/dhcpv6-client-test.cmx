@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/dhcpv6-client-test#meta/netstack-debug.cmx"
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/dhcpv6-client-tests#meta/netstack-debug.cmx"
             }
         }
     },

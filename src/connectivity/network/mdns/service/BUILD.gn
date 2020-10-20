@@ -6,9 +6,7 @@ import("//build/config.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-import("//build/testing/test_spec.gni")
+import("//src/sys/build/components.gni")
 
 declare_args() {
   # Enables the tracing feature of mdns, which can be turned on using
@@ -19,12 +17,8 @@ declare_args() {
 group("service") {
   testonly = true
   deps = [
-    ":bin",
     ":mdns",
     ":mdns_config",
-    ":mdns_fuzzers",
-    ":mdns_test",
-    ":mdns_tests",
     ":source_set",
   ]
 }
@@ -145,21 +139,14 @@ test("mdns_test") {
   }
 }
 
-package("mdns") {
+fuchsia_component("component") {
+  component_name = "mdns"
   deps = [ ":bin" ]
+  manifest = "meta/mdns.cmx"
+}
 
-  binaries = [
-    {
-      name = "mdns"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/mdns.cmx")
-      dest = "mdns.cmx"
-    },
-  ]
+fuchsia_package("mdns") {
+  deps = [ ":component" ]
 }
 
 config_data("mdns_config") {
@@ -179,26 +166,16 @@ config_data("mdns_fuchsia_udp_config") {
 group("tests") {
   testonly = true
   deps = [
-    ":mdns-netemul-multi-network-tests",
-    ":mdns_fuzzers",
-    ":mdns_netemul_multi_network_test_spec",
-    ":mdns_netemul_test_spec",
-    ":mdns_netemul_tests",
-    ":mdns_netemul_v6_test_spec",
-    ":mdns_netemul_v6_tests",
-    ":mdns_tests",
+    ":mdns-fuzzers",
+    ":mdns-netemul-tests",
+    ":mdns-tests",
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",
   ]
 }
 
-test_package("mdns_tests") {
+fuchsia_unittest_package("mdns-tests") {
   deps = [ ":mdns_test" ]
-
-  tests = [
-    {
-      name = "mdns_test"
-      environments = [ emu_env ]
-    },
-  ]
+  manifest = "meta/mdns_test.cmx"
 }
 
 fuzzer("packet_reader_fuzzer") {
@@ -217,7 +194,7 @@ fuzzer("packet_reader_fuzzer") {
   ]
 }
 
-fuzzers_package("mdns_fuzzers") {
+fuzzers_package("mdns-fuzzers") {
   fuzzers = [ ":packet_reader_fuzzer" ]
 }
 
@@ -239,69 +216,21 @@ executable("mdns_netemul_test_agent") {
   ]
 }
 
-test_spec("mdns_netemul_test_spec") {
-  target = ":mdns_netemul_tests"
-  package_url =
-      "fuchsia-pkg://fuchsia.com/mdns_netemul_tests#meta/mdns_netemul_test.cmx"
-}
-
-# NOTE(brunodalbo) we use package instead of test_package here because of an issue with the
-# test_package rule when no test binaries are provided. See fxbug.dev/54284.
-package("mdns_netemul_tests") {
+fuchsia_component("mdns_netemul_test_agent_component") {
+  component_name = "mdns_netemul_test_agent"
   testonly = true
-  deps = [
-    ":mdns_netemul_test_agent",
-    "//src/connectivity/network/tests:device_name_provider",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/mdns_netemul_test_agent.cmx")
-      dest = "mdns_netemul_test_agent.cmx"
-    },
-    {
-      path = rebase_path("meta/mdns_netemul_test.cmx")
-      dest = "mdns_netemul_test.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "mdns_netemul_test_agent"
-    },
-  ]
+  deps = [ ":mdns_netemul_test_agent" ]
+  manifest = "meta/mdns_netemul_test_agent.cmx"
 }
 
-test_spec("mdns_netemul_v6_test_spec") {
-  target = ":mdns_netemul_v6_tests"
-  package_url = "fuchsia-pkg://fuchsia.com/mdns_netemul_v6_tests#meta/mdns_netemul_v6_test.cmx"
-}
-
-# NOTE(brunodalbo) we use package instead of test_package here because of an issue with the
-# test_package rule when no test binaries are provided. See fxbug.dev/54284.
-package("mdns_netemul_v6_tests") {
+fuchsia_component("mdns_netemul_test") {
   testonly = true
-  deps = [
-    ":mdns_netemul_test_agent",
-    "//src/connectivity/network/tests:device_name_provider",
-  ]
+  manifest = "meta/mdns_netemul_test.cmx"
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/mdns_netemul_test_agent.cmx")
-      dest = "mdns_netemul_test_agent.cmx"
-    },
-    {
-      path = rebase_path("meta/mdns_netemul_v6_test.cmx")
-      dest = "mdns_netemul_v6_test.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "mdns_netemul_test_agent"
-    },
-  ]
+fuchsia_component("mdns_netemul_v6_test") {
+  testonly = true
+  manifest = "meta/mdns_netemul_v6_test.cmx"
 }
 
 executable("mdns_netemul_multi_network_test_agent") {
@@ -320,35 +249,30 @@ executable("mdns_netemul_multi_network_test_agent") {
   ]
 }
 
-test_spec("mdns_netemul_multi_network_test_spec") {
-  target = ":mdns-netemul-multi-network-tests"
-  package_url = "fuchsia-pkg://fuchsia.com/mdns-netemul-multi-network-tests#meta/mdns_netemul_multi_network_test.cmx"
-  environments = [ emu_env ]
+fuchsia_component("mdns_netemul_multi_network_test_agent_component") {
+  component_name = "mdns_netemul_multi_network_test_agent"
+  testonly = true
+  deps = [ ":mdns_netemul_multi_network_test_agent" ]
+  manifest = "meta/mdns_netemul_multi_network_test_agent.cmx"
 }
 
-# NOTE(brunodalbo) we use package instead of test_package here because of an issue with the
-# test_package rule when no test binaries are provided. See fxbug.dev/54284.
-package("mdns-netemul-multi-network-tests") {
+fuchsia_component("mdns_netemul_multi_network_test") {
   testonly = true
+  manifest = "meta/mdns_netemul_multi_network_test.cmx"
+}
+
+fuchsia_test_package("mdns-netemul-tests") {
+  test_components = [
+    ":mdns_netemul_test",
+    ":mdns_netemul_v6_test",
+    ":mdns_netemul_multi_network_test",
+  ]
   deps = [
-    ":mdns_netemul_multi_network_test_agent",
+    ":component",
+    ":mdns_netemul_multi_network_test_agent_component",
+    ":mdns_netemul_test_agent_component",
+    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
     "//src/connectivity/network/tests:device_name_provider",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/mdns_netemul_multi_network_test_agent.cmx")
-      dest = "mdns_netemul_multi_network_test_agent.cmx"
-    },
-    {
-      path = rebase_path("meta/mdns_netemul_multi_network_test.cmx")
-      dest = "mdns_netemul_multi_network_test.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "mdns_netemul_multi_network_test_agent"
-    },
   ]
 }

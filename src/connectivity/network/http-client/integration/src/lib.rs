@@ -56,7 +56,7 @@ async fn run<F: futures::Future<Output = ()>>(
     let launcher = fuchsia_component::client::launcher().expect("failed to open launcher service");
     let http_client = fuchsia_component::client::launch(
         &launcher,
-        "fuchsia-pkg://fuchsia.com/http-client-integration-test#meta/http-client.cmx".to_string(),
+        "fuchsia-pkg://fuchsia.com/http-client-integration-tests#meta/http-client.cmx".to_string(),
         None,
     )
     .expect("failed to launch http client");
