@@ -150,9 +150,29 @@ int main(int argc, char** argv) {
   zx_time_t deadline = zx_clock_get_monotonic();
   bool match_failed = false;
 
+  if (cmdline.cpuid != kNoCpuIdChosen) {
+    // The command line parser should have already ensured that this value is
+    // non-negative.
+    ZX_DEBUG_ASSERT(cmdline.cpuid >= 0);
+
+    // The command line parser should have made certain we did not select both
+    // --cpuid and --verbose.
+    ZX_DEBUG_ASSERT(cmdline.verbose == false);
+
+    if (static_cast<uint64_t>(cmdline.cpuid) >= desc->max_cpus) {
+      fprintf(stderr, "CPU ID %d is out of range.  Descriptor reports max_cpus as %lu\n",
+              cmdline.cpuid, desc->max_cpus);
+      return 1;
+    }
+    printf("Dumping counters for CPU ID %d.\n", cmdline.cpuid);
+  }
+
   if (cmdline.period != 0) {
     printf("Dumping counters every %d seconds.  Press any key to stop.\n", cmdline.period);
   }
+
+  uint64_t cpu_range_start = (cmdline.cpuid != kNoCpuIdChosen) ? cmdline.cpuid : 0;
+  uint64_t cpu_range_end = (cmdline.cpuid != kNoCpuIdChosen) ? cmdline.cpuid + 1 : desc->max_cpus;
 
   while (true) {
     if (cmdline.period != 0) {
@@ -176,7 +196,8 @@ int main(int argc, char** argv) {
               puts(" max");
               break;
             default:
-              printf(" ??? unknown type %" PRIu64 " ???\n", static_cast<uint64_t>(entry.type));
+              fprintf(stderr, " ??? unknown type %" PRIu64 " ???\n",
+                      static_cast<uint64_t>(entry.type));
           }
         } else {
           if (!cmdline.terse) {
@@ -187,7 +208,7 @@ int main(int argc, char** argv) {
                                                         : " ");
           }
           int64_t value = 0;
-          for (uint64_t cpu = 0; cpu < desc->max_cpus; ++cpu) {
+          for (uint64_t cpu = cpu_range_start; cpu < cpu_range_end; ++cpu) {
             const int64_t cpu_value = arena[(cpu * desc->num_counters()) + i];
             if (cmdline.verbose) {
               printf("%s%" PRId64,

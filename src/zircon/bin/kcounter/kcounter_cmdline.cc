@@ -8,11 +8,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-constexpr char kShortOptions[] = "hltvw::";
-constexpr struct option kLongOptions[] = {
-    {"help", no_argument, nullptr, 'h'},        {"list", no_argument, nullptr, 'l'},
-    {"terse", no_argument, nullptr, 't'},       {"verbose", no_argument, nullptr, 'v'},
-    {"watch", optional_argument, nullptr, 'w'}, {nullptr, 0, nullptr, 0}};
+constexpr char kShortOptions[] = "c:hltvw::";
+constexpr struct option kLongOptions[] = {{"help", no_argument, nullptr, 'h'},
+                                          {"list", no_argument, nullptr, 'l'},
+                                          {"terse", no_argument, nullptr, 't'},
+                                          {"verbose", no_argument, nullptr, 'v'},
+                                          {"watch", optional_argument, nullptr, 'w'},
+                                          {"cpuid", required_argument, nullptr, 'c'},
+                                          {nullptr, 0, nullptr, 0}};
 
 constexpr int default_period = 3;
 
@@ -26,6 +29,7 @@ With --list or -l, show names and types rather than values.\n\
 With --terse or -t, show only values and no names.\n\
 With --verbose or -v, show space-separated lists of per-CPU values.\n\
 With --watch or -w, keep showing the values every [period] seconds, default is %d seconds.\n\
+With --cpuid or -c, show only values for the chosen CPU ID.\n\
 Otherwise values are aggregated summaries across all CPUs.\n\
 If PREFIX arguments are given, only matching names are shown.\n\
 Results are always sorted by name.\n\
@@ -36,12 +40,20 @@ Results are always sorted by name.\n\
 bool kcounter_parse_cmdline(int argc, const char* const argv[], FILE* err,
                             KcounterCmdline* cmdline) {
   memset(cmdline, 0, sizeof(*cmdline));
+  cmdline->cpuid = kNoCpuIdChosen;
 
   optind = 0;
   int opt;
   while ((opt = getopt_long(argc, const_cast<char* const*>(argv), kShortOptions, kLongOptions,
                             nullptr)) != -1) {
     switch (opt) {
+      case 'c':
+        cmdline->cpuid = atoi(optarg);
+        if (cmdline->cpuid < 0) {
+          fprintf(err, "CPU ID must be non-negative\n");
+          return false;
+        }
+        break;
       case 'h':
         cmdline->help = true;
         break;
@@ -69,6 +81,12 @@ bool kcounter_parse_cmdline(int argc, const char* const argv[], FILE* err,
 
   if (cmdline->list + cmdline->terse + cmdline->verbose > 1) {
     fprintf(err, "%s: --list, --terse, and --verbose are mutually exclusive\n", argv[0]);
+    kcounter_usage(argv[0], err);
+    return false;
+  }
+
+  if (cmdline->verbose && (cmdline->cpuid != kNoCpuIdChosen)) {
+    fprintf(err, "%s: --verbose and --cpuid mutually exclusive\n", argv[0]);
     kcounter_usage(argv[0], err);
     return false;
   }

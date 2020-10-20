@@ -14,7 +14,10 @@ struct KcounterCmdline {
   bool verbose;
   int period;
   int unparsed_args_start;
+  int cpuid;
 };
+
+constexpr int kNoCpuIdChosen = -1;
 
 // Prints program usage to |into|, using |myname| for the application name.
 void kcounter_usage(const char* myname, FILE* into);
