@@ -47,6 +47,18 @@ using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
 
 namespace {
 
+// This test observer is used to get the name of the current test to send to sysmem to identify the
+// client.
+std::string current_test_name;
+class TestObserver : public zxtest::LifecycleObserver {
+ public:
+  void OnTestStart(const zxtest::TestCase& test_case, const zxtest::TestInfo& test_info) final {
+    current_test_name = std::string(test_case.name()) + "." + std::string(test_info.name());
+  }
+};
+
+TestObserver test_observer;
+
 zx_status_t connect_to_sysmem_driver(zx::channel* allocator2_client_param) {
   zx_status_t status;
 
@@ -77,6 +89,8 @@ zx_status_t connect_to_sysmem_driver(zx::channel* allocator2_client_param) {
   if (status != ZX_OK) {
     return status;
   }
+  fuchsia_sysmem_AllocatorSetDebugClientInfo(allocator2_client.get(), current_test_name.data(),
+                                             current_test_name.size(), 0u);
 
   *allocator2_client_param = std::move(allocator2_client);
   return ZX_OK;
@@ -98,6 +112,9 @@ zx_status_t connect_to_sysmem_service(zx::channel* allocator2_client_param) {
   if (status != ZX_OK) {
     return status;
   }
+
+  fuchsia_sysmem_AllocatorSetDebugClientInfo(allocator2_client.get(), current_test_name.data(),
+                                             current_test_name.size(), 0u);
 
   *allocator2_client_param = std::move(allocator2_client);
   return ZX_OK;
@@ -3028,4 +3045,10 @@ TEST(Sysmem, DuplicateConstraintsFails) {
     to_modify->image_format_constraints_count = 2;
     to_modify->image_format_constraints[1] = to_modify->image_format_constraints[0];
   }));
+}
+
+int main(int argc, char** argv) {
+  setlinebuf(stdout);
+  zxtest::Runner::GetInstance()->AddObserver(&test_observer);
+  return RUN_ALL_TESTS(argc, argv);
 }
