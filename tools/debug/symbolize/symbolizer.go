@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -75,11 +74,9 @@ func unknownStr(str string) OptStr {
 
 func restartSymbolizerImpl(s *LLVMSymbolizer) error {
 	if err := s.stdin.Close(); err != nil {
-		return err
+		return fmt.Errorf("failed to close stdin pipe: %w", err)
 	}
-	if err := s.symbolizer.Wait(); err != nil {
-		return err
-	}
+	s.symbolizer.Wait()
 	return s.start()
 }
 
@@ -93,8 +90,7 @@ func (s *LLVMSymbolizer) restartIfNeeded() bool {
 	restarted := false
 	if s.restartCounter == s.restartInterval-1 {
 		if err := restartSymbolizer(s); err != nil {
-			b, _ := ioutil.ReadAll(s.stderr)
-			panic(fmt.Sprintf("restarting llvm-symbolizer failed: %v\n%s", err, string(b)))
+			panic(fmt.Sprintf("restarting llvm-symbolizer failed: %v", err))
 		}
 		restarted = true
 	}
@@ -174,16 +170,16 @@ func (s *LLVMSymbolizer) start() error {
 	s.symbolizer = exec.Command(s.path)
 	var err error
 	if s.stdin, err = s.symbolizer.StdinPipe(); err != nil {
-		return err
+		return fmt.Errorf("failed to set up stdin pipe: %w", err)
 	}
 	if s.stdout, err = s.symbolizer.StdoutPipe(); err != nil {
-		return err
+		return fmt.Errorf("failed to set up stdout pipe: %w", err)
 	}
 	if s.stderr, err = s.symbolizer.StderrPipe(); err != nil {
-		return err
+		return fmt.Errorf("failed to set up stderr pipe: %w", err)
 	}
 	if err = s.symbolizer.Start(); err != nil {
-		return err
+		return fmt.Errorf("failed to start the command %q: %w", s.path, err)
 	}
 	return nil
 }
