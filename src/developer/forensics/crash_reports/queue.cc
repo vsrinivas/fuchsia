@@ -117,7 +117,7 @@ bool Queue::Upload(const CrashId local_report_id) {
     return true;
   }
 
-  FX_LOGS(ERROR) << "Error uploading local report " << std::to_string(local_report_id);
+  FX_LOGS(WARNING) << "Error uploading local report " << std::to_string(local_report_id);
 
   return false;
 }
