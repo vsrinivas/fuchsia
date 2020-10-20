@@ -480,7 +480,7 @@ pub enum SettingEvent {
 
 /// A trait handed back from Switchboard's listen interface. Allows client to
 /// signal they want to end the session.
-pub trait ListenSession: Drop {
+pub trait ListenSession {
     /// Invoked to close the current listening session. No further updates will
     /// be provided to the listener provided at the initial listen call.
     fn close(&mut self);
