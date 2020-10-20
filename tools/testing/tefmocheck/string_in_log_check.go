@@ -179,12 +179,14 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 				{startString: " lock_dep_dynamic_analysis_tests ", endString: " lock_dep_static_analysis_tests "},
 				{startString: "RUN   TestKillCriticalProcess", endString: ": TestKillCriticalProcess"},
 				{startString: "RUN   TestKernelLockupDetector", endString: ": TestKernelLockupDetector"},
+				{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: ": TestPmmCheckerOopsAndPanic"},
 			},
 		})
 		ret = append(ret, &stringInLogCheck{String: "ZIRCON KERNEL PANIC", Type: lt, ExceptBlocks: []*logBlock{
 			// These tests intentionally trigger kernel panics.
 			{startString: "RUN   TestBasicCrash", endString: "PASS: TestBasicCrash"},
 			{startString: "RUN   TestSMAPViolation", endString: "PASS: TestSMAPViolation"},
+			{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: "PASS: TestPmmCheckerOopsAndPanic"},
 		}})
 	}
 	// These may be in the output of tests, but the syslogType doesn't contain any test output.

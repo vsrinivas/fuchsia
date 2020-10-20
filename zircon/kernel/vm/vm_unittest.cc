@@ -739,6 +739,20 @@ static bool pmm_checker_test() {
 
   END_TEST;
 }
+
+static bool pmm_checker_action_from_string_test() {
+  BEGIN_TEST;
+
+  EXPECT_FALSE(PmmChecker::ActionFromString(""));
+  EXPECT_FALSE(PmmChecker::ActionFromString("blah"));
+  EXPECT_EQ(static_cast<uint32_t>(PmmChecker::Action::OOPS),
+            static_cast<uint32_t>(PmmChecker::ActionFromString("oops").value()));
+  EXPECT_EQ(static_cast<uint32_t>(PmmChecker::Action::PANIC),
+            static_cast<uint32_t>(PmmChecker::ActionFromString("panic").value()));
+
+  END_TEST;
+}
+
 static bool pmm_checker_is_valid_fill_size_test() {
   BEGIN_TEST;
 
@@ -3846,6 +3860,7 @@ VM_UNITTEST(pmm_node_delayed_alloc_swap_late_test)
 VM_UNITTEST(pmm_node_delayed_alloc_clear_early_test)
 VM_UNITTEST(pmm_node_delayed_alloc_clear_late_test)
 VM_UNITTEST(pmm_checker_test)
+VM_UNITTEST(pmm_checker_action_from_string_test)
 VM_UNITTEST(pmm_checker_is_valid_fill_size_test)
 VM_UNITTEST(pmm_get_arena_info_test)
 UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests")

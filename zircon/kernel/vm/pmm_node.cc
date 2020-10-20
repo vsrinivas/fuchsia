@@ -171,7 +171,8 @@ void PmmNode::FillFreePagesAndArm() {
 
   // Now that every page has been filled, we can arm the checker.
   checker_.Arm();
-  printf("PMM: pmm checker is armed, fill size is %lu\n", checker_.GetFillSize());
+
+  checker_.PrintStatus(stdout);
 }
 
 void PmmNode::CheckAllFreePages() {
@@ -196,9 +197,10 @@ void PmmNode::PoisonAllFreePages() {
 }
 #endif  // __has_feature(address_sanitizer)
 
-void PmmNode::EnableFreePageFilling(size_t fill_size) {
+void PmmNode::EnableFreePageFilling(size_t fill_size, PmmChecker::Action action) {
   Guard<Mutex> guard{&lock_};
   checker_.SetFillSize(fill_size);
+  checker_.SetAction(action);
   free_fill_enabled_ = true;
 }
 

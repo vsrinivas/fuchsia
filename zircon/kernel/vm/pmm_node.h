@@ -95,12 +95,12 @@ class PmmNode {
   void PoisonAllFreePages();
 #endif
 
-  // Enable the free fill checker with the specified fill size and begin filling freed pages going
-  // forward.  See |PmmChecker| for definition of fill size.
+  // Enable the free fill checker with the specified fill size and action, and begin filling freed
+  // pages going forward.  See |PmmChecker| for definition of fill size.
   //
   // Note, pages freed piror to calling this method will remain unfilled.  To fill them, call
   // |FillFreePagesAndArm|.
-  void EnableFreePageFilling(size_t fill_size);
+  void EnableFreePageFilling(size_t fill_size, PmmChecker::Action action);
 
   // Disarm and disable the free fill checker.
   void DisableChecker();

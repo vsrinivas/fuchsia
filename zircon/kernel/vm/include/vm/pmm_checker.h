@@ -7,8 +7,11 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_PMM_CHECKER_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_PMM_CHECKER_H_
 
+#include <stdio.h>
+
 #include <arch/defines.h>
 #include <ktl/atomic.h>
+#include <ktl/optional.h>
 #include <vm/page.h>
 
 // |PmmChecker| is used to detect memory corruption.  It is logically part of |PmmNode|.
@@ -32,6 +35,16 @@
 //
 class PmmChecker {
  public:
+  // The action to take when page validation fails.
+  enum class Action : uint32_t { OOPS, PANIC };
+
+  static constexpr Action DefaultAction = Action::OOPS;
+
+  // Returns ktl::nullopt if |action_string| is invalid.
+  static ktl::optional<Action> ActionFromString(const char* action_string);
+
+  static const char* ActionToString(Action action);
+
   // Returns true if |fill_size| is a valid value.  Valid values are mutliples of 8 between 8 and
   // PAGE_SIZE, inclusive.
   static bool IsValidFillSize(size_t fill_size);
@@ -46,13 +59,18 @@ class PmmChecker {
   void SetFillSize(size_t fill_size);
 
   // Returns the fill size.
-  size_t GetFillSize() const { return fill_size_;}
+  size_t GetFillSize() const { return fill_size_; }
+
+  void SetAction(Action action) { action_ = action; }
+  Action GetAction() const { return action_; }
 
   // Returns true if armed.
   bool IsArmed() const { return armed_; }
 
   void Arm();
   void Disarm();
+
+  void PrintStatus(FILE* f) const;
 
   // Fills |page| with a pattern.
   //
@@ -73,6 +91,8 @@ class PmmChecker {
  private:
   // The number of bytes to fill/validate.
   size_t fill_size_ = PAGE_SIZE;
+
+  Action action_ = DefaultAction;
 
   bool armed_ = false;
 };

@@ -126,13 +126,13 @@ void pmm_checker_check_all_free_pages() { pmm_node.CheckAllFreePages(); }
 void pmm_asan_poison_all_free_pages() { pmm_node.PoisonAllFreePages(); }
 #endif
 
-static void pmm_checker_enable(size_t fill_size) {
+static void pmm_checker_enable(size_t fill_size, PmmChecker::Action action) {
   // We might be changing the fill size.  If we increase the fill size while the checker is active,
   // we might spuriously assert so disable the checker.
   pmm_node.DisableChecker();
 
   // Enable filling of pages going forward.
-  pmm_node.EnableFreePageFilling(fill_size);
+  pmm_node.EnableFreePageFilling(fill_size, action);
 
   // From this point on, pages will be filled when they are freed.  However, the free list may still
   // have a lot of unfilled pages so make a pass over them and fill them all.
@@ -145,12 +145,7 @@ static void pmm_checker_disable() { pmm_node.DisableChecker(); }
 
 static bool pmm_checker_is_enabled() { return pmm_node.Checker()->IsArmed(); }
 
-static size_t pmm_checker_get_fill_size() { return pmm_node.Checker()->GetFillSize(); }
-
-static void pmm_checker_print_status() {
-  printf("pmm checker %s, fill size is %lu\n", pmm_checker_is_enabled() ? "enabled" : "disabled",
-         pmm_checker_get_fill_size());
-}
+static void pmm_checker_print_status() { pmm_node.Checker()->PrintStatus(stdout); }
 
 void pmm_checker_init_from_cmdline() {
   bool enabled = gCmdline.GetBool("kernel.pmm-checker.enable", false);
@@ -162,7 +157,17 @@ void pmm_checker_init_from_cmdline() {
              fill_size);
       fill_size = PAGE_SIZE;
     }
-    pmm_node.EnableFreePageFilling(fill_size);
+
+    static constexpr char kActionFlag[] = "kernel.pmm-checker.action";
+    PmmChecker::Action action = PmmChecker::DefaultAction;
+    const char* const action_string = gCmdline.GetString(kActionFlag);
+    if (auto opt_action = PmmChecker::ActionFromString(action_string)) {
+      action = opt_action.value();
+    } else {
+      printf("PMM: value from %s is invalid (\"%s\"), using \"%s\" instead\n", kActionFlag,
+             action_string, PmmChecker::ActionToString(action));
+    }
+    pmm_node.EnableFreePageFilling(fill_size, action);
   }
 }
 
@@ -180,37 +185,37 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   const bool is_panic = flags & CMD_FLAG_PANIC;
   auto usage = [cmd_name = argv[0].str, is_panic]() -> int {
     printf("usage:\n");
-    printf("%s dump                              : dump pmm info \n", cmd_name);
+    printf("%s dump                                 : dump pmm info \n", cmd_name);
     if (!is_panic) {
-      printf("%s free                              : periodically dump free mem count\n", cmd_name);
-      printf(
-          "%s oom [<rate>]                      : leak memory until oom is triggered,\n"
-          "                                        optionally specify the rate at which to leak "
-          "(in MB per second)\n",
-          cmd_name);
-      printf(
-          "%s oom hard                          : leak memory aggressively and keep on leaking\n",
-          cmd_name);
-      printf("%s mem_avail_state info              : dump memory availability state info\n",
+      printf("%s free                                 : periodically dump free mem count\n",
              cmd_name);
       printf(
-          "%s mem_avail_state <state> [<nsecs>] : allocate memory to go to memstate <state>, hold "
-          "the state for <nsecs> (default 10s) \n"
-          "                                        only works if going to <state> from current "
-          "state requires allocating memory,\n"
-          "                                        can't free up pre-allocated memory\n",
+          "%s oom [<rate>]                         : leak memory until oom is triggered, "
+          "optionally specify the rate at which to leak (in MB per second)\n",
           cmd_name);
-      printf("%s drop_user_pt                      : drop all user hardware page tables\n",
-             cmd_name);
-      printf("%s checker status                    : prints the status of the pmm checker\n",
+      printf(
+          "%s oom hard                             : leak memory aggressively and keep on "
+          "leaking\n",
+          cmd_name);
+      printf("%s mem_avail_state info                 : dump memory availability state info\n",
              cmd_name);
       printf(
-          "%s checker enable [<size>]           : enables the pmm checker with optional fill "
-          "size\n",
+          "%s mem_avail_state <state> [<nsecs>]    : allocate memory to go to memstate <state>, "
+          "hold the state for <nsecs> (default 10s) only works if going to <state> from current "
+          "state requires allocating memory, can't free up pre-allocated memory\n",
           cmd_name);
-      printf("%s checker disable                   : disables the pmm checker\n", cmd_name);
-      printf("%s checker check                     : forces a check of all free pages in the pmm\n",
+      printf("%s drop_user_pt                         : drop all user hardware page tables\n",
              cmd_name);
+      printf("%s checker status                       : prints the status of the pmm checker\n",
+             cmd_name);
+      printf(
+          "%s checker enable [<size>] [oops|panic] : enables the pmm checker with optional fill "
+          "size and optional action\n",
+          cmd_name);
+      printf("%s checker disable                      : disables the pmm checker\n", cmd_name);
+      printf(
+          "%s checker check                        : forces a check of all free pages in the pmm\n",
+          cmd_name);
     }
     return ZX_ERR_INTERNAL;
   };
@@ -337,14 +342,15 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   } else if (!strcmp(argv[1].str, "drop_user_pt")) {
     VmAspace::DropAllUserPageTables();
   } else if (!strcmp(argv[1].str, "checker")) {
-    if (argc < 3 || argc > 4) {
+    if (argc < 3 || argc > 5) {
       return usage();
     }
     if (!strcmp(argv[2].str, "status")) {
       pmm_checker_print_status();
     } else if (!strcmp(argv[2].str, "enable")) {
       size_t fill_size = PAGE_SIZE;
-      if (argc == 4) {
+      PmmChecker::Action action = PmmChecker::DefaultAction;
+      if (argc >= 4) {
         fill_size = argv[3].u;
         if (!PmmChecker::IsValidFillSize(fill_size)) {
           printf(
@@ -353,8 +359,16 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
           return ZX_ERR_INTERNAL;
         }
       }
-      pmm_checker_enable(fill_size);
-      pmm_checker_print_status();
+      if (argc == 5) {
+        if (auto opt_action = PmmChecker::ActionFromString(argv[4].str)) {
+          action = opt_action.value();
+        } else {
+          printf("error: invalid action\n");
+          return ZX_ERR_INTERNAL;
+        }
+      }
+      pmm_checker_enable(fill_size, action);
+      // No need to print status as enabling automatically prints status.
     } else if (!strcmp(argv[2].str, "disable")) {
       pmm_checker_disable();
       pmm_checker_print_status();

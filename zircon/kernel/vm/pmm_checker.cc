@@ -16,6 +16,8 @@
 #include <pretty/hexdump.h>
 #include <vm/physmap.h>
 
+#include "debug.h"
+
 namespace {
 
 // The value 0x43 was chosen because it stands out when interpreted as ASCII ('C') and is an odd
@@ -23,7 +25,49 @@ namespace {
 constexpr uint8_t kPatternOneByte = 0x43u;
 constexpr uint64_t kPattern = 0x4343434343434343ull;
 
+// This is a macro because it's passed to KERNEL_OOPS and KERNEL_OOPS requires a literal.
+#define FORMAT_MESSAGE "pmm checker found unexpected pattern in page at %p; fill size is %lu\n"
+
+void DumpPage(size_t fill_size, void* kvaddr) {
+  printf("dump of page follows\n");
+  hexdump8(kvaddr, PAGE_SIZE);
+}
+
+void DumpPageAndOops(vm_page_t* page, size_t fill_size, void* kvaddr) {
+  KERNEL_OOPS(FORMAT_MESSAGE, kvaddr, fill_size);
+  DumpPage(fill_size, kvaddr);
+}
+
+void DumpPageAndPanic(vm_page_t* page, size_t fill_size, void* kvaddr) {
+  platform_panic_start();
+  printf(FORMAT_MESSAGE, kvaddr, fill_size);
+  DumpPage(fill_size, kvaddr);
+  panic("pmm free list corruption suspected\n");
+}
+
 }  // namespace
+
+// static
+ktl::optional<PmmChecker::Action> PmmChecker::ActionFromString(const char* action_string) {
+  if (!strcmp(action_string, "oops")) {
+    return PmmChecker::Action::OOPS;
+  }
+  if (!strcmp(action_string, "panic")) {
+    return PmmChecker::Action::PANIC;
+  }
+  return ktl::nullopt;
+}
+
+// static
+const char* PmmChecker::ActionToString(Action action) {
+  switch (action) {
+    case PmmChecker::Action::OOPS:
+      return "oops";
+    case PmmChecker::Action::PANIC:
+      return "panic";
+  };
+  __UNREACHABLE;
+}
 
 // static
 bool PmmChecker::IsValidFillSize(size_t fill_size) {
@@ -63,19 +107,21 @@ NO_ASAN bool PmmChecker::ValidatePattern(vm_page_t* page) {
   return true;
 }
 
-static void DumpPageAndPanic(vm_page_t* page, size_t fill_size) {
-  platform_panic_start();
-  auto kvaddr = static_cast<void*>(paddr_to_physmap(page->paddr()));
-  printf("pmm checker found unexpected pattern in page at %p; fill size is %lu\n", kvaddr,
-         fill_size);
-  printf("dump of page follows\n");
-  // Regardless of fill size, dump the whole page since it may prove useful for debugging.
-  hexdump8(kvaddr, PAGE_SIZE);
-  panic("pmm corruption suspected\n");
-}
-
 void PmmChecker::AssertPattern(vm_page_t* page) {
   if (!ValidatePattern(page)) {
-    DumpPageAndPanic(page, fill_size_);
+    auto kvaddr = static_cast<void*>(paddr_to_physmap(page->paddr()));
+    switch (action_) {
+      case Action::OOPS:
+        DumpPageAndOops(page, fill_size_, kvaddr);
+        break;
+      case Action::PANIC:
+        DumpPageAndPanic(page, fill_size_, kvaddr);
+        break;
+    }
   }
+}
+
+void PmmChecker::PrintStatus(FILE* f) const {
+  fprintf(f, "PMM: pmm checker %s, fill size is %lu, action is %s\n",
+          armed_ ? "enabled" : "disabled", fill_size_, ActionToString(action_));
 }

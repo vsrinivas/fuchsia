@@ -25,6 +25,7 @@
 #include <kernel/thread.h>
 #include <ktl/unique_ptr.h>
 #include <platform/debug.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 
 #if defined(__x86_64__)
@@ -42,6 +43,7 @@ static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_recurse(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_crash_user_read(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_crash_pmm_use_after_free(int argc, const cmd_args *argv, uint32_t flags);
 
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("dd", "display memory in dwords", &cmd_display_mem, CMD_AVAIL_ALWAYS)
@@ -60,6 +62,8 @@ STATIC_COMMAND("crash", "intentionally crash", &cmd_crash)
 STATIC_COMMAND("crash_stackstomp", "intentionally overrun the stack", &cmd_stackstomp)
 STATIC_COMMAND("crash_recurse", "intentionally overrun the stack by recursing", &cmd_recurse)
 STATIC_COMMAND("crash_user_read", "intentionally read user memory", &cmd_crash_user_read)
+STATIC_COMMAND("crash_pmm_use_after_free", "intentionally corrupt the pmm free list",
+               &cmd_crash_pmm_use_after_free)
 STATIC_COMMAND("cmdline", "display kernel commandline", &cmd_cmdline)
 STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)
@@ -393,6 +397,40 @@ static int cmd_crash_user_read(int argc, const cmd_args *argv, uint32_t flags) {
   uint8_t b = read_byte(p);
 
   printf("read %02hhx; did not crash.\n", b);
+  return -1;
+}
+
+static int cmd_crash_pmm_use_after_free(int argc, const cmd_args *argv, uint32_t flags) {
+  // We want to corrupt one of the pages on the pmm's free list.  To do so, we'll allocate a bunch
+  // of pages, keep track of the address of the last page, then free them all.  The free list is
+  // LIFO so by allocating and freeing a bunch of pages we'll have a pointer "to the middle" and our
+  // corrupted page will be less like to be immediately allocated.
+
+  // Allocate.
+  const size_t num_pages = 10000;
+  list_node pages = LIST_INITIAL_VALUE(pages);
+  zx_status_t status = pmm_alloc_pages(num_pages, 0, &pages);
+  if (unlikely(status != ZX_OK)) {
+    printf("error: failed to allocate (%d)\n", status);
+    return -1;
+  }
+
+  // Make note of address.
+  vm_page_t *last_page = list_peek_tail_type(&pages, vm_page_t, queue_node);
+  void *va = paddr_to_physmap(last_page->paddr());
+
+  // We're printing a little early because once we've returned the pages to the free list, we want
+  // to avoid doing anything that might cause the target page to be allocated (by this thread or
+  // some other thread).
+  printf("corrupting memory at address %p\n", va);
+
+  // Free.
+  pmm_free(&pages);
+
+  // Corrupt!
+  *reinterpret_cast<char *>(va) = 'X';
+
+  printf("crash_pmm_use_after_free done\n");
   return -1;
 }
 
