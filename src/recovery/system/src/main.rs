@@ -348,8 +348,7 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
         let render_resources = self.render_resources.as_ref().unwrap();
 
         // Create a presentation to display tranformation
-        let transform =
-            self.display_rotation.transform(&target_size).unwrap_or(Transform2D::identity());
+        let transform = self.display_rotation.transform(&target_size);
 
         let clear_background_ext =
             RenderExt { pre_clear: Some(PreClear { color: BG_COLOR }), ..Default::default() };

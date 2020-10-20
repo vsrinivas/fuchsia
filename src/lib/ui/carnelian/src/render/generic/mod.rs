@@ -16,7 +16,7 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 use fuchsia_framebuffer::PixelFormat;
 
-use crate::{color::Color, Point, ViewAssistantContext};
+use crate::{color::Color, drawing::DisplayRotation, Point, ViewAssistantContext};
 
 pub mod mold;
 pub mod spinel;
@@ -45,6 +45,7 @@ pub trait Backend: Copy + Debug + Default + Eq + Hash + Ord + Sized + 'static {
     fn new_context(
         token: ClientEnd<BufferCollectionTokenMarker>,
         size: Size2D<u32>,
+        display_rotation: DisplayRotation,
     ) -> Self::Context;
 }
 
@@ -259,14 +260,17 @@ pub(crate) mod tests {
     use fuchsia_async as fasync;
     use vk_sys as vk;
 
+    use crate::drawing::DisplayRotation;
+
     #[test]
     fn generic_compile_test() {
         fn _generic<B: Backend>(
             token: ClientEnd<BufferCollectionTokenMarker>,
             size: Size2D<u32>,
+            display_rotation: DisplayRotation,
             view_context: &ViewAssistantContext,
         ) {
-            let mut context = B::new_context(token, size);
+            let mut context = B::new_context(token, size, display_rotation);
 
             let mut path_builder = context.path_builder().unwrap();
             path_builder.move_to(Point::new(0.0, 0.0)).line_to(Point::new(1.0, 1.0));

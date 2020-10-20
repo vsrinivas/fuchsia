@@ -7,6 +7,7 @@ use crate::{
         strategies::base::AppStrategy, FrameBufferPtr, InternalSender, MessageInternal,
         RenderOptions,
     },
+    drawing::DisplayRotation,
     geometry::IntSize,
     input::{self, listen_for_user_input, DeviceId, InputReportHandler},
     view::{
@@ -27,6 +28,7 @@ use std::collections::HashMap;
 
 pub(crate) struct FrameBufferAppStrategy {
     pub frame_buffer: FrameBufferPtr,
+    pub display_rotation: DisplayRotation,
     pub view_key: ViewKey,
     pub input_report_handlers: HashMap<DeviceId, InputReportHandler>,
 }
@@ -122,7 +124,7 @@ impl AppStrategy for FrameBufferAppStrategy {
         let frame_buffer_size = self.get_frame_buffer_size().expect("frame_buffer_size");
         self.input_report_handlers.insert(
             device_id.clone(),
-            InputReportHandler::new(frame_buffer_size, device_descriptor),
+            InputReportHandler::new(frame_buffer_size, self.display_rotation, device_descriptor),
         );
     }
 }

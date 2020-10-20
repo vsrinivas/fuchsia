@@ -49,6 +49,12 @@ pub struct SpinelRasterBuilder {
     pub(crate) paths: Vec<(SpinelPath, Transform2D<f32>)>,
 }
 
+impl SpinelRasterBuilder {
+    pub(crate) fn new() -> Self {
+        Self { paths: vec![] }
+    }
+}
+
 impl RasterBuilder<Spinel> for SpinelRasterBuilder {
     fn add_with_transform(&mut self, path: &SpinelPath, transform: &Transform2D<f32>) -> &mut Self {
         self.paths.push((path.clone(), *transform));

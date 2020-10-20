@@ -23,7 +23,7 @@ use textwrap::wrap_iter;
 /// Some Fuchsia device displays are mounted rotated. This value represents
 /// The supported rotations and can be used by views to rotate their content
 /// to display appropriately when running on the frame buffer.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DisplayRotation {
     Deg0,
     Deg90,
@@ -32,25 +32,43 @@ pub enum DisplayRotation {
 }
 
 impl DisplayRotation {
-    pub fn transform(&self, target_size: &Size2D<Coord>) -> Option<Transform2D<Coord>> {
-        let post_translation = match self {
-            DisplayRotation::Deg90 => Vector2D::new(0.0, target_size.width),
-            DisplayRotation::Deg180 => Vector2D::new(target_size.width, target_size.height),
-            DisplayRotation::Deg270 => Vector2D::new(target_size.height, 0.0),
-            DisplayRotation::Deg0 => Vector2D::zero(),
-        };
-        self.rotation().and_then(|transform| Some(transform.post_translate(post_translation)))
+    pub fn transform(&self, target_size: &Size2D<Coord>) -> Transform2D<Coord> {
+        let w = target_size.width;
+        let h = target_size.height;
+        match self {
+            Self::Deg0 => Transform2D::identity(),
+            Self::Deg90 => Transform2D::from_row_major_array([0.0, -1.0, 1.0, 0.0, 0.0, h]),
+            Self::Deg180 => Transform2D::from_row_major_array([-1.0, 0.0, 0.0, -1.0, w, h]),
+            Self::Deg270 => Transform2D::from_row_major_array([0.0, 1.0, -1.0, 0.0, w, 0.0]),
+        }
+    }
+
+    pub fn inv_transform(&self, target_size: &Size2D<Coord>) -> Transform2D<Coord> {
+        let w = target_size.width;
+        let h = target_size.height;
+        match self {
+            Self::Deg0 => Transform2D::identity(),
+            Self::Deg90 => Transform2D::from_row_major_array([0.0, 1.0, -1.0, 0.0, h, 0.0]),
+            Self::Deg180 => Transform2D::from_row_major_array([-1.0, 0.0, 0.0, -1.0, w, h]),
+            Self::Deg270 => Transform2D::from_row_major_array([0.0, -1.0, 1.0, 0.0, 0.0, w]),
+        }
     }
 
     pub fn rotation(&self) -> Option<Transform2D<Coord>> {
         match self {
-            DisplayRotation::Deg0 => None,
+            Self::Deg0 => None,
             _ => {
                 let display_rotation = *self;
                 let angle: Angle<Coord> = display_rotation.into();
                 Some(Transform2D::create_rotation(angle))
             }
         }
+    }
+}
+
+impl Default for DisplayRotation {
+    fn default() -> Self {
+        Self::Deg0
     }
 }
 
@@ -348,11 +366,7 @@ impl Glyph {
 
         let bounding_box = bounding_box.to_rect();
         let transform = display_rotation.transform(&Size2D::zero());
-        let display_bounding_box = if let Some(transform) = transform {
-            transform.transform_rect(&bounding_box)
-        } else {
-            bounding_box
-        };
+        let display_bounding_box = transform.transform_rect(&bounding_box);
         let path = path_builder.build();
         let mut raster_builder = context.raster_builder().expect("raster_builder");
         let rotation_transform =
@@ -401,10 +415,7 @@ impl Text {
         let v_metrics = face.font.v_metrics(scale);
         let mut ascent = v_metrics.ascent;
         let mut raster_union = None;
-        let transform = glyph_map
-            .rotation
-            .transform(&Size2D::new(0.0, ascent))
-            .unwrap_or(Transform2D::identity());
+        let transform = glyph_map.rotation.transform(&Size2D::new(0.0, ascent));
 
         for line in wrap_iter(text, wrap) {
             // TODO: adjust vertical alignment of glyphs to match first glyph.
@@ -451,11 +462,8 @@ impl Text {
         }
 
         let transform = display_rotation.transform(&Size2D::zero());
-        let bounding_box = if let Some(transform) = transform {
-            transform.inverse().expect("inverse").transform_rect(&display_bounding_box)
-        } else {
-            display_bounding_box.cast_unit::<euclid::UnknownUnit>()
-        };
+        let bounding_box =
+            transform.inverse().expect("inverse").transform_rect(&display_bounding_box);
 
         Self { raster: raster_union.expect("raster_union"), bounding_box, display_bounding_box }
     }
@@ -465,7 +473,7 @@ impl Text {
 mod tests {
     use super::{GlyphMap, Text};
     use crate::{
-        drawing::FontFace,
+        drawing::{DisplayRotation, FontFace},
         geometry::{Point, UintSize},
         render::{
             generic::{self, Backend},
@@ -508,7 +516,7 @@ mod tests {
             })
             .await
             .expect("token");
-        let mold_context = generic::Mold::new_context(context_token, size);
+        let mold_context = generic::Mold::new_context(context_token, size, DisplayRotation::Deg0);
         let _buffers_result = buffer_allocator
             .allocate_buffers(true)
             .on_timeout(Time::after(DEFAULT_TIMEOUT), || {

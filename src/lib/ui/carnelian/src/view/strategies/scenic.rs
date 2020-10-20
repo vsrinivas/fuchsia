@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use crate::{
     app::{MessageInternal, RenderOptions},
+    drawing::DisplayRotation,
     geometry::UintSize,
     input::ScenicInputHandler,
     message::Message,
@@ -65,9 +66,17 @@ impl Plumber {
         let context_token = buffer_allocator.duplicate_token().await?;
         let context = render::Context {
             inner: if render_options.use_spinel {
-                ContextInner::Spinel(generic::Spinel::new_context(context_token, size))
+                ContextInner::Spinel(generic::Spinel::new_context(
+                    context_token,
+                    size,
+                    DisplayRotation::Deg0,
+                ))
             } else {
-                ContextInner::Mold(generic::Mold::new_context(context_token, size))
+                ContextInner::Mold(generic::Mold::new_context(
+                    context_token,
+                    size,
+                    DisplayRotation::Deg0,
+                ))
             },
         };
         let buffers = buffer_allocator.allocate_buffers(true).await.context("allocate_buffers")?;

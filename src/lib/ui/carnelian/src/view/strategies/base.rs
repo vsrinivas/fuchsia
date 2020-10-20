@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use crate::{
     app::FrameBufferPtr,
+    drawing::DisplayRotation,
     geometry::{IntSize, Size},
     input,
     message::Message,
@@ -12,6 +13,8 @@ use async_trait::async_trait;
 use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_framebuffer::PixelFormat;
 use fuchsia_zircon::{Duration, Time};
+
+pub const DISPLAY_ROTATION: DisplayRotation = DisplayRotation::Deg270;
 
 #[async_trait(?Send)]
 pub(crate) trait ViewStrategy {

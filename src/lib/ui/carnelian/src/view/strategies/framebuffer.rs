@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use crate::{
     app::{FrameBufferPtr, MessageInternal, RenderOptions},
+    drawing::DisplayRotation,
     geometry::{IntSize, Size, UintSize},
     input,
     message::Message,
@@ -11,7 +12,7 @@ use crate::{
         Context, ContextInner,
     },
     view::{
-        strategies::base::{ViewStrategy, ViewStrategyPtr},
+        strategies::base::{ViewStrategy, ViewStrategyPtr, DISPLAY_ROTATION},
         ViewAssistantContext, ViewAssistantPtr, ViewDetails, ViewKey,
     },
 };
@@ -71,9 +72,17 @@ impl FrameBufferViewStrategy {
             fb.local_token.as_ref().expect("local_token").sync().await?;
             Context {
                 inner: if render_options.use_spinel {
-                    ContextInner::Spinel(generic::Spinel::new_context(context_token, unsize))
+                    ContextInner::Spinel(generic::Spinel::new_context(
+                        context_token,
+                        unsize,
+                        DISPLAY_ROTATION,
+                    ))
                 } else {
-                    ContextInner::Mold(generic::Mold::new_context(context_token, unsize))
+                    ContextInner::Mold(generic::Mold::new_context(
+                        context_token,
+                        unsize,
+                        DISPLAY_ROTATION,
+                    ))
                 },
             }
         };
@@ -149,7 +158,13 @@ impl FrameBufferViewStrategy {
         (
             ViewAssistantContext {
                 key: view_details.key,
-                size: view_details.physical_size,
+                size: match DISPLAY_ROTATION {
+                    DisplayRotation::Deg0 | DisplayRotation::Deg180 => view_details.physical_size,
+                    DisplayRotation::Deg90 | DisplayRotation::Deg270 => Size::new(
+                        view_details.physical_size.height,
+                        view_details.physical_size.width,
+                    ),
+                },
                 metrics: view_details.metrics,
                 presentation_time: time_now + interval_offset,
                 messages: Vec::new(),

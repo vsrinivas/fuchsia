@@ -21,6 +21,7 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon_sys as sys;
 
 use crate::{
+    drawing::DisplayRotation,
     render::generic::{
         mold::{
             image::VmoImage, Mold, MoldComposition, MoldImage, MoldPathBuilder, MoldRasterBuilder,
@@ -143,12 +144,17 @@ pub struct MoldContext {
     composition: mold::Composition,
     buffer_collection: BufferCollectionSynchronousProxy,
     size: Size2D<u32>,
+    display_rotation: DisplayRotation,
     images: Vec<RefCell<VmoImage>>,
     index_map: HashMap<u32, usize>,
 }
 
 impl MoldContext {
-    pub(crate) fn new(token: ClientEnd<BufferCollectionTokenMarker>, size: Size2D<u32>) -> Self {
+    pub(crate) fn new(
+        token: ClientEnd<BufferCollectionTokenMarker>,
+        size: Size2D<u32>,
+        display_rotation: DisplayRotation,
+    ) -> Self {
         let sysmem = connect_to_service::<AllocatorMarker>().expect("failed to connect to sysmem");
         let (collection_client, collection_request) =
             zx::Channel::create().expect("failed to create Zircon channel");
@@ -168,6 +174,7 @@ impl MoldContext {
             composition: mold::Composition::new(),
             buffer_collection,
             size,
+            display_rotation,
             images: vec![],
             index_map: HashMap::new(),
         }
@@ -178,6 +185,8 @@ fn render_composition(
     mold_composition: &mut mold::Composition,
     composition: &MoldComposition,
     buffer: mold::Buffer<'_>,
+    display_size: Size2D<u32>,
+    display_rotation: DisplayRotation,
     clip: Rect<u32>,
 ) {
     duration!("gfx", "render_composition");
@@ -237,16 +246,18 @@ fn render_composition(
                 },
             );
 
-        if layer.raster.translation != Vector2D::zero() {
-            mold_layer.set_transform(&[
-                1.0,
-                0.0,
-                0.0,
-                1.0,
-                layer.raster.translation.x,
-                layer.raster.translation.y,
-            ]);
-        }
+        let transform = display_rotation
+            .transform(&display_size.to_f32())
+            .pre_translate(Vector2D::new(layer.raster.translation.x, layer.raster.translation.y));
+
+        mold_layer.set_transform(&[
+            transform.m11,
+            transform.m21,
+            transform.m12,
+            transform.m22,
+            transform.m31,
+            transform.m32,
+        ]);
     }
 
     mold_composition.render(
@@ -365,7 +376,14 @@ impl Context<Mold> for MoldContext {
             );
         }
 
-        render_composition(&mut self.composition, composition, image.as_buffer(), clip);
+        render_composition(
+            &mut self.composition,
+            composition,
+            image.as_buffer(),
+            self.size,
+            self.display_rotation,
+            clip,
+        );
 
         // TODO: Motion blur support.
         if let Some(PostCopy { image: dst_image_id, copy_region, .. }) = ext.post_copy {

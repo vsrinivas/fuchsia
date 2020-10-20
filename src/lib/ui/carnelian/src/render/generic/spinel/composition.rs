@@ -4,11 +4,12 @@
 
 use std::{ops::RangeBounds, ptr, slice};
 
-use euclid::default::Rect;
+use euclid::default::{Rect, Size2D};
 use spinel_rs_sys::*;
 
 use crate::{
     color::Color,
+    drawing::DisplayRotation,
     render::generic::{
         spinel::{init, InnerContext, Spinel},
         BlendMode, Composition, Fill, FillRule, Layer, Style,
@@ -97,6 +98,8 @@ impl SpinelComposition {
         context: &InnerContext,
         raster_builder: SpnRasterBuilder,
         composition: SpnComposition,
+        size: Size2D<u32>,
+        display_rotation: DisplayRotation,
         clip: Rect<u32>,
     ) {
         unsafe {
@@ -106,15 +109,17 @@ impl SpinelComposition {
         }
 
         for (i, Layer { raster, .. }) in self.layers.iter().enumerate() {
-            for (paths_and_transforms, txty) in raster.rasters.iter() {
+            for (paths, txty) in raster.rasters.iter() {
                 unsafe {
                     spn!(spn_raster_builder_begin(raster_builder));
                 }
 
-                for (path, transform) in paths_and_transforms.iter() {
+                for (path, transform) in paths.iter() {
                     const SPINEL_TRANSFORM_MULTIPLIER: f32 = 32.0;
 
-                    let transform = transform.post_translate(*txty);
+                    let transform = transform
+                        .post_translate(*txty)
+                        .post_transform(&display_rotation.transform(&size.to_f32()));
                     let transform = SpnTransform {
                         sx: transform.m11 * SPINEL_TRANSFORM_MULTIPLIER,
                         shx: transform.m21 * SPINEL_TRANSFORM_MULTIPLIER,

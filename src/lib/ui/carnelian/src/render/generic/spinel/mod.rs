@@ -12,7 +12,7 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 use vk_sys as vk;
 
-use crate::render::generic::Backend;
+use crate::{drawing::DisplayRotation, render::generic::Backend};
 
 macro_rules! spn {
     ( $result:expr ) => {{
@@ -205,8 +205,9 @@ impl Backend for Spinel {
     fn new_context(
         token: ClientEnd<BufferCollectionTokenMarker>,
         size: Size2D<u32>,
+        display_rotation: DisplayRotation,
     ) -> SpinelContext {
-        SpinelContext::new(token, size)
+        SpinelContext::new(token, size, display_rotation)
     }
 }
 
@@ -216,14 +217,14 @@ mod tests {
 
     use fidl::endpoints::create_endpoints;
 
-    use crate::render::generic;
+    use crate::{drawing::DisplayRotation, render::generic};
 
     #[test]
     fn spinel_init() {
         generic::tests::run(|| {
             let (token, _) =
                 create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
-            Spinel::new_context(token, Size2D::new(100, 100));
+            Spinel::new_context(token, Size2D::new(100, 100), DisplayRotation::Deg0);
         });
     }
 }

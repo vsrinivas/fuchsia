@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::render::generic::Backend;
+use crate::{drawing::DisplayRotation, render::generic::Backend};
 
 use euclid::default::Size2D;
 use fidl::endpoints::ClientEnd;
@@ -35,8 +35,9 @@ impl Backend for Mold {
     fn new_context(
         token: ClientEnd<BufferCollectionTokenMarker>,
         size: Size2D<u32>,
+        display_rotation: DisplayRotation,
     ) -> MoldContext {
-        MoldContext::new(token, size)
+        MoldContext::new(token, size, display_rotation)
     }
 }
 
@@ -46,14 +47,14 @@ mod tests {
 
     use fidl::endpoints::create_endpoints;
 
-    use crate::render::generic;
+    use crate::{drawing::DisplayRotation, render::generic};
 
     #[test]
     fn mold_init() {
         generic::tests::run(|| {
             let (token, _) =
                 create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
-            Mold::new_context(token, Size2D::new(100, 100));
+            Mold::new_context(token, Size2D::new(100, 100), DisplayRotation::Deg0);
         });
     }
 }

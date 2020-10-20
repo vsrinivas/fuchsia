@@ -26,6 +26,7 @@ use spinel_rs_sys::*;
 use vk_sys as vk;
 
 use crate::{
+    drawing::DisplayRotation,
     render::generic::{
         spinel::{
             image::{image_create_info, update_descriptor_set, VulkanImage},
@@ -227,6 +228,7 @@ impl Default for SpinelConfig {
 
 pub struct SpinelContext {
     inner: Rc<RefCell<InnerContext>>,
+    display_rotation: DisplayRotation,
     path_builder: Rc<SpnPathBuilder>,
     raster_builder: Rc<SpnRasterBuilder>,
     compositions: HashMap<SpinelImage, SpnComposition>,
@@ -237,13 +239,18 @@ pub struct SpinelContext {
 }
 
 impl SpinelContext {
-    pub(crate) fn new(token: ClientEnd<BufferCollectionTokenMarker>, size: Size2D<u32>) -> Self {
-        Self::with_config(token, size, SpinelConfig::default())
+    pub(crate) fn new(
+        token: ClientEnd<BufferCollectionTokenMarker>,
+        size: Size2D<u32>,
+        display_rotation: DisplayRotation,
+    ) -> Self {
+        Self::with_config(token, size, display_rotation, SpinelConfig::default())
     }
 
     pub fn with_config(
         token: ClientEnd<BufferCollectionTokenMarker>,
         size: Size2D<u32>,
+        display_rotation: DisplayRotation,
         config: SpinelConfig,
     ) -> Self {
         let entry_points = entry_points();
@@ -640,6 +647,7 @@ impl SpinelContext {
 
         Self {
             inner,
+            display_rotation,
             path_builder,
             raster_builder,
             compositions: HashMap::new(),
@@ -705,7 +713,7 @@ impl Context<Spinel> for SpinelContext {
     }
 
     fn raster_builder(&self) -> Option<SpinelRasterBuilder> {
-        Some(SpinelRasterBuilder { paths: Vec::new() })
+        Some(SpinelRasterBuilder::new())
     }
 
     fn new_image(&mut self, size: Size2D<u32>) -> SpinelImage {
@@ -1133,6 +1141,8 @@ impl Context<Spinel> for SpinelContext {
             &*self.inner.borrow(),
             *self.raster_builder,
             spn_composition,
+            Size2D::new(self.vulkan.width, self.vulkan.height),
+            self.display_rotation,
             clip,
         );
         let spn_styling = composition

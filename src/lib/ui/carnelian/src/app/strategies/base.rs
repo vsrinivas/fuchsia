@@ -10,7 +10,9 @@ use crate::{
     geometry::IntSize,
     input::{self},
     view::{
-        strategies::base::{FrameBufferParams, ViewStrategyParams, ViewStrategyPtr},
+        strategies::base::{
+            FrameBufferParams, ViewStrategyParams, ViewStrategyPtr, DISPLAY_ROTATION,
+        },
         ViewKey,
     },
 };
@@ -136,6 +138,7 @@ pub(crate) async fn create_app_strategy(
 
         let strat = FrameBufferAppStrategy {
             frame_buffer: frame_buffer_ptr.clone(),
+            display_rotation: DISPLAY_ROTATION,
             view_key: next_view_key,
             input_report_handlers: HashMap::new(),
         };

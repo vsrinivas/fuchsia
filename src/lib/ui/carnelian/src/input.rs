@@ -4,11 +4,12 @@
 
 use crate::{
     app::{InternalSender, MessageInternal},
+    drawing::DisplayRotation,
     geometry::{IntPoint, IntRect, IntSize, LimitToBounds, Size},
     view::ViewKey,
 };
 use anyhow::Error;
-use euclid::default::Vector2D;
+use euclid::default::{Transform2D, Vector2D};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync};
@@ -490,6 +491,7 @@ impl TouchScale {
 #[derive(Default)]
 pub(crate) struct InputReportHandler {
     view_size: IntSize,
+    display_rotation: DisplayRotation,
     touch_scale: Option<TouchScale>,
     cursor_position: IntPoint,
     pressed_mouse_buttons: HashSet<u8>,
@@ -501,6 +503,7 @@ pub(crate) struct InputReportHandler {
 impl InputReportHandler {
     pub fn new(
         size: IntSize,
+        display_rotation: DisplayRotation,
         device_descriptor: &hid_input_report::DeviceDescriptor,
     ) -> InputReportHandler {
         let touch_scale = device_descriptor
@@ -522,11 +525,15 @@ impl InputReportHandler {
                     None
                 }
             });
-        Self::new_with_scale(size, touch_scale)
+        Self::new_with_scale(size, display_rotation, touch_scale)
     }
 
-    fn new_with_scale(size: IntSize, touch_scale: Option<TouchScale>) -> Self {
-        Self { view_size: size, touch_scale: touch_scale, ..InputReportHandler::default() }
+    fn new_with_scale(
+        size: IntSize,
+        display_rotation: DisplayRotation,
+        touch_scale: Option<TouchScale>,
+    ) -> Self {
+        Self { view_size: size, display_rotation, touch_scale, ..InputReportHandler::default() }
     }
 
     fn handle_mouse_input_report(
@@ -540,8 +547,10 @@ impl InputReportHandler {
             device_id: &DeviceId,
             button_set: &ButtonSet,
             cursor_position: IntPoint,
+            transform: &Transform2D<f32>,
             phase: mouse::Phase,
         ) -> Event {
+            let cursor_position = transform.transform_point(cursor_position.to_f32()).to_i32();
             let mouse_event =
                 mouse::Event { buttons: button_set.clone(), phase, location: cursor_position };
             Event {
@@ -551,6 +560,7 @@ impl InputReportHandler {
             }
         }
 
+        let transform = self.display_rotation.inv_transform(&self.view_size.to_f32());
         let new_cursor_position = self.cursor_position
             + Vector2D::new(
                 mouse.movement_x.unwrap_or(0) as i32,
@@ -575,6 +585,7 @@ impl InputReportHandler {
                 device_id,
                 &button_set,
                 new_cursor_position,
+                &transform,
                 mouse::Phase::Moved,
             );
             Some(event)
@@ -590,6 +601,7 @@ impl InputReportHandler {
                 device_id,
                 &button_set,
                 new_cursor_position,
+                &transform,
                 mouse::Phase::Down(Button(*button)),
             )
         });
@@ -600,6 +612,7 @@ impl InputReportHandler {
                 device_id,
                 &button_set,
                 new_cursor_position,
+                &transform,
                 mouse::Phase::Up(Button(*button)),
             )
         });
@@ -723,13 +736,16 @@ impl InputReportHandler {
             HashSet::new()
         };
 
+        let transform = self.display_rotation.inv_transform(&self.view_size.to_f32());
         let touch_scale = self.touch_scale.as_ref().expect("touch_scale");
+
+        let t = |point: IntPoint| transform.transform_point(point.to_f32()).to_i32();
 
         let maintained_contacts =
             self.raw_contacts.intersection(&raw_contacts).map(|raw_contact| touch::Contact {
                 contact_id: touch::ContactId(raw_contact.contact_id),
                 phase: touch::Phase::Moved(
-                    touch_scale.scale(&raw_contact.position),
+                    t(touch_scale.scale(&raw_contact.position)),
                     raw_contact.contact_size.unwrap_or_else(|| IntSize::zero()),
                 ),
             });
@@ -738,7 +754,7 @@ impl InputReportHandler {
             raw_contacts.difference(&self.raw_contacts).map(|raw_contact| touch::Contact {
                 contact_id: touch::ContactId(raw_contact.contact_id),
                 phase: touch::Phase::Down(
-                    touch_scale.scale(&raw_contact.position),
+                    t(touch_scale.scale(&raw_contact.position)),
                     raw_contact.contact_size.unwrap_or_else(|| IntSize::zero()),
                 ),
             });
@@ -858,7 +874,7 @@ mod input_report_tests {
             y: fidl_fuchsia_input_report::Range { min: 0, max: 4095 },
             y_span: 4095.0,
         };
-        InputReportHandler::new_with_scale(test_size, Some(touch_scale))
+        InputReportHandler::new_with_scale(test_size, DisplayRotation::Deg0, Some(touch_scale))
     }
 
     #[test]
