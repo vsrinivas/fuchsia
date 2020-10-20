@@ -7,7 +7,7 @@ use {
     crate::agent::restore_agent,
     crate::config::base::ControllerFlag,
     crate::handler::device_storage::testing::*,
-    crate::switchboard::base::{DisplayInfo, LowLightMode, SettingType},
+    crate::switchboard::base::{DisplayInfo, LowLightMode, SettingType, ThemeMode},
     crate::tests::fakes::brightness_service::BrightnessService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::test_failure_utils::create_test_env_with_failures,
@@ -217,16 +217,19 @@ async fn test_light_mode_with_brightness_controller() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_display_restore_with_storage_controller() {
     // Ensure auto-brightness value is restored correctly.
-    validate_restore_with_storage_controller(0.7, true, LowLightMode::Enable).await;
+    validate_restore_with_storage_controller(0.7, true, LowLightMode::Enable, ThemeMode::Default)
+        .await;
 
     // Ensure manual-brightness value is restored correctly.
-    validate_restore_with_storage_controller(0.9, false, LowLightMode::Disable).await;
+    validate_restore_with_storage_controller(0.9, false, LowLightMode::Disable, ThemeMode::Default)
+        .await;
 }
 
 async fn validate_restore_with_storage_controller(
     manual_brightness: f32,
     auto_brightness: bool,
     low_light_mode: LowLightMode,
+    theme_mode: ThemeMode,
 ) {
     let service_registry = ServiceRegistry::create();
     let storage_factory = InMemoryStorageFactory::create();
@@ -239,6 +242,7 @@ async fn validate_restore_with_storage_controller(
             manual_brightness_value: manual_brightness,
             auto_brightness,
             low_light_mode,
+            theme_mode,
         };
         assert!(store.lock().await.write(&info, false).await.is_ok());
     }
@@ -267,16 +271,29 @@ async fn validate_restore_with_storage_controller(
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_display_restore_with_brightness_controller() {
     // Ensure auto-brightness value is restored correctly.
-    validate_restore_with_brightness_controller(0.7, true, LowLightMode::Enable).await;
+    validate_restore_with_brightness_controller(
+        0.7,
+        true,
+        LowLightMode::Enable,
+        ThemeMode::Default,
+    )
+    .await;
 
     // Ensure manual-brightness value is restored correctly.
-    validate_restore_with_brightness_controller(0.9, false, LowLightMode::Disable).await;
+    validate_restore_with_brightness_controller(
+        0.9,
+        false,
+        LowLightMode::Disable,
+        ThemeMode::Default,
+    )
+    .await;
 }
 
 async fn validate_restore_with_brightness_controller(
     manual_brightness: f32,
     auto_brightness: bool,
     low_light_mode: LowLightMode,
+    theme_mode: ThemeMode,
 ) {
     let service_registry = ServiceRegistry::create();
     let brightness_service_handle = BrightnessService::create();
@@ -294,6 +311,7 @@ async fn validate_restore_with_brightness_controller(
             manual_brightness_value: manual_brightness,
             auto_brightness,
             low_light_mode,
+            theme_mode,
         };
         assert!(store.lock().await.write(&info, false).await.is_ok());
     }

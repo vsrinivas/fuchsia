@@ -311,6 +311,7 @@ pub struct DisplayInfo {
     pub manual_brightness_value: f32,
     pub auto_brightness: bool,
     pub low_light_mode: LowLightMode,
+    pub theme_mode: ThemeMode,
 }
 
 impl DisplayInfo {
@@ -318,8 +319,9 @@ impl DisplayInfo {
         auto_brightness: bool,
         manual_brightness_value: f32,
         low_light_mode: LowLightMode,
+        theme_mode: ThemeMode,
     ) -> DisplayInfo {
-        DisplayInfo { manual_brightness_value, auto_brightness, low_light_mode }
+        DisplayInfo { manual_brightness_value, auto_brightness, low_light_mode, theme_mode }
     }
 }
 
@@ -356,6 +358,16 @@ pub enum LowLightMode {
     DisableImmediately,
     /// Device should be in low-light mode.
     Enable,
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum ThemeMode {
+    Unknown,
+    Default,
+    Light,
+    Dark,
+    /// Product can choose a theme based on ambient cues.
+    Auto,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]

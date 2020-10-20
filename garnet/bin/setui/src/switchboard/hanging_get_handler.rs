@@ -494,6 +494,7 @@ mod tests {
                     false,
                     value,
                     LowLightMode::Disable,
+                    ThemeMode::Unknown,
                 )))));
             }
 

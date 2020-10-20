@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use serde::{Deserialize, Serialize};
+
 use crate::call;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::DeviceStorageCompatible;
@@ -11,7 +13,7 @@ use crate::handler::setting_handler::persist::{
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{
-    DisplayInfo, LowLightMode, SettingRequest, SettingResponse, SettingType,
+    DisplayInfo, LowLightMode, SettingRequest, SettingResponse, SettingType, ThemeMode,
 };
 use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{
@@ -26,7 +28,14 @@ impl DeviceStorageCompatible for DisplayInfo {
             false,                 /*auto_brightness_enabled*/
             0.5,                   /*brightness_value*/
             LowLightMode::Disable, /*low_light_mode*/
+            ThemeMode::Unknown,    /*theme_mode*/
         )
+    }
+
+    fn deserialize_from(value: &String) -> Self {
+        Self::extract(&value).unwrap_or_else(|_| {
+            DisplayInfoV1::extract(&value).map_or(Self::default_value(), Self::from)
+        })
     }
 }
 
@@ -157,4 +166,61 @@ where
             _ => None,
         }
     }
+}
+
+/// The following struct should never be modified.  It represents an old
+/// version of the display settings.
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct DisplayInfoV1 {
+    /// The last brightness value that was manually set.
+    pub manual_brightness_value: f32,
+    pub auto_brightness: bool,
+    pub low_light_mode: LowLightMode,
+}
+
+impl DisplayInfoV1 {
+    pub const fn new(
+        auto_brightness: bool,
+        manual_brightness_value: f32,
+        low_light_mode: LowLightMode,
+    ) -> DisplayInfoV1 {
+        DisplayInfoV1 { manual_brightness_value, auto_brightness, low_light_mode }
+    }
+}
+
+impl DeviceStorageCompatible for DisplayInfoV1 {
+    const KEY: &'static str = "display_infoV1";
+
+    fn default_value() -> Self {
+        DisplayInfoV1::new(
+            false,                 /*auto_brightness_enabled*/
+            0.5,                   /*brightness_value*/
+            LowLightMode::Disable, /*low_light_mode*/
+        )
+    }
+}
+
+impl From<DisplayInfoV1> for DisplayInfo {
+    fn from(v1: DisplayInfoV1) -> Self {
+        DisplayInfo {
+            auto_brightness: v1.auto_brightness,
+            manual_brightness_value: v1.manual_brightness_value,
+            low_light_mode: v1.low_light_mode,
+            theme_mode: ThemeMode::Unknown,
+        }
+    }
+}
+
+#[test]
+fn test_display_migration() {
+    const BRIGHTNESS_VALUE: f32 = 0.6;
+    let mut v1 = DisplayInfoV1::default_value();
+    v1.manual_brightness_value = BRIGHTNESS_VALUE;
+
+    let serialized_v1 = v1.serialize_to();
+
+    let current = DisplayInfo::deserialize_from(&serialized_v1);
+
+    assert_eq!(current.manual_brightness_value, BRIGHTNESS_VALUE);
+    assert_eq!(current.theme_mode, ThemeMode::Unknown);
 }
