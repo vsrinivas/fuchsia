@@ -9,7 +9,7 @@ use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl_fuchsia_stash::{
     FlushError, StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream,
 };
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::fx_log_warn;
 use futures::lock::Mutex;
 use futures::{TryFutureExt, TryStreamExt};
 use std::sync::Arc;
@@ -91,7 +91,11 @@ impl Instance {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| {
-                fx_log_err!("error running accessor interface: {:?}", e)
+                // TODO(fxbug.dev/62386) - This is currently set to warning so that error logs
+                // aren't produced when a component in test is torn down. This should
+                // distinguish between channel closed errors and actual stash failures and
+                // set the appropriate log level.
+                fx_log_warn!("error running accessor interface: {:?}", e)
             }),
         )
         .detach();

@@ -9,7 +9,7 @@ use fidl_fuchsia_stash::{
     ListItem, ListIteratorMarker, ListIteratorRequest, ListIteratorRequestStream, Value,
 };
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon_sys;
 use fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES;
 use futures::lock::Mutex;
@@ -168,7 +168,9 @@ impl Accessor {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| {
-                fx_log_err!("error running list prefix interface: {:?}", e)
+                // TODO(fxbug.dev/62386) - determine which errors are stash failures and log them
+                // with error severity
+                fx_log_warn!("error running list prefix interface: {:?}", e)
             }),
         )
         .detach();
@@ -255,7 +257,9 @@ impl Accessor {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| {
-                fx_log_err!("error running get prefix interface: {:?}", e)
+                // TODO(fxbug.dev/62386) - determine which errors are stash failures and log them
+                // with error severity
+                fx_log_warn!("error running get prefix interface: {:?}", e)
             }),
         )
         .detach();
