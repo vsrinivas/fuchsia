@@ -92,7 +92,7 @@ struct brcmf_bcdc {
 #define BCDC_FLAG2_IF_SHIFT  0
 #define BCDC_GET_IF_IDX(hdr) ((int)((((hdr)->flags2) & BCDC_FLAG2_IF_MASK) >> BCDC_FLAG2_IF_SHIFT))
 #define BCDC_SET_IF_IDX(hdr, idx) \
-  ((hdr)->flags2 = (((hdr)->flags2 & ~BCDC_FLAG2_IF_MASK) | ((idx) << BCDC_FLAG2_IF_SHIFT)))
+  ((hdr)->flags2 = (((hdr)->flags2 & ~BCDC_FLAG2_IF_MASK) | static_cast<uint8_t>(((idx) << BCDC_FLAG2_IF_SHIFT))))
 
 // clang-format on
 

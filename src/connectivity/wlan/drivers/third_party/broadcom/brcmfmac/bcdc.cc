@@ -21,9 +21,11 @@
 
 #include "bcdc.h"
 
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <algorithm>
+#include <limits>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
@@ -262,7 +264,8 @@ static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t 
   h->priority = (pktbuf->priority & BCDC_PRIORITY_MASK);
   h->flags2 = 0;
   h->data_offset = offset;
-  BCDC_SET_IF_IDX(h, ifidx);
+  ZX_DEBUG_ASSERT(0 <= ifidx && ifidx <= std::numeric_limits<uint8_t>::max());
+  BCDC_SET_IF_IDX(h, static_cast<uint8_t>(ifidx));
 }
 
 static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
@@ -299,7 +302,9 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
 
   brcmf_netbuf_shrink_head(pktbuf, BCDC_HEADER_LEN);
   if (do_fws) {
-    brcmf_fws_hdrpull(tmp_if, h->data_offset << 2, pktbuf);
+    const auto new_data_offset = h->data_offset << 2;
+    ZX_DEBUG_ASSERT(new_data_offset <= std::numeric_limits<uint16_t>::max());
+    brcmf_fws_hdrpull(tmp_if, static_cast<uint16_t>(new_data_offset), pktbuf);
   } else {
     brcmf_netbuf_shrink_head(pktbuf, h->data_offset << 2);
   }
@@ -322,24 +327,28 @@ static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int if
 
   // Copy the Netbuf's data in to a brcmf_netbuf, since that's what the rest of this stack
   // understands.
-  struct brcmf_netbuf* b_netbuf = brcmf_netbuf_allocate(netbuf->size() + drvr->hdrlen);
+  // Make sure that netbuf_size (calculated below) isn't going to overflow.
+  if (std::numeric_limits<uint32_t>::max() - drvr->hdrlen < netbuf->size()) {
+    BRCMF_ERR("brcmf_netbuf_allocate cannot allocate requested size (overflow)");
+    return ZX_ERR_INTERNAL;
+  }
+  const auto netbuf_size = static_cast<uint32_t>(netbuf->size() + drvr->hdrlen);
+  struct brcmf_netbuf* b_netbuf = brcmf_netbuf_allocate(netbuf_size);
   if (b_netbuf == nullptr) {
     ret = ZX_ERR_NO_MEMORY;
-    goto done;
-  }
-
-  brcmf_netbuf_grow_tail(b_netbuf, netbuf->size() + drvr->hdrlen);
-  brcmf_netbuf_shrink_head(b_netbuf, drvr->hdrlen);
-  memcpy(b_netbuf->data, netbuf->data(), netbuf->size());
-  b_netbuf->priority = netbuf->priority();
-
-  if (!brcmf_fws_queue_netbufs(bcdc->fws)) {
-    ret = brcmf_proto_txdata(drvr, ifidx, 0, b_netbuf);
   } else {
-    ret = brcmf_fws_process_netbuf(ifp, b_netbuf);
+    brcmf_netbuf_grow_tail(b_netbuf, netbuf_size);
+    brcmf_netbuf_shrink_head(b_netbuf, drvr->hdrlen);
+    memcpy(b_netbuf->data, netbuf->data(), netbuf->size());
+    b_netbuf->priority = netbuf->priority();
+
+    if (!brcmf_fws_queue_netbufs(bcdc->fws)) {
+      ret = brcmf_proto_txdata(drvr, ifidx, 0, b_netbuf);
+    } else {
+      ret = brcmf_fws_process_netbuf(ifp, b_netbuf);
+    }
   }
 
-done:
   if (ret != ZX_OK) {
     brcmu_pkt_buf_free_netbuf(b_netbuf);
   }
