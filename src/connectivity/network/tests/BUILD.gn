@@ -156,12 +156,6 @@ fuchsia_component("device_name_provider") {
   deps = [ "//src/bringup/bin/device-name-provider" ]
 }
 
-fuchsia_component("mock_cobalt") {
-  testonly = true
-  manifest = "//src/cobalt/bin/testing/mock_cobalt/meta/mock_cobalt.cmx"
-  deps = [ "//src/cobalt/bin/testing/mock_cobalt:bin" ]
-}
-
 fuchsia_test_package("netstack-integration-tests") {
   package_name = "netstack-integration-tests"
   test_components = [
@@ -173,7 +167,7 @@ fuchsia_test_package("netstack-integration-tests") {
     ":device_name_provider",
 
     # mock_cobalt provides fuchsia.cobalt.LoggerFactory and fuchsia.cobalt.test.LoggerQuerier.
-    ":mock_cobalt",
+    "//src/cobalt/bin/testing/mock_cobalt:component",
 
     # stash_secure is used by dhcpd and netstack.
     "//src/sys/stash:stash_secure",
