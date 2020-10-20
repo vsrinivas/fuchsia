@@ -23,6 +23,8 @@ class Expression {
  public:
   Expression(T checker) : checker_(std::move(checker)) {}
   void Check(ast::Node* node) const {
+    ASSERT_TRUE(node);
+
     auto expr = node->AsExpression();
     ASSERT_TRUE(expr);
 
@@ -38,6 +40,8 @@ class Integer {
  public:
   Integer(uint64_t value) : value_(value) {}
   void Check(ast::Node* node) const {
+    ASSERT_TRUE(node);
+
     auto integer = node->AsInteger();
     ASSERT_TRUE(integer);
 
@@ -52,6 +56,8 @@ class String {
  public:
   String(std::string value) : value_(value) {}
   void Check(ast::Node* node) const {
+    ASSERT_TRUE(node);
+
     auto str = node->AsString();
     ASSERT_TRUE(str);
 
@@ -66,6 +72,8 @@ class Identifier {
  public:
   Identifier(std::string identifier) : identifier_(identifier) {}
   void Check(ast::Node* node) const {
+    ASSERT_TRUE(node);
+
     auto ident = node->AsIdentifier();
     ASSERT_TRUE(ident);
 
@@ -82,16 +90,15 @@ class VariableDecl {
   VariableDecl(const std::string& name, bool is_const, T expr_check)
       : name_(name), is_const_(is_const), expr_check_(std::move(expr_check)) {}
   void Check(ast::Node* node) const {
+    ASSERT_TRUE(node);
+
     auto decl = node->AsVariableDecl();
     ASSERT_TRUE(decl);
 
     EXPECT_EQ(name_, decl->identifier());
     EXPECT_EQ(is_const_, decl->is_const());
 
-    auto expr = decl->expression();
-    ASSERT_TRUE(expr);
-
-    expr_check_.Check(expr);
+    expr_check_.Check(decl->expression());
   }
 
  private:
@@ -106,6 +113,8 @@ class Object {
   Object(Args... args) : fields_(args...) {}
 
   void Check(ast::Node* node) const {
+    ASSERT_TRUE(node);
+
     auto obj = node->AsObject();
     ASSERT_TRUE(obj);
     ASSERT_EQ(obj->fields().size(), std::tuple_size<std::tuple<Args...>>::value);
@@ -133,10 +142,11 @@ class Field {
   Field(const std::string& name, T value_check) : name_(name), value_check_(value_check) {}
 
   void Check(ast::Node* node) const {
+    ASSERT_TRUE(node);
+
     auto field = node->AsField();
     ASSERT_TRUE(field);
     EXPECT_EQ(name_, field->name());
-    ASSERT_TRUE(field->value());
     value_check_.Check(field->value());
   }
 
@@ -151,6 +161,8 @@ class Path {
       : is_local_(is_local), elements_(elements) {}
 
   void Check(ast::Node* node) const {
+    ASSERT_TRUE(node);
+
     auto path = node->AsPath();
     ASSERT_TRUE(path);
     if (is_local_) {
@@ -205,7 +217,9 @@ class Program {
   Program(Args... args) : checks_(args...) {}
 
   void Check(ast::Node* node) const {
-    ASSERT_GE(node->Children().size(), std::tuple_size<std::tuple<Args...>>::value);
+    ASSERT_TRUE(node);
+
+    ASSERT_EQ(node->Children().size(), std::tuple_size<std::tuple<Args...>>::value);
     if constexpr (std::tuple_size<std::tuple<Args...>>::value > 0) {
       DoCheck(node);
     }
@@ -253,9 +267,11 @@ TEST(ParserTest, VariableDeclFail) {
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
 
-  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+  EXPECT_EQ(
+      "Program(VariableDecl('var' E[Expected space] Identifier('s') '=' Expression(Integer('0'))))",
+      parse->ToString(kTestString));
 
-  CHECK_NODE(parse, Program());
+  CHECK_NODE(parse, Program(VariableDecl("s", false, Expression(Integer(0)))));
 }
 
 TEST(ParserTest, TwoVariableDecl) {
@@ -283,9 +299,14 @@ TEST(ParserTest, TwoVariableDeclFail) {
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
 
-  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+  EXPECT_EQ(
+      "Program(VariableDecl('var' E[Expected space] Identifier('x') '=' "
+      "Expression(Integer('0'))) ';' VariableDecl('var' Identifier('y') '=' "
+      "Expression(Integer('0'))))",
+      parse->ToString(kTestString));
 
-  CHECK_NODE(parse, Program());
+  CHECK_NODE(parse, Program(VariableDecl("x", false, Expression(Integer(0))), Skip(),
+                            VariableDecl("y", false, Expression(Integer(0)))));
 }
 
 TEST(ParserTest, TwoVariableDeclTrailingChars) {
@@ -297,9 +318,10 @@ TEST(ParserTest, TwoVariableDeclTrailingChars) {
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
 
+  // TODO: This error will be easier to handle well when more of the syntax is in place.
   EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
 
-  CHECK_NODE(parse, Program());
+  CHECK_NODE(parse, Program(Skip()));
 }
 
 TEST(ParserTest, TwoVariableDeclConst) {
@@ -388,9 +410,12 @@ TEST(ParserTest, VariableDeclIntegerZeroFirst) {
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
 
-  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(Identifier(E[Identifier cannot begin with a digit] '0912'))))",
+      parse->ToString(kTestString));
 
-  CHECK_NODE(parse, Program());
+  CHECK_NODE(parse, Program(VariableDecl("s", false, Expression(Identifier("0912")))));
 }
 
 TEST(ParserTest, VariableDeclIntegerHexNoMark) {
@@ -399,9 +424,12 @@ TEST(ParserTest, VariableDeclIntegerHexNoMark) {
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
 
-  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(Identifier(E[Identifier cannot begin with a digit] '0abc'))))",
+      parse->ToString(kTestString));
 
-  CHECK_NODE(parse, Program());
+  CHECK_NODE(parse, Program(VariableDecl("s", false, Expression(Identifier("0abc")))));
 }
 
 TEST(ParserTest, VariableDeclString) {
@@ -465,9 +493,12 @@ TEST(ParserTest, VariableDeclStringDangling) {
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
 
-  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(String('\"' 'bob' E[Expected '\"']))))",
+      parse->ToString(kTestString));
 
-  CHECK_NODE(parse, Program());
+  CHECK_NODE(parse, Program(VariableDecl("s", false, Expression(String("bob")))));
 }
 
 TEST(ParserTest, VariableDeclObject) {
@@ -513,6 +544,23 @@ TEST(ParserTest, VariableDeclObjectTrailingComma) {
 
   CHECK_NODE(parse,
              Program(VariableDecl("s", false, Expression(Object(Field("foo", Integer(6)))))));
+}
+
+TEST(ParserTest, VariableDeclObjectMissingComma) {
+  const auto kTestString = "var s = { foo: 6 bar: 7 }";
+
+  auto parse = Parse(kTestString);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(Object('{' Field(Identifier('foo') ':' Integer('6')) E[Expected ','] "
+      "Field(Identifier('bar') ':' Integer('7')) '}'))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl(
+                        "s", false,
+                        Expression(Object(Field("foo", Integer(6)), Field("bar", Integer(7)))))));
 }
 
 TEST(ParserTest, VariableDeclObjectNested) {
@@ -571,9 +619,18 @@ TEST(ParserTest, VariableDeclObjectDangling) {
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
 
-  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(Object('{' Field(Identifier('foo') ':' Object('{' Field(Identifier('bar') ':' "
+      "Integer('7')) '}')) ',' Field(Identifier('baz') ':' Integer('23')) ',' "
+      "Field(Identifier('bang') ':' String('\"' 'hiiii' '\"')) E[Expected '}']))))",
+      parse->ToString(kTestString));
 
-  CHECK_NODE(parse, Program());
+  CHECK_NODE(parse,
+             Program(VariableDecl(
+                 "s", false,
+                 Expression(Object(Field("foo", Object(Field("bar", Integer(7)))),
+                                   Field("baz", Integer(23)), Field("bang", String("hiiii")))))));
 }
 
 TEST(ParserTest, VariableDeclObjectDanglingField) {
@@ -582,9 +639,13 @@ TEST(ParserTest, VariableDeclObjectDanglingField) {
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
 
-  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(Object('{' Field(Identifier('foo') ':' "
+      "E[Expected value]) E[Expected '}']))))",
+      parse->ToString(kTestString));
 
-  CHECK_NODE(parse, Program());
+  CHECK_NODE(parse, Program(VariableDecl("s", false, Expression(Object(Field("foo", Skip()))))));
 }
 
 TEST(ParserTest, VariableDeclObjectNoFieldSeparator) {
@@ -593,9 +654,13 @@ TEST(ParserTest, VariableDeclObjectNoFieldSeparator) {
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
 
-  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(Object('{' Field(Identifier('foo') E[Expected ':'] Integer('6')) '}'))))",
+      parse->ToString(kTestString));
 
-  CHECK_NODE(parse, Program());
+  CHECK_NODE(parse,
+             Program(VariableDecl("s", false, Expression(Object(Field("foo", Integer(6)))))));
 }
 
 TEST(ParserTest, VariableDeclStringBadEscape) {
@@ -604,9 +669,26 @@ TEST(ParserTest, VariableDeclStringBadEscape) {
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
 
-  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(String('\"' 'bob' '\\' E[Bad escape sequence: '\\q'] 'bob' '\"'))))",
+      parse->ToString(kTestString));
 
-  CHECK_NODE(parse, Program());
+  CHECK_NODE(parse, Program(VariableDecl("s", false, Expression(String("bobbob")))));
+}
+
+TEST(ParserTest, VariableDeclStringDanglingEscape) {
+  const auto kTestString = "var s = \"bob\\";
+
+  auto parse = Parse(kTestString);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(String('\"' 'bob' '\\' E[Escape sequence at end of input] E[Expected '\"']))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl("s", false, Expression(String("bob")))));
 }
 
 TEST(ParserTest, VariableDeclPath) {
@@ -726,9 +808,12 @@ TEST(ParserTest, VariableDeclPathDanglingQuote) {
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
 
-  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('x') '=' "
+      "Expression(Path('.' '/' 'somew' '`' ' oo oo ' E[Expected '`']))))",
+      parse->ToString(kTestString));
 
-  CHECK_NODE(parse, Program());
+  CHECK_NODE(parse, Program(VariableDecl("x", false, Expression(Path(true, {"somew oo oo "})))));
 }
 
 TEST(ParserTest, VariableDeclPathInObject) {
@@ -915,28 +1000,6 @@ TEST(ParserTest, VariableDeclAddSubtractChainInObject) {
                         "s", false,
                         Expression(Object(Field("foo", AddSub(AddSub(Integer(1), '-', Integer(2)),
                                                               '+', Integer(7))))))));
-}
-
-TEST(ParserTest, VariableDeclAddSubtractDangle) {
-  const auto kTestString = "var s = 1 - 2 + ";
-
-  auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
-
-  CHECK_NODE(parse, Program());
-}
-
-TEST(ParserTest, VariableDeclAddSubtractTogether) {
-  const auto kTestString = "var s = 1 - + 2";
-
-  auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
-
-  EXPECT_EQ("Program(E[Unrecoverable parse error])", parse->ToString(kTestString));
-
-  CHECK_NODE(parse, Program());
 }
 
 }  // namespace shell::parser

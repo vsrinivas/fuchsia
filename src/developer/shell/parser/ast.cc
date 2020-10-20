@@ -219,8 +219,11 @@ Path::Path(size_t start, std::vector<std::shared_ptr<Node>> children)
 
 AddSub::AddSub(size_t start, std::vector<std::shared_ptr<Node>> children)
     : Nonterminal(start, std::move(children)) {
+  bool seen_op = false;
   for (const auto& child : Children()) {
     if (auto op = child->AsOperator()) {
+      seen_op = true;
+
       if (op->op() == "-") {
         type_ = kSubtract;
       } else {
@@ -228,7 +231,7 @@ AddSub::AddSub(size_t start, std::vector<std::shared_ptr<Node>> children)
         type_ = kAdd;
       }
     } else if (!child->IsError()) {
-      if (!a_) {
+      if (!seen_op) {
         a_ = child.get();
       } else {
         b_ = child.get();

@@ -33,7 +33,13 @@ ParseResult IdentifierCharacter(ParseResult prefix);
 // Parse a keyword.
 template <typename T = ast::Terminal>
 fit::function<ParseResult(ParseResult)> KW(const std::string& keyword) {
-  return Seq(Token<T>(keyword), Not(IdentifierCharacter));
+  return Seq(Token<T>(keyword), Alt(Not(IdentifierCharacter), ErInsert("Expected space")));
+}
+
+// Parse a token. If it isn't there, insert an error.
+template <typename T = ast::Terminal>
+fit::function<ParseResult(ParseResult)> ExToken(const std::string& token) {
+  return Alt(Token<T>(token), ErInsert("Expected '" + token + "'"));
 }
 
 // Token Rules -------------------------------------------------------------------------------------
@@ -64,7 +70,7 @@ ParseResult PathElement(ParseResult prefix) {
   return Alt(Token<ast::PathEscape>(Seq(Token("\\"), AnyChar)),
              Token<ast::PathElement>(OnePlus(PathCharacter)),
              Seq(Token<ast::PathEscape>("`"), Token<ast::PathElement>(ZeroPlus(AnyCharBut("`"))),
-                 Token<ast::PathEscape>("`")))(std::move(prefix));
+                 ExToken<ast::PathEscape>("`")))(std::move(prefix));
 }
 
 // Grammar Rules -----------------------------------------------------------------------------------
@@ -72,7 +78,8 @@ ParseResult PathElement(ParseResult prefix) {
 // Parses an identifier
 //     myVariable
 ParseResult Identifier(ParseResult prefix) {
-  return NT<ast::Identifier>(Seq(Not(Digit), UnescapedIdentifier))(std::move(prefix));
+  return NT<ast::Identifier>(Seq(Alt(Not(Digit), ErInsert("Identifier cannot begin with a digit")),
+                                 UnescapedIdentifier))(std::move(prefix));
 }
 
 // Parses a root path with at least one element and no trailing slash
@@ -138,8 +145,9 @@ ParseResult EscapeSequence(ParseResult prefix) {
   return Alt(Token<ast::EscapeSequence>("\\n"), Token<ast::EscapeSequence>("\\t"),
              Token<ast::EscapeSequence>("\\\n"), Token<ast::EscapeSequence>("\\r"),
              Token<ast::EscapeSequence>("\\\\"), Token<ast::EscapeSequence>("\\\""),
-             Token<ast::EscapeSequence>(
-                 Seq(Token<ast::EscapeSequence>("\\u"), Multi(6, HexDigit))))(std::move(prefix));
+             Token<ast::EscapeSequence>(Seq(Token<ast::EscapeSequence>("\\u"), Multi(6, HexDigit))),
+             Seq(Token("\\"), Alt(ErSkip("Bad escape sequence: '\\%MATCH%'", AnyChar),
+                                  ErInsert("Escape sequence at end of input"))))(std::move(prefix));
 }
 
 // Parses a sequence of characters that might be within a string body.
@@ -153,7 +161,8 @@ ParseResult StringEntity(ParseResult prefix) {
 //     "The quick brown fox jumped over the lazy dog."
 //     "A newline.\nA tab\tA code point\xF0"
 ParseResult NormalString(ParseResult prefix) {
-  return NT<ast::String>(Seq(Token("\""), ZeroPlus(StringEntity), Token("\"")))(std::move(prefix));
+  return NT<ast::String>(Seq(Token("\""), ZeroPlus(StringEntity), ExToken("\"")))(
+      std::move(prefix));
 }
 
 // Parse an ordinary string literal, or a multiline string literal.
@@ -182,7 +191,7 @@ const auto& SimpleExpression = LogicalOr;
 //     foo: 6
 //     "bar & grill": "Open now"
 ParseResult Field(ParseResult prefix) {
-  return NT<ast::Field>(WSSeq(Alt(NormalString, Identifier), Token<ast::FieldSeparator>(":"),
+  return NT<ast::Field>(WSSeq(Alt(NormalString, Identifier), ExToken<ast::FieldSeparator>(":"),
                               SimpleExpression))(std::move(prefix));
 }
 
@@ -190,7 +199,7 @@ ParseResult Field(ParseResult prefix) {
 //     foo: 6
 //     foo: 6, "bar & grill": "Open now",
 ParseResult ObjectBody(ParseResult prefix) {
-  return WSSeq(Field, ZeroPlus(WSSeq(Token(","), Field)), Maybe(Token(",")))(std::move(prefix));
+  return WSSeq(Field, ZeroPlus(WSSeq(ExToken(","), Field)), Maybe(Token(",")))(std::move(prefix));
 }
 
 // Parse an object literal.
@@ -198,7 +207,7 @@ ParseResult ObjectBody(ParseResult prefix) {
 //     { foo: 6, "bar & grill": "Open now" }
 //     { foo: { bar: 6 }, "bar & grill": "Open now" }
 ParseResult Object(ParseResult prefix) {
-  return NT<ast::Object>(WSSeq(Token("{"), Maybe(ObjectBody), Token("}")))(std::move(prefix));
+  return NT<ast::Object>(WSSeq(Token("{"), Maybe(ObjectBody), ExToken("}")))(std::move(prefix));
 }
 
 // Parse a Value.
@@ -209,7 +218,7 @@ ParseResult Value(ParseResult prefix) {
   /* Eventual full version of this rule is:
   return Alt(List, Object, Range, Lambda, Parenthetical, Block, If, Atom)(std::move(prefix));
   */
-  return Alt(Object, Atom)(std::move(prefix));
+  return Alt(Object, Atom, ErInsert("Expected value"))(std::move(prefix));
 }
 
 // Unimplemented.
@@ -243,7 +252,8 @@ ParseResult LogicalOr(ParseResult prefix) { return LogicalAnd(std::move(prefix))
 // Parses an expression. This is effectively unimplemented right now.
 ParseResult Expression(ParseResult prefix) {
   // Unimplemented
-  return NT<ast::Expression>(SimpleExpression)(std::move(prefix));
+  return NT<ast::Expression>(Alt(SimpleExpression, ErInsert("Expected expression")))(
+      std::move(prefix));
 }
 
 // Parses a variable declaration:
@@ -261,7 +271,7 @@ ParseResult ProgramContent(ParseResult prefix) {
   return Alt(WSSeq(VariableDecl, Maybe(WSSeq(AnyChar(";&", "; or &"), ProgramMeta))),
              WSSeq(FunctionDecl, Program),
              WSSeq(Expression, Maybe(WSSeq(AnyChar(";&", "; or &"), ProgramMeta))),
-  Empty)(prefix);
+             Empty)(std::move(prefix));
   */
   return Alt(WSSeq(VariableDecl, Maybe(WSSeq(AnyChar(";&"), ProgramContent))),
              Empty)(std::move(prefix));
