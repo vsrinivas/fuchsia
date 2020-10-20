@@ -77,8 +77,7 @@ void EscherEnvironment::SetUp() {
   if (!VK_TESTS_SUPPRESSED()) {
     VulkanInstance::Params instance_params(
         {{},
-         {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
-          VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME},
+         {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME},
          false});
     auto validation_layer_name = VulkanInstance::GetValidationLayerName();
     if (validation_layer_name) {
@@ -87,12 +86,14 @@ void EscherEnvironment::SetUp() {
 
     VulkanDeviceQueues::Params device_params(
         {{VK_KHR_MAINTENANCE1_EXTENSION_NAME, VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
-          VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME, VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME},
+          VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME},
          {
              VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
          },
          vk::SurfaceKHR()});
 #ifdef VK_USE_PLATFORM_FUCHSIA
+    instance_params.extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
+    device_params.required_extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
     device_params.required_extension_names.insert(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
     device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
     device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);

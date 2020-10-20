@@ -18,9 +18,9 @@ using namespace escher;
 // This function must be called after we set up the global EscherEnvironment, i.e. inside test body
 // functions.
 std::unique_ptr<Escher> GetEscherWithProtectedMemoryEnabled() {
-  VulkanDeviceQueues::Params device_params(
-      {{VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME}, {}, vk::SurfaceKHR()});
+  VulkanDeviceQueues::Params device_params({{}, {}, vk::SurfaceKHR()});
 #ifdef OS_FUCHSIA
+  device_params.required_extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
   device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
   device_params.flags = VulkanDeviceQueues::Params::kAllowProtectedMemory;
 #endif
