@@ -46,12 +46,14 @@ class DeviceConfig {
     OutputDeviceProfile()
         : OutputDeviceProfile(true, StreamUsageSetFromRenderUsages(kFidlRenderUsages)) {}
 
+    OutputDeviceProfile(bool eligible_for_loopback, StreamUsageSet supported_usages)
+        : OutputDeviceProfile(eligible_for_loopback, supported_usages,
+                              VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume),
+                              false, PipelineConfig::Default(), 0.0) {}
+
     OutputDeviceProfile(bool eligible_for_loopback, StreamUsageSet supported_usages,
-                        bool independent_volume_control = false,
-                        PipelineConfig pipeline_config = PipelineConfig::Default(),
-                        float driver_gain_db = 0.0,
-                        VolumeCurve volume_curve =
-                            VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
+                        VolumeCurve volume_curve, bool independent_volume_control,
+                        PipelineConfig pipeline_config, float driver_gain_db)
         : DeviceProfile(std::move(supported_usages), driver_gain_db),
           eligible_for_loopback_(eligible_for_loopback),
           independent_volume_control_(independent_volume_control),
@@ -103,8 +105,7 @@ class DeviceConfig {
     bool eligible_for_loopback_ = true;
     bool independent_volume_control_ = false;
     PipelineConfig pipeline_config_ = PipelineConfig::Default();
-    VolumeCurve volume_curve_ =
-        VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
+    VolumeCurve volume_curve_;
     std::shared_ptr<LoudnessTransform> loudness_transform_ =
         std::make_shared<MappedLoudnessTransform>(volume_curve_);
   };

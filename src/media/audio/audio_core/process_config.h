@@ -36,6 +36,11 @@ class ProcessConfigBuilder {
   ProcessConfigBuilder& AddThermalPolicyEntry(ThermalConfig::Entry thermal_policy_entry);
   ProcessConfig Build();
 
+  VolumeCurve default_volume_curve() {
+    return default_volume_curve_.value_or(
+        VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume));
+  }
+
  private:
   std::optional<VolumeCurve> default_volume_curve_;
   RenderUsageVolumes default_render_usage_volumes_;

@@ -1147,5 +1147,63 @@ TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyWithNoSupportedStreamTypes) 
             config.pipeline_config().root().output_channels);
 }
 
+TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyVolumeCurve) {
+  static const std::string kConfigWithRoutingPolicy =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 0.5,
+          "db": -5.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "output_devices": [
+      {
+        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "supported_stream_types": []
+      },
+      {
+        "device_id": "*",
+        "supported_stream_types": [
+          "render:media",
+          "render:interruption",
+          "render:background",
+          "render:communications",
+          "render:system_agent"
+        ]
+      }
+    ]
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithRoutingPolicy.data(),
+                               kConfigWithRoutingPolicy.size()));
+
+  const audio_stream_unique_id_t expected_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                         0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                         0x05, 0x3a}};
+
+  const auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(result.is_ok());
+  auto& result_curve =
+      result.value().device_config().output_device_profile(expected_id).volume_curve();
+
+  // Matching volume curve in kConfigWithRoutingPolicy above.
+  auto expected_curve = VolumeCurve::FromMappings({VolumeCurve::VolumeMapping(0.0, -160.0),
+                                                   VolumeCurve::VolumeMapping(0.5, -5.0),
+                                                   VolumeCurve::VolumeMapping(1.0, 0.0)});
+  ASSERT_TRUE(result.is_ok());
+  auto curve = expected_curve.take_value();
+
+  EXPECT_FLOAT_EQ(curve.VolumeToDb(0.25), result_curve.VolumeToDb(0.25));
+  EXPECT_FLOAT_EQ(curve.VolumeToDb(0.5), result_curve.VolumeToDb(0.5));
+  EXPECT_FLOAT_EQ(curve.VolumeToDb(0.75), result_curve.VolumeToDb(0.75));
+}
+
 }  // namespace
 }  // namespace media::audio

@@ -155,12 +155,15 @@ TEST_F(ThermalAgentTest, OneConfigEntry) {
                                   48000,
                                   2});
   auto transitions = MakeTransitions({{kTargetName, {kThrottledConfig}}});
+  auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   ProcessConfig process_config =
       ProcessConfigBuilder()
-          .SetDefaultVolumeCurve(
-              VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
-          .AddDeviceProfile({std::nullopt, DeviceConfig::OutputDeviceProfile(
-                                               false, {}, false, std::move(pipeline_config))})
+          .SetDefaultVolumeCurve(volume_curve)
+          .AddDeviceProfile(
+              {std::nullopt, DeviceConfig::OutputDeviceProfile(
+                                 /*eligible_for_loopback=*/false, /*supported_usages=*/{},
+                                 volume_curve, /*independent_volume_control=*/false,
+                                 std::move(pipeline_config), /*driver_gain_db=*/0.0)})
           .AddThermalPolicyEntry(ThermalConfig::Entry(kTripPoint, transitions))
           .Build();
   fuchsia::thermal::ControllerPtr thermal_controller;
@@ -242,12 +245,15 @@ TEST_F(ThermalAgentTest, MultipleConfigEntries) {
       MakeTransitions({{kTargetName1, kTripPoint1Config1}, {kTargetName2, kTripPoint1Config2}});
   auto transitions2 =
       MakeTransitions({{kTargetName0, kTripPoint2Config0}, {kTargetName2, kTripPoint2Config2}});
+  auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   ProcessConfig process_config =
       ProcessConfigBuilder()
-          .SetDefaultVolumeCurve(
-              VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
-          .AddDeviceProfile({std::nullopt, DeviceConfig::OutputDeviceProfile(
-                                               false, {}, false, std::move(pipeline_config))})
+          .SetDefaultVolumeCurve(volume_curve)
+          .AddDeviceProfile(
+              {std::nullopt, DeviceConfig::OutputDeviceProfile(
+                                 /*eligible_for_loopback=*/false, /*supported_usages=*/{},
+                                 volume_curve, /*independent_volume_control=*/false,
+                                 std::move(pipeline_config), /*driver_gain_db=*/0.0)})
           .AddThermalPolicyEntry(ThermalConfig::Entry(kTripPoint0, transitions0))
           .AddThermalPolicyEntry(ThermalConfig::Entry(kTripPoint1, transitions1))
           .AddThermalPolicyEntry(ThermalConfig::Entry(kTripPoint2, transitions2))

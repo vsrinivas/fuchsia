@@ -347,9 +347,9 @@ TEST_F(AudioOutputTest, UpdateLoudnessTransformOnSetupMixTask) {
   static const VolumeCurve volume_curve = VolumeCurve::DefaultForMinGain(-10.);
   static DeviceConfig::OutputDeviceProfile profile = DeviceConfig::OutputDeviceProfile(
       /*eligible_for_loopback=*/true,
-      /*supported_usages=*/StreamUsageSetFromRenderUsages(kFidlRenderUsages),
+      /*supported_usages=*/StreamUsageSetFromRenderUsages(kFidlRenderUsages), volume_curve,
       /*independent_volume_control=*/false, /*pipeline_config=*/PipelineConfig::Default(),
-      /*driver_gain_db=*/0.0, volume_curve);
+      /*driver_gain_db=*/0.0);
   audio_output_->SetupMixTask(profile, zx::msec(1).to_msecs(), kOneFramePerMs);
 
   auto output_transform = audio_output_->profile().loudness_transform();
@@ -365,7 +365,8 @@ TEST_F(AudioOutputTest, HonorIndpendentVolumeControlLoudnessTransform) {
       DeviceConfig::OutputDeviceProfile(
           /*eligible_for_loopback=*/true,
           /*supported_usages=*/StreamUsageSetFromRenderUsages(kFidlRenderUsages),
-          /*independent_volume_control=*/true),
+          VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume),
+          /*independent_volume_control=*/true, PipelineConfig::Default(), /*driver_gain_db*/ 0.0),
       zx::msec(1).to_msecs(), kOneFramePerMs);
 
   auto transform = audio_output_->profile().loudness_transform();

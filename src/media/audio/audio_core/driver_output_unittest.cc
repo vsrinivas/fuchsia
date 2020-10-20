@@ -436,7 +436,9 @@ class DriverV2OutputTest : public testing::ThreadingModelFixture {
                      DeviceConfig::OutputDeviceProfile(
                          /* eligible_for_loopback */ true,
                          StreamUsageSetFromRenderUsages(kFidlRenderUsages),
-                         /* independent_volume_control */ false, CreatePipelineConfig())})
+                         VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume),
+                         /* independent_volume_control */ false, CreatePipelineConfig(),
+                         /* driver_gain_db */ 0.0)})
                 .SetDefaultVolumeCurve(
                     VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
                 .Build()) {}

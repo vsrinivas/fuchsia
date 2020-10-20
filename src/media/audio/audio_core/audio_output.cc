@@ -237,10 +237,10 @@ fit::promise<void, zx_status_t> AudioOutput::UpdateDeviceProfile(
     auto updated_profile = DeviceConfig::OutputDeviceProfile(
         params.eligible_for_loopback.value_or(current_profile.eligible_for_loopback()),
         params.supported_usages.value_or(current_profile.supported_usages()),
+        params.volume_curve.value_or(current_profile.volume_curve()),
         params.independent_volume_control.value_or(current_profile.independent_volume_control()),
         params.pipeline_config.value_or(current_profile.pipeline_config()),
-        params.driver_gain_db.value_or(current_profile.driver_gain_db()),
-        params.volume_curve.value_or(current_profile.volume_curve()));
+        params.driver_gain_db.value_or(current_profile.driver_gain_db()));
     device_config.SetOutputDeviceProfile(driver()->persistent_unique_id(), updated_profile);
     set_config(device_config);
 

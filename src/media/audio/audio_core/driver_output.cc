@@ -429,10 +429,9 @@ void DriverOutput::OnDriverInfoFetched() {
   // Update the AudioDevice |config_| with the updated |pipeline_config|.
   // Only |frames_per_second| and |channels| were potentially updated in |pipeline_config|, so it is
   // not necessary to UpdateDeviceProfile() to consequently reconstruct the OutputPipeline.
-  auto updated_profile =
-      DeviceConfig::OutputDeviceProfile(profile.eligible_for_loopback(), profile.supported_usages(),
-                                        profile.independent_volume_control(), pipeline_config,
-                                        profile.driver_gain_db(), profile.volume_curve());
+  auto updated_profile = DeviceConfig::OutputDeviceProfile(
+      profile.eligible_for_loopback(), profile.supported_usages(), profile.volume_curve(),
+      profile.independent_volume_control(), pipeline_config, profile.driver_gain_db());
   DeviceConfig updated_config = config();
   updated_config.SetOutputDeviceProfile(driver()->persistent_unique_id(), updated_profile);
   set_config(updated_config);

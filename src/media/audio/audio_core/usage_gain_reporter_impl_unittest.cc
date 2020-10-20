@@ -81,9 +81,11 @@ class UsageGainReporterTest : public gtest::TestLoopFixture {
                                        /* eligible_for_loopback=*/true, /*supported_usages=*/{})})
                 .AddDeviceProfile(
                     {std::vector<audio_stream_unique_id_t>{BLUETOOTH_DEVICE_ID_AUDIO_STREAM},
-                     DeviceConfig::OutputDeviceProfile(/* eligible_for_loopback=*/true,
-                                                       /*supported_usages=*/{},
-                                                       /* independent_volume_control=*/true)})
+                     DeviceConfig::OutputDeviceProfile(
+                         /* eligible_for_loopback=*/true,
+                         /*supported_usages=*/{}, VolumeCurve::DefaultForMinGain(-60.0),
+                         /* independent_volume_control=*/true, PipelineConfig::Default(),
+                         /*driver_gain_db=*/0.0)})
                 .Build()),
         usage_(fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)) {}
 

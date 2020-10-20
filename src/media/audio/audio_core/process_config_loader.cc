@@ -317,7 +317,8 @@ fit::result<std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
                       DeviceConfig::OutputDeviceProfile>,
             std::string>
 ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
-                                       StreamUsageSet* all_supported_usages) {
+                                       StreamUsageSet* all_supported_usages,
+                                       VolumeCurve volume_curve) {
   FX_DCHECK(value.IsObject());
 
   auto device_id_it = value.FindMember(kJsonKeyDeviceId);
@@ -394,7 +395,7 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
 
   return fit::ok(std::make_pair(
       device_id, DeviceConfig::OutputDeviceProfile(
-                     eligible_for_loopback, std::move(supported_stream_types),
+                     eligible_for_loopback, std::move(supported_stream_types), volume_curve,
                      independent_volume_control, std::move(pipeline_config), driver_gain_db)));
 }
 
@@ -448,8 +449,8 @@ fit::result<void, std::string> ParseOutputDevicePoliciesFromJsonObject(
 
   StreamUsageSet all_supported_usages;
   for (const auto& output_device_profile : output_device_profiles.GetArray()) {
-    auto result =
-        ParseOutputDeviceProfileFromJsonObject(output_device_profile, &all_supported_usages);
+    auto result = ParseOutputDeviceProfileFromJsonObject(
+        output_device_profile, &all_supported_usages, config_builder->default_volume_curve());
     if (result.is_error()) {
       return result.take_error_result();
     }

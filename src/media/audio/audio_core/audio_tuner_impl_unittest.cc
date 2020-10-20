@@ -21,9 +21,14 @@ namespace {
 const auto kDeviceIdString = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 const auto kDeviceIdUnique = AudioDevice::UniqueIdFromString(kDeviceIdString).take_value();
 
-const auto kVolumeCurve = VolumeCurve::DefaultForMinGain(-160.0f);
+const auto kDefaultVolumeCurve = VolumeCurve::DefaultForMinGain(-160.0f);
 const auto kDefaultProcessConfig =
-    ProcessConfig::Builder().SetDefaultVolumeCurve(kVolumeCurve).Build();
+    ProcessConfig::Builder()
+        .SetDefaultVolumeCurve(kDefaultVolumeCurve)
+        .AddDeviceProfile({std::vector<audio_stream_unique_id_t>{kDeviceIdUnique},
+                           DeviceConfig::OutputDeviceProfile(
+                               /*eligible_for_loopback=*/true, /*supported_usages=*/{})})
+        .Build();
 const auto kDefaultPipelineConfig = PipelineConfig::Default();
 
 void ExpectEq(const VolumeCurve& expected,
@@ -152,15 +157,7 @@ class AudioTunerTest : public gtest::TestLoopFixture {
                            std::move(plug_detector), process_config);
   }
 
-  std::unique_ptr<Context> CreateContext() {
-    auto process_config =
-        ProcessConfigBuilder()
-            .SetDefaultVolumeCurve(kVolumeCurve)
-            .AddDeviceProfile({std::vector<audio_stream_unique_id_t>{kDeviceIdUnique},
-                               DeviceConfig::OutputDeviceProfile()})
-            .Build();
-    return CreateContext(process_config);
-  }
+  std::unique_ptr<Context> CreateContext() { return CreateContext(kDefaultProcessConfig); }
 
   testing::TestEffectsModule test_effects_ = testing::TestEffectsModule::Open();
   ProcessConfig::Handle handle_;
@@ -179,7 +176,7 @@ TEST_F(AudioTunerTest, PlugDuringPipelineConfigUpdate) {
   // Ensure device is unplugged, then begin update.
   EXPECT_FALSE(device->plugged());
   bool completed_update = false;
-  auto new_profile = ToAudioDeviceTuningProfile(kDefaultPipelineConfig, kVolumeCurve);
+  auto new_profile = ToAudioDeviceTuningProfile(kDefaultPipelineConfig, kDefaultVolumeCurve);
   under_test.SetAudioDeviceProfile(kDeviceIdString, std::move(new_profile),
                                    [&completed_update](zx_status_t result) {
                                      completed_update = true;
@@ -212,7 +209,7 @@ TEST_F(AudioTunerTest, UnplugDuringPipelineConfigUpdate) {
   // Ensure device is plugged, then begin update.
   EXPECT_TRUE(device->plugged());
   bool completed_update = false;
-  auto new_profile = ToAudioDeviceTuningProfile(kDefaultPipelineConfig, kVolumeCurve);
+  auto new_profile = ToAudioDeviceTuningProfile(kDefaultPipelineConfig, kDefaultVolumeCurve);
   under_test.SetAudioDeviceProfile(kDeviceIdString, std::move(new_profile),
                                    [&completed_update](zx_status_t result) {
                                      completed_update = true;
@@ -244,7 +241,7 @@ TEST_F(AudioTunerTest, FailSimultaneousPipelineConfigUpdates) {
 
   bool completed_update1 = false;
   bool completed_update2 = false;
-  auto new_profile = ToAudioDeviceTuningProfile(kDefaultPipelineConfig, kVolumeCurve);
+  auto new_profile = ToAudioDeviceTuningProfile(kDefaultPipelineConfig, kDefaultVolumeCurve);
   under_test.SetAudioDeviceProfile(kDeviceIdString, fidl::Clone(new_profile),
                                    [&completed_update1](zx_status_t result) {
                                      completed_update1 = true;
@@ -282,13 +279,14 @@ TEST_F(AudioTunerTest, GetAvailableAudioEffects) {
 }
 
 TEST_F(AudioTunerTest, InitialGetAudioDeviceProfile) {
+  auto expected_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto expected_process_config =
       ProcessConfigBuilder()
-          .SetDefaultVolumeCurve(VolumeCurve::DefaultForMinGain(-60.0))
+          .SetDefaultVolumeCurve(kDefaultVolumeCurve)
           .AddDeviceProfile(
               {std::vector<audio_stream_unique_id_t>{kDeviceIdUnique},
                DeviceConfig::OutputDeviceProfile(
-                   /*eligible_for_loopback=*/true, /*supported_usages=*/{},
+                   /*eligible_for_loopback=*/true, /*supported_usages=*/{}, expected_curve,
                    /*independent_volume_control=*/false,
                    PipelineConfig(PipelineConfig::MixGroup{
                        .name = "linearize",
@@ -314,7 +312,8 @@ TEST_F(AudioTunerTest, InitialGetAudioDeviceProfile) {
                            .output_channels = 2}},
                        .loopback = true,
                        .output_rate = 48000,
-                       .output_channels = 2}))})
+                       .output_channels = 2}),
+                   /*driver_gain_db=*/0.0)})
           .Build();
 
   auto context = CreateContext(expected_process_config);
@@ -330,7 +329,6 @@ TEST_F(AudioTunerTest, InitialGetAudioDeviceProfile) {
         tuning_profile = std::move(profile);
       });
 
-  VolumeCurve expected_curve = expected_process_config.default_volume_curve();
   std::vector<fuchsia::media::tuning::Volume> result_curve = tuning_profile.volume_curve();
   ExpectEq(expected_curve, result_curve);
 
@@ -351,7 +349,8 @@ TEST_F(AudioTunerTest, GetDefaultAudioDeviceProfile) {
         tuning_profile = std::move(profile);
       });
 
-  VolumeCurve expected_curve = expected_process_config.default_volume_curve();
+  VolumeCurve expected_curve =
+      expected_process_config.device_config().output_device_profile(kDeviceIdUnique).volume_curve();
   std::vector<fuchsia::media::tuning::Volume> result_curve = tuning_profile.volume_curve();
   ExpectEq(expected_curve, result_curve);
 
@@ -363,7 +362,7 @@ TEST_F(AudioTunerTest, GetDefaultAudioDeviceProfile) {
 }
 
 TEST_F(AudioTunerTest, SetGetDeleteAudioDeviceProfile) {
-  auto context = CreateContext(kDefaultProcessConfig);
+  auto context = CreateContext();
   AudioTunerImpl under_test(*context);
 
   // Prepare device to be updated.
@@ -433,12 +432,10 @@ TEST_F(AudioTunerTest, SetGetDeleteAudioDeviceProfile) {
         tuning_profile = std::move(profile);
       });
   result_curve = tuning_profile.volume_curve();
-  ExpectEq(kVolumeCurve, result_curve);
-  ExpectEq(kDefaultProcessConfig.device_config()
-               .output_device_profile(kDeviceIdUnique)
-               .pipeline_config()
-               .root(),
-           tuning_profile.pipeline());
+  auto default_profile =
+      kDefaultProcessConfig.device_config().output_device_profile(kDeviceIdUnique);
+  ExpectEq(default_profile.volume_curve(), result_curve);
+  ExpectEq(default_profile.pipeline_config().root(), tuning_profile.pipeline());
 }
 
 TEST_F(AudioTunerTest, SetAudioEffectConfig) {
@@ -446,11 +443,11 @@ TEST_F(AudioTunerTest, SetAudioEffectConfig) {
   std::string initial_effect_config = "";
   auto initial_process_config =
       ProcessConfigBuilder()
-          .SetDefaultVolumeCurve(VolumeCurve::DefaultForMinGain(-60.0))
+          .SetDefaultVolumeCurve(kDefaultVolumeCurve)
           .AddDeviceProfile(
               {std::vector<audio_stream_unique_id_t>{kDeviceIdUnique},
                DeviceConfig::OutputDeviceProfile(
-                   /*eligible_for_loopback=*/true, /*supported_usages=*/{},
+                   /*eligible_for_loopback=*/true, /*supported_usages=*/{}, kDefaultVolumeCurve,
                    /*independent_volume_control=*/false,
                    PipelineConfig(PipelineConfig::MixGroup{
                        .name = "linearize",
@@ -476,7 +473,8 @@ TEST_F(AudioTunerTest, SetAudioEffectConfig) {
                            .output_channels = 2}},
                        .loopback = true,
                        .output_rate = 48000,
-                       .output_channels = 2}))})
+                       .output_channels = 2}),
+                   /*driver_gain_db=*/0.0)})
           .Build();
   auto context = CreateContext(initial_process_config);
   AudioTunerImpl under_test(*context);
@@ -537,7 +535,7 @@ TEST_F(AudioTunerTest, SetAudioEffectConfig) {
 }
 
 TEST_F(AudioTunerTest, FailSetAudioEffectConfigNoInstanceName) {
-  auto context = CreateContext(kDefaultProcessConfig);
+  auto context = CreateContext();
   AudioTunerImpl under_test(*context);
 
   // Prepare device to be updated.
@@ -562,7 +560,7 @@ TEST_F(AudioTunerTest, FailSetAudioEffectConfigNoInstanceName) {
 }
 
 TEST_F(AudioTunerTest, FailSetAudioEffectConfigNoConfig) {
-  auto context = CreateContext(kDefaultProcessConfig);
+  auto context = CreateContext();
   AudioTunerImpl under_test(*context);
 
   // Prepare device to be updated.
@@ -587,7 +585,7 @@ TEST_F(AudioTunerTest, FailSetAudioEffectConfigNoConfig) {
 }
 
 TEST_F(AudioTunerTest, FailSetAudioEffectConfigInvalidInstanceName) {
-  auto context = CreateContext(kDefaultProcessConfig);
+  auto context = CreateContext();
   AudioTunerImpl under_test(*context);
 
   // Prepare device to be updated.

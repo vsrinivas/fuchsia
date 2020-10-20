@@ -135,10 +135,9 @@ void AudioTunerImpl::SetAudioEffectConfig(std::string device_id,
 AudioTunerImpl::OutputDeviceSpecification AudioTunerImpl::GetDefaultDeviceSpecification(
     const std::string& device_id) {
   auto unique_id = AudioDevice::UniqueIdFromString(device_id).take_value();
-  PipelineConfig device_profile =
-      context_.process_config().device_config().output_device_profile(unique_id).pipeline_config();
-  VolumeCurve volume_curve = context_.process_config().default_volume_curve();
-  return OutputDeviceSpecification{.pipeline_config = device_profile, .volume_curve = volume_curve};
+  auto device_profile = context_.process_config().device_config().output_device_profile(unique_id);
+  return OutputDeviceSpecification{.pipeline_config = device_profile.pipeline_config(),
+                                   .volume_curve = device_profile.volume_curve()};
 }
 
 bool AudioTunerImpl::UpdateTunedDeviceSpecification(
