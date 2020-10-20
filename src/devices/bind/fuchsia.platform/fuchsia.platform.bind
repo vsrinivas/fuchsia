@@ -48,6 +48,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  GENERIC = 0,
   RTL8211F = 0x01,
   AMLOGIC_S912 = 0x02,
   AMLOGIC_A311D = 0x06,

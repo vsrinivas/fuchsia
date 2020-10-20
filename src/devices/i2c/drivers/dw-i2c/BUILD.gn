@@ -2,9 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("dw_i2c-bind") {
+  rules = "dw_i2c.bind"
+  output = "dw_i2c-bind.h"
+  tests = "tests.json"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
 
 driver_module("dw-i2c") {
   configs += [
@@ -18,6 +26,7 @@ driver_module("dw-i2c") {
   ]
   sources = [ "dw-i2c.cc" ]
   deps = [
+    ":dw_i2c-bind",
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.i2cimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -27,9 +36,6 @@ driver_module("dw-i2c") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
@@ -44,6 +50,7 @@ test("dw-i2c-test") {
     "dw-i2c.cc",
   ]
   deps = [
+    ":dw_i2c-bind",
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.i2cimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -54,9 +61,6 @@ test("dw-i2c-test") {
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mock-function",
@@ -68,7 +72,10 @@ test("dw-i2c-test") {
 
 unittest_package("dw-i2c-test-package") {
   package_name = "dw-i2c-test"
-  deps = [ ":dw-i2c-test" ]
+  deps = [
+    ":dw-i2c-test",
+    ":dw_i2c-bind_test",
+  ]
 
   tests = [
     {

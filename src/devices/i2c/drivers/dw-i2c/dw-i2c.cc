@@ -16,7 +16,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
@@ -27,6 +26,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
+
+#include "src/devices/i2c/drivers/dw-i2c/dw_i2c-bind.h"
 
 namespace dw_i2c {
 
@@ -693,10 +694,6 @@ static zx_driver_ops_t dw_i2c_driver_ops = {
 }  // namespace dw_i2c
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(dw_i2c, dw_i2c::dw_i2c_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DW_I2C)
-ZIRCON_DRIVER_END(dw_i2c)
+ZIRCON_DRIVER(dw_i2c, dw_i2c::dw_i2c_driver_ops, "zircon", "0.1")
+
 //clang-format on
