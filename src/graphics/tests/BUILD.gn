@@ -74,11 +74,17 @@ test_package("vulkan-tests") {
       name = "vkext"
       dest = "vkext_unprotected"
       environments = magma_libvulkan_hardware_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
     {
       name = "vkext"
       dest = "vkext_protected"
       environments = protected_libvulkan_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
     {
       name = "vkpriority"
