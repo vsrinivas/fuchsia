@@ -8,6 +8,7 @@ from __future__ import print_function
 import argparse
 import functools
 import json
+import logging
 import os
 import platform
 import stat
@@ -21,7 +22,7 @@ from typing import List
 import paths
 
 if sys.hexversion < 0x030700F0:
-  print(
+  logging.critical(
       'This script requires Python >= 3.7 to run (you have %s), please upgrade!'
       % (platform.python_version()),
       file=sys.stderr)
@@ -222,11 +223,11 @@ class Image:
 
     ret = self._Cgpt(cgpt_args)
     if ret.returncode != 0:
-      print('\n'
+      logging.critical('\n'
             '======= CGPT ADD FAILED! =======\n'
             'Maybe your disk is too small?\n')
-      print(ret.stdout)
-      print(ret.stderr)
+      logging.error(ret.stdout)
+      logging.error(ret.stderr)
       return False
     return True
 
@@ -254,11 +255,10 @@ class Image:
     self.file.seek(offset, 0)
 
     written = 0
-    print(
+    logging.info(
         '   Writing image {} to partition {}... '.format(
-            part.path.split('/')[-1], part.label),
-        end=' ',
-        flush=True)
+            part.path.split('/')[-1], part.label)
+        )
     with open(part.path, 'rb') as fh:
       start = time.perf_counter()
       for block in iter(functools.partial(fh.read, self.block_size), b''):
@@ -269,33 +269,33 @@ class Image:
       os.fsync(self.file.fileno())
       finish = time.perf_counter()
     per_second = written / (finish - start)
-    print('{} in {:1.2f}s, {}/s'.format(
+    logging.info('     Wrote {} in {:1.2f}s, {}/s'.format(
         PrettySize(written), finish - start, PrettySize(per_second)))
 
   def Finalise(self):
     """Write all the partitions this image represents to disk/file."""
     if not self.is_usb:
       # first, make sure the file is big enough.
-      print('Create image of size={} bytes'.format(self.file_size))
+      logging.info('Create image of size={} bytes'.format(self.file_size))
       self.file.truncate(self.file_size)
       self.file.flush()
       os.fsync(self.file.fileno())
 
-    print('Creating new GPT partition table...', end='')
+    logging.info('Creating new GPT partition table...')
     self._Cgpt(['create', self.filename])
     self._Cgpt(['boot', '-p', self.filename])
-    print('done')
+    logging.info('Done.')
 
-    print('Creating and writing partitions...')
+    logging.info('Creating and writing partitions...')
     current_offset = Image.SECTOR_SIZE * Image.GPT_SECTORS
     for part in self.partitions:
       if not self._CgptAdd(part, current_offset):
-        print('Write failed, aborting.')
+        logging.warning('Write failed, aborting.')
         self.file.close()
         return
       self.WritePart(part, current_offset)
       current_offset += part.size
-    print('Done.')
+    logging.info('Done.')
     self.file.close()
 
 
@@ -315,17 +315,14 @@ def GetPartitions():
       for image in images_list:
         images[make_unique_name(image['name'], image['type'])] = image
   except IOError as err:
-    print(
-        'Failed to find image manifest. Have you run `fx build`?',
-        file=sys.stderr)
-    print(err)
+    logging.critical('Failed to find image manifest. Have you run `fx build`?', exc_info=err)
     return []
 
   ret = []
   is_bootable = False
   for image in IMAGES:
     if image.unique_name() not in images:
-      print("Skipping image that wasn't built: {}".format(image.unique_name()))
+      logging.debug("Skipping image that wasn't built: {}".format(image.unique_name()))
       continue
 
     for part_type in image.guids:
@@ -336,7 +333,7 @@ def GetPartitions():
         is_bootable = True
 
   if not is_bootable:
-    print('ERROR: mkinstaller would generate an unbootable image.' +
+    logging.critical('ERROR: mkinstaller would generate an unbootable image.' +
           'Are you building for a supported platform?')
     return []
 
@@ -375,21 +372,21 @@ def EjectDisk(path):
     subprocess.run(['eject', path])
   elif system == 'Darwin':
     subprocess.run(['diskutil', 'eject', path])
-  print('Ejected USB disk')
+  logging.info('Ejected USB disk')
 
 
 def Main(args):
   path = args.FILE
   if args.create:
     if not args.force and os.path.exists(path):
-      print(
+      logging.critical(
           'File {} already exists, not creating an image. Use --force if you want to proceed.'
           .format(path),
           file=sys.stderr)
       return 1
   else:
     if not os.path.exists(path):
-      print(
+      logging.critical(
           ('Path {} does not exist, use --create to create a disk image.\n'
            'Detected USB devices:\n'
            '{}').format(path, '\n'.join(GetUsbDisks())),
@@ -397,7 +394,7 @@ def Main(args):
           file=sys.stderr)
       return 1
     if not IsUsbDisk(path):
-      print(
+      logging.critical(
           ('Path {} is not a USB device. Use -f to force.\n'
            'Detected USB devices:\n'
            '{}').format(path, '\n'.join(GetUsbDisks())),
@@ -405,14 +402,17 @@ def Main(args):
           file=sys.stderr)
       return 1
 
-    if not os.access(path, os.W_OK):
-      print('Changing ownership of {} to {}'.format(path,
+    if not os.access(path, os.W_OK) and sys.stdin.isatty():
+      logging.warning('Changing ownership of {} to {}'.format(path,
                                                     os.environ.get('USER')))
       subprocess.run(
           ['sudo', 'chown', os.environ.get('USER'), path],
           stdin=sys.stdin,
           stdout=sys.stdout,
           stderr=sys.stderr)
+    elif not os.access(path, os.W_OK):
+      logging.critical('Cannot write to {}. Please check file permissions!'.format(path))
+      return 1
 
   parts = GetPartitions()
   if not parts:
@@ -449,6 +449,16 @@ if __name__ == '__main__':
       default='2M',
       help='Block size (optionally suffixed by K, M, G) to write. Default is 2M'
   )
+  parser.add_argument(
+    '-v',
+    '--verbose',
+    action='store_true',
+    help='Be verbose while creating disk images.'
+  )
   parser.add_argument('FILE', help='Path to USB device or installer image')
   argv = parser.parse_args()
+  level = logging.WARNING
+  if argv.verbose:
+    level = logging.DEBUG
+  logging.basicConfig(format='mkinstaller: %(levelname)s: %(message)s', level=level)
   sys.exit(Main(argv))
