@@ -21,7 +21,7 @@ SliceEntry CreateSliceEntry(uint16_t vpart) {
   // Slices are 1-indexed.
   // TODO(fxb/59980) include the zero entry, too.
   static uint64_t vslice = 1;
-  return SliceEntry::Create(vpart, vslice++);
+  return SliceEntry(vpart, vslice++);
 }
 
 VPartitionEntry CreatePartitionEntry(size_t slices) {
@@ -39,10 +39,7 @@ VPartitionEntry CreatePartitionEntry(size_t slices) {
   std::uniform_int_distribution<uint32_t> d2;
   uint32_t flags = d2(rand);
 
-  return VPartitionEntry::Create(
-      type, guid, slices,
-      VPartitionEntry::Name(std::string_view(reinterpret_cast<const char*>(name), sizeof(name))),
-      flags);
+  return VPartitionEntry(type, guid, slices, VPartitionEntry::StringFromArray(name), flags);
 }
 
 void ValidateMetadata(Metadata& metadata, const std::vector<VPartitionEntry>& expected_partitions,

@@ -5,7 +5,6 @@
 #include <cstdint>
 
 #include <fvm/format.h>
-
 #include <zxtest/zxtest.h>
 
 namespace fvm {
@@ -15,7 +14,7 @@ constexpr uint64_t kVPartition = 15;
 constexpr uint64_t kVSlice = 25;
 
 TEST(SliceEntryTest, DefaultsToUnallocatedAndZeroed) {
-  SliceEntry entry = SliceEntry::Create();
+  SliceEntry entry;
   ASSERT_FALSE(entry.IsAllocated());
   ASSERT_TRUE(entry.IsFree());
   ASSERT_EQ(entry.VPartition(), 0);
@@ -23,7 +22,7 @@ TEST(SliceEntryTest, DefaultsToUnallocatedAndZeroed) {
 }
 
 TEST(SliceEntryTest, CreateAllocatesAndSetsVSliceAndVPartition) {
-  SliceEntry entry = SliceEntry::Create(kVPartition, kVSlice);
+  SliceEntry entry(kVPartition, kVSlice);
   EXPECT_TRUE(entry.IsAllocated());
   EXPECT_FALSE(entry.IsFree());
   EXPECT_EQ(entry.VPartition(), kVPartition);
@@ -31,7 +30,7 @@ TEST(SliceEntryTest, CreateAllocatesAndSetsVSliceAndVPartition) {
 }
 
 TEST(SliceEntryTest, SetAllocatesAndSetsVSliceAndVPartition) {
-  SliceEntry entry = SliceEntry::Create();
+  SliceEntry entry;
   ASSERT_TRUE(entry.IsFree());
   ASSERT_EQ(entry.VPartition(), 0);
   ASSERT_EQ(entry.VSlice(), 0);
@@ -45,7 +44,7 @@ TEST(SliceEntryTest, SetAllocatesAndSetsVSliceAndVPartition) {
 }
 
 TEST(SliceEntryTest, ReleaseZeroesAndDeallocates) {
-  SliceEntry entry = SliceEntry::Create(kVPartition, kVSlice);
+  SliceEntry entry(kVPartition, kVSlice);
 
   entry.Release();
 

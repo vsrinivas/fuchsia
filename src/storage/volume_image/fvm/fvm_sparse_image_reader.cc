@@ -205,16 +205,15 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
       for (uint64_t slice = extent.slice_start; slice < extent.slice_start + extent.slice_count;
            ++slice) {
         // The +1 is because sparse images 0-index their partitions, but FVM 1-indexes.
-        slices.push_back(fvm::SliceEntry::Create(partition_index + 1, slice));
+        slices.emplace_back(partition_index + 1, slice);
       }
       allocated_slices += extent.slice_count;
     }
 
     // Push FVM's partition entry
-    fvm_partitions.push_back(fvm::VPartitionEntry::Create(
-        partition_descriptor.type, fvm::kPlaceHolderInstanceGuid.data(), allocated_slices,
-        fvm::VPartitionEntry::Name(partition_descriptor.name),
-        0));  // TODO(fxbug.dev/59567): figure out flags
+    fvm_partitions.emplace_back(partition_descriptor.type, fvm::kPlaceHolderInstanceGuid.data(),
+                                allocated_slices,
+                                fvm::VPartitionEntry::StringFromArray(partition_descriptor.name));
   }
 
   // Remember the first offset where data starts.

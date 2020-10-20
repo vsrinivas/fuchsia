@@ -80,13 +80,13 @@ static constexpr uint64_t kMaxVPartitions = 1024;
 static constexpr uint64_t kMaxUsablePartitions = kMaxVPartitions - 1;
 
 // Maximum size for a partition GUID.
-static constexpr uint64_t kGuidSize = GPT_GUID_LEN;
+static constexpr size_t kGuidSize = GPT_GUID_LEN;
 
 // Maximum string length for virtual partition GUID.
-static constexpr uint64_t kGuidStrLen = GPT_GUID_STRLEN;
+static constexpr size_t kGuidStrLen = GPT_GUID_STRLEN;
 
 // Maximum length allowed for a virtual partition name.
-static constexpr uint16_t kMaxVPartitionNameLength = 24;
+static constexpr size_t kMaxVPartitionNameLength = 24;
 
 // Number of bits required for the VSlice address space.
 static constexpr uint64_t kSliceEntryVSliceBits = 32;
@@ -272,33 +272,30 @@ static_assert(std::is_standard_layout_v<Header> && sizeof(Header) <= kBlockSize,
 
 // Represent an entry in the FVM Partition table, which is fixed size contiguous flat buffer.
 struct VPartitionEntry {
-  // std::string_view's constructor is not explicit and because of past confusion, we want to make
-  // sure nobody accidentally initialises with a char* that isn't NULL terminated.
-  struct Name {
-    explicit Name(std::string_view name) : name(name) {}
+  VPartitionEntry() = default;
 
-    template <size_t N>
-    explicit constexpr Name(const uint8_t (&array)[N])
-        : name(std::string_view(reinterpret_cast<const char*>(&array[0]),
-                                std::find(&array[0], &array[N], 0) - &array[0])) {}
+  // The name must not contain embedded nulls (this code will assert if it does). The name will
+  // be truncated to kMaxVPartitionNameLength characters.
+  //
+  // See StringFromArray() to create the name parmeter if you're creating from another fixed-length
+  // buffer.
+  //
+  // The format of the flags is not user-controllable since the flag values are not exposed in the
+  // header. Pass either 0 for default, or copy from another VPartitionEntry.
+  VPartitionEntry(const uint8_t type[kGuidSize], const uint8_t guid[kGuidSize], uint32_t slices,
+                  std::string name, uint32_t flags = 0);
 
-    std::string_view name;
-  };
-
-  // Returns a new blank entry.
-  static VPartitionEntry Create() {
-    VPartitionEntry entry;
-    entry.Release();
-    return entry;
+  // Creates a string from the given possibly-null-terminated fixed-length buffer. If there is a
+  // null terminator it will indicate the end of the string. if there is none, the string will use
+  // up the entire input buffer.
+  template <size_t N>
+  static std::string StringFromArray(const uint8_t (&array)[N]) {
+    return std::string(reinterpret_cast<const char*>(&array[0]),
+                       std::find(&array[0], &array[N], 0) - &array[0]);
   }
 
-  // Returns a new entry with a the respective |type|, |guid|, |name|, |slices| and |flags|.
-  // Note: This is subject to NRVO.
-  static VPartitionEntry Create(const uint8_t* type, const uint8_t* guid, uint32_t slices,
-                                Name name, uint32_t flags);
-
   // Returns the allowed set of flags in |raw_flags|.
-  static uint32_t ParseFlags(uint32_t raw_flags);
+  static uint32_t MaskInvalidFlags(uint32_t raw_flags);
 
   // Returns true if the entry is allocated.
   bool IsAllocated() const;
@@ -318,22 +315,24 @@ struct VPartitionEntry {
   // Marks this entry active status as |is_active|.
   void SetActive(bool is_active);
 
-  std::string name() const { return std::string(Name(unsafe_name).name); }
+  std::string name() const { return StringFromArray(unsafe_name); }
 
   // Mirrors GPT value.
-  uint8_t type[kGuidSize];
+  uint8_t type[kGuidSize] = {0};
 
   // Mirrors GPT value.
-  uint8_t guid[kGuidSize];
+  uint8_t guid[kGuidSize] = {0};
 
   // Number of allocated slices.
-  uint32_t slices;
+  uint32_t slices = 0u;
 
-  uint32_t flags;
+  // Used internally by the mutator/accessor functions above.
+  uint32_t flags = 0u;
 
-  // Partition name. This is not necessarily NULL terminated. Prefer to use the name() accessor
-  // above.
-  uint8_t unsafe_name[fvm::kMaxVPartitionNameLength];
+  // Partition name. The name is counted until the first null byte or the end of the static buffer
+  // (it is not null terminated in this case). Prefer to use the name() accessor above which
+  // abstracts this handling.
+  uint8_t unsafe_name[fvm::kMaxVPartitionNameLength] = {0};
 };
 
 static_assert(sizeof(VPartitionEntry) == 64, "Unchecked VPartitionEntry size change.");
@@ -346,19 +345,12 @@ static_assert(!internal::block_alignment<VPartitionEntry[kMaxVPartitions]>::ends
 
 // A Slice Entry represents the allocation of a slice.
 //
-// Slice Entries are laid out in an array on disk.  The index into this array
-// determines the "physical slice" being accessed, where physical slices consist
-// of all disk space immediately following the FVM metadata on an FVM partition.
+// Slice Entries are laid out in an array on disk. The index into this array determines the
+// "physical slice" being accessed, where physical slices consist of all disk space immediately
+// following the FVM metadata on an FVM partition.
 struct SliceEntry {
-  // Returns a new blank entry.
-  static SliceEntry Create() {
-    SliceEntry entry;
-    entry.Release();
-    return entry;
-  }
-
-  // Returns a slice entry with vpartition and vslice set.
-  static SliceEntry Create(uint64_t vpartition, uint64_t vslice);
+  SliceEntry() = default;
+  SliceEntry(uint64_t vpartition, uint64_t vslice);
 
   // Returns true if this slice is assigned to a partition.
   bool IsAllocated() const;
@@ -381,12 +373,11 @@ struct SliceEntry {
   void Set(uint64_t vpartition, uint64_t vslice);
 
   // Packed entry, the format must remain obscure to the user.
-  uint64_t data;
+  uint64_t data = 0u;
 };
 
 static_assert(sizeof(SliceEntry) == 8, "Unchecked SliceEntry size change.");
-static_assert(std::is_standard_layout_v<SliceEntry>,
-              "VSliceEntry must be standard layout.");
+static_assert(std::is_standard_layout_v<SliceEntry>, "VSliceEntry must be standard layout.");
 static_assert(!internal::block_alignment<SliceEntry>::may_cross_boundary,
               "VSliceEntry must not cross block boundary.");
 

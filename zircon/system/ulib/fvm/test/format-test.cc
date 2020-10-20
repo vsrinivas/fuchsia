@@ -125,4 +125,46 @@ TEST(FvmFormat, Getters) {
             header.GetMaxAllocationTableEntriesForDiskSize(header.slice_size * 1024 * 1024));
 }
 
+TEST(VPartitionEntry, DefaultConstructor) {
+  VPartitionEntry def;
+  EXPECT_FALSE(def.IsAllocated());
+  EXPECT_TRUE(def.IsActive());
+  EXPECT_TRUE(def.IsFree());
+  EXPECT_EQ("", def.name());
+}
+
+TEST(VPartitionEntry, Constructor) {
+  uint8_t type[kGuidSize];
+  std::fill(std::begin(type), std::end(type), '1');
+
+  uint8_t guid[kGuidSize];
+  std::fill(std::begin(guid), std::end(guid), '2');
+
+  const char kName[] = "Name";
+  const uint32_t kSlices = 345;
+
+  VPartitionEntry entry(type, guid, kSlices, kName);
+  EXPECT_TRUE(std::equal(std::begin(type), std::end(type), std::begin(entry.type)));
+  EXPECT_TRUE(std::equal(std::begin(guid), std::end(guid), std::begin(entry.guid)));
+
+  EXPECT_EQ(kName, entry.name());
+}
+
+TEST(VPartitionEntry, StringFromArray) {
+  constexpr size_t kLen = 8;
+  uint8_t buf[kLen] = {0};
+  EXPECT_TRUE(VPartitionEntry::StringFromArray(buf).empty());
+
+  buf[0] = 'a';
+  std::string str = VPartitionEntry::StringFromArray(buf);
+  ASSERT_EQ(1u, str.size());
+  EXPECT_EQ('a', str[0]);
+
+  // Not null terminated.
+  std::fill(std::begin(buf), std::end(buf), 'b');
+  str = VPartitionEntry::StringFromArray(buf);
+  ASSERT_EQ(kLen, str.size());
+  EXPECT_EQ("bbbbbbbb", str);
+}
+
 }  // namespace fvm

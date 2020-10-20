@@ -15,7 +15,7 @@ constexpr uint8_t kZeroGuid[sizeof(VPartitionEntry::guid)] = {0};
 constexpr uint8_t kZeroName[sizeof(VPartitionEntry::unsafe_name)] = {0};
 
 TEST(VPartitionEntryTest, DefaultsToUnallocatedAndZeroed) {
-  VPartitionEntry entry = VPartitionEntry::Create();
+  VPartitionEntry entry;
 
   ASSERT_EQ(entry.slices, 0);
   ASSERT_EQ(entry.flags, 0);
@@ -36,12 +36,11 @@ TEST(VPartitionEntryTest, CreateValuesAreOkAndFlagsAreFiltered) {
   constexpr uint32_t kFlags = ~0;
   constexpr uint32_t kSlices = 20;
 
-  VPartitionEntry entry =
-      VPartitionEntry::Create(kType, kGuid, kSlices, VPartitionEntry::Name(kName), kFlags);
+  VPartitionEntry entry(kType, kGuid, kSlices, VPartitionEntry::StringFromArray(kName), kFlags);
 
   ASSERT_EQ(entry.slices, kSlices);
   // Verify that only the parsed flags are propagated into the entry data.
-  EXPECT_EQ(entry.flags, VPartitionEntry::ParseFlags(kFlags));
+  EXPECT_EQ(entry.flags, VPartitionEntry::MaskInvalidFlags(kFlags));
   EXPECT_BYTES_EQ(entry.type, kType, sizeof(kType));
   EXPECT_BYTES_EQ(entry.guid, kGuid, sizeof(kGuid));
   EXPECT_BYTES_EQ(entry.unsafe_name, kName, sizeof(kName));
@@ -52,7 +51,7 @@ TEST(VPartitionEntryTest, CreateValuesAreOkAndFlagsAreFiltered) {
 }
 
 TEST(VPartitionEntryTest, SetActiveModifiesActiveView) {
-  VPartitionEntry entry = VPartitionEntry::Create();
+  VPartitionEntry entry;
 
   ASSERT_TRUE(entry.IsActive());
   entry.SetActive(false);
@@ -65,7 +64,7 @@ TEST(VPartitionEntryTest, SetActiveModifiesActiveView) {
 }
 
 TEST(VPartitionEntryTest, UpdatingSliceCountIsAllocated) {
-  VPartitionEntry entry = VPartitionEntry::Create();
+  VPartitionEntry entry;
 
   ASSERT_FALSE(entry.IsAllocated());
   ASSERT_TRUE(entry.IsFree());
@@ -76,7 +75,7 @@ TEST(VPartitionEntryTest, UpdatingSliceCountIsAllocated) {
 }
 
 TEST(VPartitionEntryTest, ReleaseZeroesAndMarksAsFree) {
-  VPartitionEntry entry = VPartitionEntry::Create();
+  VPartitionEntry entry;
   entry.slices++;
 
   ASSERT_TRUE(entry.IsAllocated());

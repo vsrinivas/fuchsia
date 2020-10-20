@@ -714,7 +714,7 @@ zx_status_t VPartitionManager::FIDLAllocatePartition(
     return reply(txn, ZX_ERR_INVALID_ARGS);
   }
 
-  std::string_view name(name_data, name_size);
+  std::string name(name_data, name_size);
 
   // Check that name does not have any NULL terminators in it.
   if (name.find('\0') != std::string::npos) {
@@ -735,8 +735,7 @@ zx_status_t VPartitionManager::FIDLAllocatePartition(
     }
 
     auto* entry = GetVPartEntryLocked(vpart_entry);
-    *entry = VPartitionEntry::Create(type->value, instance->value, 0, VPartitionEntry::Name(name),
-                                     flags);
+    *entry = VPartitionEntry(type->value, instance->value, 0, std::move(name), flags);
 
     if ((status = AllocateSlicesLocked(vpart.get(), 0, slice_count)) != ZX_OK) {
       entry->slices = 0;  // Undo VPartition allocation

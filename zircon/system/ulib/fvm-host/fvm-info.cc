@@ -183,8 +183,9 @@ zx_status_t FvmInfo::AllocatePartition(const fvm::PartitionDescriptor* partition
 
     // Make sure this vpartition has not already been allocated
     if (vpart->IsFree()) {
-      *vpart = fvm::VPartitionEntry::Create(
-          partition->type, guid, 0, fvm::VPartitionEntry::Name(partition->name), partition->flags);
+      *vpart = fvm::VPartitionEntry(partition->type, guid, 0,
+                                    fvm::VPartitionEntry::StringFromArray(partition->name),
+                                    partition->flags);
       vpart_hint_ = index + 1;
       dirty_ = true;
       *vpart_index = index;

@@ -135,21 +135,18 @@ std::string Header::ToString() const {
   return ss.str();
 }
 
-VPartitionEntry VPartitionEntry::Create(const uint8_t* type, const uint8_t* guid, uint32_t slices,
-                                        Name name, uint32_t flags) {
-  VPartitionEntry entry = VPartitionEntry::Create();
-  entry.slices = slices;
-  // Filter out unallowed flags.
-  entry.flags = ParseFlags(flags);
-  memcpy(&entry.type, type, kGuidSize);
-  memcpy(&entry.guid, guid, kGuidSize);
-  const size_t name_len = std::min<size_t>(kMaxVPartitionNameLength, name.name.size());
-  memcpy(entry.unsafe_name, name.name.data(), name_len);
-  memset(&entry.unsafe_name[name_len], 0, kMaxVPartitionNameLength - name_len);
-  return entry;
+VPartitionEntry::VPartitionEntry(const uint8_t in_type[kGuidSize], const uint8_t in_guid[kGuidSize],
+                                 uint32_t in_slices, std::string in_name, uint32_t in_flags)
+    : slices(in_slices), flags(MaskInvalidFlags(in_flags)) {
+  memcpy(&type, in_type, kGuidSize);
+  memcpy(&guid, in_guid, kGuidSize);
+
+  // The input name should not have any embedded nulls.
+  ZX_DEBUG_ASSERT(in_name.find('\0') == std::string::npos);
+  memcpy(unsafe_name, in_name.data(), std::min(kMaxVPartitionNameLength, in_name.size()));
 }
 
-uint32_t VPartitionEntry::ParseFlags(uint32_t raw_flags) {
+uint32_t VPartitionEntry::MaskInvalidFlags(uint32_t raw_flags) {
   return raw_flags & kVPartitionEntryFlagMask;
 }
 
@@ -174,11 +171,7 @@ void VPartitionEntry::SetActive(bool is_active) {
   }
 }
 
-SliceEntry SliceEntry::Create(uint64_t vpartition, uint64_t vslice) {
-  SliceEntry entry;
-  entry.Set(vpartition, vslice);
-  return entry;
-}
+SliceEntry::SliceEntry(uint64_t vpartition, uint64_t vslice) { Set(vpartition, vslice); }
 
 void SliceEntry::Set(uint64_t vpartition, uint64_t vslice) {
   ZX_ASSERT(vpartition < kVPartitionEntryMax);
