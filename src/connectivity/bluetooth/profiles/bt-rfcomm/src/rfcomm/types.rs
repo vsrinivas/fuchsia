@@ -37,6 +37,12 @@ pub enum RfcommError {
     Other(#[from] anyhow::Error),
 }
 
+impl From<FrameParseError> for RfcommError {
+    fn from(src: FrameParseError) -> RfcommError {
+        RfcommError::Frame(src)
+    }
+}
+
 /// Server Channels are 5 bits wide; they are the 5 most significant bits of the
 /// DLCI.
 /// Server Channels 0 and 31 are reserved. See RFCOMM 5.4.
@@ -50,6 +56,21 @@ impl ServerChannel {
     /// Returns an iterator over all the Server Channels.
     pub fn all() -> impl Iterator<Item = ServerChannel> {
         (Self::MIN.0..=Self::MAX.0).map(|x| ServerChannel(x))
+    }
+
+    /// Converts the ServerChannel to a DLCI for the provided `role`.
+    /// Defined in RFCOMM 5.4.
+    pub fn to_dlci(&self, role: Role) -> Result<DLCI, RfcommError> {
+        let direction_bit = match role {
+            Role::Initiator => 1,
+            Role::Responder => 0,
+            r => {
+                return Err(RfcommError::InvalidRole(r));
+            }
+        };
+
+        let v = (self.0 << 1) | direction_bit;
+        DLCI::try_from(v).map_err(RfcommError::from)
     }
 }
 
@@ -235,6 +256,35 @@ mod tests {
 
         let role = Role::Negotiating;
         assert_eq!(role.opposite_role(), Role::Initiator);
+    }
+
+    #[test]
+    fn test_server_channel_to_dlci_invalid_role() {
+        let invalid_role = Role::Unassigned;
+        let server_channel = ServerChannel(10);
+        assert_matches!(server_channel.to_dlci(invalid_role), Err(_));
+
+        let invalid_role = Role::Negotiating;
+        let server_channel = ServerChannel(13);
+        assert_matches!(server_channel.to_dlci(invalid_role), Err(_));
+    }
+
+    #[test]
+    fn test_server_channel_to_dlci() {
+        let server_channel = ServerChannel(5);
+        let expected_dlci = DLCI::try_from(11).unwrap();
+        assert_eq!(server_channel.to_dlci(Role::Initiator).unwrap(), expected_dlci);
+
+        let expected_dlci = DLCI::try_from(10).unwrap();
+        assert_eq!(server_channel.to_dlci(Role::Responder).unwrap(), expected_dlci);
+
+        let server_channel = ServerChannel::MIN;
+        let expected_dlci = DLCI::try_from(2).unwrap();
+        assert_eq!(server_channel.to_dlci(Role::Responder).unwrap(), expected_dlci);
+
+        let server_channel = ServerChannel::MAX;
+        let expected_dlci = DLCI::try_from(61).unwrap();
+        assert_eq!(server_channel.to_dlci(Role::Initiator).unwrap(), expected_dlci);
     }
 
     #[test]

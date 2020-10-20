@@ -69,12 +69,12 @@ impl Default for SessionParameters {
 }
 
 /// The current state of the session parameters.
-// TODO(fxbug.dev/59585): When the INT role is supported, introduce the `Negotiating` state for
-// the case of us waiting for a parameter negotiation response.
 #[derive(Clone, Copy, PartialEq)]
 enum ParameterNegotiationState {
     /// Parameters have not been negotiated.
     NotNegotiated,
+    /// Parameters are currently being negotiated.
+    Negotiating,
     /// Parameters have been negotiated.
     Negotiated(SessionParameters),
 }
@@ -86,7 +86,7 @@ impl ParameterNegotiationState {
     fn parameters(&self) -> SessionParameters {
         match self {
             Self::Negotiated(params) => *params,
-            Self::NotNegotiated => SessionParameters::default(),
+            Self::Negotiating | Self::NotNegotiated => SessionParameters::default(),
         }
     }
 
@@ -94,7 +94,7 @@ impl ParameterNegotiationState {
     fn is_negotiated(&self) -> bool {
         match self {
             Self::Negotiated(_) => true,
-            Self::NotNegotiated => false,
+            Self::Negotiating | Self::NotNegotiated => false,
         }
     }
 
@@ -281,10 +281,10 @@ impl SessionMultiplexer {
         Ok(())
     }
 
-    /// Returns true if the provided `dlci` has been initialized in the multiplexer.
-    #[cfg(test)]
-    fn dlci_registered(&self, dlci: &DLCI) -> bool {
-        self.channels.contains_key(dlci)
+    /// Returns true if the provided `dlci` has been initialized and established in
+    /// the multiplexer.
+    fn dlci_established(&self, dlci: &DLCI) -> bool {
+        self.channels.get(dlci).map(|c| c.is_established()).unwrap_or(false)
     }
 
     /// Returns true if at least one DLC has been established.
@@ -361,6 +361,10 @@ pub struct SessionInner {
     /// Outstanding frames that have been sent to the remote peer and are awaiting responses.
     outstanding_frames: OutstandingFrames,
 
+    /// Channels that are waiting to be established after either multiplexer startup or parameter
+    /// negotiation completes.
+    pending_channels: Vec<ServerChannel>,
+
     /// Sender used to relay outgoing frames to be sent to the remote peer.
     outgoing_frame_sender: mpsc::Sender<Frame>,
 
@@ -383,6 +387,7 @@ impl SessionInner {
         let session = Self {
             multiplexer: SessionMultiplexer::create(),
             outstanding_frames: OutstandingFrames::new(),
+            pending_channels: Vec::new(),
             outgoing_frame_sender,
             channel_opened_fn,
         };
@@ -436,6 +441,23 @@ impl SessionInner {
         }
     }
 
+    /// Processes pending open channel requests that are waiting for multiplexer startup or
+    /// parameter negotiation to complete.
+    async fn process_pending_channels(&mut self) -> Result<(), RfcommError> {
+        if !self.multiplexer().started() {
+            return Err(RfcommError::MultiplexerNotStarted);
+        }
+
+        let outstanding_channels = std::mem::take(&mut self.pending_channels);
+        for channel in outstanding_channels {
+            trace!("Processing outstanding open channel request: {:?}", channel);
+            if let Err(e) = self.open_remote_channel(channel).await {
+                warn!("Error opening remote channel {:?}: {:?}", channel, e);
+            }
+        }
+        Ok(())
+    }
+
     /// Finishes parameter negotiation for the Session with the provided `params` and
     /// reserves the specified DLCI.
     fn finish_parameter_negotiation(&mut self, params: &ParameterNegotiationParams) {
@@ -467,8 +489,6 @@ impl SessionInner {
 
     /// Attempts to initiate multiplexer startup by sending an SABM command over the
     /// Mux Control DLCI.
-    // TODO(fxbug.dev/59585): Remove this when full initiator role is supported.
-    #[cfg(test)]
     async fn start_multiplexer(&mut self) -> Result<(), RfcommError> {
         if self.multiplexer().started() || self.role() == Role::Negotiating {
             warn!("StartMultiplexer request when multiplexer has role: {:?}", self.role());
@@ -476,21 +496,19 @@ impl SessionInner {
         }
         self.multiplexer().set_role(Role::Negotiating);
 
-        // Send an SABM command to initiate mux startup with the remote peer.
-        let sabm_command = Frame::make_sabm_command(self.role(), DLCI::MUX_CONTROL_DLCI);
-        self.send_frame(sabm_command).await;
+        // Send the SABM command to initiate mux startup with the remote peer.
+        self.send_sabm_command(DLCI::MUX_CONTROL_DLCI).await;
         Ok(())
     }
 
     /// Attempts to initiate the parameter negotiation (PN) procedure as defined in RFCOMM 5.5.3
     /// for the given `dlci`.
-    // TODO(fxbug.dev/59585): Remove this when full initiator role is supported.
-    #[cfg(test)]
     async fn start_parameter_negotiation(&mut self, dlci: DLCI) -> Result<(), RfcommError> {
         if !self.multiplexer().started() {
             warn!("ParameterNegotiation request before multiplexer startup");
             return Err(RfcommError::MultiplexerNotStarted);
         }
+        self.multiplexer().parameters = ParameterNegotiationState::Negotiating;
 
         let pn_params = ParameterNegotiationParams::default_command(dlci);
         let pn_command = MuxCommand {
@@ -499,6 +517,49 @@ impl SessionInner {
         };
         let pn_frame = Frame::make_mux_command(self.role(), pn_command);
         self.send_frame(pn_frame).await;
+        Ok(())
+    }
+
+    /// Attempts to open a remote RFCOMM channel for the provided `server_channel`.
+    async fn open_remote_channel(
+        &mut self,
+        server_channel: ServerChannel,
+    ) -> Result<(), RfcommError> {
+        // If the multiplexer has not started yet, save the open channel request and
+        // attempt to start the multiplexer.
+        if !self.multiplexer().started() {
+            self.pending_channels.push(server_channel);
+
+            // Only attempt to start the multiplexer if we're not already negotiating.
+            if self.multiplexer().role() == Role::Unassigned {
+                self.start_multiplexer().await?;
+            }
+            return Ok(());
+        }
+
+        // When opening a remote channel, the DLCI is formed by taking the ServerChannel
+        // and the opposite of our role. See RFCOMM 5.4.
+        let dlci = server_channel.to_dlci(self.role().opposite_role())?;
+
+        // If the session-wide parameters have not been negotiated yet, save the open channel
+        // request and attempt to negotiate the parameters. Per RFCOMM 5.5.3, PN should occur
+        // at least once before creation of the first DLC. While it is valid to do a PN before
+        // every opened DLC, our implementation will only try to negotiate the parameters once.
+        if !self.multiplexer().parameters_negotiated() {
+            self.pending_channels.push(server_channel);
+
+            if self.multiplexer().parameters == ParameterNegotiationState::NotNegotiated {
+                self.start_parameter_negotiation(dlci).await?;
+            }
+            return Ok(());
+        }
+
+        if self.multiplexer().dlci_established(&dlci) {
+            return Err(RfcommError::ChannelAlreadyEstablished(dlci));
+        }
+
+        // Send the SABM Command to begin channel establishment.
+        self.send_sabm_command(dlci).await;
         Ok(())
     }
 
@@ -569,6 +630,8 @@ impl SessionInner {
                         MuxCommandParams::ParameterNegotiation(pn_response) => {
                             // Finish parameter negotiation based on remote peer's response.
                             self.finish_parameter_negotiation(&pn_response);
+                            // Attempt to process any tasks blocked on parameter negotiation.
+                            self.process_pending_channels().await?;
                             Ok(())
                         }
                         _ => {
@@ -658,7 +721,7 @@ impl SessionInner {
     }
 
     /// Handles an UnnumberedAcknowledgement response over the provided `dlci`.
-    fn handle_ua_response(&mut self, dlci: DLCI) {
+    async fn handle_ua_response(&mut self, dlci: DLCI) {
         match self.outstanding_frames.remove_frame(&dlci) {
             Some(frame) => {
                 match frame.data {
@@ -673,6 +736,22 @@ impl SessionInner {
                         if let Err(e) = self.multiplexer().start(Role::Initiator) {
                             warn!("Mux startup failed with error: {:?}", e);
                         }
+                        // Initiate parameter negotiation for session-wide parameters if there are
+                        // any pending open channel requests. Choosing the first channel is OK,
+                        // since we mainly care about setting session-wide (not DLC specific)
+                        // parameters.
+                        if let Some(Ok(dlci)) = self
+                            .pending_channels
+                            .first()
+                            .map(|sc| sc.to_dlci(self.role().opposite_role()))
+                        {
+                            // Error case is irrelevant since we just started the multiplexer.
+                            let _ = self.start_parameter_negotiation(dlci).await;
+                        }
+                    }
+                    FrameData::SetAsynchronousBalancedMode => {
+                        // Positive acknowledgement to open a remote channel on a user DLCI.
+                        self.establish_session_channel(dlci).await;
                     }
                     _frame_type => {
                         // TODO(fxbug.dev/59585): Handle UA response for other frame types.
@@ -693,7 +772,7 @@ impl SessionInner {
                 self.handle_sabm_command(frame.dlci).await;
             }
             FrameData::UnnumberedAcknowledgement => {
-                self.handle_ua_response(frame.dlci);
+                self.handle_ua_response(frame.dlci).await;
             }
             FrameData::DisconnectedMode => {
                 // TODO(fxbug.dev/59585): Handle DM response when the initiator role is
@@ -733,6 +812,11 @@ impl SessionInner {
             }
             _ => {}
         }
+    }
+
+    /// Sends an SABM command over the provided `dlci`.
+    async fn send_sabm_command(&mut self, dlci: DLCI) {
+        self.send_frame(Frame::make_sabm_command(self.role(), dlci)).await
     }
 
     /// Sends a UA response over the provided `dlci`.
@@ -926,10 +1010,12 @@ mod tests {
 
     /// Makes a DLC PN frame with arbitrary command parameters.
     /// `command_response` indicates whether the frame should be a command or response.
+    /// `dlci` is the DLCI being negotiated.
     /// `credit_flow` indicates whether credit-based flow control should be set or not.
     /// `max_frame_size` indicates the max frame size to use for the PN.
     fn make_dlc_pn_frame(
         command_response: CommandResponse,
+        dlci: DLCI,
         credit_flow: bool,
         max_frame_size: u16,
     ) -> Frame {
@@ -940,7 +1026,7 @@ mod tests {
         };
         let pn_command = MuxCommand {
             params: MuxCommandParams::ParameterNegotiation(ParameterNegotiationParams {
-                dlci: DLCI::try_from(3).unwrap(), // Random User DLCI
+                dlci,
                 credit_based_flow_handshake,
                 priority: 12,
                 max_frame_size,
@@ -976,13 +1062,24 @@ mod tests {
         let session = SessionInner {
             multiplexer: SessionMultiplexer::create(),
             outstanding_frames: OutstandingFrames::new(),
+            pending_channels: Vec::new(),
             outgoing_frame_sender,
             channel_opened_fn,
         };
         (session, outgoing_frames)
     }
 
-    /// Handles the provided `frame` and expects the `expected` frame type as a response on
+    /// Sets up a SessionInner with an outgoing `channel_receiver` which can be used to receive
+    /// opened RFCOMM channels.
+    fn setup_session_with_relay() -> (SessionInner, mpsc::Receiver<Frame>, mpsc::Receiver<Channel>)
+    {
+        let (mut session, outgoing_frames) = setup_session();
+        let (f, channel_receiver) = create_channel_relay();
+        session.channel_opened_fn = f;
+        (session, outgoing_frames, channel_receiver)
+    }
+
+    /// Handles the provided `frame` and expects the `expected` frame type sent to
     /// the provided `outgoing_frames` receiver.
     #[track_caller]
     fn handle_and_expect_frame(
@@ -1198,13 +1295,15 @@ mod tests {
         assert!(!session.session_parameters_negotiated());
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
-        // Remote initiates DLCPN.
+        // Remote initiates DLC PN over a random user DLCI.
+        let random_dlci = DLCI::try_from(3).unwrap();
         {
-            let dlcpn = make_dlc_pn_frame(CommandResponse::Command, false, 64);
+            let dlcpn = make_dlc_pn_frame(CommandResponse::Command, random_dlci, false, 64);
             let mut handle_fut = Box::pin(session.handle_frame(dlcpn));
             assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
             // Expect to reply with a DLCPN response.
-            let expected_frame = make_dlc_pn_frame(CommandResponse::Response, false, 64);
+            let expected_frame =
+                make_dlc_pn_frame(CommandResponse::Response, random_dlci, false, 64);
             match exec.run_until_stalled(&mut outgoing_frames_fut) {
                 Poll::Ready(Some(frame)) => {
                     assert_eq!(frame.data, expected_frame.data);
@@ -1220,7 +1319,7 @@ mod tests {
         assert_eq!(session.session_parameters(), expected_parameters);
 
         // Multiple DLC PN requests before a DLC is established is OK - new parameters.
-        let dlcpn = make_dlc_pn_frame(CommandResponse::Command, true, 11);
+        let dlcpn = make_dlc_pn_frame(CommandResponse::Command, random_dlci, true, 11);
         handle_and_expect_frame(
             &mut exec,
             &mut session,
@@ -1238,21 +1337,21 @@ mod tests {
     fn test_dlcpn_renegotiation_does_not_update_parameters() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        // Crete and start a SessionInner that relays any opened RFCOMM channels.
-        let (mut session, mut outgoing_frames) = setup_session();
-        let (f, mut channel_receiver) = create_channel_relay();
-        session.channel_opened_fn = f;
+        // Create and start a SessionInner that relays any opened RFCOMM channels.
+        let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session_with_relay();
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
-        // Remote peer initiates DLCPN.
+        // Remote peer initiates DLC PN over a random DLCI.
+        let random_dlci = DLCI::try_from(3).unwrap();
         {
-            let dlcpn = make_dlc_pn_frame(CommandResponse::Command, true, 100);
+            let dlcpn = make_dlc_pn_frame(CommandResponse::Command, random_dlci, true, 100);
             let mut handle_fut = Box::pin(session.handle_frame(dlcpn));
             let mut outgoing_frames_fut = Box::pin(outgoing_frames.next());
 
             assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
             // Expect to reply with a DLCPN response.
-            let expected_frame = make_dlc_pn_frame(CommandResponse::Response, true, 100);
+            let expected_frame =
+                make_dlc_pn_frame(CommandResponse::Response, random_dlci, true, 100);
             match exec.run_until_stalled(&mut outgoing_frames_fut) {
                 Poll::Ready(Some(frame)) => {
                     assert_eq!(frame.data, expected_frame.data);
@@ -1290,7 +1389,7 @@ mod tests {
 
         // Remote tries to re-negotiate the session parameters, we expect to reply with
         // a UIH PN response.
-        let dlcpn = make_dlc_pn_frame(CommandResponse::Command, true, 60);
+        let dlcpn = make_dlc_pn_frame(CommandResponse::Command, user_dlci, true, 60);
         handle_and_expect_frame(
             &mut exec,
             &mut session,
@@ -1309,10 +1408,8 @@ mod tests {
         let mut exec = fasync::Executor::new().unwrap();
 
         // Crete and start a SessionInner that relays any opened RFCOMM channels.
-        let (mut session, mut outgoing_frames) = setup_session();
+        let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session_with_relay();
         let mut outgoing_frames_fut = Box::pin(outgoing_frames.next());
-        let (f, mut channel_receiver) = create_channel_relay();
-        session.channel_opened_fn = f;
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
         // Remote peer sends SABM over a user DLCI - we expect a UA response.
@@ -1366,10 +1463,8 @@ mod tests {
         let mut exec = fasync::Executor::new().unwrap();
 
         // Crete and start a SessionInner that relays any opened RFCOMM channels.
-        let (mut session, mut outgoing_frames) = setup_session();
+        let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session_with_relay();
         let mut outgoing_frames_stream = Box::pin(outgoing_frames.next());
-        let (f, mut channel_receiver) = create_channel_relay();
-        session.channel_opened_fn = f;
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
         // Establish a user DLCI - the RFCOMM channel should be delivered to the channel
@@ -1457,10 +1552,8 @@ mod tests {
     fn test_disconnect_over_user_dlci_closes_session_channel() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        // Crete and start a SessionInner that saves any opened RFCOMM channel.
-        let (mut session, mut outgoing_frames) = setup_session();
-        let (f, mut channel_receiver) = create_channel_relay();
-        session.channel_opened_fn = f;
+        // Crete and start a SessionInner that relays any opened RFCOMM channel.
+        let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session_with_relay();
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
         // Establish a random user DLCI.
@@ -1484,7 +1577,7 @@ mod tests {
             disc.clone(),
             FrameTypeMarker::UnnumberedAcknowledgement,
         );
-        assert!(!session.multiplexer().dlci_registered(&user_dlci));
+        assert!(!session.multiplexer().dlci_established(&user_dlci));
 
         // Receiving a disconnect again on the already-closed DLCI should result in a DM response.
         handle_and_expect_frame(
@@ -1606,6 +1699,7 @@ mod tests {
         {
             let mut handle_fut = Box::pin(session.handle_frame(make_dlc_pn_frame(
                 CommandResponse::Response,
+                user_dlci,
                 true, // Peer supports credit-based flow control.
                 100,  // Peer supports max-frame-size of 100.
             )));
@@ -1615,5 +1709,157 @@ mod tests {
         let expected_parameters =
             SessionParameters { credit_based_flow: true, max_frame_size: 100 };
         assert_eq!(session.multiplexer().parameters(), expected_parameters);
+    }
+
+    #[test]
+    fn test_open_channel_request_establishes_channel_after_mux_startup_and_pn() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        // Crete and start a SessionInner that relays any opened RFCOMM channels.
+        let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session_with_relay();
+        let mut rfcomm_channel_fut = Box::pin(channel_receiver.next());
+
+        // Initiate an open RFCOMM channel request with a random valid ServerChannel.
+        let server_channel = ServerChannel(5);
+        {
+            let mut open_fut = Box::pin(session.open_remote_channel(server_channel));
+            let mut expected_outgoing_frames = Box::pin(outgoing_frames.next());
+            assert!(exec.run_until_stalled(&mut open_fut).is_pending());
+            // Since the multiplexer has not started, we first expect to send an SABM over the
+            // MUX Control DLCI to the remote peer.
+            match exec.run_until_stalled(&mut expected_outgoing_frames) {
+                Poll::Ready(Some(frame)) => {
+                    assert_eq!(frame.data, FrameData::SetAsynchronousBalancedMode);
+                    assert_eq!(frame.dlci, DLCI::MUX_CONTROL_DLCI);
+                }
+                x => panic!("Expected frame but got: {:?}", x),
+            }
+            assert_matches!(exec.run_until_stalled(&mut open_fut), Poll::Ready(Ok(_)));
+        }
+        {
+            // Simulate peer responding positively with a UA.
+            let mut handle_fut = Box::pin(
+                session
+                    .handle_frame(Frame::make_ua_response(Role::Responder, DLCI::MUX_CONTROL_DLCI)),
+            );
+            let mut expected_outgoing_frames = Box::pin(outgoing_frames.next());
+            assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
+            // We then expect the session to initiate a Parameter Negotiation request, since
+            // the session has not negotiated parameters.
+            match exec.run_until_stalled(&mut expected_outgoing_frames) {
+                Poll::Ready(Some(frame)) => {
+                    assert_matches!(frame.data, FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(MuxCommand {
+                        params: MuxCommandParams::ParameterNegotiation(_),
+                        command_response: CommandResponse::Command,
+                    })));
+                }
+                x => panic!("Expected frame but got: {:?}", x),
+            }
+            assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(_)));
+        }
+
+        let expected_dlci = server_channel.to_dlci(Role::Responder).unwrap();
+        {
+            // Simulate the peer's positive response to the DLC PN request. We then expect an
+            // outgoing SABM command to establish the user channel.
+            handle_and_expect_frame(
+                &mut exec,
+                &mut session,
+                &mut outgoing_frames,
+                make_dlc_pn_frame(
+                    CommandResponse::Response,
+                    expected_dlci,
+                    true, // Supports credit-based flow control.
+                    100,  // Supports max frame size of 100.
+                ),
+                FrameTypeMarker::SetAsynchronousBalancedMode, // Outgoing SABM.
+            );
+        }
+
+        {
+            // Remote peer replies positively to the open channel request.
+            let mut handle_fut = Box::pin(
+                session.handle_frame(Frame::make_ua_response(Role::Responder, expected_dlci)),
+            );
+            assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
+            // We then expect to open a local RFCOMM channel to be relayed to a profile client.
+            match exec.run_until_stalled(&mut rfcomm_channel_fut) {
+                Poll::Ready(Some(_channel)) => {}
+                x => panic!("Expected a channel but got: {:?}", x),
+            }
+            assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(_)));
+        }
+
+        // The DLCI should be established.
+        assert!(session.multiplexer().dlci_established(&expected_dlci));
+    }
+
+    #[test]
+    fn test_open_multiple_channels_establishes_channels_after_acknowledgement() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        // Crete and start a SessionInner that relays any opened RFCOMM channels.
+        let (mut session, mut outgoing_frames, _channel_receiver) = setup_session_with_relay();
+
+        // The session multiplexer has started.
+        assert!(session.multiplexer().start(Role::Responder).is_ok());
+
+        // Initiate an open RFCOMM channel request with a random valid ServerChannel.
+        let server_channel = ServerChannel(5);
+        let expected_dlci = server_channel.to_dlci(Role::Initiator).unwrap();
+        {
+            let mut open_fut = Box::pin(session.open_remote_channel(server_channel));
+            let mut expected_outgoing_frames = Box::pin(outgoing_frames.next());
+            assert!(exec.run_until_stalled(&mut open_fut).is_pending());
+            // We expect the session to initiate a Parameter Negotiation request (UIH Frame),
+            // for the DLCI.
+            match exec.run_until_stalled(&mut expected_outgoing_frames) {
+                Poll::Ready(Some(frame)) => {
+                    assert_eq!(frame.data.marker(), FrameTypeMarker::UnnumberedInfoHeaderCheck);
+                }
+                x => panic!("Expected frame but got: {:?}", x),
+            }
+            assert_matches!(exec.run_until_stalled(&mut open_fut), Poll::Ready(Ok(_)));
+        }
+
+        // Before the peer responds, we get another request to open a different RFCOMM channel.
+        let server_channel2 = ServerChannel(9);
+        let expected_dlci2 = server_channel2.to_dlci(Role::Initiator).unwrap();
+        {
+            // We expect the open_remote_channel call to resolve immediately, since PN is in
+            // progress. The call should be saved for later, after PN finishes.
+            let mut open_fut = Box::pin(session.open_remote_channel(server_channel2));
+            assert_matches!(exec.run_until_stalled(&mut open_fut), Poll::Ready(Ok(_)));
+        }
+
+        {
+            // Simulate the peer's positive response to the DLC PN request.
+            let mut handle_fut = Box::pin(session.handle_frame(make_dlc_pn_frame(
+                CommandResponse::Response,
+                expected_dlci,
+                true, // Supports credit-based flow control.
+                100,  // Supports max frame size of 100.
+            )));
+            let mut outgoing_frames = Box::pin(outgoing_frames.next());
+            assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
+            // We expect an outgoing SABM for `server_channel`.
+            match exec.run_until_stalled(&mut outgoing_frames) {
+                Poll::Ready(Some(frame)) => {
+                    assert_eq!(frame.data, FrameData::SetAsynchronousBalancedMode);
+                    assert_eq!(frame.dlci, expected_dlci);
+                }
+                x => panic!("Expected ready frame but got: {:?}", x),
+            }
+            assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
+            // We also expect another outgoing SABM for `server_channel2`.
+            match exec.run_until_stalled(&mut outgoing_frames) {
+                Poll::Ready(Some(frame)) => {
+                    assert_eq!(frame.data, FrameData::SetAsynchronousBalancedMode);
+                    assert_eq!(frame.dlci, expected_dlci2);
+                }
+                x => panic!("Expected ready frame but got: {:?}", x),
+            }
+            assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(_)));
+        }
     }
 }

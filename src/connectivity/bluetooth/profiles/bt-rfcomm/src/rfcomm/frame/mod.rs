@@ -448,8 +448,6 @@ impl Frame {
         Ok(Self { role, dlci, data, poll_final, command_response, credits })
     }
 
-    // TODO(fxbug.dev/59585): Remove this when full initiator role is supported.
-    #[cfg(test)]
     pub fn make_sabm_command(role: Role, dlci: DLCI) -> Self {
         Self {
             role,
