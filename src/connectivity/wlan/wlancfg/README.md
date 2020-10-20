@@ -14,12 +14,6 @@ Responsiblities:
 
 - Serves the FIDL protocols.
 - Handles FIDL requests by making calls to other modules, mainly the Interface Manager and the Saved Networks Manager.
-- Monitors State Machines, handles exits due to errors (e.g. bring up new interface, reconfigure existing networks).
-- Client Main Loop only:
-    - When notified a Client State Machine is idle, uses the Network Selection Manager to find a new network to connect to.
-    - Keeps track of whether or not client connections are enabled.
-    - Periodically checks for idle Client State Machines, if any are present, triggers a scan.
-    - On any scan completion, checks for idle Client State Machines, and attempts to connect them using the Network Selection Manager.
 
 ### Interface Manager
 
@@ -29,6 +23,9 @@ Responsiblities:
 
 - Asks Phy Manager to create interfaces as needed, creates a State Machine for each interface.
 - Examines FIDL requests and forwards them to a specific interface's State Machine.
+- Monitors State Machines, handles exits (e.g. bring up new interface, reconfigure existing networks).
+    - When a Client State Machine exits, uses the Network Selection Manager to find a new network to connect to.
+    - Periodically checks for idle Client State Machines, if any are present, triggers a reconnect.
 
 ### Phy Manager
 
@@ -60,9 +57,7 @@ Responsiblities:
 - Can be asked to Connect(NetworkId).
     - Notifies the Saved Networks Manager about connection failures / successes.
     - Periodically notifies the Saved Networks Manager about network statistics.
-    - Attempts to reconnect to the configured network for a number of times before abandoning and going to an idle state.
-- Can be asked to Disconnect() -> goes to an idle state.
-- Notifies the Main Loop when moving into an idle state, which will handle futher actions as needed (e.g. selecting a new network).
+    - Attempts to reconnect to the configured network for a number of times before abandoning and exiting.
 - On Error, exits while logging debug data.
 - Can be asked to Exit().
 - On graceful exiting of the underlying interface, exits gracefully.
@@ -74,6 +69,7 @@ Implemented in: [`client/network_selection.rs`](./src/client/network_selection.r
 Responsiblities:
 
 - Provides an interface to query the best available network for connecting to.
+- Performs scans as needed to find best available networks.
 - Uses both an in-memory cache of network stats, as well as long-term info from the Saved Networks Manager.
 
 ### Saved Network Manager
@@ -93,8 +89,6 @@ Responsiblities:
 
 - Performs scans via the Interface Manager.
 - Distributes scan results to the requester as well as the Network Selection Manager and Emergency Location provider.
-
-
 
 ## Examples of data flow in common situations
 

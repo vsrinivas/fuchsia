@@ -6,10 +6,10 @@ use {
     crate::{
         access_point::{state_machine as ap_fsm, state_machine::AccessPointApi, types as ap_types},
         client::{
-            network_selection::NetworkSelector, scan_for_network_selector,
-            state_machine as client_fsm,
+            network_selection::{NetworkMetadata, NetworkSelector},
+            state_machine as client_fsm, types as client_types,
         },
-        config_management::SavedNetworksManager,
+        config_management::{Credential, SavedNetworksManager},
         mode_management::{
             iface_manager_api::IfaceManagerApi, iface_manager_types::*, phy_manager::PhyManagerApi,
         },
@@ -671,52 +671,57 @@ impl IfaceManagerService {
     }
 }
 
-async fn initiate_reconnect_scan(
+async fn initiate_network_selection(
     iface_manager: &IfaceManagerService,
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    selector: &Arc<NetworkSelector>,
-    network_selection_scan_futures: &mut FuturesUnordered<BoxFuture<'static, Result<(), Error>>>,
+    network_selector: Arc<NetworkSelector>,
+    network_selection_futures: &mut FuturesUnordered<
+        BoxFuture<'static, Option<(client_types::NetworkIdentifier, Credential, NetworkMetadata)>>,
+    >,
 ) {
     if iface_manager.has_idle_client()
         && iface_manager.saved_networks.known_network_count().await > 0
-        && network_selection_scan_futures.is_empty()
+        && network_selection_futures.is_empty()
     {
-        info!("Attempting to reconnect idle client.");
-        let fut = scan_for_network_selector(iface_manager_client, selector.clone());
-        network_selection_scan_futures.push(fut.boxed());
+        info!("Initiating network selection for idle client interface.");
+        let fut = async move {
+            let ignore_list = vec![];
+            network_selector.get_best_network(iface_manager_client.clone(), &ignore_list).await
+        };
+        network_selection_futures.push(fut.boxed());
     }
 }
 
-async fn handle_reconnect_scan_results(
-    scan_result: Result<(), Error>,
+async fn handle_network_selection_results(
+    network_selection_result: Option<(
+        client_types::NetworkIdentifier,
+        Credential,
+        NetworkMetadata,
+    )>,
     iface_manager: &mut IfaceManagerService,
-    selector: &Arc<NetworkSelector>,
     disconnected_clients: &mut HashSet<u16>,
     reconnect_monitor_interval: &mut i64,
     connectivity_monitor_timer: &mut fasync::Interval,
 ) {
-    if scan_result.is_ok() {
+    if let Some((network_id, credential, _network_metadata)) = network_selection_result {
         *reconnect_monitor_interval = 1;
 
         if iface_manager.has_idle_client() {
-            if let Some((network_id, credential)) = selector.get_best_network(&vec![]).await {
-                let connect_req =
-                    client_fsm::ConnectRequest { network: network_id, credential: credential };
+            let connect_req =
+                client_fsm::ConnectRequest { network: network_id, credential: credential };
 
-                // Any client interfaces that have recently presented as idle will be
-                // reconnected.
-                for iface_id in disconnected_clients.drain() {
-                    if let Err(e) =
-                        iface_manager.attempt_client_reconnect(iface_id, connect_req.clone()).await
-                    {
-                        warn!("Could not reconnect iface {}: {:?}", iface_id, e);
-                    }
+            // Any client interfaces that have recently presented as idle will be
+            // reconnected.
+            for iface_id in disconnected_clients.drain() {
+                if let Err(e) =
+                    iface_manager.attempt_client_reconnect(iface_id, connect_req.clone()).await
+                {
+                    warn!("Could not reconnect iface {}: {:?}", iface_id, e);
                 }
-            } else {
-                info!("No saved networks available to reconnect to");
             }
         }
     } else {
+        info!("No saved networks available to reconnect to");
         *reconnect_monitor_interval =
             (2 * (*reconnect_monitor_interval)).min(MAX_AUTO_CONNECT_RETRY_SECONDS);
     }
@@ -728,7 +733,7 @@ async fn handle_reconnect_scan_results(
 pub(crate) async fn serve_iface_manager_requests(
     mut iface_manager: IfaceManagerService,
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    selector: Arc<NetworkSelector>,
+    network_selector: Arc<NetworkSelector>,
     mut requests: mpsc::Receiver<IfaceManagerRequest>,
 ) -> Result<Void, Error> {
     // Client and AP state machines need to be allowed to run in order for several operations to
@@ -738,7 +743,7 @@ pub(crate) async fn serve_iface_manager_requests(
 
     // Scans will be initiated to perform network selection if clients become disconnected.
     let mut disconnected_clients = HashSet::<u16>::new();
-    let mut network_selection_scan_futures = FuturesUnordered::new();
+    let mut network_selection_futures = FuturesUnordered::new();
 
     // Create a timer to periodically check to ensure that all client interfaces are connected.
     let mut reconnect_monitor_interval: i64 = 1;
@@ -753,28 +758,27 @@ pub(crate) async fn serve_iface_manager_requests(
                 if terminated_fsm.1.role == fidl_fuchsia_wlan_device::MacRole::Client {
                     iface_manager.record_idle_client(terminated_fsm.1.iface_id);
                     disconnected_clients.insert(terminated_fsm.1.iface_id);
-                    initiate_reconnect_scan(
+                    initiate_network_selection(
                         &iface_manager,
                         iface_manager_client.clone(),
-                        &selector,
-                        &mut network_selection_scan_futures
+                        network_selector.clone(),
+                        &mut network_selection_futures
                     ).await;
-                }
+                };
             },
             () = connectivity_monitor_timer.select_next_some() => {
-                initiate_reconnect_scan(
+                initiate_network_selection(
                     &iface_manager,
                     iface_manager_client.clone(),
-                    &selector,
-                    &mut network_selection_scan_futures
+                    network_selector.clone(),
+                    &mut network_selection_futures
                 ).await;
             },
             operation_result = operation_futures.select_next_some() => {},
-            scan_result = network_selection_scan_futures.select_next_some() => {
-                handle_reconnect_scan_results(
-                    scan_result,
+            network_selection_result = network_selection_futures.select_next_some() => {
+                handle_network_selection_results(
+                    network_selection_result,
                     &mut iface_manager,
-                    &selector,
                     &mut disconnected_clients,
                     &mut reconnect_monitor_interval,
                     &mut connectivity_monitor_timer
@@ -3545,18 +3549,18 @@ mod tests {
         assert!(iface_manager.fsm_futures.is_empty());
     }
 
-    enum ReconnectScanMissingAttribute {
+    enum NetworkSelectionMissingAttribute {
         AllAttributesPresent,
         IdleClient,
         SavedNetwork,
-        ScanInProgress,
+        NetworkSelectionInProgress,
     }
 
-    #[test_case(ReconnectScanMissingAttribute::AllAttributesPresent; "scan is requested")]
-    #[test_case(ReconnectScanMissingAttribute::IdleClient; "no idle clients")]
-    #[test_case(ReconnectScanMissingAttribute::SavedNetwork; "no saved networks")]
-    #[test_case(ReconnectScanMissingAttribute::ScanInProgress; "reconnect already in progress")]
-    fn test_initiate_reconnect_scan(test_type: ReconnectScanMissingAttribute) {
+    #[test_case(NetworkSelectionMissingAttribute::AllAttributesPresent; "scan is requested")]
+    #[test_case(NetworkSelectionMissingAttribute::IdleClient; "no idle clients")]
+    #[test_case(NetworkSelectionMissingAttribute::SavedNetwork; "no saved networks")]
+    #[test_case(NetworkSelectionMissingAttribute::NetworkSelectionInProgress; "selection already in progress")]
+    fn test_initiate_network_selection(test_type: NetworkSelectionMissingAttribute) {
         // Start out by setting the test up such that we would expect a scan to be requested.
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
@@ -3592,51 +3596,56 @@ mod tests {
 
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
 
-        // Create an empty FuturesUnordered to hold the scan request.
-        let mut scan_futures = FuturesUnordered::<BoxFuture<'static, Result<(), Error>>>::new();
+        // Create an empty FuturesUnordered to hold the network selection request.
+        let mut network_selection_futures = FuturesUnordered::<
+            BoxFuture<
+                'static,
+                Option<(client_types::NetworkIdentifier, Credential, NetworkMetadata)>,
+            >,
+        >::new();
 
-        // Create a network selector to be used by the scan request.
+        // Create a network selector to be used by the network selection request.
         let selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks.clone(),
             create_mock_cobalt_sender(),
         ));
 
-        // Setup the test to prevent a scan from happening for whatever reason was specified.
+        // Setup the test to prevent a network selection from happening for whatever reason was specified.
         match test_type {
-            ReconnectScanMissingAttribute::AllAttributesPresent => {}
-            ReconnectScanMissingAttribute::IdleClient => {
+            NetworkSelectionMissingAttribute::AllAttributesPresent => {}
+            NetworkSelectionMissingAttribute::IdleClient => {
                 // Make the client state machine report that it is alive.
                 iface_manager.clients[0].client_state_machine =
                     Some(Box::new(FakeClient { disconnect_ok: true, is_alive: true }));
             }
-            ReconnectScanMissingAttribute::SavedNetwork => {
+            NetworkSelectionMissingAttribute::SavedNetwork => {
                 // Remove the saved network so that there are no known networks to connect to.
                 let remove_network_fut = test_values.saved_networks.remove(network_id, credential);
                 pin_mut!(remove_network_fut);
                 assert_variant!(exec.run_until_stalled(&mut remove_network_fut), Poll::Pending);
                 process_stash_delete(&mut exec, &mut stash_server);
             }
-            ReconnectScanMissingAttribute::ScanInProgress => {
+            NetworkSelectionMissingAttribute::NetworkSelectionInProgress => {
                 // Insert a future so that it looks like a scan is in progress.
-                scan_futures.push(ready(Ok(())).boxed());
+                network_selection_futures.push(ready(None).boxed());
             }
         }
 
         {
             // Run the future to completion.
-            let fut = initiate_reconnect_scan(
+            let fut = initiate_network_selection(
                 &iface_manager,
                 iface_manager_client.clone(),
-                &selector,
-                &mut scan_futures,
+                selector,
+                &mut network_selection_futures,
             );
             pin_mut!(fut);
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
         }
 
-        // Run all scan futures to completion.
-        for mut scan_future in scan_futures.iter_mut() {
-            assert_variant!(exec.run_until_stalled(&mut scan_future), Poll::Ready(_));
+        // Run all network_selection futures to completion.
+        for mut network_selection_future in network_selection_futures.iter_mut() {
+            assert_variant!(exec.run_until_stalled(&mut network_selection_future), Poll::Ready(_));
         }
 
         // Check the outcome based on the expected failure mode.
@@ -3647,13 +3656,15 @@ mod tests {
             Poll::Ready(iface_manager_client) => iface_manager_client
         );
 
+        // We are using a scan request issuance as a proxy to determine if the network selection
+        // module took action.
         match test_type {
-            ReconnectScanMissingAttribute::AllAttributesPresent => {
+            NetworkSelectionMissingAttribute::AllAttributesPresent => {
                 assert!(iface_manager_client.scan_requested);
             }
-            ReconnectScanMissingAttribute::IdleClient
-            | ReconnectScanMissingAttribute::SavedNetwork
-            | ReconnectScanMissingAttribute::ScanInProgress => {
+            NetworkSelectionMissingAttribute::IdleClient
+            | NetworkSelectionMissingAttribute::SavedNetwork
+            | NetworkSelectionMissingAttribute::NetworkSelectionInProgress => {
                 assert!(!iface_manager_client.scan_requested);
             }
         }
@@ -3666,10 +3677,6 @@ mod tests {
         // Create an IfaceManagerService
         let test_values = test_setup(&mut exec);
         let (mut iface_manager, _stream) = create_iface_manager_with_client(&test_values, true);
-
-        // Network selector is unused for this test.
-        let selector =
-            Arc::new(NetworkSelector::new(test_values.saved_networks, create_mock_cobalt_sender()));
 
         // Scans will be initiated to perform network selection if clients become disconnected.
         let mut disconnected_clients = HashSet::<u16>::new();
@@ -3686,10 +3693,9 @@ mod tests {
 
         for i in 0..5 {
             {
-                let fut = handle_reconnect_scan_results(
-                    Err(format_err!("Test error")),
+                let fut = handle_network_selection_results(
+                    None,
                     &mut iface_manager,
-                    &selector,
                     &mut disconnected_clients,
                     &mut reconnect_monitor_interval,
                     &mut connectivity_monitor_timer,
@@ -3702,7 +3708,7 @@ mod tests {
     }
 
     #[test]
-    fn test_reconnect_on_scan_results() {
+    fn test_reconnect_on_network_selection_results() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
@@ -3758,19 +3764,22 @@ mod tests {
         iface_manager.clients[0].client_state_machine =
             Some(Box::new(FakeClient { disconnect_ok: true, is_alive: false }));
 
-        // Instigate a reconnection attempt.
+        // Setup for a reconnection attempt.
         let mut disconnected_clients = HashSet::new();
         disconnected_clients.insert(TEST_CLIENT_IFACE_ID);
-
         let mut reconnect_monitor_interval = 1;
         let mut connectivity_monitor_timer =
             fasync::Interval::new(zx::Duration::from_seconds(reconnect_monitor_interval));
+        let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
+        let network =
+            exec.run_singlethreaded(selector.get_best_network(iface_manager_client, &vec![]));
+        assert!(network.is_some());
 
         {
-            let fut = handle_reconnect_scan_results(
-                Ok(()),
+            // Run reconnection attempt
+            let fut = handle_network_selection_results(
+                network,
                 &mut iface_manager,
-                &selector,
                 &mut disconnected_clients,
                 &mut reconnect_monitor_interval,
                 &mut connectivity_monitor_timer,

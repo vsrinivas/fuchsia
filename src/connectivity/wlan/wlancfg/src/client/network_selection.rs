@@ -4,13 +4,17 @@
 
 use {
     crate::{
-        client::{scan::ScanResultUpdate, types},
+        client::{
+            scan::{self, ScanResultUpdate},
+            types,
+        },
         config_management::{self, Credential, SavedNetworksManager},
+        mode_management::iface_manager_api::IfaceManagerApi,
     },
     async_trait::async_trait,
     fuchsia_cobalt::CobaltSender,
     futures::lock::Mutex,
-    log::{error, trace},
+    log::{error, info, trace},
     std::{
         cmp::Ordering,
         collections::HashMap,
@@ -21,11 +25,13 @@ use {
     wlan_metrics_registry::{
         SavedNetworkInScanResultMetricDimensionBssCount,
         ScanResultsReceivedMetricDimensionSavedNetworksCount,
-        SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID, SCAN_RESULTS_RECEIVED_METRIC_ID,
+        LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID, SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID,
+        SCAN_RESULTS_RECEIVED_METRIC_ID,
     },
 };
 
 const RECENT_FAILURE_WINDOW: Duration = Duration::from_secs(60 * 5); // 5 minutes
+const STALE_SCAN_AGE: Duration = Duration::from_secs(15); // TODO(61992) Optimize this value
 
 pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
@@ -47,6 +53,9 @@ struct InternalNetworkData {
     recent_failure_count: u8,
 }
 
+#[derive(Debug, PartialEq)]
+pub struct NetworkMetadata {}
+
 impl NetworkSelector {
     pub fn new(saved_network_manager: Arc<SavedNetworksManager>, cobalt_api: CobaltSender) -> Self {
         Self {
@@ -64,6 +73,43 @@ impl NetworkSelector {
             scan_result_cache: Arc::clone(&self.scan_result_cache),
             saved_network_manager: Arc::clone(&self.saved_network_manager),
             cobalt_api: Arc::clone(&self.cobalt_api),
+        }
+    }
+
+    async fn perform_scan(&self, iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>) {
+        // Get the scan age. On error (which indicates the system clock moved backwards) fallback
+        // to a number that will trigger a new scan, since we have no idea how old the scan is.
+        let scan_result_guard = self.scan_result_cache.lock().await;
+        let last_scan_result_time = scan_result_guard.updated_at;
+        drop(scan_result_guard);
+        let scan_age = last_scan_result_time.elapsed().unwrap_or(STALE_SCAN_AGE);
+
+        // Log a metric for scan age, to help us optimize the STALE_SCAN_AGE
+        if last_scan_result_time != SystemTime::UNIX_EPOCH {
+            let mut cobalt_api_guard = self.cobalt_api.lock().await;
+            let cobalt_api = &mut *cobalt_api_guard;
+            cobalt_api.log_elapsed_time(
+                LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID,
+                Vec::<u32>::new(),
+                scan_age.as_micros().try_into().unwrap_or(i64::MAX),
+            );
+            drop(cobalt_api_guard);
+        }
+
+        // Determine if a new scan is warranted
+        if scan_age >= STALE_SCAN_AGE {
+            info!("Scan results are {:?} old, triggering a scan", scan_age);
+
+            scan::perform_scan(
+                iface_manager,
+                None,
+                self.generate_scan_result_updater(),
+                scan::LocationSensorUpdater {},
+                |_| None, // TODO(35920): include potentially hidden networks
+            )
+            .await;
+        } else {
+            info!("Using cached scan results from {:?} ago", scan_age);
         }
     }
 
@@ -99,10 +145,12 @@ impl NetworkSelector {
     /// Only networks that are both saved and visible in the most recent scan results are eligible
     /// for consideration. Among those, the "best" network based on compatibility and quality (e.g.
     /// RSSI, recent failures) is selected.
-    pub async fn get_best_network(
+    pub(crate) async fn get_best_network(
         &self,
+        iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         ignore_list: &Vec<types::NetworkIdentifier>,
-    ) -> Option<(types::NetworkIdentifier, Credential)> {
+    ) -> Option<(types::NetworkIdentifier, Credential, NetworkMetadata)> {
+        self.perform_scan(iface_manager).await;
         let saved_networks = load_saved_networks(Arc::clone(&self.saved_network_manager)).await;
         let networks = self.augment_networks_with_scan_data(saved_networks).await;
         find_best_network(&networks, ignore_list)
@@ -196,7 +244,7 @@ impl ScanResultUpdate for NetworkSelectorScanUpdater {
 fn find_best_network(
     networks: &HashMap<types::NetworkIdentifier, InternalNetworkData>,
     ignore_list: &Vec<types::NetworkIdentifier>,
-) -> Option<(types::NetworkIdentifier, Credential)> {
+) -> Option<(types::NetworkIdentifier, Credential, NetworkMetadata)> {
     networks
         .iter()
         .filter(|(id, data)| {
@@ -231,7 +279,7 @@ fn find_best_network(
             let rssi_b = data_b.rssi.unwrap();
             rssi_a.partial_cmp(&rssi_b).unwrap()
         })
-        .map(|(id, data)| (id.clone(), data.credential.clone()))
+        .map(|(id, data)| (id.clone(), data.credential.clone(), NetworkMetadata {}))
 }
 
 fn record_metrics_on_scan(
@@ -276,22 +324,34 @@ fn record_metrics_on_scan(
 mod tests {
     use {
         super::*,
-        crate::util::{
-            cobalt::create_mock_cobalt_sender_and_receiver, logger::set_logger_for_test,
+        crate::{
+            access_point::state_machine as ap_fsm,
+            client::state_machine as client_fsm,
+            util::{cobalt::create_mock_cobalt_sender_and_receiver, logger::set_logger_for_test},
         },
+        anyhow::Error,
         cobalt_client::traits::AsEventCode,
+        fidl::endpoints::create_proxy,
         fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
         fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
-        futures::channel::mpsc,
+        futures::{
+            channel::{mpsc, oneshot},
+            prelude::*,
+            task::Poll,
+        },
+        pin_utils::pin_mut,
         rand::Rng,
         std::sync::Arc,
+        wlan_common::assert_variant,
     };
 
     struct TestValues {
         network_selector: Arc<NetworkSelector>,
         saved_network_manager: Arc<SavedNetworksManager>,
         cobalt_events: mpsc::Receiver<CobaltEvent>,
+        iface_manager: Arc<Mutex<FakeIfaceManager>>,
+        sme_stream: fidl_sme::ClientSmeRequestStream,
     }
 
     async fn test_setup() -> TestValues {
@@ -302,8 +362,92 @@ mod tests {
         let saved_network_manager = Arc::new(SavedNetworksManager::new_for_test().await.unwrap());
         let network_selector =
             Arc::new(NetworkSelector::new(Arc::clone(&saved_network_manager), cobalt_api));
+        let (client_sme, remote) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
+        let iface_manager = Arc::new(Mutex::new(FakeIfaceManager::new(client_sme)));
 
-        TestValues { network_selector, saved_network_manager, cobalt_events }
+        TestValues {
+            network_selector,
+            saved_network_manager,
+            cobalt_events,
+            iface_manager,
+            sme_stream: remote.into_stream().expect("failed to create stream"),
+        }
+    }
+
+    struct FakeIfaceManager {
+        pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
+    }
+
+    impl FakeIfaceManager {
+        pub fn new(proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy) -> Self {
+            FakeIfaceManager { sme_proxy: proxy }
+        }
+    }
+
+    #[async_trait]
+    impl IfaceManagerApi for FakeIfaceManager {
+        async fn disconnect(
+            &mut self,
+            _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+        ) -> Result<(), Error> {
+            unimplemented!()
+        }
+
+        async fn connect(
+            &mut self,
+            _connect_req: client_fsm::ConnectRequest,
+        ) -> Result<oneshot::Receiver<()>, Error> {
+            unimplemented!()
+        }
+
+        async fn record_idle_client(&mut self, _iface_id: u16) -> Result<(), Error> {
+            unimplemented!()
+        }
+
+        async fn has_idle_client(&mut self) -> Result<bool, Error> {
+            unimplemented!()
+        }
+
+        async fn handle_added_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
+            unimplemented!()
+        }
+
+        async fn handle_removed_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
+            unimplemented!()
+        }
+
+        async fn scan(
+            &mut self,
+            mut scan_request: fidl_sme::ScanRequest,
+        ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
+            let (local, remote) = fidl::endpoints::create_proxy()?;
+            let _ = self.sme_proxy.scan(&mut scan_request, remote);
+            Ok(local)
+        }
+
+        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+            unimplemented!()
+        }
+
+        async fn start_client_connections(&mut self) -> Result<(), Error> {
+            unimplemented!()
+        }
+
+        async fn start_ap(
+            &mut self,
+            _config: ap_fsm::ApConfig,
+        ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
+            unimplemented!()
+        }
+
+        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
+            unimplemented!()
+        }
+
+        async fn stop_all_aps(&mut self) -> Result<(), Error> {
+            unimplemented!()
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -612,7 +756,7 @@ mod tests {
         // stronger network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_1.clone(), credential_1.clone())
+            (test_id_1.clone(), credential_1.clone(), NetworkMetadata {})
         );
 
         // make the other network stronger
@@ -630,7 +774,7 @@ mod tests {
         // stronger network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_2.clone(), credential_2.clone())
+            (test_id_2.clone(), credential_2.clone(), NetworkMetadata {})
         );
     }
 
@@ -672,7 +816,7 @@ mod tests {
         // stronger network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_1.clone(), credential_1.clone())
+            (test_id_1.clone(), credential_1.clone(), NetworkMetadata {})
         );
 
         // mark the stronger network as having a failure
@@ -690,7 +834,7 @@ mod tests {
         // weaker network (with no failures) returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_2.clone(), credential_2.clone())
+            (test_id_2.clone(), credential_2.clone(), NetworkMetadata {})
         );
 
         // give them both the same number of failures
@@ -708,7 +852,7 @@ mod tests {
         // stronger network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_1.clone(), credential_1.clone())
+            (test_id_1.clone(), credential_1.clone(), NetworkMetadata {})
         );
     }
 
@@ -750,7 +894,7 @@ mod tests {
         // stronger network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_2.clone(), credential_2.clone())
+            (test_id_2.clone(), credential_2.clone(), NetworkMetadata {})
         );
 
         // mark it as incompatible
@@ -768,7 +912,7 @@ mod tests {
         // other network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_1.clone(), credential_1.clone())
+            (test_id_1.clone(), credential_1.clone(), NetworkMetadata {})
         );
     }
 
@@ -823,7 +967,7 @@ mod tests {
         );
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_2.clone(), credential_2.clone())
+            (test_id_2.clone(), credential_2.clone(), NetworkMetadata {})
         );
     }
 
@@ -865,19 +1009,113 @@ mod tests {
         // stronger network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_2.clone(), credential_2.clone())
+            (test_id_2.clone(), credential_2.clone(), NetworkMetadata {})
         );
 
         // ignore the stronger network, other network returned
         assert_eq!(
             find_best_network(&networks, &vec![test_id_2.clone()]).unwrap(),
-            (test_id_1.clone(), credential_1.clone())
+            (test_id_1.clone(), credential_1.clone(), NetworkMetadata {})
         );
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn get_best_network_end_to_end() {
-        let test_values = test_setup().await;
+    async fn perform_scan_cache_is_fresh() {
+        let mut test_values = test_setup().await;
+        let network_selector = test_values.network_selector;
+
+        // Set the scan result cache to be fresher than STALE_SCAN_AGE
+        let mut scan_result_guard = network_selector.scan_result_cache.lock().await;
+        let last_scan_age = Duration::from_secs(1);
+        assert!(last_scan_age < STALE_SCAN_AGE);
+        scan_result_guard.updated_at = SystemTime::now() - last_scan_age;
+        drop(scan_result_guard);
+
+        network_selector.perform_scan(test_values.iface_manager).await;
+
+        // Metric logged for scan age
+        let metric = test_values.cobalt_events.try_next().unwrap().unwrap();
+        let expected_metric =
+            CobaltEvent::builder(LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID).as_elapsed_time(0);
+        // We need to individually check each field, since the elapsed time is non-deterministic
+        assert_eq!(metric.metric_id, expected_metric.metric_id);
+        assert_eq!(metric.event_codes, expected_metric.event_codes);
+        assert_eq!(metric.component, expected_metric.component);
+        assert_variant!(metric.payload, fidl_fuchsia_cobalt::EventPayload::ElapsedMicros(elapsed_micros) => {
+            let elapsed_time = Duration::from_micros(elapsed_micros.try_into().unwrap());
+            assert!(elapsed_time < STALE_SCAN_AGE);
+        });
+
+        // No scan performed
+        assert!(test_values.sme_stream.next().await.is_none());
+    }
+
+    #[test]
+    fn perform_scan_cache_is_stale() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = exec.run_singlethreaded(test_setup());
+        let network_selector = test_values.network_selector;
+        let test_start_time = SystemTime::now();
+
+        // Set the scan result cache to be older than STALE_SCAN_AGE
+        let mut scan_result_guard =
+            exec.run_singlethreaded(network_selector.scan_result_cache.lock());
+        scan_result_guard.updated_at =
+            SystemTime::now() - (STALE_SCAN_AGE + Duration::from_secs(1));
+        drop(scan_result_guard);
+
+        // Kick off scan
+        let scan_fut = network_selector.perform_scan(test_values.iface_manager);
+        pin_mut!(scan_fut);
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Metric logged for scan age
+        let metric = test_values.cobalt_events.try_next().unwrap().unwrap();
+        let expected_metric =
+            CobaltEvent::builder(LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID).as_elapsed_time(0);
+        assert_eq!(metric.metric_id, expected_metric.metric_id);
+        assert_eq!(metric.event_codes, expected_metric.event_codes);
+        assert_eq!(metric.component, expected_metric.component);
+        assert_variant!(metric.payload, fidl_fuchsia_cobalt::EventPayload::ElapsedMicros(elapsed_micros) => {
+            let elapsed_time = Duration::from_micros(elapsed_micros.try_into().unwrap());
+            assert!(elapsed_time > STALE_SCAN_AGE);
+        });
+
+        // Check that a scan request was sent to the sme and send back results
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, req, control_handle: _
+            }))) => {
+                // Validate the request
+                assert_eq!(req, expected_scan_request);
+                // Send all the APs
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_result(&mut vec![].iter_mut())
+                    .expect("failed to send scan data");
+
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
+
+        // Process scan
+        exec.run_singlethreaded(&mut scan_fut);
+
+        // Check scan results were updated
+        let scan_result_guard = exec.run_singlethreaded(network_selector.scan_result_cache.lock());
+        assert!(scan_result_guard.updated_at > test_start_time);
+        assert!(scan_result_guard.updated_at < SystemTime::now());
+        drop(scan_result_guard);
+    }
+
+    #[test]
+    fn get_best_network_end_to_end() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
 
         // create some identifiers
@@ -893,88 +1131,87 @@ mod tests {
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
 
         // insert some new saved networks
-        test_values
-            .saved_network_manager
-            .store(test_id_1.clone().into(), credential_1.clone())
-            .await
-            .unwrap();
-        test_values
-            .saved_network_manager
-            .store(test_id_2.clone().into(), credential_2.clone())
-            .await
-            .unwrap();
+        exec.run_singlethreaded(
+            test_values.saved_network_manager.store(test_id_1.clone().into(), credential_1.clone()),
+        )
+        .unwrap();
+        exec.run_singlethreaded(
+            test_values.saved_network_manager.store(test_id_2.clone().into(), credential_2.clone()),
+        )
+        .unwrap();
 
         // mark them as having connected
-        test_values
-            .saved_network_manager
-            .record_connect_result(
-                test_id_1.clone().into(),
-                &credential_1.clone(),
-                fidl_sme::ConnectResultCode::Success,
-                true,
-            )
-            .await;
-        test_values
-            .saved_network_manager
-            .record_connect_result(
-                test_id_2.clone().into(),
-                &credential_2.clone(),
-                fidl_sme::ConnectResultCode::Success,
-                true,
-            )
-            .await;
+        exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
+            test_id_1.clone().into(),
+            &credential_1.clone(),
+            fidl_sme::ConnectResultCode::Success,
+            true,
+        ));
+        exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
+            test_id_2.clone().into(),
+            &credential_2.clone(),
+            fidl_sme::ConnectResultCode::Success,
+            true,
+        ));
 
-        // provide some new scan results
-        let mock_scan_results = vec![
-            types::ScanResult {
-                id: test_id_1.clone(),
-                entries: vec![
-                    types::Bss {
-                        bssid: [0, 1, 2, 3, 4, 5],
-                        rssi: -14,
-                        frequency: 2400,
-                        timestamp_nanos: 0,
+        // Kick off network selection
+        let ignore_list = vec![];
+        let network_selection_fut =
+            network_selector.get_best_network(test_values.iface_manager.clone(), &ignore_list);
+        pin_mut!(network_selection_fut);
+        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back results
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, req, control_handle: _
+            }))) => {
+                // Validate the request
+                assert_eq!(req, expected_scan_request);
+
+                let mut mock_scan_results = vec![
+                    fidl_sme::BssInfo {
+                        bssid: [0, 0, 0, 0, 0, 0],
+                        ssid: test_id_1.ssid.clone(),
+                        rx_dbm: 10,
+                        snr_db: 10,
+                        channel: 0,
+                        protection: fidl_sme::Protection::Wpa3Enterprise,
+                        compatible: true,
                     },
-                    types::Bss {
-                        bssid: [6, 7, 8, 9, 10, 11],
-                        rssi: -10,
-                        frequency: 2410,
-                        timestamp_nanos: 1,
+                    fidl_sme::BssInfo {
+                        bssid: [0, 0, 0, 0, 0, 0],
+                        ssid: test_id_2.ssid.clone(),
+                        rx_dbm: 0,
+                        snr_db: 0,
+                        channel: 0,
+                        protection: fidl_sme::Protection::Wpa1,
+                        compatible: true,
                     },
-                    types::Bss {
-                        bssid: [0, 1, 2, 3, 4, 5],
-                        rssi: -20,
-                        frequency: 2400,
-                        timestamp_nanos: 0,
-                    },
-                ],
-                compatibility: types::Compatibility::Supported,
-            },
-            types::ScanResult {
-                id: test_id_2.clone(),
-                entries: vec![types::Bss {
-                    bssid: [20, 30, 40, 50, 60, 70],
-                    rssi: -15,
-                    frequency: 2400,
-                    timestamp_nanos: 0,
-                }],
-                compatibility: types::Compatibility::Supported,
-            },
-        ];
-        let mut updater = network_selector.generate_scan_result_updater();
-        updater.update_scan_results(&mock_scan_results).await;
+                ];
+                // Send all the APs
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_result(&mut mock_scan_results.iter_mut())
+                    .expect("failed to send scan data");
+
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
 
         // Check that we pick a network
-        assert_eq!(
-            network_selector.get_best_network(&vec![]).await.unwrap(),
-            (test_id_1.clone(), credential_1.clone())
-        );
+        let results = exec.run_singlethreaded(&mut network_selection_fut);
+        assert_eq!(results, Some((test_id_1.clone(), credential_1.clone(), NetworkMetadata {})));
 
         // Ignore that network, check that we pick the other one
-        assert_eq!(
-            network_selector.get_best_network(&vec![test_id_1.clone()]).await.unwrap(),
-            (test_id_2.clone(), credential_2.clone())
+        let results = exec.run_singlethreaded(
+            network_selector.get_best_network(test_values.iface_manager, &vec![test_id_1.clone()]),
         );
+        assert_eq!(results, Some((test_id_2.clone(), credential_2.clone(), NetworkMetadata {})));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1022,10 +1259,13 @@ mod tests {
 
         // Check that we choose the config saved as WPA2
         assert_eq!(
-            network_selector.get_best_network(&vec![]).await,
-            Some((id.clone(), credential))
+            network_selector.get_best_network(test_values.iface_manager.clone(), &vec![]).await,
+            Some((id.clone(), credential, NetworkMetadata {}))
         );
-        assert_eq!(network_selector.get_best_network(&vec![id]).await, None);
+        assert_eq!(
+            network_selector.get_best_network(test_values.iface_manager, &vec![id]).await,
+            None
+        );
     }
 
     fn generate_random_scan_result() -> types::ScanResult {

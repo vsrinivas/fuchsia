@@ -13,18 +13,11 @@ use {
         util::listener,
     },
     anyhow::{format_err, Error},
-    fidl::{endpoints::create_proxy, epitaph::ChannelEpitaphExt},
+    fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
-    futures::{
-        channel::{mpsc, oneshot},
-        future::join,
-        lock::Mutex,
-        prelude::*,
-        select,
-        stream::FuturesUnordered,
-    },
-    log::{error, info, warn},
+    futures::{channel::oneshot, lock::Mutex, prelude::*, select, stream::FuturesUnordered},
+    log::{error, info},
     std::{convert::TryFrom, sync::Arc},
 };
 
@@ -37,13 +30,6 @@ pub mod types;
 /// in get_saved_networks. This depends on the maximum size of a FIDL NetworkConfig, so it may
 /// need to change if a FIDL NetworkConfig or FIDL Credential changes.
 const MAX_CONFIGS_PER_RESPONSE: usize = 100;
-#[derive(Debug)]
-enum InternalMsg {
-    /// Sent when a new scan request was issued. Holds the output iterator through which the
-    /// scan results will be reported.
-    NewPendingScanRequest(fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>),
-}
-type InternalMsgSink = mpsc::UnboundedSender<InternalMsg>;
 
 // This number was chosen arbitrarily.
 const MAX_CONCURRENT_LISTENERS: usize = 1000;
@@ -61,8 +47,6 @@ pub(crate) async fn serve_provider_requests(
     network_selector: Arc<network_selection::NetworkSelector>,
     mut requests: fidl_policy::ClientProviderRequestStream,
 ) {
-    let (internal_messages_sink, mut internal_messages_stream) = mpsc::unbounded();
-    let mut pending_scans = FuturesUnordered::new();
     let mut controller_reqs = FuturesUnordered::new();
 
     loop {
@@ -77,9 +61,9 @@ pub(crate) async fn serve_provider_requests(
                 if controller_reqs.is_empty() {
                     let fut = handle_provider_request(
                         Arc::clone(&iface_manager),
-                        internal_messages_sink.clone(),
                         update_sender.clone(),
                         Arc::clone(&saved_networks),
+                        Arc::clone(&network_selector),
                         req
                     );
                     controller_reqs.push(fut);
@@ -89,39 +73,7 @@ pub(crate) async fn serve_provider_requests(
                     }
                 }
             },
-            // Progress internal messages.
-            msg = internal_messages_stream.select_next_some() => match msg {
-                // TODO(fxbug.dev/53779): Flatten out the handling of futures.
-                InternalMsg::NewPendingScanRequest(output_iterator) => {
-                    pending_scans.push(scan::perform_scan(
-                        Arc::clone(&iface_manager),
-                        Some(output_iterator),
-                        network_selector.generate_scan_result_updater(),
-                        scan::LocationSensorUpdater {},
-                        |_| None,
-                    ));
-                }
-            },
-            // Progress scans.
-            () = pending_scans.select_next_some() => {
-                // Upon receiving notification of a complete scan, check and see if the interface
-                // manager has any interfaces that are not currently connected.  If any are
-                // disconnected, attempt to reconnect now that the network selector has been
-                // updated with fresh scan results.
-                let temp_iface_manager = iface_manager.clone();
-                let mut temp_iface_manager = temp_iface_manager.lock().await;
-                match temp_iface_manager.has_idle_client().await {
-                    Ok(true) => {
-                        drop(temp_iface_manager);
-                        info!("Detected idle interface, attempting connection with new scan results");
-                        connect_to_best_network(iface_manager.clone(), network_selector.clone()).await;
-                    },
-                    Ok(false) => {},
-                    Err(e) => {
-                        error!("Unable to query idle clients on scan completion: {:?}", e);
-                    }
-                }
-            },
+            complete => break,
         }
     }
 }
@@ -142,15 +94,15 @@ pub async fn serve_listener_requests(
 /// Handle inbound requests to acquire a new ClientController.
 async fn handle_provider_request(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    internal_msg_sink: InternalMsgSink,
     update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
+    network_selector: Arc<network_selection::NetworkSelector>,
     req: fidl_policy::ClientProviderRequest,
 ) -> Result<(), fidl::Error> {
     match req {
         fidl_policy::ClientProviderRequest::GetController { requests, updates, .. } => {
             register_listener(update_sender, updates.into_proxy()?);
-            handle_client_requests(iface_manager, internal_msg_sink, saved_networks, requests)
+            handle_client_requests(iface_manager, saved_networks, network_selector, requests)
                 .await?;
             Ok(())
         }
@@ -178,8 +130,8 @@ fn log_client_request(request: &fidl_policy::ClientControllerRequest) {
 /// Handles all incoming requests from a ClientController.
 async fn handle_client_requests(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    internal_msg_sink: InternalMsgSink,
     saved_networks: SavedNetworksPtr,
+    network_selector: Arc<network_selection::NetworkSelector>,
     requests: ClientRequests,
 ) -> Result<(), fidl::Error> {
     let mut request_stream = requests.into_stream()?;
@@ -224,11 +176,14 @@ async fn handle_client_requests(
                 responder.send(status)?;
             }
             fidl_policy::ClientControllerRequest::ScanForNetworks { iterator, .. } => {
-                if let Err(e) =
-                    internal_msg_sink.unbounded_send(InternalMsg::NewPendingScanRequest(iterator))
-                {
-                    error!("Failed to send internal message: {:?}", e)
-                }
+                let fut = handle_client_request_scan(
+                    Arc::clone(&iface_manager),
+                    iterator,
+                    Arc::clone(&network_selector),
+                );
+                // The scan handler is infallible and should not block handling of further request.
+                // Detach the future here so we continue responding to other requests.
+                fuchsia_async::Task::spawn(fut).detach();
             }
             fidl_policy::ClientControllerRequest::SaveNetwork { config, responder } => {
                 // If there is an error saving the network, log it and convert to a FIDL value.
@@ -289,6 +244,21 @@ async fn handle_client_request_connect(
 
     let mut iface_manager = iface_manager.lock().await;
     iface_manager.connect(connect_req).await
+}
+
+async fn handle_client_request_scan(
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    output_iterator: fidl::endpoints::ServerEnd<fidl_fuchsia_wlan_policy::ScanResultIteratorMarker>,
+    network_selector: Arc<network_selection::NetworkSelector>,
+) {
+    scan::perform_scan(
+        iface_manager,
+        Some(output_iterator),
+        network_selector.generate_scan_result_updater(),
+        scan::LocationSensorUpdater {},
+        |_| None, // TODO(35919): include all partially hidden networks here
+    )
+    .await
 }
 
 /// This function handles requests to save a network by saving the network and sending back to the
@@ -362,7 +332,6 @@ async fn handle_client_request_remove_network(
     Ok(())
 }
 
-/// For now, instead of giving actual results simply give nothing.
 async fn handle_client_request_get_networks(
     saved_networks: SavedNetworksPtr,
     iterator: fidl::endpoints::ServerEnd<fidl_policy::NetworkConfigIteratorMarker>,
@@ -422,70 +391,6 @@ async fn handle_listener_request(
     }
 }
 
-/// Attempts to connect a client to the best available known network.
-pub(crate) async fn connect_to_best_network(
-    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    selector: Arc<network_selection::NetworkSelector>,
-) {
-    let mut iface_manager = iface_manager.lock().await;
-    // See if any known networks are in range and connect if one is.
-    if let Some((network_id, credential)) = selector.get_best_network(&vec![]).await {
-        info!("Saved network automatically selected for connection");
-        let connect_req =
-            client_fsm::ConnectRequest { network: network_id, credential: credential };
-
-        match iface_manager.connect(connect_req).await {
-            Ok(receiver) => match receiver.await {
-                Ok(()) => {}
-                Err(e) => warn!("failed to reconnect iface: {:?}", e),
-            },
-            Err(e) => warn!("could not reconnect iface: {:?}", e),
-        }
-    } else {
-        info!("No saved networks available to connect");
-    }
-}
-
-/// Waits for scan results from the scan module and indicates whether the scan completed
-/// successfully or failed with an error.
-async fn process_scan_results(proxy: fidl_policy::ScanResultIteratorProxy) -> Result<(), Error> {
-    loop {
-        let scan_results = proxy.get_next().await?;
-        match scan_results {
-            Ok(scanned_networks) => {
-                if scanned_networks.len() == 0 {
-                    return Ok(());
-                }
-            }
-            Err(e) => {
-                return Err(format_err!("scan failed: {:?}", e));
-            }
-        }
-    }
-}
-
-/// Perform a scan to seed the network selector with up-to-date information.
-pub(crate) async fn scan_for_network_selector(
-    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    selector: Arc<network_selection::NetworkSelector>,
-) -> Result<(), Error> {
-    let (proxy, server) = create_proxy()?;
-
-    let scan_fut = scan::perform_scan(
-        iface_manager,
-        Some(server),
-        selector.generate_scan_result_updater(),
-        scan::LocationSensorUpdater {},
-        |_| None,
-    );
-
-    let process_results_fut = process_scan_results(proxy);
-
-    // perform_scan is infallible.  Base the result on the ability to read the scan results
-    // reported by perform_scan.
-    join(scan_fut, process_results_fut).await.1
-}
-
 /// Registers a new update listener.
 /// The client's current state will be send to the newly added listener immediately.
 fn register_listener(
@@ -513,7 +418,6 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
-            client::{scan::ScanResultUpdate, sme_credential_from_policy},
             config_management::{Credential, NetworkConfig, SecurityType, PSK_BYTE_LEN},
             util::{cobalt::create_mock_cobalt_sender, logger::set_logger_for_test},
         },
@@ -2076,227 +1980,5 @@ mod tests {
             )
             .await
         );
-    }
-
-    /// Tests the case where there is a saved network when a disconnect event is observed.  In this
-    /// case, a reconnect should be attempted.
-    #[test]
-    fn test_connect_to_best_network() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("test_client_event_with_saved_network", &mut exec, true);
-
-        // Setup the IfaceManager so that it has a disconnected iface.
-        {
-            let iface_manager = test_values.iface_manager.clone();
-            let iface_manager_fut = iface_manager.lock();
-            pin_mut!(iface_manager_fut);
-            let mut iface_manager = match exec.run_until_stalled(&mut iface_manager_fut) {
-                Poll::Ready(iface_manager) => iface_manager,
-                Poll::Pending => panic!("expected to acquire iface_manager lock"),
-            };
-            let record_idle_fut = iface_manager.record_idle_client(0);
-            pin_mut!(record_idle_fut);
-            assert_variant!(exec.run_until_stalled(&mut record_idle_fut), Poll::Ready(Ok(())));
-        }
-
-        // Record some results to show that we have previously connected to this network and that
-        // we have seen it in a scan result.
-        let network_id = NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None);
-        let credential = Credential::None;
-        exec.run_singlethreaded(test_values.saved_networks.record_connect_result(
-            network_id,
-            &credential,
-            fidl_sme::ConnectResultCode::Success,
-            true,
-        ));
-
-        let selector = Arc::new(network_selection::NetworkSelector::new(
-            test_values.saved_networks,
-            create_mock_cobalt_sender(),
-        ));
-        let scan_results = vec![types::ScanResult {
-            id: types::NetworkIdentifier {
-                ssid: b"foobar".to_vec(),
-                type_: types::SecurityType::None,
-            },
-            entries: vec![types::Bss {
-                bssid: [0, 1, 2, 3, 4, 5],
-                rssi: -20,
-                frequency: 2400,
-                timestamp_nanos: 0,
-            }],
-            compatibility: types::Compatibility::Supported,
-        }];
-        let mut network_selector_updater = selector.generate_scan_result_updater();
-        let mut update_fut = network_selector_updater.update_scan_results(&scan_results);
-        assert_variant!(exec.run_until_stalled(&mut update_fut), Poll::Ready(()));
-        drop(update_fut);
-
-        let fut = connect_to_best_network(test_values.iface_manager, selector);
-        pin_mut!(fut);
-
-        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {..})))
-        )
-    }
-
-    /// Tests the case where there is no saved network when a disconnect event is observed.  In
-    /// this case, the interface ID should be pushed onto the vector of disconnected interfaces.
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_connect_to_best_network_no_networks() {
-        set_logger_for_test();
-
-        let stash_id = "test_client_event_no_saved_network";
-        let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = Arc::new(
-            SavedNetworksManager::new_with_stash_or_paths(
-                stash_id,
-                path,
-                tmp_path,
-                create_mock_cobalt_sender(),
-            )
-            .await
-            .expect("Failed to create a KnownEssStore"),
-        );
-
-        let (sme_proxy, _sme_server_end) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
-            .expect("failed to create ClientSmeProxy");
-        let (req_sender, _req_recvr) = mpsc::channel(1);
-        let iface_manager = Arc::new(Mutex::new(FakeIfaceManager::new(sme_proxy, req_sender)));
-
-        {
-            let iface_manager = iface_manager.clone();
-            let mut iface_manager = iface_manager.lock().await;
-            assert!(!iface_manager.has_idle_client().await.expect("failed to query idle client"));
-        }
-
-        let network_selector = Arc::new(network_selection::NetworkSelector::new(
-            saved_networks,
-            create_mock_cobalt_sender(),
-        ));
-        connect_to_best_network(iface_manager.clone(), network_selector).await;
-    }
-
-    /// Tests the case where scanning for the network selector fails.  Ensures that an error is
-    /// propagated.
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_scan_for_network_selector_fails() {
-        set_logger_for_test();
-
-        let stash_id = "test_scan_for_network_selector_fails";
-        let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = Arc::new(
-            SavedNetworksManager::new_with_stash_or_paths(
-                stash_id,
-                path,
-                tmp_path,
-                create_mock_cobalt_sender(),
-            )
-            .await
-            .expect("Failed to create a KnownEssStore"),
-        );
-        let selector = Arc::new(network_selection::NetworkSelector::new(
-            saved_networks,
-            create_mock_cobalt_sender(),
-        ));
-        let iface_manager = Arc::new(Mutex::new(FakeIfaceManagerNoIfaces {}));
-
-        assert!(scan_for_network_selector(iface_manager, selector).await.is_err());
-    }
-
-    /// Tests the case where scanning for the network selector succeeds.  Ensures that the return
-    /// status is ok.
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_scan_for_network_selector_succeeds() {
-        let saved_networks = create_network_store("test_scan_for_network_selector_succeeds").await;
-        let selector = Arc::new(network_selection::NetworkSelector::new(
-            saved_networks,
-            create_mock_cobalt_sender(),
-        ));
-
-        let (proxy, server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
-            .expect("failed to create ClientSmeProxy");
-        let (req_sender, _req_recvr) = mpsc::channel(1);
-        let iface_manager = FakeIfaceManager::new(proxy.clone(), req_sender);
-        let iface_manager = Arc::new(Mutex::new(iface_manager));
-
-        // Issue the scan request.
-        let scan_request_fut = scan_for_network_selector(iface_manager, selector);
-
-        // Create another future to monitor for the SME stream.
-        let mut sme_stream = server.into_stream().expect("failed to create ClientSmeRequestStream");
-        let scan_response_fut = async move {
-            let next_sme_req =
-                sme_stream.next().await.expect("No more requests").expect("Request stream failed");
-            match next_sme_req {
-                fidl_sme::ClientSmeRequest::Scan { txn, .. } => {
-                    // Send all the APs
-                    let (_stream, ctrl) = txn
-                        .into_stream_and_control_handle()
-                        .expect("error accessing control handle");
-                    ctrl.send_on_result(&mut vec![].iter_mut()).expect("failed to send scan data");
-
-                    // Send the end of data
-                    ctrl.send_on_finished().expect("failed to send scan data");
-                }
-                other_request => {
-                    panic!("unexpected SME request variant: {:?}", other_request);
-                }
-            }
-        };
-
-        assert!(join(scan_response_fut, scan_request_fut).await.1.is_ok());
-    }
-
-    /// Tests the case where we are able to issue a scan request, but an error is returned while
-    /// waiting for scan results.
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_scan_for_network_selector_scan_error() {
-        let saved_networks = create_network_store("test_scan_for_network_selector_succeeds").await;
-        let selector = Arc::new(network_selection::NetworkSelector::new(
-            saved_networks,
-            create_mock_cobalt_sender(),
-        ));
-
-        let (proxy, server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
-            .expect("failed to create ClientSmeProxy");
-        let (req_sender, _req_recvr) = mpsc::channel(1);
-        let iface_manager = FakeIfaceManager::new(proxy.clone(), req_sender);
-        let iface_manager = Arc::new(Mutex::new(iface_manager));
-
-        // Issue the scan request.
-        let scan_request_fut = scan_for_network_selector(iface_manager, selector);
-
-        // Create another future to monitor for the SME stream.
-        let mut sme_stream = server.into_stream().expect("failed to create ClientSmeRequestStream");
-        let scan_response_fut = async move {
-            let next_sme_req =
-                sme_stream.next().await.expect("No more requests").expect("Request stream failed");
-            match next_sme_req {
-                fidl_sme::ClientSmeRequest::Scan { txn, .. } => {
-                    let (_stream, ctrl) = txn
-                        .into_stream_and_control_handle()
-                        .expect("error accessing control handle");
-
-                    // Return an error instead of scan results.
-                    ctrl.send_on_error(&mut fidl_sme::ScanError {
-                        code: fidl_sme::ScanErrorCode::InternalError,
-                        message: "Failed to scan".to_string(),
-                    })
-                    .expect("failed to send scan error");
-                }
-                other_request => {
-                    panic!("unexpected SME request variant: {:?}", other_request);
-                }
-            }
-        };
-
-        assert!(join(scan_response_fut, scan_request_fut).await.1.is_err());
     }
 }
