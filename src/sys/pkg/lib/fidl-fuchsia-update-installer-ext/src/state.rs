@@ -191,10 +191,10 @@ impl State {
         }
     }
 
-    /// Extracts progress, if the state supports it.
-    pub fn progress(&self) -> Option<&Progress> {
-        let info_and_progress = match self {
-            State::Prepare | State::FailPrepare => return None,
+    /// Extracts info_and_progress, if the state supports it.
+    fn info_and_progress(&self) -> Option<&UpdateInfoAndProgress> {
+        match self {
+            State::Prepare | State::FailPrepare => None,
             State::Fetch(data)
             | State::Stage(data)
             | State::WaitToReboot(data)
@@ -202,10 +202,24 @@ impl State {
             | State::DeferReboot(data)
             | State::Complete(data)
             | State::FailFetch(data)
-            | State::FailStage(data) => data,
-        };
-        let UpdateInfoAndProgress { info: _, progress } = info_and_progress;
-        Some(progress)
+            | State::FailStage(data) => Some(data),
+        }
+    }
+
+    /// Extracts progress, if the state supports it.
+    pub fn progress(&self) -> Option<&Progress> {
+        match self.info_and_progress() {
+            Some(UpdateInfoAndProgress { info: _, progress }) => Some(progress),
+            _ => None,
+        }
+    }
+
+    /// Extracts the download_size field in UpdateInfo, if the state supports it.
+    pub fn download_size(&self) -> Option<u64> {
+        match self.info_and_progress() {
+            Some(UpdateInfoAndProgress { info, progress: _ }) => Some(info.download_size()),
+            _ => None,
+        }
     }
 }
 

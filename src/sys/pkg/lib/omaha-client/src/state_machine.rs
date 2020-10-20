@@ -765,7 +765,7 @@ where
 
             let (install_result, ()) = future::join(perform_install, yield_progress).await;
             if let Err(e) = install_result {
-                warn!("Installation failed: {}", e);
+                warn!("Installation failed: {:#}", anyhow!(e));
                 self.set_state(State::InstallationError, co).await;
                 self.report_omaha_event_and_update_context(
                     &request_params,

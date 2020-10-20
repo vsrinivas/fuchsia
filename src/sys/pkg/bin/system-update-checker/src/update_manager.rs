@@ -457,11 +457,8 @@ where
 
                 self.last_update_storage.store(&latest_update_package);
 
-                if let Err(e) = self
-                    .update_applier
-                    .apply(current_system_image, latest_system_image, initiator)
-                    .await
-                    .context("apply_system_update failed")
+                if let Err(e) =
+                    self.update_applier.apply(initiator).await.context("apply_system_update failed")
                 {
                     co.yield_(StatusEvent::State(State::InstallationError(
                         InstallationErrorData {
@@ -475,9 +472,9 @@ where
                     .await;
                     return Err(e);
                 };
-                // On success, system-updater reboots the system before returning, so this code
-                // should never run. The only way to leave WaitingForReboot state is to restart
-                // the component
+                // On success, system-updater will reboots the system when ready, so this code may
+                // or may not be run. The only way to leave WaitingForReboot state is to restart
+                // the component.
                 co.yield_(StatusEvent::State(State::WaitingForReboot(InstallingData {
                     update: Some(UpdateInfo {
                         version_available: Some(latest_system_image.to_string()),
@@ -540,24 +537,14 @@ impl CurrentChannelUpdater for CurrentChannelManager {
 
 // For mocking
 pub trait UpdateApplier: Send + Sync + 'static {
-    fn apply(
-        &self,
-        current_system_image: Hash,
-        latest_system_image: Hash,
-        initiator: Initiator,
-    ) -> BoxFuture<'_, Result<(), anyhow::Error>>;
+    fn apply(&self, initiator: Initiator) -> BoxFuture<'_, Result<(), anyhow::Error>>;
 }
 
 pub struct RealUpdateApplier;
 
 impl UpdateApplier for RealUpdateApplier {
-    fn apply(
-        &self,
-        current_system_image: Hash,
-        latest_system_image: Hash,
-        initiator: Initiator,
-    ) -> BoxFuture<'_, Result<(), anyhow::Error>> {
-        apply_system_update(current_system_image, latest_system_image, initiator).boxed()
+    fn apply(&self, initiator: Initiator) -> BoxFuture<'_, Result<(), anyhow::Error>> {
+        apply_system_update(initiator).boxed()
     }
 }
 
@@ -714,12 +701,7 @@ pub(crate) mod tests {
     #[derive(Clone)]
     pub struct UnreachableUpdateApplier;
     impl UpdateApplier for UnreachableUpdateApplier {
-        fn apply(
-            &self,
-            _current_system_image: Hash,
-            _latest_system_image: Hash,
-            _initiator: Initiator,
-        ) -> BoxFuture<'_, Result<(), anyhow::Error>> {
+        fn apply(&self, _initiator: Initiator) -> BoxFuture<'_, Result<(), anyhow::Error>> {
             unreachable!();
         }
     }
@@ -746,12 +728,7 @@ pub(crate) mod tests {
         }
     }
     impl UpdateApplier for FakeUpdateApplier {
-        fn apply(
-            &self,
-            _current_system_image: Hash,
-            _latest_system_image: Hash,
-            _initiator: Initiator,
-        ) -> BoxFuture<'_, Result<(), anyhow::Error>> {
+        fn apply(&self, _initiator: Initiator) -> BoxFuture<'_, Result<(), anyhow::Error>> {
             self.call_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             future::ready((self.result)().map_err(|e| e.into())).boxed()
         }
