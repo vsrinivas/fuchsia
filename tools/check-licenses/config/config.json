@@ -38,7 +38,8 @@
     "zircon/third_party/lz4/programs",
     "zircon/third_party/lz4/tests",
     "prebuilt/third_party/aemu",
-    "prebuilt/infra"
+    "prebuilt/infra",
+    "prebuilt/media"
   ],
   "textExtensionList": [
     "ac",
