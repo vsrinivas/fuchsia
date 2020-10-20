@@ -10,4 +10,7 @@
 // Enable support for Thread in the Device Layer.
 #define WEAVE_DEVICE_CONFIG_ENABLE_THREAD 1
 
+// Enable Trait Manager.
+#define WEAVE_DEVICE_CONFIG_ENABLE_TRAIT_MANAGER 1
+
 #endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_WEAVE_DEVICE_PLATFORM_CONFIG_H_

@@ -180,6 +180,12 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       return err;
     }
 
+    err = TraitMgr().Init();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "TraitMgr init failed: " << ErrorStr(err);
+      return err;
+    }
+
     return WEAVE_NO_ERROR;
 }
 
