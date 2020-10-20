@@ -11,7 +11,7 @@ use {
 };
 
 // Abstracts over input injection services (which are provided by input device registries).
-pub(crate) trait InputDeviceRegistry {
+pub trait InputDeviceRegistry {
     fn add_touchscreen_device(
         &mut self,
         width: u32,
@@ -25,7 +25,7 @@ pub(crate) trait InputDeviceRegistry {
 // Note that the input-synthesis crate deliberately chooses not to "sub-type" input devices.
 // This avoids additional code complexity, and allows the crate to support tests that
 // deliberately send events that do not match the expected event type for a device.
-pub(crate) trait InputDevice {
+pub trait InputDevice {
     fn media_buttons(
         &self,
         volume_up: bool,
@@ -124,7 +124,7 @@ pub(crate) fn text(
     Ok(())
 }
 
-pub(crate) fn tap_event(
+pub fn tap_event(
     x: u32,
     y: u32,
     width: u32,

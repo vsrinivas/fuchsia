@@ -1,0 +1,60 @@
+{
+    program: {
+        binary: "bin/scenic",
+    },
+    use: [
+        { runner: "elf" },
+        {
+            directory: "/dev/class/display-controller",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "/dev/class/goldfish-address-space",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "/dev/class/goldfish-control",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "/dev/class/goldfish-pipe",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "/config/vulkan/icd.d",
+            rights: [ "r*" ],
+        },
+        {
+            directory: "/tmp",
+            rights: [ "rw*" ],
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.cobalt.LoggerFactory",
+                "/svc/fuchsia.hardware.display.Provider",
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.scheduler.ProfileProvider",
+                "/svc/fuchsia.sysmem.Allocator",
+                "/svc/fuchsia.tracing.provider.Registry",
+                "/svc/fuchsia.ui.input.ImeService",
+                "/svc/fuchsia.vulkan.loader.Loader",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "/svc/fuchsia.ui.annotation.Registry",
+                "/svc/fuchsia.ui.focus.FocusChainListenerRegistry",
+                "/svc/fuchsia.ui.input.PointerCaptureListenerRegistry",
+                "/svc/fuchsia.ui.lifecycle.LifecycleController",
+                "/svc/fuchsia.ui.pointerinjector.Registry",
+                "/svc/fuchsia.ui.policy.accessibility.PointerEventRegistry",
+                "/svc/fuchsia.ui.scenic.internal.Snapshot",
+                "/svc/fuchsia.ui.scenic.Scenic",
+                "/svc/fuchsia.ui.views.ViewRefInstalled",
+            ],
+            from: "self",
+        },
+    ],
+}

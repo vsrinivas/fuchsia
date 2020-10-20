@@ -11,10 +11,9 @@ use {
 
 pub mod inverse_keymap;
 pub mod keymaps;
+pub mod legacy_backend;
+pub mod synthesizer;
 pub mod usages;
-
-mod legacy_backend;
-mod synthesizer;
 
 /// Simulates a media button event.
 pub async fn media_button_event_command(
@@ -30,7 +29,7 @@ pub async fn media_button_event_command(
         mic_mute,
         reset,
         pause,
-        &mut legacy_backend::InputDeviceRegistry,
+        &mut legacy_backend::InputDeviceRegistry::new(),
     )
 }
 
@@ -38,7 +37,7 @@ pub async fn media_button_event_command(
 ///
 /// `duration` is the time spent between key-press and key-release events.
 pub async fn keyboard_event_command(usage: u32, duration: Duration) -> Result<(), Error> {
-    keyboard_event(usage, duration, &mut legacy_backend::InputDeviceRegistry)
+    keyboard_event(usage, duration, &mut legacy_backend::InputDeviceRegistry::new())
 }
 
 /// Simulates `input` being typed on a [qwerty] keyboard by making use of [`InverseKeymap`].
@@ -47,7 +46,7 @@ pub async fn keyboard_event_command(usage: u32, duration: Duration) -> Result<()
 ///
 /// [qwerty]: keymaps/constant.QWERTY_MAP.html
 pub async fn text_command(input: String, duration: Duration) -> Result<(), Error> {
-    text(input, duration, &mut legacy_backend::InputDeviceRegistry)
+    text(input, duration, &mut legacy_backend::InputDeviceRegistry::new())
 }
 
 /// Simulates `tap_event_count` taps at coordinates `(x, y)` for a touchscreen with horizontal
@@ -72,7 +71,7 @@ pub async fn tap_event_command(
         height,
         tap_event_count,
         duration,
-        &mut legacy_backend::InputDeviceRegistry,
+        &mut legacy_backend::InputDeviceRegistry::new(),
     )
 }
 
@@ -96,7 +95,7 @@ pub async fn multi_finger_tap_event_command(
         height,
         tap_event_count,
         duration,
-        &mut legacy_backend::InputDeviceRegistry,
+        &mut legacy_backend::InputDeviceRegistry::new(),
     )
 }
 
@@ -128,7 +127,7 @@ pub async fn swipe_command(
         height,
         move_event_count,
         duration,
-        &mut legacy_backend::InputDeviceRegistry,
+        &mut legacy_backend::InputDeviceRegistry::new(),
     )
 }
 
@@ -174,7 +173,7 @@ pub async fn multi_finger_swipe_command(
         height,
         move_event_count,
         duration,
-        &mut legacy_backend::InputDeviceRegistry,
+        &mut legacy_backend::InputDeviceRegistry::new(),
     )
 }
 

@@ -17,7 +17,9 @@ use {
 
 // Provides a handle to an `impl synthesizer::InputDeviceRegistry`, which works with input
 // pipelines that support the (legacy) `fuchsia.ui.input.InputDeviceRegistry` protocol.
-pub(crate) struct InputDeviceRegistry;
+pub struct InputDeviceRegistry {
+    svc_dir_path: Option<String>,
+}
 
 // Wraps `DeviceDescriptor` FIDL table fields for descriptors into a single Rust type,
 // allowing us to pass any of them to `self.register_device()`.
@@ -65,11 +67,27 @@ impl synthesizer::InputDeviceRegistry for self::InputDeviceRegistry {
 }
 
 impl InputDeviceRegistry {
+    // Create a new injector. Use default path to the service directory
+    // containing the InputDeviceRegistry protocol.
+    pub fn new() -> Self {
+        Self { svc_dir_path: None }
+    }
+
+    // Create a new injector. Use |svc_dir_path| as the custom path to
+    // the service directory containing the InputDeviceRegistry protocol.
+    pub fn new_with_path(svc_dir_path: String) -> Self {
+        Self { svc_dir_path: Some(svc_dir_path) }
+    }
+
     fn add_device(
         &self,
         descriptor: UniformDeviceDescriptor,
     ) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
-        let registry = app::client::connect_to_service::<InputDeviceRegistryMarker>()?;
+        let registry = if let Some(path) = &self.svc_dir_path {
+            app::client::connect_to_service_at::<InputDeviceRegistryMarker>(path.as_str())?
+        } else {
+            app::client::connect_to_service::<InputDeviceRegistryMarker>()?
+        };
         let mut device = DeviceDescriptor {
             device_info: None,
             keyboard: None,
