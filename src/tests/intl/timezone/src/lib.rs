@@ -208,7 +208,7 @@ async fn loop_until_matching_time(
                 dart VM says the time is:               {:?}\n\t\
                 `-- the test fixture says it should be: {:?}\n\t\
                 expected test fixture timezone:         {}\n\t\
-                the test fixutre local time is:         {}\n\t\
+                the test fixture local time is:         {}\n\t\
                 test fixture says UTC time is:          {}\n\t\
                 test fixture ucal timestamp is:         {} sec since epoch\n\t\
                 test fixture userspace timestamp is:    {:?} sec since epoch\n\t\
