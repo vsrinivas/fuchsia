@@ -66,7 +66,7 @@ class VulkanExtensionTest : public testing::Test {
  public:
   ~VulkanExtensionTest();
   bool Initialize();
-  bool Exec(VkFormat format, uint32_t width, uint32_t height, bool direct, bool linear,
+  bool Exec(VkFormat format, uint32_t width, uint32_t height, bool linear,
             bool repeat_constraints_as_non_protected,
             const std::vector<fuchsia::sysmem::ImageFormatConstraints> &format_constraints =
                 std::vector<fuchsia::sysmem::ImageFormatConstraints>());
@@ -99,9 +99,6 @@ class VulkanExtensionTest : public testing::Test {
   fuchsia::sysmem::BufferCollectionInfo_2 AllocateSysmemCollection(
       std::optional<fuchsia::sysmem::BufferCollectionConstraints> constraints,
       fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
-  void InitializeNonDirectImage(fuchsia::sysmem::BufferCollectionInfo_2 &buffer_collection_info,
-                                VkImageCreateInfo image_create_info);
-  void InitializeNonDirectMemory(fuchsia::sysmem::BufferCollectionInfo_2 &buffer_collection_info);
   void InitializeDirectImage(vk::BufferCollectionFUCHSIA collection,
                              vk::ImageCreateInfo image_create_info);
   void InitializeDirectImageMemory(vk::BufferCollectionFUCHSIA collection,
@@ -326,61 +323,6 @@ fuchsia::sysmem::BufferCollectionInfo_2 VulkanExtensionTest::AllocateSysmemColle
   return buffer_collection_info;
 }
 
-void VulkanExtensionTest::InitializeNonDirectImage(
-    fuchsia::sysmem::BufferCollectionInfo_2 &buffer_collection_info,
-    VkImageCreateInfo image_create_info) {
-  fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
-  encoder.Alloc(fidl::EncodingInlineSize<fuchsia::sysmem::SingleBufferSettings>(&encoder));
-  buffer_collection_info.settings.Encode(&encoder, 0);
-  std::vector<uint8_t> encoded_data = encoder.TakeBytes();
-
-  VkFuchsiaImageFormatFUCHSIA image_format_fuchsia = {
-      .sType = VK_STRUCTURE_TYPE_FUCHSIA_IMAGE_FORMAT_FUCHSIA,
-      .pNext = nullptr,
-      .imageFormat = encoded_data.data(),
-      .imageFormatSize = static_cast<uint32_t>(encoded_data.size())};
-  image_create_info.pNext = &image_format_fuchsia;
-
-  auto [result, vk_image] = ctx_->device()->createImageUnique(image_create_info, nullptr);
-  EXPECT_EQ(vk::Result::eSuccess, result);
-  vk_image_ = std::move(vk_image);
-}
-
-void VulkanExtensionTest::InitializeNonDirectMemory(
-    fuchsia::sysmem::BufferCollectionInfo_2 &buffer_collection_info) {
-  const vk::Device &device = *ctx_->device();
-  VkMemoryRequirements memory_reqs;
-  vkGetImageMemoryRequirements(device, *vk_image_, &memory_reqs);
-  // Use first supported type
-  uint32_t memory_type = __builtin_ctz(memory_reqs.memoryTypeBits);
-
-  // The driver may not have the right information to choose the correct
-  // heap for protected memory.
-  EXPECT_FALSE(use_protected_memory_);
-
-  VkImportMemoryZirconHandleInfoFUCHSIA handle_info = {
-      .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
-      .pNext = nullptr,
-      VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
-      buffer_collection_info.buffers[0].vmo.release()};
-
-  VkMemoryAllocateInfo alloc_info = {
-      .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-      .pNext = &handle_info,
-      .allocationSize = memory_reqs.size,
-      .memoryTypeIndex = memory_type,
-  };
-  VkResult result;
-  if ((result = vkAllocateMemory(device, &alloc_info, nullptr, &vk_device_memory_)) != VK_SUCCESS) {
-    ASSERT_TRUE(false);
-  }
-
-  result = vkBindImageMemory(device, *vk_image_, vk_device_memory_, 0);
-  if (result != VK_SUCCESS) {
-    ASSERT_TRUE(false);
-  }
-}
-
 void VulkanExtensionTest::InitializeDirectImage(vk::BufferCollectionFUCHSIA collection,
                                                 vk::ImageCreateInfo image_create_info) {
   VkBufferCollectionImageCreateInfoFUCHSIA image_format_fuchsia = {
@@ -464,7 +406,7 @@ VulkanExtensionTest::CreateVkBufferCollectionForMultiImage(
 }
 
 bool VulkanExtensionTest::Exec(
-    VkFormat format, uint32_t width, uint32_t height, bool direct, bool linear,
+    VkFormat format, uint32_t width, uint32_t height, bool linear,
     bool repeat_constraints_as_non_protected,
     const std::vector<fuchsia::sysmem::ImageFormatConstraints> &format_constraints) {
   auto [local_token, vulkan_token, non_protected_token] = MakeSharedCollection<3>();
@@ -493,21 +435,12 @@ bool VulkanExtensionTest::Exec(
     fuchsia::sysmem::BufferCollectionConstraints constraints;
     // Use the other connection to specify the actual desired format and size,
     // which should be compatible with what the vulkan driver can use.
-    assert(direct);
     constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
     // Try multiple format modifiers.
     constraints.image_format_constraints_count = format_constraints.size();
     for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
       constraints.image_format_constraints[i] = format_constraints[i];
     }
-    constraints_option = constraints;
-  } else if (direct) {
-  } else {
-    fuchsia::sysmem::BufferCollectionConstraints constraints;
-    constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
-    // The total buffer count should be 1 with or without this set (because
-    // the Vulkan driver sets a minimum of one buffer).
-    constraints.min_buffer_count_for_camping = 1;
     constraints_option = constraints;
   }
   auto buffer_collection_info =
@@ -517,25 +450,17 @@ bool VulkanExtensionTest::Exec(
   fuchsia::sysmem::PixelFormat pixel_format =
       buffer_collection_info.settings.image_format_constraints.pixel_format;
 
-  if (format == VK_FORMAT_UNDEFINED && direct) {
+  if (format == VK_FORMAT_UNDEFINED) {
     EXPECT_EQ(pixel_format.type, fuchsia::sysmem::PixelFormatType::BGRA32);
   }
 
-  if (!direct) {
-    InitializeNonDirectImage(buffer_collection_info, image_create_info);
-  } else {
-    InitializeDirectImage(*collection, image_create_info);
-  }
+  InitializeDirectImage(*collection, image_create_info);
 
   if (linear) {
     CheckLinearSubresourceLayout(format, width);
   }
 
-  if (!direct) {
-    InitializeNonDirectMemory(buffer_collection_info);
-  } else {
-    InitializeDirectImageMemory(*collection);
-  }
+  InitializeDirectImageMemory(*collection);
 
   return true;
 }
@@ -630,44 +555,34 @@ bool VulkanExtensionTest::ExecBuffer(uint32_t size) {
 class VulkanImageExtensionTest : public VulkanExtensionTest,
                                  public ::testing::WithParamInterface<bool> {};
 
-TEST_P(VulkanImageExtensionTest, BufferCollectionNV12) {
-  ASSERT_TRUE(Initialize());
-  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, false, GetParam(), false));
-}
-
-TEST_P(VulkanImageExtensionTest, BufferCollectionI420) {
-  ASSERT_TRUE(Initialize());
-  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM, 64, 64, false, GetParam(), false));
-}
-
 TEST_P(VulkanImageExtensionTest, BufferCollectionNV12_1025) {
   ASSERT_TRUE(Initialize());
-  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 1025, 64, false, GetParam(), false));
+  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 1025, 64, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionRGBA) {
   ASSERT_TRUE(Initialize());
-  ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, false, GetParam(), false));
+  ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionRGBA_1025) {
   ASSERT_TRUE(Initialize());
-  ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 1025, 64, false, GetParam(), false));
+  ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 1025, 64, GetParam(), false));
 }
 
-TEST_P(VulkanImageExtensionTest, BufferCollectionDirectNV12) {
+TEST_P(VulkanImageExtensionTest, BufferCollectionNV12) {
   ASSERT_TRUE(Initialize());
-  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, true, GetParam(), false));
+  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, GetParam(), false));
 }
 
-TEST_P(VulkanImageExtensionTest, BufferCollectionDirectI420) {
+TEST_P(VulkanImageExtensionTest, BufferCollectionI420) {
   ASSERT_TRUE(Initialize());
-  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM, 64, 64, true, GetParam(), false));
+  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM, 64, 64, GetParam(), false));
 }
 
-TEST_P(VulkanImageExtensionTest, BufferCollectionDirectNV12_1280_546) {
+TEST_P(VulkanImageExtensionTest, BufferCollectionNV12_1280_546) {
   ASSERT_TRUE(Initialize());
-  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 8192, 546, true, GetParam(), false));
+  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 8192, 546, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionUndefined) {
@@ -684,7 +599,7 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionUndefined) {
   std::vector<fuchsia::sysmem::ImageFormatConstraints> two_constraints{
       bgra_image_constraints, bgra_tiled_image_constraints};
 
-  ASSERT_TRUE(Exec(VK_FORMAT_UNDEFINED, 64, 64, true, GetParam(), false, two_constraints));
+  ASSERT_TRUE(Exec(VK_FORMAT_UNDEFINED, 64, 64, GetParam(), false, two_constraints));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionMultipleFormats) {
@@ -705,27 +620,26 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionMultipleFormats) {
   std::vector<fuchsia::sysmem::ImageFormatConstraints> all_constraints{
       nv12_image_constraints, bgra_image_constraints, bgra_tiled_image_constraints};
 
-  ASSERT_TRUE(
-      Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, true, GetParam(), false, all_constraints));
+  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, GetParam(), false, all_constraints));
   if (vk_device_memory_) {
     vkFreeMemory(*ctx_->device(), vk_device_memory_, nullptr);
     vk_device_memory_ = VK_NULL_HANDLE;
   }
-  ASSERT_TRUE(Exec(VK_FORMAT_B8G8R8A8_UNORM, 64, 64, true, GetParam(), false, all_constraints));
+  ASSERT_TRUE(Exec(VK_FORMAT_B8G8R8A8_UNORM, 64, 64, GetParam(), false, all_constraints));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionProtectedRGBA) {
   set_use_protected_memory(true);
   ASSERT_TRUE(Initialize());
   ASSERT_TRUE(device_supports_protected_memory());
-  ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, true, GetParam(), false));
+  ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, ProtectedAndNonprotectedConstraints) {
   set_use_protected_memory(true);
   ASSERT_TRUE(Initialize());
   ASSERT_TRUE(device_supports_protected_memory());
-  ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, true, GetParam(), true));
+  ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, GetParam(), true));
 }
 
 TEST_P(VulkanImageExtensionTest, MultiImageFormatEntrypoint) {
