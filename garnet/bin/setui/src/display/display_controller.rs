@@ -160,6 +160,11 @@ where
                 display_info.low_light_mode = low_light_mode;
                 Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
             }
+            SettingRequest::SetThemeMode(theme_mode) => {
+                let mut display_info = self.client.read().await.clone();
+                display_info.theme_mode = theme_mode;
+                Some(write(&self.client, display_info, false).await.into_handler_result())
+            }
             SettingRequest::Get => {
                 Some(Ok(Some(SettingResponse::Brightness(self.client.read().await))))
             }

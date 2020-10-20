@@ -8,12 +8,14 @@ use {
     crate::request_respond,
     crate::switchboard::base::{
         FidlResponseErrorLogger, LowLightMode, SettingRequest, SettingResponse, SettingType,
+        ThemeMode,
     },
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatch2Responder,
         DisplayWatchLightSensor2Responder, DisplayWatchLightSensorResponder, DisplayWatchResponder,
-        Error, LightSensorData, LowLightMode as FidlLowLightMode,
+        Error, LightSensorData, LowLightMode as FidlLowLightMode, Theme,
+        ThemeType as FidlThemeType,
     },
     fuchsia_async as fasync,
 };
@@ -59,6 +61,14 @@ impl From<SettingResponse> for DisplaySettings {
                 display_settings.brightness_value = Some(info.manual_brightness_value);
             }
 
+            display_settings.theme = match info.theme_mode {
+                ThemeMode::Unknown => None,
+                ThemeMode::Default => Some(Theme { theme_type: Some(FidlThemeType::Default) }),
+                ThemeMode::Light => Some(Theme { theme_type: Some(FidlThemeType::Light) }),
+                ThemeMode::Dark => Some(Theme { theme_type: Some(FidlThemeType::Dark) }),
+                ThemeMode::Auto => Some(Theme { theme_type: Some(FidlThemeType::Auto) }),
+            };
+
             display_settings
         } else {
             panic!("incorrect value sent to display");
@@ -82,6 +92,13 @@ fn to_request(settings: DisplaySettings) -> Option<SettingRequest> {
                 Some(SettingRequest::SetLowLightMode(LowLightMode::DisableImmediately))
             }
         };
+    } else if let Some(Theme { theme_type: Some(theme_type) }) = settings.theme {
+        request = match theme_type {
+            FidlThemeType::Default => Some(SettingRequest::SetThemeMode(ThemeMode::Default)),
+            FidlThemeType::Light => Some(SettingRequest::SetThemeMode(ThemeMode::Light)),
+            FidlThemeType::Dark => Some(SettingRequest::SetThemeMode(ThemeMode::Dark)),
+            FidlThemeType::Auto => Some(SettingRequest::SetThemeMode(ThemeMode::Auto)),
+        }
     }
     request
 }

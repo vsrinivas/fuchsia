@@ -187,6 +187,7 @@ pub enum SettingRequest {
     SetBrightness(f32),
     SetAutoBrightness(bool),
     SetLowLightMode(LowLightMode),
+    SetThemeMode(ThemeMode),
 
     // Do not disturb requests.
     SetDnD(DoNotDisturbInfo),
@@ -234,6 +235,7 @@ impl SettingRequest {
             SettingRequest::Restore => "Restore",
             SettingRequest::SetUserDataSharingConsent(_) => "SetUserDataSharingConsent",
             SettingRequest::SetConfigurationInterfaces(_) => "SetConfigurationInterfaces",
+            SettingRequest::SetThemeMode(_) => "SetThemeMode",
         }
     }
 }

@@ -17,6 +17,7 @@ use {
     fidl::Error::ClientChannelClosed,
     fidl_fuchsia_settings::{
         DisplayMarker, DisplayProxy, DisplaySettings, IntlMarker, LowLightMode as FidlLowLightMode,
+        Theme as FidlTheme, ThemeType as FidlThemeType,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
@@ -211,6 +212,30 @@ async fn test_light_mode_with_brightness_controller() {
     let settings = display_proxy.watch().await.expect("watch completed");
 
     assert_eq!(settings.low_light_mode, Some(FidlLowLightMode::DisableImmediately));
+}
+
+// Tests for display theme.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_theme_mode_auto() {
+    let display_proxy = setup_display_env().await;
+
+    // Test that if theme is is set to auto, it is reflected.
+    let mut display_settings = DisplaySettings::empty();
+    display_settings.theme = Some(FidlTheme { theme_type: Some(FidlThemeType::Auto) });
+    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
+
+    let settings = display_proxy.watch().await.expect("watch completed");
+
+    assert_eq!(settings.theme, Some(FidlTheme { theme_type: Some(FidlThemeType::Auto) }));
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_no_theme_set() {
+    let display_proxy = setup_display_env().await;
+
+    let settings = display_proxy.watch().await.expect("watch completed");
+
+    assert_eq!(settings.theme, None);
 }
 
 // Makes sure that settings are restored from storage when service comes online.
