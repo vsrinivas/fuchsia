@@ -281,18 +281,12 @@ expect and provide responses to pairing i/o requests from `bt-host` production
 code.
 
 
-#### [FakeDomain](https://fuchsia.googlesource.com/fuchsia/+/f28eb81421883d215a654933acf69868dfc67295/src/connectivity/bluetooth/core/bt-host/data/fake_domain.h)
+#### [FakeL2cap](../core/bt-host/testing/fake_l2cap.h)
 
-`data::Domain` mainly serves as an intermediary layer to aggregate different
-data channel abstractions to
+`l2cap::L2cap` mainly serves as the public interface to the L2CAP layer.
 
-a.) ensure their thread safety and
-
-b.) so higher levels can interact with a generic Bluetooth `data::Domain`
-instead of lower-layer protocols.
-
-`FakeDomain` aggregates a variety of faked out implementations of protocols
-aggregated in production by `data::Domain` for unit testing of higher layers.
+`FakeL2cap` aggregates a variety of faked out implementations of protocols
+aggregated in production by `l2cap::L2cap` for unit testing of higher layers.
 
 ## `bt-host` emulation helpers
 
