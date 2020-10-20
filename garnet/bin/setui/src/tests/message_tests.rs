@@ -25,6 +25,7 @@ pub enum TestMessage {
     Bar,
     Error,
     Baz,
+    Qux,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Copy, Hash)]
@@ -49,6 +50,7 @@ async fn verify_result<P: Payload + PartialEq + 'static, A: Address + PartialEq 
 }
 
 static ORIGINAL: TestMessage = TestMessage::Foo;
+static MODIFIED: TestMessage = TestMessage::Qux;
 static BROADCAST: TestMessage = TestMessage::Baz;
 static REPLY: TestMessage = TestMessage::Bar;
 
@@ -649,9 +651,64 @@ async fn test_bind_to_recipient() {
     assert!(!rx.next().await.is_none());
 }
 
-/// Verifies that the proper signal is fired when a receptor disappears.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_propagation() {
+    let messenger_factory = test::message::create_hub();
+
+    // Create messenger to send source message.
+    let (sending_messenger, _) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("sending messenger should be created");
+
+    // Create broker to propagate a derived message.
+    let (_, mut broker) = messenger_factory
+        .create(MessengerType::Broker(None))
+        .await
+        .expect("broker should be created");
+
+    // Create messenger to be target of source message.
+    let (target_messenger, mut target_receptor) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("target messenger should be created");
+
+    // Send top level message.
+    let mut result_receptor = sending_messenger
+        .message(ORIGINAL, Audience::Messenger(target_messenger.get_signature()))
+        .send();
+
+    // Ensure broker receives message and propagate modified message.
+    verify_payload(
+        ORIGINAL,
+        &mut broker,
+        Some(Box::new(move |client| -> BoxFuture<'_, ()> {
+            Box::pin(async move {
+                client.propagate(MODIFIED).send().ack();
+            })
+        })),
+    )
+    .await;
+
+    // Ensure target receives message and reply back.
+    verify_payload(
+        MODIFIED,
+        &mut target_receptor,
+        Some(Box::new(move |client| -> BoxFuture<'_, ()> {
+            Box::pin(async move {
+                client.reply(REPLY).send().ack();
+            })
+        })),
+    )
+    .await;
+
+    // Ensure original sender gets reply.
+    verify_payload(REPLY, &mut result_receptor, None).await;
+}
+
+/// Verifies that the proper signal is fired when a receptor disappears.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_relay() {
     let messenger_factory = test::message::create_hub();
 
     let (messenger_1, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
@@ -681,7 +738,7 @@ async fn test_propagation() {
                     assert!(messenger
                         .message(client.get_payload(), Audience::Messenger(target_signature))
                         .send()
-                        .propagate(client.clone())
+                        .relay(client.clone())
                         .await
                         .is_ok());
                     ()
@@ -709,7 +766,7 @@ async fn test_propagation() {
 
 /// Verifies that the proper signal is fired when a receptor disappears.
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_propagation_error() {
+async fn test_relay_error() {
     let messenger_factory = test::message::create_hub();
 
     let (messenger_1, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
@@ -735,7 +792,7 @@ async fn test_propagation_error() {
                 assert!(messenger
                     .message(client.get_payload(), Audience::Address(TestAddress::Foo(1)))
                     .send()
-                    .propagate(client.clone())
+                    .relay(client.clone())
                     .await
                     .is_err());
                 client.reply(error_message).send().ack();

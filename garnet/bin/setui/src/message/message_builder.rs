@@ -4,7 +4,7 @@
 
 use crate::internal::common::now;
 use crate::message::action_fuse::{ActionFuse, ActionFuseHandle};
-use crate::message::base::{Address, MessageAction, MessageType, Payload};
+use crate::message::base::{Address, Attribution, Message, MessageAction, MessageType, Payload};
 use crate::message::beacon::BeaconBuilder;
 use crate::message::messenger::Messenger;
 use crate::message::receptor::Receptor;
@@ -14,7 +14,7 @@ use fuchsia_zircon::Duration;
 #[derive(Clone)]
 pub struct MessageBuilder<P: Payload + 'static, A: Address + 'static> {
     payload: P,
-    message_type: MessageType<P, A>,
+    attribution: Attribution<P, A>,
     messenger: Messenger<P, A>,
     forwarder: Option<ActionFuseHandle>,
     timeout: Option<Duration>,
@@ -29,9 +29,26 @@ impl<P: Payload + 'static, A: Address + 'static> MessageBuilder<P, A> {
         messenger: Messenger<P, A>,
     ) -> MessageBuilder<P, A> {
         MessageBuilder {
-            payload: payload,
-            message_type: message_type,
-            messenger: messenger,
+            payload,
+            attribution: Attribution::Source(message_type),
+            messenger,
+            forwarder: None,
+            timeout: None,
+        }
+    }
+
+    /// Creates a new message derived from the source message with the specified
+    /// payload. Derived messages will follow the same path as the source
+    /// message.
+    pub(super) fn derive(
+        payload: P,
+        source: Message<P, A>,
+        messenger: Messenger<P, A>,
+    ) -> MessageBuilder<P, A> {
+        MessageBuilder {
+            payload,
+            attribution: Attribution::Derived(Box::new(source)),
+            messenger,
             forwarder: None,
             timeout: None,
         }
@@ -57,7 +74,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageBuilder<P, A> {
         let (beacon, receptor) =
             BeaconBuilder::new(self.messenger.clone()).set_timeout(self.timeout).build();
         self.messenger
-            .transmit(MessageAction::Send(self.payload, self.message_type, now()), Some(beacon));
+            .transmit(MessageAction::Send(self.payload, self.attribution, now()), Some(beacon));
 
         if let Some(forwarder) = self.forwarder {
             ActionFuse::defuse(forwarder.clone());

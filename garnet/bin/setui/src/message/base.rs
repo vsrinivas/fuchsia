@@ -292,6 +292,22 @@ pub enum MessageType<P: Payload + 'static, A: Address + 'static> {
     Reply(Box<Message<P, A>>),
 }
 
+/// `Attribution` describes the relationship of the message path in relation
+/// to the author.
+#[derive(Clone, Debug)]
+pub enum Attribution<P: Payload + 'static, A: Address + 'static> {
+    /// `Source` attributed messages are the original messages to be sent on a
+    /// path. For example, a source attribution for an origin message type will
+    /// be authored by the original sender. In a reply message type, a source
+    /// attribution means the reply was authored by the original message's
+    /// intended target.
+    Source(MessageType<P, A>),
+    /// `Derived` attributed messages are messages that have been modified by
+    /// someone in the message path. They follow the same trajectory (audience
+    /// or return path), but their message has been altered.
+    Derived(Box<Message<P, A>>),
+}
+
 /// The core messaging unit. A Message may be annotated by messengers, but is
 /// not associated with a particular Messenger instance.
 #[derive(Clone, Debug)]
@@ -299,7 +315,7 @@ pub struct Message<P: Payload + 'static, A: Address + 'static> {
     author: Fingerprint<A>,
     timestamp: Timestamp,
     payload: P,
-    message_type: MessageType<P, A>,
+    attribution: Attribution<P, A>,
     // The return path is generated while the message is passed from messenger
     // to messenger on the way to the intended recipient. It indicates the
     // messengers that would like to be informed of replies to this message.
@@ -314,15 +330,16 @@ impl<P: Payload + 'static, A: Address + 'static> Message<P, A> {
         author: Fingerprint<A>,
         timestamp: Timestamp,
         payload: P,
-        message_type: MessageType<P, A>,
+        attribution: Attribution<P, A>,
     ) -> Message<P, A> {
-        Message {
-            author: author,
-            timestamp: timestamp,
-            payload: payload,
-            message_type: message_type,
-            return_path: vec![],
+        let mut return_path = vec![];
+
+        // A derived message adopts the return path of the original message.
+        if let Attribution::Derived(message) = &attribution {
+            return_path.append(&mut message.get_return_path());
         }
+
+        Message { author, timestamp, payload, attribution, return_path }
     }
 
     /// Adds an entity to be notified on any replies.
@@ -353,7 +370,10 @@ impl<P: Payload + 'static, A: Address + 'static> Message<P, A> {
 
     /// Returns the message's type.
     pub(super) fn get_message_type(&self) -> MessageType<P, A> {
-        return self.message_type.clone();
+        match &self.attribution {
+            Attribution::Source(message_type) => message_type.clone(),
+            Attribution::Derived(message) => message.get_message_type(),
+        }
     }
 
     /// Returns a copy of the message's payload.
@@ -404,7 +424,7 @@ pub(super) enum MessengerAction<P: Payload + 'static, A: Address + 'static> {
 #[derive(Debug)]
 pub(super) enum MessageAction<P: Payload + 'static, A: Address + 'static> {
     // A new message sent to the specified audience.
-    Send(P, MessageType<P, A>, Timestamp),
+    Send(P, Attribution<P, A>, Timestamp),
     // The message has been forwarded by the current holder.
     Forward(Message<P, A>),
 }

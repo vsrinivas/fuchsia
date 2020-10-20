@@ -96,6 +96,12 @@ impl<P: Payload + 'static, A: Address + 'static> MessageClient<P, A> {
         .auto_forwarder(self.forwarder.clone())
     }
 
+    /// Propagates a derived message on the path of the original message.
+    pub fn propagate(&self, payload: P) -> MessageBuilder<P, A> {
+        MessageBuilder::derive(payload, self.message.clone(), self.messenger.clone())
+            .auto_forwarder(self.forwarder.clone())
+    }
+
     pub async fn acknowledge(&mut self) {
         self.message.report_status(Status::Acknowledged).await;
     }
