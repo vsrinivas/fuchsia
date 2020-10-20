@@ -83,7 +83,7 @@ TEST(SanitizerUtilsTest, FillShadow) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(0, 0, &vmo));
   uintptr_t addr;
-  ASSERT_OK(zx::vmar::root_self()->map(0, vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr));
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
 
   size_t alloc_mem_use;
   GetMemoryUsage(&alloc_mem_use);
@@ -135,7 +135,7 @@ TEST(SanitizerUtilsTest, FillShadowSmall) {
   for (const auto size : sizes) {
     for (const auto offset : offsets) {
       ASSERT_OK(
-          zx::vmar::root_self()->map(0, vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr));
+          zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
       // Align base to the next shadow page, leaving one shadow page to its left.
       uintptr_t base = (addr + (kPageSize << shadow_scale)) & -(kPageSize << shadow_scale);
 
@@ -178,7 +178,7 @@ TEST(SanitizerUtilsTest, FillShadowPartialPages) {
     ASSERT_OK(zx::vmo::create(0, 0, &vmo));
     uintptr_t addr;
     ASSERT_OK(
-        zx::vmar::root_self()->map(0, vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr));
+        zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
     // ..and poison it.
     ASAN_POISON_MEMORY_REGION((void*)addr, len);
     // Unpoison the shadow.
