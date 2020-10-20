@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_EXTRACTOR_CXX_EXTRACTOR_H_
-#define SRC_STORAGE_EXTRACTOR_CXX_EXTRACTOR_H_
+#ifndef SRC_STORAGE_EXTRACTOR_CPP_EXTRACTOR_H_
+#define SRC_STORAGE_EXTRACTOR_CPP_EXTRACTOR_H_
 
 #include <lib/fit/result.h>
 #include <lib/zx/status.h>
@@ -69,4 +69,4 @@ zx::status<> MinfsExtract(fbl::unique_fd input_fd, extractor::Extractor& extract
 
 }  // namespace extractor
 
-#endif  // SRC_STORAGE_EXTRACTOR_CXX_EXTRACTOR_H_
+#endif  // SRC_STORAGE_EXTRACTOR_CPP_EXTRACTOR_H_

@@ -17,7 +17,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-#include "src/storage/extractor/cxx/extractor.h"
+#include "src/storage/extractor/cpp/extractor.h"
 
 namespace extractor {
 namespace {

@@ -53,7 +53,8 @@ group("tests") {
   deps = [
     ":disk-extractor-lib-tests",
     ":disk_extractor_lib_test($host_toolchain)",
+    "bin:disk-extract-unit-test",
     "c:disk-extractor-c-lib-unit-test",
-    "cxx:disk-extractor-unit-test",
+    "cpp:disk-extractor-unit-test",
   ]
 }

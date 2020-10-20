@@ -1,0 +1,28 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    program: {
+        binary: "bin/disk-extract",
+    },
+    capabilities: [
+        { protocol: "fuchsia.fs.Admin" },
+    ],
+    use: [
+        { runner: "elf" },
+        { protocol: "fuchsia.logger.LogSink" },
+        {
+            directory: "dev-class-block",
+            rights: [ "rw*" ],
+            path: "/dev/class/block",
+        },
+        {
+            directory: "tmp",
+            rights: [
+                "admin",
+                "rw*",
+            ],
+            path: "/tmp",
+        },
+    ],
+}

@@ -22,7 +22,7 @@
 #include <safemath/checked_math.h>
 
 #include "src/storage/extractor/c/extractor.h"
-#include "src/storage/extractor/cxx/extractor.h"
+#include "src/storage/extractor/cpp/extractor.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/fsck.h"
 
@@ -410,7 +410,7 @@ zx::status<> FsWalker::LoadInodeTable() {
 zx::status<> MinfsExtract(fbl::unique_fd input_fd, Extractor& extractor) {
   auto walker_or = FsWalker::Create(std::move(input_fd), extractor);
   if (walker_or.is_error()) {
-    std::cerr << "Walker: Init failure: " << walker_or.status_string() << std::endl;
+    std::cerr << "Walker: Init failure: " << walker_or.error_value() << std::endl;
     return zx::error(walker_or.error_value());
   }
   std::unique_ptr<FsWalker> walker = std::move(walker_or.value());

@@ -12,7 +12,7 @@
 #include <fbl/unique_fd.h>
 #include <safemath/checked_math.h>
 
-#include "src/storage/extractor/cxx/extractor.h"
+#include "src/storage/extractor/cpp/extractor.h"
 
 namespace extractor {
 

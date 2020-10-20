@@ -24,7 +24,7 @@
 #include <fbl/unique_fd.h>
 
 #include "src/storage/extractor/c/extractor.h"
-#include "src/storage/extractor/cxx/extractor.h"
+#include "src/storage/extractor/cpp/extractor.h"
 #include "src/storage/fs_test/fs_test.h"
 #include "src/storage/fs_test/fs_test_fixture.h"
 #include "src/storage/fs_test/minfs_test.h"
