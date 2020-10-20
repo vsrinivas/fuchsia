@@ -173,7 +173,7 @@ zx_status_t FvmInfo::GrowForSlices(size_t slice_count) {
 zx_status_t FvmInfo::AllocatePartition(const fvm::PartitionDescriptor* partition, uint8_t* guid,
                                        uint32_t* vpart_index) {
   CheckValid();
-  for (unsigned index = vpart_hint_; index < SuperBlock().GetPartitionTableEntryCount(); index++) {
+  for (uint32_t index = vpart_hint_; index < SuperBlock().GetPartitionTableEntryCount(); ++index) {
     zx_status_t status;
     fvm::VPartitionEntry* vpart = nullptr;
     if ((status = GetPartition(index, &vpart)) != ZX_OK) {
@@ -196,6 +196,29 @@ zx_status_t FvmInfo::AllocatePartition(const fvm::PartitionDescriptor* partition
   fprintf(stderr, "Unable to find any free partitions (last allocated %u, avail %lu)\n",
           vpart_hint_, SuperBlock().GetPartitionTableEntryCount());
   return ZX_ERR_INTERNAL;
+}
+
+zx::status<uint32_t> FvmInfo::AllocatePartition(const fvm::VPartitionEntry& entry) {
+  CheckValid();
+  for (uint32_t index = vpart_hint_; index < SuperBlock().GetPartitionTableEntryCount(); ++index) {
+    fvm::VPartitionEntry* vpart = nullptr;
+    if (zx_status_t status = GetPartition(index, &vpart); status != ZX_OK) {
+      fprintf(stderr, "Failed to retrieve partition %u\n", index);
+      return zx::error(status);
+    }
+
+    // Make sure this vpartition has not already been allocated
+    if (vpart->IsFree()) {
+      *vpart = entry;
+      vpart_hint_ = index + 1;
+      dirty_ = true;
+      return zx::ok(index);
+    }
+  }
+
+  fprintf(stderr, "Unable to find any free partitions (last allocated %u, avail %lu)\n",
+          vpart_hint_, SuperBlock().GetPartitionTableEntryCount());
+  return zx::error(ZX_ERR_INTERNAL);
 }
 
 zx_status_t FvmInfo::AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* pslice) {

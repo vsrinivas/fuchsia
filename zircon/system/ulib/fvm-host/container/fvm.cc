@@ -214,8 +214,12 @@ zx_status_t FvmContainer::Verify() const {
       return status;
     }
 
-    if (vpart->slices == 0) {
+    if (vpart->IsFree()) {
       break;
+    }
+    if (vpart->IsInternalReservationPartition()) {
+      // Reserve partitions need no verification.
+      continue;
     }
 
     fbl::Vector<size_t> extent_lengths;
@@ -547,6 +551,60 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name,
   return ZX_OK;
 }
 
+zx_status_t FvmContainer::AddReservationPartition(size_t num_slices) {
+  info_.CheckValid();
+
+  auto vpart_or = info_.AllocatePartition(fvm::VPartitionEntry::CreateReservationPartition());
+  if (vpart_or.is_error()) {
+    return vpart_or.status_value();
+  }
+  uint32_t vpart_index = vpart_or.value();
+
+  zx_status_t status;
+  if ((status = info_.GrowForSlices(num_slices)) != ZX_OK) {
+    fprintf(stderr, "Failed to resize metadata buffer: %d\n", status);
+    return status;
+  }
+
+  // Allocate all slices for this partition
+  uint32_t pslice_start = 0;
+  uint32_t pslice_total = 0;
+  for (size_t i = 0; i < num_slices; ++i) {
+    uint32_t pslice;
+
+    if ((status = info_.AllocateSlice(vpart_index, i, &pslice)) != ZX_OK) {
+      fprintf(stderr, "Failed to allocate slice: %d\n", status);
+      return status;
+    }
+
+    if (!pslice_start) {
+      pslice_start = pslice;
+    }
+
+    // On a new FVM container, pslice allocation is expected to be contiguous.
+    if (pslice != pslice_start + pslice_total) {
+      fprintf(stderr, "Unexpected error during slice allocation\n");
+      return ZX_ERR_INTERNAL;
+    }
+
+    pslice_total++;
+  }
+
+  fvm::VPartitionEntry* entry;
+  if ((status = info_.GetPartition(vpart_index, &entry)) != ZX_OK) {
+    return status;
+  }
+  ZX_ASSERT(entry->slices == num_slices);
+
+  FvmPartitionInfo partition;
+  partition.format = nullptr;
+  partition.vpart_index = vpart_index;
+  partition.pslice_start = pslice_start;
+  partition.slice_count = num_slices;
+  partitions_.push_back(std::move(partition));
+  return ZX_OK;
+}
+
 size_t FvmContainer::CountAddedSlices() const {
   size_t required_slices = 0;
 
@@ -579,6 +637,12 @@ zx_status_t FvmContainer::WritePartition(unsigned part_index) {
 
   unsigned extent_index = 0;
   FvmPartitionInfo* partition = &partitions_[part_index];
+  if (!partition->format) {
+    // No data to write. This leaves the partition's data uninitialized.
+    // The underlying file was already extended to the appropriate size with ftruncate(2), which
+    // means that the byte value will be zeroes.
+    return ZX_OK;
+  }
   Format* format = partition->format.get();
   uint32_t pslice_start = partition->pslice_start;
 

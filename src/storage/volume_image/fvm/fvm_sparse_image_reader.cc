@@ -210,9 +210,14 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
       allocated_slices += extent.slice_count;
     }
 
+    const uint8_t* type = partition_descriptor.type;
+    const uint8_t* guid = fvm::kPlaceHolderInstanceGuid.data();
+    if (partition_descriptor.flags & fvm::kSparseFlagReservationPartition) {
+      type = fvm::kInternalReservationGuid.data();
+      guid = fvm::kInternalReservationGuid.data();
+    }
     // Push FVM's partition entry
-    fvm_partitions.emplace_back(partition_descriptor.type, fvm::kPlaceHolderInstanceGuid.data(),
-                                allocated_slices,
+    fvm_partitions.emplace_back(type, guid, allocated_slices,
                                 fvm::VPartitionEntry::StringFromArray(partition_descriptor.name));
   }
 

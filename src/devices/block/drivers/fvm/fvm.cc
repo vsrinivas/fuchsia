@@ -361,7 +361,11 @@ zx_status_t VPartitionManager::Load() {
   // claim to have slices.
   for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
     auto* entry = GetVPartEntryLocked(i);
-    if (entry->slices == 0) {
+    if (entry->IsFree()) {
+      continue;
+    }
+    if (entry->IsInternalReservationPartition()) {
+      zxlogf(INFO, "Ignoring reserved partition with %u slices\n", entry->slices);
       continue;
     }
 

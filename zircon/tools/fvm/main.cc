@@ -39,6 +39,7 @@ constexpr char kMinimumInodes[] = "--minimum-inodes";
 constexpr char kMinimumData[] = "--minimum-data-bytes";
 constexpr char kMaximumBytes[] = "--maximum-bytes";
 constexpr char kEmptyMinfs[] = "--with-empty-minfs";
+constexpr char kReserveSlices[] = "--reserve-slices";
 
 enum class DiskType {
   File = 0,
@@ -227,9 +228,13 @@ class RawBlockImageWriter final : public storage::volume_image::Writer {
 };
 
 int add_partitions(Container* container, int argc, char** argv) {
-  auto add_corrupted_partition =
-      fbl::MakeAutoCall([&]() { container->AddCorruptedPartition(kDataTypeName, 0); });
-  bool seen = false;
+  // If the flag |kEmptyMinfs| is set, an empty minfs partition will be added after the rest of the
+  // partitions have been processed.
+  bool add_empty_minfs = false;
+  // If the flag |kReserveSlices| is set, a reservation partition with the desired number of slices
+  // will be added after the rest of the partitions have been processed.
+  size_t slices_to_reserve = 0;
+
   for (int i = 0; i < argc;) {
     if (argc - i < 2 || argv[i][0] != '-' || argv[i][1] != '-') {
       usage();
@@ -238,8 +243,16 @@ int add_partitions(Container* container, int argc, char** argv) {
     const char* partition_type = argv[i] + 2;
     const char* partition_path = argv[i + 1];
     if (i < argc && strcmp(argv[i], kEmptyMinfs) == 0) {
-      seen = true;
+      add_empty_minfs = true;
       i++;
+      continue;
+    }
+    if (i < argc && strcmp(argv[i], kReserveSlices) == 0) {
+      if (parse_size(argv[i + 1], &slices_to_reserve) < 0) {
+        usage();
+        return -1;
+      }
+      i += 2;
       continue;
     }
 
@@ -282,8 +295,11 @@ int add_partitions(Container* container, int argc, char** argv) {
       return -1;
     }
   }
-  if (!seen) {
-    add_corrupted_partition.cancel();
+  if (add_empty_minfs) {
+    container->AddCorruptedPartition(kDataTypeName, 0);
+  }
+  if (slices_to_reserve) {
+    container->AddReservationPartition(slices_to_reserve);
   }
 
   return 0;

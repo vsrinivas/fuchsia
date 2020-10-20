@@ -18,6 +18,7 @@
 #include <fvm/fvm-sparse.h>
 #include <safemath/checked_math.h>
 
+#include "fvm/format.h"
 #include "src/storage/minfs/format.h"
 
 constexpr size_t kLz4HeaderSize = 15;
@@ -238,6 +239,11 @@ zx_status_t SparseContainer::Verify() const {
     fbl::Vector<size_t> extent_lengths;
     start = end;
     xprintf("Found partition %u with %u extents\n", i, partitions_[i].descriptor.extent_count);
+
+    if (partitions_[i].descriptor.flags & fvm::kSparseFlagReservationPartition) {
+      // Reserve partitions need no verification.
+      continue;
+    }
 
     for (unsigned j = 0; j < partitions_[i].descriptor.extent_count; j++) {
       extent_lengths.push_back(partitions_[i].extents[j].extent_length);
@@ -476,6 +482,14 @@ zx_status_t SparseContainer::Commit() {
     vslice_info_t vslice_info;
     // Write out each extent in the partition
     for (unsigned j = 0; j < partition.extent_count; j++) {
+      if (!format) {
+        // Zero-fill if there is no format to instruct how to fill the data.
+        if (zx_status_t status = WriteZeroes(partitions_[i].extents[j].extent_length);
+            status != ZX_OK) {
+          return status;
+        }
+        continue;
+      }
       if (format->GetVsliceRange(j, &vslice_info) != ZX_OK) {
         fprintf(stderr, "Unable to access partition extent\n");
         return ZX_ERR_OUT_OF_RANGE;
@@ -643,6 +657,26 @@ zx_status_t SparseContainer::AddPartition(const char* path, const char* type_nam
   return ZX_OK;
 }
 
+zx_status_t SparseContainer::AddReservationPartition(size_t num_slices) {
+  uint64_t partition_index = image_.partition_count;
+  fvm::VPartitionEntry entry = fvm::VPartitionEntry::CreateReservationPartition();
+  SparsePartitionInfo info;
+  auto& descriptor = info.descriptor;
+  info.format = nullptr;
+  descriptor.magic = fvm::kPartitionDescriptorMagic;
+  memcpy(descriptor.type, entry.type, sizeof(kDataType));
+  memcpy(descriptor.name, entry.unsafe_name, sizeof(descriptor.name));
+  descriptor.flags = fvm::kSparseFlagReservationPartition;
+  descriptor.extent_count = 0;
+
+  image_.header_length += sizeof(fvm::PartitionDescriptor);
+  partitions_.push_back(std::move(info));
+  image_.partition_count++;
+
+  return AllocateExtent(static_cast<uint32_t>(partition_index), /*vslice_offset=*/0,
+                        /*slice_count=*/num_slices, fvm::kBlockSize);
+}
+
 zx_status_t SparseContainer::Decompress(const char* path) {
   if ((flags_ & fvm::kSparseFlagLz4) == 0) {
     fprintf(stderr, "Cannot decompress un-compressed sparse file\n");
@@ -751,6 +785,18 @@ zx_status_t SparseContainer::WriteData(const void* data, size_t length) {
     return ZX_ERR_IO;
   }
 
+  return ZX_OK;
+}
+
+zx_status_t SparseContainer::WriteZeroes(size_t length) {
+  constexpr std::array<uint8_t, fvm::kBlockSize> kBuffer = {0};
+  while (length > 0) {
+    size_t to_write = std::min(length, kBuffer.size());
+    if (zx_status_t status = WriteData(kBuffer.data(), to_write); status != ZX_OK) {
+      return status;
+    }
+    length -= to_write;
+  }
   return ZX_OK;
 }
 

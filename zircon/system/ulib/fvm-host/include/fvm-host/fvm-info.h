@@ -45,6 +45,9 @@ class FvmInfo {
   zx_status_t AllocatePartition(const fvm::PartitionDescriptor* partition, uint8_t* guid,
                                 uint32_t* vpart_index);
 
+  // Allocates new partition (in memory).
+  zx::status<uint32_t> AllocatePartition(const fvm::VPartitionEntry& entry);
+
   // Allocates new slice for given partition (in memory).
   zx_status_t AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* pslice);
 

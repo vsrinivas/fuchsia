@@ -58,6 +58,9 @@ class Container {
   virtual zx_status_t AddPartition(const char* path, const char* type_name,
                                    FvmReservation* reserve) = 0;
 
+  // Adds a partition which is used to reserve |num_slices| slices for FVM's internal use.
+  virtual zx_status_t AddReservationPartition(size_t num_slices) = 0;
+
   // Creates a partition of a given size and type, rounded to nearest slice. This is,
   // will allocate minimum amount of slices and the rest for the data region.
   virtual zx_status_t AddCorruptedPartition(const char* type, uint64_t required_size) {
@@ -116,6 +119,7 @@ class FvmContainer final : public Container {
   zx_status_t Extend(size_t length);
   size_t SliceSize() const final;
   zx_status_t AddPartition(const char* path, const char* type_name, FvmReservation* reserve) final;
+  zx_status_t AddReservationPartition(size_t num_slices) final;
 
   uint64_t CalculateDiskSize() const final;
 
@@ -290,6 +294,7 @@ class SparseContainer final : public Container {
   size_t SliceSize() const final;
   size_t SliceCount() const;
   zx_status_t AddPartition(const char* path, const char* type_name, FvmReservation* reserve) final;
+  zx_status_t AddReservationPartition(size_t num_slices) final;
 
   // Decompresses the contents of the sparse file (if they are compressed), and writes the output
   // to |path|.
@@ -328,6 +333,7 @@ class SparseContainer final : public Container {
 
   zx_status_t PrepareWrite(size_t max_len);
   zx_status_t WriteData(const void* data, size_t length);
+  zx_status_t WriteZeroes(size_t length);
   zx_status_t CompleteWrite();
   // Calls |used_size_f| on fvm partitions that contain a successfully detected format (through
   // Format::Detect()). |out| has a unit which is dependent on the function called.

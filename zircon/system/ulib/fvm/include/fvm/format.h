@@ -101,6 +101,11 @@ static constexpr uint64_t kMaxVSlices = 1ull << (kSliceEntryVSliceBits - 1);
 // such instance GUID.
 static constexpr std::array<uint8_t, kGuidSize> kPlaceHolderInstanceGuid = {0};
 
+// GUID for an internally defined partition used to reserve slices for future uses.
+static constexpr std::array<uint8_t, kGuidSize> kInternalReservationGuid = {
+    0xa0, 0x44, 0xe4, 0x75, 0xaa, 0x6b, 0xe5, 0xf3, 0x52, 0x4b, 0xf3, 0x67, 0x81, 0x61, 0xf9, 0xce,
+};
+
 namespace internal {
 
 // FVM block alignment properties for a given type.
@@ -285,6 +290,9 @@ struct VPartitionEntry {
   VPartitionEntry(const uint8_t type[kGuidSize], const uint8_t guid[kGuidSize], uint32_t slices,
                   std::string name, uint32_t flags = 0);
 
+  // Creates an entry which is used to retain slices for future use.
+  static VPartitionEntry CreateReservationPartition();
+
   // Creates a string from the given possibly-null-terminated fixed-length buffer. If there is a
   // null terminator it will indicate the end of the string. if there is none, the string will use
   // up the entire input buffer.
@@ -311,6 +319,9 @@ struct VPartitionEntry {
 
   // Returns true if the partition is flagged as inactive.
   bool IsInactive() const;
+
+  // Returns true if the partition is an internal one used for reserving slices for future uses.
+  bool IsInternalReservationPartition() const;
 
   // Marks this entry active status as |is_active|.
   void SetActive(bool is_active);

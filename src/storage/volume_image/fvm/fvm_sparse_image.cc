@@ -39,6 +39,7 @@ uint32_t GetImageFlags(const FvmOptions& options) {
 uint32_t GetPartitionFlags(const Partition& partition) {
   uint32_t flags = 0;
 
+  // TODO(jfsulliv): Propagate all kSparseFlags.
   switch (partition.volume().encryption) {
     case EncryptionType::kZxcrypt:
       flags |= fvm::kSparseFlagZxcrypt;

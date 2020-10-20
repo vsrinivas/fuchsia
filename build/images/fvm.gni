@@ -36,6 +36,13 @@ declare_args() {
   # selected for conservation of space, rather than performance.
   fvm_slice_size = "8388608"
 
+  # Number of slices reserved by FVM for internal usage. If set, a dummy
+  # partition will be addded to the FVM image, containing this many slices.
+  # If unset, then no reservation partition will be added.
+  # TODO(jfsulliv): Set to 1 by default so that we exercise this feature on all
+  # product configurations.
+  fvm_reserved_slices = ""
+
   # Users of the filesystem may know required minimum load (total number of
   # data bytes and total number of files) on the fs. Following parameters
   # help to reserve the space needed for the load.
@@ -128,6 +135,12 @@ template("generate_fvm") {
     }
     if (defined(invoker.with_empty_minfs) && invoker.with_empty_minfs) {
       args += [ "--with-empty-minfs" ]
+    }
+    if (fvm_reserved_slices != "") {
+      args += [
+        "--reserve-slices",
+        fvm_reserved_slices,
+      ]
     }
     if (defined(invoker.partitions)) {
       foreach(part, invoker.partitions) {
