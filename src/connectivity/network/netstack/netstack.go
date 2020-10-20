@@ -53,9 +53,6 @@ const (
 	dhcpAcquisition    = 60 * time.Second
 	dhcpBackoff        = 1 * time.Second
 	dhcpRetransmission = 4 * time.Second
-
-	cobaltClientTickerPeriod        = 1 * time.Minute
-	cobaltStatsObserverTickerPeriod = 1 * time.Minute
 )
 
 func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
@@ -108,10 +105,7 @@ func (c *cobaltClient) Collect() []cobalt.CobaltEvent {
 	return events
 }
 
-func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithCtxInterface) error {
-	ticker := time.NewTicker(cobaltClientTickerPeriod)
-	defer ticker.Stop()
-
+func (c *cobaltClient) run(ctx context.Context, cobaltLogger *cobalt.LoggerWithCtxInterface, ticker <-chan time.Time) error {
 	ids := func(events []cobalt.CobaltEvent) []uint32 {
 		ids := make([]uint32, 0, len(events))
 		for _, event := range events {
@@ -124,7 +118,7 @@ func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithC
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-ticker.C:
+		case <-ticker:
 			events := c.Collect()
 			if len(events) == 0 {
 				continue

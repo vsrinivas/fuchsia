@@ -175,8 +175,12 @@ func Main() {
 	logLevel := syslog.InfoLevel
 
 	flags := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	flags.Var((*atomicBool)(&sniffer.LogPackets), "log-packets", "Enable packet logging")
-	flags.Var(&logLevel, "verbosity", "Set the logging verbosity")
+	flags.Var((*atomicBool)(&sniffer.LogPackets), "log-packets", "enable packet logging")
+	flags.Var(&logLevel, "verbosity", "set the logging verbosity")
+
+	var cobaltClientTimerPeriod, socketStatsTimerPeriod time.Duration
+	flags.DurationVar(&cobaltClientTimerPeriod, "cobalt-scheduling-interval", time.Minute, "set the interval at which metrics will be sent to Cobalt")
+	flags.DurationVar(&socketStatsTimerPeriod, "socket-stats-sampling-interval", time.Minute, "set the interval at which socket stats will be sampled")
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		panic(err)
 	}
@@ -319,7 +323,7 @@ func Main() {
 	statsObserver.init(func() {
 		cobaltClient.Register(&statsObserver)
 	})
-	go statsObserver.run(context.Background(), cobaltStatsObserverTickerPeriod, &ns.stats, ns.stack)
+	go statsObserver.run(context.Background(), socketStatsTimerPeriod, &ns.stats, ns.stack)
 	appCtx.OutgoingService.AddDiagnostics("counters", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
@@ -525,7 +529,9 @@ func Main() {
 		syslog.Warnf("could not initialize cobalt client: %s", err)
 	} else {
 		go func() {
-			if err := cobaltClient.Run(ctx, cobaltLogger); err != nil {
+			ticker := time.NewTicker(cobaltClientTimerPeriod)
+			defer ticker.Stop()
+			if err := cobaltClient.run(ctx, cobaltLogger, ticker.C); err != nil {
 				syslog.Errorf("cobalt client exited unexpectedly: %s", err)
 			}
 		}()
