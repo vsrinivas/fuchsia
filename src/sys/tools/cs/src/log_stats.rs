@@ -44,7 +44,7 @@ pub struct ComponentLogStats {
 }
 
 impl ComponentLogStats {
-    pub fn new(node: &NodeHierarchy, start_times: &HashMap<String, f64>) -> ComponentLogStats {
+    pub fn new(node: &NodeHierarchy, start_times: &HashMap<String, i64>) -> ComponentLogStats {
         let component_url = node.name.clone();
         let short_name = {
             let last_slash_index = component_url.rfind("/");
@@ -55,7 +55,7 @@ impl ComponentLogStats {
             .to_string()
         };
         let start_time = match start_times.get(&short_name) {
-            Some(s) => *s as i64,
+            Some(s) => *s,
             None => 0,
         };
         let map = node
@@ -164,7 +164,7 @@ impl LogStats {
     // Extracts the component start times from the inspect hierarchy.
     fn extract_component_start_times(
         inspect_root: &NodeHierarchy,
-    ) -> Result<HashMap<String, f64>, Error> {
+    ) -> Result<HashMap<String, i64>, Error> {
         let mut res = HashMap::new();
         let events_node = inspect_root
             .get_child_by_path(&vec!["event_stats", "recent_events"])
@@ -183,9 +183,9 @@ impl LogStats {
                 if let Some(j) = last_colon_index {
                     let time = event
                         .get_property("@time")
-                        .and_then(|prop| prop.string())
+                        .and_then(|prop| prop.uint())
                         .ok_or(format_err!("Missing @time"))?;
-                    res.insert(moniker[i + 1..j].into(), time.parse::<f64>()?);
+                    res.insert(moniker[i + 1..j].into(), *time as i64);
                 }
             }
         }
