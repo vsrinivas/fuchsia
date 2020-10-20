@@ -5,6 +5,7 @@
 #include "src/developer/forensics/crash_reports/queue.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 #include <memory>
 
@@ -59,6 +60,8 @@ constexpr char kAnnotationValue[] = "annotation.value";
 constexpr char kSnapshotUuidValue[] = "snapshot_uuid";
 constexpr char kMinidumpKey[] = "uploadFileMinidump";
 constexpr char kMinidumpValue[] = "minidump";
+
+constexpr zx::duration kPeriodicUploadDuration = zx::min(15);
 
 fuchsia::mem::Buffer BuildAttachment(const std::string& value) {
   fuchsia::mem::Buffer attachment;
@@ -158,7 +161,7 @@ class QueueTest : public UnitTestFixture {
       switch (op) {
         case QueueOps::AddNewReport:
           FX_CHECK(queue_->Add(MakeReport(program_id_)));
-          FX_CHECK(RunLoopUntilIdle());
+          RunLoopUntilIdle();
           ++program_id_;
           if (!queue_->IsEmpty()) {
             AddExpectedReport(queue_->LatestReport());
@@ -339,37 +342,6 @@ TEST_F(QueueTest, Check_EarlyUploadSucceeds) {
               }));
 }
 
-TEST_F(QueueTest, Check_EarlyUploadFails_ReattemptSucceeds) {
-  SetUpQueue({kUploadFailed, kUploadSuccessful});
-  ApplyQueueOps({
-      QueueOps::SetStateToUpload,
-      QueueOps::AddNewReport,
-  });
-  CheckQueueContents();
-  CheckAnnotationsOnServer();
-  CheckAttachmentKeysOnServer();
-  EXPECT_TRUE(queue_->IsEmpty());
-
-  RunLoopUntilIdle();
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::CrashState::kUploaded),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 2u),
-              }));
-}
-
-TEST_F(QueueTest, Check_EarlyUploadFails_ReattemptFails) {
-  SetUpQueue({kUploadFailed, kUploadFailed});
-  ApplyQueueOps({
-      QueueOps::SetStateToUpload,
-      QueueOps::AddNewReport,
-  });
-  CheckQueueContents();
-  EXPECT_EQ(queue_->Size(), 1u);
-}
-
 TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultipleReports) {
   SetUpQueue(std::vector<bool>(5u, kUploadSuccessful));
   ApplyQueueOps({
@@ -501,7 +473,7 @@ TEST_F(QueueTest, Check_ProcessAll_ScheduledTwice) {
   });
   ASSERT_FALSE(queue_->IsEmpty());
 
-  RunLoopFor(zx::hour(1));
+  RunLoopFor(kPeriodicUploadDuration);
   EXPECT_TRUE(queue_->IsEmpty());
 
   ApplyQueueOps({
@@ -511,7 +483,7 @@ TEST_F(QueueTest, Check_ProcessAll_ScheduledTwice) {
   });
   ASSERT_FALSE(queue_->IsEmpty());
 
-  RunLoopFor(zx::hour(1));
+  RunLoopFor(kPeriodicUploadDuration);
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
@@ -627,8 +599,6 @@ TEST_F(QueueTest, Check_Cobalt) {
 }
 
 TEST_F(QueueTest, Check_CobaltMultipleUploadAttempts) {
-  // Two reports. The first one fails its first upload attempt. The second one succeeds on its first
-  // try and triggers the successful re-upload of the first report.
   SetUpQueue({
       kUploadFailed,
       kUploadSuccessful,
@@ -640,7 +610,7 @@ TEST_F(QueueTest, Check_CobaltMultipleUploadAttempts) {
       QueueOps::AddNewReport,
   });
 
-  RunLoopUntilIdle();
+  RunLoopFor(kPeriodicUploadDuration);
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
                   // Two reports were eventually uploaded.

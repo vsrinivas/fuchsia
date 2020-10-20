@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 
 #include "src/developer/forensics/crash_reports/constants.h"
@@ -39,7 +40,7 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
                                     /*max_delay=*/zx::hour(1)) {
   FX_CHECK(dispatcher_);
 
-  ProcessAllEveryHour();
+  ProcessAllEveryFifteenMinutes();
   ProcessAllOnNetworkReachable();
 
   // TODO(fxbug.dev/56448): Initialize queue with the reports in the store. We need to be able to
@@ -52,14 +53,6 @@ bool Queue::Contains(const CrashId crash_id) const {
 }
 
 bool Queue::Add(Report report) {
-  // Process all pending reports after Add has completed. The processing is done asynchronously so
-  // that the crash report filer is not blocked.
-  auto process_all = fit::defer([this] {
-    if (const auto status = PostTask(dispatcher_, [this] { ProcessAll(); }); status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Error posting task to process reports after adding new report";
-    }
-  });
-
   // Attempt to upload a report before putting it in the store.
   std::string server_report_id;
   if (state_ == State::Upload) {
@@ -82,11 +75,14 @@ bool Queue::Add(Report report) {
     return false;
   }
 
+  pending_reports_.push_back(local_report_id.value());
+
   // Early upload that failed.
   if (state_ == State::Upload) {
     upload_attempts_[local_report_id.value()]++;
+  } else if (state_ == State::Archive) {
+    ArchiveAll();
   }
-  pending_reports_.push_back(local_report_id.value());
 
   return true;
 }
@@ -193,18 +189,21 @@ void Queue::OnUploadPolicyChange(const Settings::UploadPolicy& upload_policy) {
   ProcessAll();
 }
 
-void Queue::ProcessAllEveryHour() {
+void Queue::ProcessAllEveryFifteenMinutes() {
   if (const auto status = PostDelayedTask(
           dispatcher_,
           [this] {
-            if (ProcessAll() > 0) {
-              FX_LOGS(INFO) << "Hourly processing of pending crash reports queue";
+            if (const size_t processed = ProcessAll(); processed > 0) {
+              FX_LOGS(INFO) << fxl::StringPrintf(
+                  "Processed %zu pending crash reports as part of the 15-minute periodic "
+                  "processing",
+                  processed);
             }
-            ProcessAllEveryHour();
+            ProcessAllEveryFifteenMinutes();
           },
-          zx::hour(1));
+          zx::min(15));
       status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Error posting hourly process task to async loop. Won't retry.";
+    FX_PLOGS(ERROR, status) << "Error posting periodic process task to async loop. Won't retry.";
   }
 }
 

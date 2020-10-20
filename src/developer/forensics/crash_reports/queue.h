@@ -79,8 +79,8 @@ class Queue {
   // Callback to update |state_| on upload policy changes.
   void OnUploadPolicyChange(const Settings::UploadPolicy& upload_policy);
 
-  // Schedules ProcessAll() to run every hour.
-  void ProcessAllEveryHour();
+  // Schedules ProcessAll() to run every 15 minutes.
+  void ProcessAllEveryFifteenMinutes();
 
   // Calls ProcessAll() whenever the network becomes reachable.
   void ProcessAllOnNetworkReachable();
