@@ -83,6 +83,10 @@ set_default_toolchain(target_toolchain)
 # Some projects expect a default value for sources_assignment_filter.
 sources_assignment_filter = []
 
+# Variables used to refer to the in-tree python interpreter.
+python_version = "3.8"
+python_exe_src = "//prebuilt/third_party/python3/${host_platform}/bin/python${python_version}"
+
 declare_args() {
   # *This should never be set as a build argument.*
   # It exists only to be set in `toolchain_args`.
@@ -2141,4 +2145,40 @@ template("component") {
 
 set_defaults("component") {
   configs = default_common_binary_configs
+}
+
+# This wraps the built-in action template to enforce best practices.
+# In particular:
+# * If the script is python, use the in-tree interpreter.
+#   This prevents the script from relying on the python that happens to
+#   be in the PATH, making the build more hermetic.
+template("action") {
+  action(target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "args",
+                             "script",
+                             "testonly",
+                             "visibility",
+                           ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    if (get_path_info(invoker.script, "extension") == "py") {
+      args = [ rebase_path(invoker.script, root_build_dir) ]
+      if (defined(invoker.args)) {
+        args += invoker.args
+      }
+      script = python_exe_src
+    } else {
+      forward_variables_from(invoker,
+                             [
+                               "args",
+                               "script",
+                             ])
+    }
+  }
 }
