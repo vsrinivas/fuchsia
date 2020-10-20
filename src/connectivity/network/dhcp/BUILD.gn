@@ -96,7 +96,7 @@ fuchsia_test_package("dhcp-tests") {
     ":dhcp_lib_test",
     ":dhcpd_bin_test",
   ]
-  deps = [ "//src/connectivity/network/tests:stash_secure" ]
+  deps = [ "//src/sys/stash:stash_secure" ]
 }
 
 config_data("config-default") {

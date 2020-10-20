@@ -74,7 +74,7 @@ fuchsia_test_package("dhcpd-cli-tests") {
   deps = [
     ":component",
     "//src/connectivity/network/netstack:component-debug",
-    "//src/connectivity/network/tests:stash_secure",
+    "//src/sys/stash:stash_secure",
   ]
 }
 

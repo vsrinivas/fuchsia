@@ -162,12 +162,6 @@ fuchsia_component("mock_cobalt") {
   deps = [ "//src/cobalt/bin/testing/mock_cobalt:bin" ]
 }
 
-fuchsia_component("stash_secure") {
-  testonly = true
-  manifest = "//src/sys/stash/meta/stash_secure.cmx"
-  deps = [ "//src/sys/stash:bin" ]
-}
-
 fuchsia_test_package("netstack-integration-tests") {
   package_name = "netstack-integration-tests"
   test_components = [
@@ -182,7 +176,7 @@ fuchsia_test_package("netstack-integration-tests") {
     ":mock_cobalt",
 
     # stash_secure is used by dhcpd and netstack.
-    ":stash_secure",
+    "//src/sys/stash:stash_secure",
 
     # dhcpd is used to test DHCP address acquisition.
     ":dhcpd-testing-configs",
