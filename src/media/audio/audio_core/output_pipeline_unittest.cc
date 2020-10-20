@@ -113,7 +113,16 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
   void CheckBuffer(void* buffer, float expected_sample, size_t num_samples) {
     float* floats = reinterpret_cast<float*>(buffer);
     for (size_t i = 0; i < num_samples; ++i) {
-      ASSERT_FLOAT_EQ(expected_sample, floats[i]);
+      EXPECT_FLOAT_EQ(expected_sample, floats[i])
+          << "failed at sample " << i << " of " << num_samples << ": {"
+          << ([floats, num_samples]() {
+               std::ostringstream out;
+               for (size_t i = 0; i < num_samples; ++i) {
+                 out << floats[i] << ",";
+               }
+               return out.str();
+             })()
+          << "}";
     }
   }
 
@@ -282,8 +291,9 @@ TEST_F(OutputPipelineTest, Loopback) {
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
                                                        kDefaultTransform, device_clock_);
 
-  // Present frames 5ms from now to stay ahead of the safe_write_frame.
-  auto ref_start = device_clock_.Read() + zx::msec(5);
+  // Present frames ahead of now to stay ahead of the safe_write_frame.
+  auto scheduling_delay = zx::msec(25);  // need at least 25ms for sanitizer builds
+  auto ref_start = device_clock_.Read() + scheduling_delay;
   auto transform = pipeline->loopback()->ref_time_to_frac_presentation_frame();
   auto loopback_frame = Fixed::FromRaw(transform.timeline_function.Apply(ref_start.get())).Floor();
 
@@ -296,9 +306,9 @@ TEST_F(OutputPipelineTest, Loopback) {
   ASSERT_EQ(buf->length().Floor(), 48u);
   CheckBuffer(buf->payload(), 2.0, 96);
 
-  // Sleep 6ms to advance our safe_read_frame past the above mix, which includes 1ms of output
-  // and is presented at most 5ms from now. TODO(fxbug.dev/57377): Remove this sleep
-  usleep(6000);
+  // Sleep to advance our safe_read_frame past the above mix, which includes 1ms of output
+  // and is presented at most scheduling_delay from now. TODO(fxbug.dev/57377): Remove this sleep
+  usleep((scheduling_delay + zx::msec(1)).to_usecs());
 
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
@@ -372,8 +382,9 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
                                                        kDefaultTransform, device_clock_);
 
-  // Present frames 5ms from now to stay ahead of the safe_write_frame.
-  auto ref_start = device_clock_.Read() + zx::msec(5);
+  // Present frames ahead of now to stay ahead of the safe_write_frame.
+  auto scheduling_delay = zx::msec(25);  // need at least 25ms for sanitizer builds
+  auto ref_start = device_clock_.Read() + scheduling_delay;
   auto transform = pipeline->loopback()->ref_time_to_frac_presentation_frame();
   auto loopback_frame = Fixed::FromRaw(transform.timeline_function.Apply(ref_start.get())).Floor();
 
@@ -386,9 +397,9 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   ASSERT_EQ(buf->length().Floor(), 96u);
   CheckBuffer(buf->payload(), 2.0, 192);
 
-  // Sleep 6ms to advance our safe_read_frame past the above mix, which includes 1ms of output
-  // and is presented at most 5ms from now. TODO(fxbug.dev/57377): Remove this sleep
-  usleep(6000);
+  // Sleep to advance our safe_read_frame past the above mix, which includes 1ms of output
+  // and is presented at most scheduling_delay from now. TODO(fxbug.dev/57377): Remove this sleep
+  usleep((scheduling_delay + zx::msec(1)).to_usecs());
 
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
