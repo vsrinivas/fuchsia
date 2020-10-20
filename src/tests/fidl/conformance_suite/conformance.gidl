@@ -226,7 +226,7 @@ decode_success("TableWithUnknownReservedFieldsNotStored") {
     // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
     // each binding, they should be added to the denylist here and added to
     // the allowlist in the test below.
-    bindings_denylist = [go],
+    bindings_denylist = [dart,go],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -292,7 +292,7 @@ decode_success("TableWithUnknownTrailingFieldsNotStored") {
     // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
     // each binding, they should be added to the denylist here and added to
     // the allowlist in the test below.
-    bindings_denylist = [go],
+    bindings_denylist = [dart,go],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -361,7 +361,7 @@ decode_success("TableWithUnknownTrailingFields") {
 decode_success("TableWithUnknownTrailingFieldsAndHandlesNotStored") {
     // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
     // each binding, they should be removed from the allowlist here
-    bindings_allowlist = [dart,rust],
+    bindings_allowlist = [rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),
