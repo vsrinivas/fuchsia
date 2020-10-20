@@ -314,11 +314,6 @@ class WaitQueue {
   static void MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) TA_REQ(thread_lock);
 
  private:
-  // Dequeue the first waiting thread, and set its blocking status, then return a
-  // pointer to the thread which was dequeued.  Do not actually schedule the
-  // thread to run.
-  Thread* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock);
-
   static void TimeoutHandler(Timer* timer, zx_time_t now, void* arg);
 
   // Internal helper for dequeueing a single Thread.

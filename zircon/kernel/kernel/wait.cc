@@ -334,23 +334,6 @@ bool WaitQueue::WakeOne(bool reschedule, zx_status_t wait_queue_error) {
   return woke;
 }
 
-Thread* WaitQueue::DequeueOne(zx_status_t wait_queue_error) {
-  DEBUG_ASSERT_MAGIC_CHECK(this);
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
-
-  if (WAIT_QUEUE_VALIDATION) {
-    ValidateQueue();
-  }
-
-  Thread* t = Peek();
-  if (t) {
-    Dequeue(t, wait_queue_error);
-  }
-
-  return t;
-}
-
 void WaitQueue::DequeueThread(Thread* t, zx_status_t wait_queue_error) {
   DEBUG_ASSERT_MAGIC_CHECK(this);
   DEBUG_ASSERT(arch_ints_disabled());
