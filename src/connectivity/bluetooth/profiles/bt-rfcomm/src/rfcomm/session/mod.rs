@@ -23,8 +23,8 @@ mod multiplexer;
 use self::multiplexer::{ParameterNegotiationState, SessionMultiplexer, SessionParameters};
 use crate::rfcomm::frame::{
     mux_commands::{
-        CreditBasedFlowHandshake, MuxCommand, MuxCommandIdentifier, MuxCommandParams,
-        NonSupportedCommandParams, ParameterNegotiationParams,
+        CreditBasedFlowHandshake, ModemStatusParams, MuxCommand, MuxCommandIdentifier,
+        MuxCommandParams, NonSupportedCommandParams, ParameterNegotiationParams,
     },
     Encodable, Frame, FrameData, FrameParseError, UIHData, UserData,
 };
@@ -380,6 +380,9 @@ impl SessionInner {
             Ok(_) => {
                 if self.establish_session_channel(dlci).await {
                     self.send_ua_response(dlci).await;
+                    // After positively acknowledging the established channel. Report our
+                    // current modem signals to indicate we are ready.
+                    self.send_modem_status_command(dlci).await;
                 } else {
                     self.send_dm_response(dlci).await;
                 }
@@ -404,6 +407,7 @@ impl SessionInner {
                             self.process_pending_channels().await?;
                             Ok(())
                         }
+                        MuxCommandParams::ModemStatus(_) => Ok(()),
                         _ => {
                             // TODO(fxbug.dev/59585): We currently don't send any other mux commands,
                             // add other handlers here when implemented.
@@ -522,7 +526,11 @@ impl SessionInner {
                     }
                     FrameData::SetAsynchronousBalancedMode => {
                         // Positive acknowledgement to open a remote channel on a user DLCI.
-                        self.establish_session_channel(dlci).await;
+                        if self.establish_session_channel(dlci).await {
+                            // After successfully opening the RFCOMM channel, report our
+                            // current Modem signals to indicate readiness.
+                            self.send_modem_status_command(dlci).await;
+                        }
                     }
                     _frame_type => {
                         // TODO(fxbug.dev/59585): Handle UA response for other frame types.
@@ -583,6 +591,15 @@ impl SessionInner {
             }
             _ => {}
         }
+    }
+
+    /// Sends a Modem Status command for the provided `dlci`.
+    async fn send_modem_status_command(&mut self, dlci: DLCI) {
+        let mux_command = MuxCommand {
+            params: MuxCommandParams::ModemStatus(ModemStatusParams::default(dlci)),
+            command_response: CommandResponse::Command,
+        };
+        self.send_frame(Frame::make_mux_command(self.role(), mux_command)).await;
     }
 
     /// Sends an SABM command over the provided `dlci`.
@@ -896,6 +913,25 @@ mod tests {
         }
     }
 
+    /// Expects the provided `expected` MuxCommand on the `outgoing_frames` receiver.
+    #[track_caller]
+    fn expect_mux_command(
+        exec: &mut fasync::Executor,
+        outgoing_frames: &mut mpsc::Receiver<Frame>,
+        expected: MuxCommandMarker,
+    ) {
+        let mut outgoing_frames_fut = Box::pin(outgoing_frames.next());
+        match exec.run_until_stalled(&mut outgoing_frames_fut) {
+            Poll::Ready(Some(frame)) => match frame.data {
+                FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(mux_command)) => {
+                    assert_eq!(mux_command.params.marker(), expected);
+                }
+                _ => panic!("Expected MuxCommand but got: {:?}", frame.data),
+            },
+            x => panic!("Expected a frame but got: {:?}", x),
+        }
+    }
+
     /// Expects and returns the `channel` from the provided `receiver`.
     #[track_caller]
     fn expect_channel(
@@ -1150,15 +1186,22 @@ mod tests {
         let user_dlci = DLCI::try_from(generic_dlci).unwrap();
         let user_sabm = Frame::make_sabm_command(Role::Initiator, user_dlci);
         let _channel = {
-            let mut outgoing_frames_fut = Box::pin(outgoing_frames.next());
             let mut handle_fut = Box::pin(session.handle_frame(user_sabm));
             assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
             // We expect a channel to be delivered from the`channel_opened_fn`.
             let c = expect_channel(&mut exec, &mut channel_receiver);
             // Continue to run the `handle_frame` to process the result of the channel delivery.
             assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
-            // Expect a response frame.
-            assert!(exec.run_until_stalled(&mut outgoing_frames_fut).is_ready());
+            // We expect to respond to the peer with a positive UA.
+            expect_frame(
+                &mut exec,
+                &mut outgoing_frames,
+                FrameData::UnnumberedAcknowledgement,
+                user_dlci,
+            );
+            assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
+            // We then expect to send our current Modem Signals to the peer.
+            expect_mux_command(&mut exec, &mut outgoing_frames, MuxCommandMarker::ModemStatus);
             assert!(exec.run_until_stalled(&mut handle_fut).is_ready());
             c
         };
@@ -1188,10 +1231,9 @@ mod tests {
 
         // Crete and start a SessionInner that relays any opened RFCOMM channels.
         let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session();
-        let mut outgoing_frames_fut = Box::pin(outgoing_frames.next());
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
-        // Remote peer sends SABM over a user DLCI - we expect a UA response.
+        // Remote peer sends SABM over a user DLCI - we expect to reply with a UA response.
         let random_dlci = 8;
         let user_dlci = DLCI::try_from(random_dlci).unwrap();
         let user_sabm = Frame::make_sabm_command(Role::Initiator, user_dlci);
@@ -1202,12 +1244,17 @@ mod tests {
             let _c = expect_channel(&mut exec, &mut channel_receiver);
             // Continue to run the `handle_frame` to process the result of the channel delivery.
             assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
-            match exec.run_until_stalled(&mut outgoing_frames_fut) {
-                Poll::Ready(Some(frame)) => {
-                    assert_eq!(frame.data.marker(), FrameTypeMarker::UnnumberedAcknowledgement);
-                }
-                x => panic!("Expected a frame but got {:?}", x),
-            }
+            // We expect to respond with a positive UA response.
+            expect_frame(
+                &mut exec,
+                &mut outgoing_frames,
+                FrameData::UnnumberedAcknowledgement,
+                user_dlci,
+            );
+            assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
+            // After positively responding, we expect to send our current Modem Signals to indicate
+            // readiness.
+            expect_mux_command(&mut exec, &mut outgoing_frames, MuxCommandMarker::ModemStatus);
             assert!(exec.run_until_stalled(&mut handle_fut).is_ready());
         }
     }
@@ -1445,7 +1492,6 @@ mod tests {
         let mut exec = fasync::Executor::new().unwrap();
 
         let (mut session, mut outgoing_frames, _rfcomm_channels) = setup_session();
-        let mut expected_outgoing_frames = Box::pin(outgoing_frames.next());
 
         // Attempting to negotiate parameters before mux startup should fail.
         assert!(!session.multiplexer().started());
@@ -1461,15 +1507,11 @@ mod tests {
         {
             let mut pn_fut = Box::pin(session.start_parameter_negotiation(user_dlci));
             assert!(exec.run_until_stalled(&mut pn_fut).is_pending());
-            match exec.run_until_stalled(&mut expected_outgoing_frames) {
-                Poll::Ready(Some(frame)) => {
-                    assert_matches!(
-                        frame.data,
-                        FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(_))
-                    );
-                }
-                x => panic!("Expected frame but got: {:?}", x),
-            }
+            expect_mux_command(
+                &mut exec,
+                &mut outgoing_frames,
+                MuxCommandMarker::ParameterNegotiation,
+            );
             assert_matches!(exec.run_until_stalled(&mut pn_fut), Poll::Ready(Ok(_)));
         }
         // Simulate peer responding positively - the parameters should be negotiated.
@@ -1494,7 +1536,6 @@ mod tests {
 
         // Crete and start a SessionInner that relays any opened RFCOMM channels.
         let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session();
-        let mut rfcomm_channel_fut = Box::pin(channel_receiver.next());
 
         // Initiate an open RFCOMM channel request with a random valid ServerChannel.
         let server_channel = ServerChannel(5);
@@ -1517,19 +1558,14 @@ mod tests {
                 session
                     .handle_frame(Frame::make_ua_response(Role::Responder, DLCI::MUX_CONTROL_DLCI)),
             );
-            let mut expected_outgoing_frames = Box::pin(outgoing_frames.next());
             assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
             // We then expect the session to initiate a Parameter Negotiation request, since
             // the session has not negotiated parameters.
-            match exec.run_until_stalled(&mut expected_outgoing_frames) {
-                Poll::Ready(Some(frame)) => {
-                    assert_matches!(frame.data, FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(MuxCommand {
-                        params: MuxCommandParams::ParameterNegotiation(_),
-                        command_response: CommandResponse::Command,
-                    })));
-                }
-                x => panic!("Expected frame but got: {:?}", x),
-            }
+            expect_mux_command(
+                &mut exec,
+                &mut outgoing_frames,
+                MuxCommandMarker::ParameterNegotiation,
+            );
             assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(_)));
         }
 
@@ -1558,7 +1594,11 @@ mod tests {
             );
             assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
             // We then expect to open a local RFCOMM channel to be relayed to a profile client.
-            assert_matches!(exec.run_until_stalled(&mut rfcomm_channel_fut), Poll::Ready(Some(_)));
+            let _channel = expect_channel(&mut exec, &mut channel_receiver);
+            assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
+            // Upon successful channel delivery, we expect an outgoing ModemStatus frame to
+            // be sent.
+            expect_mux_command(&mut exec, &mut outgoing_frames, MuxCommandMarker::ModemStatus);
             assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(_)));
         }
 
@@ -1581,16 +1621,14 @@ mod tests {
         let expected_dlci = server_channel.to_dlci(Role::Initiator).unwrap();
         {
             let mut open_fut = Box::pin(session.open_remote_channel(server_channel));
-            let mut expected_outgoing_frames = Box::pin(outgoing_frames.next());
             assert!(exec.run_until_stalled(&mut open_fut).is_pending());
             // We expect the session to initiate a Parameter Negotiation request (UIH Frame),
             // for the DLCI.
-            match exec.run_until_stalled(&mut expected_outgoing_frames) {
-                Poll::Ready(Some(frame)) => {
-                    assert_eq!(frame.data.marker(), FrameTypeMarker::UnnumberedInfoHeaderCheck);
-                }
-                x => panic!("Expected frame but got: {:?}", x),
-            }
+            expect_mux_command(
+                &mut exec,
+                &mut outgoing_frames,
+                MuxCommandMarker::ParameterNegotiation,
+            );
             assert_matches!(exec.run_until_stalled(&mut open_fut), Poll::Ready(Ok(_)));
         }
 

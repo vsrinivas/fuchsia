@@ -40,16 +40,32 @@ bitfield! {
     impl Debug;
     bool;
     pub ea_bit, set_ea_bit: 0;
-    pub flow_control, _: 1;
-    pub ready_to_communicate, _: 2;
-    pub ready_to_receive, _: 3;
-    pub incoming_call, _: 6;
-    pub data_valid, _: 7;
+    pub flow_control, set_flow_control: 1;
+    pub ready_to_communicate, set_ready_to_communicate: 2;
+    pub ready_to_receive, set_ready_to_receive: 3;
+    pub incoming_call, set_incoming_call: 6;
+    pub data_valid, set_data_valid: 7;
 }
 
 impl Clone for ModemStatusSignals {
     fn clone(&self) -> Self {
         Self(self.0)
+    }
+}
+
+impl Default for ModemStatusSignals {
+    /// The default modem status signals.
+    ///
+    /// See GSM 7.10 Section 5.4.6.3.7 for the interpretation of each signal bit.
+    fn default() -> Self {
+        let mut signals = Self(0);
+        signals.set_ea_bit(true); // Always set. Only one octet for the signals.
+        signals.set_flow_control(false); // Indicates ready to accept frames.
+        signals.set_ready_to_communicate(true); // Ready to communicate.
+        signals.set_ready_to_receive(true); // Ready to receive.
+        signals.set_incoming_call(false); // No incoming call.
+        signals.set_data_valid(false); // No data is being sent yet.
+        signals
     }
 }
 
@@ -77,6 +93,13 @@ pub struct ModemStatusParams {
     pub signals: ModemStatusSignals,
     // Break signal in data stream. In units of 200ms as defined in GSM 7.10 Section 5.4.6.3.7.
     pub break_value: Option<u8>,
+}
+
+impl ModemStatusParams {
+    /// Returns the default parameters for a Modem Status command.
+    pub fn default(dlci: DLCI) -> Self {
+        Self { dlci, signals: ModemStatusSignals::default(), break_value: None }
+    }
 }
 
 impl Decodable for ModemStatusParams {
