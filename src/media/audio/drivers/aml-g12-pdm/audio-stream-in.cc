@@ -15,7 +15,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 
-#include "src/media/audio/drivers/aml-g12-pdm/aml_g12_pdm-bind.h"
+#include "src/media/audio/drivers/aml-g12-pdm/aml_g12_pdm_bind.h"
 
 namespace audio {
 
