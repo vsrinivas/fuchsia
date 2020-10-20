@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/injectable_time_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}
