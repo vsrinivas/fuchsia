@@ -136,19 +136,22 @@ async fn main() -> Result<(), Error> {
 
     println!("display service tests");
     println!("  client calls display watch");
-    validate_display(None, None, None, None).await?;
+    validate_display(None, None, None, None, None).await?;
 
     println!("  client calls set brightness");
-    validate_display(Some(0.5), None, None, None).await?;
+    validate_display(Some(0.5), None, None, None, None).await?;
 
     println!("  client calls set auto brightness");
-    validate_display(None, Some(true), None, None).await?;
+    validate_display(None, Some(true), None, None, None).await?;
 
     println!("  client calls set user brightness offset");
-    validate_display(None, None, Some(0.5), None).await?;
+    validate_display(None, None, Some(0.5), None, None).await?;
 
     println!("  client calls set low light mode");
-    validate_display(None, None, None, Some(LowLightMode::Enable)).await?;
+    validate_display(None, None, None, Some(LowLightMode::Enable), None).await?;
+
+    println!("  client calls set theme");
+    validate_display(None, None, None, None, Some(ThemeType::Dark)).await?;
 
     println!("light tests");
     println!(" client calls light set");
@@ -356,6 +359,7 @@ async fn validate_display(
     expected_auto_brightness: Option<bool>,
     expected_user_brightness_offset: Option<f32>,
     expected_low_light_mode: Option<LowLightMode>,
+    expected_theme_type: Option<ThemeType>,
 ) -> Result<(), Error> {
     let env = create_service!(
         Services::Display, DisplayRequest::Set { settings, responder, } => {
@@ -374,6 +378,10 @@ async fn validate_display(
             } else if let (Some(low_light_mode), Some(expected_low_light_mode_value)) =
               (settings.low_light_mode, expected_low_light_mode) {
                 assert_eq!(low_light_mode, expected_low_light_mode_value);
+                responder.send(&mut Ok(()))?;
+            } else if let (Some(Theme{ theme_type: Some(theme_type)}), Some(expected_theme_type_value)) =
+              (settings.theme, expected_theme_type) {
+                assert_eq!(theme_type, expected_theme_type_value);
                 responder.send(&mut Ok(()))?;
             } else {
                 panic!("Unexpected call to set");
@@ -401,6 +409,7 @@ async fn validate_display(
         expected_auto_brightness,
         false,
         expected_low_light_mode,
+        Some(Theme { theme_type: expected_theme_type }),
     )
     .await?;
 
@@ -438,7 +447,7 @@ async fn validate_light_sensor() -> Result<(), Error> {
     })
     .detach();
 
-    display::command(display_service, None, None, true, None).await?;
+    display::command(display_service, None, None, true, None, None).await?;
 
     assert_eq!(*watch_called.read(), true);
 

@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl_fuchsia_settings::{ConfigurationInterfaces, LightState, LightValue},
+    fidl_fuchsia_settings::{ConfigurationInterfaces, LightState, LightValue, Theme},
     fuchsia_component::client::connect_to_service,
     structopt::StructOpt,
 };
@@ -61,6 +61,9 @@ pub enum SettingClient {
             parse(try_from_str = "str_to_low_light_mode")
         )]
         low_light_mode: Option<fidl_fuchsia_settings::LowLightMode>,
+
+        #[structopt(short = "t", long = "theme", parse(try_from_str = "str_to_theme"))]
+        theme: Option<fidl_fuchsia_settings::Theme>,
     },
 
     #[structopt(name = "do_not_disturb")]
@@ -294,7 +297,13 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let output = device::command(device_service).await?;
             println!("Device: {}", output);
         }
-        SettingClient::Display { brightness, auto_brightness, light_sensor, low_light_mode } => {
+        SettingClient::Display {
+            brightness,
+            auto_brightness,
+            light_sensor,
+            low_light_mode,
+            theme,
+        } => {
             let display_service = connect_to_service::<fidl_fuchsia_settings::DisplayMarker>()
                 .context("Failed to connect to display service")?;
             let output = display::command(
@@ -303,6 +312,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                 auto_brightness,
                 light_sensor,
                 low_light_mode,
+                theme,
             )
             .await?;
             println!("Display: {}", output);
@@ -400,6 +410,16 @@ fn str_to_low_light_mode(src: &str) -> Result<fidl_fuchsia_settings::LowLightMod
         Ok(fidl_fuchsia_settings::LowLightMode::DisableImmediately)
     } else {
         Err("Couldn't parse low light mode")
+    }
+}
+
+fn str_to_theme(src: &str) -> Result<fidl_fuchsia_settings::Theme, &str> {
+    match src {
+        "default" => Ok(Theme { theme_type: Some(fidl_fuchsia_settings::ThemeType::Default) }),
+        "dark" => Ok(Theme { theme_type: Some(fidl_fuchsia_settings::ThemeType::Dark) }),
+        "light" => Ok(Theme { theme_type: Some(fidl_fuchsia_settings::ThemeType::Light) }),
+        "auto" => Ok(Theme { theme_type: Some(fidl_fuchsia_settings::ThemeType::Auto) }),
+        _ => Err("Couldn't parse theme."),
     }
 }
 
