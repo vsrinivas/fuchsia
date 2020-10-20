@@ -343,6 +343,15 @@ TEST(BootsvcIntegrationTest, BootArguments) {
 TEST(BootsvcIntegrationTest, ResourcesAvailable) {
   zx::resource mmio_resource(zx_take_startup_handle(PA_HND(PA_MMIO_RESOURCE, 0)));
   ASSERT_TRUE(mmio_resource.is_valid());
+  zx::resource irq_resource(zx_take_startup_handle(PA_HND(PA_IRQ_RESOURCE, 0)));
+  ASSERT_TRUE(irq_resource.is_valid());
+#if __x86_64__
+  zx::resource ioport_resource(zx_take_startup_handle(PA_HND(PA_IOPORT_RESOURCE, 0)));
+  ASSERT_TRUE(ioport_resource.is_valid());
+#elif __aarch64__
+  zx::resource smc_resource(zx_take_startup_handle(PA_HND(PA_SMC_RESOURCE, 0)));
+  ASSERT_TRUE(smc_resource.is_valid());
+#endif
   zx::resource root_resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
   ASSERT_TRUE(root_resource.is_valid());
 }

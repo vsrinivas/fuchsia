@@ -44,6 +44,12 @@ struct Resources {
   // TODO(smpham): Remove root resource.
   zx::resource root;
   zx::resource mmio;
+  zx::resource irq;
+#if __x86_64__
+  zx::resource ioport;
+#elif __aarch64__
+  zx::resource smc;
+#endif
 };
 
 // Wire up stdout so that printf() and friends work.
@@ -236,8 +242,14 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   launchpad_add_handle(lp, svcfs_conn.release(), PA_HND(PA_NS_DIR, count));
   nametable[count++] = "/svc";
 
-  // Pass on mmio resources to the next process.
+  // Pass on resources to the next process.
   launchpad_add_handle(lp, resources.mmio.release(), PA_HND(PA_MMIO_RESOURCE, 0));
+  launchpad_add_handle(lp, resources.irq.release(), PA_HND(PA_IRQ_RESOURCE, 0));
+#if __x86_64__
+  launchpad_add_handle(lp, resources.ioport.release(), PA_HND(PA_IOPORT_RESOURCE, 0));
+#elif __aarch64__
+  launchpad_add_handle(lp, resources.smc.release(), PA_HND(PA_SMC_RESOURCE, 0));
+#endif
 
   // Duplicate the root resource to pass to the next process.
   zx::resource root_rsrc_dup;
@@ -339,6 +351,15 @@ int main(int argc, char** argv) {
   Resources resources;
   resources.mmio.reset(zx_take_startup_handle(PA_HND(PA_MMIO_RESOURCE, 0)));
   ZX_ASSERT_MSG(resources.mmio.is_valid(), "Invalid MMIO root resource handle\n");
+  resources.irq.reset(zx_take_startup_handle(PA_HND(PA_IRQ_RESOURCE, 0)));
+  ZX_ASSERT_MSG(resources.irq.is_valid(), "Invalid IRQ root resource handle\n");
+#if __x86_64__
+  resources.ioport.reset(zx_take_startup_handle(PA_HND(PA_IOPORT_RESOURCE, 0)));
+  ZX_ASSERT_MSG(resources.ioport.is_valid(), "Invalid IOPORT root resource handle\n");
+#elif __aarch64__
+  resources.smc.reset(zx_take_startup_handle(PA_HND(PA_SMC_RESOURCE, 0)));
+  ZX_ASSERT_MSG(resources.smc.is_valid(), "Invalid SMC root resource handle\n");
+#endif
   resources.root.reset(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
   ZX_ASSERT_MSG(resources.root.is_valid(), "Invalid root resource handle\n");
 
