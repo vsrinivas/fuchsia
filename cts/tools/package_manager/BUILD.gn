@@ -2,17 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/test.gni")
-import("//build/host.gni")
 import("//build/python/python_action.gni")
-import("//build/testing/environments.gni")
-import("//build/testing/host_test_data.gni")
+import("//cts/build/cts.gni")
 
 # TODO(omerlevran): Find a cleaner way to this by properly structuring the deps
 # between the rules. Please try to avoid using this pattern.
 _shared_out_dir = get_label_info(":bogus(${target_toolchain})", "root_out_dir")
 
-dart_test("package_manager_test") {
+cts_dart_test("package_manager_test") {
   sources = [ "package_manager_test.dart" ]
 
   deps = [
@@ -50,21 +47,21 @@ if (is_host) {
 
     outputs = [ "$target_gen_dir/pm_deps/package.tar" ]
 
-    deps = [ "//src/tests/end_to_end/package_manager/components:cts-package-manager-sample-component($default_toolchain)" ]
+    deps = [ "//cts/tools/package_manager/components:cts-package-manager-sample-component($default_toolchain)" ]
 
     args = [
       "--package_json_path",
       rebase_path(
-          "$_shared_out_dir/obj/src/tests/end_to_end/package_manager/components/cts-package-manager-sample-component/package_manifest.json"),
+          "$_shared_out_dir/obj/cts/tools/package_manager/components/cts-package-manager-sample-component/package_manifest.json"),
       "--meta_far_path",
       rebase_path(
-          "$_shared_out_dir/obj/src/tests/end_to_end/package_manager/components/cts-package-manager-sample-component/meta.far"),
+          "$_shared_out_dir/obj/cts/tools/package_manager/components/cts-package-manager-sample-component/meta.far"),
       "--output_dir",
       rebase_path("${target_gen_dir}/pm_deps"),
     ]
   }
 
-  host_test_data("runtime_deps") {
+  cts_host_test_data("runtime_deps") {
     sources = [
       "$host_tools_dir/pm",
       "$target_gen_dir/pm_deps/package.tar",

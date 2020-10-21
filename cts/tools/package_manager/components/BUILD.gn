@@ -1,34 +1,37 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
-import("//src/sys/build/components.gni")
+import("//cts/build/cts.gni")
 
 group("components") {
   testonly = true
-
   deps = [ ":cts-package-manager-sample-component" ]
 }
 
-executable("cts-package-manager-sample-bin") {
+cts_executable("cts-package-manager-sample-bin") {
+  testonly = true
   sources = [ "hello_world.cc" ]
 }
 
-executable("cts-package-manager-sample-bin2") {
+cts_executable("cts-package-manager-sample-bin2") {
+  testonly = true
   sources = [ "hello_world2.cc" ]
 }
 
-fuchsia_component("cts-package-manager-sample") {
+cts_component("cts-package-manager-sample") {
+  testonly = true
   manifest = "meta/package-manager-sample.cmx"
   deps = [ ":cts-package-manager-sample-bin" ]
 }
 
-fuchsia_component("cts-package-manager-sample2") {
+cts_component("cts-package-manager-sample2") {
+  testonly = true
   manifest = "meta/package-manager-sample2.cmx"
   deps = [ ":cts-package-manager-sample-bin2" ]
 }
 
-fuchsia_package("cts-package-manager-sample-component") {
+cts_fuchsia_package("cts-package-manager-sample-component") {
+  testonly = true
   deps = [
     ":cts-package-manager-sample",
     ":cts-package-manager-sample2",

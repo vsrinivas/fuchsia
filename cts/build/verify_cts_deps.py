@@ -22,6 +22,9 @@ import sys
 ALLOWED_CTS_DEPS = [
     '//sdk/testing/sl4f/client:client',
     '//sdk:sdk',
+    '//src/sys/pkg/bin/pm:host',
+    '//cts/tools/package_manager:pm_test_package_gather_deps',
+    '//third_party/dart-pkg/pub/archive:archive',
     '//third_party/dart-pkg/pub/async:async',
     '//third_party/dart-pkg/pub/file:file',
     '//third_party/dart-pkg/pub/logging:logging',
