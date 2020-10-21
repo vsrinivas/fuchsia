@@ -80,13 +80,15 @@ impl PolicyProxy {
                         if let MessageEvent::Message(
                             core::Payload::Action(SettingAction {
                                 id,
+                                setting_type,
                                 data: SettingActionData::Request(request),
-                                ..
                             }),
                             message_client,
                         ) = core_event
                         {
-                            proxy.process_settings_request(id, request, message_client).await;
+                            proxy
+                                .process_settings_request(id, setting_type, request, message_client)
+                                .await;
                         }
                     }
 
@@ -120,15 +122,23 @@ impl PolicyProxy {
     async fn process_settings_request(
         &mut self,
         request_id: u64,
+        setting_type: SettingType,
         request: SettingRequest,
         message_client: core::message::Client,
     ) {
         let handler_result =
             self.policy_handler.handle_setting_request(request, self.core_messenger.clone()).await;
         match handler_result {
-            Some(Transform::Request(_modified_request)) => {
-                // Handler provided a modified request to
-                // TODO(fxbug.dev/59747): Implement forwarding of the modified request.
+            Some(Transform::Request(modified_request)) => {
+                // Handler provided a modified request to forward to the setting handler in place of
+                // the original.
+                message_client
+                    .propagate(core::Payload::Action(SettingAction {
+                        id: request_id,
+                        setting_type,
+                        data: SettingActionData::Request(modified_request),
+                    }))
+                    .send();
             }
             Some(Transform::Result(result)) => {
                 // Handler provided a result to return directly to the client, respond to the

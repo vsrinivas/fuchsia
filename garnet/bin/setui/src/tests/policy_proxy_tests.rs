@@ -242,11 +242,79 @@ async fn test_setting_message_result_replacement() {
     .await;
 }
 
+/// Verify that when the policy handler returns a new request payload, that the payload is sent to
+/// the setting handler in place of the original message.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_setting_message_payload_replacement() {
+    // Original request that will be sent by the switchboard.
+    let setting_request_1 = SettingRequest::Get;
+    let setting_request_1_payload = core::Payload::Action(SettingAction {
+        id: REQUEST_ID,
+        setting_type: SETTING_TYPE,
+        data: SettingActionData::Request(setting_request_1.clone()),
+    });
+
+    // Modified request that the policy handler will return.
+    let setting_request_2 = SettingRequest::Restore;
+    let setting_request_2_payload = core::Payload::Action(SettingAction {
+        id: REQUEST_ID,
+        setting_type: SETTING_TYPE,
+        data: SettingActionData::Request(setting_request_2.clone()),
+    });
+
+    let core_messenger_factory = core::message::create_hub();
+    let policy_messenger_factory = policy::message::create_hub();
+    PolicyProxy::create(
+        SETTING_TYPE,
+        Box::new(FakePolicyHandler::create(
+            Err(policy_base::response::Error::Unexpected),
+            // Fake handler will return request 2 to be sent to the setting handler.
+            Some(Transform::Request(setting_request_2)),
+        )),
+        core_messenger_factory.clone(),
+        policy_messenger_factory,
+    )
+    .await
+    .ok();
+
+    // Create a messenger that represents the switchboard.
+    let (switchboard_messenger, _) = core_messenger_factory
+        .create(MessengerType::Addressable(core::Address::Switchboard))
+        .await
+        .unwrap();
+    // Create a messenger that represents a setting handler.
+    let (setting_handler_messenger, mut setting_handler_receptor) =
+        core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+
+    // Send a setting request from the switchboard to the setting handler.
+    let mut settings_send_receptor = switchboard_messenger
+        .message(
+            setting_request_1_payload,
+            Audience::Messenger(setting_handler_messenger.get_signature()),
+        )
+        .send();
+
+    // Verify the setting handler receives the payload that the policy handler specifies, not the
+    // original sent by the switchboard.
+    verify_payload(
+        setting_request_2_payload,
+        &mut setting_handler_receptor,
+        Some(Box::new(|client| -> BoxFuture<'_, ()> {
+            Box::pin(async move {
+                client.reply(SETTING_RESPONSE_PAYLOAD.clone()).send();
+            })
+        })),
+    )
+    .await;
+
+    // Verify that the "switchboard" receives the response that the setting handler returned.
+    verify_payload(SETTING_RESPONSE_PAYLOAD.clone(), &mut settings_send_receptor, None).await;
+}
+
 /// Exercises the main loop in the policy proxy by sending a series of messages and ensuring they're
 /// all answered.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_multiple_messages() {
-    let setting_type = SettingType::Audio;
     let policy_request = policy_base::Request::Audio(Request::Get);
     let policy_payload =
         policy_base::response::Payload::Audio(Response::Policy(PolicyId::create(0)));
@@ -255,30 +323,65 @@ async fn test_multiple_messages() {
     let policy_messenger_factory = policy::message::create_hub();
     // Initialize the policy proxy and a messenger to communicate with it.
     PolicyProxy::create(
-        setting_type,
-        Box::new(FakePolicyHandler::create(Ok(policy_payload.clone()), None)),
-        core_messenger_factory,
+        SETTING_TYPE,
+        Box::new(FakePolicyHandler::create(
+            Ok(policy_payload.clone()),
+            Some(Transform::Result(SETTING_RESULT_NO_RESPONSE.clone())),
+        )),
+        core_messenger_factory.clone(),
         policy_messenger_factory.clone(),
     )
     .await
     .ok();
+
+    // Create a messagenger for sending messages directly to the policy proxy.
     let (policy_messenger, _) =
         policy_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    // Create a messenger that represents the switchboard.
+    let (switchboard_messenger, _) = core_messenger_factory
+        .create(MessengerType::Addressable(core::Address::Switchboard))
+        .await
+        .unwrap();
+    // Create a messenger that represents a setting handler.
+    let (setting_handler_messenger, _) =
+        core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
-    // Send a few policy requests to the policy proxy.
+    // Send a few requests to the policy proxy.
     for _ in 0..3 {
+        // Send a policy request.
         let mut policy_send_receptor = policy_messenger
             .message(
                 policy::Payload::Request(policy_request.clone()),
-                Audience::Address(Address::Policy(setting_type)),
+                Audience::Address(Address::Policy(SETTING_TYPE)),
             )
             .send();
 
-        // Verify a response is returned each time.
-        let (policy_response, _) = policy_send_receptor.next_payload().await.unwrap();
-        assert_eq!(policy_response, policy::Payload::Response(Ok(policy_payload.clone())));
+        // Verify a policy response is returned each time.
+        verify_payload(
+            policy::Payload::Response(Ok(policy_payload.clone())),
+            &mut policy_send_receptor,
+            None,
+        )
+        .await;
 
-        // TODO(fxbug.dev/59747): Send some core message hub messages as well to test interleaved
-        // messages.
+        // Send a switchboard request that the policy proxy intercepts.
+        let mut settings_send_receptor = switchboard_messenger
+            .message(
+                SETTING_REQUEST_PAYLOAD.clone(),
+                Audience::Messenger(setting_handler_messenger.get_signature()),
+            )
+            .send();
+
+        // Verify that the "switchboard" receives the response that the policy handler returns
+        // each time.
+        verify_payload(
+            core::Payload::Event(SettingEvent::Response(
+                REQUEST_ID,
+                SETTING_RESULT_NO_RESPONSE.clone(),
+            )),
+            &mut settings_send_receptor,
+            None,
+        )
+        .await;
     }
 }
