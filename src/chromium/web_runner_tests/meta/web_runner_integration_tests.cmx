@@ -12,7 +12,8 @@
             "system-services": [
                 "fuchsia.device.NameProvider",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator"
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader"
             ]
         }
     },
