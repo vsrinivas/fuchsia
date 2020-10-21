@@ -173,7 +173,7 @@ protocol Netstack {
     /// Emitted when an interface is added or removed, or when an interface's properties changed.
     ///
     /// Synthetically emitted when the protocol request is bound.
-    [Deprecated = "Deprecated in favor of fuchsia.net.interfaces/State.GetListWatcher and GetPropertiesWatcher"]
+    [Deprecated = "Deprecated in favor of fuchsia.net.interfaces/State.GetWatcher"]
     -> OnInterfacesChanged(vector<NetInterface>:MAX interfaces);
 };
 
