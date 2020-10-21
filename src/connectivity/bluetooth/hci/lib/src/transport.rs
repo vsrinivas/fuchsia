@@ -83,7 +83,8 @@ where
     fn take_incoming(&mut self, _proof: IncomingPacketToken, buffer: Vec<u8>) -> IncomingPacket;
 
     /// Perform any operations that this object needs to do in the device unbind proceedure.
-    fn unbind(&mut self);
+    /// This can be unsafe in some implementations due to interfacing with C FFI.
+    unsafe fn unbind(&mut self);
 }
 
 /// Not all implementations of a `HwTransport` can be constructed in a non-async context.
