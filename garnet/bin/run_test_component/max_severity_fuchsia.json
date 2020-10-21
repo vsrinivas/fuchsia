@@ -177,14 +177,6 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/dhcpd-cli-tests#meta/dhcpd_cli_test.cmx",
-         "max_severity": "ERROR"
-      },
-      {
-         "url": "fuchsia-pkg://fuchsia.com/dhcpv6-client-test#meta/dhcpv6-client-test.cmx",
-         "max_severity": "ERROR"
-      },
-      {
          "url": "fuchsia-pkg://fuchsia.com/driver-host-tests#meta/driver-host-tests.cmx",
          "max_severity": "ERROR"
       },
@@ -386,39 +378,11 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/netdev-client-tests#meta/cpp-test.cmx",
-         "max_severity": "ERROR"
-      },
-      {
          "url": "fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/dhcp-validity-test.cmx",
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/netemul_lib_test#meta/network_test.cmx",
-         "max_severity": "ERROR"
-      },
-      {
          "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/sandbox-service.cmx",
-         "max_severity": "ERROR"
-      },
-      {
-         "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-fuchsia-c-api-test.cmx",
-         "max_severity": "ERROR"
-      },
-      {
-         "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-if-nameindex-test.cmx",
-         "max_severity": "ERROR"
-      },
-      {
-         "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-no-network-test.cmx",
-         "max_severity": "ERROR"
-      },
-      {
-         "url": "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack_cobalt_integration_test.cmx",
-         "max_severity": "ERROR"
-      },
-      {
-         "url": "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack_fidl_integration_test.cmx",
          "max_severity": "ERROR"
       },
       {

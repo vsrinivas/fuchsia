@@ -193,6 +193,7 @@ fuchsia_test_package("netstack-integration-tests") {
     "//src/connectivity/network/netstack:component-debug",
 
     # network_manager integration with netstack is tested.
+    ":network-manager-config",
     "//src/connectivity/management/network-manager:component-netemul",
   ]
 }
@@ -214,6 +215,14 @@ config_data("netcfg-netemul-config") {
   for_pkg = "netstack-integration-tests"
   sources = [ "//src/connectivity/network/netcfg/config/empty.json" ]
   outputs = [ "netcfg/empty.json" ]
+}
+
+config_data("network-manager-config") {
+  testonly = true
+  for_pkg = "netstack-integration-tests"
+  sources =
+      [ "//src/connectivity/management/network-manager/config/default.json" ]
+  outputs = [ "factory_config.json" ]
 }
 
 test("netstack_bsdsocket_c_api_test") {
