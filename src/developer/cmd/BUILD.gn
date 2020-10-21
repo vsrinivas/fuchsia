@@ -97,9 +97,6 @@ executable("cmd_unittests") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/46549): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 package("cmd") {
