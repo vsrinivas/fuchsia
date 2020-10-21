@@ -17,9 +17,13 @@ web.ContextProxy createWebContext() {
       contextProvider.ctrl.$serviceName,
       contextProviderProxyRequest.passChannel());
   final channel = Channel.fromFile('/svc');
+  final webFeatures = web.ContextFeatureFlags.network |
+      web.ContextFeatureFlags.audio |
+      web.ContextFeatureFlags.hardwareVideoDecoder |
+      web.ContextFeatureFlags.vulkan;
   final web.CreateContextParams params = web.CreateContextParams(
       serviceDirectory: InterfaceHandle<fidl_io.Directory>(channel),
-      features: web.ContextFeatureFlags.vulkan);
+      features: webFeatures);
   contextProvider.create(params, context.ctrl.request());
   contextProvider.ctrl.close();
 
