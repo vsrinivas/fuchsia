@@ -30,8 +30,8 @@ async fn main() {
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
 
     let mut futures = vec![];
-    futures.push(RuntimeUtcMonitor::new().execute().boxed());
-    KernelUtcMonitor::new();
+    RuntimeUtcMonitor::new();
+    futures.push(KernelUtcMonitor::new().execute().boxed());
     match ClockMonitor::new() {
         Ok(clock_monitor) => futures.push(clock_monitor.execute().boxed()),
         Err(err) => warn!("{}", err),
@@ -67,7 +67,10 @@ impl RuntimeUtcMonitor {
         RuntimeUtcMonitor { initial }
     }
 
-    /// Async function to operate this monitor.
+    /// Async function to operate this monitor. Currently unused because we don't need to dump both
+    /// the runtime and kernel clocks every minute, but when the Kernel clock goes away we'll need
+    /// this again.
+    #[allow(unused)]
     async fn execute(self) {
         let mut last_logged = self.initial;
         loop {
@@ -83,17 +86,32 @@ impl RuntimeUtcMonitor {
 }
 
 /// A monitor for UTC as reported by the kernel.
-struct KernelUtcMonitor {}
+struct KernelUtcMonitor {
+    /// The UTC time when this monitor was initialized.
+    initial: DateTime<Utc>,
+}
 
 impl KernelUtcMonitor {
     /// Creates a new `KernelUtcMonitor`, logging the initial state.
     pub fn new() -> Self {
-        info!("ZX_CLOCK_UTC at initialization: {}", zx_timestamp(&zx::Time::get(zx::ClockId::UTC)));
-        KernelUtcMonitor {}
+        let initial = Utc.timestamp_nanos(zx::Time::get(zx::ClockId::UTC).into_nanos());
+        info!("Kernel UTC at initialization: {}", initial);
+        KernelUtcMonitor { initial }
     }
 
-    // Note: Currently there is no need to perform ongoing monitoring tasks for Kernel time and
-    // hence there is no execute function.
+    /// Async function to operate this monitor.
+    async fn execute(self) {
+        let mut last_logged = self.initial;
+        loop {
+            fasync::Timer::new(fasync::Time::after(POLL_DELAY)).await;
+            // Only log Kernel UTC when we reach a new minute.
+            let current = Utc.timestamp_nanos(zx::Time::get(zx::ClockId::UTC).into_nanos());
+            if current.hour() != last_logged.hour() || current.minute() != last_logged.minute() {
+                info!("Kernel UTC: {}", chrono_timestamp(&current));
+                last_logged = current;
+            }
+        }
+    }
 }
 
 /// A monitor for a UTC `zx::Clock` to log changes in clock details.
@@ -110,26 +128,26 @@ impl ClockMonitor {
     pub fn new() -> Result<Self, Error> {
         // Retrieve a handle to the UTC clock.
         let clock = runtime::duplicate_utc_clock_handle(*CLOCK_RIGHTS)
-            .map_err(|stat| anyhow::anyhow!("Error retreiving UTC zx::Clock handle: {}", stat))?;
+            .map_err(|stat| anyhow::anyhow!("Error retreiving userspace UTC handle: {}", stat))?;
 
         // Log the time reported by the clock.
         match clock.read() {
-            Ok(time) => info!("UTC zx::Clock at initialization: {}", zx_timestamp(&time)),
-            Err(stat) => warn!("Error reading UTC zx::Clock initial time {}", stat),
+            Ok(time) => info!("Userspace UTC at initialization: {}", zx_timestamp(&time)),
+            Err(stat) => warn!("Error reading userspace UTC initial time {}", stat),
         }
 
         // Log the initial details and backstop time on creation
         match clock.get_details() {
             Ok(details) => {
-                info!("UTC zx::Clock backstop time: {}", zx_timestamp(&details.backstop));
+                info!("Userspace UTC backstop time: {}", zx_timestamp(&details.backstop));
                 info!(
-                    "UTC zx::Clock details at initialization: {}",
+                    "Userspace UTC details at initialization: {}",
                     Self::describe_clock_details(&details)
                 );
                 Ok(ClockMonitor { clock, initial_generation: details.generation_counter })
             }
             Err(stat) => {
-                warn!("Error reading zx::Clock details {}", stat);
+                warn!("Error reading userspace UTC details {}", stat);
                 Ok(ClockMonitor { clock, initial_generation: 0 })
             }
         }
@@ -140,8 +158,8 @@ impl ClockMonitor {
         // Future to log when the clock started signal is observed.
         let clock_start_fut = async {
             match fasync::OnSignals::new(&self.clock, zx::Signals::CLOCK_STARTED).await {
-                Ok(_) => info!("UTC zx:Clock has started"),
-                Err(err) => warn!("Error waiting for UTC zx::Clock start: {}", err),
+                Ok(_) => info!("Userspace UTC has started"),
+                Err(err) => warn!("Error waiting for userspace UTC start: {}", err),
             }
         };
 
@@ -154,9 +172,13 @@ impl ClockMonitor {
                 if let Ok(details) = self.clock.get_details() {
                     if details.generation_counter != last_logged {
                         info!(
-                            "Updated UTC zx::Clock details: {}",
+                            "Updated userspace UTC details: {}",
                             Self::describe_clock_details(&details)
                         );
+                        match self.clock.read() {
+                            Ok(time) => info!("Updated userspace UTC: {}", zx_timestamp(&time)),
+                            Err(stat) => warn!("Error reading userspace UTC after update {}", stat),
+                        }
                         last_logged = details.generation_counter;
                     }
                 }
