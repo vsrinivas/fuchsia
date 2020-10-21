@@ -256,7 +256,6 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "wifi/brcmfmac-wlanphy",
       "tcs3400-light/tcs-3400/hid-device-000",
       "sys/platform/05:03:11/clocks",
-      "sys/platform/05:03:a/thermal",
       "astro-i2s-audio-out",
       "sys/platform/05:03:13/astro-audio-in",
       "aml-secure-mem/aml-securemem",
@@ -275,6 +274,12 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "aml-power-impl-composite",
       "composite-pd-armcore",
       "composite-pd-armcore/power-0",
+
+      // Thermal
+      "sys/platform/05:03:a/thermal",
+      "sys/platform/05:03:28/thermal",
+      "class/thermal/000",
+      "class/thermal/001",
 
       // Thermistor/ADC
       "class/adc/000",
