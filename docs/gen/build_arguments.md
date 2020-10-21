@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1258
+From //build/config/BUILDCONFIG.gn:1262
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -158,21 +158,21 @@ For build/images:fvm.blob.sparse.blk, use this argument.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:75
+From //build/images/fvm.gni:82
 
 ### blob_blobfs_minimum_data_bytes
 For build/images:fvm.blob.sparse.blk, use this argument.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:61
+From //build/images/fvm.gni:68
 
 ### blob_blobfs_minimum_inodes
 For build/images:fvm.blob.sparse.blk, use this argument.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:50
+From //build/images/fvm.gni:57
 
 ### blobfs_maximum_bytes
 In addition to reserving space for inodes and data, fs needs additional
@@ -186,7 +186,7 @@ reserve few blocks required for its operations.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:71
+From //build/images/fvm.gni:78
 
 ### blobfs_minimum_data_bytes
 Number of bytes to reserve for data in the fs. This is in addition
@@ -197,7 +197,7 @@ required for the filesystem.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:57
+From //build/images/fvm.gni:64
 
 ### blobfs_minimum_inodes
 minimum_inodes is the number of inodes to reserve for the fs
@@ -206,7 +206,7 @@ required for the filesystem.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:46
+From //build/images/fvm.gni:53
 
 ### blobfs_page_in_metrics_recording
 Set this to true when configuring gn args to enable blobfs page-in
@@ -617,7 +617,7 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/942adb923975d0d5e98cfb9e662f0c4a820c7f83/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#32)
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -679,7 +679,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/c0c54e4f400fcc562025546905155d74294c529c/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/099d45e2e3a55098d7c752691b7c2b09a2e81e37/runtime/dart/dart_component.gni#24)
 
 ### dart_default_build_cfg
 Non-product JIT
@@ -704,14 +704,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/c0c54e4f400fcc562025546905155d74294c529c/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/099d45e2e3a55098d7c752691b7c2b09a2e81e37/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/c0c54e4f400fcc562025546905155d74294c529c/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/099d45e2e3a55098d7c752691b7c2b09a2e81e37/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -844,7 +844,7 @@ Enables the tracing feature of mdns, which can be turned on using
 
 **Current value (from the default):** `false`
 
-From //src/connectivity/network/mdns/service/BUILD.gn:16
+From //src/connectivity/network/mdns/service/BUILD.gn:14
 
 ### enable_netboot
 Whether to build the netboot zbi by default.
@@ -919,7 +919,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1021
+From //build/config/BUILDCONFIG.gn:1025
 
 ### fastboot_product
 
@@ -961,7 +961,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/c0c54e4f400fcc562025546905155d74294c529c/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/099d45e2e3a55098d7c752691b7c2b09a2e81e37/runtime/dart/dart_component.gni#13)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1001,14 +1001,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/c0c54e4f400fcc562025546905155d74294c529c/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/099d45e2e3a55098d7c752691b7c2b09a2e81e37/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/c0c54e4f400fcc562025546905155d74294c529c/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/099d45e2e3a55098d7c752691b7c2b09a2e81e37/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -1065,13 +1065,13 @@ From //build/images/fvm.gni:17
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:85
+From //build/images/fvm.gni:92
 
 ### fvm_ftl_nand_oob_size
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:83
+From //build/images/fvm.gni:90
 
 ### fvm_ftl_nand_page_size
 Specifying these variables will generate a NAND FVM image suitable for
@@ -1082,13 +1082,13 @@ room to initialize on boot.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:82
+From //build/images/fvm.gni:89
 
 ### fvm_ftl_nand_pages_per_block
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:84
+From //build/images/fvm.gni:91
 
 ### fvm_image_size
 The size in bytes of the FVM partition image to create. Normally this is
@@ -1122,6 +1122,17 @@ From //build/images/fvm.gni:30
 **Current value (from the default):** `""`
 
 From //build/images/args.gni:86
+
+### fvm_reserved_slices
+Number of slices reserved by FVM for internal usage. If set, a dummy
+partition will be addded to the FVM image, containing this many slices.
+If unset, then no reservation partition will be added.
+TODO(jfsulliv): Set to 1 by default so that we exercise this feature on all
+product configurations.
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:44
 
 ### fvm_slice_size
 The size of the FVM partition images "slice size". The FVM slice size is a
@@ -1353,38 +1364,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/942adb923975d0d5e98cfb9e662f0c4a820c7f83/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/942adb923975d0d5e98cfb9e662f0c4a820c7f83/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/942adb923975d0d5e98cfb9e662f0c4a820c7f83/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/942adb923975d0d5e98cfb9e662f0c4a820c7f83/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/942adb923975d0d5e98cfb9e662f0c4a820c7f83/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/942adb923975d0d5e98cfb9e662f0c4a820c7f83/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#13)
 
 ### is_analysis
 If set, the build will produce compilation analysis dumps, used for code
@@ -1605,7 +1616,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:915
+From //build/config/BUILDCONFIG.gn:919
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1851,19 +1862,19 @@ From //build/images/args.gni:69
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:72
+From //build/images/fvm.gni:79
 
 ### minfs_minimum_data_bytes
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:58
+From //build/images/fvm.gni:65
 
 ### minfs_minimum_inodes
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:47
+From //build/images/fvm.gni:54
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -2315,7 +2326,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1248
+From //build/config/BUILDCONFIG.gn:1252
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2324,7 +2335,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1253
+From //build/config/BUILDCONFIG.gn:1257
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2362,7 +2373,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1067
+From //build/config/BUILDCONFIG.gn:1071
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2591,7 +2602,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:133
+From //build/config/BUILDCONFIG.gn:137
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -2622,7 +2633,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1041
+From //build/config/BUILDCONFIG.gn:1045
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2892,35 +2903,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/942adb923975d0d5e98cfb9e662f0c4a820c7f83/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/942adb923975d0d5e98cfb9e662f0c4a820c7f83/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/942adb923975d0d5e98cfb9e662f0c4a820c7f83/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/942adb923975d0d5e98cfb9e662f0c4a820c7f83/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/942adb923975d0d5e98cfb9e662f0c4a820c7f83/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#23)
 
 ### wlancfg_config_type
 Selects the wlan configuration type to use. Choices:
@@ -3092,7 +3103,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:150
+From //build/config/BUILDCONFIG.gn:154
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
