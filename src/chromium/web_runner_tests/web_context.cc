@@ -10,7 +10,8 @@
 
 #include <gtest/gtest.h>
 
-WebContext::WebContext(sys::ComponentContext* component_context) {
+WebContext::WebContext(sys::ComponentContext* component_context,
+                       fuchsia::web::ContextFeatureFlags flags) {
   auto web_context_provider = component_context->svc()->Connect<fuchsia::web::ContextProvider>();
   web_context_provider.set_error_handler([](zx_status_t status) {
     FAIL() << "web_context_provider: " << zx_status_get_string(status);
@@ -20,6 +21,7 @@ WebContext::WebContext(sys::ComponentContext* component_context) {
   FX_CHECK(incoming_service_clone.is_valid());
   fuchsia::web::CreateContextParams params;
   params.set_service_directory(std::move(incoming_service_clone));
+  params.set_features(std::move(flags));
 
   web_context_provider->Create(std::move(params), web_context_.NewRequest());
   web_context_.set_error_handler(

@@ -252,7 +252,7 @@ TEST_F(WebRunnerPixelTest, Static) {
 class WebPixelTest : public PixelTest {
  protected:
   WebPixelTest()
-      : web_context_(context()),
+      : web_context_(context(), fuchsia::web::ContextFeatureFlags::VULKAN),
         embedder_view_({
             .session_and_listener_request =
                 scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),

@@ -85,7 +85,8 @@ class MockNavigationEventListener : public fuchsia::web::NavigationEventListener
 class ChromiumAppTest : public gtest::RealLoopFixture {
  protected:
   ChromiumAppTest()
-      : web_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory().get()) {}
+      : web_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory().get(),
+                     fuchsia::web::ContextFeatureFlags()) {}
 
   WebContext* web_context() { return &web_context_; }
 

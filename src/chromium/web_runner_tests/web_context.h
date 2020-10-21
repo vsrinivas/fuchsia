@@ -14,7 +14,7 @@
 // https://chromium.googlesource.com/chromium/src/+/master/fuchsia/engine/test/web_engine_browser_test.h
 class WebContext {
  public:
-  explicit WebContext(sys::ComponentContext* component_context);
+  WebContext(sys::ComponentContext* component_context, fuchsia::web::ContextFeatureFlags flags);
   void Navigate(const std::string& url);
 
   fuchsia::web::Frame* web_frame() const { return web_frame_.get(); }
