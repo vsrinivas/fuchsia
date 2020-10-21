@@ -133,11 +133,9 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
     return status;
   }
 
-  uint32_t channels[] = {0, 1};
   dai_format_t format = {};
   format.number_of_channels = 2;
-  format.channels_to_use_list = channels;
-  format.channels_to_use_count = countof(channels);
+  format.channels_to_use = 3;
   format.sample_format = wanted_sample_format;
   format.frame_format = wanted_frame_format;
   format.frame_rate = wanted_frame_rate;
