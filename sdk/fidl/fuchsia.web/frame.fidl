@@ -219,7 +219,7 @@ protocol Frame {
 
     /// Sets the listener for handling page navigation events.
     ///
-    /// - `listener`: The observer to use. Unregisters any existing listener is null.
+    /// - `listener`: The observer to use. Unregisters any existing listener if null.
     SetNavigationEventListener(NavigationEventListener? listener);
 
     /// If set to a value other than [`ConsoleLogLevel.NONE`], allows web content to log messages
