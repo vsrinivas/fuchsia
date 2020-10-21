@@ -249,15 +249,27 @@ class LIB_FITX_NODISCARD result<E, T> : private ::fitx::internal::modulate_copy_
   // Accessors for the underlying error.
   //
   // May only be called when the result contains an error.
-  constexpr E& error_value() {
+  constexpr E& error_value() & {
     if (is_error()) {
       return storage_.error_or_value.error;
     }
     __builtin_abort();
   }
-  constexpr const E& error_value() const {
+  constexpr const E& error_value() const & {
     if (is_error()) {
       return storage_.error_or_value.error;
+    }
+    __builtin_abort();
+  }
+  constexpr E&& error_value() && {
+    if (is_error()) {
+      return std::move(storage_.error_or_value.error);
+    }
+    __builtin_abort();
+  }
+  constexpr const E&& error_value() const&& {
+    if (is_error()) {
+      return std::move(storage_.error_or_value.error);
     }
     __builtin_abort();
   }
@@ -422,15 +434,27 @@ class LIB_FITX_NODISCARD result<E> : private ::fitx::internal::modulate_copy_and
   // Accessors for the underlying error.
   //
   // May only be called when the result contains an error.
-  constexpr E& error_value() {
+  constexpr E& error_value() & {
     if (is_error()) {
       return storage_.error_or_value.error;
     }
     __builtin_abort();
   }
-  constexpr const E& error_value() const {
+  constexpr const E& error_value() const & {
     if (is_error()) {
       return storage_.error_or_value.error;
+    }
+    __builtin_abort();
+  }
+  constexpr E&& error_value() && {
+    if (is_error()) {
+      return std::move(storage_.error_or_value.error);
+    }
+    __builtin_abort();
+  }
+  constexpr const E&& error_value() const&& {
+    if (is_error()) {
+      return std::move(storage_.error_or_value.error);
     }
     __builtin_abort();
   }

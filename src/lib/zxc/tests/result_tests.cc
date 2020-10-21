@@ -992,4 +992,28 @@ TEST(LibZxCommon, AugmentError) {
   }
 }
 
+// Ensure that the r-value overloads of value() and error_value() work as expected.
+//
+// The r-value overloads cause expressions such as the following:
+//
+//   MyFunction().value()
+//   std::move(result).value()
+//
+// to be moves and not copies.
+TEST(ResultTests, ResultRvalueOverloads) {
+  // result.value() &&
+  {
+    fitx::result<int, move_only> result = fitx::success<move_only>();
+    move_only value = std::move(result).value();
+    (void)value;
+  }
+
+  // result.error_value() &&
+  {
+    fitx::result<move_only, int> moved_error = fitx::error<move_only>();
+    move_only value = std::move(moved_error).error_value();
+    (void)value;
+  }
+}
+
 }  // anonymous namespace
