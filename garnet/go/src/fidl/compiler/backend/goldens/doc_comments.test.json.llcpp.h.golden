@@ -65,14 +65,19 @@ enum class MyStrictEnum : uint32_t {
 //
 // strict bits comment #2
 // |MyStrictBits| is strict, hence is guaranteed to only contain
-// members defined in the FIDL schema.
+// members defined in the FIDL schema when receiving it in a message.
+// Sending unknown members will fail at runtime.
 class MyStrictBits final {
  public:
   constexpr MyStrictBits() = default;
   constexpr MyStrictBits(const MyStrictBits& other) = default;
+
+  // Constructs an instance of |MyStrictBits| from an underlying primitive
+  // value, preserving any bit member not defined in the FIDL schema.
+  explicit constexpr MyStrictBits(uint32_t value) : value_(value) {}
   const static MyStrictBits MY_FIRST_BIT;
   const static MyStrictBits MY_OTHER_BIT;
-  const static MyStrictBits mask;
+  const static MyStrictBits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
   explicit constexpr inline operator bool() const {
@@ -96,21 +101,19 @@ class MyStrictBits final {
   // if the primitive does not contain any unknown members not defined in the
   // FIDL schema. Otherwise, returns |fit::nullopt|.
   constexpr inline static fit::optional<MyStrictBits> TryFrom(uint32_t value) {
-    if (value & ~mask.value_) {
+    if (value & ~kMask.value_) {
       return fit::nullopt;
     }
-    return MyStrictBits(value & MyStrictBits::mask.value_);
+    return MyStrictBits(value & MyStrictBits::kMask.value_);
   }
 
   // Constructs an instance of |MyStrictBits| from an underlying primitive
   // value, clearing any bit member not defined in the FIDL schema.
   constexpr inline static MyStrictBits TruncatingUnknown(uint32_t value) {
-    return MyStrictBits(value & MyStrictBits::mask.value_);
+    return MyStrictBits(value & MyStrictBits::kMask.value_);
   }
 
  private:
-  constexpr explicit MyStrictBits(uint32_t value) : value_(value) {}
-
   uint32_t value_ = 0;
 };
 constexpr const ::llcpp::fidl::test::doccomments::MyStrictBits
@@ -120,12 +123,12 @@ constexpr const ::llcpp::fidl::test::doccomments::MyStrictBits
     MyStrictBits::MY_OTHER_BIT =
         ::llcpp::fidl::test::doccomments::MyStrictBits(2u);
 constexpr const ::llcpp::fidl::test::doccomments::MyStrictBits
-    MyStrictBits::mask = ::llcpp::fidl::test::doccomments::MyStrictBits(3u);
+    MyStrictBits::kMask = ::llcpp::fidl::test::doccomments::MyStrictBits(3u);
 
 constexpr inline ::llcpp::fidl::test::doccomments::MyStrictBits
 MyStrictBits::operator~() const {
   return ::llcpp::fidl::test::doccomments::MyStrictBits(
-      static_cast<uint32_t>(~this->value_ & mask.value_));
+      static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::llcpp::fidl::test::doccomments::MyStrictBits
@@ -217,9 +220,13 @@ class MyFlexibleBits final {
  public:
   constexpr MyFlexibleBits() = default;
   constexpr MyFlexibleBits(const MyFlexibleBits& other) = default;
+
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
+  // value, preserving any bit member not defined in the FIDL schema.
+  explicit constexpr MyFlexibleBits(uint32_t value) : value_(value) {}
   const static MyFlexibleBits MY_FIRST_BIT;
   const static MyFlexibleBits MY_OTHER_BIT;
-  const static MyFlexibleBits mask;
+  const static MyFlexibleBits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
   explicit constexpr inline operator bool() const {
@@ -244,33 +251,25 @@ class MyFlexibleBits final {
   // the FIDL schema. Otherwise, returns |fit::nullopt|.
   constexpr inline static fit::optional<MyFlexibleBits> TryFrom(
       uint32_t value) {
-    if (value & ~mask.value_) {
+    if (value & ~kMask.value_) {
       return fit::nullopt;
     }
-    return MyFlexibleBits(value & MyFlexibleBits::mask.value_);
+    return MyFlexibleBits(value & MyFlexibleBits::kMask.value_);
   }
 
   // Constructs an instance of |MyFlexibleBits| from an underlying primitive
   // value, clearing any bit member not defined in the FIDL schema.
   constexpr inline static MyFlexibleBits TruncatingUnknown(uint32_t value) {
-    return MyFlexibleBits(value & MyFlexibleBits::mask.value_);
+    return MyFlexibleBits(value & MyFlexibleBits::kMask.value_);
   }
-  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
-  // value, preserving any bit member not defined in the FIDL schema.
-  constexpr inline static MyFlexibleBits AllowingUnknown(uint32_t value) {
-    return MyFlexibleBits(value);
-  }
-
   constexpr inline MyFlexibleBits unknown_bits() const {
-    return *this & MyFlexibleBits(~mask.value_);
+    return *this & MyFlexibleBits(~kMask.value_);
   }
   constexpr inline bool has_unknown_bits() const {
     return static_cast<bool>(unknown_bits());
   }
 
  private:
-  constexpr explicit MyFlexibleBits(uint32_t value) : value_(value) {}
-
   uint32_t value_ = 0;
 };
 constexpr const ::llcpp::fidl::test::doccomments::MyFlexibleBits
@@ -280,12 +279,13 @@ constexpr const ::llcpp::fidl::test::doccomments::MyFlexibleBits
     MyFlexibleBits::MY_OTHER_BIT =
         ::llcpp::fidl::test::doccomments::MyFlexibleBits(2u);
 constexpr const ::llcpp::fidl::test::doccomments::MyFlexibleBits
-    MyFlexibleBits::mask = ::llcpp::fidl::test::doccomments::MyFlexibleBits(3u);
+    MyFlexibleBits::kMask =
+        ::llcpp::fidl::test::doccomments::MyFlexibleBits(3u);
 
 constexpr inline ::llcpp::fidl::test::doccomments::MyFlexibleBits
 MyFlexibleBits::operator~() const {
   return ::llcpp::fidl::test::doccomments::MyFlexibleBits(
-      static_cast<uint32_t>(~this->value_ & mask.value_));
+      static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::llcpp::fidl::test::doccomments::MyFlexibleBits

@@ -46,14 +46,19 @@ enum class EnumType : int32_t {
 };
 
 // |BitsType| is strict, hence is guaranteed to only contain
-// members defined in the FIDL schema.
+// members defined in the FIDL schema when receiving it in a message.
+// Sending unknown members will fail at runtime.
 class BitsType final {
  public:
   constexpr BitsType() = default;
   constexpr BitsType(const BitsType& other) = default;
+
+  // Constructs an instance of |BitsType| from an underlying primitive value,
+  // preserving any bit member not defined in the FIDL schema.
+  explicit constexpr BitsType(uint32_t value) : value_(value) {}
   const static BitsType VALUE;
   const static BitsType true_;
-  const static BitsType mask;
+  const static BitsType kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
   explicit constexpr inline operator bool() const {
@@ -77,34 +82,32 @@ class BitsType final {
   // if the primitive does not contain any unknown members not defined in the
   // FIDL schema. Otherwise, returns |fit::nullopt|.
   constexpr inline static fit::optional<BitsType> TryFrom(uint32_t value) {
-    if (value & ~mask.value_) {
+    if (value & ~kMask.value_) {
       return fit::nullopt;
     }
-    return BitsType(value & BitsType::mask.value_);
+    return BitsType(value & BitsType::kMask.value_);
   }
 
   // Constructs an instance of |BitsType| from an underlying primitive value,
   // clearing any bit member not defined in the FIDL schema.
   constexpr inline static BitsType TruncatingUnknown(uint32_t value) {
-    return BitsType(value & BitsType::mask.value_);
+    return BitsType(value & BitsType::kMask.value_);
   }
 
  private:
-  constexpr explicit BitsType(uint32_t value) : value_(value) {}
-
   uint32_t value_ = 0;
 };
 constexpr const ::llcpp::fidl::test::consts::BitsType BitsType::VALUE =
     ::llcpp::fidl::test::consts::BitsType(1u);
 constexpr const ::llcpp::fidl::test::consts::BitsType BitsType::true_ =
     ::llcpp::fidl::test::consts::BitsType(2u);
-constexpr const ::llcpp::fidl::test::consts::BitsType BitsType::mask =
+constexpr const ::llcpp::fidl::test::consts::BitsType BitsType::kMask =
     ::llcpp::fidl::test::consts::BitsType(3u);
 
 constexpr inline ::llcpp::fidl::test::consts::BitsType BitsType::operator~()
     const {
   return ::llcpp::fidl::test::consts::BitsType(
-      static_cast<uint32_t>(~this->value_ & mask.value_));
+      static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::llcpp::fidl::test::consts::BitsType BitsType::operator|(

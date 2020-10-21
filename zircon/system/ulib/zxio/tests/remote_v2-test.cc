@@ -110,7 +110,7 @@ TEST_F(RemoteV2, GetAttributes) {
    public:
     void GetAttributes(fio2::NodeAttributesQuery query,
                        GetAttributesCompleter::Sync& completer) override {
-      EXPECT_EQ(query, fio2::NodeAttributesQuery::mask);
+      EXPECT_EQ(query, fio2::NodeAttributesQuery::kMask);
       uint64_t content_size = kContentSize;
       uint64_t id = kId;
       fio2::NodeProtocols protocols = fio2::NodeProtocols::FILE;

@@ -40,7 +40,7 @@ class QueryServiceTest : public BlobfsTestWithFvm {
 
   void QueryInfo(size_t expected_nodes, size_t expected_bytes) {
     fuchsia_fs::Query::SyncClient query_service = ConnectToQueryService();
-    auto call_result = query_service.GetInfo(fuchsia_fs::FilesystemInfoQuery::mask);
+    auto call_result = query_service.GetInfo(fuchsia_fs::FilesystemInfoQuery::kMask);
     ASSERT_OK(call_result.status());
     const auto& query_result = call_result.value().result;
     ASSERT_TRUE(query_result.is_response());

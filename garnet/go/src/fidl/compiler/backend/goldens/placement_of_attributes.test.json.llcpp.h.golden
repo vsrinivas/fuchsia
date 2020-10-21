@@ -50,13 +50,18 @@ enum class ExampleEnum : uint32_t {
 };
 
 // |ExampleBits| is strict, hence is guaranteed to only contain
-// members defined in the FIDL schema.
+// members defined in the FIDL schema when receiving it in a message.
+// Sending unknown members will fail at runtime.
 class ExampleBits final {
  public:
   constexpr ExampleBits() = default;
   constexpr ExampleBits(const ExampleBits& other) = default;
+
+  // Constructs an instance of |ExampleBits| from an underlying primitive value,
+  // preserving any bit member not defined in the FIDL schema.
+  explicit constexpr ExampleBits(uint32_t value) : value_(value) {}
   const static ExampleBits MEMBER;
-  const static ExampleBits mask;
+  const static ExampleBits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
   explicit constexpr inline operator bool() const {
@@ -80,31 +85,29 @@ class ExampleBits final {
   // if the primitive does not contain any unknown members not defined in the
   // FIDL schema. Otherwise, returns |fit::nullopt|.
   constexpr inline static fit::optional<ExampleBits> TryFrom(uint32_t value) {
-    if (value & ~mask.value_) {
+    if (value & ~kMask.value_) {
       return fit::nullopt;
     }
-    return ExampleBits(value & ExampleBits::mask.value_);
+    return ExampleBits(value & ExampleBits::kMask.value_);
   }
 
   // Constructs an instance of |ExampleBits| from an underlying primitive value,
   // clearing any bit member not defined in the FIDL schema.
   constexpr inline static ExampleBits TruncatingUnknown(uint32_t value) {
-    return ExampleBits(value & ExampleBits::mask.value_);
+    return ExampleBits(value & ExampleBits::kMask.value_);
   }
 
  private:
-  constexpr explicit ExampleBits(uint32_t value) : value_(value) {}
-
   uint32_t value_ = 0;
 };
 constexpr const ::llcpp::example::ExampleBits ExampleBits::MEMBER =
     ::llcpp::example::ExampleBits(1u);
-constexpr const ::llcpp::example::ExampleBits ExampleBits::mask =
+constexpr const ::llcpp::example::ExampleBits ExampleBits::kMask =
     ::llcpp::example::ExampleBits(1u);
 
 constexpr inline ::llcpp::example::ExampleBits ExampleBits::operator~() const {
   return ::llcpp::example::ExampleBits(
-      static_cast<uint32_t>(~this->value_ & mask.value_));
+      static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
 constexpr inline ::llcpp::example::ExampleBits ExampleBits::operator|(

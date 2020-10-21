@@ -15,7 +15,7 @@ TEST(FidlExamples, Bits) {
   auto flags = llcpp::fuchsia::examples::FileMode::READ |
                llcpp::fuchsia::examples::FileMode::WRITE |
                llcpp::fuchsia::examples::FileMode::EXECUTE;
-  ASSERT_EQ(flags, llcpp::fuchsia::examples::FileMode::mask);
+  ASSERT_EQ(flags, llcpp::fuchsia::examples::FileMode::kMask);
 }
 // [END bits]
 

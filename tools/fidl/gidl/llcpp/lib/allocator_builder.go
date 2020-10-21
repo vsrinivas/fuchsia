@@ -92,16 +92,7 @@ func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration, 
 		case gidlmixer.PrimitiveDeclaration, *gidlmixer.EnumDecl:
 			return a.construct(typeName(decl), isPointer, formatPrimitive(value))
 		case *gidlmixer.BitsDecl:
-			if decl.IsFlexible() {
-				return fmt.Sprintf("%s::AllowingUnknown(%s)", declName(decl), formatPrimitive(value))
-			}
-			// Given a strict bits declaration, it is impossible to construct one
-			// with unknown members using "regular C++". Here we use a questionable
-			// reinterpret-cast in an IIFE to fabricate such an illegal value:
-			//
-			// ([] { T bits; *reinterpret_cast<Underlying*>(&bits) = value; return bits; })()
-			//
-			return fmt.Sprintf("([] { %s bits; *reinterpret_cast<%s*>(&bits) = %s; return bits; })()", declName(decl), primitiveTypeName(decl.Underlying.Subtype()), formatPrimitive(value))
+			return fmt.Sprintf("static_cast<%s>(%s)", declName(decl), formatPrimitive(value))
 		}
 	case gidlir.RawFloat:
 		switch decl.(*gidlmixer.FloatDecl).Subtype() {

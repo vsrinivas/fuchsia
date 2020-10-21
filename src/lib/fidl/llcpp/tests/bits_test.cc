@@ -59,7 +59,7 @@ TYPED_TEST_P(Bits, BitwiseAssignOperators) {
 
 TYPED_TEST_P(Bits, IsConstexpr) {
   static constexpr auto this_should_compile = TypeParam::B | TypeParam::D | TypeParam::E;
-  EXPECT_EQ(this_should_compile, TypeParam::mask);
+  EXPECT_EQ(this_should_compile, TypeParam::kMask);
 }
 
 TYPED_TEST_P(Bits, CanConvertToNumberButMustBeExplicit) {
@@ -89,9 +89,15 @@ TYPED_TEST_P(Bits, TryFrom) {
   EXPECT_EQ(result_ok, fit::optional<TypeParam>(TypeParam::B));
 }
 
+TYPED_TEST_P(Bits, AllowingUnknownThroughStaticCast) {
+  // The bits type only has 2, 4, and 8 defined.
+  auto bits = static_cast<TypeParam>(1);
+  EXPECT_EQ(static_cast<uint8_t>(bits), 1);
+}
+
 REGISTER_TYPED_TEST_SUITE_P(Bits, BitwiseOperators, BitwiseAssignOperators, IsConstexpr,
                             CanConvertToNumberButMustBeExplicit, CanConvertToBool,
-                            TruncatingUnknown, TryFrom);
+                            TruncatingUnknown, TryFrom, AllowingUnknownThroughStaticCast);
 
 using BitsTypesToTest = ::testing::Types<llcpp::fidl::llcpp::types::test::StrictBits,
                                          llcpp::fidl::llcpp::types::test::FlexibleBits>;
@@ -99,17 +105,10 @@ INSTANTIATE_TYPED_TEST_SUITE_P(BitsTests, Bits, BitsTypesToTest);
 
 // The following APIs tested are only available on flexible bits.
 
-TEST(Bits, AllowingUnknown) {
-  using BitsType = llcpp::fidl::llcpp::types::test::FlexibleBits;
-  // The bits type only has 2, 4, and 8 defined.
-  auto bits = BitsType::AllowingUnknown(1);
-  EXPECT_EQ(static_cast<uint8_t>(bits), 1);
-}
-
 TEST(Bits, QueryingUnknown) {
   using BitsType = llcpp::fidl::llcpp::types::test::FlexibleBits;
   // The bits type only has 2, 4, and 8 defined.
-  auto bits = BitsType::AllowingUnknown(2 | 1);
+  auto bits = static_cast<BitsType>(2 | 1);
   EXPECT_TRUE(bits.has_unknown_bits());
   EXPECT_EQ(static_cast<uint8_t>(bits.unknown_bits()), 1);
 

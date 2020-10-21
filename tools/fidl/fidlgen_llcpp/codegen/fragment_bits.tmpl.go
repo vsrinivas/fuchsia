@@ -11,7 +11,8 @@ const fragmentBitsTmpl = `
 {{- end }}
 {{- if .IsStrict }}
 // |{{ .Name }}| is strict, hence is guaranteed to only contain
-// members defined in the FIDL schema.
+// members defined in the FIDL schema when receiving it in a message.
+// Sending unknown members will fail at runtime.
 {{- else }}
 // |{{ .Name }}| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
@@ -21,10 +22,14 @@ public:
   constexpr {{ .Name }}() = default;
   constexpr {{ .Name }}(const {{ .Name }}& other) = default;
 
+  // Constructs an instance of |{{ .Name }}| from an underlying primitive value,
+  // preserving any bit member not defined in the FIDL schema.
+  explicit constexpr {{ .Name }}({{ .Type }} value) : value_(value) {}
+
   {{- range .Members }}
   const static {{ $.Name }} {{ .Name }};
   {{- end }}
-  const static {{ .Name }} mask;
+  const static {{ .Name }} kMask;
 
   explicit constexpr inline operator {{ .Type }}() const { return value_; }
   explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
@@ -42,44 +47,36 @@ public:
   // if the primitive does not contain any unknown members not defined in the
   // FIDL schema. Otherwise, returns |fit::nullopt|.
   constexpr inline static fit::optional<{{ .Name }}> TryFrom({{ .Type }} value) {
-    if (value & ~mask.value_) {
+    if (value & ~kMask.value_) {
       return fit::nullopt;
     }
-    return {{ .Name }}(value & {{ .Name }}::mask.value_);
+    return {{ .Name }}(value & {{ .Name }}::kMask.value_);
   }
 
   // Constructs an instance of |{{ .Name }}| from an underlying primitive value,
   // clearing any bit member not defined in the FIDL schema.
   constexpr inline static {{ .Name }} TruncatingUnknown({{ .Type }} value) {
-    return {{ .Name }}(value & {{ .Name }}::mask.value_);
+    return {{ .Name }}(value & {{ .Name }}::kMask.value_);
   }
 
   {{- if .IsFlexible }}
-  // Constructs an instance of |{{ .Name }}| from an underlying primitive value,
-  // preserving any bit member not defined in the FIDL schema.
-  constexpr inline static {{ .Name }} AllowingUnknown({{ .Type }} value) {
-    return {{ .Name }}(value);
-  }
-
   constexpr inline {{ .Name }} unknown_bits() const {
-    return *this & {{ .Name }}(~mask.value_);
+    return *this & {{ .Name }}(~kMask.value_);
   }
   constexpr inline bool has_unknown_bits() const { return static_cast<bool>(unknown_bits()); }
   {{- end }}
 
 private:
-  constexpr explicit {{ .Name }}({{ .Type }} value) : value_(value) {}
-
   {{ .Type }} value_ = 0;
 };
 
 {{- range $member := .Members }}
 constexpr const {{ $.Namespace }}::{{ $.Name }} {{ $.Name }}::{{ $member.Name }} = {{ $.Namespace }}::{{ $.Name }}({{ $member.Value }});
 {{- end }}
-constexpr const {{ .Namespace }}::{{ .Name }} {{ .Name }}::mask = {{ $.Namespace }}::{{ $.Name }}({{ .Mask }}u);
+constexpr const {{ .Namespace }}::{{ .Name }} {{ .Name }}::kMask = {{ $.Namespace }}::{{ $.Name }}({{ .Mask }}u);
 
 constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator~() const {
-  return {{ $.Namespace }}::{{ $.Name }}(static_cast<{{ .Type }}>(~this->value_ & mask.value_));
+  return {{ $.Namespace }}::{{ $.Name }}(static_cast<{{ .Type }}>(~this->value_ & kMask.value_));
 }
 
 constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator|(

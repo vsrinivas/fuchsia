@@ -190,7 +190,7 @@ zx_status_t zxio_remote_sync(zxio_t* io) {
 
 zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
   RemoteV2 rio(io);
-  auto result = fio2::Node::Call::GetAttributes(rio.control(), fio2::NodeAttributesQuery::mask);
+  auto result = fio2::Node::Call::GetAttributes(rio.control(), fio2::NodeAttributesQuery::kMask);
   if (result.status() != ZX_OK) {
     return result.status();
   }
