@@ -10,7 +10,6 @@
 #include <optional>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
@@ -19,6 +18,8 @@
 #include <ddktl/metadata/audio.h>
 #include <fbl/array.h>
 #include <soc/as370/as370-audio-regs.h>
+
+#include "src/media/audio/drivers/as370-tdm-output/as370_audio_out_bind.h"
 
 // TODO(andresoportus): Add handling for the other formats supported by this controller.
 
@@ -332,10 +333,6 @@ static constexpr zx_driver_ops_t syn_audio_out_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(as370_audio_out, syn_audio_out_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_SYNAPTICS_AS370),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_AUDIO_OUT),
-ZIRCON_DRIVER_END(as370_audio_out)
-    // clang-format on
+ZIRCON_DRIVER(as370_audio_out, syn_audio_out_driver_ops, "zircon", "0.1")
+
+// clang-format on
