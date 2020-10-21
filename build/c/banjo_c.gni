@@ -38,6 +38,7 @@ template("banjo_c_target") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "needs_composite",
                              "testonly",
                              "visibility",
                            ])
@@ -54,6 +55,9 @@ template("banjo_c_target") {
       "//src/lib/ddk",
       "//src/lib/ddktl",
     ]
+    if (!defined(needs_composite) || needs_composite) {
+      public_deps += [ "//sdk/banjo/ddk.protocol.composite" ]
+    }
 
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ "//build/c:banjo_gen_config" ]

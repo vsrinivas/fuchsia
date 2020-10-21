@@ -13,6 +13,7 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+#include <ddktl/protocol/composite.h>
 
 #include "empty-internal.h"
 

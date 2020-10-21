@@ -23,6 +23,10 @@ import("//build/rust/toolchain.gni")
 #     Name of the library.
 #     Defaults to the target's name.
 #
+#   needs_composite (optional)
+#     Defines whether composite dep should be auto-added or not.
+#     Defaults to true.
+#
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
@@ -31,11 +35,18 @@ template("banjo") {
   if (defined(invoker.sdk_category)) {
     not_needed(invoker, [ "sdk_category" ])
   }
+  if (defined(invoker.needs_composite)) {
+    not_needed(invoker, [ "needs_composite" ])
+  }
+
   if (current_toolchain == banjo_toolchain) {
     import("//build/banjo/banjo_library.gni")
 
     banjo_library(target_name) {
       forward_variables_from(invoker, "*")
+      if (!defined(deps)) {
+        deps = []
+      }
     }
   } else if (is_fuchsia) {
     import("//build/c/banjo_c.gni")
