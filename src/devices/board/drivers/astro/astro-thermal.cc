@@ -73,24 +73,45 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
   };
 }
 
-fuchsia_hardware_thermal_ThermalDeviceInfo astro_config = {
+fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll = {
     .active_cooling = false,
     .passive_cooling = false,
     .gpu_throttling = false,
     .num_trip_points = 0,
     .big_little = false,
-    .critical_temp_celsius = 0.0,
+    .critical_temp_celsius = 101.0,
     .trip_point_info =
         {
             TripPoint(-273.15f, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
         },
     .opps = {}};
 
-static const pbus_metadata_t thermal_metadata[] = {
+fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_ddr = {
+    .active_cooling = false,
+    .passive_cooling = false,
+    .gpu_throttling = false,
+    .num_trip_points = 0,
+    .big_little = false,
+    .critical_temp_celsius = 110.0,
+    .trip_point_info =
+        {
+            TripPoint(-273.15f, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
+        },
+    .opps = {}};
+
+static const pbus_metadata_t thermal_metadata_pll[] = {
     {
         .type = DEVICE_METADATA_THERMAL_CONFIG,
-        .data_buffer = &astro_config,
-        .data_size = sizeof(astro_config),
+        .data_buffer = &thermal_config_pll,
+        .data_size = sizeof(thermal_config_pll),
+    },
+};
+
+static const pbus_metadata_t thermal_metadata_ddr[] = {
+    {
+        .type = DEVICE_METADATA_THERMAL_CONFIG,
+        .data_buffer = &thermal_config_ddr,
+        .data_size = sizeof(thermal_config_ddr),
     },
 };
 
@@ -104,8 +125,8 @@ static pbus_dev_t thermal_dev_pll = []() {
   dev.mmio_count = countof(thermal_mmios_pll);
   dev.irq_list = thermal_irqs_pll;
   dev.irq_count = countof(thermal_irqs_pll);
-  dev.metadata_list = thermal_metadata;
-  dev.metadata_count = countof(thermal_metadata);
+  dev.metadata_list = thermal_metadata_pll;
+  dev.metadata_count = countof(thermal_metadata_pll);
   return dev;
 }();
 
@@ -119,8 +140,8 @@ static pbus_dev_t thermal_dev_ddr = []() {
   dev.mmio_count = countof(thermal_mmios_ddr);
   dev.irq_list = thermal_irqs_ddr;
   dev.irq_count = countof(thermal_irqs_ddr);
-  dev.metadata_list = thermal_metadata;
-  dev.metadata_count = countof(thermal_metadata);
+  dev.metadata_list = thermal_metadata_ddr;
+  dev.metadata_count = countof(thermal_metadata_ddr);
   return dev;
 }();
 

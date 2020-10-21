@@ -33,7 +33,6 @@ constexpr int32_t kCalA_ = 324;
 constexpr int32_t kCalB_ = 424;
 constexpr int32_t kCalC_ = 3159;
 constexpr int32_t kCalD_ = 9411;
-constexpr float kRebootTempCelsius = 130.0f;
 
 }  // namespace
 
@@ -337,8 +336,8 @@ float AmlTSensor::ReadTemperatureCelsius() {
   }
 }
 
-void AmlTSensor::SetRebootTemperatureCelsius(uint32_t temp_c) {
-  uint32_t reboot_val = TempCelsiusToCode(kRebootTempCelsius, true);
+void AmlTSensor::SetRebootTemperatureCelsius(float temp_c) {
+  uint32_t reboot_val = TempCelsiusToCode(temp_c, true);
   auto reboot_config = TsCfgReg2::Get().ReadFrom(&*sensor_base_mmio_);
 
   reboot_config.set_hi_temp_enable(1)
@@ -418,6 +417,11 @@ zx_status_t AmlTSensor::InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo th
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-tsensor: Unable to create port");
     return status;
+  }
+
+  // Configure the SoC reset temperature.
+  if (thermal_config.critical_temp_celsius > 0.0) {
+    SetRebootTemperatureCelsius(thermal_config.critical_temp_celsius);
   }
 
   // Setup IRQ's and rise/fall thresholds.

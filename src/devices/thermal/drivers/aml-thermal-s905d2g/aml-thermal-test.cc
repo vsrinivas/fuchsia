@@ -234,6 +234,10 @@ class AmlTSensorTest : public zxtest::Test {
           .ExpectWrite(0x01008000);
     }
 
+    // Enable SoC reset at 102.0f
+    (*mock_sensor_base_mmio_)[(0x2 << 2)].ExpectRead(0x0);
+    (*mock_sensor_base_mmio_)[(0x2 << 2)].ExpectWrite(0xc0ff2880);
+
     ddk::MmioBuffer sensor_base_mmio(mock_sensor_base_mmio_->GetMmioBuffer());
     ddk::MmioBuffer trim_mmio(mock_trim_mmio_->GetMmioBuffer());
     ddk::MmioBuffer hiu_mmio(mock_hiu_mmio_->GetMmioBuffer());
