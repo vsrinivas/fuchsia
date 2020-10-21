@@ -153,6 +153,7 @@ group("tests") {
   deps = [
     ":web_runner_tests",
     "//src/chromium:web_engine",
+    "//src/chromium:web_runner",
 
     # The deps below are necessary on minimal product configs.
     "//src/graphics/bin/vulkan_loader",
