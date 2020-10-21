@@ -287,14 +287,21 @@ is non-null or **FIDL_ALLOC_ABSENT** when the reference is null. The location of
 the vector's content is determined by the depth-first traversal order of the
 message during decoding.
 
-### fidl_msg_t
+### fidl_incoming_msg_t and fidl_outgoing_msg_t
+
+Messages are represented by two structs, fidl_incoming_msg_t and
+fidl_outgoing_msg_t, depending on whether they are being used on the incoming
+or outgoing direction.
+
+These structs are currently identical, but are separated because they will
+diverge in the future.
 
 ```c
-typedef struct fidl_msg {
+typedef struct fidl_incoming_msg {
     // The bytes of the message.
     //
     // The bytes of the message might be in the encoded or decoded form.
-    // Functions that take a |fidl_msg_t| as an argument should document whether
+    // Functions that take a |fidl_incoming_msg_t| as an argument should document whether
     // the expect encoded or decoded messages.
     //
     // See |num_bytes| for the number of bytes in the message.
@@ -310,13 +317,35 @@ typedef struct fidl_msg {
 
     // The number of handles in |handles|.
     uint32_t num_handles;
-} fidl_msg_t;
+} fidl_incoming_msg_t;
+
+typedef struct fidl_outgoing_msg {
+    // The bytes of the message.
+    //
+    // The bytes of the message might be in the encoded or decoded form.
+    // Functions that take a |fidl_outgoing_msg_t| as an argument should document whether
+    // the expect encoded or decoded messages.
+    //
+    // See |num_bytes| for the number of bytes in the message.
+    void* bytes;
+
+    // The handles of the message.
+    //
+    // See |num_bytes| for the number of bytes in the message.
+    zx_handle_t* handles;
+
+    // The number of bytes in |bytes|.
+    uint32_t num_bytes;
+
+    // The number of handles in |handles|.
+    uint32_t num_handles;
+} fidl_outgoing_msg_t;
 ```
 
 Represents a FIDL message, including both `bytes` and `handles`. The message
 might be in the encoded or decoded format. The ownership semantics for the
 memory referred to by `bytes` and `handles` is defined by the context in which
-the `fidl_msg_t` struct is used.
+the `fidl_incoming_msg_t` and `fidl_outgoing_msg_t` struct is used.
 
 ### fidl_txn_t
 
@@ -332,7 +361,7 @@ struct fidl_txn {
     // Call |reply| only once for each |txn| object. After |reply| returns, the
     // |txn| object is considered invalid and might have been freed or reused
     // for another purpose.
-    zx_status_t (*reply)(fidl_txn_t* txn, const fidl_msg_t* msg);
+    zx_status_t (*reply)(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg);
 };
 ```
 
@@ -348,7 +377,7 @@ channel.
 zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                         zx_handle_t* handles, uint32_t max_handles,
                         uint32_t* out_actual_handles, const char** out_error_msg);
-zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_msg_t* msg,
+zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outging_msg_t* msg,
                             uint32_t* out_actual_handles, const char** out_error_msg);
 ```
 
@@ -419,7 +448,7 @@ ranges of data types such as enums and union tags.
 zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                         const zx_handle_t* handles, uint32_t num_handles,
                         const char** error_msg_out);
-zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_msg_t* msg,
+zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
                             const char** out_error_msg);
 ```
 
@@ -488,7 +517,7 @@ ranges of data types such as enums and union tags.
 ```c
 zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
                           uint32_t num_handles, const char** error_msg_out);
-zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
+zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_outgoing_msg_t* msg,
                               const char** out_error_msg);
 ```
 
@@ -669,7 +698,7 @@ was successful. Protocol-level status is communicated through out parameters.
 
 For servers, the simple C bindings generate an ops table that contains a
 function pointer for every method in the protocol and a dispatch method that
-decodes the `fidl_msg_t` and calls the appropriate function pointer:
+decodes the `fidl_incoming_msg_t` and calls the appropriate function pointer:
 
 ```c
 typedef struct unn_fleet_SpaceShip_ops {
@@ -683,7 +712,7 @@ typedef struct unn_fleet_SpaceShip_ops {
 zx_status_t unn_fleet_SpaceShip_dispatch(
     void* ctx,
     fidl_txn_t* txn,
-    fidl_msg_t* msg,
+    fidl_incoming_msg_t* msg,
     const unn_fleet_SpaceShip_ops_t* ops);
 ```
 
@@ -712,7 +741,7 @@ static zx_status_t SpaceShip_ScanForLifeforms(void* ctx, fidl_txn_t* txn) {
 ```
 
 These reply functions encode the reply and call through the `reply` function
-pointer on `fidl_msg_t`.
+pointer on `fidl_outgoing_msg_t`.
 
 ### Binding
 
