@@ -47,5 +47,5 @@ fi
 
 ${NM} --dynamic --defined-only ${LIBRARY} \
   | awk '/ T /{ print $3; }' \
-  | env LC_COLLATE=C sort \
+  | env LC_ALL=C sort \
   > ${SYMBOLS}

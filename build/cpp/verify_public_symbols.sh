@@ -82,8 +82,8 @@ if ! diff ${CURRENT} ${REFERENCE} >/dev/null; then
   echo "Error: ABI has changed! In library $LIBRARY_NAME"
   echo
 
-  ONLY_IN_CURRENT=$(comm -23 <(cat ${CURRENT}) <(cat ${REFERENCE}))
-  ONLY_IN_REFERENCE=$(comm -13 <(cat ${CURRENT}) <(cat ${REFERENCE}))
+  ONLY_IN_CURRENT=$(env LC_ALL=C comm -23 <(cat ${CURRENT}) <(cat ${REFERENCE}))
+  ONLY_IN_REFERENCE=$(env LC_ALL=C comm -13 <(cat ${CURRENT}) <(cat ${REFERENCE}))
 
   if ! [[ -z ${ONLY_IN_CURRENT} ]]; then
     echo "NOTE: the following symbols were added:"

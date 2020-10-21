@@ -47,5 +47,5 @@ fi
 
 ${NM} --dynamic --undefined-only --no-weak ${LIBRARY} \
   | awk '{ print $2; }' \
-  | env LC_COLLATE=C sort \
+  | env LC_ALL=C sort \
   > ${SYMBOLS}
