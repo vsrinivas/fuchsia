@@ -116,7 +116,7 @@ func (f *fuchsiaDevice) outbound() (*fuchsiaDevice, error) {
 	// This is just dialing a nonsense port. No packets are being sent.
 	tmpConn, err := net.DialUDP(udpProto, nil, &net.UDPAddr{IP: f.addr, Zone: f.zone, Port: 22})
 	if err != nil {
-		return nil, fmt.Errorf("getting output ip of %q: %b", f.domain, err)
+		return nil, fmt.Errorf("getting output ip of %s: %w", f.domain, err)
 	}
 	defer tmpConn.Close()
 	localAddr := tmpConn.LocalAddr().(*net.UDPAddr)
