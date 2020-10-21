@@ -137,6 +137,19 @@ variant("ubsan") {
     rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
   }
 
+  if (is_host) {
+    # TODO(fxbug.dev/60446): remove this once LLVM prebuilts have variants
+    # Disable vptr checks on host binaries.
+    # This is a temporary hack around the facts that:
+    # 1) UBSan's vptr check requires RTTI, and mixing RTTI and no-RTTI TUs in
+    #    the same binary leads to spurious UBSan failures
+    # 2) we have non-variant prebuilts for LLVM, which lack RTTI
+    # 3) we have binaries that depend on both these LLVM prebuilts and other libraries
+    # Disabling this check on host tools for now allows us to enable UBSan on
+    # host tools, which is a net win.
+    common_flags += [ "-fno-sanitize=vptr" ]
+  }
+
   # If asan is also in use, it handles ubsan_default_options indirectly.
   if (toolchain_variant.tags + [ "asan" ] - [ "asan" ] ==
       toolchain_variant.tags) {
