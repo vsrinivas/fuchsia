@@ -8,6 +8,17 @@ import("//build/testing/bootfs_test.gni")
 import("//src/sys/build/components.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
+group("bootfs") {
+  deps = [
+    ":meta",
+    ":netsvc",
+  ]
+}
+
+component_manifest_resources("meta") {
+  sources = [ "meta/netsvc.cml" ]
+}
+
 declare_args() {
   netsvc_extra_defines = []
 }
@@ -34,9 +45,11 @@ executable("netsvc") {
   deps = [
     ":args",
     ":netsvc_common",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
     "//sdk/lib/fdio",
+    "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/tftp",

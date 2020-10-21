@@ -4,7 +4,10 @@
 
 #include "debuglog.h"
 
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fdio.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/debuglog.h>
 #include <stdio.h>
@@ -66,9 +69,21 @@ static size_t get_log_line(char* out) {
 }
 
 int debuglog_init() {
-  if (zx::debuglog::create(zx::resource(), ZX_LOG_FLAG_READABLE, &debuglog) < 0) {
-    return -1;
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
   }
+  status = fdio_service_connect("/svc/fuchsia.boot.ReadOnlyLog", remote.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+  llcpp::fuchsia::boot::ReadOnlyLog::SyncClient read_only_log(std::move(local));
+  auto result = read_only_log.Get();
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  debuglog = std::move(result->log);
 
   // Set up our timeout to expire immediately, so that we check for pending log messages
   g_debuglog_next_timeout = zx::clock::get_monotonic().get();
@@ -116,7 +131,8 @@ void debuglog_recv(void* data, size_t len, bool is_mcast) {
   if ((len != 8) || is_mcast) {
     return;
   }
-  // Copied not cast in-place to satisfy alignment requirements flagged by ubsan (see fxbug.dev/45798).
+  // Copied not cast in-place to satisfy alignment requirements flagged by ubsan (see
+  // fxbug.dev/45798).
   logpacket_t pkt;
   memcpy(&pkt, data, sizeof(logpacket_t));
   if ((pkt.magic != NB_DEBUGLOG_MAGIC) || (pkt.seqno != seqno)) {

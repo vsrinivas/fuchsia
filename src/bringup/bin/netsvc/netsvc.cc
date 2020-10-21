@@ -25,6 +25,7 @@
 #include "args.h"
 #include "debuglog.h"
 #include "netboot.h"
+#include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 #include "tftp.h"
 
 #ifndef ENABLE_SLAAC
@@ -90,6 +91,11 @@ static const char* zedboot_banner =
     "\n";
 
 int main(int argc, char** argv) {
+  zx_status_t status = StdoutToDebuglog::Init();
+  if (status != ZX_OK) {
+    printf("Failed to redirect stdout to debuglog, assuming test environment and continuing\n");
+  }
+
   fbl::unique_fd svc_root(open("/svc", O_RDWR | O_DIRECTORY));
   fdio_cpp::UnownedFdioCaller caller(svc_root.get());
 

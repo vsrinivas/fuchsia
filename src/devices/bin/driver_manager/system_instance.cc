@@ -43,12 +43,9 @@ struct ServiceStarterArgs {
 };
 
 struct ServiceStarterParams {
-  std::string netsvc_interface;
   std::string clock_backstop;
   bool netsvc_disable = true;
   bool netsvc_netboot = false;
-  bool netsvc_advertise = true;
-  bool netsvc_all_features = false;
   bool virtcon_disable = false;
 };
 
@@ -60,7 +57,6 @@ struct ConsoleParams {
 
 ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
   fidl::StringView string_keys[]{
-      "netsvc.interface",
       "clock.backstop",
   };
 
@@ -68,22 +64,20 @@ ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::Sy
   ServiceStarterParams ret;
   if (string_resp.ok()) {
     auto& values = string_resp->values;
-    ret.netsvc_interface = std::string{values[0].data(), values[0].size()};
-    ret.clock_backstop = std::string{values[1].data(), values[1].size()};
+    ret.clock_backstop = std::string{values[0].data(), values[0].size()};
   }
 
   llcpp::fuchsia::boot::BoolPair bool_keys[]{
-      {"netsvc.disable", true},       {"netsvc.netboot", false},  {"netsvc.advertise", true},
-      {"netsvc.all-features", false}, {"virtcon.disable", false},
+      {fidl::StringView{"netsvc.disable"}, true},
+      {fidl::StringView{"netsvc.netboot"}, false},
+      {fidl::StringView{"virtcon.disable"}, false},
   };
 
   auto bool_resp = client->GetBools(fidl::unowned_vec(bool_keys));
   if (bool_resp.ok()) {
     ret.netsvc_disable = bool_resp->values[0];
     ret.netsvc_netboot = bool_resp->values[1];
-    ret.netsvc_advertise = bool_resp->values[2];
-    ret.netsvc_all_features = bool_resp->values[3];
-    ret.virtcon_disable = bool_resp->values[4];
+    ret.virtcon_disable = bool_resp->values[2];
   }
 
   return ret;
@@ -467,37 +461,11 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
   bool vruncmd = false;
 
   auto params = GetServiceStarterParams(coordinator->boot_args());
-  const char* interface =
-      params.netsvc_interface.empty() ? nullptr : params.netsvc_interface.data();
 
   if (!params.netsvc_disable && !coordinator->disable_netsvc()) {
-    const char* args[] = {"/boot/bin/netsvc", nullptr, nullptr, nullptr, nullptr, nullptr};
-    int argc = 1;
-
     if (params.netsvc_netboot) {
-      args[argc++] = "--netboot";
       netboot = true;
       vruncmd = true;
-    }
-
-    if (params.netsvc_advertise) {
-      args[argc++] = "--advertise";
-    }
-
-    if (params.netsvc_all_features) {
-      args[argc++] = "--all-features";
-    }
-
-    if (interface != nullptr) {
-      args[argc++] = "--interface";
-      args[argc++] = interface;
-    }
-
-    zx_status_t status =
-        launcher_.Launch(svc_job_, "netsvc", args, nullptr, -1, coordinator->root_resource(),
-                         nullptr, nullptr, 0, nullptr, FS_ALL);
-    if (status != ZX_OK) {
-      vruncmd = false;
     }
   }
 

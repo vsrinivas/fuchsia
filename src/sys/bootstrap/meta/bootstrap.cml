@@ -32,6 +32,11 @@
             url: "fuchsia-boot:///#meta/miscsvc.cm",
         },
         {
+            name: "netsvc",
+            url: "fuchsia-boot:///#meta/netsvc.cm",
+            startup: "eager",
+        },
+        {
             name: "ptysvc",
             url: "fuchsia-boot:///#meta/ptysvc.cm",
         },
@@ -90,7 +95,10 @@
                 "fuchsia.wlan.service.Wlan",
             ],
             from: "parent",
-            to: [ "#console-launcher" ],
+            to: [
+                "#console-launcher",
+                "#netsvc",
+            ],
         },
         {
             directory: "boot",
@@ -100,6 +108,7 @@
                 "#driver_manager",
                 "#fshost",
                 "#miscsvc",
+                "#netsvc",
             ],
             rights: [ "rx*" ],
         },
@@ -223,7 +232,10 @@
                 "fuchsia.virtualconsole.SessionManager",
             ],
             from: "#driver_manager",
-            to: [ "#console-launcher" ],
+            to: [
+                "#console-launcher",
+                "#netsvc",
+            ],
         },
         {
             directory: "dev",
@@ -233,6 +245,7 @@
                 "#device_name_provider",
                 "#fshost",
                 "#miscsvc",
+                "#netsvc",
                 "#sysinfo",
             ],
         },
@@ -242,6 +255,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
             dependency: "weak_for_migration",
         },
@@ -251,6 +265,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
             dependency: "weak_for_migration",
         },
@@ -260,6 +275,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
             dependency: "weak_for_migration",
         },
@@ -269,6 +285,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
             dependency: "weak_for_migration",
         },
@@ -278,6 +295,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
             dependency: "weak_for_migration",
         },
@@ -287,6 +305,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
             dependency: "weak_for_migration",
         },
@@ -308,6 +327,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
             dependency: "weak_for_migration",
         },
@@ -317,6 +337,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
             dependency: "weak_for_migration",
         },
@@ -358,6 +379,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
 
             // TODO: Once svchost is spawned by component manager, we can
@@ -385,6 +407,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
         },
 
@@ -395,6 +418,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
         },
         {
@@ -403,6 +427,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
             dependency: "weak_for_migration",
         },
@@ -412,6 +437,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
                 "#pwrbtn-monitor",
             ],
         },
@@ -447,6 +473,17 @@
             from: "parent",
             to: [ "#power_manager" ],
         },
+        {
+            protocol: [
+                "/svc/fuchsia.kernel.Counter",
+                "/svc/fuchsia.paver.Paver",
+            ],
+            from: "#miscsvc",
+            to: [
+                "#console-launcher",
+                "#netsvc",
+            ],
+        },
 
         // Non-zircon services for svchost
         {
@@ -475,6 +512,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
         },
         {
@@ -484,6 +522,7 @@
                 "#console-launcher",
                 "#driver_manager",
                 "#fshost",
+                "#netsvc",
             ],
         },
         {
@@ -496,6 +535,7 @@
             to: [
                 "#console-launcher",
                 "#driver_manager",
+                "#netsvc",
             ],
             dependency: "weak_for_migration",
         },
