@@ -6,9 +6,9 @@
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.ui.policy.Presenter",
-                "/svc/fuchsia.ui.scenic.Scenic",
+                "fuchsia.logger.LogSink",
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
             ],
         },
     ],

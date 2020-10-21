@@ -8,7 +8,6 @@ group("tests") {
   deps = [
     "e2e_flutter_tests",
     "e2e_input_tests",
-    # TODO(56604): Re-enable after converting to name-based
-    #"scenic-stress-tests",
+    "scenic-stress-tests",
   ]
 }
