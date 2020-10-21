@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/python/python_action.gni")
 
 template("sysmgr_config") {
   # Copy the config file to the output directory so changes to the config file
@@ -48,7 +47,7 @@ template("merge_sysmgr_config") {
 
   # Using the list of sysmgr config file paths, merge the json into a single
   # file
-  python_action(merged_config_target) {
+  action(merged_config_target) {
     script = "//src/sys/pkg/scripts/merge_sysmgr_config.py"
 
     deps = [ ":$merged_config_inputs_target" ]

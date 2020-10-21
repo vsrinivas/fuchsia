@@ -5,7 +5,6 @@
 import("//build/dart/dart_component.gni")
 import("//build/dart/dart_library.gni")
 import("//build/flutter/internal/flutter_dart_component.gni")
-import("//build/python/python_action.gni")
 
 # Defines a component which runs tests in the flutter/dart test harness
 #
@@ -93,7 +92,7 @@ template("flutter_dart_test_component") {
       "${_dart_gen_dir}/${target_name}/${_generated_test_package}"
   _generated_test_main = "${_generated_package_root}/lib/main.dart"
 
-  python_action(_generate_test_main_target_name) {
+  action(_generate_test_main_target_name) {
     script = "//build/flutter/internal/gen_test_component_main.py"
     outputs = [ _generated_test_main ]
     sources = []

@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python_action.gni")
 import("//cts/build/cts.gni")
 
 # TODO(omerlevran): Find a cleaner way to this by properly structuring the deps
@@ -36,7 +35,7 @@ cts_dart_test("package_manager_test") {
 }
 
 if (is_host) {
-  python_action("pm_test_package_gather_deps") {
+  action("pm_test_package_gather_deps") {
     metadata = {
       package_barrier = []
     }

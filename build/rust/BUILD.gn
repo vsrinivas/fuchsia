@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python_action.gni")
 import("//build/rust/toolchain.gni")
 import("//build/toolchain/basic_toolchain.gni")
 import("//build/toolchain/concurrent_jobs.gni")
@@ -23,7 +22,7 @@ group("disable_strict_sources_check_allowlist") {
 }
 
 cargo_toml_gen_desc_out = "$target_out_dir/cargo_toml_gen_desc.json"
-python_action("cargo_toml_gen_desc") {
+action("cargo_toml_gen_desc") {
   visibility = [ ":cargo_toml_gen" ]
   script = "//scripts/generate_cargo_desc.py"
   sources = []
@@ -57,7 +56,7 @@ python_action("cargo_toml_gen_desc") {
 #
 # For more details, see docs/development/language/rust/README.md
 #
-python_action("cargo_toml_gen") {
+action("cargo_toml_gen") {
   # Nothing in-tree should depend on Cargo files.
   # TODO(bwb) remove base_packages visibility when auto-generation is disabled
   visibility = [

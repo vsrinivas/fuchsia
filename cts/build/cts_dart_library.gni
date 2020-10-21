@@ -22,7 +22,6 @@ template("cts_dart_library") {
     cts_element("${target_name}_verify_deps") {
       deps = invoker_deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
-      forward_variables_from(invoker, [ "testonly" ])
     }
   }
 

@@ -4,7 +4,6 @@
 
 import("//build/compiled_action.gni")
 import("//build/json/validate_json.gni")
-import("//build/python/python_action.gni")
 import("config.gni")
 import("meta/version.gni")
 import("sdk_molecule.gni")
@@ -108,7 +107,7 @@ template("sdk") {
   computed_api_file = "$root_out_dir/sdk/api/$sdk_name"
 
   # Verify that the contents of the SDK have not changed.
-  python_action(verify_api_target_name) {
+  action(verify_api_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
     script = "//build/sdk/verify_sdk_api.py"
@@ -167,7 +166,7 @@ template("sdk") {
   sdk_meta_file = "$target_gen_dir/$sdk_name.sdk_meta.json"
 
   # Generates a metadata file describing the various parts of the SDK.
-  python_action(meta_target_name) {
+  action(meta_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
     script = "//build/sdk/generate_meta.py"
@@ -224,7 +223,7 @@ template("sdk") {
 
   # From the manifest file representing the SDK, generates a list of the files
   # going into the final archive.
-  python_action(archive_manifest_target_name) {
+  action(archive_manifest_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
     script = "//build/sdk/generate_archive_manifest.py"
@@ -314,7 +313,7 @@ template("sdk") {
 
   stamp_file = "$target_gen_dir/$target_name.exported"
 
-  python_action("${target_name}_export") {
+  action("${target_name}_export") {
     forward_variables_from(invoker, [ "testonly" ])
 
     script = "//build/sdk/export_sdk.py"

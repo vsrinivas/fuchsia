@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
-import("//build/python/python_action.gni")
 
 # Generates a flat romfs image from the provided files.
 template("romfs_image") {
@@ -20,7 +19,7 @@ template("romfs_image") {
       args += [ rebase_path(input, root_out_dir) ]
     }
   }
-  python_action(check_target) {
+  action(check_target) {
     forward_variables_from(invoker, [ "testonly" ])
     deps = [ ":${image_target}" ]
     script = "//src/virtualization/buildtools/romfsck.py"

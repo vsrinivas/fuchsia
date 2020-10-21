@@ -7,7 +7,6 @@ import("//build/dart/dart.gni")
 import("//build/dart/dart_library.gni")
 import("//build/dart/dart_package_config.gni")
 import("//build/dart/kernel/dart_kernel.gni")
-import("//build/python/python_action.gni")
 import("//src/sys/build/components.gni")
 import("//tools/cmc/build/cmx.gni")
 
@@ -28,7 +27,7 @@ import("//tools/cmc/build/cmx.gni")
 #     Type: path
 #
 template("_flutter_asset_manifest") {
-  python_action(target_name) {
+  action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",

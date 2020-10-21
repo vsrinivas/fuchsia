@@ -4,7 +4,6 @@
 
 import("//build/package_metadata.gni")
 import("//build/prebuilt_binaries.gni")
-import("//build/python/python_action.gni")
 
 declare_args() {
   # To ensure that everything can be built without debug symbols present we
@@ -88,7 +87,7 @@ template("prebuilt_package") {
     package_output_manifest = package_manifest_json
   }
 
-  python_action(target_name) {
+  action(target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",

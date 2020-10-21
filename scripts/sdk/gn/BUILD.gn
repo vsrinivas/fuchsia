@@ -5,7 +5,6 @@
 # Tests for the GN SDK contents.
 
 import("//build/go/go_test.gni")
-import("//build/python/python_action.gni")
 
 # GN SDK inputs and outputs
 #
@@ -44,8 +43,8 @@ import("//build/python/python_action.gni")
 
 # This template is for local building only and will not work in CQ
 template("gn_sdk") {
-  python_action("${target_name}") {
-    testonly = true
+  testonly = true
+  action("${target_name}") {
     script = "//scripts/sdk/gn/generate.py"
     outputs = [ "${invoker.output_dir}/BUILD.gn" ]
     args = [

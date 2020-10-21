@@ -4,7 +4,6 @@
 
 import("//build/compiled_action.gni")
 import("//build/json/validate_json.gni")
-import("//build/python/python_action.gni")
 import("//build/testing/golden_file.gni")
 import("config.gni")
 
@@ -217,7 +216,7 @@ template("sdk_atom") {
       generate_api_target_name = "${target_name}_generate_api"
       current_api_file = "$target_gen_dir/$target_name.api"
 
-      python_action(generate_api_target_name) {
+      action(generate_api_target_name) {
         forward_variables_from(invoker, [ "testonly" ])
 
         script = "//build/sdk/compute_atom_api.py"
@@ -260,7 +259,7 @@ template("sdk_atom") {
   }  # if defined(invoker.api)
 
   # Builds a manifest representing this element.
-  python_action(target_name) {
+  action(target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",

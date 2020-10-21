@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python_action.gni")
 import("distribution_manifest.gni")
 
 # Generates a manifest in the FINI (Fuchsia INI) format.
@@ -63,7 +62,7 @@ template("fini_manifest") {
   }
 
   # Generate a manifest file with the FINI format.
-  python_action(main_target) {
+  action(main_target) {
     forward_variables_from(invoker,
                            [
                              "testonly",

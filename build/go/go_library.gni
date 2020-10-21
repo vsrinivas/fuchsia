@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python_action.gni")
-
 # Defines a set of Go code that can be used by other Go targets
 #
 # Parameters
@@ -71,7 +69,7 @@ template("go_library") {
     ]
   }
 
-  python_action(target_name) {
+  action(target_name) {
     script = "//build/go/gen_library_metadata.py"
 
     library_file = "$target_gen_dir/$target_name.go_deps"

@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python_action.gni")
-
 # Verifies that a set of header files do not contain a "#pragma once" directive.
 #
 # Parameters
@@ -16,7 +14,7 @@ template("verify_pragma_once") {
 
   stamp_file = "$target_gen_dir/$target_name.pragma.txt"
 
-  python_action(target_name) {
+  action(target_name) {
     script = "//build/cpp/verify_pragma_once.py"
 
     inputs = invoker.headers

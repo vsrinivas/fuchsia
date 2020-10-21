@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/cpp/verify_pragma_once.gni")
-import("//build/python/python_action.gni")
 import("//build/sdk/sdk_atom.gni")
 
 # A source set that can be exported to an SDK.
@@ -172,7 +171,7 @@ template("sdk_source_set") {
   metadata_target_name = "${target_name}_sdk_metadata"
   metadata_file = "$target_gen_dir/$target_name.sdk_meta.json"
 
-  python_action(metadata_target_name) {
+  action(metadata_target_name) {
     script = "//build/cpp/gen_sdk_sources_meta_file.py"
 
     inputs = sdk_metas

@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python_action.gni")
-
 # Generates FFX subcommand with a plugin commands
 #
 template("plugins") {
@@ -62,7 +60,7 @@ template("plugins") {
     ]
   }
 
-  python_action(target_name) {
+  action(target_name) {
     script = "//src/developer/ffx/build/gn_generate_plugins.py"
     args = script_args
 

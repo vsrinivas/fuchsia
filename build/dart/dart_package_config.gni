@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python_action.gni")
-
 # Generates a package_config.json file containing all of the packages used
 # to generate a kernel file.
 #
@@ -69,7 +67,7 @@ template("dart_package_config") {
   }
 
   # Converts the intermediate to a real pacakge_config.json file.
-  python_action(main_target) {
+  action(main_target) {
     forward_variables_from(invoker,
                            [
                              "deps",

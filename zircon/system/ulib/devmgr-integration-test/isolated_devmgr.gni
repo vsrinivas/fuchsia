@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python_action.gni")
 import("//src/sys/build/components.gni")
 
 # Produces a component with an isolated driver manager which can be used to launch drivers.
@@ -69,7 +68,7 @@ template("isolated_devmgr_unittest_component") {
 
   generated_target = "${target_name}_generated_manifest"
   manifest = "$target_out_dir/${generated_target}.cmx"
-  python_action(generated_target) {
+  action(generated_target) {
     script = "//zircon/system/ulib/devmgr-integration-test/generate-component-manifest.py"
     outputs = [ manifest ]
     args = [
