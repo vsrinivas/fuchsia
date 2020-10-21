@@ -4,13 +4,12 @@
 
 #include "dw-spi.h"
 
-#include <lib/device-protocol/platform-device.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/device-protocol/platform-device.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -23,6 +22,7 @@
 #include <hw/reg.h>
 
 #include "registers.h"
+#include "src/devices/spi/drivers/dw-spi/dw_spi-bind.h"
 
 namespace spi {
 
@@ -31,8 +31,8 @@ void DwSpi::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 void DwSpi::DdkRelease() { delete this; }
 
 zx_status_t DwSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t txdata_size,
-                                    uint8_t* out_rxdata, size_t rxdata_size,
-                                    size_t* out_rxdata_actual) {
+                                   uint8_t* out_rxdata, size_t rxdata_size,
+                                   size_t* out_rxdata_actual) {
   if (cs >= SpiImplGetChipSelectCount()) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -43,13 +43,14 @@ zx_status_t DwSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t tx
 
   Enable::Get().FromValue(0).WriteTo(&mmio_);
 
-  Ctrl0::Get().FromValue(0)
-    .set_dfs(7) // 8 bits per word (bits)
-    .set_frf(Ctrl0::FRF_SPI)
-    .set_scph(0)
-    .set_scol(0)
-    .set_tmod(Ctrl0::TMOD_TR)
-    .WriteTo(&mmio_);
+  Ctrl0::Get()
+      .FromValue(0)
+      .set_dfs(7)  // 8 bits per word (bits)
+      .set_frf(Ctrl0::FRF_SPI)
+      .set_scph(0)
+      .set_scol(0)
+      .set_tmod(Ctrl0::TMOD_TR)
+      .WriteTo(&mmio_);
 
   ChipEnable::Get().FromValue(1 << cs).WriteTo(&mmio_);
 
@@ -166,8 +167,5 @@ static zx_driver_ops_t driver_ops = []() {
 }  // namespace spi
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(dw_spi, spi::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DW_SPI),
-ZIRCON_DRIVER_END(dw_spi)
+ZIRCON_DRIVER(dw_spi, spi::driver_ops, "zircon", "0.1")
+
