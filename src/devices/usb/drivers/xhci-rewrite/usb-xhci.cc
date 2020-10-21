@@ -39,8 +39,7 @@ uint32_t Log2(uint32_t value) { return 31 - __builtin_clz(value); }
 // Computes the interval value for a specified endpoint.
 int ComputeInterval(const usb_endpoint_descriptor_t* ep, usb_speed_t speed) {
   uint8_t ep_type = ep->bmAttributes & USB_ENDPOINT_TYPE_MASK;
-  uint8_t interval = ep->bInterval;
-
+  uint8_t interval = std::clamp(ep->bInterval, static_cast<uint8_t>(1), static_cast<uint8_t>(16));
   if (ep_type == USB_ENDPOINT_CONTROL || ep_type == USB_ENDPOINT_BULK) {
     if (speed == USB_SPEED_HIGH) {
       return Log2(interval);

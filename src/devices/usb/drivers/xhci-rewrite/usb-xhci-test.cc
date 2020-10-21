@@ -401,7 +401,8 @@ class XhciHarness : public zxtest::Test {
   }
 
   void EnableEndpoint(uint32_t device_id, uint8_t ep_num, bool is_in_endpoint) {
-    usb_endpoint_descriptor_t ep_desc;
+    usb_endpoint_descriptor_t ep_desc = {};
+    ep_desc.bmAttributes = USB_ENDPOINT_BULK;
     ep_desc.bEndpointAddress = ep_num | (is_in_endpoint ? 0x80 : 0);
     device_->UsbHciEnableEndpoint(device_id, &ep_desc, nullptr);
   }
@@ -782,7 +783,7 @@ TEST_F(XhciMmioHarness, QueueControlRequest) {
 }
 
 TEST_F(XhciMmioHarness, QueueNormalRequest) {
-  ConnectDevice(1, USB_SPEED_HIGH);
+  ConnectDevice(1, USB_SPEED_FULL);
   EnableEndpoint(0, 1, true);
   bool rang = false;
   SetDoorbellListener([&](uint8_t doorbell, uint8_t target) {
