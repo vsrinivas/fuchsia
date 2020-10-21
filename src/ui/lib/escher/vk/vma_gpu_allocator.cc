@@ -77,9 +77,11 @@ namespace escher {
 
 VmaGpuAllocator::VmaGpuAllocator(const VulkanContext& context)
     : physical_device_(context.physical_device) {
+  FX_DCHECK(context.instance);
   FX_DCHECK(context.device);
   FX_DCHECK(context.physical_device);
   VmaAllocatorCreateInfo allocatorInfo = {};
+  allocatorInfo.instance = context.instance;
   allocatorInfo.physicalDevice = context.physical_device;
   allocatorInfo.device = context.device;
   allocatorInfo.flags = VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;

@@ -1,6 +1,6 @@
 Name: Vulkan Memory Allocator
 Source: https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-Git Commit: b8d34d5e6a1c0f8be737cce5df5be413267c9ea5
+Git Commit: 14208732131ebefa85baa08086f5d7d806cda947
 License: MIT
 License File: LICENSE.txt
 Description:
@@ -11,4 +11,5 @@ Modifications:
 - added README.fuchsia
 - line endings were auto-converted from CRLF
 - Mutex macros (FXL_ACQUIRE, FXL_RELEASE) added to compile with -Wthread-safety
-- Indentation removed from blank newlines
+- clang formatting disabled
+- suppress "-Wnullability-completeness" warning
