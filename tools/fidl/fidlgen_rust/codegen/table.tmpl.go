@@ -26,6 +26,12 @@ fidl_table! {
     {{ .Name }} {
       ty: {{ .Type }},
       ordinal: {{ .Ordinal }},
+      {{- if .HasHandleMetadata }}
+      handle_metadata: {
+        handle_subtype: {{ .HandleSubtype }},
+        handle_rights: {{ .HandleRights }},
+      },
+      {{- end }}
     },
     {{- end }}
   ],

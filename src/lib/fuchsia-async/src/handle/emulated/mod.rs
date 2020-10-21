@@ -7,6 +7,7 @@
 pub mod channel;
 pub mod socket;
 
+use crate::invoke_for_handle_types;
 use bitflags::bitflags;
 use fuchsia_zircon_status as zx_status;
 use futures::task::noop_waker_ref;
@@ -25,13 +26,17 @@ const INVALID_HANDLE: u32 = 0xffff_ffff;
 #[derive(Debug, PartialEq, Eq)]
 pub struct ObjectType(u32);
 
+macro_rules! define_object_type_constant {
+    ($x:tt, $docname:expr, $name:ident, $value:expr, $availability:ident) => {
+        #[doc = $docname]
+        pub const $name: ObjectType = ObjectType($value);
+    };
+}
+
 impl ObjectType {
     /// No object.
     pub const NONE: ObjectType = ObjectType(0);
-    /// A channel.
-    pub const CHANNEL: ObjectType = ObjectType(1);
-    /// A socket.
-    pub const SOCKET: ObjectType = ObjectType(2);
+    invoke_for_handle_types!(define_object_type_constant);
 }
 
 /// A borrowed reference to an underlying handle
@@ -705,6 +710,8 @@ bitflags! {
         const READ           = 1 << 2;
         /// Write right.
         const WRITE          = 1 << 3;
+        /// Same rights.
+        const SAME_RIGHTS = 1 << 31;
     }
 }
 

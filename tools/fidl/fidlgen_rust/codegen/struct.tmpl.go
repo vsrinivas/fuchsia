@@ -36,6 +36,12 @@ fidl_struct! {
     {{ .Name }} {
       ty: {{ .Type }},
       offset_v1: {{ .Offset }},
+{{- if and .HasHandleMetadata (not $.UseFidlStructCopy) }}
+      handle_metadata: {
+        handle_subtype: {{ .HandleSubtype }},
+        handle_rights: {{ .HandleRights }},
+      },
+{{- end }}
     },
   {{- end }}
   ],

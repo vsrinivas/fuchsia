@@ -4,9 +4,8 @@
 
 //! Encoding contains functions and traits for FIDL2 encoding and decoding.
 
-use crate::invoke_for_handle_types;
 use {
-    crate::handle::{Handle, HandleBased},
+    crate::handle::{invoke_for_handle_types, Handle, HandleBased, ObjectType, Rights},
     crate::{Error, Result},
     bitflags::bitflags,
     fuchsia_zircon_status as zx_status,
@@ -181,6 +180,12 @@ pub struct Encoder<'a> {
 
     /// Encoding context.
     context: &'a Context,
+
+    /// Handle subtype for the next handle that is encoded.
+    next_handle_subtype: ObjectType,
+
+    /// Handle rights for the next handle that is encoded.
+    next_handle_rights: Rights,
 }
 
 /// The default context for encoding.
@@ -236,7 +241,13 @@ impl<'a> Encoder<'a> {
                 }
             }
             handles.truncate(0);
-            Encoder { buf, handles, context }
+            Encoder {
+                buf,
+                handles,
+                context,
+                next_handle_subtype: ObjectType::NONE,
+                next_handle_rights: Rights::NONE,
+            }
         }
         let mut encoder = prepare_for_encoding(context, buf, handles, x.inline_size(context));
         x.encode(&mut encoder, 0, 0)
@@ -359,6 +370,18 @@ impl<'a> Encoder<'a> {
     pub fn mut_buffer(&mut self) -> &mut [u8] {
         self.buf
     }
+
+    /// Sets the handle subtype of the next handle.
+    #[inline]
+    pub fn set_next_handle_subtype(&mut self, object_type: ObjectType) {
+        self.next_handle_subtype = object_type
+    }
+
+    /// Sets the handle rights of the next handle.
+    #[inline]
+    pub fn set_next_handle_rights(&mut self, rights: Rights) {
+        self.next_handle_rights = rights
+    }
 }
 
 /// Decoding state
@@ -381,6 +404,12 @@ pub struct Decoder<'a> {
 
     /// Decoding context.
     context: &'a Context,
+
+    /// Handle subtype for the next handle that is decoded.
+    next_handle_subtype: ObjectType,
+
+    /// Handle rights for the next handle that is decoded.
+    next_handle_rights: Rights,
 }
 
 impl<'a> Decoder<'a> {
@@ -453,6 +482,8 @@ impl<'a> Decoder<'a> {
             handles: handles,
             next_handle: 0,
             context: context,
+            next_handle_subtype: ObjectType::NONE,
+            next_handle_rights: Rights::NONE,
         };
         value.decode(&mut decoder, 0)?;
         // Safety: next_out_of_line <= buf.len() based on the if-statement above.
@@ -578,6 +609,18 @@ impl<'a> Decoder<'a> {
     #[inline]
     pub fn buffer(&self) -> &[u8] {
         self.buf
+    }
+
+    /// Sets the handle subtype of the next handle.
+    #[inline]
+    pub fn set_next_handle_subtype(&mut self, object_type: ObjectType) {
+        self.next_handle_subtype = object_type
+    }
+
+    /// Sets the handle rights of the next handle.
+    #[inline]
+    pub fn set_next_handle_rights(&mut self, rights: Rights) {
+        self.next_handle_rights = rights
     }
 }
 
@@ -2184,7 +2227,7 @@ impl Decodable for EpitaphBody {
 }
 
 macro_rules! handle_encoding {
-    ($x:tt, $availability:ident) => {
+    ($x:tt, $docname:expr, $name:ident, $value:expr, $availability:ident) => {
         type $x = crate::handle::$x;
         handle_based_codable![$x,];
     };
@@ -2343,6 +2386,12 @@ macro_rules! fidl_struct {
             $member_name:ident {
                 ty: $member_ty:ty,
                 offset_v1: $member_offset_v1:expr,
+                $(
+                    handle_metadata: {
+                        handle_subtype: $member_handle_subtype:expr,
+                        handle_rights: $member_handle_rights:expr,
+                    },
+                )?
             },
         )*],
         padding: [$(
@@ -2378,6 +2427,10 @@ macro_rules! fidl_struct {
                 )*
                 // Write the fields.
                 $(
+                    $(
+                        encoder.set_next_handle_subtype($member_handle_subtype);
+                        encoder.set_next_handle_rights($member_handle_rights);
+                    )?
                     $crate::fidl_unsafe_encode!(&mut self.$member_name, encoder, offset + $member_offset_v1, recursion_depth)?;
                 )*
                 Ok(())
@@ -2410,6 +2463,10 @@ macro_rules! fidl_struct {
                 )*
                 // Read the fields.
                 $(
+                    $(
+                        decoder.set_next_handle_subtype($member_handle_subtype);
+                        decoder.set_next_handle_rights($member_handle_rights);
+                    )?
                     $crate::fidl_unsafe_decode!(&mut self.$member_name, decoder, offset + $member_offset_v1)?;
                 )*
                 Ok(())
@@ -2669,6 +2726,12 @@ macro_rules! fidl_table {
             $member_name:ident {
                 ty: $member_ty:ty,
                 ordinal: $ordinal:expr,
+                $(
+                    handle_metadata: {
+                        handle_subtype: $member_handle_subtype:expr,
+                        handle_rights: $member_handle_rights:expr,
+                    },
+                )?
             },
         )*],
     ) => {
@@ -2720,6 +2783,10 @@ macro_rules! fidl_table {
                         _encoder.padding(_offset + _prev_end_offset, cur_offset - _prev_end_offset);
 
                         // Encode present field.
+                        $(
+                            _encoder.set_next_handle_subtype($member_handle_subtype);
+                            _encoder.set_next_handle_rights($member_handle_rights);
+                        )?
                         // # Safety:
                         // bytes_len is calculated to fit 16*max(member.ordinal).
                         // Since cur_offset is 16*(member.ordinal - 1) and the envelope takes 16 bytes, there is
@@ -2788,6 +2855,10 @@ macro_rules! fidl_table {
                                         decoder.inline_size_of::<$member_ty>(),
 
                                         |d, offset| {
+                                            $(
+                                                d.set_next_handle_subtype($member_handle_subtype);
+                                                d.set_next_handle_rights($member_handle_rights);
+                                            )?
                                             let val_ref =
                                                 self.$member_name.get_or_insert_with(
                                                     || $crate::fidl_new_empty!($member_ty));
@@ -2815,6 +2886,8 @@ macro_rules! fidl_table {
 
                         // Decode the remaining unknown envelopes.
                         while next_offset < end_offset {
+                            decoder.set_next_handle_subtype($crate::handle::ObjectType::NONE);
+                            decoder.set_next_handle_rights($crate::handle::Rights::SAME_RIGHTS);
                             $crate::encoding::decode_unknown_table_field(decoder, next_offset)?;
                             next_offset += 16;
                         }
@@ -3036,6 +3109,12 @@ macro_rules! fidl_xunion {
             $member_name:ident {
                 ty: $member_ty:ty,
                 ordinal: $member_ordinal:expr,
+                $(
+                    handle_metadata: {
+                        handle_subtype: $member_handle_subtype:expr,
+                        handle_rights: $member_handle_rights:expr,
+                    },
+                )?
             },
         )*],
         // Flexible xunions only: name of the unknown variant.
@@ -3070,7 +3149,13 @@ macro_rules! fidl_xunion {
                 $crate::fidl_unsafe_encode!(&mut ordinal, encoder, offset, recursion_depth)?;
                 match self {
                     $(
-                        $name::$member_name ( val ) => $crate::encoding::encode_in_envelope(&mut Some(val), encoder, offset+8, recursion_depth),
+                        $name::$member_name ( val ) => {
+                            $(
+                                encoder.set_next_handle_subtype($member_handle_subtype);
+                                encoder.set_next_handle_rights($member_handle_rights);
+                            )?
+                            $crate::encoding::encode_in_envelope(&mut Some(val), encoder, offset+8, recursion_depth)
+                        },
                     )*
                     $(
                         $name::$unknown_name { ordinal: _, bytes, handles } => {
@@ -3084,6 +3169,8 @@ macro_rules! fidl_xunion {
                             )?;
                             $crate::encoding::Encoder::check_recursion_depth(recursion_depth + 1)?;
                             encoder.append_out_of_line_bytes(bytes);
+                            encoder.set_next_handle_subtype($crate::handle::ObjectType::NONE);
+                            encoder.set_next_handle_rights($crate::handle::Rights::SAME_RIGHTS);
                             encoder.append_handles(handles);
                             Ok(())
                         },
@@ -3135,6 +3222,10 @@ macro_rules! fidl_xunion {
                         match ordinal {
                             $(
                                 $member_ordinal => {
+                                    $(
+                                        decoder.set_next_handle_subtype($member_handle_subtype);
+                                        decoder.set_next_handle_rights($member_handle_rights);
+                                    )?
                                     if let $name::$member_name(_) = self {
                                         // Do nothing, read the value into the object
                                     } else {
@@ -3154,6 +3245,8 @@ macro_rules! fidl_xunion {
                                 ordinal => {
                                     let bytes = decoder.buffer()[offset.. offset+(num_bytes as usize)].to_vec();
                                     let mut handles = Vec::with_capacity(num_handles as usize);
+                                    decoder.set_next_handle_subtype($crate::handle::ObjectType::NONE);
+                                    decoder.set_next_handle_rights($crate::handle::Rights::NONE);
                                     for _ in 0..num_handles {
                                         handles.push(decoder.take_next_handle()?);
                                     }

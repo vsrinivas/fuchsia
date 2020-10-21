@@ -86,14 +86,26 @@ fidl_struct! {
     field_of_channel {
       ty: fidl::Handle,
       offset_v1: 104,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::NONE,
+        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+      },
     },
     field_of_client_end {
       ty: fidl::Handle,
       offset_v1: 108,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::NONE,
+        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+      },
     },
     field_of_nullable_client_end {
       ty: Option<fidl::Handle>,
       offset_v1: 112,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::NONE,
+        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+      },
     },
   ],
   padding: [

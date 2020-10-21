@@ -170,6 +170,10 @@ fidl_struct! {
     h {
       ty: fidl::Handle,
       offset_v1: 8,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::NONE,
+        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+      },
     },
   ],
   padding: [

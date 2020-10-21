@@ -94,6 +94,10 @@ fidl_struct! {
     val {
       ty: Option<fidl::Vmo>,
       offset_v1: 0,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::VMO,
+        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+      },
     },
   ],
   padding: [],

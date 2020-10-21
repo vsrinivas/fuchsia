@@ -54,6 +54,10 @@ fidl_xunion! {
         H {
             ty: fidl::Vmo,
             ordinal: 1,
+            handle_metadata: {
+                handle_subtype: fidl::ObjectType::VMO,
+                handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+            },
         },
     ],
     unknown_member: __UnknownVariant,
@@ -76,18 +80,34 @@ fidl_struct! {
     normal_handle {
       ty: fidl::Vmo,
       offset_v1: 0,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::VMO,
+        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+      },
     },
     handle_in_vec {
       ty: Vec<fidl::Vmo>,
       offset_v1: 8,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::VMO,
+        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+      },
     },
     handle_in_array {
       ty: [fidl::Vmo; 5],
       offset_v1: 24,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::VMO,
+        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+      },
     },
     handle_in_mixed_vec_array {
       ty: Vec<[fidl::Vmo; 5]>,
       offset_v1: 48,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::VMO,
+        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+      },
     },
     table_with_handle {
       ty: TableWithHandle,
@@ -124,6 +144,10 @@ fidl_table! {
     h {
       ty: fidl::Vmo,
       ordinal: 1,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::VMO,
+        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+      },
     },
   ],
 }

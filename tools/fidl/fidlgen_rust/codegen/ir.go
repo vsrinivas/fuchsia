@@ -67,10 +67,13 @@ type Union struct {
 
 type UnionMember struct {
 	types.Attributes
-	Type    string
-	OGType  types.Type
-	Name    string
-	Ordinal int
+	Type              string
+	OGType            types.Type
+	Name              string
+	Ordinal           int
+	HasHandleMetadata bool
+	HandleRights      string
+	HandleSubtype     string
 }
 
 type Result struct {
@@ -107,12 +110,15 @@ type Struct struct {
 
 type StructMember struct {
 	types.Attributes
-	OGType       types.Type
-	Type         string
-	Name         string
-	Offset       int
-	HasDefault   bool
-	DefaultValue string
+	OGType            types.Type
+	Type              string
+	Name              string
+	Offset            int
+	HasDefault        bool
+	DefaultValue      string
+	HasHandleMetadata bool
+	HandleRights      string
+	HandleSubtype     string
 }
 
 type PaddingMarker struct {
@@ -132,10 +138,13 @@ type Table struct {
 
 type TableMember struct {
 	types.Attributes
-	OGType  types.Type
-	Type    string
-	Name    string
-	Ordinal int
+	OGType            types.Type
+	Type              string
+	Name              string
+	Ordinal           int
+	HasHandleMetadata bool
+	HandleRights      string
+	HandleSubtype     string
 }
 
 type Protocol struct {
@@ -398,6 +407,37 @@ var handleSubtypes = map[types.HandleSubtype]string{
 	types.Vmo:          "Vmo",
 }
 
+var handleSubtypeConsts = map[types.HandleSubtype]string{
+	types.Bti:          "BTI",
+	types.Channel:      "CHANNEL",
+	types.Clock:        "CLOCK",
+	types.DebugLog:     "LOG",
+	types.Event:        "EVENT",
+	types.Eventpair:    "EVENTPAIR",
+	types.Exception:    "EXCEPTION",
+	types.Fifo:         "FIFO",
+	types.Guest:        "GUEST",
+	types.Handle:       "NONE",
+	types.Interrupt:    "INTERRUPT",
+	types.Iommu:        "IOMMU",
+	types.Job:          "JOB",
+	types.Pager:        "PAGER",
+	types.PciDevice:    "PCI_DEVICE",
+	types.Pmt:          "PMT",
+	types.Port:         "PORT",
+	types.Process:      "PROCESS",
+	types.Profile:      "PROFILE",
+	types.Resource:     "RESOURCE",
+	types.Socket:       "SOCKET",
+	types.Stream:       "STREAM",
+	types.SuspendToken: "SUSPEND_TOKEN",
+	types.Thread:       "THREAD",
+	types.Time:         "TIMER",
+	types.Vcpu:         "VCPU",
+	types.Vmar:         "VMAR",
+	types.Vmo:          "VMO",
+}
+
 type compiler struct {
 	decls                  types.DeclMap
 	library                types.LibraryIdentifier
@@ -549,6 +589,24 @@ func compileHandleSubtype(val types.HandleSubtype) string {
 		return t
 	}
 	panic(fmt.Sprintf("unknown handle type: %v", val))
+}
+
+func fieldHandleInformation(val *types.Type) (string, string, bool) {
+	if val.ElementType != nil {
+		return fieldHandleInformation(val.ElementType)
+	}
+	if val.Kind != types.HandleType {
+		return "fidl::ObjectType::NONE", "fidl::Rights::NONE", false
+	}
+	subtype, ok := handleSubtypeConsts[val.HandleSubtype]
+	if !ok {
+		panic(fmt.Sprintf("unknown handle type for const: %v", val))
+	}
+	// NOTE: from_bits_truncate is used because currently from_bits isn't a
+	// const fn. Change this to from_bits if it ever becomes a const_fn.
+	return fmt.Sprintf("fidl::ObjectType::%s", subtype),
+		fmt.Sprintf("fidl::Rights::from_bits_truncate(%d)",
+			val.HandleRights), true
 }
 
 func (c *compiler) compileType(val types.Type, borrowed bool) Type {
@@ -777,14 +835,18 @@ func (c *compiler) compileService(val types.Service) Service {
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	memberType := c.compileType(val.Type, false)
+	subtype, rights, hasHandleMetadata := fieldHandleInformation(&val.Type)
 	return StructMember{
-		Attributes:   val.Attributes,
-		Type:         memberType.Decl,
-		OGType:       val.Type,
-		Name:         compileSnakeIdentifier(val.Name),
-		Offset:       val.FieldShapeV1.Offset,
-		HasDefault:   false,
-		DefaultValue: "", // TODO(cramertj) support defaults
+		Attributes:        val.Attributes,
+		Type:              memberType.Decl,
+		OGType:            val.Type,
+		Name:              compileSnakeIdentifier(val.Name),
+		Offset:            val.FieldShapeV1.Offset,
+		HasDefault:        false,
+		DefaultValue:      "", // TODO(cramertj) support defaults
+		HasHandleMetadata: hasHandleMetadata,
+		HandleSubtype:     subtype,
+		HandleRights:      rights,
 	}
 }
 
@@ -974,12 +1036,16 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 }
 
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
+	subtype, rights, hasHandleMetadata := fieldHandleInformation(&val.Type)
 	return UnionMember{
-		Attributes: val.Attributes,
-		Type:       c.compileType(val.Type, false).Decl,
-		OGType:     val.Type,
-		Name:       compileCamelIdentifier(val.Name),
-		Ordinal:    val.Ordinal,
+		Attributes:        val.Attributes,
+		Type:              c.compileType(val.Type, false).Decl,
+		OGType:            val.Type,
+		Name:              compileCamelIdentifier(val.Name),
+		Ordinal:           val.Ordinal,
+		HasHandleMetadata: hasHandleMetadata,
+		HandleSubtype:     subtype,
+		HandleRights:      rights,
 	}
 }
 
@@ -1034,12 +1100,16 @@ func (c *compiler) compileResultFromUnion(val types.Union, root Root) Result {
 func (c *compiler) compileTable(table types.Table) Table {
 	var members []TableMember
 	for _, member := range table.SortedMembersNoReserved() {
+		subtype, rights, hasHandleMetadata := fieldHandleInformation(&member.Type)
 		members = append(members, TableMember{
-			Attributes: member.Attributes,
-			OGType:     member.Type,
-			Type:       c.compileType(member.Type, false).Decl,
-			Name:       compileSnakeIdentifier(member.Name),
-			Ordinal:    member.Ordinal,
+			Attributes:        member.Attributes,
+			OGType:            member.Type,
+			Type:              c.compileType(member.Type, false).Decl,
+			Name:              compileSnakeIdentifier(member.Name),
+			Ordinal:           member.Ordinal,
+			HasHandleMetadata: hasHandleMetadata,
+			HandleSubtype:     subtype,
+			HandleRights:      rights,
 		})
 	}
 	return Table{

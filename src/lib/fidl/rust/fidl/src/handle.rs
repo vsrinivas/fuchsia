@@ -16,8 +16,6 @@ pub use fuchsia_async::Socket as AsyncSocket;
 /// Fuchsia implementation of handles just aliases the zircon library
 #[cfg(target_os = "fuchsia")]
 pub mod fuchsia_handles {
-    use crate::invoke_for_handle_types;
-
     use fuchsia_zircon as zx;
 
     pub use zx::AsHandleRef;
@@ -25,9 +23,13 @@ pub mod fuchsia_handles {
     pub use zx::HandleBased;
     pub use zx::HandleRef;
     pub use zx::MessageBuf;
+    pub use zx::ObjectType;
+    pub use zx::Rights;
+
+    pub use fuchsia_async::invoke_for_handle_types;
 
     macro_rules! fuchsia_handle {
-        ($x:tt, Stub) => {
+        ($x:tt, $docname:expr, $name:ident, $value:expr, Stub) => {
             /// Stub implementation of Zircon handle type $x.
             #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
             #[repr(transparent)]
@@ -50,7 +52,7 @@ pub mod fuchsia_handles {
             }
             impl zx::HandleBased for $x {}
         };
-        ($x:tt, $availability:tt) => {
+        ($x:tt, $docname:expr, $name:ident, $value:expr, $availability:tt) => {
             pub use zx::$x;
         };
     }
@@ -63,12 +65,13 @@ pub mod fuchsia_handles {
 /// Non-Fuchsia implementation of handles
 #[cfg(not(target_os = "fuchsia"))]
 pub mod non_fuchsia_handles {
-    use crate::invoke_for_handle_types;
 
     pub use fuchsia_async::emulated_handle::{
         AsHandleRef, EmulatedHandleRef, Handle, HandleBased, HandleRef, MessageBuf, ObjectType,
-        SocketOpts,
+        Rights, SocketOpts,
     };
+
+    pub use fuchsia_async::invoke_for_handle_types;
 
     macro_rules! declare_unsupported_fidl_handle {
         ($name:ident) => {
@@ -102,10 +105,10 @@ pub mod non_fuchsia_handles {
     }
 
     macro_rules! host_handle {
-        ($x:tt, Everywhere) => {
+        ($x:tt, $docname:expr, $name:ident, $value:expr, Everywhere) => {
             declare_fidl_handle! {$x}
         };
-        ($x:tt, $availability:ident) => {
+        ($x:tt, $docname:expr, $name:ident, $value:expr, $availability:ident) => {
             declare_unsupported_fidl_handle! {$x}
         };
     }
