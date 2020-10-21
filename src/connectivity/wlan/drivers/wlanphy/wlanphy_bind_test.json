@@ -1,0 +1,16 @@
+[
+    {
+      "name": "ProtocolFail",
+      "expected": "abort",
+      "device": {
+        "fuchsia.BIND_PROTOCOL": "fuchsia.wlan.BIND_PROTOCOL.MAC"
+      }
+    },
+    {
+      "name": "ProtocolMatch",
+      "expected": "match",
+      "device": {
+        "fuchsia.BIND_PROTOCOL": "fuchsia.wlan.BIND_PROTOCOL.PHY_IMPL"
+      }
+    }
+]

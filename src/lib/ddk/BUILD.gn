@@ -119,7 +119,6 @@ zx_library("ddk-deprecated-binding-headers") {
     "//src/connectivity/wlan/drivers/wlanif:test_source",
     "//src/connectivity/wlan/drivers/wlanif/test:*",
     "//src/connectivity/wlan/drivers/wlanphy:wlanphy_convert_unittest",
-    "//src/connectivity/wlan/drivers/wlanphy:wlanphy_driver",
     "//src/connectivity/wlan/testing/wlantap-driver:*",
     "//src/devices/bin/driver_host:*",
     "//src/devices/bin/driver_host:driver-host-test-child-driver",

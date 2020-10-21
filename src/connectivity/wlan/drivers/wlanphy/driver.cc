@@ -10,11 +10,11 @@
 
 #include <mutex>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 
 #include "device.h"
+#include "src/connectivity/wlan/drivers/wlanphy/wlanphy-bind.h"
 
 // Not guarded by a mutex, because it will be valid between .init and .release and nothing else will
 // exist outside those two calls.
@@ -72,5 +72,4 @@ static constexpr zx_driver_ops_t wlanphy_driver_ops = []() {
 }();
 
 // clang-format: off
-ZIRCON_DRIVER_BEGIN(wlan, wlanphy_driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_WLANPHY_IMPL), ZIRCON_DRIVER_END(wlan)
+ZIRCON_DRIVER(wlan, wlanphy_driver_ops, "zircon", "0.1");
