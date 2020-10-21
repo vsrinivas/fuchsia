@@ -1006,7 +1006,9 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         self.serve_connection(zx::Channel::from(startup_handle))
     }
 
-    /// Add an additional connection to the `ServiceFs` to provide services to.
+    /// Add a channel to serve this `ServiceFs` filesystem on. The `ServiceFs`
+    /// will continue to be provided over previously added channels, including
+    /// the one added if `take_and_serve_directory_handle` was called.
     pub fn serve_connection(&mut self, chan: zx::Channel) -> Result<&mut Self, Error> {
         match self.serve_connection_at(chan.into(), ROOT_NODE, None, NO_FLAGS)? {
             Some(_) => panic!("root directory connection should not return output"),
