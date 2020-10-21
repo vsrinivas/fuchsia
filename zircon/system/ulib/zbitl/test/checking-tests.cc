@@ -4,15 +4,15 @@
 
 #include <lib/zbitl/view.h>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 // Meant for fitx::result<std::string_view>.
 #define EXPECT_IS_OK(result) \
-  EXPECT_TRUE(result.is_ok(), "unexpected error: %s", result.error_value().data())
+  EXPECT_TRUE(result.is_ok()) << "unexpected error: " << result.error_value().data()
 #define EXPECT_IS_ERROR(result) EXPECT_TRUE(result.is_error())
 // Meant for fitx::result<zbitl::View::Error>.
 #define EXPECT_VIEW_IS_OK(result) \
-  EXPECT_TRUE(result.is_ok(), "unexpected error: %s", result.error_value().zbi_error.data())
+  EXPECT_TRUE(result.is_ok()) << "unexpected error: " << result.error_value().zbi_error
 
 namespace {
 
@@ -75,27 +75,27 @@ inline void CheckTwoItemZbi(uint32_t type1, uint32_t type2, bool expect_ok) {
 // Only (first, present) should result in a complete ZBI (all else being
 // equal).
 TEST(ZbitlCompletenessTest, CompleteZbi) {
-  ASSERT_NO_FATAL_FAILURES(CheckTwoItemZbi(kKernelType, kBootfsType, true));
+  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kKernelType, kBootfsType, true));
 }
 
 TEST(ZbitlCompletenessTest, BootfsMissing) {
-  ASSERT_NO_FATAL_FAILURES(CheckTwoItemZbi(kKernelType, kMiscType, false));
+  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kKernelType, kMiscType, false));
 }
 
 TEST(ZbitlCompletenessTest, KernelNotFirst) {
-  ASSERT_NO_FATAL_FAILURES(CheckTwoItemZbi(kBootfsType, kKernelType, false));
+  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kBootfsType, kKernelType, false));
 }
 
 TEST(ZbitlCompletenessTest, KernelNotFirstAndBootfsMissing) {
-  ASSERT_NO_FATAL_FAILURES(CheckTwoItemZbi(kMiscType, kKernelType, false));
+  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kMiscType, kKernelType, false));
 }
 
 TEST(ZbitlCompletenessTest, KernelMissing) {
-  ASSERT_NO_FATAL_FAILURES(CheckTwoItemZbi(kMiscType, kBootfsType, false));
+  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kMiscType, kBootfsType, false));
 }
 
 TEST(ZbitlCompletenessTest, KernelAndBootfsMissing) {
-  ASSERT_NO_FATAL_FAILURES(CheckTwoItemZbi(kMiscType, kMiscType, false));
+  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kMiscType, kMiscType, false));
 }
 
 TEST(ZbitlHeaderTest, MagicAndFlagsMissing) {

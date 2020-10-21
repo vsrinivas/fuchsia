@@ -17,25 +17,25 @@ struct EmptyTupleTestTraits {
 // The DefaultConstructed case is the only one that std::tuple<> passes since
 // every other case requires readable storage.
 TEST(ZbitlViewEmptyTupleTests, DefaultConstructed) {
-  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<EmptyTupleTestTraits>());
+  ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<EmptyTupleTestTraits>());
 }
 
 TEST(ZbitlViewStringTests, DefaultConstructed) {
-  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<StringTestTraits>());
+  ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<StringTestTraits>());
 }
 
 TEST(ZbitlViewStringTests, CrcCheckFailure) {
-  ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<StringTestTraits>());
+  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<StringTestTraits>());
 }
 
 TEST_ITERATION(ZbitlViewStringTests, StringTestTraits)
 
 TEST(ZbitlViewByteViewTests, DefaultConstructed) {
-  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<ByteViewTestTraits>());
+  ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<ByteViewTestTraits>());
 }
 
 TEST(ZbitlViewByteViewTests, CrcCheckFailure) {
-  ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<ByteViewTestTraits>());
+  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<ByteViewTestTraits>());
 }
 
 TEST_ITERATION(ZbitlViewByteViewTests, ByteViewTestTraits)

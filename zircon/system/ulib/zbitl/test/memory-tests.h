@@ -34,8 +34,8 @@ struct FblArrayTestTraits {
 
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
     ASSERT_TRUE(fd);
-    ASSERT_NO_FATAL_FAILURES(Create(size, context));
-    ASSERT_EQ(size, read(fd.get(), context->storage_.data(), size));
+    ASSERT_NO_FATAL_FAILURE(Create(size, context));
+    EXPECT_EQ(static_cast<ssize_t>(size), read(fd.get(), context->storage_.data(), size));
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,

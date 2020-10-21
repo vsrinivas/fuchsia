@@ -10,7 +10,7 @@ namespace {
 // TestDefaultConstructedView() test case.
 
 TEST(ZbitlViewStdioTests, CrcCheckFailure) {
-  ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<StdioTestTraits>());
+  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<StdioTestTraits>());
 }
 
 TEST_ITERATION(ZbitlViewStdioTests, StdioTestTraits)

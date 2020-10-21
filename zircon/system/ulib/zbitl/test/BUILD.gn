@@ -74,10 +74,12 @@ foreach(src, src_storage_types) {
   foreach(dest, dest_storage_types) {
     source_set_name = "copy_tests.${src}-to-${dest}"
     source_set(source_set_name) {
+      testonly = true
       sources = [ "copy-tests.cc" ]
       deps = [
-        "//zircon/public/lib/zxtest",
+        "//third_party/googletest:gtest",
         "//zircon/system/ulib/zbitl",
+        "//zircon/system/ulib/zircon",
       ]
       defines = [
         "SRC_STORAGE_TYPE=${src}",
@@ -101,7 +103,8 @@ test("zbitl-unittests") {
   deps = [
     "//src/lib/files",
     "//src/lib/fxl",
-    "//zircon/public/lib/zxtest",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
     "//zircon/system/ulib/zbitl",
 
     # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.

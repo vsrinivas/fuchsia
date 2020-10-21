@@ -9,11 +9,11 @@ namespace {
 using FblUint64ArrayTestTraits = FblArrayTestTraits<uint64_t>;
 
 TEST(ZbitlViewFblByteArrayTests, DefaultConstructed) {
-  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<FblByteArrayTestTraits>());
+  ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<FblByteArrayTestTraits>());
 }
 
 TEST(ZbitlViewFblByteArrayTests, CrcCheckFailure) {
-  ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<FblByteArrayTestTraits>());
+  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<FblByteArrayTestTraits>());
 }
 
 TEST_ITERATION(ZbitlViewFblByteArrayTests, FblByteArrayTestTraits)
@@ -23,7 +23,7 @@ TEST_MUTATION(ZbitlViewFblByteArrayTests, FblByteArrayTestTraits)
 TEST_COPY_CREATION(ZbitlViewFblByteArrayTests, FblByteArrayTestTraits)
 
 TEST(ZbitlViewFblUint64ArrayTests, DefaultConstructed) {
-  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<FblUint64ArrayTestTraits>());
+  ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<FblUint64ArrayTestTraits>());
 }
 
 // TODO(joshuaseaton): Use ZBIs with payload size divisible by eight so we can

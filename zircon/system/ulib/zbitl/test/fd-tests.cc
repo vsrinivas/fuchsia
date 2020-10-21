@@ -7,11 +7,11 @@
 namespace {
 
 TEST(ZbitlViewFdTests, DefaultConstructed) {
-  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<FdTestTraits>());
+  ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<FdTestTraits>());
 }
 
 TEST(ZbitlViewFdTests, CrcCheckFailure) {
-  ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<FdTestTraits>());
+  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<FdTestTraits>());
 }
 
 TEST_ITERATION(ZbitlViewFdTests, FdTestTraits)

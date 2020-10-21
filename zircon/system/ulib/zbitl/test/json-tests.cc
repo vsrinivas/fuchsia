@@ -18,10 +18,10 @@ void TestJson(TestDataZbiType type) {
   files::ScopedTempDir dir;
   fbl::unique_fd fd;
   size_t size = 0;
-  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(type, dir.path(), &fd, &size));
+  ASSERT_NO_FATAL_FAILURE(OpenTestDataZbi(type, dir.path(), &fd, &size));
 
   char buff[kMaxZbiSize];
-  ASSERT_EQ(size, read(fd.get(), buff, size));
+  EXPECT_EQ(static_cast<ssize_t>(size), read(fd.get(), buff, size));
 
   zbitl::View view(std::string_view{buff, size});
 
@@ -29,24 +29,23 @@ void TestJson(TestDataZbiType type) {
   rapidjson::PrettyWriter<JsonBuffer> json_writer(buffer);
   json_writer.SetIndent(' ', 2);
   JsonWriteZbi(json_writer, view, 0);
-  EXPECT_STR_EQ(GetExpectedJson(type), buffer.GetString());
+  EXPECT_EQ(GetExpectedJson(type), buffer.GetString());
 
   auto error = view.take_error();
-  EXPECT_FALSE(error.is_error(), "%s at offset %#x",
-               std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
-               error.error_value().item_offset);
+  EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
+                                 << error.error_value().item_offset;
 }
 
-TEST(ZbitlJsonTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestJson(TestDataZbiType::kEmpty)); }
+TEST(ZbitlJsonTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURE(TestJson(TestDataZbiType::kEmpty)); }
 
-TEST(ZbitlJsonTests, OneItemZbi) { ASSERT_NO_FATAL_FAILURES(TestJson(TestDataZbiType::kOneItem)); }
+TEST(ZbitlJsonTests, OneItemZbi) { ASSERT_NO_FATAL_FAILURE(TestJson(TestDataZbiType::kOneItem)); }
 
 TEST(ZbitlJsonTests, MultipleSmallItemsZbi) {
-  ASSERT_NO_FATAL_FAILURES(TestJson(TestDataZbiType::kMultipleSmallItems));
+  ASSERT_NO_FATAL_FAILURE(TestJson(TestDataZbiType::kMultipleSmallItems));
 }
 
 TEST(ZbitlJsonTests, SecondItemOnPageBoundaryZbi) {
-  ASSERT_NO_FATAL_FAILURES(TestJson(TestDataZbiType::kSecondItemOnPageBoundary));
+  ASSERT_NO_FATAL_FAILURE(TestJson(TestDataZbiType::kSecondItemOnPageBoundary));
 }
 
 }  // namespace

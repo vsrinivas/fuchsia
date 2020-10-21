@@ -32,7 +32,7 @@ struct BasicStringViewTestTraits {
     ASSERT_TRUE(fd);
     const size_t n = (size + sizeof(T) - 1) / sizeof(T);
     std::unique_ptr<std::byte[]> buff{new std::byte[n]};
-    ASSERT_EQ(size, read(fd.get(), buff.get(), n));
+    EXPECT_EQ(static_cast<ssize_t>(n), read(fd.get(), buff.get(), n));
     *context = {std::move(buff), n};
   }
 

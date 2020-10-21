@@ -6,6 +6,8 @@
 #include <sys/stat.h>
 #include <zircon/boot/image.h>
 
+#include <gtest/gtest.h>
+
 #ifndef __Fuchsia__
 #include <libgen.h>
 #include <unistd.h>
@@ -44,7 +46,7 @@ std::string_view ZbiName(TestDataZbiType type) {
 
 void GetExpectedPayloadCrc32(TestDataZbiType type, size_t idx, uint32_t* crc) {
   size_t num_items = GetExpectedNumberOfItems(type);
-  ASSERT_LT(idx, num_items, "expected only %zu items", num_items);
+  ASSERT_LT(idx, num_items) << "idx exceeds expected number of items in ZBI";
 
   switch (type) {
     case TestDataZbiType::kEmpty:
@@ -90,7 +92,8 @@ size_t GetExpectedNumberOfItems(TestDataZbiType type) {
 
 void GetExpectedPayload(TestDataZbiType type, size_t idx, Bytes* contents) {
   size_t num_items = GetExpectedNumberOfItems(type);
-  ASSERT_LT(idx, num_items, "expected only %zu items", num_items);
+  ASSERT_LT(idx, num_items) << "idx exceeds expected number of items in ZBI";
+
   switch (type) {
     case TestDataZbiType::kEmpty:
       // Assert would have already fired above.
@@ -190,10 +193,10 @@ void GetExpectedPayload(TestDataZbiType type, size_t idx, Bytes* contents) {
 
 void GetExpectedPayloadWithHeader(TestDataZbiType type, size_t idx, Bytes* contents) {
   Bytes payload;
-  ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx, &payload));
+  ASSERT_NO_FATAL_FAILURE(GetExpectedPayload(type, idx, &payload));
 
   uint32_t crc;
-  ASSERT_NO_FATAL_FAILURES(GetExpectedPayloadCrc32(type, idx, &crc));
+  ASSERT_NO_FATAL_FAILURE(GetExpectedPayloadCrc32(type, idx, &crc));
 
   zbi_header_t header{};
   header.type = ZBI_TYPE_IMAGE_ARGS;
@@ -358,12 +361,10 @@ void OpenTestDataZbi(TestDataZbiType type, std::string_view work_dir, fbl::uniqu
   std::filesystem::copy_file(path, copy);
 
   *fd = fbl::unique_fd{open(copy.c_str(), O_RDWR)};
-  ASSERT_TRUE(fd, "failed to open %.*s: %s", static_cast<int>(filename.size()), filename.data(),
-              strerror(errno));
+  ASSERT_TRUE(fd) << "failed to open " << filename << ": " << strerror(errno);
 
   struct stat st;
-  ASSERT_EQ(0, fstat(fd->get(), &st), "failed to stat %.*s: %s", static_cast<int>(filename.size()),
-            filename.data(), strerror(errno));
+  ASSERT_EQ(0, fstat(fd->get(), &st)) << "failed to stat " << filename << ": " << strerror(errno);
   *num_bytes = static_cast<size_t>(st.st_size);
-  ASSERT_LE(*num_bytes, kMaxZbiSize, "file is too large (%zu bytes)", *num_bytes);
+  ASSERT_LE(*num_bytes, kMaxZbiSize) << "file is too large";
 }

@@ -29,16 +29,16 @@ struct VmoTestTraits {
 
   static void Create(size_t size, Context* context) {
     zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(size, 0u, &vmo));
+    ASSERT_EQ(zx::vmo::create(size, 0u, &vmo), ZX_OK);
     *context = {std::move(vmo)};
   }
 
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
     ASSERT_TRUE(fd);
     std::unique_ptr<std::byte[]> buff{new std::byte[size]};
-    ASSERT_EQ(size, read(fd.get(), buff.get(), size), "%s", strerror(errno));
-    ASSERT_NO_FATAL_FAILURES(Create(size, context));
-    ASSERT_OK(context->storage_.write(buff.get(), 0u, size));
+    EXPECT_EQ(static_cast<ssize_t>(size), read(fd.get(), buff.get(), size));
+    ASSERT_NO_FATAL_FAILURE(Create(size, context));
+    ASSERT_EQ(context->storage_.write(buff.get(), 0u, size), ZX_OK);
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
@@ -71,21 +71,21 @@ struct UnownedVmoTestTraits {
 
   static void Create(size_t size, Context* context) {
     typename VmoTestTraits::Context vmo_context;
-    ASSERT_NO_FATAL_FAILURES(VmoTestTraits::Create(size, &vmo_context));
+    ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Create(size, &vmo_context));
     context->storage_ = zx::unowned_vmo{vmo_context.storage_};
     context->keepalive_ = std::move(vmo_context.storage_);
   }
 
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
     typename VmoTestTraits::Context vmo_context;
-    ASSERT_NO_FATAL_FAILURES(VmoTestTraits::Create(std::move(fd), size, &vmo_context));
+    ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Create(std::move(fd), size, &vmo_context));
     context->storage_ = zx::unowned_vmo{vmo_context.storage_};
     context->keepalive_ = std::move(vmo_context.storage_);
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
                    Bytes* contents) {
-    ASSERT_NO_FATAL_FAILURES(VmoTestTraits::Read(*storage, payload, size, contents));
+    ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Read(*storage, payload, size, contents));
   }
 
   static payload_type AsPayload(const storage_type& storage) { return 0; }
@@ -111,19 +111,19 @@ struct MapOwnedVmoTestTraits {
 
   static void Create(size_t size, Context* context) {
     typename VmoTestTraits::Context vmo_context;
-    ASSERT_NO_FATAL_FAILURES(VmoTestTraits::Create(size, &vmo_context));
+    ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Create(size, &vmo_context));
     *context = {zbitl::MapOwnedVmo{std::move(vmo_context.storage_)}};
   }
 
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
     typename VmoTestTraits::Context vmo_context;
-    ASSERT_NO_FATAL_FAILURES(VmoTestTraits::Create(std::move(fd), size, &vmo_context));
+    ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Create(std::move(fd), size, &vmo_context));
     *context = {zbitl::MapOwnedVmo{vmo_context.TakeStorage()}};
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
                    Bytes* contents) {
-    ASSERT_NO_FATAL_FAILURES(VmoTestTraits::Read(storage.vmo(), payload, size, contents));
+    ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Read(storage.vmo(), payload, size, contents));
   }
 
   static payload_type AsPayload(const storage_type& storage) { return 0; }
@@ -150,7 +150,7 @@ struct MapUnownedVmoTestTraits {
 
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
     typename UnownedVmoTestTraits::Context unowned_vmo_context;
-    ASSERT_NO_FATAL_FAILURES(
+    ASSERT_NO_FATAL_FAILURE(
         UnownedVmoTestTraits::Create(std::move(fd), size, &unowned_vmo_context));
     context->storage_ = zbitl::MapUnownedVmo{std::move(unowned_vmo_context.storage_)};
     context->keepalive_ = std::move(unowned_vmo_context.keepalive_);
@@ -158,14 +158,14 @@ struct MapUnownedVmoTestTraits {
 
   static void Create(size_t size, Context* context) {
     typename UnownedVmoTestTraits::Context unowned_vmo_context;
-    ASSERT_NO_FATAL_FAILURES(UnownedVmoTestTraits::Create(size, &unowned_vmo_context));
+    ASSERT_NO_FATAL_FAILURE(UnownedVmoTestTraits::Create(size, &unowned_vmo_context));
     *context = {zbitl::MapUnownedVmo{std::move(unowned_vmo_context.storage_)},
                 std::move(unowned_vmo_context.keepalive_)};
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
                    Bytes* contents) {
-    ASSERT_NO_FATAL_FAILURES(VmoTestTraits::Read(storage.vmo(), payload, size, contents));
+    ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Read(storage.vmo(), payload, size, contents));
   }
 
   static payload_type AsPayload(const storage_type& storage) { return 0; }

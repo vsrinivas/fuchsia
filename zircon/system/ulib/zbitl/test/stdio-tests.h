@@ -35,8 +35,8 @@ struct StdioTestTraits {
     std::string filename;
     ASSERT_TRUE(context->dir_.NewTempFile(&filename));
     FILE* f = fopen(filename.c_str(), "r+");
-    ASSERT_NOT_NULL(f, "failed to open %s: %s", filename.c_str(), strerror(errno));
-    ASSERT_GE(size, 1);
+    ASSERT_NE(f, nullptr) << "failed to open " << filename << ": " << strerror(errno);
+    ASSERT_GE(size, 1u);
     fseek(f, static_cast<long int>(size) - 1, SEEK_SET);
     putc(0, f);
     context->storage_ = f;
@@ -46,17 +46,17 @@ struct StdioTestTraits {
   static void Create(fbl::unique_fd fd, size_t size, Context* context) {
     ASSERT_TRUE(fd);
     FILE* f = fdopen(fd.release(), "r+");
-    ASSERT_NOT_NULL(f, "failed to open descriptor: %s", strerror(errno));
+    ASSERT_NE(f, nullptr) << "failed to open descriptor: " << strerror(errno);
     context->storage_ = f;
   }
 
   static void Read(storage_type storage, payload_type payload, size_t size, Bytes* contents) {
     contents->resize(size);
-    ASSERT_EQ(0, fseek(storage, payload, SEEK_SET), "failed to seek to payload: %s",
-              strerror(errno));
+    ASSERT_EQ(0, fseek(storage, payload, SEEK_SET))
+        << "failed to seek to payload: " << strerror(errno);
     size_t n = fread(contents->data(), 1, size, storage);
-    ASSERT_EQ(0, ferror(storage), "failed to read payload: %s", strerror(errno));
-    ASSERT_EQ(size, n, "did not fully read payload");
+    ASSERT_EQ(0, ferror(storage)) << "failed to read payload: " << strerror(errno);
+    ASSERT_EQ(size, n) << "did not fully read payload";
   }
 
   static payload_type AsPayload(storage_type storage) { return 0; }
