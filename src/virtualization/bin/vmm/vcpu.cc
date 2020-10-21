@@ -186,7 +186,7 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
         return status;
     }
 
-    status = HandlePacketLocked(packet);
+    status = HandlePacket(packet);
     switch (status) {
       case ZX_OK:
         break;
@@ -203,10 +203,10 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) { return vcpu_.interrupt(vector); }
 
-zx_status_t Vcpu::HandlePacketLocked(const zx_port_packet_t& packet) {
+zx_status_t Vcpu::HandlePacket(const zx_port_packet_t& packet) {
   switch (packet.type) {
     case ZX_PKT_TYPE_GUEST_MEM:
-      return HandleMemLocked(packet.guest_mem, packet.key);
+      return HandleMem(packet.guest_mem, packet.key);
 #if __x86_64__
     case ZX_PKT_TYPE_GUEST_IO:
       return HandleIo(packet.guest_io, packet.key);
@@ -219,7 +219,7 @@ zx_status_t Vcpu::HandlePacketLocked(const zx_port_packet_t& packet) {
   }
 }
 
-zx_status_t Vcpu::HandleMemLocked(const zx_packet_guest_mem_t& mem, uint64_t trap_key) {
+zx_status_t Vcpu::HandleMem(const zx_packet_guest_mem_t& mem, uint64_t trap_key) {
   zx_vcpu_state_t vcpu_state;
   zx_status_t status;
 #if __aarch64__
