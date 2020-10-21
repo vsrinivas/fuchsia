@@ -339,8 +339,6 @@ zx_library("ddk-deprecated-binding-headers") {
     "//src/ui/backlight/drivers/ti-lp8556:*",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test",
     "//src/ui/input/drivers/bma253:*",
-    "//src/ui/input/drivers/cypress:*",
-    "//src/ui/input/drivers/cypress:cypress-touch-test",
     "//src/ui/input/drivers/focaltech:*",
     "//src/ui/input/drivers/ft8201:*",
     "//src/ui/input/drivers/goodix:*",

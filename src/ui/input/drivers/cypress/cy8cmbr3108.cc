@@ -6,7 +6,6 @@
 
 #include <unistd.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
@@ -15,6 +14,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <hid/visalia-touch.h>
+
+#include "src/ui/input/drivers/cypress/cypress_cy8cmbr3108-bind.h"
 
 namespace {
 enum {
@@ -389,9 +390,6 @@ static constexpr zx_driver_ops_t cypress_touch_driver_ops = []() {
 }  // namespace cypress
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(cypress_cy8cmbr3108, cypress::cypress_touch_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_TOUCH),
-ZIRCON_DRIVER_END(cypress_cy8cmbr3108)
+ZIRCON_DRIVER(cypress_cy8cmbr3108, cypress::cypress_touch_driver_ops, "zircon", "0.1")
+
 //clang-format on

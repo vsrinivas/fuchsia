@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("cypress_cy8cmbr3108-bind") {
+  rules = "cypress_cy8cmbr3108.bind"
+  output = "cypress_cy8cmbr3108-bind.h"
+  tests = "tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("cypress") {
   configs += [
@@ -18,15 +29,13 @@ driver_module("cypress") {
   ]
   sources = [ "cy8cmbr3108.cc" ]
   deps = [
+    ":cypress_cy8cmbr3108-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.hidbus",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
@@ -45,6 +54,7 @@ test("cypress-touch-test") {
     "cy8cmbr3108.cc",
   ]
   deps = [
+    ":cypress_cy8cmbr3108-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
@@ -53,9 +63,6 @@ test("cypress-touch-test") {
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/ui/input/testing/fake-hidbus-ifc",
     "//src/ui/input/testing/mock-hidbus-ifc",
@@ -71,7 +78,10 @@ test("cypress-touch-test") {
 
 unittest_package("cypress-touch-test-package") {
   package_name = "cypress-touch-test"
-  deps = [ ":cypress-touch-test" ]
+  deps = [
+    ":cypress-touch-test",
+    ":cypress_cy8cmbr3108-bind_test",
+  ]
 
   tests = [
     {
