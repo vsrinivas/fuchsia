@@ -12,6 +12,7 @@ use {
         },
     },
     anyhow::{bail, format_err, Error},
+    injectable_time::FakeTime,
     serde::Deserialize,
     serde_json as json,
     std::{collections::HashMap, convert::TryFrom},
@@ -66,7 +67,10 @@ pub fn validate(parse_result: &ParseResult) -> Result<(), Error> {
                     fetcher.set_annotations(&annotations_fetcher);
                 }
             }
-            let state = MetricState { metrics, fetcher };
+            let time_source = FakeTime::new();
+            // TODO(cphoenix): Figure out what the fake time should be for validation.
+            // Tests will want a predictable ergonomic Now() time.
+            let state = MetricState::new(metrics, fetcher, &time_source);
             if let Some(action_names) = &trial.yes {
                 for action_name in action_names.iter() {
                     failed =

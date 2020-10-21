@@ -8,6 +8,8 @@ use {
         metrics::{Fetcher, FileDataFetcher, Metric, MetricState, MetricValue, Metrics},
         plugins::{register_plugins, Plugin},
     },
+    injectable_time::UtcTime,
+    lazy_static::lazy_static,
     serde::{self, Deserialize},
     std::collections::HashMap,
 };
@@ -18,6 +20,10 @@ pub struct ActionContext<'a> {
     metric_state: MetricState<'a>,
     action_results: ActionResults,
     plugins: Vec<Box<dyn Plugin>>,
+}
+
+lazy_static! {
+    pub static ref REAL_CLOCK: UtcTime = UtcTime::new();
 }
 
 impl<'a> ActionContext<'a> {
@@ -33,7 +39,7 @@ impl<'a> ActionContext<'a> {
         });
         ActionContext {
             actions,
-            metric_state: MetricState::new(metrics, Fetcher::FileData(fetcher)),
+            metric_state: MetricState::new(metrics, Fetcher::FileData(fetcher), &*REAL_CLOCK),
             action_results,
             plugins: register_plugins(),
         }

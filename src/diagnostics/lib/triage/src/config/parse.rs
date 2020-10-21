@@ -193,22 +193,38 @@ macro_rules! function {
 }
 
 fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseError<&'a str>> {
+    // alt has a limited number of args, so must be nested.
+    // At some point, worry about efficiency.
+    // Make sure that if one function is a prefix of another, the longer one comes first or the
+    // shorter one will match and short-circuit.
     alt((
-        function!("And", And),
-        function!("Or", Or),
-        function!("Not", Not),
-        function!("Max", Max),
-        function!("Min", Min),
-        function!("SyslogHas", SyslogHas),
-        function!("KlogHas", KlogHas),
-        function!("BootlogHas", BootlogHas),
-        function!("Missing", Missing),
-        function!("Annotation", Annotation),
-        function!("Fn", Lambda),
-        function!("Map", Map),
-        function!("Fold", Fold),
-        function!("Filter", Filter),
-        function!("Count", Count),
+        alt((
+            function!("And", And),
+            function!("Or", Or),
+            function!("Not", Not),
+            function!("Max", Max),
+            function!("Minutes", Minutes), // Parser must try "Minutes" before "Min"
+            function!("Min", Min),
+            function!("SyslogHas", SyslogHas),
+            function!("KlogHas", KlogHas),
+            function!("BootlogHas", BootlogHas),
+            function!("Missing", Missing),
+            function!("Annotation", Annotation),
+        )),
+        alt((
+            function!("Fn", Lambda),
+            function!("Map", Map),
+            function!("Fold", Fold),
+            function!("Filter", Filter),
+            function!("Count", Count),
+            function!("Nanos", Nanos),
+            function!("Micros", Micros),
+            function!("Millis", Millis),
+            function!("Seconds", Seconds),
+            function!("Hours", Hours),
+            function!("Days", Days),
+            function!("Now", Now),
+        )),
     ))(i)
 }
 
@@ -428,8 +444,10 @@ mod test {
         super::*,
         crate::{
             assert_missing,
-            metrics::{Expression, MetricState},
+            metrics::{Expression, Fetcher, MetricState, TrialDataFetcher},
         },
+        injectable_time::FakeTime,
+        std::collections::HashMap,
     };
 
     // Res, simplify_fn, and get_parse are necessary because IResult can't be compared and can't
@@ -824,6 +842,27 @@ mod test {
     }
 
     #[test]
+    fn parser_time_functions() -> Result<(), Error> {
+        assert_eq!(eval!("Nanos(5)"), MetricValue::Int(5));
+        assert_eq!(eval!("Micros(4)"), MetricValue::Int(4_000));
+        assert_eq!(eval!("Millis(5)"), MetricValue::Int(5_000_000));
+        assert_eq!(eval!("Seconds(2)"), MetricValue::Int(2_000_000_000));
+        assert_eq!(eval!("Minutes(2)"), MetricValue::Int(2_000_000_000 * 60));
+        assert_eq!(eval!("Hours(2)"), MetricValue::Int(2_000_000_000 * 60 * 60));
+        assert_eq!(eval!("Days(2)"), MetricValue::Int(2_000_000_000 * 60 * 60 * 24));
+        // Floating point values work.
+        assert_eq!(eval!("Seconds(0.5)"), MetricValue::Int(500_000_000));
+        // Negative values are fine.
+        assert_eq!(eval!("Seconds(-0.5)"), MetricValue::Int(-500_000_000));
+        // Non-numeric or bad arg combinations return Missing.
+        assert_missing!(eval!("Hours()"), "Time conversion needs 1 numeric argument");
+        assert_missing!(eval!("Hours(2, 3)"), "Time conversion needs 1 numeric argument");
+        assert_missing!(eval!("Hours('a')"), "Time conversion needs 1 numeric argument");
+        assert_missing!(eval!("Hours(1.0/0.0)"), "Time conversion needs 1 numeric argument");
+        Ok(())
+    }
+
+    #[test]
     fn parser_nested_function() -> Result<(), Error> {
         assert_eq!(eval!("Max(2, Min(4-1, 5))"), MetricValue::Int(3));
         assert_eq!(eval!("And(Max(1, 2+3)>1, Or(1>2, 2>1))"), MetricValue::Bool(true));
@@ -837,14 +876,15 @@ mod test {
         Ok(())
     }
 
+    fn i(i: i64) -> MetricValue {
+        MetricValue::Int(i)
+    }
+    fn v(v: &[MetricValue]) -> MetricValue {
+        MetricValue::Vector(v.to_vec())
+    }
+
     #[test]
     fn functional_programming() -> Result<(), Error> {
-        fn i(i: i64) -> MetricValue {
-            MetricValue::Int(i)
-        }
-        fn v(v: &[MetricValue]) -> MetricValue {
-            MetricValue::Vector(v.to_vec())
-        }
         assert_eq!(eval!("Map(Fn([a], a*2), [1,2,3])"), v(&[i(2), i(4), i(6)]));
         assert_eq!(
             eval!("Map(Fn([a, b], [a, b]), [1, 2, 3], [4, 5, 6])"),
@@ -859,6 +899,27 @@ mod test {
         assert_eq!(eval!("Fold(Fn([a, b], a + 1), ['a', 'b', 'c', 'd'], 0)"), i(4));
         assert_eq!(eval!("Filter(Fn([a], a > 5), [2, 4, 6, 8])"), v(&[i(6), i(8)]));
         assert_eq!(eval!("Count([1,'a', 3, 2])"), i(4));
+        Ok(())
+    }
+
+    #[test]
+    fn test_now() -> Result<(), Error> {
+        let time_source = FakeTime::new();
+        time_source.set(2000);
+        let now_expression = parse_expression("Now()")?;
+        let values = HashMap::new();
+        let fetcher = Fetcher::TrialData(TrialDataFetcher::new(&values));
+        let files = HashMap::new();
+        let state = MetricState::new(&files, fetcher, &time_source);
+
+        let first_time = state.evaluate_expression(&now_expression);
+        // Changing "wall clock" time shouldn't modify the time used by the metric state
+        time_source.set(3000);
+        let second_time = state.evaluate_expression(&now_expression);
+        let no_time = state.evaluate_expression(&parse_expression("Now(5)")?);
+        assert_eq!(first_time, i(2000));
+        assert_eq!(second_time, i(2000));
+        assert_missing!(no_time, "Now() requires no operands.");
         Ok(())
     }
 }

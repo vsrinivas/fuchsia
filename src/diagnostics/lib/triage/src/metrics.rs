@@ -9,12 +9,16 @@ use {
     super::config::{self, DataFetcher, DiagnosticData, Source},
     fetch::{InspectFetcher, KeyValueFetcher, SelectorString, SelectorType, TextFetcher},
     fuchsia_inspect_node_hierarchy::{ArrayContent, Property as DiagnosticProperty},
+    injectable_time::TimeSource,
     lazy_static::lazy_static,
     serde::{Deserialize, Deserializer},
     serde_json::Value as JsonValue,
     std::{clone::Clone, cmp::min, collections::HashMap, convert::TryFrom},
     variable::VariableName,
 };
+
+#[cfg(test)]
+use injectable_time::FakeTime;
 
 /// The contents of a single Metric. Metrics produce a value for use in Actions or other Metrics.
 #[derive(Clone, Debug)]
@@ -59,6 +63,7 @@ pub type Metrics = HashMap<String, HashMap<String, Metric>>;
 pub struct MetricState<'a> {
     pub metrics: &'a Metrics,
     pub fetcher: Fetcher<'a>,
+    now: i64,
 }
 
 /// [Fetcher] is a source of values to feed into the calculations. It may contain data either
@@ -356,6 +361,14 @@ pub enum Function {
     Fold,
     Filter,
     Count,
+    Nanos,
+    Micros,
+    Millis,
+    Seconds,
+    Minutes,
+    Hours,
+    Days,
+    Now,
 }
 
 /// Lambda stores a function; its parameters and body are evaluated lazily.
@@ -526,8 +539,12 @@ fn missing(message: &str) -> MetricValue {
 
 impl<'a> MetricState<'a> {
     /// Create an initialized MetricState.
-    pub fn new(metrics: &'a Metrics, fetcher: Fetcher<'a>) -> MetricState<'a> {
-        MetricState { metrics, fetcher }
+    pub fn new(
+        metrics: &'a Metrics,
+        fetcher: Fetcher<'a>,
+        time_source: &'a dyn TimeSource,
+    ) -> MetricState<'a> {
+        MetricState { metrics, fetcher, now: time_source.now() }
     }
 
     /// Any [name] found in the trial's "values" uses the corresponding value, regardless of
@@ -636,9 +653,17 @@ impl<'a> MetricState<'a> {
     /// Evaluate an Expression which contains only base values, not referring to other Metrics.
     #[cfg(test)]
     pub fn evaluate_math(e: &Expression) -> MetricValue {
-        let map = HashMap::new();
-        let fetcher = Fetcher::TrialData(TrialDataFetcher::new(&map));
-        MetricState::new(&HashMap::new(), fetcher).evaluate(&"".to_string(), e)
+        let values = HashMap::new();
+        let fetcher = Fetcher::TrialData(TrialDataFetcher::new(&values));
+        let files = HashMap::new();
+        let time_source = FakeTime::new();
+        let metric_state = MetricState::new(&files, fetcher, &time_source);
+        metric_state.evaluate(&"".to_string(), e)
+    }
+
+    #[cfg(test)]
+    pub fn evaluate_expression(&self, e: &Expression) -> MetricValue {
+        self.evaluate(&"".to_string(), e)
     }
 
     fn evaluate_function(
@@ -678,7 +703,22 @@ impl<'a> MetricState<'a> {
             Function::Fold => self.fold(namespace, operands),
             Function::Filter => self.filter(namespace, operands),
             Function::Count => self.count(namespace, operands),
+            Function::Nanos => self.time(namespace, operands, 1),
+            Function::Micros => self.time(namespace, operands, 1_000),
+            Function::Millis => self.time(namespace, operands, 1_000_000),
+            Function::Seconds => self.time(namespace, operands, 1_000_000_000),
+            Function::Minutes => self.time(namespace, operands, 1_000_000_000 * 60),
+            Function::Hours => self.time(namespace, operands, 1_000_000_000 * 60 * 60),
+            Function::Days => self.time(namespace, operands, 1_000_000_000 * 60 * 60 * 24),
+            Function::Now => self.now(operands),
         }
+    }
+
+    fn now(&self, operands: &'a [Expression]) -> MetricValue {
+        if !operands.is_empty() {
+            return missing("Now() requires no operands.");
+        }
+        MetricValue::Int(self.now)
     }
 
     fn apply_lambda(&self, namespace: &str, lambda: &Lambda, args: &[&MetricValue]) -> MetricValue {
@@ -853,6 +893,36 @@ impl<'a> MetricState<'a> {
         match self.evaluate(namespace, &operands[0]) {
             MetricValue::Vector(items) => MetricValue::Int(items.len() as i64),
             bad => MetricValue::Missing(format!("Count only works on vectors, not {}", bad)),
+        }
+    }
+
+    fn safe_float_to_int(float: f64) -> Option<i64> {
+        if !float.is_finite() {
+            return None;
+        }
+        if float > i64::MAX as f64 {
+            return Some(i64::MAX);
+        }
+        if float < i64::MIN as f64 {
+            return Some(i64::MIN);
+        }
+        Some(float as i64)
+    }
+
+    /// This implements the time-conversion functions.
+    fn time(&self, namespace: &str, operands: &[Expression], multiplier: i64) -> MetricValue {
+        if operands.len() != 1 {
+            return missing("Time conversion needs 1 numeric argument");
+        }
+        match self.evaluate(namespace, &operands[0]) {
+            MetricValue::Int(value) => MetricValue::Int(value * multiplier),
+            MetricValue::Float(value) => {
+                match Self::safe_float_to_int(value * (multiplier as f64)) {
+                    None => missing("Time conversion needs 1 numeric argument"),
+                    Some(value) => MetricValue::Int(value),
+                }
+            }
+            _ => missing("Time conversion needs 1 numeric argument"),
         }
     }
 
@@ -1323,7 +1393,9 @@ pub(crate) mod test {
         let mut metrics = HashMap::new();
         metrics.insert("bar_file".to_owned(), file_map);
         metrics.insert("other_file".to_owned(), other_file_map);
-        let file_state = MetricState::new(&metrics, Fetcher::FileData(BAR_99_FILE_FETCHER.clone()));
+        let fake_time = FakeTime::new();
+        let file_state =
+            MetricState::new(&metrics, Fetcher::FileData(BAR_99_FILE_FETCHER.clone()), &fake_time);
         assert_eq!(
             file_state.evaluate_variable("bar_file", variable!("bar_plus_one")),
             MetricValue::Int(100)
@@ -1379,8 +1451,12 @@ pub(crate) mod test {
         let mut metrics = HashMap::new();
         metrics.insert("foo_file".to_owned(), trial_map);
         metrics.insert("a".to_owned(), a_map);
-        let trial_state =
-            MetricState::new(&metrics, Fetcher::TrialData(FOO_42_AB_7_TRIAL_FETCHER.clone()));
+        let fake_time = FakeTime::new();
+        let trial_state = MetricState::new(
+            &metrics,
+            Fetcher::TrialData(FOO_42_AB_7_TRIAL_FETCHER.clone()),
+            &fake_time,
+        );
         // foo from values shadows foo selector.
         assert_eq!(
             trial_state.evaluate_variable("foo_file", variable!("foo")),
@@ -1421,7 +1497,8 @@ pub(crate) mod test {
         let metrics = HashMap::new();
         let mut data = vec![klog, syslog, bootlog];
         let fetcher = FileDataFetcher::new(&data);
-        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher));
+        let fake_time = FakeTime::new();
+        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher), &fake_time);
         assert_eq!(state.evaluate_value("", r#"KlogHas("lin")"#), MetricValue::Bool(true));
         assert_eq!(state.evaluate_value("", r#"KlogHas("l.ne")"#), MetricValue::Bool(true));
         assert_eq!(state.evaluate_value("", r#"KlogHas("fi.*ne")"#), MetricValue::Bool(true));
@@ -1450,7 +1527,8 @@ pub(crate) mod test {
         assert_eq!(state.evaluate_value("", r#"BootlogHas("syslog")"#), MetricValue::Bool(false));
         data.pop();
         let fetcher = FileDataFetcher::new(&data);
-        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher));
+        let fake_time = FakeTime::new();
+        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher), &fake_time);
         assert_eq!(state.evaluate_value("", r#"SyslogHas("syslog")"#), MetricValue::Bool(true));
         assert_eq!(state.evaluate_value("", r#"BootlogHas("bootlog")"#), MetricValue::Bool(false));
         assert_eq!(state.evaluate_value("", r#"BootlogHas("syslog")"#), MetricValue::Bool(false));
@@ -1465,7 +1543,8 @@ pub(crate) mod test {
         let metrics = HashMap::new();
         let data = vec![annotations];
         let fetcher = FileDataFetcher::new(&data);
-        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher));
+        let fake_time = FakeTime::new();
+        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher), &fake_time);
         assert_eq!(
             state.evaluate_value("", "Annotation('build.board')"),
             MetricValue::String("chromebook-x64".to_string())
@@ -1510,7 +1589,9 @@ pub(crate) mod test {
         .iter()
         .cloned()
         .collect();
-        let state = MetricState::new(&metrics, Fetcher::FileData(EMPTY_FILE_FETCHER.clone()));
+        let fake_time = FakeTime::new();
+        let state =
+            MetricState::new(&metrics, Fetcher::FileData(EMPTY_FILE_FETCHER.clone()), &fake_time);
 
         // Can read a value.
         assert_eq!(state.evaluate_value("root", "is42"), MetricValue::Int(42));
