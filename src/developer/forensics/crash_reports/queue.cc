@@ -47,8 +47,8 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
   // distinguish archived reports from reports that have not been uploaded yet.
 }
 
-bool Queue::Contains(const CrashId crash_id) const {
-  return std::find(pending_reports_.begin(), pending_reports_.end(), crash_id) !=
+bool Queue::Contains(const ReportId report_id) const {
+  return std::find(pending_reports_.begin(), pending_reports_.end(), report_id) !=
          pending_reports_.end();
 }
 
@@ -63,8 +63,8 @@ bool Queue::Add(Report report) {
     }
   }
 
-  std::vector<CrashId> garbage_collected_reports;
-  std::optional<CrashId> local_report_id =
+  std::vector<ReportId> garbage_collected_reports;
+  std::optional<ReportId> local_report_id =
       store_.Add(std::move(report), &garbage_collected_reports);
 
   for (const auto& id : garbage_collected_reports) {
@@ -98,7 +98,7 @@ size_t Queue::ProcessAll() {
   }
 }
 
-bool Queue::Upload(const CrashId local_report_id) {
+bool Queue::Upload(const ReportId local_report_id) {
   std::optional<Report> report = store_.Get(local_report_id);
   if (!report.has_value()) {
     // |pending_reports_| is kept in sync with |store_| so Get should only ever fail if the report
@@ -132,7 +132,7 @@ bool Queue::Upload(const Report& report, std::string* server_report_id) {
   return false;
 }
 
-void Queue::GarbageCollect(const CrashId local_report_id) {
+void Queue::GarbageCollect(const ReportId local_report_id) {
   FX_LOGS(INFO) << "Garbage collected local report " << std::to_string(local_report_id);
   info_.MarkReportAsGarbageCollected(upload_attempts_[local_report_id]);
   upload_attempts_.erase(local_report_id);
@@ -142,7 +142,7 @@ void Queue::GarbageCollect(const CrashId local_report_id) {
 }
 
 size_t Queue::UploadAll() {
-  std::vector<CrashId> new_pending_reports;
+  std::vector<ReportId> new_pending_reports;
   for (const auto& local_report_id : pending_reports_) {
     if (!Upload(local_report_id)) {
       new_pending_reports.push_back(local_report_id);

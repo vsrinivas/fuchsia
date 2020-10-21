@@ -57,10 +57,6 @@ source_set("constants") {
   visibility = [ "//src/developer/forensics/crash_reports/*" ]
 }
 
-source_set("crash_id") {
-  sources = [ "crash_id.h" ]
-}
-
 source_set("crash_register") {
   sources = [
     "crash_register.cc",
@@ -209,8 +205,8 @@ source_set("queue") {
   ]
 
   public_deps = [
-    ":crash_id",
     ":crash_server",
+    ":report_id",
     ":settings",
     ":store",
     "//sdk/fidl/fuchsia.netstack",
@@ -240,6 +236,10 @@ source_set("report") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:sized_data",
   ]
+}
+
+source_set("report_id") {
+  sources = [ "report_id.h" ]
 }
 
 source_set("report_util") {
@@ -334,8 +334,8 @@ source_set("store") {
   ]
 
   public_deps = [
-    ":crash_id",
     ":report",
+    ":report_id",
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/utils:storage_size",
   ]
