@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    fuchsia_bluetooth::{decodable_enum, pub_decodable_enum},
     fuchsia_zircon as zx,
     std::{
         convert::TryFrom,
@@ -102,84 +103,10 @@ pub enum Error {
     Other(#[from] anyhow::Error),
 }
 
-/// Generates an enum value where each variant can be converted into a constant in the given
-/// raw_type.  For example:
-/// decodable_enum! {
-///     Color<u8> {
-///        Red => 1,
-///        Blue => 2,
-///        Green => 3,
-///     }
-/// }
-/// Then Color::try_from(2) returns Color::Red, and u8::from(Color::Red) returns 1.
-macro_rules! decodable_enum {
-    ($(#[$meta:meta])* $name:ident<$raw_type:ty> {
-        $($variant:ident => $val:expr),*,
-    }) => {
-        $(#[$meta])*
-        #[derive(Debug, PartialEq)]
-        pub(crate) enum $name {
-            $($variant),*
-        }
-
-        tofrom_decodable_enum! {
-            $name<$raw_type> {
-                $($variant => $val),*,
-            }
-        }
-    }
-}
-
-/// The same as decodable_enum, but the struct is public.
-macro_rules! pub_decodable_enum {
-    ($(#[$meta:meta])* $name:ident<$raw_type:ty> {
-        $($variant:ident => $val:expr),*,
-    }) => {
-        $(#[$meta])*
-        #[derive(Debug, PartialEq)]
-        pub enum $name {
-            $($variant),*
-        }
-
-        tofrom_decodable_enum! {
-            $name<$raw_type> {
-                $($variant => $val),*,
-            }
-        }
-    }
-}
-
-/// A From<&$name> for $raw_type implementation and
-/// TryFrom<$raw_type> for $name implementation, used by (pub_)decodable_enum
-macro_rules! tofrom_decodable_enum {
-    ($name:ident<$raw_type:ty> {
-        $($variant:ident => $val:expr),*,
-    }) => {
-        impl From<&$name> for $raw_type {
-            fn from(v: &$name) -> $raw_type {
-                match v {
-                    $($name::$variant => $val),*,
-                }
-            }
-        }
-
-        impl TryFrom<$raw_type> for $name {
-            type Error = Error;
-
-            fn try_from(value: $raw_type) -> Result<Self> {
-                match value {
-                    $($val => Ok($name::$variant)),*,
-                    _ => Err(Error::OutOfRange),
-                }
-            }
-        }
-    }
-}
-
 pub_decodable_enum! {
     /// Error Codes that can be returned as part of a reject message.
     /// See Section 8.20.6
-    ErrorCode<u8> {
+    ErrorCode<u8, Error, OutOfRange> {
         // Header Error Codes
         BadHeaderFormat => 0x01,
 
@@ -263,8 +190,7 @@ pub_decodable_enum! {
     /// Part of the StreamInformation in Discovery Response.
     /// Defined in the Bluetooth Assigned Numbers
     /// https://www.bluetooth.com/specifications/assigned-numbers/audio-video
-    #[derive(Clone)]
-    MediaType<u8> {
+    MediaType<u8, Error, OutOfRange> {
         Audio => 0x00,
         Video => 0x01,
         Multimedia => 0x02,
@@ -275,8 +201,7 @@ pub_decodable_enum! {
     /// Type of endpoint (source or sync)
     /// Part of the StreamInformation in Discovery Response.
     /// See Section 8.20.3
-    #[derive(Clone)]
-    EndpointType<u8> {
+    EndpointType<u8, Error, OutOfRange> {
         Source => 0x00,
         Sink => 0x01,
     }
@@ -285,7 +210,7 @@ pub_decodable_enum! {
 decodable_enum! {
     /// Indicated whether this packet is part of a fragmented packet set.
     /// See Section 8.4.2
-    SignalingPacketType<u8> {
+    SignalingPacketType<u8, Error, OutOfRange> {
         Single => 0x00,
         Start => 0x01,
         Continue => 0x02,
@@ -297,7 +222,7 @@ decodable_enum! {
     /// Specifies the command type of each signaling command or the response
     /// type of each response packet.
     /// See Section 8.4.3
-    SignalingMessageType<u8> {
+    SignalingMessageType<u8, Error, OutOfRange> {
         Command => 0x00,
         GeneralReject => 0x01,
         ResponseAccept => 0x02,
@@ -309,8 +234,7 @@ decodable_enum! {
     /// Indicates the signaling command on a command packet.  The same identifier is used on the
     /// response to that command packet.
     /// See Section 8.4.4
-    #[derive(Copy, Clone)]
-    SignalIdentifier<u8> {
+    SignalIdentifier<u8, Error, OutOfRange> {
         Discover => 0x01,
         GetCapabilities => 0x02,
         SetConfiguration => 0x03,
@@ -525,7 +449,7 @@ pub_decodable_enum! {
     /// Indicates the signaling command on a command packet.  The same identifier is used on the
     /// response to that command packet.
     /// See Section 8.4.4
-    ServiceCategory<u8> {
+    ServiceCategory<u8, Error, OutOfRange> {
         None => 0x00,
         MediaTransport => 0x01,
         Reporting => 0x02,
@@ -844,43 +768,6 @@ impl Encodable for StreamInformation {
 mod test {
     use super::*;
     use matches::assert_matches;
-
-    decodable_enum! {
-        TestEnum<u16> {
-            One => 1,
-            Two => 2,
-            Max => 65535,
-        }
-    }
-
-    #[test]
-    fn try_from_success() {
-        let one = TestEnum::try_from(1);
-        assert!(one.is_ok());
-        assert_eq!(TestEnum::One, one.unwrap());
-        let two = TestEnum::try_from(2);
-        assert!(two.is_ok());
-        assert_eq!(TestEnum::Two, two.unwrap());
-        let max = TestEnum::try_from(65535);
-        assert!(max.is_ok());
-        assert_eq!(TestEnum::Max, max.unwrap());
-    }
-
-    #[test]
-    fn try_from_error() {
-        let err = TestEnum::try_from(5);
-        assert_matches!(err.err(), Some(Error::OutOfRange));
-    }
-
-    #[test]
-    fn into_rawtype() {
-        let raw = u16::from(&TestEnum::One);
-        assert_eq!(1, raw);
-        let raw = u16::from(&TestEnum::Two);
-        assert_eq!(2, raw);
-        let raw = u16::from(&TestEnum::Max);
-        assert_eq!(65535, raw);
-    }
 
     #[test]
     fn txlabel_tofrom_u8() {

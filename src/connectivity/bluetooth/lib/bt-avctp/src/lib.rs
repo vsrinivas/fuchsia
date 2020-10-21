@@ -84,67 +84,6 @@ pub enum Error {
 /// Result type for AVCTP, using avctp::Error
 pub(crate) type Result<T> = result::Result<T, Error>;
 
-/// Generates an enum value where each variant can be converted into a constant in the given
-/// raw_type.  For example:
-/// pub_decodable_enum! {
-///     Color<u8, Error> {
-///        Red => 1,
-///        Blue => 2,
-///        Green => 3,
-///     }
-/// }
-/// Then Color::try_from(2) returns Color::Red, and u8::from(Color::Red) returns 1.
-#[macro_export]
-macro_rules! pub_decodable_enum {
-    ($(#[$meta:meta])* $name:ident<$raw_type:ty,$error_type:ident,$error_path:ident> {
-        $($(#[$variant_meta:meta])* $variant:ident => $val:expr),*,
-    }) => {
-        $(#[$meta])*
-        #[derive(Debug, Eq, Hash, PartialEq, Copy, Clone)]
-        pub enum $name {
-            $($(#[$variant_meta])* $variant = $val),*
-        }
-
-        $crate::tofrom_decodable_enum! {
-            $name<$raw_type, $error_type, $error_path> {
-                $($variant => $val),*,
-            }
-        }
-
-        impl $name {
-            pub const VALUES : &'static [$raw_type] = &[$($val),*,];
-            pub const VARIANTS : &'static [$name] = &[$($name::$variant),*,];
-        }
-    }
-}
-
-/// A From<&$name> for $raw_type implementation and
-/// TryFrom<$raw_type> for $name implementation, used by (pub_)decodable_enum
-#[macro_export]
-macro_rules! tofrom_decodable_enum {
-    ($name:ident<$raw_type:ty, $error_type:ident, $error_path:ident> {
-        $($variant:ident => $val:expr),*,
-    }) => {
-        impl From<&$name> for $raw_type {
-            fn from(v: &$name) -> $raw_type {
-                match v {
-                    $($name::$variant => $val),*,
-                }
-            }
-        }
-
-        impl TryFrom<$raw_type> for $name {
-            type Error = $error_type;
-            fn try_from(value: $raw_type) -> std::result::Result<Self, $error_type> {
-                match value {
-                    $($val => Ok($name::$variant)),*,
-                    _ => Err($error_type::$error_path),
-                }
-            }
-        }
-    }
-}
-
 /// A decodable type can be created from a byte buffer.
 /// The type returned is separate (copied) from the buffer once decoded.
 pub trait Decodable<E = Error>: Sized {
@@ -165,6 +104,7 @@ pub trait Encodable<E = Error>: Sized {
 #[cfg(test)]
 mod test {
     use super::*;
+    use fuchsia_bluetooth::pub_decodable_enum;
     use std::convert::TryFrom;
 
     pub_decodable_enum! {

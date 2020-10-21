@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::convert::TryFrom;
+use {fuchsia_bluetooth::pub_decodable_enum, std::convert::TryFrom};
 
-use crate::{pub_decodable_enum, Decodable, Encodable, Error, Result};
+use crate::{Decodable, Encodable, Error, Result};
 
 /// An AVCTP Transaction Label
 /// Not used outside the library. Public as part of some internal Error variants.

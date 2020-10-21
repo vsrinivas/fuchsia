@@ -4,8 +4,10 @@
 
 use super::*;
 
-use bt_avctp::pub_decodable_enum;
-use std::convert::{TryFrom, TryInto};
+use {
+    fuchsia_bluetooth::pub_decodable_enum,
+    std::convert::{TryFrom, TryInto},
+};
 
 mod get_folder_items;
 mod get_total_items;

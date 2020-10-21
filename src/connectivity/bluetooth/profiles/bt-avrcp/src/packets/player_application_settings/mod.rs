@@ -5,8 +5,8 @@
 use super::*;
 
 use {
-    bt_avctp::pub_decodable_enum, fidl::encoding::Decodable as FidlDecodable,
-    fidl_fuchsia_bluetooth_avrcp as fidl_avrcp, std::convert::TryFrom,
+    fidl::encoding::Decodable as FidlDecodable, fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
+    fuchsia_bluetooth::pub_decodable_enum, std::convert::TryFrom,
 };
 
 pub mod get_attribute_text;

@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
-    bitfield::bitfield,
-    log::trace,
-    std::convert::TryFrom,
+    bitfield::bitfield, fuchsia_bluetooth::pub_decodable_enum, log::trace, std::convert::TryFrom,
 };
 
 mod dlc_parameter_negotiation;
@@ -26,7 +23,6 @@ pub use self::{
     remote_port_negotiation::RemotePortNegotiationParams,
     test_command::TestCommandParams,
 };
-use crate::pub_decodable_enum;
 use crate::rfcomm::{
     frame::{Decodable, Encodable, FrameParseError},
     types::{CommandResponse, DLCI},
@@ -36,7 +32,7 @@ pub_decodable_enum! {
     /// The supported Multiplexer Commands in RFCOMM. These commands are sent/received
     /// over the Multiplexer Control Channel (DLCI 0) and are 6 bits wide.
     /// See RFCOMM 4.3.
-    MuxCommandMarker<u8, Error> {
+    MuxCommandMarker<u8, FrameParseError, OutOfRange> {
         ParameterNegotiation => 0b100000,
         Test => 0b001000,
         FlowControlOn => 0b101000,

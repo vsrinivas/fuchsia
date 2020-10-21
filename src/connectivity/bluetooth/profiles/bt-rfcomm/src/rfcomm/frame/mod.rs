@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
-    bitfield::bitfield,
-    log::trace,
-    std::convert::TryFrom,
+    bitfield::bitfield, fuchsia_bluetooth::pub_decodable_enum, log::trace, std::convert::TryFrom,
     thiserror::Error,
 };
 
@@ -16,7 +13,6 @@ mod fcs;
 /// Multiplexer Commands.
 pub mod mux_commands;
 
-use crate::pub_decodable_enum;
 use crate::rfcomm::{
     frame::{
         fcs::{calculate_fcs, verify_fcs},
@@ -24,54 +20,6 @@ use crate::rfcomm::{
     },
     types::{CommandResponse, Role, DLCI},
 };
-
-/// Generates an enum value where each variant can be converted into a constant in the given
-/// raw_type.
-#[macro_export]
-macro_rules! pub_decodable_enum {
-    ($(#[$meta:meta])* $name:ident<$raw_type:ty,$error_type:ident> {
-        $($(#[$variant_meta:meta])* $variant:ident => $val:expr),*,
-    }) => {
-        $(#[$meta])*
-        #[derive(Debug, Eq, Hash, PartialEq, Copy, Clone)]
-        pub enum $name {
-            $($(#[$variant_meta])* $variant = $val),*
-        }
-
-        $crate::tofrom_decodable_enum! {
-            $name<$raw_type, $error_type> {
-                $($variant => $val),*,
-            }
-        }
-    }
-}
-
-/// A From<&$name> for $raw_type implementation and
-/// TryFrom<$raw_type> for $name implementation, used by pub_decodable_enum
-#[macro_export]
-macro_rules! tofrom_decodable_enum {
-    ($name:ident<$raw_type:ty, $error_type:ident> {
-        $($variant:ident => $val:expr),*,
-    }) => {
-        impl From<&$name> for $raw_type {
-            fn from(v: &$name) -> $raw_type {
-                match v {
-                    $($name::$variant => $val),*,
-                }
-            }
-        }
-
-        impl TryFrom<$raw_type> for $name {
-            type Error = $error_type;
-            fn try_from(value: $raw_type) -> std::result::Result<Self, $error_type> {
-                match value {
-                    $($val => Ok($name::$variant)),*,
-                    _ => Err(format_err!("OutOfRange")),
-                }
-            }
-        }
-    }
-}
 
 /// A decodable type can be created from a byte buffer.
 /// The type returned is separate (copied) from the buffer once decoded.
@@ -106,6 +54,8 @@ pub enum FrameParseError {
     UnsupportedFrameType,
     #[error("Mux Command type {} is unsupported", .0)]
     UnsupportedMuxCommandType(u8),
+    #[error("Value is out of range")]
+    OutOfRange,
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
@@ -113,8 +63,8 @@ pub enum FrameParseError {
 pub_decodable_enum! {
     /// The type of frame provided in the Control field.
     /// The P/F bit is set to 0 for all frame types.
-    /// See table 2, GSM 7.10 Section 07.10 5.2.1.3 and RFCOMM 4.2.
-    FrameTypeMarker<u8, Error> {
+    /// See table 2, GSM 07.10 Section 5.2.1.3 and RFCOMM 4.2.
+    FrameTypeMarker<u8, FrameParseError, UnsupportedFrameType> {
         SetAsynchronousBalancedMode => 0b00101111,
         UnnumberedAcknowledgement => 0b01100011,
         DisconnectedMode => 0b00001111,
@@ -323,7 +273,6 @@ impl ControlField {
         // Section 5.2.1.3.
         const FRAME_TYPE_MASK: u8 = 0b11101111;
         FrameTypeMarker::try_from(self.frame_type_raw() & FRAME_TYPE_MASK)
-            .or(Err(FrameParseError::UnsupportedFrameType))
     }
 }
 

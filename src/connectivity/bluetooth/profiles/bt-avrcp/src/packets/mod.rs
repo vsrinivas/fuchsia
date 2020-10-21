@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    bt_avctp::{pub_decodable_enum, AvcCommandType},
+    bt_avctp::AvcCommandType,
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
+    fuchsia_bluetooth::pub_decodable_enum,
     std::{convert::TryFrom, result},
     thiserror::Error,
 };

@@ -2,13 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Error},
-    bitfield::bitfield,
-    std::convert::TryFrom,
-};
+use {bitfield::bitfield, fuchsia_bluetooth::pub_decodable_enum, std::convert::TryFrom};
 
-use crate::pub_decodable_enum;
 use crate::rfcomm::{
     frame::{
         mux_commands::{Decodable, Encodable},
@@ -26,7 +21,7 @@ const DEFAULT_INITIAL_CREDITS: u8 = 8;
 
 pub_decodable_enum! {
     /// The Credit Based Flow Handshake variants defined in RFCOMM Table 5.3.
-    CreditBasedFlowHandshake<u8, Error> {
+    CreditBasedFlowHandshake<u8, FrameParseError, OutOfRange> {
         Unsupported => 0x0,
         SupportedRequest => 0xF,
         SupportedResponse => 0xE,
@@ -48,7 +43,7 @@ impl DLCParameterNegotiationFields<[u8; DLC_PARAMETER_NEGOTIATION_LENGTH]> {
         DLCI::try_from(self.dlci_raw())
     }
 
-    fn credit_based_flow_handshake(&self) -> Result<CreditBasedFlowHandshake, Error> {
+    fn credit_based_flow_handshake(&self) -> Result<CreditBasedFlowHandshake, FrameParseError> {
         CreditBasedFlowHandshake::try_from(self.credit_handshake())
     }
 }
@@ -100,8 +95,7 @@ impl Decodable for ParameterNegotiationParams {
         let parameters = DLCParameterNegotiationFields(fixed_buf);
 
         let dlci = parameters.dlci()?;
-        let credit_based_flow_handshake =
-            parameters.credit_based_flow_handshake().or(Err(FrameParseError::InvalidFrame))?;
+        let credit_based_flow_handshake = parameters.credit_based_flow_handshake()?;
         let priority = parameters.priority();
         let max_frame_size = parameters.max_frame_size();
         let initial_credits = parameters.initial_credits();
@@ -193,7 +187,7 @@ mod tests {
         ];
         assert_matches!(
             ParameterNegotiationParams::decode(&buf[..]),
-            Err(FrameParseError::InvalidFrame)
+            Err(FrameParseError::OutOfRange)
         );
     }
 

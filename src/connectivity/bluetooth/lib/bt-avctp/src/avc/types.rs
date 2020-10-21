@@ -1,9 +1,9 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use std::convert::TryFrom;
+use {fuchsia_bluetooth::pub_decodable_enum, std::convert::TryFrom};
 
-use crate::{pub_decodable_enum, Decodable, Encodable, Error, Result};
+use crate::{Decodable, Encodable, Error, Result};
 
 pub_decodable_enum! {
     /// AV/C Command and Response types.
