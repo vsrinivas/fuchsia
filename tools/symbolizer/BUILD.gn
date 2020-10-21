@@ -64,11 +64,6 @@ if (is_host) {
   }
 }
 
-install_host_tools("host") {
-  deps = [ ":symbolizer" ]
-  outputs = [ "symbolizer" ]
-}
-
 group("tests") {
   testonly = true
   deps = [ ":symbolizer_tests($host_toolchain)" ]

@@ -26,7 +26,7 @@ group("tools") {
     "//tools/net/device-finder:host",
     "//tools/netprotocol($host_toolchain)",
     "//tools/symbol-index:symbol_index_host",
-    "//tools/symbolizer:host",
+    "//tools/symbolizer($host_toolchain)",
   ]
 }
 
