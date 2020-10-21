@@ -5,7 +5,7 @@
 //! Typesafe wrappers around an open package directory.
 
 use {
-    fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, FileProxy},
     fuchsia_hash::Hash,
     thiserror::Error,

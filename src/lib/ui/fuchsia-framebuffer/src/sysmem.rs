@@ -4,7 +4,7 @@
 
 use crate::FrameUsage;
 use anyhow::{format_err, Context, Error};
-use fidl::endpoints::{create_endpoints, ClientEnd};
+use fidl::endpoints::{create_endpoints, ClientEnd, Proxy};
 use fidl_fuchsia_sysmem::{
     BufferCollectionConstraints, BufferMemoryConstraints, BufferUsage, ColorSpace, ColorSpaceType,
     FormatModifier, HeapType, ImageFormatConstraints, PixelFormat as SysmemPixelFormat,

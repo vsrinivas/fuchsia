@@ -4,6 +4,7 @@
 
 use std::fmt::Display;
 
+use fidl::endpoints::Proxy;
 use fidl_fuchsia_device as fdev;
 use fidl_fuchsia_hardware_ethernet as feth;
 use fidl_fuchsia_hardware_ethernet_ext as feth_ext;

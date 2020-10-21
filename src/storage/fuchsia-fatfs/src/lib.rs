@@ -191,6 +191,7 @@ mod tests {
         crate::types::{Dir, FileSystem},
         anyhow::{anyhow, Context, Error},
         fatfs::{format_volume, FormatVolumeOptions, FsOptions},
+        fidl::endpoints::Proxy,
         fidl_fuchsia_io::{DirectoryProxy, FileProxy, NodeMarker, NodeProxy},
         fuchsia_async as fasync,
         fuchsia_zircon::{AsHandleRef, Status},

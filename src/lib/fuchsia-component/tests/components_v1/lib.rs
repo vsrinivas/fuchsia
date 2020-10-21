@@ -8,7 +8,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::{create_proxy, ServerEnd, UnifiedServiceMarker},
+    fidl::endpoints::{create_proxy, Proxy, ServerEnd, UnifiedServiceMarker},
     fidl_fuchsia_component_test::{
         CounterRequest, CounterRequestStream, CounterServiceMarker, CounterServiceRequest,
     },

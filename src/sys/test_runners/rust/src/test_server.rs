@@ -454,7 +454,7 @@ mod tests {
     use {
         super::*,
         anyhow::{Context as _, Error},
-        fidl::endpoints::ClientEnd,
+        fidl::endpoints::{ClientEnd, Proxy},
         fidl_fuchsia_component_runner as fcrunner,
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         fidl_fuchsia_test::{

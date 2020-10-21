@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints,
+    fidl::endpoints::{self, Proxy},
     fidl_fidl_test_components as ftest,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,

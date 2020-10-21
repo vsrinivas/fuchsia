@@ -11,7 +11,7 @@ use {
     },
     anyhow::format_err,
     cm_fidl_validator,
-    fidl::endpoints::{create_proxy, ClientEnd},
+    fidl::endpoints::{create_proxy, ClientEnd, Proxy},
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::pkg_url::PkgUrl,

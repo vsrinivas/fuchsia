@@ -341,6 +341,7 @@ mod tests {
     use {
         super::*,
         crate::tests::{TestDiskContents, TestFatDisk},
+        fidl::endpoints::Proxy,
         fidl_fuchsia_io::{FileProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         scopeguard::defer,
         vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},

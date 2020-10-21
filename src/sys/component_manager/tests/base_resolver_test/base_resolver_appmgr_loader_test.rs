@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    fidl::endpoints::Proxy,
     fidl_fuchsia_io as fio, fuchsia_async as fasync,
     test_utils_lib::{events::*, matcher::EventMatcher, opaque_test::*},
 };

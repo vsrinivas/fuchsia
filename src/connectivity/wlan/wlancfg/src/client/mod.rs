@@ -422,7 +422,7 @@ mod tests {
             util::{cobalt::create_mock_cobalt_sender, logger::set_logger_for_test},
         },
         async_trait::async_trait,
-        fidl::endpoints::{create_proxy, create_request_stream},
+        fidl::endpoints::{create_proxy, create_request_stream, Proxy},
         fidl_fuchsia_stash as fidl_stash, fuchsia_async as fasync,
         futures::{channel::mpsc, lock::Mutex, task::Poll},
         pin_utils::pin_mut,

@@ -411,6 +411,7 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use {
         super::*,
+        fidl::endpoints::Proxy,
         fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
         vfs::{
             directory::entry::DirectoryEntry as _, execution_scope::ExecutionScope,

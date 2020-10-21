@@ -22,7 +22,7 @@ use {
     cm_rust::*,
     fidl::{
         self,
-        endpoints::{self, create_proxy, ClientEnd, ServerEnd},
+        endpoints::{self, create_proxy, ClientEnd, Proxy, ServerEnd},
     },
     fidl_fidl_examples_echo::{self as echo},
     fidl_fuchsia_component_runner as fcrunner,

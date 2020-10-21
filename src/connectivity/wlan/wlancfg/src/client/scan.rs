@@ -301,7 +301,7 @@ mod tests {
             util::logger::set_logger_for_test,
         },
         anyhow::Error,
-        fidl::endpoints::create_proxy,
+        fidl::endpoints::{create_proxy, Proxy},
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{channel::oneshot, lock::Mutex, task::Poll},
         pin_utils::pin_mut,

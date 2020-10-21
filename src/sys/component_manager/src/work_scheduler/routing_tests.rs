@@ -14,6 +14,7 @@ use {
         ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl,
         OfferServiceSource, OfferTarget, UseDecl, UseProtocolDecl, UseSource,
     },
+    fidl::endpoints::Proxy,
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
     std::{convert::TryFrom, ops::Deref, path::Path, sync::Arc},

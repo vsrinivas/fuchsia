@@ -8,7 +8,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fasync::OnSignals,
-    fidl::endpoints,
+    fidl::endpoints::{self, Proxy},
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
     fidl_fuchsia_test_manager as ftest_manager,

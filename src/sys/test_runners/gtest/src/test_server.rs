@@ -4,6 +4,7 @@
 
 use {
     async_trait::async_trait,
+    fidl::endpoints::Proxy,
     fidl_fuchsia_io::{
         self as fio, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,

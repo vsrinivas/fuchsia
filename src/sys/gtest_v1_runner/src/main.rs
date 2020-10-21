@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     by_addr::ByAddr,
     fdio::fdio_sys,
-    fidl::endpoints::{ClientEnd, ServerEnd, ServiceMarker},
+    fidl::endpoints::{ClientEnd, Proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_io::{DirectoryProxy, OPEN_RIGHT_READABLE},
     fidl_fuchsia_process as fproc,
     fidl_fuchsia_sys::{

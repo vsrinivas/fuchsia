@@ -6,7 +6,7 @@
 /// servicing fuchsia.pkg.PackageResolver.Resolve FIDL requests.
 use {
     anyhow::Error,
-    fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FileControlHandle, FileMarker, FileObject, FileRequest,
         FileRequestStream, NodeInfo, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN,

@@ -898,7 +898,10 @@ mod tests {
     use super::*;
 
     use anyhow::Context as _;
-    use fidl::{endpoints::ServerEnd, AsyncChannel};
+    use fidl::{
+        endpoints::{Proxy, ServerEnd},
+        AsyncChannel,
+    };
     use fidl_fuchsia_io as fio;
     use fuchsia_async as fasync;
     use fuchsia_zircon::{self as zx, AsHandleRef};

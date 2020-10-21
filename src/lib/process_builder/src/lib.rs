@@ -74,7 +74,7 @@ mod util;
 
 use {
     anyhow::{anyhow, Context},
-    fidl::endpoints::ClientEnd,
+    fidl::endpoints::{ClientEnd, Proxy},
     fidl_fuchsia_io as fio, fidl_fuchsia_ldsvc as fldsvc,
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_runtime::{HandleInfo, HandleType},

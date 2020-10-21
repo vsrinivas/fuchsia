@@ -5,7 +5,7 @@
 /// This module tests pkg-resolver's resolve keeps working when
 /// MinFs is broken.
 use {
-    fidl::endpoints::{RequestStream, ServerEnd},
+    fidl::endpoints::{Proxy, RequestStream, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryControlHandle, DirectoryProxy, DirectoryRequest, DirectoryRequestStream,
         FileControlHandle, FileEvent, FileMarker, FileProxy, FileRequest, FileRequestStream,

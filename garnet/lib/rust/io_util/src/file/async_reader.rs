@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl::client::QueryResponseFut,
+    fidl::{client::QueryResponseFut, endpoints::Proxy as _},
     fidl_fuchsia_io::FileProxy,
     fuchsia_zircon::Status,
     futures::io::AsyncRead,

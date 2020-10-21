@@ -29,7 +29,7 @@ use crate::{
 };
 
 use {
-    fidl::endpoints::create_proxy,
+    fidl::endpoints::{create_proxy, Proxy},
     fidl_fuchsia_io::{
         DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent, FileMarker,
         NodeAttributes, NodeInfo, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,

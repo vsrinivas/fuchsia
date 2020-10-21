@@ -84,9 +84,6 @@ impl FirstProtocolProxy {
         let service_name = <FirstProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
-    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        fidl::endpoints::Proxy::into_channel(self)
-    }
 
     /// Get a Stream of events from the remote end of the FirstProtocol protocol
     ///
@@ -419,9 +416,6 @@ impl SecondProtocolProxy {
     pub fn new(channel: fidl::AsyncChannel) -> Self {
         let service_name = <SecondProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
-    }
-    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        fidl::endpoints::Proxy::into_channel(self)
     }
 
     /// Get a Stream of events from the remote end of the SecondProtocol protocol

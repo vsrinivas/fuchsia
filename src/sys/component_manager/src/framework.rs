@@ -372,7 +372,7 @@ mod tests {
             self, CapabilityName, CapabilityNameOrPath, CapabilityPath, ChildDecl, ComponentDecl,
             ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, NativeIntoFidl,
         },
-        fidl::endpoints,
+        fidl::endpoints::{self, Proxy},
         fidl_fidl_examples_echo as echo,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
         fuchsia_async as fasync,

@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Error},
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequest, DirectoryRequestStream},
     fidl_fuchsia_pkg::{
         PackageResolverMarker, PackageResolverProxy, PackageResolverRequestStream,

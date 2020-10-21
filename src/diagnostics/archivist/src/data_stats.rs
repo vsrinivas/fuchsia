@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
+    fidl::endpoints::Proxy,
     fuchsia_inspect::{self as inspect, NumericProperty},
     fuchsia_zircon as zx,
     futures::{FutureExt, StreamExt},

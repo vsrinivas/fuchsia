@@ -349,7 +349,7 @@ mod tests {
             errors::{EnumerationError, RunTestError},
         },
         anyhow::Error,
-        fidl::endpoints::{self, ClientEnd},
+        fidl::endpoints::{self, ClientEnd, Proxy},
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         fidl_fuchsia_test::{Invocation, RunListenerProxy},
         fuchsia_runtime::job_default,

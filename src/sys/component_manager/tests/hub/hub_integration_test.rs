@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    fidl::endpoints::Proxy,
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{OPEN_FLAG_DIRECTORY, OPEN_FLAG_POSIX},
     fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,

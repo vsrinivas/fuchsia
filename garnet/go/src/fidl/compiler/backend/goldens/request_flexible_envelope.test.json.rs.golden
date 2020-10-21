@@ -153,9 +153,6 @@ impl ProtocolProxy {
         let service_name = <ProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
-    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        fidl::endpoints::Proxy::into_channel(self)
-    }
 
     /// Get a Stream of events from the remote end of the Protocol protocol
     ///

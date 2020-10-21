@@ -21,7 +21,7 @@ use {
     },
     async_trait::async_trait,
     cm_rust::CapabilityName,
-    fidl::endpoints::{create_request_stream, ClientEnd},
+    fidl::endpoints::{create_request_stream, ClientEnd, Proxy},
     fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::{self as fio, NodeProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_trace as trace,

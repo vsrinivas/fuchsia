@@ -5,6 +5,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     cstr::cstr,
+    fidl::endpoints::Proxy,
     fidl_fuchsia_hardware_pty::{DeviceMarker, DeviceProxy, WindowSize},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_zircon as zx,
+    fidl::endpoints::Proxy, fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio,
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
 };
 
 /// Creates a child in the specified `Realm`.

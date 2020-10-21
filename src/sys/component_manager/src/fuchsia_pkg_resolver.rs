@@ -6,7 +6,7 @@ use {
     crate::model::resolver::{Resolver, ResolverError, ResolverFut},
     anyhow::format_err,
     cm_fidl_validator,
-    fidl::endpoints::ClientEnd,
+    fidl::endpoints::{ClientEnd, Proxy},
     fidl_fuchsia_io::{self as fio, DirectoryMarker},
     fidl_fuchsia_sys::LoaderProxy,
     fidl_fuchsia_sys2 as fsys,

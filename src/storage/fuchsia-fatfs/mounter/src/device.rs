@@ -4,6 +4,7 @@
 
 use {
     anyhow::{Context, Error},
+    fidl::endpoints::Proxy,
     fidl_fuchsia_hardware_block_partition::{Guid, PartitionProxy},
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fuchsia_fatfs::FatFs,

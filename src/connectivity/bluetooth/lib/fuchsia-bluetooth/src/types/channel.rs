@@ -4,7 +4,10 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl::{encoding::Decodable, endpoints::ClientEnd},
+    fidl::{
+        encoding::Decodable,
+        endpoints::{ClientEnd, Proxy},
+    },
     fidl_fuchsia_bluetooth, fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
     fuchsia_zircon as zx,
     futures::{io, stream::Stream, Future, TryFutureExt},

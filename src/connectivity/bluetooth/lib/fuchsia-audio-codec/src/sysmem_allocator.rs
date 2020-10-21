@@ -4,7 +4,10 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl::{client::QueryResponseFut, endpoints::ClientEnd},
+    fidl::{
+        client::QueryResponseFut,
+        endpoints::{ClientEnd, Proxy},
+    },
     fidl_fuchsia_sysmem::{
         AllocatorProxy, BufferCollectionConstraints, BufferCollectionInfo2, BufferCollectionMarker,
         BufferCollectionProxy, BufferCollectionTokenMarker, BufferMemorySettings,

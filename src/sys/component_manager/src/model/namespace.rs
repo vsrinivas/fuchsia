@@ -10,7 +10,7 @@ use {
     },
     cm_rust::{self, ComponentDecl, UseDecl},
     directory_broker,
-    fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
+    fidl::endpoints::{create_endpoints, ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeMarker},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,

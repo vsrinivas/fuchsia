@@ -6,6 +6,7 @@
 
 use {
     anyhow::{format_err, Context as _},
+    fidl::endpoints::Proxy,
     fidl_fuchsia_hardware_ethernet_ext::is_physical,
     futures::stream::{Stream, StreamExt as _, TryStreamExt as _},
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},

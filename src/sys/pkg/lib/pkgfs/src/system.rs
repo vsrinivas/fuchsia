@@ -6,6 +6,7 @@
 
 use {
     anyhow::anyhow,
+    fidl::endpoints::Proxy,
     fidl_fuchsia_io::{DirectoryProxy, FileProxy},
     std::fs,
     thiserror::Error,

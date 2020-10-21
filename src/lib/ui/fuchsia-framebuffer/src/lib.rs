@@ -4,10 +4,7 @@
 
 use anyhow::{format_err, Context as _, Error};
 use fdio::watch_directory;
-use fidl::{
-    endpoints,
-    endpoints::{create_endpoints, ClientEnd},
-};
+use fidl::endpoints::{self, create_endpoints, ClientEnd, Proxy};
 use fidl_fuchsia_hardware_display::{
     ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig, ProviderSynchronousProxy,
 };

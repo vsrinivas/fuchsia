@@ -362,7 +362,7 @@ mod tests {
         super::*,
         crate::{client::state_machine as client_fsm, util::logger::set_logger_for_test},
         async_trait::async_trait,
-        fidl::endpoints::{create_proxy, create_request_stream},
+        fidl::endpoints::{create_proxy, create_request_stream, Proxy},
         fuchsia_async as fasync,
         futures::{channel::oneshot, task::Poll},
         pin_utils::pin_mut,

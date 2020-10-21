@@ -350,10 +350,21 @@ Methods:
 
 * `new(channel: fidl::AsyncChannel) -> TicTacToeProxy`: Create a new proxy for
   `TicTacToe`.
-* `into_channel(self) -> Result<fidl::AsyncChannel>`: Attempt to convert the
-  proxy back into a channel.
 * `take_event_stream(&self) -> TicTacToeEventStream`: Get a `Stream` of events
   from the server end (see [Events](#protocols-events-client)).
+
+Methods from implementing `fidl::endpoints::Proxy`:
+
+* `from_channel(channel: fidl::AsyncChannel) -> TicTacToeProxy`: Same as
+  `TicTacToeProxy::new`.
+* `into_channel(self) -> Result<fidl::AsyncChannel>`: Attempt to convert the
+  proxy back into a channel.
+* `as_channel(&self) -> &fidl::AsyncChannel`: Get a reference to the proxy's
+  underlying channel
+* `is_closed(&self) -> bool`: Check if the proxy has received the `PEER_CLOSED`
+  signal.
+* `on_closed<'a>(&'a self) -> fuchsia_async::OnSignals<'a>`: Get a future that
+  completes when the proxy receives the `PEER_CLOSED` signal.
 
 Methods from implementing `TicTacToeProxyInterface`:
 

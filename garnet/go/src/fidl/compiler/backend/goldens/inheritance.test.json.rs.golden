@@ -85,9 +85,6 @@ impl Super_Proxy {
         let service_name = <Super_Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
-    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        fidl::endpoints::Proxy::into_channel(self)
-    }
 
     /// Get a Stream of events from the remote end of the Super_ protocol
     ///
@@ -538,9 +535,6 @@ impl SubProxy {
     pub fn new(channel: fidl::AsyncChannel) -> Self {
         let service_name = <SubMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
-    }
-    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        fidl::endpoints::Proxy::into_channel(self)
     }
 
     /// Get a Stream of events from the remote end of the Sub protocol

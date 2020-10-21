@@ -7,7 +7,7 @@
 use crate::{buffer_collection_constraints::*, Result};
 use anyhow::Context as _;
 use fidl::encoding::Decodable;
-use fidl::endpoints::{create_endpoints, ClientEnd};
+use fidl::endpoints::{create_endpoints, ClientEnd, Proxy};
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem::*;
 use fuchsia_component::client;

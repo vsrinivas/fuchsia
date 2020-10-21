@@ -204,9 +204,6 @@ impl WithAndWithoutRequestResponseProxy {
             <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
-    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        fidl::endpoints::Proxy::into_channel(self)
-    }
 
     /// Get a Stream of events from the remote end of the WithAndWithoutRequestResponse protocol
     ///
@@ -1480,9 +1477,6 @@ impl WithErrorSyntaxProxy {
         let service_name = <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
-    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        fidl::endpoints::Proxy::into_channel(self)
-    }
 
     /// Get a Stream of events from the remote end of the WithErrorSyntax protocol
     ///
@@ -2346,9 +2340,6 @@ impl ChannelProtocolProxy {
         let service_name = <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
-    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        fidl::endpoints::Proxy::into_channel(self)
-    }
 
     /// Get a Stream of events from the remote end of the ChannelProtocol protocol
     ///
@@ -3133,9 +3124,6 @@ impl TransitionalProxy {
     pub fn new(channel: fidl::AsyncChannel) -> Self {
         let service_name = <TransitionalMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
-    }
-    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-        fidl::endpoints::Proxy::into_channel(self)
     }
 
     /// Get a Stream of events from the remote end of the Transitional protocol

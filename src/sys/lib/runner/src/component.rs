@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl::{
-        endpoints::{ClientEnd, RequestStream, ServerEnd},
+        endpoints::{ClientEnd, Proxy, RequestStream, ServerEnd},
         epitaph::ChannelEpitaphExt,
     },
     fidl_fuchsia_component as fcomp, fidl_fuchsia_component_runner as fcrunner,
@@ -618,6 +618,7 @@ mod tests {
     }
 
     mod launch_info {
+        use fidl::endpoints::Proxy;
 
         use {super::*, anyhow::format_err, futures::channel::oneshot, std::mem::drop};
 

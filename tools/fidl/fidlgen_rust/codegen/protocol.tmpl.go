@@ -146,11 +146,6 @@ impl {{ $protocol.Name }}Proxy {
 		Self { client: fidl::client::Client::new(channel, service_name) }
 	}
 
-	{{- /* TODO(fxbug.dev/60627): Remove this method. */}}
-	pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
-		fidl::endpoints::Proxy::into_channel(self)
-	}
-
 	/// Get a Stream of events from the remote end of the {{ $protocol.Name }} protocol
 	///
 	/// # Panics
