@@ -22,12 +22,6 @@ using CoreGuestTest = GuestTest<T>;
 // the guest type in order to skip under certain conditions.
 TYPED_TEST_SUITE(CoreGuestTest, AllGuestTypes);
 
-TYPED_TEST(CoreGuestTest, LaunchGuest) {
-  std::string result;
-  EXPECT_EQ(this->Execute({"echo", "test"}, &result), ZX_OK);
-  EXPECT_EQ(result, "test\n");
-}
-
 TYPED_TEST(CoreGuestTest, VirtioBalloon) {
   // Zircon does not yet have a virtio balloon driver.
   if (this->GetGuestKernel() == GuestKernel::ZIRCON) {
