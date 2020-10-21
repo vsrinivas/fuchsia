@@ -334,17 +334,6 @@ class WaitQueue {
   WaitQueueCollection collection_;
 };
 
-enum thread_state {
-  THREAD_INITIAL = 0,
-  THREAD_READY,
-  THREAD_RUNNING,
-  THREAD_BLOCKED,
-  THREAD_BLOCKED_READ_LOCK,
-  THREAD_SLEEPING,
-  THREAD_SUSPENDED,
-  THREAD_DEATH,
-};
-
 // Returns a string constant for the given thread state.
 const char* ToString(enum thread_state state);
 
@@ -886,14 +875,18 @@ struct Thread {
   // members is complete (bug 54383), we can revisit the overall
   // Thread API.
 
-  thread_state state() const { return state_; }
+  thread_state state() const { return scheduler_state_.state(); }
 
   // The scheduler can set threads to be running, or to be ready to run.
-  void set_running() { state_ = THREAD_RUNNING; }
-  void set_ready() { state_ = THREAD_READY; }
+  void set_running() { scheduler_state_.set_state(THREAD_RUNNING); }
+  void set_ready() { scheduler_state_.set_state(THREAD_READY); }
   // While wait queues can set threads to be blocked.
-  void set_blocked() { state_ = THREAD_BLOCKED; }
-  void set_blocked_read_lock() { state_ = THREAD_BLOCKED_READ_LOCK; }
+  void set_blocked() { scheduler_state_.set_state(THREAD_BLOCKED); }
+  void set_blocked_read_lock() { scheduler_state_.set_state(THREAD_BLOCKED_READ_LOCK); }
+  // The thread can set itself to be sleeping.
+  void set_sleeping() { scheduler_state_.set_state(THREAD_SLEEPING); }
+  void set_death() { scheduler_state_.set_state(THREAD_DEATH); }
+  void set_suspended() { scheduler_state_.set_state(THREAD_SUSPENDED); }
 
   // Accessors for specific flags_ bits.
   bool detatched() const { return (flags_ & THREAD_FLAG_DETACHED) != 0; }
@@ -1020,16 +1013,15 @@ struct Thread {
  private:
   Canary canary_;
 
-  fbl::DoublyLinkedListNodeState<Thread*> thread_list_node_ TA_GUARDED(thread_lock);
-
-  // active bits
-  enum thread_state state_;
+  // These fields are among the most active in the thread. They are grouped
+  // together near the front to improve cache locality.
   unsigned int flags_;
   ktl::atomic<unsigned int> signals_;
-
   SchedulerState scheduler_state_;
-
   WaitQueueState wait_queue_state_;
+  TaskState task_state_;
+  PreemptionState preemption_state_;
+  MemoryAllocationState memory_allocation_state_;
 
 #if WITH_LOCK_DEP
   // state for runtime lock validation when in thread context
@@ -1055,12 +1047,6 @@ struct Thread {
   struct arch_thread arch_;
 
   KernelStack stack_;
-
-  TaskState task_state_;
-
-  PreemptionState preemption_state_;
-
-  MemoryAllocationState memory_allocation_state_;
 
   // This is used by dispatcher.cc:SafeDeleter.
   void* recursive_object_deletion_list_ = nullptr;
@@ -1088,6 +1074,8 @@ struct Thread {
   // Used to track threads that have set |migrate_fn_|. This is used to migrate threads before a CPU
   // is taken offline.
   fbl::DoublyLinkedListNodeState<Thread*> migrate_list_node_ TA_GUARDED(thread_lock);
+
+  fbl::DoublyLinkedListNodeState<Thread*> thread_list_node_ TA_GUARDED(thread_lock);
 
   struct MigrateListTrait {
     static fbl::DoublyLinkedListNodeState<Thread*>& node_state(Thread& thread) {

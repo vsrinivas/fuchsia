@@ -19,6 +19,17 @@
 // Forward declaration.
 struct Thread;
 
+enum thread_state : uint8_t {
+  THREAD_INITIAL = 0,
+  THREAD_READY,
+  THREAD_RUNNING,
+  THREAD_BLOCKED,
+  THREAD_BLOCKED_READ_LOCK,
+  THREAD_SLEEPING,
+  THREAD_SUSPENDED,
+  THREAD_DEATH,
+};
+
 // Fixed-point task weight.
 //
 // The 16bit fractional component accommodates the exponential curve defining
@@ -170,6 +181,9 @@ class SchedulerState {
   cpu_num_t curr_cpu() const { return curr_cpu_; }
   cpu_num_t last_cpu() const { return last_cpu_; }
 
+  thread_state state() const { return state_; }
+  void set_state(thread_state state) { state_ = state; }
+
   void set_next_cpu(cpu_num_t next_cpu) {
     next_cpu_ = next_cpu;
   }
@@ -211,6 +225,58 @@ class SchedulerState {
   // WAVLTree node state.
   fbl::WAVLTreeNodeState<Thread*> run_queue_node_;
 
+  // The start time of the thread's current bandwidth request. This is the
+  // virtual start time for fair tasks and the period start for deadline tasks.
+  SchedTime start_time_{0};
+
+  // The finish time of the thread's current bandwidth request. This is the
+  // virtual finish time for fair tasks and the absolute deadline for deadline
+  // tasks.
+  SchedTime finish_time_{0};
+
+  // Mimimum finish time of all the descendents of this node in the run queue.
+  // This value is automatically maintained by the WAVLTree observer hooks. The
+  // value is used to perform a partition search in O(log n) time, to find the
+  // thread with the earliest finish time that also has an eligible start time.
+  SchedTime min_finish_time_{0};
+
+  // The scheduling discipline of this thread. Determines whether the thread is
+  // enqueued on the fair or deadline run queues and whether the weight or
+  // deadline parameters are used.
+  SchedDiscipline discipline_{SchedDiscipline::Fair};
+
+  // Flag indicating whether this thread is associated with a run queue.
+  bool active_{false};
+
+  // The scheduling state of the thread.
+  thread_state state_{THREAD_INITIAL};
+
+  // The current fair or deadline parameters of the thread.
+  union {
+    struct {
+      SchedWeight weight{0};
+      SchedDuration initial_time_slice_ns{0};
+      SchedRemainder normalized_timeslice_remainder{0};
+    } fair_;
+    SchedDeadlineParams deadline_;
+  };
+
+  // The current timeslice allocated to the thread.
+  SchedDuration time_slice_ns_{0};
+
+  // The total time in THREAD_RUNNING state. If the thread is currently in
+  // THREAD_RUNNING state, this excludes the time accrued since it last left the
+  // scheduler.
+  SchedDuration runtime_ns_{0};
+
+  // Tracks the exponential moving average of the runtime of the thread.
+  SchedDuration expected_runtime_ns_{0};
+
+  // Tracks runtime accumulated until voluntarily blocking or exhausiting the
+  // allocated time slice. Used to exclude involuntary preemption when updating
+  // the expected runtime estimate to improve accuracy.
+  SchedDuration banked_runtime_ns_{0};
+
   // The time the thread last ran. The exact point in time this value represents
   // depends on the thread state:
   //   * THREAD_RUNNING: The time of the last reschedule that selected the thread.
@@ -218,17 +284,12 @@ class SchedulerState {
   //   * Otherwise: The time the thread last ran.
   SchedTime last_started_running_{0};
 
-  // The total time in THREAD_RUNNING state. If the thread is currently in
-  // THREAD_RUNNING state, this excludes the time accrued since it last left the
-  // scheduler.
-  SchedDuration runtime_ns_{0};
+  // Takes the value of Scheduler::generation_count_ + 1 at the time this node
+  // is added to the run queue.
+  uint64_t generation_{0};
 
-  // The legacy base, effective, and inherited priority values.
-  // TODO(eieio): Move initialization of these members to the constructor. It is
-  // currently handled by Scheduler::InitializeThread.
-  int base_priority_;
-  int effective_priority_;
-  int inherited_priority_;
+  // The current sched_latency flow id for this thread.
+  uint64_t flow_id_{0};
 
   // The current CPU the thread is READY or RUNNING on, INVALID_CPU otherwise.
   cpu_num_t curr_cpu_{INVALID_CPU};
@@ -248,56 +309,12 @@ class SchedulerState {
   // assigned to CPUs outside of this set if necessary.
   cpu_mask_t soft_affinity_{CPU_MASK_ALL};
 
-  // The scheduling discipline of this thread. Determines whether the thread is
-  // enqueued on the fair or deadline run queues and whether the weight or
-  // deadline parameters are used.
-  SchedDiscipline discipline_{SchedDiscipline::Fair};
-
-  // The current fair or deadline parameters of the thread.
-  union {
-    struct {
-      SchedWeight weight{0};
-      SchedDuration initial_time_slice_ns{0};
-      SchedRemainder normalized_timeslice_remainder{0};
-    } fair_;
-    SchedDeadlineParams deadline_;
-  };
-
-  // The start time of the thread's current bandwidth request. This is the
-  // virtual start time for fair tasks and the period start for deadline tasks.
-  SchedTime start_time_{0};
-
-  // The finish time of the thread's current bandwidth request. This is the
-  // virtual finish time for fair tasks and the absolute deadline for deadline
-  // tasks.
-  SchedTime finish_time_{0};
-
-  // Mimimum finish time of all the descendents of this node in the run queue.
-  // This value is automatically maintained by the WAVLTree observer hooks. The
-  // value is used to perform a partition search in O(log n) time, to find the
-  // thread with the earliest finish time that also has an eligible start time.
-  SchedTime min_finish_time_{0};
-
-  // The current timeslice allocated to the thread.
-  SchedDuration time_slice_ns_{0};
-
-  // Tracks the exponential moving average of the runtime of the thread.
-  SchedDuration expected_runtime_ns_{0};
-
-  // Tracks runtime accumulated until voluntarily blocking or exhausiting the
-  // allocated time slice. Used to exclude involuntary preemption when updating
-  // the expected runtime estimate to improve accuracy.
-  SchedDuration banked_runtime_ns_{0};
-
-  // Takes the value of Scheduler::generation_count_ + 1 at the time this node
-  // is added to the run queue.
-  uint64_t generation_{0};
-
-  // The current sched_latency flow id for this thread.
-  uint64_t flow_id_{0};
-
-  // Flag indicating whether this thread is associated with a run queue.
-  bool active_{false};
+  // The legacy base, effective, and inherited priority values.
+  // TODO(eieio): Move initialization of these members to the constructor. It is
+  // currently handled by Scheduler::InitializeThread.
+  int base_priority_;
+  int effective_priority_;
+  int inherited_priority_;
 };
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_STATE_H_

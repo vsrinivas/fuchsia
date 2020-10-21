@@ -405,7 +405,7 @@ bool OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
   cpu_mask_t accum_cpu_mask = 0;
 
   // The new owner may not be a dying thread.
-  if ((new_owner != nullptr) && (new_owner->state_ == THREAD_DEATH)) {
+  if ((new_owner != nullptr) && (new_owner->state() == THREAD_DEATH)) {
     new_owner = nullptr;
   }
 
@@ -522,7 +522,7 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread
   Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT(magic() == kOwnedMagic);
-  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
+  DEBUG_ASSERT(current_thread->state() == THREAD_RUNNING);
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(thread_lock.IsHeld());
 
@@ -601,8 +601,8 @@ bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
     // ownership to a thread which is not yet started should have been rejected
     // by layers of code above us, and a proper status code returned to the
     // user.
-    DEBUG_ASSERT(requeue_owner->state_ != THREAD_INITIAL);
-    if (requeue_owner->state_ == THREAD_DEATH) {
+    DEBUG_ASSERT(requeue_owner->state() != THREAD_INITIAL);
+    if (requeue_owner->state() == THREAD_DEATH) {
       requeue_owner = nullptr;
     }
   }

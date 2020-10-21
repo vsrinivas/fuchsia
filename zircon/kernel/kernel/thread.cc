@@ -250,9 +250,6 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   init_thread_struct(t, name);
 
   t->task_state_.Init(entry, arg);
-
-  t->state_ = THREAD_INITIAL;
-
   Scheduler::InitializeThread(t, priority);
 
   zx_status_t status = t->stack_.Init();
@@ -317,7 +314,7 @@ void Thread::Resume() {
   {
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
-    if (state_ == THREAD_DEATH) {
+    if (state() == THREAD_DEATH) {
       // The thread is dead, resuming it is a no-op.
       return;
     }
@@ -325,7 +322,7 @@ void Thread::Resume() {
     // Clear the suspend signal in case there is a pending suspend
     signals_.fetch_and(~THREAD_SIGNAL_SUSPEND, ktl::memory_order_relaxed);
 
-    if (state_ == THREAD_INITIAL || state_ == THREAD_SUSPENDED) {
+    if (state() == THREAD_INITIAL || state() == THREAD_SUSPENDED) {
       // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
       // cpu run queue was modified
       bool local_resched = Scheduler::Unblock(this);
@@ -358,14 +355,14 @@ zx_status_t Thread::Suspend() {
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
-  if (state_ == THREAD_DEATH) {
+  if (state() == THREAD_DEATH) {
     return ZX_ERR_BAD_STATE;
   }
 
   signals_.fetch_or(THREAD_SIGNAL_SUSPEND, ktl::memory_order_relaxed);
 
   bool local_resched = false;
-  switch (state_) {
+  switch (state()) {
     case THREAD_DEATH:
       // This should be unreachable because this state was handled above.
       panic("Unexpected thread state");
@@ -445,7 +442,7 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
     }
 
     // wait for the thread to die
-    if (state_ != THREAD_DEATH) {
+    if (state() != THREAD_DEATH) {
       zx_status_t status = task_state_.Join(deadline);
       if (status != ZX_OK) {
         return status;
@@ -453,7 +450,7 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
     }
 
     canary_.Assert();
-    DEBUG_ASSERT(state_ == THREAD_DEATH);
+    DEBUG_ASSERT(state() == THREAD_DEATH);
     wait_queue_state_.AssertNotBlocked();
 
     // save the return code
@@ -485,7 +482,7 @@ zx_status_t Thread::Detach() {
   task_state_.WakeJoiners(ZX_ERR_BAD_STATE);
 
   // if it's already dead, then just do what join would have and exit
-  if (state_ == THREAD_DEATH) {
+  if (state() == THREAD_DEATH) {
     flags_ &= ~THREAD_FLAG_DETACHED;  // makes sure Join continues
     guard.Release();
     return Join(nullptr, 0);
@@ -501,7 +498,7 @@ void Thread::FreeDpc(Dpc* dpc) {
   Thread* t = dpc->arg<Thread>();
 
   t->canary_.Assert();
-  DEBUG_ASSERT(t->state_ == THREAD_DEATH);
+  DEBUG_ASSERT(t->state() == THREAD_DEATH);
 
   // grab and release the thread lock, which effectively serializes us with
   // the thread that is queuing itself for destruction.
@@ -522,10 +519,8 @@ __NO_RETURN void Thread::Current::ExitLocked(int retcode) TA_REQ(thread_lock) {
   Dpc free_dpc;
 
   // enter the dead state
-  current_thread->state_ = THREAD_DEATH;
-
+  current_thread->set_death();
   current_thread->task_state_.set_retcode(retcode);
-
   current_thread->CallMigrateFnLocked(Thread::MigrateStage::Exiting);
 
   // Make sure that we have released any wait queues we may have owned when we
@@ -597,7 +592,7 @@ void Thread::Current::Exit(int retcode) {
   Thread* current_thread = Thread::Current::Get();
 
   current_thread->canary_.Assert();
-  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
+  DEBUG_ASSERT(current_thread->state() == THREAD_RUNNING);
   DEBUG_ASSERT(!current_thread->IsIdle());
 
   if (current_thread->user_thread_) {
@@ -627,7 +622,7 @@ void Thread::Kill() {
 
   // general logic is to wake up the thread so it notices it had a signal delivered to it
 
-  switch (state_) {
+  switch (state()) {
     case THREAD_INITIAL:
       // thread hasn't been started yet.
       // not really safe to wake it up, since it's only in this state because it's under
@@ -735,7 +730,7 @@ void Thread::CallMigrateFnForCpuLocked(cpu_num_t cpu) {
   while (!migrate_list_.is_empty()) {
     Thread* const thread = migrate_list_.pop_front();
 
-    if (thread->state_ != THREAD_READY && thread->scheduler_state().last_cpu_ == cpu) {
+    if (thread->state() != THREAD_READY && thread->scheduler_state().last_cpu_ == cpu) {
       thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
     }
   }
@@ -747,7 +742,7 @@ bool Thread::CheckKillSignal() {
 
   if (signals() & THREAD_SIGNAL_KILL) {
     // Ensure we don't recurse into thread_exit.
-    DEBUG_ASSERT(state_ != THREAD_DEATH);
+    DEBUG_ASSERT(state() != THREAD_DEATH);
     return true;
   } else {
     return false;
@@ -780,7 +775,7 @@ void Thread::Current::DoSuspend() {
     // Make sure the suspend signal wasn't cleared while we were running the
     // callback.
     if (current_thread->signals() & THREAD_SIGNAL_SUSPEND) {
-      current_thread->state_ = THREAD_SUSPENDED;
+      current_thread->set_suspended();
       current_thread->signals_.fetch_and(~THREAD_SIGNAL_SUSPEND, ktl::memory_order_relaxed);
 
       // directly invoke the context switch, since we've already manipulated this thread's state
@@ -877,7 +872,7 @@ void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* greg
   }
 
   // Report any policy exceptions raised by syscalls.
-  unsigned int signals = current_thread->signals();
+  const unsigned int signals = current_thread->signals();
   if (has_user_thread && (signals & THREAD_SIGNAL_POLICY_EXCEPTION)) {
     current_thread->signals_.fetch_and(~THREAD_SIGNAL_POLICY_EXCEPTION, ktl::memory_order_relaxed);
     guard.Release();
@@ -890,7 +885,7 @@ void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* greg
   }
 
   if (signals & THREAD_SIGNAL_SUSPEND) {
-    DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
+    DEBUG_ASSERT(current_thread->state() == THREAD_RUNNING);
     // This thread has been asked to suspend.  If it has a user mode component we need to save the
     // user register state prior to calling |thread_do_suspend| so that a debugger may access it
     // while the thread is suspended.
@@ -926,7 +921,7 @@ void Thread::Current::Yield() {
   __UNUSED Thread* current_thread = Thread::Current::Get();
 
   current_thread->canary_.Assert();
-  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
+  DEBUG_ASSERT(current_thread->state() == THREAD_RUNNING);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
@@ -945,7 +940,7 @@ void Thread::Current::Preempt() {
   Thread* current_thread = Thread::Current::Get();
 
   current_thread->canary_.Assert();
-  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
+  DEBUG_ASSERT(current_thread->state() == THREAD_RUNNING);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
   if (!current_thread->IsIdle()) {
@@ -969,7 +964,7 @@ void Thread::Current::Reschedule() {
   Thread* current_thread = Thread::Current::Get();
 
   current_thread->canary_.Assert();
-  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
+  DEBUG_ASSERT(current_thread->state() == THREAD_RUNNING);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
@@ -1008,7 +1003,7 @@ void Thread::HandleSleep(Timer* timer, zx_time_t now) {
     return;
   }
 
-  if (state_ != THREAD_SLEEPING) {
+  if (state() != THREAD_SLEEPING) {
     thread_lock.Release();
     return;
   }
@@ -1053,7 +1048,7 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, Interruptible in
   Thread* current_thread = Thread::Current::Get();
 
   current_thread->canary_.Assert();
-  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
+  DEBUG_ASSERT(current_thread->state() == THREAD_RUNNING);
   DEBUG_ASSERT(!current_thread->IsIdle());
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
@@ -1078,8 +1073,7 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, Interruptible in
   // set a one shot timer to wake us up and reschedule
   timer.Set(deadline, &Thread::SleepHandler, current_thread);
 
-  current_thread->state_ = THREAD_SLEEPING;
-
+  current_thread->set_sleeping();
   current_thread->wait_queue_state_.Block(interruptible, ZX_OK);
 
   // always cancel the timer, since we may be racing with the timer tick on other cpus
@@ -1116,7 +1110,7 @@ zx_duration_t Thread::Runtime() const {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
   zx_duration_t runtime = scheduler_state_.runtime_ns();
-  if (state_ == THREAD_RUNNING) {
+  if (state() == THREAD_RUNNING) {
     zx_duration_t recent =
         zx_time_sub_time(current_time(), scheduler_state_.last_started_running());
     runtime = zx_duration_add_duration(runtime, recent);
@@ -1158,6 +1152,7 @@ void thread_construct_first(Thread* t, const char* name) {
 
   // Setup the scheduler state before directly manipulating its members.
   Scheduler::InitializeThread(t, HIGHEST_PRIORITY);
+  t->scheduler_state().state_ = THREAD_RUNNING;
   t->scheduler_state().curr_cpu_ = cpu;
   t->scheduler_state().last_cpu_ = cpu;
   t->scheduler_state().next_cpu_ = INVALID_CPU;
@@ -1242,7 +1237,7 @@ void Thread::SetDeadline(const zx_sched_deadline_params_t& params) {
  */
 void Thread::SetUsermodeThread(fbl::RefPtr<ThreadDispatcher> user_thread) {
   canary_.Assert();
-  DEBUG_ASSERT(state_ == THREAD_INITIAL);
+  DEBUG_ASSERT(state() == THREAD_INITIAL);
   DEBUG_ASSERT(!user_thread_);
 
   user_thread_ = ktl::move(user_thread);
@@ -1406,7 +1401,7 @@ void dump_thread_locked(Thread* t, bool full_dump) {
   }
 
   zx_duration_t runtime = t->scheduler_state().runtime_ns();
-  if (t->state_ == THREAD_RUNNING) {
+  if (t->state() == THREAD_RUNNING) {
     zx_duration_t recent =
         zx_time_sub_time(current_time(), t->scheduler_state().last_started_running());
     runtime = zx_duration_add_duration(runtime, recent);
@@ -1420,7 +1415,7 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     dprintf(INFO,
             "\tstate %s, curr/last cpu %d/%d, hard_affinity %#x, soft_cpu_affinity %#x, "
             "priority %d [%d,%d], remaining time slice %" PRIi64 "\n",
-            thread_state_to_str(t->state_), (int)t->scheduler_state().curr_cpu(),
+            thread_state_to_str(t->state()), (int)t->scheduler_state().curr_cpu(),
             (int)t->scheduler_state().last_cpu(), t->scheduler_state().hard_affinity(),
             t->scheduler_state().soft_affinity(), t->scheduler_state().effective_priority(),
             t->scheduler_state().base_priority(), t->scheduler_state().inherited_priority(),
@@ -1444,7 +1439,7 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     arch_dump_thread(t);
   } else {
     printf("thr %p st %4s owq %d pri %2d [%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n", t,
-           thread_state_to_str(t->state_), !t->wait_queue_state().owned_wait_queues_.is_empty(),
+           thread_state_to_str(t->state()), !t->wait_queue_state().owned_wait_queues_.is_empty(),
            t->scheduler_state().effective_priority_, t->scheduler_state().base_priority_,
            t->scheduler_state().inherited_priority_, t->user_pid_, t->user_tid_, oname, t->name());
   }
@@ -1632,7 +1627,7 @@ void Thread::Current::PrintBacktraceAtFrame(void* caller_frame) {
 zx_status_t Thread::PrintBacktrace() {
   // get the starting point if it's in a usable state
   void* fp = nullptr;
-  switch (state_) {
+  switch (state()) {
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
     case THREAD_SLEEPING:
