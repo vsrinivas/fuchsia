@@ -12,7 +12,11 @@ mod util;
 // https://pcisig.com/specifications/conventional/
 
 use {
-    anyhow::Error, argh::FromArgs, device::Device, fdio, fuchsia_async, std::fs::File,
+    anyhow::{Context, Error},
+    argh::FromArgs,
+    device::Device,
+    fdio, fuchsia_async,
+    std::fs::File,
     std::io::prelude::*,
 };
 
@@ -55,8 +59,8 @@ fn read_database<'a>(buf: &'a mut String) -> Result<db::PciDb<'a>, Error> {
 async fn main() -> Result<(), Error> {
     let args: Args = argh::from_env();
     let (proxy, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_pci::BusMarker>()?;
-    fdio::service_connect(&args.service, server.into_channel())?;
 
+    fdio::service_connect(&args.service, server.into_channel())?;
     let mut buf = String::new();
     let db = read_database(&mut buf)
         .map_err(|e| {
@@ -65,6 +69,13 @@ async fn main() -> Result<(), Error> {
             }
         })
         .ok();
+
+    // Verify the service is there before the loop so the errors to the user
+    // make sense in the kpci case.
+    proxy
+        .get_host_bridge_info()
+        .await
+        .context("RPC failed. You probably want to use `k lspci` for lspci (fxbug.dev/32978)")?;
 
     for fidl_device in &proxy.get_devices().await? {
         let device = Device::new(fidl_device, &db, &args);
