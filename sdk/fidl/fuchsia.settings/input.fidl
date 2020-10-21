@@ -10,17 +10,95 @@ library fuchsia.settings;
 /// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
 [Discoverable]
 protocol Input {
-    /// Gets the current [InputDeviceSettings]. Returns immediately on first call;
+    /// Gets the current |InputDeviceSettings|. Returns immediately on first call;
     /// subsequent calls return when the value changes.
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
+    [Transitional = "Will be deprecated in favor of Watch2"]
     Watch() -> (InputDeviceSettings settings);
 
-    /// Sets [InputDeviceSettings]. Any field not explicitly set in the table
+    /// Sets |InputDeviceSettings|. Any field not explicitly set in the table
     /// performs a no-op, and will not make any changes.
+    [Transitional = "Will be deprecated in favor of SetStates"]
     Set(InputDeviceSettings settings) -> () error Error;
+
+    /// Gets the current |InputSettings|. Returns immediately on first call;
+    /// subsequent calls return when the value changes.
+    ///
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
+    [Transitional = "Future replacement for Watch"]
+    Watch2() -> (InputSettings settings);
+
+    /// Requests software input devices to set their software state. May
+    /// not necessarily change the overall state of the device, depending on the
+    /// hardware state. Will modify the software state of the existing device if a
+    /// known id is passed. Otherwise it will add a new input device.
+    [Transitional = "Future replacement for Set"]
+    SetStates(vector<InputState>:MAX input_states) -> () error Error;
 };
+
+/// A series of flags determining the state of an input device mute toggle.
+bits ToggleStateFlags : uint64 {
+    AVAILABLE = 0x01;
+    ACTIVE = 0x02;
+    MUTED = 0x04;
+    DISABLED = 0x08;
+    ERROR = 0x10;
+};
+
+enum DeviceType {
+    MICROPHONE = 1;
+    CAMERA = 2;
+};
+
+enum DeviceStateSource {
+    HARDWARE = 1;
+    SOFTWARE = 2;
+};
+
+/// Settings related to device input. New format for InputDeviceSettings.
+table InputSettings {
+    1: vector<InputDevice>:MAX devices;
+};
+
+table InputDevice {
+    /// Uniquely identifies a device within a device type.
+    1: string:MAX device_name;
+    /// The type of input device (e.g. camera, microphone).
+    2: DeviceType device_type;
+    /// The state for each source (e.g. hardware, software).
+    3: vector<SourceState>:MAX source_states;
+    /// The software toggle states which are allowed to be changed for a device.
+    4: ToggleStateFlags mutable_toggle_state;
+    /// The overall state of the device considering the source states.
+    5: DeviceState state;
+};
+
+/// Holds the state for an |InputDevice|.
+table DeviceState {
+    /// Controls the on/off state of the input device.
+    1: ToggleStateFlags toggle_flags;
+};
+
+/// Describes what the |source|’s |state| is.
+table SourceState {
+    1: DeviceStateSource source;
+    2: DeviceState state;
+};
+
+/// A subset of |DeviceState|’s properties that clients may pass to change the
+/// software state of an InputDevice.
+table InputState {
+    1: string:MAX name;
+    2: DeviceType device_type;
+    3: DeviceState state;
+};
+
+///////////////////////////////////
+// Soon-to-be-deprecated API below
+///////////////////////////////////
 
 /// Settings related to audio input. Replacement for fuchsia.settings.AudioSettings.input.
 table InputDeviceSettings {
