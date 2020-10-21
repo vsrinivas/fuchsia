@@ -1,0 +1,16 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.platform;
+using fuchsia.composite;
+
+fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.TI;
+fuchsia.BIND_PLATFORM_DEV_DID == 5; //PDEV_DID_TI_LED
+accept fuchsia.BIND_PLATFORM_DEV_PID {
+  2, //PDEV_PID_TI_LP5018
+  3, //PDEV_PID_TI_LP5024
+  4, //PDEV_PID_TI_LP5030
+  5, //PDEV_PID_TI_LP5036
+}

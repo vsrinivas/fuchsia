@@ -18,7 +18,6 @@
 #include <cmath>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/lights.h>
@@ -29,6 +28,7 @@
 #include <fbl/alloc_checker.h>
 
 #include "lp50xx-regs.h"
+#include "src/ui/light/drivers/lp50xx-light/lp50xx_light-bind.h"
 
 namespace lp50xx_light {
 
@@ -507,13 +507,6 @@ static zx_driver_ops_t driver_ops = {
 }  // namespace lp50xx_light
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(lp50xx_light, lp50xx_light::driver_ops, "zircon", "0.1", 7)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_LED),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_TI_LP5018),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_TI_LP5024),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_TI_LP5030),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_TI_LP5036),
-ZIRCON_DRIVER_END(lp50xx_light)
+ZIRCON_DRIVER(lp50xx_light, lp50xx_light::driver_ops, "zircon", "0.1")
+
 //clang-format on
