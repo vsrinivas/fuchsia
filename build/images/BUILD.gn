@@ -681,12 +681,6 @@ unsigned_zbi_prime = {
   updater = "zbi"
 }
 
-unsigned_zbi_to_zedboot = {
-  dep = "zedboot:zbi"
-  updater = "zbi"
-  target = "zedboot.zbi"
-}
-
 if (custom_signing_script != "") {
   custom_signed_zbi("signed") {
     output_name = "fuchsia.zbi"
@@ -756,7 +750,7 @@ if (custom_signing_script != "" || use_vboot) {
 }
 
 # Sign fuchsia_prime.zbi, if neccessary.
-# The *_prime and *_to_zedboot images are used to have an alternate
+# The *_prime images are used to have an alternate
 # known-compatible OTA target for integration testing.
 if (custom_signing_script != "") {
   custom_signed_zbi("fuchsia_prime_signed") {
@@ -770,15 +764,7 @@ if (custom_signing_script != "") {
     dep = ":fuchsia_prime_signed"
     updater = "zbi.signed"
   }
-  zbi_to_zedboot = {
-    dep = "//build/images/zedboot:signed"
-    updater = "zbi.signed"
-    target = "zedboot.zbi.signed"
-  }
-  not_needed([
-               "unsigned_zbi_prime",
-               "unsigned_zbi_to_zedboot",
-             ])
+  not_needed([ "unsigned_zbi_prime" ])
 } else if (use_vboot) {
   # ChromeOS vboot images.
   vboot("fuchsia_prime_signed") {
@@ -791,18 +777,9 @@ if (custom_signing_script != "") {
     dep = ":fuchsia_prime_signed"
     updater = "zbi.signed"
   }
-  zbi_to_zedboot = {
-    dep = "//build/images/zedboot:signed"
-    updater = "zbi.signed"
-    target = "zedboot.vboot"
-  }
-  not_needed([
-               "unsigned_zbi_prime",
-               "unsigned_zbi_to_zedboot",
-             ])
+  not_needed([ "unsigned_zbi_prime" ])
 } else {
   zbi_prime = unsigned_zbi_prime
-  zbi_to_zedboot = unsigned_zbi_to_zedboot
 }
 
 if (use_vbmeta) {
@@ -2041,88 +2018,6 @@ pm_build("update_prime.meta") {
   package_name = "update_prime"
 }
 
-###
-### Generate an update package with zedboot.
-###
-
-# The update-to-zedboot images are used to have an update package that OTAs to
-# zedboot for integration testing.
-
-# In order for the update-to-zedboot package to be compatible with the update
-# package, it needs to contain a "packages" file. However, we don't actually
-# need any packages to be installed since we're writing zedboot instead of
-# Fuchsia. So we'll just generate an empty "packages" file.
-generated_file("update-to-zedboot-packages.manifest") {
-  outputs = [ "$target_out_dir/$target_name" ]
-  contents = []
-}
-
-action("update-to-zedboot.manifest") {
-  visibility = [ ":*" ]
-  testonly = true
-
-  script = "manifest.py"
-
-  outputs = [ "$target_out_dir/$target_name" ]
-
-  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-
-  deps = [
-    ":update-to-zedboot-packages.manifest",
-    ":update.manifest",
-    zbi_to_zedboot.dep,
-  ]
-  update_manifest_outputs = get_target_outputs(":update.manifest")
-  update_to_zedboot_packages_manifest_outputs =
-      get_target_outputs(":update-to-zedboot-packages.manifest")
-
-  sources = update_manifest_outputs
-  args += [
-    "--rewrite",
-    "meta/package={target}=" +
-        rebase_path("update_package.json", root_build_dir),
-    "--rewrite",
-    "packages={target}=" +
-        rebase_path(update_to_zedboot_packages_manifest_outputs[0],
-                    root_build_dir),
-    "--rewrite",
-    zbi_to_zedboot.updater + "={target}=" + zbi_to_zedboot.target,
-  ]
-  if (use_vbmeta) {
-    deps += [ "zedboot:zedboot.vbmeta" ]
-    args += [
-      "--rewrite",
-      "fuchsia.vbmeta={target}=zedboot.vbmeta",
-    ]
-  }
-
-  args += [
-    "--manifest",
-    rebase_path(update_manifest_outputs[0], root_build_dir),
-  ]
-}
-
-pm_build("update-to-zedboot.meta") {
-  visibility = [ ":*" ]
-  testonly = true
-  manifest = ":update-to-zedboot.manifest"
-  package_name = "update-to-zedboot"
-}
-
-action("update.sources.manifest") {
-  visibility = [ ":*" ]
-  testonly = true
-  script = "manifest.py"
-  deps = [ ":update.manifest" ]
-  outputs = [ "$target_out_dir/update.sources.manifest" ]
-  update_manifests = get_target_outputs(deps[0])
-  args = [
-    "--sources",
-    "--output=" + rebase_path(outputs[0], root_build_dir),
-    "--manifest=" + rebase_path(update_manifests[0]),
-  ]
-}
-
 # This output is a manifest of manifests that is usable as an input to `pm
 # publish -lp`, a tool for publishing a set of packages from a build produced
 # list of package manifests.
@@ -2136,7 +2031,6 @@ generate_package_metadata("all_package_manifests.list") {
     ":packages",
     ":system_image.meta",
     ":system_image_prime.meta",
-    ":update-to-zedboot.meta",
     ":update.meta",
     ":update_prime.meta",
   ]
