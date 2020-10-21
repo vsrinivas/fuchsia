@@ -88,6 +88,20 @@ See the
 [Gerrit documentation](https://gerrit-documentation.storage.googleapis.com/Documentation/2.12.3/intro-user.html#upload-change){:.external}
 for more information.
 
+### Request a code review
+
+After creating a change, to request a code review, do the following:
+
+1. Go to your [Fuchsia Gerrit dashboard](https://fuchsia-review.googlesource.com/dashboard/self).
+1. Click your change, which appears in the *Outgoing reviews* section.
+1. Click *ADD REVIEWER*.
+1. Add reviewers by email address. You can refer to the `OWNERS` file, located in the directory
+where you're making your change or in one of its parents to find the best reviewers for your change.
+1. Click *SEND*.
+
+Check the Gerrit [Review UI documentation](https://gerrit-review.googlesource.com/Documentation/user-review-ui.html)
+for more information about how to use the Gerrit code review tool.
+
 ### Create and upload a patch
 
 After creating a change, to upload a patch to your change, do the following:
@@ -176,10 +190,11 @@ Test: Added test X.
 You can view the commit history of the files you've edited to check for the tags
 used previously. See these examples:
 
-*   [https://fuchsia-review.googlesource.com/c/peridot/+/113955](https://fuchsia-review.googlesource.com/c/peridot/+/113955){:.external}
+*   [https://fuchsia-review.googlesource.com/c/fuchsia/+/441776](https://fuchsia-review.googlesource.com/c/fuchsia/+/441776){:.external}
 *   [https://fuchsia-review.googlesource.com/c/topaz/+/114013](https://fuchsia-review.googlesource.com/c/topaz/+/114013){:.external}
 
-If the subject of a commit message doesn't include tags, Gerrit flags your
+Commit message tags are required. If the subject of a commit message
+doesn't include tags, Gerrit flags your
 change with `Needs Label: Commit-Message-has-tags`.
 
 ### Add test instructions {#add-test-instructions}
