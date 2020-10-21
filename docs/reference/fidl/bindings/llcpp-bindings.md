@@ -633,15 +633,15 @@ set up a server implementation.
 The LLCPP bindings also provide functions for manually dispatching a message
 given an implementation, `TicTacToe::TryDispatch` and `TicTacToe::Dispatch`:
 
-* `static bool TryDispatch(Interface* impl, fidl_msg_t* msg,
+* `static bool TryDispatch(Interface* impl, fidl_incoming_msg_t* msg,
   ::fidl::Transaction* txn)`: Attempts to dispatch the incoming message. If
   there is no matching handler, it returns false, leaving the message and
   transaction intact. In all other cases, it consumes the message and returns
   true.
-* `static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
-  txn)`: Dispatches the incoming message. If there is no matching handler, it
-  closes all handles in the message and closes the channel with a
-  `ZX_ERR_NOT_SUPPORTED` epitaph, and returns false.
+* `static bool Dispatch(Interface* impl, fidl_incoming_msg_t* msg,
+  ::fidl::Transaction* txn)`: Dispatches the incoming message. If there is no
+  matching handler, it closes all handles in the message and closes the
+  channel with a `ZX_ERR_NOT_SUPPORTED` epitaph, and returns false.
 
 #### Completers {#server-completers}
 
