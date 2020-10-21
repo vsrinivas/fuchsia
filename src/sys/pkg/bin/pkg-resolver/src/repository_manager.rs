@@ -36,6 +36,7 @@ pub struct RepositoryManager {
     dynamic_configs_path: Option<PathBuf>,
     static_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
     dynamic_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
+    persisted_repos_dir: Arc<Option<PathBuf>>,
     repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
     cobalt_sender: CobaltSender,
     inspect: RepositoryManagerInspectState,
@@ -48,6 +49,7 @@ struct RepositoryManagerInspectState {
     dynamic_configs_node: inspect::Node,
     static_configs_node: inspect::Node,
     dynamic_configs_path_property: inspect::StringProperty,
+    persisted_repos_dir_property: inspect::StringProperty,
     stats: Arc<Mutex<Stats>>,
     repos_node: Arc<inspect::Node>,
 }
@@ -246,6 +248,7 @@ impl RepositoryManager {
         };
 
         let fut = open_cached_or_new_repository(
+            Arc::clone(&self.persisted_repos_dir),
             Arc::clone(&self.repositories),
             Arc::clone(&config),
             url.repo(),
@@ -278,6 +281,7 @@ impl RepositoryManager {
         };
 
         let repo = open_cached_or_new_repository(
+            Arc::clone(&self.persisted_repos_dir),
             Arc::clone(&self.repositories),
             Arc::clone(&config),
             url.repo(),
@@ -300,6 +304,7 @@ impl RepositoryManager {
 }
 
 async fn open_cached_or_new_repository(
+    persisted_repos_dir: Arc<Option<PathBuf>>,
     repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
     config: Arc<RepositoryConfig>,
     url: &RepoUrl,
@@ -312,11 +317,14 @@ async fn open_cached_or_new_repository(
         return Ok(conn.clone());
     }
 
+    let persisted_repos_dir = (*persisted_repos_dir).as_ref().map(|p| p.as_path());
+
     // Create the rust tuf client. In order to minimize our time with the lock held, we'll
     // create the client first, even if it proves to be redundant because we lost the race with
     // another thread.
     let mut repo = Arc::new(futures::lock::Mutex::new(
         Repository::new(
+            persisted_repos_dir,
             &config,
             cobalt_sender,
             inspect_node.create_child(url.host()),
@@ -343,6 +351,7 @@ pub struct UnsetCobaltSender;
 #[derive(Clone, Debug)]
 pub struct RepositoryManagerBuilder<S = UnsetCobaltSender, N = UnsetInspectNode> {
     dynamic_configs_path: Option<PathBuf>,
+    persisted_repos_dir: Option<PathBuf>,
     static_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
     dynamic_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
     experiments: Experiments,
@@ -375,6 +384,22 @@ impl<S, N> RepositoryManagerBuilder<S, N> {
             Err((self, errs))
         }
     }
+
+    /// Customize the repository manager with the persisted repository directory.
+    #[cfg(test)]
+    pub fn with_persisted_repos_dir<P>(mut self, path: P) -> Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.persisted_repos_dir = Some(path.into());
+        self
+    }
+
+    /// Customize the [RepositoryManager] with a local mirror.
+    pub fn with_local_mirror(mut self, proxy: Option<LocalMirrorProxy>) -> Self {
+        self.local_mirror = proxy;
+        self
+    }
 }
 
 impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
@@ -403,6 +428,7 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
 
         let builder = RepositoryManagerBuilder {
             dynamic_configs_path,
+            persisted_repos_dir: None,
             static_configs: HashMap::new(),
             dynamic_configs: dynamic_configs
                 .into_iter()
@@ -419,11 +445,6 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
         } else {
             Ok(builder)
         }
-    }
-
-    pub fn with_local_mirror(mut self, proxy: Option<LocalMirrorProxy>) -> Self {
-        self.local_mirror = proxy;
-        self
     }
 
     /// Create a new builder with no enabled experiments.
@@ -457,6 +478,7 @@ impl<S> RepositoryManagerBuilder<S, UnsetInspectNode> {
     ) -> RepositoryManagerBuilder<S, inspect::Node> {
         RepositoryManagerBuilder {
             dynamic_configs_path: self.dynamic_configs_path,
+            persisted_repos_dir: self.persisted_repos_dir,
             static_configs: self.static_configs,
             dynamic_configs: self.dynamic_configs,
             experiments: self.experiments,
@@ -475,6 +497,7 @@ impl<N> RepositoryManagerBuilder<UnsetCobaltSender, N> {
     ) -> RepositoryManagerBuilder<CobaltSender, N> {
         RepositoryManagerBuilder {
             dynamic_configs_path: self.dynamic_configs_path,
+            persisted_repos_dir: self.persisted_repos_dir,
             static_configs: self.static_configs,
             dynamic_configs: self.dynamic_configs,
             experiments: self.experiments,
@@ -529,12 +552,16 @@ impl RepositoryManagerBuilder<CobaltSender, inspect::Node> {
             dynamic_configs_node: self.inspect_node.create_child("dynamic_configs"),
             static_configs_node: self.inspect_node.create_child("static_configs"),
             stats: Arc::new(Mutex::new(Stats::new(self.inspect_node.create_child("stats")))),
+            persisted_repos_dir_property: self
+                .inspect_node
+                .create_string("persisted_repos_dir", &format!("{:?}", self.persisted_repos_dir)),
             repos_node: Arc::new(self.inspect_node.create_child("repos")),
             node: self.inspect_node,
         };
 
         RepositoryManager {
             dynamic_configs_path: self.dynamic_configs_path,
+            persisted_repos_dir: Arc::new(self.persisted_repos_dir),
             static_configs: to_inspectable_map_with_node(
                 self.static_configs,
                 &inspect.static_configs_node,
@@ -796,6 +823,7 @@ mod tests {
     struct TestEnvBuilder {
         static_configs: Option<Vec<(String, RepositoryConfigs)>>,
         dynamic_configs: Option<Option<RepositoryConfigs>>,
+        persisted_repos: bool,
     }
 
     impl TestEnvBuilder {
@@ -815,6 +843,11 @@ mod tests {
 
         fn add_dynamic_configs(mut self, configs: RepositoryConfigs) -> Self {
             self.dynamic_configs = Some(Some(configs));
+            self
+        }
+
+        fn with_persisted_repos(mut self) -> Self {
+            self.persisted_repos = true;
             self
         }
 
@@ -842,18 +875,22 @@ mod tests {
                 (dir, path)
             });
 
-            TestEnv { static_configs, dynamic_configs }
+            let persisted_repos_dir =
+                if self.persisted_repos { Some(tempfile::tempdir().unwrap()) } else { None };
+
+            TestEnv { static_configs, dynamic_configs, persisted_repos_dir }
         }
     }
 
     struct TestEnv {
         static_configs: Option<tempfile::TempDir>,
         dynamic_configs: Option<(tempfile::TempDir, PathBuf)>,
+        persisted_repos_dir: Option<tempfile::TempDir>,
     }
 
     impl TestEnv {
         fn builder() -> TestEnvBuilder {
-            TestEnvBuilder { static_configs: None, dynamic_configs: None }
+            TestEnvBuilder { static_configs: None, dynamic_configs: None, persisted_repos: false }
         }
 
         fn new() -> Self {
@@ -862,6 +899,10 @@ mod tests {
 
         fn dynamic_configs_path(&self) -> Option<&Path> {
             self.dynamic_configs.as_ref().map(|(_, p)| p.as_path())
+        }
+
+        fn persisted_repos_dir(&self) -> Option<&Path> {
+            self.persisted_repos_dir.as_ref().map(|p| p.path())
         }
 
         fn repo_manager(&self) -> Result<RepositoryManager, TestError> {
@@ -879,6 +920,10 @@ mod tests {
                 builder = builder
                     .load_static_configs_dir(dir.path())
                     .map_err(|(builder, errs)| (builder, TestError::LoadStaticConfigs(errs)))?;
+            }
+
+            if let Some(ref persisted_repos_dir) = self.persisted_repos_dir {
+                builder = builder.with_persisted_repos_dir(persisted_repos_dir.path());
             }
 
             Ok(builder)
@@ -1560,6 +1605,7 @@ mod tests {
                   stats: {
                       mirrors: {},
                   },
+                  persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
                   repos: {},
                 }
             }
@@ -1568,7 +1614,7 @@ mod tests {
 
     #[test]
     fn test_building_repo_manager_with_no_static_configs_populates_inspect() {
-        let env = TestEnv::builder().with_empty_dynamic_configs().build();
+        let env = TestEnv::builder().with_empty_dynamic_configs().with_persisted_repos().build();
 
         let inspector = fuchsia_inspect::Inspector::new();
 
@@ -1588,6 +1634,7 @@ mod tests {
                   stats: {
                       mirrors: {},
                   },
+                  persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
                   repos: {},
                 }
             }
@@ -1596,7 +1643,7 @@ mod tests {
 
     #[test]
     fn test_insert_remove_updates_inspect() {
-        let env = TestEnv::builder().with_empty_dynamic_configs().build();
+        let env = TestEnv::builder().with_empty_dynamic_configs().with_persisted_repos().build();
 
         let inspector = fuchsia_inspect::Inspector::new();
 
@@ -1616,6 +1663,7 @@ mod tests {
                   stats: {
                       mirrors: {},
                   },
+                  persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
                   repos: {},
                 }
             }
@@ -1657,6 +1705,7 @@ mod tests {
                     }
                   },
                   static_configs: {},
+                  persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
                   repos: {},
                   stats: {
                       mirrors: {},
@@ -1677,6 +1726,7 @@ mod tests {
                   stats: {
                       mirrors: {},
                   },
+                  persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
                   repos: {},
                 }
             }

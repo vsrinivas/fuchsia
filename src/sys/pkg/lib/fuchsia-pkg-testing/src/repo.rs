@@ -200,6 +200,19 @@ impl Repository {
         Ok(packages)
     }
 
+    /// Generate a [`RepositoryConfigBuilder`] suitable for configuring a
+    /// package resolver to use this repository when it is served at the given
+    /// URL.
+    pub fn make_repo_config_builder(&self, url: RepoUrl) -> RepositoryConfigBuilder {
+        let mut builder = RepositoryConfigBuilder::new(url);
+
+        for key in self.root_keys() {
+            builder = builder.add_root_key(key);
+        }
+
+        builder
+    }
+
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// repository when it is served at the given URL.
     pub fn make_repo_config(
@@ -208,15 +221,12 @@ impl Repository {
         mirror_config: Option<MirrorConfig>,
         use_local_mirror: bool,
     ) -> RepositoryConfig {
-        let mut builder = RepositoryConfigBuilder::new(url);
-
-        for key in self.root_keys() {
-            builder = builder.add_root_key(key);
-        }
+        let mut builder = self.make_repo_config_builder(url);
 
         if let Some(mirror_config) = mirror_config {
             builder = builder.add_mirror(mirror_config)
         }
+
         builder.use_local_mirror(use_local_mirror).build()
     }
 

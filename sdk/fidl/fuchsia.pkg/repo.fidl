@@ -123,6 +123,10 @@ enum RepositoryStorageType {
     /// Ephemeral, or in-memory storage. This repository metadata will be lost
     /// when the process or device is restarted. The default type.
     EPHEMERAL = 1;
+
+    /// Persistent, where the repository metadata is written to mutable storage
+    /// and is available after a reboot.
+    PERSISTENT = 2;
 };
 
 /// The configuration necessary to connect to a mirror.

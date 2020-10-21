@@ -220,12 +220,14 @@ impl ServedRepository {
         Ok(packages)
     }
 
-    /// Generates a `MirrorConfig` that points to this served repository.
+    /// Generates a [`MirrorConfigBuilder`] that points to this served repository.
+    pub fn get_mirror_config_builder(&self) -> MirrorConfigBuilder {
+        MirrorConfigBuilder::new(self.local_url().parse::<Uri>().unwrap()).unwrap()
+    }
+
+    /// Generates a [`MirrorConfig`] that points to this served repository.
     fn get_mirror_config(&self, subscribe: bool) -> MirrorConfig {
-        MirrorConfigBuilder::new(self.local_url().parse::<Uri>().unwrap())
-            .unwrap()
-            .subscribe(subscribe)
-            .build()
+        self.get_mirror_config_builder().subscribe(subscribe).build()
     }
 
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this

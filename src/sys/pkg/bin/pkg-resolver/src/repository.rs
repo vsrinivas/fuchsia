@@ -13,14 +13,16 @@ use {
     anyhow::{anyhow, format_err},
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg::LocalMirrorProxy,
-    fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryKey},
+    fidl_fuchsia_pkg_ext::{
+        BlobId, MirrorConfig, RepositoryConfig, RepositoryKey, RepositoryStorageType,
+    },
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::lock::Mutex as AsyncMutex,
     serde::{Deserialize, Serialize},
-    std::sync::Arc,
+    std::{path::Path, sync::Arc},
     tuf::{
         client::Config,
         crypto::PublicKey,
@@ -28,7 +30,7 @@ use {
         interchange::Json,
         metadata::{MetadataVersion, TargetPath},
         repository::{
-            EphemeralRepository, HttpRepositoryBuilder, RepositoryProvider,
+            EphemeralRepository, FileSystemRepository, HttpRepositoryBuilder, RepositoryProvider,
             RepositoryStorageProvider,
         },
     },
@@ -79,69 +81,16 @@ struct RepositoryInspectState {
 
 impl Repository {
     pub async fn new(
+        persisted_repos_dir: Option<&Path>,
         config: &RepositoryConfig,
         mut cobalt_sender: CobaltSender,
         node: inspect::Node,
         local_mirror: Option<LocalMirrorProxy>,
     ) -> Result<Self, anyhow::Error> {
-        let local = EphemeralRepository::new();
-        let local: Box<dyn RepositoryStorageProvider<_> + Send> = Box::new(local);
-
-        if config.use_local_mirror() && !config.mirrors().is_empty() {
-            return Err(format_err!("Cannot have a local mirror and remote mirrors!"));
-        }
-
         let mirror_config = config.mirrors().get(0);
-
-        let remote: Box<dyn RepositoryProvider<Json> + Send> =
-            match (local_mirror, config.use_local_mirror(), mirror_config.as_ref()) {
-                (Some(local_mirror), true, _) => Box::new(LocalMirrorRepositoryProvider::new(
-                    local_mirror,
-                    config.repo_url().clone(),
-                )),
-                (_, false, Some(mirror_config)) => {
-                    let remote_url = mirror_config.mirror_url().to_owned();
-                    Box::new(
-                        HttpRepositoryBuilder::new_with_uri(
-                            remote_url,
-                            fuchsia_hyper::new_https_client(),
-                        )
-                        .build(),
-                    )
-                }
-                (local_mirror, _, _) => {
-                    return Err(format_err!(
-                "Repo config has invalid mirror configuration: config={:?}, use_local_mirror={}",
-                config,
-                local_mirror.is_some()
-            ))
-                }
-            };
-
-        let mut root_keys = vec![];
-
-        // FIXME(42863) we used keyid_hash_algorithms in order to verify compatibility with the
-        // TUF-1.0 spec against python-tuf. python-tuf is thinking about removing
-        // keyid_hash_algorithms, so there's no real reason for us to use them anymore. In order to
-        // do this in a forward-compatible way, we need to create 2 `tuf::PublicKey` keys, one with
-        // a keyid_hash_algorithms specified, and one without. This will let us migrate the
-        // metadata without needing to modify the resolver. Once everyone has migrated over, we can
-        // remove our use of `PublicKey::from_ed25519_with_keyid_hash_algorithms`.
-        for key in config.root_keys().iter() {
-            match key {
-                RepositoryKey::Ed25519(bytes) => {
-                    root_keys.push(PublicKey::from_ed25519(bytes.clone())?);
-                    root_keys.push(PublicKey::from_ed25519_with_keyid_hash_algorithms(
-                        bytes.clone(),
-                        Some(vec!["sha256".to_string()]),
-                    )?);
-                    root_keys.push(PublicKey::from_ed25519_with_keyid_hash_algorithms(
-                        bytes.clone(),
-                        Some(vec!["sha256".to_string(), "sha512".to_string()]),
-                    )?);
-                }
-            }
-        }
+        let local = get_local_repo(persisted_repos_dir, config)?;
+        let remote = get_remote_repo(config, mirror_config, local_mirror)?;
+        let root_keys = get_root_keys(config)?;
 
         let updating_client =
             updating_tuf_client::UpdatingTufClient::from_tuf_client_and_mirror_config(
@@ -238,6 +187,97 @@ impl Repository {
     }
 }
 
+fn get_local_repo(
+    persisted_repos_dir: Option<&Path>,
+    config: &RepositoryConfig,
+) -> Result<Box<dyn RepositoryStorageProvider<Json> + Send>, anyhow::Error> {
+    match config.repo_storage_type() {
+        RepositoryStorageType::Ephemeral => {
+            let local = EphemeralRepository::new();
+            Ok(Box::new(local))
+        }
+        RepositoryStorageType::Persistent => {
+            let persisted_repos_dir = if let Some(persisted_repos_dir) = persisted_repos_dir {
+                persisted_repos_dir
+            } else {
+                return Err(format_err!(
+                    "Support for persistent repositories is disabled, cannot create repo with persistent storage"
+                ));
+            };
+
+            let path = persisted_repos_dir.join(config.repo_url().host());
+            let local = FileSystemRepository::new(path.into())?;
+            Ok(Box::new(local))
+        }
+    }
+}
+
+fn get_remote_repo(
+    config: &RepositoryConfig,
+    mirror_config: Option<&MirrorConfig>,
+    local_mirror: Option<LocalMirrorProxy>,
+) -> Result<Box<dyn RepositoryProvider<Json> + Send>, anyhow::Error> {
+    if config.use_local_mirror() && mirror_config.is_some() {
+        return Err(format_err!("Cannot have a local mirror and remote mirrors!"));
+    }
+
+    let remote: Box<dyn RepositoryProvider<Json> + Send> =
+        match (local_mirror, config.use_local_mirror(), mirror_config.as_ref()) {
+            (Some(local_mirror), true, _) => Box::new(LocalMirrorRepositoryProvider::new(
+                local_mirror,
+                config.repo_url().clone(),
+            )),
+            (_, false, Some(mirror_config)) => {
+                let remote_url = mirror_config.mirror_url().to_owned();
+                Box::new(
+                    HttpRepositoryBuilder::new_with_uri(
+                        remote_url,
+                        fuchsia_hyper::new_https_client(),
+                    )
+                    .build(),
+                )
+            }
+            (local_mirror, _, _) => {
+                return Err(format_err!(
+            "Repo config has invalid mirror configuration: config={:?}, use_local_mirror={}",
+            config,
+            local_mirror.is_some()
+        ))
+            }
+        };
+
+    Ok(remote)
+}
+
+fn get_root_keys(config: &RepositoryConfig) -> Result<Vec<PublicKey>, anyhow::Error> {
+    let mut root_keys = vec![];
+
+    // FIXME(42863) we used keyid_hash_algorithms in order to verify compatibility with the
+    // TUF-1.0 spec against python-tuf. python-tuf is thinking about removing
+    // keyid_hash_algorithms, so there's no real reason for us to use them anymore. In order to
+    // do this in a forward-compatible way, we need to create 2 `tuf::PublicKey` keys, one with
+    // a keyid_hash_algorithms specified, and one without. This will let us migrate the
+    // metadata without needing to modify the resolver. Once everyone has migrated over, we can
+    // remove our use of `PublicKey::from_ed25519_with_keyid_hash_algorithms`.
+    for key in config.root_keys().iter() {
+        match key {
+            RepositoryKey::Ed25519(bytes) => {
+                root_keys.push(PublicKey::from_ed25519(bytes.clone())?);
+                root_keys.push(PublicKey::from_ed25519_with_keyid_hash_algorithms(
+                    bytes.clone(),
+                    Some(vec!["sha256".to_string()]),
+                )?);
+                root_keys.push(PublicKey::from_ed25519_with_keyid_hash_algorithms(
+                    bytes.clone(),
+                    Some(vec!["sha256".to_string(), "sha512".to_string()]),
+                )?);
+            }
+        }
+    }
+
+    Ok(root_keys)
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -260,6 +300,7 @@ mod tests {
 
     struct TestEnvBuilder<'a> {
         server_repo_builder: RepositoryBuilder<'a>,
+        persisted_repos: bool,
     }
 
     impl<'a> TestEnvBuilder<'a> {
@@ -268,22 +309,35 @@ mod tests {
             self
         }
 
+        fn enable_persisted_repos(mut self) -> Self {
+            self.persisted_repos = true;
+            self
+        }
+
         async fn build(self) -> TestEnv {
+            let persisted_repos_dir =
+                if self.persisted_repos { Some(tempfile::tempdir().unwrap()) } else { None };
             let repo = self.server_repo_builder.build().await.expect("created repo");
 
-            TestEnv { repo: Arc::new(repo) }
+            TestEnv { persisted_repos_dir, repo: Arc::new(repo) }
         }
     }
 
     struct TestEnv {
         repo: Arc<TestRepository>,
+        persisted_repos_dir: Option<tempfile::TempDir>,
     }
 
     impl TestEnv {
         fn builder<'a>() -> TestEnvBuilder<'a> {
             TestEnvBuilder {
                 server_repo_builder: RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH),
+                persisted_repos: false,
             }
+        }
+
+        fn persisted_repos_dir(&self) -> Option<&Path> {
+            self.persisted_repos_dir.as_ref().map(|p| p.path())
         }
 
         async fn new() -> Self {
@@ -298,6 +352,7 @@ mod tests {
             let (sender, _) = futures::channel::mpsc::channel(0);
             let cobalt_sender = CobaltSender::new(sender);
             Repository::new(
+                self.persisted_repos_dir.as_ref().map(|d| d.path()),
                 config,
                 cobalt_sender,
                 inspect::Inspector::new().root().create_child("inner-node"),
@@ -515,6 +570,40 @@ mod tests {
         // Will hang if auto client never reconnects
         served_repository.wait_for_n_connected_auto_clients(1).await;
     }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn persisted_repos() {
+        let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
+        let env = TestEnv::builder().add_package(&pkg).enable_persisted_repos().build().await;
+
+        let (served_repository, _repo_config) = env.serve_repo().start(TEST_REPO_URL);
+
+        let repo_url = "fuchsia-pkg://test".parse().unwrap();
+        let repo_config = env
+            .repo
+            .make_repo_config_builder(repo_url)
+            .add_mirror(served_repository.get_mirror_config_builder().build())
+            .repo_storage_type(RepositoryStorageType::Persistent)
+            .build();
+
+        let mut repo = env.repo(&repo_config).await.expect("created opened repo");
+
+        let target_path =
+            TargetPath::new("just-meta-far/0".to_string()).expect("created target path");
+
+        // Obtain merkle root and meta far size
+        let CustomTargetMetadata { merkle, size } =
+            repo.get_merkle_at_path(&target_path).await.expect("fetched merkle from tuf");
+
+        // Verify what we got from tuf was correct
+        assert_eq!(merkle.as_bytes(), pkg.meta_far_merkle_root().as_bytes());
+        assert_eq!(size, pkg.meta_far().unwrap().metadata().unwrap().len());
+
+        // Make sure the metadata was persisted to disk
+        let dir = env.persisted_repos_dir().unwrap().join("test").join("metadata");
+
+        assert!(dir.join("1.root.json").exists());
+    }
 }
 
 #[cfg(test)]
@@ -552,6 +641,7 @@ mod inspect_tests {
         let repo_config = served_repository.make_repo_config(repo_url);
 
         let repo = Repository::new(
+            None,
             &repo_config,
             dummy_sender(),
             inspector.root().create_child("repo-node"),
@@ -589,6 +679,7 @@ mod inspect_tests {
     #[fasync::run_singlethreaded(test)]
     async fn get_merkle_at_path_updates_inspect() {
         clock::mock::set(zx::Time::from_nanos(0));
+
         let inspector = inspect::Inspector::new();
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let repo = Arc::new(
@@ -602,6 +693,7 @@ mod inspect_tests {
         let repo_url = RepoUrl::parse(TEST_REPO_URL).expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
         let mut repo = Repository::new(
+            None,
             &repo_config,
             dummy_sender(),
             inspector.root().create_child("repo-node"),
@@ -659,6 +751,7 @@ mod inspect_tests {
         let repo_url = RepoUrl::parse(TEST_REPO_URL).expect("created repo url");
         let repo_config = served_repository.make_repo_config_with_subscribe(repo_url);
         let repo = Repository::new(
+            None,
             &repo_config,
             dummy_sender(),
             inspector.root().create_child("repo-node"),

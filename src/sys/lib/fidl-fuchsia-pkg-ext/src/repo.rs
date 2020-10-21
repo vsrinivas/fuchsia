@@ -20,6 +20,10 @@ pub enum RepositoryStorageType {
     /// Store the repository in-memory. This metadata will be lost if the process or device is
     /// restarted.
     Ephemeral,
+
+    /// Store the metadata to persitent mutable storage. This metadata will still be available if
+    /// the process or device is restarted.
+    Persistent,
 }
 
 /// Convenience wrapper for the FIDL RepositoryKeyConfig type
@@ -240,6 +244,7 @@ impl From<fidl::RepositoryStorageType> for RepositoryStorageType {
     fn from(other: fidl::RepositoryStorageType) -> Self {
         match other {
             fidl::RepositoryStorageType::Ephemeral => RepositoryStorageType::Ephemeral,
+            fidl::RepositoryStorageType::Persistent => RepositoryStorageType::Persistent,
         }
     }
 }
@@ -248,6 +253,7 @@ impl From<RepositoryStorageType> for fidl::RepositoryStorageType {
     fn from(storage_type: RepositoryStorageType) -> Self {
         match storage_type {
             RepositoryStorageType::Ephemeral => fidl::RepositoryStorageType::Ephemeral,
+            RepositoryStorageType::Persistent => fidl::RepositoryStorageType::Persistent,
         }
     }
 }
@@ -358,6 +364,11 @@ impl RepositoryConfig {
     pub fn use_local_mirror(&self) -> bool {
         self.use_local_mirror
     }
+
+    /// Returns the repository storage type.
+    pub fn repo_storage_type(&self) -> &RepositoryStorageType {
+        &self.repo_storage_type
+    }
 }
 
 impl TryFrom<fidl::RepositoryConfig> for RepositoryConfig {
@@ -396,7 +407,8 @@ impl TryFrom<fidl::RepositoryConfig> for RepositoryConfig {
             1
         };
 
-        let storage_type = RepositoryStorageType::Ephemeral;
+        let storage_type =
+            other.storage_type.map(|r| r.into()).unwrap_or(RepositoryStorageType::Ephemeral);
 
         Ok(Self {
             repo_url: repo_url,
@@ -963,6 +975,39 @@ mod tests {
     }
 
     #[test]
+    fn test_repository_config_builder() {
+        let repo_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let builder = RepositoryConfigBuilder::new(repo_url.clone());
+        assert_eq!(
+            builder.clone().build(),
+            RepositoryConfig {
+                repo_url: repo_url.clone(),
+                root_version: 1,
+                root_threshold: 1,
+                root_keys: vec![],
+                mirrors: vec![],
+                update_package_url: None,
+                use_local_mirror: false,
+                repo_storage_type: RepositoryStorageType::Ephemeral,
+            }
+        );
+
+        assert_eq!(
+            builder.clone().repo_storage_type(RepositoryStorageType::Persistent).build(),
+            RepositoryConfig {
+                repo_url: repo_url.clone(),
+                root_version: 1,
+                root_threshold: 1,
+                root_keys: vec![],
+                mirrors: vec![],
+                update_package_url: None,
+                use_local_mirror: false,
+                repo_storage_type: RepositoryStorageType::Persistent,
+            }
+        );
+    }
+
+    #[test]
     fn test_repository_config_into_fidl() {
         let config = RepositoryConfig {
             repo_url: "fuchsia-pkg://fuchsia.com".try_into().unwrap(),
@@ -1033,6 +1078,43 @@ mod tests {
                 ),
                 use_local_mirror: false,
                 repo_storage_type: RepositoryStorageType::Ephemeral,
+            }
+        );
+    }
+
+    #[test]
+    fn test_repository_config_from_fidl_with_storage_type() {
+        let as_fidl = fidl::RepositoryConfig {
+            repo_url: Some("fuchsia-pkg://fuchsia.com".try_into().unwrap()),
+            root_version: Some(1),
+            root_threshold: Some(1),
+            root_keys: Some(vec![fidl::RepositoryKeyConfig::Ed25519Key(vec![0xf1, 15, 16, 3])]),
+            mirrors: Some(vec![fidl::MirrorConfig {
+                mirror_url: Some("http://example.com/tuf/repo/".into()),
+                subscribe: Some(true),
+                blob_mirror_url: None,
+            }]),
+            update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
+            use_local_mirror: None,
+            storage_type: Some(fidl::RepositoryStorageType::Persistent),
+        };
+        assert_matches!(
+            RepositoryConfig::try_from(as_fidl),
+            Ok(repository_config) if repository_config == RepositoryConfig {
+                repo_url: "fuchsia-pkg://fuchsia.com".try_into().unwrap(),
+                root_version: 1,
+                root_threshold: 1,
+                root_keys: vec![RepositoryKey::Ed25519(vec![0xf1, 15, 16, 3]),],
+                mirrors: vec![MirrorConfig {
+                    mirror_url: "http://example.com/tuf/repo/".parse::<Uri>().unwrap(),
+                    subscribe: true,
+                    blob_mirror_url: "http://example.com/tuf/repo/blobs".parse::<Uri>().unwrap(),
+                },],
+                update_package_url: Some(
+                    "fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()
+                ),
+                use_local_mirror: false,
+                repo_storage_type: RepositoryStorageType::Persistent,
             }
         );
     }

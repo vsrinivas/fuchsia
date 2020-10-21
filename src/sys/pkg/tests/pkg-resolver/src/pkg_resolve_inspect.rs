@@ -46,6 +46,7 @@ async fn initial_inspect_state() {
                 dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
                 dynamic_configs: {},
                 static_configs: {},
+                persisted_repos_dir: "None".to_string(),
                 repos: {},
                 stats: {
                     mirrors: {}
@@ -83,6 +84,7 @@ async fn adding_repo_updates_inspect_state() {
                     }
                 },
                 static_configs: {},
+                persisted_repos_dir: "None".to_string(),
                 repos: {},
                 stats: {
                     mirrors: {}
@@ -135,6 +137,7 @@ async fn resolving_package_updates_inspect_state() {
                     }
                 },
                 static_configs: {},
+                persisted_repos_dir: "None".to_string(),
                 repos: {
                     "example.com": {
                         merkles_successfully_resolved_count: 1u64,
