@@ -106,6 +106,8 @@ async fn main() -> Result<(), Error> {
 
     futures.push(run_periodic_update_check(update_manager.clone(), &config).boxed());
 
+    // In order to ensure cobalt gets a valid channel quickly, we sometimes perform an additional
+    // update check 60 seconds in.
     futures.push(
         async move {
             if config.poll_frequency().is_some() {
