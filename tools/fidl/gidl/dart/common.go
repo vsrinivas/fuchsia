@@ -47,6 +47,24 @@ func buildHandleValues(handles []gidlir.Handle) string {
 	return builder.String()
 }
 
+func buildUnknownTableData(fields []gidlir.Field) string {
+	if len(fields) == 0 {
+		return "null"
+	}
+	var builder strings.Builder
+	builder.WriteString("{\n")
+	for _, field := range fields {
+		unknownData := field.Value.(gidlir.UnknownData)
+		builder.WriteString(fmt.Sprintf(
+			"%d: fidl.UnknownRawData(\n%s,\n%s\n),",
+			field.Key.UnknownOrdinal,
+			buildBytes(unknownData.Bytes),
+			buildHandleValues(unknownData.Handles)))
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
 func visit(value interface{}, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool:
@@ -109,9 +127,11 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 
 func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 	var args []string
+	var unknownTableFields []gidlir.Field
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
-			panic("unknown field not supported")
+			unknownTableFields = append(unknownTableFields, field)
+			continue
 		}
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
@@ -119,6 +139,10 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 		}
 		val := visit(field.Value, fieldDecl)
 		args = append(args, fmt.Sprintf("%s: %s", fidlcommon.ToLowerCamelCase(field.Key.Name), val))
+	}
+	if len(unknownTableFields) > 0 {
+		args = append(args,
+			fmt.Sprintf("$unknownData: %s", buildUnknownTableData(unknownTableFields)))
 	}
 	return fmt.Sprintf("%s(%s)", fidlcommon.ToUpperCamelCase(value.Name), strings.Join(args, ", "))
 }

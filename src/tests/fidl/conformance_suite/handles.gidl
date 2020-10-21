@@ -346,7 +346,7 @@ decode_success("ChannelMaxUnknownHandlesNotStored") {
 // this test is the same as ChannelMaxUnknownHandlesNotStored, but expects
 // that the unknown data is stored in the value instead of discarded
 decode_success("ChannelMaxUnknownHandles") {
-    bindings_allowlist = [go],
+    bindings_allowlist = [dart,go],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),

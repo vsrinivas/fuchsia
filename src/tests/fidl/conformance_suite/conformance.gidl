@@ -257,7 +257,7 @@ decode_success("TableWithUnknownReservedFieldsNotStored") {
 // this test is the same as TableWithUnknownReservedFieldsNotStored, but expects
 // that the unknown data is stored in the value instead of discarded
 decode_success("TableWithUnknownReservedFields") {
-    bindings_allowlist = [go],
+    bindings_allowlist = [dart,go],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -325,7 +325,7 @@ decode_success("TableWithUnknownTrailingFieldsNotStored") {
 // this test is the same as TableWithUnknownTrailingFieldsNotStored, but expects
 // that the unknown data is stored in the value instead of discarded
 decode_success("TableWithUnknownTrailingFields") {
-    bindings_allowlist = [go],
+    bindings_allowlist = [dart,go],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -397,7 +397,7 @@ decode_success("TableWithUnknownTrailingFieldsAndHandlesNotStored") {
 // this test is the same as TableWithUnknownTrailingFieldsAndHandlesNotStored,
 // but expects that the unknown data is stored in the value instead of discarded
 decode_success("TableWithUnknownTrailingFieldsAndHandles") {
-    bindings_allowlist = [go],
+    bindings_allowlist = [dart,go],
     handle_defs = {
         #0 = event(),
         #1 = event(),
