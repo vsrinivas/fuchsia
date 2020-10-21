@@ -17,7 +17,6 @@
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/assert.h>
-#include <zircon/listnode.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
@@ -32,6 +31,8 @@
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
+
+#include "src/lib/listnode/listnode.h"
 
 // defined in report.cpp
 void print_report_descriptor(const uint8_t* rpt_desc, size_t desc_len);

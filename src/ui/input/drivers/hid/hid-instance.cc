@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
-#include <zircon/listnode.h>
 
 #include <algorithm>
 #include <memory>
@@ -22,6 +21,7 @@
 #include <hid/boot.h>
 
 #include "hid.h"
+#include "src/lib/listnode/listnode.h"
 
 namespace hid_driver {
 
