@@ -9,11 +9,17 @@ import("//build/testing/environments.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
-gidl_llcpp_conformance("generated_conformance_test") {
-  testonly = true
-  inputs = conformance_suite_gidl_files
-  fidl = conformance_suite_fidl_target
-  deps = [ "//third_party/googletest:gtest" ]
+gidl_deps = []
+foreach(gidl_file, conformance_suite_gidl_files) {
+  gidl_name = get_path_info(gidl_file, "name")
+  target = "conformance_suite__${gidl_name}"
+  gidl_deps += [ ":" + target ]
+  gidl_llcpp_conformance(target) {
+    testonly = true
+    inputs = [ gidl_file ]
+    fidl = conformance_suite_fidl_target
+    deps = [ "//third_party/googletest:gtest" ]
+  }
 }
 
 executable("fidl_llcpp_conformance_test_bin") {
@@ -27,15 +33,14 @@ executable("fidl_llcpp_conformance_test_bin") {
   ]
 
   deps = [
-    ":generated_conformance_test",
-    "//sdk/lib/fidl/cpp/test:fidl_test_llcpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+           "//sdk/lib/fidl/cpp/test:fidl_test_llcpp",
+           "//src/lib/fxl/test:gtest_main",
+           "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
+           "//third_party/googletest:gtest",
+           "//zircon/public/lib/fbl",
+           "//zircon/system/ulib/async-loop:async-loop-cpp",
+           "//zircon/system/ulib/async-loop:async-loop-default",
+         ] + gidl_deps
 }
 
 test_package("fidl-llcpp-conformance-test") {
@@ -53,7 +58,6 @@ test("fidl_llcpp_conformance_test") {
   output_name = "fidl_llcpp_conformance_host_test"
   sources = [ "test_utils.cc" ]
   deps = [
-    ":generated_conformance_test",
     "//src/lib/fxl/test:gtest_main",
     "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
     "//third_party/googletest:gtest",
