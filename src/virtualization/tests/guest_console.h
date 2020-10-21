@@ -51,6 +51,9 @@ class GuestConsole {
   // |result|, and consume the buffer so that only `yyy` remains.
   zx_status_t WaitForMarker(const std::string& marker, std::string* result = nullptr);
 
+  // Waits for the socket interface to be closed, or a deadline is reached.
+  zx_status_t WaitForSocketClosed();
+
  private:
   // Waits for something to be written to the socket and drains it.
   zx_status_t WaitForAny(zx::duration timeout);

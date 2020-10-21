@@ -20,9 +20,9 @@ zx_status_t ZxSocket::Send(zx::time deadline, const std::string& message) {
     //
     // Note "wait_one" returns ZX_OK if already signalled, even if the
     // deadline has passed.
-    zx_status_t status;
     zx_signals_t pending = 0;
-    status = socket_.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED, deadline, &pending);
+    zx_status_t status =
+        socket_.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED, deadline, &pending);
     if (status != ZX_OK) {
       return status;
     }
@@ -52,14 +52,13 @@ zx_status_t ZxSocket::Send(zx::time deadline, const std::string& message) {
 
 zx_status_t ZxSocket::Receive(zx::time deadline, std::string* result) {
   while (true) {
-    zx_status_t status;
-
     // Wait until the socket is readable, is closed, or timeout occurs.
     //
     // Note "wait_one" returns ZX_OK if already signalled, even if the
     // deadline has passed.
     zx_signals_t pending = 0;
-    status = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, deadline, &pending);
+    zx_status_t status =
+        socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, deadline, &pending);
     if (status != ZX_OK) {
       return status;
     }
@@ -83,6 +82,15 @@ zx_status_t ZxSocket::Receive(zx::time deadline, std::string* result) {
     result->append(buffer.data(), actual);
     return ZX_OK;
   }
+}
+
+zx_status_t ZxSocket::WaitForClosed(zx::time deadline) {
+  zx_signals_t pending = 0;
+  zx_status_t status = socket_.wait_one(ZX_SOCKET_PEER_CLOSED, deadline, &pending);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return pending & ZX_SOCKET_PEER_CLOSED ? ZX_OK : ZX_ERR_BAD_STATE;
 }
 
 zx_status_t DrainSocket(SocketInterface* socket, std::string* result) {

@@ -162,6 +162,10 @@ zx_status_t GuestConsole::WaitForMarker(const std::string& marker, std::string* 
   }
 }
 
+zx_status_t GuestConsole::WaitForSocketClosed() {
+  return socket_->WaitForClosed(zx::deadline_after(kTestTimeout));
+}
+
 zx_status_t GuestConsole::Drain() {
   std::string result;
   zx_status_t status = DrainSocket(socket_.get(), &result);

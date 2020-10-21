@@ -186,6 +186,15 @@ zx_status_t EnclosedGuest::Start() {
   return ZX_OK;
 }
 
+zx_status_t EnclosedGuest::Stop() {
+  zx_status_t status = ShutdownAndWait();
+  if (status != ZX_OK) {
+    return status;
+  }
+  loop_.Quit();
+  return ZX_OK;
+}
+
 zx_status_t EnclosedGuest::RunUtil(const std::string& util, const std::vector<std::string>& argv,
                                    std::string* result) {
   return Execute(GetTestUtilCommand(util, argv), {}, result);
@@ -216,6 +225,14 @@ zx_status_t ZirconEnclosedGuest::WaitForSystemReady() {
   }
   FX_LOGS(ERROR) << "Failed to wait for appmgr";
   return ZX_ERR_TIMED_OUT;
+}
+
+zx_status_t ZirconEnclosedGuest::ShutdownAndWait() {
+  zx_status_t status = GetConsole()->SendBlocking("dm shutdown\n");
+  if (status != ZX_OK) {
+    return status;
+  }
+  return GetConsole()->WaitForSocketClosed();
 }
 
 std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
@@ -250,6 +267,14 @@ zx_status_t DebianEnclosedGuest::WaitForSystemReady() {
   }
   FX_LOGS(ERROR) << "Failed to wait for shell";
   return ZX_ERR_TIMED_OUT;
+}
+
+zx_status_t DebianEnclosedGuest::ShutdownAndWait() {
+  zx_status_t status = GetConsole()->SendBlocking("shutdown now\n");
+  if (status != ZX_OK) {
+    return status;
+  }
+  return GetConsole()->WaitForSocketClosed();
 }
 
 std::vector<std::string> DebianEnclosedGuest::GetTestUtilCommand(
@@ -413,11 +438,12 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
   return ZX_OK;
 }
 
-void TerminaEnclosedGuest::WaitForSystemStopped() {
+zx_status_t TerminaEnclosedGuest::ShutdownAndWait() {
   if (server_) {
     server_->inner()->Shutdown();
     server_->inner()->Wait();
   }
+  return ZX_OK;
 }
 
 zx_status_t TerminaEnclosedGuest::Execute(const std::vector<std::string>& argv,

@@ -23,7 +23,7 @@ class GuestTest : public ::testing::Test {
   }
 
   static void TearDownTestCase() {
-    enclosed_guest_->Stop();
+    EXPECT_EQ(enclosed_guest_->Stop(), ZX_OK);
     delete enclosed_guest_;
   }
 

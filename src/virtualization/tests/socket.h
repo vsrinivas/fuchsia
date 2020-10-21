@@ -33,6 +33,9 @@ class SocketInterface {
   // Returns when one or more bytes has been received, or the given timeout has
   // passed.
   virtual zx_status_t Receive(zx::time deadline, std::string* result) = 0;
+
+  // Waits for the socket interface to be closed, or a |deadline| is reached.
+  virtual zx_status_t WaitForClosed(zx::time deadline) = 0;
 };
 
 class ZxSocket : public SocketInterface {
@@ -44,6 +47,9 @@ class ZxSocket : public SocketInterface {
 
   // |SocketInterface::Receive|
   zx_status_t Receive(zx::time deadline, std::string* result) override;
+
+  // |SocketInterface::WaitForClosed|
+  zx_status_t WaitForClosed(zx::time deadline) override;
 
  private:
   zx::socket socket_;

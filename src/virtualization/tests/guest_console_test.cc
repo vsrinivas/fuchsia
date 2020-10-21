@@ -29,6 +29,8 @@ class FakeSocket : public SocketInterface {
     return ZX_OK;
   }
 
+  zx_status_t WaitForClosed(zx::time deadline) override { return ZX_OK; }
+
  private:
   size_t reads_performed_ = 0;
   std::vector<std::string> responses_;

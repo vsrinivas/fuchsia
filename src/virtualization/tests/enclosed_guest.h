@@ -47,10 +47,7 @@ class EnclosedGuest {
   virtual ~EnclosedGuest() {}
 
   zx_status_t Start();
-  void Stop() {
-    WaitForSystemStopped();
-    loop_.Quit();
-  }
+  zx_status_t Stop();
 
   bool Ready() const { return ready_; }
 
@@ -97,10 +94,10 @@ class EnclosedGuest {
   // Waits until the guest is ready to run test utilities, called by Start.
   virtual zx_status_t WaitForSystemReady() = 0;
 
-  virtual std::string ShellPrompt() = 0;
+  // Waits for the guest to perform a graceful shutdown.
+  virtual zx_status_t ShutdownAndWait() = 0;
 
-  // Waits for the guest to perform an graceful shutdown operations.
-  virtual void WaitForSystemStopped() {}
+  virtual std::string ShellPrompt() = 0;
 
   // Invoked after the guest |Realm| has been created but before the guest
   // has been launched.
@@ -149,6 +146,7 @@ class ZirconEnclosedGuest : public EnclosedGuest {
  protected:
   zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
+  zx_status_t ShutdownAndWait() override;
   std::string ShellPrompt() override { return "$ "; }
 };
 
@@ -162,6 +160,7 @@ class DebianEnclosedGuest : public EnclosedGuest {
  protected:
   zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
+  zx_status_t ShutdownAndWait() override;
   std::string ShellPrompt() override { return "$ "; }
 };
 
@@ -178,7 +177,7 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
  protected:
   zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
-  void WaitForSystemStopped() override;
+  zx_status_t ShutdownAndWait() override;
   std::string ShellPrompt() override { return "$ "; }
 
  private:
