@@ -144,7 +144,7 @@ async fn main() -> Result<(), Error> {
                                 responder.send(
                                     zx::Status::OK.into_raw(),
                                     msg,
-                                    zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
+                                    zx::Time::get_monotonic().into_nanos(),
                                 )?;
                             }
                             _ => panic!("unexpected call to fuchsia.hardware.input.Device"),

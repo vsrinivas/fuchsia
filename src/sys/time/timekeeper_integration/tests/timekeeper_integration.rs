@@ -473,7 +473,7 @@ fn test_invalid_rtc_start_clock_from_time_source() {
             assert_leq!(reported_utc, *VALID_TIME + (monotonic_after - sample_monotonic));
             // RTC should also be set.
             let rtc_update = poll_until(|| async { rtc_updates.to_vec().pop() }).await;
-            let monotonic_after_rtc_set = zx::Time::get(zx::ClockId::Monotonic);
+            let monotonic_after_rtc_set = zx::Time::get_monotonic();
             let rtc_reported_utc = rtc_time_to_zx_time(rtc_update);
             assert_geq!(rtc_reported_utc, *VALID_TIME);
             assert_leq!(
@@ -551,7 +551,7 @@ fn test_start_clock_from_rtc() {
             assert_leq!(clock_utc, *VALID_TIME + (monotonic_after_read - sample_monotonic));
             // RTC should be set too.
             let rtc_update = poll_until(|| async { rtc_updates.to_vec().pop() }).await;
-            let monotonic_after_rtc_set = zx::Time::get(zx::ClockId::Monotonic);
+            let monotonic_after_rtc_set = zx::Time::get_monotonic();
             let rtc_reported_utc = rtc_time_to_zx_time(rtc_update);
             assert_geq!(rtc_reported_utc, *VALID_TIME);
             assert_leq!(

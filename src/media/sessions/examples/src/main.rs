@@ -37,7 +37,7 @@ impl Player {
         if state == PlayerState::Playing {
             TimelineFunction {
                 subject_time: 0,
-                reference_time: zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
+                reference_time: zx::Time::get_monotonic().into_nanos(),
                 subject_delta: 1,
                 reference_delta: 1,
             }

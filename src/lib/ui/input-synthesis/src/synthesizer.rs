@@ -42,7 +42,7 @@ pub trait InputDevice {
 }
 
 fn monotonic_nanos() -> Result<u64, Error> {
-    u64::try_from(zx::Time::get(zx::ClockId::Monotonic).into_nanos()).map_err(Into::into)
+    u64::try_from(zx::Time::get_monotonic().into_nanos()).map_err(Into::into)
 }
 
 fn repeat_with_delay(

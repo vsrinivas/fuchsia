@@ -17,5 +17,5 @@ fn ticks_get(b: &mut Bencher) {
 }
 
 fn monotonic_time(b: &mut Bencher) {
-    b.iter(|| black_box(zx::Time::get(zx::ClockId::Monotonic)));
+    b.iter(|| black_box(zx::Time::get_monotonic()));
 }

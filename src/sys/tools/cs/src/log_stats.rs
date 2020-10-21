@@ -217,7 +217,7 @@ impl fmt::Display for LogStats {
         }
         output_str.push_str(&format!("{:<7}{:<10}{}\n", "Total", "ERROR/h", "Component"));
 
-        let now = zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000_000;
+        let now = zx::Time::get_monotonic().into_nanos() / 1_000_000_000;
 
         for stats in &self.stats_list {
             for i in (min_severity_int..=max_severity_int).rev() {

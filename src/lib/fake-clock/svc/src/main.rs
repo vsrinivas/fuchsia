@@ -424,7 +424,7 @@ mod tests {
     #[test]
     fn test_event_heap() {
         set_logger_for_test();
-        let time = zx::Time::get(zx::ClockId::Monotonic);
+        let time = zx::Time::get_monotonic();
         let after = time + 10.millis();
         let e1 = PendingEvent { time, event: 0 };
         let e2 = PendingEvent { time: after, event: 1 };

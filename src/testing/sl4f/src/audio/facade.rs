@@ -222,7 +222,7 @@ impl OutputWorker {
                                 fx_log_info!("Extraction OnPositionNotify received before OnStart");
                             }
                             last_timestamp = zx::Time::from_nanos(start_time);
-                            last_event_time = zx::Time::get(zx::ClockId::Monotonic);
+                            last_event_time = zx::Time::get_monotonic();
                         },
                         Some(OutputEvent::OnStop { stop_time, ring_position }) => {
                             if last_timestamp == zx::Time::from_nanos(0) {
@@ -260,7 +260,7 @@ impl OutputWorker {
                             // than 150ms. This is highly abnormal and indicates possible glitching
                             // while receiving playback audio from the system and/or extracting it
                             // for analysis.
-                            let now = zx::Time::get(zx::ClockId::Monotonic);
+                            let now = zx::Time::get_monotonic();
                             let observed_interval = now - last_event_time;
 
                             if  observed_interval > zx::Duration::from_millis(150) {
@@ -606,7 +606,7 @@ impl InputWorker {
                                 fx_log_info!("Injection OnPositionNotify received before OnStart");
                             }
                             last_timestamp = zx::Time::from_nanos(start_time);
-                            last_event_time = zx::Time::get(zx::ClockId::Monotonic);
+                            last_event_time = zx::Time::get_monotonic();
                         },
                         Some(InputEvent::OnStop { stop_time, ring_position }) => {
                             if last_timestamp == zx::Time::from_nanos(0) {
@@ -644,7 +644,7 @@ impl InputWorker {
                             // than 150ms. This is highly abnormal and indicates possible glitching
                             // while receiving audio to be injected and/or providing it to the
                             // system.
-                            let now = zx::Time::get(zx::ClockId::Monotonic);
+                            let now = zx::Time::get_monotonic();
                             let observed_interval = now - last_event_time;
 
                             if  observed_interval > zx::Duration::from_millis(150) {
