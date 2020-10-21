@@ -94,10 +94,10 @@ After creating a change, to request a code review, do the following:
 
 1. Go to your [Fuchsia Gerrit dashboard](https://fuchsia-review.googlesource.com/dashboard/self).
 1. Click your change, which appears in the *Outgoing reviews* section.
-1. Click *ADD REVIEWER*.
+1. Click **ADD REVIEWER**.
 1. Add reviewers by email address. You can refer to the `OWNERS` file, located in the directory
 where you're making your change or in one of its parents to find the best reviewers for your change.
-1. Click *SEND*.
+1. Click **SEND**.
 
 Check the Gerrit [Review UI documentation](https://gerrit-review.googlesource.com/Documentation/user-review-ui.html)
 for more information about how to use the Gerrit code review tool.
