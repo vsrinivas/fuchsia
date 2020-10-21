@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("as370_power-bind") {
+  rules = "as370_power.bind"
+  output = "as370_power-bind.h"
+  tests = "tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 group("tests") {
   testonly = true
@@ -23,6 +34,7 @@ driver_module("as370-power") {
   ]
   sources = [ "as370-power.cc" ]
   deps = [
+    ":as370_power-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
@@ -32,9 +44,6 @@ driver_module("as370-power") {
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -52,6 +61,7 @@ test("as370-power-test") {
     "as370-power.cc",
   ]
   deps = [
+    ":as370_power-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
@@ -63,9 +73,6 @@ test("as370-power-test") {
     "//src/devices/lib/as370",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -78,7 +85,10 @@ test("as370-power-test") {
 
 unittest_package("as370-power-test-package") {
   package_name = "as370-power-test"
-  deps = [ ":as370-power-test" ]
+  deps = [
+    ":as370-power-test",
+    ":as370_power-bind_test",
+  ]
   tests = [
     {
       name = "as370-power-test"

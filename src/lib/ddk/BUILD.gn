@@ -213,7 +213,6 @@ zx_library("ddk-deprecated-binding-headers") {
     "//src/devices/nand/drivers/ram-nand:*",
     "//src/devices/nand/drivers/skip-block:common",
     "//src/devices/power/drivers/aml-meson-power:*",
-    "//src/devices/power/drivers/as370-power:*",
     "//src/devices/power/drivers/msm8x53-power:*",
     "//src/devices/power/drivers/mtk-power:*",
     "//src/devices/power/drivers/power:*",

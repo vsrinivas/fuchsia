@@ -6,7 +6,6 @@
 
 #include <lib/device-protocol/pdev.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
@@ -14,6 +13,8 @@
 #include <ddk/protocol/platform/device.h>
 #include <fbl/alloc_checker.h>
 #include <soc/as370/as370-power.h>
+
+#include "src/devices/power/drivers/as370-power/as370_power-bind.h"
 
 namespace {
 enum As370RegulatorType { BUCK = 1 };
@@ -348,9 +349,6 @@ static constexpr zx_driver_ops_t as370_power_driver_ops = []() {
 }  // namespace power
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(as370_power, power::as370_power_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_POWER),
-ZIRCON_DRIVER_END(as370_power)
+ZIRCON_DRIVER(as370_power, power::as370_power_driver_ops, "zircon", "0.1")
+
 //clang-format on
