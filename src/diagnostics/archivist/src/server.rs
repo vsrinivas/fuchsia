@@ -13,6 +13,7 @@ use {
         self, BatchIteratorControlHandle, BatchIteratorRequest, BatchIteratorRequestStream,
         StreamMode,
     },
+    fuchsia_zircon as zx,
     fuchsia_zircon_status::Status as ZxStatus,
     futures::prelude::*,
     log::warn,
@@ -83,6 +84,7 @@ impl AccessorServer {
         while let Some(res) = self.requests.next().await {
             let BatchIteratorRequest::GetNext { responder } = res?;
             self.stats.add_request();
+            let start_time = zx::Time::get_monotonic();
             // if we get None back, treat that as a terminal batch with an empty vec
             let batch = self.data.next().await.unwrap_or(vec![]);
             // turn errors into epitaphs -- we drop intermediate items if there was an error midway
@@ -93,6 +95,7 @@ impl AccessorServer {
             if batch.is_empty() {
                 self.stats.add_terminal();
             }
+            self.stats.global_stats().record_batch_duration(zx::Time::get_monotonic() - start_time);
 
             let mut response = Ok(batch);
             responder.send(&mut response)?;

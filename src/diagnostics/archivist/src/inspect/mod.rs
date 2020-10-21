@@ -117,8 +117,19 @@ impl ReaderServer {
             // make a stream of futures of populated Vec's
             .map(move |unpopulated| {
                 let global_stats = stats.global_stats().clone();
+
                 // this returns a future, which means the closure capture must be 'static
-                unpopulated.populate(timeout, move || global_stats.add_timeout())
+                async move {
+                    let start_time = zx::Time::get_monotonic();
+                    let global_stats_2 = global_stats.clone();
+                    let result =
+                        unpopulated.populate(timeout, move || global_stats.add_timeout()).await;
+                    global_stats_2.record_component_duration(
+                        &result.relative_moniker.join("/"),
+                        zx::Time::get_monotonic() - start_time,
+                    );
+                    result
+                }
             })
             // buffer a small number in memory in case later components time out
             .buffered(constants::IN_MEMORY_SNAPSHOT_LIMIT)
@@ -323,7 +334,7 @@ mod tests {
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async::{self as fasync, Task},
         fuchsia_component::server::ServiceFs,
-        fuchsia_inspect::{assert_inspect_tree, reader, Inspector},
+        fuchsia_inspect::{assert_inspect_tree, reader, testing::AnyProperty, Inspector},
         fuchsia_inspect_node_hierarchy::{trie::TrieIterableNode, NodeHierarchy},
         fuchsia_zircon as zx,
         fuchsia_zircon::Peered,
@@ -863,6 +874,7 @@ mod tests {
                 inspect_component_timeouts_count: 0u64,
                 inspect_reader_servers_constructed: 1u64,
                 inspect_reader_servers_destroyed: 0u64,
+                inspect_batch_iterator_get_next_time_usec: AnyProperty,
                 lifecycle_batch_iterator_connections_closed: 0u64,
                 lifecycle_batch_iterator_connections_opened: 0u64,
                 lifecycle_batch_iterator_get_next_errors: 0u64,
@@ -873,6 +885,7 @@ mod tests {
                 lifecycle_component_timeouts_count: 0u64,
                 lifecycle_reader_servers_constructed: 0u64,
                 lifecycle_reader_servers_destroyed: 0u64,
+                lifecycle_batch_iterator_get_next_time_usec: AnyProperty,
                 logs_batch_iterator_connections_closed: 0u64,
                 logs_batch_iterator_connections_opened: 0u64,
                 logs_batch_iterator_get_next_errors: 0u64,
@@ -883,6 +896,7 @@ mod tests {
                 logs_component_timeouts_count: 0u64,
                 logs_reader_servers_constructed: 0u64,
                 logs_reader_servers_destroyed: 0u64,
+                logs_batch_iterator_get_next_time_usec: AnyProperty,
                 stream_diagnostics_requests: 0u64,
             }
         });
@@ -954,6 +968,14 @@ mod tests {
                     inspect_component_timeouts_count: 0u64,
                     inspect_reader_servers_constructed: 1u64,
                     inspect_reader_servers_destroyed: 1u64,
+                    inspect_batch_iterator_get_next_time_usec: AnyProperty,
+                    inspect_component_time_usec: AnyProperty,
+                    inspect_longest_processing_times: contains {
+                        "test_component.cmx": contains {
+                            "@time": AnyProperty,
+                            "duration_seconds": AnyProperty
+                        }
+                    },
                     lifecycle_batch_iterator_connections_closed: 0u64,
                     lifecycle_batch_iterator_connections_opened: 0u64,
                     lifecycle_batch_iterator_get_next_errors: 0u64,
@@ -964,6 +986,7 @@ mod tests {
                     lifecycle_component_timeouts_count: 0u64,
                     lifecycle_reader_servers_constructed: 0u64,
                     lifecycle_reader_servers_destroyed: 0u64,
+                    lifecycle_batch_iterator_get_next_time_usec: AnyProperty,
                     logs_batch_iterator_connections_closed: 0u64,
                     logs_batch_iterator_connections_opened: 0u64,
                     logs_batch_iterator_get_next_errors: 0u64,
@@ -974,6 +997,7 @@ mod tests {
                     logs_component_timeouts_count: 0u64,
                     logs_reader_servers_constructed: 0u64,
                     logs_reader_servers_destroyed: 0u64,
+                    logs_batch_iterator_get_next_time_usec: AnyProperty,
                     stream_diagnostics_requests: 0u64,
                 }
             });
@@ -1008,6 +1032,14 @@ mod tests {
                     inspect_component_timeouts_count: 0u64,
                     inspect_reader_servers_constructed: 2u64,
                     inspect_reader_servers_destroyed: 2u64,
+                    inspect_batch_iterator_get_next_time_usec: AnyProperty,
+                    inspect_component_time_usec: AnyProperty,
+                    inspect_longest_processing_times: contains {
+                        "test_component.cmx": contains {
+                            "@time": AnyProperty,
+                            "duration_seconds": AnyProperty,
+                        }
+                    },
                     lifecycle_batch_iterator_connections_closed: 0u64,
                     lifecycle_batch_iterator_connections_opened: 0u64,
                     lifecycle_batch_iterator_get_next_errors: 0u64,
@@ -1018,6 +1050,7 @@ mod tests {
                     lifecycle_component_timeouts_count: 0u64,
                     lifecycle_reader_servers_constructed: 0u64,
                     lifecycle_reader_servers_destroyed: 0u64,
+                    lifecycle_batch_iterator_get_next_time_usec: AnyProperty,
                     logs_batch_iterator_connections_closed: 0u64,
                     logs_batch_iterator_connections_opened: 0u64,
                     logs_batch_iterator_get_next_errors: 0u64,
@@ -1028,6 +1061,7 @@ mod tests {
                     logs_component_timeouts_count: 0u64,
                     logs_reader_servers_constructed: 0u64,
                     logs_reader_servers_destroyed: 0u64,
+                    logs_batch_iterator_get_next_time_usec: AnyProperty,
                     stream_diagnostics_requests: 0u64,
                 }
             });

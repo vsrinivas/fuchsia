@@ -145,7 +145,15 @@ impl CommandAssertion {
                         let next_index = lines
                             .iter()
                             .enumerate()
-                            .find(|(i, line)| line.ends_with(".cmx:") && *i > found_index)
+                            .find(|(i, line)| {
+                                // Find a the next component after
+                                // archivist-for-embedding.cmx. Its
+                                // component name appears with no indentation
+                                // and ends in .cmx.
+                                line.ends_with(".cmx:")
+                                    && !line.starts_with(" ")
+                                    && *i > found_index
+                            })
                             .map(|(i, _)| i)
                             .unwrap_or(lines.len() - 1);
                         let mut result = lines[0..found_index].to_vec();
