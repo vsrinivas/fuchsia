@@ -296,9 +296,6 @@ protocol Frame {
     /// Returns the amount of private (non-shared) physical memory used by the Frame's main
     /// document. The returned size might not reflect the memory usage of embedded iframes.
     GetPrivateMemorySize() -> (uint64 size_bytes);
-
-    /// Sets the autoplay policy for this page. By default, all media is permitted to autoplay.
-    SetAutoplayPolicy(AutoplayPolicy autoplay_policy);
 };
 
 resource table WebMessage {
@@ -354,18 +351,4 @@ protocol PopupFrameCreationListener {
     /// and how it was created, is provided via `info`. Additional popup frames are delivered after
     /// the acknowledgement callback is invoked.
     OnPopupFrameCreated(Frame frame, PopupFrameCreationInfo info) -> ();
-};
-
-/// Determines the policy for automatic (non user-initiated) playback of video or audio content.
-enum AutoplayPolicy : int32 {
-    /// All media is permitted to autoplay.
-    ALLOW = 1;
-
-    /// Only allow autoplay on pages which have received input gestures from the user,
-    /// signifying a minimal amount of engagement with the page content.
-    REQUIRE_USER_GESTURE = 2;
-
-    /// Only allow autoplay on "user activated" pages, i.e. pages which were loaded as a result
-    /// of an explicit request made by the user.
-    REQUIRE_USER_ACTIVATION = 3;
 };
