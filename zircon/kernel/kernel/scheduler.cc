@@ -51,7 +51,8 @@ using ffl::Round;
 // The tracing levels used in this compilation unit.
 #define KTRACE_COMMON 1
 #define KTRACE_FLOW 2
-#define KTRACE_DETAILED 3
+#define KTRACE_COUNTER 3
+#define KTRACE_DETAILED 4
 
 // Evaluates to true if tracing is enabled for the given level.
 #define LOCAL_KTRACE_LEVEL_ENABLED(level) ((LOCAL_KTRACE_LEVEL) >= (level))
@@ -183,9 +184,10 @@ inline bool IsThreadAdjustable(const Thread* thread) {
 // This function updates the exponential moving average using potentially
 // different rates for peak and decay:
 //
-//   D = Yn - Sn-1
-//        / Sn-1 + a * D      if D < 0
-//   Sn = \ Sn-1 + b * D      if D >= 0
+//   D  = Yn - Sn-1
+//        [ Sn-1 + a * D      if D < 0
+//   Sn = [
+//        [ Sn-1 + b * D      if D >= 0
 //
 template <typename T, typename Alpha, typename Beta>
 constexpr T PeakDecayDelta(T value, T sample, Alpha alpha, Beta beta) {
@@ -250,7 +252,7 @@ inline void Scheduler::UpdateTotalExpectedRuntime(SchedDuration delta_ns) {
   DEBUG_ASSERT(total_expected_runtime_ns_ >= 0);
   const SchedDuration scaled_ns = ScaleUp(total_expected_runtime_ns_);
   exported_total_expected_runtime_ns_ = scaled_ns;
-  LOCAL_KTRACE_COUNTER(KTRACE_COMMON, "Est Load", scaled_ns.raw_value(), this_cpu());
+  LOCAL_KTRACE_COUNTER(KTRACE_COUNTER, "Est Load", scaled_ns.raw_value(), this_cpu());
 }
 
 // Updates the total deadline utilization estimator with the given delta. The
@@ -261,11 +263,11 @@ inline void Scheduler::UpdateTotalDeadlineUtilization(SchedUtilization delta) {
   DEBUG_ASSERT(total_deadline_utilization_ >= 0);
   const SchedUtilization scaled = ScaleUp(total_deadline_utilization_);
   exported_total_deadline_utilization_ = scaled;
-  LOCAL_KTRACE_COUNTER(KTRACE_COMMON, "Est Util", Round<uint64_t>(scaled * 10000), this_cpu());
+  LOCAL_KTRACE_COUNTER(KTRACE_COUNTER, "Est Util", Round<uint64_t>(scaled * 10000), this_cpu());
 }
 
 inline void Scheduler::TraceTotalRunnableThreads() const {
-  LOCAL_KTRACE_COUNTER(KTRACE_COMMON, "Run-Q Len",
+  LOCAL_KTRACE_COUNTER(KTRACE_COUNTER, "Run-Q Len",
                        runnable_fair_task_count_ + runnable_deadline_task_count_, this_cpu());
 }
 
@@ -456,7 +458,7 @@ Thread* Scheduler::DequeueThread(SchedTime now) {
 // queues. Returns a pointer to the stolen thread that is now associated with
 // the local Scheduler instance, or nullptr is no work was stolen.
 Thread* Scheduler::StealWork(SchedTime now) {
-  LocalTraceDuration<KTRACE_COMMON> trace{"steal_work"_stringref};
+  LocalTraceDuration<KTRACE_DETAILED> trace{"steal_work"_stringref};
 
   const cpu_num_t current_cpu = this_cpu();
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(current_cpu);
@@ -797,9 +799,9 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
                                 const Scheduler* queue_b) TA_REQ(thread_lock) {
     const SchedDuration a_predicted_queue_time_ns = queue_a->predicted_queue_time_ns();
     const SchedDuration b_predicted_queue_time_ns = queue_b->predicted_queue_time_ns();
-    LocalTraceDuration<KTRACE_COMMON> trace_compare{"compare: qtime,qtime"_stringref,
-                                                    Round<uint64_t>(a_predicted_queue_time_ns),
-                                                    Round<uint64_t>(b_predicted_queue_time_ns)};
+    LocalTraceDuration<KTRACE_DETAILED> trace_compare{"compare: qtime,qtime"_stringref,
+                                                      Round<uint64_t>(a_predicted_queue_time_ns),
+                                                      Round<uint64_t>(b_predicted_queue_time_ns)};
     if (IsFairThread(thread)) {
       // CPUs in the same logical cluster are considered equivalent in terms of
       // cache affinity. Choose the least loaded among the members of a cluster.
