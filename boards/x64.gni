@@ -25,7 +25,7 @@ _common_bootfs_deps = [
   "//src/devices/rtc/drivers/intel-rtc",
   "//src/devices/serial/drivers/intel-serialio",
   "//src/devices/serial/drivers/uart16550",
-  "//src/devices/usb/drivers/xhci:xhci-x86",
+  "//src/devices/usb/drivers/xhci-rewrite:xhci",
   "//src/graphics/display/drivers/intel-i915",
   "//src/graphics/display/drivers/simple:simple.amd-kaveri",
   "//src/graphics/display/drivers/simple:simple.bochs",

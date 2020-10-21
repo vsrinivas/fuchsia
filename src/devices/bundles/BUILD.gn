@@ -50,11 +50,7 @@ group("usb-host-stack") {
     "//src/devices/usb/drivers/usb-composite",
     "//src/devices/usb/drivers/usb-dfu",
   ]
-  if (target_cpu == "x64") {
-    deps += [ "//src/devices/usb/drivers/usb-hub" ]
-  } else {
-    deps += [ "//src/devices/usb/drivers/usb-hub-rewrite" ]
-  }
+  deps += [ "//src/devices/usb/drivers/usb-hub-rewrite" ]
 }
 
 group("usb-peripheral-stack") {
