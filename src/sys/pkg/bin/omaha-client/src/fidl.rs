@@ -7,7 +7,7 @@ use crate::{
     channel::ChannelConfigs,
     inspect::{AppsNode, StateNode},
 };
-use anyhow::{Context as _, Error};
+use anyhow::{anyhow, Context as _, Error};
 use event_queue::{ClosedClient, ControlHandle, Event, EventQueue, Notify};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
@@ -33,8 +33,7 @@ use omaha_client::{
     state_machine::{self, StartUpdateCheckResponse, StateMachineGone},
     storage::{Storage, StorageExt},
 };
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct State {
@@ -506,19 +505,36 @@ where
         let s = server.borrow();
         s.state_node.set(&s.state);
 
-        if state == state_machine::State::Idle {
-            // State is back to idle, clear the current update monitor handles.
-            let mut monitor_queue = s.monitor_queue.clone();
-            drop(s);
-            if let Err(e) = monitor_queue.clear().await {
-                warn!("error clearing clients of monitor_queue: {:?}", e);
+        match state {
+            state_machine::State::WaitingForReboot => {
+                let mut monitor_queue = s.monitor_queue.clone();
+                drop(s);
+                match monitor_queue.try_flush(Duration::from_secs(5)).await {
+                    Ok(flush_future) => {
+                        if let Err(e) = flush_future.await {
+                            warn!("Timed out flushing monitor_queue: {:#}", anyhow!(e));
+                        }
+                    }
+                    Err(e) => {
+                        warn!("error trying to flush monitor_queue: {:#}", anyhow!(e));
+                    }
+                }
             }
+            state_machine::State::Idle => {
+                // State is back to idle, clear the current update monitor handles.
+                let mut monitor_queue = s.monitor_queue.clone();
+                drop(s);
+                if let Err(e) = monitor_queue.clear().await {
+                    warn!("error clearing clients of monitor_queue: {:?}", e);
+                }
 
-            // The state machine might make changes to apps only when state changes to `Idle`,
-            // update the apps node in inspect.
-            let app_set = server.borrow().app_set.clone();
-            let app_set = app_set.to_vec().await;
-            server.borrow().apps_node.set(&app_set);
+                // The state machine might make changes to apps only when state changes to `Idle`,
+                // update the apps node in inspect.
+                let app_set = server.borrow().app_set.clone();
+                let app_set = app_set.to_vec().await;
+                server.borrow().apps_node.set(&app_set);
+            }
+            _ => {}
         }
     }
 

@@ -30,6 +30,7 @@ rustc_test("driver") {
     "//src/sys/pkg/testing/mock-installer",
     "//src/sys/pkg/testing/mock-omaha-server",
     "//src/sys/pkg/testing/mock-paver",
+    "//src/sys/pkg/testing/mock-reboot",
     "//src/sys/pkg/testing/mock-resolver",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -69,6 +70,9 @@ test_package("omaha-client-integration-tests") {
       name = "omaha_client_integration_test"
       dest = "omaha-client-integration-test"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

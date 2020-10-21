@@ -33,6 +33,7 @@ use {
     mock_installer::MockUpdateInstallerService,
     mock_omaha_server::{OmahaResponse, OmahaServer},
     mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    mock_reboot::MockRebootService,
     mock_resolver::MockResolverService,
     parking_lot::Mutex,
     serde_json::json,
@@ -159,9 +160,9 @@ impl TestEnvBuilder {
         fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
             let resolver_clone = resolver_clone.clone();
             fasync::Task::spawn(
-                resolver_clone
+                Arc::clone(&resolver_clone)
                     .run_resolver_service(stream)
-                    .unwrap_or_else(|e| panic!("error running resolver service {:?}", e)),
+                    .unwrap_or_else(|e| panic!("error running resolver service {:#}", anyhow!(e))),
             )
             .detach()
         });
@@ -169,8 +170,22 @@ impl TestEnvBuilder {
         let cache = Arc::new(MockCache::new());
         let cache_clone = cache.clone();
         fs.add_fidl_service(move |stream: PackageCacheRequestStream| {
-            let cache_clone = cache_clone.clone();
-            fasync::Task::spawn(cache_clone.run_cache_service(stream)).detach()
+            fasync::Task::spawn(Arc::clone(&cache_clone).run_cache_service(stream)).detach()
+        });
+
+        let (send, reboot_called) = oneshot::channel();
+        let send = Mutex::new(Some(send));
+        let reboot_service = Arc::new(MockRebootService::new(Box::new(move || {
+            send.lock().take().unwrap().send(()).unwrap();
+            Ok(())
+        })));
+        fs.add_fidl_service(move |stream| {
+            fasync::Task::spawn(
+                Arc::clone(&reboot_service)
+                    .run_reboot_service(stream)
+                    .unwrap_or_else(|e| panic!("error running reboot service: {:#}", anyhow!(e))),
+            )
+            .detach()
         });
 
         let nested_environment_label = Self::make_nested_environment_label();
@@ -236,6 +251,7 @@ impl TestEnvBuilder {
             _omaha_client: omaha_client,
             _system_updater: system_updater,
             nested_environment_label,
+            reboot_called,
         }
     }
 
@@ -259,6 +275,7 @@ struct TestEnv {
     _omaha_client: App,
     _system_updater: SystemUpdater,
     nested_environment_label: String,
+    reboot_called: oneshot::Receiver<()>,
 }
 
 impl TestEnv {
@@ -385,7 +402,7 @@ fn progress(fraction_completed: Option<f32>) -> Option<InstallationProgress> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update() {
-    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
+    let mut env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
 
     env.proxies
         .resolver
@@ -446,6 +463,7 @@ async fn test_omaha_client_update() {
                 assert_eq!(installation_progress, progress(Some(1.)));
                 assert!(!waiting_for_reboot);
                 waiting_for_reboot = true;
+                assert_matches!(env.reboot_called.try_recv(), Ok(None));
             }
             state => {
                 panic!("Unexpected state: {:?}", state);
@@ -472,6 +490,9 @@ async fn test_omaha_client_update() {
         }
     ))
     .await;
+
+    // This will hang if reboot was not triggered.
+    env.reboot_called.await.unwrap();
 }
 
 #[fasync::run_singlethreaded(test)]

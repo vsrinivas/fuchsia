@@ -284,7 +284,11 @@ where
                     }
                     Op::Status(StatusEvent::State(state)) => {
                         current_state = Some(state.clone());
-                        monitor.advance_update_state(state).await
+                        let should_flush = matches!(state, State::WaitingForReboot(_));
+                        monitor.advance_update_state(state).await;
+                        if should_flush {
+                            monitor.try_flush().await;
+                        }
                     }
                     Op::Status(StatusEvent::VersionAvailableKnown(version)) => {
                         monitor.set_version_available(version);

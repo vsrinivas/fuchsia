@@ -9,6 +9,7 @@ use {
     fuchsia_inspect_contrib::inspectable::InspectableDebugString,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::prelude::*,
+    std::time::Duration,
 };
 
 pub trait StateNotifier: Notify<Event = State> + Send + Sync + 'static {}
@@ -70,6 +71,19 @@ where
         }
     }
 
+    pub async fn try_flush(&mut self) {
+        match self.temporary_queue.try_flush(Duration::from_secs(5)).await {
+            Ok(flush_future) => {
+                if let Err(e) = flush_future.await {
+                    fx_log_warn!("Timed out flushing temporary queue: {:#}", anyhow!(e));
+                }
+            }
+            Err(e) => {
+                fx_log_warn!("error trying to flush temporary queue: {:#}", anyhow!(e));
+            }
+        }
+    }
+
     pub fn set_version_available(&mut self, version_available: String) {
         *self.version_available.get_mut() = Some(version_available);
     }
@@ -83,10 +97,11 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use event_queue::{ClosedClient, Notify};
+    use event_queue::{ClosedClient, Event, Notify};
     use fidl_fuchsia_update_ext::random_version_available;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
+    use futures::{channel::mpsc, future::BoxFuture, pin_mut, task::Poll};
     use parking_lot::Mutex;
     use proptest::prelude::*;
     use std::sync::Arc;
@@ -111,11 +126,29 @@ mod test {
         }
     }
 
-    async fn random_update_monitor(
+    struct MpscNotifier<T> {
+        sender: mpsc::Sender<T>,
+    }
+
+    impl<T> Notify for MpscNotifier<T>
+    where
+        T: Event + Send + 'static,
+    {
+        type Event = T;
+        type NotifyFuture = BoxFuture<'static, Result<(), ClosedClient>>;
+
+        fn notify(&self, event: T) -> BoxFuture<'static, Result<(), ClosedClient>> {
+            let mut sender = self.sender.clone();
+            async move { sender.send(event).map(|result| result.map_err(|_| ClosedClient)).await }
+                .boxed()
+        }
+    }
+
+    async fn random_update_monitor<N: StateNotifier>(
         update_state: Option<State>,
         version_available: Option<String>,
-    ) -> UpdateMonitor<FakeStateNotifier> {
-        let (fut, mut mms) = UpdateMonitor::<FakeStateNotifier>::new();
+    ) -> UpdateMonitor<N> {
+        let (fut, mut mms) = UpdateMonitor::<N>::new();
         fasync::Task::spawn(fut).detach();
         version_available.map(|s| mms.set_version_available(s));
         if let Some(update_state) = update_state {
@@ -184,7 +217,7 @@ mod test {
             version_available in random_version_available(),
         ) {
             fasync::Executor::new().unwrap().run_singlethreaded(async {
-                let mut update_monitor = random_update_monitor(update_state, version_available).await;
+                let mut update_monitor = random_update_monitor::<FakeStateNotifier>(update_state, version_available).await;
                 update_monitor.set_version_available(VERSION_AVAILABLE.to_string());
 
                 update_monitor.clear().await;
@@ -214,6 +247,55 @@ mod test {
                 prop_assert_eq!(temporary_callback.states.lock().clone(), vec![]);
                 Ok(())
             }).unwrap();
+        }
+
+        #[test]
+        fn test_try_flush_flushes_temporary_callbacks(
+            update_state: State,
+            version_available in random_version_available(),
+        ) {
+            let mut executor = fasync::Executor::new().unwrap();
+            let mut update_monitor = executor.run_singlethreaded(random_update_monitor(Some(update_state.clone()), version_available));
+
+            let (sender, mut receiver) = mpsc::channel(0);
+            let temporary_callback = MpscNotifier { sender };
+            executor.run_singlethreaded(update_monitor.add_temporary_callback(temporary_callback));
+
+            let flush = update_monitor.try_flush();
+            pin_mut!(flush);
+            prop_assert_eq!(executor.run_until_stalled(&mut flush), Poll::Pending);
+            prop_assert_eq!(executor.run_until_stalled(&mut receiver.next()), Poll::Ready(Some(update_state)));
+            prop_assert_eq!(executor.run_until_stalled(&mut flush), Poll::Ready(()));
+        }
+
+        #[test]
+        fn test_try_flush_timeout(
+            update_state: State,
+            version_available in random_version_available(),
+        ) {
+            let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+            // Can't use run_singlethreaded on executor with fake time.
+            let update_monitor_fut = random_update_monitor(Some(update_state), version_available);
+            pin_mut!(update_monitor_fut);
+            let mut update_monitor = match executor.run_until_stalled(&mut update_monitor_fut) {
+                Poll::Ready(monitor) => monitor,
+                Poll::Pending => panic!("random_update_monitor blocked"),
+            };
+
+            let (sender, _receiver) = mpsc::channel(0);
+            {
+                let temporary_callback = MpscNotifier { sender };
+                let add_temporary_callback = update_monitor.add_temporary_callback(temporary_callback);
+                pin_mut!(add_temporary_callback);
+                prop_assert_eq!(executor.run_until_stalled(&mut add_temporary_callback), Poll::Ready(()));
+            }
+
+            let flush = update_monitor.try_flush();
+            pin_mut!(flush);
+            prop_assert_eq!(executor.run_until_stalled(&mut flush), Poll::Pending);
+            let expected_deadline = executor.now() + zx::Duration::from_seconds(5);
+            prop_assert_eq!(executor.wake_next_timer(), Some(expected_deadline));
+            prop_assert_eq!(executor.run_until_stalled(&mut flush), Poll::Ready(()));
         }
     }
 }
