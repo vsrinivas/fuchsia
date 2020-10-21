@@ -392,7 +392,7 @@ Client<TicTacToe> client;
 zx_status_t status = client.Bind(
     std::move(client_end), dispatcher,
     // OnClientUnboundFn
-    [&](fidl::UnboundReason, zx_status_t, zx::channel) { /* ... */ },
+    [&](fidl::UnbindInfo) { /* ... */ },
     // AsyncEventHandlers
     { .on_opponent_move = [&]( /* ... */ ) { /* ... */ } });
 ```
