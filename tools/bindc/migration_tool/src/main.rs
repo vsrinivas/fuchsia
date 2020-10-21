@@ -198,9 +198,9 @@ impl Migrator {
         output.push_str("import(\"//build/bind/bind.gni\")\n");
         output.push_str(&contents[first_import.start()..last_import.end()]);
         output.push_str("\n");
-        output.push_str(format!("bind_rules(\"{}-bind\") {{\n", driver_name).as_str());
+        output.push_str(format!("bind_rules(\"{}_bind\") {{\n", driver_name).as_str());
         output.push_str(format!("  rules = \"{}.bind\"\n", driver_name).as_str());
-        output.push_str(format!("  output = \"{}-bind.h\"\n", driver_name).as_str());
+        output.push_str(format!("  output = \"{}_bind.h\"\n", driver_name).as_str());
         output.push_str(format!("  tests = \"tests.json\"\n").as_str());
         if !self.libraries.is_empty() {
             output.push_str("  deps = [\n");
@@ -211,7 +211,7 @@ impl Migrator {
         }
         output.push_str("}\n");
         output.push_str(&contents[last_import.end()..deps_start]);
-        output.push_str(format!("deps = [\n    \":{}-bind\",", driver_name).as_str());
+        output.push_str(format!("deps = [\n    \":{}_bind\",", driver_name).as_str());
         output.push_str(&contents[deps_end..]);
 
         file.seek(SeekFrom::Start(0)).map_err(|_| "Failed to seek to beginning of build file")?;
@@ -435,14 +435,14 @@ impl Migrator {
         let mut source_output = String::new();
 
         let mut bind_output_file_path = input.clone();
-        bind_output_file_path.set_file_name(format!("{}-bind.h", args.driver_name).as_str());
+        bind_output_file_path.set_file_name(format!("{}_bind.h", args.driver_name).as_str());
 
         let include = include_re.find(&contents).ok_or("Couldn't find binding include")?;
         source_output.push_str(&contents[..include.start()]);
         if let Some(full_path) = bind_output_file_path.to_str() {
             source_output.push_str(format!("#include \"{}\"\n", full_path).as_str());
         } else {
-            source_output.push_str(format!("#include \"{}-bind.h\"\n", args.driver_name).as_str());
+            source_output.push_str(format!("#include \"{}_bind.h\"\n", args.driver_name).as_str());
         }
 
         source_output.push_str(&contents[include.end()..args.match_start]);
