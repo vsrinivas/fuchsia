@@ -117,10 +117,10 @@ void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
   ++messages_sent_;
   bytes_sent_ += packet_size;
 
-  if (result < 0) {
+  // Host down errors are expected. See fxbug.dev/62074.
+  if (result < 0 && errno != EHOSTDOWN) {
     FX_LOGS(ERROR) << "Failed to sendto " << address << " from " << name_ << " (" << address_
                    << "), size " << packet_size << ", " << strerror(errno);
-    return;
   }
 }
 
@@ -220,11 +220,14 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status, uint32_t events)
     FX_DCHECK(inbound_message_callback_);
     inbound_message_callback_(std::move(message), reply_address);
   } else {
-    inbound_buffer_.resize(result);
-    // TODO(fxbug.dev/54285): Remove this message for end-users.
+#ifdef MDNS_TRACE
     FX_LOGS(WARNING) << "Couldn't parse message from " << reply_address << ", " << result
-                     << " bytes: " << fostr::HexDump(inbound_buffer_);
-    inbound_buffer_.resize(kMaxPacketSize);
+                     << " bytes: "
+                     << fostr::HexDump(inbound_buffer_.data(), result, 0);
+#else
+    FX_LOGS(WARNING) << "Couldn't parse message from " << reply_address << ", " << result
+                     << " bytes";
+#endif  // MDNS_TRACE
   }
 
   WaitForInbound();
