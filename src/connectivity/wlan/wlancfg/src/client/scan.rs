@@ -181,6 +181,7 @@ impl ScanResultUpdate for LocationSensorUpdater {
 }
 
 /// Converts sme::BssInfo to our internal BSS type, then adds it to the provided bss_by_network map.
+/// Only keeps the first unique instance of a BSSID
 fn insert_bss_to_network_bss_map(
     bss_by_network: &mut HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>>,
     new_bss: &[fidl_sme::BssInfo],
@@ -188,10 +189,12 @@ fn insert_bss_to_network_bss_map(
 ) {
     for bss in new_bss {
         if let Some(security) = security_from_sme_protection(bss.protection) {
-            bss_by_network
+            let entry = bss_by_network
                 .entry(fidl_policy::NetworkIdentifier { ssid: bss.ssid.to_vec(), type_: security })
-                .or_insert(vec![])
-                .push(types::Bss {
+                .or_insert(vec![]);
+            // Check if this BSSID is already in the hashmap
+            if !entry.iter().any(|existing_bss| existing_bss.bssid == bss.bssid) {
+                entry.push(types::Bss {
                     bssid: bss.bssid,
                     rssi: bss.rx_dbm,
                     snr_db: bss.snr_db,
@@ -200,6 +203,7 @@ fn insert_bss_to_network_bss_map(
                     observed_in_passive_scan,
                     compatible: bss.compatible,
                 });
+            };
         } else {
             // TODO(mnck): log a metric here
             debug!("Unknown security type present in scan results: {:?}", bss.protection);
@@ -1042,6 +1046,101 @@ mod tests {
             *exec.run_singlethreaded(location_sensor_results.lock()),
             Some(combined_internal_aps.clone())
         );
+    }
+
+    #[test]
+    fn insert_bss_to_network_bss_map_duplicated_bss() {
+        let mut bss_by_network = HashMap::new();
+
+        // Create some input data with duplicated BSSID and Network Identifiers
+        let passive_input_aps = vec![
+            fidl_sme::BssInfo {
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: "duplicated ssid".as_bytes().to_vec(),
+                rx_dbm: 0,
+                snr_db: 1,
+                channel: 0,
+                protection: fidl_sme::Protection::Wpa3Enterprise,
+                compatible: true,
+            },
+            fidl_sme::BssInfo {
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: "duplicated ssid".as_bytes().to_vec(),
+                rx_dbm: 13,
+                snr_db: 3,
+                channel: 14,
+                protection: fidl_sme::Protection::Wpa3Enterprise,
+                compatible: true,
+            },
+        ];
+
+        let expected_id = types::NetworkIdentifier {
+            ssid: "duplicated ssid".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa3,
+        };
+
+        // We should only see one entry for the duplicated BSSs in the passive scan results
+        let expected_bss = vec![types::Bss {
+            bssid: [0, 0, 0, 0, 0, 0],
+            rssi: 0,
+            frequency: 0,
+            timestamp_nanos: 0,
+            snr_db: 1,
+            observed_in_passive_scan: true,
+            compatible: true,
+        }];
+
+        insert_bss_to_network_bss_map(&mut bss_by_network, &passive_input_aps, true);
+        assert_eq!(bss_by_network.len(), 1);
+        assert_eq!(bss_by_network[&expected_id], expected_bss);
+
+        // Create some input data with one duplicate BSSID and one new BSSID
+        let active_input_aps = vec![
+            fidl_sme::BssInfo {
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: "duplicated ssid".as_bytes().to_vec(),
+                rx_dbm: 100,
+                snr_db: 100,
+                channel: 100,
+                protection: fidl_sme::Protection::Wpa3Enterprise,
+                compatible: true,
+            },
+            fidl_sme::BssInfo {
+                bssid: [1, 2, 3, 4, 5, 6],
+                ssid: "duplicated ssid".as_bytes().to_vec(),
+                rx_dbm: 101,
+                snr_db: 101,
+                channel: 101,
+                protection: fidl_sme::Protection::Wpa3Enterprise,
+                compatible: true,
+            },
+        ];
+
+        // After the active scan, there should be a second bss included in the results
+        let expected_bss = vec![
+            types::Bss {
+                bssid: [0, 0, 0, 0, 0, 0],
+                rssi: 0,
+                frequency: 0,
+                timestamp_nanos: 0,
+                snr_db: 1,
+                observed_in_passive_scan: true,
+                compatible: true,
+            },
+            types::Bss {
+                bssid: [1, 2, 3, 4, 5, 6],
+                rssi: 101,
+                frequency: 0,
+                timestamp_nanos: 0,
+                snr_db: 101,
+                observed_in_passive_scan: false,
+                compatible: true,
+            },
+        ];
+
+        insert_bss_to_network_bss_map(&mut bss_by_network, &active_input_aps, false);
+        assert_eq!(bss_by_network.len(), 1);
+        assert_eq!(bss_by_network[&expected_id], expected_bss);
     }
 
     #[test]
