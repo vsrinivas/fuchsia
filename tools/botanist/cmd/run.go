@@ -145,10 +145,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	// TODO(rudymathu): Remove this once stability is achieved.
 	r.zirconArgs = append(r.zirconArgs, "driver.usb_mass_storage.disable")
 
-	// Disable xhci to determine if xhci rewrite is causing instability.
-	// TODO(rudymathu): Remove this if/when xhci is stable.
-	r.zirconArgs = append(r.zirconArgs, "driver.usb_xhci.disable")
-
 	eg, ctx := errgroup.WithContext(ctx)
 	socketPath := os.Getenv(constants.SerialSocketEnvKey)
 	var conn net.Conn
