@@ -31,6 +31,12 @@ if (zx != "/") {
         # variant selectors. Using an exclude_variant_tag is
         # enough to fix the issue.
         exclude_variant_tags = [ "fuzzer" ]
+
+        # The Asan-based variants are needed to generate binaries for the SDK.
+        enable_variants = [
+          "asan",
+          "asan-ubsan",
+        ]
       }
     }
   } else if (toolchain_variant.base ==

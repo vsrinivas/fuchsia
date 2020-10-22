@@ -115,6 +115,13 @@ template("_variant_toolchain") {
 #     toolchain_args scope. Note that values in each selected variant's
 #     toolchain_args scope will override these values.
 #
+#   enable_variants:
+#     Optional: A list of variant names that should always be enabled,
+#     independent of the content of the global `select_variant` list. This
+#     should only be used for specific targets that need it, e.g. the C
+#     library needs to be built with the regular as well as ASan-enabled
+#     toolchains for the Fuchsia SDK.
+#
 # All other parameters are passed to ${toolchain_template}(). See
 # clang_toolchain_instance() and zircon_toolchain_instance() for their values.
 #
@@ -197,6 +204,7 @@ template("variant_toolchain_suite") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "enable_variants",
                              "is_pic_default",
                              "toolchain_args",
                              "toolchain_template",
@@ -213,6 +221,23 @@ template("variant_toolchain_suite") {
   foreach(selector, select_variant_canonical) {
     selectors_used += [ false ]
     i = i + 1
+  }
+
+  # Handle `enable_variants` here. First ensure that the list of names corresponds
+  # to known variant names.
+  enabled_variant_names = []
+  if (defined(invoker.enable_variants) && invoker.enable_variants != []) {
+    _all_variant_names = []
+    foreach(variant, variants) {
+      _all_variant_names += [ variant.name ]
+    }
+
+    enabled_variant_names = invoker.enable_variants
+    unknown_enabled_variants =
+        invoker.enable_variants + _all_variant_names - _all_variant_names
+    assert(
+        unknown_enabled_variants == [],
+        "Unknown variant names in enable_variants argument: $unknown_enabled_variants")
   }
 
   foreach(variant, variants) {
@@ -240,6 +265,14 @@ template("variant_toolchain_suite") {
           selectors_used[i] = true
         }
         i = i + 1
+      }
+    }
+
+    # Ensure that any variant listed in invoker.enable_variants is used too.
+    if (enabled_variant_names != []) {
+      if (enabled_variant_names + [ variant.name ] - [ variant.name ] !=
+          enabled_variant_names) {
+        variant_used = true
       }
     }
 

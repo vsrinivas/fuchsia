@@ -52,15 +52,20 @@ sanitizer_default_options_args = [
 ]
 
 # Adapt to being used in the Fuchsia GN build or in the Zircon build.
-if ("$zx/" == "//") {
+if ("$zx" == "/") {
   _hidden_config = "$zx/public/gn/config:visibility_hidden"
   _no_sanitizers_config = "$zx/public/gn/config:no_sanitizers"
   _is_kernel = is_kernel
 
   _tags = toolchain.tags
 } else {
-  _hidden_config = "//build/config:symbol_visibility_hidden"
-  _no_sanitizers_config = "//build/config:no_sanitizers"
+  if (zircon_toolchain == false) {
+    _hidden_config = "//build/config:symbol_visibility_hidden"
+    _no_sanitizers_config = "//build/config:no_sanitizers"
+  } else {
+    _hidden_config = "//build/config/zircon:visibility_hidden"
+    _no_sanitizers_config = "//build/config/zircon:no_sanitizers"
+  }
   _is_kernel = false
 
   if (defined(toolchain_variant.tags)) {
