@@ -13,6 +13,9 @@ use std::fmt::Arguments;
 use std::os::raw::c_char;
 use std::panic;
 
+#[doc(inline)]
+pub use fidl_fuchsia_logger::COMPONENT_NAME_PLACEHOLDER_TAG;
+
 #[allow(non_camel_case_types)]
 mod syslog;
 

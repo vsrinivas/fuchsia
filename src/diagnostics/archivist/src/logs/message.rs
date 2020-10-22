@@ -9,6 +9,7 @@ use diagnostics_stream::{Severity as StreamSeverity, Value};
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage, MAX_DATAGRAM_LEN_BYTES};
 use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_inspect_node_hierarchy::NodeHierarchy;
+use fuchsia_syslog::COMPONENT_NAME_PLACEHOLDER_TAG;
 use fuchsia_zircon as zx;
 use lazy_static::lazy_static;
 use libc::{c_char, c_int};
@@ -25,6 +26,8 @@ use std::{
 pub use diagnostics_data::{
     LogsData, LogsField, LogsHierarchy, LogsMetadata, LogsProperty, Severity,
 };
+
+const UNKNOWN_COMPONENT_NAME: &str = "UNKNOWN";
 
 pub const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
 pub const MIN_PACKET_SIZE: usize = METADATA_SIZE + 1;
@@ -157,7 +160,12 @@ impl Message {
             let tag_start = cursor + 1;
             let tag_end = tag_start + tag_len;
             let tag = str::from_utf8(&bytes[tag_start..tag_end])?;
-            tags.push(tag.to_owned());
+
+            if tag == COMPONENT_NAME_PLACEHOLDER_TAG {
+                tags.push(source.name().to_string());
+            } else {
+                tags.push(tag.to_owned());
+            }
 
             cursor = tag_end;
             tag_len = bytes[cursor] as usize;
@@ -361,7 +369,7 @@ impl Message {
 
     /// The name of the component from which this message originated.
     pub fn component_name(&self) -> &str {
-        self.moniker.rsplit("/").next().unwrap_or("UNKNOWN")
+        self.moniker.rsplit("/").next().unwrap_or(UNKNOWN_COMPONENT_NAME)
     }
 
     /// Convert this `Message` to a FIDL representation suitable for sending to `LogListenerSafe`.
@@ -422,7 +430,7 @@ trait IdentityExt {
 
 impl IdentityExt for SourceIdentity {
     fn name(&self) -> &str {
-        self.component_name.as_ref().map(String::as_str).unwrap_or("UNKNOWN")
+        self.component_name.as_ref().map(String::as_str).unwrap_or(UNKNOWN_COMPONENT_NAME)
     }
 
     fn url(&self) -> &str {
@@ -737,6 +745,54 @@ mod tests {
             ),
         );
 
+        assert_eq!(parsed, expected);
+    }
+
+    #[test]
+    fn placeholder_tag_replaced_with_attributed_name() {
+        let mut packet = test_packet();
+
+        let t_count = COMPONENT_NAME_PLACEHOLDER_TAG.len();
+        packet.data[0] = t_count as c_char;
+        let t_start = 1;
+        packet.add_data(1, COMPONENT_NAME_PLACEHOLDER_TAG.as_bytes());
+        let t_end = t_start + t_count;
+
+        let a_count = 5;
+        packet.data[t_end] = a_count as c_char;
+        let a_start = t_end + 1;
+        let a_end = a_start + a_count;
+        packet.fill_data(a_start..a_end, 'A' as _);
+        packet.data[a_end] = 0; // terminate tags
+
+        let b_start = a_end + 1;
+        let b_count = 5;
+        let b_end = b_start + b_count;
+        packet.fill_data(b_start..b_end, 'B' as _);
+
+        let buffer = &packet.as_bytes()[..METADATA_SIZE + b_end + 1]; // null-terminate message
+        let parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
+        let expected = Message::new(
+            packet.metadata.time,
+            Severity::Debug,
+            METADATA_SIZE + b_end,
+            packet.metadata.dropped_logs as _,
+            &*TEST_IDENTITY,
+            LogsHierarchy::new(
+                "root",
+                vec![
+                    LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
+                    LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
+                    LogsProperty::String(
+                        LogsField::Tag,
+                        TEST_IDENTITY.component_name.clone().unwrap(),
+                    ),
+                    LogsProperty::String(LogsField::Tag, "AAAAA".into()),
+                    LogsProperty::String(LogsField::Msg, "BBBBB".into()),
+                ],
+                vec![],
+            ),
+        );
         assert_eq!(parsed, expected);
     }
 

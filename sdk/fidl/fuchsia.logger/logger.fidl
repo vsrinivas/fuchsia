@@ -51,6 +51,11 @@ const uint8 MAX_TAGS = 5;
 /// Max tag length that can be passed to filter by listener.
 const uint8 MAX_TAG_LEN_BYTES = 63;
 
+/// A placeholder tag which indicates to a `LogSink` that the tag should be replaced with
+/// the actual name of the logging component. If that name is unavailable, `LogSink`
+/// implementations should replace this value with `UNKNOWN`.
+const string COMPONENT_NAME_PLACEHOLDER_TAG = "COMPONENT_NAME";
+
 struct LogFilterOptions {
     bool filter_by_pid;
     uint64 pid;
