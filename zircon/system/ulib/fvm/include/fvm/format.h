@@ -101,8 +101,8 @@ static constexpr uint64_t kMaxVSlices = 1ull << (kSliceEntryVSliceBits - 1);
 // such instance GUID.
 static constexpr std::array<uint8_t, kGuidSize> kPlaceHolderInstanceGuid = {0};
 
-// GUID for an internally defined partition used to reserve slices for future uses.
-static constexpr std::array<uint8_t, kGuidSize> kInternalReservationGuid = {
+// Type GUID for an internally defined partition used to reserve slices for future uses.
+static constexpr std::array<uint8_t, kGuidSize> kInternalReservationTypeGuid = {
     0xa0, 0x44, 0xe4, 0x75, 0xaa, 0x6b, 0xe5, 0xf3, 0x52, 0x4b, 0xf3, 0x67, 0x81, 0x61, 0xf9, 0xce,
 };
 

@@ -726,10 +726,6 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
 
   // Now that all partitions are preallocated, begin streaming data to them.
   for (size_t p = 0; p < parts.size(); p++) {
-    if (parts[p].pd->flags & fvm::kSparseFlagReservationPartition) {
-      LOG("Not streaming data for reserved partition %lu\n", p);
-      continue;
-    }
     vmoid_t vmoid;
     block_client::Client client;
     auto status = zx::make_status(RegisterFastBlockIo(parts[p].new_part, vmo, &vmoid, &client));
@@ -773,10 +769,6 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
   }
 
   for (size_t p = 0; p < parts.size(); p++) {
-    if (parts[p].pd->flags & fvm::kSparseFlagReservationPartition) {
-      LOG("Not upgrading reserved partition %lu\n", p);
-      continue;
-    }
     fdio_cpp::UnownedFdioCaller partition_connection(parts[p].new_part.get());
     // Upgrade the old partition (currently active) to the new partition (currently
     // inactive) so the new partition persists.

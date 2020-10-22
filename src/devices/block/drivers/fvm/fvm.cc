@@ -365,8 +365,7 @@ zx_status_t VPartitionManager::Load() {
       continue;
     }
     if (entry->IsInternalReservationPartition()) {
-      zxlogf(INFO, "Ignoring reserved partition with %u slices\n", entry->slices);
-      continue;
+      zxlogf(INFO, "Found reserved partition with %u slices", entry->slices);
     }
 
     // Update instance placeholder GUIDs to a newly generated guid.

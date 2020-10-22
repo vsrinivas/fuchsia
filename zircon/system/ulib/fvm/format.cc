@@ -149,8 +149,8 @@ VPartitionEntry::VPartitionEntry(const uint8_t in_type[kGuidSize], const uint8_t
 VPartitionEntry VPartitionEntry::CreateReservationPartition() {
   constexpr const char* kName = "internal";
   static_assert(__builtin_strlen(kName) <= kMaxVPartitionNameLength);
-  return VPartitionEntry(kInternalReservationGuid.cbegin(), kInternalReservationGuid.cbegin(), 0,
-                         kName, 0);
+  return VPartitionEntry(kInternalReservationTypeGuid.cbegin(),
+                         kInternalReservationTypeGuid.cbegin(), 0, kName, 0);
 }
 
 uint32_t VPartitionEntry::MaskInvalidFlags(uint32_t raw_flags) {
@@ -166,7 +166,7 @@ bool VPartitionEntry::IsAllocated() const { return slices != 0; }
 bool VPartitionEntry::IsFree() const { return !IsAllocated(); }
 
 bool VPartitionEntry::IsInternalReservationPartition() const {
-  return memcmp(guid, kInternalReservationGuid.cbegin(), sizeof(guid)) == 0;
+  return memcmp(type, kInternalReservationTypeGuid.cbegin(), sizeof(type)) == 0;
 }
 
 void VPartitionEntry::Release() {

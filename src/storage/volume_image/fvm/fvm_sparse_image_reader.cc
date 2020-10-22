@@ -213,8 +213,7 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
     const uint8_t* type = partition_descriptor.type;
     const uint8_t* guid = fvm::kPlaceHolderInstanceGuid.data();
     if (partition_descriptor.flags & fvm::kSparseFlagReservationPartition) {
-      type = fvm::kInternalReservationGuid.data();
-      guid = fvm::kInternalReservationGuid.data();
+      type = fvm::kInternalReservationTypeGuid.data();
     }
     // Push FVM's partition entry
     fvm_partitions.emplace_back(type, guid, allocated_slices,
