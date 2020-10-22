@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <lib/cmdline.h>
+#include <lib/counters.h>
 #include <lib/instrumentation/asan.h>
 #include <platform.h>
 #include <string.h>
@@ -19,6 +20,9 @@
 #include "debug.h"
 
 namespace {
+
+// The number of times the pmm checker has detected corruption.
+KCOUNTER(counter_pattern_validation_failed, "vm.pmm.checker.validation_failed")
 
 // The value 0x43 was chosen because it stands out when interpreted as ASCII ('C') and is an odd
 // value that is less likely to occur natually (e.g. arm64 instructions are 4-byte aligned).
@@ -109,6 +113,7 @@ NO_ASAN bool PmmChecker::ValidatePattern(vm_page_t* page) {
 
 void PmmChecker::AssertPattern(vm_page_t* page) {
   if (!ValidatePattern(page)) {
+    kcounter_add(counter_pattern_validation_failed, 1);
     auto kvaddr = static_cast<void*>(paddr_to_physmap(page->paddr()));
     switch (action_) {
       case Action::OOPS:
