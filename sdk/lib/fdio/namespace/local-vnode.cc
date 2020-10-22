@@ -39,8 +39,9 @@ void LocalVnode::AddEntry(fbl::RefPtr<LocalVnode> vn) {
 void LocalVnode::RemoveEntry(LocalVnode* vn) {
   auto it = entries_by_name_.find(vn->Name());
   if (it != entries_by_name_.end() && it->node().get() == vn) {
+    auto id = it->id();
     entries_by_name_.erase(it);
-    entries_by_id_.erase(it->id());
+    entries_by_id_.erase(id);
   }
 }
 
