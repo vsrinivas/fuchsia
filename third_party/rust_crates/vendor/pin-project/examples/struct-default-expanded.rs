@@ -27,50 +27,53 @@ struct Struct<T, U> {
 }
 
 #[doc(hidden)]
-#[allow(clippy::mut_mut)] // This lint warns `&mut &mut <ty>`.
-#[allow(dead_code)] // This lint warns unused fields/variants.
+#[allow(dead_code)]
 #[allow(single_use_lifetimes)]
+#[allow(clippy::mut_mut)]
+#[allow(clippy::type_repetition_in_bounds)]
 struct __StructProjection<'pin, T, U>
 where
     Struct<T, U>: 'pin,
 {
-    pinned: ::pin_project::__reexport::pin::Pin<&'pin mut (T)>,
+    pinned: ::pin_project::__private::Pin<&'pin mut (T)>,
     unpinned: &'pin mut (U),
 }
 #[doc(hidden)]
-#[allow(dead_code)] // This lint warns unused fields/variants.
+#[allow(dead_code)]
 #[allow(single_use_lifetimes)]
+#[allow(clippy::type_repetition_in_bounds)]
 struct __StructProjectionRef<'pin, T, U>
 where
     Struct<T, U>: 'pin,
 {
-    pinned: ::pin_project::__reexport::pin::Pin<&'pin (T)>,
+    pinned: ::pin_project::__private::Pin<&'pin (T)>,
     unpinned: &'pin (U),
 }
 
 #[doc(hidden)]
 #[allow(non_upper_case_globals)]
 #[allow(single_use_lifetimes)]
-const __SCOPE_Struct: () = {
+#[allow(clippy::used_underscore_binding)]
+const _: () = {
     impl<T, U> Struct<T, U> {
         fn project<'pin>(
-            self: ::pin_project::__reexport::pin::Pin<&'pin mut Self>,
+            self: ::pin_project::__private::Pin<&'pin mut Self>,
         ) -> __StructProjection<'pin, T, U> {
             unsafe {
                 let Self { pinned, unpinned } = self.get_unchecked_mut();
                 __StructProjection {
-                    pinned: ::pin_project::__reexport::pin::Pin::new_unchecked(pinned),
+                    pinned: ::pin_project::__private::Pin::new_unchecked(pinned),
                     unpinned,
                 }
             }
         }
         fn project_ref<'pin>(
-            self: ::pin_project::__reexport::pin::Pin<&'pin Self>,
+            self: ::pin_project::__private::Pin<&'pin Self>,
         ) -> __StructProjectionRef<'pin, T, U> {
             unsafe {
                 let Self { pinned, unpinned } = self.get_ref();
                 __StructProjectionRef {
-                    pinned: ::pin_project::__reexport::pin::Pin::new_unchecked(pinned),
+                    pinned: ::pin_project::__private::Pin::new_unchecked(pinned),
                     unpinned,
                 }
             }
@@ -91,9 +94,9 @@ const __SCOPE_Struct: () = {
     // When RFC 2145 is implemented (rust-lang/rust#48054),
     // this will become a lint, rather then a hard error.
     //
-    // As a workaround for this, we generate a new struct, containing all of the pinned
-    // fields from our #[pin_project] type. This struct is declared within
-    // a function, which makes it impossible to be named by user code.
+    // As a workaround for this, we generate a new struct, containing all of
+    // the pinned fields from our #[pin_project] type. This struct is declared
+    // within a function, which makes it impossible to be named by user code.
     // This guarantees that it will use the default auto-trait impl for Unpin -
     // that is, it will implement Unpin iff all of its fields implement Unpin.
     // This type can be safely declared as 'public', satisfying the privacy
@@ -104,19 +107,22 @@ const __SCOPE_Struct: () = {
     //
     // See also https://github.com/taiki-e/pin-project/pull/53.
     struct __Struct<'pin, T, U> {
-        __pin_project_use_generics: ::pin_project::__private::AlwaysUnpin<'pin, (T, U)>,
+        __pin_project_use_generics: ::pin_project::__private::AlwaysUnpin<
+            'pin,
+            (::pin_project::__private::PhantomData<T>, ::pin_project::__private::PhantomData<U>),
+        >,
         __field0: T,
     }
-    impl<'pin, T, U> ::pin_project::__reexport::marker::Unpin for Struct<T, U> where
-        __Struct<'pin, T, U>: ::pin_project::__reexport::marker::Unpin
+    impl<'pin, T, U> ::pin_project::__private::Unpin for Struct<T, U> where
+        __Struct<'pin, T, U>: ::pin_project::__private::Unpin
     {
     }
     // A dummy impl of `UnsafeUnpin`, to ensure that the user cannot implement it.
     //
     // To ensure that users don't accidentally write a non-functional `UnsafeUnpin`
-    // impls, we emit one ourselves. If the user ends up writing a `UnsafeUnpin` impl,
-    // they'll get a "conflicting implementations of trait" error when coherence
-    // checks are run.
+    // impls, we emit one ourselves. If the user ends up writing an `UnsafeUnpin`
+    // impl, they'll get a "conflicting implementations of trait" error when
+    // coherence checks are run.
     unsafe impl<T, U> ::pin_project::UnsafeUnpin for Struct<T, U> {}
 
     // Ensure that struct does not implement `Drop`.
@@ -126,18 +132,19 @@ const __SCOPE_Struct: () = {
     // the conflict with the second impl.
     trait StructMustNotImplDrop {}
     #[allow(clippy::drop_bounds)]
-    impl<T: ::pin_project::__reexport::ops::Drop> StructMustNotImplDrop for T {}
+    impl<T: ::pin_project::__private::Drop> StructMustNotImplDrop for T {}
     impl<T, U> StructMustNotImplDrop for Struct<T, U> {}
     // A dummy impl of `PinnedDrop`, to ensure that users don't accidentally
     // write a non-functional `PinnedDrop` impls.
     impl<T, U> ::pin_project::__private::PinnedDrop for Struct<T, U> {
-        unsafe fn drop(self: ::pin_project::__reexport::pin::Pin<&mut Self>) {}
+        unsafe fn drop(self: ::pin_project::__private::Pin<&mut Self>) {}
     }
 
-    // Ensure that it's impossible to use pin projections on a #[repr(packed)] struct.
+    // Ensure that it's impossible to use pin projections on a #[repr(packed)]
+    // struct.
     //
     // Taking a reference to a packed field is unsafe, and applying
-    // #[deny(safe_packed_borrows)] makes sure that doing this without
+    // #[forbid(safe_packed_borrows)] makes sure that doing this without
     // an 'unsafe' block (which we deliberately do not generate)
     // is a hard error.
     //
@@ -147,7 +154,7 @@ const __SCOPE_Struct: () = {
     // a much nicer error above.
     //
     // See https://github.com/taiki-e/pin-project/pull/34 for more details.
-    #[deny(safe_packed_borrows)]
+    #[forbid(safe_packed_borrows)]
     fn __assert_not_repr_packed<T, U>(val: &Struct<T, U>) {
         &val.pinned;
         &val.unpinned;

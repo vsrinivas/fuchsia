@@ -1,5 +1,6 @@
 #![warn(rust_2018_idioms, single_use_lifetimes)]
 #![allow(dead_code)]
+#![allow(deprecated)]
 
 // Ceurrently, `#[attr] if true {}` doesn't even *parse* on MSRV,
 // which means that it will error even behind a `#[rustversion::since(..)]`
@@ -160,8 +161,8 @@ struct A {
 
 mod project_use_1 {
     use crate::A;
-    use core::pin::Pin;
     use pin_project::project;
+    use std::pin::Pin;
 
     #[project]
     use crate::A;
@@ -242,7 +243,7 @@ fn issue_206() {
 #[project]
 #[test]
 fn combine() {
-    #[pin_project(Replace)]
+    #[pin_project(project_replace)]
     enum Enum<A> {
         V1(#[pin] A),
         V2,
@@ -272,7 +273,7 @@ fn combine() {
 #[project_replace]
 #[test]
 fn combine_compat() {
-    #[pin_project(Replace)]
+    #[pin_project(project_replace)]
     enum Enum<A> {
         V1(#[pin] A),
         V2,

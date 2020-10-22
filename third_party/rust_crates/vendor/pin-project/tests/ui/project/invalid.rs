@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 mod argument {
     use pin_project::{pin_project, project};
 
@@ -46,7 +48,7 @@ mod argument {
 mod attribute {
     use pin_project::{pin_project, project, project_ref, project_replace};
 
-    #[pin_project(Replace)]
+    #[pin_project(project_replace)]
     struct A(#[pin] ());
 
     #[project]

@@ -5,7 +5,7 @@
 //
 // use pin_project::pin_project;
 //
-// #[pin_project(Replace)]
+// #[pin_project(project_replace)]
 // struct Struct<T, U> {
 //     #[pin]
 //     pinned: T,
@@ -27,64 +27,67 @@ struct Struct<T, U> {
 }
 
 #[doc(hidden)]
-#[allow(clippy::mut_mut)] // This lint warns `&mut &mut <ty>`.
-#[allow(dead_code)] // This lint warns unused fields/variants.
+#[allow(dead_code)]
 #[allow(single_use_lifetimes)]
+#[allow(clippy::mut_mut)]
+#[allow(clippy::type_repetition_in_bounds)]
 struct __StructProjection<'pin, T, U>
 where
     Struct<T, U>: 'pin,
 {
-    pinned: ::pin_project::__reexport::pin::Pin<&'pin mut (T)>,
+    pinned: ::pin_project::__private::Pin<&'pin mut (T)>,
     unpinned: &'pin mut (U),
 }
 #[doc(hidden)]
-#[allow(dead_code)] // This lint warns unused fields/variants.
+#[allow(dead_code)]
 #[allow(single_use_lifetimes)]
+#[allow(clippy::type_repetition_in_bounds)]
 struct __StructProjectionRef<'pin, T, U>
 where
     Struct<T, U>: 'pin,
 {
-    pinned: ::pin_project::__reexport::pin::Pin<&'pin (T)>,
+    pinned: ::pin_project::__private::Pin<&'pin (T)>,
     unpinned: &'pin (U),
 }
-
 #[doc(hidden)]
-#[allow(dead_code)] // This lint warns unused fields/variants.
+#[allow(dead_code)]
+#[allow(unreachable_pub)]
 #[allow(single_use_lifetimes)]
 struct __StructProjectionOwned<T, U> {
-    pinned: ::pin_project::__reexport::marker::PhantomData<T>,
+    pinned: ::pin_project::__private::PhantomData<T>,
     unpinned: U,
 }
 
 #[doc(hidden)]
 #[allow(non_upper_case_globals)]
 #[allow(single_use_lifetimes)]
-const __SCOPE_Struct: () = {
+#[allow(clippy::used_underscore_binding)]
+const _: () = {
     impl<T, U> Struct<T, U> {
         fn project<'pin>(
-            self: ::pin_project::__reexport::pin::Pin<&'pin mut Self>,
+            self: ::pin_project::__private::Pin<&'pin mut Self>,
         ) -> __StructProjection<'pin, T, U> {
             unsafe {
                 let Self { pinned, unpinned } = self.get_unchecked_mut();
                 __StructProjection {
-                    pinned: ::pin_project::__reexport::pin::Pin::new_unchecked(pinned),
+                    pinned: ::pin_project::__private::Pin::new_unchecked(pinned),
                     unpinned,
                 }
             }
         }
         fn project_ref<'pin>(
-            self: ::pin_project::__reexport::pin::Pin<&'pin Self>,
+            self: ::pin_project::__private::Pin<&'pin Self>,
         ) -> __StructProjectionRef<'pin, T, U> {
             unsafe {
                 let Self { pinned, unpinned } = self.get_ref();
                 __StructProjectionRef {
-                    pinned: ::pin_project::__reexport::pin::Pin::new_unchecked(pinned),
+                    pinned: ::pin_project::__private::Pin::new_unchecked(pinned),
                     unpinned,
                 }
             }
         }
         fn project_replace(
-            self: ::pin_project::__reexport::pin::Pin<&mut Self>,
+            self: ::pin_project::__private::Pin<&mut Self>,
             __replacement: Self,
         ) -> __StructProjectionOwned<T, U> {
             unsafe {
@@ -93,15 +96,15 @@ const __SCOPE_Struct: () = {
 
                 // First, extract all the unpinned fields
                 let __result = __StructProjectionOwned {
-                    pinned: ::pin_project::__reexport::marker::PhantomData,
-                    unpinned: ::pin_project::__reexport::ptr::read(unpinned),
+                    pinned: ::pin_project::__private::PhantomData,
+                    unpinned: ::pin_project::__private::ptr::read(unpinned),
                 };
 
                 // Destructors will run in reverse order, so next create a guard to overwrite
                 // `self` with the replacement value without calling destructors.
                 let __guard = ::pin_project::__private::UnsafeOverwriteGuard {
                     target: __self_ptr,
-                    value: ::pin_project::__reexport::mem::ManuallyDrop::new(__replacement),
+                    value: ::pin_project::__private::ManuallyDrop::new(__replacement),
                 };
 
                 // Now create guards to drop all the pinned fields
@@ -124,11 +127,14 @@ const __SCOPE_Struct: () = {
     // See ./struct-default-expanded.rs and https://github.com/taiki-e/pin-project/pull/53.
     // for details.
     struct __Struct<'pin, T, U> {
-        __pin_project_use_generics: ::pin_project::__private::AlwaysUnpin<'pin, (T, U)>,
+        __pin_project_use_generics: ::pin_project::__private::AlwaysUnpin<
+            'pin,
+            (::pin_project::__private::PhantomData<T>, ::pin_project::__private::PhantomData<U>),
+        >,
         __field0: T,
     }
-    impl<'pin, T, U> ::pin_project::__reexport::marker::Unpin for Struct<T, U> where
-        __Struct<'pin, T, U>: ::pin_project::__reexport::marker::Unpin
+    impl<'pin, T, U> ::pin_project::__private::Unpin for Struct<T, U> where
+        __Struct<'pin, T, U>: ::pin_project::__private::Unpin
     {
     }
     unsafe impl<T, U> ::pin_project::UnsafeUnpin for Struct<T, U> {}
@@ -138,17 +144,18 @@ const __SCOPE_Struct: () = {
     // See ./struct-default-expanded.rs for details.
     trait StructMustNotImplDrop {}
     #[allow(clippy::drop_bounds)]
-    impl<T: ::pin_project::__reexport::ops::Drop> StructMustNotImplDrop for T {}
+    impl<T: ::pin_project::__private::Drop> StructMustNotImplDrop for T {}
     impl<T, U> StructMustNotImplDrop for Struct<T, U> {}
     impl<T, U> ::pin_project::__private::PinnedDrop for Struct<T, U> {
-        unsafe fn drop(self: ::pin_project::__reexport::pin::Pin<&mut Self>) {}
+        unsafe fn drop(self: ::pin_project::__private::Pin<&mut Self>) {}
     }
 
-    // Ensure that it's impossible to use pin projections on a #[repr(packed)] struct.
+    // Ensure that it's impossible to use pin projections on a #[repr(packed)]
+    // struct.
     //
     // See ./struct-default-expanded.rs and https://github.com/taiki-e/pin-project/pull/34
     // for details.
-    #[deny(safe_packed_borrows)]
+    #[forbid(safe_packed_borrows)]
     fn __assert_not_repr_packed<T, U>(val: &Struct<T, U>) {
         &val.pinned;
         &val.unpinned;

@@ -365,7 +365,7 @@ if (!(current_os == "fuchsia")) {
 }
 
 group("pin-project") {
-  deps = [ ":pin-project-v0_4_17" ]
+  deps = [ ":pin-project-v0_4_26" ]
 }
 
 group("pin-utils") {
@@ -3185,7 +3185,7 @@ rust_library("futures-util-v0_3_5") {
   deps += [ ":futures-sink-v0_3_5" ]
   deps += [ ":futures-task-v0_3_5" ]
   deps += [ ":memchr-v2_3_3" ]
-  deps += [ ":pin-project-v0_4_17" ]
+  deps += [ ":pin-project-v0_4_26" ]
   deps += [ ":pin-utils-v0_1_0" ]
   deps += [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
   deps += [ ":proc-macro-nested-v0_1_4" ]
@@ -3606,7 +3606,7 @@ rust_library("hyper-v0_13_6") {
   deps += [ ":httparse-v1_3_3" ]
   deps += [ ":itoa-v0_4_3" ]
   deps += [ ":log-v0_4_8" ]
-  deps += [ ":pin-project-v0_4_17" ]
+  deps += [ ":pin-project-v0_4_26" ]
   deps += [ ":time-v0_1_42" ]
   deps += [ ":tokio-v0_2_21" ]
   deps += [ ":tower-service-v0_3_0" ]
@@ -5290,33 +5290,33 @@ rust_library("phf_shared-v0_7_24") {
   ]
 }
 
-rust_library("pin-project-v0_4_17") {
+rust_library("pin-project-v0_4_26") {
   crate_name = "pin_project"
   crate_root = "//third_party/rust_crates/vendor/pin-project/src/lib.rs"
-  output_name = "pin_project-f7f7a0399f97f610"
+  output_name = "pin_project-a02b7c35a51bd146"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":pin-project-internal-v0_4_17($host_toolchain)" ]
+  deps += [ ":pin-project-internal-v0_4_26($host_toolchain)" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=f7f7a0399f97f610",
-    "-Cextra-filename=-f7f7a0399f97f610",
+    "-Cmetadata=a02b7c35a51bd146",
+    "-Cextra-filename=-a02b7c35a51bd146",
   ]
 }
 
-rust_proc_macro("pin-project-internal-v0_4_17") {
+rust_proc_macro("pin-project-internal-v0_4_26") {
   crate_name = "pin_project_internal"
   crate_root =
       "//third_party/rust_crates/vendor/pin-project-internal/src/lib.rs"
-  output_name = "pin_project_internal-a83a8b136dc1a1a4"
+  output_name = "pin_project_internal-c9d209096f69f67a"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -5332,8 +5332,10 @@ rust_proc_macro("pin-project-internal-v0_4_17") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=a83a8b136dc1a1a4",
-    "-Cextra-filename=-a83a8b136dc1a1a4",
+    "-Cmetadata=c9d209096f69f67a",
+    "-Cextra-filename=-c9d209096f69f67a",
+    "--cfg=underscore_consts",
+    "--cfg=deprecated_proc_macro",
   ]
 }
 
@@ -8829,7 +8831,7 @@ rust_library("tracing-futures-v0_2_4") {
   ]
 
   deps = []
-  deps += [ ":pin-project-v0_4_17" ]
+  deps += [ ":pin-project-v0_4_26" ]
   deps += [ ":tracing-v0_1_15" ]
 
   rustenv = []

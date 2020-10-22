@@ -1,5 +1,6 @@
 #![warn(rust_2018_idioms, single_use_lifetimes)]
 #![allow(dead_code)]
+#![allow(deprecated)]
 
 use pin_project::{pin_project, project_ref};
 use std::pin::Pin;
@@ -149,7 +150,7 @@ fn project_impl() {
 #[project_ref]
 #[test]
 fn combine() {
-    #[pin_project(Replace)]
+    #[pin_project(project_replace)]
     enum Enum<A> {
         V1(#[pin] A),
         V2,

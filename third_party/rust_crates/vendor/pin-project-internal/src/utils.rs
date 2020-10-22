@@ -1,16 +1,14 @@
-use proc_macro2::{Group, TokenStream, TokenTree};
-use quote::format_ident;
+use proc_macro2::{Group, Spacing, Span, TokenStream, TokenTree};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::{iter::FromIterator, mem};
 use syn::{
-    parse::{ParseBuffer, ParseStream},
+    parse::{Parse, ParseBuffer, ParseStream},
     punctuated::Punctuated,
     visit_mut::{self, VisitMut},
     *,
 };
 
-pub(crate) type Variants = Punctuated<Variant, token::Comma>;
-
-pub(crate) use Mutability::{Immutable, Mutable, Owned};
+pub(crate) type Variants = Punctuated<Variant, Token![,]>;
 
 macro_rules! error {
     ($span:expr, $msg:expr) => {
@@ -28,39 +26,43 @@ macro_rules! parse_quote_spanned {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
-pub(crate) enum Mutability {
+pub(crate) enum ProjKind {
     Mutable,
     Immutable,
     Owned,
 }
 
-impl Mutability {
-    /// Returns the name of method and attribute.
+impl ProjKind {
+    pub(crate) const ALL: [Self; 3] = [ProjKind::Mutable, ProjKind::Immutable, ProjKind::Owned];
+
+    /// Returns the name of the projection method.
     pub(crate) fn method_name(self) -> &'static str {
         match self {
-            Mutable => "project",
-            Immutable => "project_ref",
-            Owned => "project_replace",
+            ProjKind::Mutable => "project",
+            ProjKind::Immutable => "project_ref",
+            ProjKind::Owned => "project_replace",
         }
     }
 
-    /// Creates the ident of the projected type from the ident of the original type.
+    /// Creates the ident of the projected type from the ident of the original
+    /// type.
     pub(crate) fn proj_ident(self, ident: &Ident) -> Ident {
         match self {
-            Mutable => format_ident!("__{}Projection", ident),
-            Immutable => format_ident!("__{}ProjectionRef", ident),
-            Owned => format_ident!("__{}ProjectionOwned", ident),
+            ProjKind::Mutable => format_ident!("__{}Projection", ident),
+            ProjKind::Immutable => format_ident!("__{}ProjectionRef", ident),
+            ProjKind::Owned => format_ident!("__{}ProjectionOwned", ident),
         }
     }
 }
 
-/// Determines the lifetime names. Ensure it doesn't overlap with any existing lifetime names.
+/// Determines the lifetime names. Ensure it doesn't overlap with any existing
+/// lifetime names.
 pub(crate) fn determine_lifetime_name(lifetime_name: &mut String, generics: &mut Generics) {
     struct CollectLifetimes(Vec<String>);
 
     impl VisitMut for CollectLifetimes {
-        fn visit_lifetime_def_mut(&mut self, node: &mut LifetimeDef) {
-            self.0.push(node.lifetime.to_string())
+        fn visit_lifetime_def_mut(&mut self, def: &mut LifetimeDef) {
+            self.0.push(def.lifetime.to_string());
         }
     }
 
@@ -85,24 +87,23 @@ pub(crate) fn insert_lifetime_and_bound(
 ) -> WherePredicate {
     insert_lifetime(generics, lifetime.clone());
 
-    let orig_type: Type = syn::parse_quote!(#orig_ident #orig_generics);
+    let orig_type: Type = parse_quote!(#orig_ident #orig_generics);
     let mut punct = Punctuated::new();
     punct.push(TypeParamBound::Lifetime(lifetime));
 
     WherePredicate::Type(PredicateType {
         lifetimes: None,
         bounded_ty: orig_type,
-        colon_token: token::Colon::default(),
+        colon_token: <Token![:]>::default(),
         bounds: punct,
     })
 }
 
 /// Inserts a `lifetime` at position `0` of `generics.params`.
 pub(crate) fn insert_lifetime(generics: &mut Generics, lifetime: Lifetime) {
-    generics.lt_token.get_or_insert_with(token::Lt::default);
-    generics.gt_token.get_or_insert_with(token::Gt::default);
-
-    generics.params.insert(0, GenericParam::Lifetime(LifetimeDef::new(lifetime)));
+    generics.lt_token.get_or_insert_with(<Token![<]>::default);
+    generics.gt_token.get_or_insert_with(<Token![>]>::default);
+    generics.params.insert(0, LifetimeDef::new(lifetime).into());
 }
 
 /// Determines the visibility of the projected type and projection method.
@@ -115,10 +116,29 @@ pub(crate) fn determine_visibility(vis: &Visibility) -> Visibility {
 }
 
 /// Check if `tokens` is an empty `TokenStream`.
-/// This is almost equivalent to `syn::parse2::<Nothing>()`,
-/// but produces a better error message and does not require ownership of `tokens`.
+/// This is almost equivalent to `syn::parse2::<Nothing>()`, but produces
+/// a better error message and does not require ownership of `tokens`.
 pub(crate) fn parse_as_empty(tokens: &TokenStream) -> Result<()> {
     if tokens.is_empty() { Ok(()) } else { Err(error!(tokens, "unexpected token: {}", tokens)) }
+}
+
+pub(crate) fn respan<T>(node: &T, span: Span) -> T
+where
+    T: ToTokens + Parse,
+{
+    let tokens = node.to_token_stream();
+    let respanned = respan_tokens(tokens, span);
+    syn::parse2(respanned).unwrap()
+}
+
+fn respan_tokens(tokens: TokenStream, span: Span) -> TokenStream {
+    tokens
+        .into_iter()
+        .map(|mut token| {
+            token.set_span(span);
+            token
+        })
+        .collect()
 }
 
 // =================================================================================================
@@ -183,11 +203,15 @@ impl<'a> ParseBufferExt<'a> for ParseBuffer<'a> {
 // visitors
 
 // Replace `self`/`Self` with `__self`/`self_ty`.
-// Based on https://github.com/dtolnay/async-trait/blob/0.1.30/src/receiver.rs
+// Based on https://github.com/dtolnay/async-trait/blob/0.1.35/src/receiver.rs
 
-pub(crate) struct ReplaceReceiver<'a>(pub(crate) &'a Type);
+pub(crate) struct ReplaceReceiver<'a>(pub(crate) &'a TypePath);
 
 impl ReplaceReceiver<'_> {
+    fn self_ty(&self, span: Span) -> TypePath {
+        respan(self.0, span)
+    }
+
     fn self_to_qself(&self, qself: &mut Option<QSelf>, path: &mut Path) {
         if path.leading_colon.is_some() {
             return;
@@ -203,18 +227,16 @@ impl ReplaceReceiver<'_> {
             return;
         }
 
+        let span = first.ident.span();
         *qself = Some(QSelf {
-            lt_token: token::Lt::default(),
-            ty: Box::new(self.0.clone()),
+            lt_token: Token![<](span),
+            ty: Box::new(self.self_ty(span).into()),
             position: 0,
             as_token: None,
-            gt_token: token::Gt::default(),
+            gt_token: Token![>](span),
         });
 
-        match path.segments.pairs().next().unwrap().punct() {
-            Some(&&colon) => path.leading_colon = Some(colon),
-            None => return,
-        }
+        path.leading_colon = Some(**path.segments.pairs().next().unwrap().punct().unwrap());
 
         let segments = mem::replace(&mut path.segments, Punctuated::new());
         path.segments = segments.into_pairs().skip(1).collect();
@@ -230,25 +252,66 @@ impl ReplaceReceiver<'_> {
             return;
         }
 
-        if let Type::Path(self_ty) = &self.0 {
-            let variant = mem::replace(path, self_ty.path.clone());
-            for segment in &mut path.segments {
-                if let PathArguments::AngleBracketed(bracketed) = &mut segment.arguments {
-                    if bracketed.colon2_token.is_none() && !bracketed.args.is_empty() {
-                        bracketed.colon2_token = Some(token::Colon2::default());
-                    }
+        let self_ty = self.self_ty(first.ident.span());
+        let variant = mem::replace(path, self_ty.path);
+        for segment in &mut path.segments {
+            if let PathArguments::AngleBracketed(bracketed) = &mut segment.arguments {
+                if bracketed.colon2_token.is_none() && !bracketed.args.is_empty() {
+                    bracketed.colon2_token = Some(<Token![::]>::default());
                 }
             }
-            if variant.segments.len() > 1 {
-                path.segments.push_punct(token::Colon2::default());
-                path.segments.extend(variant.segments.into_pairs().skip(1));
-            }
-        } else {
-            let span = path.segments[0].ident.span();
-            let msg = "Self type of this impl is unsupported in expression position";
-            let error = Error::new(span, msg).to_compile_error();
-            *path = parse_quote!(::pin_project::__reexport::marker::PhantomData::<#error>);
         }
+        if variant.segments.len() > 1 {
+            path.segments.push_punct(<Token![::]>::default());
+            path.segments.extend(variant.segments.into_pairs().skip(1));
+        }
+    }
+
+    fn visit_token_stream(&self, tokens: &mut TokenStream) -> bool {
+        let mut out = Vec::new();
+        let mut modified = false;
+        let mut iter = tokens.clone().into_iter().peekable();
+        while let Some(tt) = iter.next() {
+            match tt {
+                TokenTree::Ident(mut ident) => {
+                    modified |= prepend_underscore_to_self(&mut ident);
+                    if ident == "Self" {
+                        modified = true;
+                        let self_ty = self.self_ty(ident.span());
+                        match iter.peek() {
+                            Some(TokenTree::Punct(p))
+                                if p.as_char() == ':' && p.spacing() == Spacing::Joint =>
+                            {
+                                let next = iter.next().unwrap();
+                                match iter.peek() {
+                                    Some(TokenTree::Punct(p)) if p.as_char() == ':' => {
+                                        let span = ident.span();
+                                        out.extend(quote_spanned!(span=> <#self_ty>))
+                                    }
+                                    _ => out.extend(quote!(#self_ty)),
+                                }
+                                out.push(next);
+                            }
+                            _ => out.extend(quote!(#self_ty)),
+                        }
+                    } else {
+                        out.push(TokenTree::Ident(ident));
+                    }
+                }
+                TokenTree::Group(group) => {
+                    let mut content = group.stream();
+                    modified |= self.visit_token_stream(&mut content);
+                    let mut new = Group::new(group.delimiter(), content);
+                    new.set_span(group.span());
+                    out.push(TokenTree::Group(new));
+                }
+                other => out.push(other),
+            }
+        }
+        if modified {
+            *tokens = TokenStream::from_iter(out);
+        }
+        modified
     }
 }
 
@@ -257,7 +320,7 @@ impl VisitMut for ReplaceReceiver<'_> {
     fn visit_type_mut(&mut self, ty: &mut Type) {
         if let Type::Path(node) = ty {
             if node.qself.is_none() && node.path.is_ident("Self") {
-                *ty = self.0.clone();
+                *ty = self.self_ty(node.path.segments[0].ident.span()).into();
             } else {
                 self.visit_type_path_mut(node);
             }
@@ -305,25 +368,25 @@ impl VisitMut for ReplaceReceiver<'_> {
         visit_mut::visit_pat_tuple_struct_mut(self, pat);
     }
 
-    fn visit_item_mut(&mut self, node: &mut Item) {
-        match node {
+    fn visit_item_mut(&mut self, item: &mut Item) {
+        match item {
             // Visit `macro_rules!` because locally defined macros can refer to `self`.
-            Item::Macro(node) if node.mac.path.is_ident("macro_rules") => {
-                self.visit_macro_mut(&mut node.mac)
+            Item::Macro(item) if item.mac.path.is_ident("macro_rules") => {
+                self.visit_macro_mut(&mut item.mac)
             }
             // Otherwise, do not recurse into nested items.
             _ => {}
         }
     }
 
-    fn visit_macro_mut(&mut self, node: &mut Macro) {
+    fn visit_macro_mut(&mut self, mac: &mut Macro) {
         // We can't tell in general whether `self` inside a macro invocation
         // refers to the self in the argument list or a different self
         // introduced within the macro. Heuristic: if the macro input contains
         // `fn`, then `self` is more likely to refer to something other than the
         // outer function's self argument.
-        if !contains_fn(node.tokens.clone()) {
-            visit_token_stream(&mut node.tokens);
+        if !contains_fn(mac.tokens.clone()) {
+            self.visit_token_stream(&mut mac.tokens);
         }
     }
 }
@@ -334,31 +397,6 @@ fn contains_fn(tokens: TokenStream) -> bool {
         TokenTree::Group(group) => contains_fn(group.stream()),
         _ => false,
     })
-}
-
-fn visit_token_stream(tokens: &mut TokenStream) -> bool {
-    let mut out = Vec::new();
-    let mut modified = false;
-    for tt in tokens.clone() {
-        match tt {
-            TokenTree::Ident(mut ident) => {
-                modified |= prepend_underscore_to_self(&mut ident);
-                out.push(TokenTree::Ident(ident));
-            }
-            TokenTree::Group(group) => {
-                let mut content = group.stream();
-                modified |= visit_token_stream(&mut content);
-                let mut new = Group::new(group.delimiter(), content);
-                new.set_span(group.span());
-                out.push(TokenTree::Group(new));
-            }
-            other => out.push(other),
-        }
-    }
-    if modified {
-        *tokens = TokenStream::from_iter(out);
-    }
-    modified
 }
 
 pub(crate) fn prepend_underscore_to_self(ident: &mut Ident) -> bool {

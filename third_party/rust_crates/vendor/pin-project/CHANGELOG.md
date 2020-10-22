@@ -6,9 +6,120 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 ## [Unreleased]
 
+## [0.4.26] - 2020-10-04
+
+* [Fix drop order of pinned fields in project_replace](https://github.com/taiki-e/pin-project/pull/287)
+
+## [0.4.25] - 2020-10-01
+
+* Suppress `drop_bounds` lint, which will be added to rustc in the future. See [#272](https://github.com/taiki-e/pin-project/issues/272) for more details.
+
+  (Note: 1.0.0-alpha.1 already contains this change.)
+
+## [0.4.24] - 2020-09-26
+
+* Fix compatibility of generated code with `forbid(future_incompatible)`
+
+  Note: This does not guarantee compatibility with `forbid(future_incompatible)` in the future.
+  If rustc adds a new lint, we may not be able to keep this.
+
+## [0.4.23] - 2020-07-27
+
+* [Fix compile error with `?Sized` type parameters.][263]
+
+[263]: https://github.com/taiki-e/pin-project/pull/263
+
+## [0.4.22] - 2020-06-14
+
+* Documentation improvements.
+
+## [0.4.21] - 2020-06-13
+
+* [Deprecated `#[project]`, `#[project_ref]`, and `#[project_replace]` attributes due to some unfixable limitations.][244]
+
+  Consider naming the projected type by passing an argument with the same name as the method to the #[pin_project] attribute instead.
+
+  ```rust
+  use pin_project::pin_project;
+  use std::pin::Pin;
+
+  #[pin_project(project = EnumProj)]
+  enum Enum<T> {
+      Variant(#[pin] T),
+  }
+
+  fn func<T>(x: Pin<&mut Enum<T>>) {
+      match x.project() {
+          EnumProj::Variant(y) => {
+              let _: Pin<&mut T> = y;
+          }
+      }
+  }
+  ```
+
+  See [#225][225] for more details.
+
+* [Support `Self` in fields and generics in type definitions.][245]
+
+* [Fix errors involving *"`self` value is a keyword only available in methods with `self` parameter"* in apparently correct code.][250]
+
+* Diagnostic improvements.
+
+[225]: https://github.com/taiki-e/pin-project/pull/225
+[244]: https://github.com/taiki-e/pin-project/pull/244
+[245]: https://github.com/taiki-e/pin-project/pull/245
+[250]: https://github.com/taiki-e/pin-project/pull/250
+
+## [0.4.20] - 2020-06-07
+
+* [You can now use project_replace argument without Replace argument.][243]
+  This used to require you to specify both.
+
+  ```diff
+  - #[pin_project(Replace, project_replace = EnumProjOwn)]
+  + #[pin_project(project_replace = EnumProjOwn)]
+    enum Enum<T> {
+        Variant(#[pin] T)
+    }
+  ```
+
+* [Makes `project_replace` argument an alias for `Replace` argument so that it can be used without a value.][243]
+
+  ```rust
+  #[pin_project(project_replace)]
+  enum Enum<T> {
+      Variant(#[pin] T)
+  }
+  ```
+
+  *The `Replace` argument will be deprecated in the future.*
+
+* Suppress `unreachable_pub` lint in generated code.
+
+[243]: https://github.com/taiki-e/pin-project/pull/243
+
+## [0.4.19] - 2020-06-04
+
+* [Fix `unused_results` lint in generated code.][239]
+
+[239]: https://github.com/taiki-e/pin-project/pull/239
+
+## [0.4.18] - 2020-06-04
+
+* [Support `Self` in more syntax positions inside `#[pinned_drop]` impl.][230]
+
+* [Suppress `clippy::type_repetition_in_bounds` and `clippy::used_underscore_binding` lints in generated code.][233]
+
+* Documentation improvements.
+
+* Diagnostic improvements.
+
+[230]: https://github.com/taiki-e/pin-project/pull/230
+[233]: https://github.com/taiki-e/pin-project/pull/233
+
 ## [0.4.17] - 2020-05-18
 
-* [Allowed naming the projected types.][202]
+* [Support naming the projection types.][202]
 
   By passing an argument with the same name as the method to the attribute, you can name the projection type returned from the method:
 
@@ -73,11 +184,13 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 * [Fixed an issue where duplicate `#[project]` attributes were ignored.][218]
 
-* [Fixed compile error and warnings with HRTB.][217]
+* [Suppress `single_use_lifetimes` lint in generated code.][217]
 
-* [Hide generated items from --document-private-items.][211] See [#211][211] for more details.
+* [Support overlapping lifetime names in HRTB.][217]
 
-* Improve documentation
+* [Hide generated items from --document-private-items.][211] See [#211][211] for details.
+
+* Documentation improvements.
 
 [211]: https://github.com/taiki-e/pin-project/pull/211
 [217]: https://github.com/taiki-e/pin-project/pull/217
@@ -94,7 +207,11 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
   * [Support overwriting the name of core crate.][199]
 
-  * Improve documentation
+  * [Suppress `clippy::needless_pass_by_value` lint in generated code of `#[pinned_drop]`.][200]
+
+  * Documentation improvements.
+
+  * Diagnostic improvements.
 
 [207]: https://github.com/taiki-e/pin-project/pull/207
 
@@ -110,10 +227,15 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 * [Support overwriting the name of core crate.][199]
 
-* Improve documentation
+* [Suppress `clippy::needless_pass_by_value` lint in generated code of `#[pinned_drop]`.][200]
+
+* Documentation improvements.
+
+* Diagnostic improvements.
 
 [197]: https://github.com/taiki-e/pin-project/pull/197
 [199]: https://github.com/taiki-e/pin-project/pull/199
+[200]: https://github.com/taiki-e/pin-project/pull/200
 
 ## [0.4.10] - 2020-05-04
 
@@ -121,6 +243,12 @@ This project adheres to [Semantic Versioning](https://semver.org).
   `project_replace` method is optional and can be enabled by passing the `Replace` argument to `#[pin_project]` attribute.
   See [the documentation](https://docs.rs/pin-project/0.4/pin_project/attr.pin_project.html#project_replace) for more details.
 
+* [Support `Self` and `self` in more syntax positions inside `#[pinned_drop]` impl.][190]
+
+* [Hided all generated items except for projected types from calling code.][192] See [#192][192] for details.
+
+[190]: https://github.com/taiki-e/pin-project/pull/190
+[192]: https://github.com/taiki-e/pin-project/pull/192
 [194]: https://github.com/taiki-e/pin-project/pull/194
 
 ## [0.4.9] - 2020-04-14
@@ -139,6 +267,9 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 * [Ensured that users cannot implement `PinnedDrop` without proper attribute argument.][180]
 
+* [Fixed use of `Self` in expression position inside `#[pinned_drop]` impl.][177]
+
+[177]: https://github.com/taiki-e/pin-project/pull/180
 [180]: https://github.com/taiki-e/pin-project/pull/180
 
 ## [0.4.7] - 2020-01-20
@@ -172,6 +303,8 @@ This project adheres to [Semantic Versioning](https://semver.org).
 * [`#[pin_project]` can now interoperate with `#[cfg()]` on tuple structs and tuple variants.][135]
 
 * [Fixed support for DSTs(Dynamically Sized Types) on `#[pin_project(UnsafeUnpin)]`][120]
+
+* Diagnostic improvements.
 
 [120]: https://github.com/taiki-e/pin-project/pull/120
 [135]: https://github.com/taiki-e/pin-project/pull/135
@@ -262,7 +395,7 @@ Changes since the 0.4.0-beta.1 release:
 
 * Added some examples and generated code.
 
-* Improve error messages.
+* Diagnostic improvements.
 
 [86]: https://github.com/taiki-e/pin-project/pull/86
 
@@ -270,7 +403,7 @@ Changes since the 0.4.0-beta.1 release:
 
 * [`#[pin_project]` can now interoperate with `#[cfg()]`.][77]
 
-* Improved documentation.
+* Documentation improvements.
 
 [77]: https://github.com/taiki-e/pin-project/pull/77
 
@@ -292,14 +425,14 @@ Changes since the 0.4.0-beta.1 release:
 
 * [Improved document of generated code.][62]. Also added an option to control the document of generated code. See [#62][62] for more details.
 
-* [Improved error messages][61]
+* [Diagnostic improvements.][61]
 
 [61]: https://github.com/taiki-e/pin-project/pull/61
 [62]: https://github.com/taiki-e/pin-project/pull/62
 
 ## [0.4.0-alpha.7] - 2019-09-02
 
-* [Applied `#[allow(dead_code)]` to generated types.][57]
+* [Suppress `dead_code` lint in generated types.][57]
 
 [57]: https://github.com/taiki-e/pin-project/pull/57
 
@@ -317,7 +450,7 @@ Changes since the 0.4.0-beta.1 release:
 
 ## [0.4.0-alpha.4] - 2019-08-23
 
-* Avoided clippy::drop_bounds lint in generated code.
+* Suppress `clippy::drop_bounds` lint in generated code.
 
 ## [0.4.0-alpha.3] - 2019-08-23
 
@@ -359,11 +492,11 @@ See also [tracking issue for 0.4 release][21].
 
 ## [0.3.4] - 2019-07-21
 
-* Improved error messages.
+* Diagnostic improvements.
 
 ## [0.3.3] - 2019-07-15 - YANKED
 
-* Improved error messages.
+* Diagnostic improvements.
 
 ## [0.3.2] - 2019-03-30
 
@@ -371,7 +504,7 @@ See also [tracking issue for 0.4 release][21].
 
 ## [0.3.1] - 2019-03-02
 
-* Improved documentation.
+* Documentation improvements.
 
 * Updated minimum `syn` version to 0.15.22.
 
@@ -393,7 +526,7 @@ See also [tracking issue for 0.4 release][21].
 
 * Made `unsafe_fields` optional.
 
-* Improved documentation.
+* Documentation improvements.
 
 ## [0.1.8] - 2019-02-02
 
@@ -427,7 +560,7 @@ See also [tracking issue for 0.4 release][21].
 
 ## [0.1.2] - 2019-01-09
 
-* Improved documentation.
+* Documentation improvements.
 
 ## [0.1.1] - 2019-01-08
 
@@ -437,7 +570,16 @@ See also [tracking issue for 0.4 release][21].
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/pin-project/compare/v0.4.17...HEAD
+[Unreleased]: https://github.com/taiki-e/pin-project/compare/v0.4.26...HEAD
+[0.4.26]: https://github.com/taiki-e/pin-project/compare/v0.4.25...v0.4.26
+[0.4.25]: https://github.com/taiki-e/pin-project/compare/v0.4.24...v0.4.25
+[0.4.24]: https://github.com/taiki-e/pin-project/compare/v0.4.23...v0.4.24
+[0.4.23]: https://github.com/taiki-e/pin-project/compare/v0.4.22...v0.4.23
+[0.4.22]: https://github.com/taiki-e/pin-project/compare/v0.4.21...v0.4.22
+[0.4.21]: https://github.com/taiki-e/pin-project/compare/v0.4.20...v0.4.21
+[0.4.20]: https://github.com/taiki-e/pin-project/compare/v0.4.19...v0.4.20
+[0.4.19]: https://github.com/taiki-e/pin-project/compare/v0.4.18...v0.4.19
+[0.4.18]: https://github.com/taiki-e/pin-project/compare/v0.4.17...v0.4.18
 [0.4.17]: https://github.com/taiki-e/pin-project/compare/v0.4.16...v0.4.17
 [0.4.16]: https://github.com/taiki-e/pin-project/compare/v0.4.15...v0.4.16
 [0.4.15]: https://github.com/taiki-e/pin-project/compare/v0.4.14...v0.4.15
