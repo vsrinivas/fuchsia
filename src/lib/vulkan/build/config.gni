@@ -2,6 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Indicates if the prebuilt Vulkan runtime is available on current host.
+# Currently the prebuilt runtime is only available on Linux x64 machines.
+#
+has_prebuilt_vulkan_runtime = current_cpu == "x64" && is_linux
+
 declare_args() {
   if (host_os == "linux" && host_cpu == "x64") {
     #
@@ -18,8 +23,8 @@ declare_args() {
     vulkan_host_runtime_dir = "//prebuilt/third_party/vulkan_runtime/linux-x64"
   }
 
-  # TODO(liyl): Currently macOS doesn't have Vulkan support, so we always
-  # use the null Vulkan implementation instead.
+  # TODO(liyl): Currently non-x64 platforms and macOS don't have Vulkan support,
+  # so we always use the null Vulkan implementation instead.
 
   #
   # Global arguments for whether we use a "null" Vulkan implementation on
@@ -28,7 +33,7 @@ declare_args() {
   #
   # This argument will affect all vulkan_{executable/test} build targets.
   #
-  use_null_vulkan_on_host = is_mac
+  use_null_vulkan_on_host = !has_prebuilt_vulkan_runtime
 
   #
   # Global arguments for whether we use the SwiftShader Vulkan ICD on host

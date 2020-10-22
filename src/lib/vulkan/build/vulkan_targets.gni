@@ -103,7 +103,7 @@ template("_target_with_vulkan") {
   assert(target_type == "executable" || target_type == "test",
          "Unsupported target_type value: $target_type!")
 
-  if (is_host && is_linux) {
+  if (is_host && has_prebuilt_vulkan_runtime) {
     if (!defined(invoker.output_name)) {
       _output_name = target_name
     } else {
