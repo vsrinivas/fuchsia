@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 )
 
 // Archive allows interacting with the build artifact repository.
@@ -83,21 +85,29 @@ func (a *Archive) download(ctx context.Context, dir string, buildID string, src 
 	// So we'll initally download into a temporary file, and only once it
 	// succeeds do we rename it into the real destination.
 	err := util.AtomicallyWriteFile(path, 0644, func(tmpfile *os.File) error {
-		args := []string{
-			"cp",
-			"-build", buildID,
-			"-src", src,
-			"-dst", tmpfile.Name(),
-		}
-
-		_, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
-		if err != nil {
-			if len(stderr) != 0 {
-				return fmt.Errorf("artifacts failed: %w: %s", err, string(stderr))
+		// TODO(fxb/62503): Temporary measure to work around use of old version of cloud storage
+		// api in prebuilt. This should be removed when the artifacts prebuilt is updated to
+		// do the retry on network issues itself.
+		eb := retry.NewExponentialBackoff(100*time.Millisecond, 10*time.Second, 2)
+		// ~12 seconds to hit ceiling, plus 2.5 minutes of slack, given the above EB.
+		retryCap := uint64(22)
+		return retry.Retry(ctx, retry.WithMaxAttempts(eb, retryCap), func() error {
+			args := []string{
+				"cp",
+				"-build", buildID,
+				"-src", src,
+				"-dst", tmpfile.Name(),
 			}
-			return fmt.Errorf("artifacts failed: %w", err)
-		}
-		return nil
+
+			_, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
+			if err != nil {
+				if len(stderr) != 0 {
+					return fmt.Errorf("artifacts failed: %w: %s", err, string(stderr))
+				}
+				return fmt.Errorf("artifacts failed: %w", err)
+			}
+			return nil
+		}, nil)
 	})
 	if err != nil {
 		return "", err
