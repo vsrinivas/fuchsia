@@ -96,7 +96,12 @@ void CheckedTruncate(const char* filename, uint8_t* u8, ssize_t new_len) {
     // Verify that the file is unchanged up to old_len
     ASSERT_EQ(emu_lseek(fd, 0, SEEK_SET), 0);
     ASSERT_TRUE(CheckStreamAll(emu_read, fd, readbuf.data(), old_len));
-    ASSERT_EQ(memcmp(readbuf.data(), u8, old_len), 0);
+    if (old_len > 0) {
+      // It's undefined behavior to call memcmp on a nullptr, so only do this
+      // check if old_len is nonzero and thus readbuf.data() is expected to
+      // contain a real pointer.
+      ASSERT_EQ(memcmp(readbuf.data(), u8, old_len), 0);
+    }
     // Verify that the file is filled with zeroes from old_len to new_len
     ASSERT_EQ(emu_lseek(fd, old_len, SEEK_SET), old_len);
     ASSERT_TRUE(CheckStreamAll(emu_read, fd, readbuf.data(), new_len - old_len));
@@ -110,7 +115,12 @@ void CheckedTruncate(const char* filename, uint8_t* u8, ssize_t new_len) {
     // Verify that the file is unchanged up to new_len
     ASSERT_EQ(emu_lseek(fd, 0, SEEK_SET), 0);
     ASSERT_TRUE(CheckStreamAll(emu_read, fd, readbuf.data(), new_len));
-    ASSERT_EQ(memcmp(readbuf.data(), u8, new_len), 0);
+    if (new_len > 0) {
+      // It's undefined behavior to call memcmp on a nullptr, so only do this
+      // check if old_len is nonzero and thus readbuf.data() is expected to
+      // contain a real pointer.
+      ASSERT_EQ(memcmp(readbuf.data(), u8, new_len), 0);
+    }
   }
 
   ASSERT_EQ(emu_close(fd), 0);
