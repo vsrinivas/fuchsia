@@ -1,0 +1,30 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings;
+
+/// Settings related to factory reset.
+[Discoverable]
+protocol FactoryReset {
+    /// Notifies of a change in information about the factory reset settings.
+    ///
+    /// On a given connection, the first call will return the current `settings`
+    /// value while subsequent calls will only return the new `settings` value
+    /// upon a value change. This follows the hanging get pattern.
+    ///
+    /// If this call fails, it is considered a fatal error and the channel will
+    /// be closed.
+    Watch() -> (FactoryResetSettings settings);
+
+    /// Sets factory reset settings. Any field not explicitly set in the table
+    /// performs a no-op, and will not make any changes.
+    Set(FactoryResetSettings settings) -> () error Error;
+};
+
+/// Information about the factory reset settings.
+table FactoryResetSettings {
+    /// When set to true, a user is able to physically perform a factory reset.
+    /// When false, that functionality is disabled.
+    1: bool is_local_reset_allowed;
+};

@@ -13,6 +13,7 @@ fidl("fuchsia.settings") {
     "device.fidl",
     "display.fidl",
     "do_not_disturb.fidl",
+    "factory_reset.fidl",
     "input.fidl",
     "intl.fidl",
     "light.fidl",
