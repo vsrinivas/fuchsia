@@ -30,7 +30,9 @@ Fuchsia's [bootstrap script](/scripts/bootstrap) creates a `fuchsia` directory
 and downloads the content of the Fuchsia source repository to this new
 directory.
 
-Note: Downloading Fuchsia may take up to 60 minutes.
+Note: Downloading Fuchsia source requires ~2 GiB of space on your machine. In
+addition, you will need another 80-90 GiB of space when you build Fuchsia,
+depending on your build configuration.
 
 To download the Fuchsia source, do the following:
 
