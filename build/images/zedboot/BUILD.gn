@@ -44,7 +44,7 @@ zedboot_deps += [
   "//src/connectivity/network/bin/ping",
   "//src/devices/nand/bin/nand-util",
   "//src/devices/nand/drivers/broker:nand-broker",
-  "//src/diagnostics/dlog",
+  "//src/diagnostics/bundles:debugging",
   "//src/security/bin/syscall-check",
   "//src/storage/bin/dd",
   "//src/storage/bin/umount",
