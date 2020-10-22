@@ -513,7 +513,7 @@ mod tests {
     use dns::test_util::*;
     use dns::DEFAULT_PORT;
     use fidl_fuchsia_net_ext::IntoExt as _;
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty};
     use net_declare::{fidl_ip_v4, fidl_ip_v6, std_ip_v4, std_ip_v6};
     use trust_dns_proto::{
         op::Query,
@@ -1049,13 +1049,15 @@ mod tests {
         assert_inspect_tree!(inspector, root:{
             servers: {
                 "0": {
-                    address: "[2001:4860:4860::4444]:53",
+                    // TODO(fxbug.dev/59493): Change to "[2001:4860:4860::4444%2]:53"
+                    address: AnyProperty,
                 },
                 "1": {
                     address: "8.8.4.4:53",
                 },
                 "2": {
-                    address: "[2002:4860:4860::4444]:53",
+                    // TODO(fxbug.dev/59493): Change to "[2002:4860:4860::4444%2]:53"
+                    address: AnyProperty,
                 },
                 "3": {
                     address: "8.8.8.8:53",
