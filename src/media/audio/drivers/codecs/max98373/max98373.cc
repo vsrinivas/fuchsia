@@ -4,6 +4,8 @@
 
 #include "max98373.h"
 
+#include <lib/simple-codec/simple-codec-helper.h>
+
 #include <algorithm>
 #include <memory>
 
@@ -33,25 +35,19 @@ constexpr uint8_t kRegResetReset               = 0x01;
 // clang-format on
 
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
-static const uint32_t supported_n_channels[] = {2};
-static const sample_format_t supported_sample_formats[] = {SAMPLE_FORMAT_PCM_SIGNED};
-static const frame_format_t supported_frame_formats[] = {FRAME_FORMAT_I2S};
-static const uint32_t supported_rates[] = {48000};
-static const uint8_t supported_bits_per_slot[] = {32};
-static const uint8_t supported_bits_per_sample[] = {32};
-static const dai_supported_formats_t kSupportedDaiFormats = {
-    .number_of_channels_list = supported_n_channels,
-    .number_of_channels_count = countof(supported_n_channels),
-    .sample_formats_list = supported_sample_formats,
-    .sample_formats_count = countof(supported_sample_formats),
-    .frame_formats_list = supported_frame_formats,
-    .frame_formats_count = countof(supported_frame_formats),
-    .frame_rates_list = supported_rates,
-    .frame_rates_count = countof(supported_rates),
-    .bits_per_slot_list = supported_bits_per_slot,
-    .bits_per_slot_count = countof(supported_bits_per_slot),
-    .bits_per_sample_list = supported_bits_per_sample,
-    .bits_per_sample_count = countof(supported_bits_per_sample),
+static const std::vector<uint32_t> kSupportedNumberOfChannels = {2};
+static const std::vector<sample_format_t> kSupportedSampleFormats = {SAMPLE_FORMAT_PCM_SIGNED};
+static const std::vector<frame_format_t> kSupportedFrameFormats = {FRAME_FORMAT_I2S};
+static const std::vector<uint32_t> kSupportedRates = {48'000};
+static const std::vector<uint8_t> kSupportedBitsPerSlot = {32};
+static const std::vector<uint8_t> kSupportedBitsPerSample = {32};
+static const audio::DaiSupportedFormats kSupportedDaiFormats = {
+    .number_of_channels = kSupportedNumberOfChannels,
+    .sample_formats = kSupportedSampleFormats,
+    .frame_formats = kSupportedFrameFormats,
+    .frame_rates = kSupportedRates,
+    .bits_per_slot = kSupportedBitsPerSlot,
+    .bits_per_sample = kSupportedBitsPerSample,
 };
 
 enum {
@@ -85,7 +81,7 @@ zx_status_t Max98373::HardwareReset() {
   return ZX_ERR_INTERNAL;
 }
 
-zx_status_t Max98373::SoftwareResetAndInitialize() {
+zx_status_t Max98373::Reset() {
   fbl::AutoLock lock(&lock_);
   auto status = WriteReg(kRegReset, kRegResetReset);
   if (status != ZX_OK) {
@@ -124,20 +120,23 @@ zx_status_t Max98373::SoftwareResetAndInitialize() {
   return status;
 }
 
-zx_status_t Max98373::Bind() {
+zx::status<DriverIds> Max98373::Initialize() {
+  auto ids = DriverIds{
+      .vendor_id = PDEV_VID_MAXIM,
+      .device_id = PDEV_DID_MAXIM_MAX98373,
+  };
   auto thunk = [](void* arg) -> int { return reinterpret_cast<Max98373*>(arg)->Thread(); };
   int rc = thrd_create_with_name(&thread_, thunk, this, "max98373-thread");
   if (rc != thrd_success) {
-    return ZX_ERR_INTERNAL;
+    return zx::error(rc);
   }
-  zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_MAXIM},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MAXIM_MAX98373},
-  };
-  return DdkAdd(ddk::DeviceAddArgs("max98373").set_props(props));
+  return zx::ok(ids);
 }
 
-void Max98373::Shutdown() { thrd_join(thread_, NULL); }
+zx_status_t Max98373::Shutdown() {
+  thrd_join(thread_, NULL);
+  return ZX_OK;
+}
 
 zx_status_t Max98373::Create(zx_device_t* parent) {
   composite_protocol_t composite;
@@ -155,136 +154,66 @@ zx_status_t Max98373::Create(zx_device_t* parent) {
     zxlogf(ERROR, "%s Could not get fragments", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
-
-  fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<Max98373>(
-      new (&ac) Max98373(parent, fragments[FRAGMENT_I2C], fragments[FRAGMENT_RESET_GPIO]));
-  if (!ac.check()) {
-    zxlogf(ERROR, "%s Could not allocate memory", __FILE__);
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  status = dev->Bind();
-  if (status != ZX_OK) {
-    return status;
-  }
+  auto dev = SimpleCodecServer::Create<Max98373>(parent, fragments[FRAGMENT_I2C],
+                                                 fragments[FRAGMENT_RESET_GPIO]);
 
   // devmgr is now in charge of the memory for dev.
   dev.release();
   return ZX_OK;
 }
 
-void Max98373::CodecReset(codec_reset_callback callback, void* cookie) {
-  auto status = SoftwareResetAndInitialize();
-  callback(cookie, status);
+Info Max98373::GetInfo() {
+  return {.unique_id = "", .manufacturer = "Maxim", .product_name = "MAX98373"};
 }
 
-void Max98373::CodecGetInfo(codec_get_info_callback callback, void* cookie) {
-  info_t info;
-  info.unique_id = "";
-  info.manufacturer = "Maxim";
-  info.product_name = "MAX98373";
-  callback(cookie, &info);
-}
+bool Max98373::IsBridgeable() { return false; }
 
-void Max98373::CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie) {
-  callback(cookie, false);
-}
-
-void Max98373::CodecSetBridgedMode(bool enable_bridged_mode,
-                                   codec_set_bridged_mode_callback callback, void* cookie) {
+void Max98373::SetBridgedMode(bool enable_bridged_mode) {
   // TODO(andresoportus): Add support and report true in CodecIsBridgeable.
-  callback(cookie);
 }
 
-void Max98373::CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie) {
-  callback(cookie, ZX_OK, &kSupportedDaiFormats, 1);
+std::vector<DaiSupportedFormats> Max98373::GetDaiFormats() {
+  std::vector<DaiSupportedFormats> formats;
+  formats.push_back(kSupportedDaiFormats);
+  return formats;
 }
 
-void Max98373::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format_callback callback,
-                                 void* cookie) {
-  if (format == nullptr) {
-    callback(cookie, ZX_ERR_INVALID_ARGS);
-    return;
+zx_status_t Max98373::SetDaiFormat(const DaiFormat& format) {
+  if (!IsDaiFormatSupported(format, kSupportedDaiFormats)) {
+    zxlogf(ERROR, "%s unsupported format\n", __FILE__);
+    return ZX_ERR_NOT_SUPPORTED;
   }
-
-  // Only allow 2 channels.
-  if (format->number_of_channels != 2) {
-    zxlogf(ERROR, "%s DAI format number of channels not supported", __FILE__);
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-  if (format->channels_to_use_bitmask != 3) {
-    zxlogf(ERROR, "%s DAI format channels to use not supported", __FILE__);
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-
-  // Only I2S.
-  if (format->sample_format != SAMPLE_FORMAT_PCM_SIGNED ||
-      format->frame_format != FRAME_FORMAT_I2S) {
-    zxlogf(ERROR, "%s DAI format format not supported", __FILE__);
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-
-  // Check rates allowed.
-  size_t i = 0;
-  for (i = 0; i < kSupportedDaiFormats.frame_rates_count; ++i) {
-    if (format->frame_rate == kSupportedDaiFormats.frame_rates_list[i]) {
-      break;
-    }
-  }
-  if (i == kSupportedDaiFormats.frame_rates_count) {
-    zxlogf(ERROR, "%s DAI format rates not supported", __FILE__);
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-
-  // Allow only 32 bits samples and slot.
-  if (format->bits_per_sample != 32 || format->bits_per_slot != 32) {
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-  callback(cookie, ZX_OK);
+  return ZX_OK;
 }
 
-void Max98373::CodecGetGainFormat(codec_get_gain_format_callback callback, void* cookie) {
-  gain_format_t format = {};
-  format.type = GAIN_TYPE_DECIBELS;
-  format.min_gain = kMinGain;
-  format.max_gain = kMaxGain;
-  format.gain_step = kGainStep;
-  format.can_mute = false;
-  format.can_agc = false;
-  callback(cookie, &format);
+GainFormat Max98373::GetGainFormat() {
+  return {
+      .min_gain_db = kMinGain,
+      .max_gain_db = kMaxGain,
+      .gain_step_db = kGainStep,
+      .can_mute = true,
+      .can_agc = false,
+  };
 }
 
-void Max98373::CodecSetGainState(const gain_state_t* gain_state,
-                                 codec_set_gain_state_callback callback, void* cookie) {
+void Max98373::SetGainState(GainState gain_state) {
   fbl::AutoLock lock(&lock_);
-  float gain = std::clamp(gain_state->gain, kMinGain, kMaxGain);
+  float gain = std::clamp(gain_state.gain_db, kMinGain, kMaxGain);
   uint8_t gain_reg = static_cast<uint8_t>(-gain * 2.f);
   zx_status_t status = WriteReg(kRegDigitalVol, gain_reg);
   if (status != ZX_OK) {
-    callback(cookie);
     return;
   }
-  current_gain_ = gain;
-  callback(cookie);
+  if (gain_state.agc_enable) {
+    zxlogf(ERROR, "%s AGC enable not supported\n", __FILE__);
+    gain_state.agc_enable = false;
+  }
+  gain_state_ = gain_state;
 }
 
-void Max98373::CodecGetGainState(codec_get_gain_state_callback callback, void* cookie) {
-  gain_state_t gain_state = {};
-  gain_state.gain = current_gain_;
-  gain_state.muted = false;
-  gain_state.agc_enable = false;
-  callback(cookie, &gain_state);
-}
+GainState Max98373::GetGainState() { return gain_state_; }
 
-void Max98373::CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie) {
-  callback(cookie, nullptr);
-}
+PlugState Max98373::GetPlugState() { return {.hardwired = true, .plugged = true}; }
 
 zx_status_t Max98373::WriteReg(uint16_t reg, uint8_t value) {
   uint8_t write_buffer[3];

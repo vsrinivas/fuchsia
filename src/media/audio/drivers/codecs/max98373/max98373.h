@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_MAX98373_MAX98373_H_
 
 #include <lib/device-protocol/i2c-channel.h>
+#include <lib/simple-codec/simple-codec-server.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
 
@@ -23,55 +24,33 @@
 
 namespace audio {
 
-class Max98373;
-using DeviceType = ddk::Device<Max98373, ddk::Unbindable, ddk::Suspendable>;
-
-class Max98373 : public DeviceType,  // Not final for unit tests.
-                 public ddk::CodecProtocol<Max98373, ddk::base_protocol> {
+class Max98373 : public SimpleCodecServer {
  public:
   static zx_status_t Create(zx_device_t* parent);
 
   explicit Max98373(zx_device_t* device, const ddk::I2cChannel& i2c,
                     const ddk::GpioProtocolClient& codec_reset)
-      : DeviceType(device), i2c_(i2c), codec_reset_(codec_reset) {}
-  zx_status_t Bind();
-
-  void DdkRelease() { delete this; }
-  void DdkUnbind(ddk::UnbindTxn txn) {
-    Shutdown();
-    txn.Reply();
-  }
-
-  void DdkSuspend(ddk::SuspendTxn txn) {
-    // TODO(fxbug.dev/42613): Implement proper power management based on the requested state.
-    Shutdown();
-    txn.Reply(ZX_OK, txn.requested_state());
-  }
-
-  // Codec protocol.
-  void CodecReset(codec_reset_callback callback, void* cookie);
-  void CodecGetInfo(codec_get_info_callback callback, void* cookie);
-  void CodecStop(codec_stop_callback callback, void* cookie) {
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-  }
-  void CodecStart(codec_start_callback callback, void* cookie) {
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-  }
-  void CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie);
-  void CodecSetBridgedMode(bool enable_bridged_mode, codec_set_bridged_mode_callback callback,
-                           void* cookie);
-  void CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie);
-  void CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format_callback callback,
-                         void* cookie);
-  void CodecGetGainFormat(codec_get_gain_format_callback callback, void* cookie);
-  void CodecGetGainState(codec_get_gain_state_callback callback, void* cookie);
-  void CodecSetGainState(const gain_state_t* gain_state, codec_set_gain_state_callback callback,
-                         void* cookie);
-  void CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie);
+      : SimpleCodecServer(device), i2c_(i2c), codec_reset_(codec_reset) {}
+  // Implementation for SimpleCodecServer.
+  zx_status_t Shutdown() override;
 
  protected:
-  zx_status_t SoftwareResetAndInitialize();  // Protected for unit tests.
-  zx_status_t HardwareReset();               // Protected for unit tests.
+  // Implementation for SimpleCodecServer.
+  zx::status<DriverIds> Initialize() override;
+  zx_status_t Reset() override;
+  Info GetInfo() override;
+  zx_status_t Stop() override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t Start() override { return ZX_ERR_NOT_SUPPORTED; }
+  bool IsBridgeable() override;
+  void SetBridgedMode(bool enable_bridged_mode) override;
+  std::vector<DaiSupportedFormats> GetDaiFormats() override;
+  zx_status_t SetDaiFormat(const DaiFormat& format) override;
+  GainFormat GetGainFormat() override;
+  GainState GetGainState() override;
+  void SetGainState(GainState state) override;
+  PlugState GetPlugState() override;
+
+  zx_status_t HardwareReset();  // Protected for unit tests.
 
   std::atomic<bool> initialized_ = false;  // Protected for unit tests.
 
@@ -82,10 +61,9 @@ class Max98373 : public DeviceType,  // Not final for unit tests.
 
   zx_status_t WriteReg(uint16_t reg, uint8_t value) TA_REQ(lock_);
   zx_status_t ReadReg(uint16_t reg, uint8_t* value) TA_REQ(lock_);
-  void Shutdown();
   int Thread();
 
-  float current_gain_ = 0;
+  GainState gain_state_ = {};
   ddk::I2cChannel i2c_;
   ddk::GpioProtocolClient codec_reset_;
   thrd_t thread_;
