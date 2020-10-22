@@ -32,3 +32,10 @@ zx_library("rtc") {
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
+
+zx_library("rtc_llcpp") {
+  sdk = "source"
+  sdk_headers = [ "librtc_llcpp.h" ]
+  sources = [ "librtc_llcpp.cc" ]
+  deps = [ "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_llcpp" ]
+}

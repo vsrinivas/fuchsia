@@ -7,7 +7,10 @@ import("//build/test/test_package.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":rtc-lib-package" ]
+  deps = [
+    ":rtc-lib-llcpp-package",
+    ":rtc-lib-package",
+  ]
 }
 
 test("rtc-lib") {
@@ -31,6 +34,28 @@ unittest_package("rtc-lib-package") {
   tests = [
     {
       name = "rtc-lib-test"
+    },
+  ]
+}
+
+test("rtc-lib-llcpp") {
+  output_name = "rtc-lib-llcpp-test"
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "rtc_llcpp_unittest.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_llcpp",
+    "//src/devices/rtc/lib/rtc:rtc_llcpp",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+unittest_package("rtc-lib-llcpp-package") {
+  package_name = "rtc-lib-llcpp"
+  deps = [ ":rtc-lib-llcpp" ]
+
+  tests = [
+    {
+      name = "rtc-lib-llcpp-test"
     },
   ]
 }
