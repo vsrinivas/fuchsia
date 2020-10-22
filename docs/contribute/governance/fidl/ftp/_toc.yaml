@@ -82,6 +82,8 @@ toc:
   path: /docs/contribute/governance/fidl/ftp/ftp-048.md
 - title: "FTP-049: FIDL Tuning Process Evolution"
   path: /docs/contribute/governance/fidl/ftp/ftp-049.md
+- title: "FTP-052: Type Aliasing and New Types"
+  path: /docs/contribute/governance/fidl/ftp/ftp-052.md
 - title: "FTP-054: Parameter Attributes"
   path: /docs/contribute/governance/fidl/ftp/ftp-054.md
 - title: "FTP-057: Default No Handles"
