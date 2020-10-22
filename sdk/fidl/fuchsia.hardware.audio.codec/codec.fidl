@@ -1,0 +1,190 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.audio.codec;
+
+using zx;
+
+// For an overview see //docs/concepts/drivers/driver_interfaces/audio_codec.md
+
+const uint32 UNIQUE_ID_SIZE = 16;
+const uint32 MAX_UI_STRING_SIZE = 256;
+const uint32 MAX_COUNT_CHANNELS_TO_USE = 64;
+const uint32 MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS = 64;
+const uint32 MAX_COUNT_SUPPORTED_SAMPLE_FORMATS = 64;
+const uint32 MAX_COUNT_SUPPORTED_FRAME_FORMATS = 64;
+const uint32 MAX_COUNT_SUPPORTED_RATES = 64;
+const uint32 MAX_COUNT_SUPPORTED_BITS_PER_SLOT = 8;
+const uint32 MAX_COUNT_SUPPORTED_BITS_PER_SAMPLE = 8;
+const uint32 MAX_COUNT_FORMATS = 64;
+
+enum SampleFormat : uint8 {
+    PDM = 1;
+    PCM_SIGNED = 2;
+    PCM_UNSIGNED = 3;
+    PCM_FLOAT = 4;
+};
+
+enum FrameFormat : uint8 {
+    /// No frame format as in samples without a frame sync like PDM.
+    NONE = 1;
+    /// Format as specified in the I2S specification (left justified, 2 channels, 32 bits per
+    /// channel, frame sync stays low for the left channel and high for the right channel, data
+    /// starts one clock cycle after frame sync changes clocked out at the falling edge of sclk).
+    I2S = 2;
+    /// Left justified, 2 channels, data starts at frame sync changes from low to high clocked out
+    /// at the falling edge of sclk. The frame sync must stay high for bits_per_channel bits for the
+    /// first channel and low for bits_per_channel bits for the second channel.
+    STEREO_LEFT = 3;
+    /// Right justified, 2 channels. The frame sync must stay high for bits_per_channel bits for the
+    /// first channel and low for bits_per_channel bits for the second channel.
+    STEREO_RIGHT = 4;
+    /// Left justified, variable number of channels, data starts at frame sync changes from low to
+    /// high clocked out at the rising edge of sclk. The frame sync must stay high for exactly 1
+    /// clock cycle.
+    TDM1 = 5;
+    /// Custom format specified via FrameFormatCustom.
+    CUSTOM = 6;
+};
+
+/// Frame format only used if FrameFormat is set to CUSTOM.
+struct FrameFormatCustom {
+    /// Justification of the samples within a slot.
+    bool left_justified;
+    /// Clocking of data samples and frame sync output on either raising or falling sclk.
+    bool sclk_on_raising;
+    /// Number of sclks between the beginning of a frame sync change and audio samples.
+    /// For example, for I2S set to 1 and for stereo left justified set to 0.
+    int8 frame_sync_sclks_offset;
+    /// Number of sclks the frame sync is high within a frame.
+    /// For example, for I2S with 32 bits slots set to 32, for TDM usually set to 1.
+    uint8 frame_sync_size;
+};
+
+struct DaiFormat {
+    /// Number of channels in the DAI.
+    uint32 number_of_channels;
+    /// Which channels to use in the DAI.
+    uint64 channels_to_use_bitmask;
+    /// The format of all samples in the DAI.
+    SampleFormat sample_format;
+    /// The format of all samples in the DAI.
+    FrameFormat frame_format;
+    /// Frame format if frame_format is set to CUSTOM, ignored otherwise.
+    FrameFormatCustom frame_format_custom;
+    /// The frame rate for all samples in the DAI.
+    uint32 frame_rate;
+    /// The bits per slot for all channels in the DAI.
+    uint8 bits_per_slot;
+    /// The bits per sample for all samples in the DAI.  Must be smaller than bits per channel for
+    /// samples to fit.
+    uint8 bits_per_sample;
+};
+
+struct DaiSupportedFormats {
+    /// All possible number of channels supported by the codec.
+    vector<uint32>:MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS number_of_channels;
+    /// Sample formats supported by the codec.
+    vector<SampleFormat>:MAX_COUNT_SUPPORTED_SAMPLE_FORMATS sample_formats;
+    /// Frame formats supported by the codec.
+    vector<FrameFormat>:MAX_COUNT_SUPPORTED_FRAME_FORMATS frame_formats;
+    /// For frame formats supported by the codec specified to be CUSTOM.
+    vector<FrameFormatCustom>:MAX_COUNT_SUPPORTED_FRAME_FORMATS frame_formats_custom;
+    /// Rates supported by the codec.
+    vector<uint32>:MAX_COUNT_SUPPORTED_RATES frame_rates;
+    /// The bits per slot supported by the codec.
+    vector<uint8>:MAX_COUNT_SUPPORTED_BITS_PER_SLOT bits_per_slot;
+    /// Bits per sample supported by the codec.
+    vector<uint8>:MAX_COUNT_SUPPORTED_BITS_PER_SAMPLE bits_per_sample;
+};
+
+enum GainType : uint8 {
+    /// Gain specified in dB, for example -103.0dB or +3.2dB.
+    DECIBELS = 1;
+    /// Gain specified as a percentage, for example 10.0% or 80.5%.
+    PERCENT = 2;
+};
+
+struct GainFormat {
+    /// Specifies what the numbers for gain represent, e.g. a percentage.
+    GainType type;
+    /// Minimum gain that could be set in the codec.
+    float32 min_gain;
+    /// Maximum gain that could be set in the codec.
+    float32 max_gain;
+    /// Smallest increment for gain values starting from min_gain.
+    float32 gain_step;
+    /// Is the codec capable of muting.
+    bool can_mute;
+    /// Is the codec capable of automatic gain control.
+    bool can_agc;
+};
+
+struct GainState {
+    /// Gain amount, this will have different meanings depending on the GainType value.
+    float32 gain;
+    /// Codec muted state.
+    bool muted;
+    /// Codec AGC enabled state.
+    bool agc_enable;
+};
+
+struct Info {
+    /// Unique identifier for the codec.
+    string:UNIQUE_ID_SIZE unique_id;
+    /// Name of the codec manufacturer.
+    string:MAX_UI_STRING_SIZE manufacturer;
+    /// Product name of the codec.
+    string:MAX_UI_STRING_SIZE product_name;
+};
+
+struct PlugState {
+    // TODO(andresoportus):  Add can_notify bool to PlugState.
+    bool hardwired;
+    bool plugged;
+};
+
+protocol Codec {
+
+    // Main controls.
+    /// Resets the codec.
+    Reset() -> (zx.status status);
+    /// Retrieves textual information about the codec.
+    GetInfo() -> (Info info);
+    /// Stops the codec operation.
+    Stop() -> (zx.status status);
+    /// Start/Re-start the codec operation.
+    Start() -> (zx.status status);
+
+    // Bridged mode.
+    /// Retrieves bridgeable mode from a codec.
+    IsBridgeable() -> (bool supports_bridged_mode);
+    /// Sets a codec's bridged mode.  Only required if the codec supports bridged mode as specified
+    /// by IsBridgeable's reply.
+    SetBridgedMode(bool enable_bridged_mode);
+
+    // DAI Format.
+    // TODO(andresoportus):  Add DAI format loss notification support.
+    /// Retrieves the DAI formats supported by the codec, if not available at the time the codec
+    /// may reply with an error status and the controller may retry at a later time.
+    /// Retrieving multiple DaiSupportedFormats allows for cases where exclusive
+    /// combinations of the parameters in DaiSupportedFormats may be supported.
+    GetDaiFormats() -> (zx.status status, vector<DaiSupportedFormats>:MAX_COUNT_FORMATS formats);
+    /// Sets the DAI format to be used in the interface between the controller and codec, if
+    /// the codec is not able to support the DAI format anymore, e.g. for a removable component
+    /// then the function may return an error status.
+    SetDaiFormat(DaiFormat format) -> (zx.status status);
+
+    // Gain related.
+    // Retrieves gain capabilites/format.
+    GetGainFormat() -> (GainFormat format);
+    // Retrieves gain related state.
+    GetGainState() -> (GainState gain_state);
+    // Sets gain state, the client can query current gain state state via GetGainState.
+    SetGainState(GainState gain_state);
+
+    // Plug Detect
+    /// Retrieves plug detect state.
+    GetPlugState() -> (PlugState plug_state);
+};
