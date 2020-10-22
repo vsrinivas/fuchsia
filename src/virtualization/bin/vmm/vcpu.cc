@@ -180,6 +180,7 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
         deferred.cancel();
         return ZX_OK;
       case ZX_ERR_UNAVAILABLE:
+      case ZX_ERR_CANCELED:
         return ZX_OK;
       default:
         FX_PLOGS(ERROR, status) << "Failed to resume VCPU " << id_;
