@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_LIB_MMIO_PTR_INCLUDE_MMIO_PTR_MMIO_PTR_H_
 #define ZIRCON_SYSTEM_DEV_LIB_MMIO_PTR_INCLUDE_MMIO_PTR_MMIO_PTR_H_
 
+#include <stddef.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 
@@ -143,5 +144,59 @@ static inline uint64_t MmioRead64(MMIO_PTR const volatile uint64_t* buffer) {
 }
 
 #endif
+
+// MmioReadBuffer/MmioWriteBuffer provide methods for doing bulk/memcpy style transfers to/from
+// device memory. These methods to not provide any access width guarantees and as such should only
+// be used in situations where this is acceptable.
+//
+// For example, do _not_ use these functions to dump a bank of 32-bit MMIO registers, but rather
+// use it only for accessing the small banks of RAM or ROM which might exist inside of a device
+__NONNULL((1, 2))
+static inline void MmioWriteBuffer(MMIO_PTR volatile void* mmio, const void* source, size_t size) {
+  uintptr_t source_ptr = (uintptr_t)source;
+  uintptr_t mmio_ptr = (uintptr_t)mmio;
+  while (mmio_ptr & 0x7 && size) {
+    MmioWrite8(*((const uint8_t*)source_ptr), (MMIO_PTR volatile uint8_t*)mmio_ptr);
+    size--;
+    mmio_ptr++;
+    source_ptr++;
+  }
+  while (size >= 8) {
+    MmioWrite64(*((const uint64_t*)source_ptr), (MMIO_PTR volatile uint64_t*)mmio_ptr);
+    size -= 8;
+    mmio_ptr += 8;
+    source_ptr += 8;
+  }
+  while (size) {
+    MmioWrite8(*((const uint8_t*)source_ptr), (MMIO_PTR volatile uint8_t*)mmio_ptr);
+    size--;
+    mmio_ptr++;
+    source_ptr++;
+  }
+}
+
+__NONNULL((1, 2))
+static inline void MmioReadBuffer(void* dest, MMIO_PTR const volatile void* mmio, size_t size) {
+  uintptr_t dest_ptr = (uintptr_t)dest;
+  uintptr_t mmio_ptr = (uintptr_t)mmio;
+  while (mmio_ptr & 0x7 && size) {
+    *((uint8_t*)dest_ptr) = MmioRead8((MMIO_PTR const volatile uint8_t*)mmio_ptr);
+    size--;
+    mmio_ptr++;
+    dest_ptr++;
+  }
+  while (size >= 8) {
+    *((uint64_t*)dest_ptr) = MmioRead64((MMIO_PTR const volatile uint64_t*)mmio_ptr);
+    size -= 8;
+    mmio_ptr += 8;
+    dest_ptr += 8;
+  }
+  while (size) {
+    *((uint8_t*)dest_ptr) = MmioRead8((MMIO_PTR const volatile uint8_t*)mmio_ptr);
+    size--;
+    mmio_ptr++;
+    dest_ptr++;
+  }
+}
 
 #endif  // ZIRCON_SYSTEM_DEV_LIB_MMIO_PTR_INCLUDE_MMIO_PTR_MMIO_PTR_H_

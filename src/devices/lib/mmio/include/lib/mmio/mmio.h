@@ -135,11 +135,15 @@ struct MmioBufferOps {
   uint16_t (*Read16)(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs);
   uint32_t (*Read32)(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs);
   uint64_t (*Read64)(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs);
+  void (*ReadBuffer)(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs, void* buffer,
+                     size_t size);
 
   void (*Write8)(const void* ctx, const mmio_buffer_t& mmio, uint8_t val, zx_off_t offs);
   void (*Write16)(const void* ctx, const mmio_buffer_t& mmio, uint16_t val, zx_off_t offs);
   void (*Write32)(const void* ctx, const mmio_buffer_t& mmio, uint32_t val, zx_off_t offs);
   void (*Write64)(const void* ctx, const mmio_buffer_t& mmio, uint64_t val, zx_off_t offs);
+  void (*WriteBuffer)(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs, const void* buffer,
+                      size_t size);
 };
 
 // Forward declaration.
@@ -335,10 +339,24 @@ class MmioBuffer {
   uint32_t Read32(zx_off_t offs) const { return ops_->Read32(ctx_, mmio_, offs); }
   uint64_t Read64(zx_off_t offs) const { return ops_->Read64(ctx_, mmio_, offs); }
 
+  // Read `size` bytes from the MmioBuffer into `buffer`. There are no access width guarantees
+  // when using this operation and must only be used with devices where arbitrary access widths are
+  // supported.
+  void ReadBuffer(zx_off_t offs, void* buffer, size_t size) const {
+    return ops_->ReadBuffer(ctx_, mmio_, offs, buffer, size);
+  }
+
   void Write8(uint8_t val, zx_off_t offs) const { ops_->Write8(ctx_, mmio_, val, offs); }
   void Write16(uint16_t val, zx_off_t offs) const { ops_->Write16(ctx_, mmio_, val, offs); }
   void Write32(uint32_t val, zx_off_t offs) const { ops_->Write32(ctx_, mmio_, val, offs); }
   void Write64(uint64_t val, zx_off_t offs) const { ops_->Write64(ctx_, mmio_, val, offs); }
+
+  // Write `size` bytes from `buffer` into the MmioBuffer. There are no access width guarantees
+  // when using this operation and must only be used with devices where arbitrary access widths are
+  // supported.
+  void WriteBuffer(zx_off_t offs, const void* buffer, size_t size) const {
+    ops_->WriteBuffer(ctx_, mmio_, offs, buffer, size);
+  }
 
  protected:
   mmio_buffer_t mmio_;
@@ -364,6 +382,12 @@ class MmioBuffer {
     return MmioRead64(GetAddr<uint64_t>(ctx, mmio, offs));
   }
 
+  static void ReadBuffer(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs, void* buffer,
+                         size_t size) {
+    ZX_DEBUG_ASSERT(offs + size <= mmio.size);
+    return MmioReadBuffer(buffer, GetAddr<uint64_t>(ctx, mmio, offs), size);
+  }
+
   static void Write8(const void* ctx, const mmio_buffer_t& mmio, uint8_t val, zx_off_t offs) {
     MmioWrite8(val, GetAddr<uint8_t>(ctx, mmio, offs));
     hw_mb();
@@ -384,15 +408,24 @@ class MmioBuffer {
     hw_mb();
   }
 
+  static void WriteBuffer(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs,
+                          const void* buffer, size_t size) {
+    ZX_DEBUG_ASSERT(offs + size <= mmio.size);
+    MmioWriteBuffer(GetAddr<uint64_t>(ctx, mmio, offs), buffer, size);
+    hw_mb();
+  }
+
   static constexpr MmioBufferOps kDefaultOps = {
       .Read8 = Read8,
       .Read16 = Read16,
       .Read32 = Read32,
       .Read64 = Read64,
+      .ReadBuffer = ReadBuffer,
       .Write8 = Write8,
       .Write16 = Write16,
       .Write32 = Write32,
       .Write64 = Write64,
+      .WriteBuffer = WriteBuffer,
   };
 
  private:

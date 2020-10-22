@@ -57,4 +57,46 @@ TEST(MmioPtr, LowLevelAPIReads) {
   ASSERT_EQ(MmioRead64(const_value64_ptr), 17);
 }
 
+TEST(MmioPtr, ReadBuffer) {
+  const std::array<uint8_t, 256> array = [] {
+    std::array<uint8_t, 256> result;
+    for (size_t i = 0; i < result.size(); ++i) {
+      result[i] = static_cast<uint8_t>(i);
+    }
+    return result;
+  }();
+
+  // Read all but the first and last byte.
+  std::array<uint8_t, 256> result = {};
+  MMIO_PTR const void* value_ptr = FakeMmioPtr(&array[1]);
+  MmioReadBuffer(&result[1], value_ptr, array.size() - 2);
+
+  ASSERT_EQ(result[0], 0u);
+  for (size_t i = 1; i < result.size() - 1; ++i) {
+    ASSERT_EQ(result[i], i);
+  }
+  ASSERT_EQ(result[255], 0u);
+}
+
+TEST(MmioPtr, WriteBuffer) {
+  const std::array<uint8_t, 256> array = [] {
+    std::array<uint8_t, 256> result;
+    for (size_t i = 0; i < result.size(); ++i) {
+      result[i] = static_cast<uint8_t>(i);
+    }
+    return result;
+  }();
+
+  // Read all but the first and last byte.
+  std::array<uint8_t, 256> mmio_buffer = {};
+  MMIO_PTR void* mmio_ptr = FakeMmioPtr(&mmio_buffer[1]);
+  MmioWriteBuffer(mmio_ptr, &array[1], array.size() - 2);
+
+  ASSERT_EQ(mmio_buffer[0], 0u);
+  for (size_t i = 1; i < mmio_buffer.size() - 1; ++i) {
+    ASSERT_EQ(mmio_buffer[i], i);
+  }
+  ASSERT_EQ(mmio_buffer[255], 0u);
+}
+
 }  // namespace

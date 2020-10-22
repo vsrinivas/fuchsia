@@ -93,7 +93,6 @@ group("tests") {
     "//zircon/system/ulib/lazy_init/test:lazy_init-test-bootfs-test",
     "//zircon/system/ulib/lockdep/test:lockdep-test-bootfs-test",
     "//zircon/system/ulib/mipi-dsi/test:mipidsi-bootfs-test",
-    "//zircon/system/ulib/mmio-ptr/test:mmio-ptr-unittest-bootfs-test",
     "//zircon/system/ulib/mock-function/test:mock-function-test-bootfs-test",
     "//zircon/system/ulib/perftest/test:perftest-bootfs-test",
     "//zircon/system/ulib/pretty/test:pretty-test-bootfs-test",

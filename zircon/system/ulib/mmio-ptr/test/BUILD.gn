@@ -13,15 +13,15 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
-group("test") {
+group("tests") {
   testonly = true
   deps = [ ":mmio-ptr-unittest" ]
 }
 
-test("mmio-ptr-unittest") {
-  output_name = "mmio-ptr-unittest-test"
+test("unittest") {
+  output_name = "mmio-ptr-unittest"
   testonly = true
   sources = [ "mmio-ptr-unittest.cc" ]
   deps = [
@@ -32,7 +32,7 @@ test("mmio-ptr-unittest") {
   ]
 }
 
-bootfs_test("mmio-ptr-unittest-bootfs-test") {
-  name = "mmio-ptr-unittest-test"
-  deps = [ ":mmio-ptr-unittest" ]
+fuchsia_unittest_package("mmio-ptr-unittest") {
+  executable_path = "test/mmio-ptr-unittest"
+  deps = [ ":unittest" ]
 }

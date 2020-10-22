@@ -43,6 +43,7 @@ group("tests") {
     "inspect:tests",
     "ldmsg:tests",
     "memfs/test:tests",
+    "mmio-ptr/test:tests",
     "nand-redundant-storage:tests",
     "storage/buffer:tests",
     "storage/operation:tests",
