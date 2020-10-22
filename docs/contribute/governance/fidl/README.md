@@ -33,6 +33,7 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-043](ftp/ftp-043.md) | 2019-05-06 | 2019-05-30 | Documentation Comment Format &mdash; Mark me up, mark me down
 [FTP-048](ftp/ftp-048.md) | 2019-08-25 | 2019-09-26 | Explicit Union Ordinals
 [FTP-028](ftp/ftp-028.md) | 2019-04-01 | 2019-12-12 | Handle Rights – The Right Stuff
+[FTP-052](ftp/ftp-052.md) | 2020-01-07 | 2020-01-23 | Type Aliasing and New Types
 [FTP-054](ftp/ftp-054.md) | 2019-11-21 | 2019-12-12 | Parameter Attributes &mdash; A Chance to Write Self Documenting APIs
 [FTP-049](ftp/ftp-049.md) | 2019-11-20 | 2019-12-19 | FIDL Tuning Process Evolution
 [FTP-057](ftp/ftp-057.md) | 2020-01-16 | 2020-01-23 | Default No Handles
