@@ -1,8 +1,7 @@
 # Fint protobufs
 
-To update the generated Go code, run the following command from within the
-`//tools` directory:
+The .proto files here are the source of truth. Copybara should automatically
+copy files from here to the other places they're needed.
 
-```sh
-go generate go.fuchsia.dev/fuchsia/tools/integration/cmd/fint/proto
-```
+To update the compiled / generated files when the .proto files change, run
+`update.sh` (located in this directory).
