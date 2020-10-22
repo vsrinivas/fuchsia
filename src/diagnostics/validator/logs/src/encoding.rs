@@ -5,12 +5,12 @@
 use anyhow::Error;
 use fidl_fuchsia_diagnostics::Severity;
 use fidl_fuchsia_diagnostics_stream::{Argument, Record, Value};
-use fidl_fuchsia_validate_logs::ValidateProxy;
+use fidl_fuchsia_validate_logs::EncodingPuppetProxy;
 use log::*;
 use pretty_assertions::assert_eq;
 use std::convert::TryInto;
 
-pub async fn test_encodings(proxy: ValidateProxy) -> Result<(), Error> {
+pub async fn test_encodings(proxy: EncodingPuppetProxy) -> Result<(), Error> {
     info!("Testing encoding.");
     let arr: Vec<&dyn Fn() -> TestCase> = vec![
         &test_signed_int_positive,
@@ -30,7 +30,7 @@ pub async fn test_encodings(proxy: ValidateProxy) -> Result<(), Error> {
     let mut actual = vec![];
     for f in &arr {
         let mut test_case = (f)();
-        let result = proxy.log(&mut test_case.1).await?.expect("Unable to get Record");
+        let result = proxy.encode(&mut test_case.1).await?.expect("Unable to get Record");
         let size = result.size;
         let vmo = result.vmo;
         let test_name = test_case.0;

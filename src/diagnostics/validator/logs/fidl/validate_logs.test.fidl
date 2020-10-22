@@ -7,13 +7,13 @@ library fuchsia.validate.logs;
 using fuchsia.mem;
 using fuchsia.diagnostics.stream;
 
-enum ValidateError {
+enum PuppetError {
     UnsupportedRecord = 1;
 };
 
 [Discoverable]
-protocol Validate {
+protocol EncodingPuppet {
     /// Log takes a record and converts it into a buffer.
     /// Returns an error if record contains unsupported type
-    Log(fuchsia.diagnostics.stream.Record record) -> (fuchsia.mem.Buffer result) error ValidateError;
+    Encode(fuchsia.diagnostics.stream.Record record) -> (fuchsia.mem.Buffer result) error PuppetError;
 };

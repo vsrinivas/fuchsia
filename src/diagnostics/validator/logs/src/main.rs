@@ -4,6 +4,7 @@
 
 use anyhow::Error;
 use argh::FromArgs;
+use fidl_fuchsia_validate_logs::EncodingPuppetMarker;
 use fuchsia_async::Socket;
 use fuchsia_component::client::{launch, launcher};
 use futures::channel::mpsc::channel;
@@ -39,7 +40,7 @@ async fn main() -> Result<(), Error> {
         let app = launch(&launcher, puppet_url.to_string(), None)?;
         (None, app)
     };
-    let proxy = app.connect_to_service::<fidl_fuchsia_validate_logs::ValidateMarker>()?;
+    let proxy = app.connect_to_service::<EncodingPuppetMarker>()?;
     encoding::test_encodings(proxy).await?;
 
     if test_log_sink {

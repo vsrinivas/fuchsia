@@ -13,17 +13,17 @@ import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
 
-class _ValidateImpl extends fidl_validate.Validate {
-  final _binding = fidl_validate.ValidateBinding();
+class _EncodingPuppetImpl extends fidl_validate.EncodingPuppet {
+  final _binding = fidl_validate.EncodingPuppetBinding();
 
   static const int bufferSize = 1024;
 
-  void bind(InterfaceRequest<fidl_validate.Validate> request) {
+  void bind(InterfaceRequest<fidl_validate.EncodingPuppet> request) {
     _binding.bind(this, request);
   }
 
   @override
-  Future<fidl_mem.Buffer> log(fidl_stream.Record record) async {
+  Future<fidl_mem.Buffer> encode(fidl_stream.Record record) async {
     ByteData bytes = ByteData(bufferSize);
     final len = streams.writeRecord(bytes, record);
     final vmo = SizedVmo.fromUint8List(bytes.buffer.asUint8List(0, len));
@@ -34,8 +34,8 @@ class _ValidateImpl extends fidl_validate.Validate {
 void main(List<String> args) {
   setupLogger();
   final context = StartupContext.fromStartupInfo();
-  final validate = _ValidateImpl();
+  final validate = _EncodingPuppetImpl();
 
-  context.outgoing.addPublicService<fidl_validate.Validate>(
-      validate.bind, fidl_validate.Validate.$serviceName);
+  context.outgoing.addPublicService<fidl_validate.EncodingPuppet>(
+      validate.bind, fidl_validate.EncodingPuppet.$serviceName);
 }

@@ -14,28 +14,28 @@
 
 #include <sdk/lib/syslog/streams/cpp/encode.h>
 
-class Puppet : public fuchsia::validate::logs::Validate {
+class Puppet : public fuchsia::validate::logs::EncodingPuppet {
  public:
   explicit Puppet(std::unique_ptr<sys::ComponentContext> context) : context_(std::move(context)) {
-    context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
+    context_->outgoing()->AddPublicService(encoding_bindings_.GetHandler(this));
   }
 
-  void Log(fuchsia::diagnostics::stream::Record record, LogCallback callback) override {
+  void Encode(fuchsia::diagnostics::stream::Record record, EncodeCallback callback) override {
     std::vector<uint8_t> buffer;
     streams::log_record(record, &buffer);
     fuchsia::mem::Buffer read_buffer;
     zx::vmo::create(buffer.size(), 0, &read_buffer.vmo);
     read_buffer.vmo.write(buffer.data(), 0, buffer.size());
     read_buffer.size = buffer.size();
-    fuchsia::validate::logs::Validate_Log_Result result;
-    fuchsia::validate::logs::Validate_Log_Response response{std::move(read_buffer)};
+    fuchsia::validate::logs::EncodingPuppet_Encode_Result result;
+    fuchsia::validate::logs::EncodingPuppet_Encode_Response response{std::move(read_buffer)};
     result.set_response(std::move(response));
     callback(std::move(result));
   }
 
  private:
   std::unique_ptr<sys::ComponentContext> context_;
-  fidl::BindingSet<fuchsia::validate::logs::Validate> bindings_;
+  fidl::BindingSet<fuchsia::validate::logs::EncodingPuppet> encoding_bindings_;
 };
 
 int main(int argc, const char** argv) {
