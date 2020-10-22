@@ -413,8 +413,10 @@ zx_status_t VPartitionManager::Load() {
     if (vpartitions[i] == nullptr) {
       continue;
     }
-    if (GetAllocatedVPartEntry(i)->IsInactive()) {
-      zxlogf(ERROR, "Freeing inactive partition");
+    VPartitionEntry* entry = GetAllocatedVPartEntry(i);
+    if (entry->IsInactive()) {
+      zxlogf(ERROR, "Freeing %u slices from inactive partition %zu (%s)", entry->slices, i,
+             entry->name().c_str());
       FreeSlices(vpartitions[i].get(), 0, VSliceMax());
       continue;
     }
