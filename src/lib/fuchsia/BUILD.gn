@@ -1,0 +1,73 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_staticlib.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("fuchsia") {
+  name = "fuchsia"
+  edition = "2018"
+  deps = [
+    ":fuchsia-macro",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:argh",
+  ]
+  if (is_fuchsia) {
+    deps += [ "//src/lib/syslog/rust:syslog" ]
+  }
+  sources = [ "src/lib.rs" ]
+
+  enforce_source_listing = true
+}
+
+import("//build/rust/rustc_macro.gni")
+
+rustc_macro("fuchsia-macro") {
+  version = "0.1.0"
+  edition = "2018"
+  deps = [
+    "//third_party/rust_crates:proc-macro2",
+    "//third_party/rust_crates:quote",
+    "//third_party/rust_crates:syn",
+  ]
+
+  enforce_source_listing = true
+
+  source_root = "src/macro.rs"
+  sources = [ "src/macro.rs" ]
+}
+
+rustc_test("fuchsia_test") {
+  name = "fuchsia_test"
+  edition = "2018"
+  deps = [
+    ":fuchsia",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+  ]
+  enforce_source_listing = true
+  source_root = "src/test.rs"
+  sources = [ "src/test.rs" ]
+}
+
+test_package("fuchsia-tests") {
+  deps = [ ":fuchsia_test" ]
+
+  tests = [
+    {
+      name = "fuchsia_test"
+      environments = [ emu_env ]
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fuchsia-tests",
+    ":fuchsia_test($host_toolchain)",
+  ]
+}

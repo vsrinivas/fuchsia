@@ -226,12 +226,8 @@ enum IncomingService {
     // ... more services here
 }
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    let opt: Opts = argh::from_env();
-
-    fuchsia_syslog::init_with_tags(&["overnet"]).context("initialize logging")?;
-
+#[fuchsia::component]
+async fn main(opt: Opts) -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     let mut svc_dir = fs.dir("svc");
     svc_dir.add_fidl_service(IncomingService::ServiceConsumer);
@@ -313,7 +309,7 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_udplinks_hashmap() {
         //construct a router node
         let node = Router::new(
