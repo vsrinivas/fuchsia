@@ -14,6 +14,7 @@
 
 #include <arch/quirks.h>
 #include <fbl/alloc_checker.h>
+#include <kernel/mp.h>
 #include <ktl/array.h>
 #include <object/handle.h>
 #include <vm/pmm.h>
@@ -281,15 +282,25 @@ const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
     REDIRECT_SYSCALL(dynsym_window, zx_ticks_get, SYSCALL_zx_ticks_get_via_kernel);
   }
 #if ARCH_ARM64
-  else if (arch_quirks_needs_arm_erratum_858921_mitigation()) {
-    // TODO(fxbug.dev/59609) : Make sure this happens after all of the processors in
-    // the system have been started.  We don't know whether the quirk is needed
-    // or not until all processors have had a chance to start and examine the
-    // registers which describe the architecture and version of the core.
+  else {
+    // Wait for a _really_ long time for all of the CPUs to have started up, so
+    // we know whether or not to deploy the ARM A73 timer read mitigation or
+    // not.  If we timeout from this, then something is extremely wrong.  In
+    // that situation, go ahead and install the mitigation anyway. It is slower,
+    // but at least it will read correctly on all cores.
     //
     // see arch/quirks.h for details about the quirk itself.
-    dprintf(INFO, "Installing A73 quirks for zx_ticks_get in VDSO\n");
-    REDIRECT_SYSCALL(dynsym_window, zx_ticks_get, ticks_get_arm_a73);
+    zx_status_t status = mp_wait_for_all_cpus_started(Deadline::after(ZX_SEC(30)));
+    if ((status != ZX_OK) || arch_quirks_needs_arm_erratum_858921_mitigation()) {
+      if (status != ZX_OK) {
+        KERNEL_OOPS(
+            "WARNING: Timed out waiting for all CPUs to start.  Installing A73 quirks for "
+            "zx_ticks_get in VDSO as a defensive measure.\n");
+      } else {
+        dprintf(INFO, "Installing A73 quirks for zx_ticks_get in VDSO\n");
+      }
+      REDIRECT_SYSCALL(dynsym_window, zx_ticks_get, ticks_get_arm_a73);
+    }
   }
 #endif
 

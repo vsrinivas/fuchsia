@@ -65,9 +65,6 @@ KCOUNTER(timeline_virtual_entry, "boot.timeline.virtual")
 
 namespace {
 
-// static translation unit local storage for the quirks flag.
-ktl::atomic<bool> s_arch_quirks_needs_arm_erratum_858921_mitigation{false};
-
 enum timer_irq_assignment {
   IRQ_PHYS,
   IRQ_VIRT,
@@ -404,8 +401,6 @@ void late_update_reg_procs(uint) {
       panic("no irqs set in late_update_reg_procs\n");
     }
 
-    s_arch_quirks_needs_arm_erratum_858921_mitigation.store(true);
-
     ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
 
     dprintf(INFO, "arm generic timer applying A73 workaround\n");
@@ -417,10 +412,6 @@ LK_PDEV_INIT(arm_generic_timer_pdev_init, KDRV_ARM_GENERIC_TIMER, arm_generic_ti
 
 LK_INIT_HOOK_FLAGS(late_update_reg_procs, &late_update_reg_procs, LK_INIT_LEVEL_PLATFORM_EARLY + 1,
                    LK_INIT_FLAG_ALL_CPUS)
-
-bool arch_quirks_needs_arm_erratum_858921_mitigation() {
-  return s_arch_quirks_needs_arm_erratum_858921_mitigation.load();
-}
 
 /********************************************************************************
  *

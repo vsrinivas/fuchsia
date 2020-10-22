@@ -21,6 +21,10 @@
 // the kernel, and to inject a special version of zx_ticks_get in the VDSO if
 // our clients are not going to make a syscall in order to read the tick
 // counter.
+//
+// Do not call this function until all of the cores have been started and had a
+// chance to identify themselves.  Use mp_wait_for_all_cpus_started
+// (kernel/mp.h) to establish this if needed.
 #if __aarch64__
 bool arch_quirks_needs_arm_erratum_858921_mitigation();
 #else

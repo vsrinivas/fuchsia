@@ -15,6 +15,7 @@
 #include <dev/interrupt.h>
 #include <kernel/cpu.h>
 #include <kernel/event.h>
+#include <ktl/iterator.h>
 
 #define LOCAL_TRACE 0
 
@@ -134,3 +135,15 @@ zx_status_t arch_mp_cpu_unplug(cpu_num_t cpu_id) {
 }
 
 zx_status_t arch_mp_cpu_hotplug(cpu_num_t cpu_id) { return ZX_ERR_NOT_SUPPORTED; }
+
+// If there are any A73 cores in this system, then we need the clock read
+// mitigation.
+bool arch_quirks_needs_arm_erratum_858921_mitigation() {
+  DEBUG_ASSERT(ktl::size(arm64_percpu_array) >= arch_max_num_cpus());
+  for (uint i = 0; i < arch_max_num_cpus(); ++i) {
+    if (arm64_percpu_array[i].microarch == ARM_CORTEX_A73) {
+      return true;
+    }
+  }
+  return false;
+}

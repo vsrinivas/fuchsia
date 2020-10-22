@@ -35,7 +35,6 @@
 #include <kernel/stats.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
-#include <ktl/iterator.h>
 #include <lk/init.h>
 #include <platform/timer.h>
 
