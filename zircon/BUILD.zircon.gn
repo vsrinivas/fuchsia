@@ -293,7 +293,10 @@ if (current_toolchain == default_toolchain) {
       testonly = true
       data_keys = [ "legacy_sysroot" ]
       walk_keys = [ "legacy_barrier" ]
-      deps = [ ":all-ulib-$cpu" ]
+      deps = [
+        ":all-ulib-$cpu",
+        ":asan-ulib-$cpu",
+      ]
     }
   }
 }
@@ -359,45 +362,56 @@ foreach(cpu, standard_fuchsia_cpus) {
     deps = [ "$zx/system/ulib" ]
   }
 
-  environment_redirect("instrumented-ulib-$cpu") {
-    testonly = true
-    cpu = cpu
-    environment_label = "$zx/public/gn/toolchain:user"
-    deps = [ ":instrumented-ulib-redirect" ]
+  foreach(tag,
+          [
+            "instrumented",
+            "asan",
+          ]) {
+    environment_redirect("$tag-ulib-$cpu") {
+      testonly = true
+      cpu = cpu
+      environment_label = "$zx/public/gn/toolchain:user"
+      deps = [ ":$tag-ulib-redirect" ]
+    }
   }
 }
 
 if (toolchain.environment == "user") {
-  instrumented_variants = []
-  foreach(selector, toolchain.variant_selectors) {
-    if (selector.tags + [ "instrumented" ] - [ "instrumented" ] !=
-        selector.tags) {
-      instrumented_variants += [ selector.variant ]
-      instrumented_variants -= [ selector.variant ]
-      instrumented_variants += [ selector.variant ]
+  foreach(tag,
+          [
+            "instrumented",
+            "asan",
+          ]) {
+    variants = []
+    foreach(selector, toolchain.variant_selectors) {
+      if (selector.tags + [ tag ] - [ tag ] != selector.tags) {
+        variants += [ selector.variant ]
+        variants -= [ selector.variant ]
+        variants += [ selector.variant ]
+      }
     }
-  }
-  group("instrumented-ulib-redirect") {
-    testonly = true
-    visibility = [ ":*" ]
-    deps = []
-    foreach(variant, instrumented_variants) {
-      deps += [ ":instrumented-ulib-redirect.$variant" ]
-    }
-  }
-  foreach(variant, instrumented_variants) {
-    environment_redirect("instrumented-ulib-redirect.$variant") {
+    group("$tag-ulib-redirect") {
       testonly = true
-      visibility = [ ":instrumented-ulib-redirect" ]
-      variant = variant
+      visibility = [ ":*" ]
+      deps = []
+      foreach(variant, variants) {
+        deps += [ ":$tag-ulib-redirect.$variant" ]
+      }
+    }
+    foreach(variant, variants) {
+      environment_redirect("$tag-ulib-redirect.$variant") {
+        testonly = true
+        visibility = [ ":$tag-ulib-redirect" ]
+        variant = variant
 
-      # NOTE: Order of deps items is important.
-      deps = [ "$zx/system/ulib" ]
-      foreach(dep, toolchain.implicit_deps) {
-        if (dep == "$dep") {
-          deps += [ dep ]
-        } else {
-          deps += dep.add
+        # NOTE: Order of deps items is important.
+        deps = [ "$zx/system/ulib" ]
+        foreach(dep, toolchain.implicit_deps) {
+          if (dep == "$dep") {
+            deps += [ dep ]
+          } else {
+            deps += dep.add
+          }
         }
       }
     }

@@ -148,54 +148,57 @@ if (current_toolchain == default_toolchain) {
     gen_include_dir =
         get_label_info(public_deps[0], "root_gen_dir") + "/include"
     metadata = {
-      legacy_sysroot = [
-        {
-          vdso =
-              rebase_path("$target_out_dir/libzircon.so.debug", root_build_dir)
-        },
-        {
-          include_dirs = rebase_path([
-                                       "include",
-                                       gen_include_dir,
-                                     ],
-                                     root_build_dir)
-        },
-        {
-          sdk = {
-            include_dir = rebase_path(gen_include_dir, root_build_dir)
-            headers = [
-              "zircon/syscalls/internal/cdecls.inc",
-              # Note not included in SDK: "zircon/syscalls/definitions.rs",
-            ]
-          }
-        },
-        {
-          sdk = {
-            include_dir = rebase_path("include", root_build_dir)
-            headers = [ "zircon/status.h" ]
-          }
-        },
-        {
-          sdk = {
-            include_dir = rebase_path("include", root_build_dir)
-            headers = [ "zircon/exception.h" ]
-          }
-        },
-        {
-          sdk = {
-            source = rebase_path("$target_out_dir/libzircon.so.debug",
-                                 root_build_dir)
-            link = "lib/libzircon.so"
-          }
-        },
-        {
-          sdk = {
-            source = rebase_path("$target_out_dir/libzircon.so.debug",
-                                 root_build_dir)
-            debug = "debug/libzircon.so"
-          }
-        },
-      ]
+      if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] ==
+          toolchain.tags) {
+        legacy_sysroot = [
+          {
+            vdso = rebase_path("$target_out_dir/libzircon.so.debug",
+                               root_build_dir)
+          },
+          {
+            include_dirs = rebase_path([
+                                         "include",
+                                         gen_include_dir,
+                                       ],
+                                       root_build_dir)
+          },
+          {
+            sdk = {
+              include_dir = rebase_path(gen_include_dir, root_build_dir)
+              headers = [
+                "zircon/syscalls/internal/cdecls.inc",
+                # Note not included in SDK: "zircon/syscalls/definitions.rs",
+              ]
+            }
+          },
+          {
+            sdk = {
+              include_dir = rebase_path("include", root_build_dir)
+              headers = [ "zircon/status.h" ]
+            }
+          },
+          {
+            sdk = {
+              include_dir = rebase_path("include", root_build_dir)
+              headers = [ "zircon/exception.h" ]
+            }
+          },
+          {
+            sdk = {
+              source = rebase_path("$target_out_dir/libzircon.so.debug",
+                                   root_build_dir)
+              link = "lib/libzircon.so"
+            }
+          },
+          {
+            sdk = {
+              source = rebase_path("$target_out_dir/libzircon.so.debug",
+                                   root_build_dir)
+              debug = "debug/libzircon.so"
+            }
+          },
+        ]
+      }
 
       # TODO(fxbug.dev/3156): This is not actually for the SDK (see above).  This
       # is special-cased so no //zircon/public/lib/zircon gets made, but
