@@ -70,9 +70,6 @@ executable("wlanphy_convert_unittest") {
 
   configs +=
       [ "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_mlme_tests_config" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("wlanphy-unittests") {
