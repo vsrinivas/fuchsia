@@ -46,11 +46,7 @@ struct x86_percpu {
   struct x86_percpu *direct;
 
   /* the current thread */
-#ifdef __cplusplus
   Thread *current_thread;
-#else
-  struct Thread *current_thread;
-#endif
 
   // The offsets of these two slots are published in
   // system/public/zircon/tls.h and known to the compiler.
@@ -139,9 +135,7 @@ static inline uint arch_max_num_cpus(void) { return x86_num_cpus; }
 
 void x86_ipi_halt_handler(void *) __NO_RETURN;
 
-#ifdef __cplusplus
 void x86_secondary_entry(ktl::atomic<unsigned int>* aps_still_booting, Thread *thread);
-#endif
 
 void x86_force_halt_all_but_local_and_bsp(void);
 
