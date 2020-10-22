@@ -53,9 +53,6 @@ Follow the instructions to install the RAM and SSD on the NUC:
 
    <img width="50%" src="/docs/images/developing_on_nuc/parts_installed.jpg"/>
 1. Replace bottom and screw feet back in.
-1. (Optional) Apply fuchsia logo.
-
-   <img width="50%" src="/docs/images/developing_on_nuc/nuc_fuchsia.jpg"/>
 1. Plug power, ethernet, HDMI, keyboard, and mouse into NUC.
 
 ## 3. Enable EFI booting {#enable-efi-booting}
