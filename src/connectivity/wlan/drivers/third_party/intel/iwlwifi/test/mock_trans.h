@@ -18,6 +18,7 @@
 namespace wlan::testing {
 
 typedef decltype(((struct iwl_trans_ops*)(nullptr))->send_cmd) send_cmd_t;
+typedef decltype(((struct iwl_trans_ops*)(nullptr))->tx) tx_t;
 
 // Used by the testing case to loop back.
 //
@@ -52,12 +53,23 @@ class MockTrans {
 
   void unbindSendCmd() { trans_->ops->send_cmd = org_send_cmd; }
 
+  void bindTx(tx_t new_tx) {
+    ZX_ASSERT(trans_);
+    ZX_ASSERT(trans_->ops);
+
+    org_tx = trans_->ops->tx;
+    trans_->ops->tx = new_tx;
+  }
+
+  void unbindTx() { trans_->ops->tx = org_tx; }
+
  protected:
   struct iwl_trans* trans_;
   struct trans_sim_priv* priv_;
 
  private:
   send_cmd_t org_send_cmd;
+  tx_t org_tx;
 };
 
 }  // namespace wlan::testing
