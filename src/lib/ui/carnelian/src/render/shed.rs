@@ -9,7 +9,7 @@ use euclid::default::Transform2D;
 
 use crate::{
     color::Color,
-    geometry::Point,
+    geometry::{Point, Size},
     render::{BlendMode, Context, Fill, FillRule, Layer, Path, PathBuilder, Raster, Style},
 };
 
@@ -169,7 +169,12 @@ impl Parser {
         Ok(commands)
     }
 
-    pub fn parse_svg_paths(&mut self) -> anyhow::Result<Vec<SvgPath>> {
+    pub fn parse_shed(&mut self) -> anyhow::Result<Shed> {
+        ensure!(self.len() >= 8, "missing size");
+
+        let width = self.parse_f32();
+        let height = self.parse_f32();
+
         let mut paths = Vec::new();
 
         while self.len() > 0 {
@@ -180,13 +185,14 @@ impl Parser {
             });
         }
 
-        Ok(paths)
+        Ok(Shed { paths, size: Size::new(width, height) })
     }
 }
 
 #[derive(Debug)]
 pub struct Shed {
     paths: Vec<SvgPath>,
+    size: Size,
 }
 
 impl Shed {
@@ -200,7 +206,7 @@ impl Shed {
 
         let mut parser = Parser::new(bytes);
 
-        Ok(Shed { paths: parser.parse_svg_paths()? })
+        parser.parse_shed()
     }
 
     pub fn paths(&self, context: &mut Context) -> Vec<(Path, Style)> {
@@ -220,6 +226,10 @@ impl Shed {
                 (path_builder.build(), style)
             })
             .collect()
+    }
+
+    pub fn size(&self) -> Size {
+        self.size
     }
 
     pub fn rasters(
@@ -284,7 +294,10 @@ mod tests {
     #[test]
     fn paths() {
         let bytes = vec![
-            b's', b'h', b'e', b'd', 0, // NonZero,
+            b's', b'h', b'e', b'd', // header
+            0, 0, 32, 65, // width (10.0)
+            0, 0, 160, 65, // height (20.0)
+            0,  // NonZero,
             255, 0, 0, 255, // #ff0000
             0, 16, 0, 32, 0, // M 1, 2
             5, // Z
@@ -294,16 +307,21 @@ mod tests {
             0, 48, 0, 64, 0, // M 3, 4
             1, 80, 0, 96, 0, // L 5, 6
             5, // Z
-            6,
+            6, // End
         ];
 
         let mut parser = Parser::new(bytes);
 
+        let shed = parser.parse_shed().unwrap();
+
+        assert_eq!(shed.size.width, 10.0);
+        assert_eq!(shed.size.height, 20.0);
+
         assert_eq!(
-            parser.parse_svg_paths().unwrap(),
+            shed.paths,
             vec![
                 SvgPath {
-                    commands: vec![PathCommand::MoveTo(Point::new(1.0, 2.0)), PathCommand::Close,],
+                    commands: vec![PathCommand::MoveTo(Point::new(1.0, 2.0)), PathCommand::Close],
                     fill_rule: FillRule::NonZero,
                     color: Color { r: 255, g: 0, b: 0, a: 255 },
                 },
