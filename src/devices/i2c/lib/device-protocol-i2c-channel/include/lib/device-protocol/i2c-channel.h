@@ -9,6 +9,7 @@
 #include <lib/sync/completion.h>
 #include <zircon/types.h>
 
+#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/i2c.h>
 
 namespace ddk {
@@ -20,6 +21,9 @@ class I2cChannel : public I2cProtocolClient {
   I2cChannel(const i2c_protocol_t* proto) : I2cProtocolClient(proto) {}
 
   I2cChannel(zx_device_t* parent) : I2cProtocolClient(parent) {}
+
+  I2cChannel(ddk::CompositeProtocolClient& composite, const char* fragment_name)
+      : I2cProtocolClient(composite, fragment_name) {}
 
   ~I2cChannel() = default;
 
