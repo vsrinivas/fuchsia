@@ -7,6 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
+import("//zircon/tools/fidl/testdata/targets.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer/..."
@@ -50,4 +51,36 @@ if (is_host) {
     outputs =
         [ "$root_out_dir/test_data/fidlgen_libfuzzer/{{source_file_part}}" ]
   }
+}
+
+group("goldens") {
+  testonly = true
+
+  # This is needed because libfuzzer depends on HLCPP bindings.
+  hlcpp_denylist = [
+    # TODO(fxbug.dev/55889): Escape "union" keyword.
+    "//zircon/tools/fidl/testdata:fidl.test.union",
+
+    # TODO(fxbug.dev/62520): Insert enum/bits <-> primitive conversions.
+    "//zircon/tools/fidl/testdata:fidl.test.consts",
+
+    # TODO(fxbug.dev/62521): Make empty service compile.
+    "//zircon/tools/fidl/testdata:fidl.test.bindingsdenylist",
+
+    # TODO(fxbug.dev/62533): Fix many issues.
+    "//zircon/tools/fidl/testdata:fidl.test.handles",
+  ]
+
+  deps = []
+  foreach(target, fidl_testdata_targets - hlcpp_denylist) {
+    deps += [ "${target}_libfuzzer" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fidlgen_libfuzzer_test($host_toolchain)",
+    ":goldens",
+  ]
 }

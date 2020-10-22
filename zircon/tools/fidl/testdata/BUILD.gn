@@ -1,0 +1,56 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+standalone_libraries = [
+  "arrays.test.fidl",
+  "bindings_denylist.test.fidl",
+  "bits.test.fidl",
+  "byte_and_bytes.test.fidl",
+  "constants.test.fidl",
+  "consts.test.fidl",
+  "doc_comments.test.fidl",
+  "empty_struct.test.fidl",
+  "encapsulated_structs.test.fidl",
+  "enum.test.fidl",
+  "error.test.fidl",
+  "escaping.test.fidl",
+  "handles.test.fidl",
+  "handles_in_types.test.fidl",
+  "inheritance.test.fidl",
+  "inheritance_with_recursive_decl.test.fidl",
+  "nullable.test.fidl",
+  "padding.test.fidl",
+  "protocol_request.test.fidl",
+  "protocols.test.fidl",
+  "request_flexible_envelope.test.fidl",
+  "service.test.fidl",
+  "table.test.fidl",
+  "union.test.fidl",
+  "union_sandwich.test.fidl",
+  "vectors.test.fidl",
+]
+
+foreach(filename, standalone_libraries) {
+  library = "fidl.test." +
+            string_replace(string_replace(filename, ".test.fidl", ""), "_", "")
+  fidl(library) {
+    testonly = true
+    sources = [ filename ]
+    public_deps = [ "//zircon/vdso/zx" ]
+    experimental_flags = [ "enable_handle_rights" ]
+    host_llcpp = true
+  }
+}
+
+# TODO(fxbug.dev/55850): Rename library to fidl.test.struct (no "s") and move
+# this back to the standalone_libraries list.
+fidl("fidl.test.structs") {
+  testonly = true
+  sources = [ "struct.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+  experimental_flags = [ "enable_handle_rights" ]
+  host_llcpp = true
+}

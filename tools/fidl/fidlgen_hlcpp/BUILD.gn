@@ -7,6 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
+import("//zircon/tools/fidl/testdata/targets.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/..."
@@ -57,4 +58,48 @@ if (is_host) {
     sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
     outputs = [ "$root_out_dir/test_data/fidlgen_hlcpp/{{source_file_part}}" ]
   }
+}
+
+group("goldens") {
+  testonly = true
+
+  # Keep this in sync with hlcpp_denylist in fidlgen_libfuzzer/BUILD.gn.
+  denylist = [
+    # TODO(fxbug.dev/55889): Escape "union" keyword.
+    "//zircon/tools/fidl/testdata:fidl.test.union",
+
+    # TODO(fxbug.dev/62520): Insert enum/bits <-> primitive conversions.
+    "//zircon/tools/fidl/testdata:fidl.test.consts",
+
+    # TODO(fxbug.dev/62521): Make empty service compile.
+    "//zircon/tools/fidl/testdata:fidl.test.bindingsdenylist",
+
+    # TODO(fxbug.dev/62533): Fix many issues.
+    "//zircon/tools/fidl/testdata:fidl.test.handles",
+  ]
+
+  if (host_toolchain == current_toolchain) {
+    denylist += [
+      # TODO(fxbug.dev/62576): Add ifdefs to that handles compile on host.
+      "//zircon/tools/fidl/testdata:fidl.test.encapsulatedstructs",
+      "//zircon/tools/fidl/testdata:fidl.test.handlesintypes",
+      "//zircon/tools/fidl/testdata:fidl.test.nullable",
+      "//zircon/tools/fidl/testdata/type_aliases:example",
+      "//zircon/tools/fidl/testdata/type_aliases:someotherlibrary",
+    ]
+  }
+
+  deps = []
+  foreach(target, fidl_testdata_targets - denylist) {
+    deps += [ "${target}_hlcpp" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fidlgen_hlcpp_test($host_toolchain)",
+    ":goldens",
+    ":goldens($host_toolchain)",
+  ]
 }

@@ -7,6 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
+import("//zircon/tools/fidl/testdata/targets.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/..."
@@ -54,4 +55,33 @@ if (is_host) {
     ]
     outputs = [ "$root_out_dir/test_data/fidlgen_rust/{{source_file_part}}" ]
   }
+}
+
+group("goldens") {
+  testonly = true
+
+  denylist = [
+    # TODO(fxbug.dev/52276): Support arrays of all sizes in Rust.
+    "//zircon/tools/fidl/testdata:fidl.test.arrays",
+
+    # TODO(fxbug.dev/62520): Insert enum/bits <-> primitive conversions.
+    "//zircon/tools/fidl/testdata:fidl.test.consts",
+
+    # TODO(fxbug.dev/62524): Fix Ord/Hash trait issue with fidl::Resource.
+    "//zircon/tools/fidl/testdata:fidl.test.handles",
+  ]
+
+  deps = []
+  foreach(target, fidl_testdata_targets - denylist) {
+    deps += [ "${target}-rustc" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fidlgen_rust_test($host_toolchain)",
+    ":goldens",
+    ":goldens($host_toolchain)",
+  ]
 }

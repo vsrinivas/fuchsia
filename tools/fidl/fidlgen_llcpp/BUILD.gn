@@ -7,6 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
+import("//zircon/tools/fidl/testdata/targets.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp/..."
@@ -46,4 +47,79 @@ if (is_host) {
     sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
     outputs = [ "$root_out_dir/test_data/fidlgen_llcpp/{{source_file_part}}" ]
   }
+}
+
+group("goldens") {
+  testonly = true
+
+  denylist = [
+    # TODO(fxbug.dev/55889): Escape "union" keyword.
+    "//zircon/tools/fidl/testdata:fidl.test.union",
+
+    # TODO(fxbug.dev/62520): Insert enum/bits <-> primitive conversions.
+    "//zircon/tools/fidl/testdata:fidl.test.consts",
+
+    # TODO(fxbug.dev/62523): Make protocol named "Interface" compile.
+    "//zircon/tools/fidl/testdata:fidl.test.doccomments",
+
+    # TODO(fxbug.dev/62526): Fix pcidevice.h include issue.
+    "//zircon/tools/fidl/testdata:fidl.test.handles",
+
+    # TODO(fxbug.dev/62532): Fix many issues.
+    "//zircon/tools/fidl/testdata:fidl.test.protocolrequest",
+  ]
+
+  if (host_toolchain == current_toolchain) {
+    denylist += [
+      # TODO(fxbug.dev/62576): Add ifdefs to that handles compile on host.
+      "//zircon/tools/fidl/testdata:fidl.test.encapsulatedstructs",
+      "//zircon/tools/fidl/testdata:fidl.test.handlesintypes",
+      "//zircon/tools/fidl/testdata:fidl.test.nullable",
+      "//zircon/tools/fidl/testdata/type_aliases:example",
+      "//zircon/tools/fidl/testdata/type_aliases:someotherlibrary",
+
+      # TODO(fxbug.dev/62573): Add ifdefs to that protocols compile on host.
+      "//zircon/tools/fidl/testdata:fidl.test.bindingsdenylist",
+      "//zircon/tools/fidl/testdata:fidl.test.emptystruct",
+      "//zircon/tools/fidl/testdata:fidl.test.error",
+      "//zircon/tools/fidl/testdata:fidl.test.inheritance",
+      "//zircon/tools/fidl/testdata:fidl.test.inheritancewithrecursivedecl",
+      "//zircon/tools/fidl/testdata:fidl.test.protocols",
+      "//zircon/tools/fidl/testdata:fidl.test.requestflexibleenvelope",
+      "//zircon/tools/fidl/testdata:fidl.test.service",
+      "//zircon/tools/fidl/testdata:fidl.test.unionsandwich",
+      "//zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose:bottom",
+      "//zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose:middle",
+      "//zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose:top",
+      "//zircon/tools/fidl/testdata/placement_of_attributes:example",
+      "//zircon/tools/fidl/testdata/placement_of_attributes:exampleusing",
+      "//zircon/tools/fidl/testdata/transitive_dependencies_compose:bottom",
+      "//zircon/tools/fidl/testdata/transitive_dependencies_compose:middle",
+      "//zircon/tools/fidl/testdata/transitive_dependencies_compose:top",
+
+      # TODO(fxbug.dev/62573): These also have protocols, but are covered by
+      # earlier denylist entries. When those other issues are fixed, these will
+      # need to be uncommented.
+      #"//zircon/tools/fidl/testdata:fidl.test.doccomments",
+      #"//zircon/tools/fidl/testdata:fidl.test.handles",
+      #"//zircon/tools/fidl/testdata:fidl.test.handlesintypes",
+      #"//zircon/tools/fidl/testdata:fidl.test.nullable",
+      #"//zircon/tools/fidl/testdata:fidl.test.protocolrequest",
+      #"//zircon/tools/fidl/testdata:fidl.test.union",
+    ]
+  }
+
+  deps = []
+  foreach(target, fidl_testdata_targets - denylist) {
+    deps += [ "${target}_llcpp" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fidlgen_llcpp_test($host_toolchain)",
+    ":goldens",
+    ":goldens($host_toolchain)",
+  ]
 }

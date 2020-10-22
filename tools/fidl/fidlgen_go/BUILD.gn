@@ -5,8 +5,10 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
 import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
+import("//zircon/tools/fidl/testdata/targets.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/..."
@@ -40,4 +42,20 @@ if (is_host) {
       "//garnet/go/src/fidl/compiler/backend/typestest",
     ]
   }
+}
+
+group("goldens") {
+  testonly = true
+  deps = []
+  foreach(target, fidl_testdata_targets) {
+    deps += [ "$target($go_toolchain)" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fidlgen_go_test($host_toolchain)",
+    ":goldens",
+  ]
 }

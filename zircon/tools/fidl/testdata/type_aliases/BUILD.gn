@@ -1,0 +1,18 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("example") {
+  testonly = true
+  sources = [ "example.test.fidl" ]
+  public_deps = [ ":someotherlibrary" ]
+  host_llcpp = true
+}
+
+fidl("someotherlibrary") {
+  testonly = true
+  sources = [ "someotherlibrary.test.fidl" ]
+  host_llcpp = true
+}
