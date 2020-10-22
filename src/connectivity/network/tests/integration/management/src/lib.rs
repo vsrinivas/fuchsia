@@ -25,7 +25,7 @@ use netstack_testing_common::environments::{
 };
 use netstack_testing_common::{
     try_all, try_any, wait_for_non_loopback_interface_up, Result,
-    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, DHCP_SERVER_DEFAULT_CONFIG_PATH,
+    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
 
@@ -444,10 +444,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
             name,
             vec![
                 KnownServices::LookupAdmin.into_launch_service(),
-                KnownServices::DhcpServer.into_launch_service_with_arguments(vec![
-                    "--config",
-                    DHCP_SERVER_DEFAULT_CONFIG_PATH,
-                ]),
+                KnownServices::DhcpServer.into_launch_service(),
                 KnownServices::SecureStash.into_launch_service(),
             ],
         )

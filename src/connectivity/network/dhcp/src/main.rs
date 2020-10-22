@@ -6,7 +6,6 @@
 
 use {
     anyhow::{Context as _, Error},
-    argh::FromArgs,
     dhcp::{
         configuration,
         protocol::{Message, SERVER_PORT},
@@ -31,7 +30,6 @@ use {
 
 /// A buffer size in excess of the maximum allowable DHCP message size.
 const BUF_SZ: usize = 1024;
-const DEFAULT_CONFIG_PATH: &str = "/config/data/config.json";
 /// The rate in seconds at which expiration DHCP leases are recycled back into the managed address
 /// pool. The current value of 5 is meant to facilitate manual testing.
 // TODO(atait): Replace with Duration type after it has been updated to const fn.
@@ -41,26 +39,35 @@ enum IncomingService {
     Server(fidl_fuchsia_net_dhcp::Server_RequestStream),
 }
 
-/// The Fuchsia DHCP server.
-#[derive(Debug, FromArgs)]
-#[argh(name = "dhcpd")]
-pub struct Args {
-    /// the path to the default configuration file consumed by dhcpd if it was unable to access a
-    /// fuchsia.stash.Store instance.
-    #[argh(option, default = "DEFAULT_CONFIG_PATH.to_string()")]
-    pub config: String,
-}
+const DEFAULT_LEASE_DURATION_SECONDS: u32 = 24 * 60 * 60;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let () = fuchsia_syslog::init().context("cannot init logger")?;
     log::info!("starting");
 
-    let Args { config } = argh::from_env();
     let stash = dhcp::stash::Stash::new(DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX)
         .context("failed to instantiate stash")?;
-    let default_params = configuration::load_server_params_from_file(&config)
-        .context("failed to load default server parameters from configuration file")?;
+    let default_params = configuration::ServerParameters {
+        server_ips: vec![],
+        lease_length: dhcp::configuration::LeaseLength {
+            default_seconds: DEFAULT_LEASE_DURATION_SECONDS,
+            max_seconds: DEFAULT_LEASE_DURATION_SECONDS,
+        },
+        managed_addrs: dhcp::configuration::ManagedAddresses {
+            network_id: std::net::Ipv4Addr::UNSPECIFIED,
+            broadcast: std::net::Ipv4Addr::UNSPECIFIED,
+            mask: std::convert::TryInto::try_into(0u8).unwrap(),
+            pool_range_start: std::net::Ipv4Addr::UNSPECIFIED,
+            pool_range_stop: std::net::Ipv4Addr::UNSPECIFIED,
+        },
+        permitted_macs: dhcp::configuration::PermittedMacs(vec![]),
+        static_assignments: dhcp::configuration::StaticAssignments(
+            std::collections::hash_map::HashMap::new(),
+        ),
+        arp_probe: false,
+        bound_device_names: vec![],
+    };
     let params = stash.load_parameters().await.unwrap_or_else(|e| {
         log::warn!("failed to load parameters from stash: {:?}", e);
         default_params.clone()
@@ -95,7 +102,7 @@ async fn main() -> Result<(), Error> {
             // Sending here should never fail; we just created the stream above.
             let () = socket_sink.try_send(socket_collection)?;
         }
-        Err(e) => log::error!("Failed to start server on startup: {:?}", e),
+        Err(e) => log::warn!("could not enable server on startup: {:?}", e),
     }
 
     let admin_fut =

@@ -37,7 +37,7 @@ async fn test_resolve_route() -> Result {
         .join_network::<netemul::NetworkDevice, _>(
             &net,
             "host",
-            netemul::InterfaceConfig::StaticIp(HOST_IP_V4),
+            &netemul::InterfaceConfig::StaticIp(HOST_IP_V4),
         )
         .await
         .context("host failed to join network")?;
@@ -69,7 +69,7 @@ async fn test_resolve_route() -> Result {
         .join_network::<netemul::NetworkDevice, _>(
             &net,
             "gateway",
-            netemul::InterfaceConfig::StaticIp(GATEWAY_IP_V4),
+            &netemul::InterfaceConfig::StaticIp(GATEWAY_IP_V4),
         )
         .await
         .context("gateway failed to join network")?;

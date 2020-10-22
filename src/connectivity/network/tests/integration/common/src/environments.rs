@@ -110,24 +110,11 @@ impl KnownServices {
     /// Transforms into a [`netemul_environment::LaunchService`] with no
     /// arguments.
     pub fn into_launch_service(self) -> netemul_environment::LaunchService {
-        self.into_launch_service_with_arguments::<Option<String>>(None)
-    }
-
-    /// Transforms into a [`netemul_environment::LaunchService`] with no
-    /// arguments with `args`.
-    pub fn into_launch_service_with_arguments<I>(
-        self,
-        args: I,
-    ) -> netemul_environment::LaunchService
-    where
-        I: IntoIterator,
-        I::Item: Into<String>,
-    {
         let (name, url) = self.get_name_url();
         netemul_environment::LaunchService {
             name: name.to_string(),
             url: url.to_string(),
-            arguments: args.into_iter().map(Into::into).collect(),
+            arguments: vec![],
         }
     }
 }

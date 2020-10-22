@@ -16,7 +16,7 @@ use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use futures::future::{self, FusedFuture, Future, FutureExt as _};
-use futures::stream::TryStreamExt as _;
+use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_subnet, std_ip_v6};
 use net_types::ethernet::Mac;
 use net_types::ip as net_types_ip;
@@ -101,14 +101,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
         .create_netstack_environment_with::<Netstack2, _, _>(
             format!("{}_server", name),
             vec![
-                KnownServices::DhcpServer.into_launch_service_with_arguments(vec![
-                    // TODO: Once DHCP server supports dynamic configuration
-                    // (fxbug.dev/45830), stop using the config file and configure
-                    // it programatically. For now, the constants defined in this
-                    // test reflect the ones defined in test_config.json.
-                    "--config",
-                    "/config/data/dhcpd-testing/test_config.json",
-                ]),
+                KnownServices::DhcpServer.into_launch_service(),
                 KnownServices::SecureStash.into_launch_service(),
             ],
         )
@@ -125,7 +118,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
         .join_network::<E, _>(
             &network,
             "server-ep",
-            netemul::InterfaceConfig::StaticIp(SERVER_ADDR),
+            &netemul::InterfaceConfig::StaticIp(SERVER_ADDR),
         )
         .await
         .context("failed to configure server networking")?;
@@ -134,6 +127,32 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
         .connect_to_service::<net_dhcp::Server_Marker>()
         .context("failed to connext to DHCP server")?;
 
+    let dhcp_server_ref = &dhcp_server;
+    // TODO(fxbug.dev/62554): derive these from SERVER_ADDR.
+    let () = stream::iter(
+        [
+            fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![fidl_ip_v4!(192.168.0.1)]),
+            fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
+                network_id: Some(fidl_ip_v4!(192.168.0.0)),
+                broadcast: Some(fidl_ip_v4!(192.168.0.127)),
+                mask: Some(fidl_ip_v4!(255.255.255.128)),
+                pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
+                pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
+            }),
+        ]
+        .iter_mut(),
+    )
+    .map(Ok)
+    .try_for_each_concurrent(None, |parameter| async move {
+        dhcp_server_ref
+            .set_parameter(parameter)
+            .await
+            .context("failed to call dhcp/Server.SetParameter")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .with_context(|| format!("dhcp/Server.SetParameter({:?}) returned error", parameter))
+    })
+    .await?;
+
     let () = dhcp_server
         .set_option(&mut net_dhcp::Option_::DomainNameServer(vec![DHCP_DNS_SERVER]))
         .await
@@ -141,9 +160,16 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
         .map_err(zx::Status::from_raw)
         .context("dhcp/Server.SetOption returned error")?;
 
+    let () = dhcp_server
+        .start_serving()
+        .await
+        .context("failed to call dhcp/Server.StartServing")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("dhcp/Server.StartServing returned error")?;
+
     // Start networking on client environment.
     let _client_iface = client_environment
-        .join_network::<E, _>(&network, "client-ep", netemul::InterfaceConfig::Dhcp)
+        .join_network::<E, _>(&network, "client-ep", &netemul::InterfaceConfig::Dhcp)
         .await
         .context("failed to configure client networking")?;
 

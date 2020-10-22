@@ -259,7 +259,7 @@ impl<'a> TestEnvironment<'a> {
         &self,
         network: &TestNetwork<'a>,
         ep_name: S,
-        config: InterfaceConfig,
+        config: &InterfaceConfig,
     ) -> Result<TestInterface<'a>>
     where
         E: Endpoint,
@@ -285,7 +285,7 @@ impl<'a> TestEnvironment<'a> {
         network: &TestNetwork<'a>,
         ep_name: impl Into<String>,
         ep_config: netemul_network::EndpointConfig,
-        if_config: InterfaceConfig,
+        if_config: &InterfaceConfig,
     ) -> Result<TestInterface<'a>> {
         let endpoint = network
             .create_endpoint_with(ep_name, ep_config)
@@ -298,14 +298,14 @@ impl<'a> TestEnvironment<'a> {
     pub async fn install_endpoint(
         &self,
         endpoint: TestEndpoint<'a>,
-        config: InterfaceConfig,
+        config: &InterfaceConfig,
     ) -> Result<TestInterface<'a>> {
         let interface =
             endpoint.into_interface_in_environment(self).await.context("failed to add endpoint")?;
         let () = interface.set_link_up(true).await.context("failed to start endpoint")?;
         let () = match config {
             InterfaceConfig::StaticIp(addr) => {
-                interface.add_ip_addr(addr).await.context("failed to add static IP")?
+                interface.add_ip_addr(*addr).await.context("failed to add static IP")?
             }
             InterfaceConfig::Dhcp => {
                 interface.start_dhcp().await.context("failed to start DHCP")?;

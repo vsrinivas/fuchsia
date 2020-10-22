@@ -5,8 +5,10 @@
 #![cfg(test)]
 
 use {
+    anyhow::Context as _,
     fuchsia_component::{client::AppBuilder, server::ServiceFs},
-    futures::{FutureExt, StreamExt},
+    futures::{FutureExt as _, StreamExt as _, TryStreamExt as _},
+    net_declare::fidl_ip_v4,
 };
 
 struct Command<'a> {
@@ -15,7 +17,10 @@ struct Command<'a> {
     expected_stderr: &'a str,
 }
 
-async fn test_cli_with_config(config: &'static str, commands: Vec<Command<'_>>) {
+async fn test_cli_with_config(
+    parameters: &mut [fidl_fuchsia_net_dhcp::Parameter],
+    commands: Vec<Command<'_>>,
+) {
     let mut fs = ServiceFs::new_local();
 
     let mut netstack_builder =
@@ -23,8 +28,7 @@ async fn test_cli_with_config(config: &'static str, commands: Vec<Command<'_>>) 
     let mut stash_builder =
         AppBuilder::new("fuchsia-pkg://fuchsia.com/dhcpd-cli-tests#meta/stash_secure.cmx");
     let mut dhcpd_builder =
-        AppBuilder::new("fuchsia-pkg://fuchsia.com/dhcpd-testing#meta/dhcpd.cmx")
-            .args(vec!["--config".to_string(), format!("/config/data/{}.json", config)]);
+        AppBuilder::new("fuchsia-pkg://fuchsia.com/dhcpd-cli-tests#meta/dhcpd.cmx");
 
     fs.add_proxy_service_to::<fidl_fuchsia_stash::SecureStoreMarker, _>(
         stash_builder
@@ -48,33 +52,57 @@ async fn test_cli_with_config(config: &'static str, commands: Vec<Command<'_>>) 
     let env =
         fs.create_salted_nested_environment("test_cli").expect("failed to create environment");
 
-    let fs = fs.for_each_concurrent(None, |()| async move {});
+    let fs = fs.for_each_concurrent(None, futures::future::ready);
     futures::pin_mut!(fs);
 
     let _stash = stash_builder.spawn(env.launcher()).expect("failed to launch test stash");
-    let _dhcpd = dhcpd_builder.spawn(env.launcher()).expect("failed to launch test dhcpd");
+    let dhcpd = dhcpd_builder.spawn(env.launcher()).expect("failed to launch test dhcpd");
     let _netstack = netstack_builder.spawn(env.launcher()).expect("failed to launch test netstack");
 
-    for Command { args, expected_stdout, expected_stderr } in commands {
-        let output =
-            AppBuilder::new("fuchsia-pkg://fuchsia.com/dhcpd-cli-tests#meta/dhcpd-cli.cmx")
-                .args(args)
-                .output(env.launcher())
-                .expect("failed to launch dhcpd-cli");
+    let dhcp_server = dhcpd
+        .connect_to_service::<fidl_fuchsia_net_dhcp::Server_Marker>()
+        .expect("failed to connect to DHCP server");
+    let dhcp_server_ref = &dhcp_server;
+    let test_fut = async {
+        let () = futures::stream::iter(parameters.iter_mut())
+            .map(Ok)
+            .try_for_each_concurrent(None, |parameter| async move {
+                dhcp_server_ref
+                    .set_parameter(parameter)
+                    .await
+                    .context("failed to call dhcp/Server.SetParameter")?
+                    .map_err(fuchsia_zircon::Status::from_raw)
+                    .with_context(|| {
+                        format!("dhcp/Server.SetParameter({:?}) returned error", parameter)
+                    })
+            })
+            .await
+            .expect("failed to configure DHCP server");
 
-        let output = futures::select! {
-            () = fs => panic!("request stream terminated"),
-            output = output.fuse() => output.expect("dhcpd-cli terminated with error"),
-        };
-        let stdout = std::str::from_utf8(&output.stdout).expect("failed to get stdout");
-        let stderr = std::str::from_utf8(&output.stderr).expect("failed to get stderr");
-        assert_eq!(stderr, expected_stderr);
-        assert_eq!(stdout, expected_stdout);
-    }
+        for Command { args, expected_stdout, expected_stderr } in commands {
+            let output =
+                AppBuilder::new("fuchsia-pkg://fuchsia.com/dhcpd-cli-tests#meta/dhcpd-cli.cmx")
+                    .args(args)
+                    .output(env.launcher())
+                    .expect("failed to launch dhcpd-cli")
+                    .await
+                    .expect("failed to collect dhcpd-cli output");
+
+            let stdout = std::str::from_utf8(&output.stdout).expect("failed to get stdout");
+            let stderr = std::str::from_utf8(&output.stderr).expect("failed to get stderr");
+            assert_eq!(stderr, expected_stderr);
+            assert_eq!(stdout, expected_stdout);
+        }
+    };
+
+    futures::select! {
+        () = fs => panic!("request stream terminated"),
+        () = test_fut.fuse() => {},
+    };
 }
 
 async fn test_cli(commands: Vec<Command<'_>>) {
-    test_cli_with_config("default_config", commands).await
+    test_cli_with_config(&mut [], commands).await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -166,24 +194,15 @@ async fn test_list_parameter() {
         args: vec!["list", "parameter"],
         expected_stdout: r#"[
     IpAddrs(
-        [
-            Ipv4Address {
-                addr: [
-                    192,
-                    168,
-                    0,
-                    1,
-                ],
-            },
-        ],
+        [],
     ),
     AddressPool(
         AddressPool {
             network_id: Some(
                 Ipv4Address {
                     addr: [
-                        192,
-                        168,
+                        0,
+                        0,
                         0,
                         0,
                     ],
@@ -192,28 +211,28 @@ async fn test_list_parameter() {
             broadcast: Some(
                 Ipv4Address {
                     addr: [
-                        192,
-                        168,
                         0,
-                        128,
+                        0,
+                        0,
+                        0,
                     ],
                 },
             ),
             mask: Some(
                 Ipv4Address {
                     addr: [
-                        255,
-                        255,
-                        255,
-                        128,
+                        0,
+                        0,
+                        0,
+                        0,
                     ],
                 },
             ),
             pool_range_start: Some(
                 Ipv4Address {
                     addr: [
-                        192,
-                        168,
+                        0,
+                        0,
                         0,
                         0,
                     ],
@@ -222,8 +241,8 @@ async fn test_list_parameter() {
             pool_range_stop: Some(
                 Ipv4Address {
                     addr: [
-                        192,
-                        168,
+                        0,
+                        0,
                         0,
                         0,
                     ],
@@ -355,7 +374,16 @@ async fn test_start_fails() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_start_succeeds() {
     test_cli_with_config(
-        "test_config",
+        &mut [
+            fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![fidl_ip_v4!(192.168.0.1)]),
+            fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
+                network_id: Some(fidl_ip_v4!(192.168.0.0)),
+                broadcast: Some(fidl_ip_v4!(192.168.0.127)),
+                mask: Some(fidl_ip_v4!(255.255.255.128)),
+                pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
+                pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
+            }),
+        ],
         vec![Command { args: vec!["start"], expected_stdout: "", expected_stderr: "" }],
     )
     .await

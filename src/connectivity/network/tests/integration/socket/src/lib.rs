@@ -77,14 +77,14 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str) -> Result {
     const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
 
     let _client_ep = client
-        .join_network::<E, _>(&net, "client", netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET))
+        .join_network::<E, _>(&net, "client", &netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET))
         .await
         .context("client failed to join network")?;
     let server = sandbox
         .create_netstack_environment::<Netstack2, _>(format!("{}_server", name))
         .context("failed to create server environment")?;
     let _server_ep = server
-        .join_network::<E, _>(&net, "server", netemul::InterfaceConfig::StaticIp(SERVER_SUBNET))
+        .join_network::<E, _>(&net, "server", &netemul::InterfaceConfig::StaticIp(SERVER_SUBNET))
         .await
         .context("server failed to join network")?;
 
@@ -165,7 +165,7 @@ async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) -> Result {
         .create_netstack_environment::<Netstack2, _>(format!("{}_client", name))
         .context("failed to create client environment")?;
     let _client_ep = client
-        .join_network::<E, _>(&net, "client", netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET))
+        .join_network::<E, _>(&net, "client", &netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET))
         .await
         .context("client failed to join network")?;
 
@@ -173,7 +173,7 @@ async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) -> Result {
         .create_netstack_environment::<Netstack2, _>(format!("{}_server", name))
         .context("failed to create server environment")?;
     let _server_ep = server
-        .join_network::<E, _>(&net, "server", netemul::InterfaceConfig::StaticIp(SERVER_SUBNET))
+        .join_network::<E, _>(&net, "server", &netemul::InterfaceConfig::StaticIp(SERVER_SUBNET))
         .await
         .context("server failed to join network")?;
 

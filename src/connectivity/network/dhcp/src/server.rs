@@ -287,16 +287,16 @@ impl Server {
                     panic!("server tried to release unallocated ip {}", addr)
                 }
                 return Ok(config.client_addr);
-            } else if self.pool.addr_is_available(config.client_addr) {
+            } else if self.pool.addr_is_available(&config.client_addr) {
                 return Ok(config.client_addr);
             }
         }
         if let Some(requested_addr) = get_requested_ip_addr(&client) {
             if self.pool.addr_is_available(requested_addr) {
-                return Ok(requested_addr);
+                return Ok(*requested_addr);
             }
         }
-        self.pool.get_next_available_addr().map_err(AddressPoolError::into)
+        self.pool.get_next_available_addr().map(|x| *x).map_err(AddressPoolError::into)
     }
 
     fn store_client_config(
@@ -357,7 +357,7 @@ impl Server {
                 *self.params.server_ips.first().ok_or(ServerError::ServerMissingIpAddr)?,
             ))
         } else {
-            let () = self.validate_requested_addr_with_client(&req, requested_ip)?;
+            let () = self.validate_requested_addr_with_client(&req, &requested_ip)?;
             let dest = self.get_destination_addr(&req);
             Ok(ServerAction::SendResponse(self.build_ack(req, requested_ip)?, dest))
         }
@@ -378,21 +378,21 @@ impl Server {
     fn validate_requested_addr_with_client(
         &self,
         req: &Message,
-        requested_ip: Ipv4Addr,
+        requested_ip: &Ipv4Addr,
     ) -> Result<(), ServerError> {
         if let Some(client_config) = self.cache.get(&req.chaddr) {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_err(|std::time::SystemTimeError { .. }| ServerError::ServerTimeError)?;
-            if client_config.client_addr != requested_ip {
+            if client_config.client_addr != *requested_ip {
                 Err(ServerError::RequestedIpOfferIpMismatch(
-                    requested_ip,
+                    *requested_ip,
                     client_config.client_addr,
                 ))
             } else if client_config.expired(now) {
                 Err(ServerError::ExpiredClientConfig)
             } else if !self.pool.addr_is_allocated(requested_ip) {
-                Err(ServerError::UnidentifiedRequestedIp(requested_ip))
+                Err(ServerError::UnidentifiedRequestedIp(*requested_ip))
             } else {
                 Ok(())
             }
@@ -418,12 +418,13 @@ impl Server {
             return Ok(ServerAction::SendResponse(nak, dest));
         }
         let dest = self.get_destination_addr(&req);
+        let requested_ip = *requested_ip;
         Ok(ServerAction::SendResponse(self.build_ack(req, requested_ip)?, dest))
     }
 
     fn handle_request_renewing(&mut self, req: Message) -> Result<ServerAction, ServerError> {
         let client_ip = req.ciaddr;
-        let () = self.validate_requested_addr_with_client(&req, client_ip)?;
+        let () = self.validate_requested_addr_with_client(&req, &client_ip)?;
         let dest = self.get_destination_addr(&req);
         Ok(ServerAction::SendResponse(self.build_ack(req, client_ip)?, dest))
     }
@@ -435,10 +436,10 @@ impl Server {
         if is_recipient(&self.params.server_ips, &dec)
             && self.validate_requested_addr_with_client(&dec, declined_ip).is_err()
         {
-            let () = self.pool.allocate_addr(declined_ip)?;
+            let () = self.pool.allocate_addr(*declined_ip)?;
         }
         self.cache.remove(&dec.chaddr);
-        Ok(ServerAction::AddressDecline(declined_ip))
+        Ok(ServerAction::AddressDecline(*declined_ip))
     }
 
     fn handle_release(&mut self, rel: Message) -> Result<ServerAction, ServerError> {
@@ -704,8 +705,11 @@ pub trait ServerDispatcher {
 
 impl ServerDispatcher for Server {
     fn try_validate_parameters(&self) -> Result<&ServerParameters, Status> {
-        // Validate that the server parameters are valid to start leasing
-        // addresses.
+        if !self.params.is_valid() {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        // TODO(fxbug.dev/62558): rethink this check and this function.
         if self.pool.is_empty() {
             log::error!("Server validation failed: Address pool is empty");
             return Err(Status::INVALID_ARGS);
@@ -1054,10 +1058,10 @@ impl AddressPool {
     /// addresses; the address is selected based on the subnet from which
     /// the message was received (if `giaddr` is 0) or on the address of
     /// the relay agent that forwarded the message (`giaddr` when not 0).
-    fn get_next_available_addr(&self) -> Result<Ipv4Addr, AddressPoolError> {
+    fn get_next_available_addr(&self) -> Result<&Ipv4Addr, AddressPoolError> {
         let mut iter = self.available_addrs.iter();
         match iter.next() {
-            Some(addr) => Ok(*addr),
+            Some(addr) => Ok(addr),
             None => Err(AddressPoolError::Ipv4AddrExhaustion),
         }
     }
@@ -1080,12 +1084,12 @@ impl AddressPool {
         }
     }
 
-    fn addr_is_available(&self, addr: Ipv4Addr) -> bool {
-        self.available_addrs.contains(&addr) && !self.allocated_addrs.contains(&addr)
+    fn addr_is_available(&self, addr: &Ipv4Addr) -> bool {
+        self.available_addrs.contains(addr) && !self.allocated_addrs.contains(addr)
     }
 
-    fn addr_is_allocated(&self, addr: Ipv4Addr) -> bool {
-        !self.available_addrs.contains(&addr) && self.allocated_addrs.contains(&addr)
+    fn addr_is_allocated(&self, addr: &Ipv4Addr) -> bool {
+        !self.available_addrs.contains(addr) && self.allocated_addrs.contains(addr)
     }
 
     fn is_empty(&self) -> bool {
@@ -1114,8 +1118,8 @@ fn is_in_subnet(req: &Message, config: &ServerParameters) -> bool {
         None => return false,
     };
     config.server_ips.iter().any(|server_ip| {
-        config.managed_addrs.mask.apply_to(client_ip)
-            == config.managed_addrs.mask.apply_to(*server_ip)
+        config.managed_addrs.mask.apply_to(&client_ip)
+            == config.managed_addrs.mask.apply_to(server_ip)
     })
 }
 
@@ -1142,13 +1146,13 @@ fn get_client_state(msg: &Message) -> Result<ClientState, ()> {
     }
 }
 
-fn get_requested_ip_addr(req: &Message) -> Option<Ipv4Addr> {
+fn get_requested_ip_addr(req: &Message) -> Option<&Ipv4Addr> {
     req.options
         .iter()
         .filter_map(
             |opt| {
                 if let DhcpOption::RequestedIpAddress(addr) = opt {
-                    Some(*addr)
+                    Some(addr)
                 } else {
                     None
                 }
@@ -1939,7 +1943,7 @@ pub mod tests {
         );
         let _response = server.dispatch(req).unwrap();
         assert!(server.cache.contains_key(&client_mac));
-        assert!(server.pool.addr_is_allocated(requested_ip));
+        assert!(server.pool.addr_is_allocated(&requested_ip));
         Ok(())
     }
 
@@ -1975,7 +1979,7 @@ pub mod tests {
 
         assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientMac(client_mac)));
         assert!(!server.cache.contains_key(&client_mac));
-        assert!(!server.pool.addr_is_allocated(requested_ip));
+        assert!(!server.pool.addr_is_allocated(&requested_ip));
         Ok(())
     }
 
@@ -2608,8 +2612,8 @@ pub mod tests {
 
         assert_eq!(server.dispatch(release), Ok(ServerAction::AddressRelease(release_ip)));
 
-        assert!(!server.pool.addr_is_allocated(release_ip), "addr marked allocated");
-        assert!(server.pool.addr_is_available(release_ip), "addr not marked available");
+        assert!(!server.pool.addr_is_allocated(&release_ip), "addr marked allocated");
+        assert!(server.pool.addr_is_available(&release_ip), "addr not marked available");
         assert!(server.cache.contains_key(&client_mac), "client config not retained");
         assert_eq!(
             server.cache.get(&client_mac).unwrap(),
@@ -2633,8 +2637,8 @@ pub mod tests {
 
         assert_eq!(server.dispatch(release), Err(ServerError::UnknownClientMac(client_mac,)));
 
-        assert!(server.pool.addr_is_allocated(release_ip), "addr not marked allocated");
-        assert!(!server.pool.addr_is_available(release_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(&release_ip), "addr not marked allocated");
+        assert!(!server.pool.addr_is_available(&release_ip), "addr still marked available");
         Ok(())
     }
 
@@ -2679,8 +2683,8 @@ pub mod tests {
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
 
-        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
-        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
+        assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
         assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
         Ok(())
     }
@@ -2718,8 +2722,8 @@ pub mod tests {
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
 
-        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
-        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
+        assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
         assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
         Ok(())
     }
@@ -2744,8 +2748,8 @@ pub mod tests {
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
 
-        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
-        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
+        assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
         assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
         Ok(())
     }
@@ -2795,8 +2799,8 @@ pub mod tests {
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
 
-        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
-        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
+        assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
         Ok(())
     }
 
@@ -2826,8 +2830,8 @@ pub mod tests {
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
 
-        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
-        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
+        assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
         assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
         Ok(())
     }
@@ -3161,8 +3165,8 @@ pub mod tests {
         let () = server.dispatch_clear_leases().context("dispatch_clear_leases() failed")?;
         let empty_map = HashMap::new();
         assert_eq!(empty_map, server.cache);
-        assert!(server.pool.addr_is_available(client));
-        assert!(!server.pool.addr_is_allocated(client));
+        assert!(server.pool.addr_is_available(&client));
+        assert!(!server.pool.addr_is_allocated(&client));
         let stored_leases =
             server.stash.load_client_configs().await.context("load_client_configs() failed")?;
         assert_eq!(empty_map, stored_leases);

@@ -40,12 +40,16 @@ fuchsia_component("component") {
 rustc_test("dhcpd-cli-test") {
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/connectivity/lib/net-declare",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
 
@@ -73,6 +77,7 @@ fuchsia_test_package("dhcpd-cli-tests") {
   test_components = [ ":dhcpd-cli-test-component" ]
   deps = [
     ":component",
+    "//src/connectivity/network/dhcp:component",
     "//src/connectivity/network/netstack:component-debug",
     "//src/sys/stash:stash_secure",
   ]
@@ -80,8 +85,5 @@ fuchsia_test_package("dhcpd-cli-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":dhcpd-cli-tests",
-    "//src/connectivity/network/dhcp:dhcpd-testing",
-  ]
+  deps = [ ":dhcpd-cli-tests" ]
 }

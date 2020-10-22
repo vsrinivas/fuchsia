@@ -111,7 +111,7 @@ where
         .join_network::<E, _>(
             &network,
             name.ethertap_compatible_name(),
-            netemul::InterfaceConfig::None,
+            &netemul::InterfaceConfig::None,
         )
         .await
         .context("failed to configure networking")?;

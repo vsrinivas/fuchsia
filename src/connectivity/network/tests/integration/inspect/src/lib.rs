@@ -151,7 +151,7 @@ async fn inspect_nic() -> Result {
             &network,
             "eth-ep",
             netemul::Ethernet::make_config(netemul::DEFAULT_MTU, Some(ETH_MAC)),
-            netemul::InterfaceConfig::StaticIp(fidl_subnet!(192.168.0.1/24)),
+            &netemul::InterfaceConfig::StaticIp(fidl_subnet!(192.168.0.1/24)),
         )
         .await
         .context("failed to join network with ethernet endpoint")?;
@@ -160,7 +160,7 @@ async fn inspect_nic() -> Result {
             &network,
             "netdev-ep",
             netemul::NetworkDevice::make_config(netemul::DEFAULT_MTU, Some(NETDEV_MAC)),
-            netemul::InterfaceConfig::StaticIp(fidl_subnet!(192.168.0.2/24)),
+            &netemul::InterfaceConfig::StaticIp(fidl_subnet!(192.168.0.2/24)),
         )
         .await
         .context("failed to join network with netdevice endpoint")?;

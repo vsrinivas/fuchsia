@@ -50,9 +50,6 @@ pub const ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_
 /// The time to wait between two consecutive checks of an event.
 pub const ASYNC_EVENT_CHECK_INTERVAL: zx::Duration = zx::Duration::from_seconds(1);
 
-/// The path to the default configuration file for DHCP server.
-pub const DHCP_SERVER_DEFAULT_CONFIG_PATH: &str = "/config/data/dhcpd-testing/default_config.json";
-
 /// As per [RFC 4861] sections 4.1-4.5, NDP packets MUST have a hop limit of 255.
 ///
 /// [RFC 4861]: https://tools.ietf.org/html/rfc4861

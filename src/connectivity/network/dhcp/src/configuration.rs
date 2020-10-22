@@ -8,17 +8,9 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::fs;
 use std::io;
 use std::net::Ipv4Addr;
 use thiserror::Error;
-
-/// Attempts to load a `ServerParameters` from the json file at the provided path.
-pub fn load_server_params_from_file(path: &str) -> Result<ServerParameters, ConfigError> {
-    let json = fs::read_to_string(path)?;
-    let config = serde_json::from_str(&json)?;
-    Ok(config)
-}
 
 /// A collection of the basic configuration parameters needed by the server.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -44,6 +36,52 @@ pub struct ServerParameters {
     /// and will process incoming DHCP messages regardless of the interface on
     /// which they arrive.
     pub bound_device_names: Vec<String>,
+}
+
+impl ServerParameters {
+    pub fn is_valid(&self) -> bool {
+        let Self {
+            server_ips,
+            lease_length: crate::configuration::LeaseLength { default_seconds, max_seconds },
+            managed_addrs:
+                crate::configuration::ManagedAddresses {
+                    network_id,
+                    broadcast,
+                    mask,
+                    pool_range_start,
+                    pool_range_stop,
+                },
+            permitted_macs: _,
+            static_assignments: _,
+            arp_probe: _,
+            bound_device_names: _,
+        } = self;
+        if server_ips.is_empty() {
+            return false;
+        }
+        if server_ips.iter().any(std::net::Ipv4Addr::is_unspecified) {
+            return false;
+        }
+        if *default_seconds == 0 {
+            return false;
+        }
+        if *max_seconds == 0 {
+            return false;
+        }
+        if ![network_id, pool_range_start, pool_range_stop]
+            .iter()
+            .all(|address| !address.is_unspecified() && mask.apply_to(address) == *network_id)
+        {
+            return false;
+        }
+        if broadcast != &Ipv4Addr::BROADCAST {
+            let subnet_broadcast: Ipv4Addr = (u32::from(*network_id) | !mask.to_u32()).into();
+            if broadcast != &subnet_broadcast {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 /// Parameters controlling lease duration allocation. Per,
@@ -128,17 +166,17 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::AddressPool> for ManagedAddresses {
             let broadcast = Ipv4Addr::from_fidl(broadcast);
             let pool_range_start = Ipv4Addr::from_fidl(pool_range_start);
             let pool_range_stop = Ipv4Addr::from_fidl(pool_range_stop);
-            if mask.apply_to(network_id) != network_id {
+            if mask.apply_to(&network_id) != network_id {
                 Err(anyhow::format_err!(
                     "fuchsia.net.dhcp.AddressPool contained wrong mask (/{}) for network_id ({})",
                     mask.ones(),
                     network_id
                 ))
-            } else if mask.apply_to(broadcast) != network_id {
+            } else if mask.apply_to(&broadcast) != network_id {
                 Err(anyhow::format_err!("fuchsia.net.dhcp.AddressPool contained broadcast ({}) outside of network_id ({})", broadcast, network_id))
-            } else if mask.apply_to(pool_range_start) != network_id {
+            } else if mask.apply_to(&pool_range_start) != network_id {
                 Err(anyhow::format_err!("fuchsia.net.dhcp.AddressPool contained pool_range_start ({}) outside of network_id ({})", pool_range_start, network_id))
-            } else if mask.apply_to(pool_range_stop) != network_id {
+            } else if mask.apply_to(&pool_range_stop) != network_id {
                 Err(anyhow::format_err!("fuchsia.net.dhcp.AddressPool contained pool_range_stop ({}) outside of network_id ({})", pool_range_stop, network_id))
             } else if pool_range_start > pool_range_stop {
                 Err(anyhow::format_err!("fuchsia.net.dhpc.AddressPool contained pool_range_start ({}) > pool_range_stop ({})", pool_range_start, pool_range_stop))
@@ -285,7 +323,7 @@ impl SubnetMask {
     }
 
     /// Returns the Network address resulting from masking `target` with the `SubnetMask`.
-    pub fn apply_to(&self, target: Ipv4Addr) -> Ipv4Addr {
+    pub fn apply_to(&self, target: &Ipv4Addr) -> Ipv4Addr {
         let subnet_mask_bits = self.to_u32();
         let target_bits = u32::from_be_bytes(target.octets());
         Ipv4Addr::from(target_bits & subnet_mask_bits)

@@ -8,6 +8,7 @@ rustc_test("dhcp") {
   output_name = "netstack_dhcp_integration_test"
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/network/testing/netemul/rust:lib",
