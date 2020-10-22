@@ -40,10 +40,8 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
 
   // Encode the input with fidl::Encode and compare againt encode().
   fidl::aligned<FidlType> aligned_value = builder();
-  ::fidl::internal::LinearizeBuffer<FidlType> buf;
-  auto encode_result = ::fidl::LinearizeAndEncode<FidlType>(&aligned_value.value, buf.buffer());
-  ZX_ASSERT(encode_result.status == ZX_OK && encode_result.error == nullptr);
-  const fidl::BytePart& expected_bytes = encode_result.message.bytes();
+  ::fidl::OwnedOutgoingMessage<FidlType> encoded(&aligned_value.value);
+  ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
 
   aligned_value = builder();
   std::vector<uint8_t> reference_bytes;
@@ -56,17 +54,19 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
     return false;
   }
 
-  if (expected_bytes.actual() != reference_bytes.size()) {
+  fidl::OutgoingMessage& expected_message = encoded.GetOutgoingMessage();
+  if (expected_message.byte_actual() != reference_bytes.size()) {
     std::cout << "output size mismatch - encoded reference size was " << reference_bytes.size()
-              << " but expected encode result size was" << expected_bytes.actual() << std::endl;
+              << " but expected encode result size was" << expected_message.byte_actual()
+              << std::endl;
     return false;
   }
   bool success = true;
-  for (size_t i = 0; i < expected_bytes.size(); i++) {
-    if (expected_bytes.data()[i] != reference_bytes.data()[i]) {
+  for (size_t i = 0; i < expected_message.byte_actual(); i++) {
+    if (expected_message.bytes()[i] != reference_bytes.data()[i]) {
       std::cout << "At offset " << i << " reference got 0x" << std::setw(2) << std::setfill('0')
                 << std::hex << int(reference_bytes.data()[i]) << " but fidl::Decode got 0x"
-                << int(expected_bytes.data()[i]) << std::dec << std::endl;
+                << int(expected_message.bytes()[i]) << std::dec << std::endl;
       success = false;
     }
   }

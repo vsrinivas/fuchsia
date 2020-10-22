@@ -58,6 +58,7 @@ struct ByteStorage<kSize, std::enable_if_t<(kSize > kMaxStackAllocSize)>> {
   constexpr static uint32_t kBufferSize = kSize;
 
   fidl::BytePart buffer() { return storage->view(); }
+  uint8_t* data() { return storage->data(); }
 
   ByteStorage() : storage(std::make_unique<AlignedBuffer<kBufferSize>>()) {}
   explicit ByteStorage(DelayAllocationTag) {}
@@ -82,6 +83,7 @@ struct ByteStorage<kSize, std::enable_if_t<(kSize <= kMaxStackAllocSize)>> {
   constexpr static uint32_t kBufferSize = kSize;
 
   fidl::BytePart buffer() { return storage.view(); }
+  uint8_t* data() { return storage.data(); }
 
   ByteStorage() {}
   explicit ByteStorage(DelayAllocationTag) {}

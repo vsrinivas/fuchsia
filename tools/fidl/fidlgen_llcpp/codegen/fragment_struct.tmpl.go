@@ -19,11 +19,11 @@ struct {{ .Name }};
   {{- end }}
 {{- end }}
 
-{{- define "StructSentSize"}}
+{{- define "SentSize"}}
   {{- if gt .MaxSentSize 65536 -}}
   ZX_CHANNEL_MAX_MSG_BYTES
   {{- else -}}
-  PrimarySize + MaxOutOfLine
+  FIDL_ALIGN(PrimarySize + MaxOutOfLine)
   {{- end -}}
 {{- end }}
 
@@ -51,6 +51,7 @@ struct {{ .Name }} {
   {{- end }}
   void _CloseHandles();
 
+  // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
   class UnownedOutgoingMessage final {
    public:
     UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size, {{ .Name }}* value)
@@ -69,6 +70,9 @@ struct {{ .Name }} {
     UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -81,12 +85,13 @@ struct {{ .Name }} {
     ::fidl::OutgoingMessage message_;
   };
 
+  // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
   class OwnedOutgoingMessage final {
    public:
     explicit OwnedOutgoingMessage({{ .Name }}* value)
         {{- if gt .MaxSentSize 512 -}}
-      : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "StructSentSize" .}}>>()),
-        message_(bytes_->data(), {{- template "StructSentSize" .}}
+      : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "SentSize" .}}>>()),
+        message_(bytes_->data(), {{- template "SentSize" .}}
         {{- else }}
         : message_(bytes_, sizeof(bytes_)
         {{- end }}
@@ -97,6 +102,9 @@ struct {{ .Name }} {
     OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -104,14 +112,15 @@ struct {{ .Name }} {
 
    private:
     {{- if gt .MaxSentSize 512 }}
-    std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "StructSentSize" .}}>> bytes_;
+    std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "SentSize" .}}>> bytes_;
     {{- else }}
     FIDL_ALIGNDECL
-    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
     {{- end }}
     UnownedOutgoingMessage message_;
   };
 
+  // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(const IncomingMessage&) = delete;

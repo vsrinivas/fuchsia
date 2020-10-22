@@ -191,6 +191,7 @@ class {{ .Name }} final {
     void _CloseHandles();
     {{- end }}
 
+    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size
@@ -234,6 +235,9 @@ class {{ .Name }} final {
       UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
@@ -250,6 +254,7 @@ class {{ .Name }} final {
       ::fidl::OutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
@@ -275,6 +280,9 @@ class {{ .Name }} final {
       OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
@@ -292,6 +300,7 @@ class {{ .Name }} final {
       UnownedOutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(const IncomingMessage&) = delete;
@@ -373,6 +382,7 @@ class {{ .Name }} final {
     using ResponseType = {{ .Name }}Response;
         {{- end }}
 
+    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid
@@ -416,6 +426,9 @@ class {{ .Name }} final {
       UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
@@ -432,6 +445,7 @@ class {{ .Name }} final {
       ::fidl::OutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid
@@ -457,6 +471,9 @@ class {{ .Name }} final {
       OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
@@ -474,6 +491,7 @@ class {{ .Name }} final {
       UnownedOutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(const IncomingMessage&) = delete;

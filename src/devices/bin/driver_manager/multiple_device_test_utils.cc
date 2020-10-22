@@ -316,17 +316,12 @@ void MultipleDeviceTestCase::SendUnbindReply(const zx::channel& remote, zx_txid_
   namespace fdm = ::llcpp::fuchsia::device::manager;
   fidl::aligned<fdm::DeviceController_Unbind_Response> result_resp;
   auto result = fdm::DeviceController_Unbind_Result::WithResponse(fidl::unowned_ptr(&result_resp));
-  constexpr uint32_t kWriteAllocSize =
-      fidl::internal::ClampedMessageSize<fdm::DeviceController::UnbindResponse,
-                                         fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t write_bytes[kWriteAllocSize];
   fdm::DeviceController::UnbindResponse resp(result);
   resp._hdr.txid = txid;
-  auto encode_result =
-      fidl::LinearizeAndEncode(&resp, fidl::BytePart(write_bytes, kWriteAllocSize));
-  ASSERT_OK(encode_result.status);
-  auto msg = encode_result.message.ToAnyMessage();
-  ASSERT_OK(msg.Write(remote.get(), 0));
+  fidl::OwnedOutgoingMessage<fdm::DeviceController::UnbindResponse> encoded(&resp);
+  ASSERT_TRUE(encoded.ok());
+  encoded.Write(remote.get());
+  ASSERT_TRUE(encoded.ok());
 }
 
 void MultipleDeviceTestCase::CheckUnbindReceivedAndReply(const zx::channel& remote) {
@@ -366,17 +361,12 @@ void MultipleDeviceTestCase::SendRemoveReply(const zx::channel& remote, zx_txid_
   fidl::aligned<fdm::DeviceController_CompleteRemoval_Response> result_resp;
   auto result =
       fdm::DeviceController_CompleteRemoval_Result::WithResponse(fidl::unowned_ptr(&result_resp));
-  constexpr uint32_t kWriteAllocSize =
-      fidl::internal::ClampedMessageSize<fdm::DeviceController::CompleteRemovalResponse,
-                                         fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t write_bytes[kWriteAllocSize];
   fdm::DeviceController::CompleteRemovalResponse resp(result);
   resp._hdr.txid = txid;
-  auto encode_result =
-      fidl::LinearizeAndEncode(&resp, fidl::BytePart(write_bytes, kWriteAllocSize));
-  ASSERT_OK(encode_result.status);
-  auto msg = encode_result.message.ToAnyMessage();
-  ASSERT_OK(msg.Write(remote.get(), 0));
+  fidl::OwnedOutgoingMessage<fdm::DeviceController::CompleteRemovalResponse> encoded(&resp);
+  ASSERT_TRUE(encoded.ok());
+  encoded.Write(remote.get());
+  ASSERT_TRUE(encoded.ok());
 }
 
 void MultipleDeviceTestCase::CheckRemoveReceivedAndReply(const zx::channel& remote) {

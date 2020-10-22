@@ -19,7 +19,6 @@ const fileHeaderTmpl = `
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/string_view.h>

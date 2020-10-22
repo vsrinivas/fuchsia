@@ -8,6 +8,7 @@
 #include <lib/scsi/scsilib.h>
 #include <lib/scsi/scsilib_controller.h>
 #include <sys/types.h>
+#include <zircon/listnode.h>
 
 #include <map>
 

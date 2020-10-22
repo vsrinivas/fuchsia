@@ -9,7 +9,6 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -2396,6 +2395,7 @@ struct StructWithNullableXUnion {
   ::llcpp::fidl::test::union ::OlderSimpleUnion x1 = {};
   void _CloseHandles();
 
+  // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
   class UnownedOutgoingMessage final {
    public:
     UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -2410,6 +2410,9 @@ struct StructWithNullableXUnion {
     UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -2419,6 +2422,7 @@ struct StructWithNullableXUnion {
     ::fidl::OutgoingMessage message_;
   };
 
+  // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
   class OwnedOutgoingMessage final {
    public:
     explicit OwnedOutgoingMessage(StructWithNullableXUnion* value)
@@ -2429,6 +2433,9 @@ struct StructWithNullableXUnion {
     OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -2438,10 +2445,11 @@ struct StructWithNullableXUnion {
 
    private:
     FIDL_ALIGNDECL
-    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
     UnownedOutgoingMessage message_;
   };
 
+  // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(const IncomingMessage&) = delete;
@@ -2489,6 +2497,7 @@ struct Pizza {
   ::fidl::VectorView<::fidl::StringView> toppings = {};
   void _CloseHandles();
 
+  // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
   class UnownedOutgoingMessage final {
    public:
     UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size, Pizza* value)
@@ -2501,6 +2510,9 @@ struct Pizza {
     UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -2510,6 +2522,7 @@ struct Pizza {
     ::fidl::OutgoingMessage message_;
   };
 
+  // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
   class OwnedOutgoingMessage final {
    public:
     explicit OwnedOutgoingMessage(Pizza* value)
@@ -2522,6 +2535,9 @@ struct Pizza {
     OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -2535,6 +2551,7 @@ struct Pizza {
     UnownedOutgoingMessage message_;
   };
 
+  // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(const IncomingMessage&) = delete;
@@ -2582,6 +2599,7 @@ struct Pasta {
   ::fidl::StringView sauce = {};
   void _CloseHandles();
 
+  // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
   class UnownedOutgoingMessage final {
    public:
     UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size, Pasta* value)
@@ -2594,6 +2612,9 @@ struct Pasta {
     UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -2603,6 +2624,7 @@ struct Pasta {
     ::fidl::OutgoingMessage message_;
   };
 
+  // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
   class OwnedOutgoingMessage final {
    public:
     explicit OwnedOutgoingMessage(Pasta* value)
@@ -2613,6 +2635,9 @@ struct Pasta {
     OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -2622,10 +2647,11 @@ struct Pasta {
 
    private:
     FIDL_ALIGNDECL
-    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
     UnownedOutgoingMessage message_;
   };
 
+  // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(const IncomingMessage&) = delete;
@@ -2695,6 +2721,7 @@ class TestProtocol final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
+    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(
@@ -2725,6 +2752,9 @@ class TestProtocol final {
       UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
@@ -2741,6 +2771,7 @@ class TestProtocol final {
       ::fidl::OutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
@@ -2755,6 +2786,9 @@ class TestProtocol final {
       OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
@@ -2770,6 +2804,7 @@ class TestProtocol final {
       UnownedOutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(const IncomingMessage&) = delete;
@@ -2829,6 +2864,7 @@ class TestProtocol final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = StrictXUnionHenceResponseMayBeStackAllocatedResponse;
 
+    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
@@ -2863,6 +2899,9 @@ class TestProtocol final {
       UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
@@ -2879,6 +2918,7 @@ class TestProtocol final {
       ::fidl::OutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid)
@@ -2892,6 +2932,9 @@ class TestProtocol final {
       OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
@@ -2907,6 +2950,7 @@ class TestProtocol final {
       UnownedOutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(const IncomingMessage&) = delete;
@@ -2967,6 +3011,7 @@ class TestProtocol final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
+    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
@@ -2996,6 +3041,9 @@ class TestProtocol final {
       UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
@@ -3012,6 +3060,7 @@ class TestProtocol final {
       ::fidl::OutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
@@ -3026,6 +3075,9 @@ class TestProtocol final {
       OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
@@ -3041,6 +3093,7 @@ class TestProtocol final {
       UnownedOutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(const IncomingMessage&) = delete;
@@ -3100,6 +3153,7 @@ class TestProtocol final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
 
+    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
@@ -3134,6 +3188,9 @@ class TestProtocol final {
       UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
@@ -3150,6 +3207,7 @@ class TestProtocol final {
       ::fidl::OutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid)
@@ -3163,6 +3221,9 @@ class TestProtocol final {
       OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
@@ -3178,6 +3239,7 @@ class TestProtocol final {
       UnownedOutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(const IncomingMessage&) = delete;
@@ -3687,6 +3749,7 @@ struct NullableUnionStruct {
   ::llcpp::fidl::test::union ::Union the_union = {};
   void _CloseHandles();
 
+  // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
   class UnownedOutgoingMessage final {
    public:
     UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -3701,6 +3764,9 @@ struct NullableUnionStruct {
     UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -3710,6 +3776,7 @@ struct NullableUnionStruct {
     ::fidl::OutgoingMessage message_;
   };
 
+  // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
   class OwnedOutgoingMessage final {
    public:
     explicit OwnedOutgoingMessage(NullableUnionStruct* value)
@@ -3722,6 +3789,9 @@ struct NullableUnionStruct {
     OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -3735,6 +3805,7 @@ struct NullableUnionStruct {
     UnownedOutgoingMessage message_;
   };
 
+  // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(const IncomingMessage&) = delete;
@@ -3782,6 +3853,7 @@ struct Empty {
   uint8_t __reserved = {};
   void _CloseHandles();
 
+  // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
   class UnownedOutgoingMessage final {
    public:
     UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size, Empty* value)
@@ -3794,6 +3866,9 @@ struct Empty {
     UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
@@ -3803,6 +3878,7 @@ struct Empty {
     ::fidl::OutgoingMessage message_;
   };
 
+  // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
   class OwnedOutgoingMessage final {
    public:
     explicit OwnedOutgoingMessage(Empty* value)
@@ -3813,6 +3889,9 @@ struct Empty {
     OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
@@ -3822,10 +3901,11 @@ struct Empty {
 
    private:
     FIDL_ALIGNDECL
-    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
     UnownedOutgoingMessage message_;
   };
 
+  // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(const IncomingMessage&) = delete;

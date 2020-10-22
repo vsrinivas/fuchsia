@@ -5,7 +5,10 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/message.h>
+#ifdef __Fuchsia__
+#include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/llcpp/server.h>
+#endif
 #include <stdio.h>
 
 namespace fidl {
@@ -26,9 +29,13 @@ OutgoingMessage::OutgoingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_
 }
 
 OutgoingMessage::~OutgoingMessage() {
+#ifdef __Fuchsia__
   if (handle_actual() > 0) {
     zx_handle_close_many(handles(), handle_actual());
   }
+#else
+  ZX_ASSERT(handle_actual() == 0);
+#endif
 }
 
 void OutgoingMessage::LinearizeAndEncode(const fidl_type_t* message_type, void* data) {
@@ -45,6 +52,7 @@ void OutgoingMessage::LinearizeAndEncode(const fidl_type_t* message_type, void* 
   }
 }
 
+#ifdef __Fuchsia__
 void OutgoingMessage::Write(zx_handle_t channel) {
   if (status_ != ZX_OK) {
     return;
@@ -97,6 +105,7 @@ void OutgoingMessage::Call(const fidl_type_t* response_type, zx_handle_t channel
   }
   return ::fidl::Result(status_, error_);
 }
+#endif
 
 namespace internal {
 
@@ -118,9 +127,13 @@ IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_
 }
 
 IncomingMessage::~IncomingMessage() {
+#ifdef __Fuchsia__
   if (handle_actual() > 0) {
     zx_handle_close_many(handles(), handle_actual());
   }
+#else
+  ZX_ASSERT(handle_actual() == 0);
+#endif
 }
 
 void IncomingMessage::Init(OutgoingMessage& outgoing_message, zx_handle_t* handles,

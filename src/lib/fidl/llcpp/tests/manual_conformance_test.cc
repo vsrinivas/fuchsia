@@ -48,13 +48,11 @@ TEST(InlineXUnionInStruct, Success) {
     input.before = fidl::unowned_str(before);
     input.xu.set_su(fidl::unowned_ptr(&simple_union));
     input.after = fidl::unowned_str(after);
-    std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
-    fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
-    auto encode_result = fidl::LinearizeAndEncode(&input, std::move(bytes));
-    ASSERT_STREQ(encode_result.error, nullptr);
-    ASSERT_EQ(encode_result.status, ZX_OK);
-    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encode_result.message.bytes().begin(),
-                                                        encode_result.message.bytes().size(),
+    fidl::OwnedOutgoingMessage<llcpp_misc::InlineXUnionInStruct> encoded(&input);
+    ASSERT_STREQ(encoded.error(), nullptr);
+    ASSERT_TRUE(encoded.ok());
+    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encoded.GetOutgoingMessage().bytes(),
+                                                        encoded.GetOutgoingMessage().byte_actual(),
                                                         &expected[0], expected.size()));
   }
   // decode
@@ -103,13 +101,11 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     input.before = fidl::unowned_str(before);
     input.xu.set_i(fidl::unowned_ptr(&integer));
     input.after = fidl::unowned_str(after);
-    std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
-    fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
-    auto encode_result = fidl::LinearizeAndEncode(&input, std::move(bytes));
-    ASSERT_STREQ(encode_result.error, nullptr);
-    ASSERT_EQ(encode_result.status, ZX_OK);
-    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encode_result.message.bytes().begin(),
-                                                        encode_result.message.bytes().size(),
+    fidl::OwnedOutgoingMessage<llcpp_misc::InlineXUnionInStruct> encoded(&input);
+    ASSERT_STREQ(encoded.error(), nullptr);
+    ASSERT_TRUE(encoded.ok());
+    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encoded.GetOutgoingMessage().bytes(),
+                                                        encoded.GetOutgoingMessage().byte_actual(),
                                                         &expected[0], expected.size()));
   }
   // decode
@@ -136,11 +132,9 @@ TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
   std::string empty_str = "";
   input.before = fidl::unowned_str(empty_str);
   input.after = fidl::unowned_str(empty_str);
-  std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
-  fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
-  auto encode_result = fidl::LinearizeAndEncode(&input, std::move(bytes));
-  EXPECT_STREQ(encode_result.error, "non-nullable xunion is absent");
-  EXPECT_EQ(encode_result.status, ZX_ERR_INVALID_ARGS);
+  fidl::OwnedOutgoingMessage<llcpp_misc::InlineXUnionInStruct> encoded(&input);
+  EXPECT_STREQ(encoded.error(), "non-nullable xunion is absent");
+  EXPECT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS);
 }
 TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
   // clang-format off
@@ -227,13 +221,11 @@ TEST(ComplexTable, SuccessEmpty) {
   {
     llcpp_misc::ComplexTable::UnownedBuilder builder;
     auto input = builder.build();
-    std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
-    fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
-    auto encode_result = fidl::LinearizeAndEncode(&input, std::move(bytes));
-    ASSERT_STREQ(encode_result.error, nullptr);
-    ASSERT_EQ(encode_result.status, ZX_OK);
-    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encode_result.message.bytes().begin(),
-                                                        encode_result.message.bytes().size(),
+    fidl::OwnedOutgoingMessage<llcpp_misc::ComplexTable> encoded(&input);
+    ASSERT_STREQ(encoded.error(), nullptr);
+    ASSERT_TRUE(encoded.ok());
+    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encoded.GetOutgoingMessage().bytes(),
+                                                        encoded.GetOutgoingMessage().byte_actual(),
                                                         &expected[0], expected.size()));
   }
   // decode
@@ -332,13 +324,11 @@ TEST(ComplexTable, Success) {
                        .set_u(fidl::unowned_ptr(&xu))
                        .set_strings(fidl::unowned_ptr(&strings));
     auto input = builder.build();
-    std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
-    fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
-    auto encode_result = fidl::LinearizeAndEncode(&input, std::move(bytes));
-    ASSERT_STREQ(encode_result.error, nullptr);
-    ASSERT_EQ(encode_result.status, ZX_OK);
-    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encode_result.message.bytes().begin(),
-                                                        encode_result.message.bytes().size(),
+    fidl::OwnedOutgoingMessage<llcpp_misc::ComplexTable> encoded(&input);
+    ASSERT_STREQ(encoded.error(), nullptr);
+    ASSERT_TRUE(encoded.ok());
+    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encoded.GetOutgoingMessage().bytes(),
+                                                        encoded.GetOutgoingMessage().byte_actual(),
                                                         &expected[0], expected.size()));
   }
   // decode

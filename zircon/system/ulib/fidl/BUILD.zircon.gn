@@ -94,7 +94,6 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/errors.h",
       "lib/fidl/llcpp/failover_allocator.h",
       "lib/fidl/llcpp/heap_allocator.h",
-      "lib/fidl/llcpp/linearized_and_encoded.h",
       "lib/fidl/llcpp/memory.h",
       "lib/fidl/llcpp/message.h",
       "lib/fidl/llcpp/message_storage.h",
@@ -162,7 +161,6 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/coding.h",
       "lib/fidl/llcpp/envelope.h",
       "lib/fidl/llcpp/failover_allocator.h",
-      "lib/fidl/llcpp/linearized_and_encoded.h",
       "lib/fidl/llcpp/memory.h",
       "lib/fidl/llcpp/server.h",
       "lib/fidl/llcpp/string_view.h",
@@ -173,7 +171,10 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/vector_view.h",
     ]
     sdk_migrated = true
-    sources = [ "llcpp_coding.c" ]
+    sources = [
+      "llcpp_coding.c",
+      "llcpp_message.cc",
+    ]
     public_deps = [ "$zx/system/ulib/zircon:headers" ]
     deps = [
       ":fidl_base",

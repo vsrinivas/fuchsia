@@ -9,7 +9,6 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -294,6 +293,7 @@ class Protocol final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
+    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(
@@ -320,6 +320,9 @@ class Protocol final {
       UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
@@ -335,6 +338,7 @@ class Protocol final {
       ::fidl::OutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
@@ -353,6 +357,9 @@ class Protocol final {
       OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
@@ -368,6 +375,7 @@ class Protocol final {
       UnownedOutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(const IncomingMessage&) = delete;
@@ -433,6 +441,7 @@ class Protocol final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = RequestStrictResponseFlexibleResponse;
 
+    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(
@@ -459,6 +468,9 @@ class Protocol final {
       UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
@@ -474,6 +486,7 @@ class Protocol final {
       ::fidl::OutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
@@ -493,6 +506,9 @@ class Protocol final {
       OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
@@ -508,6 +524,7 @@ class Protocol final {
       UnownedOutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(const IncomingMessage&) = delete;
@@ -567,6 +584,7 @@ class Protocol final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
+    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(
@@ -593,6 +611,9 @@ class Protocol final {
       UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
@@ -608,6 +629,7 @@ class Protocol final {
       ::fidl::OutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
@@ -626,6 +648,9 @@ class Protocol final {
       OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
@@ -641,6 +666,7 @@ class Protocol final {
       UnownedOutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(const IncomingMessage&) = delete;
@@ -706,6 +732,7 @@ class Protocol final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = RequestFlexibleResponseStrictResponse;
 
+    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(
@@ -732,6 +759,9 @@ class Protocol final {
       UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
@@ -747,6 +777,7 @@ class Protocol final {
       ::fidl::OutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
@@ -766,6 +797,9 @@ class Protocol final {
       OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
@@ -781,6 +815,7 @@ class Protocol final {
       UnownedOutgoingMessage message_;
     };
 
+    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(const IncomingMessage&) = delete;

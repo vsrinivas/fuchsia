@@ -10,6 +10,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <iostream>
 #include <type_traits>
 
 #include <perftest/perftest.h>
@@ -31,9 +32,11 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Encode.
 
     {
-      auto encoded = ::fidl::internal::LinearizedAndEncoded<FidlType>(&aligned_value.value);
-      auto& encode_result = encoded.result();
-      ZX_ASSERT(encode_result.status == ZX_OK && encode_result.error == nullptr);
+      ::fidl::OwnedOutgoingMessage<FidlType> encoded(&aligned_value.value);
+      if (encoded.error() != nullptr) {
+        std::cerr << "Unexpected error: " << encoded.error() << '\n';
+      }
+      ZX_ASSERT(encoded.ok());
     }
 
     state->NextStep();  // End: Encode. Begin: Teardown.

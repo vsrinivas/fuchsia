@@ -198,17 +198,12 @@ TEST(MagicNumberTest, EventRead) {
   zx::channel h1, h2;
   ASSERT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
   std::string s = "foo";
-  constexpr uint32_t kWriteAllocSize =
-      fidl::internal::ClampedMessageSize<test::Frobinator::HrobResponse,
-                                         fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> write_bytes_unique_ptr(new uint8_t[kWriteAllocSize]);
-  uint8_t* write_bytes = write_bytes_unique_ptr.get();
   test::Frobinator::HrobResponse _response(fidl::unowned_str(s));
   // Set an incompatible magic number
   _response._hdr.magic_number = 0;
-  auto encode_result =
-      fidl::LinearizeAndEncode(&_response, fidl::BytePart(write_bytes, kWriteAllocSize));
-  ASSERT_EQ(fidl::Write(zx::unowned_channel(h1), std::move(encode_result.message)), ZX_OK);
+  fidl::OwnedOutgoingMessage<test::Frobinator::HrobResponse> encoded(&_response);
+  encoded.Write(h1.get());
+  ASSERT_TRUE(encoded.ok());
 
   test::Frobinator::EventHandlers handlers;
   handlers.hrob = [&](test::Frobinator::HrobResponse* message) {

@@ -266,6 +266,7 @@ type Table struct {
 	BiggestOrdinal int
 	MaxHandles     int
 	MaxOutOfLine   int
+	MaxSentSize    int
 	HasPointer     bool
 	IsResource     bool
 	// Types of the members in ordinal order, "void" for reserved.
@@ -1417,6 +1418,7 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 		BiggestOrdinal: 0,
 		MaxHandles:     val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine:   val.TypeShapeV1.MaxOutOfLine,
+		MaxSentSize:    val.TypeShapeV1.InlineSize + val.TypeShapeV1.MaxOutOfLine,
 		HasPointer:     val.TypeShapeV1.Depth > 0,
 		IsResource:     val.TypeShapeV1.IsResource,
 	}

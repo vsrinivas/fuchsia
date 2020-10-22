@@ -9,7 +9,7 @@
 #define SRC_LIB_FIDL_LLCPP_TESTS_TYPES_TEST_UTILS_H_
 
 #include <lib/fidl/llcpp/coding.h>
-#include <lib/fidl/llcpp/linearized_and_encoded.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/zx/event.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
@@ -69,12 +69,14 @@ void CannotProxyUnknownEnvelope(std::vector<uint8_t> bytes, std::vector<zx_handl
   check(result->result);
   handle_checker.CheckEvents();
 
-  fidl::internal::LinearizeBuffer<FidlType> buffer;
-  auto encode_result = fidl::LinearizeAndEncode(result, buffer.buffer());
-  ASSERT_EQ(encode_result.status, ZX_ERR_INVALID_ARGS)
-      << zx_status_get_string(encode_result.status);
+  // Here we want to encode a message with unknown data. To be able to encoded all the unknown data,
+  // we always use a full size buffer.
+  FIDL_ALIGNDECL
+  uint8_t encoded_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  fidl::UnownedOutgoingMessage<FidlType> encoded(encoded_bytes, ZX_CHANNEL_MAX_MSG_BYTES, result);
+  ASSERT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS) << encoded.status_string();
 
-  EXPECT_STREQ(encode_result.error, "Cannot encode unknown union or table") << encode_result.error;
+  EXPECT_STREQ(encoded.error(), "Cannot encode unknown union or table") << encoded.error();
 }
 
 }  // namespace llcpp_types_test_utils

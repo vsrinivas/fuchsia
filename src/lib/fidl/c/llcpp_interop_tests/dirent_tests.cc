@@ -87,18 +87,10 @@ class Server {
 
  private:
   template <typename FidlType>
-  zx_status_t Reply(fidl_txn_t* txn, fidl::DecodedMessage<FidlType> response_message) {
-    auto encode_result = fidl::Encode(std::move(response_message));
-    if (encode_result.status != ZX_OK) {
-      return encode_result.status;
-    }
-    auto& message = encode_result.message;
-    fidl_outgoing_msg_t msg = {.bytes = message.bytes().data(),
-                               .handles = message.handles().data(),
-                               .num_bytes = message.bytes().actual(),
-                               .num_handles = message.handles().actual()};
-    zx_status_t status = txn->reply(txn, &msg);
-    message.ReleaseBytesAndHandles();
+  zx_status_t Reply(fidl_txn_t* txn, FidlType* value) {
+    fidl::OwnedOutgoingMessage<FidlType> encoded(value);
+    zx_status_t status = txn->reply(txn, encoded.GetOutgoingMessage().message());
+    encoded.GetOutgoingMessage().ReleaseHandles();
     return status;
   }
 
@@ -115,10 +107,7 @@ class Server {
     }
     gen::DirEntTestInterface::CountNumDirectoriesResponse response(count);
     response._hdr.txid = request._hdr.txid;
-    fidl::DecodedMessage<gen::DirEntTestInterface::CountNumDirectoriesResponse> response_msg;
-    response_msg.Reset(
-        fidl::BytePart(reinterpret_cast<uint8_t*>(&response), sizeof(response), sizeof(response)));
-    return Reply(txn, std::move(response_msg));
+    return Reply(txn, &response);
   }
 
   zx_status_t DoReadDir(fidl_txn_t* txn,
@@ -127,16 +116,7 @@ class Server {
     auto golden = golden_dirents();
     gen::DirEntTestInterface::ReadDirResponse response(golden);
     response._hdr.txid = decoded.message()->_hdr.txid;
-    fidl::Buffer<gen::DirEntTestInterface::ReadDirResponse> buffer;
-    auto encode_result = fidl::LinearizeAndEncode(&response, buffer.view());
-    if (encode_result.status != ZX_OK) {
-      return encode_result.status;
-    }
-    auto decode_result = fidl::Decode(std::move(encode_result.message));
-    if (decode_result.status != ZX_OK) {
-      return decode_result.status;
-    }
-    return Reply(txn, std::move(decode_result.message));
+    return Reply(txn, &response);
   }
 
   zx_status_t DoConsumeDirectories(
@@ -146,10 +126,7 @@ class Server {
     EXPECT_EQ(decoded.message()->dirents.count(), 3);
     gen::DirEntTestInterface::ConsumeDirectoriesResponse response;
     fidl_init_txn_header(&response._hdr, 0, decoded.message()->_hdr.ordinal);
-    fidl::DecodedMessage<gen::DirEntTestInterface::ConsumeDirectoriesResponse> response_msg;
-    response_msg.Reset(
-        fidl::BytePart(reinterpret_cast<uint8_t*>(&response), sizeof(response), sizeof(response)));
-    return Reply(txn, std::move(response_msg));
+    return Reply(txn, &response);
   }
 
   zx_status_t DoOneWayDirents(

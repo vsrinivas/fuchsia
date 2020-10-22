@@ -150,29 +150,6 @@ EncodeResult<FidlType> Encode(DecodedMessage<FidlType> msg) {
   return result;
 }
 
-template <typename FidlType>
-EncodeResult<FidlType> LinearizeAndEncode(FidlType* value, BytePart bytes) {
-  static_assert(IsFidlType<FidlType>::value, "FIDL type required");
-  static_assert(FidlType::Type != nullptr, "FidlType should have a coding table");
-  EncodeResult<FidlType> result;
-  uint32_t num_bytes_actual;
-  uint32_t num_handles_actual;
-  result.message.bytes() = std::move(bytes);
-  fidl_trace(WillLLCPPLinearizeAndEncode);
-  result.status = fidl_linearize_and_encode(
-      FidlType::Type, value, result.message.bytes().data(), result.message.bytes().capacity(),
-      result.message.handles().data(), result.message.handles().capacity(), &num_bytes_actual,
-      &num_handles_actual, &result.error);
-  fidl_trace(DidLLCPPLinearizeAndEncode, FidlType::Type, result.message.bytes().data(),
-             num_bytes_actual, num_handles_actual);
-  if (result.status != ZX_OK) {
-    return result;
-  }
-  result.message.bytes().set_actual(num_bytes_actual);
-  result.message.handles().set_actual(num_handles_actual);
-  return result;
-}
-
 #ifdef __Fuchsia__
 
 namespace {

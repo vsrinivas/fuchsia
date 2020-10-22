@@ -6,14 +6,22 @@
 #define LIB_FIDL_LLCPP_MESSAGE_H_
 
 #include <lib/fidl/cpp/message_part.h>
-#ifdef __Fuchsia__
-#include <lib/fidl/llcpp/client_base.h>
-#endif
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/txn_header.h>
+#ifdef __Fuchsia__
 #include <zircon/fidl.h>
+#endif
 
 namespace fidl {
+
+namespace internal {
+
+#ifdef __Fuchsia__
+class ClientBase;
+class ResponseContext;
+#endif
+
+}  // namespace internal
 
 // Class representing a FIDL message on the write path.
 // Each instantiation of the class should only be used for one message.
@@ -176,10 +184,12 @@ class IncomingMessage : public ::fidl::Result {
 
 }  // namespace internal
 
+// TODO(vbelliard): rename to OwnedEncodedMessage.
 // This class owns a message of |FidlType| and encodes the message automatically upon construction.
 template <typename FidlType>
 using OwnedOutgoingMessage = typename FidlType::OwnedOutgoingMessage;
 
+// TODO(vbelliard): rename to UnownedEncodedMessage.
 // This class manages the handles within |FidlType| and encodes the message automatically upon
 // construction. Different from |OwnedOutgoingMessage|, it takes in a caller-allocated buffer and
 // uses that as the backing storage for the message. The buffer must outlive instances of this
@@ -187,6 +197,7 @@ using OwnedOutgoingMessage = typename FidlType::OwnedOutgoingMessage;
 template <typename FidlType>
 using UnownedOutgoingMessage = typename FidlType::UnownedOutgoingMessage;
 
+// TODO(vbelliard): rename to DecodedMessage.
 // This class manages the handles within |FidlType| and decodes the message automatically upon
 // construction. It always borrows external buffers for the backing storage of the message.
 // This class should mostly be used for tests.
