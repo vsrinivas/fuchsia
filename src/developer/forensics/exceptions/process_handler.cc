@@ -18,7 +18,7 @@ namespace {
 
 bool SpawnSubprocess(zx::channel* client, zx::process* subprocess) {
   static size_t subprocess_num{1};
-  const std::string subprocess_name(fxl::StringPrintf("handler_%03zu", subprocess_num++));
+  const std::string subprocess_name(fxl::StringPrintf("exception_handler_%03zu", subprocess_num++));
 
   const std::array<const char*, 2> args = {
       subprocess_name.c_str(),
