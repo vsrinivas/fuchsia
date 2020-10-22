@@ -89,13 +89,13 @@ class HidButtonsDevice : public DeviceType {
 
   // FIDL Interface Functions.
   bool GetState(ButtonType type);
-  zx_status_t RegisterNotify(uint8_t types, uint64_t chan_id);
+  zx_status_t RegisterNotify(uint8_t types, ButtonsNotifyInterface* notify);
 
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t Bind(fbl::Array<Gpio> gpios, fbl::Array<buttons_button_config_t> buttons);
-  virtual void ClosingChannel(uint64_t id);
+  virtual void ClosingChannel(ButtonsNotifyInterface* notify);
   virtual void Notify(uint32_t type);
 
  protected:
@@ -221,12 +221,10 @@ class ButtonsNotifyInterface : public Buttons::Interface {
   explicit ButtonsNotifyInterface(HidButtonsDevice* peripheral) : device_(peripheral) {}
   ~ButtonsNotifyInterface() = default;
 
-  zx_status_t Init(async_dispatcher_t* dispatcher, zx::channel chan, uint64_t id) {
-    id_ = id;
-
+  zx_status_t Init(async_dispatcher_t* dispatcher, zx::channel chan) {
     fidl::OnUnboundFn<ButtonsNotifyInterface> unbound = [this](ButtonsNotifyInterface*,
                                                                fidl::UnbindInfo, zx::channel) {
-      device_->ClosingChannel(id_);
+      device_->ClosingChannel(this);
     };
     auto res = fidl::BindServer(dispatcher, std::move(chan), this, std::move(unbound));
     if (res.is_error())
@@ -235,7 +233,6 @@ class ButtonsNotifyInterface : public Buttons::Interface {
     return ZX_OK;
   }
 
-  uint64_t id() const { return id_; }
   const fidl::ServerBindingRef<Buttons>& binding() { return *binding_; }
 
   // Methods required by the FIDL interface
@@ -244,7 +241,7 @@ class ButtonsNotifyInterface : public Buttons::Interface {
   }
   void RegisterNotify(uint8_t types, RegisterNotifyCompleter::Sync& _completer) {
     zx_status_t status = ZX_OK;
-    if ((status = device_->RegisterNotify(types, id_)) == ZX_OK) {
+    if ((status = device_->RegisterNotify(types, this)) == ZX_OK) {
       _completer.ReplySuccess();
     } else {
       _completer.ReplyError(status);
@@ -253,7 +250,6 @@ class ButtonsNotifyInterface : public Buttons::Interface {
 
  private:
   HidButtonsDevice* device_;
-  uint64_t id_;
   std::optional<fidl::ServerBindingRef<Buttons>> binding_;
 };
 

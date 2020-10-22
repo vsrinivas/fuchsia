@@ -513,8 +513,7 @@ zx_status_t HidButtonsDevice::ButtonsGetChannel(zx::channel chan, async_dispatch
   fbl::AutoLock lock(&channels_lock_);
 
   interfaces_.emplace_back(this);
-  auto status = interfaces_.back().Init(dispatcher, std::move(chan),
-                                        reinterpret_cast<uint64_t>(&(interfaces_.back())));
+  auto status = interfaces_.back().Init(dispatcher, std::move(chan));
   if (status != ZX_OK)
     interfaces_.pop_back();
   return status;
@@ -526,13 +525,12 @@ bool HidButtonsDevice::GetState(ButtonType type) {
   return static_cast<bool>(val);
 }
 
-zx_status_t HidButtonsDevice::RegisterNotify(uint8_t types, uint64_t chan_id) {
-  auto addr = reinterpret_cast<ButtonsNotifyInterface*>(chan_id);
+zx_status_t HidButtonsDevice::RegisterNotify(uint8_t types, ButtonsNotifyInterface* notify) {
   fbl::AutoLock lock(&channels_lock_);
   for (const auto& [type, button] : button_map_) {
-    auto it = find(button2channels_[button].begin(), button2channels_[button].end(), addr);
+    auto it = find(button2channels_[button].begin(), button2channels_[button].end(), notify);
     if ((types & (1 << type)) && (it == button2channels_[button].end())) {
-      button2channels_[button].push_back(addr);
+      button2channels_[button].push_back(notify);
     }
     if (!(types & (1 << type)) && (it != button2channels_[button].end())) {
       // types already registered and not listed in the client's request are removed
@@ -542,11 +540,10 @@ zx_status_t HidButtonsDevice::RegisterNotify(uint8_t types, uint64_t chan_id) {
   return ZX_OK;
 }
 
-void HidButtonsDevice::ClosingChannel(uint64_t id) {
+void HidButtonsDevice::ClosingChannel(ButtonsNotifyInterface* notify) {
   fbl::AutoLock lock(&channels_lock_);
   for (const auto& [type, button] : button_map_) {
-    auto it = find(button2channels_[button].begin(), button2channels_[button].end(),
-                   reinterpret_cast<ButtonsNotifyInterface*>(id));
+    auto it = find(button2channels_[button].begin(), button2channels_[button].end(), notify);
     // Note: not all buttons may have the channel to be closed (it may be in any buttons either)
     if (it != button2channels_[button].end()) {
       button2channels_[button].erase(it);
@@ -554,13 +551,13 @@ void HidButtonsDevice::ClosingChannel(uint64_t id) {
   }
 
   // release ownership
-  auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
-                         [&id](ButtonsNotifyInterface& interface) { return interface.id() == id; });
-  if (it == interfaces_.end()) {
-    zxlogf(ERROR, "%s interfaces_ could not find channel", __func__);
-    return;
+  for (auto iter = interfaces_.begin(); iter != interfaces_.end(); ++iter) {
+    if (&(*iter) == notify) {
+      interfaces_.erase(iter);
+      return;
+    }
   }
-  interfaces_.erase(it);
+  zxlogf(ERROR, "%s interfaces_ could not find channel", __func__);
 }
 
 static constexpr zx_driver_ops_t hid_buttons_driver_ops = []() {

@@ -178,8 +178,8 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
     sync_completion_reset(&debounce_threshold_passed_);
   }
 
-  void ClosingChannel(uint64_t id) override {
-    HidButtonsDevice::ClosingChannel(id);
+  void ClosingChannel(ButtonsNotifyInterface* interface) override {
+    HidButtonsDevice::ClosingChannel(interface);
     sync_completion_signal(&test_channels_cleared_);
   }
 
