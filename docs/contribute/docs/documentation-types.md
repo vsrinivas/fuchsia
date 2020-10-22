@@ -9,17 +9,17 @@ tone, see the [Fuchsia documentation standards][doc-standard].
 For specific guidance on word choice, style, and structure, see the
 [Fuchsia documentation style guide][style-guide].
 
-## Procedural, conceptual, or reference documentation
+## Procedures (guides), concepts, or reference documentation
 
 Most documentation can be divided into these categories:
 
-- [Procedural](#procedural-documentation)
+- [Procedures (guides)](#procedural-documentation)
     - Get-started - Documentation that provides a step-by-step process for setting up a part of
       the Fuchsia developer environment, such as downloading and building Fuchsia. These are located
       under `/docs/get-started`.
     - Development, or Guides - Documentation that provides a step-by-step process for completing
       any task related to Fuchsia. These are all located under `/docs/development/`.
-- [Conceptual](#conceptual-documentation) - Documentation that helps you understand a concept such
+- [Concepts](#conceptual-documentation) - Documentation that helps you understand a concept such
   as mods in Fuchsia. This type of documentation is located under `/docs/concepts`.
 - [Reference](#reference-documentation) - Documentation that provides a source of information about
   parts of a system such as API parameters or FIDL. These are located under `/docs/reference/`. Much
@@ -130,7 +130,7 @@ indicate if a parameter is required or optional, and show examples of the use of
 examples should be very generic and simple. If you feel like you need a more elaborate example,
 consider creating a procedural document to reinforce your reference documentation.
 
-For the style guide for API documentation, see
+For the style guide for API documentation, see the
 [API style guide][api-style].
 
 

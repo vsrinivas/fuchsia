@@ -38,19 +38,17 @@ whenever you use the link in the doc. This makes links easy to update in the doc
 In this example, it's called `fuchsia-home`:
 
 ```none
-[Fuchsia home page][fuchsia-home]
+   [Fuchsia home page][fuchsia-home]
 ```
 
 And then define it at the bottom of the document:
 
-```none
-[fuchsia-home]: https://fuchsia.dev/
-```
+<pre class="prettyprint"><code> [fuchsia-home]: https://fuchsia.dev/ </code></pre>
 
 <span class="compare-worse">Not recommended</span>: Writing an in-line link like the following.
 
 ```none
-[Fuchsia home page](www.fuchsia.dev)
+   [Fuchsia home page](www.fuchsia.dev)
 ```
 
 You can read more about reference style links in the external
@@ -80,9 +78,11 @@ dashes (`-`) instead, using `{#section-title}`. Also, use dashes for file names.
 
 <span class="compare-better">Recommended</span>: Using dashes for anchors
 
-    ```none
-    ## This is a section header {#this-is-a-section-header}
-    ```
+```none
+
+## This is a section header {#this-is-a-section-header}
+
+```
 
 
 ## Code samples
