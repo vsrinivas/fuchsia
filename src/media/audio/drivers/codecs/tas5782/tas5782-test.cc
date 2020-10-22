@@ -6,6 +6,7 @@
 
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
+#include <lib/simple-codec/simple-codec-client.h>
 #include <lib/sync/completion.h>
 
 #include <mock/ddktl/protocol/gpio.h>
@@ -13,174 +14,159 @@
 
 namespace audio {
 
-static constexpr uint32_t kCodecTimeoutSecs = 1;
+namespace {
 
-struct Tas5782Test : public Tas5782 {
-  explicit Tas5782Test(zx_device_t* device, const ddk::I2cChannel& i2c,
-                       const ddk::GpioProtocolClient& codec_reset,
-                       const ddk::GpioProtocolClient& codec_mute)
-      : Tas5782(device, i2c, codec_reset, codec_mute) {
+audio::DaiFormat GetDefaultDaiFormat() {
+  return {
+      .number_of_channels = 2,
+      .channels_to_use_bitmask = 3,
+      .sample_format = SAMPLE_FORMAT_PCM_SIGNED,
+      .frame_format = FRAME_FORMAT_I2S,
+      .frame_rate = 48'000,
+      .bits_per_slot = 32,
+      .bits_per_sample = 32,
+  };
+}
+}  // namespace
+
+struct Tas5782Codec : public Tas5782 {
+  explicit Tas5782Codec(const ddk::I2cChannel& i2c, const ddk::GpioProtocolClient& codec_reset,
+                        const ddk::GpioProtocolClient& codec_mute)
+      : Tas5782(fake_ddk::kFakeParent, i2c, codec_reset, codec_mute) {
     initialized_ = true;
   }
-  zx_status_t CodecSetDaiFormat(dai_format_t* format) {
-    struct AsyncOut {
-      sync_completion_t completion;
-      zx_status_t status;
-    } out;
-    Tas5782::CodecSetDaiFormat(
-        format,
-        [](void* ctx, zx_status_t s) {
-          AsyncOut* out = reinterpret_cast<AsyncOut*>(ctx);
-          out->status = s;
-          sync_completion_signal(&out->completion);
-        },
-        &out);
-    auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
-    if (status != ZX_OK) {
-      return status;
-    }
-    return out.status;
-  }
+  codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 };
 
 TEST(Tas5782Test, GoodSetDai) {
   mock_i2c::MockI2c mock_i2c;
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
-  Tas5782Test device(nullptr, std::move(i2c), unused_gpio0, unused_gpio1);
 
-  dai_format_t format = {};
-  format.number_of_channels = 2;
-  format.channels_to_use_bitmask = 3;
-  format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-  format.frame_format = FRAME_FORMAT_I2S;
-  format.frame_rate = 48000;
-  format.bits_per_slot = 32;
-  format.bits_per_sample = 32;
-  EXPECT_OK(device.CodecSetDaiFormat(&format));
+  auto codec = SimpleCodecServer::Create<Tas5782Codec>(mock_i2c.GetProto(), std::move(unused_gpio0),
+                                                       std::move(unused_gpio1));
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+
+  DaiFormat format = GetDefaultDaiFormat();
+  ASSERT_OK(client.SetDaiFormat(std::move(format)));
+
+  mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas5782Test, BadSetDai) {
   mock_i2c::MockI2c mock_i2c;
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
-  Tas5782Test device(nullptr, std::move(i2c), unused_gpio0, unused_gpio1);
 
-  // No format at all.
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, device.CodecSetDaiFormat(nullptr));
+  auto codec = SimpleCodecServer::Create<Tas5782Codec>(mock_i2c.GetProto(), std::move(unused_gpio0),
+                                                       std::move(unused_gpio1));
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
-  // Blank format.
-  dai_format format = {};
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
-
-  // Almost good format (wrong frame_format).
-  format.number_of_channels = 2;
-  format.channels_to_use_bitmask = 3;
-  format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-  format.frame_format = FRAME_FORMAT_STEREO_LEFT;  // This must fail, only I2S supported.
-  format.frame_rate = 48000;
-  format.bits_per_slot = 32;
-  format.bits_per_sample = 32;
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
-
-  // Almost good format (wrong channels).
-  format.frame_format = FRAME_FORMAT_I2S;  // Restore I2S frame format.
-  format.number_of_channels = 1;
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
-
-  // Almost good format (wrong rate).
-  format.number_of_channels = 2;  // Restore channel count;
-  format.frame_rate = 7890;
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
+  {
+    DaiFormat format = GetDefaultDaiFormat();
+    format.frame_format = FRAME_FORMAT_STEREO_LEFT;  // This must fail, only I2S supported.
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
+  }
+  {
+    DaiFormat format = GetDefaultDaiFormat();
+    format.number_of_channels = 1;  // Almost good format (wrong channels).
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
+  }
 
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas5782Test, GetDai) {
   mock_i2c::MockI2c mock_i2c;
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
-  Tas5782 device(nullptr, std::move(i2c), unused_gpio0, unused_gpio1);
-  struct AsyncOut {
-    sync_completion_t completion;
-    zx_status_t status;
-  } out;
 
-  device.CodecGetDaiFormats(
-      [](void* ctx, zx_status_t status, const dai_supported_formats_t* formats_list,
-         size_t formats_count) {
-        AsyncOut* out = reinterpret_cast<AsyncOut*>(ctx);
-        EXPECT_EQ(formats_count, 1);
-        EXPECT_EQ(formats_list[0].number_of_channels_count, 1);
-        EXPECT_EQ(formats_list[0].number_of_channels_list[0], 2);
-        EXPECT_EQ(formats_list[0].sample_formats_count, 1);
-        EXPECT_EQ(formats_list[0].sample_formats_list[0], SAMPLE_FORMAT_PCM_SIGNED);
-        EXPECT_EQ(formats_list[0].frame_formats_count, 1);
-        EXPECT_EQ(formats_list[0].frame_formats_list[0], FRAME_FORMAT_I2S);
-        EXPECT_EQ(formats_list[0].frame_rates_count, 1);
-        EXPECT_EQ(formats_list[0].frame_rates_list[0], 48000);
-        EXPECT_EQ(formats_list[0].bits_per_slot_count, 1);
-        EXPECT_EQ(formats_list[0].bits_per_slot_list[0], 32);
-        EXPECT_EQ(formats_list[0].bits_per_sample_count, 1);
-        EXPECT_EQ(formats_list[0].bits_per_sample_list[0], 32);
-        out->status = status;
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  EXPECT_OK(out.status);
-  EXPECT_OK(sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get()));
+  auto codec = SimpleCodecServer::Create<Tas5782Codec>(mock_i2c.GetProto(), std::move(unused_gpio0),
+                                                       std::move(unused_gpio1));
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+  auto formats = client.GetDaiFormats();
+
+  EXPECT_EQ(formats.value().size(), 1);
+  EXPECT_EQ(formats.value()[0].number_of_channels.size(), 1);
+  EXPECT_EQ(formats.value()[0].number_of_channels[0], 2);
+  EXPECT_EQ(formats.value()[0].sample_formats.size(), 1);
+  EXPECT_EQ(formats.value()[0].sample_formats[0], SAMPLE_FORMAT_PCM_SIGNED);
+  EXPECT_EQ(formats.value()[0].frame_formats.size(), 1);
+  EXPECT_EQ(formats.value()[0].frame_formats[0], FRAME_FORMAT_I2S);
+  EXPECT_EQ(formats.value()[0].frame_rates.size(), 1);
+  EXPECT_EQ(formats.value()[0].frame_rates[0], 48000);
+  EXPECT_EQ(formats.value()[0].bits_per_slot.size(), 1);
+  EXPECT_EQ(formats.value()[0].bits_per_slot[0], 32);
+  EXPECT_EQ(formats.value()[0].bits_per_sample.size(), 1);
+  EXPECT_EQ(formats.value()[0].bits_per_sample[0], 32);
+  mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas5782Test, GetInfo) {
-  ddk::I2cChannel unused_i2c;
+  mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
-  Tas5782 device(nullptr, std::move(unused_i2c), unused_gpio0, unused_gpio1);
+  auto codec = SimpleCodecServer::Create<Tas5782Codec>(
+      unused_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
-  device.CodecGetInfo(
-      [](void* ctx, const info_t* info) {
-        EXPECT_EQ(strcmp(info->unique_id, ""), 0);
-        EXPECT_EQ(strcmp(info->manufacturer, "Texas Instruments"), 0);
-        EXPECT_EQ(strcmp(info->product_name, "TAS5782m"), 0);
-      },
-      nullptr);
+  auto info = client.GetInfo();
+  EXPECT_EQ(info.value().unique_id.compare(""), 0);
+  EXPECT_EQ(info.value().manufacturer.compare("Texas Instruments"), 0);
+  EXPECT_EQ(info.value().product_name.compare("TAS5782m"), 0);
 }
 
 TEST(Tas5782Test, BridgedMode) {
-  ddk::I2cChannel unused_i2c;
+  mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
-  Tas5782 device(nullptr, std::move(unused_i2c), unused_gpio0, unused_gpio1);
+  auto codec = SimpleCodecServer::Create<Tas5782Codec>(
+      unused_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
-  device.CodecIsBridgeable(
-      [](void* ctx, bool supports_bridged_mode) { EXPECT_EQ(supports_bridged_mode, false); },
-      nullptr);
+  auto bridgeable = client.IsBridgeable();
+  ASSERT_FALSE(bridgeable.value());
 }
 
 TEST(Tas5782Test, GetGainFormat) {
-  ddk::I2cChannel unused_i2c;
+  mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
-  Tas5782 device(nullptr, std::move(unused_i2c), unused_gpio0, unused_gpio1);
+  auto codec = SimpleCodecServer::Create<Tas5782Codec>(
+      unused_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
-  device.CodecGetGainFormat(
-      [](void* ctx, const gain_format_t* format) {
-        EXPECT_EQ(format->type, GAIN_TYPE_DECIBELS);
-        EXPECT_EQ(format->min_gain, -103.0);
-        EXPECT_EQ(format->max_gain, 24.0);
-        EXPECT_EQ(format->gain_step, 0.5);
-      },
-      nullptr);
+  auto format = client.GetGainFormat();
+  EXPECT_EQ(format.value().min_gain_db, -103.0);
+  EXPECT_EQ(format.value().max_gain_db, 24.0);
+  EXPECT_EQ(format.value().gain_step_db, 0.5);
 }
 
 TEST(Tas5782Test, GetPlugState) {
-  ddk::I2cChannel unused_i2c;
+  mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
-  Tas5782 device(nullptr, std::move(unused_i2c), unused_gpio0, unused_gpio1);
+  auto codec = SimpleCodecServer::Create<Tas5782Codec>(
+      unused_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
-  device.CodecGetPlugState(
-      [](void* ctx, const plug_state_t* state) {
-        EXPECT_EQ(state->hardwired, true);
-        EXPECT_EQ(state->plugged, true);
-      },
-      nullptr);
+  auto state = client.GetPlugState();
+  EXPECT_EQ(state.value().hardwired, true);
+  EXPECT_EQ(state.value().plugged, true);
 }
 
 TEST(Tas5782Test, Init) {
@@ -201,11 +187,15 @@ TEST(Tas5782Test, Init) {
   mock_gpio0.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Reset, set to 0 and then to 1.
   mock_gpio1.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Set to mute and then to unmute..
 
-  Tas5782 device(fake_ddk::kFakeParent, std::move(i2c), gpio0, gpio1);
-  device.Bind();
-  // Delay to test we don't do other init I2C writes in another thread.
+  auto codec = SimpleCodecServer::Create<Tas5782Codec>(
+    std::move(i2c), std::move(gpio0), std::move(gpio1));
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+
   zx::nanosleep(zx::deadline_after(zx::msec(100)));
-  device.ResetAndInitialize();
+  client.Reset();
   mock_i2c.VerifyAndClear();
   mock_gpio0.VerifyAndClear();
   mock_gpio1.VerifyAndClear();

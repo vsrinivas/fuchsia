@@ -5,6 +5,7 @@
 #include "tas5782.h"
 
 #include <lib/device-protocol/i2c.h>
+#include <lib/simple-codec/simple-codec-helper.h>
 
 #include <algorithm>
 #include <memory>
@@ -19,25 +20,19 @@
 
 namespace {
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
-static const uint32_t supported_n_channels[] = {2};
-static const sample_format_t supported_sample_formats[] = {SAMPLE_FORMAT_PCM_SIGNED};
-static const frame_format_t supported_frame_formats[] = {FRAME_FORMAT_I2S};
-static const uint32_t supported_rates[] = {48000};
-static const uint8_t supported_bits_per_slot[] = {32};
-static const uint8_t supported_bits_per_sample[] = {32};
-static const dai_supported_formats_t kSupportedDaiFormats = {
-    .number_of_channels_list = supported_n_channels,
-    .number_of_channels_count = countof(supported_n_channels),
-    .sample_formats_list = supported_sample_formats,
-    .sample_formats_count = countof(supported_sample_formats),
-    .frame_formats_list = supported_frame_formats,
-    .frame_formats_count = countof(supported_frame_formats),
-    .frame_rates_list = supported_rates,
-    .frame_rates_count = countof(supported_rates),
-    .bits_per_slot_list = supported_bits_per_slot,
-    .bits_per_slot_count = countof(supported_bits_per_slot),
-    .bits_per_sample_list = supported_bits_per_sample,
-    .bits_per_sample_count = countof(supported_bits_per_sample),
+static const std::vector<uint32_t> kSupportedDaiNumberOfChannels = {2};
+static const std::vector<sample_format_t> kSupportedDaiSampleFormats = {SAMPLE_FORMAT_PCM_SIGNED};
+static const std::vector<frame_format_t> kSupportedDaiFrameFormats = {FRAME_FORMAT_I2S};
+static const std::vector<uint32_t> kSupportedDaiRates = {48'000};
+static const std::vector<uint8_t> kSupportedDaiBitsPerSlot = {32};
+static const std::vector<uint8_t> kSupportedDaiBitsPerSample = {32};
+static const audio::DaiSupportedFormats kSupportedDaiFormats = {
+    .number_of_channels = kSupportedDaiNumberOfChannels,
+    .sample_formats = kSupportedDaiSampleFormats,
+    .frame_formats = kSupportedDaiFrameFormats,
+    .frame_rates = kSupportedDaiRates,
+    .bits_per_slot = kSupportedDaiBitsPerSlot,
+    .bits_per_sample = kSupportedDaiBitsPerSample,
 };
 
 enum {
@@ -51,7 +46,7 @@ enum {
 
 namespace audio {
 
-zx_status_t Tas5782::ResetAndInitialize() {
+zx_status_t Tas5782::Reset() {
   fbl::AutoLock lock(&lock_);
   if (codec_mute_.is_valid()) {
     codec_mute_.Write(0);  // Set to "mute".
@@ -87,22 +82,22 @@ zx_status_t Tas5782::ResetAndInitialize() {
   return ZX_OK;
 }
 
-zx_status_t Tas5782::Bind() {
-  zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5782},
-  };
-  return DdkAdd(ddk::DeviceAddArgs("tas5782").set_props(props));
+zx::status<DriverIds> Tas5782::Initialize() {
+  return zx::ok(DriverIds{
+      .vendor_id = PDEV_VID_TI,
+      .device_id = PDEV_DID_TI_TAS5782,
+  });
 }
 
-void Tas5782::Shutdown() {
-  thrd_join(thread_, NULL);
+zx_status_t Tas5782::Shutdown() {
   if (codec_mute_.is_valid()) {
     codec_mute_.Write(0);  // Set to "mute".
   }
   if (codec_reset_.is_valid()) {
     codec_reset_.Write(0);  // Keep the codec in reset.
   }
+
+  return ZX_OK;
 }
 
 zx_status_t Tas5782::Create(zx_device_t* parent) {
@@ -123,151 +118,71 @@ zx_status_t Tas5782::Create(zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<Tas5782>(new (&ac) Tas5782(parent, fragments[FRAGMENT_I2C],
-                                                        fragments[FRAGMENT_RESET_GPIO],
-                                                        fragments[FRAGMENT_MUTE_GPIO]));
-  if (!ac.check()) {
-    zxlogf(ERROR, "%s Could not allocate memory", __FILE__);
-    return ZX_ERR_NO_MEMORY;
-  }
-  status = dev->Bind();
-  if (status != ZX_OK) {
-    return status;
-  }
+  auto dev = SimpleCodecServer::Create<Tas5782>(parent, fragments[FRAGMENT_I2C],
+                                                fragments[FRAGMENT_RESET_GPIO],
+                                                fragments[FRAGMENT_MUTE_GPIO]);
 
   // devmgr is now in charge of the memory for dev.
   dev.release();
   return ZX_OK;
 }
 
-void Tas5782::CodecReset(codec_reset_callback callback, void* cookie) {
-  fbl::AutoLock lock(&lock_);
-  auto status = ResetAndInitialize();
-  callback(cookie, status);
+Info Tas5782::GetInfo() {
+  return {.unique_id = "", .manufacturer = "Texas Instruments", .product_name = "TAS5782m"};
 }
 
-void Tas5782::CodecGetInfo(codec_get_info_callback callback, void* cookie) {
-  info_t info;
-  info.unique_id = "";
-  info.manufacturer = "Texas Instruments";
-  info.product_name = "TAS5782m";
-  callback(cookie, &info);
-}
+bool Tas5782::IsBridgeable() { return false; }
 
-void Tas5782::CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie) {
-  callback(cookie, false);
-}
-
-void Tas5782::CodecSetBridgedMode(bool enable_bridged_mode,
-                                  codec_set_bridged_mode_callback callback, void* cookie) {
+void Tas5782::SetBridgedMode(bool enable_bridged_mode) {
   // TODO(andresoportus): Add support and report true in CodecIsBridgeable.
-  callback(cookie);
 }
 
-void Tas5782::CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie) {
-  callback(cookie, ZX_OK, &kSupportedDaiFormats, 1);
+std::vector<DaiSupportedFormats> Tas5782::GetDaiFormats() {
+  std::vector<DaiSupportedFormats> formats;
+  formats.push_back(kSupportedDaiFormats);
+  return formats;
 }
 
-void Tas5782::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format_callback callback,
-                                void* cookie) {
-  if (!initialized_) {
-    callback(cookie, ZX_ERR_UNAVAILABLE);
-    return;
+zx_status_t Tas5782::SetDaiFormat(const DaiFormat& format) {
+  if (!IsDaiFormatSupported(format, kSupportedDaiFormats)) {
+    zxlogf(ERROR, "%s unsupported format\n", __FILE__);
+    return ZX_ERR_NOT_SUPPORTED;
   }
-  if (format == nullptr) {
-    callback(cookie, ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
-  // Only allow 2 channels.
-  if (format->number_of_channels != 2) {
-    zxlogf(ERROR, "%s DAI format number of channels not supported", __FILE__);
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-  if (format->channels_to_use_bitmask != 3) {
-    zxlogf(ERROR, "%s DAI format channels to use not supported", __FILE__);
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-
-  // Only I2S.
-  if (format->sample_format != SAMPLE_FORMAT_PCM_SIGNED ||
-      format->frame_format != FRAME_FORMAT_I2S) {
-    zxlogf(ERROR, "%s DAI format format not supported", __FILE__);
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-
-  // Check rates allowed.
-  size_t i = 0;
-  for (i = 0; i < kSupportedDaiFormats.frame_rates_count; ++i) {
-    if (format->frame_rate == kSupportedDaiFormats.frame_rates_list[i]) {
-      break;
-    }
-  }
-  if (i == kSupportedDaiFormats.frame_rates_count) {
-    zxlogf(ERROR, "%s DAI format rates not supported", __FILE__);
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-
-  // Allow only 32 bits samples and slot.
-  if (format->bits_per_sample != 32 || format->bits_per_slot != 32) {
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-  callback(cookie, ZX_OK);
+  return ZX_OK;
 }
 
-void Tas5782::CodecGetGainFormat(codec_get_gain_format_callback callback, void* cookie) {
-  gain_format_t format = {};
-  format.type = GAIN_TYPE_DECIBELS;
-  format.min_gain = kMinGain;
-  format.max_gain = kMaxGain;
-  format.gain_step = kGainStep;
-  callback(cookie, &format);
+GainFormat Tas5782::GetGainFormat() {
+  return {
+      .min_gain_db = kMinGain,
+      .max_gain_db = kMaxGain,
+      .gain_step_db = kGainStep,
+      .can_mute = true,
+      .can_agc = false,
+  };
 }
 
-void Tas5782::CodecSetGainState(const gain_state_t* gain_state,
-                                codec_set_gain_state_callback callback, void* cookie) {
-  if (!initialized_) {
-    zxlogf(ERROR, "%s Couldn't set gain, not initialized yet", __FILE__);
-    callback(cookie);
-    return;
-  }
+void Tas5782::SetGainState(GainState gain_state) {
   fbl::AutoLock lock(&lock_);
-  float gain = std::clamp(gain_state->gain, kMinGain, kMaxGain);
+  float gain = std::clamp(gain_state.gain_db, kMinGain, kMaxGain);
   uint8_t gain_reg = static_cast<uint8_t>(48 - gain * 2);
   auto status = WriteReg(0x3d, gain_reg);  // Left gain.
   if (status != ZX_OK) {
-    callback(cookie);
     return;
   }
   status = WriteReg(0x3e, gain_reg);  // Right gain.
   if (status != ZX_OK) {
-    callback(cookie);
     return;
   }
-  current_gain_ = gain;
-  callback(cookie);
+  if (gain_state.agc_enable) {
+    zxlogf(ERROR, "%s AGC enable not supported\n", __FILE__);
+    gain_state.agc_enable = false;
+  }
+  gain_state_ = gain_state;
 }
 
-void Tas5782::CodecGetGainState(codec_get_gain_state_callback callback, void* cookie) {
-  gain_state_t gain_state = {};
-  gain_state.gain = current_gain_;
-  gain_state.muted = false;
-  gain_state.agc_enable = false;
-  callback(cookie, &gain_state);
-}
+GainState Tas5782::GetGainState() { return gain_state_; }
 
-void Tas5782::CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie) {
-  plug_state_t plug_state = {};
-  plug_state.hardwired = true;
-  plug_state.plugged = true;
-  callback(cookie, &plug_state);
-}
+PlugState Tas5782::GetPlugState() { return {.hardwired = true, .plugged = true}; }
 
 zx_status_t Tas5782::WriteReg(uint8_t reg, uint8_t value) {
   uint8_t write_buf[2];

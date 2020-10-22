@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS5782_TAS5782_H_
 
 #include <lib/device-protocol/i2c-channel.h>
+#include <lib/simple-codec/simple-codec-server.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
 
@@ -15,7 +16,6 @@
 #include <ddk/device.h>
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/gpio.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -24,55 +24,34 @@
 
 namespace audio {
 
-class Tas5782;
-using DeviceType = ddk::Device<Tas5782, ddk::Unbindable, ddk::Suspendable>;
-
-class Tas5782 : public DeviceType,  // Not final for unit tests.
-                public ddk::CodecProtocol<Tas5782, ddk::base_protocol> {
+class Tas5782 : public SimpleCodecServer {
  public:
   static zx_status_t Create(zx_device_t* parent);
 
   explicit Tas5782(zx_device_t* device, const ddk::I2cChannel& i2c,
                    const ddk::GpioProtocolClient& codec_reset,
                    const ddk::GpioProtocolClient& codec_mute)
-      : DeviceType(device), i2c_(i2c), codec_reset_(codec_reset), codec_mute_(codec_mute) {}
-  zx_status_t Bind();
+      : SimpleCodecServer(device), i2c_(i2c), codec_reset_(codec_reset), codec_mute_(codec_mute) {}
 
-  void DdkRelease() { delete this; }
-  void DdkUnbind(ddk::UnbindTxn txn) {
-    Shutdown();
-    txn.Reply();
-  }
-
-  void DdkSuspend(ddk::SuspendTxn txn) {
-    // TODO(fxbug.dev/42613): Implement proper power management based on the requested state.
-    Shutdown();
-    txn.Reply(ZX_OK, txn.requested_state());
-  }
-
-  void CodecReset(codec_reset_callback callback, void* cookie);
-  void CodecGetInfo(codec_get_info_callback callback, void* cookie);
-  void CodecStop(codec_stop_callback callback, void* cookie) {
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-  }
-  void CodecStart(codec_start_callback callback, void* cookie) {
-    callback(cookie, ZX_ERR_NOT_SUPPORTED);
-  }
-  void CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie);
-  void CodecSetBridgedMode(bool enable_bridged_mode, codec_set_bridged_mode_callback callback,
-                           void* cookie);
-  void CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie);
-  void CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format_callback callback,
-                         void* cookie);
-  void CodecGetGainFormat(codec_get_gain_format_callback callback, void* cookie);
-  void CodecGetGainState(codec_get_gain_state_callback callback, void* cookie);
-  void CodecSetGainState(const gain_state_t* gain_state, codec_set_gain_state_callback callback,
-                         void* cookie);
-  void CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie);
-
-  zx_status_t ResetAndInitialize();
+  // Implementation for SimpleCodecServer.
+  zx_status_t Shutdown() override;
 
  protected:
+  // Implementation for SimpleCodecServer.
+  zx::status<DriverIds> Initialize() override;
+  zx_status_t Reset() override;
+  Info GetInfo() override;
+  zx_status_t Stop() override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t Start() override { return ZX_ERR_NOT_SUPPORTED; }
+  bool IsBridgeable() override;
+  void SetBridgedMode(bool enable_bridged_mode) override;
+  std::vector<DaiSupportedFormats> GetDaiFormats() override;
+  zx_status_t SetDaiFormat(const DaiFormat& format) override;
+  GainFormat GetGainFormat() override;
+  GainState GetGainState() override;
+  void SetGainState(GainState state) override;
+  PlugState GetPlugState() override;
+
   std::atomic<bool> initialized_ = false;  // Protected for unit tests.
 
  private:
@@ -81,13 +60,12 @@ class Tas5782 : public DeviceType,  // Not final for unit tests.
   static constexpr float kGainStep = 0.5;
 
   zx_status_t WriteReg(uint8_t reg, uint8_t value) TA_REQ(lock_);
-  void Shutdown();
 
   ddk::I2cChannel i2c_;
   ddk::GpioProtocolClient codec_reset_;
   ddk::GpioProtocolClient codec_mute_;
-  float current_gain_ = 0;
-  thrd_t thread_;
+
+  GainState gain_state_ = {};
   fbl::Mutex lock_;
 };
 }  // namespace audio
