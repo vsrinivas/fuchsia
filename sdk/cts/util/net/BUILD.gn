@@ -1,0 +1,18 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//sdk/cts/build/cts_dart_library.gni")
+
+cts_dart_library("net") {
+  package_name = "net"
+
+  testonly = true
+
+  sources = [
+    "curl.dart",
+    "ports.dart",
+  ]
+
+  deps = [ "//third_party/dart-pkg/pub/logging" ]
+}

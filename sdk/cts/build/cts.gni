@@ -1,0 +1,11 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//sdk/cts/build/cts_component.gni")
+import("//sdk/cts/build/cts_dart_test.gni")
+import("//sdk/cts/build/cts_executable.gni")
+import("//sdk/cts/build/cts_fuchsia_package.gni")
+import("//sdk/cts/build/cts_host_test_data.gni")
+import("//sdk/cts/build/cts_resource.gni")
+import("//sdk/cts/build/cts_source_set.gni")
+import("//sdk/cts/build/cts_test_package.gni")

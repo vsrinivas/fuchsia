@@ -1,0 +1,38 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//sdk/cts/build/cts_vars.gni")
+
+# Defines a CTS element.
+#
+# Ensures that dependencies are allowed in CTS. This template should not be used
+# directly, but through the other CTS templates.
+template("cts_element") {
+  assert(defined(invoker.deps))
+  assert(defined(invoker.invoker_label))
+
+  fully_qualified_deps = []
+  foreach(dep, invoker.deps) {
+    fully_qualified_deps += [ get_label_info(dep, "label_no_toolchain") ]
+  }
+
+  action(target_name) {
+    forward_variables_from(invoker, "*")
+    testonly = true
+
+    script = "//sdk/cts/build/verify_cts_deps.py"
+
+    # GN requires an action to output a file. This file is written, but not used.
+    outputs = [ "${target_gen_dir}/${target_name}_DEPFILE" ]
+
+    args = [
+             "--root_build_dir",
+             rebase_path(root_build_dir),
+             "--output",
+             rebase_path(outputs[0]),
+             "--invoker_label",
+             invoker_label,
+             "--deps",
+           ] + fully_qualified_deps
+  }
+}
