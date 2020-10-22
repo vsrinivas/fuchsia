@@ -92,6 +92,7 @@ using SomeProtocolHandle = ::fidl::InterfaceHandle<SomeProtocol>;
 namespace internal {}  // namespace internal
 #endif                 // __Fuchsia__
 
+#ifdef __Fuchsia__
 class Handles final {
  public:
   static const fidl_type_t* FidlType;
@@ -177,6 +178,8 @@ inline zx_status_t Clone(const ::fidl::test::handles::Handles& _value,
 }
 
 using HandlesPtr = ::std::unique_ptr<Handles>;
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 
 class SomeProtocol {
@@ -337,6 +340,7 @@ struct Equality<::fidl::test::handles::obj_type> {
   }
 };
 
+#ifdef __Fuchsia__
 template <>
 struct CodingTraits<::fidl::test::handles::Handles>
     : public EncodableCodingTraits<::fidl::test::handles::Handles, 132> {};
@@ -492,4 +496,5 @@ struct Equality<::fidl::test::handles::Handles> {
     return true;
   }
 };
+#endif  // __Fuchsia__
 }  // namespace fidl

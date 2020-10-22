@@ -7,6 +7,7 @@ namespace fidl {
 namespace test {
 namespace handles {
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_handles_HandlesTable;
 const fidl_type_t* Handles::FidlType = &fidl_test_handles_HandlesTable;
 
@@ -168,6 +169,8 @@ zx_status_t Handles::Clone(Handles* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 namespace {}  // namespace
 

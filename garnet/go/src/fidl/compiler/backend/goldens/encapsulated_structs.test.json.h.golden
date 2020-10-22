@@ -15,6 +15,7 @@ class ArrayInt16Int8;
 class StructPaddingTestStruct;
 class TopLevelStruct;
 
+#ifdef __Fuchsia__
 class NonInlineStructTestStruct final {
  public:
   static const fidl_type_t* FidlType;
@@ -41,6 +42,7 @@ inline zx_status_t Clone(
 
 using NonInlineStructTestStructPtr =
     ::std::unique_ptr<NonInlineStructTestStruct>;
+#endif  // __Fuchsia__
 
 class Int8Int32 final {
  public:
@@ -146,6 +148,7 @@ inline zx_status_t Clone(
 
 using StructPaddingTestStructPtr = ::std::unique_ptr<StructPaddingTestStruct>;
 
+#ifdef __Fuchsia__
 class TopLevelStruct final {
  public:
   static const fidl_type_t* FidlType;
@@ -171,11 +174,14 @@ inline zx_status_t Clone(
 }
 
 using TopLevelStructPtr = ::std::unique_ptr<TopLevelStruct>;
+#endif  // __Fuchsia__
+
 }  // namespace encapsulatedstructs
 }  // namespace test
 }  // namespace fidl
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct CodingTraits<
     ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct>
@@ -217,6 +223,8 @@ struct Equality<::fidl::test::encapsulatedstructs::NonInlineStructTestStruct> {
     return true;
   }
 };
+#endif  // __Fuchsia__
+
 template <>
 struct CodingTraits<::fidl::test::encapsulatedstructs::Int8Int32>
     : public EncodableCodingTraits<::fidl::test::encapsulatedstructs::Int8Int32,
@@ -369,6 +377,7 @@ struct Equality<::fidl::test::encapsulatedstructs::StructPaddingTestStruct> {
     return true;
   }
 };
+#ifdef __Fuchsia__
 template <>
 struct CodingTraits<::fidl::test::encapsulatedstructs::TopLevelStruct>
     : public EncodableCodingTraits<
@@ -408,4 +417,5 @@ struct Equality<::fidl::test::encapsulatedstructs::TopLevelStruct> {
     return true;
   }
 };
+#endif  // __Fuchsia__
 }  // namespace fidl

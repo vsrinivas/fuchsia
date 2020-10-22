@@ -131,6 +131,7 @@ zx_status_t StructWithNullableString::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableRequestTable;
 const fidl_type_t* StructWithNullableRequest::FidlType =
     &fidl_test_nullable_StructWithNullableRequestTable;
@@ -163,6 +164,9 @@ zx_status_t StructWithNullableRequest::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableProtocolTable;
 const fidl_type_t* StructWithNullableProtocol::FidlType =
     &fidl_test_nullable_StructWithNullableProtocolTable;
@@ -195,6 +199,9 @@ zx_status_t StructWithNullableProtocol::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableHandleTable;
 const fidl_type_t* StructWithNullableHandle::FidlType =
     &fidl_test_nullable_StructWithNullableHandleTable;
@@ -226,6 +233,8 @@ zx_status_t StructWithNullableHandle::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 namespace {
 

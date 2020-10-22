@@ -132,6 +132,7 @@ inline zx_status_t Clone(
 
 using StructWithNullableStringPtr = ::std::unique_ptr<StructWithNullableString>;
 
+#ifdef __Fuchsia__
 class StructWithNullableRequest final {
  public:
   static const fidl_type_t* FidlType;
@@ -156,7 +157,9 @@ inline zx_status_t Clone(
 
 using StructWithNullableRequestPtr =
     ::std::unique_ptr<StructWithNullableRequest>;
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 class StructWithNullableProtocol final {
  public:
   static const fidl_type_t* FidlType;
@@ -181,7 +184,9 @@ inline zx_status_t Clone(
 
 using StructWithNullableProtocolPtr =
     ::std::unique_ptr<StructWithNullableProtocol>;
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 class StructWithNullableHandle final {
  public:
   static const fidl_type_t* FidlType;
@@ -205,6 +210,8 @@ inline zx_status_t Clone(
 }
 
 using StructWithNullableHandlePtr = ::std::unique_ptr<StructWithNullableHandle>;
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 
 class SimpleProtocol {
@@ -620,6 +627,7 @@ struct Equality<::fidl::test::nullable::StructWithNullableString> {
     return true;
   }
 };
+#ifdef __Fuchsia__
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableRequest>
     : public EncodableCodingTraits<
@@ -650,6 +658,9 @@ struct Equality<::fidl::test::nullable::StructWithNullableRequest> {
     return true;
   }
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableProtocol>
     : public EncodableCodingTraits<
@@ -680,6 +691,9 @@ struct Equality<::fidl::test::nullable::StructWithNullableProtocol> {
     return true;
   }
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableHandle>
     : public EncodableCodingTraits<
@@ -709,6 +723,8 @@ struct Equality<::fidl::test::nullable::StructWithNullableHandle> {
     return true;
   }
 };
+#endif  // __Fuchsia__
+
 template <>
 struct IsFidlXUnion<::fidl::test::nullable::SimpleUnion>
     : public std::true_type {};

@@ -9,10 +9,15 @@ const structTemplate = `
 class {{ .Name }};
 {{- end }}
 
+{{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
+     emulated handles for C++. */}}
 {{- define "StructDeclaration" }}
-{{range .DocComments}}
+{{ if .IsResource }}
+#ifdef __Fuchsia__
+{{- end }}
+{{- range .DocComments }}
 ///{{ . }}
-{{- end}}
+{{- end }}
 class {{ .Name }} final {
  public:
   static const fidl_type_t* FidlType;
@@ -66,9 +71,16 @@ inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& _value,
 }
 
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
+{{- if .IsResource }}
+#endif  // __Fuchsia__
+{{ end }}
+
 {{- end }}
 
 {{- define "StructDefinition" }}
+{{- if .IsResource }}
+#ifdef __Fuchsia__
+{{- end }}
 extern "C" const fidl_type_t {{ .TableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
@@ -101,10 +113,16 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
   {{- end }}
   return ZX_OK;
 }
+{{- if .IsResource }}
+#endif  // __Fuchsia__
+{{ end }}
 
 {{- end }}
 
 {{- define "StructTraits" }}
+{{- if .IsResource }}
+#ifdef __Fuchsia__
+{{- end }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
     : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSize }}> {};
@@ -140,6 +158,9 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
     return true;
   }
 };
+{{- if .IsResource }}
+#endif  // __Fuchsia__
+{{ end }}
 
 {{- end }}
 `

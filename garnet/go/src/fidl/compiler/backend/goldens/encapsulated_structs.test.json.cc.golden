@@ -7,6 +7,7 @@ namespace fidl {
 namespace test {
 namespace encapsulatedstructs {
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     fidl_test_encapsulatedstructs_NonInlineStructTestStructTable;
 const fidl_type_t* NonInlineStructTestStruct::FidlType =
@@ -44,6 +45,8 @@ zx_status_t NonInlineStructTestStruct::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+#endif  // __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_Int8Int32Table;
 const fidl_type_t* Int8Int32::FidlType =
     &fidl_test_encapsulatedstructs_Int8Int32Table;
@@ -176,6 +179,7 @@ zx_status_t StructPaddingTestStruct::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_TopLevelStructTable;
 const fidl_type_t* TopLevelStruct::FidlType =
     &fidl_test_encapsulatedstructs_TopLevelStructTable;
@@ -208,6 +212,8 @@ zx_status_t TopLevelStruct::Clone(TopLevelStruct* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+#endif  // __Fuchsia__
+
 }  // namespace encapsulatedstructs
 }  // namespace test
 }  // namespace fidl

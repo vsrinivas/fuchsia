@@ -23,6 +23,7 @@ inline zx_status_t Clone(::example::obj_type value,
 
 class ExampleOfUseOfAliases;
 
+#ifdef __Fuchsia__
 class ExampleOfUseOfAliases final {
  public:
   static const fidl_type_t* FidlType;
@@ -64,6 +65,8 @@ inline zx_status_t Clone(const ::example::ExampleOfUseOfAliases& _value,
 }
 
 using ExampleOfUseOfAliasesPtr = ::std::unique_ptr<ExampleOfUseOfAliases>;
+#endif  // __Fuchsia__
+
 }  // namespace example
 namespace fidl {
 
@@ -96,6 +99,7 @@ struct Equality<::example::obj_type> {
   }
 };
 
+#ifdef __Fuchsia__
 template <>
 struct CodingTraits<::example::ExampleOfUseOfAliases>
     : public EncodableCodingTraits<::example::ExampleOfUseOfAliases, 120> {};
@@ -163,4 +167,5 @@ struct Equality<::example::ExampleOfUseOfAliases> {
     return true;
   }
 };
+#endif  // __Fuchsia__
 }  // namespace fidl

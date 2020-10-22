@@ -5,6 +5,7 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace example {
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t example_ExampleOfUseOfAliasesTable;
 const fidl_type_t* ExampleOfUseOfAliases::FidlType =
     &example_ExampleOfUseOfAliasesTable;
@@ -86,4 +87,6 @@ zx_status_t ExampleOfUseOfAliases::Clone(ExampleOfUseOfAliases* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+#endif  // __Fuchsia__
+
 }  // namespace example

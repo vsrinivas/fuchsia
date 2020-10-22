@@ -9,10 +9,15 @@ const tableTemplate = `
 class {{ .Name }};
 {{- end }}
 
+{{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
+     emulated handles for C++. */}}
 {{- define "TableDeclaration" }}
-{{range .DocComments}}
+{{ if .IsResource }}
+#ifdef __Fuchsia__
+{{- end }}
+{{- range .DocComments }}
 ///{{ . }}
-{{- end}}
+{{- end }}
 class {{ .Name }} final {
  public:
   static const fidl_type_t* FidlType;
@@ -96,9 +101,16 @@ class {{ .Name }} final {
 };
 
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
+{{- if .IsResource }}
+#endif  // __Fuchsia__
+{{ end }}
+
 {{- end }}
 
 {{- define "TableDefinition" }}
+{{- if .IsResource }}
+#ifdef __Fuchsia__
+{{- end }}
 extern "C" const fidl_type_t {{ .TableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
@@ -216,10 +228,16 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   {{- end }}
   return ZX_OK;
 }
+{{- if .IsResource }}
+#endif  // __Fuchsia__
+{{ end }}
 
 {{- end }}
 
 {{- define "TableTraits" }}
+{{- if .IsResource }}
+#ifdef __Fuchsia__
+{{- end }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
     : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSize }}> {};
@@ -246,6 +264,9 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
     return true;
   }
 };
+{{- if .IsResource }}
+#endif  // __Fuchsia__
+{{ end }}
 
 {{- end }}
 `

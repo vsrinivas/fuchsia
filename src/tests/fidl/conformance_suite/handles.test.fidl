@@ -11,27 +11,27 @@ resource struct SingleHandle {
     handle h;
 };
 
-[BindingsDenylist = "hlcpp, llcpp"]
+[BindingsDenylist = "llcpp"]
 resource struct SingleOptionalHandle {
     handle? h;
 };
 
-[BindingsDenylist = "hlcpp, llcpp"]
+[BindingsDenylist = "llcpp"]
 resource struct ArrayOfHandles {
     array<handle>:3 a;
 };
 
-[BindingsDenylist = "hlcpp, llcpp"]
+[BindingsDenylist = "llcpp"]
 resource struct ArrayOfOptionalHandles {
     array<handle?>:3 a;
 };
 
-[BindingsDenylist = "hlcpp, llcpp"]
+[BindingsDenylist = "llcpp"]
 resource struct VectorOfHandles {
     vector<handle> v;
 };
 
-[BindingsDenylist = "hlcpp, llcpp"]
+[BindingsDenylist = "llcpp"]
 resource struct VectorOfOptionalHandles {
     vector<handle?> v;
 };
@@ -51,7 +51,7 @@ resource_definition handle : uint32 {
     };
 };
 
-[BindingsDenylist = "hlcpp, llcpp"]
+[BindingsDenylist = "llcpp"]
 resource struct MultipleHandleSubtypes {
     handle untyped;
     handle:EVENT event;
