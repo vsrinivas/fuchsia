@@ -3,48 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
 import("//build/test/test_package.gni")
-
-group("test") {
-  testonly = true
-  deps = [
-    ":wlanif-test",
-    ":wlanif-test-driver",
-  ]
-}
-
-driver_module("wlanif-test-driver") {
-  output_name = "wlanif-test"
-
-  sources = [ "binding.c" ]
-
-  deps = [
-    "//garnet/lib/wlan/protocol",
-    "//src/connectivity/wlan/lib/common/cpp:common",
-    "//src/devices/lib/driver",
-    "//zircon/public/lib/zx",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
-  ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
-}
-
-driver_package("wlanif-test") {
-  deps = [ ":wlanif-test-driver" ]
-
-  drivers = [
-    {
-      name = "wlanif-test.so"
-    },
-  ]
-}
 
 executable("convert_unittest") {
   output_name = "wlanif_convert_unittest"
@@ -54,7 +13,7 @@ executable("convert_unittest") {
   sources = [ "convert_unittest.cc" ]
 
   deps = [
-    "//src/connectivity/wlan/drivers/wlanif:test_source",
+    "//src/connectivity/wlan/drivers/wlanif:lib_source",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
@@ -70,7 +29,7 @@ executable("device_unittest") {
   sources = [ "device_unittest.cc" ]
 
   deps = [
-    "//src/connectivity/wlan/drivers/wlanif:test_source",
+    "//src/connectivity/wlan/drivers/wlanif:lib_source",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake_ddk",
