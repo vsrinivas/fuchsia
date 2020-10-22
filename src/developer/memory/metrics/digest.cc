@@ -25,9 +25,9 @@ const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
     // Memory used with the GPU or display hardware.
     {"Graphics", ".*", "magma_create_buffer|Mali .*|Magma.*|ImagePipe2Surface.*"},
     // Unused protected pool memory.
-    {"ProtectedPool", "driver_host:sys", "SysmemAmlogicProtectedPool"},
+    {"ProtectedPool", "driver_host:.*", "SysmemAmlogicProtectedPool"},
     // Unused contiguous pool memory.
-    {"ContiguousPool", "driver_host:sys", "SysmemContiguousPool"},
+    {"ContiguousPool", "driver_host:.*", "SysmemContiguousPool"},
     {"Fshost", "fshost.cm", ".*"},
     {"Minfs", ".*minfs", ".*"},
     {"Blobfs", ".*blobfs", ".*", [](const Vmo& vmo) { return BlobfsIsActiveVmo(vmo); }},

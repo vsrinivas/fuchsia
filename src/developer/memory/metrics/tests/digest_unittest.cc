@@ -185,7 +185,7 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
            .processes = {
                {.koid = 1, .name = "bin/bootsvc", .vmos = {1}},
                {.koid = 2, .name = "test", .vmos = {2, 25, 26}},
-               {.koid = 3, .name = "driver_host:sys", .vmos = {3, 4}},
+               {.koid = 3, .name = "driver_host:pdev:00:00:1b", .vmos = {3, 4}},
                {.koid = 4, .name = "fshost.cm", .vmos = {5}},
                {.koid = 5, .name = "/boot/bin/minfs", .vmos = {6}},
                {.koid = 6, .name = "/boot/bin/blobfs", .vmos = {7, 23, 24}},
