@@ -22,7 +22,7 @@ TEST(ExtentReserverTest, Reserve) {
   // The ReservedExtent constructor should reserve the extent.
   // The destructor should release the extent.
   {
-    ReservedExtent reserved_extent(&reserver, extent);
+    ReservedExtent reserved_extent = reserver.Reserve(extent);
     EXPECT_EQ(block_count, reserver.ReservedBlockCount());
   }
   EXPECT_EQ(0u, reserver.ReservedBlockCount());
@@ -37,7 +37,7 @@ TEST(ExtentReserverTest, ReserveReset) {
   // The ReservedExtent constructor should reserve the extent.
   // Reset should release the extent.
   {
-    ReservedExtent reserved_extent(&reserver, extent);
+    ReservedExtent reserved_extent = reserver.Reserve(extent);
     EXPECT_EQ(block_count, reserver.ReservedBlockCount());
     reserved_extent.Reset();
     EXPECT_EQ(0u, reserver.ReservedBlockCount());
@@ -54,7 +54,7 @@ TEST(ExtentReserverTest, Constructor) {
 
   // Test reservation via the constructor.
   {
-    ReservedExtent reserved_extent(&reserver, extent);
+    ReservedExtent reserved_extent = reserver.Reserve(extent);
     EXPECT_EQ(extent.Start(), reserved_extent.extent().Start());
     EXPECT_EQ(extent.Length(), reserved_extent.extent().Length());
     EXPECT_EQ(block_count, reserver.ReservedBlockCount());
@@ -70,7 +70,7 @@ TEST(ExtentReserverTest, MoveConstructor) {
 
   // Test reservation via move constructor.
   {
-    ReservedExtent source_extent(&reserver, extent);
+    ReservedExtent source_extent = reserver.Reserve(extent);
     EXPECT_EQ(1u, reserver.ReservedBlockCount());
     EXPECT_EQ(extent.Start(), source_extent.extent().Start());
     EXPECT_EQ(extent.Length(), source_extent.extent().Length());
@@ -91,7 +91,7 @@ TEST(ExtentReserverTest, MoveAssignment) {
 
   // Test reservation via the move assignment operator.
   {
-    ReservedExtent source_extent(&reserver, extent);
+    ReservedExtent source_extent = reserver.Reserve(extent);
     EXPECT_EQ(1u, reserver.ReservedBlockCount());
     EXPECT_EQ(extent.Start(), source_extent.extent().Start());
     EXPECT_EQ(extent.Length(), source_extent.extent().Length());
@@ -111,7 +111,7 @@ TEST(ExtentReserverTest, Split) {
   Extent extent{start_block, block_count};
 
   EXPECT_EQ(0u, reserver.ReservedBlockCount());
-  ReservedExtent reserved_extent(&reserver, extent);
+  ReservedExtent reserved_extent = reserver.Reserve(extent);
   EXPECT_EQ(10u, reserver.ReservedBlockCount());
 
   {

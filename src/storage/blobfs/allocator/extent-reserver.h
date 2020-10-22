@@ -9,10 +9,14 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#include <mutex>
+
 #include <bitmap/rle-bitmap.h>
 #include <blobfs/format.h>
 
 namespace blobfs {
+
+class ReservedExtent;
 
 // Allows extents to be reserved and unreserved. The purpose of reservation is to allow allocation
 // of extents to occur without yet allocating structures which could be written out to durable
@@ -21,10 +25,7 @@ namespace blobfs {
 // These extents may be observed by derived classes of ExtentReserver
 class ExtentReserver {
  public:
-  // Reserves space for blocks in memory. Does not update disk.
-  //
-  // |extent.Length()| must be > 0.
-  void Reserve(const Extent& extent);
+  ReservedExtent Reserve(const Extent& extent);
 
   // Unreserves space for blocks in memory. Does not update disk.
   void Unreserve(const Extent& extent);
@@ -33,18 +34,28 @@ class ExtentReserver {
   uint64_t ReservedBlockCount() const;
 
  protected:
+  std::mutex& mutex() const __TA_RETURN_CAPABILITY(mutex_) { return mutex_; }
+
+  // Reserves space for blocks in memory. Does not update disk.
+  //
+  // |extent.Length()| must be > 0.
+  ReservedExtent ReserveLocked(const Extent& extent) __TA_REQUIRES(mutex());
+
   // Returns an iterator to the underlying reserved blocks.
   //
   // This iterator becomes invalid on the next call to either |ReserveExtent| or
   // |UnreserveExtent|.
-  bitmap::RleBitmap::const_iterator ReservedBlocksCbegin() const {
+  bitmap::RleBitmap::const_iterator ReservedBlocksCbegin() const __TA_REQUIRES(mutex()) {
     return reserved_blocks_.cbegin();
   }
 
-  bitmap::RleBitmap::const_iterator ReservedBlocksCend() const { return reserved_blocks_.end(); }
+  bitmap::RleBitmap::const_iterator ReservedBlocksCend() const __TA_REQUIRES(mutex()) {
+    return reserved_blocks_.end();
+  }
 
  private:
-  bitmap::RleBitmap reserved_blocks_ = {};
+  mutable std::mutex mutex_;
+  bitmap::RleBitmap reserved_blocks_ __TA_GUARDED(mutex_);
 };
 
 // Wraps an extent reservation in RAII to hold the reservation active, and release it when it goes
@@ -53,10 +64,6 @@ class ReservedExtent {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ReservedExtent);
 
-  // Creates a reserved extent.
-  //
-  // |extent.Length()| must be > 0.
-  ReservedExtent(ExtentReserver* reserver, Extent extent);
   ReservedExtent(ReservedExtent&& o);
   ReservedExtent& operator=(ReservedExtent&& o);
   ~ReservedExtent();
@@ -78,6 +85,14 @@ class ReservedExtent {
   void Reset();
 
  private:
+  friend ExtentReserver;
+
+  // Creates a reserved extent.
+  //
+  // |extent.Length()| must be > 0.
+  // The caller is responsible for actually reserving an extent.
+  ReservedExtent(ExtentReserver* reserver, Extent extent) : reserver_(reserver), extent_(extent) {}
+
   // Update internal state such that future calls to |Reserved| return false.
   void Release();
 
@@ -87,6 +102,11 @@ class ReservedExtent {
   ExtentReserver* reserver_;
   Extent extent_;
 };
+
+inline ReservedExtent ExtentReserver::Reserve(const Extent& extent) {
+  std::scoped_lock lock(mutex());
+  return ReserveLocked(extent);
+}
 
 }  // namespace blobfs
 

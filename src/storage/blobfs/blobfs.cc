@@ -95,6 +95,7 @@ zx::status<std::unique_ptr<Journal>> InitializeJournal(
 
   auto options = Journal::Options();
   options.metrics = journal_metrics;
+  options.sequence_data_writes = false;
   return zx::ok(std::make_unique<Journal>(transaction_handler, std::move(journal_superblock),
                                           std::move(journal_buffer), std::move(writeback_buffer),
                                           journal_start, options));
@@ -402,7 +403,7 @@ void Blobfs::FreeExtent(const Extent& extent, BlobTransaction& transaction) {
 
   // Check if blocks were allocated on disk.
   if (allocator_->CheckBlocksAllocated(start, end)) {
-    allocator_->FreeBlocks(extent);
+    transaction.AddReservedExtent(allocator_->FreeBlocks(extent));
     info_.alloc_block_count -= num_blocks;
     WriteBitmap(num_blocks, start, transaction);
     WriteInfo(transaction);

@@ -112,9 +112,10 @@ class Allocator : private ExtentReserver, private NodeReserver, public NodeFinde
 
   // Frees blocks which have already been allocated (in-memory).
   //
-  // |extent| must represent a portion of the block map which has already been
-  // allocated.
-  void FreeBlocks(const Extent& extent);
+  // |extent| must represent a portion of the block map which has already been allocated.  Returns a
+  // ReservedExtent which keeps the blocks reserved until destroyed (which allows us to hold the
+  // blocks until the transaction commits).
+  ReservedExtent FreeBlocks(const Extent& extent);
 
   // Reserves space for nodes in memory. Does not update disk.
   //
@@ -186,7 +187,7 @@ class Allocator : private ExtentReserver, private NodeReserver, public NodeFinde
                               fbl::Vector<ReservedExtent>* out_extents,
                               bitmap::RleBitmap::const_iterator* out_reserved_iterator,
                               uint64_t* out_remaining_blocks, uint64_t* out_start,
-                              uint64_t* out_block_length);
+                              uint64_t* out_block_length) __TA_REQUIRES(mutex());
 
   // Searches for |nblocks| free blocks between the block_map_ and reserved_blocks_ bitmaps.
   //

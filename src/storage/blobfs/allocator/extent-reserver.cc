@@ -12,15 +12,20 @@
 
 namespace blobfs {
 
-void ExtentReserver::Reserve(const Extent& extent) {
+ReservedExtent ExtentReserver::ReserveLocked(const Extent& extent) {
   ZX_DEBUG_ASSERT_MSG(extent.Length() > 0, "Reserving empty extents is disallowed");
+  size_t blkno_out;
+  ZX_DEBUG_ASSERT(reserved_blocks_.Find(false, extent.Start(), extent.Start() + extent.Length(),
+                                        extent.Length(), &blkno_out) == ZX_OK);
   zx_status_t status = reserved_blocks_.Set(extent.Start(), extent.Start() + extent.Length());
   ZX_DEBUG_ASSERT(status == ZX_OK);
+  return ReservedExtent(this, extent);
 }
 
 void ExtentReserver::Unreserve(const Extent& extent) {
   // Ensure the blocks are already reserved.
   size_t blkno_out;
+  std::scoped_lock lock(mutex_);
   ZX_DEBUG_ASSERT(reserved_blocks_.Find(true, extent.Start(), extent.Start() + extent.Length(),
                                         extent.Length(), &blkno_out) == ZX_OK);
 
@@ -28,11 +33,9 @@ void ExtentReserver::Unreserve(const Extent& extent) {
   ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-uint64_t ExtentReserver::ReservedBlockCount() const { return reserved_blocks_.num_bits(); }
-
-ReservedExtent::ReservedExtent(ExtentReserver* reserver, Extent extent)
-    : reserver_(reserver), extent_(extent) {
-  reserver_->Reserve(extent_);
+uint64_t ExtentReserver::ReservedBlockCount() const {
+  std::scoped_lock lock(mutex_);
+  return reserved_blocks_.num_bits();
 }
 
 ReservedExtent::~ReservedExtent() { Reset(); }

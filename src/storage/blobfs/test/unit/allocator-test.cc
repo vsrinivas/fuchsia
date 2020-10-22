@@ -6,14 +6,18 @@
 
 #include <memory>
 
+#include <blobfs/mkfs.h>
+#include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
-#include "utils.h"
-
-using id_allocator::IdAllocator;
+#include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
 namespace {
+
+using ::id_allocator::IdAllocator;
 
 TEST(AllocatorTest, Null) {
   MockSpaceManager space_manager;
@@ -66,10 +70,11 @@ TEST(AllocatorTest, SingleCollision) {
 
   // Check that freeing the space (and releasing the reservation) makes it
   // available for use once more.
-  allocator->FreeBlocks(extents[0].extent());
+  Extent extent = extents[0].extent();
   allocator->FreeNode(node.index());
   node.Reset();
   extents.reset();
+  allocator->FreeBlocks(extent);
   ASSERT_EQ(allocator->ReserveBlocks(1, &extents), ZX_OK);
   ASSERT_TRUE(allocator->ReserveNode());
 }
@@ -503,7 +508,7 @@ TEST(AllocatorTest, LiveInodePtrBlocksGrow) {
     done = true;
   });
   // Sleeping is usually bad in tests, but this is a halting problem.
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+  zx::nanosleep(zx::deadline_after(zx::msec(50)));
   EXPECT_FALSE(done);
 
   // Reset the pointer and the thread should be unblocked.
@@ -525,6 +530,70 @@ TEST(AllocatorTest, TwoInodePtrsDontBlock) {
 
   InodePtr inode1 = allocator.GetNode(0);
   InodePtr inode2 = allocator.GetNode(1);
+}
+
+TEST(AllocatorTest, FreedBlocksAreReservedUntilTransactionCommits) {
+  constexpr uint32_t kBlockSize = 512;
+  constexpr uint32_t kNumBlocks = 200 * kBlobfsBlockSize / kBlockSize;
+  constexpr size_t kBlobSize = 150000;
+  auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
+  EXPECT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  loop.StartThread();
+  std::unique_ptr<Blobfs> fs;
+  MountOptions options;
+  block_client::FakeBlockDevice& device_ref = *device;
+  ASSERT_EQ(Blobfs::Create(loop.dispatcher(), std::move(device), &options, zx::resource(), &fs),
+            ZX_OK);
+
+  // Create a blob that takes up more than half of the volume.
+  fbl::RefPtr<fs::Vnode> root;
+  ASSERT_EQ(fs->OpenRootNode(&root), ZX_OK);
+  std::unique_ptr<BlobInfo> info;
+  GenerateRandomBlob("", kBlobSize, &info);
+  fbl::RefPtr<fs::Vnode> file;
+  ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+  size_t actual;
+  EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
+  EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &actual), ZX_OK);
+  EXPECT_EQ(file->Close(), ZX_OK);
+
+  // Attempting to create another blob should result in a no-space condition.
+  std::unique_ptr<BlobInfo> info2;
+  GenerateRandomBlob("", kBlobSize, &info2);
+  ASSERT_EQ(root->Create(info2->path + 1, 0, &file), ZX_OK);
+  EXPECT_EQ(file->Truncate(info2->size_data), ZX_OK);
+  EXPECT_EQ(file->Write(info2->data.get(), info2->size_data, 0, &actual), ZX_ERR_NO_SPACE);
+  EXPECT_EQ(file->Close(), ZX_OK);
+
+  // Prevent any more writes from hitting the disk.
+  device_ref.Pause();
+
+  // Unlink the blob we just created.
+  EXPECT_EQ(root->Unlink(info->path + 1, /*must_be_dir=*/false), ZX_OK);
+
+  // Should still see a no-space condition.
+  ASSERT_EQ(root->Create(info2->path + 1, 0, &file), ZX_OK);
+  EXPECT_EQ(file->Truncate(info2->size_data), ZX_OK);
+  EXPECT_EQ(file->Write(info2->data.get(), info2->size_data, 0, &actual), ZX_ERR_NO_SPACE);
+  EXPECT_EQ(file->Close(), ZX_OK);
+
+  device_ref.Resume();
+  fs->Sync([](zx_status_t) {});
+
+  // There's no easy way of knowing when the space will become available because there's no
+  // trigger we can hook into, so, for now, just keep retrying.
+  for (;;) {
+    ASSERT_EQ(root->Create(info2->path + 1, 0, &file), ZX_OK);
+    EXPECT_EQ(file->Truncate(info2->size_data), ZX_OK);
+    zx_status_t status = file->Write(info2->data.get(), info2->size_data, 0, &actual);
+    EXPECT_EQ(file->Close(), ZX_OK);
+    if (status == ZX_OK) {
+      break;
+    }
+    ASSERT_EQ(status, ZX_ERR_NO_SPACE);
+    zx::nanosleep(zx::deadline_after(zx::msec(50)));
+  }
 }
 
 }  // namespace

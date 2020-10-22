@@ -135,13 +135,14 @@ void Allocator::MarkBlocksAllocated(const ReservedExtent& reserved_extent) {
   ZX_ASSERT(block_map_.Set(start, end) == ZX_OK);
 }
 
-void Allocator::FreeBlocks(const Extent& extent) {
+ReservedExtent Allocator::FreeBlocks(const Extent& extent) {
   uint64_t start = extent.Start();
   uint64_t length = extent.Length();
   uint64_t end = start + length;
 
   ZX_DEBUG_ASSERT(CheckBlocksAllocated(start, end));
   ZX_ASSERT(block_map_.Clear(start, end) == ZX_OK);
+  return ExtentReserver::Reserve(extent);
 }
 
 zx_status_t Allocator::ReserveNodes(uint64_t num_nodes, fbl::Vector<ReservedNode>* out_nodes) {
@@ -379,7 +380,7 @@ bool Allocator::MunchUnreservedExtents(bitmap::RleBitmap::const_iterator reserve
         }
         start = reserved_iterator->end();
         remaining_blocks -= extent.Length();
-        out_extents->push_back(ReservedExtent(this, std::move(extent)));
+        out_extents->push_back(ExtentReserver::ReserveLocked(std::move(extent)));
         reserved_iterator = ReservedBlocksCbegin();
       } else {
         // Free Suffix: The observed range overlaps with a
@@ -404,6 +405,8 @@ bool Allocator::MunchUnreservedExtents(bitmap::RleBitmap::const_iterator reserve
 zx_status_t Allocator::FindBlocks(uint64_t start, uint64_t num_blocks,
                                   fbl::Vector<ReservedExtent>* out_extents,
                                   uint64_t* out_actual_blocks) {
+  std::scoped_lock lock(mutex());
+
   // Using a single iterator over the reserved allocation map lets us
   // avoid re-scanning portions of the reserved map. This is possible
   // because the |reserved_blocks_| map should be immutable
@@ -445,7 +448,7 @@ zx_status_t Allocator::FindBlocks(uint64_t start, uint64_t num_blocks,
       ZX_DEBUG_ASSERT(block_map_.Scan(extent.Start(), extent.Start() + extent.Length(), false));
       start += extent.Length();
       remaining_blocks -= extent.Length();
-      out_extents->push_back(ReservedExtent(this, std::move(extent)));
+      out_extents->push_back(ExtentReserver::ReserveLocked(std::move(extent)));
       reserved_iterator = ReservedBlocksCbegin();
     }
   }
