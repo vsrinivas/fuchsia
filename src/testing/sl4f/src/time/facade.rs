@@ -28,6 +28,13 @@ impl TimeFacade {
         Ok(time_millis.try_into()?)
     }
 
+    /// Returns the system's reported UTC time in millis since the Unix epoch, retrieved by
+    /// explicitly using the clock handle provided to the runtime.
+    pub fn userspace_time_millis() -> Result<u64, Error> {
+        let clock = fuchsia_runtime::duplicate_utc_clock_handle(zx::Rights::READ)?;
+        Ok(clock.read()?.into_nanos() as u64 / NANOS_IN_MILLIS)
+    }
+
     /// Returns the UTC time in millis since the Unix epoch, according to the kernel maintained
     /// UTC clock (ZX_CLOCK_UTC). This clock will soon be removed in favor of the userspace clock.
     pub fn kernel_time_millis() -> Result<u64, Error> {

@@ -17,6 +17,10 @@ impl Facade for TimeFacade {
                 let system_time = Self::system_time_millis()?;
                 Ok(to_value(system_time)?)
             }
+            "UserspaceTimeMillis" => {
+                let userspace_time = Self::userspace_time_millis()?;
+                Ok(to_value(userspace_time)?)
+            }
             "KernelTimeMillis" => {
                 let kernel_time = Self::kernel_time_millis()?;
                 Ok(to_value(kernel_time)?)

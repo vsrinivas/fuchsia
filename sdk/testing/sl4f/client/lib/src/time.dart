@@ -13,9 +13,16 @@ class Time {
   /// Constructs a [Time] object.
   Time(this._sl4f);
 
-  /// Returns the system time on the DUT in UTC.
+  /// Returns the system time on the DUT in UTC as reported by the standard libraries used by sl4f.
   Future<DateTime> systemTime() async {
     final timestampMillis = await _sl4f.request('time_facade.SystemTimeMillis');
+    return DateTime.fromMillisecondsSinceEpoch(timestampMillis, isUtc: true);
+  }
+
+  /// Returns the system time on the DUT in UTC, as reported by the clock passed to sl4f's runtime.
+  Future<DateTime> userspaceTime() async {
+    final timestampMillis =
+        await _sl4f.request('time_facade.UserspaceTimeMillis');
     return DateTime.fromMillisecondsSinceEpoch(timestampMillis, isUtc: true);
   }
 

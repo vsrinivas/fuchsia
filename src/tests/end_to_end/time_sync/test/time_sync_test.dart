@@ -3,15 +3,16 @@
 // found in the LICENSE file.
 
 import 'dart:core';
-import 'dart:io';
 import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
+
+const Duration pollPeriod = Duration(seconds: 1);
+const Duration maxHostDiff = Duration(minutes: 1);
+const Duration maxUserspaceKernelDiff = Duration(seconds: 2);
 
 void main() {
   sl4f.Sl4f sl4fDriver;
   sl4f.Time sl4fTime;
-
-  const Duration pollPeriod = Duration(seconds: 1);
 
   setUp(() async {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
@@ -25,20 +26,49 @@ void main() {
   });
 
   test('time is synchronized', () async {
-    while (!await sl4fTime.isSystemTimeSynchronized()) {
-      sleep(pollPeriod);
-    }
-    final systemTime = await sl4fTime.systemTime();
-
-    // Do a fairly permissive check as it takes time to check the time
-    // and the host may be set slightly different.
+    await waitUntilTimeSynchronized(sl4fTime);
     final hostTime = DateTime.now().toUtc();
-    expect(systemTime.isAfter(hostTime.subtract(Duration(minutes: 1))), isTrue);
-    expect(systemTime.isBefore(hostTime.add(Duration(minutes: 1))), isTrue);
 
-    // kernel time should also roughly agree.
+    // All UTC clocks on the DUT should roughly align with the host time.
+    final systemTime = await sl4fTime.systemTime();
+    expect(systemTime.isAfter(hostTime.subtract(maxHostDiff)), isTrue);
+    expect(systemTime.isBefore(hostTime.add(maxHostDiff)), isTrue);
+
+    final userspaceTime = await sl4fTime.userspaceTime();
+    expect(userspaceTime.isAfter(hostTime.subtract(maxHostDiff)), isTrue);
+    expect(userspaceTime.isBefore(hostTime.add(maxHostDiff)), isTrue);
+
     final kernelTime = await sl4fTime.kernelTime();
-    expect(kernelTime.isAfter(hostTime.subtract(Duration(minutes: 1))), isTrue);
-    expect(kernelTime.isBefore(hostTime.add(Duration(minutes: 1))), isTrue);
+    expect(kernelTime.isAfter(hostTime.subtract(maxHostDiff)), isTrue);
+    expect(kernelTime.isBefore(hostTime.add(maxHostDiff)), isTrue);
   });
+
+  test('utc clocks agree', () async {
+    await waitUntilTimeSynchronized(sl4fTime);
+
+    // Verify that all UTC clocks on the DUT roughly agree by checking that
+    // their offsets from the host time agree.
+    final systemTime = await sl4fTime.systemTime();
+    final systemTimeOffset = DateTime.now().toUtc().difference(systemTime);
+
+    final userspaceTime = await sl4fTime.userspaceTime();
+    final userspaceTimeOffset =
+        DateTime.now().toUtc().difference(userspaceTime);
+
+    final kernelTime = await sl4fTime.kernelTime();
+    final kernelTimeOffset = DateTime.now().toUtc().difference(kernelTime);
+
+    expect((systemTimeOffset - userspaceTimeOffset).abs(),
+        lessThan(maxUserspaceKernelDiff));
+    expect((systemTimeOffset - kernelTimeOffset).abs(),
+        lessThan(maxUserspaceKernelDiff));
+    expect((userspaceTimeOffset - kernelTimeOffset).abs(),
+        lessThan(maxUserspaceKernelDiff));
+  });
+}
+
+Future<void> waitUntilTimeSynchronized(sl4f.Time sl4fTime) async {
+  while (!await sl4fTime.isSystemTimeSynchronized()) {
+    await Future.delayed(pollPeriod);
+  }
 }

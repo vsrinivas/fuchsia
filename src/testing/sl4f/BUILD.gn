@@ -101,6 +101,7 @@ rustc_library("lib") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/mapped-vmo",
     "//src/lib/network/fidl_fuchsia_hardware_ethernet_ext",
     "//src/lib/storage/fuchsia-vfs-watcher",

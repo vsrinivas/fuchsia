@@ -21,12 +21,26 @@ void main() {
   });
 
   group('time', () {
-    test('can retrieve time', () async {
-      // In context of this test, we don't know if the device should actually be synchronized
-      // or not, so just check that we can get some time.
-      final earlyTime = DateTime.utc(2000, 1, 1);
+    // In context of these tests, we don't know if the device should actually be synchronized
+    // or not, so we just verify that we can get some time.
+    final earlyTime = DateTime.utc(2000, 1, 1);
+
+    test('can retrieve system time', () async {
       final systemTime = await time.systemTime();
       expect(systemTime.isAfter(earlyTime), isTrue);
+    });
+
+    test('can retrieve userspace time', () async {
+      final userspaceTime = await time.userspaceTime();
+      expect(userspaceTime.isAfter(earlyTime), isTrue);
+    });
+
+    test('can retrieve kernel time', () async {
+      final kernelTime = await time.kernelTime();
+      expect(kernelTime.isAfter(earlyTime), isTrue);
+    });
+
+    test('can check device synchronized', () async {
       expect(await time.isSystemTimeSynchronized(), isNotNull);
     });
   });
