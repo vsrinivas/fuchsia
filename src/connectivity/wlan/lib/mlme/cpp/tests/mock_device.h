@@ -43,7 +43,7 @@ std::pair<zx::channel, zx::channel> make_channel() {
   return {std::move(local), std::move(remote)};
 }
 
-// Reads a fidl_msg_t from a channel.
+// Reads a fidl_incoming_msg_t from a channel.
 struct FidlMessage {
   static std::optional<FidlMessage> ReadFromChannel(zx::channel* endpoint) {
     FidlMessage msg = {};

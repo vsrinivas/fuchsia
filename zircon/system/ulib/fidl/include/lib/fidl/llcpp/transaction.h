@@ -67,7 +67,7 @@ class OutgoingMessage;
 // and then dispatch to the server e.g.
 //
 //     fuchsia::device::driver::Interface* server_impl = /* construct/obtain server */;
-//     fidl_msg_t msg = /* read FIDL message */;
+//     fidl_incoming_msg_t msg = /* read FIDL message */;
 //     DriverRpcTransaction txn(/* ...some args... */);
 //     fuchsia::device::driver::Dispatch(server_impl, &msg, &txn);
 //     /* Inspect |txn| */
