@@ -23,13 +23,24 @@
 namespace forensics {
 namespace exceptions {
 namespace handler {
+namespace {
 
-int main() {
+std::string ExtractHandlerIndex(const std::string& process_name) {
+  // The process name should be of the form "exception_handler_001".
+  auto first_num = process_name.find_last_of("_");
+  FX_CHECK(first_num != std::string::npos);
+  FX_CHECK((++first_num) != std::string::npos);
+  return process_name.substr(first_num);
+}
+
+}  // namespace
+
+int main(const std::string& process_name) {
   using forensics::exceptions::kComponentLookupTimeout;
   using Binding = fidl::Binding<forensics::exceptions::handler::CrashReporter,
                                 std::unique_ptr<fuchsia::exception::internal::CrashReporter>>;
 
-  syslog::SetTags({"forensics", "exception"});
+  syslog::SetTags({"forensics", "exception", ExtractHandlerIndex(process_name)});
 
   // We receive a channel that we interpret as a fuchsia.exception.internal.CrashReporter
   // connection.
