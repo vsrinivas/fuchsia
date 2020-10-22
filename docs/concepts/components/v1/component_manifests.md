@@ -54,7 +54,13 @@ the following schema:
         "args": {
             "type": "array",
             "items": {
-              "type": "string"
+                "type": "string"
+            },
+        },
+        "env_vars": {
+            "type": "array",
+            "items": {
+                "type": "string"
             },
         },
     }
@@ -63,7 +69,10 @@ the following schema:
 
 The `binary` property describes where in the package namespace to find the
 binary to run the component, and the optional `args` property contains the
-string arguments to be provided to the process.
+string arguments to be provided to the process. The optional `env_vars`
+property specifies environment variables to provide to the binary where
+each element in the array uses the format `"VAR=VALUE"`, for example 
+`"RUST_BACKTRACE=1"`.
 
 If [`runner`](#runner) is present, `program` is a freeform string-string JSON
 object interpreted as args to pass to the runner.
