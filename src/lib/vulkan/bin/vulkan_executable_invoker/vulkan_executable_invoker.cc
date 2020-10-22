@@ -11,6 +11,10 @@
 #include <string>
 #include <vector>
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
 #ifndef EXECUTABLE
 #error FATAL: EXECUTABLE not defined!
 #endif
@@ -21,6 +25,12 @@
 
 #ifndef VK_LIB_PATH
 #error Fatal: VK_LIB_PATH not defined!
+#endif
+
+#ifdef __APPLE__
+#define LD_LIBRARY_PATH_ENV_NAME "DYLD_LIBRARY_PATH"
+#else
+#define LD_LIBRARY_PATH_ENV_NAME "LD_LIBRARY_PATH"
 #endif
 
 namespace {
@@ -67,7 +77,7 @@ int main(int argc, char** argv, char** envp) {
   // to it so that predefined library path will have priority in library lookup.
   // Otherwise, we just set it to the prebuilt library and avoid adding a ":"
   // prefix to avoid looking up libraries in the current working directory.
-  const char* ld_library_path_cstr = getenv("LD_LIBRARY_PATH");
+  const char* ld_library_path_cstr = getenv(LD_LIBRARY_PATH_ENV_NAME);
   std::string ld_library_path = ld_library_path_cstr
                                     ? std::string(ld_library_path_cstr) + ":" + vk_lib_path.string()
                                     : vk_lib_path.string();
@@ -75,7 +85,7 @@ int main(int argc, char** argv, char** envp) {
   // Set up envp.
   std::vector<char*> environment_pointers;
   std::vector<std::string> environments = {
-      std::string("LD_LIBRARY_PATH=") + ld_library_path,
+      std::string(LD_LIBRARY_PATH_ENV_NAME "=") + ld_library_path,
       std::string("VK_LAYER_PATH=") + vk_layer_path.string(),
 #ifdef VK_ICD_PATH
       std::string("VK_ICD_FILENAMES=") + vk_icd_path.string(),
@@ -87,7 +97,7 @@ int main(int argc, char** argv, char** envp) {
 
   // And environment variables from host environment.
   for (char** env = envp; *env; env++) {
-    bool filter_out = EnvironmentHasVarname(*env, "LD_LIBRARY_PATH") ||
+    bool filter_out = EnvironmentHasVarname(*env, LD_LIBRARY_PATH_ENV_NAME) ||
                       EnvironmentHasVarname(*env, "VK_LAYER_PATH");
 #ifdef VK_ICD_PATH
     filter_out = filter_out || EnvironmentHasVarname(*env, "VK_ICD_FILENAMES");
@@ -104,6 +114,7 @@ int main(int argc, char** argv, char** envp) {
   for (int i = 1; i < argc; i++) {
     arguments.push_back(argv[i]);
   }
+  arguments.push_back(nullptr);
 
   execve(arguments[0], arguments.data(), environment_pointers.data());
 

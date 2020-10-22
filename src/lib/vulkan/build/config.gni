@@ -5,7 +5,7 @@
 # Indicates if the prebuilt Vulkan runtime is available on current host.
 # Currently the prebuilt runtime is only available on Linux x64 machines.
 #
-has_prebuilt_vulkan_runtime = current_cpu == "x64" && is_linux
+has_prebuilt_vulkan_runtime = current_cpu == "x64" && (is_linux || is_mac)
 
 declare_args() {
   if (host_os == "linux" && host_cpu == "x64") {
@@ -23,9 +23,13 @@ declare_args() {
     vulkan_host_runtime_dir = "//prebuilt/third_party/vulkan_runtime/linux-x64"
   }
 
-  # TODO(liyl): Currently non-x64 platforms and macOS don't have Vulkan support,
-  # so we always use the null Vulkan implementation instead.
+  if (host_os == "mac" && host_cpu == "x64") {
+    vulkan_host_sdk_dir = "//prebuilt/third_party/vulkansdk/mac/macOS"
+    vulkan_host_runtime_dir = "//prebuilt/third_party/vulkan_runtime/mac-x64"
+  }
 
+  # TODO(liyl): Currently non-x64 platforms don't have Vulkan support,
+  # so we always use the null Vulkan implementation instead.
   #
   # Global arguments for whether we use a "null" Vulkan implementation on
   # host vulkan_executables and vulkan_tests, so that any attempt to create a
@@ -42,7 +46,7 @@ declare_args() {
   # This argument will affect all vulkan_{executable/test} build targets and
   # it only works when use_null_vulkan_on_host is set to false.
   #
-  use_swiftshader_vulkan_icd_on_host = !is_mac
+  use_swiftshader_vulkan_icd_on_host = true
 }
 
 #

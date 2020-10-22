@@ -30,6 +30,8 @@ template("_vulkan_executable_invoker") {
     ]
     if (use_swiftshader_vulkan_icd_on_host) {
       defines += [ "VK_ICD_PATH=\"${vulkan_host_runtime_out_root}/${vulkan_host_runtime_sub_dirs.lib}/vk_swiftshader_icd.json\"" ]
+    } else if (is_mac) {
+      defines += [ "VK_ICD_PATH=\"${vulkan_host_runtime_out_root}/${vulkan_host_runtime_sub_dirs.lib}/MoltenVK_icd.json\"" ]
     }
     sources = [ "//src/lib/vulkan/bin/vulkan_executable_invoker/vulkan_executable_invoker.cc" ]
   }
@@ -78,7 +80,7 @@ template("_vulkan_executable_intermediate") {
 #   - For executables / tests on Fuchsia, it adds necessary build dependencies,
 #     including include directories, Vulkan loaders and Vulkan layers linkage.
 #
-#   - For executables / tests running on Linux hosts,
+#   - For executables / tests running on Linux/macOS hosts,
 #
 #     * It creates an executable named "{output_name}_host_executable"
 #       (output_name is set to target_name, unless specifically defined) which
@@ -161,9 +163,9 @@ template("_target_with_vulkan") {
 # Build a C/C++ executable to run on the host/target system with Vulkan
 # compile-time and run-time dependency.
 #
-# For Fuchsia targets / macOS hosts, it is equivalent to executable().
+# For Fuchsia targets, it is equivalent to executable().
 #
-# For Linux hosts, it generates two intermediate executables:
+# For Linux/macOS hosts, it generates two intermediate executables:
 #
 # - {output_name}_host_executable,
 #   which built from the sources and dependencies specified in the
@@ -192,9 +194,9 @@ template("vulkan_executable") {
 # Build a C/C++ test executable to run on the host/target system with Vulkan
 # compile-time and run-time dependency.
 #
-# For Fuchsia targets / macOS hosts, it is equivalent to test().
+# For Fuchsia targets, it is equivalent to test().
 #
-# For Linux hosts, it generates two intermediate executables:
+# For Linux/macOS hosts, it generates two intermediate executables:
 #
 # - {output_name}_host_executable,
 #   which built from the sources and dependencies specified in the

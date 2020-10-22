@@ -5,6 +5,7 @@
 import("//build/sdk/sdk_atom.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/lib/vulkan/build/config.gni")
+import("//src/lib/vulkan/build/symlink.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 
@@ -147,29 +148,61 @@ if (is_host) {
   copy("copy_vulkan_libs") {
     assert(has_prebuilt_vulkan_runtime, "Prebuilt Vulkan runtime not found.")
     _lib_dir = vulkan_host_runtime_sub_dirs.lib
-    sources = [
-      "$vulkan_host_runtime_dir/$_lib_dir/libVkLayer_khronos_validation.so",
-      "$vulkan_host_runtime_dir/$_lib_dir/libvulkan.so.1",
-    ]
-    if (use_swiftshader_vulkan_icd_on_host) {
-      sources += [
-        "$vulkan_host_runtime_dir/$_lib_dir/libvk_swiftshader.so",
-        "$vulkan_host_runtime_dir/$_lib_dir/vk_swiftshader_icd.json",
+    if (is_linux) {
+      sources = [
+        "$vulkan_host_runtime_dir/$_lib_dir/libVkLayer_khronos_validation.so",
+        "$vulkan_host_runtime_dir/$_lib_dir/libvulkan.so.1",
       ]
+      if (use_swiftshader_vulkan_icd_on_host) {
+        sources += [
+          "$vulkan_host_runtime_dir/$_lib_dir/libvk_swiftshader.so",
+          "$vulkan_host_runtime_dir/$_lib_dir/vk_swiftshader_icd.json",
+        ]
+      }
+    }
+    if (is_mac) {
+      sources = [
+        "$vulkan_host_runtime_dir/$_lib_dir/MoltenVK_icd.json",
+        "$vulkan_host_runtime_dir/$_lib_dir/libMoltenVK.dylib",
+        "$vulkan_host_runtime_dir/$_lib_dir/libVkLayer_khronos_validation.dylib",
+        "$vulkan_host_runtime_dir/$_lib_dir/libvulkan.1.dylib",
+      ]
+      if (use_swiftshader_vulkan_icd_on_host) {
+        sources += [
+          "$vulkan_host_runtime_dir/$_lib_dir/libvk_swiftshader.dylib",
+          "$vulkan_host_runtime_dir/$_lib_dir/vk_swiftshader_icd.json",
+        ]
+      }
     }
     outputs = [ "${root_out_dir}/${vulkan_host_runtime_out_root}/${_lib_dir}/{{source_file_part}}" ]
   }
 
-  # libvulkan.so is a symbolic link to libvulkan.so.1. For symbolic links, ninja
-  # records the modification time of the linked file into its log, so we need to
-  # ensure that the original library file is copied before the symbolic link. We
-  # do this by adding "copy_vulkan_libs" as its dependency.
-  copy("copy_vulkan_lib_links") {
-    assert(has_prebuilt_vulkan_runtime, "Prebuilt Vulkan runtime not found.")
-    _lib_dir = vulkan_host_runtime_sub_dirs.lib
-    sources = [ "$vulkan_host_runtime_dir/$_lib_dir/libvulkan.so" ]
-    outputs = [ "${root_out_dir}/${vulkan_host_runtime_out_root}/${_lib_dir}/{{source_file_part}}" ]
-    deps = [ ":copy_vulkan_libs" ]
+  # On Linux, libvulkan.so is a symbolic link to libvulkan.so.1. For symbolic
+  # links, ninja records the modification time of the linked file into its log,
+  # so we need to ensure that the original library file is copied before the
+  # symbolic link. We do this by adding "copy_vulkan_libs" as its dependency.
+  if (is_linux) {
+    copy("vulkan_lib_links") {
+      assert(has_prebuilt_vulkan_runtime, "Prebuilt Vulkan runtime not found.")
+      _lib_dir = vulkan_host_runtime_sub_dirs.lib
+      sources = [ "$vulkan_host_runtime_dir/$_lib_dir/libvulkan.so" ]
+      outputs = [ "${root_out_dir}/${vulkan_host_runtime_out_root}/${_lib_dir}/{{source_file_part}}" ]
+      deps = [ ":copy_vulkan_libs" ]
+    }
+  }
+
+  # On macOS, copy target will makes copies of all symlinks instead of keeping
+  # the links. Having two separated libvulkan.1.dylib and libvulkan.dylib will
+  # cause Vulkan loader crash, thus we set the symlink after the actual dylib
+  # libvulkan.dylib is copied to build out directory.
+  if (is_mac) {
+    symlink("vulkan_lib_links") {
+      assert(has_prebuilt_vulkan_runtime, "Prebuilt Vulkan runtime not found.")
+      _lib_dir = vulkan_host_runtime_sub_dirs.lib
+      source = "${root_out_dir}/${vulkan_host_runtime_out_root}/${_lib_dir}/libvulkan.1.dylib"
+      output = "${root_out_dir}/${vulkan_host_runtime_out_root}/${_lib_dir}/libvulkan.dylib"
+      deps = [ ":copy_vulkan_libs" ]
+    }
   }
 
   copy("copy_vulkan_etc") {
@@ -177,12 +210,17 @@ if (is_host) {
     _layers_dir = vulkan_host_runtime_sub_dirs.layers
     sources = [
       "$vulkan_host_runtime_dir/$_layers_dir/VkLayer_khronos_validation.json",
-      "$vulkan_host_runtime_dir/$_layers_dir/VkLayer_standard_validation.json",
     ]
+    if (is_linux) {
+      # On Linux we also add VkLayer_standard_validation to support Vulkan 1.0
+      # drivers.
+      sources += [ "$vulkan_host_runtime_dir/$_layers_dir/VkLayer_standard_validation.json" ]
+    }
     outputs = [ "${root_out_dir}/${vulkan_host_runtime_out_root}/${_layers_dir}/{{source_file_part}}" ]
   }
 
   host_test_data("vulkan_test_data") {
+    assert(has_prebuilt_vulkan_runtime, "Prebuilt Vulkan runtime not found.")
     _lib_dir = vulkan_host_runtime_sub_dirs.lib
     _layers_dir = vulkan_host_runtime_sub_dirs.layers
     _data_dir = "${root_out_dir}/${vulkan_host_runtime_out_root}"
@@ -193,6 +231,7 @@ if (is_host) {
     deps = [
       ":copy_vulkan_etc",
       ":copy_vulkan_libs",
+      ":vulkan_lib_links",
     ]
   }
 
@@ -200,8 +239,8 @@ if (is_host) {
     assert(has_prebuilt_vulkan_runtime, "Prebuilt Vulkan runtime not found.")
     deps = [
       ":copy_vulkan_etc",
-      ":copy_vulkan_lib_links",
       ":copy_vulkan_libs",
+      ":vulkan_lib_links",
     ]
   }
 }
@@ -212,12 +251,18 @@ if (is_host) {
 # executables.
 #
 config("vulkan_host_config") {
-  if (current_cpu == "x64" && is_host && is_linux) {
+  if (current_cpu == "x64" && is_host) {
     include_dirs = [ "$vulkan_host_sdk_dir/include" ]
-    lib_dirs =
-        [ "$vulkan_host_runtime_dir/${vulkan_host_runtime_sub_dirs.lib}" ]
+    lib_dirs = [ "$vulkan_host_sdk_dir/lib" ]
 
     # Link Vulkan loader to host executables.
     libs = [ "vulkan" ]
+
+    if (is_mac) {
+      defines = [
+        "VK_USE_PLATFORM_MACOS_MVK",
+        "VK_USE_PLATFORM_METAL_EXT",
+      ]
+    }
   }
 }

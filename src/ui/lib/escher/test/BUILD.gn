@@ -6,7 +6,7 @@ import("//build/test.gni")
 import("//src/lib/vulkan/build/vulkan_targets.gni")
 import("//src/ui/lib/escher/build_args.gni")
 
-if (is_host && !has_prebuilt_vulkan_runtime) {
+if (is_host && (!has_prebuilt_vulkan_runtime || is_mac)) {
   # Escher cannot run without prebuilt Vulkan runtime on host for now.
   # Since we may include Escher host tests in the default build,
   # we substitute in a dummy executable in the case of a mac build.
