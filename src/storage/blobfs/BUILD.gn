@@ -172,6 +172,7 @@ zx_library("blobfs") {
       "query.cc",
       "read-metrics.cc",
       "runner.cc",
+      "transaction.cc",
       "verification-metrics.cc",
     ]
     public_deps += [

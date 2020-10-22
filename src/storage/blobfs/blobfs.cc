@@ -336,9 +336,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // to indicate that the filesystem may not be in a "clean" state anymore. This helps to make
   // sure we are unmounted cleanly i.e the kBlobFlagClean flag is set back on clean unmount.
   if (options->writability == blobfs::Writability::Writable) {
-    storage::UnbufferedOperationsBuilder operations;
-    fs->UpdateFlags(&operations, kBlobFlagClean, false);
-    fs->journal()->schedule_task(fs->journal()->WriteMetadata(operations.TakeOperations()));
+    BlobTransaction transaction;
+    fs->UpdateFlags(transaction, kBlobFlagClean, false);
+    transaction.Commit(*fs->journal());
   }
 
   FS_TRACE_INFO(
@@ -380,8 +380,7 @@ zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
   return Blob::LoadAndVerifyBlob(this, node_index);
 }
 
-void Blobfs::PersistBlocks(const ReservedExtent& reserved_extent,
-                           storage::UnbufferedOperationsBuilder* operations) {
+void Blobfs::PersistBlocks(const ReservedExtent& reserved_extent, BlobTransaction& transaction) {
   TRACE_DURATION("blobfs", "Blobfs::PersistBlocks");
 
   allocator_->MarkBlocksAllocated(reserved_extent);
@@ -389,13 +388,12 @@ void Blobfs::PersistBlocks(const ReservedExtent& reserved_extent,
   const Extent& extent = reserved_extent.extent();
   info_.alloc_block_count += extent.Length();
   // Write out to disk.
-  WriteBitmap(extent.Length(), extent.Start(), operations);
-  WriteInfo(operations);
+  WriteBitmap(extent.Length(), extent.Start(), transaction);
+  WriteInfo(transaction);
 }
 
 // Frees blocks from reserved and allocated maps, updates disk in the latter case.
-void Blobfs::FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuilder* operations,
-                        std::vector<storage::BufferedOperation>* trim_data) {
+void Blobfs::FreeExtent(const Extent& extent, BlobTransaction& transaction) {
   size_t start = extent.Start();
   size_t num_blocks = extent.Length();
   size_t end = start + num_blocks;
@@ -406,101 +404,93 @@ void Blobfs::FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuild
   if (allocator_->CheckBlocksAllocated(start, end)) {
     allocator_->FreeBlocks(extent);
     info_.alloc_block_count -= num_blocks;
-    WriteBitmap(num_blocks, start, operations);
-    WriteInfo(operations);
-    DeleteExtent(DataStartBlock(info_) + start, num_blocks, trim_data);
+    WriteBitmap(num_blocks, start, transaction);
+    WriteInfo(transaction);
+    DeleteExtent(DataStartBlock(info_) + start, num_blocks, transaction);
   }
 }
 
-void Blobfs::FreeNode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations) {
+void Blobfs::FreeNode(uint32_t node_index, BlobTransaction& transaction) {
   allocator_->FreeNode(node_index);
   info_.alloc_inode_count--;
-  WriteNode(node_index, operations);
+  WriteNode(node_index, transaction);
 }
 
-void Blobfs::FreeInode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations,
-                       std::vector<storage::BufferedOperation>* trim_data) {
+void Blobfs::FreeInode(uint32_t node_index, BlobTransaction& transaction) {
   TRACE_DURATION("blobfs", "Blobfs::FreeInode", "node_index", node_index);
   InodePtr mapped_inode = GetNode(node_index);
-  ZX_DEBUG_ASSERT(operations != nullptr);
 
   if (mapped_inode->header.IsAllocated()) {
     // Always write back the first node.
-    FreeNode(node_index, operations);
+    FreeNode(node_index, transaction);
 
     AllocatedExtentIterator extent_iter(allocator_.get(), node_index);
     while (!extent_iter.Done()) {
       // If we're observing a new node, free it.
       if (extent_iter.NodeIndex() != node_index) {
         node_index = extent_iter.NodeIndex();
-        FreeNode(node_index, operations);
+        FreeNode(node_index, transaction);
       }
 
       const Extent* extent;
       ZX_ASSERT(extent_iter.Next(&extent) == ZX_OK);
 
       // Free the extent.
-      FreeExtent(*extent, operations, trim_data);
+      FreeExtent(*extent, transaction);
     }
-    WriteInfo(operations);
+    WriteInfo(transaction);
   }
 }
 
-void Blobfs::PersistNode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations) {
+void Blobfs::PersistNode(uint32_t node_index, BlobTransaction& transaction) {
   TRACE_DURATION("blobfs", "Blobfs::PersistNode");
   info_.alloc_inode_count++;
-  WriteNode(node_index, operations);
-  WriteInfo(operations);
+  WriteNode(node_index, transaction);
+  WriteInfo(transaction);
 }
 
 size_t Blobfs::WritebackCapacity() const { return WriteBufferSize(); }
 
-void Blobfs::WriteBitmap(uint64_t nblocks, uint64_t start_block,
-                         storage::UnbufferedOperationsBuilder* operations) {
+void Blobfs::WriteBitmap(uint64_t nblocks, uint64_t start_block, BlobTransaction& transaction) {
   TRACE_DURATION("blobfs", "Blobfs::WriteBitmap", "nblocks", nblocks, "start_block", start_block);
   uint64_t bbm_start_block = start_block / kBlobfsBlockBits;
   uint64_t bbm_end_block =
       fbl::round_up(start_block + nblocks, kBlobfsBlockBits) / kBlobfsBlockBits;
 
   // Write back the block allocation bitmap
-  storage::UnbufferedOperation operation = {
-      .vmo = zx::unowned_vmo(allocator_->GetBlockMapVmo().get()),
-      {
-          .type = storage::OperationType::kWrite,
-          .vmo_offset = bbm_start_block,
-          .dev_offset = BlockMapStartBlock(info_) + bbm_start_block,
-          .length = bbm_end_block - bbm_start_block,
-      }};
-  operations->Add(operation);
+  transaction.AddOperation({.vmo = zx::unowned_vmo(allocator_->GetBlockMapVmo().get()),
+                            {
+                                .type = storage::OperationType::kWrite,
+                                .vmo_offset = bbm_start_block,
+                                .dev_offset = BlockMapStartBlock(info_) + bbm_start_block,
+                                .length = bbm_end_block - bbm_start_block,
+                            }});
 }
 
-void Blobfs::WriteNode(uint32_t map_index, storage::UnbufferedOperationsBuilder* operations) {
+void Blobfs::WriteNode(uint32_t map_index, BlobTransaction& transaction) {
   TRACE_DURATION("blobfs", "Blobfs::WriteNode", "map_index", map_index);
   uint64_t block = (map_index * sizeof(Inode)) / kBlobfsBlockSize;
-  storage::UnbufferedOperation operation = {
-      .vmo = zx::unowned_vmo(allocator_->GetNodeMapVmo().get()),
-      {
-          .type = storage::OperationType::kWrite,
-          .vmo_offset = block,
-          .dev_offset = NodeMapStartBlock(info_) + block,
-          .length = 1,
-      }};
-  operations->Add(operation);
+  transaction.AddOperation({.vmo = zx::unowned_vmo(allocator_->GetNodeMapVmo().get()),
+                            {
+                                .type = storage::OperationType::kWrite,
+                                .vmo_offset = block,
+                                .dev_offset = NodeMapStartBlock(info_) + block,
+                                .length = 1,
+                            }});
 }
 
-void Blobfs::UpdateFlags(storage::UnbufferedOperationsBuilder* operations, uint32_t flags,
-                         bool set) {
+void Blobfs::UpdateFlags(BlobTransaction& transaction, uint32_t flags, bool set) {
   if (set) {
     info_.flags |= flags;
   } else {
     info_.flags &= (~flags);
   }
-  WriteInfo(operations);
+  WriteInfo(transaction);
 }
 
-void Blobfs::WriteInfo(storage::UnbufferedOperationsBuilder* operations) {
+void Blobfs::WriteInfo(BlobTransaction& transaction) {
   memcpy(info_mapping_.start(), &info_, sizeof(info_));
-  storage::UnbufferedOperation operation = {
+  transaction.AddOperation({
       .vmo = zx::unowned_vmo(info_mapping_.vmo().get()),
       {
           .type = storage::OperationType::kWrite,
@@ -508,12 +498,11 @@ void Blobfs::WriteInfo(storage::UnbufferedOperationsBuilder* operations) {
           .dev_offset = 0,
           .length = 1,
       },
-  };
-  operations->Add(operation);
+  });
 }
 
 void Blobfs::DeleteExtent(uint64_t start_block, uint64_t num_blocks,
-                          std::vector<storage::BufferedOperation>* trim_data) const {
+                          BlobTransaction& transaction) const {
   if (block_info_.flags & fuchsia_hardware_block_FLAG_TRIM_SUPPORT) {
     TRACE_DURATION("blobfs", "Blobfs::DeleteExtent", "num_blocks", num_blocks, "start_block",
                    start_block);
@@ -521,7 +510,7 @@ void Blobfs::DeleteExtent(uint64_t start_block, uint64_t num_blocks,
     operation.op.type = storage::OperationType::kTrim;
     operation.op.dev_offset = start_block;
     operation.op.length = num_blocks;
-    trim_data->push_back(operation);
+    transaction.AddTrimOperation(operation);
   }
 }
 
@@ -630,10 +619,10 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
   InodePtr new_nodes = allocator->GetNode(inoblks_old * kBlobfsInodesPerBlock);
   memset(&*new_nodes, 0, kBlobfsBlockSize * zeroed_nodes_blocks);
 
-  storage::UnbufferedOperationsBuilder builder;
-  WriteInfo(&builder);
+  BlobTransaction transaction;
+  WriteInfo(transaction);
   if (zeroed_nodes_blocks > 0) {
-    storage::UnbufferedOperation operation = {
+    transaction.AddOperation({
         .vmo = zx::unowned_vmo(allocator->GetNodeMapVmo().get()),
         {
             .type = storage::OperationType::kWrite,
@@ -641,10 +630,9 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
             .dev_offset = NodeMapStartBlock(info_) + inoblks_old,
             .length = zeroed_nodes_blocks,
         },
-    };
-    builder.Add(operation);
+    });
   }
-  journal_->schedule_task(journal_->WriteMetadata(builder.TakeOperations()));
+  transaction.Commit(*journal_);
   return ZX_OK;
 }
 
@@ -690,8 +678,8 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   info_.dat_slices += static_cast<uint32_t>(length);
   info_.data_block_count = blocks;
 
-  storage::UnbufferedOperationsBuilder builder;
-  WriteInfo(&builder);
+  BlobTransaction transaction;
+  WriteInfo(transaction);
   uint64_t zeroed_bitmap_blocks = abmblks - abmblks_old;
   // Since we are extending the bitmap, we need to fill the expanded
   // portion of the allocation block bitmap with zeroes.
@@ -705,9 +693,9 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
             .length = zeroed_bitmap_blocks,
         },
     };
-    builder.Add(operation);
+    transaction.AddOperation(operation);
   }
-  journal_->schedule_task(journal_->WriteMetadata(builder.TakeOperations()));
+  transaction.Commit(*journal_);
   return ZX_OK;
 }
 
@@ -805,9 +793,9 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
     if (info_mapping_.start() == nullptr) {
       FS_TRACE_ERROR("blobfs: Cannot write journal clean bit\n");
     } else {
-      storage::UnbufferedOperationsBuilder operations;
-      UpdateFlags(&operations, kBlobFlagClean, true);
-      journal_->schedule_task(journal_->WriteMetadata(operations.TakeOperations()));
+      BlobTransaction transaction;
+      UpdateFlags(transaction, kBlobFlagClean, true);
+      transaction.Commit(*journal_);
     }
   }
   // Waits for all pending writeback operations to complete or fail.

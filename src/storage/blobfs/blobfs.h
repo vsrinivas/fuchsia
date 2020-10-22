@@ -56,13 +56,13 @@
 #include "iterator/extent-iterator.h"
 #include "metrics.h"
 #include "pager/user-pager.h"
+#include "src/storage/blobfs/transaction.h"
 #include "transaction-manager.h"
 
 namespace blobfs {
 
 using block_client::BlockDevice;
 using llcpp::fuchsia::io::FilesystemInfo;
-using storage::UnbufferedOperationsBuilder;
 
 constexpr char kOutgoingDataRoot[] = "root";
 
@@ -180,15 +180,13 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Frees an inode, from both the reserved map and the inode table. If the
   // inode was allocated in the inode table, write the deleted inode out to
   // disk.
-  void FreeInode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations,
-                 std::vector<storage::BufferedOperation>* trim_data);
+  void FreeInode(uint32_t node_index, BlobTransaction& transaction);
 
   // Writes node data to the inode table and updates disk.
-  void PersistNode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations);
+  void PersistNode(uint32_t node_index, BlobTransaction& transaction);
 
   // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
-  void PersistBlocks(const ReservedExtent& reserved_extent,
-                     storage::UnbufferedOperationsBuilder* operations);
+  void PersistBlocks(const ReservedExtent& reserved_extent, BlobTransaction& transaction);
 
   bool PagingEnabled() const { return pager_ != nullptr; }
 
@@ -244,29 +242,26 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   [[nodiscard]] zx_status_t InitializeVnodes();
 
   // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
-  void FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuilder* operations,
-                  std::vector<storage::BufferedOperation>* trim_data);
+  void FreeExtent(const Extent& extent, BlobTransaction& transaction);
 
   // Free a single node. Doesn't attempt to parse the type / traverse nodes;
   // this function just deletes a single node.
-  void FreeNode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations);
+  void FreeNode(uint32_t node_index, BlobTransaction& transaction);
 
   // Given a contiguous number of blocks after a starting block,
   // write out the bitmap to disk for the corresponding blocks.
   // Should only be called by PersistBlocks and FreeExtent.
-  void WriteBitmap(uint64_t nblocks, uint64_t start_block,
-                   storage::UnbufferedOperationsBuilder* operations);
+  void WriteBitmap(uint64_t nblocks, uint64_t start_block, BlobTransaction& transaction);
 
   // Given a node within the node map at an index, write it to disk.
   // Should only be called by AllocateNode and FreeNode.
-  void WriteNode(uint32_t map_index, storage::UnbufferedOperationsBuilder* operations);
+  void WriteNode(uint32_t map_index, BlobTransaction& transaction);
 
   // Enqueues an update for allocated inode/block counts.
-  void WriteInfo(storage::UnbufferedOperationsBuilder* operations);
+  void WriteInfo(BlobTransaction& transaction);
 
-  // Adds a trim operation to |trim_data|.
-  void DeleteExtent(uint64_t start_block, uint64_t num_blocks,
-                    std::vector<storage::BufferedOperation>* trim_data) const;
+  // Adds a trim operation to |transaction|.
+  void DeleteExtent(uint64_t start_block, uint64_t num_blocks, BlobTransaction& transaction) const;
 
   // Creates an unique identifier for this instance. This is to be called only during
   // "construction".
@@ -277,7 +272,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   [[nodiscard]] zx_status_t LoadAndVerifyBlob(uint32_t node_index);
 
   // Updates the flags field in superblock.
-  void UpdateFlags(storage::UnbufferedOperationsBuilder* operations, uint32_t flags, bool set);
+  void UpdateFlags(BlobTransaction& transaction, uint32_t flags, bool set);
 
   // Runs fsck at the end of a transaction, just after metadata has been written. Used for testing
   // to be sure that all transactions leave the file system in a good state.

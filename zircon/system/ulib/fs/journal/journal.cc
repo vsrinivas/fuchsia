@@ -185,6 +185,9 @@ Journal::Promise Journal::WriteMetadata(std::vector<storage::UnbufferedOperation
 }
 
 Journal::Promise Journal::TrimData(std::vector<storage::BufferedOperation> operations) {
+  if (operations.empty()) {
+    return fit::make_result_promise<void, zx_status_t>(fit::ok());
+  }
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalTrimData);
   zx_status_t status =
       CheckOperationsAndGetTotalBlockCount<storage::OperationType::kTrim>(operations)

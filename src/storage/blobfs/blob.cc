@@ -128,8 +128,12 @@ zx_status_t Blob::WriteNullBlob() {
     return status;
   }
 
-  blobfs_->journal()->schedule_task(
-      WriteMetadata().and_then([blob = fbl::RefPtr(this)]() { blob->CompleteSync(); }));
+  BlobTransaction transaction;
+  if (zx_status_t status = WriteMetadata(transaction); status != ZX_OK) {
+    return status;
+  }
+  transaction.Commit(*blobfs_->journal(), {},
+                     [blob = fbl::RefPtr(this)]() { blob->CompleteSync(); });
   return ZX_OK;
 }
 
@@ -226,7 +230,7 @@ bool Blob::IsPagerBacked() const {
 
 Digest Blob::MerkleRoot() const { return GetKeyAsDigest(); }
 
-fit::promise<void, zx_status_t> Blob::WriteMetadata() {
+zx_status_t Blob::WriteMetadata(BlobTransaction& transaction) {
   TRACE_DURATION("blobfs", "Blobfs::WriteMetadata");
   assert(state() == BlobState::kDataWrite);
 
@@ -239,7 +243,7 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
     zx_status_t status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
     if (status != ZX_OK) {
       set_state(BlobState::kError);
-      return fit::make_error_promise(status);
+      return status;
     }
   }
 
@@ -249,15 +253,14 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
     syncing_state_ = SyncingState::kSyncing;
   }
 
-  storage::UnbufferedOperationsBuilder operations;
   if (inode_.block_count) {
     // We utilize the NodePopulator class to take our reserved blocks and nodes and fill the
     // persistent map with an allocated inode / container.
 
     // If |on_node| is invoked on a node, it means that node was necessary to represent this
     // blob. Persist the node back to durable storge.
-    auto on_node = [this, &operations](const ReservedNode& node) {
-      blobfs_->PersistNode(node.index(), &operations);
+    auto on_node = [this, &transaction](const ReservedNode& node) {
+      blobfs_->PersistNode(node.index(), transaction);
     };
 
     // If |on_extent| is invoked on an extent, it was necessary to represent this blob. Persist
@@ -267,7 +270,7 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
     // more extents than this blob ended up using. Decrement |remaining_blocks| to track if we
     // should exit early.
     size_t remaining_blocks = inode_.block_count;
-    auto on_extent = [this, &operations, &remaining_blocks](ReservedExtent& extent) {
+    auto on_extent = [this, &transaction, &remaining_blocks](ReservedExtent& extent) {
       ZX_DEBUG_ASSERT(remaining_blocks > 0);
       if (remaining_blocks >= extent.extent().Length()) {
         // Consume the entire extent.
@@ -277,7 +280,7 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
         extent.SplitAt(static_cast<BlockCountType>(remaining_blocks));
         remaining_blocks = 0;
       }
-      blobfs_->PersistBlocks(extent, &operations);
+      blobfs_->PersistBlocks(extent, transaction);
       if (remaining_blocks == 0) {
         return NodePopulator::IterationCommand::Stop;
       }
@@ -305,14 +308,10 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
     *(blobfs_->GetNode(map_index_)) = inode_;
     const ReservedNode& node = write_info_->node_indices[0];
     blobfs_->GetAllocator()->MarkInodeAllocated(node);
-    blobfs_->PersistNode(node.index(), &operations);
+    blobfs_->PersistNode(node.index(), transaction);
   }
-
   write_info_.reset();
-
-  return blobfs_->journal()
-      ->WriteMetadata(operations.TakeOperations())
-      .and_then([blob = fbl::RefPtr(this)]() { blob->CompleteSync(); });
+  return ZX_OK;
 }
 
 [[nodiscard]] static zx_status_t ZeroTail(zx_handle_t vmo, uint64_t end) {
@@ -534,8 +533,12 @@ zx_status_t Blob::Commit() {
 
   // Wrap all pending writes with a strong reference to this Blob, so that it stays
   // alive while there are writes in progress acting on it.
-  auto task = fs::wrap_reference(write_all_data.and_then(WriteMetadata()), fbl::RefPtr(this));
-  blobfs_->journal()->schedule_task(std::move(task));
+  BlobTransaction transaction;
+  if (zx_status_t status = WriteMetadata(transaction); status != ZX_OK) {
+    return status;
+  }
+  transaction.Commit(*blobfs_->journal(), std::move(write_all_data),
+                     [self = fbl::RefPtr(this)]() {});
   blobfs_->Metrics()->UpdateClientWrite(data_bytes_written, merkle_size, ticker.End(),
                                         generation_time);
   return ZX_OK;
@@ -1011,14 +1014,9 @@ zx_status_t Blob::Purge() {
   if (state() == BlobState::kReadable) {
     // A readable blob should only be purged if it has been unlinked.
     ZX_ASSERT(DeletionQueued());
-    storage::UnbufferedOperationsBuilder operations;
-    std::vector<storage::BufferedOperation> trim_data;
-    blobfs_->FreeInode(GetMapIndex(), &operations, &trim_data);
-
-    auto task = fs::wrap_reference(blobfs_->journal()->WriteMetadata(operations.TakeOperations()),
-                                   fbl::RefPtr(this))
-                    .and_then(blobfs_->journal()->TrimData(std::move(trim_data)));
-    blobfs_->journal()->schedule_task(std::move(task));
+    BlobTransaction transaction;
+    blobfs_->FreeInode(GetMapIndex(), transaction);
+    transaction.Commit(*blobfs_->journal());
   }
   ZX_ASSERT(Cache().Evict(fbl::RefPtr(this)) == ZX_OK);
   set_state(BlobState::kPurged);

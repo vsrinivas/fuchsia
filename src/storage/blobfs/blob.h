@@ -42,6 +42,7 @@
 #include "format-assertions.h"
 #include "metrics.h"
 #include "pager/page-watcher.h"
+#include "src/storage/blobfs/transaction.h"
 
 namespace blobfs {
 
@@ -239,7 +240,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // Called by the Vnode once the last write has completed, updating the
   // on-disk metadata.
-  fit::promise<void, zx_status_t> WriteMetadata();
+  zx_status_t WriteMetadata(BlobTransaction& transaction);
 
   // Returns whether the data or merkle tree bytes are mapped and resident in memory.
   bool IsDataLoaded() const;
