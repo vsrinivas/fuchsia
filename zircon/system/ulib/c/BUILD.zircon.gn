@@ -108,6 +108,21 @@ if (zx != "/" && zircon_toolchain == false) {
     # Don't link against the shared libc++.
     configs += [ "$zx_build_config:static-libc++" ]
 
+    if (zx == "/") {
+      libc_stripped = "$target_out_dir/libc.so"
+    } else {
+      libc_stripped = "$root_build_dir/libc.so"
+    }
+    libc_unstripped = libc_stripped + ".debug"
+
+    rebased_libc_stripped = rebase_path(libc_stripped, root_build_dir)
+    rebased_libc_unstripped = rebase_path(libc_unstripped, root_build_dir)
+
+    not_needed([
+                 "rebased_libc_stripped",
+                 "rebased_libc_unstripped",
+               ])
+
     metadata = {
       # TODO(BLD-353): temporary kludges; see //zircon/public/sysroot
       legacy_sysroot = [
@@ -129,10 +144,10 @@ if (zx != "/" && zircon_toolchain == false) {
           toolchain.tags) {
         legacy_sysroot += [
           {
-            libc = rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
+            libc = rebased_libc_unstripped
           },
           {
-            libc_dist = rebase_path("$target_out_dir/libc.so", root_build_dir)
+            libc_dist = rebased_libc_stripped
           },
           {
             include_dirs = [
@@ -146,6 +161,7 @@ if (zx != "/" && zircon_toolchain == false) {
               include_dir = "//zircon/system/public"
               headers = [
                 "zircon/assert.h",
+                "zircon/boot/bootfs.h",
                 "zircon/boot/driver-config.h",
                 "zircon/boot/e820.h",
                 "zircon/boot/image.h",
@@ -156,6 +172,8 @@ if (zx != "/" && zircon_toolchain == false) {
                 "zircon/errors.h",
                 "zircon/features.h",
                 "zircon/fidl.h",
+                "zircon/hw/debug/arm64.h",
+                "zircon/hw/debug/x86.h",
                 "zircon/hw/gpt.h",
                 "zircon/hw/i2c.h",
                 "zircon/hw/pci.h",
@@ -203,6 +221,25 @@ if (zx != "/" && zircon_toolchain == false) {
               if (!exclude_testonly_syscalls) {
                 headers += [ "zircon/testonly-syscalls.h" ]
               }
+            }
+          },
+          {
+            sdk = {
+              include_dir = "//zircon/system/public"
+              no_export = true
+              headers = [
+                # "zircon/device/audio.h",   See above.
+                "zircon/device/block.h",
+                "zircon/device/bt-hci.h",
+                "zircon/device/ethernet.h",
+                "zircon/device/intel-hda.h",
+                "zircon/device/nand.h",
+                "zircon/device/network.h",
+                "zircon/device/sysmem.h",
+                "zircon/device/usb-peripheral.h",
+                "zircon/device/usb-peripheral-test.h",
+                "zircon/device/vfs.h",
+              ]
             }
           },
           {
@@ -390,6 +427,7 @@ if (zx != "/" && zircon_toolchain == false) {
                 "wctype.h",
                 "wordexp.h",
                 "zircon/dlfcn.h",
+                "zircon/lookup.h",
                 "zircon/sanitizer.h",
                 "zircon/threads.h",
                 "zircon/utc.h",
@@ -403,8 +441,7 @@ if (zx != "/" && zircon_toolchain == false) {
               # linker stubs.  For now, just use the unstripped library to link
               # against.  This matches what library() gives the SDK via
               # zircon_library().
-              source =
-                  rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
+              source = rebased_libc_unstripped
               link = "lib/${toolchain.libprefix}libc.so"
             }
           },

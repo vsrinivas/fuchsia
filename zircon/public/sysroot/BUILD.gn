@@ -27,6 +27,50 @@ version_content = {
 
 # Turn the information from Zircon into a set of copy() rules for the
 # sysroot while filling in $version_content.
+#
+# For historical reasons, only the scopes with an `sdk` key are considered
+# here. Each value associated with an `sdk` key is a scope itself, with the
+# following schema:
+#
+# If `include_dir` is present then:
+#
+#   include_dir (optional)
+#     [GN path] A GN path to a subdirectory containing zero or more headers
+#     to copy to the sysroot's include directory.
+#
+#   headers (optional)
+#     [list of paths] Required if `include_dir` is specified, ignored otherwise.
+#     A list of header sub-paths, relative to `include_dir`, that must be
+#     copied to the sysroot directory.
+#
+#   no_export (optional)
+#     [boolean] Ignored if `include_dir` is not used. A flag that is set to
+#     indicate that the set of headers described in the current entry should
+#     not be exported to the SDK sysroot (though they will still be copied
+#     to the platform's sysroot). This is useful for <zircon/device/*.h>
+#     headers, as well as `testonly-cdecls.inc`.
+#
+# Otherwise, if `include_dir` is _not_ present:
+#
+#   source (optional)
+#     [path] A path, relative to the current root build directory, where
+#     to find the source file to be copied into the sysroot, where destination
+#     is specified by one of the ` link`, `debug` or `dist` keys described
+#     below. Ignored if `include_dir` is present.
+#
+#   debug (optional)
+#   dist (optional)
+#   link (optional)
+#     [path] A path relative to the sysroot directory, that specifies where
+#     the `source` file needs to be copied into the SDK. Only one of these
+#     keys can be used per entry. For the platform SDK, onle `dist` and `link`
+#     are used. The SDK sysroot will use all three though.
+#
+#   deps (optional)
+#     [list of labels] A list of labels to dependencies for this entry,
+#     this should correspond to the GN target that built the `source`
+#     file, once the sysroot generation is moved to the Fuchsia build.
+#
 sysroot_deps = []
 i = 0
 foreach(entry, zircon_legacy_sysroot) {
@@ -48,13 +92,16 @@ foreach(entry, zircon_legacy_sysroot) {
             outputs = [ "$sysroot_dir/include/$file" ]
           }
         }
-        version_content.headers += [ "$file_base/include/$file" ]
-        sdk_files += [
-          {
-            source = "$dir/$file"
-            dest = "$file_base/include/$file"
-          },
-        ]
+        no_export = defined(sdk.no_export) && sdk.no_export
+        if (!no_export) {
+          version_content.headers += [ "$file_base/include/$file" ]
+          sdk_files += [
+            {
+              source = "$dir/$file"
+              dest = "$file_base/include/$file"
+            },
+          ]
+        }
       }
     } else if (defined(sdk.debug)) {
       version_content.debug_libs +=
@@ -106,26 +153,31 @@ group("sysroot") {
   }
 }
 
-write_file("$target_gen_dir/sysroot.meta.in.json",
-           {
-             type = "sysroot"
-             name = "sysroot"
-             versions = {
-               if (target_cpu == "arm64") {
-                 arm64 = version_content
-               } else if (target_cpu == "x64") {
-                 x64 = version_content
-               } else {
-                 assert(false, "Unknown CPU type: $target_cpu")
-               }
-             }
-           },
-           "json")
+sysroot_meta_json_file = "$target_gen_dir/sysroot.meta.in.json"
+
+generated_file("sysroot-meta-json") {
+  outputs = [ sysroot_meta_json_file ]
+  visibility = [ ":*" ]
+  contents = {
+    type = "sysroot"
+    name = "sysroot"
+    versions = {
+      if (target_cpu == "arm64") {
+        arm64 = version_content
+      } else if (target_cpu == "x64") {
+        x64 = version_content
+      } else {
+        assert(false, "Unknown CPU type: $target_cpu")
+      }
+    }
+  }
+  output_conversion = "json"
+}
 
 action("sysroot-meta") {
   visibility = [ ":*" ]
   script = "//build/zircon/sdk_build_id.py"
-  sources = [ "$target_gen_dir/sysroot.meta.in.json" ]
+  sources = [ sysroot_meta_json_file ]
   outputs = [
     "$target_out_dir/sysroot.meta.out.json",
     "$target_out_dir/sysroot.debug.manifest",
@@ -136,6 +188,7 @@ action("sysroot-meta") {
     "--manifest=" + rebase_path(outputs[1], root_build_dir),
     "--location=/versions/$target_cpu/debug_libs",
   ]
+  deps = [ ":sysroot-meta-json" ]
 }
 meta_outputs = get_target_outputs(":sysroot-meta")
 

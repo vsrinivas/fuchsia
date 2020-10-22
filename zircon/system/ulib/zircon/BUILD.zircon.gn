@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/vdso/vdso.gni")
 if (zx == "/") {
   import("$zx_build/public/gn/config/globals.gni")
   import("$zx_build/public/gn/config/standard.gni")
@@ -229,7 +230,7 @@ if (_can_redirect_to_zircon) {
     if (zx == "/") {
       vdso_unstripped = rebase_path("$target_out_dir/libzircon.so.debug")
     } else {
-      vdso_unstripped = rebase_path("root_out_dir/libzircon.so.debug")
+      vdso_unstripped = rebase_path("$root_out_dir/libzircon.so.debug")
     }
     rebased_vdso_unstripped = rebase_path(vdso_unstripped, root_build_dir)
     debug_file = rebase_path(vdso_unstripped, "", root_build_dir)
@@ -260,6 +261,16 @@ if (_can_redirect_to_zircon) {
                 "zircon/syscalls/internal/cdecls.inc",
                 # Note not included in SDK: "zircon/syscalls/definitions.rs",
               ]
+            }
+          },
+          {
+            sdk = {
+              include_dir = rebased_gen_include_dir
+              no_export = true
+              headers = []
+              if (!exclude_testonly_syscalls) {
+                headers += [ "zircon/syscalls/internal/testonly-cdecls.inc" ]
+              }
             }
           },
           {
