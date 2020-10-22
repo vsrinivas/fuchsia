@@ -1,0 +1,51 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.element;
+
+using fuchsia.mem;
+
+/// The value of an [`fuchsia.element/Annotation`].
+///
+/// The actual field used depends on the type of annotation.
+resource union Value {
+    1: string:MAX text;
+    2: fuchsia.mem.Buffer buffer;
+};
+
+/// An annotation defined dynamically by key/value pair.
+///
+/// The Session Framework does not constrain the contents of `key` and `value`
+/// in any way. Cooperating components that exchange annotations must define
+/// and validate annotation entries based on their own conventions.
+resource struct Annotation {
+    /// An identfier for this annotation.
+    string:MAX key;
+
+    /// The content of this annotation.
+    Value? value;
+};
+
+/// Error returned from methods that operate on annotations.
+enum AnnotationError {
+    /// The session rejected the provided annotations.
+    ///
+    /// Reasons for rejection may be due to annotations that violate defined
+    /// type constraints, such as:
+    ///
+    /// * The `Value` size exceeds the maximum length
+    /// * The total number of annotations on an element exceeds `MAX`
+    REJECTED = 1;
+
+    /// The annotations on an element could not be returned.
+    ///
+    /// Reasons for this failure may be due to inability to read buffer bytes.
+    NOT_FOUND = 2;
+};
+
+/// The annotations applied to an element.
+resource table Annotations {
+    /// A list of dynamically-defined annotations.
+    1: vector<Annotation>:MAX custom_annotations;
+};
