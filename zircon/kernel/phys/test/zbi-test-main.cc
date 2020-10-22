@@ -11,11 +11,16 @@
 #include "test-main.h"
 
 void ZbiMain(void* zbi, arch::EarlyTicks ticks) {
+  // Early boot may have filled the screen with logs. Add a newline to
+  // terminate any previous line, and another newline to leave a blank.
+  printf("\n\n");
+
+  // Run the test.
   int status = TestMain(zbi, ticks);
   if (status == 0) {
-    printf("*** Test succeeded ***\n%s\n", ZBI_TEST_SUCCESS_STRING);
+    printf("\n*** Test succeeded ***\n%s\n\n", ZBI_TEST_SUCCESS_STRING);
   } else {
-    printf("*** Test FAILED: status %d ***\n", status);
+    printf("\n*** Test FAILED: status %d ***\n\n", status);
   }
 
   // No way to shut down.
