@@ -436,7 +436,7 @@ zx_protocol_device_t device_mac_ops = {
 
 /////////////////////////////////////       PHY       //////////////////////////////////////////////
 
-static zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
+zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
   struct iwl_trans* iwl_trans = ctx;
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
   if (!mvm || !info) {
@@ -476,8 +476,8 @@ static zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
 }
 
 // This function is working with a PHY context ('ctx') to create a MAC interface.
-static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
-                                    uint16_t* out_iface_id) {
+zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
+                             uint16_t* out_iface_id) {
   struct iwl_trans* iwl_trans = ctx;
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
   zx_status_t ret = ZX_OK;
@@ -572,7 +572,7 @@ unlock:
 
 // This function is working with a PHY context ('ctx') to delete a MAC interface ('id').
 // The 'id' is the value assigned by phy_create_iface().
-static zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
+zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
   struct iwl_trans* iwl_trans = ctx;
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
   zx_status_t ret = ZX_OK;
@@ -618,12 +618,12 @@ unlock:
   return ret;
 }
 
-static zx_status_t phy_set_country(void* ctx, const wlanphy_country_t* country) {
+zx_status_t phy_set_country(void* ctx, const wlanphy_country_t* country) {
   IWL_ERR(ctx, "%s() needs porting ...\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t phy_get_country(void* ctx, wlanphy_country_t* out_country) {
+zx_status_t phy_get_country(void* ctx, wlanphy_country_t* out_country) {
   if (out_country == NULL) {
     return ZX_ERR_INVALID_ARGS;
   }

@@ -23,4 +23,11 @@ size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
 void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t* bands,
                      size_t bands_count, wlan_info_band_info_t* band_infos);
 
+zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info);
+zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
+                             uint16_t* out_iface_id);
+zx_status_t phy_destroy_iface(void* ctx, uint16_t id);
+zx_status_t phy_set_country(void* ctx, const wlanphy_country_t* country);
+zx_status_t phy_get_country(void* ctx, wlanphy_country_t* out_country);
+
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_WLAN_DEVICE_H_

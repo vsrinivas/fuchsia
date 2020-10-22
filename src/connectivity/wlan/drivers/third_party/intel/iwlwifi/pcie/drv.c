@@ -959,12 +959,7 @@ static zx_status_t iwl_find_pci_device(uint16_t device_id, uint16_t subsystem_de
   return ZX_ERR_NOT_FOUND;
 }
 
-static void iwl_pci_unbind(void* ctx) {
-  struct iwl_trans* trans = (struct iwl_trans*)ctx;
-  device_unbind_reply(trans->zxdev);
-}
-
-static void iwl_pci_release(void* ctx) {
+void iwl_pci_release(void* ctx) {
   struct iwl_trans* trans = (struct iwl_trans*)ctx;
 
 #if 0  // NEEDS_PORTING
@@ -986,19 +981,13 @@ static void iwl_pci_release(void* ctx) {
   free(trans);
 }
 
-// TODO(fxbug.dev/36795): move to wlan-device.c
-static zx_protocol_device_t device_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .unbind = iwl_pci_unbind,
-    .release = iwl_pci_release,
-};
-
-zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
+zx_status_t iwl_pci_create(void* ctx, zx_device_t* parent, struct iwl_trans** out_trans,
+                           bool load_firmware) {
   struct iwl_trans* iwl_trans;
   zx_status_t status;
 
   pci_protocol_t pci;
-  status = device_get_protocol(dev, ZX_PROTOCOL_PCI, &pci);
+  status = device_get_protocol(parent, ZX_PROTOCOL_PCI, &pci);
   if (status != ZX_OK) {
     return status;
   }
@@ -1012,24 +1001,23 @@ zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
   uint16_t subsystem_device_id;
   status = pci_config_read16(&pci, PCI_CFG_SUBSYSTEM_ID, &subsystem_device_id);
   if (status != ZX_OK) {
-    IWL_ERR(iwl_trans, "Failed to read PCI subsystem device ID: %s\n",
-            zx_status_get_string(status));
+    IWL_ERR(ctx, "Failed to read PCI subsystem device ID: %s\n", zx_status_get_string(status));
     return status;
   }
 
-  IWL_INFO(iwl_trans, "Device ID: %04x Subsystem Device ID: %04x\n", pci_info.device_id,
+  IWL_INFO(ctx, "Device ID: %04x Subsystem Device ID: %04x\n", pci_info.device_id,
            subsystem_device_id);
 
   const struct iwl_pci_device* device;
   status = iwl_find_pci_device(pci_info.device_id, subsystem_device_id, &device);
   if (status != ZX_OK) {
-    IWL_ERR(iwl_trans, "Failed to find PCI config: %s\n", zx_status_get_string(status));
+    IWL_ERR(ctx, "Failed to find PCI config: %s\n", zx_status_get_string(status));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   iwl_trans = iwl_trans_pcie_alloc(&pci, device);
   if (!iwl_trans) {
-    IWL_ERR(iwl_trans, "Failed to allocate PCIE transport: %s\n", zx_status_get_string(status));
+    IWL_ERR(ctx, "Failed to allocate PCIE transport: %s\n", zx_status_get_string(status));
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -1038,7 +1026,7 @@ zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
     return ZX_ERR_BAD_STATE;
   }
 
-  iwl_trans->to_load_firmware = true;  // indicate to load firmware in the later code.
+  iwl_trans->to_load_firmware = load_firmware;  // indicate to load firmware in the later code.
 
   /*
    * special-case 7265D, it has the same PCI IDs.
@@ -1088,27 +1076,17 @@ zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
 #endif  // CPTCFG_IWLMVM || CPTCFG_IWLFMAC
 #endif  // NEEDS_PORTING
 
-  device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "iwlwifi-wlanphy",
-      .ctx = iwl_trans,
-      .ops = &device_ops,
-      .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
-      .proto_ops = &wlanphy_ops,
-      .flags = 0,
-  };
+  *out_trans = iwl_trans;
+  return status;
+}
 
-  status = device_add(dev, &args, &iwl_trans->zxdev);
-  if (status != ZX_OK) {
-    IWL_ERR(iwl_trans, "Failed to create device: %s\n", zx_status_get_string(status));
-    free(iwl_trans);
-    return status;
-  }
-
-  status = async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &iwl_trans->loop);
+zx_status_t iwl_pci_start(struct iwl_trans* iwl_trans, zx_device_t* zxdev) {
+  iwl_trans->zxdev = zxdev;
+  zx_status_t status =
+      async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &iwl_trans->loop);
   if (status != ZX_OK) {
     IWL_ERR(iwl_trans, "Failed to create async loop: %s\n", zx_status_get_string(status));
-    goto fail_remove_device;
+    return status;
   }
 
   status = async_loop_start_thread(iwl_trans->loop, "iwlwifi-worker", NULL);
@@ -1163,8 +1141,7 @@ fail_stop_device:
   iwl_drv_stop(iwl_trans->drv);
 fail_destroy_loop:
   async_loop_destroy(iwl_trans->loop);
-fail_remove_device:
-  device_async_remove(iwl_trans->zxdev);
+
   return status;
 }
 

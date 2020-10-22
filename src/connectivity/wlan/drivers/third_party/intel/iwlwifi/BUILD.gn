@@ -32,6 +32,8 @@ source_set("core") {
   sources = [
     "cfg/7000.c",
     "cpp-wrapper.cc",
+    "device.cc",
+    "device.h",
     "fuchsia_porting.c",
     "fuchsia_porting.h",
     "fw/init.c",
@@ -79,12 +81,12 @@ source_set("core") {
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/driver",
-    "//src/lib/ddk",
     "//zircon/public/lib/async",
     "//zircon/public/lib/zircon-internal",
   ]
 
   public_deps = [
+    "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/backtrace-request",
@@ -101,9 +103,10 @@ source_set("pcie") {
 
   sources = [
     "pcie/bind.cc",
-    "pcie/bind.h",
     "pcie/drv.c",
     "pcie/internal.h",
+    "pcie/pcie_device.cc",
+    "pcie/pcie_device.h",
     "pcie/rx.c",
     "pcie/trans-gen2.c",
     "pcie/trans.c",
@@ -114,7 +117,6 @@ source_set("pcie") {
     ":core",
     ":iwlwifi_bind",
     "//garnet/lib/wlan/protocol",
-    "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -123,7 +125,6 @@ source_set("pcie") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/pci/lib/device-protocol-pci",
-    "//src/lib/ddk",
     "//zircon/public/lib/sync",
   ]
 
