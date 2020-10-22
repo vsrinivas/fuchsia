@@ -229,7 +229,7 @@ From //boards/arm64.gni:18
 
 From //build/board.gni:14
 
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//boards/kernel_cmdline:serial-legacy", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/bin/acpidump", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/pci/bin:bootfs", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci:xhci-x86", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/bin/ihda", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//boards/kernel_cmdline:serial-legacy", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/bin/acpidump", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/pci/bin:bootfs", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/bin/ihda", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/security/policy/zxcrypt:null"]`
 
 From //boards/x64.gni:48
 
@@ -302,7 +302,7 @@ From //boards/arm64.gni:22
 
 From //build/board.gni:25
 
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//boards/kernel_cmdline:serial-legacy", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/bin/acpidump", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/pci/bin:bootfs", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci:xhci-x86", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/bin/ihda", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//boards/kernel_cmdline:serial-legacy", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/bin/acpidump", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/pci/bin:bootfs", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/bin/ihda", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/security/policy/zxcrypt:null"]`
 
 From //boards/x64.gni:50
 
@@ -355,7 +355,7 @@ From //boards/arm64.gni:20
 
 From //build/board.gni:22
 
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//boards/kernel_cmdline:serial-legacy", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/bin/acpidump", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/pci/bin:bootfs", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci:xhci-x86", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/bin/ihda", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//boards/kernel_cmdline:serial-legacy", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/bin/acpidump", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/pci/bin:bootfs", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/bin/ihda", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/security/policy/zxcrypt:null"]`
 
 From //boards/x64.gni:52
 
@@ -535,7 +535,7 @@ Path to Clang lib directory.
 
 **Current value (from the default):** `"../build/prebuilt/third_party/clang/linux-x64/lib"`
 
-From //build/images/manifest.gni:13
+From //build/images/manifest.gni:12
 
 ### clang_prefix
 The default clang toolchain provided by the prebuilt. This variable is
@@ -617,7 +617,7 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/66d325b5b59c93f15f6e9ef7cea99e75b076e9b1/config.gni#32)
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -771,7 +771,7 @@ Enable all strict deps.
 
 **Current value (from the default):** `false`
 
-From //build/dart/dart_library.gni:18
+From //build/dart/dart_library.gni:17
 
 ### disable_kernel_pci
 Disable kernel PCI driver support. A counterpart of the the build
@@ -787,14 +787,14 @@ TODO(fxbug.dev/36723, fxbug.dev/6623) Remove this flag once issues are resolved
 
 **Current value (from the default):** `false`
 
-From //build/dart/dart_library.gni:22
+From //build/dart/dart_library.gni:21
 
 ### enable_dart_analysis
 Enable all dart analysis
 
 **Current value (from the default):** `true`
 
-From //build/dart/dart_library.gni:15
+From //build/dart/dart_library.gni:14
 
 ### enable_frame_pointers
 Controls whether the compiler emits full stack frames for function calls.
@@ -905,7 +905,7 @@ Extra args to globally apply to the manifest generation script.
 
 **Current value (from the default):** `[]`
 
-From //build/images/manifest.gni:19
+From //build/images/manifest.gni:18
 
 ### extra_package_labels
 
@@ -1157,7 +1157,7 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:17
 
 **Current value (from the default):** `false`
 
-From //build/go/go_build.gni:21
+From //build/go/go_build.gni:20
 
 ### gocache_dir
   gocache_dir
@@ -1167,7 +1167,7 @@ From //build/go/go_build.gni:21
 
 **Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir/fidling/.gocache"`
 
-From //build/go/go_build.gni:17
+From //build/go/go_build.gni:16
 
 ### goldfish_control_use_composite_device
 
@@ -1364,38 +1364,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/66d325b5b59c93f15f6e9ef7cea99e75b076e9b1/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/66d325b5b59c93f15f6e9ef7cea99e75b076e9b1/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/66d325b5b59c93f15f6e9ef7cea99e75b076e9b1/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/66d325b5b59c93f15f6e9ef7cea99e75b076e9b1/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/66d325b5b59c93f15f6e9ef7cea99e75b076e9b1/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/66d325b5b59c93f15f6e9ef7cea99e75b076e9b1/config.gni#13)
 
 ### is_analysis
 If set, the build will produce compilation analysis dumps, used for code
@@ -1927,7 +1927,7 @@ From //src/connectivity/management/BUILD.gn:6
 
 **Current value (from the default):** `[]`
 
-From //src/bringup/bin/netsvc/BUILD.gn:12
+From //src/bringup/bin/netsvc/BUILD.gn:23
 
 ### omaha_app_id
 Default app id will always return no update.
@@ -1974,7 +1974,7 @@ From //build/images/args.gni:130
 
 **Current value (from the default):** `false`
 
-From //build/persist_logs.gni:14
+From //build/persist_logs.gni:13
 
 ### pkgfs_packages_allowlist
 
@@ -2156,7 +2156,7 @@ Path to rustc lib directory.
 
 **Current value (from the default):** `"../build/prebuilt/third_party/rust/linux-x64/lib"`
 
-From //build/images/manifest.gni:16
+From //build/images/manifest.gni:15
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
@@ -2461,7 +2461,7 @@ parameter to true regardless of whether it is specified on a target.
 
 **Current value (from the default):** `false`
 
-From //build/config.gni:13
+From //build/config.gni:12
 
 ### syzkaller_dir
 Used by syz-ci to build with own syz-executor source.
@@ -2667,7 +2667,7 @@ debug archives in tar.bzip2 format into the .build-id directory
 
 **Current value (from the default):** `false`
 
-From //build/packages/prebuilt_package.gni:14
+From //build/packages/prebuilt_package.gni:13
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
@@ -2829,7 +2829,7 @@ Whether libraries under //vendor should be linted.
 
 **Current value (from the default):** `false`
 
-From //build/fidl/fidl_library.gni:14
+From //build/fidl/fidl_library.gni:13
 
 ### verify_system_package_entries
 Whether to check and enforce that contributions to the system image package
@@ -2903,35 +2903,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/66d325b5b59c93f15f6e9ef7cea99e75b076e9b1/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/66d325b5b59c93f15f6e9ef7cea99e75b076e9b1/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/66d325b5b59c93f15f6e9ef7cea99e75b076e9b1/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/66d325b5b59c93f15f6e9ef7cea99e75b076e9b1/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/14e8ed25866f6c0e2333b5f531a0de905083a639/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/66d325b5b59c93f15f6e9ef7cea99e75b076e9b1/config.gni#23)
 
 ### wlancfg_config_type
 Selects the wlan configuration type to use. Choices:
@@ -2950,7 +2950,7 @@ where `LEVEL` can be an integer or "max".
 
 **Current value (from the default):** `"zstd"`
 
-From //build/zbi/zbi.gni:13
+From //build/zbi/zbi.gni:12
 
 ### zedboot_cmdline_args
 List of kernel command line arguments to bake into the Zedboot image.
