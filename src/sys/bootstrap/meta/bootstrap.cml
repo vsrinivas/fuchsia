@@ -222,10 +222,8 @@
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
-                "fuchsia.kernel.Counter",
                 "fuchsia.kernel.DebugBroker",
                 "fuchsia.kernel.MexecBroker",
-                "fuchsia.paver.Paver",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.kernel.Controller",
@@ -475,8 +473,8 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.kernel.Counter",
-                "/svc/fuchsia.paver.Paver",
+                "fuchsia.kernel.Counter",
+                "fuchsia.paver.Paver",
             ],
             from: "#miscsvc",
             to: [
