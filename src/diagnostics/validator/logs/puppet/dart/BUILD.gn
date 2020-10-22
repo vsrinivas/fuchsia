@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 import("//topaz/runtime/dart_runner/dart_app.gni")
 
 dart_app("log-validator-dart-puppet") {
@@ -29,24 +28,20 @@ dart_app("log-validator-dart-puppet") {
 
   meta = [
     {
-      path = rebase_path("meta/log-validator-dart-puppet.cmx")
+      path = rebase_path("meta/puppet.cmx")
       dest = "log-validator-dart-puppet.cmx"
     },
   ]
 }
 
-test_package("log-validator-test-dart") {
-  public_deps = [
-    ":log-validator-dart-puppet",
-    "//src/diagnostics/validator/logs:log-validator-bin",
-  ]
+fuchsia_component("log-validator-for-dart") {
+  manifest = "meta/validator.cmx"
+  deps = [ "../..:log-validator-bin" ]
+}
 
-  tests = [
-    {
-      name = "log_validator"
-      environments = basic_envs
-    },
-  ]
+fuchsia_test_package("log-validator-test-dart") {
+  deps = [ ":log-validator-dart-puppet" ]
+  test_components = [ ":log-validator-for-dart" ]
 }
 
 group("tests") {

@@ -2,11 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-executable("log_validator_cpp_puppet_bin") {
+executable("puppet") {
   output_name = "log_validator_cpp_puppet"
   testonly = true
   sources = [ "puppet.cc" ]
@@ -26,30 +24,20 @@ executable("log_validator_cpp_puppet_bin") {
   ]
 }
 
-test_package("log-validator-test-cpp") {
-  deps = [
-    ":log_validator_cpp_puppet_bin",
-    "//src/diagnostics/validator/logs:log-validator-bin",
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/log_validator_cpp_puppet.cmx")
-      dest = "log_validator_cpp_puppet.cmx"
-    },
-  ]
+fuchsia_component("log-validator-cpp-puppet") {
+  testonly = true
+  manifest = "meta/puppet.cmx"
+  deps = [ ":puppet" ]
+}
 
-  binaries = [
-    {
-      name = "log_validator_cpp_puppet"
-    },
-  ]
+fuchsia_component("log-validator-for-cpp") {
+  manifest = "meta/validator.cmx"
+  deps = [ "../..:log-validator-bin" ]
+}
 
-  tests = [
-    {
-      name = "log_validator"
-      environments = basic_envs
-    },
-  ]
+fuchsia_test_package("log-validator-test-cpp") {
+  deps = [ ":log-validator-cpp-puppet" ]
+  test_components = [ ":log-validator-for-cpp" ]
 }
 
 group("tests") {

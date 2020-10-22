@@ -2,9 +2,9 @@
     "program": {
         "args": [
             "--url",
-            "fuchsia-pkg://fuchsia.com/log-validator-test-rust#meta/log_validator_rust_puppet.cmx"
+            "fuchsia-pkg://fuchsia.com/log-validator-dart-puppet#meta/log-validator-dart-puppet.cmx"
         ],
-        "binary": "test/log_validator"
+        "binary": "bin/log_validator"
     },
     "sandbox": {
         "services": [
