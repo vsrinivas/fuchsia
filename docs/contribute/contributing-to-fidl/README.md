@@ -221,7 +221,7 @@ To run a specific test case, use the `--case` flag with the fidlc test binary.
 The binary can be located by running `fidldev test --dry-run --no-regen fidlc`.
 
 ```sh
-$FUCHSIA_DIR/out/default/host_x64/fidl-compiler -- --case attributes_tests
+$FUCHSIA_DIR/out/default/host_x64/fidl-compiler --gtest_filter 'EnumsTests.*'
 ```
 
 To regenerate the `fidlc` JSON goldens:
