@@ -9,8 +9,8 @@ import("//src/sys/build/components.gni")
 group("tests") {
   testonly = true
   deps = [
+    ":netstack-c-api-tests",
     ":netstack_bsdsocket_c_api_test($host_toolchain)",
-    ":netstack_c_api_tests",
     ":netstack_external_network_test_client($host_toolchain)",
     ":netstack_if_nameindex_test($host_toolchain)",
     "benchmarks",
@@ -95,10 +95,10 @@ test("name_provider_service_not_present_test") {
 # currently no way to express a dependency between packages in the build
 # system, so we aggregate all the package dependencies in this group target.
 # See bug 36293 for more details.
-group("netstack_c_api_tests") {
+group("netstack-c-api-tests") {
   testonly = true
   deps = [
-    ":netstack_c_api_tests_inner",
+    ":netstack-c-api-tests-inner",
 
     # netemul_runner is used to create hermetic test environments.
     "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",
@@ -114,68 +114,60 @@ fuchsia_component("connect") {
   deps = [ "connect" ]
 }
 
-fuchsia_component("connect-test") {
-  testonly = true
-  manifest = "meta/connect_test.cmx"
-  deps = [ ":connect" ]
-}
-
-fuchsia_component("netstack-external-network-test-client") {
+fuchsia_component("netstack_external_network_test_client_component") {
+  component_name = "netstack_external_network_test_client"
   testonly = true
   manifest = "meta/netstack_external_network_test_client.cmx"
   deps = [ ":netstack_external_network_test_client" ]
 }
 
-fuchsia_component("netstack-external-network-test") {
-  testonly = true
-  manifest = "meta/netstack_external_network_test.cmx"
-  deps = [ ":netstack-external-network-test-client" ]
+manifest_only_tests = [
+  "connect",
+  "netstack_external_network",
+]
+
+foreach(test, manifest_only_tests) {
+  name = "${test}_test"
+  fuchsia_component("${name}_component") {
+    component_name = name
+    testonly = true
+    manifest = "meta/${name}.cmx"
+  }
 }
 
-fuchsia_component("name-provider-service-not-present-test") {
-  testonly = true
-  manifest = "meta/name_provider_service_not_present_test.cmx"
-  deps = [ ":name_provider_service_not_present_test" ]
+tests = [
+  "name_provider_service_not_present",
+  "netstack_bsdsocket_c_api",
+  "netstack_fuchsia_c_api",
+  "netstack_if_nameindex",
+  "netstack_no_network",
+]
+
+foreach(test, tests) {
+  name = "${test}_test"
+  fuchsia_component("${name}_component") {
+    component_name = name
+    testonly = true
+    manifest = "meta/${name}.cmx"
+    deps = [ ":${name}" ]
+  }
 }
 
-fuchsia_component("netstack-bsdsocket-c-api-test") {
-  testonly = true
-  manifest = "meta/netstack_bsdsocket_c_api_test.cmx"
-  deps = [ ":netstack_bsdsocket_c_api_test" ]
-}
-
-fuchsia_component("netstack-fuchsia-c-api-test") {
-  testonly = true
-  manifest = "meta/netstack_fuchsia_c_api_test.cmx"
-  deps = [ ":netstack_fuchsia_c_api_test" ]
-}
-
-fuchsia_component("netstack-if-nameindex-test") {
-  testonly = true
-  manifest = "meta/netstack_if_nameindex_test.cmx"
-  deps = [ ":netstack_if_nameindex_test" ]
-}
-
-fuchsia_component("netstack-no-network-test") {
-  testonly = true
-  manifest = "meta/netstack_no_network_test.cmx"
-  deps = [ ":netstack_no_network_test" ]
-}
-
-fuchsia_test_package("netstack_c_api_tests_inner") {
+fuchsia_test_package("netstack-c-api-tests-inner") {
   package_name = "netstack-c-api-tests"
 
-  test_components = [
-    ":connect-test",
-    ":name-provider-service-not-present-test",
-    ":netstack-external-network-test",
-    ":netstack-bsdsocket-c-api-test",
-    ":netstack-fuchsia-c-api-test",
-    ":netstack-if-nameindex-test",
-    ":netstack-no-network-test",
-  ]
+  test_components = []
+  foreach(test, manifest_only_tests) {
+    test_components += [ ":${test}_test_component" ]
+  }
+  foreach(test, tests) {
+    test_components += [ ":${test}_test_component" ]
+  }
 
   deps = [
+    ":connect",
+    ":netstack_external_network_test_client_component",
+
     # device_name_provider provides fuchsia.device.NameProvider.
     ":device_name_provider",
 

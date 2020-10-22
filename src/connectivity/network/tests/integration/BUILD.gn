@@ -13,99 +13,25 @@ group("tests") {
   ]
 }
 
-fuchsia_component("netstack_cobalt_integration_test") {
-  testonly = true
-  manifest = "meta/netstack_cobalt_integration_test.cmx"
-  deps = [ "cobalt" ]
-}
+tests = [
+  "cobalt",
+  "dhcp",
+  "dns",
+  "fidl",
+  "inspect",
+  "ipv6",
+  "management",
+  "routes",
+  "socket",
+]
 
-fuchsia_component("netstack_dhcp_integration_test") {
-  testonly = true
-  manifest = "meta/netstack_dhcp_integration_test.cmx"
-  deps = [
-    "dhcp",
-
-    # netemul-sandbox is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
-  ]
-}
-
-fuchsia_component("netstack_dns_integration_test") {
-  testonly = true
-  manifest = "meta/netstack_dns_integration_test.cmx"
-  deps = [
-    ":network-manager-config",
-    "dns",
-
-    # netemul-sandbox is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
-  ]
-}
-
-fuchsia_component("netstack_fidl_integration_test") {
-  testonly = true
-  manifest = "meta/netstack_fidl_integration_test.cmx"
-  deps = [
-    "fidl",
-
-    # netemul-sandbox is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
-  ]
-}
-
-fuchsia_component("netstack_inspect_integration_test") {
-  testonly = true
-  manifest = "meta/netstack_inspect_integration_test.cmx"
-  deps = [
-    "inspect",
-
-    # netemul-sandbox is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
-  ]
-}
-
-fuchsia_component("netstack_ipv6_integration_test") {
-  testonly = true
-  manifest = "meta/netstack_ipv6_integration_test.cmx"
-  deps = [
-    "ipv6",
-
-    # netemul-sandbox is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
-  ]
-}
-
-fuchsia_component("netstack_management_integration_test") {
-  testonly = true
-  manifest = "meta/netstack_management_integration_test.cmx"
-  deps = [
-    "management",
-
-    # netemul-sandbox is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
-  ]
-}
-
-fuchsia_component("netstack_routes_integration_test") {
-  testonly = true
-  manifest = "meta/netstack_routes_integration_test.cmx"
-  deps = [
-    "routes",
-
-    # netemul-sandbox is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
-  ]
-}
-
-fuchsia_component("netstack_socket_integration_test") {
-  testonly = true
-  manifest = "meta/netstack_socket_integration_test.cmx"
-  deps = [
-    "socket",
-
-    # netemul-sandbox is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
-  ]
+foreach(test, tests) {
+  name = "netstack_${test}_integration_test"
+  fuchsia_component(name) {
+    testonly = true
+    manifest = "meta/${name}.cmx"
+    deps = [ test ]
+  }
 }
 
 fuchsia_test_package("netstack-integration-tests") {
@@ -115,17 +41,10 @@ fuchsia_test_package("netstack-integration-tests") {
       max_severity = "ERROR"
     }
   }
-  test_components = [
-    ":netstack_cobalt_integration_test",
-    ":netstack_dhcp_integration_test",
-    ":netstack_dns_integration_test",
-    ":netstack_fidl_integration_test",
-    ":netstack_inspect_integration_test",
-    ":netstack_ipv6_integration_test",
-    ":netstack_management_integration_test",
-    ":netstack_routes_integration_test",
-    ":netstack_socket_integration_test",
-  ]
+  test_components = []
+  foreach(test, tests) {
+    test_components += [ ":netstack_${test}_integration_test" ]
+  }
   deps = [
     # device_name_provider provides fuchsia.device.NameProvider.
     "..:device_name_provider",
@@ -157,7 +76,11 @@ fuchsia_test_package("netstack-integration-tests") {
     "//src/connectivity/network/netstack:component-debug",
 
     # network_manager integration with netstack is tested.
+    ":network-manager-config",
     "//src/connectivity/management/network-manager:component-netemul",
+
+    # netemul-sandbox is used to create hermetic environments.
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
   ]
 }
 
