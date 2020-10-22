@@ -49,6 +49,19 @@ impl<'a> HandleRef<'a> {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
+#[repr(transparent)]
+pub struct Koid(u64);
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct HandleBasicInfo {
+    pub koid: Koid,
+    pub rights: Rights,
+    pub object_type: ObjectType,
+    pub related_koid: Koid,
+    pub reserved: u32,
+}
+
 /// A trait to get a reference to the underlying handle of an object.
 pub trait AsHandleRef {
     /// Get a reference to the handle.
@@ -64,6 +77,32 @@ pub trait AsHandleRef {
     /// key in a data structure).
     fn raw_handle(&self) -> u32 {
         self.as_handle_ref().0
+    }
+
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_HANDLE_BASIC topic.
+    fn basic_info(&self) -> Result<HandleBasicInfo, zx_status::Status> {
+        if self.is_invalid() {
+            return Err(zx_status::Status::BAD_HANDLE);
+        }
+        let (koid_left, rights, side) = with_handle(self.raw_handle(), |h, side| match h {
+            HdlRef::Channel(hdl) => (hdl.koid_left, hdl.rights, side),
+            HdlRef::StreamSocket(hdl) => (hdl.koid_left, hdl.rights, side),
+            HdlRef::DatagramSocket(hdl) => (hdl.koid_left, hdl.rights, side),
+        });
+        let koids = match side {
+            Side::Left => (koid_left, koid_left + 1),
+            Side::Right => (koid_left + 1, koid_left),
+        };
+        let (_, _, ty, _) = unpack_handle(self.raw_handle());
+        Ok(HandleBasicInfo {
+            koid: Koid(koids.0),
+            rights: rights,
+            object_type: ty.object_type(),
+            related_koid: Koid(koids.1),
+            reserved: 0,
+        })
     }
 }
 
@@ -193,6 +232,34 @@ impl Handle {
         let h = self.0;
         self.0 = INVALID_HANDLE;
         h
+    }
+
+    /// Create a replacement for a handle, possibly reducing the rights available. This invalidates
+    /// the original handle. Wraps the
+    /// [zx_handle_replace](https://fuchsia.dev/fuchsia-src/reference/syscalls/handle_replace.md)
+    /// syscall.
+    pub fn replace(self, target_rights: Rights) -> Result<Handle, zx_status::Status> {
+        if self.is_invalid() {
+            return Err(zx_status::Status::BAD_HANDLE);
+        }
+        let (shard, slot, ty, side) = unpack_handle(self.raw_handle());
+        let result = match ty {
+            HdlType::Channel => table_replace(&CHANNELS, shard, slot, target_rights),
+            HdlType::StreamSocket => table_replace(&STREAM_SOCKETS, shard, slot, target_rights),
+            HdlType::DatagramSocket => table_replace(&DATAGRAM_SOCKETS, shard, slot, target_rights),
+        };
+        let (new_shard, new_slot) = match result {
+            Ok(val) => val,
+            Err(zx_status::Status::BAD_HANDLE) => {
+                std::mem::forget(self);
+                return Err(zx_status::Status::BAD_HANDLE);
+            }
+            Err(status) => {
+                return Err(status);
+            }
+        };
+        std::mem::forget(self);
+        unsafe { Ok(Handle::from_raw(pack_handle(new_shard, new_slot, ty, side))) }
     }
 }
 
@@ -872,18 +939,19 @@ impl<T> Default for HandleTable<T> {
 
 impl<T> HandleTable<T> {
     fn new_handle_slot(&self, rights: Rights) -> (usize, usize) {
+        self.insert_hdl(Hdl {
+            q: Default::default(),
+            wakers: Default::default(),
+            liveness: Liveness::Open,
+            koid_left: NEXT_KOID.fetch_add(2, Ordering::Relaxed),
+            rights: rights,
+        })
+    }
+
+    fn insert_hdl(&self, hdl: Hdl<T>) -> (usize, usize) {
         let shard = self.next_shard.fetch_add(1, Ordering::Relaxed) & 15;
         let mut h = self.shards[shard].lock().unwrap();
-        (
-            shard,
-            h.insert(Hdl {
-                q: Default::default(),
-                wakers: Default::default(),
-                liveness: Liveness::Open,
-                koid_left: NEXT_KOID.fetch_add(2, Ordering::Relaxed),
-                rights: rights,
-            }),
-        )
+        (shard, h.insert(hdl))
     }
 }
 
@@ -926,6 +994,28 @@ fn table_contains<T>(tbl: &HandleTable<T>, shard: usize, slot: usize, side: Side
             _ => false,
         },
     }
+}
+
+fn table_replace<T>(
+    tbl: &HandleTable<T>,
+    shard: usize,
+    slot: usize,
+    target_rights: Rights,
+) -> Result<(usize, usize), zx_status::Status> {
+    let mut tbl_shard = tbl.shards[shard].lock().unwrap();
+    match tbl_shard.get(slot) {
+        None => {
+            return Err(zx_status::Status::BAD_HANDLE);
+        }
+        Some(h) => {
+            if !h.rights.contains(target_rights) {
+                return Err(zx_status::Status::INVALID_ARGS);
+            }
+        }
+    };
+    let mut h = tbl_shard.remove(slot);
+    h.rights = target_rights;
+    Ok(tbl.insert_hdl(h))
 }
 
 fn close_in_table<T>(tbl: &HandleTable<T>, shard: usize, slot: usize, side: Side) {
@@ -1092,5 +1182,83 @@ mod test {
         }
         assert!(c.is_dangling());
         std::mem::forget(c);
+    }
+
+    #[test]
+    fn handle_basic_info_success() {
+        let (c1, c2) = Channel::create().unwrap();
+        let c1_info = c1.basic_info().unwrap();
+        let c2_info = c2.basic_info().unwrap();
+
+        assert_ne!(c1_info.koid, Koid(0));
+        assert_ne!(c1_info.related_koid, Koid(0));
+        assert_ne!(c1_info.koid, c1_info.related_koid);
+        assert_eq!(c1_info.related_koid, c2_info.koid);
+        assert_eq!(c1_info.koid, c2_info.related_koid);
+
+        assert_eq!(c1_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
+        assert_eq!(c1_info.object_type, ObjectType::CHANNEL);
+        assert_eq!(c1_info.reserved, 0);
+    }
+
+    #[test]
+    fn handle_basic_info_invalid() {
+        assert_eq!(Handle::invalid().basic_info().unwrap_err(), zx_status::Status::BAD_HANDLE);
+
+        // Note non-zero but invalid handles can't be tested because of a
+        // panic when the handle isn't found in with_handle().
+    }
+
+    #[test]
+    fn handle_replace_success() {
+        let (c1, _) = Channel::create().unwrap();
+        let orig_basic_info = c1.basic_info().unwrap();
+        assert_eq!(orig_basic_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
+        let orig_raw = c1.raw_handle();
+
+        let new_handle = c1.into_handle().replace(Rights::TRANSFER | Rights::WRITE).unwrap();
+        assert_ne!(new_handle.raw_handle(), orig_raw);
+        let replaced_handle = unsafe { Handle::from_raw(orig_raw) };
+        assert!(replaced_handle.is_dangling());
+        std::mem::ManuallyDrop::new(replaced_handle);
+
+        let new_basic_info = new_handle.basic_info().unwrap();
+        assert_eq!(new_basic_info.koid, orig_basic_info.koid);
+        assert_eq!(new_basic_info.related_koid, orig_basic_info.related_koid);
+        assert_eq!(new_basic_info.object_type, ObjectType::CHANNEL);
+        assert_eq!(new_basic_info.rights, Rights::TRANSFER | Rights::WRITE);
+    }
+
+    #[test]
+    fn handle_replace_invalid() {
+        assert_eq!(
+            Handle::invalid().replace(Rights::TRANSFER).unwrap_err(),
+            zx_status::Status::BAD_HANDLE
+        );
+
+        let (c, _) = Channel::create().unwrap();
+        let raw = c.raw_handle();
+
+        // Close the handle
+        drop(c);
+
+        unsafe {
+            let closed_handle = Handle::from_raw(raw);
+            assert_eq!(
+                closed_handle.replace(Rights::TRANSFER).unwrap_err(),
+                zx_status::Status::BAD_HANDLE
+            );
+        }
+    }
+
+    #[test]
+    fn handle_replace_increasing_rights() {
+        let (c1, _) = Channel::create().unwrap();
+        let orig_basic_info = c1.basic_info().unwrap();
+        assert_eq!(orig_basic_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
+        assert_eq!(
+            c1.into_handle().replace(Rights::DUPLICATE).unwrap_err(),
+            zx_status::Status::INVALID_ARGS
+        );
     }
 }
