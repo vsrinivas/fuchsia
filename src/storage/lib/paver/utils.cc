@@ -165,8 +165,7 @@ zx::status<zx::channel> OpenBlockPartition(const fbl::unique_fd& devfs_root,
 constexpr char kSkipBlockDevPath[] = "class/skip-block/";
 
 zx::status<zx::channel> OpenSkipBlockPartition(const fbl::unique_fd& devfs_root,
-                                               const Uuid& type_guid,
-                                               zx_duration_t timeout) {
+                                               const Uuid& type_guid, zx_duration_t timeout) {
   auto cb = [&](const zx::channel& chan) {
     auto result = skipblock::SkipBlock::Call::GetPartitionInfo(zx::unowned(chan));
     if (!result.ok()) {
