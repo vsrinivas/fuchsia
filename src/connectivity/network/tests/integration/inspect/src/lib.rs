@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::environments::{Netstack2, TestSandboxExt};
-use crate::Result;
+#![cfg(test)]
+
 use anyhow::Context as _;
 use fidl_fuchsia_net_interfaces_ext::CloneExt as _;
 use fuchsia_inspect_node_hierarchy::Property;
 use net_declare::{fidl_mac, fidl_subnet};
 use netemul::Endpoint as _;
+use netstack_testing_common::environments::{Netstack2, TestSandboxExt};
+use netstack_testing_common::Result;
 
 /// A helper type to provide address verification in inspect NIC data.
 ///

@@ -2,10 +2,188 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
+import("//src/sys/build/components.gni")
+
 group("tests") {
   testonly = true
   deps = [
-    "dhcp:dhcp_integration_tests",
+    ":netstack-integration-tests",
     "ip_forward:netemul-ip-forward-tests",
   ]
+}
+
+fuchsia_component("netstack_cobalt_integration_test") {
+  testonly = true
+  manifest = "meta/netstack_cobalt_integration_test.cmx"
+  deps = [ "cobalt" ]
+}
+
+fuchsia_component("netstack_dhcp_integration_test") {
+  testonly = true
+  manifest = "meta/netstack_dhcp_integration_test.cmx"
+  deps = [
+    "dhcp",
+
+    # netemul-sandbox is used to create hermetic environments.
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+  ]
+}
+
+fuchsia_component("netstack_dns_integration_test") {
+  testonly = true
+  manifest = "meta/netstack_dns_integration_test.cmx"
+  deps = [
+    ":network-manager-config",
+    "dns",
+
+    # netemul-sandbox is used to create hermetic environments.
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+  ]
+}
+
+fuchsia_component("netstack_fidl_integration_test") {
+  testonly = true
+  manifest = "meta/netstack_fidl_integration_test.cmx"
+  deps = [
+    "fidl",
+
+    # netemul-sandbox is used to create hermetic environments.
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+  ]
+}
+
+fuchsia_component("netstack_inspect_integration_test") {
+  testonly = true
+  manifest = "meta/netstack_inspect_integration_test.cmx"
+  deps = [
+    "inspect",
+
+    # netemul-sandbox is used to create hermetic environments.
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+  ]
+}
+
+fuchsia_component("netstack_ipv6_integration_test") {
+  testonly = true
+  manifest = "meta/netstack_ipv6_integration_test.cmx"
+  deps = [
+    "ipv6",
+
+    # netemul-sandbox is used to create hermetic environments.
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+  ]
+}
+
+fuchsia_component("netstack_management_integration_test") {
+  testonly = true
+  manifest = "meta/netstack_management_integration_test.cmx"
+  deps = [
+    "management",
+
+    # netemul-sandbox is used to create hermetic environments.
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+  ]
+}
+
+fuchsia_component("netstack_routes_integration_test") {
+  testonly = true
+  manifest = "meta/netstack_routes_integration_test.cmx"
+  deps = [
+    "routes",
+
+    # netemul-sandbox is used to create hermetic environments.
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+  ]
+}
+
+fuchsia_component("netstack_socket_integration_test") {
+  testonly = true
+  manifest = "meta/netstack_socket_integration_test.cmx"
+  deps = [
+    "socket",
+
+    # netemul-sandbox is used to create hermetic environments.
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+  ]
+}
+
+fuchsia_test_package("netstack-integration-tests") {
+  package_name = "netstack-integration-tests"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  test_components = [
+    ":netstack_cobalt_integration_test",
+    ":netstack_dhcp_integration_test",
+    ":netstack_dns_integration_test",
+    ":netstack_fidl_integration_test",
+    ":netstack_inspect_integration_test",
+    ":netstack_ipv6_integration_test",
+    ":netstack_management_integration_test",
+    ":netstack_routes_integration_test",
+    ":netstack_socket_integration_test",
+  ]
+  deps = [
+    # device_name_provider provides fuchsia.device.NameProvider.
+    "..:device_name_provider",
+
+    # mock_cobalt provides fuchsia.cobalt.LoggerFactory and fuchsia.cobalt.test.LoggerQuerier.
+    "//src/cobalt/bin/testing/mock_cobalt:component",
+
+    # stash_secure is used by dhcpd and netstack.
+    "//src/sys/stash:stash_secure",
+
+    # dhcpd is used to test DHCP address acquisition.
+    ":dhcpd-testing-configs",
+    "//src/connectivity/network/dhcp:component",
+
+    # DHCPv6 client is under test.
+    "//src/connectivity/network/dhcpv6/client:component",
+
+    # dns_resolver integration with netstack is tested.
+    "//src/connectivity/network/dns:component",
+
+    # netcfg integration with netstack is tested.
+    ":netcfg-netemul-config",
+    "//src/connectivity/network/netcfg:component-netemul",
+
+    # netstack3 is under test.
+    "//src/connectivity/network/netstack3:component",
+
+    # netstack is under test.
+    "//src/connectivity/network/netstack:component-debug",
+
+    # network_manager integration with netstack is tested.
+    "//src/connectivity/management/network-manager:component-netemul",
+  ]
+}
+
+config_data("dhcpd-testing-configs") {
+  testonly = true
+  for_pkg = "netstack-integration-tests"
+  sources = [
+    "//src/connectivity/network/dhcp/data/bound_device_test_config_eth2.json",
+    "//src/connectivity/network/dhcp/data/bound_device_test_config_eth3.json",
+    "//src/connectivity/network/dhcp/data/default_config.json",
+    "//src/connectivity/network/dhcp/data/test_config.json",
+  ]
+  outputs = [ "dhcpd-testing/{{source_file_part}}" ]
+}
+
+config_data("netcfg-netemul-config") {
+  testonly = true
+  for_pkg = "netstack-integration-tests"
+  sources = [ "//src/connectivity/network/netcfg/config/empty.json" ]
+  outputs = [ "netcfg/empty.json" ]
+}
+
+config_data("network-manager-config") {
+  testonly = true
+  for_pkg = "netstack-integration-tests"
+  sources =
+      [ "//src/connectivity/management/network-manager/config/default.json" ]
+  outputs = [ "factory_config.json" ]
 }

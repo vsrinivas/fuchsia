@@ -2,20 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Context as _;
-use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_logger;
-use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
-use fuchsia_async::TimeoutExt as _;
-use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
-use net_declare::{fidl_ip, fidl_subnet, std_ip};
-use netemul::EnvironmentUdpSocket as _;
-use netstack_testing_macros::variants_test;
+#![cfg(test)]
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use crate::environments::{Netstack, Netstack2, TestSandboxExt as _};
-use crate::{EthertapName as _, Result};
+use fidl_fuchsia_logger;
+use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
+use fuchsia_async::TimeoutExt as _;
+
+use anyhow::Context as _;
+use fidl::endpoints::create_endpoints;
+use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
+use net_declare::{fidl_ip, fidl_subnet, std_ip};
+use netemul::EnvironmentUdpSocket as _;
+use netstack_testing_common::environments::{Netstack, Netstack2, TestSandboxExt as _};
+use netstack_testing_common::{EthertapName as _, Result};
+use netstack_testing_macros::variants_test;
 
 /// Regression test: test that Netstack.SetInterfaceStatus does not kill the channel to the client
 /// if given an invalid interface id.

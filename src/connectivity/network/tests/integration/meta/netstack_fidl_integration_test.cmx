@@ -1,0 +1,18 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.netemul.sandbox.Sandbox": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netemul-sandbox.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "bin/netstack_fidl_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.netemul.sandbox.Sandbox",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

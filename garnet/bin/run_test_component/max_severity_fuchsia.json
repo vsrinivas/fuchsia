@@ -386,10 +386,6 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack_integration_test.cmx",
-         "max_severity": "ERROR"
-      },
-      {
          "url": "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-integration-test.cmx",
          "max_severity": "FATAL"
       },

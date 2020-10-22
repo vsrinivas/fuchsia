@@ -5,13 +5,13 @@
 //! Useful constants for tests.
 
 /// IPv6 constants.
-pub(crate) mod ipv6 {
+pub mod ipv6 {
     use net_types::ip as net_types_ip;
 
     /// An IPv6 prefix.
     ///
     /// 2001:f1f0:4060:1::/64
-    pub(crate) const PREFIX: net_types_ip::Subnet<net_types_ip::Ipv6Addr> = unsafe {
+    pub const PREFIX: net_types_ip::Subnet<net_types_ip::Ipv6Addr> = unsafe {
         net_types_ip::Subnet::new_unchecked(
             net_types_ip::Ipv6Addr::new([
                 0x20, 0x01, 0xf1, 0xf0, 0x40, 0x60, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -23,16 +23,16 @@ pub(crate) mod ipv6 {
     /// A link-local IPv6 address.
     ///
     /// fe80::1
-    pub(crate) const LINK_LOCAL_ADDR: net_types_ip::Ipv6Addr =
+    pub const LINK_LOCAL_ADDR: net_types_ip::Ipv6Addr =
         net_types_ip::Ipv6Addr::new([0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
 }
 
 /// Ethernet constants.
-pub(crate) mod eth {
+pub mod eth {
     use net_types::ethernet::Mac;
 
     /// A MAC address.
     ///
     /// 02:00:00:00:00:01
-    pub(crate) const MAC_ADDR: Mac = Mac::new([0x02, 0x00, 0x00, 0x00, 0x00, 0x01]);
+    pub const MAC_ADDR: Mac = Mac::new([0x02, 0x00, 0x00, 0x00, 0x00, 0x01]);
 }

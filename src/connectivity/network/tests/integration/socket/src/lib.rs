@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![cfg(test)]
+
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fuchsia_async::TimeoutExt as _;
 
@@ -12,13 +14,12 @@ use futures::{
 };
 use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_subnet};
 use netemul::{EnvironmentTcpListener as _, EnvironmentTcpStream as _, EnvironmentUdpSocket as _};
+use netstack_testing_common::environments::{Netstack2, TestSandboxExt as _};
+use netstack_testing_common::Result;
 use netstack_testing_macros::variants_test;
 use packet::Serializer;
 use packet_formats;
 use packet_formats::ipv4::Ipv4Header;
-
-use crate::environments::{Netstack2, TestSandboxExt as _};
-use crate::Result;
 
 async fn run_udp_socket_test(
     server: &netemul::TestEnvironment<'_>,

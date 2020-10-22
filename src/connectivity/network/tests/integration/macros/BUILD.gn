@@ -1,0 +1,18 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_macro.gni")
+
+rustc_macro("netstack_testing_macros") {
+  source_root = "src/proc_macros.rs"
+
+  deps = [
+    "//third_party/rust_crates:proc-macro-hack",
+    "//third_party/rust_crates:proc-macro2",
+    "//third_party/rust_crates:quote",
+    "//third_party/rust_crates:syn",
+  ]
+
+  sources = [ "src/proc_macros.rs" ]
+}

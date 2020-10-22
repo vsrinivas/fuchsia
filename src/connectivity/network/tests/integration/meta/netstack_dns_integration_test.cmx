@@ -1,0 +1,18 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.netemul.sandbox.Sandbox": "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netemul-sandbox.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "bin/netstack_dns_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.netemul.sandbox.Sandbox",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

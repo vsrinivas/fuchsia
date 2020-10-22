@@ -4,26 +4,27 @@
 
 import("//build/rust/rustc_test.gni")
 
-rustc_test("dhcp") {
-  output_name = "netstack_dhcp_integration_test"
+rustc_test("dns") {
+  output_name = "netstack_dns_integration_test"
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
+    "//sdk/fidl/fuchsia.net.dhcpv6:fuchsia.net.dhcpv6-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
     "//src/connectivity/lib/net-declare",
+    "//src/connectivity/lib/net-types",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",
     "//src/connectivity/network/tests/integration/macros:netstack_testing_macros",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/network/fidl_fuchsia_net_ext",
-    "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
-    "//src/lib/network/fidl_fuchsia_net_stack_ext",
-    "//src/lib/network/fidl_fuchsia_netstack_ext",
+    "//src/lib/network/packet",
+    "//src/lib/network/packet-formats",
+    "//src/lib/network/packet-formats-dhcp",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:matches",
   ]
   sources = [ "src/lib.rs" ]
 }

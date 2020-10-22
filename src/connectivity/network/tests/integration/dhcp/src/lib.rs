@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![cfg(test)]
+
 use anyhow::Context as _;
 use fuchsia_async::TimeoutExt as _;
 use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_subnet};
+use netstack_testing_common::environments::{KnownServices, Netstack2, TestSandboxExt as _};
+use netstack_testing_common::Result;
 use netstack_testing_macros::variants_test;
-
-use crate::environments::{KnownServices, Netstack2, TestSandboxExt as _};
-use crate::Result;
 
 /// Endpoints in DHCP tests are either
 /// 1. attached to the server stack, which will have DHCP servers serving on them.

@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::{HashMap, HashSet};
+#![cfg(test)]
+
+use std::collections::HashMap;
 
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_dhcp as dhcp;
@@ -14,69 +16,18 @@ use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
-use futures::future::{FusedFuture, Future, FutureExt as _};
+use futures::future::FutureExt as _;
 use futures::stream::{self, StreamExt as _};
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
-use netstack_testing_macros::variants_test;
-
-use crate::environments::{KnownServices, Manager, NetCfg, Netstack2, TestSandboxExt as _};
-use crate::{
-    try_all, try_any, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, DHCP_SERVER_DEFAULT_CONFIG_PATH,
+use netstack_testing_common::environments::{
+    KnownServices, Manager, NetCfg, Netstack2, TestSandboxExt as _,
 };
-
-/// Waits for a non-loopback interface to come up with an ID not in `exclude_ids`.
-///
-/// Useful when waiting for an interface to be discovered and brought up by a
-/// network manager.
-///
-/// Returns the interface's ID and name.
-pub(crate) async fn wait_for_non_loopback_interface_up<
-    F: Unpin + FusedFuture + Future<Output = Result<fuchsia_component::client::ExitStatus>>,
->(
-    interface_state: &net_interfaces::StateProxy,
-    mut wait_for_netmgr: &mut F,
-    exclude_ids: Option<&HashSet<u32>>,
-    timeout: zx::Duration,
-) -> Result<(u32, String)> {
-    let mut if_map = HashMap::new();
-    let wait_for_interface = fidl_fuchsia_net_interfaces_ext::wait_interface(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(interface_state)?,
-        &mut if_map,
-        |if_map| {
-            if_map.iter().find_map(|(id, properties)| {
-                let id = *id as u32;
-                if properties.device_class
-                    != Some(net_interfaces::DeviceClass::Loopback(net_interfaces::Empty {}))
-                    && properties.online?
-                    && exclude_ids.map_or(true, |ids| !ids.contains(&id))
-                {
-                    Some((
-                        id,
-                        properties.name.clone().expect("failed to find loopback interface name"),
-                    ))
-                } else {
-                    None
-                }
-            })
-        },
-    )
-    .on_timeout(timeout.after_now(), || {
-        Err(anyhow::anyhow!(
-            "timed out waiting for OnInterfaceseChanged event with a non-loopback interface"
-        ))
-    })
-    .fuse();
-    fuchsia_async::pin_mut!(wait_for_interface);
-    futures::select! {
-        wait_for_interface_res = wait_for_interface => {
-            wait_for_interface_res
-        }
-        wait_for_netmgr_res = wait_for_netmgr => {
-            Err(anyhow::anyhow!("the network manager unexpectedly exited with exit status = {:?}", wait_for_netmgr_res?))
-        }
-    }
-}
+use netstack_testing_common::{
+    try_all, try_any, wait_for_non_loopback_interface_up, Result,
+    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, DHCP_SERVER_DEFAULT_CONFIG_PATH,
+};
+use netstack_testing_macros::variants_test;
 
 /// Test that NetCfg discovers a newly added device and it adds the device
 /// to the Netstack.

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Provides utilities for test environments.
+
 use fidl_fuchsia_net_filter;
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_netemul_environment as netemul_environment;
@@ -18,6 +20,7 @@ const NO_SERVICES: Option<netemul_environment::LaunchService> = None;
 /// The Netstack version. Used to specify which Netstack version to use in a
 /// Netstack-served [`KnownServices`].
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[allow(missing_docs)]
 pub enum NetstackVersion {
     Netstack2,
     Netstack3,
@@ -36,6 +39,7 @@ impl NetstackVersion {
         }
     }
 
+    /// Gets the Netstack name.
     pub fn get_name(&self) -> &'static str {
         match self {
             NetstackVersion::Netstack2 => "ns2",
@@ -46,6 +50,7 @@ impl NetstackVersion {
 
 /// Known services used in tests.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[allow(missing_docs)]
 pub enum KnownServices {
     Stack(NetstackVersion),
     Netstack(NetstackVersion),

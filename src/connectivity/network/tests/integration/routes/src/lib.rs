@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::environments::{Netstack2, TestSandboxExt as _};
-use crate::Result;
+#![cfg(test)]
+
 use anyhow::Context as _;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use net_declare::{fidl_ip, fidl_subnet};
+use netstack_testing_common::environments::{Netstack2, TestSandboxExt as _};
+use netstack_testing_common::Result;
 use std::convert::TryFrom as _;
 
 #[fuchsia_async::run_singlethreaded(test)]

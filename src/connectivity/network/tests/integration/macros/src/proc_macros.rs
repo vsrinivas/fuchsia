@@ -232,9 +232,13 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
 /// ```
 /// async fn test_foo<N: Nestack>(name: &str){/*...*/}
 /// #[fuchsia_async::run_singlethreaded(test)]
-/// async fn test_foo_ns2() { test_foo::<crate::environments::Netstack2>("test_foo_ns2").await }
+/// async fn test_foo_ns2() {
+///     test_foo::<netstack_testing_common::environments::Netstack2>("test_foo_ns2").await
+/// }
 /// #[fuchsia_async::run_singlethreaded(test)]
-/// async fn test_foo_ns3() { test_foo::<crate::environments::Netstack3>("test_foo_ns3").await }
+/// async fn test_foo_ns3() {
+///     test_foo::<netstack_testing_common::environments::Netstack3>("test_foo_ns3").await
+/// }
 /// ```
 ///
 /// Similarily,
@@ -266,23 +270,29 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
 /// async fn test_foo<N: Nestack, E: netemul::Endpoint>(name: &str){/*...*/}
 /// #[fuchsia_async::run_singlethreaded(test)]
 /// async fn test_foo_ns2_eth() {
-///     test_foo::<crate::environments::Netstack2, netemul::Ethernet>("test_foo_ns2_eth").await
+///     test_foo::<netstack_testing_common::environments::Netstack2, netemul::Ethernet>(
+///         "test_foo_ns2_eth",
+///     )
+///     .await
 /// }
 /// #[fuchsia_async::run_singlethreaded(test)]
 /// async fn test_foo_ns3_eth() {
-///     test_foo::<crate::environments::Netstack3, netemul::Ethernet>("test_foo_ns3_eth").await
+///     test_foo::<netstack_testing_common::environments::Netstack3, netemul::Ethernet>(
+///         "test_foo_ns3_eth",
+///     )
+///     .await
 /// }
 /// #[fuchsia_async::run_singlethreaded(test)]
 /// async fn test_foo_ns2_netdev() {
 ///     test_foo::<
-///         crate::environments::Netstack2,
+///         netstack_testing_common::environments::Netstack2,
 ///         netemul::NetworkDevice,
 ///     >("test_foo_ns2_netdev").await
 /// }
 /// #[fuchsia_async::run_singlethreaded(test)]
 /// async fn test_foo_ns3_netdev() {
 ///     test_foo::<
-///         crate::environments::Netstack3,
+///         netstack_testing_common::environments::Netstack3,
 ///         netemul::NetworkDevice,
 ///     >("test_foo_ns3_netdev").await
 /// }
@@ -305,11 +315,15 @@ pub fn variants_test(attrs: TokenStream, input: TokenStream) -> TokenStream {
                 trait_bound: str_to_syn_path("Netstack"),
                 implementations: &[
                     Implementation {
-                        type_name: str_to_syn_path("crate::environments::Netstack2"),
+                        type_name: str_to_syn_path(
+                            "netstack_testing_common::environments::Netstack2",
+                        ),
                         suffix: "ns2",
                     },
                     Implementation {
-                        type_name: str_to_syn_path("crate::environments::Netstack3"),
+                        type_name: str_to_syn_path(
+                            "netstack_testing_common::environments::Netstack3",
+                        ),
                         suffix: "ns3",
                     },
                 ],
@@ -331,11 +345,13 @@ pub fn variants_test(attrs: TokenStream, input: TokenStream) -> TokenStream {
                 trait_bound: str_to_syn_path("Manager"),
                 implementations: &[
                     Implementation {
-                        type_name: str_to_syn_path("crate::environments::NetCfg"),
+                        type_name: str_to_syn_path("netstack_testing_common::environments::NetCfg"),
                         suffix: "netcfg",
                     },
                     Implementation {
-                        type_name: str_to_syn_path("crate::environments::NetworkManager"),
+                        type_name: str_to_syn_path(
+                            "netstack_testing_common::environments::NetworkManager",
+                        ),
                         suffix: "netmgr",
                     },
                 ],

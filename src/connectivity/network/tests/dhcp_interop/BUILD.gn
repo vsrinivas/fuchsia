@@ -1,0 +1,74 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+group("dhcp_integration_tests") {
+  testonly = true
+  public_deps = [
+    ":netemul-dhcp-tests",
+    "//src/connectivity/network/testing/netemul:guest",
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",
+    "//src/virtualization/packages/debian_guest",
+  ]
+}
+
+# This is the config file that dhcpd will use for the dhcp_validity test. An address pool
+# with a single address is provided so that when the Netstack DHCP client runs, it gets a
+# predictable IP address.
+resource("dhcpd_config") {
+  sources = [ "dhcp_validity/data/dhcpd.conf" ]
+  outputs = [ "data/dhcpd.conf" ]
+}
+
+# This bash script is run on the Debian guest to configure it for the dhcp_validity test.
+# The guest's ethernet interface is given a static IP address, /etc/default/isc-dhcp-server
+# is written so that DHCP is served on that interface, and then dhcpd is started.
+resource("dhcp_setup") {
+  sources = [ "dhcp_validity/data/dhcp_setup.sh" ]
+  outputs = [ "data/dhcp_setup.sh" ]
+}
+
+# This is the DHCPv6 config file that dhcpd will use for the dhcp_validity test.
+# The list of DNS servers configured in this file is expected in test. The address pool
+# configured in this file is necessary for dhcpd to start, and the actual range is not
+# important.
+resource("dhcp6_setup") {
+  sources = [ "dhcp_validity/data/dhcpd6.conf" ]
+  outputs = [ "data/dhcpd6.conf" ]
+}
+
+fuchsia_component("dhcp-validity") {
+  testonly = true
+  manifest = "meta/dhcp_validity.cmx"
+  deps = [ "dhcp_validity:test" ]
+}
+
+fuchsia_component("dhcp-validity-test") {
+  testonly = true
+  manifest = "meta/dhcp_validity_test.cmx"
+  deps = [
+    ":dhcp-validity",
+    ":dhcp6_setup",
+    ":dhcp_setup",
+    ":dhcpd_config",
+  ]
+}
+
+fuchsia_test_package("netemul-dhcp-tests") {
+  test_components = [ ":dhcp-validity-test" ]
+  deps = [
+    "//src/connectivity/network/dhcpv6/client:component",
+
+    # DHCP is implemented in-stack in netstack2. This will change when DHCP is
+    # implemented out-of-stack.
+    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
+  ]
+
+  # TODO(fxbug.dev/48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+  test_specs = {
+    environments = nuc_env_fails_on_asan
+  }
+}

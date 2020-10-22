@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::fmt::Debug;
+#![cfg(test)]
+
 use std::mem::size_of;
 
 use fidl_fuchsia_net as net;
@@ -20,31 +21,20 @@ use futures::stream::TryStreamExt as _;
 use net_types::ethernet::Mac;
 use net_types::ip::{self as net_types_ip, Ip};
 use net_types::{SpecifiedAddress, Witness};
+use netstack_testing_common::constants::{eth as eth_consts, ipv6 as ipv6_consts};
+use netstack_testing_common::environments::{
+    KnownServices, Netstack, Netstack2, TestSandboxExt as _,
+};
+use netstack_testing_common::{
+    sleep, write_ndp_message, EthertapName, Result, ASYNC_EVENT_CHECK_INTERVAL,
+    ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, NDP_MESSAGE_TTL,
+};
 use netstack_testing_macros::variants_test;
-use packet::serialize::{InnerPacketBuilder, Serializer};
-use packet_formats::ethernet::{EtherType, EthernetFrameBuilder};
 use packet_formats::icmp::ndp::{
-    self,
     options::{NdpOption, PrefixInformation},
     NeighborAdvertisement, NeighborSolicitation, RouterAdvertisement, RouterSolicitation,
 };
-use packet_formats::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
-use packet_formats::ip::IpProto;
-use packet_formats::ipv6::Ipv6PacketBuilder;
 use packet_formats::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame;
-use zerocopy::ByteSlice;
-
-use crate::constants::{eth as eth_consts, ipv6 as ipv6_consts};
-use crate::environments::{KnownServices, Netstack, Netstack2, TestSandboxExt as _};
-use crate::{
-    sleep, EthertapName, Result, ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
-    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
-};
-
-/// As per [RFC 4861] sections 4.1-4.5, NDP packets MUST have a hop limit of 255.
-///
-/// [RFC 4861]: https://tools.ietf.org/html/rfc4861
-const NDP_MESSAGE_TTL: u8 = 255;
 
 /// The expected number of Router Solicitations sent by the netstack when an
 /// interface is brought up as a host.
@@ -133,34 +123,6 @@ where
     return Ok((network, environment, netstack, iface, fake_ep));
 }
 
-/// Writes an NDP message to the provided fake endpoint.
-///
-/// Given the source and destination MAC and IP addresses, NDP message and
-/// options, the full NDP packet (including IPv6 and Ethernet headers) will be
-/// transmitted to the fake endpoint's network.
-pub(super) async fn write_ndp_message<
-    B: ByteSlice + Debug,
-    M: IcmpMessage<net_types_ip::Ipv6, B, Code = IcmpUnusedCode> + Debug,
->(
-    src_mac: Mac,
-    dst_mac: Mac,
-    src_ip: net_types_ip::Ipv6Addr,
-    dst_ip: net_types_ip::Ipv6Addr,
-    message: M,
-    options: &[NdpOption<'_>],
-    ep: &netemul::TestFakeEndpoint<'_>,
-) -> Result {
-    let ser = ndp::OptionsSerializer::<_>::new(options.iter())
-        .into_serializer()
-        .encapsulate(IcmpPacketBuilder::<_, B, _>::new(src_ip, dst_ip, IcmpUnusedCode, message))
-        .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, NDP_MESSAGE_TTL, IpProto::Icmpv6))
-        .encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, EtherType::Ipv6))
-        .serialize_vec_outer()
-        .map_err(|e| anyhow::anyhow!("failed to serialize NDP packet: {:?}", e))?
-        .unwrap_b();
-    let () = ep.write(ser.as_ref()).await.context("failed to write to fake endpoint")?;
-    Ok(())
-}
 /// Launches a new netstack with the endpoint and returns the IPv6 addresses
 /// initially assigned to it.
 ///

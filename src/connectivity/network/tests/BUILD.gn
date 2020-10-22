@@ -3,226 +3,27 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/rust/rustc_macro.gni")
-import("//build/rust/rustc_test.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
   deps = [
-    ":netstack-integration-tests",
     ":netstack_bsdsocket_c_api_test($host_toolchain)",
     ":netstack_c_api_tests",
     ":netstack_external_network_test_client($host_toolchain)",
     ":netstack_if_nameindex_test($host_toolchain)",
     "benchmarks",
+    "dhcp_interop:dhcp_integration_tests",
     "getifaddrs:tests",
     "integration:tests",
   ]
-}
-
-rustc_test("netstack_integration_test_bin") {
-  name = "netstack_integration_test"
-  edition = "2018"
-
-  deps = [
-    ":netstack_testing_macros",
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
-    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap-rustc",
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
-    "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
-    "//sdk/fidl/fuchsia.net.dhcpv6:fuchsia.net.dhcpv6-rustc",
-    "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
-    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
-    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
-    "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
-    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
-    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/connectivity/lib/net-declare",
-    "//src/connectivity/lib/net-types",
-    "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
-    "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
-    "//src/connectivity/network/testing/netemul/rust:lib",
-    "//src/lib/async-utils",
-    "//src/lib/diagnostics/data/rust",
-    "//src/lib/diagnostics/inspect/contrib/rust",
-    "//src/lib/diagnostics/inspect/node-hierarchy/rust",
-    "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/network/fidl_fuchsia_hardware_ethernet_ext",
-    "//src/lib/network/fidl_fuchsia_net_ext",
-    "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
-    "//src/lib/network/fidl_fuchsia_net_stack_ext",
-    "//src/lib/network/fidl_fuchsia_netstack_ext",
-    "//src/lib/network/packet",
-    "//src/lib/network/packet-formats",
-    "//src/lib/network/packet-formats-dhcp",
-    "//src/lib/zerocopy",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:matches",
-    "//third_party/rust_crates:paste",
-    "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:socket2",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  sources = [
-    "src/constants.rs",
-    "src/dhcp.rs",
-    "src/dns.rs",
-    "src/environments.rs",
-    "src/fidl.rs",
-    "src/inspect.rs",
-    "src/ipv6.rs",
-    "src/lib.rs",
-    "src/management.rs",
-    "src/routes.rs",
-    "src/socket.rs",
-  ]
-}
-
-rustc_macro("netstack_testing_macros") {
-  source_root = "src/proc_macros.rs"
-
-  deps = [
-    "//third_party/rust_crates:proc-macro-hack",
-    "//third_party/rust_crates:proc-macro2",
-    "//third_party/rust_crates:quote",
-    "//third_party/rust_crates:syn",
-  ]
-
-  sources = [ "src/proc_macros.rs" ]
-}
-
-rustc_test("netstack_cobalt_integration_test_bin") {
-  name = "netstack_cobalt_integration_test"
-  edition = "2018"
-  source_root = "src/cobalt.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
-    "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
-    "//src/connectivity/network/netstack:networking_metrics_rustlib",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:matches",
-  ]
-
-  sources = [ "src/cobalt.rs" ]
-}
-
-fuchsia_component("netstack_integration_test") {
-  testonly = true
-  manifest = "meta/netstack_integration_test.cmx"
-  deps = [
-    ":netstack_integration_test_bin",
-
-    # netemul-sandbox is used to create hermetic environments.
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
-  ]
-}
-
-fuchsia_component("netstack_cobalt_integration_test") {
-  testonly = true
-  manifest = "meta/netstack_cobalt_integration_test.cmx"
-  deps = [ ":netstack_cobalt_integration_test_bin" ]
 }
 
 fuchsia_component("device_name_provider") {
   testonly = true
   manifest = "meta/device_name_provider.cmx"
   deps = [ "//src/bringup/bin/device-name-provider" ]
-}
-
-fuchsia_test_package("netstack-integration-tests") {
-  package_name = "netstack-integration-tests"
-  test_components = [
-    ":netstack_cobalt_integration_test",
-    ":netstack_integration_test",
-  ]
-  deps = [
-    # device_name_provider provides fuchsia.device.NameProvider.
-    ":device_name_provider",
-
-    # mock_cobalt provides fuchsia.cobalt.LoggerFactory and fuchsia.cobalt.test.LoggerQuerier.
-    "//src/cobalt/bin/testing/mock_cobalt:component",
-
-    # stash_secure is used by dhcpd and netstack.
-    "//src/sys/stash:stash_secure",
-
-    # dhcpd is used to test DHCP address acquisition.
-    ":dhcpd-testing-configs",
-    "//src/connectivity/network/dhcp:component",
-
-    # DHCPv6 client is under test.
-    "//src/connectivity/network/dhcpv6/client:component",
-
-    # dns_resolver integration with netstack is tested.
-    "//src/connectivity/network/dns:component",
-
-    # netcfg integration with netstack is tested.
-    ":netcfg-netemul-config",
-    "//src/connectivity/network/netcfg:component-netemul",
-
-    # netstack3 is under test.
-    "//src/connectivity/network/netstack3:component",
-
-    # netstack is under test.
-    "//src/connectivity/network/netstack:component-debug",
-
-    # network_manager integration with netstack is tested.
-    ":network-manager-config",
-    "//src/connectivity/management/network-manager:component-netemul",
-  ]
-}
-
-config_data("dhcpd-testing-configs") {
-  testonly = true
-  for_pkg = "netstack-integration-tests"
-  sources = [
-    "//src/connectivity/network/dhcp/data/bound_device_test_config_eth2.json",
-    "//src/connectivity/network/dhcp/data/bound_device_test_config_eth3.json",
-    "//src/connectivity/network/dhcp/data/default_config.json",
-    "//src/connectivity/network/dhcp/data/test_config.json",
-  ]
-  outputs = [ "dhcpd-testing/{{source_file_part}}" ]
-}
-
-config_data("netcfg-netemul-config") {
-  testonly = true
-  for_pkg = "netstack-integration-tests"
-  sources = [ "//src/connectivity/network/netcfg/config/empty.json" ]
-  outputs = [ "netcfg/empty.json" ]
-}
-
-config_data("network-manager-config") {
-  testonly = true
-  for_pkg = "netstack-integration-tests"
-  sources =
-      [ "//src/connectivity/management/network-manager/config/default.json" ]
-  outputs = [ "factory_config.json" ]
 }
 
 test("netstack_bsdsocket_c_api_test") {
