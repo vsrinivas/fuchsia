@@ -18,8 +18,7 @@ guest_packages = [
 ]
 
 # TODO(fxbug.dev/50820): Fix on ASan and switch back to [ nuc_env ].
-# TODO(fxbug.dev/56119): Fix on sherlock and add back `+ [ sherlock_env ]`
-guest_environments = nuc_env_fails_on_asan
+guest_environments = nuc_env_fails_on_asan + [ sherlock_env ]
 
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
 linux_tests_resources = [
