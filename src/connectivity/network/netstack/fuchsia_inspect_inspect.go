@@ -71,6 +71,7 @@ func (impl *inspectImpl) OpenChild(ctx fidl.Context, childName string, childChan
 		}).asService()
 		return true, svc.AddFn(ctx, childChannel.Channel)
 	}
+	_ = childChannel.Close()
 	return false, nil
 }
 

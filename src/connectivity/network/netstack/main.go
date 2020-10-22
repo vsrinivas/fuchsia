@@ -655,7 +655,11 @@ func connectCobaltLogger(ctx *component.Context) (*cobalt.LoggerWithCtxInterface
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to cobalt logger factory service: %s", err)
 	}
+	defer func() {
+		_ = cobaltLoggerFactory.Close()
+	}()
 	ctx.ConnectToEnvService(freq)
+
 	lreq, cobaltLogger, err := cobalt.NewLoggerWithCtxInterfaceRequest()
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to cobalt logger service: %s", err)
@@ -665,6 +669,7 @@ func connectCobaltLogger(ctx *component.Context) (*cobalt.LoggerWithCtxInterface
 		return nil, fmt.Errorf("CreateLoggerFromProjectId(%d, ...) = _, %s", networking_metrics.ProjectId, err)
 	}
 	if result != cobalt.StatusOk {
+		_ = cobaltLogger.Close()
 		return nil, fmt.Errorf("could not create logger for project %s: result: %s", networking_metrics.ProjectName, result)
 	}
 

@@ -23,6 +23,11 @@ import (
 )
 
 func respond(ctx fidl.Context, flags uint32, req fidlio.NodeWithCtxInterfaceRequest, err error, node fidlio.NodeWithCtx) error {
+	if err != nil {
+		defer func() {
+			_ = req.Close()
+		}()
+	}
 	if flags&fidlio.OpenFlagDescribe != 0 {
 		proxy := fidlio.NodeEventProxy{Channel: req.Channel}
 		switch err := err.(type) {

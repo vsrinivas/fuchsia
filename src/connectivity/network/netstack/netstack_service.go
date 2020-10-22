@@ -352,6 +352,7 @@ func (ni *netstackImpl) GetDhcpClient(ctx fidl.Context, id uint32, request dhcp.
 	nicid := tcpip.NICID(id)
 	if _, ok := ni.ns.stack.NICInfo()[nicid]; !ok {
 		result.SetErr(int32(zx.ErrNotFound))
+		_ = request.Close()
 		return result, nil
 	}
 	stub := dhcp.ClientWithCtxStub{Impl: &clientImpl{ns: ni.ns, nicid: nicid}}

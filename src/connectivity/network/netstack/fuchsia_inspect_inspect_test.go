@@ -5,10 +5,12 @@
 package netstack
 
 import (
+	"context"
 	"reflect"
 	"sort"
 	"strconv"
 	"syscall/zx"
+	"syscall/zx/zxwait"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
@@ -429,5 +431,31 @@ func TestFifoStatsInfoInspectImpl(t *testing.T) {
 		},
 	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestInspectGetMissingChild(t *testing.T) {
+	impl := inspectImpl{
+		inner: &nicInfoMapInspectImpl{},
+	}
+	req, proxy, err := inspect.NewInspectWithCtxInterfaceRequest()
+	if err != nil {
+		t.Fatalf("inspect.NewInspectWithCtxInterfaceRequest() = %s", err)
+	}
+	defer func() {
+		if err := proxy.Close(); err != nil {
+			t.Fatalf("proxy.Close() = %s", err)
+		}
+	}()
+	found, err := impl.OpenChild(context.Background(), "non-existing-child", req)
+	if err != nil {
+		t.Fatalf("impl.OpenChild(...) = %s", err)
+	}
+	if found {
+		t.Fatalf("got impl.OpenChild(...) = true, want = false")
+	}
+	// The request channel must have been closed.
+	if _, err := zxwait.Wait(*proxy.Channel.Handle(), zx.SignalChannelPeerClosed, 0); err != nil {
+		t.Fatalf("zxwait.Wait(_, zx.SignalChannelPeerClosed, 0) = %s", err)
 	}
 }

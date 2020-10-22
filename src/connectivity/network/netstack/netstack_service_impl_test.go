@@ -8,11 +8,13 @@ import (
 	"context"
 	"net"
 	"syscall/zx"
+	"syscall/zx/zxwait"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 
 	netfidl "fidl/fuchsia/net"
+	"fidl/fuchsia/net/dhcp"
 	"fidl/fuchsia/netstack"
 
 	"github.com/google/go-cmp/cmp"
@@ -176,6 +178,34 @@ func TestRouteTableTransactions(t *testing.T) {
 		AssertNoError(t, err)
 		if zx.Status(success) != zx.ErrOk {
 			t.Errorf("expected success after ending the previous transaction")
+		}
+	})
+}
+
+func TestGetDhcpClient(t *testing.T) {
+	t.Run("bad NIC", func(t *testing.T) {
+		netstackServiceImpl := netstackImpl{ns: newNetstack(t)}
+		req, proxy, err := dhcp.NewClientWithCtxInterfaceRequest()
+		if err != nil {
+			t.Fatalf("dhcp.NewClientWithCtxInterfaceRequest() = %s", err)
+		}
+		defer func() {
+			if err := proxy.Close(); err != nil {
+				t.Fatalf("proxy.Close() = %s", err)
+			}
+		}()
+		result, err := netstackServiceImpl.GetDhcpClient(context.Background(), 1234, req)
+		if err != nil {
+			t.Fatalf("netstachServiceImpl.GetDhcpClient(...) = %s", err)
+		}
+		if got, want := result.Which(), netstack.I_netstackGetDhcpClientResultTag(netstack.NetstackGetDhcpClientResultErr); got != want {
+			t.Fatalf("got result.Which() = %d, want = %d", got, want)
+		}
+		if got, want := zx.Status(result.Err), zx.ErrNotFound; got != want {
+			t.Fatalf("got result.Err = %s, want = %s", got, want)
+		}
+		if _, err := zxwait.Wait(*proxy.Channel.Handle(), zx.SignalChannelPeerClosed, 0); err != nil {
+			t.Fatalf("zxwait.Wait(_, zx.SignalChannelPeerClosed, 0) = %s", err)
 		}
 	})
 }

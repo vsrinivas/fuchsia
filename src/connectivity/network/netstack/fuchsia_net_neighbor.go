@@ -44,6 +44,7 @@ func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neighbor.EntryIter
 			continue
 		default:
 			_ = syslog.ErrorTf(neighbor.ViewName, "EntryIterator received unexpected error from Neighbors(%d): %s", nicID, err)
+			_ = it.Close()
 			return WrapTcpIpError(err)
 		}
 
