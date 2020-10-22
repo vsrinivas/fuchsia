@@ -10,8 +10,11 @@ pub mod socket;
 use crate::invoke_for_handle_types;
 use bitflags::bitflags;
 use fuchsia_zircon_status as zx_status;
+use futures::ready;
 use futures::task::noop_waker_ref;
 use slab::Slab;
+#[cfg(debug_assertions)]
+use std::cell::Cell;
 use std::sync::Mutex;
 use std::{
     collections::VecDeque,
@@ -351,41 +354,22 @@ impl Channel {
         &self,
         cx: &mut Context<'_>,
         bytes: &mut Vec<u8>,
-        handles: &mut Vec<HandleInfo>,
+        handle_infos: &mut Vec<HandleInfo>,
     ) -> Poll<Result<(), zx_status::Status>> {
-        with_handle(self.0, |h, side| {
-            if let HdlRef::Channel(obj) = h {
-                if let Some(mut msg) = obj.q.side_mut(side.opposite()).pop_front() {
-                    std::mem::swap(bytes, &mut msg.bytes);
-                    if handles.capacity() < msg.handles.capacity() {
-                        handles.reserve(msg.handles.len() - handles.len());
-                    }
-                    handles.clear();
-                    for h in &mut msg.handles {
-                        let h_raw = h.raw_handle();
-                        let (_, _, ty, _) = unpack_handle(h_raw);
-                        let rights = with_handle(h_raw, |href, _| match href {
-                            HdlRef::Channel(h) => h.rights,
-                            HdlRef::StreamSocket(h) => h.rights,
-                            HdlRef::DatagramSocket(h) => h.rights,
-                        });
-                        handles.push(HandleInfo {
-                            handle: std::mem::replace(h, Handle::invalid()),
-                            object_type: ty.object_type(),
-                            rights: rights,
-                        })
-                    }
-                    Poll::Ready(Ok(()))
-                } else if obj.liveness.is_open() {
-                    *obj.wakers.side_mut(side.opposite()) = Some(cx.waker().clone());
-                    Poll::Pending
-                } else {
-                    Poll::Ready(Err(zx_status::Status::PEER_CLOSED))
-                }
-            } else {
-                unreachable!();
-            }
-        })
+        let mut handles = Vec::new();
+        ready!(self.poll_read(cx, bytes, &mut handles))?;
+        handle_infos.clear();
+        handle_infos.extend(handles.into_iter().map(|handle| {
+            let h_raw = handle.raw_handle();
+            let (_, _, ty, _) = unpack_handle(h_raw);
+            let rights = with_handle(h_raw, |href, _| match href {
+                HdlRef::Channel(h) => h.rights,
+                HdlRef::StreamSocket(h) => h.rights,
+                HdlRef::DatagramSocket(h) => h.rights,
+            });
+            HandleInfo { handle, object_type: ty.object_type(), rights }
+        }));
+        Poll::Ready(Ok(()))
     }
 
     /// Write a message to a channel.
@@ -895,9 +879,16 @@ enum HdlRef<'a> {
     DatagramSocket(&'a mut Hdl<Vec<u8>>),
 }
 
+#[cfg(debug_assertions)]
+std::thread_local! {
+    static IN_WITH_HANDLE: Cell<bool> = Cell::new(false);
+}
+
 fn with_handle<R>(handle: u32, f: impl FnOnce(HdlRef<'_>, Side) -> R) -> R {
+    #[cfg(debug_assertions)]
+    IN_WITH_HANDLE.with(|iwh| assert_eq!(iwh.replace(true), false));
     let (shard, slot, ty, side) = unpack_handle(handle);
-    match ty {
+    let r = match ty {
         HdlType::Channel => {
             f(HdlRef::Channel(&mut CHANNELS.shards[shard].lock().unwrap()[slot]), side)
         }
@@ -908,7 +899,10 @@ fn with_handle<R>(handle: u32, f: impl FnOnce(HdlRef<'_>, Side) -> R) -> R {
             HdlRef::DatagramSocket(&mut DATAGRAM_SOCKETS.shards[shard].lock().unwrap()[slot]),
             side,
         ),
-    }
+    };
+    #[cfg(debug_assertions)]
+    IN_WITH_HANDLE.with(|iwh| assert_eq!(iwh.replace(false), true));
+    r
 }
 
 const SHARD_COUNT: usize = 16;
