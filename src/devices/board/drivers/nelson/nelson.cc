@@ -20,6 +20,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
+#include "nelson-gpios.h"
+
 namespace nelson {
 
 static const pbus_dev_t rtc_dev = []() {
@@ -54,6 +56,28 @@ uint32_t Nelson::GetBoardRev() {
   }
 
   return *board_rev_;
+}
+
+uint32_t Nelson::GetDisplayId() {
+  if (!display_id_) {
+    uint8_t id0, id1;
+    gpio_impl_.ConfigIn(GPIO_DISPLAY_ID0, GPIO_NO_PULL);
+    gpio_impl_.ConfigIn(GPIO_DISPLAY_ID1, GPIO_NO_PULL);
+    gpio_impl_.Read(GPIO_DISPLAY_ID0, &id0);
+    gpio_impl_.Read(GPIO_DISPLAY_ID1, &id1);
+    display_id_.emplace(id0 | (id1 << 1));
+  }
+
+  return *display_id_;
+}
+
+bool Nelson::Is9365Ddic() {
+  // On DVT or later, GPIOZ_11 indicates whether the 9364 (1) or 9365 (0) DDIC is present. Only the
+  // 9364 is used before DVT.
+  if (GetBoardRev() >= BOARD_REV_DVT) {
+    return (GetDisplayId() & 1) == 0;
+  }
+  return false;
 }
 
 int Nelson::Thread() {

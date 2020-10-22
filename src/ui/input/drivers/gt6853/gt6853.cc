@@ -10,6 +10,7 @@
 #include <zircon/threads.h>
 
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/composite.h>
@@ -30,10 +31,14 @@ constexpr uint8_t kTouchEvent = 1 << 7;
 
 namespace touch {
 
-enum class Gt6853Device::Register : uint16_t {
-  kEventStatusReg = 0x4100,
-  kContactsReg = 0x4101,
-  kContactsStartReg = 0x4102,
+enum class Gt6853Device::HostCommand : uint8_t {
+  kConfigStart = 0x80,
+  kConfigEnd = 0x83,
+};
+
+enum class Gt6853Device::DeviceCommand : uint8_t {
+  kReadyForConfig = 0x82,
+  kDeviceIdle = 0xff,
 };
 
 void Gt6853InputReport::ToFidlInputReport(fuchsia_input_report::InputReport::Builder& builder,
@@ -222,6 +227,10 @@ zx_status_t Gt6853Device::Init() {
     return status;
   }
 
+  if ((status = DownloadConfigIfNeeded()) != ZX_OK) {
+    return status;
+  }
+
   status = thrd_create_with_name(
       &thread_, [](void* arg) -> int { return reinterpret_cast<Gt6853Device*>(arg)->Thread(); },
       this, "gt6853-thread");
@@ -259,7 +268,243 @@ zx_status_t Gt6853Device::Init() {
     return status;
   }
 
-  // TODO(48099): Determine if a configuration blob is needed, and if so, send it here.
+  return ZX_OK;
+}
+
+zx_status_t Gt6853Device::DownloadConfigIfNeeded() {
+  zx::vmo config_vmo;
+
+  bool use_9365_config = false;
+  size_t actual = 0;
+  zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &use_9365_config,
+                                           sizeof(use_9365_config), &actual);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to get device metadata: %d", status);
+    return status;
+  }
+  if (actual != sizeof(use_9365_config)) {
+    zxlogf(ERROR, "Expected metadata size %zu, got %zu", sizeof(use_9365_config), actual);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  size_t config_vmo_size = 0;
+  if (use_9365_config) {
+    status = load_firmware(parent(), GT6853_CONFIG_9365_PATH, config_vmo.reset_and_get_address(),
+                           &config_vmo_size);
+  } else {
+    status = load_firmware(parent(), GT6853_CONFIG_9364_PATH, config_vmo.reset_and_get_address(),
+                           &config_vmo_size);
+  }
+
+  if (status != ZX_OK) {
+    zxlogf(WARNING, "Failed to load config binary, skipping config download");
+    return ZX_OK;
+  }
+
+  zx::status<uint8_t> sensor_id = ReadReg8(Register::kSensorIdReg);
+  if (sensor_id.is_error()) {
+    zxlogf(ERROR, "Failed to read sensor ID register: %d", sensor_id.error_value());
+    return sensor_id.error_value();
+  }
+
+  zxlogf(INFO, "Sensor ID 0x%02x, using 936%d config", sensor_id.value(), use_9365_config ? 5 : 4);
+
+  zx::status<uint64_t> config_offset =
+      GetConfigOffset(config_vmo, config_vmo_size, sensor_id.value() & 0xf);
+  if (config_offset.is_error()) {
+    return config_offset.error_value();
+  }
+
+  uint32_t config_size = 0;
+  if (config_vmo_size < config_offset.value() + sizeof(config_size)) {
+    zxlogf(ERROR, "Config vmo size is %zu, must be at least %lu", config_vmo_size,
+           config_offset.value() + sizeof(config_size));
+    return ZX_ERR_IO_INVALID;
+  }
+
+  status = config_vmo.read(&config_size, config_offset.value(), sizeof(config_size));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to read config VMO: %d", status);
+    return status;
+  }
+
+  // The offset of the config data in each config table entry.
+  constexpr uint32_t kConfigDataOffset = 121;
+
+  config_size = le32toh(config_size);
+  if (config_size < kConfigDataOffset) {
+    zxlogf(ERROR, "Config size is %u, must be at least %u", config_size, kConfigDataOffset);
+    return ZX_ERR_IO_INVALID;
+  }
+
+  zxlogf(INFO, "Found %u-byte config at offset %lu", config_size, config_offset.value());
+
+  return SendConfig(config_vmo, config_offset.value() + kConfigDataOffset,
+                    config_size - kConfigDataOffset);
+}
+
+zx::status<uint64_t> Gt6853Device::GetConfigOffset(const zx::vmo& config_vmo,
+                                                   const size_t config_vmo_size,
+                                                   const uint8_t sensor_id) {
+  constexpr size_t kConfigTableHeaderSize = 16;
+  if (config_vmo_size < kConfigTableHeaderSize) {
+    zxlogf(ERROR, "Config VMO size is %zu, must be at least %zu", config_vmo_size,
+           kConfigTableHeaderSize);
+    return zx::error(ZX_ERR_IO_INVALID);
+  }
+
+  uint32_t config_size = 0;
+  zx_status_t status = config_vmo.read(&config_size, 0, sizeof(config_size));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to read config VMO: %d", status);
+    return zx::error(status);
+  }
+
+  config_size = le32toh(config_size);
+  if (config_size != config_vmo_size) {
+    zxlogf(ERROR, "Config size (%u) doesnt't match VMO size (%zu)", config_size, config_vmo_size);
+    return zx::error(ZX_ERR_IO_INVALID);
+  }
+
+  // TODO(bradenkell): Check config CRC byte.
+
+  // The offset of the config entry count in the table header.
+  constexpr uint64_t kConfigEntryCountOffset = 9;
+
+  uint8_t config_count = 0;
+  status = config_vmo.read(&config_count, kConfigEntryCountOffset, sizeof(config_count));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to read config VMO: %d", status);
+    return zx::error(status);
+  }
+
+  if (config_vmo_size < (kConfigTableHeaderSize + (config_count * sizeof(uint16_t)))) {
+    zxlogf(ERROR, "Config VMO size is %zu, must be at least %zu", config_vmo_size,
+           kConfigTableHeaderSize + (config_count * sizeof(uint16_t)));
+    return zx::error(ZX_ERR_IO_INVALID);
+  }
+
+  for (int i = 0; i < config_count; i++) {
+    const uint64_t config_offset_offset = kConfigTableHeaderSize + (i * sizeof(uint16_t));
+    uint16_t config_offset = 0;
+    status = config_vmo.read(&config_offset, config_offset_offset, sizeof(config_offset));
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to read config VMO: %d", status);
+      return zx::error(status);
+    }
+
+    // The offset of the sensor ID in each config table entry.
+    constexpr uint64_t kConfigSensorIdOffset = 20;
+
+    config_offset = le16toh(config_offset);
+    if (config_vmo_size < config_offset + kConfigSensorIdOffset) {
+      zxlogf(ERROR, "Config offset %u is too big", config_offset);
+      return zx::error(ZX_ERR_IO_INVALID);
+    }
+
+    uint8_t config_sensor_id = 0;
+    status = config_vmo.read(&config_sensor_id, config_offset + kConfigSensorIdOffset,
+                             sizeof(config_sensor_id));
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to read config VMO: %d", status);
+      return zx::error(status);
+    }
+
+    if (config_sensor_id == sensor_id) {
+      return zx::ok(config_offset);
+    }
+  }
+
+  zxlogf(ERROR, "Failed to find config for sensor ID 0x%02x", sensor_id);
+  return zx::error(ZX_ERR_NOT_FOUND);
+}
+
+zx_status_t Gt6853Device::PollCommandRegister(const DeviceCommand command) {
+  constexpr int kCommandTimeoutMs = 100;  // An arbitrary timeout that seems to work.
+  for (int i = 0; i < kCommandTimeoutMs; i++) {
+    auto status = ReadReg8(Register::kCommandReg);
+    if (status.is_error()) {
+      zxlogf(ERROR, "Failed to read command register");
+      return status.error_value();
+    }
+
+    if (status.value() == static_cast<uint8_t>(command)) {
+      return ZX_OK;
+    }
+
+    zx::nanosleep(zx::deadline_after(zx::msec(1)));
+  }
+
+  zxlogf(ERROR, "Timed out waiting for command register 0x%02x", static_cast<uint8_t>(command));
+  return ZX_ERR_TIMED_OUT;
+}
+
+zx_status_t Gt6853Device::SendCommand(const HostCommand command) {
+  const uint8_t checksum = 0xff - static_cast<uint8_t>(command) + 1;
+  uint8_t buffer[] = {
+      static_cast<uint16_t>(Register::kCommandReg) >> 8,
+      static_cast<uint16_t>(Register::kCommandReg) & 0xff,
+      static_cast<uint8_t>(command),
+      0x00,
+      checksum,
+  };
+  zx_status_t status = i2c_.WriteSync(buffer, sizeof(buffer));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to send command 0x%02x: %d", static_cast<uint8_t>(command), status);
+    return status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t Gt6853Device::SendConfig(const zx::vmo& config_vmo, uint64_t offset, size_t size) {
+  zx_status_t status = PollCommandRegister(DeviceCommand::kDeviceIdle);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Device not idle before config download");
+    return status;
+  }
+
+  if ((status = SendCommand(HostCommand::kConfigStart)) != ZX_OK) {
+    zxlogf(ERROR, "Failed to start config download");
+    return status;
+  }
+
+  if ((status = PollCommandRegister(DeviceCommand::kReadyForConfig)) != ZX_OK) {
+    return status;
+  }
+
+  constexpr size_t kMaxConfigPacketSize = 128;
+
+  while (size > 0) {
+    const size_t tx_size = std::min(size, kMaxConfigPacketSize);
+    uint8_t buffer[sizeof(Register::kConfigDataReg) + kMaxConfigPacketSize];
+
+    status = config_vmo.read(&buffer[sizeof(Register::kConfigDataReg)], offset, tx_size);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to read config VMO: %d", status);
+      return status;
+    }
+
+    buffer[0] = static_cast<uint16_t>(Register::kConfigDataReg) >> 8;
+    buffer[1] = static_cast<uint16_t>(Register::kConfigDataReg) & 0xff;
+    if ((status = i2c_.WriteSync(buffer, tx_size + sizeof(Register::kConfigDataReg))) != ZX_OK) {
+      zxlogf(ERROR, "Failed to write %zu config bytes: %d", tx_size, status);
+      return status;
+    }
+
+    size -= tx_size;
+    offset += tx_size;
+  }
+
+  if ((status = SendCommand(HostCommand::kConfigEnd)) != ZX_OK) {
+    zxlogf(ERROR, "Failed to stop config download");
+    return status;
+  }
+
+  if ((status = PollCommandRegister(DeviceCommand::kDeviceIdle)) != ZX_OK) {
+    zxlogf(ERROR, "Device not idle after config download");
+    return status;
+  }
+
   return ZX_OK;
 }
 

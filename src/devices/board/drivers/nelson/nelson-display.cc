@@ -156,10 +156,8 @@ zx_status_t Nelson::DisplayInit() {
       },
   };
 
-  uint8_t pt;
-  gpio_impl_.ConfigIn(GPIO_PANEL_DETECT, GPIO_NO_PULL);
-  gpio_impl_.Read(GPIO_PANEL_DETECT, &pt);
-  if (pt) {
+  // TODO(61396): Add support for DVT panels.
+  if (GetDisplayId() & 1) {
     display_panel_info[0].panel_type = PANEL_P070ACB_FT;
   } else {
     display_panel_info[0].panel_type = PANEL_TV070WSM_FT;

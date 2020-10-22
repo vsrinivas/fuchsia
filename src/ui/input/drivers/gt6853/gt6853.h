@@ -47,6 +47,15 @@ class Gt6853Device : public DeviceType,
                      fuchsia_input_report::InputDevice::Interface,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
+  enum class Register : uint16_t {
+    kEventStatusReg = 0x4100,
+    kContactsReg = 0x4101,
+    kContactsStartReg = 0x4102,
+    kSensorIdReg = 0x4541,
+    kCommandReg = 0x60cc,
+    kConfigDataReg = 0x60dc,
+  };
+
   Gt6853Device(zx_device_t* parent, ddk::I2cChannel i2c) : Gt6853Device(parent, i2c, {}, {}) {}
 
   Gt6853Device(zx_device_t* parent, ddk::I2cChannel i2c, ddk::GpioProtocolClient interrupt_gpio,
@@ -82,11 +91,19 @@ class Gt6853Device : public DeviceType,
   void WaitForNextReader();
 
  private:
-  enum class Register : uint16_t;
+  enum class HostCommand : uint8_t;
+  enum class DeviceCommand : uint8_t;
 
   static Gt6853Contact ParseContact(const uint8_t* contact_buffer);
 
   zx_status_t Init();
+
+  zx_status_t DownloadConfigIfNeeded();
+  static zx::status<uint64_t> GetConfigOffset(const zx::vmo& config_vmo, size_t config_vmo_size,
+                                              uint8_t sensor_id);
+  zx_status_t PollCommandRegister(DeviceCommand command);
+  zx_status_t SendCommand(HostCommand command);
+  zx_status_t SendConfig(const zx::vmo& config_vmo, uint64_t offset, size_t size);
 
   zx::status<uint8_t> ReadReg8(Register reg);
   zx::status<> Read(Register reg, uint8_t* buffer, size_t size);

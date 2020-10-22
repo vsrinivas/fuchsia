@@ -140,6 +140,8 @@ class Nelson : public NelsonType {
   int Thread();
 
   uint32_t GetBoardRev(void);
+  uint32_t GetDisplayId(void);
+  bool Is9365Ddic();
   zx_status_t EnableWifi32K(void);
   zx_status_t SdEmmcConfigurePortB(void);
 
@@ -150,6 +152,7 @@ class Nelson : public NelsonType {
 
   thrd_t thread_;
   std::optional<uint32_t> board_rev_;
+  std::optional<uint32_t> display_id_;
 };
 
 }  // namespace nelson

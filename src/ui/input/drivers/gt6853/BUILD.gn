@@ -3,10 +3,54 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/driver_package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
+
+config_9364_path = "gt6853/goodix_cfg_group_fiti9364.bin"
+config_9365_path = "gt6853/goodix_cfg_group_fiti9365.bin"
+
+driver_package("gt6853") {
+  deps = [ ":gt6853-module" ]
+
+  drivers = [
+    {
+      name = "gt6853.so"
+    },
+  ]
+
+  libraries = []
+
+  if (internal_access) {
+    deps += [
+      ":config-9364-copy($shlib_toolchain)",
+      ":config-9365-copy($shlib_toolchain)",
+    ]
+
+    libraries += [
+      {
+        name = "firmware/$config_9364_path"
+      },
+      {
+        name = "firmware/$config_9365_path"
+      },
+    ]
+  }
+}
+
+if (internal_access) {
+  copy("config-9364-copy") {
+    sources = [ "//prebuilt/touch/$config_9364_path" ]
+    outputs = [ "$root_out_dir/firmware/$config_9364_path" ]
+  }
+  copy("config-9365-copy") {
+    sources = [ "//prebuilt/touch/$config_9365_path" ]
+    outputs = [ "$root_out_dir/firmware/$config_9365_path" ]
+  }
+}
 
 group("common") {
   public_deps = [
@@ -43,7 +87,7 @@ bind_rules("gt6853-bind") {
   ]
 }
 
-driver_module("gt6853") {
+driver_module("gt6853-module") {
   output_name = "gt6853"
   sources = [ "gt6853.cc" ]
   configs += [
@@ -53,6 +97,10 @@ driver_module("gt6853") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   deps = [ ":common" ]
+  defines = [
+    "GT6853_CONFIG_9364_PATH=\"$config_9364_path\"",
+    "GT6853_CONFIG_9365_PATH=\"$config_9365_path\"",
+  ]
 }
 
 test("gt6853-test") {
@@ -69,6 +117,10 @@ test("gt6853-test") {
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zxtest",
+  ]
+  defines = [
+    "GT6853_CONFIG_9364_PATH=\"$config_9364_path\"",
+    "GT6853_CONFIG_9365_PATH=\"$config_9365_path\"",
   ]
 }
 

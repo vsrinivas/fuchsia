@@ -74,7 +74,8 @@ static const gpio_pin_t gpio_pins[] = {
     // For wifi.
     {S905D3_WIFI_SDIO_WAKE_HOST},
     // For display.
-    {GPIO_PANEL_DETECT},
+    {GPIO_DISPLAY_ID0},
+    {GPIO_DISPLAY_ID1},
     {GPIO_LCD_RESET},
     // For touch screen.
     {GPIO_TOUCH_INTERRUPT},

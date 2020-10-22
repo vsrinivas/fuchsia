@@ -76,7 +76,9 @@ static const device_fragment_t goodix_fragments[] = {
 };
 
 zx_status_t Nelson::TouchInit() {
+  const uint32_t display_id = GetDisplayId();
   zxlogf(INFO, "Board rev: %u", GetBoardRev());
+  zxlogf(INFO, "Panel ID: 0b%d%d", display_id & 0b10 ? 1 : 0, display_id & 0b01 ? 1 : 0);
 
   if (GetBoardRev() < BOARD_REV_P2) {
     return TouchInitP1();
@@ -87,14 +89,23 @@ zx_status_t Nelson::TouchInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GOODIX_GT6853},
   };
 
+  const bool use_9365_config = Is9365Ddic();
+  const device_metadata_t touch_metadata[] = {
+      {
+          .type = DEVICE_METADATA_PRIVATE,
+          .data = &use_9365_config,
+          .length = sizeof(use_9365_config),
+      },
+  };
+
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = goodix_fragments,
       .fragments_count = countof(goodix_fragments),
       .coresident_device_index = UINT32_MAX,
-      .metadata_list = nullptr,
-      .metadata_count = 0,
+      .metadata_list = touch_metadata,
+      .metadata_count = countof(touch_metadata),
   };
   zx_status_t status = DdkAddComposite("gt6853-touch", &comp_desc);
   if (status != ZX_OK) {
@@ -105,18 +116,13 @@ zx_status_t Nelson::TouchInit() {
 }
 
 zx_status_t Nelson::TouchInitP1() {
-  // Check the display ID pin to determine which driver device to add
-  gpio_impl_.SetAltFunction(GPIO_PANEL_DETECT, 0);
-  gpio_impl_.ConfigIn(GPIO_PANEL_DETECT, GPIO_NO_PULL);
-  uint8_t gpio_state = 0;
-
   /* Two variants of display are supported, one with BOE display panel and
         ft3x27 touch controller, the other with INX panel and Goodix touch
         controller.  This GPIO input is used to identify each.
         Logic 0 for BOE/ft3x27 combination
         Logic 1 for Innolux/Goodix combination
   */
-  gpio_impl_.Read(GPIO_PANEL_DETECT, &gpio_state);
+  const uint8_t gpio_state = GetDisplayId() & 1;
   zxlogf(INFO, "%s - Touch type: %s", __func__, (gpio_state ? "GTx8x" : "FT3x27"));
   if (!gpio_state) {
     const zx_device_prop_t props[] = {
