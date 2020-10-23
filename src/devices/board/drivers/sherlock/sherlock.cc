@@ -83,6 +83,11 @@ int Sherlock::Thread() {
     return -1;
   }
 
+  if (RegistersInit() != ZX_OK) {
+    zxlogf(ERROR, "RegistersInit() failed");
+    return -1;
+  }
+
   if (BoardInit() != ZX_OK) {
     zxlogf(ERROR, "BoardInit() failed");
     return -1;

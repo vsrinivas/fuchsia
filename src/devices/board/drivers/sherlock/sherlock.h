@@ -89,6 +89,7 @@ class Sherlock : public SherlockType {
   zx_status_t Start();
   zx_status_t SysmemInit();
   zx_status_t GpioInit();
+  zx_status_t RegistersInit();
   zx_status_t BoardInit();
   zx_status_t CanvasInit();
   zx_status_t I2cInit();

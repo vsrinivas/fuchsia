@@ -53,6 +53,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_RADAR_SENSOR           0x26  // Radar Sensor
 #define PDEV_DID_POWER_DOMAIN_COMPOSITE 0x27  // Power domain, as a composite device
 #define PDEV_DID_DW_SPI                 0x28  // Designware SPI
+#define PDEV_DID_REGISTERS              0x29  // Registers device
 
 // QEMU emulator
 #define PDEV_VID_QEMU               0x01

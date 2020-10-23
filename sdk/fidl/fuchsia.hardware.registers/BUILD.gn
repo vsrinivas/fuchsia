@@ -5,6 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.registers") {
-  sources = [ "register-util.fidl" ]
+  sources = [
+    "metadata.fidl",
+    "register-util.fidl",
+  ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

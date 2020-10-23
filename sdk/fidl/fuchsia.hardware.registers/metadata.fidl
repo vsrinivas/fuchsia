@@ -1,0 +1,46 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.registers;
+
+using zx;
+
+union Mask {
+    1: uint8 r8;
+    2: uint16 r16;
+    3: uint32 r32;
+    4: uint64 r64;
+};
+
+table MaskEntry {
+    1: Mask mask;
+    /// Number of masks with this mask value.
+    2: uint32 count;
+};
+
+table RegistersMetadataEntry {
+    /// RegisterID for binding purposes.
+    1: uint64 id;
+
+    /// Base physical address of register range.
+    /// Should be aligned to 4 for 32-bit registers, 8 for 64-bit registers, etc.
+    2: zx.paddr base_address;
+
+    /// A run length encoded list of masks.
+    /// Should be in order starting from base address. Masks should all be of the same type.
+    3: vector<MaskEntry>:MAX masks;
+};
+
+table MmioMetadataEntry {
+    /// Base physical address of MMIO range.
+    1: zx.paddr base_address;
+};
+
+table Metadata {
+    /// Vector of MMIO metadata. One for each MMIO listed.
+    1: vector<MmioMetadataEntry>:MAX mmio;
+
+    /// Vector of Registers metadata. One for each register to be published.
+    2: vector<RegistersMetadataEntry>:MAX registers;
+};

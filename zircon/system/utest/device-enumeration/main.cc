@@ -493,6 +493,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "aml-secure-mem/aml-securemem",
       "pwm-init",
       "sys/platform/05:04:24/ram",
+      "sys/platform/00:00:29",  // registers device
 
       // CPU Device.
       "sys/platform/03:05:6",
