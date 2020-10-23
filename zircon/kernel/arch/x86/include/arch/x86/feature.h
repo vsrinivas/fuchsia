@@ -360,6 +360,9 @@ typedef struct {
   bool has_swapgs_bug;
   bool has_ssb;
 
+  // Whether the idle loop should prefer HLT to MWAIT.
+  // TODO(fxbug.dev/61265): Allow idle predictor/governor to drive this from a table
+  bool idle_prefer_hlt;
   x86_idle_states_t idle_states;
 } x86_microarch_config_t;
 

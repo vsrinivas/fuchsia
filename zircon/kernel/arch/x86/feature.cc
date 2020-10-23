@@ -686,6 +686,7 @@ static const x86_microarch_config_t cannon_lake_config{
     .has_mds = true,
     .has_swapgs_bug = true,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -705,6 +706,7 @@ static const x86_microarch_config_t skylake_config{
     .has_mds = true,
     .has_swapgs_bug = true,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states =
@@ -733,6 +735,7 @@ static const x86_microarch_config_t skylake_x_config{
     .has_mds = true,
     .has_swapgs_bug = true,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -752,6 +755,7 @@ static const x86_microarch_config_t broadwell_config{
     .has_mds = true,
     .has_swapgs_bug = true,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -770,6 +774,7 @@ static const x86_microarch_config_t haswell_config{
     .has_mds = true,
     .has_swapgs_bug = true,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -788,6 +793,7 @@ static const x86_microarch_config_t ivybridge_config{
     .has_mds = true,
     .has_swapgs_bug = true,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -806,6 +812,7 @@ static const x86_microarch_config_t sandybridge_config{
     .has_mds = true,
     .has_swapgs_bug = true,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -824,6 +831,7 @@ static const x86_microarch_config_t westmere_config{
     .has_mds = true,
     .has_swapgs_bug = true,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -842,6 +850,7 @@ static const x86_microarch_config_t nehalem_config{
     .has_mds = true,
     .has_swapgs_bug = true,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -860,6 +869,7 @@ static const x86_microarch_config_t silvermont_config{
     .has_mds = true,
     .has_swapgs_bug = false,
     .has_ssb = false,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -878,6 +888,9 @@ static const x86_microarch_config_t goldmont_config{
     .has_mds = false,
     .has_swapgs_bug = false,
     .has_ssb = true,
+    // [APL30] Apollo Lake SOCs (Goldmont) have an errata which causes stores to not always wake
+    // MWAIT-ing cores. Prefer HLT to avoid the issue.
+    .idle_prefer_hlt = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -896,6 +909,7 @@ static const x86_microarch_config_t goldmont_plus_config{
     .has_mds = false,
     .has_swapgs_bug = false,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {
@@ -923,6 +937,7 @@ static const x86_microarch_config_t intel_default_config{
     .has_mds = true,
     .has_swapgs_bug = true,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -943,6 +958,9 @@ static const x86_microarch_config_t zen_config{
     .has_mds = false,
     .has_swapgs_bug = false,
     .has_ssb = true,
+    // Zen SOCs save substantial power using HLT instead of MWAIT.
+    // TODO(fxbug.dev/61265): Use a predictor/selection to use mwait for short sleeps.
+    .idle_prefer_hlt = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -961,6 +979,7 @@ static const x86_microarch_config_t jaguar_config{
     .has_mds = false,
     .has_swapgs_bug = false,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -979,6 +998,8 @@ static const x86_microarch_config_t bulldozer_config{
     .has_mds = false,
     .has_swapgs_bug = false,
     .has_ssb = true,
+    // Excavator SOCs in particular save substantial power using HLT instead of MWAIT
+    .idle_prefer_hlt = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -997,6 +1018,7 @@ static const x86_microarch_config_t amd_default_config{
     .has_mds = false,
     .has_swapgs_bug = false,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -1017,6 +1039,7 @@ static const x86_microarch_config_t unknown_vendor_config{
     .has_mds = true,
     .has_swapgs_bug = false,
     .has_ssb = true,
+    .idle_prefer_hlt = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},

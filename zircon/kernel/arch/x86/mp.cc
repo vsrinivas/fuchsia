@@ -111,7 +111,9 @@ zx_status_t x86_allocate_ap_structures(uint32_t* apic_ids, uint8_t cpu_count) {
     }
     memset(ap_percpus, 0, len);
 
-    if ((use_monitor = x86_feature_test(X86_FEATURE_MON))) {
+    use_monitor = x86_feature_test(X86_FEATURE_MON) &&
+                  !x86_get_microarch_config()->idle_prefer_hlt;
+    if (use_monitor) {
       uint16_t monitor_size = x86_get_cpuid_leaf(X86_CPUID_MON)->b & 0xffff;
       if (monitor_size < MAX_CACHE_LINE) {
         monitor_size = MAX_CACHE_LINE;
