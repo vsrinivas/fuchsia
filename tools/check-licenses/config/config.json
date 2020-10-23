@@ -85,6 +85,7 @@
   ],
   "exitOnProhibitedLicenseTypes": true,
   "exitOnUnlicensedFiles": true,
+  "outputLicenseFile": true,
   "outputFilePrefix": "NOTICE",
   "outputFileExtension": "html.gz",
   "product": "astro",

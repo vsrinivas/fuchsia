@@ -85,12 +85,13 @@ func Walk(config *Config) error {
 		return fmt.Errorf("Encountered files that are missing licenses. File paths are:\n%v", files)
 	}
 
-	file, err := createOutputFile(config)
-	if err != nil {
-		return err
+	if config.OutputLicenseFile {
+		file, err := createOutputFile(config)
+		if err != nil {
+			return err
+		}
+		saveToOutputFile(file, licenses, config, metrics)
 	}
-
-	saveToOutputFile(file, licenses, config, metrics)
 	metrics.print()
 	return nil
 }

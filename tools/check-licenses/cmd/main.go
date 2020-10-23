@@ -26,6 +26,7 @@ var (
 	logLevel                     = flag.Int("log_level", 0, "Log level, see https://godoc.org/github.com/golang/glog for more info.")
 	exitOnUnlicensedFiles        = flag.Bool("exit_on_unlicensed_files", true, "If true, exits if it encounters files that are unlicensed.")
 	exitOnProhibitedLicenseTypes = flag.Bool("exit_on_prohibited_license_types", true, "If true, exits if it encounters a prohibited license type.")
+	outputLicenseFile            = flag.Bool("output_license_file", true, "If true, outputs a license file with all the licenses for the project.")
 	prohibitedLicenseTypes       = flag.String("prohibited_license_types", "", "Comma separated list of license types that are prohibited. This arg is added to the list of prohibitedLicenseTypes in the config file.")
 )
 
@@ -68,6 +69,8 @@ func validateArgs() {
 	// flags once b/163611041 is completed.
 	config.ExitOnProhibitedLicenseTypes = *exitOnProhibitedLicenseTypes
 	config.ExitOnUnlicensedFiles = *exitOnUnlicensedFiles
+
+	config.OutputLicenseFile = *outputLicenseFile
 
 	if *licensePatternDir != "" {
 		if info, err := os.Stat(*licensePatternDir); os.IsNotExist(err) && info.IsDir() {
