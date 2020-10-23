@@ -16,6 +16,8 @@ use futures::prelude::*;
 use std::fs;
 use std::sync::Arc;
 
+const MAX_RESULT_ITEMS: usize = 20;
+
 async fn run_fuzzy_search_server(
     mut stream: ComponentIndexRequestStream,
     index: Arc<Vec<String>>,
@@ -28,7 +30,12 @@ async fn run_fuzzy_search_server(
                 .send(&mut Err(FuzzySearchError::MalformedInput))
                 .context("error sending response")?;
         } else {
-            let res: Vec<String> = index.iter().filter(|c| c.contains(&needle)).cloned().collect();
+            let res: Vec<String> = index
+                .iter()
+                .filter(|c| c.contains(&needle))
+                .take(MAX_RESULT_ITEMS)
+                .cloned()
+                .collect();
             responder.send(&mut Ok(res)).context("error sending response")?;
         }
     }
@@ -128,6 +135,143 @@ mod tests {
         test_parse_hash => {
             needle = "package#foo.cmx",
             accept = false,
+        }
+    }
+
+    mod fuzzy_search_server {
+        use super::*;
+        use fidl::endpoints::create_proxy_and_stream;
+        use fidl_fuchsia_sys_index::ComponentIndexMarker;
+        use futures::pin_mut;
+        use matches::assert_matches;
+
+        #[fasync::run_until_stalled(test)]
+        async fn reports_matching_component_to_client() -> Result<(), Error> {
+            let (search_proxy, query_stream) = create_proxy_and_stream::<ComponentIndexMarker>()?;
+            let search_result_fut = search_proxy.fuzzy_search("a");
+            let server_exit_fut = run_fuzzy_search_server(
+                query_stream,
+                Arc::new(vec!["component_a".to_owned(), "component_b".to_owned()]),
+            );
+            pin_mut!(search_result_fut);
+            pin_mut!(server_exit_fut);
+
+            match futures::future::select(search_result_fut, server_exit_fut).await {
+                future::Either::Left((search_result, _server_fut)) => {
+                    assert_matches!(search_result, Ok(Ok(results)) if results.as_slice() == ["component_a"])
+                }
+                future::Either::Right((server_exit, _search_fut)) => {
+                    panic!("server terminated with `{:?}`", server_exit)
+                }
+            };
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn informs_client_of_error_on_invalid_query() -> Result<(), Error> {
+            let (search_proxy, query_stream) = create_proxy_and_stream::<ComponentIndexMarker>()?;
+            let search_result_fut = search_proxy.fuzzy_search("bad:query");
+            let server_exit_fut = run_fuzzy_search_server(
+                query_stream,
+                Arc::new(vec!["component_a".to_owned(), "component_b".to_owned()]),
+            );
+            pin_mut!(search_result_fut);
+            pin_mut!(server_exit_fut);
+
+            match futures::future::select(search_result_fut, server_exit_fut).await {
+                future::Either::Left((search_result, _server_fut)) => {
+                    assert_matches!(search_result, Ok(Err(_)))
+                }
+                future::Either::Right((server_exit, _search_fut)) => {
+                    panic!("server terminated with `{:?}`", server_exit)
+                }
+            };
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn reports_empty_results_to_client_on_no_match() -> Result<(), Error> {
+            let (search_proxy, query_stream) = create_proxy_and_stream::<ComponentIndexMarker>()?;
+            let search_result_fut = search_proxy.fuzzy_search("a");
+            let server_exit_fut =
+                run_fuzzy_search_server(query_stream, Arc::new(vec!["component_b".to_owned()]));
+            pin_mut!(search_result_fut);
+            pin_mut!(server_exit_fut);
+
+            match futures::future::select(search_result_fut, server_exit_fut).await {
+                future::Either::Left((search_result, _server_fut)) => {
+                    assert_matches!(search_result, Ok(Ok(results)) if results.len() == 0)
+                }
+                future::Either::Right((server_exit, _search_fut)) => {
+                    panic!("server terminated with `{:?}`", server_exit)
+                }
+            };
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn upper_bounds_size_of_results_sent_to_client() -> Result<(), Error> {
+            let (search_proxy, query_stream) = create_proxy_and_stream::<ComponentIndexMarker>()?;
+            let search_result_fut = search_proxy.fuzzy_search("c");
+            let component_list =
+                (1..=MAX_RESULT_ITEMS * 2).map(|i| format!("component {}", i)).collect::<Vec<_>>();
+            let server_exit_fut = run_fuzzy_search_server(query_stream, Arc::new(component_list));
+            pin_mut!(search_result_fut);
+            pin_mut!(server_exit_fut);
+
+            match futures::future::select(search_result_fut, server_exit_fut).await {
+                future::Either::Left((search_result, _server_fut)) => {
+                    assert_matches!(search_result, Ok(Ok(results)) if results.len() <= MAX_RESULT_ITEMS)
+                }
+                future::Either::Right((server_exit, _search_fut)) => {
+                    panic!("server terminated with `{:?}`", server_exit)
+                }
+            };
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn does_not_spuriously_drop_matches() -> Result<(), Error> {
+            let (search_proxy, query_stream) = create_proxy_and_stream::<ComponentIndexMarker>()?;
+            let search_result_fut = search_proxy.fuzzy_search("A");
+            let component_list = (1..=MAX_RESULT_ITEMS)
+                .map(|i| format!("component {}", i))
+                .chain(std::iter::once("Component A".to_owned()))
+                .collect::<Vec<_>>();
+            let server_exit_fut = run_fuzzy_search_server(query_stream, Arc::new(component_list));
+            pin_mut!(search_result_fut);
+            pin_mut!(server_exit_fut);
+
+            match futures::future::select(search_result_fut, server_exit_fut).await {
+                future::Either::Left((search_result, _server_fut)) => {
+                    assert_matches!(search_result, Ok(Ok(results)) if results.as_slice() == ["Component A"])
+                }
+                future::Either::Right((server_exit, _search_fut)) => {
+                    panic!("server terminated with `{:?}`", server_exit)
+                }
+            };
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn terminates_with_error_on_failed_write() -> Result<(), Error> {
+            let (search_proxy, query_stream) = create_proxy_and_stream::<ComponentIndexMarker>()?;
+            let server_exit_fut =
+                run_fuzzy_search_server(query_stream, Arc::new(vec!["A".to_owned()]));
+            search_proxy.fuzzy_search("A"); // Note: request is sent synchronously
+            std::mem::drop(search_proxy);
+            assert_matches!(server_exit_fut.await, Err(_));
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn terminates_with_ok_on_end_of_stream() -> Result<(), Error> {
+            let (search_proxy, query_stream) = create_proxy_and_stream::<ComponentIndexMarker>()?;
+            let server_exit_fut =
+                run_fuzzy_search_server(query_stream, Arc::new(vec!["A".to_owned()]));
+            std::mem::drop(search_proxy);
+            assert_matches!(server_exit_fut.await, Ok(()));
+            Ok(())
         }
     }
 }

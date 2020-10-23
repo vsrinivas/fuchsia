@@ -55,6 +55,8 @@ rustc_binary("component_index_bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [ "//third_party/rust_crates:matches" ]
+
   sources = [ "src/main.rs" ]
 }
 
