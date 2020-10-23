@@ -14,6 +14,7 @@
 #include <vector>
 
 #include <ddk/debug.h>
+#include <safemath/safe_conversions.h>
 #include <zxtest/zxtest.h>
 
 #include "src/camera/drivers/hw_accel/ge2d/ge2d.h"
@@ -171,7 +172,7 @@ void WriteDataToVmo(zx_handle_t vmo, const image_format_2_t& format) {
   ASSERT_OK(zx_vmo_op_range(vmo, ZX_VMO_OP_CACHE_CLEAN, 0, size, nullptr, 0));
 }
 
-void WriteConstantColorToVmo(zx_handle_t vmo, uint32_t y, uint32_t u, uint32_t v,
+void WriteConstantColorToVmo(zx_handle_t vmo, uint8_t y, uint8_t u, uint8_t v,
                              const image_format_2_t& format) {
   uint32_t size = format.bytes_per_row * format.coded_height * 3 / 2;
   std::vector<uint8_t> input_data(format.coded_width);
@@ -192,7 +193,7 @@ void WriteConstantColorToVmo(zx_handle_t vmo, uint32_t y, uint32_t u, uint32_t v
   ASSERT_OK(zx_vmo_op_range(vmo, ZX_VMO_OP_CACHE_CLEAN, 0, size, nullptr, 0));
 }
 
-void WriteConstantRgbaToVmo(zx_handle_t vmo, uint32_t r, uint32_t g, uint32_t b, uint32_t a,
+void WriteConstantRgbaToVmo(zx_handle_t vmo, uint8_t r, uint8_t g, uint8_t b, uint8_t a,
                             const image_format_2_t& format) {
   uint32_t size = format.bytes_per_row * format.coded_height;
   std::vector<uint8_t> input_data(format.coded_width * 4);
@@ -231,7 +232,7 @@ void WriteScalingDataToVmo(zx_handle_t vmo, const image_format_2_t& format) {
       start_val %= kMaxPlus1 * 2;
       if (start_val >= kMaxPlus1)
         start_val = (kMaxPlus1 * 2 - 1) - start_val;
-      input_data[x] = start_val;
+      input_data[x] = safemath::checked_cast<uint8_t>(start_val);
     }
     ASSERT_OK(zx_vmo_write(vmo, input_data.data(), y * format.bytes_per_row, format.coded_width));
   }
@@ -241,23 +242,26 @@ void WriteScalingDataToVmo(zx_handle_t vmo, const image_format_2_t& format) {
 
 float lerp(float x, float y, float a) { return x + (y - x) * a; }
 
-template <typename T>
-float BilinearInterp(T load, float x, float y) {
-  x = std::max(0.0f, x);
-  y = std::max(0.0f, y);
-  int low_x = x;
-  int low_y = y;
+float BilinearInterp(fit::function<float(const uint32_t, const uint32_t)> load, float x, float y) {
+  auto checked_x = safemath::checked_cast<int32_t>(x);
+  auto checked_y = safemath::checked_cast<int32_t>(y);
+
+  auto low_x = std::max(0, checked_x);
+  auto low_y = std::max(0, checked_y);
   // If the input is on a pixel center then read from that both times, to avoid
   // reading out of bounds.
-  int upper_x = low_x == x ? low_x : low_x + 1;
-  int upper_y = low_y == y ? low_y : low_y + 1;
-  float a_0_0 = load(low_x, low_y);
-  float a_0_1 = load(low_x, upper_y);
-  float a_1_0 = load(upper_x, low_y);
-  float a_1_1 = load(upper_x, upper_y);
-  float row_1 = lerp(a_0_0, a_1_0, x - low_x);
-  float row_2 = lerp(a_0_1, a_1_1, x - low_x);
-  return lerp(row_1, row_2, y - low_y);
+  auto upper_x = low_x == checked_x ? low_x : low_x + 1;
+  auto upper_y = low_y == checked_y ? low_y : low_y + 1;
+
+  auto a_0_0 = load(low_x, low_y);
+  auto a_0_1 = load(low_x, upper_y);
+  auto a_1_0 = load(upper_x, low_y);
+  auto a_1_1 = load(upper_x, upper_y);
+
+  auto row_1 = lerp(a_0_0, a_1_0, x - static_cast<float>(low_x));
+  auto row_2 = lerp(a_0_1, a_1_1, x - static_cast<float>(low_x));
+
+  return lerp(row_1, row_2, y - static_cast<float>(low_y));
 }
 
 // Compare a rectangular region of |addr_a| with a rectangular region of |addr_b|.
@@ -275,8 +279,8 @@ void CheckSubPlaneEqual(void* addr_a, void* addr_b, uint32_t offset_a, uint32_t 
       constexpr float kHalfPixel = 0.5f;
       // Add and subtract half a pixel to try to account for the pixel center
       // location.
-      float input_y = ((y + kHalfPixel) * y_scale - kHalfPixel);
-      float input_x = ((x + kHalfPixel) * x_scale - kHalfPixel);
+      float input_x = ((safemath::checked_cast<float>(x) + kHalfPixel) * x_scale - kHalfPixel);
+      float input_y = ((safemath::checked_cast<float>(y) + kHalfPixel) * y_scale - kHalfPixel);
       for (uint32_t c = 0; c < bytes_per_pixel; c++) {
         float input_value = BilinearInterp(
             [&](uint32_t x, uint32_t y) {
@@ -378,11 +382,13 @@ void Ge2dDeviceTest::CompareCroppedOutput(const frame_available_info* info, floa
   ASSERT_OK(mapper_b.Map(*zx::unowned_vmo(vmo_b), 0, 0, ZX_VM_PERM_READ));
 
   uint32_t a_start_offset = input_format.bytes_per_row * resize_info_.crop.y + resize_info_.crop.x;
-  float width_scale = static_cast<float>(resize_info_.crop.width) / output_format.coded_width;
-  float height_scale = static_cast<float>(resize_info_.crop.height) / output_format.coded_height;
+  float width_scale = safemath::checked_cast<float>(resize_info_.crop.width) /
+                      safemath::checked_cast<float>(output_format.coded_width);
+  float height_scale = safemath::checked_cast<float>(resize_info_.crop.height) /
+                       safemath::checked_cast<float>(output_format.coded_height);
   // Account for rounding and other minor issues.
   if (width_scale != 1.0f || height_scale != 1.0f)
-    tolerance += 0.7;
+    tolerance += 0.7f;
   // Pre-scaler may cause minor changes.
   if (width_scale > 2.0f)
     tolerance += 1;

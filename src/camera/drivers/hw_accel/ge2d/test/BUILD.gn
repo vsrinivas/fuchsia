@@ -12,15 +12,13 @@ source_set("device_test") {
     "//src/camera/drivers/test_utils",
     "//src/lib/ddk",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/driver-unit-test",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("test") {
