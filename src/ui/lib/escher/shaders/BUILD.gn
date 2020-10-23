@@ -5,8 +5,8 @@
 import("//build/testing/host_test_data.gni")
 import("//src/ui/lib/escher/shaders/shaders.gni")
 
-assert(is_linux,
-       "shaders need only be copied to the build directory for linux tests")
+assert(is_host,
+       "shaders need only be copied to the build directory for host tests")
 
 # Copies shaders needed for escher linux tests to a specific test data
 # directory near the test binary.
@@ -31,7 +31,7 @@ foreach(shader, spirv_resources) {
   group_deps += [ ":$shader_target_name" ]
 }
 
-group("linux_shader_data") {
+group("host_shader_data") {
   testonly = true
   deps = group_deps
 }

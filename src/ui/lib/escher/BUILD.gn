@@ -69,6 +69,14 @@ config("vk_mem_alloc_error_suppression") {
     "-Wno-unused-variable",
     "-Wno-missing-field-initializers",
   ]
+
+  if (is_mac) {
+    # TODO(fxbug.dev/62261): Current vk_mem_alloc.h has a possible naming
+    # conflict for aligned_alloc() method which is implemented natively on
+    # macOS 10.15 SDK and above. We should update vk_mem_alloc.h to upstream
+    # to fix this.
+    cflags += [ "-Wno-unguarded-availability-new" ]
+  }
 }
 
 source_set("vk_mem_alloc") {
@@ -416,6 +424,15 @@ template("escher_library") {
       sources += [
         "fs/linux_data_source.cc",
         "fs/linux_data_source.h",
+        "util/impl/trace_macros_impl.cc",
+        "util/impl/trace_macros_impl.h",
+      ]
+    }
+
+    if (is_mac) {
+      sources += [
+        "fs/macos_data_source.cc",
+        "fs/macos_data_source.h",
         "util/impl/trace_macros_impl.cc",
         "util/impl/trace_macros_impl.h",
       ]

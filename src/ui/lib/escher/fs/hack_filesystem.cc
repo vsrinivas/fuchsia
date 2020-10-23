@@ -8,7 +8,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 
-#ifdef __Fuchsia__
+#if defined(__Fuchsia__)
 #include "src/ui/lib/escher/fs/fuchsia_data_source.h"
 namespace escher {
 HackFilesystemPtr HackFilesystem::New(const std::shared_ptr<vfs::PseudoDir>& root_dir) {
@@ -16,11 +16,18 @@ HackFilesystemPtr HackFilesystem::New(const std::shared_ptr<vfs::PseudoDir>& roo
 }
 HackFilesystemPtr HackFilesystem::New() { return fxl::MakeRefCounted<FuchsiaDataSource>(); }
 }  // namespace escher
-#else
+#elif defined(__linux__)
 #include "src/ui/lib/escher/fs/linux_data_source.h"
 namespace escher {
 HackFilesystemPtr HackFilesystem::New() { return fxl::MakeRefCounted<LinuxDataSource>(); }
 }  // namespace escher
+#elif defined(__APPLE__)
+#include "src/ui/lib/escher/fs/macos_data_source.h"
+namespace escher {
+HackFilesystemPtr HackFilesystem::New() { return fxl::MakeRefCounted<MacOSDataSource>(); }
+}  // namespace escher
+#else
+#error "OS is not supported."
 #endif
 
 namespace escher {

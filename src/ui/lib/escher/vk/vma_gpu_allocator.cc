@@ -184,7 +184,7 @@ ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInf
                                          VMA_MEMORY_USAGE_UNKNOWN,
                                          static_cast<VkMemoryPropertyFlags>(info.memory_flags),
                                          0u,
-                                         0u,
+                                         GetMemoryTypeBitsMask(info),
                                          VK_NULL_HANDLE,
                                          nullptr};
 
@@ -233,6 +233,32 @@ bool VmaGpuAllocator::CreateImage(const VkImageCreateInfo& image_create_info,
                                vma_allocation, vma_allocation_info);
   FX_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
   return status == VK_SUCCESS;
+}
+
+uint32_t VmaGpuAllocator::GetMemoryTypeBitsMask(const escher::ImageInfo& info) {
+  uint32_t memory_type_bits = 0;
+#ifdef VK_USE_PLATFORM_MACOS_MVK
+  // On macOS using Metal layers for rendering, Metal requires textures using
+  // multi-sampling to use only DeviceLocal memory types.
+  if (info.sample_count > 1) {
+    // We cache the calculated memory type bits mask to avoid duplicated
+    // calculation.
+    if (memory_type_bits_mask_) {
+      return *memory_type_bits_mask_;
+    }
+    auto memory_properties = physical_device_.getMemoryProperties();
+    for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
+      if ((memory_properties.memoryTypes[i].propertyFlags &
+           vk::MemoryPropertyFlagBits::eDeviceLocal) &&
+          !(memory_properties.memoryTypes[i].propertyFlags &
+            vk::MemoryPropertyFlagBits::eHostVisible)) {
+        memory_type_bits |= (1 << i);
+      }
+    }
+    memory_type_bits_mask_.emplace(memory_type_bits);
+  }
+#endif  // VK_USE_PLATFORM_MACOS_MVK
+  return memory_type_bits;
 }
 
 }  // namespace escher

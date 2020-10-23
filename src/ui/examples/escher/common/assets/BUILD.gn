@@ -6,7 +6,7 @@ import("//build/testing/host_test_data.gni")
 import("//src/ui/examples/escher/common/assets/assets.gni")
 
 assert(
-    is_linux,
+    is_host,
     "assets need only be copied to the build directory for linux tests/examples")
 
 # Copies shaders needed for escher linux tests to a specific test data
@@ -21,7 +21,7 @@ foreach(asset, escher_examples_assets) {
   group_deps += [ ":$asset_target_name" ]
 }
 
-group("linux_assets") {
+group("host_assets") {
   testonly = true
   deps = group_deps
 }
