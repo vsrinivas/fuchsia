@@ -217,6 +217,7 @@ rustc_library("lib") {
     "src/tests/intl_tests.rs",
     "src/tests/light_sensor_tests.rs",
     "src/tests/light_tests.rs",
+    "src/tests/media_buttons_agent_tests.rs",
     "src/tests/message_tests.rs",
     "src/tests/message_utils.rs",
     "src/tests/night_mode_tests.rs",

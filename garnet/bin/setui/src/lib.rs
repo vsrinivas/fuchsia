@@ -38,8 +38,8 @@ use {
     crate::setup::setup_controller::SetupController,
     crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
-        AudioInfo, DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, InputInfo, NightModeInfo,
-        PrivacyInfo, SettingType, SetupInfo,
+        AudioInfo, DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, InputInfoSources,
+        NightModeInfo, PrivacyInfo, SettingType, SetupInfo,
     },
     crate::switchboard::intl_types::IntlInfo,
     crate::switchboard::light_types::LightInfo,
@@ -449,7 +449,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         register_handler!(
             factory_handle,
             SettingType::Input,
-            DataHandler::<InputInfo, InputController>::spawn
+            DataHandler::<InputInfoSources, InputController>::spawn
         );
         // Intl
         register_handler!(

@@ -43,7 +43,7 @@ pub struct InputMonitor<T: Send + Sync + DeviceStorageCompatible + 'static> {
     input_types: HashSet<InputType>,
 
     /// The state of the mic mute.
-    mic_mute_state: bool,
+    mic_mute_state: Option<bool>,
 
     /// The most recent volume button event.
     volume_button_event: i8,
@@ -81,7 +81,7 @@ where
             service_connected: false,
             input_tx,
             input_types: HashSet::from_iter(input_types.iter().cloned()),
-            mic_mute_state: false,
+            mic_mute_state: None,
             volume_button_event: 0,
         }));
 
@@ -99,7 +99,7 @@ where
     }
 
     /// The current mic mute state.
-    pub fn get_mute_state(&self) -> bool {
+    pub fn get_mute_state(&self) -> Option<bool> {
         self.mic_mute_state
     }
 
@@ -108,9 +108,7 @@ where
         if let (Some(mic_mute), true) =
             (event.mic_mute, self.input_types.contains(&InputType::Microphone))
         {
-            if self.mic_mute_state != mic_mute {
-                self.mic_mute_state = mic_mute;
-            }
+            self.mic_mute_state = Some(mic_mute);
         }
         if let (Some(volume), true) =
             (event.volume, self.input_types.contains(&InputType::VolumeButtons))
