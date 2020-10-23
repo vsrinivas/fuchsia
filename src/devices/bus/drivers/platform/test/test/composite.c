@@ -18,7 +18,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/clock.h>
-#include <ddk/protocol/codec.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/goldfish/addressspace.h>
 #include <ddk/protocol/goldfish/pipe.h>
@@ -43,7 +42,6 @@ enum Fragments_1 {
   FRAGMENT_I2C_1,
   FRAGMENT_POWER_1,
   FRAGMENT_CHILD4_1,
-  FRAGMENT_CODEC_1,
   FRAGMENT_COUNT_1,
 };
 
@@ -429,171 +427,6 @@ static zx_status_t test_power(power_protocol_t* power) {
   return ZX_OK;
 }
 
-static void test_codec_reset_callback(void* ctx, zx_status_t status) {
-  zx_status_t* out = (zx_status_t*)ctx;
-  *out = status;
-}
-
-static void test_codec_stop_callback(void* ctx, zx_status_t status) {
-  zx_status_t* out = (zx_status_t*)ctx;
-  *out = status;
-}
-
-static void test_codec_start_callback(void* ctx, zx_status_t status) {
-  zx_status_t* out = (zx_status_t*)ctx;
-  *out = status;
-}
-
-static void test_codec_get_info_callback(void* ctx, const info_t* info) {
-  zx_status_t* out = (zx_status_t*)ctx;
-  if (strcmp(info->unique_id, "test_id")) {
-    *out = ZX_ERR_INTERNAL;
-    return;
-  }
-  if (strcmp(info->manufacturer, "test_man")) {
-    *out = ZX_ERR_INTERNAL;
-    return;
-  }
-  if (strcmp(info->product_name, "test_product")) {
-    *out = ZX_ERR_INTERNAL;
-    return;
-  }
-  *out = ZX_OK;
-}
-
-static void test_codec_is_bridgeable_callback(void* ctx, bool supports_bridged_mode) {
-  zx_status_t* out = (zx_status_t*)ctx;
-  if (supports_bridged_mode != true) {
-    *out = ZX_ERR_INTERNAL;
-    return;
-  }
-  *out = ZX_OK;
-}
-
-static void test_codec_set_bridged_mode_callback(void* ctx) {
-  zx_status_t* out = (zx_status_t*)ctx;
-  *out = ZX_OK;
-}
-
-static void test_codec_get_dai_formats_callback(void* ctx, zx_status_t status,
-                                                const dai_supported_formats_t* formats_list,
-                                                size_t formats_count) {
-  zx_status_t* out = (zx_status_t*)ctx;
-  *out = status;
-  if (status != ZX_OK) {
-    return;
-  }
-  // Use memcpy() to avoid direct loads to misaligned pointers.
-  uint32_t number_of_channels_list[3];
-  memcpy(number_of_channels_list, formats_list[1].number_of_channels_list,
-         sizeof(number_of_channels_list));
-  uint32_t frame_rate;
-  memcpy(&frame_rate, formats_list[2].frame_rates_list, sizeof(frame_rate));
-  if (formats_count != 3 || formats_list[0].bits_per_sample_count != 3 ||
-      formats_list[0].bits_per_sample_list[0] != 1 ||
-      formats_list[0].bits_per_sample_list[1] != 99 ||
-      formats_list[0].bits_per_sample_list[2] != 253 ||
-      formats_list[0].number_of_channels_count != 0 || formats_list[0].frame_rates_count != 0 ||
-      formats_list[1].number_of_channels_count != 3 || number_of_channels_list[0] != 0 ||
-      number_of_channels_list[1] != 1 || number_of_channels_list[2] != 200 ||
-      formats_list[2].frame_rates_count != 1 || frame_rate != 48000) {
-    *out = ZX_ERR_INTERNAL;
-  }
-}
-
-static void test_codec_set_dai_format_callback(void* ctx, zx_status_t status) {
-  zx_status_t* out = (zx_status_t*)ctx;
-  *out = status;
-}
-
-static void test_codec_get_gain_format_callback(void* ctx, const gain_format_t* format) {
-  zx_status_t* out = (zx_status_t*)ctx;
-  if (format->can_agc != true || format->min_gain != -99.99f) {
-    *out = ZX_ERR_INTERNAL;
-    return;
-  }
-  *out = ZX_OK;
-}
-
-static void test_codec_get_gain_state_callback(void* ctx, const gain_state_t* gain_state) {
-  zx_status_t* out = (zx_status_t*)ctx;
-  if (gain_state->gain != 123.456f || gain_state->muted != true ||
-      gain_state->agc_enable != false) {
-    *out = ZX_ERR_INTERNAL;
-    return;
-  }
-  *out = ZX_OK;
-}
-
-static void test_codec_set_gain_state_callback(void* ctx) {
-  zx_status_t* out = (zx_status_t*)ctx;
-  *out = ZX_OK;
-}
-
-static void test_codec_get_plug_state_callback(void* ctx, const plug_state_t* plug_state) {
-  zx_status_t* out = (zx_status_t*)ctx;
-  if (plug_state->hardwired != false || plug_state->plugged != true) {
-    *out = ZX_ERR_INTERNAL;
-    return;
-  }
-  *out = ZX_OK;
-}
-
-static zx_status_t test_codec(codec_protocol_t* codec) {
-  zx_status_t status = ZX_OK;
-  codec_reset(codec, test_codec_reset_callback, (void*)&status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  codec_stop(codec, test_codec_stop_callback, (void*)&status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  codec_start(codec, test_codec_start_callback, (void*)&status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  codec_get_info(codec, test_codec_get_info_callback, (void*)&status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  codec_is_bridgeable(codec, test_codec_is_bridgeable_callback, (void*)&status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  codec_set_bridged_mode(codec, true, test_codec_set_bridged_mode_callback, (void*)&status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  codec_get_dai_formats(codec, test_codec_get_dai_formats_callback, (void*)&status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  dai_format_t format = {};
-  codec_set_dai_format(codec, &format, test_codec_set_dai_format_callback, (void*)&status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  codec_get_gain_format(codec, test_codec_get_gain_format_callback, (void*)&status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  codec_get_gain_state(codec, test_codec_get_gain_state_callback, (void*)&status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  gain_state_t gain_state = {};
-  codec_set_gain_state(codec, &gain_state, test_codec_set_gain_state_callback, &status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  codec_get_plug_state(codec, test_codec_get_plug_state_callback, (void*)&status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return ZX_OK;
-}
-
 static zx_status_t test_pwm(pwm_protocol_t* pwm) {
   zx_status_t status = ZX_OK;
   mode_config_t mode_cfg = {.mode = 0, .magic = {12345}};
@@ -714,7 +547,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   clock_protocol_t child4;
   gpio_protocol_t gpio;
   i2c_protocol_t i2c;
-  codec_protocol_t codec;
   spi_protocol_t spi;
   pwm_protocol_t pwm;
   rpmb_protocol_t rpmb;
@@ -774,15 +606,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C", DRIVER_NAME);
       return status;
     }
-    if (strncmp(fragments[FRAGMENT_CODEC_1].name, "codec", 32)) {
-      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_CODEC_1].name);
-      return ZX_ERR_INTERNAL;
-    }
-    status = device_get_protocol(fragments[FRAGMENT_CODEC_1].device, ZX_PROTOCOL_CODEC, &codec);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CODEC", DRIVER_NAME);
-      return status;
-    }
     if ((status = test_clock(&clock)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_clock failed: %d", DRIVER_NAME, status);
       return status;
@@ -797,10 +620,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     }
     if ((status = test_i2c(&i2c)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_i2c failed: %d", DRIVER_NAME, status);
-      return status;
-    }
-    if ((status = test_codec(&codec)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_codec failed: %d", DRIVER_NAME, status);
       return status;
     }
   } else if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_2) {

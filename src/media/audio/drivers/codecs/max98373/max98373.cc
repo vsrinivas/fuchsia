@@ -34,10 +34,14 @@ constexpr uint8_t kRegGlobalEnableOn           = 0x01;
 constexpr uint8_t kRegResetReset               = 0x01;
 // clang-format on
 
+}  // namespace
+
+namespace audio {
+
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
 static const std::vector<uint32_t> kSupportedNumberOfChannels = {2};
-static const std::vector<sample_format_t> kSupportedSampleFormats = {SAMPLE_FORMAT_PCM_SIGNED};
-static const std::vector<frame_format_t> kSupportedFrameFormats = {FRAME_FORMAT_I2S};
+static const std::vector<SampleFormat> kSupportedSampleFormats = {SampleFormat::PCM_SIGNED};
+static const std::vector<FrameFormat> kSupportedFrameFormats = {FrameFormat::I2S};
 static const std::vector<uint32_t> kSupportedRates = {48'000};
 static const std::vector<uint8_t> kSupportedBitsPerSlot = {32};
 static const std::vector<uint8_t> kSupportedBitsPerSample = {32};
@@ -55,10 +59,6 @@ enum {
   FRAGMENT_RESET_GPIO,
   FRAGMENT_COUNT,
 };
-
-}  // namespace
-
-namespace audio {
 
 int Max98373::Thread() {
   auto status = HardwareReset();
@@ -188,9 +188,10 @@ zx_status_t Max98373::SetDaiFormat(const DaiFormat& format) {
 
 GainFormat Max98373::GetGainFormat() {
   return {
-      .min_gain_db = kMinGain,
-      .max_gain_db = kMaxGain,
-      .gain_step_db = kGainStep,
+      .type = GainType::DECIBELS,
+      .min_gain = kMinGain,
+      .max_gain = kMaxGain,
+      .gain_step = kGainStep,
       .can_mute = true,
       .can_agc = false,
   };
@@ -198,7 +199,7 @@ GainFormat Max98373::GetGainFormat() {
 
 void Max98373::SetGainState(GainState gain_state) {
   fbl::AutoLock lock(&lock_);
-  float gain = std::clamp(gain_state.gain_db, kMinGain, kMaxGain);
+  float gain = std::clamp(gain_state.gain, kMinGain, kMaxGain);
   uint8_t gain_reg = static_cast<uint8_t>(-gain * 2.f);
   zx_status_t status = WriteReg(kRegDigitalVol, gain_reg);
   if (status != ZX_OK) {

@@ -36,6 +36,9 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_BUTTONS:
       proto->ops = &buttons_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_CODEC:
+      proto->ops = &codec_protocol_ops_;
+      return ZX_OK;
     case ZX_PROTOCOL_CLOCK:
       proto->ops = &clock_protocol_ops_;
       return ZX_OK;
@@ -53,9 +56,6 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
       return ZX_OK;
     case ZX_PROTOCOL_I2C:
       proto->ops = &i2c_protocol_ops_;
-      return ZX_OK;
-    case ZX_PROTOCOL_CODEC:
-      proto->ops = &codec_protocol_ops_;
       return ZX_OK;
     case ZX_PROTOCOL_PDEV:
       proto->ops = &pdev_protocol_ops_;
@@ -188,6 +188,21 @@ zx_status_t FragmentProxy::ButtonsGetChannel(zx::channel chan) {
   return ZX_OK;
 }
 
+zx_status_t FragmentProxy::CodecConnect(zx::channel chan) {
+  CodecProxyRequest req = {};
+  CodecProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_CODEC;
+  req.op = CodecOp::GET_CHANNEL;
+  zx_handle_t handle = chan.release();
+
+  auto status =
+      Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
 zx_status_t FragmentProxy::ClockEnable() {
   ClockProxyRequest req = {};
   ClockProxyResponse resp = {};
@@ -305,172 +320,6 @@ zx_status_t FragmentProxy::EthBoardResetPhy() {
   req.op = EthBoardOp::RESET_PHY;
 
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
-}
-
-void FragmentProxy::CodecReset(codec_reset_callback callback, void* cookie) {
-  CodecProxyRequest req = {};
-  ProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_CODEC;
-  req.op = CodecOp::RESET;
-
-  auto status = Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
-  callback(cookie, status);
-}
-
-void FragmentProxy::CodecStop(codec_stop_callback callback, void* cookie) {
-  CodecProxyRequest req = {};
-  ProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_CODEC;
-  req.op = CodecOp::STOP;
-
-  auto status = Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
-  callback(cookie, status);
-}
-
-void FragmentProxy::CodecStart(codec_start_callback callback, void* cookie) {
-  CodecProxyRequest req = {};
-  ProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_CODEC;
-  req.op = CodecOp::START;
-
-  auto status = Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
-  callback(cookie, status);
-}
-
-void FragmentProxy::CodecGetInfo(codec_get_info_callback callback, void* cookie) {
-  CodecProxyRequest req = {};
-  CodecInfoProxyResponse resp = {};
-  info_t info = {};
-  req.header.proto_id = ZX_PROTOCOL_CODEC;
-  req.op = CodecOp::GET_INFO;
-
-  Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-  info.unique_id = resp.unique_id;
-  info.manufacturer = resp.manufacturer;
-  info.product_name = resp.product_name;
-  callback(cookie, &info);
-}
-
-void FragmentProxy::CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie) {
-  CodecProxyRequest req = {};
-  CodecIsBridgeableProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_CODEC;
-  req.op = CodecOp::IS_BRIDGEABLE;
-
-  Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-  callback(cookie, resp.supports_bridged_mode);
-}
-
-void FragmentProxy::CodecSetBridgedMode(bool enable_bridged_mode,
-                                        codec_set_bridged_mode_callback callback, void* cookie) {
-  CodecSetBridgedProxyRequest req = {};
-  ProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_CODEC;
-  req.op = CodecOp::SET_BRIDGED_MODE;
-  req.enable_bridged_mode = enable_bridged_mode;
-
-  Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
-  callback(cookie);
-}
-
-void FragmentProxy::CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie) {
-  CodecProxyRequest req = {};
-  uint8_t resp_buffer[kProxyMaxTransferSize];
-  auto* resp = reinterpret_cast<ProxyResponse*>(resp_buffer);
-  req.header.proto_id = ZX_PROTOCOL_CODEC;
-  req.op = CodecOp::GET_DAI_FORMATS;
-
-  auto status = Rpc(&req.header, sizeof(req), resp, kProxyMaxTransferSize);
-  if (status != ZX_OK) {
-    callback(cookie, status, nullptr, 0);
-    return;
-  }
-  auto* p = reinterpret_cast<uint8_t*>(resp + 1);
-  size_t n_formats = *reinterpret_cast<size_t*>(p);
-  p += sizeof(size_t);
-
-  auto* formats = reinterpret_cast<dai_supported_formats_t*>(p);
-  p += sizeof(dai_supported_formats_t) * n_formats;
-
-  for (size_t i = 0; i < n_formats; ++i) {
-    formats[i].number_of_channels_list = reinterpret_cast<uint32_t*>(p);
-    p += formats[i].number_of_channels_count * sizeof(uint32_t);
-
-    formats[i].sample_formats_list = reinterpret_cast<sample_format_t*>(p);
-    p += formats[i].sample_formats_count * sizeof(sample_format_t);
-
-    formats[i].frame_formats_list = reinterpret_cast<frame_format_t*>(p);
-    p += formats[i].frame_formats_count * sizeof(frame_format_t);
-
-    formats[i].frame_formats_custom_list = reinterpret_cast<frame_format_custom_t*>(p);
-    p += formats[i].frame_formats_custom_count * sizeof(frame_format_custom_t);
-
-    formats[i].frame_rates_list = reinterpret_cast<uint32_t*>(p);
-    p += formats[i].frame_rates_count * sizeof(uint32_t);
-
-    formats[i].bits_per_slot_list = p;
-    p += formats[i].bits_per_slot_count * sizeof(uint8_t);
-
-    formats[i].bits_per_sample_list = p;
-    p += formats[i].bits_per_sample_count * sizeof(uint8_t);
-  }
-
-  callback(cookie, status, formats, n_formats);
-}
-
-void FragmentProxy::CodecSetDaiFormat(const dai_format_t* format,
-                                      codec_set_dai_format_callback callback, void* cookie) {
-  CodecDaiFormatProxyRequest req = {};
-  ProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_CODEC;
-  req.op = CodecOp::SET_DAI_FORMAT;
-  req.format = *format;
-
-  auto status = Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
-
-  callback(cookie, status);
-}
-
-void FragmentProxy::CodecGetGainFormat(codec_get_gain_format_callback callback, void* cookie) {
-  CodecProxyRequest req = {};
-  CodecGainFormatProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_CODEC;
-  req.op = CodecOp::GET_GAIN_FORMAT;
-
-  Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-  callback(cookie, &resp.format);
-}
-
-void FragmentProxy::CodecGetGainState(codec_get_gain_state_callback callback, void* cookie) {
-  CodecProxyRequest req = {};
-  CodecGainStateProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_CODEC;
-  req.op = CodecOp::GET_GAIN_STATE;
-
-  Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-  callback(cookie, &resp.state);
-}
-
-void FragmentProxy::CodecSetGainState(const gain_state_t* gain_state,
-                                      codec_set_gain_state_callback callback, void* cookie) {
-  CodecGainStateProxyRequest req = {};
-  ProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_CODEC;
-  req.op = CodecOp::SET_GAIN_STATE;
-  req.state = *gain_state;
-
-  Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
-  callback(cookie);
-}
-
-void FragmentProxy::CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie) {
-  CodecProxyRequest req = {};
-  CodecPlugStateProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_CODEC;
-  req.op = CodecOp::GET_PLUG_STATE;
-
-  Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-  callback(cookie, &resp.plug_state);
 }
 
 zx_status_t FragmentProxy::GoldfishAddressSpaceOpenChildDriver(

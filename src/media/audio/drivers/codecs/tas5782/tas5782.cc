@@ -18,11 +18,12 @@
 
 #include "src/media/audio/drivers/codecs/tas5782/ti_tas5782-bind.h"
 
-namespace {
+namespace audio {
+
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
 static const std::vector<uint32_t> kSupportedDaiNumberOfChannels = {2};
-static const std::vector<sample_format_t> kSupportedDaiSampleFormats = {SAMPLE_FORMAT_PCM_SIGNED};
-static const std::vector<frame_format_t> kSupportedDaiFrameFormats = {FRAME_FORMAT_I2S};
+static const std::vector<SampleFormat> kSupportedDaiSampleFormats = {SampleFormat::PCM_SIGNED};
+static const std::vector<FrameFormat> kSupportedDaiFrameFormats = {FrameFormat::I2S};
 static const std::vector<uint32_t> kSupportedDaiRates = {48'000};
 static const std::vector<uint8_t> kSupportedDaiBitsPerSlot = {32};
 static const std::vector<uint8_t> kSupportedDaiBitsPerSample = {32};
@@ -41,10 +42,6 @@ enum {
   FRAGMENT_MUTE_GPIO,
   FRAGMENT_COUNT,
 };
-
-}  // namespace
-
-namespace audio {
 
 zx_status_t Tas5782::Reset() {
   fbl::AutoLock lock(&lock_);
@@ -153,9 +150,10 @@ zx_status_t Tas5782::SetDaiFormat(const DaiFormat& format) {
 
 GainFormat Tas5782::GetGainFormat() {
   return {
-      .min_gain_db = kMinGain,
-      .max_gain_db = kMaxGain,
-      .gain_step_db = kGainStep,
+      .type = GainType::DECIBELS,
+      .min_gain = kMinGain,
+      .max_gain = kMaxGain,
+      .gain_step = kGainStep,
       .can_mute = true,
       .can_agc = false,
   };
@@ -163,7 +161,7 @@ GainFormat Tas5782::GetGainFormat() {
 
 void Tas5782::SetGainState(GainState gain_state) {
   fbl::AutoLock lock(&lock_);
-  float gain = std::clamp(gain_state.gain_db, kMinGain, kMaxGain);
+  float gain = std::clamp(gain_state.gain, kMinGain, kMaxGain);
   uint8_t gain_reg = static_cast<uint8_t>(48 - gain * 2);
   auto status = WriteReg(0x3d, gain_reg);  // Left gain.
   if (status != ZX_OK) {

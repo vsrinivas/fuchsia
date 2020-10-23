@@ -20,7 +20,7 @@ namespace audio {
 // This class provides simple audio DAI controller drivers a way to communicate with codecs using
 // the audio codec protocol. The methods in the protocol have been converted to always return a
 // status in case there is not reply (after kDefaultTimeoutNsecs or the timeout specified via the
-// SetTimeout() method).
+// SetTimeout() method). This class is thread hostile.
 class SimpleCodecClient {
  public:
   // Convenience methods not part of the audio codec protocol.
@@ -63,7 +63,10 @@ class SimpleCodecClient {
     zx_status_t status;
   };
 
+  zx::unowned_channel Connect();
+
   int64_t timeout_nsecs_ = kDefaultTimeoutNsecs;
+  ::fuchsia::hardware::audio::codec::CodecSyncPtr codec_;
 };
 
 }  // namespace audio

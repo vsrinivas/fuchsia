@@ -9,8 +9,6 @@
 #include <lib/simple-codec/simple-codec-client.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 
-#include <thread>
-
 #include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
 
@@ -33,13 +31,10 @@ TEST(Max98373Test, GetInfo) {
   client.SetProtocol(&codec_proto);
 
   {
-    std::thread t([&]() {
-      auto info = client.GetInfo();
-      EXPECT_EQ(info.value().unique_id.compare(""), 0);
-      EXPECT_EQ(info.value().manufacturer.compare("Maxim"), 0);
-      EXPECT_EQ(info.value().product_name.compare("MAX98373"), 0);
-    });
-    t.join();
+    auto info = client.GetInfo();
+    EXPECT_EQ(info.value().unique_id.compare(""), 0);
+    EXPECT_EQ(info.value().manufacturer.compare("Maxim"), 0);
+    EXPECT_EQ(info.value().product_name.compare("MAX98373"), 0);
   }
 }
 
@@ -68,8 +63,7 @@ TEST(Max98373Test, Reset) {
 
   // Delay to test we don't do other init I2C writes in another thread.
   zx::nanosleep(zx::deadline_after(zx::msec(100)));
-  std::thread t([&]() { ASSERT_OK(client.Reset()); });
-  t.join();
+  ASSERT_OK(client.Reset());
   mock_i2c.VerifyAndClear();
 }
 
@@ -86,11 +80,13 @@ TEST(Max98373Test, SetGainGood) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
-  std::thread t([&]() {
-    GainState gain({.gain_db = -32.f, .muted = false, .agc_enable = false});
-    client.SetGainState(gain);
-  });
-  t.join();
+  GainState gain({.gain = -32.f, .muted = false, .agc_enable = false});
+  client.SetGainState(gain);
+
+  // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
+  auto unused = client.GetInfo();
+  static_cast<void>(unused);
+
   mock_i2c.VerifyAndClear();
 }
 
@@ -107,11 +103,13 @@ TEST(Max98373Test, SetGainOurOfRangeLow) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
-  std::thread t([&]() {
-    GainState gain({.gain_db = -999.f, .muted = false, .agc_enable = false});
-    client.SetGainState(gain);
-  });
-  t.join();
+  GainState gain({.gain = -999.f, .muted = false, .agc_enable = false});
+  client.SetGainState(gain);
+
+  // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
+  auto unused = client.GetInfo();
+  static_cast<void>(unused);
+
   mock_i2c.VerifyAndClear();
 }
 
@@ -128,11 +126,13 @@ TEST(Max98373Test, SetGainOurOfRangeHigh) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
-  std::thread t([&]() {
-    GainState gain({.gain_db = 999.f, .muted = false, .agc_enable = false});
-    client.SetGainState(gain);
-  });
-  t.join();
+  GainState gain({.gain = 999.f, .muted = false, .agc_enable = false});
+  client.SetGainState(gain);
+
+  // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
+  auto unused = client.GetInfo();
+  static_cast<void>(unused);
+
   mock_i2c.VerifyAndClear();
 }
 

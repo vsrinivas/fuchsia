@@ -152,27 +152,13 @@ class FragmentProxy : public FragmentProxyBase,
   uint32_t VregGetVoltageStep();
   void VregGetRegulatorParams(vreg_params_t* out_params);
 
-  void CodecReset(codec_reset_callback callback, void* cookie);
-  void CodecStop(codec_stop_callback callback, void* cookie);
-  void CodecStart(codec_start_callback callback, void* cookie);
-  void CodecGetInfo(codec_get_info_callback callback, void* cookie);
-  void CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie);
-  void CodecSetBridgedMode(bool enable_bridged_mode, codec_set_bridged_mode_callback callback,
-                           void* cookie);
-  void CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie);
-  void CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format_callback callback,
-                         void* cookie);
-  void CodecGetGainFormat(codec_get_gain_format_callback callback, void* cookie);
-  void CodecGetGainState(codec_get_gain_state_callback callback, void* cookie);
-  void CodecSetGainState(const gain_state_t* gain_state, codec_set_gain_state_callback callback,
-                         void* cookie);
-  void CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie);
-
   // USB Mode Switch
   zx_status_t UsbModeSwitchSetMode(usb_mode_t mode);
 
   // DSI
   zx_status_t DsiConnect(zx::channel server);
+
+  zx_status_t CodecConnect(zx::channel chan);
 
  private:
   zx::channel rpc_;

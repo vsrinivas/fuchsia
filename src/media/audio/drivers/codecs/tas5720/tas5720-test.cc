@@ -10,27 +10,22 @@
 #include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/sync/completion.h>
 
-#include <thread>
-
 #include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
 
-namespace {
+namespace audio {
 
 audio::DaiFormat GetDefaultDaiFormat() {
   return {
       .number_of_channels = 2,
       .channels_to_use_bitmask = 1,  // Use one channel in this mono codec.
-      .sample_format = SAMPLE_FORMAT_PCM_SIGNED,
-      .frame_format = FRAME_FORMAT_STEREO_LEFT,
+      .sample_format = SampleFormat::PCM_SIGNED,
+      .frame_format = FrameFormat::STEREO_LEFT,
       .frame_rate = 24'000,
       .bits_per_slot = 32,
       .bits_per_sample = 16,
   };
 }
-}  // namespace
-
-namespace audio {
 
 class Tas5720Test : public zxtest::Test {
  public:
@@ -73,16 +68,17 @@ TEST_F(Tas5720Test, CodecInitGood) {
   tester.SetMetadata(&instance_count, sizeof(instance_count));
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
   ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
 
   // Shutdown.
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   codec->DdkAsyncRemove();
-  codec->DdkRelease();
-  codec.release();  // codec is managed by the DDK.
-
-  mock_i2c_.VerifyAndClear();
   ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+  mock_i2c_.VerifyAndClear();
 }
 
 TEST(Tas5720Test, CodecInitBad) {
@@ -111,23 +107,18 @@ TEST_F(Tas5720Test, CodecGetInfo) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
-  std::thread t([&]() {
-    auto info = client.GetInfo();
-    ASSERT_EQ(info->unique_id.compare(""), 0);
-    ASSERT_EQ(info->manufacturer.compare("Texas Instruments"), 0);
-    ASSERT_EQ(info->product_name.compare("TAS5720"), 0);
-  });
-  t.join();
+  auto info = client.GetInfo();
+  ASSERT_EQ(info->unique_id.compare(""), 0);
+  ASSERT_EQ(info->manufacturer.compare("Texas Instruments"), 0);
+  ASSERT_EQ(info->product_name.compare("TAS5720"), 0);
 
   // Shutdown.
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   codec->DdkAsyncRemove();
-  codec->DdkRelease();
-  codec.release();  // codec is managed by the DDK.
-
-  mock_i2c_.VerifyAndClear();
   ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+  mock_i2c_.VerifyAndClear();
 }
 
 TEST_F(Tas5720Test, CodecReset) {
@@ -164,18 +155,15 @@ TEST_F(Tas5720Test, CodecReset) {
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
-  std::thread t([&]() { ASSERT_OK(client.Reset()); });
-  t.join();
+  ASSERT_OK(client.Reset());
 
   // Shutdown.
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   codec->DdkAsyncRemove();
-  codec->DdkRelease();
-  codec.release();  // codec is managed by the DDK.
-
-  mock_i2c_.VerifyAndClear();
   ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+  mock_i2c_.VerifyAndClear();
 }
 
 TEST_F(Tas5720Test, CodecBridgedMode) {
@@ -188,26 +176,18 @@ TEST_F(Tas5720Test, CodecBridgedMode) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
   {
-    std::thread t([&]() {
-      auto bridgeable = client.IsBridgeable();
-      ASSERT_FALSE(bridgeable.value());
-    });
-    t.join();
+    auto bridgeable = client.IsBridgeable();
+    ASSERT_FALSE(bridgeable.value());
   }
-  {
-    std::thread t([&]() { client.SetBridgedMode(false); });
-    t.join();
-  }
+  { client.SetBridgedMode(false); }
 
   // Shutdown.
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   codec->DdkAsyncRemove();
-  codec->DdkRelease();
-  codec.release();  // codec is managed by the DDK.
-
-  mock_i2c_.VerifyAndClear();
   ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+  mock_i2c_.VerifyAndClear();
 }
 
 TEST_F(Tas5720Test, CodecDaiFormat) {
@@ -222,25 +202,22 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
 
   // Check getting DAI formats.
   {
-    std::thread t([&]() {
-      auto formats = client.GetDaiFormats();
-      ASSERT_EQ(formats->size(), 1);
-      ASSERT_EQ(formats.value()[0].number_of_channels.size(), 1);
-      ASSERT_EQ(formats.value()[0].number_of_channels[0], 2);
-      ASSERT_EQ(formats.value()[0].sample_formats.size(), 1);
-      ASSERT_EQ(formats.value()[0].sample_formats[0], SAMPLE_FORMAT_PCM_SIGNED);
-      ASSERT_EQ(formats.value()[0].frame_formats.size(), 2);
-      ASSERT_EQ(formats.value()[0].frame_formats[0], FRAME_FORMAT_STEREO_LEFT);
-      ASSERT_EQ(formats.value()[0].frame_formats[1], FRAME_FORMAT_I2S);
-      ASSERT_EQ(formats.value()[0].frame_rates.size(), 2);
-      ASSERT_EQ(formats.value()[0].frame_rates[0], 48000);
-      ASSERT_EQ(formats.value()[0].frame_rates[1], 96000);
-      ASSERT_EQ(formats.value()[0].bits_per_slot.size(), 1);
-      ASSERT_EQ(formats.value()[0].bits_per_slot[0], 32);
-      ASSERT_EQ(formats.value()[0].bits_per_sample.size(), 1);
-      ASSERT_EQ(formats.value()[0].bits_per_sample[0], 16);
-    });
-    t.join();
+    auto formats = client.GetDaiFormats();
+    ASSERT_EQ(formats->size(), 1);
+    ASSERT_EQ(formats.value()[0].number_of_channels.size(), 1);
+    ASSERT_EQ(formats.value()[0].number_of_channels[0], 2);
+    ASSERT_EQ(formats.value()[0].sample_formats.size(), 1);
+    ASSERT_EQ(formats.value()[0].sample_formats[0], SampleFormat::PCM_SIGNED);
+    ASSERT_EQ(formats.value()[0].frame_formats.size(), 2);
+    ASSERT_EQ(formats.value()[0].frame_formats[0], FrameFormat::STEREO_LEFT);
+    ASSERT_EQ(formats.value()[0].frame_formats[1], FrameFormat::I2S);
+    ASSERT_EQ(formats.value()[0].frame_rates.size(), 2);
+    ASSERT_EQ(formats.value()[0].frame_rates[0], 48000);
+    ASSERT_EQ(formats.value()[0].frame_rates[1], 96000);
+    ASSERT_EQ(formats.value()[0].bits_per_slot.size(), 1);
+    ASSERT_EQ(formats.value()[0].bits_per_slot[0], 32);
+    ASSERT_EQ(formats.value()[0].bits_per_sample.size(), 1);
+    ASSERT_EQ(formats.value()[0].bits_per_sample[0], 16);
   }
 
   // Check setting DAI formats.
@@ -250,12 +227,9 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
     mock_i2c_.ExpectWriteStop({0x02, 0x45});  // Set rate to 48kHz.
     DaiFormat format = GetDefaultDaiFormat();
     format.frame_rate = 48'000;
-    std::thread t([&]() {
-      auto formats = client.GetDaiFormats();
-      ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-      ASSERT_OK(client.SetDaiFormat(std::move(format)));
-    });
-    t.join();
+    auto formats = client.GetDaiFormats();
+    ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+    ASSERT_OK(client.SetDaiFormat(std::move(format)));
   }
 
   {
@@ -264,12 +238,9 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
     mock_i2c_.ExpectWriteStop({0x02, 0x4d});  // Set rate to 96kHz.
     DaiFormat format = GetDefaultDaiFormat();
     format.frame_rate = 96'000;
-    std::thread t([&]() {
-      auto formats = client.GetDaiFormats();
-      ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-      ASSERT_OK(client.SetDaiFormat(std::move(format)));
-    });
-    t.join();
+    auto formats = client.GetDaiFormats();
+    ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+    ASSERT_OK(client.SetDaiFormat(std::move(format)));
   }
 
   {
@@ -277,23 +248,18 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
     mock_i2c_.ExpectWriteStop({0x03, 0xfc});  // Set slot to 0.
     DaiFormat format = GetDefaultDaiFormat();
     format.frame_rate = 192'000;
-    std::thread t([&]() {
-      auto formats = client.GetDaiFormats();
-      ASSERT_FALSE(IsDaiFormatSupported(format, formats.value()));
-      ASSERT_NOT_OK(client.SetDaiFormat(std::move(format)));
-    });
-    t.join();
+    auto formats = client.GetDaiFormats();
+    ASSERT_FALSE(IsDaiFormatSupported(format, formats.value()));
+    ASSERT_NOT_OK(client.SetDaiFormat(std::move(format)));
   }
 
   // Shutdown.
-  mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
+  mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});  // Shutdown.
 
   codec->DdkAsyncRemove();
-  codec->DdkRelease();
-  codec.release();  // codec is managed by the DDK.
-
-  mock_i2c_.VerifyAndClear();
   ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+  mock_i2c_.VerifyAndClear();
 }
 
 TEST_F(Tas5720Test, CodecGain) {
@@ -313,7 +279,7 @@ TEST_F(Tas5720Test, CodecGain) {
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x03, 0xef});  // Not muted.
   client.SetGainState({
-      .gain_db = -32.f,
+      .gain = -32.f,
       .muted = false,
       .agc_enable = false,
   });
@@ -326,7 +292,7 @@ TEST_F(Tas5720Test, CodecGain) {
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x03, 0xef});  // Not muted.
   client.SetGainState({
-      .gain_db = -999.f,
+      .gain = -999.f,
       .muted = false,
       .agc_enable = false,
   });
@@ -339,7 +305,7 @@ TEST_F(Tas5720Test, CodecGain) {
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x03, 0xef});  // Not muted.
   client.SetGainState({
-      .gain_db = 111.f,
+      .gain = 111.f,
       .muted = false,
       .agc_enable = false,
   });
@@ -347,12 +313,14 @@ TEST_F(Tas5720Test, CodecGain) {
   // Shutdown.
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
-  codec->DdkAsyncRemove();
-  codec->DdkRelease();
-  codec.release();  // codec is managed by the DDK.
+  // Make a 2-wal call to make sure the server (we know single threaded) completed previous calls.
+  auto unused = client.GetInfo();
+  static_cast<void>(unused);
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());       // Guarantees Unbind called so we can test for shutdown.
+  codec.release()->DdkRelease();  // codec release managed by the DDK.
   mock_i2c_.VerifyAndClear();
-  ASSERT_TRUE(tester.Ok());
 }
 
 TEST_F(Tas5720Test, CodecPlugState) {
@@ -365,22 +333,17 @@ TEST_F(Tas5720Test, CodecPlugState) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
-  std::thread t([&]() {
-    auto state = client.GetPlugState();
-    ASSERT_TRUE(state->hardwired);
-    ASSERT_TRUE(state->plugged);
-  });
-  t.join();
+  auto state = client.GetPlugState();
+  ASSERT_TRUE(state->hardwired);
+  ASSERT_TRUE(state->plugged);
 
   // Shutdown.
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   codec->DdkAsyncRemove();
-  codec->DdkRelease();
-  codec.release();  // codec is managed by the DDK.
-
-  mock_i2c_.VerifyAndClear();
   ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+  mock_i2c_.VerifyAndClear();
 }
 
 TEST(Tas5720Test, InstanceCount) {
@@ -421,11 +384,9 @@ TEST(Tas5720Test, InstanceCount) {
   mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   codec->DdkAsyncRemove();
-  codec->DdkRelease();
-  codec.release();  // codec is managed by the DDK.
-
-  mock_i2c.VerifyAndClear();
   ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+  mock_i2c.VerifyAndClear();
 }
 
 }  // namespace audio

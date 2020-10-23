@@ -44,7 +44,6 @@ driver_module("test-board") {
     "//build/unification/config:zircon-migrated",
   ]
   sources = [
-    "test-audio-codec.cc",
     "test-board.cc",
     "test-clock.cc",
     "test-goldfish.cc",
@@ -244,30 +243,6 @@ driver_module("test-spi") {
   ]
 }
 
-driver_module("test-audio-codec") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
-  ]
-  sources = [ "test/audio-codec.cc" ]
-  deps = [
-    "//sdk/banjo/ddk.protocol.codec",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//src/devices/lib/driver",
-    "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
-    "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 driver_module("test-pwm") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
@@ -352,7 +327,6 @@ foreach(driver, simple_drivers) {
     sources = [ "test/$driver.c" ]
     deps = [
       "//sdk/banjo/ddk.protocol.clock",
-      "//sdk/banjo/ddk.protocol.codec",
       "//sdk/banjo/ddk.protocol.composite",
       "//sdk/banjo/ddk.protocol.goldfish.addressspace",
       "//sdk/banjo/ddk.protocol.goldfish.pipe",
@@ -379,7 +353,6 @@ isolated_devmgr_unittest_package("platform-bus-test") {
   executable_path = "test/platform-bus-test"
   deps = [
     ":platform-bus",
-    ":test-audio-codec",
     ":test-board",
     ":test-clock",
     ":test-goldfish-address-space",

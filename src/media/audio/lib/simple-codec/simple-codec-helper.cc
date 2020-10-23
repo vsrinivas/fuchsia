@@ -19,8 +19,8 @@ bool IsDaiFormatSupported(const DaiFormat& format,
 }
 
 bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& supported) {
-  const sample_format_t sample_format = format.sample_format;
-  const frame_format_t frame_format = format.frame_format;
+  const SampleFormat sample_format = format.sample_format;
+  const FrameFormat frame_format = format.frame_format;
   const uint32_t frame_rate = format.frame_rate;
   const uint8_t bits_per_sample = format.bits_per_sample;
   const uint8_t bits_per_slot = format.bits_per_slot;
@@ -45,7 +45,7 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
   size_t j = 0;
   for (i = 0; i < supported.frame_formats.size(); ++i) {
     if (supported.frame_formats[i] == frame_format) {
-      if (frame_format != FRAME_FORMAT_CUSTOM) {
+      if (frame_format != FrameFormat::CUSTOM) {
         break;
       } else {
         if (j < supported.frame_formats_custom.size()) {

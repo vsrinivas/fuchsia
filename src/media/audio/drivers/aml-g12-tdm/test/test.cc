@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/simple-codec/simple-codec-server.h>
+#include <lib/sync/completion.h>
 
 #include <ddktl/protocol/composite.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
@@ -22,8 +23,8 @@ namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
 static constexpr uint32_t kTestFrameRate1 = 48000;
 static constexpr uint32_t kTestFrameRate2 = 96000;
 static constexpr size_t kMaxLanes = 4;
-static constexpr float kTestGain = 1.234f;
-static constexpr float kTestDeltaGain = 1.1f;
+static constexpr float kTestGain = 2.f;
+static constexpr float kTestDeltaGain = 1.f;
 
 audio_fidl::PcmFormat GetDefaultPcmFormat() {
   audio_fidl::PcmFormat format;
@@ -59,18 +60,32 @@ struct CodecTest : public DeviceType, public SimpleCodecServer {
   }
   bool IsBridgeable() override { return true; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
-  std::vector<DaiSupportedFormats> GetDaiFormats() override { return {}; }
+  std::vector<DaiSupportedFormats> GetDaiFormats() override {
+    DaiSupportedFormats formats;
+    formats.number_of_channels.push_back(2);
+    formats.sample_formats.push_back(SampleFormat::PCM_SIGNED);
+    formats.frame_formats.push_back(FrameFormat::I2S);
+    formats.frame_rates.push_back(kTestFrameRate1);
+    formats.bits_per_slot.push_back(16);
+    formats.bits_per_sample.push_back(16);
+    return std::vector<DaiSupportedFormats>{formats};
+  }
   zx_status_t SetDaiFormat(const DaiFormat& format) override {
     last_frame_rate_ = format.frame_rate;
     return ZX_OK;
   }
   GainFormat GetGainFormat() override {
-    return {.min_gain_db = -10.f, .max_gain_db = 10.f, .can_mute = true, .can_agc = true};
+    return {.type = GainType::DECIBELS,
+            .min_gain = -10.f,
+            .max_gain = 10.f,
+            .can_mute = true,
+            .can_agc = true};
   }
   GainState GetGainState() override { return {}; }
   void SetGainState(GainState state) override {
     muted_ = state.muted;
-    gain_ = state.gain_db;
+    gain_ = state.gain;
+    sync_completion_signal(&set_gain_completion_);
   }
   PlugState GetPlugState() override { return {}; }
 
@@ -80,6 +95,7 @@ struct CodecTest : public DeviceType, public SimpleCodecServer {
   bool started_ = false;
   bool muted_ = false;
   float gain_ = 0.f;
+  sync_completion_t set_gain_completion_;
 };
 
 struct AmlTdmOutDeviceTest : public AmlTdmOutDevice {
@@ -155,6 +171,7 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
 
     unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
 
+    InitDaiFormats();
     auto status = InitCodecsGain();
     if (status != ZX_OK) {
       return status;
@@ -404,6 +421,10 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
   auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
   ASSERT_OK(props.status());
 
+  // Wait until codecs have received a SetGainState call.
+  sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
+  sync_completion_wait(&codec2->set_gain_completion_, ZX_TIME_INFINITE);
+
   // Check we started (al least not stopped) both codecs and set them to muted.
   ASSERT_TRUE(codec1->started_);
   ASSERT_TRUE(codec2->started_);
@@ -440,7 +461,14 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
+  // Wait until codecs have received a SetGainState call.
+  sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
+  sync_completion_wait(&codec2->set_gain_completion_, ZX_TIME_INFINITE);
+  sync_completion_reset(&codec1->set_gain_completion_);
+  sync_completion_reset(&codec2->set_gain_completion_);
+
   {
+    // We start with agc false and muted true.
     auto builder = audio_fidl::GainState::UnownedBuilder();
     fidl::aligned<bool> mute = true;
     fidl::aligned<bool> agc = false;
@@ -449,6 +477,11 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     builder.set_agc_enabled(fidl::unowned_ptr(&agc));
     builder.set_gain_db(fidl::unowned_ptr(&gain));
     client.SetGain(builder.build());
+    // Wait until codecs have received a SetGainState call.
+    sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
+    sync_completion_wait(&codec2->set_gain_completion_, ZX_TIME_INFINITE);
+    sync_completion_reset(&codec1->set_gain_completion_);
+    sync_completion_reset(&codec2->set_gain_completion_);
 
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
@@ -457,6 +490,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
         audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(client.channel()));
     ASSERT_TRUE(gain_state->gain_state.has_agc_enabled());
     ASSERT_FALSE(gain_state->gain_state.agc_enabled());
+    ASSERT_TRUE(gain_state->gain_state.muted());
     ASSERT_EQ(gain_state->gain_state.gain_db(), kTestGain);
 
     ASSERT_EQ(codec1->gain_, kTestGain + kTestDeltaGain);
@@ -466,6 +500,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
   }
 
   {
+    // We switch to agc true and muted false.
     auto builder = audio_fidl::GainState::UnownedBuilder();
     fidl::aligned<bool> mute = false;
     fidl::aligned<bool> agc = true;
@@ -475,6 +510,12 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     builder.set_gain_db(fidl::unowned_ptr(&gain));
     client.SetGain(builder.build());
 
+    // Wait until codecs have received a SetGainState call.
+    sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
+    sync_completion_wait(&codec2->set_gain_completion_, ZX_TIME_INFINITE);
+    sync_completion_reset(&codec1->set_gain_completion_);
+    sync_completion_reset(&codec2->set_gain_completion_);
+
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
     // In this test we want to get the gain state anyways.
@@ -483,6 +524,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
 
     ASSERT_TRUE(gain_state->gain_state.has_agc_enabled());
     ASSERT_TRUE(gain_state->gain_state.agc_enabled());
+    ASSERT_FALSE(gain_state->gain_state.muted());
     ASSERT_EQ(gain_state->gain_state.gain_db(), kTestGain);
 
     ASSERT_EQ(codec1->gain_, kTestGain + kTestDeltaGain);
@@ -505,6 +547,12 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     auto start = audio_fidl::RingBuffer::Call::Start(zx::unowned_channel(local));
     ASSERT_OK(start.status());
 
+    // Wait until codecs have received a SetGainState call.
+    sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
+    sync_completion_wait(&codec2->set_gain_completion_, ZX_TIME_INFINITE);
+    sync_completion_reset(&codec1->set_gain_completion_);
+    sync_completion_reset(&codec2->set_gain_completion_);
+
     // Now we set gain again.
     auto builder2 = audio_fidl::GainState::UnownedBuilder();
     fidl::aligned<bool> mute = false;
@@ -514,6 +562,11 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     builder2.set_agc_enabled(fidl::unowned_ptr(&agc));
     builder2.set_gain_db(fidl::unowned_ptr(&gain));
     client.SetGain(builder2.build());
+    // Wait until codecs have received a SetGainState call.
+    sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
+    sync_completion_wait(&codec2->set_gain_completion_, ZX_TIME_INFINITE);
+    sync_completion_reset(&codec1->set_gain_completion_);
+    sync_completion_reset(&codec2->set_gain_completion_);
 
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
@@ -523,25 +576,33 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
 
     ASSERT_TRUE(gain_state->gain_state.has_agc_enabled());
     ASSERT_FALSE(gain_state->gain_state.agc_enabled());
+    ASSERT_FALSE(gain_state->gain_state.muted());
     ASSERT_EQ(gain_state->gain_state.gain_db(), kTestGain);
 
+    // We check the gain delta support in one codec.
     ASSERT_EQ(codec1->gain_, kTestGain + kTestDeltaGain);
     ASSERT_EQ(codec2->gain_, kTestGain);
+
+    // And finally we check that we removed mute in the codecs.
     ASSERT_FALSE(codec1->muted_);  // override_mute_ is cleared, we were able to set mute to false.
     ASSERT_FALSE(codec2->muted_);  // override_mute_ is cleared, we were able to set mute to false.
-  }
 
-  controller->DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
-  enable_gpio.VerifyAndClear();
-  controller->DdkRelease();
+    controller->DdkAsyncRemove();
+    EXPECT_TRUE(tester.Ok());
+    enable_gpio.VerifyAndClear();
+    controller->DdkRelease();
+  }
 }
 
 TEST(AmlG12Tdm, I2sOutOneCodecCantAgc) {
   struct CodecCantAgcTest : public CodecTest {
     explicit CodecCantAgcTest(zx_device_t* device) : CodecTest(device) {}
     GainFormat GetGainFormat() override {
-      return {.min_gain_db = -10.f, .max_gain_db = 10.f, .can_mute = true, .can_agc = false};
+      return {.type = GainType::DECIBELS,
+              .min_gain = -10.f,
+              .max_gain = 10.f,
+              .can_mute = true,
+              .can_agc = false};
     }
   };
 
@@ -584,7 +645,11 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantMute) {
   struct CodecCantMuteTest : public CodecTest {
     explicit CodecCantMuteTest(zx_device_t* device) : CodecTest(device) {}
     GainFormat GetGainFormat() override {
-      return {.min_gain_db = -10.f, .max_gain_db = 10.f, .can_mute = false, .can_agc = true};
+      return {.type = GainType::DECIBELS,
+              .min_gain = -10.f,
+              .max_gain = 10.f,
+              .can_mute = false,
+              .can_agc = true};
     }
   };
 

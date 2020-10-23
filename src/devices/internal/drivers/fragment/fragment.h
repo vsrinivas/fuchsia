@@ -191,9 +191,6 @@ class Fragment : public FragmentBase {
   static void I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
                                   size_t op_count);
 
-  static void CodecTransactCallback(void* cookie, zx_status_t status,
-                                    const dai_supported_formats_t* formats_list,
-                                    size_t formats_count);
   ProtocolClient<ddk::AmlogicCanvasProtocolClient, amlogic_canvas_protocol_t> canvas_client_;
   ProtocolClient<ddk::ButtonsProtocolClient, buttons_protocol_t> buttons_client_;
   ProtocolClient<ddk::ClockProtocolClient, clock_protocol_t> clock_client_;

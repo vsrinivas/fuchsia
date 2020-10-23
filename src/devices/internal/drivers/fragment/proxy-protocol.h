@@ -9,15 +9,6 @@ namespace fragment {
 
 // Maximum transfer size we can proxy.
 static constexpr size_t kProxyMaxTransferSize = 4096;
-// TODO(andresoportus): remove these restrictions.
-static constexpr size_t kMaxDaiFormats = 8;
-static constexpr size_t kMaxChannels = 8;
-static constexpr size_t kMaxSampleFormats = 8;
-static constexpr size_t kMaxFrameFormats = 8;
-static constexpr size_t kMaxRates = 8;
-static constexpr size_t kMaxBitsPerSlot = 8;
-static constexpr size_t kMaxBitsPerSample = 8;
-static constexpr size_t kMaxCodecStringSize = 64;
 
 /// Header for RPC requests.
 struct ProxyRequest {
@@ -66,84 +57,6 @@ struct rpc_pdev_metadata_rsp_t {
   uint8_t metadata[PROXY_MAX_METADATA_SIZE];
 };
 
-// ZX_PROTOCOL_CODEC proxy support.
-enum class CodecOp {
-  RESET,
-  STOP,
-  START,
-  GET_INFO,
-  IS_BRIDGEABLE,
-  SET_BRIDGED_MODE,
-  GET_GAIN_FORMAT,
-  GET_GAIN_STATE,
-  SET_GAIN_STATE,
-  GET_DAI_FORMATS,
-  SET_DAI_FORMAT,
-  GET_PLUG_STATE,
-};
-
-struct CodecProxyRequest {
-  ProxyRequest header;
-  CodecOp op;
-};
-
-struct CodecIsBridgeableProxyResponse {
-  ProxyResponse header;
-  bool supports_bridged_mode;
-};
-
-struct CodecSetBridgedProxyRequest {
-  ProxyRequest header;
-  CodecOp op;
-  bool enable_bridged_mode;
-};
-
-struct CodecGainFormatProxyResponse {
-  ProxyResponse header;
-  gain_format_t format;
-};
-
-struct CodecGainStateProxyRequest {
-  ProxyRequest header;
-  CodecOp op;
-  gain_state_t state;
-};
-
-struct CodecGainStateProxyResponse {
-  ProxyResponse header;
-  gain_state_t state;
-};
-
-struct CodecDaiFormatsProxyResponse {
-  ProxyResponse header;
-  dai_supported_formats_t formats[kMaxDaiFormats];
-  uint32_t number_of_channels[kMaxChannels];
-  sample_format_t formats_list[kMaxSampleFormats];
-  frame_format_t frame_formats[kMaxFrameFormats];
-  frame_format_custom_t frame_formats_custom[kMaxFrameFormats];
-  uint32_t frame_rates_list[kMaxRates];
-  uint8_t bits_per_slot[kMaxBitsPerSlot];
-  uint8_t bits_per_sample_list[kMaxBitsPerSample];
-};
-
-struct CodecDaiFormatProxyRequest {
-  ProxyRequest header;
-  CodecOp op;
-  dai_format_t format;
-};
-
-struct CodecPlugStateProxyResponse {
-  ProxyResponse header;
-  plug_state_t plug_state;
-};
-
-struct CodecInfoProxyResponse {
-  ProxyResponse header;
-  char unique_id[kMaxCodecStringSize];
-  char manufacturer[kMaxCodecStringSize];
-  char product_name[kMaxCodecStringSize];
-};
-
 // ZX_PROTOCOL_GPIO proxy support.
 enum class GpioOp {
   CONFIG_IN,
@@ -184,6 +97,20 @@ struct ButtonsProxyRequest {
 };
 
 struct ButtonsProxyResponse {
+  ProxyResponse header;
+};
+
+// ZX_PROTOCOL_CODEC proxy support.
+enum class CodecOp {
+  GET_CHANNEL,
+};
+
+struct CodecProxyRequest {
+  ProxyRequest header;
+  CodecOp op;
+};
+
+struct CodecProxyResponse {
   ProxyResponse header;
 };
 

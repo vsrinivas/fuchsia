@@ -73,11 +73,6 @@ int TestBoard::Thread() {
     zxlogf(ERROR, "%s: TestInit failed: %d", __func__, status);
   }
 
-  status = AudioCodecInit();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CodecInit failed: %d", __func__, status);
-  }
-
   status = PwmInit();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: PwmInit failed: %d", __func__, status);
@@ -157,9 +152,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 1),
       BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 5),
   };
-  const zx_bind_inst_t codec_match[] = {
-      BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
-  };
   const zx_bind_inst_t child2_match[] = {
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
@@ -210,10 +202,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {std::size(child2_match), child2_match},
       {std::size(child4_match), child4_match},
   };
-  device_fragment_part_t codec_fragment[] = {
-      {std::size(root_match), root_match},
-      {std::size(codec_match), codec_match},
-  };
   device_fragment_part_t spi_fragment[] = {
       {std::size(root_match), root_match},
       {std::size(spi_match), spi_match},
@@ -237,7 +225,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {"i2c", std::size(i2c_fragment), i2c_fragment},
       {"power", std::size(power_fragment), power_fragment},
       {"child4", std::size(child4_fragment), child4_fragment},
-      {"codec", std::size(codec_fragment), codec_fragment},
   };
 
   struct composite_test_metadata metadata_1 = {

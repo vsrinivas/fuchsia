@@ -7,263 +7,114 @@
 #include <ddk/debug.h>
 
 namespace audio {
+namespace codec_fidl = ::fuchsia::hardware::audio::codec;
+using SyncCall = ::fuchsia::hardware::audio::codec::Codec_Sync;
 
 zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client) {
   proto_client_ = proto_client;
   if (!proto_client_.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }
+  zx::channel channel_remote, channel_local;
+  auto status = zx::channel::create(0, &channel_local, &channel_remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = proto_client_.Connect(std::move(channel_remote));
+  if (status != ZX_OK) {
+    return status;
+  }
+  codec_.Bind(std::move(channel_local));
   return ZX_OK;
 }
-
 void SimpleCodecClient::SetTimeout(int64_t nsecs) { timeout_nsecs_ = nsecs; }
 
 zx_status_t SimpleCodecClient::Reset() {
-  AsyncOut out = {};
-  proto_client_.Reset(
-      [](void* ctx, zx_status_t status) {
-        auto* out = reinterpret_cast<AsyncOut*>(ctx);
-        out->status = status;
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  auto status = sync_completion_wait(&out.completion, timeout_nsecs_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (out.status != ZX_OK) {
-    return out.status;
-  }
-  return ZX_OK;
+  int32_t out_status = 0;
+  auto status = codec_->Reset(&out_status);
+  return (status == ZX_OK) ? out_status : status;
 }
 
 zx_status_t SimpleCodecClient::Stop() {
-  AsyncOut out = {};
-  proto_client_.Stop(
-      [](void* ctx, zx_status_t status) {
-        auto* out = reinterpret_cast<AsyncOut*>(ctx);
-        out->status = status;
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  auto status = sync_completion_wait(&out.completion, timeout_nsecs_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (out.status != ZX_OK) {
-    return out.status;
-  }
-  return ZX_OK;
+  int32_t out_status = 0;
+  auto status = codec_->Stop(&out_status);
+  return (status == ZX_OK) ? out_status : status;
 }
 
 zx_status_t SimpleCodecClient::Start() {
-  AsyncOut out = {};
-  proto_client_.Start(
-      [](void* ctx, zx_status_t status) {
-        auto* out = reinterpret_cast<AsyncOut*>(ctx);
-        out->status = status;
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  auto status = sync_completion_wait(&out.completion, timeout_nsecs_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (out.status != ZX_OK) {
-    return out.status;
-  }
-  return ZX_OK;
+  int32_t out_status = 0;
+  auto status = codec_->Start(&out_status);
+  return (status == ZX_OK) ? out_status : status;
 }
 
 zx::status<Info> SimpleCodecClient::GetInfo() {
-  AsyncOutData<Info> out = {};
-  proto_client_.GetInfo(
-      [](void* ctx, const info_t* info) {
-        auto* out = reinterpret_cast<AsyncOutData<Info>*>(ctx);
-        out->data.unique_id.assign(info->unique_id);
-        out->data.product_name.assign(info->product_name);
-        out->data.manufacturer.assign(info->manufacturer);
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  auto status = sync_completion_wait(&out.completion, timeout_nsecs_);
+  codec_fidl::Info info = {};
+  auto status = codec_->GetInfo(&info);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(out.data);
+  return zx::ok(std::move(info));
 }
 
 zx::status<bool> SimpleCodecClient::IsBridgeable() {
-  AsyncOutData<bool> out = {};
-  proto_client_.IsBridgeable(
-      [](void* ctx, bool supports_bridged_mode) {
-        auto* out = reinterpret_cast<AsyncOutData<bool>*>(ctx);
-        out->data = supports_bridged_mode;
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  auto status = sync_completion_wait(&out.completion, timeout_nsecs_);
+  bool out_supports_bridged_mode = false;
+  auto status = codec_->IsBridgeable(&out_supports_bridged_mode);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(out.data);
+  return zx::ok(out_supports_bridged_mode);
 }
 
 zx_status_t SimpleCodecClient::SetBridgedMode(bool bridged) {
-  AsyncOut out = {};
-  proto_client_.SetBridgedMode(
-      bridged,
-      [](void* ctx) {
-        auto* out = reinterpret_cast<AsyncOut*>(ctx);
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  return sync_completion_wait(&out.completion, timeout_nsecs_);
+  return codec_->SetBridgedMode(bridged);
 }
 
 zx::status<std::vector<DaiSupportedFormats>> SimpleCodecClient::GetDaiFormats() {
-  AsyncOutData<std::vector<DaiSupportedFormats>> out;
-  proto_client_.GetDaiFormats(
-      [](void* ctx, zx_status_t s, const dai_supported_formats_t* formats_list,
-         size_t formats_count) {
-        auto* out = reinterpret_cast<AsyncOutData<std::vector<DaiSupportedFormats>>*>(ctx);
-        out->status = s;
-        if (out->status == ZX_OK) {
-          for (size_t i = 0; i < formats_count; ++i) {
-            std::vector<uint32_t> number_of_channels(
-                formats_list[i].number_of_channels_list,
-                formats_list[i].number_of_channels_list + formats_list[i].number_of_channels_count);
-            std::vector<sample_format_t> sample_formats(
-                formats_list[i].sample_formats_list,
-                formats_list[i].sample_formats_list + formats_list[i].sample_formats_count);
-            std::vector<frame_format_t> frame_formats(
-                formats_list[i].frame_formats_list,
-                formats_list[i].frame_formats_list + formats_list[i].frame_formats_count);
-            std::vector<frame_format_custom_t> frame_formats_custom(
-                formats_list[i].frame_formats_custom_list,
-                formats_list[i].frame_formats_custom_list +
-                    formats_list[i].frame_formats_custom_count);
-            std::vector<uint32_t> frame_rates(
-                formats_list[i].frame_rates_list,
-                formats_list[i].frame_rates_list + formats_list[i].frame_rates_count);
-            std::vector<uint8_t> bits_per_slot(
-                formats_list[i].bits_per_slot_list,
-                formats_list[i].bits_per_slot_list + formats_list[i].bits_per_slot_count);
-            std::vector<uint8_t> bits_per_sample(
-                formats_list[i].bits_per_sample_list,
-                formats_list[i].bits_per_sample_list + formats_list[i].bits_per_sample_count);
-            DaiSupportedFormats formats = {.number_of_channels = number_of_channels,
-                                           .sample_formats = sample_formats,
-                                           .frame_formats = frame_formats,
-                                           .frame_formats_custom = frame_formats_custom,
-                                           .frame_rates = frame_rates,
-                                           .bits_per_slot = bits_per_slot,
-                                           .bits_per_sample = bits_per_sample};
-            out->data.push_back(std::move(formats));
-          }
-        }
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  auto status = sync_completion_wait(&out.completion, timeout_nsecs_);
+  int32_t out_status = 0;
+  std::vector<DaiSupportedFormats> out_formats;
+  auto status = codec_->GetDaiFormats(&out_status, &out_formats);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  if (out.status != ZX_OK) {
-    return zx::error(out.status);
-  }
-  return zx::ok(out.data);
+  return zx::ok(std::move(out_formats));
 }
 
 zx_status_t SimpleCodecClient::SetDaiFormat(DaiFormat format) {
-  AsyncOut out = {};
-  dai_format_t f;
-  f.number_of_channels = format.number_of_channels;
-  f.channels_to_use_bitmask = format.channels_to_use_bitmask;
-  f.sample_format = format.sample_format;
-  f.frame_format = format.frame_format;
-  f.frame_format_custom = format.frame_format_custom;
-  f.frame_rate = format.frame_rate;
-  f.bits_per_slot = format.bits_per_slot;
-  f.bits_per_sample = format.bits_per_sample;
-  proto_client_.SetDaiFormat(
-      &f,
-      [](void* ctx, zx_status_t s) {
-        auto* out = reinterpret_cast<AsyncOut*>(ctx);
-        out->status = s;
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  auto status = sync_completion_wait(&out.completion, timeout_nsecs_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (out.status != ZX_OK) {
-    return out.status;
-  }
-  return status;
+  int32_t out_status = 0;
+  auto status = codec_->SetDaiFormat(std::move(format), &out_status);
+  return (status == ZX_OK) ? out_status : status;
 }
 
 zx::status<GainFormat> SimpleCodecClient::GetGainFormat() {
-  AsyncOutData<GainFormat> out = {};
-  proto_client_.GetGainFormat(
-      [](void* ctx, const gain_format_t* format) {
-        auto* out = reinterpret_cast<AsyncOutData<GainFormat>*>(ctx);
-        out->data.min_gain_db = format->min_gain;
-        out->data.max_gain_db = format->max_gain;
-        out->data.gain_step_db = format->gain_step;
-        out->data.can_mute = format->can_mute;
-        out->data.can_agc = format->can_agc;
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  auto status = sync_completion_wait(&out.completion, timeout_nsecs_);
+  codec_fidl::GainFormat gain_format = {};
+  auto status = codec_->GetGainFormat(&gain_format);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(out.data);
+  return zx::ok(std::move(gain_format));
 }
 
 zx::status<GainState> SimpleCodecClient::GetGainState() {
-  AsyncOutData<GainState> out = {};
-  proto_client_.GetGainState(
-      [](void* ctx, const gain_state_t* state) {
-        auto* out = reinterpret_cast<AsyncOutData<GainState>*>(ctx);
-        out->data.gain_db = state->gain;
-        out->data.muted = state->muted;
-        out->data.agc_enable = state->agc_enable;
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  auto status = sync_completion_wait(&out.completion, timeout_nsecs_);
+  codec_fidl::GainState gain_state = {};
+  auto status = codec_->GetGainState(&gain_state);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(out.data);
+  return zx::ok(std::move(gain_state));
 }
 
 void SimpleCodecClient::SetGainState(GainState state) {
-  gain_state_t state2 = {
-      .gain = state.gain_db, .muted = state.muted, .agc_enable = state.agc_enable};
-  proto_client_.SetGainState(
-      &state2, [](void* ctx) {}, nullptr);
+  auto unused = codec_->SetGainState(std::move(state));
+  static_cast<void>(unused);
 }
 
 zx::status<PlugState> SimpleCodecClient::GetPlugState() {
-  AsyncOutData<PlugState> out = {};
-  proto_client_.GetPlugState(
-      [](void* ctx, const plug_state_t* state) {
-        auto* out = reinterpret_cast<AsyncOutData<PlugState>*>(ctx);
-        out->data.hardwired = state->hardwired;
-        out->data.plugged = state->plugged;
-        sync_completion_signal(&out->completion);
-      },
-      &out);
-  auto status = sync_completion_wait(&out.completion, timeout_nsecs_);
+  codec_fidl::PlugState plug_state = {};
+  auto status = codec_->GetPlugState(&plug_state);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(out.data);
+  return zx::ok(std::move(plug_state));
 }
 
 }  // namespace audio

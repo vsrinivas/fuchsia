@@ -43,11 +43,15 @@ constexpr uint8_t kRegDieId                    = 0x67;
 constexpr uint8_t kRegClearFaultBitsAnalog     = 0x80;
 // clang-format on
 
+}  // namespace
+
+namespace audio {
+
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
 static const std::vector<uint32_t> kSupportedDaiNumberOfChannels = {2, 4};
-static const std::vector<sample_format_t> kSupportedDaiSampleFormats = {SAMPLE_FORMAT_PCM_SIGNED};
-static const std::vector<frame_format_t> kSupportedDaiFrameFormats = {FRAME_FORMAT_I2S,
-                                                                      FRAME_FORMAT_TDM1};
+static const std::vector<SampleFormat> kSupportedDaiSampleFormats = {SampleFormat::PCM_SIGNED};
+static const std::vector<FrameFormat> kSupportedDaiFrameFormats = {FrameFormat::I2S,
+                                                                   FrameFormat::TDM1};
 static const std::vector<uint32_t> kSupportedDaiRates = {48'000};
 static const std::vector<uint8_t> kSupportedDaiBitsPerSlot = {16, 32};
 static const std::vector<uint8_t> kSupportedDaiBitsPerSample = {16, 32};
@@ -64,10 +68,6 @@ enum {
   FRAGMENT_I2C,
   FRAGMENT_COUNT,
 };
-
-}  // namespace
-
-namespace audio {
 
 Tas58xx::Tas58xx(zx_device_t* device, const ddk::I2cChannel& i2c)
     : SimpleCodecServer(device), i2c_(i2c) {
@@ -140,7 +140,7 @@ zx_status_t Tas58xx::Reset() {
     }
   }
   constexpr float kDefaultGainDb = -30.f;
-  SetGainState({.gain_db = kDefaultGainDb, .muted = true});
+  SetGainState({.gain = kDefaultGainDb, .muted = true});
   initialized_ = true;
   return ZX_OK;
 }
@@ -228,7 +228,7 @@ zx_status_t Tas58xx::SetDaiFormat(const DaiFormat& format) {
 
   uint8_t reg_value =
       (format.bits_per_sample == 32 ? kRegSapCtrl1Bits32bits : kRegSapCtrl1Bits16bits) |
-      (format.frame_format == FRAME_FORMAT_I2S ? 0x00 : kRegSapCtrl1BitsTdmSmallFs);
+      (format.frame_format == FrameFormat::I2S ? 0x00 : kRegSapCtrl1BitsTdmSmallFs);
 
   fbl::AutoLock lock(&lock_);
   auto status = WriteReg(kRegSapCtrl1, reg_value);
@@ -243,9 +243,10 @@ zx_status_t Tas58xx::SetDaiFormat(const DaiFormat& format) {
 
 GainFormat Tas58xx::GetGainFormat() {
   return {
-      .min_gain_db = kMinGain,
-      .max_gain_db = kMaxGain,
-      .gain_step_db = kGainStep,
+      .type = GainType::DECIBELS,
+      .min_gain = kMinGain,
+      .max_gain = kMaxGain,
+      .gain_step = kGainStep,
       .can_mute = true,
       .can_agc = false,
   };
@@ -253,7 +254,7 @@ GainFormat Tas58xx::GetGainFormat() {
 
 void Tas58xx::SetGainState(GainState gain_state) {
   fbl::AutoLock lock(&lock_);
-  float gain = std::clamp(gain_state.gain_db, kMinGain, kMaxGain);
+  float gain = std::clamp(gain_state.gain, kMinGain, kMaxGain);
   uint8_t gain_reg = static_cast<uint8_t>(48 - gain * 2);
   zx_status_t status = WriteReg(kRegDigitalVol, gain_reg);
   if (status != ZX_OK) {

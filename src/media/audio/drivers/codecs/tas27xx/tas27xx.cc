@@ -16,11 +16,11 @@
 
 #include "src/media/audio/drivers/codecs/tas27xx/ti_tas27xx-bind.h"
 
-namespace {
+namespace audio {
 
 static const std::vector<uint32_t> kSupportedNumberOfChannels = {2};
-static const std::vector<sample_format_t> kSupportedSampleFormats = {SAMPLE_FORMAT_PCM_SIGNED};
-static const std::vector<frame_format_t> kSupportedFrameFormats = {FRAME_FORMAT_I2S};
+static const std::vector<SampleFormat> kSupportedSampleFormats = {SampleFormat::PCM_SIGNED};
+static const std::vector<FrameFormat> kSupportedFrameFormats = {FrameFormat::I2S};
 static const std::vector<uint32_t> kSupportedRates = {48'000, 96'000};
 static const std::vector<uint8_t> kSupportedBitsPerSlot = {32};
 static const std::vector<uint8_t> kSupportedBitsPerSample = {16};
@@ -38,10 +38,6 @@ enum {
   FRAGMENT_FAULT_GPIO,
   FRAGMENT_COUNT,
 };
-
-}  // namespace
-
-namespace audio {
 
 int Tas27xx::Thread() {
   zx::time timestamp;
@@ -138,9 +134,10 @@ zx_status_t Tas27xx::Start() {
 
 GainFormat Tas27xx::GetGainFormat() {
   return {
-      .min_gain_db = kMinGain,
-      .max_gain_db = kMaxGain,
-      .gain_step_db = kGainStep,
+      .type = GainType::DECIBELS,
+      .min_gain = kMinGain,
+      .max_gain = kMaxGain,
+      .gain_step = kGainStep,
       .can_mute = true,
       .can_agc = false,
   };
@@ -149,8 +146,8 @@ GainFormat Tas27xx::GetGainFormat() {
 GainState Tas27xx::GetGainState() { return gain_state_; }
 
 void Tas27xx::SetGainState(GainState gain_state) {
-  gain_state.gain_db = std::clamp(gain_state.gain_db, kMinGain, kMaxGain);
-  uint8_t gain_reg = static_cast<uint8_t>(-gain_state.gain_db / kGainStep);
+  gain_state.gain = std::clamp(gain_state.gain, kMinGain, kMaxGain);
+  uint8_t gain_reg = static_cast<uint8_t>(-gain_state.gain / kGainStep);
   WriteReg(PB_CFG2, gain_reg);
   if (gain_state.agc_enable) {
     zxlogf(ERROR, "tas27xx: AGC enable not supported\n");
@@ -287,7 +284,9 @@ zx_status_t Tas27xx::Reinitialize() {
     return status;
   }
   constexpr float kDefaultGainDb = -30.f;
-  GainState gain_state = {.gain_db = kDefaultGainDb, .muted = true};
+  GainState gain_state = {
+
+      .gain = kDefaultGainDb, .muted = true};
   SetGainState(std::move(gain_state));
   return ZX_OK;
 }

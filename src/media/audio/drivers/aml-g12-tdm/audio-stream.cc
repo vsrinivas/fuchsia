@@ -160,7 +160,7 @@ void AmlG12TdmStream::InitDaiFormats() {
   frame_rate_ = kMinSampleRate;
   for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
     // Only the PCM signed sample format is supported.
-    dai_formats_[i].sample_format = SAMPLE_FORMAT_PCM_SIGNED;
+    dai_formats_[i].sample_format = SampleFormat::PCM_SIGNED;
     dai_formats_[i].frame_rate = frame_rate_;
     dai_formats_[i].bits_per_sample = metadata_.tdm.bits_per_sample;
     dai_formats_[i].bits_per_slot = metadata_.tdm.bits_per_slot;
@@ -168,14 +168,16 @@ void AmlG12TdmStream::InitDaiFormats() {
     dai_formats_[i].channels_to_use_bitmask = metadata_.codecs_channels_mask[i];
     switch (metadata_.tdm.type) {
       case metadata::TdmType::I2s:
-        dai_formats_[i].frame_format = FRAME_FORMAT_I2S;
+        dai_formats_[i].frame_format = FrameFormat::I2S;
         break;
       case metadata::TdmType::StereoLeftJustified:
-        dai_formats_[i].frame_format = FRAME_FORMAT_STEREO_LEFT;
+        dai_formats_[i].frame_format = FrameFormat::STEREO_LEFT;
         break;
       case metadata::TdmType::Tdm1:
-        dai_formats_[i].frame_format = FRAME_FORMAT_TDM1;
+        dai_formats_[i].frame_format = FrameFormat::TDM1;
         break;
+      default:
+        ZX_ASSERT(0);  // Not supported.
     }
   }
 
@@ -382,7 +384,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
 }
 
 void AmlG12TdmStream::UpdateCodecsGainStateFromCurrent() {
-  UpdateCodecsGainState({.gain_db = cur_gain_state_.cur_gain,
+  UpdateCodecsGainState({.gain = cur_gain_state_.cur_gain,
                          .muted = cur_gain_state_.cur_mute,
                          .agc_enable = cur_gain_state_.cur_agc});
 }
@@ -390,7 +392,7 @@ void AmlG12TdmStream::UpdateCodecsGainStateFromCurrent() {
 void AmlG12TdmStream::UpdateCodecsGainState(GainState state) {
   for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
     auto state2 = state;
-    state2.gain_db += metadata_.tdm.codecs_delta_gains[i];
+    state2.gain += metadata_.tdm.codecs_delta_gains[i];
     if (override_mute_) {
       state2.muted = true;
     }
@@ -411,9 +413,9 @@ zx_status_t AmlG12TdmStream::InitCodecsGain() {
       if (format.is_error()) {
         return format.error_value();
       }
-      min_gain = std::max(min_gain, format->min_gain_db);
-      max_gain = std::min(max_gain, format->max_gain_db);
-      gain_step = std::max(gain_step, format->gain_step_db);
+      min_gain = std::max(min_gain, format->min_gain);
+      max_gain = std::min(max_gain, format->max_gain);
+      gain_step = std::max(gain_step, format->gain_step);
       can_all_mute = (can_all_mute && format->can_mute);
       can_all_agc = (can_all_agc && format->can_agc);
     }
@@ -423,7 +425,7 @@ zx_status_t AmlG12TdmStream::InitCodecsGain() {
     if (state.is_error()) {
       return state.error_value();
     }
-    cur_gain_state_.cur_gain = state->gain_db;
+    cur_gain_state_.cur_gain = state->gain;
     cur_gain_state_.cur_mute = false;
     cur_gain_state_.cur_agc = false;
     UpdateCodecsGainState(state.value());

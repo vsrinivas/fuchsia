@@ -17,13 +17,14 @@
 
 #include "src/media/audio/drivers/codecs/tas5720/ti_tas5720-bind.h"
 
-namespace {
+namespace audio {
+
 // This codec offers a DAI interface with 2 channel I2S, even though it is a mono amp with the
 // channel actually amplified specified via metadata for a particular product.
 static const std::vector<uint32_t> kSupportedNumberOfChannels = {2};
-static const std::vector<sample_format_t> kSupportedSampleFormats = {SAMPLE_FORMAT_PCM_SIGNED};
-static const std::vector<frame_format_t> kSupportedFrameFormats = {FRAME_FORMAT_STEREO_LEFT,
-                                                                   FRAME_FORMAT_I2S};
+static const std::vector<SampleFormat> kSupportedSampleFormats = {SampleFormat::PCM_SIGNED};
+static const std::vector<FrameFormat> kSupportedFrameFormats = {FrameFormat::STEREO_LEFT,
+                                                                FrameFormat::I2S};
 static const std::vector<uint32_t> kSupportedRates = {48'000, 96'000};
 static const std::vector<uint8_t> kSupportedBitsPerSlot = {32};
 static const std::vector<uint8_t> kSupportedBitsPerSample = {16};
@@ -40,10 +41,6 @@ enum {
   FRAGMENT_I2C,
   FRAGMENT_COUNT,
 };
-
-}  // namespace
-
-namespace audio {
 
 constexpr float Tas5720::kMaxGain;
 constexpr float Tas5720::kMinGain;
@@ -151,7 +148,7 @@ zx_status_t Tas5720::Reinitialize() {
     return status;
   }
   constexpr float kDefaultGainDb = -30.f;
-  GainState gain_state = {.gain_db = kDefaultGainDb, .muted = true};
+  GainState gain_state = {.gain = kDefaultGainDb, .muted = true};
   SetGainState(std::move(gain_state));
   return ZX_OK;
 }
@@ -239,7 +236,7 @@ zx_status_t Tas5720::SetDaiFormat(const DaiFormat& format) {
   ZX_ASSERT(format.channels_to_use_bitmask == 1 ||
             format.channels_to_use_bitmask == 2);  // Mono codec, 2 channel TDM.
   tdm_slot_ = static_cast<uint8_t>(__builtin_ctzl(format.channels_to_use_bitmask));
-  i2s_ = format.frame_format == FRAME_FORMAT_I2S;
+  i2s_ = format.frame_format == FrameFormat::I2S;
   auto status = SetSlot(tdm_slot_);
   if (status != ZX_OK) {
     return status;
@@ -250,9 +247,10 @@ zx_status_t Tas5720::SetDaiFormat(const DaiFormat& format) {
 
 GainFormat Tas5720::GetGainFormat() {
   return {
-      .min_gain_db = kMinGain,
-      .max_gain_db = kMaxGain,
-      .gain_step_db = kGainStep,
+      .type = GainType::DECIBELS,
+      .min_gain = kMinGain,
+      .max_gain = kMaxGain,
+      .gain_step = kGainStep,
       .can_mute = true,
       .can_agc = false,
   };
@@ -261,7 +259,7 @@ GainFormat Tas5720::GetGainFormat() {
 GainState Tas5720::GetGainState() { return gain_state_; }
 
 void Tas5720::SetGainState(GainState gain_state) {
-  auto status = SetGain(gain_state.gain_db);
+  auto status = SetGain(gain_state.gain);
   if (status != ZX_OK) {
     zxlogf(ERROR, "tas5720: Could not set gain %d\n", status);
   }

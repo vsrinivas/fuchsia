@@ -20,8 +20,8 @@ audio::DaiFormat GetDefaultDaiFormat() {
   return {
       .number_of_channels = 2,
       .channels_to_use_bitmask = 3,
-      .sample_format = SAMPLE_FORMAT_PCM_SIGNED,
-      .frame_format = FRAME_FORMAT_I2S,
+      .sample_format = SampleFormat::PCM_SIGNED,
+      .frame_format = FrameFormat::I2S,
       .frame_rate = 48'000,
       .bits_per_slot = 32,
       .bits_per_sample = 32,
@@ -68,7 +68,7 @@ TEST(Tas5782Test, BadSetDai) {
 
   {
     DaiFormat format = GetDefaultDaiFormat();
-    format.frame_format = FRAME_FORMAT_STEREO_LEFT;  // This must fail, only I2S supported.
+    format.frame_format = FrameFormat::STEREO_LEFT;  // This must fail, only I2S supported.
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
   }
   {
@@ -96,9 +96,9 @@ TEST(Tas5782Test, GetDai) {
   EXPECT_EQ(formats.value()[0].number_of_channels.size(), 1);
   EXPECT_EQ(formats.value()[0].number_of_channels[0], 2);
   EXPECT_EQ(formats.value()[0].sample_formats.size(), 1);
-  EXPECT_EQ(formats.value()[0].sample_formats[0], SAMPLE_FORMAT_PCM_SIGNED);
+  EXPECT_EQ(formats.value()[0].sample_formats[0], SampleFormat::PCM_SIGNED);
   EXPECT_EQ(formats.value()[0].frame_formats.size(), 1);
-  EXPECT_EQ(formats.value()[0].frame_formats[0], FRAME_FORMAT_I2S);
+  EXPECT_EQ(formats.value()[0].frame_formats[0], FrameFormat::I2S);
   EXPECT_EQ(formats.value()[0].frame_rates.size(), 1);
   EXPECT_EQ(formats.value()[0].frame_rates[0], 48000);
   EXPECT_EQ(formats.value()[0].bits_per_slot.size(), 1);
@@ -149,9 +149,9 @@ TEST(Tas5782Test, GetGainFormat) {
   client.SetProtocol(&codec_proto);
 
   auto format = client.GetGainFormat();
-  EXPECT_EQ(format.value().min_gain_db, -103.0);
-  EXPECT_EQ(format.value().max_gain_db, 24.0);
-  EXPECT_EQ(format.value().gain_step_db, 0.5);
+  EXPECT_EQ(format.value().min_gain, -103.0);
+  EXPECT_EQ(format.value().max_gain, 24.0);
+  EXPECT_EQ(format.value().gain_step, 0.5);
 }
 
 TEST(Tas5782Test, GetPlugState) {
@@ -187,8 +187,8 @@ TEST(Tas5782Test, Init) {
   mock_gpio0.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Reset, set to 0 and then to 1.
   mock_gpio1.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Set to mute and then to unmute..
 
-  auto codec = SimpleCodecServer::Create<Tas5782Codec>(
-    std::move(i2c), std::move(gpio0), std::move(gpio1));
+  auto codec =
+      SimpleCodecServer::Create<Tas5782Codec>(std::move(i2c), std::move(gpio0), std::move(gpio1));
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;

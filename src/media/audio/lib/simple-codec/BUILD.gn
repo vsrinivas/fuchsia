@@ -19,9 +19,14 @@ zx_library("simple-codec") {
     "simple-codec-server.cc",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.audio.codec",
     "//src/lib/ddktl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+
+    # TODO(andresoportus): Remove depedency on TLS (maybe done by C++ bindings unification).
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.codec",
