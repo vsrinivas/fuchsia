@@ -1,0 +1,44 @@
+[
+  {
+    "type": "DriverManagerHandler",
+    "name": "driver_manager_handler",
+    "config": {}
+  },
+  {
+    "type": "ShutdownWatcher",
+    "name": "shutdown_watcher"
+  },
+  {
+    "type": "SystemShutdownHandler",
+    "name": "sys_shutdown",
+    "config": {
+      "component_manager_path": "/svc/fuchsia.sys2.SystemController",
+      "shutdown_timeout_s": 3600
+    },
+    "dependencies": {
+      "driver_manager_handler_node": "driver_manager_handler",
+      "shutdown_watcher_node": "shutdown_watcher"
+    }
+  },
+  {
+    "type": "TemperatureHandler",
+    "name": "temperature",
+    "config": {
+      "driver_path": "/dev/class/thermal/000",
+      "cache_duration_ms": 50
+    }
+  },
+  {
+    "type": "ThermalShutdown",
+    "name": "thermal_shutdown",
+    "dependencies": {
+      "system_shutdown_node": "sys_shutdown",
+      "temperature_handler_node": "temperature"
+    },
+    "config": {
+      "thermal_shutdown_temperature_c": 97.0,
+      "poll_interval_s": 1,
+      "filter_time_constant_s": 1
+    }
+  }
+]

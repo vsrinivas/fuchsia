@@ -37,6 +37,10 @@ node_config("luis") {
   source = "luis_node_config.json"
 }
 
+node_config("nelson") {
+  source = "nelson_node_config.json"
+}
+
 node_config("sherlock") {
   source = "sherlock_node_config.json"
 }
@@ -51,6 +55,7 @@ config_data("test_config_data") {
     "astro_node_config.json",
     "base_node_config.json",
     "luis_node_config.json",
+    "nelson_node_config.json",
     "sherlock_node_config.json",
   ]
 }

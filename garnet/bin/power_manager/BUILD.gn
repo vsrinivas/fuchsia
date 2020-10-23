@@ -136,6 +136,10 @@ group("luis_config") {
   deps = [ "node_config:luis" ]
 }
 
+group("nelson_config") {
+  deps = [ "node_config:nelson" ]
+}
+
 group("sherlock_config") {
   deps = [ "node_config:sherlock" ]
 }
