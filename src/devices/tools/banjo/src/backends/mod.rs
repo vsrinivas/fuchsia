@@ -4,16 +4,12 @@
 
 use {crate::ast::BanjoAst, anyhow::Error, std::io};
 
-pub use self::{
-    ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppSubtype, rust::RustBackend,
-    syzkaller::SyzkallerBackend,
-};
+pub use self::{ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppSubtype, rust::RustBackend};
 
 mod ast;
 mod c;
 mod cpp;
 mod rust;
-mod syzkaller;
 mod util;
 
 pub trait Backend<'a, W: io::Write> {

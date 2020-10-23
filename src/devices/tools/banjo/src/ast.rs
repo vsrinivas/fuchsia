@@ -487,6 +487,7 @@ pub struct Method {
 }
 
 impl Method {
+    #[allow(dead_code)]
     pub fn name_to_ty(&self, arg_name: &str) -> Result<&Ty, Error> {
         for (name, ty) in self.in_params.iter() {
             if arg_name == name {
@@ -886,6 +887,7 @@ impl BanjoAst {
         }
     }
 
+    #[allow(dead_code)]
     pub fn is_resource(&self, ty: &Ty) -> bool {
         match ty {
             Ty::Identifier { id, .. } => {
