@@ -1,0 +1,56 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.blobfs.internal;
+
+using zx;
+
+/// Used to transport the Blobfs CompressionAlgorithm enum.
+enum CompressionAlgorithm {
+    UNCOMPRESSED = 1;
+    LZ4 = 2;
+    ZSTD = 3;
+    ZSTD_SEEKABLE = 4;
+    CHUNKED = 5;
+};
+
+/// A range of bytes.
+struct Range {
+    /// Offset in bytes from the start of the VMO.
+    uint64 offset;
+    /// The number of bytes starting at the offset.
+    uint64 size;
+};
+
+/// A request sent to the decompressor.
+struct DecompressRangeRequest {
+    /// The bytes where the decompressed result will be placed.
+    Range decompressed;
+    /// The bytes from the compressed input to extract from.
+    Range compressed;
+
+    /// Algorithm to use for decompression.
+    CompressionAlgorithm algorithm;
+};
+
+/// A response from the decompressor after handling a `DecompressRangeRequest`.
+struct DecompressRangeResponse {
+    /// Decompressed size in bytes.
+    uint64 size;
+    /// Operation status.
+    zx.status status;
+
+    /// Padding out to the same length as `DecompressRangeRequest`. Values must be zero.
+    array<int8>:24 reserved;
+};
+
+[Discoverable]
+protocol DecompressorCreator {
+    /// Takes the server end of a fifo for `DecompressRangeRequest` objects to
+    /// handle requests and put `DecopmressRangeResponse` responses on. Data
+    /// for requests is read from `compressed_vmo` and results written to
+    /// `decompressed_vmo`.
+    Create(zx.handle:FIFO server_end, zx.handle:VMO compressed_vmo,
+           zx.handle:VMO decompressed_vmo) -> (zx.status status);
+};

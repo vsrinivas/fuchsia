@@ -12,6 +12,7 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/fidl/fidl.gni")
 import("//build/unification/zx_library.gni")
 
 declare_args() {
@@ -50,6 +51,7 @@ source_set("private_headers") {
     sources += [
       "allocator/allocator.h",
       "compression/blob-compressor.h",
+      "compression/external-decompressor.h",
       "compression/zstd-compressed-block-collection.h",
       "compression/zstd-seekable-blob-collection.h",
       "compression/zstd-seekable-blob.h",
@@ -157,6 +159,7 @@ zx_library("blobfs") {
       "blobfs.cc",
       "cache-node.cc",
       "compression/blob-compressor.cc",
+      "compression/external-decompressor.cc",
       "compression/zstd-compressed-block-collection.cc",
       "compression/zstd-seekable-blob-collection.cc",
       "compression/zstd-seekable-blob.cc",
@@ -183,6 +186,7 @@ zx_library("blobfs") {
       "//zircon/system/ulib/fs/metrics:metrics-inspect",
     ]
     deps += [
+      ":fuchsia.blobfs.internal_llcpp",
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_llcpp",
       "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
@@ -230,4 +234,64 @@ zx_library("blobfs") {
       "BLOBFS_ENABLE_LARGE_INSPECT_VMO",
     ]
   }
+}
+
+fidl("fuchsia.blobfs.internal") {
+  sources = [ "compression/decompressor-sandbox/decompressor.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+source_set("decompressor-impl") {
+  include_dirs = [
+    ".",
+    "//src",
+  ]
+  visibility = [ "./*" ]
+  sources = [
+    "compression/decompressor-sandbox/decompressor-impl.cc",
+    "compression/decompressor-sandbox/decompressor-impl.h",
+  ]
+  deps = [
+    ":blobfs",
+    ":fuchsia.blobfs.internal",
+    ":fuchsia.blobfs.internal_llcpp",
+    ":private_headers",
+    "//sdk/lib/fidl/cpp:cpp",
+    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/lib/sys/cpp:cpp",
+    "//sdk/lib/syslog/cpp:cpp",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/digest",
+    "//zircon/system/ulib/fs/journal",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/fzl",
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/ulib/zstd",
+    "//zircon/third_party/ulib/zstd:zstdseek",
+  ]
+}
+
+executable("decompressor") {
+  include_dirs = [
+    ".",
+    "//src",
+  ]
+  sources = [
+    "compression/decompressor-sandbox/main.cc",
+  ]
+  deps = [
+    ":decompressor-impl",
+    ":fuchsia.blobfs.internal",
+    "//sdk/lib/fidl/cpp:cpp",
+    "//sdk/lib/sys/cpp:cpp",
+    "//sdk/lib/syslog/cpp:cpp",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/digest",
+    "//zircon/system/ulib/fs/journal",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/fzl",
+  ]
 }
