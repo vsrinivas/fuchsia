@@ -49,11 +49,21 @@ fn main() -> Result<(), Error> {
                     .takes_value(true),
             ),
         )
+        .subcommand(
+            SubCommand::with_name("relay").about("Enables/disables relay").arg(
+                Arg::with_name("state")
+                    .help("State of the relay: 'on' or 'off'")
+                    .required(true)
+                    .index(1)
+                    .possible_values(&["on", "off"]),
+            ),
+        )
         .get_matches();
 
     match matches.subcommand() {
         ("list", _) => run_list(),
         ("record", Some(arg_matches)) => run_record(arg_matches)?,
+        ("relay", Some(arg_matches)) => run_relay(arg_matches)?,
         _ => panic!("Invalid subcommand"),
     };
 
@@ -90,4 +100,11 @@ fn run_record(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
 
     println!("Recording to {}. Press ENTER to stop.", dest_name);
     zedmon.read_reports(output, StdinStopper::new())
+}
+
+/// Runs the "relay" subcommand.
+fn run_relay(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
+    let zedmon = lib::zedmon();
+    zedmon.set_relay(arg_matches.value_of("state").unwrap() == "on")?;
+    Ok(())
 }

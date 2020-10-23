@@ -332,6 +332,13 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
 
         Ok((best_offset_nanos, uncertainty_nanos))
     }
+
+    /// Enables or disables the relay on the Zedmon device.
+    pub fn set_relay(&self, enable: bool) -> Result<(), Error> {
+        let request = protocol::encode_set_output(protocol::Output::Relay as u8, enable);
+        self.interface.borrow_mut().write(&request)?;
+        Ok(())
+    }
 }
 
 /// Lists the serial numbers of all connected Zedmons.
@@ -543,6 +550,9 @@ mod tests {
         // fake Zedmon's clock will run perfectly in parallel to the host clock. Note that only
         // timestamps reported in Timestamp packets are affected by `offset_time`; timestamps in
         // Report packets are directly specified by the test, via `report_queue`.
+        //
+        // To test ZedmonClient::set_relay, use CoordinatorBuilder::with_relay_enabled to
+        // populate the relay state, and CoordinatorHandle::relay_enabled to check expectations.
         struct Coordinator {
             // Constants that define the fake device.
             device_config: DeviceConfiguration,
@@ -558,6 +568,9 @@ mod tests {
             // offset_time = host_time`. Only used for Timestamp packets; the timestamps in
             // Reports are set by the test when populating `report_queue`.
             offset_time: Option<Duration>,
+
+            // Whether Zedmon's relay is enabled.
+            relay_enabled: Option<bool>,
         }
 
         // Constants that are inherent to a Zedmon device.
@@ -576,6 +589,12 @@ mod tests {
                 let lock = COORDINATOR.read().unwrap();
                 let coordinator = lock.as_ref().expect("Coordinator not initialized");
                 Stopper { signal: coordinator.stop_signal.clone() }
+            }
+
+            pub fn relay_enabled(&self) -> bool {
+                let lock = COORDINATOR.read().unwrap();
+                let coordinator = lock.as_ref().expect("Coordinator not populated");
+                coordinator.relay_enabled.expect("relay_enabled not set")
             }
         }
 
@@ -599,11 +618,17 @@ mod tests {
             device_config: DeviceConfiguration,
             report_queue: Option<VecDeque<Vec<Report>>>,
             offset_time: Option<Duration>,
+            relay_enabled: Option<bool>,
         }
 
         impl CoordinatorBuilder {
             pub fn new(device_config: DeviceConfiguration) -> Self {
-                CoordinatorBuilder { device_config, report_queue: None, offset_time: None }
+                CoordinatorBuilder {
+                    device_config,
+                    report_queue: None,
+                    offset_time: None,
+                    relay_enabled: None,
+                }
             }
 
             pub fn with_report_queue(mut self, report_queue: VecDeque<Vec<Report>>) -> Self {
@@ -613,6 +638,11 @@ mod tests {
 
             pub fn with_offset_time(mut self, offset_time: Duration) -> Self {
                 self.offset_time.replace(offset_time);
+                self
+            }
+
+            pub fn with_relay_enabled(mut self, enabled: bool) -> Self {
+                self.relay_enabled.replace(enabled);
                 self
             }
 
@@ -629,13 +659,14 @@ mod tests {
                     device_config: self.device_config,
                     report_queue: self.report_queue,
                     offset_time: self.offset_time,
+                    relay_enabled: self.relay_enabled,
                     stop_signal,
                 });
                 CoordinatorHandle {}
             }
         }
 
-        // Gets COORDINATOR's device_config.
+        // Gets a copy of COORDINATOR's device_config.
         fn coordinator_get_device_config() -> DeviceConfiguration {
             let lock = COORDINATOR.read().unwrap();
             let coordinator = lock.as_ref().expect("Coordinator not initialized");
@@ -664,6 +695,13 @@ mod tests {
             let zedmon_now = SystemTime::now() - offset_time;
             let timestamp = zedmon_now.duration_since(SystemTime::UNIX_EPOCH).unwrap();
             timestamp.as_micros() as u64
+        }
+
+        fn coordinator_set_relay_enabled(enabled: bool) {
+            let mut lock = COORDINATOR.write().unwrap();
+            let coordinator = lock.as_mut().expect("Coodrinator not populated");
+            let relay_enabled = coordinator.relay_enabled.as_mut().expect("relay_enabled not set");
+            *relay_enabled = enabled;
         }
 
         // Indicates the contents of the next read from FakeZedmonInterface.
@@ -756,6 +794,12 @@ mod tests {
                 buffer[0] = PacketType::Timestamp as u8;
                 serialize_timestamp_micros(coordinator_get_timestamp_micros(), buffer)
             }
+
+            fn set_output(&self, index: u8, value: u8) {
+                if index == protocol::Output::Relay as u8 {
+                    coordinator_set_relay_enabled(value != 0);
+                }
+            }
         }
 
         impl Read for FakeZedmonInterface {
@@ -786,6 +830,10 @@ mod tests {
                         self.next_read = Some(NextRead::ReportFormat(data[1]))
                     }
                     PacketType::QueryTime => self.next_read = Some(NextRead::Timestamp),
+                    PacketType::SetOutput => {
+                        assert_eq!(data.len(), 3);
+                        self.set_output(data[1], data[2]);
+                    }
                     _ => panic!("Not a valid host-to-target packet"),
                 }
                 Ok(data.len())
@@ -951,6 +999,34 @@ mod tests {
 
         let (reported_offset, uncertainty) = zedmon.get_time_offset_nanos()?;
         assert_near!(zedmon_offset.as_nanos() as i64, reported_offset, uncertainty);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_relay() -> Result<(), Error> {
+        // Values are not used by this test.
+        let device_config = fake_device::DeviceConfiguration {
+            shunt_resistance: 0.0,
+            v_shunt_scale: 0.0,
+            v_bus_scale: 0.0,
+        };
+
+        let builder = fake_device::CoordinatorBuilder::new(device_config).with_relay_enabled(false);
+        let handle = builder.build();
+        let zedmon = ZedmonClient::<fake_device::FakeZedmonInterface>::new()?;
+
+        // Test true->false and false->true transitions, and no-ops in each state.
+        zedmon.set_relay(true)?;
+        assert_eq!(handle.relay_enabled(), true);
+        zedmon.set_relay(true)?;
+        assert_eq!(handle.relay_enabled(), true);
+        zedmon.set_relay(false)?;
+        assert_eq!(handle.relay_enabled(), false);
+        zedmon.set_relay(false)?;
+        assert_eq!(handle.relay_enabled(), false);
+        zedmon.set_relay(true)?;
+        assert_eq!(handle.relay_enabled(), true);
 
         Ok(())
     }

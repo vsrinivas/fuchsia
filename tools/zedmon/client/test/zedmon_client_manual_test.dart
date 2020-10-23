@@ -25,4 +25,6 @@ Future<void> main() async {
     final regex = RegExp(r'\W+');
     expect(regex.allMatches(result.stdout).length, 1);
   });
+
+  // TODO(fxbug.dev/45835): Add tests for "zedmon record" and "zedmon relay".
 }
