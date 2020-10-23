@@ -8,12 +8,14 @@
 
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 
 #include "lib/fit/function.h"
 #include "rapidjson/document.h"
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/filewritestream.h"
+#include "rapidjson/istreamwrapper.h"
 #include "rapidjson/writer.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -77,7 +79,7 @@ class CloudStorageSymbolServerImpl : public CloudStorageSymbolServer {
   void DoAuthenticate(const std::map<std::string, std::string>& data,
                       fit::callback<void(const Err&)> cb) override;
   void OnAuthenticationResponse(Curl::Error result, fit::callback<void(const Err&)> cb,
-                                std::shared_ptr<rapidjson::Document> document);
+                                const std::string& response);
   std::shared_ptr<Curl> PrepareCurl(const std::string& build_id, DebugSymbolFileType file_type);
   void FetchWithCurl(const std::string& build_id, DebugSymbolFileType file_type,
                      std::shared_ptr<Curl> curl, SymbolServer::FetchCallback cb);
@@ -165,22 +167,22 @@ void CloudStorageSymbolServerImpl::DoAuthenticate(
   curl->SetURL(kTokenServer);
   curl->set_post_data(post_data);
 
-  auto document = std::make_shared<rapidjson::Document>();
-  curl->set_data_callback([document](const std::string& data) {
-    document->Parse(data);
+  auto response = std::make_shared<std::string>();
+  curl->set_data_callback([response](const std::string& data) {
+    response->append(data);
     return data.size();
   });
 
-  curl->Perform([weak_this = weak_factory_.GetWeakPtr(), cb = std::move(cb), document](
+  curl->Perform([weak_this = weak_factory_.GetWeakPtr(), cb = std::move(cb), response](
                     Curl*, Curl::Error result) mutable {
     if (weak_this)
-      weak_this->OnAuthenticationResponse(std::move(result), std::move(cb), std::move(document));
+      weak_this->OnAuthenticationResponse(std::move(result), std::move(cb), *response);
   });
 }
 
-void CloudStorageSymbolServerImpl::OnAuthenticationResponse(
-    Curl::Error result, fit::callback<void(const Err&)> cb,
-    std::shared_ptr<rapidjson::Document> document) {
+void CloudStorageSymbolServerImpl::OnAuthenticationResponse(Curl::Error result,
+                                                            fit::callback<void(const Err&)> cb,
+                                                            const std::string& response) {
   if (result) {
     std::string error = "Could not contact authentication server: ";
     error += result.ToString();
@@ -191,24 +193,27 @@ void CloudStorageSymbolServerImpl::OnAuthenticationResponse(
     return;
   }
 
-  if (!DocIsAuthInfo(*document)) {
+  rapidjson::Document document;
+  document.Parse(response);
+
+  if (!DocIsAuthInfo(document)) {
     error_log_.push_back("Authentication failed");
     ChangeState(SymbolServer::State::kAuth);
     cb(Err("Authentication failed"));
     return;
   }
 
-  access_token_ = (*document)["access_token"].GetString();
+  access_token_ = document["access_token"].GetString();
 
   bool new_refresh = false;
-  if (document->HasMember("refresh_token")) {
+  if (document.HasMember("refresh_token")) {
     new_refresh = true;
-    refresh_token_ = (*document)["refresh_token"].GetString();
+    refresh_token_ = document["refresh_token"].GetString();
   }
 
-  if (document->HasMember("expires_in")) {
+  if (document.HasMember("expires_in")) {
     constexpr int kMilli = 1000;
-    int time = (*document)["expires_in"].GetInt();
+    int time = document["expires_in"].GetInt();
 
     if (time > 1000) {
       time -= 100;
@@ -243,6 +248,10 @@ void CloudStorageSymbolServer::Authenticate(const std::string& data,
     return;
   }
 
+  // Authenciate using zxdb's own client ID.
+  client_id_ = kClientId;
+  client_secret_ = kClientSecret;
+
   std::map<std::string, std::string> post_data;
   post_data["code"] = data;
   post_data["client_id"] = kClientId;
@@ -256,23 +265,31 @@ void CloudStorageSymbolServer::Authenticate(const std::string& data,
 void CloudStorageSymbolServer::AuthRefresh() {
   std::map<std::string, std::string> post_data;
   post_data["refresh_token"] = refresh_token_;
-  post_data["client_id"] = kClientId;
-  post_data["client_secret"] = kClientSecret;
+  post_data["client_id"] = client_id_;
+  post_data["client_secret"] = client_secret_;
   post_data["grant_type"] = "refresh_token";
 
   DoAuthenticate(post_data, [](const Err& err) {});
 }
 
-void CloudStorageSymbolServer::LoadCachedAuth() {
+void CloudStorageSymbolServer::DoInit() {
   if (state() != SymbolServer::State::kAuth && state() != SymbolServer::State::kInitializing) {
     return;
   }
 
+  if (LoadCachedAuth() || LoadGCloudAuth()) {
+    ChangeState(SymbolServer::State::kBusy);
+    AuthRefresh();
+  } else {
+    ChangeState(SymbolServer::State::kAuth);
+  }
+}
+
+bool CloudStorageSymbolServer::LoadCachedAuth() {
   FILE* fp = GetGoogleApiAuthCache("rb");
 
   if (!fp) {
-    ChangeState(SymbolServer::State::kAuth);
-    return;
+    return false;
   }
 
   std::vector<char> buf(65536);
@@ -281,15 +298,42 @@ void CloudStorageSymbolServer::LoadCachedAuth() {
   fclose(fp);
 
   if (!success) {
-    ChangeState(SymbolServer::State::kAuth);
-    return;
+    return false;
   }
 
+  client_id_ = kClientId;
+  client_secret_ = kClientSecret;
   refresh_token_ = std::string(buf.data(), buf.data() + buf.size());
 
-  ChangeState(SymbolServer::State::kBusy);
+  return true;
+}
 
-  AuthRefresh();
+bool CloudStorageSymbolServer::LoadGCloudAuth() {
+  const char* home = std::getenv("HOME");
+  if (!home) {
+    return false;
+  }
+
+  std::ifstream file(std::string(home) + "/.config/gcloud/application_default_credentials.json");
+  if (!file) {
+    return false;
+  }
+
+  rapidjson::IStreamWrapper input_stream(file);
+  rapidjson::Document credentials;
+  credentials.ParseStream(input_stream);
+
+  if (credentials.HasParseError() || !credentials.IsObject() ||
+      !credentials.HasMember("client_id") || !credentials.HasMember("client_secret") ||
+      !credentials.HasMember("refresh_token")) {
+    return false;
+  }
+
+  client_id_ = credentials["client_id"].GetString();
+  client_secret_ = credentials["client_secret"].GetString();
+  refresh_token_ = credentials["refresh_token"].GetString();
+
+  return true;
 }
 
 std::shared_ptr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(const std::string& build_id,

@@ -31,7 +31,7 @@ class CloudStorageSymbolServer : public SymbolServer {
 
   // Initialize the class. We want the constructor to do this, but the test mock might need to be
   // manipulated first, so we break this out into a separate function.
-  void DoInit() { LoadCachedAuth(); }
+  void DoInit();
 
   // General dispatch from the result of a Curl transaction. Handles the error cases and then
   // returns true if no error occurred.
@@ -42,11 +42,20 @@ class CloudStorageSymbolServer : public SymbolServer {
   void AuthRefresh();
 
   // Load our saved refresh token from disk and reauthenticate.
-  void LoadCachedAuth();
+  // Returns whether the loading succeeds.
+  bool LoadCachedAuth();
+
+  // Load authentication from gcloud config file. Returns whether the loading succeeds.
+  bool LoadGCloudAuth();
 
   std::string path_;
   std::string access_token_;
   std::string refresh_token_;
+
+  // client_id_ and client_secret_ might be different from kClientId and kClientSecret
+  // if we're using gcloud's credential.
+  std::string client_id_;
+  std::string client_secret_;
 };
 
 class MockCloudStorageSymbolServer : public CloudStorageSymbolServer {

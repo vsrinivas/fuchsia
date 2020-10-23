@@ -34,7 +34,8 @@ int AuthMode() {
 
   if (server->state() == zxdb::SymbolServer::State::kReady) {
     std::cout << "You have already authenticated. To use another credential, please remove "
-              << "~/.fuchsia/debug/googleapi_auth.\n";
+              << "~/.fuchsia/debug/googleapi_auth and sign out gcloud using "
+              << "`gcloud auth application-default revoke`\n";
     return EXIT_SUCCESS;
   }
 
