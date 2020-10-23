@@ -1149,13 +1149,6 @@ if (fvm_partition != "") {
       rebase_path(fvm_blob_sparse_blk_path),
     ]
     fvm_deps = [ ":fvm.blob.sparse.blk" ]
-
-    # TODO(fxbug.dev/58896): generate fvm.blk from this on the fly when needed
-    # rather than always building both. Context:
-    # qemu/emu does not work on fvm.fastboot.blk for raw nand devices yet.
-    # Thus, we still generate the raw image and use it for emu/qemu at this point.
-    # Remove this dependency once it is implemented.
-    default_image_deps += [ ":fvm.blk" ]
   } else {
     assert(
         false,

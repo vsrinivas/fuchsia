@@ -15,6 +15,7 @@ group("tests") {
 test_scripts = [
   "tests/fx-internal/bash_test_framework_test",
   "tests/fx-internal/devfinder_usage_test",
+  "tests/fx-internal/fvm_test",
   "tests/fx-internal/fx_helpers_test",
   "tests/fx-internal/fx_test",
   "tests/fx-internal/fx_update_path_test",
@@ -110,6 +111,7 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/emu-remote",
         "//tools/devshell/fdt",
         "//tools/devshell/flash",
+        "//tools/devshell/get-build-dir",
         "//tools/devshell/get-device-addr",
         "//tools/devshell/helpdoc",
         "//tools/devshell/jq.fx",

@@ -8,6 +8,7 @@
 BT_FILE_DEPS=(
   "scripts/fx"
   "tools/devshell/emu"
+  "tools/devshell/get-build-dir"
   "tools/devshell/lib/fvm.sh"
   "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/fx-optional-features.sh"
@@ -25,6 +26,7 @@ BT_SET_UP() {
   btf::make_mock "${PREBUILT_AEMU_DIR}/emulator"
   btf::make_mock "${BT_TEMP_DIR}/out/default/image_paths.sh"
   btf::make_hosttools_mock "zbi"
+  fvm="$(btf::make_hosttools_mock fvm)"
 }
 
 # Test that -c arguments are added to the end of the kernel command line.
@@ -66,6 +68,34 @@ get_machine_arg() {
     fi
   done
   echo "invalid"
+}
+
+# Test creating a raw FVM image on-demand.
+TEST_create_fvm() {
+  # Fake that we have a sparse FVM image to use as a source.
+  export IMAGE_FVM_SPARSE='fake-fvm.sparse'
+  touch "$(${fx} get-build-dir)/${IMAGE_FVM_SPARSE}"
+
+  # We need to mock out 2 `fvm` tool behaviors:
+  #  1. "decompress" should create the requested file
+  #  2. "extend" should save the file path so we can verify it's passed as
+  #     an emulator arg later
+  local created_fvm_path_file="$(${fx} get-build-dir)/created-fvm-path"
+  cat >"${fvm}.mock_side_effects" <<EOF
+if [[ \$2 == "decompress" ]]; then
+  touch \$1
+elif [[ \$2 == "extend" ]]; then
+  echo \$1 > "${created_fvm_path_file}"
+fi
+EOF
+
+  BT_EXPECT ${fx} emu --headless -a off
+
+  local created_fvm_path=$(cat "${created_fvm_path_file}")
+  BT_EXPECT btf::does-mock-args-contain \
+      "${PREBUILT_AEMU_DIR}/emulator.mock_state" \
+      "-drive" "file=${created_fvm_path},format=raw,if=none,id=vdisk" \
+      "-device" "virtio-blk-pci,drive=vdisk"
 }
 
 BT_RUN_TESTS "$@"

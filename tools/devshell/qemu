@@ -53,16 +53,12 @@ args+=(-z "${kernelzbi}")
 fx-zbi -o "${kernelzbi}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
   --entry "data/ssh/authorized_keys=${authkeys_path}"
 
-# Try raw image first if it exist. Otherwise see if we can find a fastboot format fvm.
-fvm_image="${IMAGE_FVM_RAW}"
-if [[ -z "${fvm_image}" ]] ; then
-  fvm_image="${IMAGE_FVM_FASTBOOT}"
-fi
-if [[ -n ${fvm_image} ]] ; then
-  fvm_initial="${FUCHSIA_BUILD_DIR}/${fvm_image}"
-  fvm_extended="${imgdir}/fvm.blk"
-  fx-fvm-extend-image "${fvm_initial}" "${fvm_extended}"
-  args+=(-d -D "${fvm_extended}" --diskfmt=raw)
+# Not all builds use an FVM so failing to find a source FVM is OK.
+fvm_source=$(fx-fvm-find-raw-source)
+if [[ -n "${fvm_source}" ]]; then
+  fvm_raw="${imgdir}/fvm_raw.blk"
+  fx-fvm-extend-image "${fvm_source}" "${fvm_raw}" "${IMAGE_SIZE}"
+  args+=(-d -D "${fvm_raw}" --diskfmt=raw)
 fi
 
 "${FUCHSIA_DIR}/zircon/scripts/run-zircon" "${args[@]}" "$@"

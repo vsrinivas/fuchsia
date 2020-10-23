@@ -418,16 +418,12 @@ KERNEL_ZBI="${img_dir}/fuchsia-ssh.zbi"
 fx-zbi -o "${KERNEL_ZBI}" "${ZBI_IMAGE}" \
   --entry "data/ssh/authorized_keys=${AUTHORIZED_KEYS}"
 
-# Try raw image first if it exist. Otherwise see if we can find a fastboot format fvm.
-fvm_initial="${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}"
-if [[ -z "${fvm_initial}" || ! -f "${fvm_initial}" ]] ; then
-  fvm_initial="${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_FASTBOOT}"
-fi
-
-if [[ -f "${fvm_initial}" ]] ; then
-  fvm_extended="${img_dir}/fvm.blk"
-  fx-fvm-extend-image "${fvm_initial}" "${fvm_extended}" "${IMAGE_SIZE}"
-  ARGS+=("-drive" "file=${fvm_extended},format=raw,if=none,id=vdisk")
+# Not all builds use an FVM so failing to find a source FVM is OK.
+fvm_source=$(fx-fvm-find-raw-source)
+if [[ -n "${fvm_source}" ]]; then
+  fvm_raw="${img_dir}/fvm_raw.blk"
+  fx-fvm-extend-image "${fvm_source}" "${fvm_raw}" "${IMAGE_SIZE}"
+  ARGS+=("-drive" "file=${fvm_raw},format=raw,if=none,id=vdisk")
   ARGS+=("-device" "virtio-blk-pci,drive=vdisk")
 fi
 
