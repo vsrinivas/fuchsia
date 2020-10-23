@@ -4,10 +4,7 @@
 
 group("services") {
   testonly = true
-  deps = [
-    "//src/media/audio/audio",
-    "//src/media/audio/audio_core",
-  ]
+  deps = [ "//src/media/audio/audio_core" ]
 }
 
 group("virtual_audio_service_with_config") {
