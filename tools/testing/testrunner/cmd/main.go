@@ -199,17 +199,18 @@ func loadTests(path string) ([]testsharder.Test, error) {
 type tester interface {
 	Test(context.Context, testsharder.Test, io.Writer, io.Writer, string) (runtests.DataSinkReference, error)
 	Close() error
-	CopySinks(context.Context, []runtests.DataSinkReference) error
+	EnsureSinks(context.Context, []runtests.DataSinkReference) error
 	RunSnapshot(context.Context, string) error
 }
 
 // TODO: write tests for this function. Tests were deleted in fxrev.dev/407968 as part of a refactoring.
 func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, addr net.IPAddr, sshKeyFile, serialSocketPath, outDir string) error {
-	var sinks []runtests.DataSinkReference
+	var fuchsiaSinks, localSinks []runtests.DataSinkReference
 	var fuchsiaTester, localTester tester
 
 	for _, test := range tests {
 		var t tester
+		var sinks *[]runtests.DataSinkReference
 		switch test.OS {
 		case "fuchsia":
 			if fuchsiaTester == nil {
@@ -227,6 +228,7 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 				}
 			}
 			t = fuchsiaTester
+			sinks = &fuchsiaSinks
 		case "linux", "mac":
 			if test.OS == "linux" && runtime.GOOS != "linux" {
 				return fmt.Errorf("cannot run linux tests when GOOS = %q", runtime.GOOS)
@@ -239,9 +241,10 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 					// Tell tests written in Rust to print stack on failures.
 					"RUST_BACKTRACE=1",
 				)
-				localTester = newSubprocessTester(localWD, localEnv, perTestTimeout)
+				localTester = newSubprocessTester(localWD, localEnv, outputs.outDir, perTestTimeout)
 			}
 			t = localTester
+			sinks = &localSinks
 		default:
 			return fmt.Errorf("test %#v has unsupported OS: %q", test, test.OS)
 		}
@@ -255,21 +258,33 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			return err
 		}
 		for _, result := range results {
-			sinks = append(sinks, result.DataSinks)
+			*sinks = append(*sinks, result.DataSinks)
 		}
 	}
 
-	for _, t := range []tester{fuchsiaTester, localTester} {
-		if t == nil {
-			continue
+	if fuchsiaTester != nil {
+		defer fuchsiaTester.Close()
+	}
+	if localTester != nil {
+		defer localTester.Close()
+	}
+	finalize := func(t tester, sinks []runtests.DataSinkReference) error {
+		if t != nil {
+			if err := t.RunSnapshot(ctx, snapshotFile); err != nil {
+				return err
+			}
+			if err := t.EnsureSinks(ctx, sinks); err != nil {
+				return err
+			}
 		}
-		defer t.Close()
-		if err := t.RunSnapshot(ctx, snapshotFile); err != nil {
-			return err
-		}
-		if err := t.CopySinks(ctx, sinks); err != nil {
-			return err
-		}
+		return nil
+	}
+
+	if err := finalize(localTester, localSinks); err != nil {
+		return err
+	}
+	if err := finalize(fuchsiaTester, fuchsiaSinks); err != nil {
+		return err
 	}
 	return nil
 }

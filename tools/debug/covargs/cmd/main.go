@@ -103,8 +103,9 @@ func readSummary(summaryFiles []string) (runtests.DataSinkMap, error) {
 			for name, data := range detail.DataSinks {
 				for _, sink := range data {
 					sinks[name] = append(sinks[name], runtests.DataSink{
-						Name: sink.Name,
-						File: filepath.Join(dir, sink.File),
+						Name:     sink.Name,
+						File:     filepath.Join(dir, sink.File),
+						BuildIDs: sink.BuildIDs,
 					})
 				}
 			}
@@ -148,7 +149,7 @@ type ProfileEntry struct {
 }
 
 func readInfo(dumpFiles, summaryFiles []string) (*indexedInfo, error) {
-	summary, err := readSummary(summaryFile)
+	summary, err := readSummary(summaryFiles)
 	if err != nil {
 		return nil, err
 	}

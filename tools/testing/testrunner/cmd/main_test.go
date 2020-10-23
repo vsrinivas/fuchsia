@@ -23,7 +23,7 @@ import (
 
 const (
 	testFunc        = "Test"
-	copySinksFunc   = "CopySinks"
+	copySinksFunc   = "EnsureSinks"
 	runSnapshotFunc = "RunSnapshot"
 )
 
@@ -50,7 +50,7 @@ func (t *fakeTester) Close() error {
 	return nil
 }
 
-func (t *fakeTester) CopySinks(_ context.Context, _ []runtests.DataSinkReference) error {
+func (t *fakeTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference) error {
 	t.funcCalls = append(t.funcCalls, copySinksFunc)
 	return nil
 }

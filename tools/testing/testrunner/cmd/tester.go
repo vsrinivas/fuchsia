@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -44,6 +46,10 @@ const (
 
 	// Printed to the serial console when ready to accept user input.
 	serialConsoleCursor = "\n$"
+
+	llvmProfileEnvKey    = "LLVM_PROFILE_FILE"
+	llvmProfileExtension = ".profraw"
+	llvmProfileSinkType  = "llvm-profile"
 )
 
 type timeoutError struct {
@@ -81,18 +87,38 @@ type dataSinkCopier interface {
 
 // subprocessTester executes tests in local subprocesses.
 type subprocessTester struct {
-	env            []string
-	dir            string
-	perTestTimeout time.Duration
+	env               []string
+	dir               string
+	perTestTimeout    time.Duration
+	localOutputDir    string
+	getModuleBuildIDs func(string) ([]string, error)
+}
+
+func getModuleBuildIDs(test string) ([]string, error) {
+	f, err := os.Open(test)
+	if err != nil {
+		return nil, err
+	}
+	buildIDs, err := elflib.GetBuildIDs(filepath.Base(test), f)
+	if err != nil {
+		return nil, err
+	}
+	var asStrings []string
+	for _, id := range buildIDs {
+		asStrings = append(asStrings, hex.EncodeToString(id))
+	}
+	return asStrings, nil
 }
 
 // NewSubprocessTester returns a SubprocessTester that can execute tests
 // locally with a given working directory and environment.
-func newSubprocessTester(dir string, env []string, perTestTimeout time.Duration) *subprocessTester {
+func newSubprocessTester(dir string, env []string, localOutputDir string, perTestTimeout time.Duration) *subprocessTester {
 	return &subprocessTester{
-		dir:            dir,
-		env:            env,
-		perTestTimeout: perTestTimeout,
+		dir:               dir,
+		env:               env,
+		perTestTimeout:    perTestTimeout,
+		localOutputDir:    localOutputDir,
+		getModuleBuildIDs: getModuleBuildIDs,
 	}
 }
 
@@ -104,8 +130,27 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	if err := os.MkdirAll(outDir, 0770); err != nil {
 		return nil, err
 	}
-	r := newRunner(t.dir,
-		append(t.env, fmt.Sprintf("%s=%s", testOutDirEnvKey, outDir)))
+
+	// Might as well emit any profiles directly to the output directory.
+	// TODO(fxbug.dev/61208): until this is resolved, we make the assumption
+	// that the binaries are statically linked and will only produce one
+	// profile on execution. Once build IDs are embedded in profiles
+	// automatically, we can switch to a more flexible scheme where, say,
+	// we set
+	// LLVM_PROFILE_FILE=<output dir>/<test-specific namsepace>/%p.profraw
+	// and then record any .profraw file written to that directory as an
+	// emitted profile.
+	profileRel := filepath.Join(llvmProfileSinkType, test.Path+llvmProfileExtension)
+	profileAbs := filepath.Join(t.localOutputDir, profileRel)
+	os.MkdirAll(filepath.Dir(profileAbs), os.ModePerm)
+
+	r := newRunner(t.dir, append(
+		t.env,
+		fmt.Sprintf("%s=%s", testOutDirEnvKey, outDir),
+		// When host-side tests are instrumented for profiling, executing
+		// them will write a profile to the location under this environment variable.
+		fmt.Sprintf("%s=%s", llvmProfileEnvKey, profileAbs),
+	))
 	if t.perTestTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, t.perTestTimeout)
@@ -113,12 +158,55 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	}
 	err := r.Run(ctx, []string{test.Path}, stdout, stderr)
 	if err == context.DeadlineExceeded {
-		return nil, &timeoutError{t.perTestTimeout}
+		err = &timeoutError{t.perTestTimeout}
+	}
+
+	if exists, profileErr := osmisc.FileExists(profileAbs); profileErr != nil {
+		logger.Errorf(ctx, "unable to determine whether a profile was emitted: %v", profileErr)
+	} else if exists {
+		// TODO(fxbug.dev/61208): delete determination of build IDs once
+		// profiles embed this information.
+		var buildIDs []string
+		buildIDs, profileErr = t.getModuleBuildIDs(test.Path)
+		if profileErr == nil {
+			return runtests.DataSinkReference{
+				llvmProfileSinkType: []runtests.DataSink{
+					{
+						Name:     filepath.Base(profileRel),
+						File:     profileRel,
+						BuildIDs: buildIDs,
+					},
+				},
+			}, err
+		} else {
+			logger.Warningf(ctx, "failed to read module build IDs from %q", test.Path)
+		}
 	}
 	return nil, err
 }
 
-func (t *subprocessTester) CopySinks(_ context.Context, _ []runtests.DataSinkReference) error {
+func (t *subprocessTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference) error {
+	// Nothing to actually copy; if any profiles were emitted, they would have
+	// been written directly to the output directory. We verify here that all
+	// recorded data sinks are actually present.
+	numSinks := 0
+	for _, ref := range sinkRefs {
+		for _, sinks := range ref {
+			for _, sink := range sinks {
+				abs := filepath.Join(t.localOutputDir, sink.File)
+				exists, err := osmisc.FileExists(abs)
+				if err != nil {
+					return fmt.Errorf("unable to determine if local data sink %q exists: %v", sink.File, err)
+				} else if !exists {
+					return fmt.Errorf("expected a local data sink %q, but no such file exists", sink.File)
+				}
+				numSinks++
+			}
+		}
+	}
+	if numSinks > 0 {
+		logger.Debugf(ctx, "local data sinks present: %d", numSinks)
+	}
 	return nil
 }
 
@@ -318,9 +406,9 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 	return sinks, testErr
 }
 
-func (t *fuchsiaSSHTester) CopySinks(ctx context.Context, sinks []runtests.DataSinkReference) error {
+func (t *fuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference) error {
 	startTime := time.Now()
-	sinkMap, err := t.copier.Copy(sinks, t.localOutputDir)
+	sinkMap, err := t.copier.Copy(sinkRefs, t.localOutputDir)
 	if err != nil {
 		return fmt.Errorf("failed to copy data sinks off target: %v", err)
 	}
@@ -415,7 +503,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _
 	return nil, nil
 }
 
-func (t *fuchsiaSerialTester) CopySinks(_ context.Context, _ []runtests.DataSinkReference) error {
+func (t *fuchsiaSerialTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference) error {
 	return nil
 }
 

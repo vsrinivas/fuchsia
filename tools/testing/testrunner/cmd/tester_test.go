@@ -78,12 +78,41 @@ func (r *fakeCmdRunner) Run(_ context.Context, command []string, _, _ io.Writer)
 }
 
 func TestSubprocessTester(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "TestSubprocessTester")
+	if err != nil {
+		t.Fatal("failed to create a temporary directory:", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	tester := subprocessTester{
+		localOutputDir: tmpDir,
+		getModuleBuildIDs: func(test string) ([]string, error) {
+			name := filepath.Base(test)
+			return []string{name + "-BUILD-ID1", name + "-BUILD-ID2"}, nil
+		},
+	}
+
+	passingTest := filepath.Join("host_x64", "passing")
+	passingProfile := filepath.Join("llvm-profile", passingTest+".profraw")
+	failingTest := filepath.Join("host_x64", "failing")
+	failingProfile := filepath.Join("llvm-profile", failingTest+".profraw")
+	for _, profile := range []string{passingProfile, failingProfile} {
+		abs := filepath.Join(tmpDir, profile)
+		os.MkdirAll(filepath.Dir(abs), os.ModePerm)
+		f, err := os.Create(abs)
+		if err != nil {
+			t.Fatalf("failed to create profile: %v", err)
+		}
+		f.Close()
+	}
+
 	cases := []struct {
-		name    string
-		test    build.Test
-		runErrs []error
-		wantErr bool
-		wantCmd []string
+		name          string
+		test          build.Test
+		runErrs       []error
+		wantErr       bool
+		wantCmd       []string
+		wantDataSinks runtests.DataSinkMap
 	}{
 		{
 			name:    "no path",
@@ -91,25 +120,45 @@ func TestSubprocessTester(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "yes path",
-			test: build.Test{
-				Path: "/foo/bar",
-			},
+			name:    "test passes with profile",
+			test:    build.Test{Path: passingTest},
 			wantErr: false,
-			wantCmd: []string{"/foo/bar"},
+			wantCmd: []string{passingTest},
+			wantDataSinks: runtests.DataSinkMap{
+				"llvm-profile": []runtests.DataSink{
+					{
+						Name:     filepath.Base(passingProfile),
+						File:     passingProfile,
+						BuildIDs: []string{"passing-BUILD-ID1", "passing-BUILD-ID2"},
+					},
+				},
+			},
+		},
+		{
+			name:          "test passes without profile",
+			test:          build.Test{Path: "uninstrumented_test"},
+			wantErr:       false,
+			wantCmd:       []string{"uninstrumented_test"},
+			wantDataSinks: nil,
 		},
 		{
 			name:    "test fails",
-			test:    build.Test{Path: "/fail"},
+			test:    build.Test{Path: failingTest},
 			runErrs: []error{fmt.Errorf("test failed")},
 			wantErr: true,
-			wantCmd: []string{"/fail"},
+			wantCmd: []string{failingTest},
+			wantDataSinks: runtests.DataSinkMap{
+				"llvm-profile": []runtests.DataSink{
+					{
+						Name:     filepath.Base(failingProfile),
+						File:     failingProfile,
+						BuildIDs: []string{"failing-BUILD-ID1", "failing-BUILD-ID2"},
+					},
+				},
+			},
 		},
 	}
-	baseOutDir, err := ioutil.TempDir("", "TestSubprocessTester")
-	if err != nil {
-		t.Fatal("failed to create baseOutDir:", err)
-	}
+
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			runner := &fakeCmdRunner{
@@ -118,14 +167,8 @@ func TestSubprocessTester(t *testing.T) {
 			newRunner = func(dir string, env []string) cmdRunner {
 				return runner
 			}
-			tester := subprocessTester{}
-			defer func() {
-				if err := tester.Close(); err != nil {
-					t.Errorf("Close returned error: %v", err)
-				}
-			}()
-			outDir := filepath.Join(baseOutDir, c.test.Path)
-			_, err := tester.Test(context.Background(), testsharder.Test{Test: c.test}, ioutil.Discard, ioutil.Discard, outDir)
+			outDir := filepath.Join(tmpDir, c.test.Path)
+			ref, err := tester.Test(context.Background(), testsharder.Test{Test: c.test}, ioutil.Discard, ioutil.Discard, outDir)
 			if gotErr := (err != nil); gotErr != c.wantErr {
 				t.Errorf("tester.Test got error: %v, want error: %t", err, c.wantErr)
 			}
@@ -136,6 +179,11 @@ func TestSubprocessTester(t *testing.T) {
 			}
 			if diff := cmp.Diff(c.wantCmd, runner.lastCmd); diff != "" {
 				t.Errorf("Unexpected command run (-want +got):\n%s", diff)
+			}
+
+			sinks := runtests.DataSinkMap(ref)
+			if !reflect.DeepEqual(sinks, c.wantDataSinks) {
+				t.Fatalf("expected: %#v;\nactual: %#v", c.wantDataSinks, sinks)
 			}
 		})
 	}

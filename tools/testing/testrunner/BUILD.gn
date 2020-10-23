@@ -23,6 +23,7 @@ go_library("main") {
     "//tools/botanist:constants",
     "//tools/botanist:target",
     "//tools/build",
+    "//tools/debug/elflib",
     "//tools/integration/testsharder:testsharder_lib",
     "//tools/lib/color",
     "//tools/lib/environment",

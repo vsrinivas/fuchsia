@@ -47,6 +47,14 @@ type DataSink struct {
 
 	// File is the file containing the sink data.
 	File string `json:"file"`
+
+	// BuildIDs optionally provides the build IDs relevant to the data (e.g.,
+	// those of the modules of a particular test). While `runtests` will not
+	// actually provide this information, it is currently the most convenient
+	// place to convey this information for non-Fuchsia profiles to covargs.
+	// Once build IDs are automatically embedded in any emitted profile,
+	// tracked by fxbug.dev/61208, this can be deleted.
+	BuildIDs []string `json:"build_ids,omitempty"`
 }
 
 // DataSinkMap is mapping from a data sink name to a list of the corresponding
