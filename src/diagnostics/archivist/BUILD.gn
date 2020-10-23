@@ -88,6 +88,7 @@ rustc_library("lib") {
     "src/events/mod.rs",
     "src/events/stream.rs",
     "src/events/types.rs",
+    "src/filter.rs",
     "src/formatter.rs",
     "src/inspect/collector.rs",
     "src/inspect/mod.rs",
