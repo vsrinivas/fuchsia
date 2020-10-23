@@ -328,6 +328,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/00:00:f/fallback-rtc",
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot1/block",
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot2/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/rpmb",
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-001/block",
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
