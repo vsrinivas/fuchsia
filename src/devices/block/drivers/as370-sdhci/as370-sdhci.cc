@@ -9,7 +9,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/clock.h>
@@ -18,6 +17,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <hwreg/bitfields.h>
+
+#include "src/devices/block/drivers/as370-sdhci/as370-sdhci-bind.h"
 
 namespace {
 
@@ -460,14 +461,4 @@ static constexpr zx_driver_ops_t as370_sdhci_driver_ops = []() -> zx_driver_ops_
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(as370_sdhci, as370_sdhci_driver_ops, "zircon", "0.1", 8)
-BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-
-    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE, 1),
-
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_SDHCI0),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_SDHCI0), BI_ABORT(),
-
-    BI_LABEL(1), BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_SDHCI1),
-    ZIRCON_DRIVER_END(as370_sdhci)
+ZIRCON_DRIVER(as370_sdhci, as370_sdhci_driver_ops, "zircon", "0.1")

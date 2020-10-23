@@ -2,10 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
-  testonly = true
-  deps = [
-    "as370:tests",
-    "mt8167s_ref:tests",
-  ]
+import("//build/bind/bind.gni")
+
+bind_library("fuchsia.sdmmc") {
+  source = "fuchsia.sdmmc.bind"
 }

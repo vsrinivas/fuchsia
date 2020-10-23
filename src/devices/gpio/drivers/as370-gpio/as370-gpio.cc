@@ -6,7 +6,6 @@
 
 #include <lib/device-protocol/pdev.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -15,6 +14,7 @@
 #include <fbl/alloc_checker.h>
 
 #include "as370-gpio-reg.h"
+#include "src/devices/gpio/drivers/as370-gpio/as370-gpio-bind.h"
 
 namespace {
 
@@ -532,8 +532,4 @@ static constexpr zx_driver_ops_t as370_gpio_driver_ops = []() -> zx_driver_ops_t
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(as370_gpio, as370_gpio_driver_ops, "zircon", "0.1", 2)
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_SYNAPTICS_GPIO),
-ZIRCON_DRIVER_END(as370_gpio)
-//clang-format on
+ZIRCON_DRIVER(as370_gpio, as370_gpio_driver_ops, "zircon", "0.1")

@@ -1,0 +1,38 @@
+[
+    {
+        "name": "Match AS370",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "0x01"
+        }
+    },
+    {
+        "name": "Match Visalia",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "0x08"
+        }
+    },
+    {
+        "name": "AS370 VID mismatch",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.SYNPATICS",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "0x08"
+        }
+    },
+    {
+        "name": "Visalia VID mismatch",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "0x01"
+        }
+    }
+]

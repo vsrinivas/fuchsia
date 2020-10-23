@@ -10,7 +10,6 @@
 #include <lib/zx/time.h>
 #include <zircon/threads.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
@@ -19,6 +18,7 @@
 #include <fbl/auto_lock.h>
 
 #include "cadence-hpnfc-reg.h"
+#include "src/devices/nand/drivers/cadence-hpnfc/cadence-hpnfc-bind.h"
 
 namespace {
 
@@ -617,6 +617,4 @@ static zx_driver_ops_t cadence_hpnfc_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(cadence_hpnfc, cadence_hpnfc_driver_ops, "zircon", "0.1", 2)
-BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_CADENCE_HPNFC), ZIRCON_DRIVER_END(cadence_hpnfc)
+ZIRCON_DRIVER(cadence_hpnfc, cadence_hpnfc_driver_ops, "zircon", "0.1")

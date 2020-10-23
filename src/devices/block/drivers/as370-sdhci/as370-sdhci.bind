@@ -1,0 +1,19 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.composite;
+using fuchsia.platform;
+
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS;
+
+if fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE {
+  fuchsia.BIND_PLATFORM_DEV_DID == 0x0c;  // PDEV_DID_VS680_SDHCI1
+} else if fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE {
+  accept fuchsia.BIND_PLATFORM_DEV_DID {
+    0x0a,  // PDEV_DID_AS370_SDHCI0
+    0x0b,  // PDEV_DID_VS680_SDHCI0
+  }
+} else {
+  abort;
+}

@@ -2,7 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("as370-bind") {
+  rules = "as370.bind"
+  output = "as370-bind.h"
+  tests = "as370-bind-test.json"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
 
 driver_module("as370") {
   configs += [
@@ -29,6 +37,7 @@ driver_module("as370") {
     "as370.cc",
   ]
   deps = [
+    ":as370-bind",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -52,4 +61,9 @@ driver_module("as370") {
 
   # TODO(fxbug.dev/47406): restore some form of data dependency on as370 and visalia
   # boot shims.
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":as370-bind_test" ]
 }

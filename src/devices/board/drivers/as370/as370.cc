@@ -12,6 +12,8 @@
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 
+#include "src/devices/board/drivers/as370/as370-bind.h"
+
 namespace board_as370 {
 
 zx_status_t As370::Create(void* ctx, zx_device_t* parent) {
@@ -119,13 +121,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(as370, driver_ops, "zircon", "0.1", 6)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
-    BI_GOTO_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS, 0),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SYNAPTICS_AS370),
-    BI_LABEL(0),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_VISALIA),
-ZIRCON_DRIVER_END(as370)
-//clang-format on
+ZIRCON_DRIVER(as370, driver_ops, "zircon", "0.1")

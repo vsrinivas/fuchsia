@@ -16,7 +16,6 @@
 #include <lib/zx/pmt.h>
 #include <lib/zx/time.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/block.h>
@@ -24,6 +23,8 @@
 #include <fbl/alloc_checker.h>
 
 #include "sdhci-reg.h"
+
+#include "src/devices/block/drivers/sdhci/sdhci-bind.h"
 
 namespace {
 
@@ -1120,9 +1121,4 @@ static constexpr zx_driver_ops_t sdhci_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-// The formatter does not play nice with these macros.
-// clang-format off
-ZIRCON_DRIVER_BEGIN(sdhci, sdhci_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SDHCI)
-ZIRCON_DRIVER_END(sdhci)
-// clang-format on
+ZIRCON_DRIVER(sdhci, sdhci_driver_ops, "zircon", "0.1")

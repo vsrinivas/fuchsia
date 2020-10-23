@@ -2,7 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("as370-sdhci-bind") {
+  rules = "as370-sdhci.bind"
+  output = "as370-sdhci-bind.h"
+  tests = "as370-sdhci-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("as370-sdhci") {
   configs += [
@@ -16,6 +27,7 @@ driver_module("as370-sdhci") {
   ]
   sources = [ "as370-sdhci.cc" ]
   deps = [
+    ":as370-sdhci-bind",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
@@ -27,13 +39,15 @@ driver_module("as370-sdhci") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":as370-sdhci-bind_test" ]
 }

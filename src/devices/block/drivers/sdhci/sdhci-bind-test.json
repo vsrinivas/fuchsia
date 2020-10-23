@@ -1,0 +1,16 @@
+[
+    {
+        "name": "Match",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDHCI"
+        }
+    },
+    {
+        "name": "Invalid protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+        }
+    }
+]

@@ -7,7 +7,6 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/time.h>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -16,6 +15,7 @@
 #include <fbl/alloc_checker.h>
 
 #include "as370-thermal-reg.h"
+#include "src/devices/thermal/drivers/as370-thermal/as370-thermal-bind.h"
 
 namespace {
 
@@ -263,10 +263,4 @@ static constexpr zx_driver_ops_t as370_thermal_driver_ops = []() -> zx_driver_op
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(as370_thermal, as370_thermal_driver_ops, "zircon", "0.1", 3)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_THERMAL),
-ZIRCON_DRIVER_END(as370_thermal)
-    // clang-format on
+ZIRCON_DRIVER(as370_thermal, as370_thermal_driver_ops, "zircon", "0.1")
