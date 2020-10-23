@@ -193,11 +193,13 @@ void Queue::ProcessAllEveryFifteenMinutes() {
   if (const auto status = PostDelayedTask(
           dispatcher_,
           [this] {
-            if (const size_t processed = ProcessAll(); processed > 0) {
+            // Save the size of |pending_reports_| because ProcessAll mutates |pending_reports_|.
+            if (const auto pending = pending_reports_.size(); pending > 0) {
+              const auto processed = ProcessAll();
               FX_LOGS(INFO) << fxl::StringPrintf(
-                  "Processed %zu pending crash reports as part of the 15-minute periodic "
-                  "processing",
-                  processed);
+                  "Successfully processed %zu of %zu pending crash reports as part of the "
+                  "15-minute periodic processing",
+                  processed, pending);
             }
             ProcessAllEveryFifteenMinutes();
           },
@@ -247,8 +249,12 @@ void Queue::ProcessAllOnNetworkReachable() {
         network_reconnection_backoff_.Reset();
         const bool reachable = std::any_of(interfaces.cbegin(), interfaces.cend(), isReachable);
         if (reachable) {
-          if (ProcessAll() > 0) {
-            FX_LOGS(INFO) << "Processing of pending crash reports queue on network reachable";
+          // Save the size of |pending_reports_| because ProcessAll mutates |pending_reports_|.
+          if (const auto pending = pending_reports_.size(); pending > 0) {
+            const auto processed = ProcessAll();
+            FX_LOGS(INFO) << fxl::StringPrintf(
+                "Successfully processed %zu of %zu pending crash reports on network reachable",
+                processed, pending);
           }
         }
       };
