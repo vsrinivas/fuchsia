@@ -41,6 +41,8 @@ template("golden_file") {
       rebase_path(stamp_file),
     ]
 
+    warn_on_changes =
+        defined(invoker.warn_on_changes) && invoker.warn_on_changes
     if (warn_on_changes) {
       args += [ "--warn" ]
     }
