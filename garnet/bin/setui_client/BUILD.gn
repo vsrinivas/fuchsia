@@ -54,6 +54,7 @@ rustc_library("lib") {
     "src/device.rs",
     "src/display.rs",
     "src/do_not_disturb.rs",
+    "src/factory_reset.rs",
     "src/input.rs",
     "src/intl.rs",
     "src/lib.rs",

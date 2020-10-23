@@ -14,6 +14,7 @@ pub mod audio;
 pub mod device;
 pub mod display;
 pub mod do_not_disturb;
+pub mod factory_reset;
 pub mod input;
 pub mod intl;
 pub mod light;
@@ -73,6 +74,12 @@ pub enum SettingClient {
 
         #[structopt(short = "n", long = "night_mode_dnd")]
         night_mode_dnd: Option<bool>,
+    },
+
+    #[structopt(name = "factory_reset")]
+    FactoryReset {
+        #[structopt(short = "l", long = "is_local_reset_allowed")]
+        is_local_reset_allowed: Option<bool>,
     },
 
     #[structopt(name = "input")]
@@ -322,6 +329,14 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                 .context("Failed to connect to do_not_disturb service")?;
             let output = do_not_disturb::command(dnd_service, user_dnd, night_mode_dnd).await?;
             println!("DoNotDisturb: {}", output);
+        }
+        SettingClient::FactoryReset { is_local_reset_allowed } => {
+            let factory_reset_service =
+                connect_to_service::<fidl_fuchsia_settings::FactoryResetMarker>()
+                    .context("Failed to connect to factory_reset service")?;
+            let output =
+                factory_reset::command(factory_reset_service, is_local_reset_allowed).await?;
+            println!("FactoryReset: {}", output);
         }
         SettingClient::Intl { time_zone, temperature_unit, locales, hour_cycle, clear_locales } => {
             let intl_service = connect_to_service::<fidl_fuchsia_settings::IntlMarker>()

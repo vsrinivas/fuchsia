@@ -15,6 +15,7 @@ use {
     setui_client_lib::device,
     setui_client_lib::display,
     setui_client_lib::do_not_disturb,
+    setui_client_lib::factory_reset,
     setui_client_lib::input,
     setui_client_lib::intl,
     setui_client_lib::light,
@@ -31,6 +32,7 @@ enum Services {
     Device(DeviceRequestStream),
     Display(DisplayRequestStream),
     DoNotDisturb(DoNotDisturbRequestStream),
+    FactoryReset(FactoryResetRequestStream),
     Input(InputRequestStream),
     Intl(IntlRequestStream),
     Light(LightRequestStream),
@@ -152,6 +154,10 @@ async fn main() -> Result<(), Error> {
 
     println!("  client calls set theme");
     validate_display(None, None, None, None, Some(ThemeType::Dark)).await?;
+
+    println!("factory reset tests");
+    println!("  client calls set local reset allowed");
+    validate_factory_reset(true).await?;
 
     println!("light tests");
     println!(" client calls light set");
@@ -413,6 +419,33 @@ async fn validate_display(
     )
     .await?;
 
+    Ok(())
+}
+
+// Validates the set and watch for factory reset.
+async fn validate_factory_reset(expected_local_reset_allowed: bool) -> Result<(), Error> {
+    let env = create_service!(
+        Services::FactoryReset, FactoryResetRequest::Set { settings, responder, } => {
+            if let (Some(local_reset_allowed), expected_local_reset_allowed) =
+                (settings.is_local_reset_allowed, expected_local_reset_allowed)
+            {
+                assert_eq!(local_reset_allowed, expected_local_reset_allowed);
+                responder.send(&mut Ok(()))?;
+            } else {
+                panic!("Unexpected call to set");
+            }
+        },
+        FactoryResetRequest::Watch { responder } => {
+            responder.send(FactoryResetSettings {
+                is_local_reset_allowed: Some(true),
+            })?;
+        }
+    );
+
+    let factory_reset_service = env
+        .connect_to_service::<FactoryResetMarker>()
+        .context("Failed to connect to factory reset service")?;
+    factory_reset::command(factory_reset_service, Some(expected_local_reset_allowed)).await?;
     Ok(())
 }
 
