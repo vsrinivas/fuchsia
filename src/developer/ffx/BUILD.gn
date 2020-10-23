@@ -59,8 +59,6 @@ if (is_host) {
   host_test("ffx-e2e-without-target") {
     binary_path = "$root_out_dir/ffx"
     args = [
-      "--config",
-      "\"{\\\"log\\\":{\\\"enabled\\\":true,\\\"dir\\\":\\\"\$FUCHSIA_TEST_OUTDIR\\\"}}\"",
       "self-test",
       "--include-target",
       "false",
@@ -74,18 +72,16 @@ if (is_host) {
 
   host_test("ffx-e2e-with-target") {
     binary_path = "$root_out_dir/ffx"
-    args = [
-      "--config",
-      "\"{\\\"log\\\":{\\\"enabled\\\":true,\\\"dir\\\":\\\"\$FUCHSIA_TEST_OUTDIR\\\"}}\"",
-      "self-test",
-    ]
+    args = [ "self-test" ]
 
     deps = [ ":ffx_bin" ]
 
     # TODO(fxbug.dev/60683): split additional dimensions such as multi-device
     # mac + device, etc.
+    #
+    # TODO(fxbug.dev/60740): Further diagnose flake conditions in nuc_env
     environments = [
-      nuc_env
+      # nuc_env
     ]
   }
 }
