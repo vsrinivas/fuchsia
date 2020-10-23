@@ -19,6 +19,7 @@ pub enum Payload {
 pub enum Event {
     Custom(&'static str),
     Earcon(earcon::Event),
+    MediaButtons(media_buttons::Event),
     Restore(restore::Event),
     Closed(&'static str),
     Handler(SettingType, handler::Event),
@@ -56,6 +57,28 @@ pub mod handler {
         AttemptsExceeded(SettingRequest),
         Execute(u64),
         Teardown,
+    }
+}
+
+pub mod media_buttons {
+    use crate::input::{ButtonType, VolumeGain};
+
+    #[derive(PartialEq, Clone, Debug)]
+    pub enum Event {
+        OnButton(ButtonType),
+        OnVolume(VolumeGain),
+    }
+
+    impl From<ButtonType> for Event {
+        fn from(button_type: ButtonType) -> Self {
+            Self::OnButton(button_type)
+        }
+    }
+
+    impl From<VolumeGain> for Event {
+        fn from(volume_gain: VolumeGain) -> Self {
+            Self::OnVolume(volume_gain)
+        }
     }
 }
 

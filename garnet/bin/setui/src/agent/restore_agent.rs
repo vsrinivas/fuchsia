@@ -46,7 +46,7 @@ impl RestoreAgent {
         };
 
         fasync::Task::spawn(async move {
-            while let Some(event) = context.receptor.next().await {
+            while let Some(event) = context.agent_receptor.next().await {
                 if let MessageEvent::Message(Payload::Invocation(invocation), client) = event {
                     client.reply(Payload::Complete(agent.handle(invocation).await)).send().ack();
                 }

@@ -17,7 +17,7 @@ use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt};
 
 use crate::internal::core;
-use crate::internal::event::{self};
+use crate::internal::event;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::switchboard::base::{

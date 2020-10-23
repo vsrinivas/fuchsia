@@ -96,7 +96,7 @@ impl TestAgent {
             scaffold::agent::Generate::Sync(Arc::new(move |mut context: Context| {
                 let agent = agent_clone.clone();
                 fasync::Task::spawn(async move {
-                    while let Ok((payload, client)) = context.receptor.next_payload().await {
+                    while let Ok((payload, client)) = context.agent_receptor.next_payload().await {
                         if let agent::Payload::Invocation(invocation) = payload {
                             client
                                 .reply(agent::Payload::Complete(

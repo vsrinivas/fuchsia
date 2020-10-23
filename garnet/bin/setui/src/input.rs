@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 pub use self::common::{
-    monitor_media_buttons, monitor_media_buttons_using_publisher, InputMonitor, InputMonitorHandle,
-    InputType,
+    monitor_media_buttons, monitor_media_buttons_using_publisher, ButtonType, InputMonitor,
+    InputMonitorHandle, InputType, VolumeGain,
 };
 pub use self::input_fidl_handler::fidl_io;
 pub mod common;

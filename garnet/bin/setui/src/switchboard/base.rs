@@ -11,6 +11,7 @@ use thiserror::Error;
 use crate::audio::ModifiedTimestamps;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::ControllerError;
+use crate::input::{ButtonType, VolumeGain};
 use crate::switchboard::accessibility_types::AccessibilityInfo;
 use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::{LightInfo, LightState};
@@ -173,6 +174,10 @@ pub fn get_default_setting_types() -> HashSet<SettingType> {
 pub enum SettingRequest {
     Get,
 
+    // Input events.
+    OnButton(ButtonType),
+    OnVolume(VolumeGain),
+
     // Accessibility requests.
     SetAccessibilityInfo(AccessibilityInfo),
 
@@ -225,6 +230,8 @@ impl SettingRequest {
     pub fn for_inspect(self) -> &'static str {
         match self {
             SettingRequest::Get => "Get",
+            SettingRequest::OnButton(_) => "OnButton",
+            SettingRequest::OnVolume(_) => "OnVolume",
             SettingRequest::SetAccessibilityInfo(_) => "SetAccessibilityInfo",
             SettingRequest::ScheduleClearAccounts => "ScheduleClearAccounts",
             SettingRequest::SetVolume(_) => "SetVolume",

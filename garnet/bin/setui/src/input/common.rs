@@ -56,6 +56,20 @@ pub enum InputType {
     VolumeButtons,
 }
 
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+pub enum ButtonType {
+    MicrophoneMute(bool),
+    CameraMute(bool),
+}
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+pub enum VolumeGain {
+    /// This is neither up nor down. It is equivalent to no gain.
+    Neutral,
+    Up,
+    Down,
+}
+
 impl<T> InputMonitor<T>
 where
     T: DeviceStorageCompatible + Send + Sync + 'static,

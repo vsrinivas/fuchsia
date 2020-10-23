@@ -54,7 +54,7 @@ impl Agent {
         };
 
         fasync::Task::spawn(async move {
-            while let Ok((payload, client)) = context.receptor.next_payload().await {
+            while let Ok((payload, client)) = context.agent_receptor.next_payload().await {
                 if let Payload::Invocation(invocation) = payload {
                     client.reply(Payload::Complete(agent.handle(invocation).await)).send().ack();
                 }
