@@ -1,0 +1,23 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+executable("puppet") {
+  output_name = "sink_validator_cpp_puppet"
+  testonly = true
+  sources = [ "puppet.cc" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp:backend",
+    "//sdk/lib/syslog/cpp:cpp",
+  ]
+}
+
+fuchsia_component("component") {
+  component_name = "sink-validator-cpp-puppet"
+  testonly = true
+  manifest = "meta/puppet.cmx"
+  deps = [ ":puppet" ]
+}

@@ -4,7 +4,7 @@
             "--url",
             "fuchsia-pkg://fuchsia.com/log-encoding-validator-rust#meta/log-validator-rust-puppet.cmx"
         ],
-        "binary": "bin/log_validator"
+        "binary": "bin/encoding_validator"
     },
     "sandbox": {
         "services": [

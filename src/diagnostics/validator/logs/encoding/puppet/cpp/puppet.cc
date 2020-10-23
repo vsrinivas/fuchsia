@@ -41,6 +41,5 @@ class Puppet : public fuchsia::validate::logs::EncodingPuppet {
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   Puppet puppet(sys::ComponentContext::CreateAndServeOutgoingDirectory());
-  FX_SLOG(WARNING)("test_log", {syslog::LogKey("foo") = "bar"});
   loop.Run();
 }

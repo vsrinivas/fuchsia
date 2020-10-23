@@ -4,19 +4,45 @@
 
 use anyhow::Context;
 use anyhow::Error;
+use argh::FromArgs;
 use diagnostics_stream::parse::parse_record as parse;
 use fidl_fuchsia_logger::LogSinkRequest;
 use fidl_fuchsia_logger::LogSinkRequestStream;
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
 use fuchsia_async as fasync;
+use fuchsia_async::Socket;
 use fuchsia_async::Task;
 use fuchsia_component::client::App;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
+use futures::channel::mpsc::channel;
+use futures::channel::mpsc::Receiver;
 use futures::channel::mpsc::Sender;
 use futures::prelude::*;
 use log::*;
-use pretty_assertions::assert_eq;
+
+/// Validate Log VMO formats written by 'puppet' programs controlled by
+/// this Validator program.
+#[derive(Debug, FromArgs)]
+struct Opt {
+    /// required arg: The URL of the puppet
+    #[argh(option, long = "url")]
+    puppet_url: String,
+}
+
+#[fuchsia_async::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&[]).unwrap();
+    let Opt { puppet_url } = argh::from_env();
+    let (tx, mut rx): (Sender<fidl::Socket>, Receiver<fidl::Socket>) = channel(1);
+
+    let (_env, _app) = launch_puppet(&puppet_url, tx)?;
+
+    let socket = Socket::from_socket(rx.next().await.unwrap()).unwrap();
+    test_socket(&socket, puppet_url).await;
+
+    Ok(())
+}
 
 pub async fn test_socket(s: &fasync::Socket, puppet_url: String) {
     info!("Running the LogSink socket test.");
