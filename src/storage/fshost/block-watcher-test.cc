@@ -354,7 +354,7 @@ TEST(AddDeviceTestCase, AddFVMDevice) {
 // Tests adding a device with an MBR format.
 TEST(AddDeviceTestCase, AddMBRDevice) {
   auto options = TestOptions();
-  options.options.emplace(BlockDeviceManager::Options::kMbr);
+  options.options[BlockDeviceManager::Options::kMbr] = std::string();
   BlockDeviceManager manager(options);
   MockBlockDevice device(MockBlockDevice::Options{
       .content_format = DISK_FORMAT_MBR,
@@ -498,7 +498,7 @@ TEST(AddDeviceTestCase, AddValidBlobDevice) {
 
 TEST(AddDeviceTestCase, NetbootingDoesNotMountBlobfs) {
   auto options = TestOptions();
-  options.options.emplace(BlockDeviceManager::Options::kNetboot);
+  options.options[BlockDeviceManager::Options::kNetboot] = std::string();
   BlockDeviceManager manager(options);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_OK(manager.AddDevice(fvm_device));
@@ -584,7 +584,7 @@ TEST(AddDeviceTestCase, FormatMinfsDeviceWithZxcrypt) {
 
 TEST(AddDeviceTestCase, MinfsWithNoZxcryptOptionMountsWithoutZxcrypt) {
   auto options = TestOptions();
-  options.options.emplace("no-zxcrypt");
+  options.options["no-zxcrypt"] = std::string();
   BlockDeviceManager manager(options);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_OK(manager.AddDevice(fvm_device));
@@ -600,7 +600,7 @@ TEST(AddDeviceTestCase, MinfsRamdiskMounts) {
   // The fvm-ramdisk option will check that the topological path actually has an expected ramdisk
   // prefix.
   auto manager_options = TestOptions();
-  manager_options.options.emplace(BlockDeviceManager::Options::kFvmRamdisk);
+  manager_options.options[BlockDeviceManager::Options::kFvmRamdisk] = std::string();
   BlockDeviceManager manager(manager_options);
   auto options = MockBlockDevice::FvmOptions();
   constexpr std::string_view kBasePath = "/dev/misc/ramctl/mock_device/block";
@@ -617,8 +617,8 @@ TEST(AddDeviceTestCase, MinfsRamdiskMounts) {
 
 TEST(AddDeviceTestCase, MinfsRamdiskDeviceNotRamdiskDoesNotMount) {
   auto options = TestOptions();
-  options.options.emplace(BlockDeviceManager::Options::kFvmRamdisk);
-  options.options.emplace(BlockDeviceManager::Options::kAttachZxcryptToNonRamdisk);
+  options.options[BlockDeviceManager::Options::kFvmRamdisk] = std::string();
+  options.options[BlockDeviceManager::Options::kAttachZxcryptToNonRamdisk] = std::string();
   BlockDeviceManager manager(options);
   auto fvm_options = MockBlockDevice::FvmOptions();
   fvm_options.topological_path = "/dev/misc/ramctl/mock_device/block";
@@ -635,7 +635,7 @@ TEST(AddDeviceTestCase, MinfsRamdiskDeviceNotRamdiskDoesNotMount) {
 
 TEST(AddDeviceTestCase, MinfsRamdiskWithoutZxcryptAttachOption) {
   auto options = TestOptions();
-  options.options.emplace(BlockDeviceManager::Options::kFvmRamdisk);
+  options.options[BlockDeviceManager::Options::kFvmRamdisk] = std::string();
   BlockDeviceManager manager(options);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_OK(manager.AddDevice(fvm_device));

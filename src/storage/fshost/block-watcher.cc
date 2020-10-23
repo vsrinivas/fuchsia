@@ -74,7 +74,7 @@ class Watcher {
     auto options =
         file ? BlockDeviceManager::ReadOptions(file) : BlockDeviceManager::DefaultOptions();
     if (netboot) {
-      options.options.emplace(BlockDeviceManager::Options::kNetboot);
+      options.options[BlockDeviceManager::Options::kNetboot] = std::string();
     }
     return options;
   }

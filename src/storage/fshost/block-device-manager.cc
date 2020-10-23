@@ -277,19 +277,27 @@ MinfsMatcher::PartitionNames GetMinfsPartitionNames() { return {"minfs", GUID_DA
 }  // namespace
 
 BlockDeviceManager::Options BlockDeviceManager::ReadOptions(std::istream& stream) {
-  std::set<std::string, std::less<>> options;
+  std::map<std::string, std::string, std::less<>> options;
   for (std::string line; std::getline(stream, line);) {
     if (line == Options::kDefault) {
       auto default_options = DefaultOptions();
       options.insert(default_options.options.begin(), default_options.options.end());
-    }
-    if (line.size() > 0) {
-      if (line[0] == '-') {
-        options.erase(line.substr(1));
-      } else if (line[0] == '#') {
-        // Treat as comment; ignore.
+    } else if (line.size() > 0) {
+      if (line[0] == '#')
+        continue;  // Treat as comment; ignore;
+
+      std::string key, value;
+      if (auto separator_index = line.find('='); separator_index != std::string::npos) {
+        key = line.substr(0, separator_index);
+        value = line.substr(separator_index + 1);
       } else {
-        options.emplace(std::move(line));
+        key = line;  // No value, just a bare key.
+      }
+
+      if (key[0] == '-') {
+        options.erase(key.substr(1));
+      } else {
+        options[key] = std::move(value);
       }
     }
   }
@@ -297,8 +305,15 @@ BlockDeviceManager::Options BlockDeviceManager::ReadOptions(std::istream& stream
 }
 
 BlockDeviceManager::Options BlockDeviceManager::DefaultOptions() {
-  return {.options = {Options::kBlobfs, Options::kBootpart, Options::kDurable, Options::kFactory,
-                      Options::kFvm, Options::kGpt, Options::kMinfs}};
+  BlockDeviceManager::Options result;
+  result.options[Options::kBlobfs] = std::string();
+  result.options[Options::kBootpart] = std::string();
+  result.options[Options::kDurable] = std::string();
+  result.options[Options::kFactory] = std::string();
+  result.options[Options::kFvm] = std::string();
+  result.options[Options::kGpt] = std::string();
+  result.options[Options::kMinfs] = std::string();
+  return result;
 }
 
 BlockDeviceManager::BlockDeviceManager(const Options& options) {

@@ -43,6 +43,10 @@ class BlockDeviceManager {
     static constexpr char kGpt[] = "gpt";            // Enables GPT devices.
     static constexpr char kMbr[] = "mbr";            // Enables MBR devices.
     static constexpr char kMinfs[] = "minfs";        // Enables minfs partition.
+    static constexpr char kBlobfsMaxBytes[] =
+        "blobfs-max-bytes";  // Maximum number of bytes a blobfs partition can grow to.
+    static constexpr char kMinfsMaxBytes[] =
+        "minfs-max-bytes";  // Maximum number of bytes non-ramdisk minfs partition can grow to.
     static constexpr char kNetboot[] =
         "netboot";  // Disables everything except fvm, gpt and bootpart.
     static constexpr char kNoZxcrypt[] = "no-zxcrypt";  // Disables zxcrypt for minfs partitions.
@@ -54,7 +58,10 @@ class BlockDeviceManager {
 
     bool is_set(std::string_view option) const { return options.find(option) != options.end(); }
 
-    std::set<std::string, std::less<>> options;
+    // Key/value options. Many options do not have "values" so the value will be empty. This
+    // will not contain the kDefault value; that's handled specially and causes the defaults to
+    // be loaded.
+    std::map<std::string, std::string, std::less<>> options;
   };
 
   // Reads options from the stream which consist of one option per line. "default" means include the

@@ -298,13 +298,26 @@ TEST(BlockDeviceManager, ReadOptions) {
   std::stringstream stream;
   stream << "# A comment" << std::endl
          << BlockDeviceManager::Options::kDefault << std::endl
+         << BlockDeviceManager::Options::kNoZxcrypt
+         << std::endl
+         // Duplicate keys should be de-duped.
          << BlockDeviceManager::Options::kNoZxcrypt << std::endl
+         << BlockDeviceManager::Options::kMinfsMaxBytes << "=1"
+         << std::endl
+         // Duplicates should overwrite the value.
+         << BlockDeviceManager::Options::kMinfsMaxBytes << "=12345"
+         << std::endl
+         // Empty value.
+         << BlockDeviceManager::Options::kBlobfsMaxBytes << "=" << std::endl
          << "-" << BlockDeviceManager::Options::kBlobfs;
+
   const auto options = BlockDeviceManager::ReadOptions(stream);
   auto expected_options = BlockDeviceManager::DefaultOptions();
-  expected_options.options.emplace(BlockDeviceManager::Options::kDefault);
-  expected_options.options.emplace(BlockDeviceManager::Options::kNoZxcrypt);
+  expected_options.options[BlockDeviceManager::Options::kNoZxcrypt] = std::string();
+  expected_options.options[BlockDeviceManager::Options::kMinfsMaxBytes] = "12345";
+  expected_options.options[BlockDeviceManager::Options::kBlobfsMaxBytes] = std::string();
   expected_options.options.erase(BlockDeviceManager::Options::kBlobfs);
+
   EXPECT_EQ(expected_options.options, options.options);
 }
 
