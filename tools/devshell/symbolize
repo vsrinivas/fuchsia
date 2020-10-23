@@ -89,7 +89,7 @@ function cpp_symbolizer {
     extra_args+=(--ids-txt "${i}")
   done
   if [[ "${is_remote}" -eq 1 ]]; then
-    if [[ ! -f ~/.fuchsia/debug/googleapi_auth ]]; then
+    if [[ ! -f ~/.fuchsia/debug/googleapi_auth && ! -f ~/.config/gcloud/application_default_credentials.json ]]; then
       fx-error "Please authenticate first using \`fx symbolize --experimental --auth\`."
       exit 1
     fi
