@@ -227,6 +227,30 @@ use those values, create a generated header file using the
 the [`hwreg_asm_header()`](../../../system/ulib/hwreg/hwreg_asm_header.gni) GN
 template.
 
+### Documentation
+
+The shorthands of "\[\<archicture ID\>/\<manual ID\>\]: \<chapter/verse/page/figure/etc.\>\" are used
+extensively to reference official architecture documentation. In particular,
+the identifiers are expected to be one of the following:
+
+**\[intel/vol1\]** ~ [Intel® 64 and IA-32 Architectures Software Developer's Manual Volume 1: Basic Architecture](https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-software-developers-manual-volume-1-basic-architecture.html), May 2020
+
+**\[intel/vol2\]** ~ [Intel® 64 and IA-32 Architectures Software Developer's Manual Combined Volumes 2A, 2B, 2C, and 2D: Instruction Set Reference, A-Z](https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-sdm-combined-volumes-2a-2b-2c-and-2d-instruction-set-reference-a-z.html), May 2020
+
+**\[intel/vol3\]** ~ [Intel® 64 and IA-32 Architectures Software Developer's Manual Combined Volumes 3A, 3B, 3C, and 3D: System Programming Guide](https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-sdm-combined-volumes-3a-3b-3c-and-3d-system-programming-guide.html), May 2020
+
+**\[intel/vol4\]** ~ [Intel® 64 and IA-32 Architectures Software Developer's Manual Volume 4: Model-Specific Registers](https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-software-developers-manual-volume-4-model-specific-registers.html), May 2020
+
+**\[amd/vol1\]** ~ [AMD64 Architecture Programmer’s Manual Volume 1: Application Programming](https://www.amd.com/system/files/TechDocs/24592.pdf), December 2017
+
+**\[amd/vol2\]** ~ [AMD64 Architecture Programmer’s Manual Volume 2: System Programming](https://www.amd.com/system/files/TechDocs/24593.pdf), May 2020
+
+**\[amd/vol3\]** ~ [AMD64 Architecture Programmer’s Manual Volume 3: General Purpose and System Instructions](https://www.amd.com/system/files/TechDocs/24594.pdf), April 2020
+
+**\[amd/vol4\]** ~ [AMD64 Architecture Programmer’s Manual Volume 4: 128-bit and 256 bit media instructions](https://www.amd.com/system/files/TechDocs/26568.pdf), May 2020
+
+**\[amd/vol5\]** ~ [AMD64 Architecture Programmer’s Manual Volume 5: 64-Bit Media and x87 Floating-Point Instructions](https://www.amd.com/system/files/TechDocs/26569_APM_V5.pdf), May 2018
+
 ## Testing
 
 **TODO(mcgrathr)** _Describe testing methodology._

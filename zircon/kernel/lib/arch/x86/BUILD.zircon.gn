@@ -12,10 +12,6 @@ zx_library("x86") {
   static = true
   visibility = [ "../*" ]
   sources = []
-  public_deps = [
-    # TODO
-    "$zx/system/ulib/hwreg:headers",
-  ]
 
   sdk = "source"
   sdk_headers = [ "lib/arch/intrin.h" ]

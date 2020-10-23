@@ -19,17 +19,22 @@ if (zx != "/" || current_toolchain != default_toolchain) {
     sdk_headers = [ "lib/arch/asm.h" ]
     sdk_migrated = true
 
-    sources = []
+    sources = [ "cpuid.cc" ]
+
+    public_deps = [
+      # <lib/arch/x86/cpuid.h> has #include <hwreg/bitfields.h>.
+      "$zx/system/ulib/hwreg:headers",
+    ]
 
     if (is_host) {
       deps = [ "host" ]
-      public_deps = [ "host:headers" ]
+      public_deps += [ "host:headers" ]
     } else {
       # The per-CPU subdirectory is a separate library() target but it shares
       # (and overrides) the <lib/arch/...> header name space and users of this
       # library need never realize it's distinct.
       deps = [ zircon_cpu ]
-      public_deps = [
+      public_deps += [
         ":gen-x86-msr-asm",
         "$zircon_cpu:headers",
       ]
