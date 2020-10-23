@@ -11,6 +11,7 @@ mod device_tests;
 mod display_tests;
 mod do_not_disturb_tests;
 mod event_tests;
+mod factory_reset_tests;
 mod fakes;
 mod hanging_get_tests;
 mod input_tests;

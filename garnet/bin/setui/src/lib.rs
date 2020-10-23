@@ -17,6 +17,7 @@ use {
     crate::display::display_controller::{DisplayController, ExternalBrightnessControl},
     crate::display::light_sensor_controller::LightSensorController,
     crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
+    crate::factory_reset::factory_reset_controller::FactoryResetController,
     crate::handler::base::GenerateHandler,
     crate::handler::device_storage::DeviceStorageFactory,
     crate::handler::setting_handler::persist::Handler as DataHandler,
@@ -37,8 +38,8 @@ use {
     crate::setup::setup_controller::SetupController,
     crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
-        AudioInfo, DisplayInfo, DoNotDisturbInfo, InputInfo, NightModeInfo, PrivacyInfo,
-        SettingType, SetupInfo,
+        AudioInfo, DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, InputInfo, NightModeInfo,
+        PrivacyInfo, SettingType, SetupInfo,
     },
     crate::switchboard::intl_types::IntlInfo,
     crate::switchboard::light_types::LightInfo,
@@ -65,6 +66,7 @@ mod clock;
 mod device;
 mod display;
 mod do_not_disturb;
+mod factory_reset;
 mod fidl_clone;
 mod fidl_processor;
 mod input;
@@ -461,6 +463,12 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             SettingType::DoNotDisturb,
             DataHandler::<DoNotDisturbInfo, DoNotDisturbController>::spawn
         );
+        // Factory Reset
+        register_handler!(
+            factory_handle,
+            SettingType::FactoryReset,
+            DataHandler::<FactoryResetInfo, FactoryResetController>::spawn
+        );
         // Night mode
         register_handler!(
             factory_handle,
@@ -619,6 +627,15 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         DoNotDisturb,
         do_not_disturb,
         DoNotDisturb
+    );
+
+    register_fidl_handler!(
+        components,
+        service_dir,
+        switchboard_messenger_factory,
+        FactoryReset,
+        factory_reset,
+        FactoryReset
     );
 
     register_fidl_handler!(

@@ -117,6 +117,7 @@ pub enum SettingType {
     Device,
     Display,
     DoNotDisturb,
+    FactoryReset,
     Input,
     Intl,
     Light,
@@ -136,6 +137,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
         SettingType::Device,
         SettingType::Display,
         SettingType::DoNotDisturb,
+        SettingType::FactoryReset,
         SettingType::Input,
         SettingType::Intl,
         SettingType::Light,
@@ -192,6 +194,9 @@ pub enum SettingRequest {
     // Do not disturb requests.
     SetDnD(DoNotDisturbInfo),
 
+    // Factory Reset requests.
+    SetLocalResetAllowed(bool),
+
     // Intl requests.
     SetIntlInfo(IntlInfo),
 
@@ -226,6 +231,7 @@ impl SettingRequest {
             SettingRequest::SetMicMute(_) => "SetMicMute",
             SettingRequest::SetBrightness(_) => "SetBrightness",
             SettingRequest::SetAutoBrightness(_) => "SetAutoBrightness",
+            SettingRequest::SetLocalResetAllowed(_) => "SetLocalResetAllowed",
             SettingRequest::SetLowLightMode(_) => "SetLowLightMode",
             SettingRequest::SetDnD(_) => "SetDnD",
             SettingRequest::SetIntlInfo(_) => "SetIntlInfo",
@@ -351,6 +357,17 @@ impl DoNotDisturbInfo {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FactoryResetInfo {
+    pub is_local_reset_allowed: bool,
+}
+
+impl FactoryResetInfo {
+    pub const fn new(is_local_reset_allowed: bool) -> Self {
+        Self { is_local_reset_allowed }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize, Hash, Eq)]
 pub enum LowLightMode {
     /// Device should not be in low-light mode.
@@ -414,6 +431,7 @@ pub enum SettingResponse {
     /// Response to a request to get current brightness state.AccessibilityEncoder
     Brightness(DisplayInfo),
     Device(DeviceInfo),
+    FactoryReset(FactoryResetInfo),
     Light(LightInfo),
     LightSensor(LightData),
     DoNotDisturb(DoNotDisturbInfo),
@@ -434,6 +452,7 @@ impl SettingResponse {
             SettingResponse::Audio(info) => ("Audio", format!("{:?}", info)),
             SettingResponse::Brightness(info) => ("Brightness", format!("{:?}", info)),
             SettingResponse::Device(info) => ("Device", format!("{:?}", info)),
+            SettingResponse::FactoryReset(info) => ("FactoryReset", format!("{:?}", info)),
             SettingResponse::Light(info) => ("Light", format!("{:?}", info)),
             SettingResponse::LightSensor(info) => ("LightSensor", format!("{:?}", info)),
             SettingResponse::DoNotDisturb(info) => ("DoNotDisturb", format!("{:?}", info)),

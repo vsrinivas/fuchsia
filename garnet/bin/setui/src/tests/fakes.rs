@@ -9,5 +9,6 @@ pub mod discovery_service;
 pub mod hardware_light_service;
 pub mod hardware_power_statecontrol_service;
 pub mod input_device_registry_service;
+pub mod recovery_policy_service;
 pub mod service_registry;
 pub mod sound_player_service;
