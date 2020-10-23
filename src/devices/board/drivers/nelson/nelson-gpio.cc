@@ -90,6 +90,8 @@ static const gpio_pin_t gpio_pins[] = {
     {GPIO_VOLUME_DOWN},
     {GPIO_VOLUME_BOTH},
     {GPIO_MIC_PRIVACY},
+    // For LED.
+    {GPIO_AMBER_LED},
     // For SDIO.
     {GPIO_WIFI_REG_ON},
     // For SPI.
