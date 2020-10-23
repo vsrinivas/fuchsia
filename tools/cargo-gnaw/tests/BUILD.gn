@@ -132,17 +132,19 @@ if (is_host) {
       source = "//prebuilt/third_party/${invoker.tool}/${host_platform}"
       target = "${invoker.out_dir}/${invoker.tool}"
       inputs = [ "$source/.versions/${invoker.tool}.cipd_version" ]
-      script = "copy_tool.py"
+      script = "//build/copy_tree.py"
+      stamp = "${target}.stamp"
       args = [
         rebase_path(source, root_build_dir),
         rebase_path(target, root_build_dir),
+        rebase_path(stamp, root_build_dir),
       ]
 
       # In theory we could use the version file as our output, but that causes
       # a problem: ninja will attempt to mkdir $target, and if $target exists
       # but is not a directory, the build will fail. So we use a stamp file in
       # the parent directory instead.
-      outputs = [ "$target.stamp" ]
+      outputs = [ stamp ]
 
       metadata = {
         test_runtime_deps = [ target ]
