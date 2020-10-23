@@ -35,7 +35,7 @@ table PairingState {
 };
 
 /// ResetConfig flags.
-bits ResetConfigFlags : uint32 {
+bits ResetConfigFlags : uint16 {
     /// Reset network configuration information.
     NETWORK_CONFIG = 0x0001;
     /// Reset fabric configuration information.
@@ -47,7 +47,7 @@ bits ResetConfigFlags : uint32 {
 };
 
 /// Reset all device configuration information.
-const uint32 RESET_CONFIG_ALL = 0x00FF;
+const uint16 RESET_CONFIG_ALL = 0x00FF;
 
 /// QR Code data for pairing.
 struct QrCode {
