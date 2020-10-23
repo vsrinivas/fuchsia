@@ -429,9 +429,13 @@ void Parent::TakeChildRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kParent_TakeChild_Ordinal);
 }
 
+void Parent::TakeChildRequest::_CloseHandles() { c.reset(); }
+
 void Parent::TakeChildRequestRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kParent_TakeChildRequest_Ordinal);
 }
+
+void Parent::TakeChildRequestRequest::_CloseHandles() { r.reset(); }
 
 namespace {}  // namespace
 

@@ -24,7 +24,7 @@ namespace internal {
 
 template <typename Sub>
 struct FromFailureMixin {
-  // Initialize ourself from one of EncodeResult, DecodeResult, LinearizeResult, in the case of
+  // Initialize ourself from one of EncodeResult, LinearizeResult, in the case of
   // error hence there is no message.
   template <typename SomeResult>
   static Sub FromFailure(SomeResult failure) {
@@ -37,33 +37,6 @@ struct FromFailureMixin {
 
 // The table of any FIDL method with zero in/out parameters.
 extern "C" const fidl_type_t _llcpp_coding_AnyZeroArgMessageTable;
-
-// Holds a |DecodedMessage| in addition to |status| and |error|.
-// This is typically the return type of fidl::Decode and FIDL methods which require
-// a decode step for the response.
-// If |status| is ZX_OK, |message| contains a valid decoded message of type FidlType.
-// Otherwise, |error| contains a human-readable string for debugging purposes.
-template <typename FidlType>
-struct DecodeResult final : internal::FromFailureMixin<DecodeResult<FidlType>> {
-  zx_status_t status = ZX_ERR_INTERNAL;
-  const char* error = nullptr;
-  DecodedMessage<FidlType> message;
-
-  // Convenience accessor for the FIDL message pointer.
-  // Asserts that the decoding was successful.
-  FidlType* Unwrap() {
-    ZX_DEBUG_ASSERT(status == ZX_OK);
-    return message.message();
-  }
-
-  DecodeResult() = default;
-
-  DecodeResult(zx_status_t status, const char* error,
-               DecodedMessage<FidlType> message = DecodedMessage<FidlType>())
-      : status(status), error(error), message(std::move(message)) {
-    ZX_DEBUG_ASSERT(status != ZX_OK || this->message.is_valid());
-  }
-};
 
 // Holds a |EncodedMessage| in addition to |status| and |error|.
 // This is typically the return type of fidl::Encode and other FIDL methods which
@@ -103,32 +76,6 @@ struct LinearizeResult final : internal::FromFailureMixin<LinearizeResult<FidlTy
   }
 };
 
-// Consumes an encoded message object containing FIDL encoded bytes and handles.
-// Uses the FIDL encoding tables to deserialize the message in-place.
-// If the message is invalid, discards the buffer and returns an error.
-template <typename FidlType>
-DecodeResult<FidlType> Decode(EncodedMessage<FidlType> msg) {
-  static_assert(IsFidlType<FidlType>::value, "FIDL type required");
-  static_assert(FidlType::Type != nullptr, "FidlType should have a coding table");
-  DecodeResult<FidlType> result;
-
-  // Perform in-place decoding
-  fidl_trace(WillLLCPPDecode, FidlType::Type, msg.bytes().data(), msg.bytes().actual(),
-             msg.handles().actual());
-  result.status = fidl_decode(FidlType::Type, msg.bytes().data(), msg.bytes().actual(),
-                              msg.handles().data(), msg.handles().actual(), &result.error);
-  fidl_trace(DidLLCPPDecode);
-
-  // Clear out |msg| independent of success or failure
-  BytePart bytes = msg.ReleaseBytesAndHandles();
-  if (result.status == ZX_OK) {
-    result.message.Reset(std::move(bytes));
-  } else {
-    result.message.Reset(BytePart());
-  }
-  return result;
-}
-
 // Serializes the content of the message in-place.
 // The message's contents are always consumed by this operation, even in case of an error.
 template <typename FidlType>
@@ -165,16 +112,6 @@ struct MaybeSelectResponseType<true, RequestType, ResponseType> {
 };
 
 }  // namespace
-
-template <typename FidlType>
-DecodeResult<FidlType> DecodeAs(fidl_incoming_msg_t* msg) {
-  static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
-  if (msg->num_handles > EncodedMessage<FidlType>::kResolvedMaxHandles) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    return DecodeResult<FidlType>(ZX_ERR_INVALID_ARGS, "too many handles");
-  }
-  return fidl::Decode(fidl::EncodedMessage<FidlType>(msg));
-}
 
 // Write |encoded_msg| down a channel. Used for sending one-way calls and events.
 template <typename FidlType>

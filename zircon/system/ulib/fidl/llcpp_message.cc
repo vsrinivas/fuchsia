@@ -111,20 +111,13 @@ namespace internal {
 
 IncomingMessage::IncomingMessage() : ::fidl::Result(ZX_OK, nullptr) {}
 
-IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
-                                 zx_handle_t* handles, uint32_t handle_capacity,
+IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
                                  uint32_t handle_actual)
     : ::fidl::Result(ZX_OK, nullptr),
       message_{.bytes = bytes,
                .handles = handles,
                .num_bytes = byte_actual,
-               .num_handles = handle_actual},
-      byte_capacity_(byte_capacity),
-      handle_capacity_(handle_capacity) {
-  if (byte_capacity < byte_actual) {
-    SetResult(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall);
-  }
-}
+               .num_handles = handle_actual} {}
 
 IncomingMessage::~IncomingMessage() {
 #ifdef __Fuchsia__
@@ -142,9 +135,7 @@ void IncomingMessage::Init(OutgoingMessage& outgoing_message, zx_handle_t* handl
   message_.handles = handles;
   message_.num_bytes = outgoing_message.byte_actual();
   message_.num_handles = 0;
-  byte_capacity_ = outgoing_message.byte_capacity();
-  handle_capacity_ = handle_capacity;
-  if (outgoing_message.handle_actual() > handle_capacity_) {
+  if (outgoing_message.handle_actual() > handle_capacity) {
     SetResult(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall);
   } else {
     for (uint32_t i = 0; i < outgoing_message.handle_actual(); ++i) {

@@ -58,13 +58,11 @@ TEST(InlineXUnionInStruct, Success) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fidl::EncodedMessage<llcpp_misc::InlineXUnionInStruct> encoded_msg(
-        fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
-                       static_cast<uint32_t>(encoded_bytes.size())));
-    auto decode_result = fidl::Decode(std::move(encoded_msg));
-    ASSERT_STREQ(decode_result.error, nullptr);
-    ASSERT_EQ(decode_result.status, ZX_OK);
-    const llcpp_misc::InlineXUnionInStruct& msg = *decode_result.message.message();
+    fidl::IncomingMessage<llcpp_misc::InlineXUnionInStruct> decoded(
+        encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()));
+    ASSERT_STREQ(decoded.error(), nullptr);
+    ASSERT_TRUE(decoded.ok());
+    const llcpp_misc::InlineXUnionInStruct& msg = *decoded.PrimaryObject();
     ASSERT_STREQ(msg.before.begin(), &before[0]);
     ASSERT_EQ(msg.before.size(), before.size());
     ASSERT_STREQ(msg.after.begin(), &after[0]);
@@ -111,13 +109,11 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fidl::EncodedMessage<llcpp_misc::InlineXUnionInStruct> encoded_msg(
-        fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
-                       static_cast<uint32_t>(encoded_bytes.size())));
-    auto decode_result = fidl::Decode(std::move(encoded_msg));
-    ASSERT_STREQ(decode_result.error, nullptr);
-    ASSERT_EQ(decode_result.status, ZX_OK);
-    const llcpp_misc::InlineXUnionInStruct& msg = *decode_result.message.message();
+    fidl::IncomingMessage<llcpp_misc::InlineXUnionInStruct> decoded(
+        encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
+    ASSERT_STREQ(decoded.error(), nullptr);
+    ASSERT_TRUE(decoded.ok());
+    const llcpp_misc::InlineXUnionInStruct& msg = *decoded.PrimaryObject();
     ASSERT_STREQ(msg.before.begin(), &before[0]);
     ASSERT_EQ(msg.before.size(), before.size());
     ASSERT_STREQ(msg.after.begin(), &after[0]);
@@ -152,12 +148,10 @@ TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   // clang-format on
-  fidl::EncodedMessage<llcpp_misc::InlineXUnionInStruct> encoded_msg(
-      fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
-                     static_cast<uint32_t>(encoded_bytes.size())));
-  auto decode_result = fidl::Decode(std::move(encoded_msg));
-  EXPECT_STREQ(decode_result.error, "non-nullable xunion is absent");
-  EXPECT_EQ(decode_result.status, ZX_ERR_INVALID_ARGS);
+  fidl::IncomingMessage<llcpp_misc::InlineXUnionInStruct> decoded(
+      encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
+  EXPECT_STREQ(decoded.error(), "non-nullable xunion is absent");
+  EXPECT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
 }
 TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
   // clang-format off
@@ -176,12 +170,10 @@ TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   // clang-format on
-  fidl::EncodedMessage<llcpp_misc::InlineXUnionInStruct> encoded_msg(
-      fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
-                     static_cast<uint32_t>(encoded_bytes.size())));
-  auto decode_result = fidl::Decode(std::move(encoded_msg));
-  EXPECT_STREQ(decode_result.error, "xunion with zero as ordinal must be empty");
-  EXPECT_EQ(decode_result.status, ZX_ERR_INVALID_ARGS);
+  fidl::IncomingMessage<llcpp_misc::InlineXUnionInStruct> decoded(
+      encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
+  EXPECT_STREQ(decoded.error(), "xunion with zero as ordinal must be empty");
+  EXPECT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
 }
 // The xunion ordinal hashing algorithm generates 32 bit values. But if it did
 // generate values bigger than that, they would decode successfully
@@ -204,11 +196,9 @@ TEST(InlineXUnionInStruct, SuccessLargeXUnionOrdinal) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   // clang-format on
-  fidl::EncodedMessage<llcpp_misc::InlineXUnionInStruct> encoded_msg(
-      fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
-                     static_cast<uint32_t>(encoded_bytes.size())));
-  auto decode_result = fidl::Decode(std::move(encoded_msg));
-  ASSERT_EQ(decode_result.status, ZX_OK);
+  fidl::IncomingMessage<llcpp_misc::InlineXUnionInStruct> decoded(
+      encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
+  ASSERT_TRUE(decoded.ok());
 }
 TEST(ComplexTable, SuccessEmpty) {
   // clang-format off
@@ -231,13 +221,11 @@ TEST(ComplexTable, SuccessEmpty) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fidl::EncodedMessage<llcpp_misc::ComplexTable> encoded_msg(
-        fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
-                       static_cast<uint32_t>(encoded_bytes.size())));
-    auto decode_result = fidl::Decode(std::move(encoded_msg));
-    ASSERT_STREQ(decode_result.error, nullptr);
-    ASSERT_EQ(decode_result.status, ZX_OK);
-    const llcpp_misc::ComplexTable& msg = *decode_result.message.message();
+    fidl::IncomingMessage<llcpp_misc::ComplexTable> decoded(
+        encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
+    ASSERT_STREQ(decoded.error(), nullptr);
+    ASSERT_TRUE(decoded.ok());
+    const llcpp_misc::ComplexTable& msg = *decoded.PrimaryObject();
     ASSERT_FALSE(msg.has_simple());
     ASSERT_FALSE(msg.has_u());
     ASSERT_FALSE(msg.has_strings());
@@ -250,12 +238,10 @@ TEST(ComplexTable, FailToDecodeAbsentTable) {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelopes data pointer is absent
   };
   // clang-format on
-  fidl::EncodedMessage<llcpp_misc::ComplexTable> encoded_msg(
-      fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
-                     static_cast<uint32_t>(encoded_bytes.size())));
-  auto decode_result = fidl::Decode(std::move(encoded_msg));
-  ASSERT_STREQ(decode_result.error, "absent pointer disallowed in non-nullable collection");
-  ASSERT_EQ(decode_result.status, ZX_ERR_INVALID_ARGS);
+  fidl::IncomingMessage<llcpp_misc::ComplexTable> decoded(
+      encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
+  ASSERT_STREQ(decoded.error(), "absent pointer disallowed in non-nullable collection");
+  ASSERT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
 }
 TEST(ComplexTable, Success) {
   // clang-format off
@@ -334,13 +320,11 @@ TEST(ComplexTable, Success) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fidl::EncodedMessage<llcpp_misc::ComplexTable> encoded_msg(
-        fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
-                       static_cast<uint32_t>(encoded_bytes.size())));
-    auto decode_result = fidl::Decode(std::move(encoded_msg));
-    ASSERT_STREQ(decode_result.error, nullptr);
-    ASSERT_EQ(decode_result.status, ZX_OK);
-    const llcpp_misc::ComplexTable& msg = *decode_result.message.message();
+    fidl::IncomingMessage<llcpp_misc::ComplexTable> decoded(
+        encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
+    ASSERT_STREQ(decoded.error(), nullptr);
+    ASSERT_TRUE(decoded.ok());
+    const llcpp_misc::ComplexTable& msg = *decoded.PrimaryObject();
     ASSERT_TRUE(msg.has_simple());
     ASSERT_TRUE(msg.simple().has_x());
     ASSERT_EQ(msg.simple().x(), table_x);

@@ -85,11 +85,10 @@ template <typename FidlType>
 bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
   uint32_t size = static_cast<uint32_t>(bytes.size());
-  fidl::EncodedMessage<FidlType> message(fidl::BytePart(&bytes[0], size, size));
-  auto decode_result = fidl::Decode(std::move(message));
-  if (decode_result.status != ZX_OK || decode_result.error != nullptr) {
-    std::cout << "Decoding failed (" << zx_status_get_string(decode_result.status)
-              << "): " << decode_result.error << std::endl;
+  fidl::IncomingMessage<FidlType> decoded(bytes.data(), size, nullptr, 0);
+  if (!decoded.ok() || decoded.error() != nullptr) {
+    std::cout << "Decoding failed (" << zx_status_get_string(decoded.status())
+              << "): " << decoded.error() << std::endl;
     return false;
   }
   // TODO(fxbug.dev/7958): For now we are only checking that fidl::Decode succeeds.
@@ -104,15 +103,14 @@ template <typename FidlType>
 bool DecodeFailure(std::vector<uint8_t> bytes, zx_status_t expected_error_code) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
   uint32_t size = static_cast<uint32_t>(bytes.size());
-  fidl::EncodedMessage<FidlType> message(fidl::BytePart(&bytes[0], size, size));
-  auto decode_result = fidl::Decode(std::move(message));
-  if (decode_result.status == ZX_OK) {
+  fidl::IncomingMessage<FidlType> decoded(bytes.data(), size, nullptr, 0);
+  if (decoded.ok()) {
     std::cout << "Decoding unexpectedly succeeded" << std::endl;
     return false;
   }
-  if (decode_result.status != expected_error_code) {
-    std::cout << "Decoding failed with error code " << zx_status_get_string(decode_result.status)
-              << " (" << decode_result.error << "), but expected error code "
+  if (decoded.status() != expected_error_code) {
+    std::cout << "Decoding failed with error code " << zx_status_get_string(decoded.status())
+              << " (" << decoded.error() << "), but expected error code "
               << zx_status_get_string(expected_error_code) << std::endl;
     return false;
   }

@@ -886,6 +886,8 @@ void ChannelProtocol::MutateSocketRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kChannelProtocol_MutateSocket_Ordinal);
 }
 
+void ChannelProtocol::MutateSocketRequest::_CloseHandles() { a.reset(); }
+
 void ChannelProtocol::MutateSocketResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kChannelProtocol_MutateSocket_Ordinal);
 }

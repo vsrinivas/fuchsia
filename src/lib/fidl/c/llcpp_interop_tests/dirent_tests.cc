@@ -96,9 +96,9 @@ class Server {
 
   zx_status_t DoCountNumDirectories(
       fidl_txn_t* txn,
-      fidl::DecodedMessage<gen::DirEntTestInterface::CountNumDirectoriesRequest> decoded) {
+      fidl::IncomingMessage<gen::DirEntTestInterface::CountNumDirectoriesRequest>& decoded) {
     count_num_directories_num_calls_.fetch_add(1);
-    const auto& request = *decoded.message();
+    const auto& request = *decoded.PrimaryObject();
     int64_t count = 0;
     for (const auto& dirent : request.dirents) {
       if (dirent.is_dir) {
@@ -111,41 +111,37 @@ class Server {
   }
 
   zx_status_t DoReadDir(fidl_txn_t* txn,
-                        fidl::DecodedMessage<gen::DirEntTestInterface::ReadDirRequest> decoded) {
+                        fidl::IncomingMessage<gen::DirEntTestInterface::ReadDirRequest>& decoded) {
     read_dir_num_calls_.fetch_add(1);
     auto golden = golden_dirents();
     gen::DirEntTestInterface::ReadDirResponse response(golden);
-    response._hdr.txid = decoded.message()->_hdr.txid;
+    response._hdr.txid = decoded.PrimaryObject()->_hdr.txid;
     return Reply(txn, &response);
   }
 
   zx_status_t DoConsumeDirectories(
       fidl_txn_t* txn,
-      fidl::DecodedMessage<gen::DirEntTestInterface::ConsumeDirectoriesRequest> decoded) {
+      fidl::IncomingMessage<gen::DirEntTestInterface::ConsumeDirectoriesRequest>& decoded) {
     consume_directories_num_calls_.fetch_add(1);
-    EXPECT_EQ(decoded.message()->dirents.count(), 3);
+    EXPECT_EQ(decoded.PrimaryObject()->dirents.count(), 3);
     gen::DirEntTestInterface::ConsumeDirectoriesResponse response;
-    fidl_init_txn_header(&response._hdr, 0, decoded.message()->_hdr.ordinal);
+    fidl_init_txn_header(&response._hdr, 0, decoded.PrimaryObject()->_hdr.ordinal);
     return Reply(txn, &response);
   }
 
   zx_status_t DoOneWayDirents(
       fidl_txn_t* txn,
-      fidl::DecodedMessage<gen::DirEntTestInterface::OneWayDirentsRequest> decoded) {
+      fidl::IncomingMessage<gen::DirEntTestInterface::OneWayDirentsRequest>& decoded) {
     one_way_dirents_num_calls_.fetch_add(1);
-    EXPECT_EQ(decoded.message()->dirents.count(), 3);
-    EXPECT_OK(decoded.message()->ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED));
+    EXPECT_EQ(decoded.PrimaryObject()->dirents.count(), 3);
+    EXPECT_OK(decoded.PrimaryObject()->ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED));
     // No response required for one-way calls.
     return ZX_OK;
   }
 
   template <typename FidlType>
-  static fidl::DecodeResult<FidlType> DecodeAs(fidl_incoming_msg_t* msg) {
-    if (msg->num_handles > fidl::EncodedMessage<FidlType>::kResolvedMaxHandles) {
-      zx_handle_close_many(msg->handles, msg->num_handles);
-      return fidl::DecodeResult<FidlType>(ZX_ERR_INVALID_ARGS, "too many handles");
-    }
-    return fidl::Decode(fidl::EncodedMessage<FidlType>(msg));
+  static fidl::IncomingMessage<FidlType> DecodeAs(fidl_incoming_msg_t* msg) {
+    return fidl::IncomingMessage<FidlType>(msg);
   }
 
   static zx_status_t FidlDispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* msg,
@@ -159,31 +155,31 @@ class Server {
     switch (hdr->ordinal) {
       case fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesOrdinal: {
         auto result = DecodeAs<gen::DirEntTestInterface::CountNumDirectoriesRequest>(msg);
-        if (result.status != ZX_OK) {
-          return result.status;
+        if (!result.ok()) {
+          return result.status();
         }
-        return server->DoCountNumDirectories(txn, std::move(result.message));
+        return server->DoCountNumDirectories(txn, result);
       }
       case fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirOrdinal: {
         auto result = DecodeAs<gen::DirEntTestInterface::ReadDirRequest>(msg);
-        if (result.status != ZX_OK) {
-          return result.status;
+        if (!result.ok()) {
+          return result.status();
         }
-        return server->DoReadDir(txn, std::move(result.message));
+        return server->DoReadDir(txn, result);
       }
       case fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesOrdinal: {
         auto result = DecodeAs<gen::DirEntTestInterface::ConsumeDirectoriesRequest>(msg);
-        if (result.status != ZX_OK) {
-          return result.status;
+        if (!result.ok()) {
+          return result.status();
         }
-        return server->DoConsumeDirectories(txn, std::move(result.message));
+        return server->DoConsumeDirectories(txn, result);
       }
       case fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsOrdinal: {
         auto result = DecodeAs<gen::DirEntTestInterface::OneWayDirentsRequest>(msg);
-        if (result.status != ZX_OK) {
-          return result.status;
+        if (!result.ok()) {
+          return result.status();
         }
-        return server->DoOneWayDirents(txn, std::move(result.message));
+        return server->DoOneWayDirents(txn, result);
       }
       default:
         return ZX_ERR_NOT_SUPPORTED;

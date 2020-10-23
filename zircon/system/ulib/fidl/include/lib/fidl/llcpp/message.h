@@ -130,13 +130,10 @@ class IncomingMessage : public ::fidl::Result {
   // |IncomingMessage| is destructed.
   // If Decode has been called, the handles have been transferred to the allocated memory.
   IncomingMessage();
-  IncomingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
-                  zx_handle_t* handles, uint32_t handle_capacity, uint32_t handle_actual);
+  IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
+                  uint32_t handle_actual);
   explicit IncomingMessage(const fidl_incoming_msg_t* msg)
-      : ::fidl::Result(ZX_OK, nullptr),
-        message_(*msg),
-        byte_capacity_(msg->num_bytes),
-        handle_capacity_(msg->num_handles) {}
+      : ::fidl::Result(ZX_OK, nullptr), message_(*msg) {}
   // Copy and move is disabled for the sake of avoiding double handle close.
   // It is possible to implement the move operations with correct semantics if they are
   // ever needed.
@@ -150,14 +147,15 @@ class IncomingMessage : public ::fidl::Result {
   zx_handle_t* handles() const { return message_.handles; }
   uint32_t byte_actual() const { return message_.num_bytes; }
   uint32_t handle_actual() const { return message_.num_handles; }
-  uint32_t byte_capacity() const { return byte_capacity_; }
-  uint32_t handle_capacity() const { return handle_capacity_; }
   fidl_incoming_msg_t* message() { return &message_; }
 
  protected:
   // Initialize the |IncomingMessage| from an |OutgoingMessage|. The handles within
   // |OutgoingMessage| are transferred to the |IncomingMessage|.
   void Init(OutgoingMessage& outgoing_message, zx_handle_t* handles, uint32_t handle_capacity);
+
+  // Reset the byte pointer. Used to relase the control onwership of the bytes.
+  void ResetBytes() { message_.bytes = nullptr; }
 
   // Decodes the message using |FidlType|. If this operation succeed, |status()| is ok and
   // |bytes()| contains the decoded object.
@@ -178,8 +176,6 @@ class IncomingMessage : public ::fidl::Result {
   void ReleaseHandles() { message_.num_handles = 0; }
 
   fidl_incoming_msg_t message_;
-  uint32_t byte_capacity_;
-  uint32_t handle_capacity_;
 };
 
 }  // namespace internal

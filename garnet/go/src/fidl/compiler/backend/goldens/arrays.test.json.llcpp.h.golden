@@ -294,6 +294,16 @@ class TableSmallArray final {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<TableSmallArray>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<TableSmallArray>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -303,6 +313,11 @@ class TableSmallArray final {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<TableSmallArray*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -537,6 +552,16 @@ class TableLargeArray final {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<TableLargeArray>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<TableLargeArray>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -546,6 +571,11 @@ class TableLargeArray final {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<TableLargeArray*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -760,6 +790,16 @@ struct StructSmallArray {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct StructSmallArray>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct StructSmallArray>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -769,6 +809,11 @@ struct StructSmallArray {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct StructSmallArray*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -862,6 +907,16 @@ struct StructLargeArray {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct StructLargeArray>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct StructLargeArray>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -871,6 +926,11 @@ struct StructLargeArray {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct StructLargeArray*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and

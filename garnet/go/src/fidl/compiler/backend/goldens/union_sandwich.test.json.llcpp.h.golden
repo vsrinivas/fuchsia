@@ -454,6 +454,16 @@ struct SandwichUnionSize8Alignment4 {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct SandwichUnionSize8Alignment4>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct SandwichUnionSize8Alignment4>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -463,6 +473,11 @@ struct SandwichUnionSize8Alignment4 {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct SandwichUnionSize8Alignment4*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -562,6 +577,16 @@ struct SandwichUnionSize36Alignment4 {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct SandwichUnionSize36Alignment4>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct SandwichUnionSize36Alignment4>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -571,6 +596,11 @@ struct SandwichUnionSize36Alignment4 {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct SandwichUnionSize36Alignment4*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -670,6 +700,16 @@ struct SandwichUnionSize12Alignment4 {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct SandwichUnionSize12Alignment4>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct SandwichUnionSize12Alignment4>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -679,6 +719,11 @@ struct SandwichUnionSize12Alignment4 {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct SandwichUnionSize12Alignment4*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -776,6 +821,16 @@ struct StructSize16Alignment8 {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct StructSize16Alignment8>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct StructSize16Alignment8>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -785,6 +840,11 @@ struct StructSize16Alignment8 {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct StructSize16Alignment8*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -884,6 +944,16 @@ struct SandwichUnionSize24Alignment8 {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct SandwichUnionSize24Alignment8>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct SandwichUnionSize24Alignment8>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -893,6 +963,11 @@ struct SandwichUnionSize24Alignment8 {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct SandwichUnionSize24Alignment8*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and

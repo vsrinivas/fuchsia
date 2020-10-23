@@ -303,15 +303,35 @@ class {{ .Name }} final {
     // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
+      IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
+                      uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+        Decode<{{ .Name }}Response>();
+      }
+      IncomingMessage(fidl_incoming_msg_t* msg) : ::fidl::internal::IncomingMessage(msg) {
+        Decode<{{ .Name }}Response>();
+      }
       IncomingMessage(const IncomingMessage&) = delete;
       IncomingMessage(IncomingMessage&&) = delete;
       IncomingMessage* operator=(const IncomingMessage&) = delete;
       IncomingMessage* operator=(IncomingMessage&&) = delete;
+      {{- if .ResponseIsResource }}
+      ~IncomingMessage() {
+        if (ok() && (PrimaryObject() != nullptr)) {
+          PrimaryObject()->_CloseHandles();
+        }
+      }
+      {{- end }}
 
       {{ .Name }}Response* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
         return reinterpret_cast<{{ .Name }}Response*>(bytes());
       }
+
+      // Release the ownership of the decoded message. That means that the handles won't be closed
+      // When the object is destroyed.
+      // After calling this method, the IncomingMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
 
       // These methods should only be used for testing purpose.
       // They create an IncomingMessage using the bytes of an outgoing message and copying the
@@ -381,6 +401,10 @@ class {{ .Name }} final {
         {{- if and .HasResponse .Response }}
     using ResponseType = {{ .Name }}Response;
         {{- end }}
+
+    {{- if .RequestIsResource }}
+    void _CloseHandles();
+    {{- end }}
 
     // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
@@ -494,15 +518,35 @@ class {{ .Name }} final {
     // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
+      IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
+                      uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+        Decode<{{ .Name }}Request>();
+      }
+      IncomingMessage(fidl_incoming_msg_t* msg) : ::fidl::internal::IncomingMessage(msg) {
+        Decode<{{ .Name }}Request>();
+      }
       IncomingMessage(const IncomingMessage&) = delete;
       IncomingMessage(IncomingMessage&&) = delete;
       IncomingMessage* operator=(const IncomingMessage&) = delete;
       IncomingMessage* operator=(IncomingMessage&&) = delete;
+      {{- if .RequestIsResource }}
+      ~IncomingMessage() {
+        if (ok() && (PrimaryObject() != nullptr)) {
+          PrimaryObject()->_CloseHandles();
+        }
+      }
+      {{- end }}
 
       {{ .Name }}Request* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
         return reinterpret_cast<{{ .Name }}Request*>(bytes());
       }
+
+      // Release the ownership of the decoded message. That means that the handles won't be closed
+      // When the object is destroyed.
+      // After calling this method, the IncomingMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
 
       // These methods should only be used for testing purpose.
       // They create an IncomingMessage using the bytes of an outgoing message and copying the
@@ -1009,6 +1053,14 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
     void {{ .LLProps.ProtocolName }}::{{ .Name }}Request::_InitHeader(zx_txid_t _txid) {
       fidl_init_txn_header(&_hdr, _txid, {{ .OrdinalName }});
     }
+      {{- if .RequestIsResource }}
+
+    void {{ .LLProps.ProtocolName }}::{{ .Name }}Request::_CloseHandles() {
+      {{- range .Request }}
+        {{- template "StructMemberCloseHandles" . }}
+      {{- end }}
+    }
+      {{- end }}
     {{- end }}
     {{- if .HasResponse }}
 {{ "" }}

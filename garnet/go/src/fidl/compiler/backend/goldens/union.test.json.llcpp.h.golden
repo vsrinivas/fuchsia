@@ -2452,6 +2452,16 @@ struct StructWithNullableXUnion {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct StructWithNullableXUnion>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct StructWithNullableXUnion>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -2461,6 +2471,11 @@ struct StructWithNullableXUnion {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct StructWithNullableXUnion*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -2554,6 +2569,16 @@ struct Pizza {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Pizza>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Pizza>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -2563,6 +2588,11 @@ struct Pizza {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Pizza*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -2654,6 +2684,16 @@ struct Pasta {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Pasta>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Pasta>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -2663,6 +2703,11 @@ struct Pasta {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Pasta*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -2807,6 +2852,17 @@ class TestProtocol final {
     // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
+      IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                      zx_handle_t* handles = nullptr,
+                      uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                              handle_actual) {
+        Decode<StrictXUnionHenceResponseMayBeStackAllocatedResponse>();
+      }
+      IncomingMessage(fidl_incoming_msg_t* msg)
+          : ::fidl::internal::IncomingMessage(msg) {
+        Decode<StrictXUnionHenceResponseMayBeStackAllocatedResponse>();
+      }
       IncomingMessage(const IncomingMessage&) = delete;
       IncomingMessage(IncomingMessage&&) = delete;
       IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -2817,6 +2873,11 @@ class TestProtocol final {
         return reinterpret_cast<
             StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(bytes());
       }
+
+      // Release the ownership of the decoded message. That means that the
+      // handles won't be closed When the object is destroyed. After calling
+      // this method, the IncomingMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
 
       // These methods should only be used for testing purpose.
       // They create an IncomingMessage using the bytes of an outgoing message
@@ -2953,6 +3014,17 @@ class TestProtocol final {
     // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
+      IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                      zx_handle_t* handles = nullptr,
+                      uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                              handle_actual) {
+        Decode<StrictXUnionHenceResponseMayBeStackAllocatedRequest>();
+      }
+      IncomingMessage(fidl_incoming_msg_t* msg)
+          : ::fidl::internal::IncomingMessage(msg) {
+        Decode<StrictXUnionHenceResponseMayBeStackAllocatedRequest>();
+      }
       IncomingMessage(const IncomingMessage&) = delete;
       IncomingMessage(IncomingMessage&&) = delete;
       IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -2963,6 +3035,11 @@ class TestProtocol final {
         return reinterpret_cast<
             StrictXUnionHenceResponseMayBeStackAllocatedRequest*>(bytes());
       }
+
+      // Release the ownership of the decoded message. That means that the
+      // handles won't be closed When the object is destroyed. After calling
+      // this method, the IncomingMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
 
       // These methods should only be used for testing purpose.
       // They create an IncomingMessage using the bytes of an outgoing message
@@ -3096,6 +3173,17 @@ class TestProtocol final {
     // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
+      IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                      zx_handle_t* handles = nullptr,
+                      uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                              handle_actual) {
+        Decode<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>();
+      }
+      IncomingMessage(fidl_incoming_msg_t* msg)
+          : ::fidl::internal::IncomingMessage(msg) {
+        Decode<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>();
+      }
       IncomingMessage(const IncomingMessage&) = delete;
       IncomingMessage(IncomingMessage&&) = delete;
       IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -3106,6 +3194,11 @@ class TestProtocol final {
         return reinterpret_cast<
             FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(bytes());
       }
+
+      // Release the ownership of the decoded message. That means that the
+      // handles won't be closed When the object is destroyed. After calling
+      // this method, the IncomingMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
 
       // These methods should only be used for testing purpose.
       // They create an IncomingMessage using the bytes of an outgoing message
@@ -3242,6 +3335,17 @@ class TestProtocol final {
     // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
+      IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                      zx_handle_t* handles = nullptr,
+                      uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                              handle_actual) {
+        Decode<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>();
+      }
+      IncomingMessage(fidl_incoming_msg_t* msg)
+          : ::fidl::internal::IncomingMessage(msg) {
+        Decode<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>();
+      }
       IncomingMessage(const IncomingMessage&) = delete;
       IncomingMessage(IncomingMessage&&) = delete;
       IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -3252,6 +3356,11 @@ class TestProtocol final {
         return reinterpret_cast<
             FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest*>(bytes());
       }
+
+      // Release the ownership of the decoded message. That means that the
+      // handles won't be closed When the object is destroyed. After calling
+      // this method, the IncomingMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
 
       // These methods should only be used for testing purpose.
       // They create an IncomingMessage using the bytes of an outgoing message
@@ -3808,6 +3917,16 @@ struct NullableUnionStruct {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct NullableUnionStruct>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct NullableUnionStruct>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -3817,6 +3936,11 @@ struct NullableUnionStruct {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct NullableUnionStruct*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -3908,6 +4032,16 @@ struct Empty {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Empty>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Empty>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -3917,6 +4051,11 @@ struct Empty {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Empty*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and

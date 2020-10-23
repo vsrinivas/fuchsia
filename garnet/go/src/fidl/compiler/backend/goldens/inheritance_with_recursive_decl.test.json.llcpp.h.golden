@@ -72,6 +72,7 @@ class Parent final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
+    void _CloseHandles();
 
     // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
@@ -150,15 +151,36 @@ class Parent final {
     // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
+      IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                      zx_handle_t* handles = nullptr,
+                      uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                              handle_actual) {
+        Decode<FirstRequest>();
+      }
+      IncomingMessage(fidl_incoming_msg_t* msg)
+          : ::fidl::internal::IncomingMessage(msg) {
+        Decode<FirstRequest>();
+      }
       IncomingMessage(const IncomingMessage&) = delete;
       IncomingMessage(IncomingMessage&&) = delete;
       IncomingMessage* operator=(const IncomingMessage&) = delete;
       IncomingMessage* operator=(IncomingMessage&&) = delete;
+      ~IncomingMessage() {
+        if (ok() && (PrimaryObject() != nullptr)) {
+          PrimaryObject()->_CloseHandles();
+        }
+      }
 
       FirstRequest* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
         return reinterpret_cast<FirstRequest*>(bytes());
       }
+
+      // Release the ownership of the decoded message. That means that the
+      // handles won't be closed When the object is destroyed. After calling
+      // this method, the IncomingMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
 
       // These methods should only be used for testing purpose.
       // They create an IncomingMessage using the bytes of an outgoing message
@@ -362,6 +384,7 @@ class Child final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
+    void _CloseHandles();
 
     // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
@@ -440,15 +463,36 @@ class Child final {
     // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
+      IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                      zx_handle_t* handles = nullptr,
+                      uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                              handle_actual) {
+        Decode<FirstRequest>();
+      }
+      IncomingMessage(fidl_incoming_msg_t* msg)
+          : ::fidl::internal::IncomingMessage(msg) {
+        Decode<FirstRequest>();
+      }
       IncomingMessage(const IncomingMessage&) = delete;
       IncomingMessage(IncomingMessage&&) = delete;
       IncomingMessage* operator=(const IncomingMessage&) = delete;
       IncomingMessage* operator=(IncomingMessage&&) = delete;
+      ~IncomingMessage() {
+        if (ok() && (PrimaryObject() != nullptr)) {
+          PrimaryObject()->_CloseHandles();
+        }
+      }
 
       FirstRequest* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
         return reinterpret_cast<FirstRequest*>(bytes());
       }
+
+      // Release the ownership of the decoded message. That means that the
+      // handles won't be closed When the object is destroyed. After calling
+      // this method, the IncomingMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
 
       // These methods should only be used for testing purpose.
       // They create an IncomingMessage using the bytes of an outgoing message
@@ -500,6 +544,7 @@ class Child final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
+    void _CloseHandles();
 
     // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedOutgoingMessage final {
@@ -578,15 +623,36 @@ class Child final {
     // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
+      IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                      zx_handle_t* handles = nullptr,
+                      uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                              handle_actual) {
+        Decode<SecondRequest>();
+      }
+      IncomingMessage(fidl_incoming_msg_t* msg)
+          : ::fidl::internal::IncomingMessage(msg) {
+        Decode<SecondRequest>();
+      }
       IncomingMessage(const IncomingMessage&) = delete;
       IncomingMessage(IncomingMessage&&) = delete;
       IncomingMessage* operator=(const IncomingMessage&) = delete;
       IncomingMessage* operator=(IncomingMessage&&) = delete;
+      ~IncomingMessage() {
+        if (ok() && (PrimaryObject() != nullptr)) {
+          PrimaryObject()->_CloseHandles();
+        }
+      }
 
       SecondRequest* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
         return reinterpret_cast<SecondRequest*>(bytes());
       }
+
+      // Release the ownership of the decoded message. That means that the
+      // handles won't be closed When the object is destroyed. After calling
+      // this method, the IncomingMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
 
       // These methods should only be used for testing purpose.
       // They create an IncomingMessage using the bytes of an outgoing message

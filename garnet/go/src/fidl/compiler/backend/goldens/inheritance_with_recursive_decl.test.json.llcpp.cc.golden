@@ -116,6 +116,8 @@ void Parent::FirstRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kParent_First_Ordinal);
 }
 
+void Parent::FirstRequest::_CloseHandles() { request.reset(); }
+
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kChild_First_Ordinal =
@@ -275,9 +277,13 @@ void Child::FirstRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kChild_First_Ordinal);
 }
 
+void Child::FirstRequest::_CloseHandles() { request.reset(); }
+
 void Child::SecondRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kChild_Second_Ordinal);
 }
+
+void Child::SecondRequest::_CloseHandles() { request.reset(); }
 
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test

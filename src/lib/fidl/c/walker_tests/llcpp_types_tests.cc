@@ -5,6 +5,7 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
@@ -13,218 +14,10 @@
 #include <optional>
 #include <utility>
 
+#include <fidl/test/coding/fuchsia/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
 
-namespace {
-
-// Manually define the coding table for FIDL messages used in these tests.
-// These will match the llcpp codegen output.
-
-extern const FidlCodedStruct NonnullableChannelMessageType;
-
-// A message with a single non-nullable channel.
-struct NonnullableChannelMessage {
-  alignas(FIDL_ALIGNMENT) fidl_message_header_t header;
-  zx::channel channel;
-
-  [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 1;
-
-  static constexpr uint32_t PrimarySize =
-      FIDL_ALIGN(sizeof(fidl_message_header_t)) + FIDL_ALIGN(sizeof(zx::channel));
-
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-
-  [[maybe_unused]] static constexpr bool HasPointer = false;
-
-  static constexpr bool IsResource = true;
-
-  static constexpr const fidl_type_t* Type = &NonnullableChannelMessageType;
-
-  static void MakeDecodedMessageHelper(
-      fidl::BytePart buffer, fidl::DecodedMessage<NonnullableChannelMessage>* out_decoded_message,
-      zx::channel* out_channel);
-};
-
-const FidlCodedHandle NonnullableChannelType = {
-    .tag = kFidlTypeHandle,
-    .nullable = kFidlNullability_Nonnullable,
-    .handle_subtype = ZX_OBJ_TYPE_CHANNEL,
-    .handle_rights = 0,
-};
-const FidlStructElement NonnullableChannelMessageFields[] = {
-    FidlStructElement::Field(&NonnullableChannelType, offsetof(NonnullableChannelMessage, channel),
-                             kFidlIsResource_Resource),
-    FidlStructElement::Padding32(offsetof(NonnullableChannelMessage, channel) + 4, 0xffffffff),
-};
-const FidlCodedStruct NonnullableChannelMessageType = {
-    .tag = kFidlTypeStruct,
-    .element_count = 2,
-    .size = sizeof(NonnullableChannelMessage),
-    .elements = NonnullableChannelMessageFields,
-    .name = "NonnullableChannelMessage",
-};
-
-extern const FidlCodedStruct InlinePODStructType;
-
-// A message with a uint64_t.
-struct InlinePODStruct {
-  uint64_t payload;
-
-  [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 0;
-
-  static constexpr uint32_t PrimarySize = FIDL_ALIGN(sizeof(payload));
-
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-
-  [[maybe_unused]] static constexpr bool HasPointer = false;
-
-  static constexpr bool IsResource = false;
-
-  static constexpr const fidl_type_t* Type = &InlinePODStructType;
-
-  static void MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t payload,
-                                       fidl::DecodedMessage<InlinePODStruct>* out_decoded_message);
-};
-
-// Full-width primitives do not need coding tables.
-const FidlStructElement InlinePODStructStructFields[] = {};
-const FidlCodedStruct InlinePODStructType = {
-    .tag = kFidlTypeStruct,
-    .element_count = 0,
-    .size = sizeof(InlinePODStruct),
-    .elements = InlinePODStructStructFields,
-    .name = "InlinePODStruct",
-};
-
-extern const FidlCodedStruct OutOfLineMessageType;
-
-// A message with an optional struct.
-struct OutOfLineMessage {
-  alignas(FIDL_ALIGNMENT) fidl_message_header_t header;
-  InlinePODStruct* optional;
-
-  [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 0;
-
-  static constexpr uint32_t PrimarySize =
-      FIDL_ALIGN(sizeof(fidl_message_header_t)) + FIDL_ALIGN(sizeof(InlinePODStruct*));
-
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-
-  [[maybe_unused]] static constexpr bool HasPointer = true;
-
-  static constexpr bool IsResource = false;
-
-  static constexpr const fidl_type_t* Type = &OutOfLineMessageType;
-
-  static void MakeDecodedMessageHelper(fidl::BytePart buffer,
-                                       std::optional<uint64_t> optional_field,
-                                       fidl::DecodedMessage<OutOfLineMessage>* out_decoded_message);
-};
-
-const FidlCodedStructPointer OptionalPointerType = {
-    .tag = kFidlTypeStructPointer,
-    .struct_type = &InlinePODStructType.coded_struct(),
-};
-const FidlStructElement OutOfLineMessageTypeFields[] = {
-    FidlStructElement::Field(&OptionalPointerType, offsetof(OutOfLineMessage, optional),
-                             kFidlIsResource_NotResource),
-};
-const FidlCodedStruct OutOfLineMessageType = {
-    .tag = kFidlTypeStruct,
-    .element_count = 1,
-    .size = sizeof(OutOfLineMessage),
-    .elements = OutOfLineMessageTypeFields,
-    .name = "OutOfLineMessage",
-};
-
-extern const FidlCodedStruct LargeStructType;
-
-// A message with a large array, such that it need to be heap-allocated.
-struct LargeStruct {
-  // 4096 * 8 = 32 KB
-  fidl::Array<uint64_t, 4096> payload;
-
-  [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 0;
-
-  static constexpr uint32_t PrimarySize = FIDL_ALIGN(sizeof(payload));
-
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-
-  [[maybe_unused]] static constexpr bool HasPointer = false;
-
-  [[maybe_unused]] static constexpr bool IsResource = false;
-
-  static constexpr const fidl_type_t* Type = &LargeStructType;
-
-  static void MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
-                                       fidl::DecodedMessage<LargeStruct>* out_decoded_message);
-};
-
-// Full-width primitives do not need coding tables.
-const FidlStructElement LargeStructStructFields[] = {};
-const FidlCodedStruct LargeStructType = {
-    .tag = kFidlTypeStruct,
-    .element_count = 0,
-    .size = sizeof(LargeStruct),
-    .elements = LargeStructStructFields,
-    .name = "LargeStruct",
-};
-
-// These two structs are used to test the stack/heap allocation selection in
-// fidl::internal::ResponseStorage
-
-struct StructOf512Bytes {
-  fidl::Array<uint8_t, 512> payload;
-
-  [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = FIDL_ALIGN(sizeof(payload));
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  [[maybe_unused]] static constexpr bool HasPointer = false;
-  [[maybe_unused]] static constexpr bool IsResource = false;
-  [[maybe_unused]] static constexpr const fidl_type_t* Type = nullptr;
-};
-
-struct StructOf513Bytes {
-  fidl::Array<uint8_t, 513> payload;
-
-  [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = FIDL_ALIGN(sizeof(payload));
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  [[maybe_unused]] static constexpr bool HasPointer = false;
-  [[maybe_unused]] static constexpr bool IsResource = false;
-  [[maybe_unused]] static constexpr const fidl_type_t* Type = nullptr;
-};
-
-}  // namespace
-
-namespace fidl {
-
-// Manually specialize the templates.
-// These will match the llcpp codegen output.
-
-template <>
-struct IsFidlType<NonnullableChannelMessage> : public std::true_type {};
-template <>
-struct IsFidlMessage<NonnullableChannelMessage> : public std::true_type {};
-
-template <>
-struct IsFidlType<InlinePODStruct> : public std::true_type {};
-
-template <>
-struct IsFidlType<OutOfLineMessage> : public std::true_type {};
-template <>
-struct IsFidlMessage<OutOfLineMessage> : public std::true_type {};
-
-template <>
-struct IsFidlType<LargeStruct> : public std::true_type {};
-
-template <>
-struct IsFidlType<StructOf512Bytes> : public std::true_type {};
-
-template <>
-struct IsFidlType<StructOf513Bytes> : public std::true_type {};
-
-}  // namespace fidl
+using ::llcpp::fidl::test::coding::fuchsia::TypesTest;
 
 namespace {
 
@@ -243,28 +36,15 @@ void HelperExpectPeerInvalid(zx::channel& channel) {
 }
 
 TEST(LlcppTypesTests, EncodedMessageTest) {
-  // Manually construct an encoded message
-  alignas(NonnullableChannelMessage) uint8_t buf[sizeof(NonnullableChannelMessage)] = {};
-  auto msg = reinterpret_cast<NonnullableChannelMessage*>(&buf[0]);
-  msg->channel.reset(FIDL_HANDLE_PRESENT);
+  TypesTest::NonNullableChannelRequest msg(0);
 
   // Capture the extra handle here; it will not be cleaned by encoded_message
-  zx::channel channel_1 = {};
+  zx::channel channel_1;
+
+  EXPECT_EQ(zx::channel::create(0, &msg.channel, &channel_1), ZX_OK);
 
   {
-    fidl::EncodedMessage<NonnullableChannelMessage> encoded_message;
-    encoded_message.bytes() = fidl::BytePart(buf, sizeof(buf), sizeof(buf));
-    zx_handle_t* handle = encoded_message.handles().data();
-
-    // Unsafely open a channel, which should be closed automatically by encoded_message
-    {
-      zx::channel out0, out1;
-      EXPECT_EQ(zx::channel::create(0, &out0, &out1), ZX_OK);
-      *handle = out0.release();
-      channel_1 = std::move(out1);
-    }
-
-    encoded_message.handles().set_actual(1);
+    fidl::OwnedOutgoingMessage<TypesTest::NonNullableChannelRequest> encoded(&msg);
 
     HelperExpectPeerValid(channel_1);
   }
@@ -273,24 +53,19 @@ TEST(LlcppTypesTests, EncodedMessageTest) {
 }
 
 TEST(LlcppTypesTests, DecodedMessageTest) {
-  // Manually construct a decoded message
-  alignas(NonnullableChannelMessage) uint8_t buf[sizeof(NonnullableChannelMessage)] = {};
-  auto msg = reinterpret_cast<NonnullableChannelMessage*>(&buf[0]);
+  TypesTest::NonNullableChannelRequest msg(0);
 
-  // Capture the extra handle here; it will not be cleaned by decoded_message
-  zx::channel channel_1 = {};
+  // Capture the extra handle here; it will not be cleaned by encoded.
+  zx::channel channel_1;
+
+  EXPECT_EQ(zx::channel::create(0, &msg.channel, &channel_1), ZX_OK);
+
+  fidl::OwnedOutgoingMessage<TypesTest::NonNullableChannelRequest> encoded(&msg);
 
   {
-    // Unsafely open a channel, which should be closed automatically by decoded_message
-    {
-      zx::channel out0, out1;
-      EXPECT_EQ(zx::channel::create(0, &out0, &out1), ZX_OK);
-      msg->channel = std::move(out0);
-      channel_1 = std::move(out1);
-    }
-
-    fidl::DecodedMessage<NonnullableChannelMessage> decoded_message(
-        fidl::BytePart(buf, sizeof(buf), sizeof(buf)));
+    auto decoded =
+        fidl::IncomingMessage<TypesTest::NonNullableChannelRequest>::FromOutgoingWithRawHandleCopy(
+            &encoded);
 
     HelperExpectPeerValid(channel_1);
   }
@@ -298,76 +73,70 @@ TEST(LlcppTypesTests, DecodedMessageTest) {
   HelperExpectPeerInvalid(channel_1);
 }
 
-// Start with an encoded message, then decode and back.
+// Start with a message, then encode, decode and encode again.
 TEST(LlcppTypesTests, RoundTripTest) {
-  alignas(NonnullableChannelMessage) uint8_t buf[sizeof(NonnullableChannelMessage)] = {};
-  auto msg = reinterpret_cast<NonnullableChannelMessage*>(&buf[0]);
-  msg->header.txid = 10;
-  msg->header.ordinal = (42lu << 32);
-  msg->channel.reset(FIDL_HANDLE_PRESENT);
+  TypesTest::NonNullableChannelRequest msg(10);
 
   // Capture the extra handle here; it will not be cleaned by encoded_message
-  zx::channel channel_1 = {};
+  zx::channel channel_1;
 
-  fidl::EncodedMessage<NonnullableChannelMessage>* encoded_message =
-      new fidl::EncodedMessage<NonnullableChannelMessage>();
+  EXPECT_EQ(zx::channel::create(0, &msg.channel, &channel_1), ZX_OK);
 
-  encoded_message->bytes() = fidl::BytePart(buf, sizeof(buf), sizeof(buf));
-  zx_handle_t* handle = encoded_message->handles().data();
+  zx_handle_t unsafe_handle_backup(msg.channel.get());
 
-  zx_handle_t unsafe_handle_backup;
-  // Unsafely open a channel, which should be closed automatically by encoded_message
-  {
-    zx::channel out0, out1;
-    EXPECT_EQ(zx::channel::create(0, &out0, &out1), ZX_OK);
-    *handle = out0.release();
-    unsafe_handle_backup = *handle;
-    channel_1 = std::move(out1);
-  }
+  // We need to define our own storage because it is used after encoded is deleted.
+  FIDL_ALIGNDECL uint8_t storage[sizeof(TypesTest::NonNullableChannelRequest)];
 
-  encoded_message->handles().set_actual(1);
+  auto encoded = new fidl::UnownedOutgoingMessage<TypesTest::NonNullableChannelRequest>(
+      storage, sizeof(storage), &msg);
+  EXPECT_EQ(encoded->GetOutgoingMessage().byte_actual(),
+            sizeof(TypesTest::NonNullableChannelRequest));
 
-  uint8_t golden_encoded[] = {10,  0,   0,   0,    // txid
-                              0,   0,   0,   0,    // reserved
-                              0,   0,   0,   0,    // low bytes of ordinal (was flags)
-                              42,  0,   0,   0,    // high bytes of ordinal
-                              255, 255, 255, 255,  // handle present
-                              0,   0,   0,   0};
+  uint8_t golden_encoded[] = {0x0a, 0x00, 0x00, 0x00,   // txid
+                              0x00, 0x00, 0x00, 0x01,   // flags and version
+                              0xa1, 0xd4, 0x9b, 0x76,   // low bytes of ordinal
+                              0x82, 0x41, 0x13, 0x06,   // high bytes of ordinal
+                              0xff, 0xff, 0xff, 0xff,   // handle present
+                              0x00, 0x00, 0x00, 0x00};  // Padding
 
   // Byte-accurate comparison
-  EXPECT_EQ(memcmp(golden_encoded, buf, sizeof(buf)), 0);
+  EXPECT_EQ(memcmp(golden_encoded, encoded->GetOutgoingMessage().bytes(),
+                   encoded->GetOutgoingMessage().byte_actual()),
+            0);
 
   HelperExpectPeerValid(channel_1);
 
   // Decode
-  auto decode_result = fidl::Decode(std::move(*encoded_message));
-  auto& decoded_message = decode_result.message;
-  EXPECT_EQ(decode_result.status, ZX_OK);
-  EXPECT_NULL(decode_result.error, "%s", decode_result.error);
-  EXPECT_EQ(decoded_message.message()->header.txid, 10);
-  EXPECT_EQ(decoded_message.message()->header.ordinal, (42lu << 32));
-  EXPECT_EQ(decoded_message.message()->channel.get(), unsafe_handle_backup);
+  auto decoded =
+      fidl::IncomingMessage<TypesTest::NonNullableChannelRequest>::FromOutgoingWithRawHandleCopy(
+          encoded);
+  EXPECT_TRUE(decoded.ok());
+  EXPECT_NULL(decoded.error(), "%s", decoded.error());
+  EXPECT_EQ(decoded.PrimaryObject()->_hdr.txid, 10);
+  EXPECT_EQ(decoded.PrimaryObject()->_hdr.ordinal, 0x6134182769bd4a1lu);
+  EXPECT_EQ(decoded.PrimaryObject()->channel.get(), unsafe_handle_backup);
   // encoded_message should be consumed
-  EXPECT_EQ(encoded_message->handles().actual(), 0);
-  EXPECT_EQ(encoded_message->bytes().actual(), 0);
-  // If we destroy encoded_message, it should not accidentally close the channel
-  delete encoded_message;
+  EXPECT_EQ(encoded->GetOutgoingMessage().handle_actual(), 0);
+  delete encoded;
+  // At this point, encoded is destroyed but not decoded, it should not accidentally close the
+  // channel.
   HelperExpectPeerValid(channel_1);
 
   // Encode
   {
-    auto encode_result = fidl::Encode(std::move(decoded_message));
-    auto& encoded_message = encode_result.message;
-    EXPECT_EQ(encode_result.status, ZX_OK);
-    EXPECT_NULL(encode_result.error, "%s", encode_result.error);
-    // decoded_message should be consumed
-    EXPECT_EQ(decoded_message.message(), nullptr);
+    fidl::OwnedOutgoingMessage<TypesTest::NonNullableChannelRequest> encoded2(
+        decoded.PrimaryObject());
+    EXPECT_TRUE(encoded2.ok());
+    EXPECT_NULL(encoded2.error(), "%s", encoded2.error());
 
     // Byte-level comparison
-    EXPECT_EQ(encoded_message.bytes().actual(), sizeof(buf));
-    EXPECT_EQ(encoded_message.handles().actual(), 1);
-    EXPECT_EQ(encoded_message.handles().data()[0], unsafe_handle_backup);
-    EXPECT_EQ(memcmp(golden_encoded, encoded_message.bytes().data(), sizeof(buf)), 0);
+    EXPECT_EQ(encoded2.GetOutgoingMessage().byte_actual(),
+              sizeof(TypesTest::NonNullableChannelRequest));
+    EXPECT_EQ(memcmp(golden_encoded, encoded2.GetOutgoingMessage().bytes(),
+                     encoded2.GetOutgoingMessage().byte_actual()),
+              0);
+    EXPECT_EQ(encoded2.GetOutgoingMessage().handle_actual(), 1);
+    EXPECT_EQ(encoded2.GetOutgoingMessage().handles()[0], unsafe_handle_backup);
 
     HelperExpectPeerValid(channel_1);
   }
@@ -416,109 +185,19 @@ TEST(LlcppTypesTests, UninitializedBufferHeapAllocationAlignmentTest) {
   ASSERT_TRUE(reinterpret_cast<uintptr_t>(array_of_100.get()) % 8 == 0);
 }
 
-template <typename TestMessage>
-class MySyncCall;
-
-// Helper to populate a OwnedSyncCallBase<NonnullableChannelMessage> with a decoded message,
-// as if receiving a FIDL reply.
-void NonnullableChannelMessage::MakeDecodedMessageHelper(
-    fidl::BytePart buffer, fidl::DecodedMessage<NonnullableChannelMessage>* out_decoded_message,
-    zx::channel* out_channel) {
-  auto msg = reinterpret_cast<NonnullableChannelMessage*>(buffer.data());
-  memset(buffer.data(), 0, buffer.capacity());
-
-  {
-    zx::channel out0, out1;
-    EXPECT_EQ(zx::channel::create(0, &out0, &out1), ZX_OK);
-    msg->channel = std::move(out0);
-    // Capture the extra handle here; it will not be cleaned by decoded_message
-    *out_channel = std::move(out1);
-
-    fidl::BytePart full_buffer(std::move(buffer));
-    full_buffer.set_actual(sizeof(NonnullableChannelMessage));
-    fidl::DecodedMessage<NonnullableChannelMessage> decoded_message(std::move(full_buffer));
-    *out_decoded_message = std::move(decoded_message);
-  }
-
-  HelperExpectPeerValid(*out_channel);
-}
-
-// Helper to populate a OwnedSyncCallBase<InlinePODStruct> with a decoded message,
-// as if receiving a FIDL reply.
-void InlinePODStruct::MakeDecodedMessageHelper(
-    fidl::BytePart buffer, uint64_t payload,
-    fidl::DecodedMessage<InlinePODStruct>* out_decoded_message) {
-  auto msg = reinterpret_cast<InlinePODStruct*>(buffer.data());
-  memset(buffer.data(), 0, buffer.capacity());
-  msg->payload = payload;
-
-  {
-    fidl::BytePart full_buffer(std::move(buffer));
-    full_buffer.set_actual(sizeof(InlinePODStruct));
-    fidl::DecodedMessage<InlinePODStruct> decoded_message(std::move(full_buffer));
-    *out_decoded_message = std::move(decoded_message);
-  }
-
-  EXPECT_EQ(out_decoded_message->message()->payload, payload);
-}
-
-// Helper to populate a OwnedSyncCallBase<OutOfLineMessage> with a decoded message,
-// as if receiving a FIDL reply.
-void OutOfLineMessage::MakeDecodedMessageHelper(
-    fidl::BytePart buffer, std::optional<uint64_t> optional_field,
-    fidl::DecodedMessage<OutOfLineMessage>* out_decoded_message) {
-  auto msg = reinterpret_cast<OutOfLineMessage*>(buffer.data());
-  memset(buffer.data(), 0, buffer.capacity());
-
-  if (optional_field) {
-    ASSERT_EQ(buffer.capacity(), FIDL_ALIGN(OutOfLineMessage::PrimarySize) +
-                                     FIDL_ALIGN(OutOfLineMessage::MaxOutOfLine));
-    auto out_of_line = reinterpret_cast<InlinePODStruct*>(
-        reinterpret_cast<uint8_t*>(msg) + FIDL_ALIGN(OutOfLineMessage::PrimarySize));
-    out_of_line->payload = optional_field.value();
-    msg->optional = out_of_line;
-  } else {
-    ASSERT_GE(buffer.capacity(), FIDL_ALIGN(OutOfLineMessage::PrimarySize));
-    msg->optional = nullptr;
-  }
-
-  {
-    fidl::BytePart full_buffer(std::move(buffer));
-    full_buffer.set_actual(sizeof(OutOfLineMessage));
-    fidl::DecodedMessage<OutOfLineMessage> decoded_message(std::move(full_buffer));
-    *out_decoded_message = std::move(decoded_message);
-  }
-}
-
-// Helper to populate a OwnedSyncCallBase<LargeStruct> with a decoded message,
-// as if receiving a FIDL reply.
-void LargeStruct::MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
-                                           fidl::DecodedMessage<LargeStruct>* out_decoded_message) {
-  auto msg = reinterpret_cast<LargeStruct*>(buffer.data());
-  memset(buffer.data(), 0, buffer.capacity());
-  for (auto& x : msg->payload) {
-    x = fill;
-  }
-
-  {
-    fidl::BytePart full_buffer(std::move(buffer));
-    full_buffer.set_actual(sizeof(LargeStruct));
-    fidl::DecodedMessage<LargeStruct> decoded_message(std::move(full_buffer));
-    *out_decoded_message = std::move(decoded_message);
-  }
-
-  for (const auto& x : out_decoded_message->message()->payload) {
-    EXPECT_EQ(x, fill);
-  }
-}
-
 TEST(LlcppTypesTests, ResponseStorageAllocationStrategyTest) {
   // The stack allocation limit of 512 bytes is defined in
   // zircon/system/ulib/fidl/include/lib/fidl/llcpp/sync_call.h
-  ASSERT_EQ(sizeof(fidl::internal::ResponseStorage<StructOf512Bytes>), 512);
 
-  // Since the buffer is on heap, |ResponseStorage| becomes a pointer.
-  ASSERT_EQ(sizeof(fidl::internal::ResponseStorage<StructOf513Bytes>), sizeof(std::uintptr_t));
+  static_assert(sizeof(TypesTest::RequestOf512BytesRequest) == 512);
+  // Buffers for messages no bigger than 512 bytes are embedded, for this request,
+  // OwnedOutgoingMessage size is bigger than 512 bytes.
+  static_assert(sizeof(fidl::OwnedOutgoingMessage<TypesTest::RequestOf512BytesRequest>) > 512);
+
+  static_assert(sizeof(TypesTest::RequestOf513BytesRequest) == 520);
+  // Buffers for messages bigger than 512 bytes are store on the heap, for this request,
+  // OwnedOutgoingMessage size is smaller than 512 bytes.
+  static_assert(sizeof(fidl::OwnedOutgoingMessage<TypesTest::RequestOf513BytesRequest>) < 512);
 }
 
 }  // namespace

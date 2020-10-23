@@ -127,6 +127,16 @@ struct Padding7ByteMiddle {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding7ByteMiddle>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding7ByteMiddle>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -136,6 +146,11 @@ struct Padding7ByteMiddle {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding7ByteMiddle*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -231,6 +246,16 @@ struct Padding7ByteEnd {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding7ByteEnd>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding7ByteEnd>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -240,6 +265,11 @@ struct Padding7ByteEnd {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding7ByteEnd*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -336,6 +366,16 @@ struct Padding6ByteMiddle {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding6ByteMiddle>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding6ByteMiddle>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -345,6 +385,11 @@ struct Padding6ByteMiddle {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding6ByteMiddle*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -440,6 +485,16 @@ struct Padding6ByteEnd {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding6ByteEnd>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding6ByteEnd>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -449,6 +504,11 @@ struct Padding6ByteEnd {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding6ByteEnd*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -547,6 +607,16 @@ struct Padding5ByteMiddle {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding5ByteMiddle>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding5ByteMiddle>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -556,6 +626,11 @@ struct Padding5ByteMiddle {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding5ByteMiddle*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -653,6 +728,16 @@ struct Padding5ByteEnd {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding5ByteEnd>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding5ByteEnd>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -662,6 +747,11 @@ struct Padding5ByteEnd {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding5ByteEnd*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -758,6 +848,16 @@ struct Padding4ByteMiddle {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding4ByteMiddle>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding4ByteMiddle>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -767,6 +867,11 @@ struct Padding4ByteMiddle {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding4ByteMiddle*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -862,6 +967,16 @@ struct Padding4ByteEnd {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding4ByteEnd>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding4ByteEnd>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -871,6 +986,11 @@ struct Padding4ByteEnd {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding4ByteEnd*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -972,6 +1092,16 @@ struct Padding4ByteAlignmentLength12 {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding4ByteAlignmentLength12>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding4ByteAlignmentLength12>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -981,6 +1111,11 @@ struct Padding4ByteAlignmentLength12 {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding4ByteAlignmentLength12*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -1077,6 +1212,16 @@ struct Padding3ByteMiddle {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding3ByteMiddle>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding3ByteMiddle>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -1086,6 +1231,11 @@ struct Padding3ByteMiddle {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding3ByteMiddle*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -1181,6 +1331,16 @@ struct Padding3ByteEnd {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding3ByteEnd>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding3ByteEnd>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -1190,6 +1350,11 @@ struct Padding3ByteEnd {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding3ByteEnd*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -1286,6 +1451,16 @@ struct Padding2ByteMiddle {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding2ByteMiddle>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding2ByteMiddle>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -1295,6 +1470,11 @@ struct Padding2ByteMiddle {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding2ByteMiddle*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -1390,6 +1570,16 @@ struct Padding2ByteEnd {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding2ByteEnd>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding2ByteEnd>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -1399,6 +1589,11 @@ struct Padding2ByteEnd {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding2ByteEnd*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -1498,6 +1693,16 @@ struct Padding2ByteAlignmentLength6 {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding2ByteAlignmentLength6>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding2ByteAlignmentLength6>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -1507,6 +1712,11 @@ struct Padding2ByteAlignmentLength6 {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding2ByteAlignmentLength6*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -1603,6 +1813,16 @@ struct Padding1ByteMiddle {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding1ByteMiddle>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding1ByteMiddle>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -1612,6 +1832,11 @@ struct Padding1ByteMiddle {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding1ByteMiddle*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and
@@ -1707,6 +1932,16 @@ struct Padding1ByteEnd {
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
+                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct Padding1ByteEnd>();
+    }
+    IncomingMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct Padding1ByteEnd>();
+    }
     IncomingMessage(const IncomingMessage&) = delete;
     IncomingMessage(IncomingMessage&&) = delete;
     IncomingMessage* operator=(const IncomingMessage&) = delete;
@@ -1716,6 +1951,11 @@ struct Padding1ByteEnd {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<struct Padding1ByteEnd*>(bytes());
     }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the IncomingMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
 
     // These methods should only be used for testing purpose.
     // They create an IncomingMessage using the bytes of an outgoing message and

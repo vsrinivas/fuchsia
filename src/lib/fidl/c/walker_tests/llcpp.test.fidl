@@ -4,6 +4,8 @@
 
 library fidl.test.coding.fuchsia;
 
+using zx;
+
 enum TestEnum : uint32 {
     ONE = 1;
 };
@@ -25,4 +27,10 @@ protocol Simple {
 
     /// Never actually replies.  Just closes instead.
     Close() -> (int32 v);
+};
+
+protocol TypesTest {
+    NonNullableChannel(zx.handle:CHANNEL channel);
+    RequestOf512Bytes(array<byte>:496 value);
+    RequestOf513Bytes(array<byte>:497 value);
 };

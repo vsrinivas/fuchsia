@@ -116,44 +116,37 @@ void TearDownAsyncCServerHelper(async_loop_t* loop) { async_loop_destroy(loop); 
 
 }  // namespace
 
-template <typename T>
-void WithEncodedMessage(T callback) {
-  // manually call the server using generated message definitions
-  FIDL_ALIGNDECL uint8_t storage[512] = {};
-  fidl::BytePart bytes(storage, sizeof(storage),
-                       sizeof(basictypes::TestInterface::ConsumeSimpleStructRequest));
-  new (storage) basictypes::TestInterface::ConsumeSimpleStructRequest(0);
-  fidl::DecodedMessage<basictypes::TestInterface::ConsumeSimpleStructRequest> request(
-      std::move(bytes));
-  request.message()->arg.field = 123;
+static constexpr size_t kNumRow = 5;
+static constexpr size_t kNumCol = 4;
+static constexpr size_t kNumHandlesInArray = kNumRow * kNumCol;
+
+struct FillRequestHandles {
+  zx::eventpair single_handle_ourside;
+  std::unique_ptr<zx::eventpair[]> handle_our_side;
+  FillRequestHandles() : handle_our_side(new zx::eventpair[kNumHandlesInArray]) {}
+};
+
+void FillRequest(FillRequestHandles& handles,
+                 basictypes::TestInterface::ConsumeSimpleStructRequest& request) {
+  request.arg.field = 123;
   // make sure array shape is as expected (5 by 4)
-  constexpr size_t kNumRow = 5;
-  constexpr size_t kNumCol = 4;
-  constexpr size_t kNumHandlesInArray = kNumRow * kNumCol;
-  static_assert(decltype(request.message()->arg.arr)::size() == kNumRow);
-  static_assert(std::remove_reference_t<decltype(request.message()->arg.arr[0])>::size() ==
-                kNumCol);
+  static_assert(decltype(request.arg.arr)::size() == kNumRow);
+  static_assert(std::remove_reference_t<decltype(request.arg.arr[0])>::size() == kNumCol);
   // insert handles to be sent over
   zx::eventpair single_handle_payload;
-  zx::eventpair single_handle_ourside;
-  ASSERT_OK(zx::eventpair::create(0, &single_handle_ourside, &single_handle_payload));
+  ASSERT_OK(zx::eventpair::create(0, &handles.single_handle_ourside, &single_handle_payload));
   std::unique_ptr<zx::eventpair[]> handle_payload(new zx::eventpair[kNumHandlesInArray]);
-  std::unique_ptr<zx::eventpair[]> handle_our_side(new zx::eventpair[kNumHandlesInArray]);
   for (size_t i = 0; i < kNumHandlesInArray; i++) {
-    ASSERT_OK(zx::eventpair::create(0, &handle_our_side[i], &handle_payload[i]));
+    ASSERT_OK(zx::eventpair::create(0, &handles.handle_our_side[i], &handle_payload[i]));
   }
   // fill the |ep| field
-  request.message()->arg.ep = std::move(single_handle_payload);
+  request.arg.ep = std::move(single_handle_payload);
   // fill the 2D handles array
   for (size_t i = 0; i < kNumRow; i++) {
     for (size_t j = 0; j < kNumCol; j++) {
-      request.message()->arg.arr[i][j] = std::move(handle_payload[i * kNumCol + j]);
+      request.arg.arr[i][j] = std::move(handle_payload[i * kNumCol + j]);
     }
   }
-  auto encode_result = fidl::Encode(std::move(request));
-  ASSERT_OK(encode_result.status);
-
-  callback(std::move(encode_result));
 }
 
 TEST(BasicTypesTest, RawChannelCallStruct) {
@@ -163,17 +156,22 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
   async_loop_t* loop = nullptr;
   ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
-  WithEncodedMessage(
-      [&](fidl::EncodeResult<basictypes::TestInterface::ConsumeSimpleStructRequest> encode_result) {
-        FIDL_ALIGNDECL uint8_t response_storage[512];
-        fidl::BytePart response_bytes(&response_storage[0], sizeof(response_storage));
-        auto response =
-            fidl::Call(client, std::move(encode_result.message), std::move(response_bytes));
+  basictypes::TestInterface::ConsumeSimpleStructRequest request(0);
+  FillRequestHandles handles;
+  FillRequest(handles, request);
+  fidl::OwnedOutgoingMessage<basictypes::TestInterface::ConsumeSimpleStructRequest> encoded(
+      &request);
 
-        ASSERT_OK(response.status);
-        auto decode_result = fidl::Decode(std::move(response.message));
-        ASSERT_EQ(decode_result.message.message()->field, 123);
-      });
+  FIDL_ALIGNDECL uint8_t response_storage[512];
+  // Do the call and decode the received response.
+  encoded.GetOutgoingMessage().Call<basictypes::TestInterface::ConsumeSimpleStructResponse>(
+      client.get(), response_storage, sizeof(response_storage));
+
+  ASSERT_TRUE(encoded.ok());
+
+  auto response =
+      reinterpret_cast<basictypes::TestInterface::ConsumeSimpleStructResponse*>(response_storage);
+  ASSERT_EQ(response->field, 123);
 
   TearDownAsyncCServerHelper(loop);
 }
@@ -185,15 +183,18 @@ TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
   async_loop_t* loop = nullptr;
   ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
-  WithEncodedMessage(
-      [&](fidl::EncodeResult<basictypes::TestInterface::ConsumeSimpleStructRequest> encode_result) {
-        FIDL_ALIGNDECL uint8_t response_storage[512];
-        fidl::BytePart response_bytes(&response_storage[0], sizeof(response_storage));
-        auto response = fidl::Call(client, std::move(encode_result.message),
-                                   std::move(response_bytes), zx::time::infinite_past());
+  basictypes::TestInterface::ConsumeSimpleStructRequest request(0);
+  FillRequestHandles handles;
+  FillRequest(handles, request);
+  fidl::OwnedOutgoingMessage<basictypes::TestInterface::ConsumeSimpleStructRequest> encoded(
+      &request);
 
-        ASSERT_EQ(ZX_ERR_TIMED_OUT, response.status);
-      });
+  FIDL_ALIGNDECL uint8_t response_storage[512];
+  // Do the call and decode the received response.
+  encoded.GetOutgoingMessage().Call<basictypes::TestInterface::ConsumeSimpleStructResponse>(
+      client.get(), response_storage, sizeof(response_storage), ZX_TIME_INFINITE_PAST);
+
+  ASSERT_EQ(encoded.status(), ZX_ERR_TIMED_OUT);
 
   TearDownAsyncCServerHelper(loop);
 }
