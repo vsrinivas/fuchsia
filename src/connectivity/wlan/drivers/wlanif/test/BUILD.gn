@@ -2,8 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test/test_package.gni")
+
+bind_test("wlanif_bind_test") {
+  rules = "//src/connectivity/wlan/drivers/wlanif/wlanif.bind"
+  tests = "wlanif_bind_test.json"
+  deps = [ "//src/devices/bind/fuchsia.wlan" ]
+}
 
 executable("convert_unittest") {
   output_name = "wlanif_convert_unittest"
@@ -55,6 +62,7 @@ executable("impl_unittest") {
 
 unittest_package("wlanif_unittest") {
   deps = [
+    ":wlanif_bind_test",
     ":convert_unittest",
     ":device_unittest",
     ":impl_unittest",

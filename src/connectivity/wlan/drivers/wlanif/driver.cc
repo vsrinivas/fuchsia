@@ -4,12 +4,12 @@
 
 #include "driver.h"
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <zircon/status.h>
 
 #include "device.h"
+#include "src/connectivity/wlan/drivers/wlanif/wlanif-bind.h"
 
 zx_status_t wlanif_bind(void* ctx, zx_device_t* device) {
   zxlogf(INFO, "%s", __func__);
@@ -43,5 +43,4 @@ static constexpr zx_driver_ops_t wlanif_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(wlan, wlanif_driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_WLANIF_IMPL), ZIRCON_DRIVER_END(wlan)
+ZIRCON_DRIVER(wlan, wlanif_driver_ops, "zircon", "0.1");
