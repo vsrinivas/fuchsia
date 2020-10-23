@@ -51,7 +51,6 @@ DEFAULT_BUILDIDTOOL_BIN = os.path.join(PREBUILT_DIR, 'tools', 'buildidtool', 'li
 # host test constants
 HOST_TEST_PATH = os.path.join(SCRIPT_DIR, 'tests', 'run-host-tests.sh')
 
-
 class GnTester(object):
     """Class for GN SDK test setup, execution, and cleanup."""
 
@@ -289,6 +288,15 @@ class GnTester(object):
             self._run_test("_verify_component_override", arch)
             self._run_test("_verify_cmx_touch", arch)
 
+    def _run_devtool_e2e_tests(self):
+       """Tests the SDK dev tools in sdk/gn/base/bin."""
+       invocation = [
+            os.path.join(SCRIPT_DIR, "tests", "e2e", "test.py"),
+            os.path.join(SCRIPT_DIR, "third_party","fuchsia-sdk","bin"),
+       ]
+       print 'Running devtool e2e tests: "%s"' % ' '.join(invocation)
+       self._run_cmd(invocation, cwd=self.proj_dir)
+
     def _host_tests(self, arch):
         invocation = [
             HOST_TEST_PATH,
@@ -304,6 +312,7 @@ class GnTester(object):
             print "The GN SDK does not support building on macOS."
         else:
             self._run_build_tests()
+            self._run_devtool_e2e_tests()
         return self._test_failed
 
 

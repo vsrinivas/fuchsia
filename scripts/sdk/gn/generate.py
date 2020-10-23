@@ -597,6 +597,13 @@ def run_generator(
         wrkspc_sdk_dir = os.path.join(tests, 'third_party', 'fuchsia-sdk')
         copy_tree(output, wrkspc_sdk_dir)
 
+        # Copy test metadata to the workspace. meta/manifest.json tells the
+        # emulator tools where the SDK for integration testing is located.
+        # This must be done after the GN SDK is copied into the test workspace,
+        # which would otherwise overwrite these contents.
+        testdata = os.path.join(SCRIPT_DIR, 'testdata')
+        copy_tree(os.path.join(testdata, 'meta'), os.path.join(wrkspc_sdk_dir, 'meta'))
+
     if output_archive:
         if not create_archive(output_archive, output):
             return 1
