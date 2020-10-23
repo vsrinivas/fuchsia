@@ -72,6 +72,22 @@ pub trait TimeoutExt: Future + Sized {
     {
         OnTimeout { timer: Timer::new(time), future: self, on_timeout: Some(on_timeout) }
     }
+
+    /// Wraps the future in a stall-guard, calling `on_stalled` to produce a result
+    /// when the future hasn't been otherwise polled within the `timeout`.
+    /// This is a heuristic - spurious wakeups will keep the detection from triggering,
+    /// and moving all work to external tasks or threads with force the triggering early.
+    fn on_stalled<OS>(self, timeout: std::time::Duration, on_stalled: OS) -> OnStalled<Self, OS>
+    where
+        OS: FnOnce() -> Self::Output,
+    {
+        OnStalled {
+            timer: Timer::new(timeout),
+            future: self,
+            timeout,
+            on_stalled: Some(on_stalled),
+        }
+    }
 }
 
 impl<F: Future + Sized> TimeoutExt for F {}
@@ -114,6 +130,54 @@ where
             return Poll::Ready(item);
         }
         Poll::Pending
+    }
+}
+
+/// A wrapper for a future who's steady progress is monitored and will complete with the provided
+/// closure if no progress is made before the timeout.
+#[derive(Debug)]
+#[must_use = "futures do nothing unless polled"]
+pub struct OnStalled<F, OS> {
+    timer: Timer,
+    future: F,
+    timeout: std::time::Duration,
+    on_stalled: Option<OS>,
+}
+
+impl<F, OS> OnStalled<F, OS> {
+    // Safety: this is safe because `OnTimeout` is only `Unpin` if
+    // the future is `Unpin`, and aside from `future`, all other fields are
+    // treated as movable.
+    unsafe_unpinned!(timer: Timer);
+    unsafe_pinned!(future: F);
+    unsafe_unpinned!(timeout: std::time::Duration);
+    unsafe_unpinned!(on_stalled: Option<OS>);
+}
+
+impl<F: Unpin, OT> Unpin for OnStalled<F, OT> {}
+
+impl<F: Future, OS> Future for OnStalled<F, OS>
+where
+    OS: FnOnce() -> F::Output,
+{
+    type Output = F::Output;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        if let Poll::Ready(item) = self.as_mut().future().poll(cx) {
+            return Poll::Ready(item);
+        }
+        match self.as_mut().timer().poll_unpin(cx) {
+            Poll::Ready(()) => {
+                let os =
+                    OnStalled::on_stalled(self.as_mut()).take().expect("polled after completion");
+                Poll::Ready((os)())
+            }
+            Poll::Pending => {
+                let new_timer = Timer::new(*self.as_mut().timeout());
+                *self.as_mut().timer() = new_timer;
+                Poll::Pending
+            }
+        }
     }
 }
 
@@ -210,5 +274,31 @@ mod timer_tests {
             Either::Left(()) => {}
             Either::Right(()) => panic!("wrong timer fired"),
         }
+    }
+
+    #[test]
+    fn can_detect_stalls() {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        use std::sync::Arc;
+        use std::time::Duration;
+        let runs = Arc::new(AtomicU64::new(0));
+        assert_eq!(
+            {
+                let runs = runs.clone();
+                Executor::new().unwrap().run_singlethreaded(
+                    async move {
+                        let mut sleep = Duration::from_millis(1);
+                        loop {
+                            Timer::new(sleep).await;
+                            sleep *= 2;
+                            runs.fetch_add(1, Ordering::SeqCst);
+                        }
+                    }
+                    .on_stalled(Duration::from_secs(1), || 1u8),
+                )
+            },
+            1u8
+        );
+        assert!(runs.load(Ordering::SeqCst) >= 9);
     }
 }
