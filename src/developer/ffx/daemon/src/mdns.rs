@@ -10,7 +10,7 @@ use {
     crate::net::IsLocalAddr,
     crate::target::*,
     ::mdns::protocol as dns,
-    anyhow::Result,
+    anyhow::{Context as _, Result},
     async_std::sync::Mutex,
     async_std::task::JoinHandle,
     async_std::{net::UdpSocket, task},
@@ -44,31 +44,87 @@ async fn interface_discovery(
     query_interval: Duration,
     ttl: u32,
 ) {
-    let v4_listen_socket = Arc::new(make_listen_socket((MDNS_MCAST_V4, MDNS_PORT).into()).unwrap());
-    let v6_listen_socket = Arc::new(make_listen_socket((MDNS_MCAST_V6, MDNS_PORT).into()).unwrap());
-    {
-        let mut tasks = socket_tasks.lock().await;
-        tasks.insert(
-            (MDNS_MCAST_V4, MDNS_PORT).into(),
-            task::spawn(recv_loop(v4_listen_socket.clone(), e.clone())),
-        );
-        tasks.insert(
-            (MDNS_MCAST_V6, MDNS_PORT).into(),
-            task::spawn(recv_loop(v6_listen_socket.clone(), e.clone())),
-        );
-    }
+    // See fxbug.dev/62617#c10 for details. A macOS system can end up in
+    // a situation where the default routes for protocols are on
+    // non-functional interfaces, and under such conditions the wildcard
+    // listen socket binds will fail. We will repeat attempting to bind
+    // them, as newly added interfaces later may unstick the issue, if
+    // they introduce new routes. These boolean flags are used to
+    // suppress the production of a log output in every interface
+    // iteration.
+    // In order to manually reproduce these conditions on a macOS
+    // system, open Network.prefpane, and for each connection in the
+    // list select Advanced... > TCP/IP > Configure IPv6 > Link-local
+    // only. Click apply, then restart the ffx daemon.
+    let mut should_log_v4_listen_error = true;
+    let mut should_log_v6_listen_error = true;
+
+    let mut v4_listen_socket: Option<Arc<UdpSocket>> = None;
+    let mut v6_listen_socket: Option<Arc<UdpSocket>> = None;
 
     loop {
         // Block holds the lock on the task map.
         {
             let mut tasks = socket_tasks.lock().await;
 
+            if v4_listen_socket.is_none() {
+                match make_listen_socket((MDNS_MCAST_V4, MDNS_PORT).into())
+                    .context("make_listen_socket for IPv4")
+                {
+                    Ok(sock) => {
+                        let sock = Arc::new(sock);
+                        v4_listen_socket.replace(sock.clone());
+                        tasks.insert(
+                            (MDNS_MCAST_V4, MDNS_PORT).into(),
+                            task::spawn(recv_loop(sock.clone(), e.clone())),
+                        );
+                        should_log_v4_listen_error = true;
+                    }
+                    Err(err) => {
+                        if should_log_v4_listen_error {
+                            log::error!(
+                                "mdns: unable to bind IPv4 listen socket: {}. Discovery may fail.",
+                                err
+                            );
+                            should_log_v4_listen_error = false;
+                        }
+                    }
+                }
+            }
+
+            if v6_listen_socket.is_none() {
+                match make_listen_socket((MDNS_MCAST_V6, MDNS_PORT).into())
+                    .context("make_listen_socket for IPv6")
+                {
+                    Ok(sock) => {
+                        let sock = Arc::new(sock);
+                        v6_listen_socket.replace(sock.clone());
+                        tasks.insert(
+                            (MDNS_MCAST_V6, MDNS_PORT).into(),
+                            task::spawn(recv_loop(sock.clone(), e.clone())),
+                        );
+                        should_log_v6_listen_error = true;
+                    }
+                    Err(err) => {
+                        if should_log_v6_listen_error {
+                            log::error!(
+                                "mdns: unable to bind IPv6 listen socket: {}. Discovery may fail.",
+                                err
+                            );
+                            should_log_v6_listen_error = false;
+                        }
+                    }
+                }
+            }
+
             for iface in net::get_mcast_interfaces().unwrap_or(Vec::new()) {
                 let maybe_id = iface.id();
                 // Note: further below we only map over this result, and don't log repeatedly.
                 match maybe_id.as_ref() {
                     Ok(id) => {
-                        let _ = v6_listen_socket.join_multicast_v6(&MDNS_MCAST_V6, *id);
+                        if let Some(ref sock) = v6_listen_socket {
+                            let _ = sock.join_multicast_v6(&MDNS_MCAST_V6, *id);
+                        }
                     }
                     Err(err) => {
                         log::warn!("{}", err);
@@ -78,7 +134,9 @@ async fn interface_discovery(
                 for addr in iface.addrs.iter() {
                     // TODO(raggi): remove duplicate joins, log unexpected errors
                     if let SocketAddr::V4(addr) = addr {
-                        let _ = v4_listen_socket.join_multicast_v4(MDNS_MCAST_V4, *addr.ip());
+                        if let Some(ref sock) = v4_listen_socket {
+                            let _ = sock.join_multicast_v4(MDNS_MCAST_V4, *addr.ip());
+                        }
                     }
 
                     if tasks.get(addr).is_some() {
@@ -284,14 +342,19 @@ fn make_listen_socket(listen_addr: SocketAddr) -> Result<UdpSocket> {
                 socket2::Domain::ipv4(),
                 socket2::Type::dgram(),
                 Some(socket2::Protocol::udp()),
-            )?;
-            socket.set_multicast_loop_v4(false)?;
-            socket.set_reuse_address(true)?;
-            socket.set_reuse_port(true)?;
-            socket.bind(
-                &SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), listen_addr.port()).into(),
-            )?;
-            socket.join_multicast_v4(&MDNS_MCAST_V4, &Ipv4Addr::UNSPECIFIED)?;
+            )
+            .context("construct datagram socket")?;
+            socket.set_multicast_loop_v4(false).context("set_multicast_loop_v4")?;
+            socket.set_reuse_address(true).context("set_reuse_address")?;
+            socket.set_reuse_port(true).context("set_reuse_port")?;
+            socket
+                .bind(
+                    &SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), listen_addr.port()).into(),
+                )
+                .context("bind")?;
+            socket
+                .join_multicast_v4(&MDNS_MCAST_V4, &Ipv4Addr::UNSPECIFIED)
+                .context("join_multicast_v4")?;
             socket
         }
         SocketAddr::V6(_) => {
@@ -299,15 +362,18 @@ fn make_listen_socket(listen_addr: SocketAddr) -> Result<UdpSocket> {
                 socket2::Domain::ipv6(),
                 socket2::Type::dgram(),
                 Some(socket2::Protocol::udp()),
-            )?;
-            socket.set_only_v6(true)?;
-            socket.set_multicast_loop_v6(false)?;
-            socket.set_reuse_address(true)?;
-            socket.set_reuse_port(true)?;
-            socket.bind(
-                &SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), listen_addr.port()).into(),
-            )?;
-            socket.join_multicast_v6(&MDNS_MCAST_V6, 0)?;
+            )
+            .context("construct datagram socket")?;
+            socket.set_only_v6(true).context("set_only_v6")?;
+            socket.set_multicast_loop_v6(false).context("set_multicast_loop_v6")?;
+            socket.set_reuse_address(true).context("set_reuse_address")?;
+            socket.set_reuse_port(true).context("set_reuse_port")?;
+            socket
+                .bind(
+                    &SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), listen_addr.port()).into(),
+                )
+                .context("bind")?;
+            socket.join_multicast_v6(&MDNS_MCAST_V6, 0).context("join_multicast_v6")?;
             socket
         }
     };
@@ -321,14 +387,17 @@ fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<U
                 socket2::Domain::ipv4(),
                 socket2::Type::dgram(),
                 Some(socket2::Protocol::udp()),
-            )?;
-            socket.set_ttl(ttl)?;
-            socket.set_multicast_if_v4(&saddr.ip())?;
-            socket.set_multicast_ttl_v4(ttl)?;
-            socket.set_reuse_address(true)?;
-            socket.set_reuse_port(true)?;
-            socket.bind(&addr.into())?;
-            socket.connect(&SocketAddrV4::new(MDNS_MCAST_V4, MDNS_PORT).into())?;
+            )
+            .context("construct datagram socket")?;
+            socket.set_ttl(ttl).context("set_ttl")?;
+            socket.set_multicast_if_v4(&saddr.ip()).context("set_multicast_if_v4")?;
+            socket.set_multicast_ttl_v4(ttl).context("set_multicast_ttl_v4")?;
+            socket.set_reuse_address(true).context("set_reuse_address")?;
+            socket.set_reuse_port(true).context("set_reuse_port")?;
+            socket.bind(&addr.into()).context("bind")?;
+            socket
+                .connect(&SocketAddrV4::new(MDNS_MCAST_V4, MDNS_PORT).into())
+                .context("connect")?;
             socket
         }
         SocketAddr::V6(ref saddr) => {
@@ -336,17 +405,18 @@ fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<U
                 socket2::Domain::ipv6(),
                 socket2::Type::dgram(),
                 Some(socket2::Protocol::udp()),
-            )?;
-            socket.set_only_v6(true)?;
-            socket.set_multicast_if_v6(interface_id)?;
-            socket.set_unicast_hops_v6(ttl)?;
-            socket.set_multicast_hops_v6(ttl)?;
-            socket.set_reuse_address(true)?;
-            socket.set_reuse_port(true)?;
-            socket.bind(&addr.into())?;
-            socket.connect(
-                &SocketAddrV6::new(MDNS_MCAST_V6, MDNS_PORT, 0, saddr.scope_id()).into(),
-            )?;
+            )
+            .context("construct datagram socket")?;
+            socket.set_only_v6(true).context("set_only_v6")?;
+            socket.set_multicast_if_v6(interface_id).context("set_multicast_if_v6")?;
+            socket.set_unicast_hops_v6(ttl).context("set_unicast_hops_v6")?;
+            socket.set_multicast_hops_v6(ttl).context("set_multicast_hops_v6")?;
+            socket.set_reuse_address(true).context("set_reuse_address")?;
+            socket.set_reuse_port(true).context("set_reuse_port")?;
+            socket.bind(&addr.into()).context("bind")?;
+            socket
+                .connect(&SocketAddrV6::new(MDNS_MCAST_V6, MDNS_PORT, 0, saddr.scope_id()).into())
+                .context("connect")?;
             socket
         }
     };
