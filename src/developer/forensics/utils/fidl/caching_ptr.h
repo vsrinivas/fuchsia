@@ -122,7 +122,7 @@ class CachingPtr {
   void Connect() {
     connection_ = services_->Connect<Interface>();
     connection_.set_error_handler([this](zx_status_t status) {
-      FX_PLOGS(ERROR, status) << "Lost connection with " << Interface::Name_;
+      FX_PLOGS(WARNING, status) << "Lost connection with " << Interface::Name_;
       if (const auto post_status =
               make_call_task_.PostDelayed(dispatcher_, make_call_backoff_.GetNext());
           post_status != ZX_OK) {

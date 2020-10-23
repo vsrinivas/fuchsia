@@ -57,7 +57,7 @@ int main(const std::string& process_name) {
 
   Binding crash_reporter_binding(std::move(crash_reporter), std::move(channel), loop.dispatcher());
   crash_reporter_binding.set_error_handler([&loop](const zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Lost connection to client";
+    FX_PLOGS(WARNING, status) << "Lost connection to client";
     loop.Shutdown();
   });
 

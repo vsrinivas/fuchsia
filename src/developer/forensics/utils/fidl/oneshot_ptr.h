@@ -84,7 +84,7 @@ class OneShotPtr {
         return;
       }
 
-      FX_PLOGS(ERROR, status) << "Lost connection to " << name_;
+      FX_PLOGS(WARNING, status) << "Lost connection to " << name_;
 
       bridge_.CompleteError(Error::kConnectionError);
     });

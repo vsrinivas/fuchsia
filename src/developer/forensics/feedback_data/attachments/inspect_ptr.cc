@@ -74,7 +74,7 @@ void Inspect::SetUp() {
       return;
     }
 
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.diagnostics.BatchIterator";
+    FX_PLOGS(WARNING, status) << "Lost connection to fuchsia.diagnostics.BatchIterator";
     archive_.CompleteError(Error::kConnectionError);
   });
 }

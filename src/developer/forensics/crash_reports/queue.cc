@@ -212,7 +212,7 @@ void Queue::ProcessAllEveryFifteenMinutes() {
 void Queue::ProcessAllOnNetworkReachable() {
   netstack_ = services_->Connect<fuchsia::netstack::Netstack>();
   netstack_.set_error_handler([this](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Lost connection to " << fuchsia::netstack::Netstack::Name_;
+    FX_PLOGS(WARNING, status) << "Lost connection to " << fuchsia::netstack::Netstack::Name_;
 
     network_reconnection_task_.Reset([this]() mutable { ProcessAllOnNetworkReachable(); });
     async::PostDelayedTask(

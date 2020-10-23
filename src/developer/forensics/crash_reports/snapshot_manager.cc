@@ -92,7 +92,7 @@ void SnapshotManager::Connect() {
 
   // On disconnect, complete all pending requests with a default snapshot.
   data_provider_.set_error_handler([this](const zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchisa.feedback.DataProvider";
+    FX_PLOGS(WARNING, status) << "Lost connection to fuchisa.feedback.DataProvider";
 
     for (auto& request : requests_) {
       if (!request.is_pending) {

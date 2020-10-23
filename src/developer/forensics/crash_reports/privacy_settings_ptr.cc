@@ -35,7 +35,7 @@ void PrivacySettingsWatcher::StartWatching() {
 void PrivacySettingsWatcher::Connect() {
   privacy_settings_ptr_ = services_->Connect<fuchsia::settings::Privacy>();
   privacy_settings_ptr_.set_error_handler([this](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.settings.Privacy";
+    FX_PLOGS(WARNING, status) << "Lost connection to fuchsia.settings.Privacy";
     Reset();
 
     retry_task_.Reset([this]() mutable { StartWatching(); });

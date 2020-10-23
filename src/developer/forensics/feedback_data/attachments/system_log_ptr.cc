@@ -47,7 +47,7 @@ LogListener::LogListener(async_dispatcher_t* dispatcher,
       return;
     }
 
-    FX_PLOGS(ERROR, status) << "Lost connection with fuchsia.logger.LogListenerSafe";
+    FX_PLOGS(WARNING, status) << "Lost connection with fuchsia.logger.LogListenerSafe";
     logger_.CompleteError(Error::kConnectionError);
   });
 

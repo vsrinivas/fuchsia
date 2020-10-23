@@ -20,12 +20,12 @@ void SystemLogListener::StartListening() {
 
   binding_.Bind(log_listener.NewRequest());
   binding_.set_error_handler([](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.logger.LogListener";
+    FX_PLOGS(WARNING, status) << "Lost connection to fuchsia.logger.LogListener";
   });
 
   logger_ = services_->Connect<fuchsia::logger::Log>();
   logger_.set_error_handler([](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.logger.Log";
+    FX_PLOGS(WARNING, status) << "Lost connection to fuchsia.logger.Log";
   });
 
   // We first ask the logger to send all of the logs it has cached and then we begin listening for

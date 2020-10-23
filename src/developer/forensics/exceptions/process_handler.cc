@@ -65,7 +65,7 @@ bool SpawnSubprocess(zx::channel* client, zx::process* subprocess) {
 ProcessHandler::ProcessHandler(async_dispatcher_t* dispatcher, fit::closure on_available)
     : dispatcher_(dispatcher), on_available_(std::move(on_available)) {
   crash_reporter_.set_error_handler([this](const zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Lost connection to subprocess";
+    FX_PLOGS(WARNING, status) << "Lost connection to subprocess";
     on_available_();
   });
 }

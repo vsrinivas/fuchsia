@@ -32,7 +32,7 @@ UtcTimeProvider::UtcTimeProvider(std::shared_ptr<sys::ServiceDirectory> services
       utc_monotonic_difference_file_(std::move(utc_monotonic_difference_file)),
       previous_boot_utc_monotonic_difference_(std::nullopt) {
   utc_.set_error_handler([](const zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Lost connection with fuchsia.time.Utc";
+    FX_PLOGS(WARNING, status) << "Lost connection with fuchsia.time.Utc";
   });
 
   WatchForAccurateUtcTime();
