@@ -106,13 +106,13 @@ impl ManagerService {
     }
 
     async fn trigger_matching_shortcuts(&self, event: KeyEvent) -> Result<bool, Error> {
+        #[derive(Debug)]
         enum EarlyExit {
             Handled,
         };
-
         // Clone, upgrade, and filter out stale Weak pointers.
         // TODO: remove when Weak pointers filtering done in router.
-        let registries = self.store.get_registries().await;
+        let registries = self.store.get_focused_registries().await;
         let registries =
             registries.iter().cloned().filter_map(|r| r.upgrade()).into_iter().map(|r| Ok(r));
 
@@ -159,8 +159,9 @@ impl ManagerService {
                 let id = shortcut.id.unwrap_or(DEFAULT_SHORTCUT_ID);
                 let was_handled = listener
                     .on_shortcut(id)
-                    .on_timeout(fasync::Time::after(DEFAULT_LISTENER_TIMEOUT), || Ok(false));
-                match was_handled.await {
+                    .on_timeout(fasync::Time::after(DEFAULT_LISTENER_TIMEOUT), || Ok(false))
+                    .await;
+                match was_handled {
                     // Stop processing client registry on successful handling.
                     Ok(true) => return Ok(true),
                     // Keep processing on shortcut not being handled.

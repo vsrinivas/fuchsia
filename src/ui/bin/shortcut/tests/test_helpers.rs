@@ -5,11 +5,11 @@
 use {
     anyhow::{Context as _, Error},
     fidl::client::QueryResponseFut,
-    fidl_fuchsia_input as input, fidl_fuchsia_ui_input2 as ui_input2,
-    fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_shortcut as ui_shortcut,
-    fidl_fuchsia_ui_views as ui_views,
+    fidl_fuchsia_input as input, fidl_fuchsia_ui_focus as ui_focus,
+    fidl_fuchsia_ui_input2 as ui_input2, fidl_fuchsia_ui_input3 as ui_input3,
+    fidl_fuchsia_ui_shortcut as ui_shortcut, fidl_fuchsia_ui_views as ui_views,
     fuchsia_component::client::connect_to_service,
-    fuchsia_zircon as zx,
+    fuchsia_scenic as scenic,
     futures::StreamExt,
     std::sync::Once,
 };
@@ -88,6 +88,7 @@ impl ShortcutBuilder {
 
 /// Test helper for FIDL fuchsia.ui.shortcut.Registry service.
 pub struct RegistryService {
+    pub view_ref: ui_views::ViewRef,
     pub registry: ui_shortcut::RegistryProxy,
     pub listener: ui_shortcut::ListenerRequestStream,
 }
@@ -107,11 +108,11 @@ impl RegistryService {
             fidl::endpoints::create_request_stream::<ui_shortcut::ListenerMarker>()?;
 
         // Set listener and view ref.
-        let (raw_event_pair, _) = zx::EventPair::create()?;
-        let view_ref = &mut ui_views::ViewRef { reference: raw_event_pair };
-        registry.set_view(view_ref, listener_client_end).expect("set_view");
+        let view_ref = scenic::ViewRefPair::new()?.view_ref;
+        registry
+            .set_view(&mut fuchsia_scenic::duplicate_view_ref(&view_ref)?, listener_client_end)?;
 
-        Ok(Self { registry, listener })
+        Ok(Self { registry, listener, view_ref })
     }
 
     /// Registers a new shortcut with the shortcut registry service.
@@ -133,7 +134,7 @@ impl RegistryService {
         if let Some(Ok(ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. })) =
             self.listener.next().await
         {
-            responder.send(handler(id)).expect("responding from shortcut listener for shift")
+            responder.send(handler(id)).expect("responding from shortcut listener")
         } else {
             panic!("Error from listener.next() on shortcut activation");
         };
@@ -261,5 +262,17 @@ impl ManagerService {
             was_handled = was_handled || self.manager.handle_key3_event(event).await?;
         }
         Ok(was_handled)
+    }
+
+    pub async fn set_focus_chain(&self, focus_chain: Vec<&ui_views::ViewRef>) -> Result<(), Error> {
+        let focus_chain = ui_focus::FocusChain {
+            focus_chain: Some(
+                focus_chain
+                    .into_iter()
+                    .map(scenic::duplicate_view_ref)
+                    .collect::<Result<Vec<_>, _>>()?,
+            ),
+        };
+        self.manager.handle_focus_change(focus_chain).await.map_err(Into::into)
     }
 }

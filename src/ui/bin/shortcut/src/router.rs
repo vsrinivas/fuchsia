@@ -121,7 +121,9 @@ impl Router {
                             .await
                             .context("handle input2 event")?
                     };
-                    responder.send(was_handled).context("error sending response")?;
+                    responder
+                        .send(was_handled)
+                        .context("Error sending response for HandleKeyEvent")?;
                 }
                 // Handle input3 key events for input3 shortcuts.
                 ui_shortcut::ManagerRequest::HandleKey3Event { event, responder } => {
@@ -137,10 +139,15 @@ impl Router {
                             }
                         }
                     };
-                    responder.send(was_handled).context("error sending response")?;
+                    responder
+                        .send(was_handled)
+                        .context("Error sending response for HandleKey3Event")?;
                 }
-                ui_shortcut::ManagerRequest::HandleFocusChange { .. } => {
-                    unimplemented!();
+                ui_shortcut::ManagerRequest::HandleFocusChange {
+                    focus_chain, responder, ..
+                } => {
+                    self.environment.store.handle_focus_change(&focus_chain).await;
+                    responder.send()?;
                 }
             }
         }

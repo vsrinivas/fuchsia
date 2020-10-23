@@ -3,10 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_input as input, fidl_fuchsia_ui_shortcut as ui_shortcut,
-    fidl_fuchsia_ui_views as ui_views,
-    futures::lock::{Mutex, MutexGuard},
-    std::collections::HashSet,
+    fidl_fuchsia_input as input, fidl_fuchsia_ui_focus as ui_focus,
+    fidl_fuchsia_ui_shortcut as ui_shortcut, fidl_fuchsia_ui_views as ui_views,
+    fuchsia_syslog::fx_log_info,
+    fuchsia_zircon as zx,
+    fuchsia_zircon::AsHandleRef,
+    futures::{
+        lock::{MappedMutexGuard, Mutex, MutexGuard},
+        stream, StreamExt,
+    },
+    std::collections::{HashMap, HashSet},
     std::ops::Deref,
     std::sync::{Arc, Weak},
     std::vec::Vec,
@@ -38,6 +44,9 @@ struct RegistryStoreInner {
     // Weak ref for ClientRegistry to allow shortcuts to be dropped out
     // of collection once client connection is removed.
     registries: Vec<Weak<Mutex<ClientRegistry>>>,
+
+    // Currently focused clients in the FocusChain order, i.e. parents first.
+    focused_registries: Vec<Weak<Mutex<ClientRegistry>>>,
 }
 
 impl RegistryStore {
@@ -53,11 +62,27 @@ impl RegistryStore {
     }
 
     /// Get all client registries.
+    /// Returned reference can be used as a `Vec<Weak<Mutex<ClientRegistry>>>`.
     /// Returned reference contains `MutexGuard`, and as a result it prevents
     /// other uses of client registry store (e.g. adding new, removing) until goes
     /// out of scope.
     pub async fn get_registries<'a>(&'a self) -> LockedRegistries<'a> {
-        LockedRegistries(self.inner.lock().await)
+        LockedRegistries(MutexGuard::map(self.inner.lock().await, |r| &mut r.registries))
+    }
+
+    /// Get client registries for currently focused clients.
+    /// Returned reference can be used as a `Vec<Weak<Mutex<ClientRegistry>>>`.
+    /// Returned reference contains `MutexGuard`, and as a result it prevents
+    /// other uses of client registry store (e.g. adding new, removing) until goes
+    /// out of scope.
+    /// Returned reference is ordered by Scenic View hierarchy, parent first.
+    pub async fn get_focused_registries<'a>(&'a self) -> LockedRegistries<'a> {
+        LockedRegistries(MutexGuard::map(self.inner.lock().await, |r| &mut r.focused_registries))
+    }
+
+    /// Update client registries to account for a `FocusChain` event.
+    pub async fn handle_focus_change(&self, focus_chain: &ui_focus::FocusChain) {
+        self.inner.lock().await.update_focused_registries(focus_chain).await;
     }
 }
 
@@ -68,17 +93,78 @@ impl RegistryStoreInner {
         self.registries.push(Arc::downgrade(&registry));
         registry
     }
+
+    /// Updates `self.focused_registries` to reflect current focus chain.
+    async fn update_focused_registries(&mut self, focus_chain: &ui_focus::FocusChain) {
+        let focus_chain = match focus_chain {
+            ui_focus::FocusChain { focus_chain: Some(focus_chain), .. } => focus_chain,
+            _ => return,
+        };
+
+        // Iterator over all active registries, i.e. all `Weak` refs upgraded.
+        let registries_iter = stream::iter(
+            self.registries
+                .iter()
+                .cloned()
+                .filter_map(|registry_weak: Weak<Mutex<ClientRegistry>>| {
+                    registry_weak.upgrade().map(|registry_arc: Arc<Mutex<ClientRegistry>>| {
+                        (registry_arc, registry_weak.clone())
+                    })
+                })
+                .into_iter(),
+        );
+
+        // Acquire Mutex locks and hash all client registries by `Koid`.
+        let mut registries: HashMap<zx::Koid, Weak<Mutex<ClientRegistry>>> = registries_iter
+            .filter_map(|(registry_arc, registry_weak)| async move {
+                if let ClientRegistry { subscriber: Some(Subscriber { view_ref, .. }), .. } =
+                    &*registry_arc.lock().await
+                {
+                    let koid = match view_ref.reference.as_handle_ref().get_koid() {
+                        Ok(koid) => koid,
+                        // If Koid can't be received, this means view ref is invalid
+                        // and can't be notified.
+                        _ => {
+                            fx_log_info!("Client uses invalid ViewRef: {:?}", view_ref);
+                            return None;
+                        }
+                    };
+                    Some((koid, registry_weak))
+                } else {
+                    // Client registry has no subscriber set and can't be notified.
+                    fx_log_info!("Client has no listener and view ref set up.");
+                    None
+                }
+            })
+            .collect()
+            .await;
+
+        // Only focused shortcut clients are retained, and other view_refs are dropped.
+        self.focused_registries = focus_chain
+            .into_iter()
+            .filter_map(|view_ref| {
+                view_ref
+                    .reference
+                    .as_handle_ref()
+                    .get_koid()
+                    .ok()
+                    .and_then(|koid| registries.remove(&koid))
+            })
+            .collect();
+    }
 }
 
 /// Holds `MutexGuard` in order to provide exclusive access to vector
 /// of client registries.
 /// Implements `Deref` and can be used as `Vec<Weak<Mutex<ClientRegistry>>>`.
-pub struct LockedRegistries<'a>(MutexGuard<'a, RegistryStoreInner>);
+pub struct LockedRegistries<'a>(
+    MappedMutexGuard<'a, RegistryStoreInner, Vec<Weak<Mutex<ClientRegistry>>>>,
+);
 
 impl<'a> Deref for LockedRegistries<'a> {
     type Target = Vec<Weak<Mutex<ClientRegistry>>>;
     fn deref(&self) -> &Self::Target {
-        &self.0.registries
+        &self.0
     }
 }
 

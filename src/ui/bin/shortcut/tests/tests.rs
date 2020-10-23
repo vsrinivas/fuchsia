@@ -4,10 +4,11 @@
 #![cfg(test)]
 use {
     anyhow::{format_err, Error},
-    fidl_fuchsia_input as input, fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
+    fidl_fuchsia_input as input, fidl_fuchsia_ui_shortcut as ui_shortcut,
+    fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_zircon as zx,
-    futures::future,
     futures::{
+        future,
         stream::{self, StreamExt},
         FutureExt,
     },
@@ -20,6 +21,9 @@ mod v2_tests;
 
 static TEST_SHORTCUT_ID: u32 = 123;
 static TEST_SHORTCUT_2_ID: u32 = 321;
+
+const LISTENER_ACTIVATION_TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
+const WAS_HANDLED_TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
 
 /// Helper wrapper for a typical test case:
 ///  - `keys` are pressed sequentially
@@ -95,7 +99,13 @@ impl TestCase {
 
         // Advance combined stream of events and stop when the key was handled.
         let was_handled = loop {
-            if let Some(EventType::KeyHandled(Ok(was_handled))) = events.next().await {
+            if let Some(EventType::KeyHandled(Ok(was_handled))) = events
+                .next()
+                .on_timeout(fasync::Time::after(WAS_HANDLED_TIMEOUT), || {
+                    panic!("was_handled timeout")
+                })
+                .await
+            {
                 break was_handled;
             }
         };
@@ -115,6 +125,7 @@ impl TestCase {
 async fn test_keys3() -> Result<(), Error> {
     let mut registry_service = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
+    manager_service.set_focus_chain(vec![&registry_service.view_ref]).await?;
 
     // Set shortcut for either LEFT_SHIFT or RIGHT_SHIFT + E.
     let shortcut = ShortcutBuilder::new()
@@ -206,6 +217,9 @@ async fn test_multiple_matches() -> Result<(), Error> {
     let manager_service = ManagerService::new().await?;
 
     let mut registry_service2 = RegistryService::new().await?;
+    manager_service
+        .set_focus_chain(vec![&registry_service.view_ref, &registry_service2.view_ref])
+        .await?;
 
     // Set shortcut for LEFT_SHIFT + G.
     let shortcut = ShortcutBuilder::new()
@@ -268,23 +282,97 @@ async fn test_client_timeout() -> Result<(), Error> {
 
     let listener = &mut registry_service.listener;
 
-    let was_handled = future::join(
-        manager_service.press_key3(input::Key::J),
-        listener.next().map(|req| {
-            if let Some(Ok(ui_shortcut::ListenerRequest::OnShortcut { responder, .. })) = req {
-                // Shutdown the channel instead of responding, adding an epitaph
-                // to simplify debugging the test in case of a flake.
-                responder.control_handle().shutdown_with_epitaph(zx::Status::OK);
-            }
-        }),
-    )
-    .await
-    .0?;
+    manager_service.set_focus_chain(vec![&registry_service.view_ref]).await?;
 
-    assert_eq!(false, was_handled);
+    let (was_handled, listener_activated) = future::join(
+        manager_service.press_key3(input::Key::J),
+        listener
+            .next()
+            .map(|req| {
+                if let Some(Ok(ui_shortcut::ListenerRequest::OnShortcut { responder, .. })) = req {
+                    // Shutdown the channel instead of responding, adding an epitaph
+                    // to simplify debugging the test in case of a flake.
+                    responder.control_handle().shutdown_with_epitaph(zx::Status::OK);
+                }
+                Ok(())
+            })
+            .on_timeout(fasync::Time::after(LISTENER_ACTIVATION_TIMEOUT), || {
+                Err(format_err!("Shortcut not activated."))
+            }),
+    )
+    .await;
+
+    assert!(listener_activated.is_ok());
+
+    assert_eq!(false, was_handled?);
 
     // Release the pressed key.
     manager_service.release_key3(input::Key::J).await?;
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_focus_change() -> Result<(), Error> {
+    let mut client1 = RegistryService::new().await?;
+    let mut client2 = RegistryService::new().await?;
+    let manager_service = ManagerService::new().await?;
+
+    client1
+        .register_shortcut(
+            ShortcutBuilder::new().set_key3(input::Key::F).set_id(TEST_SHORTCUT_ID).build(),
+        )
+        .await;
+    client2
+        .register_shortcut(
+            ShortcutBuilder::new().set_key3(input::Key::F).set_id(TEST_SHORTCUT_2_ID).build(),
+        )
+        .await;
+
+    manager_service.set_focus_chain(vec![&client1.view_ref]).await?;
+
+    // Scope part of the test case to release listeners and borrows once done.
+    {
+        let client1 = TestCase::new()
+            .set_keys(vec![input::Key::F])
+            .set_shortcut_hook(|id| {
+                assert_eq!(id, TEST_SHORTCUT_ID);
+                true
+            })
+            .set_handled_hook(|was_handled| assert_eq!(true, was_handled))
+            .run(&mut client1, &manager_service);
+        futures::pin_mut!(client1);
+
+        let client2 = client2.listener.next();
+        futures::pin_mut!(client2);
+
+        let activated_listener = future::select(client1, client2).await;
+
+        assert!(matches!(activated_listener, future::Either::Left { .. }));
+    }
+
+    // Change focus to another client.
+    manager_service.set_focus_chain(vec![&client2.view_ref]).await?;
+
+    // Scope part of the test case to release listeners and borrows once done.
+    {
+        let client1 = client1.listener.next();
+        futures::pin_mut!(client1);
+
+        let client2 = TestCase::new()
+            .set_keys(vec![input::Key::F])
+            .set_shortcut_hook(|id| {
+                assert_eq!(id, TEST_SHORTCUT_2_ID);
+                true
+            })
+            .set_handled_hook(|was_handled| assert_eq!(true, was_handled))
+            .run(&mut client2, &manager_service);
+        futures::pin_mut!(client2);
+
+        let activated_listener = future::select(client2, client1).await;
+
+        assert!(matches!(activated_listener, future::Either::Left { .. }));
+    }
 
     Ok(())
 }
