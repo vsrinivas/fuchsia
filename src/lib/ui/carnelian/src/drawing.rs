@@ -306,21 +306,10 @@ impl<'a> FontFace<'a> {
 pub struct Glyph {
     pub raster: Raster,
     pub bounding_box: Rect,
-    pub display_bounding_box: Rect,
 }
 
 impl Glyph {
     pub fn new(context: &mut RenderContext, face: &FontFace<'_>, size: f32, id: GlyphId) -> Self {
-        Self::new_rotated(context, face, size, id, DisplayRotation::Deg0)
-    }
-
-    pub fn new_rotated(
-        context: &mut RenderContext,
-        face: &FontFace<'_>,
-        size: f32,
-        id: GlyphId,
-        display_rotation: DisplayRotation,
-    ) -> Self {
         let mut path_builder = context.path_builder().expect("path_builder");
         let mut bounding_box = Box2D::zero();
         let scale = Scale::uniform(size);
@@ -365,38 +354,28 @@ impl Glyph {
         }
 
         let bounding_box = bounding_box.to_rect();
-        let transform = display_rotation.transform(&Size2D::zero());
-        let display_bounding_box = transform.transform_rect(&bounding_box);
         let path = path_builder.build();
         let mut raster_builder = context.raster_builder().expect("raster_builder");
-        let rotation_transform =
-            display_rotation.rotation().and_then(|transform| Some(transform.to_untyped()));
-        raster_builder.add(&path, rotation_transform.as_ref());
+        raster_builder.add(&path, None);
 
-        Self { raster: raster_builder.build(), display_bounding_box, bounding_box }
+        Self { raster: raster_builder.build(), bounding_box }
     }
 }
 
 #[derive(Debug)]
 pub struct GlyphMap {
     glyphs: BTreeMap<GlyphId, Glyph>,
-    rotation: DisplayRotation,
 }
 
 impl GlyphMap {
     pub fn new() -> Self {
-        Self::new_with_rotation(DisplayRotation::Deg0)
-    }
-
-    pub fn new_with_rotation(rotation: DisplayRotation) -> Self {
-        Self { glyphs: BTreeMap::new(), rotation }
+        Self { glyphs: BTreeMap::new() }
     }
 }
 
 pub struct Text {
     pub raster: Raster,
     pub bounding_box: Rect,
-    pub display_bounding_box: Rect,
 }
 
 impl Text {
@@ -409,17 +388,15 @@ impl Text {
         glyph_map: &mut GlyphMap,
     ) -> Self {
         let glyphs = &mut glyph_map.glyphs;
-        let display_rotation = glyph_map.rotation;
-        let mut display_bounding_box = Rect::zero();
+        let mut bounding_box = Rect::zero();
         let scale = Scale::uniform(size);
         let v_metrics = face.font.v_metrics(scale);
         let mut ascent = v_metrics.ascent;
         let mut raster_union = None;
-        let transform = glyph_map.rotation.transform(&Size2D::new(0.0, ascent));
 
         for line in wrap_iter(text, wrap) {
             // TODO: adjust vertical alignment of glyphs to match first glyph.
-            let y_offset = transform.transform_vector(Vector2D::new(0.0, ascent)).to_i32();
+            let y_offset = vec2(0.0, ascent).to_i32();
             let chars = line.chars();
             let mut x: f32 = 0.0;
             let mut last = None;
@@ -431,11 +408,8 @@ impl Text {
 
                 // Lookup glyph entry in cache.
                 // TODO: improve sub pixel placement using a larger cache.
-                let position =
-                    y_offset + transform.transform_vector(Vector2D::new(x, 0.0)).to_i32();
-                let glyph = glyphs.entry(id).or_insert_with(|| {
-                    Glyph::new_rotated(context, face, size, id, display_rotation)
-                });
+                let position = y_offset + vec2(x, 0.0).to_i32();
+                let glyph = glyphs.entry(id).or_insert_with(|| Glyph::new(context, face, size, id));
 
                 // Clone and translate raster.
                 let raster =
@@ -447,12 +421,12 @@ impl Text {
                 };
 
                 // Expand bounding box.
-                let glyph_bounding_box = &glyph.display_bounding_box.translate(position.to_f32());
+                let glyph_bounding_box = &glyph.bounding_box.translate(position.to_f32());
 
-                if display_bounding_box.is_empty() {
-                    display_bounding_box = *glyph_bounding_box;
+                if bounding_box.is_empty() {
+                    bounding_box = *glyph_bounding_box;
                 } else {
-                    display_bounding_box = display_bounding_box.union(&glyph_bounding_box);
+                    bounding_box = bounding_box.union(&glyph_bounding_box);
                 }
 
                 x += w;
@@ -461,11 +435,7 @@ impl Text {
             ascent += size;
         }
 
-        let transform = display_rotation.transform(&Size2D::zero());
-        let bounding_box =
-            transform.inverse().expect("inverse").transform_rect(&display_bounding_box);
-
-        Self { raster: raster_union.expect("raster_union"), bounding_box, display_bounding_box }
+        Self { raster: raster_union.expect("raster_union"), bounding_box }
     }
 }
 

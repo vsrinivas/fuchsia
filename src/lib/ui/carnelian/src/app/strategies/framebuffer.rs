@@ -50,6 +50,7 @@ impl AppStrategy for FrameBufferAppStrategy {
         };
         let strat_ptr = FrameBufferViewStrategy::new(
             key,
+            strategy_params.display_rotation,
             render_options,
             &strategy_params.size,
             strategy_params.pixel_format,

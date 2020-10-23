@@ -112,11 +112,17 @@ This will wipe all of your data from this device and reset it to factory setting
 
 struct RecoveryAppAssistant {
     app_context: AppContext,
+    display_rotation: DisplayRotation,
 }
 
 impl RecoveryAppAssistant {
     pub fn new(app_context: &AppContext) -> Self {
-        Self { app_context: app_context.clone() }
+        let args: Args = argh::from_env();
+
+        Self {
+            app_context: app_context.clone(),
+            display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0),
+        }
     }
 }
 
@@ -126,14 +132,16 @@ impl AppAssistant for RecoveryAppAssistant {
     }
 
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        let args: Args = argh::from_env();
         Ok(Box::new(RecoveryViewAssistant::new(
             &self.app_context,
-            args.rotation.unwrap_or(DisplayRotation::Deg0),
             view_key,
             RECOVERY_MODE_HEADLINE,
             RECOVERY_MODE_BODY,
         )?))
+    }
+
+    fn get_display_rotation(&self) -> DisplayRotation {
+        self.display_rotation
     }
 }
 
@@ -150,13 +158,12 @@ struct SizedText {
 impl SizedText {
     pub fn new(
         context: &mut RenderContext,
-        display_rotation: DisplayRotation,
         label: &str,
         size: f32,
         wrap: usize,
         face: &FontFace<'_>,
     ) -> Self {
-        let mut glyphs = GlyphMap::new_with_rotation(display_rotation);
+        let mut glyphs = GlyphMap::new();
         let text = Text::new(context, label, size, wrap, face, &mut glyphs);
         Self { text, glyphs }
     }
@@ -172,7 +179,6 @@ struct RenderResources {
 impl RenderResources {
     fn new(
         context: &mut RenderContext,
-        display_rotation: DisplayRotation,
         min_dimension: f32,
         heading: &str,
         body: &str,
@@ -180,25 +186,16 @@ impl RenderResources {
         face: &FontFace<'_>,
     ) -> Self {
         let text_size = min_dimension / 10.0;
-        let heading_label =
-            SizedText::new(context, display_rotation, heading, text_size, 100, face);
+        let heading_label = SizedText::new(context, heading, text_size, 100, face);
         let heading_label_size = heading_label.text.bounding_box.size;
 
         let body_text_size = min_dimension / 18.0;
         let body_wrap = heading_label_size.width / body_text_size * 3.0;
-        let body_label = SizedText::new(
-            context,
-            display_rotation,
-            body,
-            body_text_size,
-            body_wrap as usize,
-            face,
-        );
+        let body_label = SizedText::new(context, body, body_text_size, body_wrap as usize, face);
 
         let countdown_text_size = min_dimension / 4.0;
         let countdown_label = SizedText::new(
             context,
-            display_rotation,
             &format!("{:02}", countdown_ticks),
             countdown_text_size,
             100,
@@ -210,7 +207,6 @@ impl RenderResources {
 }
 
 struct RecoveryViewAssistant<'a> {
-    display_rotation: DisplayRotation,
     face: FontFace<'a>,
     heading: String,
     body: String,
@@ -227,7 +223,6 @@ struct RecoveryViewAssistant<'a> {
 impl<'a> RecoveryViewAssistant<'a> {
     fn new(
         app_context: &AppContext,
-        display_rotation: DisplayRotation,
         view_key: ViewKey,
         heading: &str,
         body: &str,
@@ -239,7 +234,6 @@ impl<'a> RecoveryViewAssistant<'a> {
         let logo_image = PngImage { file: LOGO_IMAGE_PATH.to_string(), loaded_info: None };
 
         Ok(RecoveryViewAssistant {
-            display_rotation,
             face,
             composition,
             heading: heading.to_string(),
@@ -308,13 +302,6 @@ impl<'a> RecoveryViewAssistant<'a> {
             }
         };
     }
-
-    fn target_size(&self, size: Size) -> Size {
-        match self.display_rotation {
-            DisplayRotation::Deg90 | DisplayRotation::Deg270 => Size::new(size.height, size.width),
-            DisplayRotation::Deg0 | DisplayRotation::Deg180 => size,
-        }
-    }
 }
 
 impl ViewAssistant for RecoveryViewAssistant<'_> {
@@ -330,13 +317,12 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         // Emulate the size that Carnelian passes when the display is rotated
-        let target_size = self.target_size(context.size);
+        let target_size = context.size;
         let min_dimension = target_size.width.min(target_size.height);
 
         if self.render_resources.is_none() {
             self.render_resources = Some(RenderResources::new(
                 render_context,
-                self.display_rotation,
                 min_dimension,
                 &self.heading,
                 &self.body,
@@ -346,9 +332,6 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
         }
 
         let render_resources = self.render_resources.as_ref().unwrap();
-
-        // Create a presentation to display tranformation
-        let transform = self.display_rotation.transform(&target_size);
 
         let clear_background_ext =
             RenderExt { pre_clear: Some(PreClear { color: BG_COLOR }), ..Default::default() };
@@ -384,8 +367,6 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                 logo_position.y + logo_size.height,
             );
 
-            let display_heading_label_offset = transform.transform_point(heading_label_offset);
-
             (
                 Layer {
                     raster: render_resources
@@ -393,7 +374,7 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                         .text
                         .raster
                         .clone()
-                        .translate(to_raster_translation_vector(display_heading_label_offset)),
+                        .translate(to_raster_translation_vector(heading_label_offset)),
                     style: Style {
                         fill_rule: FillRule::NonZero,
                         fill: Fill::Solid(HEADING_COLOR),
@@ -411,7 +392,6 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                 (target_size.width / 2.0) - (body_label_size.width / 2.0),
                 heading_label_offset.y + heading_label_size.height * 1.5,
             );
-            let display_body_label_offset = transform.transform_point(body_label_offset);
 
             Layer {
                 raster: render_resources
@@ -419,7 +399,7 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                     .text
                     .raster
                     .clone()
-                    .translate(to_raster_translation_vector(display_body_label_offset)),
+                    .translate(to_raster_translation_vector(body_label_offset)),
                 style: Style {
                     fill_rule: FillRule::NonZero,
                     fill: Fill::Solid(BODY_COLOR),
@@ -434,7 +414,7 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
             let circle_raster = raster_for_circle(
                 logo_center,
                 logo_size.width.min(logo_size.height) / 2.0,
-                Some(&transform.to_untyped()),
+                None,
                 render_context,
             );
             let circle_layer = Layer {
@@ -446,28 +426,27 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                 },
             };
 
-            let countdown_label_layer =
-                {
-                    let countdown_label_size =
-                        render_resources.countdown_label.text.bounding_box.size;
-                    let countdown_label_offset = Point::new(
-                        logo_center.x - countdown_label_size.width / 2.0,
-                        logo_center.y - (render_resources.countdown_text_size / 2.0),
-                    );
-                    let display_countdown_label_offset =
-                        transform.transform_point(countdown_label_offset);
+            let countdown_label_layer = {
+                let countdown_label_size = render_resources.countdown_label.text.bounding_box.size;
+                let countdown_label_offset = Point::new(
+                    logo_center.x - countdown_label_size.width / 2.0,
+                    logo_center.y - (render_resources.countdown_text_size / 2.0),
+                );
 
-                    Layer {
-                        raster: render_resources.countdown_label.text.raster.clone().translate(
-                            to_raster_translation_vector(display_countdown_label_offset),
-                        ),
-                        style: Style {
-                            fill_rule: FillRule::NonZero,
-                            fill: Fill::Solid(Color::white()),
-                            blend_mode: BlendMode::Over,
-                        },
-                    }
-                };
+                Layer {
+                    raster: render_resources
+                        .countdown_label
+                        .text
+                        .raster
+                        .clone()
+                        .translate(to_raster_translation_vector(countdown_label_offset)),
+                    style: Style {
+                        fill_rule: FillRule::NonZero,
+                        fill: Fill::Solid(Color::white()),
+                        blend_mode: BlendMode::Over,
+                    },
+                }
+            };
 
             self.composition.replace(
                 ..,
@@ -479,10 +458,8 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
             render_context.render(&self.composition, None, image, &clear_background_ext);
         } else {
             // Determine visible rect and copy |png_image| to |image|.
-            let dst_rect =
-                transform.transform_rect(&Rect::new(logo_position, logo_size)).to_untyped();
-            let output_rect =
-                transform.transform_rect(&Rect::new(Point2D::zero(), target_size)).to_untyped();
+            let dst_rect = &Rect::new(logo_position, logo_size);
+            let output_rect = Rect::from_size(target_size);
             let png_ext = RenderExt {
                 post_copy: dst_rect.intersection(&output_rect).map(|visible_rect| PostCopy {
                     image,

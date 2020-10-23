@@ -10,9 +10,7 @@ use crate::{
     geometry::IntSize,
     input::{self},
     view::{
-        strategies::base::{
-            FrameBufferParams, ViewStrategyParams, ViewStrategyPtr, DISPLAY_ROTATION,
-        },
+        strategies::base::{FrameBufferParams, ViewStrategyParams, ViewStrategyPtr},
         ViewKey,
     },
 };
@@ -138,7 +136,7 @@ pub(crate) async fn create_app_strategy(
 
         let strat = FrameBufferAppStrategy {
             frame_buffer: frame_buffer_ptr.clone(),
-            display_rotation: DISPLAY_ROTATION,
+            display_rotation: assistant.get_display_rotation(),
             view_key: next_view_key,
             input_report_handlers: HashMap::new(),
         };
@@ -149,6 +147,7 @@ pub(crate) async fn create_app_strategy(
                     frame_buffer: frame_buffer_ptr,
                     pixel_format: strat.get_pixel_format(),
                     size,
+                    display_rotation: assistant.get_display_rotation(),
                 },
             )))
             .unwrap_or_else(|err| panic!("unbounded send failed: {}", err));

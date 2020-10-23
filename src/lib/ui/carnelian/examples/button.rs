@@ -3,9 +3,13 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
+use argh::FromArgs;
 use carnelian::{
     color::Color,
-    drawing::{path_for_corner_knockouts, path_for_rectangle, FontFace, GlyphMap, Paint, Text},
+    drawing::{
+        path_for_corner_knockouts, path_for_rectangle, DisplayRotation, FontFace, GlyphMap, Paint,
+        Text,
+    },
     input::{self},
     make_app_assistant, make_message,
     render::{
@@ -19,6 +23,25 @@ use carnelian::{
 use euclid::default::Vector2D;
 use fuchsia_zircon::{AsHandleRef, Event, Signals, Time};
 use lazy_static::lazy_static;
+
+fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, String> {
+    match s {
+        "0" => Ok(DisplayRotation::Deg0),
+        "90" => Ok(DisplayRotation::Deg90),
+        "180" => Ok(DisplayRotation::Deg180),
+        "270" => Ok(DisplayRotation::Deg270),
+        _ => Err(format!("Invalid DisplayRotation {}", s)),
+    }
+}
+
+/// Button Sample
+#[derive(Debug, FromArgs)]
+#[argh(name = "recovery")]
+struct Args {
+    /// rotate
+    #[argh(option, from_str_fn(display_rotation_from_str))]
+    rotation: Option<DisplayRotation>,
+}
 
 // This font creation method isn't ideal. The correct method would be to ask the Fuchsia
 // font service for the font data.
@@ -37,15 +60,23 @@ pub enum ButtonMessages {
 }
 
 #[derive(Default)]
-struct ButtonAppAssistant;
+struct ButtonAppAssistant {
+    display_rotation: DisplayRotation,
+}
 
 impl AppAssistant for ButtonAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
+        let args: Args = argh::from_env();
+        self.display_rotation = args.rotation.unwrap_or(DisplayRotation::Deg0);
         Ok(())
     }
 
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(ButtonViewAssistant::new()?))
+    }
+
+    fn get_display_rotation(&self) -> DisplayRotation {
+        self.display_rotation
     }
 }
 

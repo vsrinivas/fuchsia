@@ -12,7 +12,7 @@ use crate::{
         Context, ContextInner,
     },
     view::{
-        strategies::base::{ViewStrategy, ViewStrategyPtr, DISPLAY_ROTATION},
+        strategies::base::{ViewStrategy, ViewStrategyPtr},
         ViewAssistantContext, ViewAssistantPtr, ViewDetails, ViewKey,
     },
 };
@@ -33,6 +33,7 @@ type WaitEvents = BTreeMap<ImageId, Event>;
 
 pub(crate) struct FrameBufferViewStrategy {
     app_sender: UnboundedSender<MessageInternal>,
+    display_rotation: DisplayRotation,
     frame_buffer: FrameBufferPtr,
     frame_set: FrameSet,
     image_indexes: BTreeMap<ImageId, u32>,
@@ -48,6 +49,7 @@ const RENDER_FRAME_COUNT: usize = 2;
 impl FrameBufferViewStrategy {
     pub(crate) async fn new(
         key: ViewKey,
+        display_rotation: DisplayRotation,
         render_options: RenderOptions,
         size: &IntSize,
         pixel_format: fuchsia_framebuffer::PixelFormat,
@@ -75,13 +77,13 @@ impl FrameBufferViewStrategy {
                     ContextInner::Spinel(generic::Spinel::new_context(
                         context_token,
                         unsize,
-                        DISPLAY_ROTATION,
+                        display_rotation,
                     ))
                 } else {
                     ContextInner::Mold(generic::Mold::new_context(
                         context_token,
                         unsize,
-                        DISPLAY_ROTATION,
+                        display_rotation,
                     ))
                 },
             }
@@ -118,6 +120,7 @@ impl FrameBufferViewStrategy {
         let frame_set = FrameSet::new(fb_image_ids);
         Ok(Box::new(FrameBufferViewStrategy {
             app_sender,
+            display_rotation,
             frame_buffer: frame_buffer.clone(),
             frame_set: frame_set,
             image_indexes,
@@ -158,7 +161,7 @@ impl FrameBufferViewStrategy {
         (
             ViewAssistantContext {
                 key: view_details.key,
-                size: match DISPLAY_ROTATION {
+                size: match self.display_rotation {
                     DisplayRotation::Deg0 | DisplayRotation::Deg180 => view_details.physical_size,
                     DisplayRotation::Deg90 | DisplayRotation::Deg270 => Size::new(
                         view_details.physical_size.height,

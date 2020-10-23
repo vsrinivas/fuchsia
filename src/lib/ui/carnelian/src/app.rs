@@ -4,6 +4,7 @@
 
 use crate::{
     app::strategies::base::{create_app_strategy, AppStrategyPtr},
+    drawing::DisplayRotation,
     geometry::Size,
     input::DeviceId,
     message::Message,
@@ -103,6 +104,10 @@ pub trait AppAssistant {
     /// Mode options for rendering
     fn get_render_options(&self) -> RenderOptions {
         RenderOptions::default()
+    }
+
+    fn get_display_rotation(&self) -> DisplayRotation {
+        DisplayRotation::Deg0
     }
 }
 

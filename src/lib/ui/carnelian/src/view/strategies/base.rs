@@ -14,8 +14,6 @@ use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_framebuffer::PixelFormat;
 use fuchsia_zircon::{Duration, Time};
 
-pub const DISPLAY_ROTATION: DisplayRotation = DisplayRotation::Deg270;
-
 #[async_trait(?Send)]
 pub(crate) trait ViewStrategy {
     fn initial_metrics(&self) -> Size {
@@ -89,6 +87,7 @@ pub(crate) struct FrameBufferParams {
     pub size: IntSize,
     pub frame_buffer: FrameBufferPtr,
     pub pixel_format: PixelFormat,
+    pub display_rotation: DisplayRotation,
 }
 
 pub(crate) struct ScenicParams {
