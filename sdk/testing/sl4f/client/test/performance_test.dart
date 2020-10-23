@@ -53,6 +53,8 @@ void main(List<String> args) {
     return tempDir;
   }
 
+  // TODO(fxbug.dev/59861): Update this test to the new fuchsia perf json
+  // format when the migration is done.
   test('process trace', () async {
     final metricsSpecs = [
       MetricsSpec(name: 'test_metric_1'),
@@ -95,6 +97,52 @@ void main(List<String> args) {
 
     expect(resultsObject[1]['label'], equals('label_2'));
     expect(resultsObject[1]['test_suite'], equals('test_name'));
+    expect(resultsObject[1]['unit'], equals('milliseconds'));
+    expect(resultsObject[1]['values'], equals([2.0]));
+  });
+
+  test('process trace with testSuite set but not testName', () async {
+    final metricsSpecs = [
+      MetricsSpec(name: 'test_metric_1'),
+      MetricsSpec(name: 'test_metric_2'),
+    ];
+    final metricsSpecSet =
+        MetricsSpecSet(testSuite: 'test_suite', metricsSpecs: metricsSpecs);
+    final testMetricsRegistry = {
+      'test_metric_1': (Model model, Map<String, dynamic> extraArgs) => [
+            TestCaseResults('label_1', Unit.nanoseconds, [1.0])
+          ],
+      'test_metric_2': (Model model, Map<String, dynamic> extraArgs) => [
+            TestCaseResults('label_2', Unit.milliseconds, [2.0])
+          ],
+    };
+
+    final traceFile = File(path.join(createTempDir().path, 'sample-trace.json'))
+      ..createSync()
+      ..writeAsStringSync('''
+{
+  "traceEvents": [],
+  "systemTraceEvents": {
+    "type": "fuchsia",
+    "events": []
+  }
+}
+''');
+
+    final performance = Performance(mockSl4f, mockDump);
+    final resultsFile = await performance
+        .processTrace(metricsSpecSet, traceFile, registry: testMetricsRegistry);
+
+    final resultsFileContents = await resultsFile.readAsString();
+    final resultsObject = json.decode(resultsFileContents);
+
+    expect(resultsObject[0]['label'], equals('label_1'));
+    expect(resultsObject[0]['test_suite'], equals('test_suite'));
+    expect(resultsObject[0]['unit'], equals('nanoseconds'));
+    expect(resultsObject[0]['values'], equals([1.0]));
+
+    expect(resultsObject[1]['label'], equals('label_2'));
+    expect(resultsObject[1]['test_suite'], equals('test_suite'));
     expect(resultsObject[1]['unit'], equals('milliseconds'));
     expect(resultsObject[1]['values'], equals([2.0]));
   });

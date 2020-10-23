@@ -55,11 +55,18 @@ String unitToCatapultConverterString(Unit unit) =>
 ///
 /// See the link at the top of this file for documentation.
 class TestCaseResults {
+  String metric;
+  // This field below is being renamed from "label" to "metric".
+  // It is duplicated as a transitional measure so that it can be accessed via
+  // either name.  TODO(fxbug.dev/59861): Remove the "label" field."
   String label;
   Unit unit;
   List<double> values;
 
-  TestCaseResults(this.label, this.unit, this.values);
+  TestCaseResults(this.metric, this.unit, this.values) {
+    // TODO(fxbug.dev/59861): Remove the statement below when "label" is removed.
+    label = metric;
+  }
 
   Map<String, dynamic> toJson({@required String testSuite}) => {
         'label': label,

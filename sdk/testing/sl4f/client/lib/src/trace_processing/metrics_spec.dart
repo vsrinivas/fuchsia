@@ -34,10 +34,23 @@ class MetricsSpec {
 /// Is tagged with a [testName] value to indicate what test name the
 /// collection of computed metrics should be output under.
 class MetricsSpecSet {
+  String testSuite;
   String testName;
   List<MetricsSpec> metricsSpecs;
 
-  MetricsSpecSet({@required this.testName, @required this.metricsSpecs});
+  MetricsSpecSet(
+      {@required this.metricsSpecs,
+      // TODO(fxbug.dev/59861): Make the testSuite argument required after transition
+      // is done.
+      this.testSuite,
+      // TODO(fxbug.dev/59861): Make testName required after migration is done.
+      this.testName}) {
+    // TODO(fxbug.dev/59861): Remove the if block below, which is used for backward
+    // compatible transition purpose.
+    if (testName == null && testSuite != null) {
+      testName = testSuite;
+    }
+  }
 }
 
 typedef MetricsProcessor = List<TestCaseResults> Function(
