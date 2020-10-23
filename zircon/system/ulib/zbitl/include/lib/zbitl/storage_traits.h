@@ -58,6 +58,13 @@ struct StorageTraits {
   /// std::span pointing to the contents.
   struct payload_type {};
 
+  /// This method is expected to return a type convertible to std::string_view
+  /// (e.g., std::string or const char*) representing the message associated to
+  /// a given error value. The returned object is "owning" and so it is
+  /// expected that the caller keep the returned object alive for as long as
+  /// they use any string_view converted from it.
+  static std::string_view error_string(error_type error) { return {}; }
+
   /// This returns the upper bound on available space where the ZBI is stored.
   /// The container must fit within this maximum.  Storage past the container's
   /// self-encoded size need not be accessible and will never be accessed.
@@ -202,6 +209,8 @@ struct StorageTraits<std::basic_string_view<T>> {
 
   using payload_type = Storage;
 
+  static std::string_view error_string(error_type error) { return {}; }
+
   static fitx::result<error_type, uint32_t> Capacity(Storage& zbi) {
     return fitx::ok(static_cast<uint32_t>(
         std::min(zbi.size(),
@@ -249,6 +258,8 @@ struct StorageTraits<std::span<T, Extent>> {
   struct error_type {};
 
   using payload_type = Storage;
+
+  static std::string_view error_string(error_type error) { return {}; }
 
   static fitx::result<error_type, uint32_t> Capacity(Storage& zbi) {
     return fitx::ok(static_cast<uint32_t>(

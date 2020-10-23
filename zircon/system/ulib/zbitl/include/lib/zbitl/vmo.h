@@ -7,6 +7,7 @@
 
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <zircon/status.h>
 
 #include <optional>
 #include <utility>
@@ -110,6 +111,8 @@ struct StorageTraits<zx::vmo> {
   /// Offset into the VMO where the ZBI item payload begins.
   using payload_type = uint64_t;
 
+  static std::string_view error_string(error_type error) { return zx_status_get_string(error); }
+
   static fitx::result<error_type, uint32_t> Capacity(const zx::vmo&);
 
   static fitx::result<error_type, zbi_header_t> Header(const zx::vmo&, uint32_t offset);
@@ -170,6 +173,8 @@ struct StorageTraits<zx::unowned_vmo> {
   using error_type = Owned::error_type;
   using payload_type = Owned::payload_type;
 
+  static auto error_string(error_type error) { return Owned::error_string(error); }
+
   static auto Capacity(const zx::unowned_vmo& vmo) { return Owned::Capacity(*vmo); }
 
   static auto Header(const zx::unowned_vmo& vmo, uint32_t offset) {
@@ -211,6 +216,8 @@ class StorageTraits<MapUnownedVmo> {
 
   using error_type = Owned::error_type;
   using payload_type = Owned::payload_type;
+
+  static auto error_string(error_type error) { return Owned::error_string(error); }
 
   static auto Capacity(const MapUnownedVmo& zbi) { return Owned::Capacity(zbi.vmo()); }
 

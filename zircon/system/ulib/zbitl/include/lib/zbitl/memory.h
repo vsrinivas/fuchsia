@@ -23,6 +23,8 @@ class StorageTraits<fbl::Array<T>> {
 
   using payload_type = fbl::Span<T>;
 
+  static std::string_view error_string(error_type error) { return {}; }
+
   static fbl::Span<std::byte> AsBytes(const Storage& zbi) {
     return {reinterpret_cast<std::byte*>(zbi.data()), zbi.size() * sizeof(T)};
   }

@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_
 #define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_
 
+#include <lib/zbitl/error_string.h>
 #include <lib/zbitl/json.h>
 #include <lib/zbitl/view.h>
 
@@ -15,15 +16,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-#include "copy-tests.h"
-#include "fbl/string_printf.h"
 #include "src/lib/files/scoped_temp_dir.h"
-
-#define ASSERT_IS_OK(result)                                                                 \
-  do {                                                                                       \
-    const auto& result_ = result;                                                            \
-    ASSERT_TRUE(result_.is_ok()) << "unexpected error: " << result_.error_value().zbi_error; \
-  } while (0)
 
 // While it is convenient to use std::string as a container in representing ZBI
 // content, we alias the type to convey that it need not necessarily represent
@@ -150,7 +143,8 @@ inline void TestIteration(TestDataZbiType type) {
   ASSERT_NO_FATAL_FAILURE(TestTraits::Create(std::move(fd), size, &context));
   zbitl::View<Storage, Checking> view(context.TakeStorage());
 
-  ASSERT_IS_OK(view.container_header());
+  auto container_result = view.container_header();
+  ASSERT_FALSE(container_result.is_error()) << ViewErrorString(container_result.error_value());
 
   size_t idx = 0;
   for (auto [header, payload] : view) {
@@ -167,9 +161,8 @@ inline void TestIteration(TestDataZbiType type) {
   }
   EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
 
-  auto error = view.take_error();
-  EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                 << error.error_value().item_offset;
+  auto result = view.take_error();
+  EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
 }
 
 #define TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, TestTraits, checking_name, checking, \
@@ -216,13 +209,15 @@ void TestCrcCheckFailure() {
   ASSERT_NO_FATAL_FAILURE(TestTraits::Create(std::move(fd), size, &context));
   zbitl::CrcCheckingView<Storage> view(context.TakeStorage());
 
-  ASSERT_IS_OK(view.container_header());
+  auto container_result = view.container_header();
+  ASSERT_FALSE(container_result.is_error()) << ViewErrorString(container_result.error_value());
 
   for (auto [header, payload] : view) {
     EXPECT_EQ(header->type, header->type);
     EXPECT_TRUE(false) << "should not be reached";
   }
   auto error = view.take_error();
+
   ASSERT_TRUE(error.is_error());
   // The error shouldn't be one of storage.
   EXPECT_FALSE(error.error_value().storage_error) << error.error_value().zbi_error;
@@ -251,7 +246,8 @@ void TestMutation(TestDataZbiType type) {
   ASSERT_NO_FATAL_FAILURE(TestTraits::Create(std::move(fd), size, &context));
   zbitl::View view(context.TakeStorage());  // Yay deduction guides.
 
-  ASSERT_IS_OK(view.container_header());
+  auto container_result = view.container_header();
+  ASSERT_FALSE(container_result.is_error()) << ViewErrorString(container_result.error_value());
 
   size_t expected_num_items = GetExpectedNumberOfItems(type);
 
@@ -272,9 +268,8 @@ void TestMutation(TestDataZbiType type) {
   EXPECT_EQ(expected_num_items, idx);
 
   {
-    auto error = view.take_error();
-    EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                   << error.error_value().item_offset;
+    auto result = view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
   }
 
   idx = 0;
@@ -289,11 +284,8 @@ void TestMutation(TestDataZbiType type) {
   }
   EXPECT_EQ(expected_num_items, idx);
 
-  {
-    auto error = view.take_error();
-    EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                   << error.error_value().item_offset;
-  }
+  auto result = view.take_error();
+  EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
 }
 
 #define TEST_MUTATION_BY_TYPE(suite_name, TestTraits, type_name, type) \
@@ -328,8 +320,7 @@ void TestCopyCreation(TestDataZbiType type, bool with_header) {
 
     auto result = with_header ? view.CopyRawItemWithHeader(it) : view.CopyRawItem(it);
     ASSERT_TRUE(result.is_ok()) << "item " << idx << ", " << (with_header ? "with" : "without")
-                                << " header: "
-                                << CopyResultErrorMsg(std::move(result).error_value());
+                                << " header: " << ViewCopyErrorString(result.error_value());
 
     auto created = std::move(result).value();
 
@@ -347,9 +338,8 @@ void TestCopyCreation(TestDataZbiType type, bool with_header) {
   }
   EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
 
-  auto error = view.take_error();
-  EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                 << error.error_value().item_offset;
+  auto result = view.take_error();
+  EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
 }
 
 // We simply test in this case that we are able to copy-create the byte ranges
@@ -373,7 +363,8 @@ void TestCopyCreationByByteRange(TestDataZbiType type) {
   for (auto it = view.begin(); it != view.end(); ++it, ++idx) {
     uint32_t payload_size = (*it).header->length;
     auto result = view.Copy(it.payload_offset(), payload_size);
-    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
+    EXPECT_FALSE(result.is_error()) << ViewCopyErrorString(result.error_value());
+
     auto created = std::move(result).value();
 
     Bytes actual;
@@ -386,9 +377,8 @@ void TestCopyCreationByByteRange(TestDataZbiType type) {
   }
   EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
 
-  auto error = view.take_error();
-  EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                 << error.error_value().item_offset;
+  auto result = view.take_error();
+  EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
 }
 
 template <typename TestTraits>
@@ -408,13 +398,15 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
   // [begin(), begin() + 1).
   {
     auto first = view.begin();
-    auto result = view.Copy(first, Next(first));
-    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
 
-    auto created = std::move(result).value();
+    auto copy_result = view.Copy(first, Next(first));
+    EXPECT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
+
+    auto created = std::move(copy_result).value();
 
     zbitl::View created_view(std::move(created));
-    ASSERT_IS_OK(created_view.container_header());
+    auto container_result = view.container_header();
+    ASSERT_FALSE(container_result.is_error()) << ViewErrorString(container_result.error_value());
 
     size_t idx = 0;
     for (auto [header, payload] : created_view) {
@@ -432,19 +424,20 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
     }
     EXPECT_EQ(1u, idx);
 
-    auto error = created_view.take_error();
-    EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                   << error.error_value().item_offset;
+    auto result = created_view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
   }
 
   // [begin() + 1, end()).
   if (Next(view.begin()) != view.end()) {
-    auto result = view.Copy(Next(view.begin()), view.end());
-    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
-    auto created = std::move(result).value();
+    auto copy_result = view.Copy(Next(view.begin()), view.end());
+    EXPECT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
+
+    auto created = std::move(copy_result).value();
 
     zbitl::View created_view(std::move(created));
-    ASSERT_IS_OK(created_view.container_header());
+    auto container_result = view.container_header();
+    ASSERT_FALSE(container_result.is_error()) << ViewErrorString(container_result.error_value());
 
     // We might have filled slop with a single discard element; skip if so.
     auto first = created_view.begin();
@@ -469,14 +462,12 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
     }
     EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
 
-    auto error = created_view.take_error();
-    EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                   << error.error_value().item_offset;
+    auto result = created_view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
   }
 
-  auto error = view.take_error();
-  EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                 << error.error_value().item_offset;
+  auto result = view.take_error();
+  EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
 }
 
 #define TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, type_name, type, \
@@ -527,8 +518,7 @@ void TestCopying(TestDataZbiType type, bool with_header) {
     auto result = with_header ? view.CopyRawItemWithHeader(std::move(copy), it)
                               : view.CopyRawItem(std::move(copy), it);
     ASSERT_TRUE(result.is_ok()) << "item " << idx << ", " << (with_header ? "with" : "without")
-                                << " header: "
-                                << CopyResultErrorMsg(std::move(result).error_value());
+                                << " header: " << ViewCopyErrorString(result.error_value());
 
     Bytes actual;
     auto copy_payload = DestTestTraits::AsPayload(copy);
@@ -544,9 +534,8 @@ void TestCopying(TestDataZbiType type, bool with_header) {
   }
   EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
 
-  auto error = view.take_error();
-  EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                 << error.error_value().item_offset;
+  auto result = view.take_error();
+  EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
 }
 
 // We simply test in this case that we are able to copy the byte ranges
@@ -573,7 +562,7 @@ void TestCopyingByByteRange(TestDataZbiType type) {
     auto copy = copy_context.TakeStorage();
 
     auto result = view.Copy(copy, it.payload_offset(), payload_size);
-    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
+    EXPECT_FALSE(result.is_error()) << ViewCopyErrorString(result.error_value());
 
     Bytes actual;
     auto copy_payload = DestTestTraits::AsPayload(copy);
@@ -585,9 +574,8 @@ void TestCopyingByByteRange(TestDataZbiType type) {
   }
   EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
 
-  auto error = view.take_error();
-  EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                 << error.error_value().item_offset;
+  auto result = view.take_error();
+  EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
 }
 
 template <typename SrcTestTraits, typename DestTestTraits>
@@ -609,10 +597,14 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
     auto copy = copy_context.TakeStorage();
 
     auto first = view.begin();
-    auto result = view.Copy(copy, first, Next(view.begin()));
-    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
+    {
+      auto result = view.Copy(copy, first, Next(view.begin()));
+      EXPECT_FALSE(result.is_error()) << ViewCopyErrorString(result.error_value());
+    }
+
     zbitl::View copy_view(std::move(copy));
-    ASSERT_IS_OK(copy_view.container_header());
+    auto container_result = view.container_header();
+    ASSERT_FALSE(container_result.is_error()) << ViewErrorString(container_result.error_value());
 
     size_t idx = 0;
     for (auto [header, payload] : copy_view) {
@@ -625,9 +617,8 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
     }
     EXPECT_EQ(1u, idx);
 
-    auto error = copy_view.take_error();
-    EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                   << error.error_value().item_offset;
+    auto result = copy_view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
   }
 
   // [begin() + 1, end()).
@@ -637,11 +628,14 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
     auto copy = copy_context.TakeStorage();
 
     auto first = Next(view.begin());
-    auto result = view.Copy(copy, first, view.end());
-    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
+    {
+      auto result = view.Copy(copy, first, view.end());
+      EXPECT_FALSE(result.is_error()) << ViewCopyErrorString(result.error_value());
+    }
 
     zbitl::View copy_view(std::move(copy));
-    ASSERT_IS_OK(copy_view.container_header());
+    auto container_result = view.container_header();
+    ASSERT_FALSE(container_result.is_error()) << ViewErrorString(container_result.error_value());
 
     size_t idx = 1;  // Corresponding to begin() + 1.
     for (auto [header, payload] : copy_view) {
@@ -654,14 +648,14 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
     }
     EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
 
-    auto error = copy_view.take_error();
-    EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                   << error.error_value().item_offset;
+    auto result = copy_view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
   }
 
-  auto error = view.take_error();
-  EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                 << error.error_value().item_offset;
+  {
+    auto result = view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
+  }
 }
 
 template <typename SrcTestTraits, typename DestTestTraits>

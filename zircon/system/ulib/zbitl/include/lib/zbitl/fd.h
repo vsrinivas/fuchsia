@@ -7,6 +7,8 @@
 
 #include <sys/types.h>  // off_t
 
+#include <string>
+
 #include <fbl/unique_fd.h>
 
 #include "storage_traits.h"
@@ -22,6 +24,8 @@ class StorageTraits<fbl::unique_fd> {
 
   /// Offset into file where the ZBI item payload begins.
   using payload_type = off_t;
+
+  static std::string error_string(error_type error) { return strerror(error); }
 
   static fitx::result<error_type, uint32_t> Capacity(const fbl::unique_fd&);
 

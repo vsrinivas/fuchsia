@@ -4,9 +4,9 @@
 
 #include "vmo-tests.h"
 
-#include <algorithm>
+#include <lib/zbitl/error_string.h>
 
-#include "copy-tests.h"
+#include <algorithm>
 
 namespace {
 
@@ -57,26 +57,25 @@ void TestCloning() {
     {
       auto first = view.begin();
       EXPECT_EQ(sizeof(zbi_header_t), first.item_offset());
-      auto result = view.Copy(first, Next(first));
-      ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
+      auto copy_result = view.Copy(first, Next(first));
+      ASSERT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
-      auto created = std::move(result).value();
+      auto created = std::move(copy_result).value();
       const zx::vmo& vmo = CreationTestTraits::GetVmo(created);
       const zx::vmo& parent = TestTraits::GetVmo(view.storage());  // Well, would-be parent.
       ASSERT_NO_FATAL_FAILURE(ExpectVmoIsCloned(vmo, parent));
 
       // CRC-checking and header checking is sufficient to determine
       // byte-for-byte equality.
-      zbitl::CrcCheckingView<decltype(created)> createdView(std::move(created));
-      auto createdFirst = createdView.begin();
-      EXPECT_EQ(createdView.end(), Next(createdFirst));  // Should only have one item.
+      zbitl::CrcCheckingView<decltype(created)> created_view(std::move(created));
+      auto created_first = created_view.begin();
+      EXPECT_EQ(created_view.end(), Next(created_first));  // Should only have one item.
       zbi_header_t src_header = *((*first).header);
-      zbi_header_t dest_header = *((*createdFirst).header);
+      zbi_header_t dest_header = *((*created_first).header);
       EXPECT_EQ(HeaderToTuple(src_header), HeaderToTuple(dest_header));
 
-      auto error = createdView.take_error();
-      EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                     << error.error_value().item_offset;
+      auto result = created_view.take_error();
+      EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
     }
 
     // kSecondItemOnPageBoundary, copying the second item.
@@ -84,30 +83,28 @@ void TestCloning() {
     {
       auto second = Next(view.begin());
       EXPECT_EQ(0u, second.item_offset() % ZX_PAGE_SIZE);
-      auto result = view.Copy(second, Next(second));
-      ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
+      auto copy_result = view.Copy(second, Next(second));
+      ASSERT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
-      auto created = std::move(result).value();
+      auto created = std::move(copy_result).value();
       const zx::vmo& vmo = CreationTestTraits::GetVmo(created);
       ASSERT_NO_FATAL_FAILURE(ExpectVmoIsNotCloned(vmo));
 
       // CRC-checking and header checking is sufficient to determine
       // byte-for-byte equality.
-      zbitl::CrcCheckingView<decltype(created)> createdView(std::move(created));
-      auto createdFirst = createdView.begin();
-      EXPECT_EQ(createdView.end(), Next(createdFirst));  // Should only have one item.
+      zbitl::CrcCheckingView<decltype(created)> created_view(std::move(created));
+      auto created_first = created_view.begin();
+      EXPECT_EQ(created_view.end(), Next(created_first));  // Should only have one item.
       zbi_header_t src_header = *((*second).header);
-      zbi_header_t dest_header = *((*createdFirst).header);
+      zbi_header_t dest_header = *((*created_first).header);
       EXPECT_EQ(HeaderToTuple(src_header), HeaderToTuple(dest_header));
 
-      auto error = createdView.take_error();
-      EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                     << error.error_value().item_offset;
+      auto result = created_view.take_error();
+      ASSERT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
     }
 
-    auto error = view.take_error();
-    EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                   << error.error_value().item_offset;
+    auto result = view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
   }
 
   // kMultipleSmallItems
@@ -127,21 +124,25 @@ void TestCloning() {
     {
       auto first = view.begin();
       EXPECT_EQ(sizeof(zbi_header_t), first.item_offset());
-      auto result = view.Copy(first, Next(first));
-      ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
-      auto created = std::move(result).value();
+      auto copy_result = view.Copy(first, Next(first));
+      ASSERT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
+
+      auto created = std::move(copy_result).value();
+      const zx::vmo& vmo = CreationTestTraits::GetVmo(created);
+      const zx::vmo& parent = TestTraits::GetVmo(view.storage());  // Well, would-be parent.
+      ASSERT_NO_FATAL_FAILURE(ExpectVmoIsCloned(vmo, parent));
+
       // CRC-checking and header checking is sufficient to determine
       // byte-for-byte equality.
-      zbitl::CrcCheckingView<decltype(created)> createdView(std::move(created));
-      auto createdFirst = createdView.begin();
-      EXPECT_EQ(createdView.end(), Next(createdFirst));  // Should only have one item.
+      zbitl::CrcCheckingView<decltype(created)> created_view(std::move(created));
+      auto created_first = created_view.begin();
+      EXPECT_EQ(created_view.end(), Next(created_first));  // Should only have one item.
       zbi_header_t src_header = *((*first).header);
-      zbi_header_t dest_header = *((*createdFirst).header);
+      zbi_header_t dest_header = *((*created_first).header);
       EXPECT_EQ(HeaderToTuple(src_header), HeaderToTuple(dest_header));
 
-      auto error = createdView.take_error();
-      EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                     << error.error_value().item_offset;
+      auto result = created_view.take_error();
+      EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
     }
 
     // kMultipleSmallItems, copying the second item.
@@ -151,31 +152,31 @@ void TestCloning() {
       constexpr uint32_t kSecondItemSize = 240;
       auto second = Next(view.begin());
       EXPECT_EQ(kSecondItemSize, second.item_offset());
-      auto result = view.Copy(second, Next(second));
-      ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
+      auto copy_result = view.Copy(second, Next(second));
+      ASSERT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
-      auto created = std::move(result).value();
+      auto created = std::move(copy_result).value();
       const zx::vmo& vmo = CreationTestTraits::GetVmo(created);
       const zx::vmo& parent = TestTraits::GetVmo(view.storage());  // Well, would-be parent.
       ASSERT_NO_FATAL_FAILURE(ExpectVmoIsCloned(vmo, parent));
 
       // CRC-checking and header checking is sufficient to determine
       // byte-for-byte equality.
-      zbitl::CrcCheckingView<decltype(created)> createdView(std::move(created));
-      auto createdFirst = createdView.begin();
-      auto createdSecond = Next(createdFirst);
-      EXPECT_EQ(createdView.end(), Next(createdSecond));  // Should have two items.
+      zbitl::CrcCheckingView<decltype(created)> created_view(std::move(created));
+      auto created_first = created_view.begin();
+      auto createdSecond = Next(created_first);
+      EXPECT_EQ(created_view.end(), Next(createdSecond));  // Should have two items.
 
       zbi_header_t src_header = *((*second).header);
-      zbi_header_t dest1_header = *((*createdFirst).header);
-      uint64_t dest1_payload = (*createdFirst).payload;
+      zbi_header_t dest1_header = *((*created_first).header);
+      uint64_t dest1_payload = (*created_first).payload;
       zbi_header_t dest2_header = *((*createdSecond).header);
 
       EXPECT_EQ(static_cast<uint32_t>(ZBI_TYPE_DISCARD), dest1_header.type);
       constexpr uint32_t kExpectedDiscardSize = kSecondItemSize - 2 * sizeof(zbi_header_t);
       ASSERT_EQ(kExpectedDiscardSize, dest1_header.length);
       Bytes contents;
-      ASSERT_NO_FATAL_FAILURE(CreationTestTraits::Read(createdView.storage(), dest1_payload,
+      ASSERT_NO_FATAL_FAILURE(CreationTestTraits::Read(created_view.storage(), dest1_payload,
                                                        kExpectedDiscardSize, &contents));
       EXPECT_EQ(kExpectedDiscardSize, contents.size());
       EXPECT_TRUE(
@@ -183,14 +184,12 @@ void TestCloning() {
 
       EXPECT_EQ(HeaderToTuple(src_header), HeaderToTuple(dest2_header));
 
-      auto error = createdView.take_error();
-      EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                     << error.error_value().item_offset;
+      auto result = created_view.take_error();
+      ASSERT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
     }
 
-    auto error = view.take_error();
-    EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                   << error.error_value().item_offset;
+    auto result = view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
   }
 }
 

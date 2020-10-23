@@ -320,6 +320,10 @@ class View {
   /// the error.  Errors arising from Storage access also provide an error
   /// value defined via StorageTraits; see <lib/zbitl/storage_traits.h>.
   struct Error {
+    static auto storage_error_string(typename Traits::error_type error) {
+      return Traits::error_string(error);
+    }
+
     /// A string constant describing the error.
     std::string_view zbi_error{};
 
@@ -342,7 +346,13 @@ class View {
   /// to remain unset.
   template <typename CopyStorage>
   struct CopyError {
-    using WriteError = typename StorageTraits<std::decay_t<CopyStorage>>::error_type;
+    using WriteTraits = StorageTraits<std::decay_t<CopyStorage>>;
+    using WriteError = typename WriteTraits::error_type;
+    using ReadError = typename Traits::error_type;
+
+    static auto read_error_string(ReadError error) { return Traits::error_string(error); }
+
+    static auto write_error_string(WriteError error) { return WriteTraits::error_string(error); }
 
     /// A string constant describing the error.
     std::string_view zbi_error{};

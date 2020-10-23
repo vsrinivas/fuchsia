@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zbitl/error_string.h>
 #include <lib/zbitl/view.h>
 
 #include <rapidjson/prettywriter.h>
@@ -31,9 +32,8 @@ void TestJson(TestDataZbiType type) {
   JsonWriteZbi(json_writer, view, 0);
   EXPECT_EQ(GetExpectedJson(type), buffer.GetString());
 
-  auto error = view.take_error();
-  EXPECT_FALSE(error.is_error()) << error.error_value().zbi_error << " at offset 0x" << std::hex
-                                 << error.error_value().item_offset;
+  auto result = view.take_error();
+  EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
 }
 
 TEST(ZbitlJsonTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURE(TestJson(TestDataZbiType::kEmpty)); }
