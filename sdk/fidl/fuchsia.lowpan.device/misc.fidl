@@ -21,3 +21,6 @@ const uint16 MAX_NETWORK_TYPES = 16;
 
 /// Type for describing a channel index.
 using ChannelIndex = fuchsia.lowpan.ChannelIndex;
+
+/// Used with `DeviceExtra.CommissionNetwork()`.
+using JoinerSecret = bytes:32;

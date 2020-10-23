@@ -9,9 +9,10 @@ use super::*;
 use anyhow::Error;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
-    DeviceState, EnergyScanParameters, EnergyScanResult, NetworkScanParameters,
+    DeviceState, EnergyScanParameters, EnergyScanResult, NetworkScanParameters, ProvisionError,
     ProvisioningMonitorMarker, ProvisioningMonitorRequest, ProvisioningProgress,
 };
+use fidl_fuchsia_lowpan_test::*;
 use fuchsia_zircon_status as zx_status;
 use futures::stream::BoxStream;
 use futures::FutureExt;
@@ -348,5 +349,55 @@ impl Driver for DummyDevice {
         fx_log_info!("Got send_mfg_command command: {:?}", command);
 
         Ok("error: The dummy driver currently has no manufacturing commands.".to_string())
+    }
+
+    async fn commission_network(
+        &self,
+        secret: &[u8],
+        progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
+    ) {
+        fx_log_info!("Got commission command with secret {:?}", secret);
+        let mut request_stream = progress.into_stream().expect("progress into stream");
+
+        let fut = async move {
+            let ProvisioningMonitorRequest::WatchProgress { responder } = request_stream
+                .try_next()
+                .await?
+                .ok_or(format_err!("Provisioning monitor closed"))?;
+
+            responder.send(&mut Ok(dummy_device::ProvisioningProgress::Progress(0.5)))?;
+
+            let ProvisioningMonitorRequest::WatchProgress { responder } = request_stream
+                .try_next()
+                .await?
+                .ok_or(format_err!("Provisioning monitor closed"))?;
+
+            responder.send(&mut Err(ProvisionError::NetworkNotFound))?;
+
+            Ok::<(), Error>(())
+        };
+
+        match fut.await {
+            Ok(()) => {
+                fx_log_info!("Replied to ProvisioningProgress requests");
+            }
+            Err(e) => {
+                fx_log_info!("Error replying to ProvisioningProgress requests: {:?}", e);
+            }
+        }
+    }
+
+    async fn replace_mac_address_filter_settings(
+        &self,
+        _settings: MacAddressFilterSettings,
+    ) -> ZxResult<()> {
+        Ok(())
+    }
+
+    async fn get_mac_address_filter_settings(&self) -> ZxResult<MacAddressFilterSettings> {
+        Ok(MacAddressFilterSettings {
+            mode: Some(MacAddressFilterMode::Disabled),
+            ..MacAddressFilterSettings::empty()
+        })
     }
 }

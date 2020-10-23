@@ -23,6 +23,10 @@ enum ProvisionError : int32 {
     /// Forming a new network did not successfully complete because the
     /// a peer with the requested network identity is in range.
     NETWORK_ALREADY_EXISTS = 3;
+
+    /// This operation was canceled due to an incompatible operation
+    /// being started before this one was finished.
+    CANCELED = 4;
 };
 
 /// Indicates the current status of the form/join operation.

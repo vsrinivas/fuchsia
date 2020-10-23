@@ -88,6 +88,21 @@ pub trait Driver: Send + Sync {
         progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
     );
 
+    /// Commissions this device onto an unknown network.
+    ///
+    /// See [`fidl_fuchsia_lowpan_device::DeviceExtra::commission_network`] for more information.
+    ///
+    /// Note that the future returned from this method is not
+    /// for the return value, rather it is used for handling
+    /// the `progress` ServerEnd and making progress on the
+    /// `join` operation. From a FIDL point of view, this method
+    /// returns immediately.
+    async fn commission_network(
+        &self,
+        secret: &[u8],
+        progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
+    );
+
     /// Returns the value of the current credential, if one is available.
     ///
     /// See [`fidl_fuchsia_lowpan_device::DeviceExtra::get_credential`] for more information.
@@ -171,6 +186,12 @@ pub trait Driver: Send + Sync {
     ///
     /// See [`fidl_fuchsia_factory_lowpan::FactoryDevice::send_mfg_command`] for more information.
     async fn send_mfg_command(&self, command: &str) -> ZxResult<String>;
+
+    async fn replace_mac_address_filter_settings(
+        &self,
+        settings: MacAddressFilterSettings,
+    ) -> ZxResult<()>;
+    async fn get_mac_address_filter_settings(&self) -> ZxResult<MacAddressFilterSettings>;
 }
 
 #[async_trait()]
@@ -285,6 +306,9 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
                     }
                     DeviceExtraRequest::FormNetwork { params, progress, .. } => {
                         self.form_network(params, progress).await;
+                    }
+                    DeviceExtraRequest::CommissionNetwork { secret, progress, .. } => {
+                        self.commission_network(&secret, progress).await;
                     }
                     DeviceExtraRequest::GetCredential { responder, .. } => {
                         self.get_credential()
@@ -547,6 +571,22 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
                         .and_then(|response| ready(responder.send(response).map_err(Error::from)))
                         .await
                         .context("error in get_thread_router_id request")?;
+                }
+                DeviceTestRequest::ReplaceMacAddressFilterSettings {
+                    settings, responder, ..
+                } => {
+                    self.replace_mac_address_filter_settings(settings)
+                        .err_into::<Error>()
+                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .await
+                        .context("error in set_address_filter_settings request")?;
+                }
+                DeviceTestRequest::GetMacAddressFilterSettings { responder, .. } => {
+                    self.get_mac_address_filter_settings()
+                        .err_into::<Error>()
+                        .and_then(|x| ready(responder.send(x).map_err(Error::from)))
+                        .await
+                        .context("error in get_address_filter_settings request")?;
                 }
             }
             Result::<(), Error>::Ok(())

@@ -14,6 +14,7 @@ use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
     DeviceState, EnergyScanParameters, NetworkScanParameters, ProvisioningMonitorMarker,
 };
+use fidl_fuchsia_lowpan_test::*;
 use fuchsia_async::TimeoutExt;
 use futures::stream::BoxStream;
 use futures::{StreamExt, TryFutureExt};
@@ -769,6 +770,34 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
                 .boxed(),
         )
         .await
+    }
+
+    async fn commission_network(
+        &self,
+        _secret: &[u8],
+        _progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
+    ) {
+        fx_log_info!("Got commission command");
+    }
+
+    async fn replace_mac_address_filter_settings(
+        &self,
+        settings: MacAddressFilterSettings,
+    ) -> ZxResult<()> {
+        if settings.mode.or(Some(MacAddressFilterMode::Disabled))
+            == Some(MacAddressFilterMode::Disabled)
+        {
+            Ok(())
+        } else {
+            Err(ZxStatus::NOT_SUPPORTED)
+        }
+    }
+
+    async fn get_mac_address_filter_settings(&self) -> ZxResult<MacAddressFilterSettings> {
+        Ok(MacAddressFilterSettings {
+            mode: Some(MacAddressFilterMode::Disabled),
+            ..MacAddressFilterSettings::empty()
+        })
     }
 }
 

@@ -151,6 +151,9 @@ protocol DeviceExtra {
     /// The progress of the operation can be monitored via
     /// the `ProvisioningMonitor` protocol instance. The operation
     /// may be cancelled by closing the `ProvisioningMonitor`.
+    ///
+    /// Calling this method will cause any current form, join, or
+    /// commission operation to be canceled.
     FormNetwork(fuchsia.lowpan.ProvisioningParams params, request<ProvisioningMonitor> progress);
 
     /// Attempts to join a pre-existing nearby network
@@ -162,7 +165,27 @@ protocol DeviceExtra {
     /// The progress of the operation can be monitored via
     /// the `ProvisioningMonitor` protocol instance. The operation
     /// may be cancelled by closing the `ProvisioningMonitor`.
+    ///
+    /// Calling this method will cause any current form, join, or
+    /// commission operation to be canceled.
     JoinNetwork(fuchsia.lowpan.ProvisioningParams params, request<ProvisioningMonitor> progress);
+
+    /// Attempts to find and join a pre-existing nearby network
+    /// that is configured to accept and provision devices with
+    /// the given shared secret. This allows new devices to join
+    /// existing networks without knowing the credentials for the
+    /// specific network.
+    ///
+    /// Upon success, the device will be active and provisioned
+    /// for the newly created network.
+    ///
+    /// The progress of the operation can be monitored via
+    /// the `ProvisioningMonitor` protocol instance. The operation
+    /// may be cancelled by closing the `ProvisioningMonitor`.
+    ///
+    /// Calling this method will cause any current form, join, or
+    /// commission operation to be canceled.
+    CommissionNetwork(JoinerSecret secret, request<ProvisioningMonitor> progress);
 
     /// Fetches the current credential.
     ///

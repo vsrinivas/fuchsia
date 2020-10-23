@@ -17,6 +17,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
     "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device-rustc",
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
+    "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/connectivity/lowpan/lib/lowpan_driver_common",
     "//src/connectivity/lowpan/lib/spinel_pack",
