@@ -850,9 +850,22 @@ func (e *endpoint) IsAttached() bool {
 func (*endpoint) Wait() {}
 
 func (*endpoint) MTU() uint32 {
-	// This value is used by IPv4 fragmentation.  It must be at least 68 bytes as
-	// required by RFC 791.
-	return 1000
+	// As per RFC 8200 section 5:
+	//
+	//  IPv6 requires that every link in the Internet have an MTU of 1280
+	//  octets or greater. This is known as the IPv6 minimum link MTU. On
+	//  any link that cannot convey a 1280-octet packet in one piece, link-
+	//  specific fragmentation and reassembly must be provided at a layer
+	//  below IPv6.
+	//
+	// RFC 791 section 3.2 also has a minimum MTU requirement for IPv4:
+	//
+	//  Every internet module must be able to forward a datagram of 68
+	//  octets without further fragmentation. This is because an internet
+	//  header may be up to 60 octets, and the minimum fragment is 8 octets.
+	//
+	// Since the IPv6 minimum MTU is the greater value, we use that.
+	return header.IPv6MinimumMTU
 }
 
 func (*endpoint) Capabilities() stack.LinkEndpointCapabilities {
