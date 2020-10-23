@@ -5,31 +5,29 @@
 #ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_COPY_TESTS_H_
 #define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_COPY_TESTS_H_
 
+#include <zircon/assert.h>
+
+#include <sstream>
 #include <string>
 
-#include "src/lib/fxl/strings/string_printf.h"
-
-// An error message for the return value of CopyRawItem() or
-// CopyRawItemWithHeader().
-template <typename CopyResult>
-std::string CopyResultErrorMsg(CopyResult result) {
-  std::string msg;
-  if (result.is_error()) {
-    auto input_error = std::move(result).error_value();
-    msg = input_error.zbi_error.data();
-    if (input_error.storage_error) {
-      auto storage_error = std::move(input_error).storage_error;
-      if constexpr (std::is_integral_v<decltype(storage_error)>) {
-        fxl::StringAppendf(&msg, ": read error %d\n", storage_error);
-      }
+// An error message for an error returned by the Copy API.
+template <typename CopyError>
+std::string CopyResultErrorMsg(CopyError copy_error) {
+  std::stringstream ss;
+  auto append = [&ss](auto&& io_error) {
+    if constexpr (std::is_integral_v<decltype(io_error)>) {
+      ss << " " << io_error << "\n";
     }
-  } else if (result.value().is_error()) {
-    auto storage_error = std::move(result).value().error_value();
-    if constexpr (std::is_integral_v<decltype(storage_error)>) {
-      fxl::StringAppendf(&msg, ": write error %d\n", storage_error);
-    }
+  };
+  ss << copy_error.zbi_error;
+  if (copy_error.read_error) {
+    ss << ": read error at offset " << std::hex << copy_error.read_offset;
+    append(copy_error.read_error.value());
+  } else if (copy_error.write_error) {
+    ss << ": write error at offset " << std::hex << copy_error.write_offset;
+    append(copy_error.write_error.value());
   }
-  return msg;
+  return ss.str();
 }
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_COPY_TESTS_H_

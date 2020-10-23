@@ -328,12 +328,10 @@ void TestCopyCreation(TestDataZbiType type, bool with_header) {
 
     auto result = with_header ? view.CopyRawItemWithHeader(it) : view.CopyRawItem(it);
     ASSERT_TRUE(result.is_ok()) << "item " << idx << ", " << (with_header ? "with" : "without")
-                                << " header: " << CopyResultErrorMsg(std::move(result));
-    ASSERT_TRUE(result.value().is_ok())
-        << "item " << idx << ", " << (with_header ? "with" : "without")
-        << " header: " << CopyResultErrorMsg(std::move(result));
+                                << " header: "
+                                << CopyResultErrorMsg(std::move(result).error_value());
 
-    auto created = std::move(result).value().value();
+    auto created = std::move(result).value();
 
     Bytes actual;
     auto created_payload = CreationTraits::AsPayload(created);
@@ -375,10 +373,8 @@ void TestCopyCreationByByteRange(TestDataZbiType type) {
   for (auto it = view.begin(); it != view.end(); ++it, ++idx) {
     uint32_t payload_size = (*it).header->length;
     auto result = view.Copy(it.payload_offset(), payload_size);
-    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result));
-    ASSERT_TRUE(result.value().is_ok()) << CopyResultErrorMsg(std::move(result));
-
-    auto created = std::move(result).value().value();
+    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
+    auto created = std::move(result).value();
 
     Bytes actual;
     auto created_payload = CreationTestTraits::AsPayload(created);
@@ -413,10 +409,9 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
   {
     auto first = view.begin();
     auto result = view.Copy(first, Next(first));
-    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result));
-    ASSERT_TRUE(result.value().is_ok()) << CopyResultErrorMsg(std::move(result));
+    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
 
-    auto created = std::move(result).value().value();
+    auto created = std::move(result).value();
 
     zbitl::View created_view(std::move(created));
     ASSERT_IS_OK(created_view.container_header());
@@ -445,10 +440,8 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
   // [begin() + 1, end()).
   if (Next(view.begin()) != view.end()) {
     auto result = view.Copy(Next(view.begin()), view.end());
-    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result));
-    ASSERT_TRUE(result.value().is_ok()) << CopyResultErrorMsg(std::move(result));
-
-    auto created = std::move(result).value().value();
+    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
+    auto created = std::move(result).value();
 
     zbitl::View created_view(std::move(created));
     ASSERT_IS_OK(created_view.container_header());
@@ -534,10 +527,8 @@ void TestCopying(TestDataZbiType type, bool with_header) {
     auto result = with_header ? view.CopyRawItemWithHeader(std::move(copy), it)
                               : view.CopyRawItem(std::move(copy), it);
     ASSERT_TRUE(result.is_ok()) << "item " << idx << ", " << (with_header ? "with" : "without")
-                                << " header: " << CopyResultErrorMsg(std::move(result));
-    ASSERT_TRUE(result.value().is_ok())
-        << "item " << idx << ", " << (with_header ? "with" : "without")
-        << " header: " << CopyResultErrorMsg(std::move(result));
+                                << " header: "
+                                << CopyResultErrorMsg(std::move(result).error_value());
 
     Bytes actual;
     auto copy_payload = DestTestTraits::AsPayload(copy);
@@ -582,8 +573,7 @@ void TestCopyingByByteRange(TestDataZbiType type) {
     auto copy = copy_context.TakeStorage();
 
     auto result = view.Copy(copy, it.payload_offset(), payload_size);
-    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result));
-    ASSERT_TRUE(result.value().is_ok()) << CopyResultErrorMsg(std::move(result));
+    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
 
     Bytes actual;
     auto copy_payload = DestTestTraits::AsPayload(copy);
@@ -620,9 +610,7 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
 
     auto first = view.begin();
     auto result = view.Copy(copy, first, Next(view.begin()));
-    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result));
-    ASSERT_TRUE(result.value().is_ok()) << CopyResultErrorMsg(std::move(result));
-
+    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
     zbitl::View copy_view(std::move(copy));
     ASSERT_IS_OK(copy_view.container_header());
 
@@ -650,8 +638,7 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
 
     auto first = Next(view.begin());
     auto result = view.Copy(copy, first, view.end());
-    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result));
-    ASSERT_TRUE(result.value().is_ok()) << CopyResultErrorMsg(std::move(result));
+    ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
 
     zbitl::View copy_view(std::move(copy));
     ASSERT_IS_OK(copy_view.container_header());

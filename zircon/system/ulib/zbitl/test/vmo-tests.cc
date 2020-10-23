@@ -58,10 +58,9 @@ void TestCloning() {
       auto first = view.begin();
       EXPECT_EQ(sizeof(zbi_header_t), first.item_offset());
       auto result = view.Copy(first, Next(first));
-      ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result));
-      ASSERT_TRUE(result.value().is_ok()) << CopyResultErrorMsg(std::move(result));
+      ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
 
-      auto created = std::move(result).value().value();
+      auto created = std::move(result).value();
       const zx::vmo& vmo = CreationTestTraits::GetVmo(created);
       const zx::vmo& parent = TestTraits::GetVmo(view.storage());  // Well, would-be parent.
       ASSERT_NO_FATAL_FAILURE(ExpectVmoIsCloned(vmo, parent));
@@ -86,10 +85,9 @@ void TestCloning() {
       auto second = Next(view.begin());
       EXPECT_EQ(0u, second.item_offset() % ZX_PAGE_SIZE);
       auto result = view.Copy(second, Next(second));
-      ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result));
-      ASSERT_TRUE(result.value().is_ok()) << CopyResultErrorMsg(std::move(result));
+      ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
 
-      auto created = std::move(result).value().value();
+      auto created = std::move(result).value();
       const zx::vmo& vmo = CreationTestTraits::GetVmo(created);
       ASSERT_NO_FATAL_FAILURE(ExpectVmoIsNotCloned(vmo));
 
@@ -130,14 +128,8 @@ void TestCloning() {
       auto first = view.begin();
       EXPECT_EQ(sizeof(zbi_header_t), first.item_offset());
       auto result = view.Copy(first, Next(first));
-      ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result));
-      ASSERT_TRUE(result.value().is_ok()) << CopyResultErrorMsg(std::move(result));
-
-      auto created = std::move(result).value().value();
-      const zx::vmo& vmo = CreationTestTraits::GetVmo(created);
-      const zx::vmo& parent = TestTraits::GetVmo(view.storage());  // Well, would-be parent.
-      ASSERT_NO_FATAL_FAILURE(ExpectVmoIsCloned(vmo, parent));
-
+      ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
+      auto created = std::move(result).value();
       // CRC-checking and header checking is sufficient to determine
       // byte-for-byte equality.
       zbitl::CrcCheckingView<decltype(created)> createdView(std::move(created));
@@ -160,10 +152,9 @@ void TestCloning() {
       auto second = Next(view.begin());
       EXPECT_EQ(kSecondItemSize, second.item_offset());
       auto result = view.Copy(second, Next(second));
-      ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result));
-      ASSERT_TRUE(result.value().is_ok()) << CopyResultErrorMsg(std::move(result));
+      ASSERT_TRUE(result.is_ok()) << CopyResultErrorMsg(std::move(result).error_value());
 
-      auto created = std::move(result).value().value();
+      auto created = std::move(result).value();
       const zx::vmo& vmo = CreationTestTraits::GetVmo(created);
       const zx::vmo& parent = TestTraits::GetVmo(view.storage());  // Well, would-be parent.
       ASSERT_NO_FATAL_FAILURE(ExpectVmoIsCloned(vmo, parent));
