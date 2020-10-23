@@ -415,6 +415,17 @@ impl ComponentDecl {
         })
     }
 
+    /// Returns the `ResolverDecl` corresponding to `resolver_name`.
+    pub fn find_resolver_source<'a>(
+        &'a self,
+        resolver_name: &CapabilityName,
+    ) -> Option<&'a ResolverDecl> {
+        self.capabilities.iter().find_map(|c| match c {
+            CapabilityDecl::Resolver(r) if &r.name == resolver_name => Some(r),
+            _ => None,
+        })
+    }
+
     /// Returns the `CollectionDecl` corresponding to `collection_name`.
     pub fn find_collection<'a>(&'a self, collection_name: &str) -> Option<&'a CollectionDecl> {
         self.collections.iter().find(|c| c.name == collection_name)
@@ -1283,36 +1294,6 @@ impl NativeIntoFidl<Option<fsys::Ref>> for RunnerSource {
             RunnerSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             RunnerSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             RunnerSource::Child(child_name) => {
-                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
-            }
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ResolverSource {
-    Parent,
-    Self_,
-    Child(String),
-}
-
-impl FidlIntoNative<ResolverSource> for Option<fsys::Ref> {
-    fn fidl_into_native(self) -> ResolverSource {
-        match self.unwrap() {
-            fsys::Ref::Parent(_) => ResolverSource::Parent,
-            fsys::Ref::Self_(_) => ResolverSource::Self_,
-            fsys::Ref::Child(c) => ResolverSource::Child(c.name),
-            _ => panic!("invalid ResolverSource variant"),
-        }
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::Ref>> for ResolverSource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
-            ResolverSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
-            ResolverSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
-            ResolverSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
             }
         })

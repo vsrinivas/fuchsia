@@ -1,0 +1,39 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // The binary to run for this component.
+    program: {
+        binary: "bin/component_manager_test_resolvers_integration_test",
+    },
+
+    // Capabilities defined by this component.
+    capabilities: [
+        {
+            resolver: "example_resolver",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
+        },
+        {
+            protocol: "fuchsia.test.Suite",
+            path: "/svc/fuchsia.test.Suite",
+        },
+    ],
+
+    // Capabilities used by this component.
+    use: [
+        { runner: "rust_test_runner" },
+        { protocol: "fidl.test.components.Trigger" },
+    ],
+
+    // Capabilities exposed to the component's parent.
+    expose: [
+        {
+            resolver: "example_resolver",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

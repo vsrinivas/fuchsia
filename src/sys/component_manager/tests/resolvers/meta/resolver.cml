@@ -1,0 +1,31 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // The binary to run for this component.
+    program: {
+        binary: "bin/component_manager_test_resolvers_resolver",
+    },
+
+    // Capabilities defined by this component.
+    capabilities: [
+        {
+            resolver: "test_resolver",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
+        },
+    ],
+
+    // Capabilities used by this component.
+    use: [
+        // Use the built-in ELF runner to run native binaries.
+        { runner: "elf" },
+    ],
+
+    // Capabilities exposed to the component's parent.
+    expose: [
+        {
+            resolver: "test_resolver",
+            from: "self",
+        },
+    ],
+}

@@ -6,7 +6,9 @@ use {
     crate::model::{
         error::ModelError,
         realm::{Realm, WeakRealm},
-        resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
+        resolver::{
+            Resolver, ResolverError, ResolverFut, ResolverRegistrationError, ResolverRegistry,
+        },
     },
     fidl_fuchsia_sys2 as fsys,
     std::{collections::HashMap, sync::Arc, time::Duration},
@@ -39,6 +41,8 @@ pub enum EnvironmentError {
         "stop timeout could not be set, environment has no parent and does not specify a value"
     )]
     StopTimeoutUnknown,
+    #[error("failed to register resolvers")]
+    ResolverRegistration(#[from] ResolverRegistrationError),
 }
 
 /// How this environment extends its parent's.
@@ -94,7 +98,7 @@ impl Environment {
             parent: Some(parent.into()),
             extends: env_decl.extends.into(),
             runner_registry: RunnerRegistry::from_decl(&env_decl.runners),
-            resolver_registry: ResolverRegistry::new(),
+            resolver_registry: ResolverRegistry::from_decl(&env_decl.resolvers, parent)?,
             stop_timeout: match env_decl.stop_timeout_ms {
                 Some(timeout) => Duration::from_millis(timeout.into()),
                 None => match env_decl.extends {

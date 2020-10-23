@@ -17,6 +17,7 @@ group("tests") {
     "hub:hub_integration_test",
     "namespace_capabilities:tests",
     "panic-test:component_manager_panic_test",
+    "resolvers:tests",
     "rights:tests",
     "routing:tests",
     "security_policy:tests",

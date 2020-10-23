@@ -117,6 +117,7 @@ pub enum InternalCapability {
     Directory(CapabilityNameOrPath),
     Runner(CapabilityName),
     Event(CapabilityName),
+    Resolver(CapabilityName),
 }
 
 impl InternalCapability {
@@ -134,6 +135,7 @@ impl InternalCapability {
             InternalCapability::Directory(_) => "directory",
             InternalCapability::Runner(_) => "runner",
             InternalCapability::Event(_) => "event",
+            InternalCapability::Resolver(_) => "resolver",
         }
     }
 
@@ -142,6 +144,7 @@ impl InternalCapability {
             InternalCapability::Protocol(source_name_or_path) => Some(&source_name_or_path),
             InternalCapability::Directory(source_name_or_path) => Some(&source_name_or_path),
             InternalCapability::Runner(_)
+            | InternalCapability::Resolver(_)
             | InternalCapability::Event(_)
             | InternalCapability::Service(_) => None,
         }
@@ -152,6 +155,7 @@ impl InternalCapability {
             InternalCapability::Service(name) => Some(&name),
             InternalCapability::Runner(name) => Some(&name),
             InternalCapability::Event(name) => Some(&name),
+            InternalCapability::Resolver(name) => Some(&name),
             InternalCapability::Protocol(_) | InternalCapability::Directory(_) => None,
         }
     }
@@ -195,6 +199,9 @@ impl InternalCapability {
             }
             OfferDecl::Event(e) if e.source == OfferEventSource::Parent => {
                 Ok(InternalCapability::Event(e.source_name.clone()))
+            }
+            OfferDecl::Resolver(r) if r.source == OfferResolverSource::Parent => {
+                Ok(InternalCapability::Resolver(r.source_name.clone()))
             }
             _ => {
                 return Err(Error::InvalidBuiltinCapability {});
@@ -322,6 +329,7 @@ pub enum ComponentCapability {
     Directory(DirectoryDecl),
     Storage(StorageDecl),
     Runner(RunnerDecl),
+    Resolver(ResolverDecl),
 }
 
 impl ComponentCapability {
@@ -358,6 +366,7 @@ impl ComponentCapability {
             },
             ComponentCapability::Environment(env) => match env {
                 EnvironmentCapability::Runner { .. } => "runner",
+                EnvironmentCapability::Resolver { .. } => "resolver",
             },
             ComponentCapability::Expose(expose) | ComponentCapability::UsedExpose(expose) => {
                 match expose {
@@ -381,6 +390,7 @@ impl ComponentCapability {
             ComponentCapability::Directory(_) => "directory",
             ComponentCapability::Storage(_) => "storage",
             ComponentCapability::Runner(_) => "runner",
+            ComponentCapability::Resolver(_) => "resolver",
         }
     }
 
@@ -395,6 +405,7 @@ impl ComponentCapability {
             },
             ComponentCapability::Environment(env_cap) => match env_cap {
                 EnvironmentCapability::Runner { .. } => None,
+                EnvironmentCapability::Resolver { .. } => None,
             },
             ComponentCapability::Expose(expose) => match expose {
                 ExposeDecl::Protocol(ExposeProtocolDecl { source_path, .. }) => Some(source_path),
@@ -425,6 +436,7 @@ impl ComponentCapability {
             ComponentCapability::Protocol(_) => None,
             ComponentCapability::Directory(_) => None,
             ComponentCapability::Runner(_) => None,
+            ComponentCapability::Resolver(_) => None,
         }
     }
 
@@ -440,6 +452,7 @@ impl ComponentCapability {
             ComponentCapability::Protocol(protocol) => Some(&protocol.source_path),
             ComponentCapability::Directory(directory) => Some(&directory.source_path),
             ComponentCapability::Runner(runner) => Some(&runner.source_path),
+            ComponentCapability::Resolver(resolver) => Some(&resolver.source_path),
             _ => None,
         }
     }
@@ -463,15 +476,18 @@ impl ComponentCapability {
             },
             ComponentCapability::Environment(env_cap) => match env_cap {
                 EnvironmentCapability::Runner { source_name, .. } => Some(source_name),
+                EnvironmentCapability::Resolver { source_name, .. } => Some(source_name),
             },
             ComponentCapability::Expose(expose) => match expose {
                 ExposeDecl::Runner(ExposeRunnerDecl { source_name, .. }) => Some(source_name),
+                ExposeDecl::Resolver(ExposeResolverDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
             ComponentCapability::Offer(offer) => match offer {
                 OfferDecl::Runner(OfferRunnerDecl { source_name, .. }) => Some(source_name),
                 OfferDecl::Event(OfferEventDecl { source_name, .. }) => Some(source_name),
                 OfferDecl::Storage(OfferStorageDecl { source_name, .. }) => Some(source_name),
+                OfferDecl::Resolver(OfferResolverDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
             _ => None,
@@ -560,6 +576,22 @@ impl ComponentCapability {
                     source_name, ..
                 }),
                 ExposeDecl::Runner(expose),
+            ) => source_name == &expose.target_name,
+            // Resolver exposed to me that has a matching `expose` or `offer`.
+            (
+                ComponentCapability::Offer(OfferDecl::Resolver(parent_offer)),
+                ExposeDecl::Resolver(expose),
+            ) => parent_offer.source_name == expose.target_name,
+            (
+                ComponentCapability::Expose(ExposeDecl::Resolver(parent_expose)),
+                ExposeDecl::Resolver(expose),
+            ) => parent_expose.source_name == expose.target_name,
+            (
+                ComponentCapability::Environment(EnvironmentCapability::Resolver {
+                    source_name,
+                    ..
+                }),
+                ExposeDecl::Resolver(expose),
             ) => source_name == &expose.target_name,
             // Directory exposed to me that matches a `storage` declaration which consumes it.
             (ComponentCapability::Storage(parent_storage), ExposeDecl::Directory(expose)) => {
@@ -675,7 +707,7 @@ impl ComponentCapability {
                 (
                     ComponentCapability::Use(UseDecl::Runner(child_use)),
                     OfferDecl::Runner(offer),
-                ) => Self::is_offer_runner_or_event_match(
+                ) => Self::is_offer_runner_resolver_or_event_match(
                     child_moniker,
                     &child_use.source_name,
                     &offer.target,
@@ -684,7 +716,7 @@ impl ComponentCapability {
                 (
                     ComponentCapability::Offer(OfferDecl::Runner(child_offer)),
                     OfferDecl::Runner(offer),
-                ) => Self::is_offer_runner_or_event_match(
+                ) => Self::is_offer_runner_resolver_or_event_match(
                     child_moniker,
                     &child_offer.source_name,
                     &offer.target,
@@ -696,15 +728,37 @@ impl ComponentCapability {
                         ..
                     }),
                     OfferDecl::Runner(offer),
-                ) => Self::is_offer_runner_or_event_match(
+                ) => Self::is_offer_runner_resolver_or_event_match(
                     child_moniker,
                     &source_name,
                     &offer.target,
                     &offer.target_name,
                 ),
+                // Resolvers offered from parent.
+                (
+                    ComponentCapability::Offer(OfferDecl::Resolver(child_offer)),
+                    OfferDecl::Resolver(offer),
+                ) => Self::is_offer_runner_resolver_or_event_match(
+                    child_moniker,
+                    &child_offer.source_name,
+                    &offer.target,
+                    &offer.target_name,
+                ),
+                (
+                    ComponentCapability::Environment(EnvironmentCapability::Resolver {
+                        source_name,
+                        ..
+                    }),
+                    OfferDecl::Resolver(offer),
+                ) => Self::is_offer_runner_resolver_or_event_match(
+                    child_moniker,
+                    source_name,
+                    &offer.target,
+                    &offer.target_name,
+                ),
                 // Events offered from parent.
                 (ComponentCapability::Use(UseDecl::Event(child_use)), OfferDecl::Event(offer)) => {
-                    Self::is_offer_runner_or_event_match(
+                    Self::is_offer_runner_resolver_or_event_match(
                         child_moniker,
                         &child_use.source_name,
                         &offer.target,
@@ -714,7 +768,7 @@ impl ComponentCapability {
                 (
                     ComponentCapability::Offer(OfferDecl::Event(child_offer)),
                     OfferDecl::Event(parent_offer),
-                ) => Self::is_offer_runner_or_event_match(
+                ) => Self::is_offer_runner_resolver_or_event_match(
                     child_moniker,
                     &child_offer.source_name,
                     &parent_offer.target,
@@ -821,6 +875,12 @@ impl ComponentCapability {
         decl.find_runner_source(self.source_name()?)
     }
 
+    /// Given an offer/expose of a resolver from `self`, return the associated ResolverDecl,
+    /// if it exists.
+    pub fn find_resolver_source<'a>(&self, decl: &'a ComponentDecl) -> Option<&'a ResolverDecl> {
+        decl.find_resolver_source(self.source_name()?)
+    }
+
     fn is_offer_service_match(
         child_moniker: &ChildMoniker,
         names: &HashSet<&CapabilityName>,
@@ -854,7 +914,7 @@ impl ComponentCapability {
         target_matches_moniker(parent_target, child_moniker)
     }
 
-    fn is_offer_runner_or_event_match(
+    fn is_offer_runner_resolver_or_event_match(
         child_moniker: &ChildMoniker,
         source_name: &CapabilityName,
         target: &OfferTarget,
@@ -884,6 +944,15 @@ fn target_matches_moniker(parent_target: &OfferTarget, child_moniker: &ChildMoni
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EnvironmentCapability {
     Runner { source_name: CapabilityName, source: RegistrationSource },
+    Resolver { source_name: CapabilityName, source: RegistrationSource },
+}
+
+impl EnvironmentCapability {
+    pub fn registration_source(&self) -> &RegistrationSource {
+        match self {
+            Self::Runner { source, .. } | Self::Resolver { source, .. } => &source,
+        }
+    }
 }
 
 #[cfg(test)]

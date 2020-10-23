@@ -31,8 +31,8 @@ use {
         self, CapabilityDecl, CapabilityName, CapabilityNameOrPath, CapabilityPath, ComponentDecl,
         DirectoryDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget, OfferDecl,
         OfferDirectoryDecl, OfferDirectorySource, OfferEventDecl, OfferEventSource,
-        OfferRunnerSource, OfferServiceSource, OfferStorageSource, StorageDirectorySource, UseDecl,
-        UseDirectoryDecl, UseEventDecl, UseStorageDecl,
+        OfferResolverSource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
+        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseStorageDecl,
     },
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
@@ -54,6 +54,7 @@ enum OfferSource<'a> {
     Storage(&'a OfferStorageSource),
     Runner(&'a OfferRunnerSource),
     Event(&'a OfferEventSource),
+    Resolver(&'a OfferResolverSource),
 }
 
 /// Describes the source of a capability, for any type of capability.
@@ -62,6 +63,7 @@ enum CapabilityExposeSource<'a> {
     Protocol(&'a ExposeSource),
     Directory(&'a ExposeSource),
     Runner(&'a ExposeSource),
+    Resolver(&'a ExposeSource),
 }
 
 /// Finds the source of the `capability` used by `absolute_moniker`, and pass along the
@@ -114,6 +116,36 @@ pub(super) async fn route_use_event_capability<'a>(
 ) -> Result<CapabilitySource, ModelError> {
     let (source, _cap_state) = find_used_capability_source(use_decl, target_realm).await?;
     Ok(source)
+}
+
+/// Finds the source of a capability that is registered with an environment, and
+/// opens the capability with the given server-side channel.
+/// TODO(61304): Make runner capability routing use this method.
+pub(super) async fn route_capability_from_environment<'a>(
+    flags: u32,
+    open_mode: u32,
+    relative_path: String,
+    capability: EnvironmentCapability,
+    target_realm: &'a Arc<Realm>,
+    server_chan: &mut zx::Channel,
+) -> Result<(), ModelError> {
+    let source = capability.registration_source().clone();
+    let capability = ComponentCapability::Environment(capability);
+    let cap_state = CapabilityState::Other;
+    let (cap_source, cap_state) =
+        find_environment_component_capability_source(&target_realm, capability, cap_state, &source)
+            .await?;
+
+    let relative_path = cap_state.make_relative_path(relative_path);
+    open_capability_at_source(
+        flags,
+        open_mode,
+        relative_path,
+        cap_source,
+        target_realm,
+        server_chan,
+    )
+    .await
 }
 
 /// Finds the source of the expose capability used at `source_path` by `target_realm`, and pass
@@ -830,13 +862,24 @@ fn find_capability_source_from_self(
     decl: &cm_rust::ComponentDecl,
 ) -> CapabilitySource {
     match capability {
-        ComponentCapability::Environment(EnvironmentCapability::Runner { .. }) => {
-            let runner_decl = capability.find_runner_source(decl).expect("missing runner").clone();
-            CapabilitySource::Component {
-                capability: ComponentCapability::Runner(runner_decl),
-                realm: env_realm.as_weak(),
+        ComponentCapability::Environment(env_cap) => match env_cap {
+            EnvironmentCapability::Runner { .. } => {
+                let runner_decl =
+                    capability.find_runner_source(decl).expect("missing runner").clone();
+                CapabilitySource::Component {
+                    capability: ComponentCapability::Runner(runner_decl),
+                    realm: env_realm.as_weak(),
+                }
             }
-        }
+            EnvironmentCapability::Resolver { .. } => {
+                let resolver_decl =
+                    capability.find_resolver_source(decl).expect("missing resolver").clone();
+                CapabilitySource::Component {
+                    capability: ComponentCapability::Resolver(resolver_decl),
+                    realm: env_realm.as_weak(),
+                }
+            }
+        },
         _ => {
             panic!("Capability has invalid type: {:?}", capability);
         }
@@ -1063,7 +1106,7 @@ async fn walk_offer_chain<'a>(
             OfferDecl::Directory(d) => OfferSource::Directory(&d.source),
             OfferDecl::Storage(s) => OfferSource::Storage(&s.source),
             OfferDecl::Runner(r) => OfferSource::Runner(&r.source),
-            OfferDecl::Resolver(_) => return Err(ModelError::unsupported("Resolver capability")),
+            OfferDecl::Resolver(r) => OfferSource::Resolver(&r.source),
             OfferDecl::Event(e) => OfferSource::Event(&e.source),
         };
         let (dir_rights, subdir_decl) = match offer {
@@ -1105,7 +1148,8 @@ async fn walk_offer_chain<'a>(
             }
             OfferSource::Protocol(OfferServiceSource::Parent)
             | OfferSource::Storage(OfferStorageSource::Parent)
-            | OfferSource::Runner(OfferRunnerSource::Parent) => {
+            | OfferSource::Runner(OfferRunnerSource::Parent)
+            | OfferSource::Resolver(OfferResolverSource::Parent) => {
                 // The offered capability comes from the parent, so follow the
                 // parent
                 pos.capability = ComponentCapability::Offer(offer.clone());
@@ -1206,8 +1250,22 @@ async fn walk_offer_chain<'a>(
                     realm: cur_realm.as_weak(),
                 }));
             }
+            OfferSource::Resolver(OfferResolverSource::Self_) => {
+                // The offered capability comes from the current component.
+                // Find the current component's Resolver declaration.
+                let cap = ComponentCapability::Offer(offer.clone());
+                return Ok(Some(CapabilitySource::Component {
+                    capability: ComponentCapability::Resolver(
+                        cap.find_resolver_source(decl)
+                            .expect("resolver offer references nonexistent section")
+                            .clone(),
+                    ),
+                    realm: cur_realm.as_weak(),
+                }));
+            }
             OfferSource::Protocol(OfferServiceSource::Child(child_name))
-            | OfferSource::Runner(OfferRunnerSource::Child(child_name)) => {
+            | OfferSource::Runner(OfferRunnerSource::Child(child_name))
+            | OfferSource::Resolver(OfferResolverSource::Child(child_name)) => {
                 // The offered capability comes from a child, break the loop
                 // and begin walking the expose chain.
                 pos.capability = ComponentCapability::Offer(offer.clone());
@@ -1329,7 +1387,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
             ExposeDecl::Protocol(ls) => (CapabilityExposeSource::Protocol(&ls.source), &ls.target),
             ExposeDecl::Directory(d) => (CapabilityExposeSource::Directory(&d.source), &d.target),
             ExposeDecl::Runner(r) => (CapabilityExposeSource::Runner(&r.source), &r.target),
-            ExposeDecl::Resolver(_) => return Err(ModelError::unsupported("Resolver capability")),
+            ExposeDecl::Resolver(r) => (CapabilityExposeSource::Resolver(&r.source), &r.target),
         };
         if target != &ExposeTarget::Parent {
             let partial = pos.moniker().leaf().expect("impossible source above root").to_partial();
@@ -1425,8 +1483,28 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                     realm: cur_realm.as_weak(),
                 });
             }
+            CapabilityExposeSource::Resolver(ExposeSource::Self_) => {
+                // The exposed capability comes from the current component.
+                // Find the current component's Resolver declaration.
+                let cap = ComponentCapability::Expose(expose.clone());
+                return Ok(CapabilitySource::Component {
+                    capability: ComponentCapability::Resolver(
+                        cap.find_resolver_source(decl)
+                            .expect(&format!(
+                                "An `expose from resolver` declaration was found at `{}` for `{}`
+                            with no corresponding resolver declaration. This ComponentDecl should
+                            not have passed validation.",
+                                pos.moniker(),
+                                cap.source_id()
+                            ))
+                            .clone(),
+                    ),
+                    realm: cur_realm.as_weak(),
+                });
+            }
             CapabilityExposeSource::Protocol(ExposeSource::Child(child_name))
-            | CapabilityExposeSource::Runner(ExposeSource::Child(child_name)) => {
+            | CapabilityExposeSource::Runner(ExposeSource::Child(child_name))
+            | CapabilityExposeSource::Resolver(ExposeSource::Child(child_name)) => {
                 // The offered capability comes from a child, so follow the child.
                 pos.capability = ComponentCapability::Expose(expose.clone());
                 let partial = PartialMoniker::new(child_name.to_string(), None);
@@ -1492,8 +1570,9 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                     scope_moniker: pos.moniker().clone(),
                 });
             }
-            CapabilityExposeSource::Runner(ExposeSource::Framework) => {
-                // Currently we don't expose any runners from `framework`.
+            CapabilityExposeSource::Runner(ExposeSource::Framework)
+            | CapabilityExposeSource::Resolver(ExposeSource::Framework) => {
+                // Currently we don't expose any runners/resolvers from `framework`.
                 // TODO: This error should be caught by validation. We shouldn't have to handle
                 // this case here.
                 return Err(RoutingError::expose_from_framework_not_found(

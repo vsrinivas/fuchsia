@@ -276,6 +276,12 @@ impl ComponentDeclBuilder {
         self
     }
 
+    /// Add a custom resolver declaration.
+    pub fn resolver(mut self, resolver: cm_rust::ResolverDecl) -> Self {
+        self.result.capabilities.push(cm_rust::CapabilityDecl::Resolver(resolver));
+        self
+    }
+
     /// Add an environment declaration.
     pub fn add_environment(mut self, environment: impl Into<cm_rust::EnvironmentDecl>) -> Self {
         self.result.environments.push(environment.into());

@@ -38,7 +38,7 @@ use {
             hooks::EventType,
             hub::Hub,
             model::{Model, ModelParams},
-            resolver::{Resolver, ResolverError, ResolverRegistry},
+            resolver::{Resolver, ResolverRegistrationError, ResolverRegistry},
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
         startup::Arguments,
@@ -163,7 +163,7 @@ impl BuiltinEnvironmentBuilder {
         mut self,
         scheme: String,
         resolver: Box<dyn Resolver + Send + Sync + 'static>,
-    ) -> Result<Self, ResolverError> {
+    ) -> Result<Self, ResolverRegistrationError> {
         self.resolvers.register(scheme, resolver)?;
         Ok(self)
     }

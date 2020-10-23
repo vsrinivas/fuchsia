@@ -3,11 +3,21 @@
 // found in the LICENSE file.
 
 use {
+    crate::{
+        capability::EnvironmentCapability,
+        model::{
+            error::ModelError,
+            realm::{Realm, WeakRealm},
+            routing,
+        },
+    },
     anyhow::Error,
     clonable_error::ClonableError,
-    fidl_fuchsia_sys2 as fsys,
+    cm_rust::{CapabilityName, RegistrationSource, ResolverRegistration},
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fuchsia_zircon::Status,
     futures::future::{self, BoxFuture},
-    std::collections::HashMap,
+    std::{collections::HashMap, sync::Arc},
     thiserror::Error,
     url::Url,
 };
@@ -20,6 +30,12 @@ pub trait Resolver {
 }
 
 pub type ResolverFut<'a> = BoxFuture<'a, Result<fsys::Component, ResolverError>>;
+
+#[derive(Error, Debug, Clone)]
+pub enum ResolverRegistrationError {
+    #[error("a resolver is already registered with the URL scheme \"{}\"", 0)]
+    SchemeAlreadyRegistered(String),
+}
 
 /// Resolves a component URL using a resolver selected based on the URL's scheme.
 #[derive(Default)]
@@ -36,13 +52,33 @@ impl ResolverRegistry {
         &mut self,
         scheme: String,
         resolver: Box<dyn Resolver + Send + Sync + 'static>,
-    ) -> Result<(), ResolverError> {
+    ) -> Result<(), ResolverRegistrationError> {
         if self.resolvers.contains_key(&scheme) {
-            Err(ResolverError::DuplicateResolverError { scheme: scheme.clone() })
+            Err(ResolverRegistrationError::SchemeAlreadyRegistered(scheme.clone()))
         } else {
             self.resolvers.insert(scheme, resolver);
             Ok(())
         }
+    }
+
+    /// Creates and populates a `ResolverRegistry` with `RemoteResolvers` that
+    /// have been registered with an environment.
+    pub fn from_decl(
+        decl: &[ResolverRegistration],
+        parent: &Arc<Realm>,
+    ) -> Result<Self, ResolverRegistrationError> {
+        let mut registry = ResolverRegistry::new();
+        for resolver in decl {
+            registry.register(
+                resolver.scheme.clone().into(),
+                Box::new(RemoteResolver::new(
+                    resolver.resolver.clone(),
+                    resolver.source.clone(),
+                    parent.as_weak(),
+                )),
+            )?;
+        }
+        Ok(registry)
     }
 }
 
@@ -58,6 +94,67 @@ impl Resolver for ResolverRegistry {
             }
             Err(e) => Box::pin(future::err(ResolverError::url_parse_error(component_url, e))),
         }
+    }
+}
+
+/// A resolver whose implementation lives in an external component. The source
+/// of the resolver is determined through capability routing.
+pub struct RemoteResolver {
+    capability_name: CapabilityName,
+    source: RegistrationSource,
+    realm: WeakRealm,
+}
+
+impl RemoteResolver {
+    pub fn new(name: CapabilityName, source: RegistrationSource, realm: WeakRealm) -> Self {
+        RemoteResolver { capability_name: name, source, realm }
+    }
+}
+
+// TODO(61288): Implement some sort of caching of the routed capability. Multiple
+// component URL resolutions should be possible on a single channel.
+impl Resolver for RemoteResolver {
+    fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
+        Box::pin(async move {
+            let decl = EnvironmentCapability::Resolver {
+                source_name: self.capability_name.clone(),
+                source: self.source.clone(),
+            };
+            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
+            let open_mode = fio::MODE_TYPE_SERVICE;
+            let (proxy, server_end) =
+                fidl::endpoints::create_proxy::<fsys::ComponentResolverMarker>()
+                    .map_err(ResolverError::unknown_resolver_error)?;
+            let realm = self.realm.upgrade().map_err(ResolverError::routing_error)?;
+            routing::route_capability_from_environment(
+                flags,
+                open_mode,
+                String::new(),
+                decl,
+                &realm,
+                &mut server_end.into_channel(),
+            )
+            .await
+            .map_err(ResolverError::routing_error)?;
+            let (status, component) = proxy
+                .resolve(component_url)
+                .await
+                .map_err(ResolverError::unknown_resolver_error)?;
+            let status = Status::from_raw(status);
+            match status {
+                Status::OK => Ok(component),
+                Status::INVALID_ARGS => {
+                    Err(ResolverError::url_parse_error(component_url, RemoteError(status)))
+                }
+                Status::NOT_FOUND => {
+                    Err(ResolverError::component_not_available(component_url, RemoteError(status)))
+                }
+                Status::UNAVAILABLE => {
+                    Err(ResolverError::manifest_invalid(component_url, RemoteError(status)))
+                }
+                _ => Err(ResolverError::unknown_resolver_error(RemoteError(status))),
+            }
+        })
     }
 }
 
@@ -96,6 +193,10 @@ pub enum ResolverError {
     },
     #[error("url missing resource \"{}\"", url)]
     UrlMissingResourceError { url: String },
+    #[error("failed to route resolver capability: {}", 0)]
+    RoutingError(#[source] Box<ModelError>),
+    #[error("an unknown error ocurred with the resolver: {}", 0)]
+    UnknownResolverError(#[source] ClonableError),
 }
 
 impl ResolverError {
@@ -122,11 +223,23 @@ impl ResolverError {
     pub fn url_missing_resource_error(url: impl Into<String>) -> ResolverError {
         ResolverError::UrlMissingResourceError { url: url.into() }
     }
+
+    pub fn routing_error(err: ModelError) -> ResolverError {
+        ResolverError::RoutingError(Box::new(err))
+    }
+
+    pub fn unknown_resolver_error(err: impl Into<Error>) -> ResolverError {
+        ResolverError::UnknownResolverError(err.into().into())
+    }
 }
+
+#[derive(Error, Clone, Debug)]
+#[error("remote resolver returned status {}", 0)]
+struct RemoteError(Status);
 
 #[cfg(test)]
 mod tests {
-    use {super::*, anyhow::format_err};
+    use {super::*, anyhow::format_err, matches::assert_matches};
 
     struct MockOkResolver {
         pub expected_url: String,
@@ -223,13 +336,8 @@ mod tests {
             MockOkResolver { expected_url: "".to_string(), resolved_url: "".to_string() };
         let resolver_b =
             MockOkResolver { expected_url: "".to_string(), resolved_url: "".to_string() };
-        registry.register("fuchsia-pkg".to_string(), Box::new(resolver_a)).unwrap();
-        match registry.register("fuchsia-pkg".to_string(), Box::new(resolver_b)).unwrap_err() {
-            ResolverError::DuplicateResolverError { scheme } => {
-                assert_eq!("fuchsia-pkg".to_string(), scheme);
-            }
-            f => panic!("expected DuplicatResolverError, instead found {:?}", f),
-        }
+        assert_matches!(registry.register("fuchsia-pkg".to_string(), Box::new(resolver_a)), Ok(()));
+        assert_matches!(registry.register("fuchsia-pkg".to_string(), Box::new(resolver_b)), Err(ResolverRegistrationError::SchemeAlreadyRegistered(scheme)) if scheme == "fuchsia-pkg");
     }
 
     #[test]
@@ -239,7 +347,7 @@ mod tests {
             MockOkResolver { expected_url: "".to_string(), resolved_url: "".to_string() };
         let resolver_b =
             MockOkResolver { expected_url: "".to_string(), resolved_url: "".to_string() };
-        registry.register("fuchsia--pkg".to_string(), Box::new(resolver_a)).unwrap();
-        registry.register("fuchsia--boot".to_string(), Box::new(resolver_b)).unwrap();
+        registry.register("fuchsia-pkg".to_string(), Box::new(resolver_a)).unwrap();
+        registry.register("fuchsia-boot".to_string(), Box::new(resolver_b)).unwrap();
     }
 }

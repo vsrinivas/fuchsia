@@ -28,7 +28,7 @@ use {
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, Status},
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
     maplit::hashmap,
@@ -3349,4 +3349,246 @@ async fn event_filter_routing() {
         },
     )
     .await;
+}
+
+///   a
+///  / \
+/// b   c
+///
+/// a: creates environment "env" and registers resolver "base" from c.
+/// b: resolved by resolver "base" through "env".
+/// b: exposes resolver "base" from self.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_resolver_from_parent_environment() {
+    // Note that we do not define a component "b". This will be resolved by our custom resolver.
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new_empty_component()
+                .add_child(ChildDeclBuilder::new().name("b").url("base://b").environment("env"))
+                .add_child(ChildDeclBuilder::new_lazy_child("c"))
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_resolver(ResolverRegistration {
+                            resolver: "base".into(),
+                            source: RegistrationSource::Child("c".into()),
+                            scheme: "base".into(),
+                        }),
+                )
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Resolver(ExposeResolverDecl {
+                    source: ExposeSource::Self_,
+                    source_name: "base".into(),
+                    target: ExposeTarget::Parent,
+                    target_name: "base".into(),
+                }))
+                .resolver(ResolverDecl {
+                    name: "base".into(),
+                    source_path: "/svc/fuchsia.sys2.ComponentResolver".parse().unwrap(),
+                })
+                .build(),
+        ),
+    ];
+
+    // Set up the system.
+    let (resolver_service, mut receiver) =
+        create_service_directory_entry::<fsys::ComponentResolverMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "c" exposes a resolver service.
+        .add_outgoing_path(
+            "c",
+            CapabilityPath::try_from("/svc/fuchsia.sys2.ComponentResolver").unwrap(),
+            resolver_service,
+        )
+        .build()
+        .await;
+
+    join!(
+        // Bind "b:0". We expect to see a call to our resolver service for the new component.
+        async move {
+            universe
+                .bind_instance(&vec!["b:0"].into())
+                .await
+                .expect("failed to bind to instance b:0");
+        },
+        // Wait for a request, and resolve it.
+        async {
+            while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
+                receiver.next().await
+            {
+                assert_eq!(component_url, "base://b");
+                responder
+                    .send(
+                        Status::OK.into_raw(),
+                        fsys::Component {
+                            resolved_url: Some("test://b".into()),
+                            decl: Some(default_component_decl().native_into_fidl()),
+                            package: None,
+                        },
+                    )
+                    .expect("failed to send resolve response");
+            }
+        }
+    );
+}
+
+///   a
+///    \
+///     b
+///      \
+///       c
+/// a: creates environment "env" and registers resolver "base" from self.
+/// b: has environment "env".
+/// c: is resolved by resolver from grandarent.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_resolver_from_grandparent_environment() {
+    // Note that we do not define a component "c". This will be resolved by our custom resolver.
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env"))
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_resolver(ResolverRegistration {
+                            resolver: "base".into(),
+                            source: RegistrationSource::Self_,
+                            scheme: "base".into(),
+                        }),
+                )
+                .resolver(ResolverDecl {
+                    name: "base".into(),
+                    source_path: "/svc/fuchsia.sys2.ComponentResolver".parse().unwrap(),
+                })
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new_empty_component()
+                .add_child(ChildDeclBuilder::new().name("c").url("base://c"))
+                .build(),
+        ),
+    ];
+
+    // Set up the system.
+    let (resolver_service, mut receiver) =
+        create_service_directory_entry::<fsys::ComponentResolverMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "c" exposes a resolver service.
+        .add_outgoing_path(
+            "a",
+            CapabilityPath::try_from("/svc/fuchsia.sys2.ComponentResolver").unwrap(),
+            resolver_service,
+        )
+        .build()
+        .await;
+
+    join!(
+        // Bind "c:0". We expect to see a call to our resolver service for the new component.
+        async move {
+            universe
+                .bind_instance(&vec!["b:0", "c:0"].into())
+                .await
+                .expect("failed to bind to instance c:0");
+        },
+        // Wait for a request, and resolve it.
+        async {
+            while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
+                receiver.next().await
+            {
+                assert_eq!(component_url, "base://c");
+                responder
+                    .send(
+                        Status::OK.into_raw(),
+                        fsys::Component {
+                            resolved_url: Some("test://c".into()),
+                            decl: Some(default_component_decl().native_into_fidl()),
+                            package: None,
+                        },
+                    )
+                    .expect("failed to send resolve response");
+            }
+        }
+    );
+}
+
+///   a
+///  / \
+/// b   c
+/// a: creates environment "env" and registers resolver "base" from self.
+/// b: has environment "env".
+/// c: does NOT have environment "env".
+#[fuchsia_async::run_singlethreaded(test)]
+async fn resolver_is_not_available() {
+    // Note that we do not define a component "b" or "c". This will be resolved by our custom resolver.
+    let components = vec![(
+        "a",
+        ComponentDeclBuilder::new()
+            .add_child(ChildDeclBuilder::new().name("b").url("base://b").environment("env"))
+            .add_child(ChildDeclBuilder::new().name("c").url("base://c"))
+            .add_environment(
+                EnvironmentDeclBuilder::new()
+                    .name("env")
+                    .extends(fsys::EnvironmentExtends::Realm)
+                    .add_resolver(ResolverRegistration {
+                        resolver: "base".into(),
+                        source: RegistrationSource::Self_,
+                        scheme: "base".into(),
+                    }),
+            )
+            .resolver(ResolverDecl {
+                name: "base".into(),
+                source_path: "/svc/fuchsia.sys2.ComponentResolver".parse().unwrap(),
+            })
+            .build(),
+    )];
+
+    // Set up the system.
+    let (resolver_service, mut receiver) =
+        create_service_directory_entry::<fsys::ComponentResolverMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "c" exposes a resolver service.
+        .add_outgoing_path(
+            "a",
+            CapabilityPath::try_from("/svc/fuchsia.sys2.ComponentResolver").unwrap(),
+            resolver_service,
+        )
+        .build()
+        .await;
+
+    join!(
+        // Bind "c:0". We expect to see a failure that the scheme is not registered.
+        async move {
+            assert_matches!(
+                universe.bind_instance(&vec!["c:0"].into()).await,
+                Err(ModelError::ResolverError { err: ResolverError::SchemeNotRegistered })
+            );
+        },
+        // Wait for a request, and resolve it.
+        async {
+            while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
+                receiver.next().await
+            {
+                assert_eq!(component_url, "base://b");
+                responder
+                    .send(
+                        Status::OK.into_raw(),
+                        fsys::Component {
+                            resolved_url: Some("test://b".into()),
+                            decl: Some(default_component_decl().native_into_fidl()),
+                            package: None,
+                        },
+                    )
+                    .expect("failed to send resolve response");
+            }
+        }
+    );
 }

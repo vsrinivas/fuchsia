@@ -1,0 +1,108 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+group("resolvers") {
+  testonly = true
+  deps = [ ":tests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":package" ]
+}
+
+# The binary for the test resolver.
+rustc_binary("resolver_bin") {
+  testonly = true
+
+  name = "component_manager_test_resolvers_resolver"
+
+  source_root = "src/resolver.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/resolver.rs" ]
+}
+
+# The binary for the component resolved by the custom Component Resolver.
+rustc_binary("component_bin") {
+  testonly = true
+
+  name = "component_manager_test_resolvers_component"
+
+  source_root = "src/component.rs"
+
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/component.rs" ]
+}
+
+# The integration test binary.
+rustc_test("integration_test_bin") {
+  name = "component_manager_test_resolvers_integration_test"
+
+  source_root = "src/integration_test.rs"
+
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/integration_test.rs" ]
+}
+
+fuchsia_component("root") {
+  testonly = true
+  manifest = "meta/root.cml"
+}
+
+fuchsia_component("resolver") {
+  testonly = true
+  manifest = "meta/resolver.cml"
+  deps = [ ":resolver_bin" ]
+}
+
+fuchsia_component("integration_test") {
+  testonly = true
+  manifest = "meta/integration_test.cml"
+  deps = [ ":integration_test_bin" ]
+}
+
+fuchsia_test_package("package") {
+  package_name = "component-manager-test-resolver"
+  test_components = [ ":root" ]
+  deps = [
+    ":component_bin",
+    ":integration_test",
+    ":resolver",
+  ]
+}

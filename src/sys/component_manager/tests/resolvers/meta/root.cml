@@ -1,0 +1,46 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "resolver",
+            url: "fuchsia-pkg://fuchsia.com/component-manager-test-resolver#meta/resolver.cm",
+        },
+        {
+            name: "integration_test",
+            url: "fuchsia-pkg://fuchsia.com/component-manager-test-resolver#meta/integration_test.cm",
+        },
+        {
+            name: "custom_component",
+            url: "test://component",
+            environment: "#env",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fidl.test.components.Trigger",
+            from: "#custom_component",
+            to: [ "#integration_test" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#integration_test",
+        },
+    ],
+    environments: [
+        {
+            name: "env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "test_resolver",
+                    from: "#resolver",
+                    scheme: "test",
+                },
+            ],
+        },
+    ],
+}
