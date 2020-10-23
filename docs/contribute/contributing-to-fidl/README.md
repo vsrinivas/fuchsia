@@ -379,8 +379,10 @@ useful for debugging issues that prevent boot of the device.
 | hlcpp bindings tests including conformance tests     | `fx test fidl-hlcpp-tests`                | //sdk/lib/fidl                                                             |
 | llcpp bindings tests     | `fx test //src/lib/fidl/llcpp/tests`     | //zircon/system/ulib/fidl/include/lib/fidl/llcpp
 | go bindings tests        | `fx test go_fidl_tests`             | //third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
-| dart bindings tests      | `fx test fidl_bindings_test`        | //topaz/public/dart/fidl                                                  |
+| dart bindings tests      | `fx test fidl_bindings_test`<br>(_see note below_) | //topaz/public/dart/fidl                                                  |
 | rust bindings tests      | `fx test fidl-rust-tests`           | //src/lib/fidl/rust/fidl                                                  |
+
+Note: While `fx test fidl_bindings_test` prints test names as they run, it does not show stack traces for test failures. To see those, look at the `fx qemu` or `fx log` output.
 
 ##### Host
 
