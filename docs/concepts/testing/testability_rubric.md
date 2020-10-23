@@ -140,18 +140,14 @@ receiving Testability+1.
 
 ### Recommended: Test for flakiness (if supported)
 
-This is currently recomended but will become required once
-<http://fxbug.dev/50483> is done.
+This is currently recommended. Once <http://fxbug.dev/50301> is done, this will
+be automatically included for tests that are determined to be affected.
 
 Note: This feature is not currently supported for bringup builders.
 
 As a testability reviewer, if a change adds or modifies tests, you
 should make sure the author correctly tests for flakiness using the MULTIPLY
-feature as described below. Check to see if it worked by clicking on the tryjob
-and looking for a step that says `shard multiplied:<shard name>-<test name>`.
-For example:
-
-![multiplied shard screenshot](multiplied-shard-screenshot.png)
+feature as described below.
 
 As a change author, when you add or modify tests, you should tell the
 infrastructure to run those tests multiple times with a MULTIPLY field in the
@@ -200,10 +196,43 @@ the other shards (although the calculated run count will be limited to a
 maximum of 2000). Longer tests will be run fewer times, shorter tests more
 times.
 
+Note: When specifying "run_count", it's important to have a space after the
+colon and before the run_count so as to distinguish it from colons in the test
+name. Otherwise the colon and run_count will be treated as part of the test
+name.
+
 Note: If your CL increases a test's duration, then the historical duration
 data may no longer be accurate and the number of runs calculated by the
 infrastructure may cause the shard to time out. In this case, you'll have to
 edit the commit message and specify a lower number of runs.
+
+#### Determine success
+
+If it worked, any builders running the tests specified by the MULTIPLY feature
+will add comments to the CL that say:
+
+```txt
+A builder created multiplier shards. Click the following link for more details:
+```
+
+This comment includes a link to the build that will run the multiplied tests. If
+the build is completed, you should see a step like `multiplied:<shard
+name>-<test name>` under one of the `passes`, `flakes`, or `failures` steps. If
+the build is not yet completed, you can click on the link under the `build` step
+named `<builder name>-subbuild`, which will take you to the subbuild build page
+where you should see a similar `multiplied` step. Since the comment doesn't
+specify which tests were multiplied, you can look at the build pages to confirm
+(in case you multiplied more than one test).
+
+For example:
+
+![multiplied shard screenshot](multiplied-shard-screenshot.png)
+
+If no such comment appears, then there probably is an error with the syntax or
+the test is unable to run in any of the regular CQ builders. In this case, you
+will have to either add it to the build graph so that it is run by one of the
+builders or manually choose the tryjob that runs the test if it's run in an
+optional builder.
 
 #### Syntax examples {#multiply-examples}
 
