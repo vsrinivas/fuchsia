@@ -7,7 +7,7 @@
 
 use {
     crate::{
-        cache::MerkleForError, clock, inspect_util,
+        cache::MerkleForError, clock, error, inspect_util,
         metrics_util::tuf_error_as_create_tuf_client_event_code,
     },
     anyhow::{anyhow, format_err},
@@ -16,13 +16,14 @@ use {
     fidl_fuchsia_pkg_ext::{
         BlobId, MirrorConfig, RepositoryConfig, RepositoryKey, RepositoryStorageType,
     },
+    fuchsia_async::TimeoutExt as _,
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
-    futures::lock::Mutex as AsyncMutex,
+    futures::{future::TryFutureExt as _, lock::Mutex as AsyncMutex},
     serde::{Deserialize, Serialize},
-    std::{path::Path, sync::Arc},
+    std::{path::Path, sync::Arc, time::Duration},
     tuf::{
         client::Config,
         crypto::PublicKey,
@@ -86,6 +87,7 @@ impl Repository {
         mut cobalt_sender: CobaltSender,
         node: inspect::Node,
         local_mirror: Option<LocalMirrorProxy>,
+        tuf_metadata_deadline: Duration,
     ) -> Result<Self, anyhow::Error> {
         let mirror_config = config.mirrors().get(0);
         let local = get_local_repo(persisted_repos_dir, config)?;
@@ -102,6 +104,8 @@ impl Repository {
                     local,
                     remote,
                 )
+                .map_err(error::TufOrDeadline::Tuf)
+                .on_timeout(tuf_metadata_deadline, || Err(error::TufOrDeadline::DeadlineExceeded))
                 .await
                 .map_err(|e| {
                     cobalt_sender.log_event_count(
@@ -110,9 +114,10 @@ impl Repository {
                         0,
                         1,
                     );
-                    format_err!("Unable to create rust tuf client, received error {:?}", e)
+                    anyhow!(e).context("creating rust-tuf client")
                 })?,
                 mirror_config,
+                tuf_metadata_deadline,
                 node.create_child("updating_tuf_client"),
                 cobalt_sender.clone(),
             );
@@ -154,7 +159,9 @@ impl Repository {
                 updating_client.metadata_versions(),
                 target_path
             ),
-            Err(TufError::NotFound) => return Err(MerkleForError::NotFound),
+            Err(error::TufOrDeadline::Tuf(TufError::NotFound)) => {
+                return Err(MerkleForError::NotFound)
+            }
             Err(other) => {
                 fx_log_err!(
                     "failed to update local TUF metadata for {:?} while getting merkle for {:?} with error: {:#}",
@@ -282,6 +289,7 @@ fn get_root_keys(config: &RepositoryConfig) -> Result<Vec<PublicKey>, anyhow::Er
 mod tests {
     use {
         super::*,
+        crate::DEFAULT_TUF_METADATA_DEADLINE,
         fuchsia_async as fasync,
         fuchsia_pkg_testing::{
             serve::{handler, ServedRepository, ServedRepositoryBuilder, UriPathHandler},
@@ -357,6 +365,7 @@ mod tests {
                 cobalt_sender,
                 inspect::Inspector::new().root().create_child("inner-node"),
                 None,
+                DEFAULT_TUF_METADATA_DEADLINE,
             )
             .await
         }
@@ -610,6 +619,7 @@ mod tests {
 mod inspect_tests {
     use {
         super::*,
+        crate::DEFAULT_TUF_METADATA_DEADLINE,
         fuchsia_async as fasync,
         fuchsia_inspect::assert_inspect_tree,
         fuchsia_pkg_testing::{serve::handler, PackageBuilder, RepositoryBuilder},
@@ -646,6 +656,7 @@ mod inspect_tests {
             dummy_sender(),
             inspector.root().create_child("repo-node"),
             None,
+            DEFAULT_TUF_METADATA_DEADLINE,
         )
         .await
         .expect("created Repository");
@@ -698,6 +709,7 @@ mod inspect_tests {
             dummy_sender(),
             inspector.root().create_child("repo-node"),
             None,
+            DEFAULT_TUF_METADATA_DEADLINE,
         )
         .await
         .expect("created Repository");
@@ -756,6 +768,7 @@ mod inspect_tests {
             dummy_sender(),
             inspector.root().create_child("repo-node"),
             None,
+            DEFAULT_TUF_METADATA_DEADLINE,
         )
         .await
         .expect("created opened repo");

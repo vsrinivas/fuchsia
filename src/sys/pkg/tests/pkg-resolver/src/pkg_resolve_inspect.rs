@@ -50,7 +50,8 @@ async fn initial_inspect_state() {
                 repos: {},
                 stats: {
                     mirrors: {}
-                }
+                },
+                tuf_metadata_deadline_seconds: 240u64,
             },
             resolver_service: {
                 cache_fallbacks_due_to_not_found: 0u64,
@@ -74,21 +75,14 @@ async fn adding_repo_updates_inspect_state() {
     assert_inspect_tree!(
         hierarchy,
         root: contains {
-            repository_manager: {
-                dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
+            repository_manager: contains {
                 dynamic_configs: {
                     "example.com": {
                         root_keys: {},
                         mirrors: {},
                         update_package_url: format!("{:?}", config.update_package_url()),
-                    }
+                    },
                 },
-                static_configs: {},
-                persisted_repos_dir: "None".to_string(),
-                repos: {},
-                stats: {
-                    mirrors: {}
-                }
             },
         }
     );
@@ -119,8 +113,7 @@ async fn resolving_package_updates_inspect_state() {
     assert_inspect_tree!(
         env.pkg_resolver_inspect_hierarchy().await,
         root: contains {
-            repository_manager: {
-                dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
+            repository_manager: contains {
                 dynamic_configs: {
                     "example.com": {
                         root_keys: {
@@ -136,8 +129,6 @@ async fn resolving_package_updates_inspect_state() {
                         update_package_url: format!("{:?}", config.update_package_url()),
                     }
                 },
-                static_configs: {},
-                persisted_repos_dir: "None".to_string(),
                 repos: {
                     "example.com": {
                         merkles_successfully_resolved_count: 1u64,

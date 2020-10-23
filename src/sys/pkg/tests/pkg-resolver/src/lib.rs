@@ -4,9 +4,10 @@
 
 use {
     anyhow::Error,
+    cobalt_client::traits::AsEventCodes,
     fidl::endpoints::{ClientEnd, DiscoverableService},
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
-    fidl_fuchsia_cobalt::CobaltEvent,
+    fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
@@ -34,6 +35,7 @@ use {
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::{self as zx, Status},
     futures::prelude::*,
+    matches::assert_matches,
     parking_lot::Mutex,
     pkgfs_ramdisk::PkgfsRamdisk,
     serde::Serialize,
@@ -43,6 +45,7 @@ use {
         io::{self, BufWriter, Read},
         path::{Path, PathBuf},
         sync::Arc,
+        time::Duration,
     },
     tempfile::TempDir,
 };
@@ -241,6 +244,7 @@ where
     boot_arguments_service: Option<BootArgumentsService<'static>>,
     local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
     allow_local_mirror: bool,
+    tuf_metadata_deadline: Option<Duration>,
 }
 
 impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
@@ -257,6 +261,7 @@ impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
             boot_arguments_service: None,
             local_mirror_repo: None,
             allow_local_mirror: false,
+            tuf_metadata_deadline: None,
         }
     }
 }
@@ -274,6 +279,7 @@ where
             self.boot_arguments_service,
             self.local_mirror_repo,
             self.allow_local_mirror,
+            self.tuf_metadata_deadline,
         )
         .await
     }
@@ -290,6 +296,7 @@ where
             boot_arguments_service: self.boot_arguments_service,
             local_mirror_repo: self.local_mirror_repo,
             allow_local_mirror: self.allow_local_mirror,
+            tuf_metadata_deadline: self.tuf_metadata_deadline,
         }
     }
     pub fn mounts(self, mounts: Mounts) -> TestEnvBuilder<PkgFsFn, P, impl FnOnce() -> Mounts> {
@@ -299,6 +306,7 @@ where
             boot_arguments_service: self.boot_arguments_service,
             local_mirror_repo: self.local_mirror_repo,
             allow_local_mirror: self.allow_local_mirror,
+            tuf_metadata_deadline: self.tuf_metadata_deadline,
         }
     }
     pub fn boot_arguments_service(
@@ -311,6 +319,7 @@ where
             boot_arguments_service: Some(svc),
             local_mirror_repo: self.local_mirror_repo,
             allow_local_mirror: self.allow_local_mirror,
+            tuf_metadata_deadline: self.tuf_metadata_deadline,
         }
     }
 
@@ -320,7 +329,17 @@ where
     }
 
     pub fn allow_local_mirror(mut self) -> Self {
+        assert_eq!(self.allow_local_mirror, false, "allow_local_mirror should only be set once");
         self.allow_local_mirror = true;
+        self
+    }
+
+    pub fn tuf_metadata_deadline(mut self, deadline: Duration) -> Self {
+        assert!(
+            self.tuf_metadata_deadline.is_none(),
+            "tuf_metadata_deadline should only be set once"
+        );
+        self.tuf_metadata_deadline = Some(deadline);
         self
     }
 }
@@ -556,6 +575,7 @@ impl<P: PkgFs> TestEnv<P> {
         boot_arguments_service: Option<BootArgumentsService<'static>>,
         local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
         allow_local_mirror: bool,
+        tuf_metadata_deadline: Option<Duration>,
     ) -> Self {
         let mut pkg_cache = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cmx"
@@ -595,6 +615,15 @@ impl<P: PkgFs> TestEnv<P> {
 
         let pkg_resolver = if allow_local_mirror {
             pkg_resolver.args(vec!["--allow-local-mirror", "true"])
+        } else {
+            pkg_resolver
+        };
+
+        let pkg_resolver = if let Some(deadline) = tuf_metadata_deadline {
+            pkg_resolver.args(vec![
+                "--tuf-metadata-deadline-seconds".to_string(),
+                deadline.as_secs().to_string(),
+            ])
         } else {
             pkg_resolver
         };
@@ -758,6 +787,48 @@ impl<P: PkgFs> TestEnv<P> {
         fdio::service_connect(&path.to_string_lossy().to_string(), server_end.into_channel())
             .expect("failed to connect to Tree service");
         reader::read_from_tree(&tree).await.expect("failed to get inspect hierarchy")
+    }
+
+    /// Wait until at least `expected_event_codes.len()` events of metric id `expected_metric_id`
+    /// are received, then assert that the event codes of the received events correspond, in order,
+    /// to the event codes in `expected_event_codes`.
+    pub async fn assert_count_events(
+        &self,
+        expected_metric_id: u32,
+        expected_event_codes: Vec<impl AsEventCodes>,
+    ) {
+        let actual_events = self
+            .mocks
+            .logger_factory
+            .wait_for_at_least_n_events_with_metric_id(
+                expected_event_codes.len(),
+                expected_metric_id,
+            )
+            .await;
+        assert_eq!(
+            actual_events.len(),
+            expected_event_codes.len(),
+            "event count different than expected, actual_events: {:?}",
+            actual_events
+        );
+
+        for (event, expected_codes) in actual_events
+            .into_iter()
+            .zip(expected_event_codes.into_iter().map(|c| c.as_event_codes()))
+        {
+            assert_matches!(
+                event,
+                CobaltEvent {
+                    metric_id,
+                    event_codes,
+                    component: None,
+                    payload: EventPayload::EventCount(CountEvent {
+                        period_duration_micros: 0,
+                        count: 1
+                    }),
+                } if metric_id == expected_metric_id && event_codes == expected_codes
+            )
+        }
     }
 }
 

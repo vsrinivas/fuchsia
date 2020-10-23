@@ -8,7 +8,7 @@ use {
     crate::serve::UriPathHandler,
     futures::{
         channel::{mpsc, oneshot},
-        future::{ready, BoxFuture},
+        future::{pending, ready, BoxFuture},
         prelude::*,
     },
     hyper::{header::CONTENT_LENGTH, Body, Response, StatusCode},
@@ -467,5 +467,14 @@ impl UriPathHandler for OneByteFlipped {
                 .expect("valid response")
         }
         .boxed()
+    }
+}
+
+/// Handler that never sends bytes.
+pub struct Hang;
+
+impl UriPathHandler for Hang {
+    fn handle(&self, _: &Path, _: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        pending().boxed()
     }
 }

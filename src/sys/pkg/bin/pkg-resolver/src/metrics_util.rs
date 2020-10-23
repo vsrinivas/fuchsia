@@ -2,76 +2,63 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {cobalt_sw_delivery_registry as metrics, tuf::error::Error as TufError};
+use {
+    crate::error,
+    cobalt_sw_delivery_registry::{
+        CreateTufClientMetricDimensionResult, UpdateTufClientMetricDimensionResult,
+    },
+};
 
 pub fn tuf_error_as_update_tuf_client_event_code(
-    e: &TufError,
-) -> metrics::UpdateTufClientMetricDimensionResult {
+    e: &error::TufOrDeadline,
+) -> UpdateTufClientMetricDimensionResult {
+    use {
+        error::TufOrDeadline::*, tuf::error::Error::*,
+        UpdateTufClientMetricDimensionResult as EventCodes,
+    };
     match e {
-        TufError::BadSignature => metrics::UpdateTufClientMetricDimensionResult::BadSignature,
-        TufError::Encoding(_) => metrics::UpdateTufClientMetricDimensionResult::Encoding,
-        TufError::ExpiredMetadata(_) => {
-            metrics::UpdateTufClientMetricDimensionResult::ExpiredMetadata
-        }
-        TufError::IllegalArgument(_) => {
-            metrics::UpdateTufClientMetricDimensionResult::IllegalArgument
-        }
-        TufError::MissingMetadata(_) => {
-            metrics::UpdateTufClientMetricDimensionResult::MissingMetadata
-        }
-        TufError::NoSupportedHashAlgorithm => {
-            metrics::UpdateTufClientMetricDimensionResult::NoSupportedHashAlgorithm
-        }
-        TufError::NotFound => metrics::CreateTufClientMetricDimensionResult::NotFound,
-        TufError::Opaque(_) => metrics::UpdateTufClientMetricDimensionResult::Opaque,
-        TufError::Programming(_) => metrics::UpdateTufClientMetricDimensionResult::Programming,
-        TufError::TargetUnavailable => {
-            metrics::UpdateTufClientMetricDimensionResult::TargetUnavailable
-        }
-        TufError::UnknownKeyType(_) => {
-            metrics::UpdateTufClientMetricDimensionResult::UnknownKeyType
-        }
-        TufError::VerificationFailure(_) => {
-            metrics::UpdateTufClientMetricDimensionResult::VerificationFailure
-        }
-        TufError::Http(_) => metrics::CreateTufClientMetricDimensionResult::Http,
-        TufError::Hyper(_) => metrics::CreateTufClientMetricDimensionResult::Hyper,
-        _ => metrics::CreateTufClientMetricDimensionResult::UnexpectedTufErrorVariant,
+        Tuf(BadSignature) => EventCodes::BadSignature,
+        Tuf(Encoding(_)) => EventCodes::Encoding,
+        Tuf(ExpiredMetadata(_)) => EventCodes::ExpiredMetadata,
+        Tuf(IllegalArgument(_)) => EventCodes::IllegalArgument,
+        Tuf(MissingMetadata(_)) => EventCodes::MissingMetadata,
+        Tuf(NoSupportedHashAlgorithm) => EventCodes::NoSupportedHashAlgorithm,
+        Tuf(NotFound) => EventCodes::NotFound,
+        Tuf(Opaque(_)) => EventCodes::Opaque,
+        Tuf(Programming(_)) => EventCodes::Programming,
+        Tuf(TargetUnavailable) => EventCodes::TargetUnavailable,
+        Tuf(UnknownKeyType(_)) => EventCodes::UnknownKeyType,
+        Tuf(VerificationFailure(_)) => EventCodes::VerificationFailure,
+        Tuf(Http(_)) => EventCodes::Http,
+        Tuf(Hyper(_)) => EventCodes::Hyper,
+        DeadlineExceeded => EventCodes::DeadlineExceeded,
+        _ => EventCodes::UnexpectedTufErrorVariant,
     }
 }
 
 pub fn tuf_error_as_create_tuf_client_event_code(
-    e: &TufError,
-) -> metrics::CreateTufClientMetricDimensionResult {
+    e: &error::TufOrDeadline,
+) -> CreateTufClientMetricDimensionResult {
+    use {
+        error::TufOrDeadline::*, tuf::error::Error::*,
+        CreateTufClientMetricDimensionResult as EventCodes,
+    };
     match e {
-        TufError::BadSignature => metrics::CreateTufClientMetricDimensionResult::BadSignature,
-        TufError::Encoding(_) => metrics::CreateTufClientMetricDimensionResult::Encoding,
-        TufError::ExpiredMetadata(_) => {
-            metrics::CreateTufClientMetricDimensionResult::ExpiredMetadata
-        }
-        TufError::IllegalArgument(_) => {
-            metrics::CreateTufClientMetricDimensionResult::IllegalArgument
-        }
-        TufError::MissingMetadata(_) => {
-            metrics::CreateTufClientMetricDimensionResult::MissingMetadata
-        }
-        TufError::NoSupportedHashAlgorithm => {
-            metrics::CreateTufClientMetricDimensionResult::NoSupportedHashAlgorithm
-        }
-        TufError::NotFound => metrics::CreateTufClientMetricDimensionResult::NotFound,
-        TufError::Opaque(_) => metrics::CreateTufClientMetricDimensionResult::Opaque,
-        TufError::Programming(_) => metrics::CreateTufClientMetricDimensionResult::Programming,
-        TufError::TargetUnavailable => {
-            metrics::CreateTufClientMetricDimensionResult::TargetUnavailable
-        }
-        TufError::UnknownKeyType(_) => {
-            metrics::CreateTufClientMetricDimensionResult::UnknownKeyType
-        }
-        TufError::VerificationFailure(_) => {
-            metrics::CreateTufClientMetricDimensionResult::VerificationFailure
-        }
-        TufError::Http(_) => metrics::CreateTufClientMetricDimensionResult::Http,
-        TufError::Hyper(_) => metrics::CreateTufClientMetricDimensionResult::Hyper,
-        _ => metrics::CreateTufClientMetricDimensionResult::UnexpectedTufErrorVariant,
+        Tuf(BadSignature) => EventCodes::BadSignature,
+        Tuf(Encoding(_)) => EventCodes::Encoding,
+        Tuf(ExpiredMetadata(_)) => EventCodes::ExpiredMetadata,
+        Tuf(IllegalArgument(_)) => EventCodes::IllegalArgument,
+        Tuf(MissingMetadata(_)) => EventCodes::MissingMetadata,
+        Tuf(NoSupportedHashAlgorithm) => EventCodes::NoSupportedHashAlgorithm,
+        Tuf(NotFound) => EventCodes::NotFound,
+        Tuf(Opaque(_)) => EventCodes::Opaque,
+        Tuf(Programming(_)) => EventCodes::Programming,
+        Tuf(TargetUnavailable) => EventCodes::TargetUnavailable,
+        Tuf(UnknownKeyType(_)) => EventCodes::UnknownKeyType,
+        Tuf(VerificationFailure(_)) => EventCodes::VerificationFailure,
+        Tuf(Http(_)) => EventCodes::Http,
+        Tuf(Hyper(_)) => EventCodes::Hyper,
+        DeadlineExceeded => EventCodes::DeadlineExceeded,
+        _ => EventCodes::UnexpectedTufErrorVariant,
     }
 }

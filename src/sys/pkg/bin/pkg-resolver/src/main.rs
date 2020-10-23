@@ -15,7 +15,11 @@ use {
     futures::{prelude::*, stream::FuturesUnordered},
     itertools::Itertools as _,
     parking_lot::RwLock,
-    std::{io, sync::Arc, time::Instant},
+    std::{
+        io,
+        sync::Arc,
+        time::{Duration, Instant},
+    },
     system_image::CachePackages,
 };
 
@@ -23,6 +27,7 @@ mod args;
 mod cache;
 mod clock;
 mod config;
+mod error;
 mod experiment;
 mod font_package_manager;
 mod inspect_util;
@@ -73,6 +78,14 @@ const STATIC_RULES_PATH: &str = "/config/data/rewrites.json";
 const DYNAMIC_RULES_PATH: &str = "/data/rewrites.json";
 
 const STATIC_FONT_REGISTRY_PATH: &str = "/config/data/font_packages.json";
+
+// Repository size is currently 100 KB. Allowing for 10x growth and assuming a
+// 4,096 B/s minimum bandwidth (the default minimum bandwidth used by rust-tuf
+// HttpRepository) results in a duration of (10 * 100,000 B) / (4,096 B/s) = 244 seconds.
+// Round to the minute boundary to make it more clear when reconstructing logs
+// that there is a designed timeout involved.
+// TODO(fxbug.dev/62300) replace with granular deadlines in rust-tuf.
+const DEFAULT_TUF_METADATA_DEADLINE: Duration = Duration::from_secs(240);
 
 fn main() -> Result<(), Error> {
     let startup_time = Instant::now();
@@ -132,6 +145,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         &config,
         cobalt_sender.clone(),
         local_mirror.clone(),
+        args.tuf_metadata_deadline_seconds,
     )));
     let rewrite_manager = Arc::new(RwLock::new(
         load_rewrite_manager(
@@ -274,6 +288,7 @@ fn load_repo_manager(
     config: &Config,
     mut cobalt_sender: CobaltSender,
     local_mirror: Option<LocalMirrorProxy>,
+    tuf_metadata_deadline: Duration,
 ) -> RepositoryManager {
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
@@ -284,6 +299,7 @@ fn load_repo_manager(
             fx_log_err!("error loading dynamic repo config: {:#}", anyhow!(err));
             builder
         })
+        .tuf_metadata_deadline(tuf_metadata_deadline)
         .with_local_mirror(local_mirror)
         .inspect_node(node)
         .load_static_configs_dir(STATIC_REPO_DIR)

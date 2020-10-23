@@ -8,6 +8,7 @@ use {
         experiment::Experiments,
         inspect_util::{self, InspectableRepositoryConfig},
         repository::Repository,
+        DEFAULT_TUF_METADATA_DEADLINE,
     },
     anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
@@ -26,6 +27,7 @@ use {
         ops::Deref,
         path::{Path, PathBuf},
         sync::Arc,
+        time::Duration,
     },
     thiserror::Error,
 };
@@ -41,6 +43,7 @@ pub struct RepositoryManager {
     cobalt_sender: CobaltSender,
     inspect: RepositoryManagerInspectState,
     local_mirror: Option<LocalMirrorProxy>,
+    tuf_metadata_deadline: Duration,
 }
 
 #[derive(Debug)]
@@ -255,6 +258,7 @@ impl RepositoryManager {
             self.cobalt_sender.clone(),
             Arc::clone(&self.inspect.repos_node),
             self.local_mirror.clone(),
+            self.tuf_metadata_deadline,
         );
 
         let cobalt_sender = self.cobalt_sender.clone();
@@ -288,6 +292,7 @@ impl RepositoryManager {
             self.cobalt_sender.clone(),
             Arc::clone(&self.inspect.repos_node),
             self.local_mirror.clone(),
+            self.tuf_metadata_deadline,
         );
 
         let cobalt_sender = self.cobalt_sender.clone();
@@ -311,8 +316,8 @@ async fn open_cached_or_new_repository(
     cobalt_sender: CobaltSender,
     inspect_node: Arc<inspect::Node>,
     local_mirror: Option<LocalMirrorProxy>,
+    tuf_metadata_deadline: Duration,
 ) -> Result<Arc<AsyncMutex<Repository>>, OpenRepoError> {
-    // Exit early if we've already connected to this repository.
     if let Some(conn) = repositories.read().get(url) {
         return Ok(conn.clone());
     }
@@ -329,6 +334,7 @@ async fn open_cached_or_new_repository(
             cobalt_sender,
             inspect_node.create_child(url.host()),
             local_mirror,
+            tuf_metadata_deadline,
         )
         .await
         .map_err(|e| OpenRepoError { repo_url: config.repo_url().clone(), source: e })?,
@@ -358,6 +364,7 @@ pub struct RepositoryManagerBuilder<S = UnsetCobaltSender, N = UnsetInspectNode>
     cobalt_sender: S,
     inspect_node: N,
     local_mirror: Option<LocalMirrorProxy>,
+    tuf_metadata_deadline: Duration,
 }
 
 impl<S, N> RepositoryManagerBuilder<S, N> {
@@ -400,6 +407,11 @@ impl<S, N> RepositoryManagerBuilder<S, N> {
         self.local_mirror = proxy;
         self
     }
+
+    pub fn tuf_metadata_deadline(mut self, deadline: Duration) -> Self {
+        self.tuf_metadata_deadline = deadline;
+        self
+    }
 }
 
 impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
@@ -438,6 +450,7 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
             cobalt_sender: UnsetCobaltSender,
             inspect_node: UnsetInspectNode,
             local_mirror: None,
+            tuf_metadata_deadline: DEFAULT_TUF_METADATA_DEADLINE,
         };
 
         if let Some(err) = err {
@@ -485,6 +498,7 @@ impl<S> RepositoryManagerBuilder<S, UnsetInspectNode> {
             cobalt_sender: self.cobalt_sender,
             inspect_node,
             local_mirror: self.local_mirror,
+            tuf_metadata_deadline: self.tuf_metadata_deadline,
         }
     }
 }
@@ -504,6 +518,7 @@ impl<N> RepositoryManagerBuilder<UnsetCobaltSender, N> {
             cobalt_sender,
             inspect_node: self.inspect_node,
             local_mirror: self.local_mirror,
+            tuf_metadata_deadline: self.tuf_metadata_deadline,
         }
     }
 }
@@ -545,6 +560,8 @@ fn to_inspectable_map_with_node(
 impl RepositoryManagerBuilder<CobaltSender, inspect::Node> {
     /// Build the [RepositoryManager].
     pub fn build(self) -> RepositoryManager {
+        self.inspect_node
+            .record_uint("tuf_metadata_deadline_seconds", self.tuf_metadata_deadline.as_secs());
         let inspect = RepositoryManagerInspectState {
             dynamic_configs_path_property: self
                 .inspect_node
@@ -575,6 +592,7 @@ impl RepositoryManagerBuilder<CobaltSender, inspect::Node> {
             cobalt_sender: self.cobalt_sender,
             inspect,
             local_mirror: self.local_mirror,
+            tuf_metadata_deadline: self.tuf_metadata_deadline,
         }
     }
 }
@@ -1585,28 +1603,29 @@ mod tests {
             inspector,
             root: {
                 repository_manager: {
-                  dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
-                  dynamic_configs: {},
-                  static_configs: {
-                     "fuchsia.com": {
-                        root_keys: {
-                            "0": format!("{:?}", fuchsia_config.root_keys()[0])
-                        },
-                        mirrors: {
-                            "0": {
-                                mirror_url: format!("{:?}", mirror_config.mirror_url()),
-                                subscribe: format!("{:?}", mirror_config.subscribe()),
-                                blob_mirror_url: format!("{:?}", mirror_config.blob_mirror_url())
-                            }
-                        },
-                        update_package_url: format!("{:?}", fuchsia_config.update_package_url()),
-                    }
-                  },
-                  stats: {
-                      mirrors: {},
-                  },
-                  persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
-                  repos: {},
+                    dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
+                    dynamic_configs: {},
+                    static_configs: {
+                        "fuchsia.com": {
+                            root_keys: {
+                                "0": format!("{:?}", fuchsia_config.root_keys()[0])
+                            },
+                            mirrors: {
+                                "0": {
+                                    mirror_url: format!("{:?}", mirror_config.mirror_url()),
+                                    subscribe: format!("{:?}", mirror_config.subscribe()),
+                                    blob_mirror_url: format!("{:?}", mirror_config.blob_mirror_url())
+                                }
+                            },
+                            update_package_url: format!("{:?}", fuchsia_config.update_package_url()),
+                        }
+                    },
+                    stats: {
+                        mirrors: {},
+                    },
+                    repos: {},
+                    persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
+                    tuf_metadata_deadline_seconds: DEFAULT_TUF_METADATA_DEADLINE.as_secs(),
                 }
             }
         );
@@ -1628,14 +1647,15 @@ mod tests {
             inspector,
             root: {
                 repository_manager: {
-                  dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
-                  dynamic_configs: {},
-                  static_configs: {},
-                  stats: {
-                      mirrors: {},
-                  },
-                  persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
-                  repos: {},
+                    dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
+                    dynamic_configs: {},
+                    static_configs: {},
+                    stats: {
+                        mirrors: {},
+                    },
+                    repos: {},
+                    persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
+                    tuf_metadata_deadline_seconds: DEFAULT_TUF_METADATA_DEADLINE.as_secs(),
                 }
             }
         );
@@ -1656,15 +1676,8 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                repository_manager: {
-                  dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
-                  dynamic_configs: {},
-                  static_configs: {},
-                  stats: {
-                      mirrors: {},
-                  },
-                  persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
-                  repos: {},
+                repository_manager: contains {
+                    dynamic_configs: {},
                 }
             }
         );
@@ -1687,29 +1700,22 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                repository_manager: {
-                  dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
-                  dynamic_configs: {
-                    "fuchsia.com": {
-                        root_keys: {
-                            "0": format!("{:?}", config.root_keys()[0])
-                        },
-                        mirrors: {
-                            "0": {
-                                mirror_url: format!("{:?}", mirror_config.mirror_url()),
-                                subscribe: format!("{:?}", mirror_config.subscribe()),
-                                blob_mirror_url: format!("{:?}", mirror_config.blob_mirror_url())
-                            }
-                        },
-                        update_package_url: format!("{:?}", config.update_package_url()),
-                    }
-                  },
-                  static_configs: {},
-                  persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
-                  repos: {},
-                  stats: {
-                      mirrors: {},
-                  },
+                repository_manager: contains {
+                    dynamic_configs: {
+                        "fuchsia.com": {
+                            root_keys: {
+                                "0": format!("{:?}", config.root_keys()[0])
+                            },
+                            mirrors: {
+                                "0": {
+                                    mirror_url: format!("{:?}", mirror_config.mirror_url()),
+                                    subscribe: format!("{:?}", mirror_config.subscribe()),
+                                    blob_mirror_url: format!("{:?}", mirror_config.blob_mirror_url())
+                                }
+                            },
+                            update_package_url: format!("{:?}", config.update_package_url()),
+                        }
+                    },
                 }
             }
         );
@@ -1719,15 +1725,8 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                repository_manager: {
-                  dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
-                  dynamic_configs: {},
-                  static_configs: {},
-                  stats: {
-                      mirrors: {},
-                  },
-                  persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
-                  repos: {},
+                repository_manager: contains {
+                    dynamic_configs: {},
                 }
             }
         );

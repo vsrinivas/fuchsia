@@ -84,6 +84,7 @@ rustc_binary("bin") {
     "src/cache/retry.rs",
     "src/clock.rs",
     "src/config.rs",
+    "src/error.rs",
     "src/experiment.rs",
     "src/font_package_manager.rs",
     "src/inspect_util.rs",

@@ -3,23 +3,26 @@
 // found in the LICENSE file.
 
 use {
-    crate::{clock, inspect_util, metrics_util::tuf_error_as_update_tuf_client_event_code},
+    crate::{clock, error, inspect_util, metrics_util::tuf_error_as_update_tuf_client_event_code},
     anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_ext::MirrorConfig,
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, TimeoutExt as _},
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_contrib::inspectable::InspectableDebugString,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::{
-        future::{AbortHandle, Abortable, FutureExt},
+        future::{AbortHandle, Abortable, FutureExt as _, TryFutureExt as _},
         lock::Mutex as AsyncMutex,
         stream::StreamExt,
     },
     http_uri_ext::HttpUriExt as _,
-    std::sync::{Arc, Weak},
+    std::{
+        sync::{Arc, Weak},
+        time::Duration,
+    },
     tuf::{
         error::Error as TufError,
         interchange::Json,
@@ -42,6 +45,8 @@ pub struct UpdatingTufClient {
 
     /// `Some` if there is an AutoClient task, dropping it stops the task.
     auto_client_aborter: Option<AbortHandleOnDrop>,
+
+    tuf_metadata_deadline: Duration,
 
     inspect: UpdatingTufClientInspectState,
 
@@ -118,6 +123,7 @@ impl UpdatingTufClient {
             tuf::client::DefaultTranslator,
         >,
         config: Option<&MirrorConfig>,
+        tuf_metadata_deadline: Duration,
         node: inspect::Node,
         cobalt_sender: CobaltSender,
     ) -> Arc<AsyncMutex<Self>> {
@@ -139,6 +145,7 @@ impl UpdatingTufClient {
                 "last_update_successfully_checked_time",
             ),
             auto_client_aborter,
+            tuf_metadata_deadline,
             inspect: UpdatingTufClientInspectState {
                 update_check_failure_count: inspect_util::Counter::new(
                     &node,
@@ -192,7 +199,7 @@ impl UpdatingTufClient {
 
     /// Updates the tuf client metadata if it is considered to be stale, returning whether or not
     /// updates were performed.
-    pub async fn update_if_stale(&mut self) -> Result<UpdateResult, TufError> {
+    pub async fn update_if_stale(&mut self) -> Result<UpdateResult, error::TufOrDeadline> {
         if self.is_stale() {
             if self.update().await? {
                 Ok(UpdateResult::Updated)
@@ -225,8 +232,15 @@ impl UpdatingTufClient {
         }
     }
 
-    async fn update(&mut self) -> Result<bool, TufError> {
-        let res = self.client.update().await;
+    async fn update(&mut self) -> Result<bool, error::TufOrDeadline> {
+        let res = self
+            .client
+            .update()
+            .map_err(error::TufOrDeadline::Tuf)
+            .on_timeout(self.tuf_metadata_deadline, || {
+                Err(crate::error::TufOrDeadline::DeadlineExceeded)
+            })
+            .await;
         self.inspect.root_version.set(self.client.root_version().into());
         self.inspect
             .timestamp_version

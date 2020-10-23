@@ -7,7 +7,7 @@ use {
     cobalt_client::traits::{AsEventCode, AsEventCodes},
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::create_endpoints,
-    fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
+    fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
     fidl_fuchsia_pkg::UpdatePolicy,
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{
@@ -20,41 +20,6 @@ use {
     serde_json::json,
     std::sync::Arc,
 };
-
-async fn assert_count_events(
-    env: &TestEnv,
-    expected_metric_id: u32,
-    expected_event_codes: Vec<impl AsEventCodes>,
-) {
-    let actual_events = env
-        .mocks
-        .logger_factory
-        .wait_for_at_least_n_events_with_metric_id(expected_event_codes.len(), expected_metric_id)
-        .await;
-    assert_eq!(
-        actual_events.len(),
-        expected_event_codes.len(),
-        "event count different than expected, actual_events: {:?}",
-        actual_events
-    );
-
-    for (event, expected_codes) in
-        actual_events.into_iter().zip(expected_event_codes.into_iter().map(|c| c.as_event_codes()))
-    {
-        assert_matches!(
-            event,
-            CobaltEvent {
-                metric_id,
-                event_codes,
-                component: None,
-                payload: EventPayload::EventCount(CountEvent {
-                    period_duration_micros: 0,
-                    count: 1
-                }),
-            } if metric_id == expected_metric_id && event_codes == expected_codes
-        )
-    }
-}
 
 async fn assert_elapsed_duration_events(
     env: &TestEnv,
@@ -115,7 +80,7 @@ async fn verify_resolve_emits_cobalt_events_with_metric_id(
         env.resolve_package(&format!("fuchsia-pkg://example.com/{}", pkg.name())).await.map(|_| ()),
         expected_resolve_result
     );
-    assert_count_events(&env, metric_id, expected_events).await;
+    env.assert_count_events(metric_id, expected_events).await;
     env.stop().await;
 }
 
@@ -126,8 +91,7 @@ async fn repository_manager_load_static_configs_success() {
         .build()
         .await;
 
-    assert_count_events(
-        &env,
+    env.assert_count_events(
         metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
         vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Success],
     )
@@ -165,8 +129,7 @@ async fn pkg_resolver_startup_duration() {
 async fn repository_manager_load_static_configs_io() {
     let env = TestEnvBuilder::new().build().await;
 
-    assert_count_events(
-        &env,
+    env.assert_count_events(
         metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
         vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Io],
     )
@@ -186,8 +149,7 @@ async fn repository_manager_load_static_configs_parse() {
         .build()
         .await;
 
-    assert_count_events(
-        &env,
+    env.assert_count_events(
         metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
         vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Parse],
     )
@@ -209,8 +171,7 @@ async fn repository_manager_load_static_configs_overridden() {
         .build()
         .await;
 
-    assert_count_events(
-        &env,
+    env.assert_count_events(
         metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
         vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Overridden],
     )
@@ -241,8 +202,7 @@ async fn resolve_success_regular() {
         Ok(())
     );
 
-    assert_count_events(
-        &env,
+    env.assert_count_events(
         metrics::RESOLVE_METRIC_ID,
         vec![(
             metrics::ResolveDurationMetricDimensionResult::Success,
@@ -261,8 +221,7 @@ async fn resolve_failure_regular_unreachable() {
         Err(Status::ADDRESS_UNREACHABLE),
     );
 
-    assert_count_events(
-        &env,
+    env.assert_count_events(
         metrics::RESOLVE_METRIC_ID,
         vec![(
             metrics::ResolveMetricDimensionResult::ZxErrAddressUnreachable,
@@ -508,8 +467,7 @@ async fn font_resolver_is_font_package_check_not_font() {
         Status::NOT_FOUND.into_raw()
     );
 
-    assert_count_events(
-        &env,
+    env.assert_count_events(
         metrics::IS_FONT_PACKAGE_CHECK_METRIC_ID,
         vec![metrics::IsFontPackageCheckMetricDimensionResult::NotFont],
     )
@@ -525,8 +483,7 @@ async fn font_manager_load_static_registry_success() {
         .build()
         .await;
 
-    assert_count_events(
-        &env,
+    env.assert_count_events(
         metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
         vec![metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Success],
     )
@@ -539,8 +496,7 @@ async fn font_manager_load_static_registry_success() {
 async fn font_manager_load_static_registry_failure_io() {
     let env = TestEnvBuilder::new().build().await;
 
-    assert_count_events(
-        &env,
+    env.assert_count_events(
         metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
         vec![metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Io],
     )
@@ -558,8 +514,7 @@ async fn font_manager_load_static_registry_failure_parse() {
         .build()
         .await;
 
-    assert_count_events(
-        &env,
+    env.assert_count_events(
         metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
         vec![metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Parse],
     )
@@ -580,8 +535,7 @@ async fn font_manager_load_static_registry_failure_pkg_url() {
         .build()
         .await;
 
-    assert_count_events(
-        &env,
+    env.assert_count_events(
         metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
         vec![metrics::FontManagerLoadStaticRegistryMetricDimensionResult::PkgUrl],
     )
@@ -594,8 +548,7 @@ async fn font_manager_load_static_registry_failure_pkg_url() {
 async fn load_repository_for_channel_success_no_rewrite_rule() {
     let env = TestEnvBuilder::new().build().await;
 
-    assert_count_events(
-        &env,
+    env.assert_count_events(
         metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_METRIC_ID,
         vec![metrics::RepositoryManagerLoadRepositoryForChannelMetricDimensionResult::Success],
     )

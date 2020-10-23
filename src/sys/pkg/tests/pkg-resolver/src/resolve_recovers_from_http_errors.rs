@@ -204,3 +204,24 @@ async fn second_resolve_succeeds_when_blob_corrupted() {
     )
     .await
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn second_resolve_succeeds_when_tuf_metadata_update_fails() {
+    // pkg-resolver uses tuf::client::Client::with_trusted_root_keys to create its TUF client.
+    // That method will only retrieve the specified version of the root metadata (1 for these
+    // tests), with the rest of the metadata being retrieved during the first update. This means
+    // that hanging all attempts for 2.snapshot.json metadata will allow tuf client creation to
+    // succeed but still fail tuf client update.
+    // We want to specifically verify recovery from update failure because if creation fails,
+    // pkg-resolver will not make a Repository object, so the next resolve attempt would try again
+    // from scratch, but if update fails, pkg-resolver will keep its Repository object which
+    // contains a rust-tuf client in a possibly invalid state, and we want to verify that
+    // pkg-resolver calls update on the client again and that this update recovers the client.
+    let pkg = PackageBuilder::new("no-blobs").build().await.unwrap();
+    verify_resolve_fails_then_succeeds(
+        pkg,
+        handler::ForPath::new("/2.snapshot.json", handler::OneByteShortThenDisconnect),
+        Status::INTERNAL,
+    )
+    .await
+}
