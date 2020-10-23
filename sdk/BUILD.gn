@@ -197,7 +197,7 @@ sdk_molecule("fidl") {
   ]
 }
 
-sdk_molecule("core_tools") {
+sdk_molecule("host_tools") {
   visibility = [ ":*" ]
 
   # TODO: Move to cross_compiled once it's possible to cross-compile them.
@@ -287,6 +287,22 @@ sdk_molecule("core_lib") {
   ]
 }
 
+sdk_molecule("core_idk") {
+  visibility = [ ":*" ]
+  testonly = true
+  deps = [
+    ":core_lib",
+    ":fidl",
+    ":license",
+    "devices",
+    "docs",
+    "//src/lib/vulkan:vulkan_layers",
+    "//third_party/Vulkan-Loader:libvulkan_sdk",
+    "//third_party/Vulkan-Loader:vulkan_license",
+    "//zircon/public/sysroot:sysroot_sdk",
+  ]
+}
+
 sdk("core") {
   id = sdk_id
 
@@ -297,16 +313,8 @@ sdk("core") {
   testonly = true
 
   deps = [
-    ":core_lib",
-    ":core_tools",
-    ":fidl",
-    ":license",
-    "devices",
-    "docs",
-    "//src/lib/vulkan:vulkan_layers",
-    "//third_party/Vulkan-Loader:libvulkan_sdk",
-    "//third_party/Vulkan-Loader:vulkan_license",
-    "//zircon/public/sysroot:sysroot_sdk",
+    ":core_idk",
+    ":host_tools",
   ]
 }
 
