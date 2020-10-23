@@ -21,7 +21,7 @@ use {
 const ARCHIVIST_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/feedback_reader_test_archivist.cmx";
 const SERVICE_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/iquery_test_component.cmx";
+    "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/test_component.cmx";
 
 const ARCHIVIST_CONFIG: &[u8] = include_bytes!("../configs/archivist_config.json");
 const ALL_GOLDEN_JSON: &[u8] = include_bytes!("../configs/all_golden.json");
@@ -235,7 +235,7 @@ async fn canonical_reader_test() -> Result<(), Error> {
     // Then verify that from the expected data, we can retrieve one specific value.
     retrieve_and_validate_results(
         &archivist_app,
-        vec!["iquery_test_component.cmx:*:lazy-*"],
+        vec!["test_component.cmx:*:lazy-*"],
         &*SINGLE_VALUE_CLIENT_SELECTOR_JSON_PATH,
         3,
     )
@@ -246,7 +246,7 @@ async fn canonical_reader_test() -> Result<(), Error> {
     // Then verify that subtree selection retrieves all trees under and including root.
     retrieve_and_validate_results(
         &archivist_app,
-        vec!["iquery_test_component.cmx:root"],
+        vec!["test_component.cmx:root"],
         &*ALL_GOLDEN_JSON_PATH,
         3,
     )
@@ -258,7 +258,7 @@ async fn canonical_reader_test() -> Result<(), Error> {
     // to the archivist.
     retrieve_and_validate_results(
         &archivist_app,
-        vec![r#"iquery_test_component.cmx:root:array\:0x15"#],
+        vec![r#"test_component.cmx:root:array\:0x15"#],
         &*EMPTY_RESULTS_GOLDEN_JSON_PATH,
         3,
     )

@@ -2,7 +2,7 @@
   {
     "data_source": "Inspect",
     "metadata": {
-      "component_url": "fuchsia-pkg://fuchsia.com/iquery_tests#meta/basic_component.cmx",
+      "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx",
       "errors": null,
       "filename": "fuchsia.inspect.Tree",
       "timestamp": "TIMESTAMP"
@@ -22,7 +22,7 @@
   {
     "data_source": "Inspect",
     "metadata": {
-      "component_url": "fuchsia-pkg://fuchsia.com/iquery_tests#meta/basic_component.cmx",
+      "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx",
       "errors": null,
       "filename": "fuchsia.inspect.Tree",
       "timestamp": "TIMESTAMP"

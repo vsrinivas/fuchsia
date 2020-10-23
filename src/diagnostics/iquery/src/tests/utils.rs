@@ -20,15 +20,15 @@ use {
 };
 
 const BASIC_COMPONENT_URL: &'static str =
-    "fuchsia-pkg://fuchsia.com/iquery_tests#meta/basic_component.cmx";
+    "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx";
 const TEST_COMPONENT_URL: &'static str =
-    "fuchsia-pkg://fuchsia.com/iquery_tests#meta/test_component.cmx";
+    "fuchsia-pkg://fuchsia.com/iquery-tests#meta/test_component.cmx";
 
 /// Creates a new environment named `env_label` and a starts the basic component under it.
 pub async fn start_basic_component(
     env_label: &str,
 ) -> Result<(NestedEnvironment, App), anyhow::Error> {
-    let (env, app) = launch(env_label, BASIC_COMPONENT_URL)?;
+    let (env, app) = launch(env_label, BASIC_COMPONENT_URL, None)?;
     wait_for_out_ready(&app).await?;
     Ok((env, app))
 }
@@ -37,7 +37,9 @@ pub async fn start_basic_component(
 pub async fn start_test_component(
     env_label: &str,
 ) -> Result<(NestedEnvironment, App), anyhow::Error> {
-    let (env, app) = launch(env_label, TEST_COMPONENT_URL)?;
+    let args =
+        vec!["--columns".to_string(), "3".to_string(), "--rows".to_string(), "3".to_string()];
+    let (env, app) = launch(env_label, TEST_COMPONENT_URL, Some(args))?;
     wait_for_out_ready(&app).await?;
     Ok((env, app))
 }
@@ -85,10 +87,11 @@ pub async fn wait_for_terminated(mut app: App) {
 fn launch(
     env_label: &str,
     url: impl Into<String>,
+    args: Option<Vec<String>>,
 ) -> Result<(NestedEnvironment, App), anyhow::Error> {
     let mut service_fs = ServiceFs::new();
     let env = service_fs.create_nested_environment(env_label)?;
-    let app = client::launch(&env.launcher(), url.into(), None)?;
+    let app = client::launch(&env.launcher(), url.into(), args)?;
     fasync::Task::spawn(service_fs.collect()).detach();
     Ok((env, app))
 }

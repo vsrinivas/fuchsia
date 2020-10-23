@@ -1,7 +1,7 @@
 show-all-test/basic_component.cmx:
   metadata:
     filename = fuchsia.inspect.Tree
-    component_url = fuchsia-pkg://fuchsia.com/iquery_tests#meta/basic_component.cmx
+    component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx
     timestamp = TIMESTAMP
   payload:
     root:
@@ -12,7 +12,7 @@ show-all-test/basic_component.cmx:
 show-all-test2/basic_component.cmx:
   metadata:
     filename = fuchsia.inspect.Tree
-    component_url = fuchsia-pkg://fuchsia.com/iquery_tests#meta/basic_component.cmx
+    component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx
     timestamp = TIMESTAMP
   payload:
     root:

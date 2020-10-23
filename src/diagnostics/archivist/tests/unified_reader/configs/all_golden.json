@@ -2,12 +2,12 @@
    {
       "data_source": "Inspect",
       "metadata": {
-         "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/iquery_test_component.cmx",
+         "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/test_component.cmx",
          "errors": null,
          "filename": "fuchsia.inspect.Tree",
          "timestamp": 0
       },
-      "moniker": "iquery_test_component.cmx",
+      "moniker": "test_component.cmx",
       "payload": {
          "root": {
             "array:0x15": [
@@ -299,12 +299,12 @@
    {
       "data_source": "Inspect",
       "metadata": {
-         "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/iquery_test_component.cmx",
+         "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/test_component.cmx",
          "errors": null,
          "filename": "fuchsia.inspect.deprecated.Inspect",
          "timestamp": 0
       },
-      "moniker": "iquery_test_component.cmx",
+      "moniker": "test_component.cmx",
       "payload": {
          "root": {
             "table:0x0": {
@@ -403,12 +403,12 @@
    {
       "data_source": "Inspect",
       "metadata": {
-         "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/iquery_test_component.cmx",
+         "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/test_component.cmx",
          "errors": null,
          "filename": "root.inspect",
          "timestamp": 0
       },
-      "moniker": "iquery_test_component.cmx",
+      "moniker": "test_component.cmx",
       "payload": {
          "root": {
             "array:0x15": [

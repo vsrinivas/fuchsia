@@ -251,8 +251,6 @@ group("deprecated_package_underscore") {
     "//src/devices/bind/debugger:bind_debugger",
     "//src/devices/bind/debugger:bind_debugger_tests",
     "//src/devices/clock/lib/clocktree/tests:clocktree_test",
-    "//src/diagnostics/iquery:iquery_tests",
-    "//src/diagnostics/iquery/test:iquery_golden_tests",
     "//src/diagnostics/lib/inspect-fidl-load:inspect_fidl_load_tests",
     "//src/diagnostics/lib/selectors:selectors_tests",
     "//src/diagnostics/streams:diagnostic_streams_tests",

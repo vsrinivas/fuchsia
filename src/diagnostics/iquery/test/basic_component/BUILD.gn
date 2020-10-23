@@ -3,9 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
-rustc_binary("iquery_basic_component") {
+rustc_binary("bin") {
   edition = "2018"
+  name = "iquery_basic_component"
   source_root = "main.rs"
 
   deps = [
@@ -17,4 +19,10 @@ rustc_binary("iquery_basic_component") {
   ]
 
   sources = [ "main.rs" ]
+}
+
+fuchsia_component("basic_component") {
+  testonly = true
+  manifest = "meta/basic_component.cmx"
+  deps = [ ":bin" ]
 }

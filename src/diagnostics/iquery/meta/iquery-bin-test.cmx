@@ -10,7 +10,7 @@
         "args": [
             "--test-threads=1"
         ],
-        "binary": "test/iquery_bin_test"
+        "binary": "bin/iquery_bin_test"
     },
     "sandbox": {
         "features": [
