@@ -28,7 +28,7 @@ use {
         FutureExt, StreamExt,
     },
     log::{error, info, warn},
-    std::{collections::HashSet, sync::Arc},
+    std::{collections::HashSet, sync::Arc, unimplemented},
     void::Void,
 };
 
@@ -581,10 +581,7 @@ impl IfaceManagerService {
         Ok(())
     }
 
-    async fn start_ap(
-        &mut self,
-        config: ap_fsm::ApConfig,
-    ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
+    async fn start_ap(&mut self, config: ap_fsm::ApConfig) -> Result<oneshot::Receiver<()>, Error> {
         let mut ap_iface_container = self.get_ap(None).await?;
 
         let (sender, receiver) = oneshot::channel();
@@ -730,6 +727,44 @@ async fn handle_network_selection_results(
         fasync::Interval::new(zx::Duration::from_seconds(*reconnect_monitor_interval));
 }
 
+async fn handle_terminated_state_machine(
+    terminated_fsm: StateMachineMetadata,
+    iface_manager: &mut IfaceManagerService,
+    iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    selector: Arc<NetworkSelector>,
+    disconnected_clients: &mut HashSet<u16>,
+    network_selection_futures: &mut FuturesUnordered<
+        BoxFuture<'static, Option<(client_types::NetworkIdentifier, Credential, NetworkMetadata)>>,
+    >,
+) {
+    match terminated_fsm.role {
+        fidl_fuchsia_wlan_device::MacRole::Ap => {
+            // If the state machine exited normally, the IfaceManagerService will have already
+            // destroyed the interface.  If not, then the state machine exited because it could not
+            // communicate with the SME and the interface is likely unusable.
+            let mut phy_manager = iface_manager.phy_manager.lock().await;
+            if phy_manager.destroy_ap_iface(terminated_fsm.iface_id).await.is_err() {
+                return;
+            }
+        }
+        fidl_fuchsia_wlan_device::MacRole::Client => {
+            iface_manager.record_idle_client(terminated_fsm.iface_id);
+            disconnected_clients.insert(terminated_fsm.iface_id);
+            initiate_network_selection(
+                &iface_manager,
+                iface_manager_client.clone(),
+                selector.clone(),
+                network_selection_futures,
+            )
+            .await;
+        }
+        fidl_fuchsia_wlan_device::MacRole::Mesh => {
+            // Not yet supported.
+            unimplemented!();
+        }
+    }
+}
+
 pub(crate) async fn serve_iface_manager_requests(
     mut iface_manager: IfaceManagerService,
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
@@ -754,17 +789,14 @@ pub(crate) async fn serve_iface_manager_requests(
         select! {
             terminated_fsm = iface_manager.fsm_futures.select_next_some() => {
                 info!("state machine exited: {:?}", terminated_fsm.1);
-
-                if terminated_fsm.1.role == fidl_fuchsia_wlan_device::MacRole::Client {
-                    iface_manager.record_idle_client(terminated_fsm.1.iface_id);
-                    disconnected_clients.insert(terminated_fsm.1.iface_id);
-                    initiate_network_selection(
-                        &iface_manager,
-                        iface_manager_client.clone(),
-                        network_selector.clone(),
-                        &mut network_selection_futures
-                    ).await;
-                };
+                handle_terminated_state_machine(
+                    terminated_fsm.1,
+                    &mut iface_manager,
+                    iface_manager_client.clone(),
+                    network_selector.clone(),
+                    &mut disconnected_clients,
+                    &mut network_selection_futures,
+                ).await;
             },
             () = connectivity_monitor_timer.select_next_some() => {
                 initiate_network_selection(
@@ -1104,10 +1136,10 @@ mod tests {
         fn start(
             &mut self,
             _request: ap_fsm::ApConfig,
-            responder: ap_fsm::StartResponder,
+            responder: oneshot::Sender<()>,
         ) -> Result<(), anyhow::Error> {
             if self.start_succeeds {
-                let _ = responder.send(fidl_fuchsia_wlan_sme::StartApResultCode::Success);
+                let _ = responder.send(());
                 Ok(())
             } else {
                 Err(format_err!("start failed"))
@@ -3056,7 +3088,7 @@ mod tests {
         async fn start_ap(
             &mut self,
             _config: ap_fsm::ApConfig,
-        ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
+        ) -> Result<oneshot::Receiver<()>, Error> {
             unimplemented!()
         }
 
@@ -3861,5 +3893,114 @@ mod tests {
         // The reconnect attempt should have seen an idle client interface and created a new client
         // state machine future for it.
         assert!(!iface_manager.fsm_futures.is_empty());
+    }
+
+    #[test]
+    fn test_terminated_client() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup(&mut exec);
+
+        // Create a fake network entry so that a reconnect will be attempted.
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+        test_values.saved_networks = Arc::new(saved_networks);
+
+        // Update the saved networks with knowledge of the test SSID and credentials.
+        {
+            let save_network_fut =
+                test_values.saved_networks.store(network_id.clone(), credential.clone());
+            pin_mut!(save_network_fut);
+            assert_variant!(exec.run_until_stalled(&mut save_network_fut), Poll::Pending);
+
+            process_stash_write(&mut exec, &mut stash_server);
+        }
+
+        // Create a network selector.
+        let selector = Arc::new(NetworkSelector::new(
+            test_values.saved_networks.clone(),
+            create_mock_cobalt_sender(),
+        ));
+
+        // Create an interface manager with an unconfigured client interface.
+        let (mut iface_manager, _sme_stream) =
+            create_iface_manager_with_client(&test_values, false);
+        iface_manager.clients[0].client_state_machine =
+            Some(Box::new(FakeClient { disconnect_ok: true, is_alive: false }));
+
+        // Create remaining boilerplate to call handle_terminated_state_machine.
+        let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
+        let mut disconnected_clients = HashSet::new();
+        let mut network_selection_futures = FuturesUnordered::new();
+
+        let metadata = StateMachineMetadata {
+            role: fidl_fuchsia_wlan_device::MacRole::Client,
+            iface_id: TEST_CLIENT_IFACE_ID,
+        };
+
+        {
+            let fut = handle_terminated_state_machine(
+                metadata,
+                &mut iface_manager,
+                iface_manager_client,
+                selector,
+                &mut disconnected_clients,
+                &mut network_selection_futures,
+            );
+            pin_mut!(fut);
+
+            assert_eq!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        // Verify that a disconnected client has been recorded.
+        assert!(disconnected_clients.contains(&TEST_CLIENT_IFACE_ID));
+
+        // Verify that a scan has been kicked off.
+        assert!(!network_selection_futures.is_empty());
+    }
+
+    #[test]
+    fn test_terminated_ap() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec);
+        let selector = Arc::new(NetworkSelector::new(
+            test_values.saved_networks.clone(),
+            create_mock_cobalt_sender(),
+        ));
+
+        // Create an interface manager with an unconfigured client interface.
+        let (mut iface_manager, _next_sme_req) =
+            create_iface_manager_with_client(&test_values, true);
+
+        // Create remaining boilerplate to call handle_terminated_state_machine.
+        let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
+        let mut disconnected_clients = HashSet::new();
+        let mut network_selection_futures = FuturesUnordered::new();
+
+        let metadata = StateMachineMetadata {
+            role: fidl_fuchsia_wlan_device::MacRole::Ap,
+            iface_id: TEST_AP_IFACE_ID,
+        };
+
+        {
+            let fut = handle_terminated_state_machine(
+                metadata,
+                &mut iface_manager,
+                iface_manager_client,
+                selector,
+                &mut disconnected_clients,
+                &mut network_selection_futures,
+            );
+            pin_mut!(fut);
+
+            assert_eq!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        // Verify that the IfaceManagerService does not have an AP interface.
+        assert!(iface_manager.aps.is_empty());
     }
 }

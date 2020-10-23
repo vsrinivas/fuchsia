@@ -56,10 +56,7 @@ pub(crate) trait IfaceManagerApi {
     async fn start_client_connections(&mut self) -> Result<(), Error>;
 
     /// Starts an AP interface with the provided configuration.
-    async fn start_ap(
-        &mut self,
-        config: ap_fsm::ApConfig,
-    ) -> Result<oneshot::Receiver<fidl_sme::StartApResultCode>, Error>;
+    async fn start_ap(&mut self, config: ap_fsm::ApConfig) -> Result<oneshot::Receiver<()>, Error>;
 
     /// Stops the AP interface corresponding to the provided configuration and destroys it.
     async fn stop_ap(&mut self, ssid: Vec<u8>, password: Vec<u8>) -> Result<(), Error>;
@@ -149,10 +146,7 @@ impl IfaceManagerApi for IfaceManager {
         receiver.await?
     }
 
-    async fn start_ap(
-        &mut self,
-        config: ap_fsm::ApConfig,
-    ) -> Result<oneshot::Receiver<fidl_sme::StartApResultCode>, Error> {
+    async fn start_ap(&mut self, config: ap_fsm::ApConfig) -> Result<oneshot::Receiver<()>, Error> {
         let (responder, receiver) = oneshot::channel();
         let req = StartApRequest { config, responder };
         self.sender.try_send(IfaceManagerRequest::StartAp(req))?;

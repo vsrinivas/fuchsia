@@ -37,10 +37,12 @@ const DEFAULT_PHY: Phy = Phy::Ht;
 type State = state_machine::State<ExitReason>;
 type NextReqFut = stream::StreamFuture<mpsc::Receiver<ManualRequest>>;
 
-pub type StartResponder = oneshot::Sender<fidl_sme::StartApResultCode>;
-
 pub trait AccessPointApi {
-    fn start(&mut self, request: ApConfig, responder: StartResponder) -> Result<(), anyhow::Error>;
+    fn start(
+        &mut self,
+        request: ApConfig,
+        responder: oneshot::Sender<()>,
+    ) -> Result<(), anyhow::Error>;
     fn stop(&mut self, responder: oneshot::Sender<()>) -> Result<(), anyhow::Error>;
     fn exit(&mut self, responder: oneshot::Sender<()>) -> Result<(), anyhow::Error>;
 }
@@ -56,7 +58,11 @@ impl AccessPoint {
 }
 
 impl AccessPointApi for AccessPoint {
-    fn start(&mut self, request: ApConfig, responder: StartResponder) -> Result<(), anyhow::Error> {
+    fn start(
+        &mut self,
+        request: ApConfig,
+        responder: oneshot::Sender<()>,
+    ) -> Result<(), anyhow::Error> {
         self.req_sender
             .try_send(ManualRequest::Start((request, responder)))
             .map_err(|e| format_err!("failed to send start request: {:?}", e))
@@ -76,7 +82,7 @@ impl AccessPointApi for AccessPoint {
 }
 
 pub enum ManualRequest {
-    Start((ApConfig, StartResponder)),
+    Start((ApConfig, oneshot::Sender<()>)),
     Stop(oneshot::Sender<()>),
     Exit(oneshot::Sender<()>),
 }
@@ -200,39 +206,61 @@ async fn starting_state(
     proxy: fidl_sme::ApSmeProxy,
     next_req: NextReqFut,
     mut req: ApConfig,
-    responder: Option<StartResponder>,
+    responder: Option<oneshot::Sender<()>>,
     sender: ApListenerMessageSender,
 ) -> Result<State, ExitReason> {
+    // Create an initial AP state
+    let mut state =
+        ApStateUpdate::new(req.id.clone(), types::OperatingState::Starting, req.mode, req.band);
+
     // Apply default PHY, CBW, and channel settings.
     req.radio_config.phy.get_or_insert(DEFAULT_PHY);
     req.radio_config.cbw.get_or_insert(DEFAULT_CBW);
     req.radio_config.primary_chan.get_or_insert(DEFAULT_CHANNEL);
 
     // Send a stop request to ensure that the AP begin in an unstarting state.
-    proxy.stop().await.map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+    let stop_result = match proxy.stop().await {
+        Ok(fidl_sme::StopApResultCode::Success) => Ok(()),
+        Ok(code) => Err(format_err!("Unexpected StopApResultCode: {:?}", code)),
+        Err(e) => Err(format_err!("Failed to send a stop command to wlanstack: {}", e)),
+    };
+
+    // If the stop operation failed, send a failure update and exit the state machine.
+    if stop_result.is_err() {
+        let mut failed_state = state.clone();
+        failed_state.state = types::OperatingState::Failed;
+        send_state_update(&sender, failed_state)
+            .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+
+        stop_result.map_err(|e| ExitReason(Err(e)))?;
+    }
+
+    // If the stop operation was successful, update all listeners that the AP is stopped.
     send_ap_stopped_update(&sender).map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
 
-    // Create an initial AP state
-    let mut state =
-        ApStateUpdate::new(req.id.clone(), types::OperatingState::Starting, req.mode, req.band);
+    // Update all listeners that a new AP is starting.
     send_state_update(&sender, state.clone())
         .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
 
     let mut ap_config = fidl_sme::ApConfig::from(req.clone());
-    let result = proxy.start(&mut ap_config).await;
+    let result = match proxy.start(&mut ap_config).await {
+        Ok(fidl_sme::StartApResultCode::Success) => Ok(()),
+        Ok(code) => Err(format_err!("Failed to start AP: {:?}", code)),
+        Err(e) => Err(format_err!("Failed to send a start command to wlanstack: {}", e)),
+    };
 
-    // If 'start' call to SME failed, return an error since we can't
-    // recover from it
-    let result = result.map_err(|e| {
+    if result.is_err() {
         let mut state = state.clone();
         state.state = types::OperatingState::Failed;
         let _ = send_state_update(&sender, state);
-        ExitReason(Err(format_err!("Failed to send a start command to wlanstack: {}", e)))
-    })?;
+        result.map_err(|e| ExitReason(Err(e)))?;
+    }
+
     match responder {
-        Some(responder) => responder.send(result).unwrap_or_else(|_| ()),
+        Some(responder) => responder.send(()).unwrap_or_else(|_| ()),
         None => {}
     }
+
     state.state = types::OperatingState::Active;
     send_state_update(&sender, state.clone())
         .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
@@ -629,10 +657,7 @@ mod tests {
 
         // Verify that the SME response is plumbed back to the caller.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut receiver),
-            Poll::Ready(Ok(fidl_sme::StartApResultCode::Success))
-        );
+        assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
     }
 
     #[test]
@@ -908,10 +933,7 @@ mod tests {
 
         // Verify that the SME response is plumbed back to the caller.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut receiver),
-            Poll::Ready(Ok(fidl_sme::StartApResultCode::Success))
-        );
+        assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
 
         // There should be a pending active state notification
         assert_variant!(
@@ -1083,10 +1105,7 @@ mod tests {
 
         // Expect the start responder to be acknowledged
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut start_receiver),
-            Poll::Ready(Ok(fidl_sme::StartApResultCode::Success))
-        );
+        assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Ready(Ok(())));
     }
 
     #[test]
@@ -1212,10 +1231,7 @@ mod tests {
             .send(fidl_sme::StartApResultCode::Success)
             .expect("could not send SME start response");
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut start_receiver),
-            Poll::Ready(Ok(fidl_sme::StartApResultCode::Success))
-        );
+        assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Ready(Ok(())));
 
         // When state machine goes to started state, it issues a status request. Ignore it.
         let _status_responder = assert_variant!(
@@ -1311,10 +1327,7 @@ mod tests {
 
         // The first request should receive the acknowledgement, the second one shouldn't.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut start_receiver),
-            Poll::Ready(Ok(fidl_sme::StartApResultCode::Success))
-        );
+        assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Ready(Ok(())));
         assert_variant!(exec.run_until_stalled(&mut second_start_receiver), Poll::Pending);
 
         // The state machine checks for status to make sure AP is started
@@ -1351,10 +1364,7 @@ mod tests {
 
         // The second start request should receive the acknowledgement now.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut second_start_receiver),
-            Poll::Ready(Ok(fidl_sme::StartApResultCode::Success))
-        );
+        assert_variant!(exec.run_until_stalled(&mut second_start_receiver), Poll::Ready(Ok(())));
     }
 
     #[test]
@@ -1423,10 +1433,7 @@ mod tests {
 
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
         assert_variant!(exec.run_until_stalled(&mut exit_receiver), Poll::Ready(Ok(())));
-        assert_variant!(
-            exec.run_until_stalled(&mut start_receiver),
-            Poll::Ready(Ok(fidl_sme::StartApResultCode::Success))
-        );
+        assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Ready(Ok(())));
     }
 
     #[test]
@@ -1460,6 +1467,142 @@ mod tests {
 
         // Run the state machine and expect it to exit
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+    }
+
+    #[test]
+    fn test_sme_fails_to_stop_while_starting() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+
+        let (start_sender, _start_receiver) = oneshot::channel();
+        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let req = ApConfig {
+            id: create_network_id(),
+            credential: vec![],
+            radio_config,
+            mode: types::ConnectivityMode::Unrestricted,
+            band: types::OperatingBand::Any,
+        };
+
+        // Start off in the starting state
+        let fut = starting_state(
+            test_values.sme_proxy,
+            test_values.ap_req_stream.into_future(),
+            req,
+            Some(start_sender),
+            test_values.update_sender,
+        );
+        let fut = run_state_machine(fut);
+        pin_mut!(fut);
+
+        // Handle the initial disconnect request and send back a failure.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        let sme_fut = test_values.sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
+                responder
+                    .send(fidl_sme::StopApResultCode::TimedOut)
+                    .expect("could not send AP stop response");
+            }
+        );
+
+        // The future should complete.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+
+        // There should also be a failed state update.
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(mut updates))) => {
+            let update = updates.access_points.pop().expect("no new updates available.");
+            assert_eq!(update.state, types::OperatingState::Failed);
+        });
+    }
+
+    #[test]
+    fn test_sme_fails_to_start_while_starting() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+
+        let (start_sender, mut start_receiver) = oneshot::channel();
+        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let req = ApConfig {
+            id: create_network_id(),
+            credential: vec![],
+            radio_config,
+            mode: types::ConnectivityMode::Unrestricted,
+            band: types::OperatingBand::Any,
+        };
+
+        // Start off in the starting state
+        let fut = starting_state(
+            test_values.sme_proxy,
+            test_values.ap_req_stream.into_future(),
+            req,
+            Some(start_sender),
+            test_values.update_sender,
+        );
+        let fut = run_state_machine(fut);
+        pin_mut!(fut);
+
+        // Handle the initial disconnect request
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        let sme_fut = test_values.sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
+                responder
+                    .send(fidl_sme::StopApResultCode::Success)
+                    .expect("could not send AP stop response");
+            }
+        );
+
+        // There should also be a stopped state update.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(_)))
+        );
+
+        // Wait for a start request and send back a timeout.
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ApSmeRequest::Start{ config: _, responder }) => {
+                responder
+                    .send(fidl_sme::StartApResultCode::TimedOut)
+                    .expect("could not send AP stop response");
+            }
+        );
+
+        // The future should complete.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+
+        // Verify that the failure to start is reported.
+        assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Ready(Err(_)));
+
+        // There should also be a starting state update.
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(mut updates))) => {
+            let update = updates.access_points.pop().expect("no new updates available.");
+            assert_eq!(update.state, types::OperatingState::Starting);
+        });
+
+        // And then the starting update should be quickly followed by a failure update.
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(mut updates))) => {
+            let update = updates.access_points.pop().expect("no new updates available.");
+            assert_eq!(update.state, types::OperatingState::Failed);
+        });
     }
 
     #[test]

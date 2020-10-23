@@ -66,8 +66,7 @@ pub(crate) struct StartClientConnectionsRequest {
 #[derive(Debug)]
 pub(crate) struct StartApRequest {
     pub config: ap_fsm::ApConfig,
-    pub responder:
-        oneshot::Sender<Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error>>,
+    pub responder: oneshot::Sender<Result<oneshot::Receiver<()>, Error>>,
 }
 
 #[derive(Debug)]

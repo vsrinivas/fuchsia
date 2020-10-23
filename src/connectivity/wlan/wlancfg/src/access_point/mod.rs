@@ -7,7 +7,7 @@ use {
     anyhow::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
         future::BoxFuture,
@@ -100,7 +100,16 @@ impl AccessPoint {
                 msg = internal_messages_stream.select_next_some() => pending_response_queue.push(msg),
                 resp = pending_response_queue.select_next_some() => match resp {
                     Ok(Response::StartResponse(result)) => {
-                        self.handle_sme_start_response(result)
+                        match result.result {
+                            Ok(()) => {}
+                            Err(_) => {
+                                let ssid_as_str = match std::str::from_utf8(&result.config.id.ssid) {
+                                    Ok(ssid) => ssid,
+                                    Err(_) => "",
+                                };
+                                error!("AP {} did not start", ssid_as_str);
+                            }
+                        };
                     },
                     Err(e) => error!("error while processing AP requests: {}", e)
                 }
@@ -243,25 +252,6 @@ impl AccessPoint {
         }
     }
 
-    fn handle_sme_start_response(&self, result: StartParameters) {
-        match result.result {
-            Ok(result_code) => match result_code {
-                fidl_sme::StartApResultCode::Success
-                | fidl_sme::StartApResultCode::AlreadyStarted => {}
-                ref state => {
-                    let ssid_as_str = match std::str::from_utf8(&result.config.id.ssid) {
-                        Ok(ssid) => ssid,
-                        Err(_) => "",
-                    };
-                    error!("AP {} did not start: {:?}", ssid_as_str, state);
-                }
-            },
-            Err(e) => {
-                error!("Failed to communicate with AP SME: {}", e);
-            }
-        };
-    }
-
     /// Handle inbound requests to register an additional AccessPointStateUpdates listener.
     async fn handle_listener_request(
         &self,
@@ -292,7 +282,7 @@ fn reject_provider_request(
 // The NetworkConfigs will be used in the future to aggregate state in crate::util::listener.
 struct StartParameters {
     config: state_machine::ApConfig,
-    result: Result<fidl_sme::StartApResultCode, Error>,
+    result: Result<(), Error>,
 }
 
 enum Response {
@@ -363,7 +353,7 @@ mod tests {
         crate::{client::state_machine as client_fsm, util::logger::set_logger_for_test},
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
-        fuchsia_async as fasync,
+        fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
         futures::{channel::oneshot, task::Poll},
         pin_utils::pin_mut,
         std::unimplemented,
@@ -372,7 +362,7 @@ mod tests {
 
     #[derive(Debug)]
     struct FakeIfaceManager {
-        pub start_response: fidl_fuchsia_wlan_sme::StartApResultCode,
+        pub start_response_succeeds: bool,
         pub start_succeeds: bool,
         pub stop_succeeds: bool,
     }
@@ -380,7 +370,7 @@ mod tests {
     impl FakeIfaceManager {
         pub fn new() -> Self {
             FakeIfaceManager {
-                start_response: fidl_fuchsia_wlan_sme::StartApResultCode::Success,
+                start_response_succeeds: true,
                 start_succeeds: true,
                 stop_succeeds: true,
             }
@@ -434,10 +424,14 @@ mod tests {
         async fn start_ap(
             &mut self,
             _config: state_machine::ApConfig,
-        ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
+        ) -> Result<oneshot::Receiver<()>, Error> {
             if self.start_succeeds {
                 let (sender, receiver) = oneshot::channel();
-                let _ = sender.send(self.start_response);
+
+                if self.start_response_succeeds {
+                    let _ = sender.send(());
+                }
+
                 Ok(receiver)
             } else {
                 Err(format_err!("start_ap was configured to fail"))
@@ -557,7 +551,7 @@ mod tests {
                 exec.run_until_stalled(&mut iface_manager_fut),
                 Poll::Ready(iface_manager) => { iface_manager }
             );
-            iface_manager.start_response = fidl_sme::StartApResultCode::InternalError;
+            iface_manager.start_response_succeeds = false;
         }
 
         // Issue StartAP request.

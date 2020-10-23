@@ -665,8 +665,7 @@ mod tests {
         async fn start_ap(
             &mut self,
             _config: ap_fsm::ApConfig,
-        ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, anyhow::Error>
-        {
+        ) -> Result<oneshot::Receiver<()>, anyhow::Error> {
             unimplemented!()
         }
 
