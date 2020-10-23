@@ -110,6 +110,32 @@ TEST_F(ComponentIdIndexTest, LookupTransitionalMoniker_Exists) {
       << "Id not found via transitional_realm_paths.";
 }
 
+TEST_F(ComponentIdIndexTest, LookupTransitionalMoniker_Null) {
+  auto config_dir = MakeAppmgrConfigDirWithIndex(R"({
+    "instances": [
+      {
+        "instance_id": "8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280",
+        "appmgr_moniker": {
+          "realm_path": ["sys"],
+          "transitional_realm_paths": null,
+          "url": "fuchsia-pkg://example.com/pkg#meta/component.cmx"
+        }
+      }
+    ]
+  })");
+
+  auto result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
+  EXPECT_FALSE(result.is_error());
+  auto index = result.take_value();
+
+  // Verify that the index includs the entry in spite of the |null| field.
+  Moniker moniker = {.url = "fuchsia-pkg://example.com/pkg#meta/component.cmx",
+                     .realm_path = {"sys"}};
+  auto id = index->LookupMoniker(moniker).value_or("");
+  EXPECT_EQ("8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280", id)
+      << "Id not found via realm_path.";
+}
+
 TEST_F(ComponentIdIndexTest, LookupMonikerNotExists) {
   // the instance_id below is 63 hexchars (252 bits) instead of 64 hexchars (256 bits)
   auto config_dir = MakeAppmgrConfigDirWithIndex(R"({"instances" : []})");
@@ -123,10 +149,27 @@ TEST_F(ComponentIdIndexTest, LookupMonikerNotExists) {
 }
 
 TEST_F(ComponentIdIndexTest, ShouldNotRestrictIsolatedPersistentStorage) {
+  // Should default to |false| if not set.
   auto config_dir = MakeAppmgrConfigDirWithIndex(R"({"instances" : []})");
   auto result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
   EXPECT_FALSE(result.is_error());
   auto index = result.take_value();
+  EXPECT_FALSE(index->restrict_isolated_persistent_storage());
+
+  // |null| is equivalent to not set.
+  config_dir = MakeAppmgrConfigDirWithIndex(
+      R"({"appmgr_restrict_isolated_persistent_storage": null, "instances" : []})");
+  result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
+  EXPECT_FALSE(result.is_error());
+  index = result.take_value();
+  EXPECT_FALSE(index->restrict_isolated_persistent_storage());
+
+  // Configs may also explicitly set to |false|.
+  config_dir = MakeAppmgrConfigDirWithIndex(
+      R"({"appmgr_restrict_isolated_persistent_storage": false, "instances" : []})");
+  result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
+  EXPECT_FALSE(result.is_error());
+  index = result.take_value();
   EXPECT_FALSE(index->restrict_isolated_persistent_storage());
 }
 

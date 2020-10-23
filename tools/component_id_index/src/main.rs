@@ -180,6 +180,7 @@ mod tests {
                             i
                         ),
                         realm_path: vec!["root".to_string(), "child".to_string(), i.to_string()],
+                        transitional_realm_paths: None,
                     },
                 })
                 .collect(),

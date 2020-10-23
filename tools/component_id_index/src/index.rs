@@ -12,6 +12,7 @@ use std::str;
 pub struct AppmgrMoniker {
     pub url: String,
     pub realm_path: Vec<String>,
+    pub transitional_realm_paths: Option<Vec<Vec<String>>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -92,6 +93,7 @@ mod tests {
                             i
                         ),
                         realm_path: vec!["root".to_string(), "child".to_string(), i.to_string()],
+                        transitional_realm_paths: None,
                     },
                 })
                 .collect(),
@@ -117,7 +119,8 @@ mod tests {
         "root",
         "child",
         "0"
-      ]
+      ],
+      "transitional_realm_paths": null
     }
   },
   {
@@ -128,7 +131,8 @@ mod tests {
         "root",
         "child",
         "1"
-      ]
+      ],
+      "transitional_realm_paths": null
     }
   }
 ]

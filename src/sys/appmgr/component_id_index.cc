@@ -100,8 +100,11 @@ fit::result<ComponentIdEntry, ComponentIdIndex::Error> ParseEntry(const rapidjso
       .monikers = {Moniker{.url = component_url, .realm_path = std::move(realm_path)}}};
 
   // 'transitional_realm_paths' is an optional vector of realm paths.
-  if (appmgr_moniker.HasMember("transitional_realm_paths")) {
-    const auto& transitional_paths = appmgr_moniker["transitional_realm_paths"];
+  // Note that optional fields are serialized as |null| by some tooling.
+  constexpr char kTransitionalRealmPaths[] = "transitional_realm_paths";
+  if (appmgr_moniker.HasMember(kTransitionalRealmPaths) &&
+      !appmgr_moniker[kTransitionalRealmPaths].IsNull()) {
+    const auto& transitional_paths = appmgr_moniker[kTransitionalRealmPaths];
     if (!transitional_paths.IsArray() || transitional_paths.GetArray().Size() < 1) {
       FX_LOGS(ERROR) << "appmgr_moniker.transitional_realm_paths is an optional, non-empty list.";
       return fit::error(ComponentIdIndex::Error::INVALID_MONIKER);
