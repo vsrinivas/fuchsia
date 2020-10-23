@@ -27,11 +27,13 @@ class StorageTraits<FILE*> {
 
   static std::string error_string(error_type error) { return strerror(error); }
 
-  static fitx::result<error_type, uint32_t> Capacity(FILE*);
+  static fitx::result<error_type, uint32_t> Capacity(FILE* f);
 
-  static fitx::result<error_type, zbi_header_t> Header(FILE*, uint32_t offset);
+  static fitx::result<error_type> EnsureCapacity(FILE* f, uint32_t capacity_bytes);
 
-  static fitx::result<error_type, payload_type> Payload(FILE*, uint32_t offset, uint32_t length) {
+  static fitx::result<error_type, zbi_header_t> Header(FILE* f, uint32_t offset);
+
+  static fitx::result<error_type, payload_type> Payload(FILE* f, uint32_t offset, uint32_t length) {
     return fitx::ok(offset);
   }
 
@@ -57,12 +59,12 @@ class StorageTraits<FILE*> {
     }
   }
 
-  static fitx::result<error_type, uint32_t> Crc32(FILE*, uint32_t offset, uint32_t length);
+  static fitx::result<error_type, uint32_t> Crc32(FILE* f, uint32_t offset, uint32_t length);
 
-  static fitx::result<error_type> Write(FILE*, uint32_t offset, ByteView data);
+  static fitx::result<error_type> Write(FILE* f, uint32_t offset, ByteView data);
 
  private:
-  static fitx::result<error_type> DoRead(FILE*, payload_type offset, uint32_t length,
+  static fitx::result<error_type> DoRead(FILE* f, payload_type offset, uint32_t length,
                                          bool (*)(void*, ByteView), void*);
 };
 

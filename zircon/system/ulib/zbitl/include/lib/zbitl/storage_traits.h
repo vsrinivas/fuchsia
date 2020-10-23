@@ -73,6 +73,13 @@ struct StorageTraits {
     return fitx::error<error_type>{};
   }
 
+  /// Ensures that the capacity is at least that of the provided value
+  /// (possibly larger), for specializations where such an operation is
+  /// sensible.
+  static fitx::result<error_type> EnsureCapacity(Storage& zbi, uint32_t capacity) {
+    return fitx::error<error_type>{};
+  }
+
   /// This fetches the item (or container) header at the given offset.  The
   /// return type can use either plain `zbi_header_t` or it can use
   /// `std::reference_wrapper<const zbi_header_t>`.  The former case is for

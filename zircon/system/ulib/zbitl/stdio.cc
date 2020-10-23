@@ -20,12 +20,35 @@ using error_type = StorageTraits<FILE*>::error_type;
 }  // namespace
 
 fitx::result<error_type, uint32_t> StorageTraits<FILE*>::Capacity(FILE* f) {
-  long int eof = fseek(f, 0, SEEK_END) == 0 ? ftell(f) : -1;
+  if (fseek(f, 0, SEEK_END)) {
+    return fitx::error{errno};
+  }
+  long int eof = ftell(f);
+  return fitx::ok(static_cast<uint32_t>(
+      std::min(static_cast<long int>(std::numeric_limits<uint32_t>::max()), eof)));
+}
+
+fitx::result<error_type> StorageTraits<FILE*>::EnsureCapacity(FILE* f, uint32_t capacity_bytes) {
+  if (fseek(f, 0, SEEK_END)) {
+    return fitx::error{errno};
+  }
+  long int eof = ftell(f);
   if (eof < 0) {
     return fitx::error{errno};
   }
-  return fitx::ok(static_cast<uint32_t>(
-      std::min(static_cast<long int>(std::numeric_limits<uint32_t>::max()), eof)));
+  uint32_t current = static_cast<uint32_t>(eof);
+  if (current >= capacity_bytes) {
+    return fitx::ok();  // Current capacity is sufficient.
+  }
+
+  // Write a single byte to reserve enough space for the new capacity.
+  if (fseek(f, capacity_bytes - current - 1, SEEK_END)) {
+    return fitx::error{errno};
+  }
+  if (putc(0, f) == EOF) {
+    return fitx::error{errno};
+  }
+  return fitx::ok();
 }
 
 fitx::result<error_type, zbi_header_t> StorageTraits<FILE*>::Header(FILE* f, uint32_t offset) {

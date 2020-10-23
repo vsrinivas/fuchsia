@@ -23,6 +23,26 @@ fitx::result<zx_status_t, uint32_t> StorageTraits<zx::vmo>::Capacity(const zx::v
       std::min(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()), vmo_size)));
 }
 
+fitx::result<zx_status_t> StorageTraits<zx::vmo>::EnsureCapacity(const zx::vmo& vmo,
+                                                                 uint32_t capacity_bytes) {
+  auto current = Capacity(vmo);
+  if (current.is_error()) {
+    return current.take_error();
+  } else if (current.value() >= capacity_bytes) {
+    return fitx::ok();  // Current capacity is sufficient.
+  }
+
+  uint64_t cap = static_cast<uint64_t>(capacity_bytes);
+  if (auto status = vmo.set_size(cap); status != ZX_OK) {
+    return fitx::error{status};
+  }
+  if (auto status = vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &cap, sizeof(cap));
+      status != ZX_OK) {
+    return fitx::error{status};
+  }
+  return fitx::ok();
+}
+
 fitx::result<zx_status_t, zbi_header_t> StorageTraits<zx::vmo>::Header(const zx::vmo& vmo,
                                                                        uint32_t offset) {
   zbi_header_t header;

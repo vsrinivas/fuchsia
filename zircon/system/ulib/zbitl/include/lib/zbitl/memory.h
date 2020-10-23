@@ -5,6 +5,8 @@
 #ifndef LIB_ZBITL_MEMORY_H_
 #define LIB_ZBITL_MEMORY_H_
 
+#include <cstring>
+
 #include <fbl/array.h>
 #include <fbl/span.h>
 
@@ -25,23 +27,33 @@ class StorageTraits<fbl::Array<T>> {
 
   static std::string_view error_string(error_type error) { return {}; }
 
-  static fbl::Span<std::byte> AsBytes(const Storage& zbi) {
-    return {reinterpret_cast<std::byte*>(zbi.data()), zbi.size() * sizeof(T)};
+  static fbl::Span<std::byte> AsBytes(const Storage& storage) {
+    return {reinterpret_cast<std::byte*>(storage.data()), storage.size() * sizeof(T)};
   }
 
-  static fitx::result<error_type, uint32_t> Capacity(Storage& zbi) {
-    return fitx::ok(static_cast<uint32_t>(AsBytes(zbi).size()));
+  static fitx::result<error_type, uint32_t> Capacity(const Storage& storage) {
+    return fitx::ok(static_cast<uint32_t>(AsBytes(storage).size()));
+  }
+
+  static fitx::result<error_type> EnsureCapacity(Storage& storage, uint32_t capacity_bytes) {
+    if (size_t current = AsBytes(storage).size(); current < capacity_bytes) {
+      const size_t n = (capacity_bytes + sizeof(T) - 1) / sizeof(T);
+      Storage new_storage(new T[n], n);
+      memcpy(new_storage.data(), storage.data(), current);
+      storage.swap(new_storage);
+    }
+    return fitx::ok();
   }
 
   static fitx::result<error_type, std::reference_wrapper<const zbi_header_t>> Header(
-      Storage& zbi, uint32_t offset) {
+      const Storage& storage, uint32_t offset) {
     return fitx::ok(std::ref(*reinterpret_cast<const zbi_header_t*>(
-        AsBytes(zbi).subspan(offset, sizeof(zbi_header_t)).data())));
+        AsBytes(storage).subspan(offset, sizeof(zbi_header_t)).data())));
   }
 
-  static fitx::result<error_type, payload_type> Payload(Storage& zbi, uint32_t offset,
+  static fitx::result<error_type, payload_type> Payload(const Storage& storage, uint32_t offset,
                                                         uint32_t length) {
-    auto payload = AsBytes(zbi).subspan(offset, length);
+    auto payload = AsBytes(storage).subspan(offset, length);
     ZX_DEBUG_ASSERT(payload.size() == length);
     ZX_ASSERT_MSG(payload.size() % sizeof(T) == 0,
                   "payload size not a multiple of storage fbl::Array element_type size");

@@ -113,7 +113,13 @@ struct StorageTraits<zx::vmo> {
 
   static std::string_view error_string(error_type error) { return zx_status_get_string(error); }
 
+  // Returns ZX_PROP_VMO_CONTENT_SIZE, if set - or else the page-rounded VMO
+  // size.
   static fitx::result<error_type, uint32_t> Capacity(const zx::vmo&);
+
+  // Will enlarge the underlying VMO size if needed, updating
+  // ZX_PROP_VMO_CONTENT_SIZE to the new capacity value if so.
+  static fitx::result<error_type> EnsureCapacity(const zx::vmo&, uint32_t capacity_bytes);
 
   static fitx::result<error_type, zbi_header_t> Header(const zx::vmo&, uint32_t offset);
 
@@ -177,6 +183,10 @@ struct StorageTraits<zx::unowned_vmo> {
 
   static auto Capacity(const zx::unowned_vmo& vmo) { return Owned::Capacity(*vmo); }
 
+  static auto EnsureCapacity(const zx::unowned_vmo& vmo, uint32_t capacity_bytes) {
+    return Owned::EnsureCapacity(*vmo, capacity_bytes);
+  }
+
   static auto Header(const zx::unowned_vmo& vmo, uint32_t offset) {
     return Owned::Header(*vmo, offset);
   }
@@ -220,6 +230,11 @@ class StorageTraits<MapUnownedVmo> {
   static auto error_string(error_type error) { return Owned::error_string(error); }
 
   static auto Capacity(const MapUnownedVmo& zbi) { return Owned::Capacity(zbi.vmo()); }
+
+  static fitx::result<error_type> EnsureCapacity(const MapUnownedVmo& zbi,
+                                                 uint32_t capacity_bytes) {
+    return Owned::EnsureCapacity(zbi.vmo(), capacity_bytes);
+  }
 
   static auto Header(const MapUnownedVmo& zbi, uint32_t offset) {
     return Owned::Header(zbi.vmo(), offset);
@@ -278,7 +293,7 @@ class StorageTraits<MapUnownedVmo> {
 };
 
 template <>
-class StorageTraits<MapOwnedVmo> : public StorageTraits<MapUnownedVmo> {};
+struct StorageTraits<MapOwnedVmo> : public StorageTraits<MapUnownedVmo> {};
 
 }  // namespace zbitl
 

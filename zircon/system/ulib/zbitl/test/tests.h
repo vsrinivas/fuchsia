@@ -470,6 +470,44 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
   EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
 }
 
+template <typename SrcTestTraits, typename DestTestTraits>
+void TestCopyingIntoSmallStorage() {
+  using DestStorage = typename DestTestTraits::storage_type;
+
+  static_assert(zbitl::View<DestStorage>::Traits::CanEnsureCapacity());
+
+  files::ScopedTempDir dir;
+
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURE(OpenTestDataZbi(TestDataZbiType::kOneItem, dir.path(), &fd, &size));
+
+  typename SrcTestTraits::Context src_context;
+  ASSERT_NO_FATAL_FAILURE(SrcTestTraits::Create(std::move(fd), size, &src_context));
+  zbitl::View view(src_context.TakeStorage());
+
+  auto [header, payload] = *(view.begin());
+
+  typename DestTestTraits::Context dest_context;
+  ASSERT_NO_FATAL_FAILURE(DestTestTraits::Create((header->length) / 2, &dest_context));
+  auto small_storage = dest_context.TakeStorage();
+
+  auto copy_result = view.Copy(small_storage, view.begin().payload_offset(), header->length);
+  ASSERT_FALSE(copy_result.is_error()) << ViewCopyErrorString(std::move(copy_result).error_value());
+
+  Bytes expected;
+  ASSERT_NO_FATAL_FAILURE(SrcTestTraits::Read(view.storage(), payload, header->length, &expected));
+
+  Bytes actual;
+  ASSERT_NO_FATAL_FAILURE(DestTestTraits::Read(
+      small_storage, DestTestTraits::AsPayload(small_storage), header->length, &actual));
+
+  EXPECT_EQ(expected, actual);
+
+  auto result = view.take_error();
+  ASSERT_FALSE(result.is_error()) << ViewErrorString(std::move(result).error_value());
+}
+
 #define TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, type_name, type, \
                                               with_header, with_header_name)           \
   TEST(suite_name, type_name##CopyCreation##with_header_name) {                        \
@@ -597,10 +635,8 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
     auto copy = copy_context.TakeStorage();
 
     auto first = view.begin();
-    {
-      auto result = view.Copy(copy, first, Next(view.begin()));
-      EXPECT_FALSE(result.is_error()) << ViewCopyErrorString(result.error_value());
-    }
+    auto copy_result = view.Copy(copy, first, Next(view.begin()));
+    EXPECT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
     zbitl::View copy_view(std::move(copy));
     auto container_result = view.container_header();
@@ -698,6 +734,12 @@ void TestZeroCopying() {
     auto test = TestZeroCopying<SrcTestTraits, DestTestTraits>;                           \
     ASSERT_NO_FATAL_FAILURE(test());                                                      \
   }
+#define TEST_COPYING_INTO_SMALL_STORAGE(suite_name, SrcTestTraits, src_name, DestTestTraits, \
+                                        dest_name)                                           \
+  TEST(suite_name, Copying##src_name##to##dest_name##SmallStorage) {                         \
+    auto test = TestCopyingIntoSmallStorage<SrcTestTraits, DestTestTraits>;                  \
+    ASSERT_NO_FATAL_FAILURE(test());                                                         \
+  }
 
 #define TEST_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)               \
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, OneItemZbi, \
@@ -708,6 +750,7 @@ void TestZeroCopying() {
                        MultipleSmallItemsZbi, TestDataZbiType::kMultipleSmallItems)                \
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,             \
                        SecondItemOnPageBoundaryZbi, TestDataZbiType::kSecondItemOnPageBoundary)    \
-  TEST_ZERO_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)
+  TEST_ZERO_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)                \
+  TEST_COPYING_INTO_SMALL_STORAGE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_

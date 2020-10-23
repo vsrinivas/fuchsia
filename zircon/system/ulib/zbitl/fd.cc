@@ -30,6 +30,21 @@ fitx::result<error_type, uint32_t> StorageTraits<fbl::unique_fd>::Capacity(
   return fitx::ok(static_cast<uint32_t>(size));
 }
 
+fitx::result<error_type> StorageTraits<fbl::unique_fd>::EnsureCapacity(fbl::unique_fd& fd,
+                                                                       uint32_t capacity_bytes) {
+  auto current = Capacity(fd);
+  if (current.is_error()) {
+    return current.take_error();
+  } else if (current.value() >= capacity_bytes) {
+    return fitx::ok();  // Current capacity is sufficient.
+  }
+  // Write a single byte to reserve enough space for the new capacity.
+  if (ssize_t n = pwrite(fd.get(), "", 1, capacity_bytes - 1); n < 0) {
+    return fitx::error{errno};
+  }
+  return fitx::ok();
+}
+
 fitx::result<error_type, zbi_header_t> StorageTraits<fbl::unique_fd>::Header(
     const fbl::unique_fd& fd, uint32_t offset) {
   zbi_header_t header;
