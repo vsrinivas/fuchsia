@@ -33,7 +33,8 @@ zx_status_t PciRootAllocator::AllocateWindow(zx_paddr_t in_base, size_t size,
   zx::eventpair ep = {};
   zx_status_t status = pciroot_.GetAddressSpace(in_base, size, type_, low_, &out_base, &res, &ep);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to allocate [%#8lx, %#8lx, %s] from root: %d", in_base, size,
+    // This error may not be fatal, the Device probe/allocation methods will know for sure.
+    zxlogf(DEBUG, "failed to allocate [%#8lx, %#8lx, %s] from root: %d", in_base, size,
            (type_ == PCI_ADDRESS_SPACE_MEMORY) ? "mmio" : "io", status);
     return status;
   }
