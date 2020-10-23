@@ -161,6 +161,9 @@ impl AvrcpRelay {
                         sessions2::PlayerRequest::PrevItem { .. } => {
                             let _ = controller.send_command(avrcp::AvcPanelCommand::Backward).await;
                         },
+                        sessions2::PlayerRequest::BindVolumeControl { .. } => {
+                            // Drop incoming channel, we don't support this interface.
+                        },
                         x => info!("Unhandled request from Player: {:?}", x),
                     }
                 }
