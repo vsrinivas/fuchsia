@@ -62,10 +62,10 @@ executable("impl_unittest") {
 
 unittest_package("wlanif_unittest") {
   deps = [
-    ":wlanif_bind_test",
     ":convert_unittest",
     ":device_unittest",
     ":impl_unittest",
+    ":wlanif_bind_test",
   ]
 
   tests = [
