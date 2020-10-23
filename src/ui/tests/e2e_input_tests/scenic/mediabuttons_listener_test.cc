@@ -121,7 +121,7 @@ TEST_F(MediaButtonsListenerTest, MediaButtons) {
         // Inject a media button input with all buttons but the factory reset button
         // set. If fdr is set, FactoryResetManager will handle the buttons event
         // instead of the MediaButtonListener, which we are testing.
-        InjectInput({"media_button", "1", "1", "1", "0", "1", nullptr});
+        InjectInput({"media_button", "1", "1", "1", "0", "1", "0", nullptr});
         ++injection_count_;
       },
       zx::sec(1));
@@ -131,6 +131,9 @@ TEST_F(MediaButtonsListenerTest, MediaButtons) {
       [this](const MediaButtonsEvent& observed) {
         ASSERT_TRUE(observed.has_mic_mute());
         EXPECT_TRUE(observed.mic_mute());
+
+        ASSERT_TRUE(observed.has_camera_disable());
+        EXPECT_FALSE(observed.camera_disable());
 
         ASSERT_TRUE(observed.has_volume());
         EXPECT_EQ(observed.volume(), 0);

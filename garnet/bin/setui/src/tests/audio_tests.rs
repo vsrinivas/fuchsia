@@ -335,8 +335,12 @@ async fn test_audio_input() {
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    let buttons_event =
-        MediaButtonsEvent { volume: Some(1), mic_mute: Some(true), pause: Some(false) };
+    let buttons_event = MediaButtonsEvent {
+        volume: Some(1),
+        mic_mute: Some(true),
+        pause: Some(false),
+        camera_disable: Some(false),
+    };
     fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
 
     let updated_settings = audio_proxy.watch().await.expect("watch completed");

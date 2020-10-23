@@ -228,6 +228,7 @@ struct MediaButtonsReport {
     bool mic_mute;
     bool reset;
     bool pause;
+    bool camera_disable;
 };
 
 // Device and Report

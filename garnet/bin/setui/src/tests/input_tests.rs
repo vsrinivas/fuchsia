@@ -64,8 +64,13 @@ async fn set_mic_mute(proxy: &InputProxy, mic_muted: bool) {
 
 // Switch the hardware mic state to muted = [muted].
 async fn switch_hardware_mic_mute(fake_services: &FakeServices, muted: bool) {
-    let buttons_event =
-        MediaButtonsEvent { volume: Some(1), mic_mute: Some(muted), pause: Some(false) };
+    // TODO(fxbug.dev/62648): Replace rigid constructions with a builder.
+    let buttons_event = MediaButtonsEvent {
+        volume: Some(1),
+        mic_mute: Some(muted),
+        pause: Some(false),
+        camera_disable: Some(false),
+    };
     fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
 }
 
@@ -276,8 +281,12 @@ async fn test_media_buttons() {
     let service_registry = ServiceRegistry::create();
     let input_device_registry_service = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
 
-    let initial_event =
-        MediaButtonsEvent { volume: Some(1), mic_mute: Some(true), pause: Some(false) };
+    let initial_event = MediaButtonsEvent {
+        volume: Some(1),
+        mic_mute: Some(true),
+        pause: Some(false),
+        camera_disable: Some(false),
+    };
     input_device_registry_service.lock().await.send_media_button_event(initial_event.clone());
 
     service_registry.lock().await.register_service(input_device_registry_service.clone());
@@ -292,8 +301,12 @@ async fn test_media_buttons() {
         assert_eq!(initial_event, event);
     }
 
-    let second_event =
-        MediaButtonsEvent { volume: Some(0), mic_mute: Some(false), pause: Some(false) };
+    let second_event = MediaButtonsEvent {
+        volume: Some(0),
+        mic_mute: Some(false),
+        pause: Some(false),
+        camera_disable: Some(false),
+    };
     input_device_registry_service.lock().await.send_media_button_event(second_event.clone());
 
     if let Some(event) = input_rx.next().await {
@@ -307,8 +320,12 @@ async fn test_device_listener_failure() {
     let input_device_registry_service = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
     input_device_registry_service.lock().await.set_fail(true);
 
-    let initial_event =
-        MediaButtonsEvent { volume: Some(1), mic_mute: Some(true), pause: Some(false) };
+    let initial_event = MediaButtonsEvent {
+        volume: Some(1),
+        mic_mute: Some(true),
+        pause: Some(false),
+        camera_disable: Some(false),
+    };
     input_device_registry_service.lock().await.send_media_button_event(initial_event.clone());
 
     service_registry.lock().await.register_service(input_device_registry_service.clone());

@@ -145,6 +145,9 @@ enum Command {
         #[structopt(parse(try_from_str = "parse_bool"))]
         /// 0 or 1
         pause: bool,
+        #[structopt(parse(try_from_str = "parse_bool"))]
+        /// 0 or 1
+        camera_disable: bool,
     },
 }
 
@@ -198,13 +201,14 @@ async fn main() {
             )
             .await
         }
-        Command::MediaButton { mic_mute, volume_up, volume_down, reset, pause } => {
+        Command::MediaButton { mic_mute, volume_up, volume_down, reset, pause, camera_disable } => {
             input_synthesis::media_button_event_command(
                 mic_mute,
                 volume_up,
                 volume_down,
                 reset,
                 pause,
+                camera_disable,
             )
             .await
         }

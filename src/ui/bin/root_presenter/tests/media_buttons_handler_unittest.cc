@@ -216,5 +216,41 @@ TEST_F(MediaButtonsHandlerTest, PauseButton) {
   EXPECT_FALSE(activity_notifier.GetLastEvent()->pause());
 }
 
+// This test ensures that the camera button state is sent forward
+// if the mic and camera are tied together.
+TEST_F(MediaButtonsHandlerTest, MicCameraTogether) {
+  {
+    fuchsia::ui::input::MediaButtonsReport media_buttons;
+    media_buttons.mic_mute = true;
+    media_buttons.camera_disable = true;
+
+    DispatchReport(std::move(media_buttons));
+  }
+
+  auto listener = CreateListener();
+
+  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
+  EXPECT_TRUE(listener->GetLastEvent()->mic_mute());
+  EXPECT_TRUE(listener->GetLastEvent()->camera_disable());
+}
+
+// This test ensures that the camera button state is sent forward
+// if the mic and camera are separately controlled.
+TEST_F(MediaButtonsHandlerTest, MicCameraSeparate) {
+  {
+    fuchsia::ui::input::MediaButtonsReport media_buttons;
+    media_buttons.mic_mute = true;
+    media_buttons.camera_disable = false;
+
+    DispatchReport(std::move(media_buttons));
+  }
+
+  auto listener = CreateListener();
+
+  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
+  EXPECT_TRUE(listener->GetLastEvent()->mic_mute());
+  EXPECT_FALSE(listener->GetLastEvent()->camera_disable());
+}
+
 }  // namespace
 }  // namespace root_presenter

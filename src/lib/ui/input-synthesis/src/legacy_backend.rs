@@ -131,6 +131,7 @@ impl synthesizer::InputDevice for self::InputDevice {
         mic_mute: bool,
         reset: bool,
         pause: bool,
+        camera_disable: bool,
         time: u64,
     ) -> Result<(), Error> {
         self.fidl_proxy
@@ -140,6 +141,7 @@ impl synthesizer::InputDevice for self::InputDevice {
                 mic_mute,
                 reset,
                 pause,
+                camera_disable,
                 time,
             ))
             .map_err(Into::into)
@@ -176,6 +178,7 @@ fn media_buttons(
     mic_mute: bool,
     reset: bool,
     pause: bool,
+    camera_disable: bool,
     time: u64,
 ) -> InputReport {
     InputReport {
@@ -187,6 +190,7 @@ fn media_buttons(
             mic_mute,
             reset,
             pause,
+            camera_disable,
         })),
         mouse: None,
         stylus: None,
@@ -271,6 +275,7 @@ mod tests {
             mic_mute: bool,
             reset: bool,
             pause: bool,
+            camera_disable: bool,
             event_time: u64
         ) {
             let test_fut = async {
@@ -281,7 +286,7 @@ mod tests {
                     };
                 let input_device = InputDevice { fidl_proxy };
                 input_device
-                    .media_buttons(volume_up, volume_down, mic_mute, reset, pause, event_time)?;
+                    .media_buttons(volume_up, volume_down, mic_mute, reset, pause, camera_disable, event_time)?;
                 std::mem::drop(input_device);  // Close channel to terminate stream.
 
                 let reports = request_stream.collect::<Vec<_>>().await;
@@ -293,7 +298,8 @@ mod tests {
                             volume_down,
                             mic_mute,
                             reset,
-                            pause
+                            pause,
+                            camera_disable,
                         })),
                         mouse: None,
                         stylus: None,

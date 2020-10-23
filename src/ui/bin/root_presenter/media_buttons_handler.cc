@@ -74,6 +74,7 @@ fuchsia::ui::input::MediaButtonsEvent CreateMediaButtonsEvent(
   }
   event.set_volume(volume_gain);
   event.set_mic_mute(report.media_buttons->mic_mute);
+  event.set_camera_disable(report.media_buttons->camera_disable);
   event.set_pause(report.media_buttons->pause);
   return event;
 }

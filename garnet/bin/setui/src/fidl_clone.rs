@@ -152,6 +152,11 @@ impl FIDLClone for LightValue {
 
 impl FIDLClone for MediaButtonsEvent {
     fn clone(&self) -> Self {
-        MediaButtonsEvent { volume: self.volume, mic_mute: self.mic_mute, pause: self.pause }
+        MediaButtonsEvent {
+            volume: self.volume,
+            mic_mute: self.mic_mute,
+            pause: self.pause,
+            camera_disable: self.camera_disable,
+        }
     }
 }

@@ -22,6 +22,7 @@ pub async fn media_button_event_command(
     mic_mute: bool,
     reset: bool,
     pause: bool,
+    camera_disable: bool,
 ) -> Result<(), Error> {
     media_button_event(
         volume_up,
@@ -29,6 +30,7 @@ pub async fn media_button_event_command(
         mic_mute,
         reset,
         pause,
+        camera_disable,
         &mut legacy_backend::InputDeviceRegistry::new(),
     )
 }
