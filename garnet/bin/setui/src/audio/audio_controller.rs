@@ -78,14 +78,8 @@ impl VolumeController {
         let mut audio_info = self.client.read().await;
         self.input_monitor.lock().await.ensure_monitor().await;
 
-        audio_info.input = AudioInputInfo {
-            mic_mute: self
-                .input_monitor
-                .lock()
-                .await
-                .get_mute_state()
-                .unwrap_or(audio_info.input.mic_mute),
-        };
+        audio_info.input =
+            AudioInputInfo { mic_mute: self.input_monitor.lock().await.get_mute_state() };
         audio_info.modified_timestamps = Some(self.modified_timestamps.clone());
         Ok(audio_info)
     }

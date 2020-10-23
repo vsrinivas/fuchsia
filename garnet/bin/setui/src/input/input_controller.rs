@@ -11,21 +11,17 @@ use async_trait::async_trait;
 use {
     crate::input::{InputMonitor, InputMonitorHandle, InputType},
     crate::switchboard::base::{
-        ControllerStateResult, InputInfo, InputInfoSources, Microphone, SettingRequest,
-        SettingResponse,
+        ControllerStateResult, InputInfo, Microphone, SettingRequest, SettingResponse,
     },
     futures::lock::Mutex,
     std::sync::Arc,
 };
 
-impl DeviceStorageCompatible for InputInfoSources {
+impl DeviceStorageCompatible for InputInfo {
     const KEY: &'static str = "input_info";
 
     fn default_value() -> Self {
-        InputInfoSources {
-            hw_microphone: Microphone { muted: false },
-            sw_microphone: Microphone { muted: false },
-        }
+        InputInfo { microphone: Microphone { muted: false } }
     }
 }
 
@@ -36,10 +32,10 @@ type InputControllerInnerHandle = Arc<Mutex<InputControllerInner>>;
 /// Allows the controller to use a lock on its contents.
 struct InputControllerInner {
     /// Client to communicate with persistent store and notify on.
-    client: ClientProxy<InputInfoSources>,
+    client: ClientProxy<InputInfo>,
 
     /// Handles and reports the media button states.
-    input_monitor: InputMonitorHandle<InputInfoSources>,
+    input_monitor: InputMonitorHandle<InputInfo>,
 
     /// Local tracking of the hardware mic state.
     hardware_mic_muted: bool,
@@ -51,43 +47,38 @@ struct InputControllerInner {
 impl InputControllerInner {
     /// Gets the input state.
     async fn get_info(&mut self) -> Result<InputInfo, ControllerError> {
-        let input_info = self.client.read().await;
+        let mut input_info = self.client.read().await;
         let mut input_monitor = self.input_monitor.lock().await;
         input_monitor.ensure_monitor().await;
-        self.hardware_mic_muted =
-            input_monitor.get_mute_state().unwrap_or(input_info.hw_microphone.muted);
+        self.hardware_mic_muted = input_monitor.get_mute_state();
         let muted = self.hardware_mic_muted || self.software_mic_muted;
 
-        Ok(InputInfo { microphone: Microphone { muted } })
+        input_info.microphone = Microphone { muted };
+        Ok(input_info)
     }
 
     /// Restores the input state.
     // TODO(fxbug.dev/57917): After config is implemented, this should return a ControllerStateResult.
     async fn restore(&mut self) {
-        let input_info = self.client.read().await;
         // Get hardware state.
         let mut input_monitor = self.input_monitor.lock().await;
         input_monitor.ensure_monitor().await;
-        self.hardware_mic_muted =
-            input_monitor.get_mute_state().unwrap_or(input_info.hw_microphone.muted);
+        self.hardware_mic_muted = input_monitor.get_mute_state();
 
         // Get software state.
-        self.software_mic_muted = input_info.sw_microphone.muted;
+        self.software_mic_muted = self.client.read().await.microphone.muted;
     }
 
     /// Sets the software mic state to [muted].
     async fn set_mic_mute(&mut self, muted: bool) -> SettingHandlerResult {
         let mut input_info = self.client.read().await;
-        input_info.sw_microphone.muted = muted;
+        input_info.microphone.muted = muted;
 
         let mut input_monitor = self.input_monitor.lock().await;
         input_monitor.ensure_monitor().await;
 
-        self.hardware_mic_muted =
-            input_monitor.get_mute_state().unwrap_or(input_info.hw_microphone.muted);
+        self.hardware_mic_muted = input_monitor.get_mute_state();
         self.software_mic_muted = muted;
-
-        input_info.hw_microphone.muted = self.hardware_mic_muted;
 
         // Store the newly set value.
         write(&self.client, input_info, false).await.into_handler_result()
@@ -100,9 +91,9 @@ pub struct InputController {
 }
 
 #[async_trait]
-impl data_controller::Create<InputInfoSources> for InputController {
+impl data_controller::Create<InputInfo> for InputController {
     /// Creates the controller.
-    async fn create(client: ClientProxy<InputInfoSources>) -> Result<Self, ControllerError> {
+    async fn create(client: ClientProxy<InputInfo>) -> Result<Self, ControllerError> {
         Ok(Self {
             inner: Arc::new(Mutex::new(InputControllerInner {
                 client: client.clone(),

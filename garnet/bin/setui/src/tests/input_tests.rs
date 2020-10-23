@@ -9,7 +9,7 @@ use {
     crate::handler::device_storage::DeviceStorage,
     crate::input::monitor_media_buttons,
     crate::service_context::ServiceContext,
-    crate::switchboard::base::{InputInfoSources, Microphone, SettingType},
+    crate::switchboard::base::{InputInfo, Microphone, SettingType},
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::test_failure_utils::create_test_env_with_failures,
@@ -27,10 +27,7 @@ use {
     std::sync::Arc,
 };
 
-const DEFAULT_INPUT_INFO: InputInfoSources = InputInfoSources {
-    hw_microphone: Microphone { muted: false },
-    sw_microphone: Microphone { muted: false },
-};
+const DEFAULT_INPUT_INFO: InputInfo = InputInfo { microphone: Microphone { muted: false } };
 const DEFAULT_MIC_STATE: bool = false;
 const ENV_NAME: &str = "settings_service_input_test_environment";
 const CONTEXT_ID: u64 = 0;
@@ -83,11 +80,11 @@ async fn get_and_check_mic_mute(input_proxy: &InputProxy, expected_muted_state: 
 // Gets the store from |factory| and populate it with default values.
 async fn create_storage(
     factory: Arc<Mutex<InMemoryStorageFactory>>,
-) -> Arc<Mutex<DeviceStorage<InputInfoSources>>> {
+) -> Arc<Mutex<DeviceStorage<InputInfo>>> {
     let store = factory
         .lock()
         .await
-        .get_device_storage::<InputInfoSources>(StorageAccessContext::Test, CONTEXT_ID);
+        .get_device_storage::<InputInfo>(StorageAccessContext::Test, CONTEXT_ID);
     {
         let mut store_lock = store.lock().await;
         let input_info = DEFAULT_INPUT_INFO;
@@ -110,7 +107,7 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 // Creates the environment.
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
-) -> (NestedEnvironment, Arc<Mutex<DeviceStorage<InputInfoSources>>>) {
+) -> (NestedEnvironment, Arc<Mutex<DeviceStorage<InputInfo>>>) {
     let storage_factory = InMemoryStorageFactory::create();
     let store = create_storage(storage_factory.clone()).await;
 
@@ -200,9 +197,9 @@ async fn test_restore() {
         let store = storage_factory
             .lock()
             .await
-            .get_device_storage::<InputInfoSources>(StorageAccessContext::Test, CONTEXT_ID);
+            .get_device_storage::<InputInfo>(StorageAccessContext::Test, CONTEXT_ID);
         let mut stored_info = DEFAULT_INPUT_INFO.clone();
-        stored_info.sw_microphone.muted = true;
+        stored_info.microphone.muted = true;
         assert!(store.lock().await.write(&stored_info, false).await.is_ok());
     }
 
@@ -245,10 +242,7 @@ async fn test_persisted_values_applied_at_start() {
     let storage_factory = InMemoryStorageFactory::create();
     let store = create_storage(storage_factory.clone()).await;
 
-    let test_input_info = InputInfoSources {
-        hw_microphone: Microphone { muted: false },
-        sw_microphone: Microphone { muted: true },
-    };
+    let test_input_info = InputInfo { microphone: Microphone { muted: true } };
 
     // Write values in the store.
     {

@@ -253,18 +253,6 @@ impl SettingRequest {
     }
 }
 
-impl From<ButtonType> for SettingRequest {
-    fn from(button_type: ButtonType) -> Self {
-        SettingRequest::OnButton(button_type)
-    }
-}
-
-impl From<VolumeGain> for SettingRequest {
-    fn from(volume_gain: VolumeGain) -> Self {
-        SettingRequest::OnVolume(volume_gain)
-    }
-}
-
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceInfo {
     pub build_tag: String,
@@ -302,12 +290,6 @@ pub struct AudioStream {
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct InputInfo {
     pub microphone: Microphone,
-}
-
-#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct InputInfoSources {
-    pub sw_microphone: Microphone,
-    pub hw_microphone: Microphone,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
