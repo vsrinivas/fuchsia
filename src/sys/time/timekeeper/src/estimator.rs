@@ -3,10 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::{enums::Track, time_source::Sample},
+    crate::{
+        diagnostics::{Diagnostics, Event},
+        enums::Track,
+        time_source::Sample,
+    },
     chrono::prelude::*,
     fuchsia_zircon as zx,
     log::{info, warn},
+    std::sync::Arc,
 };
 
 /// The variance (i.e. standard deviation squared) of the system oscillator frequency error, used
@@ -45,7 +50,7 @@ fn f64_to_duration(float: f64) -> zx::Duration {
 /// estimated_frequency is considered a fixed value by the filter, i.e. has a covariance of zero
 /// and an observation model term of zero.
 #[derive(Debug)]
-pub struct Estimator {
+pub struct Estimator<D: Diagnostics> {
     /// A reference utc from which the estimate is maintained.
     reference_utc: zx::Time,
     /// The monotonic time at which the estimate applies.
@@ -62,19 +67,29 @@ pub struct Estimator {
     /// The utc offset calculated using the initial sample. This is a temporary variable that lets
     /// us retain a fixed output until we are more confident in the internal state.
     offset: zx::Duration,
+    /// A diagnostics implementation for recording events of note.
+    diagnostics: Arc<D>,
 }
 
-impl Estimator {
+impl<D: Diagnostics> Estimator<D> {
     /// Construct a new estimator inititalized to the supplied sample.
-    pub fn new(track: Track, Sample { utc, monotonic, std_dev }: Sample) -> Self {
+    pub fn new(track: Track, sample: Sample, diagnostics: Arc<D>) -> Self {
+        let Sample { utc, monotonic, std_dev } = sample;
+        let covariance_00 = duration_to_f64(std_dev).powf(2.0).max(MIN_COVARIANCE);
+        diagnostics.record(Event::EstimateUpdated {
+            track,
+            offset: utc - monotonic,
+            covariance: covariance_00 as u64,
+        });
         Estimator {
             reference_utc: utc,
             monotonic,
             estimate_0: 0f64,
             estimate_1: 1f64,
-            covariance_00: duration_to_f64(std_dev).powf(2.0).max(MIN_COVARIANCE),
+            covariance_00,
             offset: utc - monotonic,
             track,
+            diagnostics,
         }
     }
 
@@ -119,9 +134,13 @@ impl Estimator {
         // Then correct to aposteriori by merging in the measurement.
         self.correct(utc, std_dev);
 
-        // TODO(jsankey): Define and send a new diagnostic event to communicate an update.
-        let input_utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
         let estimated_utc = self.reference_utc + f64_to_duration(self.estimate_0);
+        self.diagnostics.record(Event::EstimateUpdated {
+            track: self.track,
+            offset: estimated_utc - self.monotonic,
+            covariance: self.covariance_00 as u64,
+        });
+        let input_utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
         info!(
             "received {:?} update to {}. Estimated UTC offset={}, covariance={:e}",
             self.track,
@@ -142,38 +161,54 @@ impl Estimator {
 
 #[cfg(test)]
 mod test {
-    use {super::*, lazy_static::lazy_static, test_util::assert_near};
+    use {
+        super::*, crate::diagnostics::FakeDiagnostics, lazy_static::lazy_static,
+        test_util::assert_near,
+    };
 
-    const OFFSET_1: zx::Duration = zx::Duration::from_nanos(777);
-    const OFFSET_2: zx::Duration = zx::Duration::from_nanos(999);
-    const STD_DEV_1: zx::Duration = zx::Duration::from_nanos(2222);
+    const OFFSET_1: zx::Duration = zx::Duration::from_seconds(777);
+    const OFFSET_2: zx::Duration = zx::Duration::from_seconds(999);
+    const STD_DEV_1: zx::Duration = zx::Duration::from_millis(22);
     const ZERO_DURATION: zx::Duration = zx::Duration::from_nanos(0);
+    const TEST_TRACK: Track = Track::Primary;
 
     lazy_static! {
         static ref TIME_1: zx::Time = zx::Time::from_nanos(10000);
         static ref TIME_2: zx::Time = zx::Time::from_nanos(20000);
         static ref TIME_3: zx::Time = zx::Time::from_nanos(30000);
+        static ref COV_1: u64 = STD_DEV_1.into_nanos().pow(2u32) as u64;
+    }
+
+    fn create_estimate_event(offset: zx::Duration, covariance: u64) -> Event {
+        Event::EstimateUpdated { track: TEST_TRACK, offset, covariance }
     }
 
     #[test]
     fn initialize_and_estimate() {
-        let estimator =
-            Estimator::new(Track::Primary, Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1));
+        let diagnostics = Arc::new(FakeDiagnostics::new());
+        let estimator = Estimator::new(
+            TEST_TRACK,
+            Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1),
+            Arc::clone(&diagnostics),
+        );
         assert_eq!(estimator.estimate(*TIME_1), *TIME_1 + OFFSET_1);
         assert_eq!(estimator.estimate(*TIME_2), *TIME_2 + OFFSET_1);
+        diagnostics.assert_events(&[create_estimate_event(OFFSET_1, *COV_1)]);
     }
 
     #[test]
     fn kalman_filter_performance() {
         // Note: The expected outputs for these test inputs have been validated using the time
         // synchronization simulator we created during algorithm development.
+        let diagnostics = Arc::new(FakeDiagnostics::new());
         let mut estimator = Estimator::new(
-            Track::Primary,
+            TEST_TRACK,
             Sample::new(
                 zx::Time::from_nanos(10001_000000000),
                 zx::Time::from_nanos(1_000000000),
                 zx::Duration::from_millis(50),
             ),
+            Arc::clone(&diagnostics),
         );
         assert_eq!(estimator.reference_utc, zx::Time::from_nanos(10001_000000000));
         assert_near!(estimator.estimate_0, 0f64, 1.0);
@@ -194,31 +229,59 @@ mod test {
         ));
         assert_near!(estimator.estimate_0, 299_985642106.0, 1.0);
         assert_near!(estimator.covariance_00, 1.9119595120463945e15, 1.0);
+        diagnostics.assert_events(&[
+            create_estimate_event(zx::Duration::from_nanos(10000000000000), 2500000000000000),
+            create_estimate_event(zx::Duration::from_nanos(10000005887335), 2354934150544971),
+            create_estimate_event(zx::Duration::from_nanos(9999985642105), 1911959512046394),
+        ]);
     }
 
     #[test]
     fn update_ignored() {
-        let mut estimator =
-            Estimator::new(Track::Primary, Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1));
+        let diagnostics = Arc::new(FakeDiagnostics::new());
+        let mut estimator = Estimator::new(
+            TEST_TRACK,
+            Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1),
+            Arc::clone(&diagnostics),
+        );
         estimator.update(Sample::new(*TIME_2 + OFFSET_2, *TIME_2, STD_DEV_1));
         assert_eq!(estimator.estimate(*TIME_3), *TIME_3 + OFFSET_1);
+        // Even though the update shouldn't affect the output yet it should be logged.
+        diagnostics.assert_events(&[
+            create_estimate_event(OFFSET_1, *COV_1),
+            create_estimate_event(zx::Duration::from_seconds(888), 242000000000000),
+        ]);
     }
 
     #[test]
     fn covariance_minimum() {
-        let mut estimator =
-            Estimator::new(Track::Primary, Sample::new(*TIME_1 + OFFSET_1, *TIME_1, ZERO_DURATION));
+        let diagnostics = Arc::new(FakeDiagnostics::new());
+        let mut estimator = Estimator::new(
+            TEST_TRACK,
+            Sample::new(*TIME_1 + OFFSET_1, *TIME_1, ZERO_DURATION),
+            Arc::clone(&diagnostics),
+        );
         assert_eq!(estimator.covariance_00, MIN_COVARIANCE);
         estimator.update(Sample::new(*TIME_2 + OFFSET_2, *TIME_2, ZERO_DURATION));
         assert_eq!(estimator.covariance_00, MIN_COVARIANCE);
+        diagnostics.assert_events(&[
+            create_estimate_event(OFFSET_1, MIN_COVARIANCE as u64),
+            create_estimate_event(OFFSET_2, MIN_COVARIANCE as u64),
+        ]);
     }
 
     #[test]
     fn earlier_monotonic_ignored() {
-        let mut estimator =
-            Estimator::new(Track::Primary, Sample::new(*TIME_2 + OFFSET_1, *TIME_2, STD_DEV_1));
+        let diagnostics = Arc::new(FakeDiagnostics::new());
+        let mut estimator = Estimator::new(
+            TEST_TRACK,
+            Sample::new(*TIME_2 + OFFSET_1, *TIME_2, STD_DEV_1),
+            Arc::clone(&diagnostics),
+        );
         assert_near!(estimator.estimate_0, 0.0, 1.0);
         estimator.update(Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1));
         assert_near!(estimator.estimate_0, 0.0, 1.0);
+        // Ignored event should not be logged.
+        diagnostics.assert_events(&[create_estimate_event(OFFSET_1, *COV_1)]);
     }
 }

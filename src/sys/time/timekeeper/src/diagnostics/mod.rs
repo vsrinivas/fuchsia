@@ -38,6 +38,15 @@ pub enum Event {
     TimeSourceStatus { role: Role, status: Status },
     /// A sample received from a time source was rejected during validation.
     SampleRejected { role: Role, error: SampleValidationError },
+    /// A time estimate was updated.
+    EstimateUpdated {
+        /// The `Track` of the estimate.
+        track: Track,
+        /// Estimated UTC at reference minus monotonic time at reference.
+        offset: zx::Duration,
+        /// Element [0,0] of the covariance matrix in nanoseconds squared.
+        covariance: u64,
+    },
     /// An attempt was made to write to the real time clock.
     WriteRtc { outcome: WriteRtcOutcome },
     /// The userspace clock has been started for the first time.

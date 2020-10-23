@@ -60,6 +60,9 @@ impl Diagnostics for CobaltDiagnostics {
             Event::SampleRejected { .. } => {
                 // TODO(jsankey): Define and use a Cobalt metric for time sample rejections.
             }
+            Event::EstimateUpdated { .. } => {
+                // TODO(jsankey): Define and use Cobalt metrics for estimate quality.
+            }
             Event::WriteRtc { outcome } => {
                 self.sender.lock().log_event(
                     REAL_TIME_CLOCK_EVENTS_METRIC_ID,

@@ -32,7 +32,7 @@ pub struct ClockManager<T: TimeSource, R: Rtc, D: Diagnostics> {
     time_source_manager: TimeSourceManager<T, D, KernelMonotonicProvider>,
     /// The `Estimator` that maintains an estimate of the UTC and frequency, populated after the
     /// first sample has been received.
-    estimator: Option<Estimator>,
+    estimator: Option<Estimator<D>>,
     /// An optional real time clock that will be updated when new UTC estimates are produced.
     rtc: Option<R>,
     /// An optional notifier used to communicate changes in the clock synchronization state.
@@ -100,10 +100,13 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
             // Feed it to the estimator (or initialize the estimator).
             match &mut self.estimator {
                 Some(estimator) => estimator.update(sample),
-                None => self.estimator = Some(Estimator::new(self.track, sample)),
+                None => {
+                    self.estimator =
+                        Some(Estimator::new(self.track, sample, Arc::clone(&self.diagnostics)))
+                }
             }
             // Note: Both branches of the match led to a populated estimator so safe to unwrap.
-            let estimator: &mut Estimator = &mut self.estimator.as_mut().unwrap();
+            let estimator: &mut Estimator<D> = &mut self.estimator.as_mut().unwrap();
 
             // Determine the error in the current clock compared to this updated estimate.
             // Note: In the initial implementation of `Estimator` updates are discarded hence
@@ -217,6 +220,7 @@ mod tests {
         static ref BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(222222 * NANOS_PER_SECOND);
         static ref CLOCK_OPTS: zx::ClockOpts = zx::ClockOpts::empty();
         static ref START_CLOCK_SOURCE: StartClockSource = StartClockSource::External(TEST_ROLE);
+        static ref COV: u64 = STD_DEV.into_nanos().pow(2u32) as u64;
     }
 
     /// Creates and starts a new clock with default options.
@@ -300,6 +304,7 @@ mod tests {
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
+            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, covariance: *COV },
             Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
             Event::WriteRtc { outcome: WriteRtcOutcome::Succeeded },
         ]);
@@ -335,6 +340,7 @@ mod tests {
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
+            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, covariance: *COV },
             Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
         ]);
     }
@@ -377,7 +383,13 @@ mod tests {
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
+            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, covariance: *COV },
             Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
+            Event::EstimateUpdated {
+                track: *TEST_TRACK,
+                offset: zx::Duration::from_nanos(1666500000080699),
+                covariance: 3872000000562500,
+            },
         ]);
     }
 }

@@ -28,6 +28,8 @@ use {
 const ONE_MILLION: u32 = 1_000_000;
 /// The value stored in place of any time that could not be generated.
 const FAILED_TIME: i64 = -1;
+/// The number of time estimates that are retained.
+const ESTIMATE_UPDATE_COUNT: usize = 5;
 
 lazy_static! {
     pub static ref INSPECTOR: Inspector = Inspector::new();
@@ -39,6 +41,44 @@ fn monotonic_time() -> i64 {
 
 fn utc_time() -> i64 {
     zx::Time::get(zx::ClockId::UTC).into_nanos()
+}
+
+/// A vector of inspect nodes used to store some struct implementing `InspectWritable`, where the
+/// contents of the oldest node are replaced on each write.
+///
+/// An 'counter' field is added to each node labeling which write led to the current node contents.
+/// The first write will have a counter of 1 and the node with the highest counter value is always
+/// the most recently written.
+///
+/// Potentially this is worth moving into a library at some point.
+pub struct CircularBuffer<T: InspectWritable + Default> {
+    count: usize,
+    nodes: Vec<T::NodeType>,
+    counters: Vec<UintProperty>,
+}
+
+impl<T: InspectWritable + Default> CircularBuffer<T> {
+    /// Construct a new `CircularBuffer` of the supplied size within the supplied parent node.
+    /// Each node is named with the supplied prefix and an integer suffix, all nodes are initialized
+    /// to default values.
+    fn new(size: usize, prefix: &str, node: &Node) -> Self {
+        let mut nodes: Vec<T::NodeType> = Vec::new();
+        let mut counters: Vec<UintProperty> = Vec::new();
+        for i in 0..size {
+            let child = node.create_child(format!("{}{}", prefix, i));
+            counters.push(child.create_uint("counter", 0));
+            nodes.push(T::default().create(child));
+        }
+        CircularBuffer { count: 0, nodes, counters }
+    }
+
+    /// Write the supplied data into the oldest node in the circular buffer.
+    fn update(&mut self, data: &T) {
+        let index = self.count % self.nodes.len();
+        self.count += 1;
+        self.nodes[index].update(data);
+        self.counters[index].set(self.count as u64);
+    }
 }
 
 /// A representation of a point in time as measured by all pertinent clocks.
@@ -108,9 +148,9 @@ impl From<zx::ClockDetails> for ClockDetails {
 /// An inspect `Node` and properties used to describe interactions with a real time clock.
 struct RealTimeClockNode {
     /// The number of successful writes to the RTC.
-    _write_success_counter: UintProperty,
+    write_success_counter: UintProperty,
     /// The number of failed writes to the RTC.
-    _write_failure_counter: UintProperty,
+    write_failure_counter: UintProperty,
     /// The inspect Node these fields are exported to.
     _node: Node,
 }
@@ -123,8 +163,8 @@ impl RealTimeClockNode {
             node.record_int("initial_time", time.into_nanos());
         }
         RealTimeClockNode {
-            _write_success_counter: node.create_uint("write_successes", 0u64),
-            _write_failure_counter: node.create_uint("write_failures", 0u64),
+            write_success_counter: node.create_uint("write_successes", 0u64),
+            write_failure_counter: node.create_uint("write_failures", 0u64),
             _node: node,
         }
     }
@@ -132,8 +172,8 @@ impl RealTimeClockNode {
     /// Records an attempt to write to the clock.
     pub fn write(&mut self, outcome: WriteRtcOutcome) {
         match outcome {
-            WriteRtcOutcome::Succeeded => self._write_success_counter.add(1),
-            WriteRtcOutcome::Failed => self._write_failure_counter.add(1),
+            WriteRtcOutcome::Succeeded => self.write_success_counter.add(1),
+            WriteRtcOutcome::Failed => self.write_failure_counter.add(1),
         }
     }
 }
@@ -196,17 +236,58 @@ impl TimeSourceNode {
     }
 }
 
+/// A representation of a single update to a UTC estimate.
+#[derive(InspectWritable, Default)]
+pub struct Estimate {
+    /// The monotonic time at which the estimate was received.
+    monotonic: i64,
+    /// Estimated UTC at reference minus monotonic time at reference, in nanoseconds.
+    offset: i64,
+    /// Element [0,0] of the covariance matrix, in nanoseconds squared.
+    /// The generation counter as documented in the zx::Clock.
+    covariance: u64,
+}
+
+/// An inspect `Node` and properties used to describe the state and history of a time track.
+struct TrackNode {
+    /// A circular buffer of recent updates to the time estimate.
+    estimates: CircularBuffer<Estimate>,
+    /// The inspect `Node` these fields are exported to.
+    _node: Node,
+}
+
+impl TrackNode {
+    /// Constructs a new `TrackNode`.
+    pub fn new(node: Node) -> Self {
+        TrackNode {
+            estimates: CircularBuffer::new(ESTIMATE_UPDATE_COUNT, "estimate_", &node),
+            _node: node,
+        }
+    }
+
+    /// Records a new estimate of time for the track.
+    pub fn update_estimate(&mut self, offset: zx::Duration, covariance: u64) {
+        let estimate =
+            Estimate { monotonic: monotonic_time(), offset: offset.into_nanos(), covariance };
+        self.estimates.update(&estimate);
+    }
+}
+
 /// The complete set of Timekeeper information exported through Inspect.
 pub struct InspectDiagnostics {
     /// The monotonic time at which the network became available, in nanoseconds.
     network_available_monotonic: Mutex<Option<IntProperty>>,
     /// Details of the health of time sources.
     time_sources: Mutex<HashMap<Role, TimeSourceNode>>,
+    /// Details of the current state and history of time tracks.
+    tracks: Mutex<HashMap<Track, TrackNode>>,
     /// Details of interactions with the real time clock.
     rtc: Mutex<Option<RealTimeClockNode>>,
     /// The details of the most recent update to the UTC zx::Clock.
+    // TODO(jsankey): Consider moving this into the TrackNode.
     last_update: Mutex<Option<<ClockDetails as InspectWritable>::NodeType>>,
     /// The UTC clock that provides the `clock_utc` component of `TimeSet` data.
+    // TODO(jsankey): Consider moving this into the TrackNode.
     clock: Arc<zx::Clock>,
     /// The inspect node used to export the contents of this `InspectDiagnostics`.
     node: Node,
@@ -237,20 +318,26 @@ impl InspectDiagnostics {
         node.record_int("backstop", backstop.into_nanos());
 
         let mut time_sources_hashmap = HashMap::new();
+        let mut tracks_hashmap = HashMap::new();
         time_sources_hashmap.insert(
             Role::Primary,
             TimeSourceNode::new(node.create_child("primary_time_source"), &primary.time_source),
         );
+        tracks_hashmap.insert(Track::Primary, TrackNode::new(node.create_child("primary_track")));
+
         if let Some(monitor) = optional_monitor {
             time_sources_hashmap.insert(
                 Role::Monitor,
                 TimeSourceNode::new(node.create_child("monitor_time_source"), &monitor.time_source),
             );
+            tracks_hashmap
+                .insert(Track::Monitor, TrackNode::new(node.create_child("monitor_track")));
         }
 
         let diagnostics = InspectDiagnostics {
             network_available_monotonic: Mutex::new(None),
             time_sources: Mutex::new(time_sources_hashmap),
+            tracks: Mutex::new(tracks_hashmap),
             rtc: Mutex::new(None),
             last_update: Mutex::new(None),
             clock: Arc::clone(&clock),
@@ -319,6 +406,12 @@ impl Diagnostics for InspectDiagnostics {
                     .get_mut(&role)
                     .map(|source| source.sample_rejection(error));
             }
+            Event::EstimateUpdated { track, offset, covariance } => {
+                self.tracks
+                    .lock()
+                    .get_mut(&track)
+                    .map(|track| track.update_estimate(offset, covariance));
+            }
             Event::WriteRtc { outcome } => {
                 if let Some(ref mut rtc_node) = *self.rtc.lock() {
                     rtc_node.write(outcome);
@@ -349,6 +442,8 @@ mod tests {
     const RATE_ADJUST: u32 = 222;
     const ERROR_BOUNDS: u64 = 4444444444;
     const GENERATION_COUNTER: u32 = 7777;
+    const OFFSET: zx::Duration = zx::Duration::from_seconds(311);
+    const COVARIANCE: u64 = 545454545454;
 
     const VALID_DETAILS: zx::sys::zx_clock_details_v1_t = zx::sys::zx_clock_details_v1_t {
         options: 0,
@@ -447,6 +542,16 @@ mod tests {
                     component: "FakeTimeSource",
                     status: "Launched",
                     status_change_monotonic: AnyProperty,
+                },
+                primary_track: contains {
+                    estimate_0: contains {
+                        counter: 0u64,
+                        monotonic: 0i64,
+                        offset: 0i64,
+                        covariance: 0u64,
+                    }
+                    // For brevity we omit the other empty estimates we expect in the circular
+                    // buffer.
                 },
                 "fuchsia.inspect.Health": contains {
                     status: "STARTING_UP",
@@ -591,6 +696,110 @@ mod tests {
                     status: "Network",
                     status_change_monotonic: AnyProperty,
                 }
+            }
+        );
+    }
+
+    #[test]
+    fn tracks() {
+        let inspector = &Inspector::new();
+        let (test, _) = create_test_object(&inspector, true);
+        assert_inspect_tree!(
+            inspector,
+            root: contains {
+                primary_track: contains {
+                    estimate_0: contains {
+                        counter: 0u64,
+                        monotonic: 0i64,
+                        offset: 0i64,
+                        covariance: 0u64,
+                    },
+                    estimate_1: contains {
+                        counter: 0u64,
+                        monotonic: 0i64,
+                        offset: 0i64,
+                        covariance: 0u64,
+                    },
+                    estimate_2: contains {
+                        counter: 0u64,
+                        monotonic: 0i64,
+                        offset: 0i64,
+                        covariance: 0u64,
+                    },
+                    estimate_3: contains {
+                        counter: 0u64,
+                        monotonic: 0i64,
+                        offset: 0i64,
+                        covariance: 0u64,
+                    },
+                    estimate_4: contains {
+                        counter: 0u64,
+                        monotonic: 0i64,
+                        offset: 0i64,
+                        covariance: 0u64,
+                    },
+                },
+                monitor_track: contains {
+                    estimate_0: contains {},
+                    estimate_1: contains {},
+                    estimate_2: contains {},
+                    estimate_3: contains {},
+                    estimate_4: contains {},
+                },
+            }
+        );
+
+        // Write enough to wrap the circular buffer
+        for i in 1..8 {
+            test.record(Event::EstimateUpdated {
+                track: Track::Primary,
+                offset: OFFSET * i,
+                covariance: COVARIANCE * (i as u64),
+            });
+        }
+
+        assert_inspect_tree!(
+            inspector,
+            root: contains {
+                primary_track: contains {
+                    estimate_0: contains {
+                        counter: 6u64,
+                        monotonic: AnyProperty,
+                        offset: 6 * OFFSET.into_nanos(),
+                        covariance: 6 * COVARIANCE,
+                    },
+                    estimate_1: contains {
+                        counter: 7u64,
+                        monotonic: AnyProperty,
+                        offset: 7 * OFFSET.into_nanos(),
+                        covariance: 7 * COVARIANCE,
+                    },
+                    estimate_2: contains {
+                        counter: 3u64,
+                        monotonic: AnyProperty,
+                        offset: 3 * OFFSET.into_nanos(),
+                        covariance: 3 * COVARIANCE,
+                    },
+                    estimate_3: contains {
+                        counter: 4u64,
+                        monotonic: AnyProperty,
+                        offset: 4 * OFFSET.into_nanos(),
+                        covariance: 4 * COVARIANCE,
+                    },
+                    estimate_4: contains {
+                        counter: 5u64,
+                        monotonic: AnyProperty,
+                        offset: 5 * OFFSET.into_nanos(),
+                        covariance: 5 * COVARIANCE,
+                    },
+                },
+                monitor_track: contains {
+                    estimate_0: contains {},
+                    estimate_1: contains {},
+                    estimate_2: contains {},
+                    estimate_3: contains {},
+                    estimate_4: contains {},
+                },
             }
         );
     }
