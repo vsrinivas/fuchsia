@@ -53,7 +53,12 @@ func (r *routesImpl) Resolve(_ fidl.Context, destination net.IpAddress) (routes.
 	// Build our response with the resolved route.
 	var response routes.StateResolveResponse
 	var node routes.Destination
-	node.SetMac(fidlconv.ToNetMacAddress(route.RemoteLinkAddress))
+
+	// If the remote link address is unspecified, then the outgoing link does not
+	// support MAC addressing.
+	if len(route.RemoteLinkAddress) != 0 {
+		node.SetMac(fidlconv.ToNetMacAddress(route.RemoteLinkAddress))
+	}
 	node.SetInterfaceId(uint64(route.NICID()))
 	if len(route.NextHop) != 0 {
 		node.SetAddress(fidlconv.ToNetIpAddress(route.NextHop))

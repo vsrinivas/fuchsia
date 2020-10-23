@@ -11,6 +11,48 @@ use netstack_testing_common::environments::{Netstack2, TestSandboxExt as _};
 use netstack_testing_common::Result;
 use std::convert::TryFrom as _;
 
+async fn resolve(
+    routes: &fidl_fuchsia_net_routes::StateProxy,
+    mut remote: fidl_fuchsia_net::IpAddress,
+) -> Result<fidl_fuchsia_net_routes::Resolved> {
+    routes
+        .resolve(&mut remote)
+        .await
+        .context("routes/State.Resolve FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("routes/State.Resolve error")
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_resolve_loopback_route() -> Result {
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let env = sandbox
+        .create_netstack_environment::<Netstack2, _>("resolve_loopback_route")
+        .context("failed to create environment")?;
+    let routes = env
+        .connect_to_service::<fidl_fuchsia_net_routes::StateMarker>()
+        .context("failed to connect to routes/State")?;
+    let routes = &routes;
+
+    let test = |remote: fidl_fuchsia_net::IpAddress| async move {
+        assert_eq!(
+            resolve(routes, remote).await.context("error resolving remote")?,
+            fidl_fuchsia_net_routes::Resolved::Direct(fidl_fuchsia_net_routes::Destination {
+                address: Some(remote),
+                mac: None,
+                interface_id: Some(1),
+            }),
+        );
+        Result::Ok(())
+    };
+
+    let () =
+        test(fidl_ip!(127.0.0.1)).await.context("error testing resolution for IPv4 loopback")?;
+    let () = test(fidl_ip!(::1)).await.context("error testing resolution for IPv6 loopback")?;
+
+    Ok(())
+}
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_resolve_route() -> Result {
     const HOST_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.2/24);
@@ -110,17 +152,6 @@ async fn test_resolve_route() -> Result {
         .context("failed to connect to routes/State")?;
     let routes = &routes;
 
-    let resolve = move |mut remote: fidl_fuchsia_net::IpAddress| async move {
-        Result::Ok(
-            routes
-                .resolve(&mut remote)
-                .await
-                .context("resolve FIDL error")?
-                .map_err(fuchsia_zircon::Status::from_raw)
-                .context("resolve error")?,
-        )
-    };
-
     let resolve_fails = move |mut remote: fidl_fuchsia_net::IpAddress| async move {
         assert_eq!(
             routes
@@ -148,7 +179,7 @@ async fn test_resolve_route() -> Result {
 
         // Start asking for a route for something that is directly accessible on the
         // network.
-        let resolved = resolve(gateway).await.context("can't resolve peer")?;
+        let resolved = resolve(routes, gateway).await.context("can't resolve peer")?;
         assert_eq!(resolved, fidl_fuchsia_net_routes::Resolved::Direct(gateway_node()));
         // Fails if MAC unreachable.
         let () =
@@ -182,10 +213,11 @@ async fn test_resolve_route() -> Result {
         .context("add_route error")?;
 
         // Resolve a public IP again and check that we get the gateway response.
-        let resolved = resolve(public_ip).await.context("can't resolve through gateway")?;
+        let resolved = resolve(routes, public_ip).await.context("can't resolve through gateway")?;
         assert_eq!(resolved, fidl_fuchsia_net_routes::Resolved::Gateway(gateway_node()));
         // And that the unspecified address resolves to the gateway node as well.
-        let resolved = resolve(unspecified).await.context("can't resolve unspecified address")?;
+        let resolved =
+            resolve(routes, unspecified).await.context("can't resolve unspecified address")?;
         assert_eq!(resolved, fidl_fuchsia_net_routes::Resolved::Gateway(gateway_node()));
 
         Result::Ok(())
