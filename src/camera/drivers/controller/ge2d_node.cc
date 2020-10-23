@@ -12,6 +12,7 @@
 #include <algorithm>
 
 #include <fbl/auto_call.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/drivers/controller/stream_pipeline_info.h"
@@ -282,10 +283,14 @@ zx_status_t Ge2dNode::OnSetCropRect(float x_min, float y_min, float x_max, float
   y_max = std::clamp(y_max, 0.0f, 1.0f);
 
   auto& input_image_format = parent_node()->output_image_formats().at(0);
-  auto normalized_x_min = static_cast<uint32_t>(x_min * input_image_format.coded_width + 0.5f);
-  auto normalized_y_min = static_cast<uint32_t>(y_min * input_image_format.coded_height + 0.5f);
-  auto normalized_x_max = static_cast<uint32_t>(x_max * input_image_format.coded_width + 0.5f);
-  auto normalized_y_max = static_cast<uint32_t>(y_max * input_image_format.coded_height + 0.5f);
+  auto normalized_x_min = safemath::checked_cast<uint32_t>(
+      x_min * safemath::checked_cast<float>(input_image_format.coded_width) + 0.5f);
+  auto normalized_y_min = safemath::checked_cast<uint32_t>(
+      y_min * safemath::checked_cast<float>(input_image_format.coded_height) + 0.5f);
+  auto normalized_x_max = safemath::checked_cast<uint32_t>(
+      x_max * safemath::checked_cast<float>(input_image_format.coded_width) + 0.5f);
+  auto normalized_y_max = safemath::checked_cast<uint32_t>(
+      y_max * safemath::checked_cast<float>(input_image_format.coded_height) + 0.5f);
 
   if (enabled_) {
     auto width = normalized_x_max - normalized_x_min;

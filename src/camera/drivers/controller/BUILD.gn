@@ -44,7 +44,10 @@ source_set("source") {
     "stream_protocol.cc",
     "stream_protocol.h",
   ]
-  deps = [ ":camera_controller_bind" ]
+  deps = [
+    ":camera_controller_bind",
+    "//zircon/public/lib/safemath",
+  ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.camerahwaccel",
     "//sdk/banjo/ddk.protocol.composite",
@@ -81,7 +84,4 @@ source_set("source") {
     "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/trace:trace-driver",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

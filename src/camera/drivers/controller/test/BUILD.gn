@@ -39,7 +39,4 @@ executable("test") {
   if (internal_access) {
     defines = [ "INTERNAL_ACCESS" ]
   }
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -10,6 +10,7 @@
 #include <zircon/types.h>
 
 #include <fbl/auto_call.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/drivers/controller/stream_pipeline_info.h"
@@ -34,7 +35,7 @@ fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
     FX_PLOGST(ERROR, kTag, status) << "Failed to load the GDC firmware";
     return fit::error(status);
   }
-  info.size = size;
+  info.size = safemath::checked_cast<uint32_t>(size);
   return fit::ok(info);
 }
 
