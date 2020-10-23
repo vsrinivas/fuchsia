@@ -3,7 +3,7 @@
 This document describes the codec interface between controllers and codecs in
 Fuchsia. It is meant to serve as a reference for driver-authors, and to define
 the interface contract which codec drivers must implement and that controllers
-can use. The codec interface is a Banjo protocol exposed by codec drivers.
+can use. The codec interface is a FIDL protocol exposed by codec drivers.
 
 ## Notation and Terminology
 
@@ -74,7 +74,12 @@ writing and using simple codec drivers implementing the codec protocol.
 
 ## Protocol definition
 
-The codec protocol is defined in [Banjo](/docs/development/drivers/banjo-tutorial.md) at
+The codec protocol is defined in FIDL at
+[codec.fidl](/sdk/fidl/fuchsia.hardware.audio.codec/codec.fidl).
+
+Note that because the DDK does not currently provide a way to directly get a FIDL
+channel for communication, we define a way to get a channel via
+[Banjo](/docs/development/drivers/banjo-tutorial.md) at
 [ddk.protocol.codec](/sdk/banjo/ddk.protocol.codec/codec.banjo).
 
 Many codec protocol operations are "fire-and-forget", i.e. they do not expect a
