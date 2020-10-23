@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use anyhow::format_err;
-use bt_avdtp::{self as avdtp, MediaCodecType, ServiceCapability};
+use bt_avdtp::{self as avdtp, MediaCodecType, ServiceCapability, StreamEndpointId};
 use fidl_fuchsia_media as media;
+use log::trace;
 use std::convert::TryFrom;
 
 use crate::media_types::{
@@ -114,6 +115,35 @@ impl MediaCodecConfig {
         }
     }
 
+    /// Negotiate the best supported configuration, given another configuration.
+    /// This can be seen as a kind of intersection of the capabilities of the two configs.
+    /// IF this returns Some(result), then a.supports(result) and b.supports(result) will both be
+    /// true.
+    pub fn negotiate(a: &MediaCodecConfig, b: &MediaCodecConfig) -> Option<MediaCodecConfig> {
+        if a.codec_type != b.codec_type {
+            return None;
+        }
+        match a.codec_type {
+            MediaCodecType::AUDIO_AAC => {
+                let a = AacCodecInfo::try_from(a.codec_extra()).expect("should parse");
+                let b = AacCodecInfo::try_from(b.codec_extra()).expect("should parse");
+                AacCodecInfo::negotiate(&a, &b).map(|matched| MediaCodecConfig {
+                    codec_type: MediaCodecType::AUDIO_AAC,
+                    codec_extra: matched.to_bytes().to_vec(),
+                })
+            }
+            MediaCodecType::AUDIO_SBC => {
+                let a = SbcCodecInfo::try_from(a.codec_extra()).expect("should parse");
+                let b = SbcCodecInfo::try_from(b.codec_extra()).expect("should parse");
+                SbcCodecInfo::negotiate(&a, &b).map(|matched| MediaCodecConfig {
+                    codec_type: MediaCodecType::AUDIO_SBC,
+                    codec_extra: matched.to_bytes().to_vec(),
+                })
+            }
+            _ => unreachable!(),
+        }
+    }
+
     /// Retrieves a set of EncoderSettings that is suitable to configure a StreamProcessor to encode
     /// to the target configuration for this MediaCodecConfig.
     /// Returns Err(OutOfRange) if this does not specify a single configuration.
@@ -188,6 +218,15 @@ impl MediaCodecConfig {
         Ok(encoder_settings)
     }
 
+    /// Construct a ServiceCapability that represents this codec config.
+    pub fn capability(&self) -> ServiceCapability {
+        match self.codec_type {
+            MediaCodecType::AUDIO_SBC => SbcCodecInfo::try_from(self.codec_extra()).unwrap().into(),
+            MediaCodecType::AUDIO_AAC => AacCodecInfo::try_from(self.codec_extra()).unwrap().into(),
+            _ => unreachable!(),
+        }
+    }
+
     /// The number of channels that is selected in the configuration.  Returns OutOfRange if
     /// the configuration supports a range of channel counts.
     pub fn channel_count(&self) -> avdtp::Result<usize> {
@@ -259,6 +298,12 @@ impl MediaCodecConfig {
     }
 }
 
+impl From<&MediaCodecConfig> for ServiceCapability {
+    fn from(config: &MediaCodecConfig) -> Self {
+        config.capability()
+    }
+}
+
 impl TryFrom<&ServiceCapability> for MediaCodecConfig {
     type Error = avdtp::Error;
 
@@ -288,11 +333,67 @@ impl TryFrom<&ServiceCapability> for MediaCodecConfig {
     }
 }
 
+/// Selects a codec and a set of capabilities for that codec, based on a preferential list of
+/// partially-defined codec capabilities, using each codec's support to find best compatable
+/// matching capability.
+/// Currently supports SBC and AAC codec capabilities.
+#[derive(Debug, Clone)]
+pub struct CodecNegotiation {
+    preferred_codecs: Vec<MediaCodecConfig>,
+}
+
+impl CodecNegotiation {
+    /// Make a new codec negotation set using `codecs` as an ordered list "ideal" capabilities.
+    /// Capabilities earlier in the list are preferred if compatable when selecting.
+    /// Returns an error if any of the capabilities provided can't be negotiated, or aren't codecs.
+    pub fn build(codecs: Vec<ServiceCapability>) -> avdtp::Result<Self> {
+        let expected = codecs.len();
+        let preferred_codecs: Vec<_> =
+            codecs.iter().filter_map(|c| MediaCodecConfig::try_from(c).ok()).collect();
+        if preferred_codecs.len() != expected {
+            return Err(format_err!("Unsupported capability used in CodecNegotiation").into());
+        }
+        Ok(Self { preferred_codecs })
+    }
+
+    /// Given a set of endpoints, return the endpoint id, and a ServiceCapability representing the
+    /// selected compatible codec parameters for that endpoint, based on our preferences.
+    /// Returns None if none of the endpoints can be supported by the preferred codecs.
+    pub fn select(
+        &self,
+        endpoints: &[avdtp::StreamEndpoint],
+    ) -> Option<(ServiceCapability, StreamEndpointId)> {
+        let codecs_with_ids: Vec<_> = endpoints
+            .iter()
+            .filter_map(|e| Self::get_codec_cap(e).map(|cap| (cap, e.local_id())))
+            .collect();
+        for preferred in &self.preferred_codecs {
+            for (codec, id) in &codecs_with_ids {
+                if let Ok(config) = MediaCodecConfig::try_from(*codec) {
+                    if let Some(negotiated) = MediaCodecConfig::negotiate(&config, &preferred) {
+                        trace!("Codec negotiation selected: {:?}", negotiated);
+                        return Some((negotiated.capability(), (*id).clone()));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn get_codec_cap<'a>(stream: &'a avdtp::StreamEndpoint) -> Option<&'a ServiceCapability> {
+        stream
+            .capabilities()
+            .iter()
+            .find(|cap| cap.category() == avdtp::ServiceCategory::MediaCodec)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use bt_avdtp::MediaType;
+    use bt_avdtp::{MediaType, StreamEndpoint};
+    use std::convert::TryInto;
 
     use crate::media_types::*;
 
@@ -397,5 +498,156 @@ mod tests {
         assert!(!sbc.supports(&aac));
         assert!(!aac.supports(&sbc));
         assert!(sbc.supports(&sbc));
+    }
+
+    /// Build an endpoint with the specified type, and local id.
+    fn test_codec_endpoint(id: u8, codec_cap: ServiceCapability) -> StreamEndpoint {
+        avdtp::StreamEndpoint::new(
+            id,
+            avdtp::MediaType::Audio,
+            avdtp::EndpointType::Sink,
+            vec![ServiceCapability::MediaTransport, codec_cap],
+        )
+        .expect("media endpoint")
+    }
+
+    #[test]
+    fn test_codec_negotiation() {
+        // It should choose nothing if there aren't any local priorities (there aren't any streams)
+        // of if there is no endpoint to choose from.
+
+        let empty_negotiation = CodecNegotiation::build(vec![]).expect("builds okay");
+
+        let sbc_seid = 1u8;
+        let aac_seid = 2u8;
+
+        let remote_endpoints = vec![
+            test_codec_endpoint(aac_seid, test_codec_cap(MediaCodecType::AUDIO_AAC)),
+            test_codec_endpoint(sbc_seid, test_codec_cap(MediaCodecType::AUDIO_SBC)),
+        ];
+
+        assert!(empty_negotiation.select(&remote_endpoints).is_none());
+
+        let priority_order = vec![
+            test_codec_cap(MediaCodecType::AUDIO_AAC),
+            test_codec_cap(MediaCodecType::AUDIO_SBC),
+        ];
+        let negotiation = CodecNegotiation::build(priority_order).expect("builds");
+
+        assert!(negotiation.select(&Vec::new()).is_none());
+
+        // Should choose the highest-priority capability that matches, regardless of order.
+
+        let aac_config = MediaCodecConfig::try_from(&test_codec_cap(MediaCodecType::AUDIO_AAC))
+            .expect("codec_config");
+        let aac_negotiated =
+            MediaCodecConfig::negotiate(&aac_config, &aac_config).expect("negotiated config");
+
+        let sbc_config = MediaCodecConfig::try_from(&test_codec_cap(MediaCodecType::AUDIO_SBC))
+            .expect("codec_config");
+        let sbc_negotiated =
+            MediaCodecConfig::negotiate(&sbc_config, &sbc_config).expect("negotiated config");
+
+        assert_eq!(
+            negotiation.select(&remote_endpoints),
+            Some((aac_negotiated.capability(), aac_seid.try_into().unwrap()))
+        );
+
+        let mut reversed_endpoints: Vec<_> = remote_endpoints.iter().map(|e| e.as_new()).collect();
+        reversed_endpoints.reverse();
+
+        assert_eq!(
+            negotiation.select(&reversed_endpoints),
+            Some((aac_negotiated.capability(), aac_seid.try_into().unwrap()))
+        );
+
+        // Should skip an endpoint if it can't match up to one it supports,
+        // even if it's higher priority.
+
+        // An AAC endpoint incompatable with the test codec caps.
+        let incompatible_aac_endpoint = test_codec_endpoint(
+            aac_seid,
+            AacCodecInfo::new(
+                AacObjectType::MPEG4_AAC_SCALABLE,
+                AacSamplingFrequency::FREQ96000HZ,
+                AacChannels::ONE,
+                true,
+                0,
+            )
+            .expect("aac codec builds")
+            .into(),
+        );
+        let incompatible_aac_endpoints =
+            vec![incompatible_aac_endpoint, remote_endpoints[1].as_new()];
+
+        assert_eq!(
+            negotiation.select(&incompatible_aac_endpoints),
+            Some((sbc_negotiated.capability(), sbc_seid.try_into().unwrap()))
+        );
+    }
+
+    #[test]
+    fn test_negotiate() {
+        let sbc_mandatory_snk = SbcCodecInfo::new(
+            SbcSamplingFrequency::MANDATORY_SNK,
+            SbcChannelMode::MANDATORY_SNK,
+            SbcBlockCount::MANDATORY_SNK,
+            SbcSubBands::MANDATORY_SNK,
+            SbcAllocation::MANDATORY_SNK,
+            23,
+            SbcCodecInfo::BITPOOL_MAX,
+        )
+        .unwrap();
+        let sbc_snk_config = MediaCodecConfig::try_from(&sbc_mandatory_snk.into()).unwrap();
+
+        // When remote end has a different set of things, we choose the single config that is within
+        // both.
+        let sbc_codec_48 = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ48000HZ,
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::MANDATORY_SRC,
+            SbcSubBands::MANDATORY_SRC,
+            SbcAllocation::MANDATORY_SRC,
+            SbcCodecInfo::BITPOOL_MIN,
+            45,
+        )
+        .unwrap();
+        let sbc_48_config = MediaCodecConfig::try_from(&sbc_codec_48.into()).unwrap();
+
+        let negotiated = MediaCodecConfig::negotiate(&sbc_snk_config, &sbc_48_config)
+            .expect("negotiation to succeed");
+
+        assert_eq!(
+            negotiated.capability(),
+            SbcCodecInfo::new(
+                SbcSamplingFrequency::FREQ48000HZ,
+                SbcChannelMode::JOINT_STEREO,
+                SbcBlockCount::SIXTEEN,
+                SbcSubBands::EIGHT,
+                SbcAllocation::LOUDNESS,
+                23,
+                45,
+            )
+            .unwrap()
+            .into()
+        );
+
+        assert!(sbc_snk_config.supports(&negotiated));
+        assert!(sbc_48_config.supports(&negotiated));
+
+        // If the configs don't overlap, returns None.
+        let sbc_codec_44 = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ44100HZ,
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::MANDATORY_SRC,
+            SbcSubBands::MANDATORY_SRC,
+            SbcAllocation::MANDATORY_SRC,
+            SbcCodecInfo::BITPOOL_MIN,
+            45,
+        )
+        .unwrap();
+        let sbc_44_config = MediaCodecConfig::try_from(&sbc_codec_44.into()).unwrap();
+
+        assert!(MediaCodecConfig::negotiate(&sbc_48_config, &sbc_44_config).is_none());
     }
 }

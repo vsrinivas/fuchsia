@@ -21,6 +21,14 @@ bitflags! {
     }
 }
 
+impl SbcSamplingFrequency {
+    /// Select the "best" sampling frequency of the ones available.
+    fn best(&self) -> Option<Self> {
+        let ordered = [Self::FREQ48000HZ, Self::FREQ44100HZ, Self::FREQ32000HZ, Self::FREQ16000HZ];
+        ordered.iter().find(|freq| self.contains(**freq)).copied()
+    }
+}
+
 bitflags! {
     /// Channel Mode field for SBC (Octet 0; b0-3).
     /// Support for all modes is mandatory in A2DP sink.
@@ -36,6 +44,13 @@ bitflags! {
             | Self::DUAL_CHANNEL.bits
             | Self::STEREO.bits
             | Self::JOINT_STEREO.bits;
+    }
+}
+
+impl SbcChannelMode {
+    fn best(&self) -> Option<Self> {
+        let ordered = [Self::JOINT_STEREO, Self::STEREO, Self::DUAL_CHANNEL, Self::MONO];
+        ordered.iter().find(|mode| self.contains(**mode)).copied()
     }
 }
 
@@ -188,8 +203,8 @@ impl SbcCodecInfo {
         let hz = match SbcSamplingFrequency::from_bits_truncate(self.0.sampling_frequency()) {
             SbcSamplingFrequency::FREQ16000HZ => 16000,
             SbcSamplingFrequency::FREQ32000HZ => 32000,
-            SbcSamplingFrequency::FREQ48000HZ => 48000,
             SbcSamplingFrequency::FREQ44100HZ => 44100,
+            SbcSamplingFrequency::FREQ48000HZ => 48000,
             _ => return Err(avdtp::Error::OutOfRange),
         };
         Ok(hz)
@@ -224,6 +239,43 @@ impl SbcCodecInfo {
         }
         return true;
     }
+
+    /// Return the best intersection of a and b's capabilites, if one exists.
+    pub fn negotiate(a: &Self, b: &Self) -> Option<Self> {
+        let min_bitpool = std::cmp::max(a.0.minbitpoolval(), b.0.minbitpoolval());
+        let max_bitpool = std::cmp::min(a.0.maxbitpoolval(), b.0.maxbitpoolval());
+        if max_bitpool < min_bitpool {
+            return None;
+        }
+        let available_frequencies = SbcSamplingFrequency::from_bits_truncate(
+            a.0.sampling_frequency() & b.0.sampling_frequency(),
+        );
+        let frequency = match available_frequencies.best() {
+            None => return None,
+            Some(freq) => freq,
+        };
+        let available_mode = a.channel_mode() & b.channel_mode();
+        let channel_mode = match available_mode.best() {
+            None => return None,
+            Some(mode) => mode,
+        };
+        // All sources and sinks must support these options. A2DP 1.3.2 Sec 4.3.2
+        let allocation = SbcAllocation::LOUDNESS;
+        let block_count = SbcBlockCount::SIXTEEN;
+        let sub_bands = SbcSubBands::EIGHT;
+        Some(
+            SbcCodecInfo::new(
+                frequency,
+                channel_mode,
+                block_count,
+                sub_bands,
+                allocation,
+                min_bitpool,
+                max_bitpool,
+            )
+            .expect("supported options"),
+        )
+    }
 }
 
 impl TryFrom<&[u8]> for SbcCodecInfo {
@@ -238,6 +290,16 @@ impl TryFrom<&[u8]> for SbcCodecInfo {
         codec_info_bytes.copy_from_slice(&value);
 
         Ok(Self(SbcCodecInfoBits(u32::from_be_bytes(codec_info_bytes))))
+    }
+}
+
+impl From<SbcCodecInfo> for avdtp::ServiceCapability {
+    fn from(codec_info: SbcCodecInfo) -> Self {
+        Self::MediaCodec {
+            media_type: avdtp::MediaType::Audio,
+            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+            codec_extra: codec_info.to_bytes().to_vec(),
+        }
     }
 }
 
@@ -278,6 +340,14 @@ bitflags! {
     }
 }
 
+impl AacSamplingFrequency {
+    fn best(&self) -> Option<Self> {
+        // Since one of 48000 or 44100 is mandatory, this list should find one.
+        let ordered = [Self::FREQ96000HZ, Self::FREQ48000HZ, Self::FREQ44100HZ];
+        ordered.iter().find(|freq| self.contains(**freq)).copied()
+    }
+}
+
 bitflags! {
     /// Channels field for MPEG-2,4 AAC (Octet 2; b2-3).
     /// Support for both 1 and 2 channels is mandatory in A2DP Sink.
@@ -287,6 +357,13 @@ bitflags! {
         const ONE = 0b10;
         const TWO = 0b01;
         const MANDATORY_SNK = Self::ONE.bits | Self::TWO.bits;
+    }
+}
+
+impl AacChannels {
+    fn best(&self) -> Option<Self> {
+        let ordered = [Self::TWO, Self::ONE];
+        ordered.iter().find(|channels| self.contains(**channels)).copied()
     }
 }
 
@@ -434,6 +511,31 @@ impl AacCodecInfo {
         }
         return true;
     }
+
+    pub fn negotiate(a: &Self, b: &Self) -> Option<Self> {
+        let available_frequencies = AacSamplingFrequency::from_bits_truncate(
+            a.0.sampling_frequency() & b.0.sampling_frequency(),
+        );
+        let sampling_frequency = match available_frequencies.best() {
+            None => return None,
+            Some(freq) => freq,
+        };
+        let available_channels = a.channels() & b.channels();
+        let channels = match available_channels.best() {
+            None => return None,
+            Some(channels) => channels,
+        };
+        let vbr = a.variable_bit_rate() && b.variable_bit_rate();
+        // If either bitrate is unspecified, take the other one, otherwise, the minimum.
+        let bitrate = match (a.bitrate(), b.bitrate()) {
+            (0, b) => b,
+            (a, 0) => a,
+            (a, b) => std::cmp::min(a, b),
+        };
+        // This option is mandatory for source and sink and we prefer it. See A2DP 1.3.2 Sec 4.5.2
+        let object_type = AacObjectType::MPEG2_AAC_LC;
+        Some(AacCodecInfo::new(object_type, sampling_frequency, channels, vbr, bitrate).unwrap())
+    }
 }
 
 impl TryFrom<&[u8]> for AacCodecInfo {
@@ -452,6 +554,17 @@ impl TryFrom<&[u8]> for AacCodecInfo {
         Ok(Self(AacCodecInfoBits(u64::from_be_bytes(codec_info_bytes))))
     }
 }
+
+impl From<AacCodecInfo> for avdtp::ServiceCapability {
+    fn from(codec_info: AacCodecInfo) -> Self {
+        Self::MediaCodec {
+            media_type: avdtp::MediaType::Audio,
+            codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+            codec_extra: codec_info.to_bytes().to_vec(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

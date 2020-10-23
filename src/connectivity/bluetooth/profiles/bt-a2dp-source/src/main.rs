@@ -8,7 +8,12 @@ use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     async_helpers::component_lifecycle::ComponentLifecycleServer,
-    bt_a2dp::{codec::MediaCodecConfig, media_types::*, peer::ControllerPool, stream},
+    bt_a2dp::{
+        codec::{CodecNegotiation, MediaCodecConfig},
+        media_types::*,
+        peer::ControllerPool,
+        stream,
+    },
     bt_avdtp::{self as avdtp, ServiceCapability},
     fidl::{encoding::Decodable, endpoints::create_request_stream},
     fidl_fuchsia_bluetooth_bredr as bredr,
@@ -75,9 +80,10 @@ pub const AAC_SEID: u8 = 7;
 // Highest AAC bitrate we want to transmit
 const MAX_BITRATE_AAC: u32 = 250000;
 
-pub fn build_sbc_endpoint(
-    endpoint_type: avdtp::EndpointType,
-) -> avdtp::Result<avdtp::StreamEndpoint> {
+/// Pick a reasonable quality bitrate to use by default. 64k average per channel.
+const PREFERRED_BITRATE_AAC: u32 = 128000;
+
+fn build_sbc_capability() -> avdtp::Result<avdtp::ServiceCapability> {
     let sbc_codec_info = SbcCodecInfo::new(
         SbcSamplingFrequency::FREQ48000HZ,
         SbcChannelMode::JOINT_STEREO,
@@ -88,47 +94,49 @@ pub fn build_sbc_endpoint(
         SbcCodecInfo::BITPOOL_MAX,
     )?;
     trace!("Supported SBC codec parameters: {:?}.", sbc_codec_info);
+    Ok(ServiceCapability::MediaCodec {
+        media_type: avdtp::MediaType::Audio,
+        codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+        codec_extra: sbc_codec_info.to_bytes().to_vec(),
+    })
+}
 
+pub fn build_sbc_endpoint(
+    endpoint_type: avdtp::EndpointType,
+) -> avdtp::Result<avdtp::StreamEndpoint> {
     avdtp::StreamEndpoint::new(
         SBC_SEID,
         avdtp::MediaType::Audio,
         endpoint_type,
-        vec![
-            ServiceCapability::MediaTransport,
-            ServiceCapability::MediaCodec {
-                media_type: avdtp::MediaType::Audio,
-                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                codec_extra: sbc_codec_info.to_bytes().to_vec(),
-            },
-        ],
+        vec![ServiceCapability::MediaTransport, build_sbc_capability()?],
     )
 }
 
-pub fn build_aac_endpoint(
-    endpoint_type: avdtp::EndpointType,
-) -> avdtp::Result<avdtp::StreamEndpoint> {
+fn build_aac_capability(bitrate: u32) -> avdtp::Result<avdtp::ServiceCapability> {
     let aac_codec_info = AacCodecInfo::new(
         AacObjectType::MANDATORY_SRC,
         AacSamplingFrequency::FREQ48000HZ,
         AacChannels::TWO,
         true,
-        MAX_BITRATE_AAC,
+        bitrate,
     )?;
-
     trace!("Supported AAC codec parameters: {:?}.", aac_codec_info);
 
+    Ok(ServiceCapability::MediaCodec {
+        media_type: avdtp::MediaType::Audio,
+        codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+        codec_extra: aac_codec_info.to_bytes().to_vec(),
+    })
+}
+
+pub fn build_aac_endpoint(
+    endpoint_type: avdtp::EndpointType,
+) -> avdtp::Result<avdtp::StreamEndpoint> {
     avdtp::StreamEndpoint::new(
         AAC_SEID,
         avdtp::MediaType::Audio,
         endpoint_type,
-        vec![
-            ServiceCapability::MediaTransport,
-            ServiceCapability::MediaCodec {
-                media_type: avdtp::MediaType::Audio,
-                codec_type: avdtp::MediaCodecType::AUDIO_AAC,
-                codec_extra: aac_codec_info.to_bytes().to_vec(),
-            },
-        ],
+        vec![ServiceCapability::MediaTransport, build_aac_capability(MAX_BITRATE_AAC)?],
     )
 }
 
@@ -255,7 +263,12 @@ async fn main() -> Result<(), Error> {
     profile_svc.search(bredr::ServiceClassProfileIdentifier::AudioSink, &ATTRS, results_client)?;
 
     let streams = build_local_streams(opts.source)?;
-    let mut peers = Peers::new(streams, profile_svc, signaling_channel_mode, controller_pool);
+    let negotiation = CodecNegotiation::build(vec![
+        build_aac_capability(PREFERRED_BITRATE_AAC)?,
+        build_sbc_capability()?,
+    ])?;
+    let mut peers =
+        Peers::new(streams, negotiation, profile_svc, signaling_channel_mode, controller_pool);
     if let Err(e) = peers.iattach(inspect.root(), "connected") {
         info!("Failed to attach peers to inspect: {:?}", e);
     }
@@ -338,6 +351,7 @@ mod tests {
 
         let peers = Peers::new(
             stream::Streams::new(),
+            CodecNegotiation::build(vec![]).expect("build empty codecs"),
             profile_proxy,
             bredr::ChannelMode::Basic,
             controller,

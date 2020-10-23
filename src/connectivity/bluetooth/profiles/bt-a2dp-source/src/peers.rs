@@ -4,8 +4,8 @@
 
 use {
     anyhow::{format_err, Error},
-    bt_a2dp::{media_types::*, peer::ControllerPool, peer::Peer, stream},
-    bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory},
+    bt_a2dp::{codec::CodecNegotiation, peer::ControllerPool, peer::Peer, stream},
+    bt_avdtp as avdtp,
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_async::{self as fasync, DurationExt},
@@ -17,10 +17,7 @@ use {
     fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
     log::{info, warn},
-    std::{
-        convert::{TryFrom, TryInto},
-        sync::Arc,
-    },
+    std::{convert::TryInto, sync::Arc},
 };
 
 use crate::{AAC_SEID, SBC_SEID};
@@ -28,6 +25,7 @@ use crate::{AAC_SEID, SBC_SEID};
 pub struct Peers {
     peers: DetachableMap<PeerId, Peer>,
     streams: stream::Streams,
+    negotiation: CodecNegotiation,
     profile: bredr::ProfileProxy,
     /// The L2CAP channel mode preference for the AVDTP signaling channel.
     channel_mode: bredr::ChannelMode,
@@ -42,6 +40,7 @@ const INITIATOR_DELAY: zx::Duration = zx::Duration::from_seconds(2);
 impl Peers {
     pub fn new(
         streams: stream::Streams,
+        negotiation: CodecNegotiation,
         profile: bredr::ProfileProxy,
         channel_mode: bredr::ChannelMode,
         controller: Arc<ControllerPool>,
@@ -51,6 +50,7 @@ impl Peers {
             inspect: inspect::Node::default(),
             profile,
             streams,
+            negotiation,
             channel_mode,
             controller,
         }
@@ -69,6 +69,7 @@ impl Peers {
         channel: Channel,
         desc: Option<bredr::ProfileDescriptor>,
         streams: stream::Streams,
+        negotiation: CodecNegotiation,
         profile: bredr::ProfileProxy,
         controller_pool: Arc<ControllerPool>,
         inspect: &inspect::Node,
@@ -99,7 +100,7 @@ impl Peers {
         controller_pool.peer_connected(id.clone(), detached_peer.clone());
 
         if start_streaming_flag {
-            Peers::spawn_streaming(entry.clone());
+            Peers::spawn_streaming(entry.clone(), negotiation);
         }
 
         let peer_id = id.clone();
@@ -120,6 +121,7 @@ impl Peers {
         let channel_mode = self.channel_mode.clone();
         let controller_pool = self.controller.clone();
         let inspect = self.inspect.clone_weak();
+        let negotiation = self.negotiation.clone();
         fasync::Task::local(async move {
             info!("Waiting {:?} to connect to discovered peer {}", INITIATOR_DELAY, id);
             fasync::Timer::new(INITIATOR_DELAY.after_now()).await;
@@ -128,7 +130,7 @@ impl Peers {
                 if let Some(peer) = peer.upgrade() {
                     if peer.set_descriptor(desc.clone()).is_none() {
                         // TODO(fxbug.dev/50465): maybe check to see if we should start streaming.
-                        Peers::spawn_streaming(entry.clone());
+                        Peers::spawn_streaming(entry.clone(), negotiation);
                     }
                 }
                 return;
@@ -169,6 +171,7 @@ impl Peers {
                 channel,
                 Some(desc),
                 streams,
+                negotiation,
                 profile,
                 controller_pool,
                 &inspect,
@@ -196,6 +199,7 @@ impl Peers {
             channel,
             None,
             self.streams.as_new(),
+            self.negotiation.clone(),
             self.profile.clone(),
             self.controller.clone(),
             &self.inspect,
@@ -203,13 +207,13 @@ impl Peers {
     }
 
     /// Attempt to start a media stream to `peer`
-    fn spawn_streaming(entry: LazyEntry<PeerId, Peer>) {
+    fn spawn_streaming(entry: LazyEntry<PeerId, Peer>, negotiation: CodecNegotiation) {
         let weak_peer = match entry.get() {
             None => return,
             Some(peer) => peer,
         };
         fuchsia_async::Task::local(async move {
-            if let Err(e) = start_streaming(&weak_peer).await {
+            if let Err(e) = start_streaming(&weak_peer, &negotiation).await {
                 info!("Failed to stream: {:?}", e);
                 weak_peer.detach();
             }
@@ -225,141 +229,35 @@ impl Inspect for &mut Peers {
     }
 }
 
-async fn start_streaming(peer: &DetachableWeak<PeerId, Peer>) -> Result<(), anyhow::Error> {
+async fn start_streaming(
+    peer: &DetachableWeak<PeerId, Peer>,
+    negotiation: &CodecNegotiation,
+) -> Result<(), anyhow::Error> {
     let streams_fut = {
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
         strong.collect_capabilities()
     };
     let remote_streams = streams_fut.await?;
-    let selected_stream = SelectedStream::pick(&remote_streams)?;
+
+    let (codec_caps, remote_seid) =
+        negotiation.select(&remote_streams).ok_or(format_err!("No compatible stream found"))?;
+
+    let local_seid = match codec_caps.codec_type() {
+        Some(&avdtp::MediaCodecType::AUDIO_AAC) => AAC_SEID,
+        Some(&avdtp::MediaCodecType::AUDIO_SBC) => SBC_SEID,
+        _ => return Err(format_err!("Unsupported codec type")),
+    };
 
     let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
-    strong
-        .stream_start(
-            selected_stream.seid.try_into()?,
-            selected_stream.remote_stream.local_id().clone(),
-            selected_stream.codec_settings.clone(),
-        )
-        .await
-        .map_err(Into::into)
-}
-
-/// Pick a reasonable quality bitrate to use by default. 64k average per channel.
-const PREFERRED_BITRATE_AAC: u32 = 128000;
-
-/// Represents a chosen remote stream endpoint and negotiated codec and encoder settings
-#[derive(Debug)]
-struct SelectedStream<'a> {
-    remote_stream: &'a avdtp::StreamEndpoint,
-    codec_settings: ServiceCapability,
-    seid: u8,
-}
-
-impl<'a> SelectedStream<'a> {
-    /// From the list of available remote streams, pick our preferred one and return matching codec parameters.
-    fn pick(
-        remote_streams: &'a Vec<avdtp::StreamEndpoint>,
-    ) -> Result<SelectedStream<'_>, anyhow::Error> {
-        // prefer AAC
-        let (remote_stream, seid) =
-            match Self::find_stream(remote_streams, &avdtp::MediaCodecType::AUDIO_AAC) {
-                Some(aac_stream) => (aac_stream, AAC_SEID),
-                None => (
-                    Self::find_stream(remote_streams, &avdtp::MediaCodecType::AUDIO_SBC)
-                        .ok_or(format_err!("Couldn't find a compatible stream"))?,
-                    SBC_SEID,
-                ),
-            };
-
-        let codec_settings = Self::negotiate_codec_settings(remote_stream)?;
-
-        Ok(SelectedStream { remote_stream, codec_settings, seid })
-    }
-
-    /// From `stream` remote options, select our preferred and supported encoding options
-    fn negotiate_codec_settings(
-        stream: &'a avdtp::StreamEndpoint,
-    ) -> Result<ServiceCapability, Error> {
-        let codec_cap = Self::get_codec_cap(stream).ok_or(format_err!("no codec extra found"))?;
-        match codec_cap {
-            ServiceCapability::MediaCodec {
-                codec_type: avdtp::MediaCodecType::AUDIO_AAC,
-                codec_extra,
-                ..
-            } => {
-                let remote_codec_info = AacCodecInfo::try_from(&codec_extra[..])?;
-                let negotiated_bitrate =
-                    std::cmp::min(remote_codec_info.bitrate(), PREFERRED_BITRATE_AAC);
-                // Remote peers have to support these options
-                let aac_codec_info = AacCodecInfo::new(
-                    AacObjectType::MPEG2_AAC_LC,
-                    AacSamplingFrequency::FREQ48000HZ,
-                    AacChannels::TWO,
-                    true,
-                    negotiated_bitrate,
-                )?;
-                Ok(ServiceCapability::MediaCodec {
-                    media_type: avdtp::MediaType::Audio,
-                    codec_type: avdtp::MediaCodecType::AUDIO_AAC,
-                    codec_extra: aac_codec_info.to_bytes().to_vec(),
-                })
-            }
-            ServiceCapability::MediaCodec {
-                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                codec_extra,
-                ..
-            } => {
-                // TODO(fxbug.dev/39321): Choose codec options based on availability and quality.
-                let remote_codec_info = SbcCodecInfo::try_from(&codec_extra[..])?;
-                // Attempt to use the recommended "High Quality" bitpool value.
-                let mut bitpool_value = 51;
-                bitpool_value = std::cmp::min(bitpool_value, remote_codec_info.max_bitpool());
-                let sbc_codec_info = SbcCodecInfo::new(
-                    SbcSamplingFrequency::FREQ48000HZ,
-                    SbcChannelMode::JOINT_STEREO,
-                    SbcBlockCount::SIXTEEN,
-                    SbcSubBands::EIGHT,
-                    SbcAllocation::LOUDNESS,
-                    /* min_bpv= */ bitpool_value,
-                    /* max_bpv= */ bitpool_value,
-                )?;
-
-                Ok(ServiceCapability::MediaCodec {
-                    media_type: avdtp::MediaType::Audio,
-                    codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                    codec_extra: sbc_codec_info.to_bytes().to_vec(),
-                })
-            }
-            ServiceCapability::MediaCodec { codec_type, .. } => {
-                Err(format_err!("Unsupported codec {:?}", codec_type))
-            }
-            x => Err(format_err!("Expected MediaCodec and got {:?}", x)),
-        }
-    }
-
-    fn find_stream(
-        remote_streams: &'a Vec<avdtp::StreamEndpoint>,
-        codec_type: &avdtp::MediaCodecType,
-    ) -> Option<&'a avdtp::StreamEndpoint> {
-        remote_streams
-            .iter()
-            .filter(|stream| stream.information().endpoint_type() == &avdtp::EndpointType::Sink)
-            .find(|stream| stream.codec_type() == Some(codec_type))
-    }
-
-    fn get_codec_cap(stream: &'a avdtp::StreamEndpoint) -> Option<&'a ServiceCapability> {
-        stream.capabilities().iter().find(|cap| cap.category() == ServiceCategory::MediaCodec)
-    }
+    strong.stream_start(local_seid.try_into()?, remote_seid, codec_caps).await.map_err(Into::into)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{build_aac_endpoint, build_sbc_endpoint};
 
     use fidl::endpoints::create_proxy_and_stream;
     use fuchsia_inspect::assert_inspect_tree;
-    use matches::assert_matches;
 
     fn setup_peers_test() -> (fasync::Executor, PeerId, Peers, bredr::ProfileRequestStream) {
         let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
@@ -368,8 +266,14 @@ mod tests {
         let controller = Arc::new(ControllerPool::new());
         let id = PeerId(1);
 
-        let peers =
-            Peers::new(stream::Streams::new(), proxy, bredr::ChannelMode::Basic, controller);
+        let negotiation = CodecNegotiation::build(vec![]).expect("negotiation builds");
+        let peers = Peers::new(
+            stream::Streams::new(),
+            negotiation,
+            proxy,
+            bredr::ChannelMode::Basic,
+            controller,
+        );
 
         (exec, id, peers, stream)
     }
@@ -436,93 +340,5 @@ mod tests {
         assert_inspect_tree!(inspect, root: { peers: { peer_0: {
             id: "0000000000000001", local_streams: contains {}
         }}});
-    }
-
-    #[test]
-    fn test_stream_selection() {
-        let sbc_endpoint = build_sbc_endpoint(avdtp::EndpointType::Sink).expect("sbc endpoint");
-        let aac_endpoint = build_aac_endpoint(avdtp::EndpointType::Sink).expect("aac endpoint");
-
-        // test that aac is preferred
-        let remote_streams = vec![aac_endpoint.as_new(), sbc_endpoint.as_new()];
-        assert_matches!(
-            SelectedStream::pick(&remote_streams),
-            Ok(SelectedStream {
-                seid: AAC_SEID,
-                codec_settings:
-                    ServiceCapability::MediaCodec {
-                        media_type: avdtp::MediaType::Audio,
-                        codec_type: avdtp::MediaCodecType::AUDIO_AAC,
-                        ..
-                    },
-                ..
-            })
-        );
-
-        // only sbc available, should return sbc
-        let remote_streams = vec![sbc_endpoint.as_new()];
-        assert_matches!(
-            SelectedStream::pick(&remote_streams),
-            Ok(SelectedStream {
-                seid: SBC_SEID,
-                codec_settings:
-                    ServiceCapability::MediaCodec {
-                        media_type: avdtp::MediaType::Audio,
-                        codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                        ..
-                    },
-                ..
-            })
-        );
-
-        // none available, should error
-        let remote_streams = vec![];
-        assert!(SelectedStream::pick(&remote_streams).is_err());
-
-        // When remote end has a bitpool max that is lower than our preferred, the selected bitpool
-        // value doesn't go out of range.
-        let lower_max_bpv = 45;
-        let sbc_codec_info = SbcCodecInfo::new(
-            SbcSamplingFrequency::FREQ48000HZ,
-            SbcChannelMode::JOINT_STEREO,
-            SbcBlockCount::MANDATORY_SRC,
-            SbcSubBands::MANDATORY_SRC,
-            SbcAllocation::MANDATORY_SRC,
-            SbcCodecInfo::BITPOOL_MIN,
-            lower_max_bpv,
-        )
-        .expect("sbc_codec_info");
-        let remote_streams = vec![avdtp::StreamEndpoint::new(
-            SBC_SEID,
-            avdtp::MediaType::Audio,
-            avdtp::EndpointType::Sink,
-            vec![
-                ServiceCapability::MediaTransport,
-                ServiceCapability::MediaCodec {
-                    media_type: avdtp::MediaType::Audio,
-                    codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                    codec_extra: sbc_codec_info.to_bytes().to_vec(),
-                },
-            ],
-        )
-        .expect("stream endpoint")];
-
-        match SelectedStream::pick(&remote_streams) {
-            Ok(SelectedStream {
-                seid: SBC_SEID,
-                codec_settings:
-                    ServiceCapability::MediaCodec {
-                        media_type: avdtp::MediaType::Audio,
-                        codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                        codec_extra,
-                    },
-                ..
-            }) => {
-                let codec_info =
-                    SbcCodecInfo::try_from(&codec_extra[..]).expect("codec extra to parse");
-                assert!(codec_info.max_bitpool() <= lower_max_bpv);
-            }
-            x => panic!("Expected Ok Selected SBC stream, got {:?}", x),
-        };
     }
 }

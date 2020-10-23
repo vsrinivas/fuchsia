@@ -561,10 +561,10 @@ impl ServiceCapability {
         }
     }
 
-    pub fn is_codec_type(&self, codec: &MediaCodecType) -> bool {
+    pub fn codec_type(&self) -> Option<&MediaCodecType> {
         match self {
-            ServiceCapability::MediaCodec { codec_type, .. } => codec_type == codec,
-            _ => false,
+            ServiceCapability::MediaCodec { codec_type, .. } => Some(codec_type),
+            _ => None,
         }
     }
 }
@@ -799,9 +799,7 @@ mod test {
         assert!(sbc_codec.is_codec());
         assert!(!transport.is_codec());
 
-        assert!(sbc_codec.is_codec_type(&MediaCodecType::AUDIO_SBC));
-        assert!(!sbc_codec.is_codec_type(&MediaCodecType::AUDIO_AAC));
-        assert!(!transport.is_codec_type(&MediaCodecType::AUDIO_SBC));
-        assert!(!transport.is_codec_type(&MediaCodecType::AUDIO_AAC));
+        assert_eq!(Some(&MediaCodecType::AUDIO_SBC), sbc_codec.codec_type());
+        assert_eq!(None, transport.codec_type());
     }
 }
