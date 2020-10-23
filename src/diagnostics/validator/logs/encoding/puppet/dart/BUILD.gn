@@ -14,10 +14,10 @@ dart_app("log-validator-dart-puppet") {
       package_root = "."
       sources = [ "main.dart" ]
       deps = [
+        "../../fidl:validate",
         "//sdk/fidl/fuchsia.diagnostics.stream",
         "//sdk/fidl/fuchsia.mem",
         "//src/diagnostics/lib/streams/dart:fuchsia_diagnostic_streams",
-        "//src/diagnostics/validator/logs/fidl:validate",
         "//topaz/public/dart/fidl",
         "//topaz/public/dart/fuchsia_logger",
         "//topaz/public/dart/fuchsia_services",
@@ -31,23 +31,5 @@ dart_app("log-validator-dart-puppet") {
       path = rebase_path("meta/puppet.cmx")
       dest = "log-validator-dart-puppet.cmx"
     },
-  ]
-}
-
-fuchsia_component("log-validator-for-dart") {
-  manifest = "meta/validator.cmx"
-  deps = [ "../..:log-validator-bin" ]
-}
-
-fuchsia_test_package("log-validator-test-dart") {
-  deps = [ ":log-validator-dart-puppet" ]
-  test_components = [ ":log-validator-for-dart" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [
-    ":log-validator-dart-puppet",
-    ":log-validator-test-dart",
   ]
 }

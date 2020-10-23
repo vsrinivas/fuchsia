@@ -11,8 +11,8 @@ rustc_binary("puppet") {
   testonly = true
 
   deps = [
+    "../../fidl:validate-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//src/diagnostics/validator/logs/fidl:validate-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/stream/rust",
     "//src/lib/fidl/rust/fidl",
@@ -28,23 +28,9 @@ rustc_binary("puppet") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("log-validator-rust-puppet") {
+fuchsia_component("component") {
+  component_name = "log-validator-rust-puppet"
   testonly = true
   manifest = "meta/puppet.cmx"
   deps = [ ":puppet" ]
-}
-
-fuchsia_component("log-validator-for-rust") {
-  manifest = "meta/validator.cmx"
-  deps = [ "../..:log-validator-bin" ]
-}
-
-fuchsia_test_package("log-validator-test-rust") {
-  deps = [ ":log-validator-rust-puppet" ]
-  test_components = [ ":log-validator-for-rust" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":log-validator-test-rust" ]
 }

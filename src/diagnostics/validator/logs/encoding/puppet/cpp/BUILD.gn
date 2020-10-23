@@ -10,13 +10,13 @@ executable("puppet") {
   sources = [ "puppet.cc" ]
 
   deps = [
+    "../../fidl:validate",
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp:backend",
     "//sdk/lib/syslog/cpp:cpp",
     "//sdk/lib/syslog/streams/cpp:streams",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
-    "//src/diagnostics/validator/logs/fidl:validate",
     "//src/lib/fsl",
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -24,23 +24,9 @@ executable("puppet") {
   ]
 }
 
-fuchsia_component("log-validator-cpp-puppet") {
+fuchsia_component("component") {
+  component_name = "log-validator-cpp-puppet"
   testonly = true
   manifest = "meta/puppet.cmx"
   deps = [ ":puppet" ]
-}
-
-fuchsia_component("log-validator-for-cpp") {
-  manifest = "meta/validator.cmx"
-  deps = [ "../..:log-validator-bin" ]
-}
-
-fuchsia_test_package("log-validator-test-cpp") {
-  deps = [ ":log-validator-cpp-puppet" ]
-  test_components = [ ":log-validator-for-cpp" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":log-validator-test-cpp" ]
 }
