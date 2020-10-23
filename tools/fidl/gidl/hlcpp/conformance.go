@@ -18,46 +18,100 @@ import (
 )
 
 var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
-#include <conformance/cpp/fidl.h>
 #include <gtest/gtest.h>
 
-#include "lib/fidl/cpp/test/test_util.h"
+#include <conformance/cpp/fidl.h>
+#include <lib/fidl/cpp/test/test_util.h>
+
+#ifdef __Fuchsia__
+#include <lib/fidl/cpp/test/handle_util.h>
+#include <zircon/syscalls.h>
+#endif
 
 {{ range .EncodeSuccessCases }}
+{{- if .FuchsiaOnly }}
+#ifdef __Fuchsia__
+{{- end }}
 TEST(Conformance, {{ .Name }}_Encode) {
+	{{- if .HandleDefs }}
+	const auto handle_defs = {{ .HandleDefs }};
+	{{- end }}
 	{{ .ValueBuild }}
-	const auto expected = {{ .Bytes }};
+	const auto expected_bytes = {{ .Bytes }};
+	const auto expected_handles = {{ .Handles }};
 	{{/* Must use a variable because macros don't understand commas in template args. */}}
 	const auto result =
 		fidl::test::util::ValueToBytes<{{ .ValueType }}>(
-			{{ .ValueVar }}, expected);
+			{{ .ValueVar }}, expected_bytes, expected_handles);
 	EXPECT_TRUE(result);
+	{{- /* The handles are closed by the fidl::Message destructor in ValueToBytes. */}}
 }
+{{- if .FuchsiaOnly }}
+#endif  // __Fuchsia__
+{{- end }}
 {{ end }}
 
 {{ range .DecodeSuccessCases }}
+{{- if .FuchsiaOnly }}
+#ifdef __Fuchsia__
+{{- end }}
 TEST(Conformance, {{ .Name }}_Decode) {
+	{{- if .HandleDefs }}
+	const auto handle_defs = {{ .HandleDefs }};
+	{{- end }}
 	{{ .ValueBuild }}
 	auto bytes = {{ .Bytes }};
+	auto handles = {{ .Handles }};
 	EXPECT_TRUE(fidl::Equals(
-		fidl::test::util::DecodedBytes<{{ .ValueType }}>(bytes),
+		fidl::test::util::DecodedBytes<{{ .ValueType }}>(bytes, handles),
 		{{ .ValueVar }}));
 }
+{{- if .FuchsiaOnly }}
+#endif  // __Fuchsia__
+{{- end }}
 {{ end }}
 
 {{ range .EncodeFailureCases }}
+{{- if .FuchsiaOnly }}
+#ifdef __Fuchsia__
+{{- end }}
 TEST(Conformance, {{ .Name }}_Encode_Failure) {
+	{{- if .HandleDefs }}
+	const auto handle_defs = {{ .HandleDefs }};
+	{{- end }}
 	{{ .ValueBuild }}
 	fidl::test::util::CheckEncodeFailure<{{ .ValueType }}>(
 		{{ .ValueVar }}, {{ .ErrorCode }});
+	{{- if .HandleDefs }}
+	for (const auto handle : handle_defs) {
+		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+	}
+	{{- end }}
 }
+{{- if .FuchsiaOnly }}
+#endif  // __Fuchsia__
+{{- end }}
 {{ end }}
 
 {{ range .DecodeFailureCases }}
+{{- if .FuchsiaOnly }}
+#ifdef __Fuchsia__
+{{- end }}
 TEST(Conformance, {{ .Name }}_Decode_Failure) {
+	{{- if .HandleDefs }}
+	const auto handle_defs = {{ .HandleDefs }};
+	{{- end }}
 	auto bytes = {{ .Bytes }};
 	fidl::test::util::CheckDecodeFailure<{{ .ValueType }}>(bytes, {{ .ErrorCode }});
+	{{- if .HandleDefs }}
+	for (const auto handle : handle_defs) {
+		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+	}
+	{{- end }}
 }
+{{- if .FuchsiaOnly }}
+#endif  // __Fuchsia__
+{{- end }}
 {{ end }}
 `))
 
@@ -69,19 +123,23 @@ type conformanceTmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, ValueType, ValueBuild, ValueVar, Bytes string
+	Name, HandleDefs, ValueType, ValueBuild, ValueVar, Bytes, Handles string
+	FuchsiaOnly                                                       bool
 }
 
 type decodeSuccessCase struct {
-	Name, ValueBuild, ValueType, ValueVar, Bytes string
+	Name, HandleDefs, ValueType, ValueBuild, ValueVar, Bytes, Handles string
+	FuchsiaOnly                                                       bool
 }
 
 type encodeFailureCase struct {
-	Name, ValueType, ValueBuild, ValueVar, ErrorCode string
+	Name, HandleDefs, ValueType, ValueBuild, ValueVar, ErrorCode string
+	FuchsiaOnly                                                  bool
 }
 
 type decodeFailureCase struct {
-	Name, ValueType, Bytes, ErrorCode string
+	Name, HandleDefs, ValueType, Bytes, Handles, ErrorCode string
+	FuchsiaOnly                                            bool
 }
 
 // Generate generates High-Level C++ tests.
@@ -129,11 +187,14 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-				Name:       testCaseName(encodeSuccess.Name, encoding.WireFormat),
-				ValueBuild: valueBuild,
-				ValueVar:   valueVar,
-				ValueType:  declName(decl),
-				Bytes:      bytesBuilder(encoding.Bytes),
+				Name:        testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				HandleDefs:  BuildHandleDefs(encodeSuccess.HandleDefs),
+				ValueBuild:  valueBuild,
+				ValueVar:    valueVar,
+				ValueType:   declName(decl),
+				Bytes:       buildBytes(encoding.Bytes),
+				Handles:     buildHandles(encoding.Handles),
+				FuchsiaOnly: decl.IsResource(),
 			})
 		}
 	}
@@ -155,11 +216,14 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				ValueBuild: valueBuild,
-				ValueVar:   valueVar,
-				ValueType:  declName(decl),
-				Bytes:      bytesBuilder(encoding.Bytes),
+				Name:        testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				HandleDefs:  BuildHandleDefs(decodeSuccess.HandleDefs),
+				ValueBuild:  valueBuild,
+				ValueVar:    valueVar,
+				ValueType:   declName(decl),
+				Bytes:       buildBytes(encoding.Bytes),
+				Handles:     buildHandles(encoding.Handles),
+				FuchsiaOnly: decl.IsResource(),
 			})
 		}
 	}
@@ -183,11 +247,13 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 				continue
 			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
-				Name:       testCaseName(encodeFailure.Name, wireFormat),
-				ValueBuild: valueBuild,
-				ValueVar:   valueVar,
-				ValueType:  declName(decl),
-				ErrorCode:  errorCode,
+				Name:        testCaseName(encodeFailure.Name, wireFormat),
+				HandleDefs:  BuildHandleDefs(encodeFailure.HandleDefs),
+				ValueBuild:  valueBuild,
+				ValueVar:    valueVar,
+				ValueType:   declName(decl),
+				ErrorCode:   errorCode,
+				FuchsiaOnly: decl.IsResource(),
 			})
 		}
 	}
@@ -197,7 +263,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmixer.Schema) ([]decodeFailureCase, error) {
 	var decodeFailureCases []decodeFailureCase
 	for _, decodeFailure := range gidlDecodeFailures {
-		_, err := schema.ExtractDeclarationByName(decodeFailure.Type)
+		decl, err := schema.ExtractDeclarationByName(decodeFailure.Type)
 		if err != nil {
 			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
 		}
@@ -208,10 +274,13 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
-				Name:      testCaseName(decodeFailure.Name, encoding.WireFormat),
-				ValueType: valueType,
-				Bytes:     bytesBuilder(encoding.Bytes),
-				ErrorCode: errorCode,
+				Name:        testCaseName(decodeFailure.Name, encoding.WireFormat),
+				HandleDefs:  BuildHandleDefs(decodeFailure.HandleDefs),
+				ValueType:   valueType,
+				Bytes:       buildBytes(encoding.Bytes),
+				Handles:     buildHandles(encoding.Handles),
+				ErrorCode:   errorCode,
+				FuchsiaOnly: decl.IsResource(),
 			})
 		}
 	}
@@ -236,11 +305,27 @@ func cppConformanceType(gidlTypeString string) string {
 	return "conformance::" + gidlTypeString
 }
 
-func bytesBuilder(bytes []byte) string {
+func buildBytes(bytes []byte) string {
 	var builder strings.Builder
 	builder.WriteString("std::vector<uint8_t>{")
 	for i, b := range bytes {
 		builder.WriteString(fmt.Sprintf("0x%02x,", b))
+		if i%8 == 7 {
+			builder.WriteString("\n")
+		}
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
+func buildHandles(handles []gidlir.Handle) string {
+	if len(handles) == 0 {
+		return "std::vector<zx_handle_t>{}"
+	}
+	var builder strings.Builder
+	builder.WriteString("std::vector<zx_handle_t>{\n")
+	for i, h := range handles {
+		builder.WriteString(fmt.Sprintf("handle_defs[%d],", h))
 		if i%8 == 7 {
 			builder.WriteString("\n")
 		}

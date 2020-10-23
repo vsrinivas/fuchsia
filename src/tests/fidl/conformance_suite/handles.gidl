@@ -4,7 +4,7 @@
 
 success("SingleHandle") {
     // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_allowlist = [dart,go,rust],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
     },
@@ -25,7 +25,7 @@ success("SingleHandle") {
 
 success("SingleOptionalHandlePresent") {
     // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_allowlist = [dart,go,rust],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
     },
@@ -46,7 +46,7 @@ success("SingleOptionalHandlePresent") {
 
 success("SingleOptionalHandleAbsent") {
     // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_allowlist = [dart,go,rust],
+    bindings_denylist = [llcpp],
     value = SingleOptionalHandle {},
     bytes = {
         v1 = [
@@ -57,7 +57,7 @@ success("SingleOptionalHandleAbsent") {
 
 success("ArrayOfHandles") {
     // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_allowlist = [dart,go,rust],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -80,7 +80,7 @@ success("ArrayOfHandles") {
 
 success("ArrayOfOptionalHandles") {
     // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_allowlist = [dart,go,rust],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
     },
@@ -101,7 +101,7 @@ success("ArrayOfOptionalHandles") {
 
 success("VectorOfHandles") {
     // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_allowlist = [dart,go,rust],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -125,7 +125,7 @@ success("VectorOfHandles") {
 
 success("VectorOfOptionalHandles") {
     // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_allowlist = [go,rust],
+    bindings_denylist = [llcpp], // dart?
     handle_defs = {
         #0 = event(),
     },
@@ -147,7 +147,7 @@ success("VectorOfOptionalHandles") {
 
 success("MultipleHandleSubtypes") {
     // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_allowlist = [dart,go,rust],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = channel(),
         #1 = event(),
@@ -229,7 +229,7 @@ decode_failure("TooFewHandles") {
 // Currently channels max out at 64-handles.
 success("ChannelMaxHandles") {
     // TODO(fxb.dev/36441): Implement handles in all backends.
-    bindings_allowlist = [dart,go,rust],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),
@@ -301,7 +301,7 @@ decode_success("ChannelMaxUnknownHandlesNotStored") {
     // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
     // each binding, they should be removed from the allowlist here and added
     // to the allowlist in the test below.
-    bindings_allowlist = [rust],
+    bindings_allowlist = [rust,hlcpp],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),

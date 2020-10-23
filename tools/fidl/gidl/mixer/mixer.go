@@ -407,6 +407,10 @@ func (decl *StructDecl) IsNullable() bool {
 	return decl.nullable
 }
 
+func (decl *StructDecl) IsResource() bool {
+	return decl.structDecl.IsResourceType()
+}
+
 func (decl *StructDecl) Name() string {
 	return string(decl.structDecl.Name)
 }

@@ -548,9 +548,10 @@ type UnionMember struct {
 // Table represents a declaration of a FIDL table.
 type Table struct {
 	Attributes
-	Name        EncodedCompoundIdentifier `json:"name"`
-	Members     []TableMember             `json:"members"`
-	TypeShapeV1 TypeShape                 `json:"type_shape_v1"`
+	Name         EncodedCompoundIdentifier `json:"name"`
+	Members      []TableMember             `json:"members"`
+	Resourceness `json:"resource"`
+	TypeShapeV1  TypeShape `json:"type_shape_v1"`
 }
 
 // TableMember represents the declaration of a field in a FIDL table.
@@ -595,10 +596,11 @@ func (t *Table) SortedMembersNoReserved() []TableMember {
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
 	Attributes
-	Name        EncodedCompoundIdentifier `json:"name"`
-	Anonymous   bool                      `json:"anonymous"`
-	Members     []StructMember            `json:"members"`
-	TypeShapeV1 TypeShape                 `json:"type_shape_v1"`
+	Name         EncodedCompoundIdentifier `json:"name"`
+	Anonymous    bool                      `json:"anonymous"`
+	Members      []StructMember            `json:"members"`
+	Resourceness `json:"resource"`
+	TypeShapeV1  TypeShape `json:"type_shape_v1"`
 }
 
 // StructMember represents the declaration of a field in a FIDL struct.

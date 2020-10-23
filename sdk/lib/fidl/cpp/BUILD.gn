@@ -165,6 +165,9 @@ gidl_hlcpp_conformance("conformance_test_sources") {
     ":test_util",
     "//third_party/googletest:gtest",
   ]
+  if (is_fuchsia) {
+    deps += [ ":handle_util" ]
+  }
 }
 
 source_set("host_test_sources") {
@@ -188,8 +191,8 @@ source_set("host_test_sources") {
 
   deps = [
     ":cpp_base",
-    "test:fidl_test",
     ":test_util",
+    "test:fidl_test",
     "//third_party/googletest:gtest",
   ]
 }
@@ -221,11 +224,11 @@ source_set("test_sources") {
 
   deps = [
     ":cpp",
-    "test:fidl_test",
-    "test:collision_test",
     ":test_support",
     ":test_util",
     ":union_migration_test_fidl",
+    "test:collision_test",
+    "test:fidl_test",
     "//sdk/lib/fidl/cpp/test",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop",

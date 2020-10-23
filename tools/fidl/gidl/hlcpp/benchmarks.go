@@ -167,25 +167,3 @@ func benchmarkTypeFromValue(librarySuffix string, value gidlir.Value) string {
 func benchmarkName(gidlName string) string {
 	return strings.ReplaceAll(gidlName, "/", "_")
 }
-
-func BuildHandleDefs(defs []gidlir.HandleDef) string {
-	if len(defs) == 0 {
-		return ""
-	}
-	var builder strings.Builder
-	builder.WriteString("std::vector<zx_handle_t>{\n")
-	for i, d := range defs {
-		switch d.Subtype {
-		case fidlir.Channel:
-			builder.WriteString("fidl::test::util::create_channel(),")
-		case fidlir.Event:
-			builder.WriteString("fidl::test::util::create_event(),")
-		default:
-			panic(fmt.Sprintf("unsupported handle subtype: %s", d.Subtype))
-		}
-		// Write indices corresponding to the .gidl file handle_defs block.
-		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
-	}
-	builder.WriteString("}")
-	return builder.String()
-}

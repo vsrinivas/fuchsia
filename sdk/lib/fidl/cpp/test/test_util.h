@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef LIB_FIDL_CPP_TEST_TEST_UTIL_H_
+#define LIB_FIDL_CPP_TEST_TEST_UTIL_H_
+
 #include <lib/fidl/internal.h>
 
 #include <cstdint>
@@ -87,23 +90,20 @@ bool ValueToBytes(const Input& input, const std::vector<uint8_t>& expected) {
   auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
   fidl::Clone(input).Encode(&enc, offset);
   auto msg = enc.GetMessage();
-  return cmp_payload(reinterpret_cast<const uint8_t*>(msg.bytes().data()), msg.bytes().actual(),
-                     reinterpret_cast<const uint8_t*>(expected.data()), expected.size());
+  return cmp_payload(msg.bytes().data(), msg.bytes().actual(), expected.data(), expected.size());
 }
 
 template <class Input>
 bool ValueToBytes(Input input, const std::vector<uint8_t>& bytes,
-                  std::vector<zx_handle_t>& handles) {
+                  const std::vector<zx_handle_t>& handles) {
   fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER);
   auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
   input.Encode(&enc, offset);
   auto msg = enc.GetMessage();
   auto bytes_match =
-      cmp_payload(reinterpret_cast<const uint8_t*>(msg.bytes().data()), msg.bytes().actual(),
-                  reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size());
+      cmp_payload(msg.bytes().data(), msg.bytes().actual(), bytes.data(), bytes.size());
   auto handles_match =
-      cmp_payload(reinterpret_cast<const uint8_t*>(msg.handles().data()), msg.handles().actual(),
-                  reinterpret_cast<const uint8_t*>(handles.data()), handles.size());
+      cmp_payload(msg.handles().data(), msg.handles().actual(), handles.data(), handles.size());
   return bytes_match && handles_match;
 }
 
@@ -128,3 +128,5 @@ void CheckEncodeFailure(const Input& input, const zx_status_t expected_failure_c
 }  // namespace util
 }  // namespace test
 }  // namespace fidl
+
+#endif  // LIB_FIDL_CPP_TEST_TEST_UTIL_H_

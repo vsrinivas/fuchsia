@@ -38,6 +38,28 @@ func escapeStr(value string) string {
 	return buf.String()
 }
 
+func BuildHandleDefs(defs []gidlir.HandleDef) string {
+	if len(defs) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString("std::vector<zx_handle_t>{\n")
+	for i, d := range defs {
+		switch d.Subtype {
+		case fidlir.Channel:
+			builder.WriteString("fidl::test::util::create_channel(),")
+		case fidlir.Event:
+			builder.WriteString("fidl::test::util::create_event(),")
+		default:
+			panic(fmt.Sprintf("unsupported handle subtype: %s", d.Subtype))
+		}
+		// Write indices corresponding to the .gidl file handle_defs block.
+		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
 func newCppValueBuilder() cppValueBuilder {
 	return cppValueBuilder{}
 }
@@ -140,7 +162,8 @@ func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.Record
 		if field.Key.IsUnknown() {
 			unknownData := field.Value.(gidlir.UnknownData)
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s%s_experimental_set_unknown_data(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n", containerVar, accessor, field.Key.UnknownOrdinal, bytesBuilder(unknownData.Bytes)))
+				"%s%s_experimental_set_unknown_data(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n",
+				containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes)))
 			continue
 		}
 
