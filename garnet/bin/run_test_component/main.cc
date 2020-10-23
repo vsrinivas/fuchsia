@@ -275,6 +275,7 @@ int main(int argc, const char** argv) {
 
   fuchsia::sys::EnvironmentPtr parent_env;
   fuchsia::sys::LauncherPtr launcher;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> diagnostics_enclosing_env;
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_env;
 
   std::vector<std::shared_ptr<fuchsia::logger::LogMessage>> restricted_logs;
@@ -369,11 +370,21 @@ int main(int argc, const char** argv) {
       }
     }
 
+    // Compute a common random suffix for the environments created to run the test.
+    uint32_t env_rand_suffix;
+    zx_cprng_draw(&env_rand_suffix, sizeof(env_rand_suffix));
+
     if (collect_logs || offer_collected_logs) {
-      // launch the archivist if it'll be used
-      fuchsia::sys::LauncherPtr launcher;
-      parent_env->GetLauncher(launcher.NewRequest());
-      archivist_component = launch_archivist(launcher, loop.dispatcher());
+      // create a nested diagnostics realm and launch the archivist if it'll be used
+      std::string env_label = fxl::StringPrintf("%s%08x", "diagnostics_", env_rand_suffix);
+      diagnostics_enclosing_env = sys::testing::EnclosingEnvironment::Create(
+          std::move(env_label), parent_env, sys::testing::EnvironmentServices::Create(parent_env),
+          fuchsia::sys::EnvironmentOptions{.inherit_parent_services = true,
+                                           .use_parent_runners = true,
+                                           .delete_storage_on_death = true});
+
+      archivist_component =
+          launch_archivist(diagnostics_enclosing_env->launcher_ptr(), loop.dispatcher());
     }
     if (collect_logs) {
       ZX_ASSERT(archivist_component != nullptr);
@@ -403,9 +414,7 @@ int main(int argc, const char** argv) {
     std::string env_label = std::move(parse_result.realm_label);
     fuchsia::sys::EnvironmentOptions env_opt;
     if (env_label.empty()) {
-      uint32_t rand;
-      zx_cprng_draw(&rand, sizeof(rand));
-      env_label = fxl::StringPrintf("%s%08x", kEnvPrefix, rand);
+      env_label = fxl::StringPrintf("%s%08x", kEnvPrefix, env_rand_suffix);
       env_opt.delete_storage_on_death = true;
     }
 
