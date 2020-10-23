@@ -7,6 +7,18 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("testparser") {
+  sources = [
+    "dartsystemtest.go",
+    "googletest.go",
+    "gotest.go",
+    "result.go",
+    "rusttest.go",
+    "testparser.go",
+    "testparser_test.go",
+    "trftest.go",
+    "vulkanctstest.go",
+    "zircon_utest.go",
+  ]
 }
 
 group("tests") {
@@ -26,6 +38,10 @@ go_test("test") {
 
 go_library("main") {
   source_dir = "cmd"
+  sources = [
+    "main.go",
+    "main_test.go",
+  ]
   deps = [ ":testparser" ]
 }
 

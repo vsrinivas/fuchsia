@@ -12,6 +12,7 @@ go_library("lib") {
     "//src/sys/pkg/bin/amber:lib",
     "//src/sys/pkg/bin/pkgfs:pmd",
   ]
+  sources = [ "gub.go" ]
 }
 
 go_binary("grand_unified_binary") {

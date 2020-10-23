@@ -7,6 +7,11 @@ import("//build/go/go_library.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("gopkg") {
+  sources = [
+    "fidlmerge.go",
+    "flags.go",
+  ]
+
   deps = [
     "//garnet/go/src/fidl/compiler/backend/common",
     "//garnet/go/src/fidl/compiler/backend/types",

@@ -6,11 +6,25 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("tap") {
+  sources = [
+    "doc.go",
+    "parser.go",
+    "parser_test.go",
+    "producer.go",
+    "producer_test.go",
+    "tap.go",
+  ]
   deps = [ ":tokenizer" ]
 }
 
 go_library("tokenizer") {
   source_dir = "tokenizer"
+
+  sources = [
+    "iterator.go",
+    "lexer.go",
+    "stream.go",
+  ]
 }
 
 go_test("tap_tests") {

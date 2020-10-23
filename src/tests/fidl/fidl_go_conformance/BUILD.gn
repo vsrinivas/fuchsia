@@ -22,19 +22,6 @@ gidl("conformance_suite") {
   output = generated_source
 }
 
-go_library("conformance_tests_library") {
-  testonly = true
-  name = "conformance_tests"
-  source_dir = generated_dir
-
-  non_go_deps = [
-    ":conformance_suite",
-    ":copy_test_utils",
-  ]
-
-  deps = [ "${conformance_suite_fidl_target}(${go_toolchain})" ]
-}
-
 copy("copy_test_utils") {
   sources = [
     "//third_party/go/src/syscall/zx/fidl/fidl_test/testutil_test.go",
@@ -42,6 +29,23 @@ copy("copy_test_utils") {
     "//third_party/go/src/syscall/zx/fidl/fidl_test/zx_notfuchsia_test.go",
   ]
   outputs = [ "${generated_dir}/{{source_file_part}}" ]
+}
+
+go_library("conformance_tests_library") {
+  testonly = true
+  name = "conformance_tests"
+  source_dir = generated_dir
+
+  sources =
+      rebase_path([ generated_source ] + get_target_outputs(":copy_test_utils"),
+                  generated_dir)
+
+  non_go_deps = [
+    ":conformance_suite",
+    ":copy_test_utils",
+  ]
+
+  deps = [ "${conformance_suite_fidl_target}(${go_toolchain})" ]
 }
 
 go_test("fidl_go_conformance_tests") {

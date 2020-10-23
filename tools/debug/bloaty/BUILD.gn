@@ -6,6 +6,14 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("bloaty") {
+  sources = [
+    "bloaty.go",
+    "bloaty_test.go",
+    "chart.go",
+    "chart_test.go",
+    "symbols.go",
+    "symbols_test.go",
+  ]
 }
 
 go_test("bloaty_tests") {

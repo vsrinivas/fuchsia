@@ -7,6 +7,14 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("elflib") {
+  sources = [
+    "elflib.go",
+    "elflib_test.go",
+    "pe.go",
+    "pe_test.go",
+    "sources.go",
+    "sources_test.go",
+  ]
 }
 
 _testdata_path = "$target_gen_dir/testdata"

@@ -6,6 +6,10 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("mdns") {
+  sources = [
+    "mdns.go",
+    "mdns_test.go",
+  ]
   deps = [
     "//third_party/golibs:golang.org/x/net",
     "//tools/lib/logger",
@@ -14,6 +18,7 @@ go_library("mdns") {
 
 go_test("mdns_tests") {
   # TODO(awdavies): The default name conflicts w/ the connectivity service.
+
   output_name = "mdns_tools_test"
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/mdns" ]
   deps = [

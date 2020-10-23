@@ -17,6 +17,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
     deps = [ "//src/testing/qemu" ]
+    sources = [ "console_qemu_test.go" ]
   }
 
   host_test_data("bringup_zbi") {

@@ -15,6 +15,32 @@ go_library("lib") {
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/qemu",
   ]
+  sources = [
+    "api.go",
+    "api_test.go",
+    "build.go",
+    "build_mock.go",
+    "build_test.go",
+    "command.go",
+    "command_mock.go",
+    "connector.go",
+    "connector_mock.go",
+    "connector_test.go",
+    "e2e_test.go",
+    "fuzzer.go",
+    "fuzzer_test.go",
+    "handle.go",
+    "handle_test.go",
+    "instance.go",
+    "instance_test.go",
+    "launcher.go",
+    "launcher_mock.go",
+    "launcher_test.go",
+    "process.go",
+    "process_test.go",
+    "ssh_fake.go",
+    "test_utils.go",
+  ]
 }
 
 # This tool can only be built on the host
@@ -23,6 +49,7 @@ if (is_host) {
     name = "main"
     source_dir = "cmd"
     deps = [ ":lib" ]
+    sources = [ "fuzz.go" ]
   }
 
   go_binary("undercoat") {

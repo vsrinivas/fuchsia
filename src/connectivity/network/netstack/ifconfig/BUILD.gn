@@ -17,6 +17,11 @@ go_library("ifconfig_lib") {
     "//sdk/fidl/fuchsia.wlan.service($go_toolchain)",
     "//src/lib/component",
   ]
+
+  sources = [
+    "ifconfig.go",
+    "ifconfig_test.go",
+  ]
 }
 
 go_test("netstack_ifconfig_test") {

@@ -6,6 +6,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 
 go_library("lib") {
+  sources = [ "gen.go" ]
 }
 
 go_binary("gentool") {

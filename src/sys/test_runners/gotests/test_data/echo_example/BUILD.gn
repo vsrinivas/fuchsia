@@ -13,6 +13,7 @@ go_library("echo_go_test_lib") {
     "//examples/components/routing/fidl:echo($go_toolchain)",
     "//src/lib/component",
   ]
+  sources = [ "echo_go_test.go" ]
 }
 
 go_test("echo_go_client") {

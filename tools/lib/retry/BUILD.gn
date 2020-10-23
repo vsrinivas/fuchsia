@@ -6,6 +6,13 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("retry") {
+  sources = [
+    "backoff.go",
+    "backoff_test.go",
+    "clock.go",
+    "retry.go",
+    "retry_test.go",
+  ]
 }
 
 go_test("retry_tests") {

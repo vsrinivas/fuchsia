@@ -6,6 +6,14 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("sse") {
+  sources = [
+    "client.go",
+    "client_test.go",
+    "event.go",
+    "event_test.go",
+    "sse.go",
+    "sse_test.go",
+  ]
 }
 
 go_test("sse_test") {

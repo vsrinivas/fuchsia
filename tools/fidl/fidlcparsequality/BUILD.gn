@@ -7,6 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/host.gni")
 
 go_library("lib") {
+  sources = [ "main.go" ]
 }
 
 go_binary("fidlcparsequality") {

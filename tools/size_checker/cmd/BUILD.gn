@@ -65,6 +65,10 @@ generated_file("size_checker_json") {
 }
 
 go_library("size_checker_lib") {
+  sources = [
+    "size_checker.go",
+    "size_checker_test.go",
+  ]
 }
 
 go_binary("size_checker") {

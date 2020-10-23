@@ -13,6 +13,18 @@ go_library("gopkg") {
     "//garnet/go/src/fidl/compiler/backend/common",
     "//garnet/go/src/fidl/compiler/backend/types",
   ]
+  sources = [
+    "hlcpp/hlcpp.go",
+    "main.go",
+    "measurer/code_generator.go",
+    "measurer/expressions.go",
+    "measurer/measurer.go",
+    "measurer/ops.go",
+    "measurer/pruning.go",
+    "measurer/pruning_test.go",
+    "rust/rust.go",
+    "utils/utils.go",
+  ]
 }
 
 go_binary("measure-tape") {

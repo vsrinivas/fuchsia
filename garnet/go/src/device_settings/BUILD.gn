@@ -10,6 +10,8 @@ import("//build/testing/environments.gni")
 
 go_library("device_settings") {
   name = "device_settings"
+
+  sources = [ "device_settings_test.go" ]
 }
 
 go_test("device_settings_integration_test") {

@@ -16,6 +16,10 @@ go_binary("affectedtests") {
 }
 
 go_library("lib") {
+  sources = [
+    "affectedtests.go",
+    "affectedtests_test.go",
+  ]
   deps = [
     "//tools/build",
     "//tools/build/ninjago/ninjagraph",
@@ -24,6 +28,7 @@ go_library("lib") {
 
 go_library("main") {
   source_dir = "cmd"
+  sources = [ "main.go" ]
   deps = [ "//tools/build" ]
 }
 

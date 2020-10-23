@@ -19,6 +19,14 @@ go_library("component") {
     "//sdk/fidl/fuchsia.io($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
   ]
+
+  sources = [
+    "context.go",
+    "io.go",
+    "io_test.go",
+    "serve.go",
+    "serve_test.go",
+  ]
 }
 
 go_test("component_test") {

@@ -6,6 +6,10 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("digest") {
+  sources = [
+    "digest.go",
+    "digest_test.go",
+  ]
 }
 
 go_test("digest_tests") {

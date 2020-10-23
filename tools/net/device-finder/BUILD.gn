@@ -8,6 +8,18 @@ import("//build/go/go_test.gni")
 
 go_library("main") {
   source_dir = "cmd"
+  sources = [
+    "common.go",
+    "dev_finder_test.go",
+    "dnssderrors.go",
+    "dnssdfinder.go",
+    "dnssdfinder.h",
+    "dnssdfinder_c.c",
+    "finders.go",
+    "list.go",
+    "main.go",
+    "resolve.go",
+  ]
   deps = [
     "//third_party/golibs:github.com/google/subcommands",
     "//tools/lib/color",

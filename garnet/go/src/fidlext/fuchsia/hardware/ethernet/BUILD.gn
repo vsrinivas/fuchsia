@@ -9,4 +9,6 @@ go_library("fidlext_fuchsia_hardware_ethernet_fake_lib") {
   name = "fidlext/fuchsia/hardware/ethernet"
 
   deps = [ "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)" ]
+
+  sources = [ "ethernet_fake.go" ]
 }

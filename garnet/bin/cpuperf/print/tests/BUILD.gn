@@ -36,6 +36,16 @@ if (is_host) {
       ":cpuperf_print",
       ":raw_printer_test_data",
     ]
+    sources = [
+      "raw-expected-output.txt",
+      "raw-test.0.0.cpuperf",
+      "raw-test.0.1.cpuperf",
+      "raw-test.0.2.cpuperf",
+      "raw-test.0.3.cpuperf",
+      "raw-test.cpsession",
+      "raw_printer_test.go",
+      "util.go",
+    ]
   }
 
   go_test("cpuperf_raw_printer_test") {

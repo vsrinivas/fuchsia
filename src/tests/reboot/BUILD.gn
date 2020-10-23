@@ -28,6 +28,8 @@ if (is_linux) {
     source_dir = "//src/tests/reboot/support"
 
     deps = [ "//src/testing/qemu" ]
+
+    sources = [ "reboot.go" ]
   }
 
   host_test_data("main_zbi") {
@@ -44,6 +46,7 @@ if (is_linux) {
       testonly = true
       source_dir = "//src/tests/reboot/$split_name"
       deps = [ ":support" ]
+      forward_variables_from(invoker, [ "sources" ])
     }
 
     go_test("${split_name}_test") {
@@ -54,11 +57,15 @@ if (is_linux) {
   }
 
   split_go_test("dm_reboot") {
+    sources = [ "dm_reboot_test.go" ]
   }
   split_go_test("dm_reboot_recovery") {
+    sources = [ "dm_reboot_recovery_test.go" ]
   }
   split_go_test("dm_reboot_bootloader") {
+    sources = [ "dm_reboot_bootloader_test.go" ]
   }
   split_go_test("kill_critical_process") {
+    sources = [ "kill_critical_process_test.go" ]
   }
 }

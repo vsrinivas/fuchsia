@@ -20,6 +20,33 @@ go_library("pmd") {
     "//src/lib/component",
     "//src/sys/pkg/bin/pm:pm_lib",
   ]
+
+  sources = [
+    "allowlist/allowlist.go",
+    "allowlist/allowlist_test.go",
+    "blobfs/blobfs.go",
+    "index/dynamic_index.go",
+    "index/dynamic_index_test.go",
+    "index/static_index.go",
+    "index/static_index_test.go",
+    "iou/iou.go",
+    "pkgfs/ctl_directory.go",
+    "pkgfs/dents.go",
+    "pkgfs/metafar.go",
+    "pkgfs/needs_directory.go",
+    "pkgfs/package_directory.go",
+    "pkgfs/package_install_directory.go",
+    "pkgfs/package_list_directories.go",
+    "pkgfs/pkgfs.go",
+    "pkgfs/pkgfs_test.go",
+    "pkgfs/root_directory.go",
+    "pkgfs/unsupported_vnodes.go",
+    "pkgfs/validation_directory.go",
+    "pkgfs/validation_directory_test.go",
+    "pkgfs/versions_directory.go",
+    "pkgsvr/pkgsvr.go",
+    "ramdisk/ramdisk.go",
+  ]
 }
 
 package("disable-executability-restrictions") {

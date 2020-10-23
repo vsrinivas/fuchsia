@@ -9,10 +9,22 @@ import("//third_party/protobuf/proto_library.gni")
 
 go_library("proto_lib") {
   source_dir = "proto"
+  sources = [
+    "context.pb.go",
+    "static.pb.go",
+  ]
   deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
 }
 
 go_library("fint_lib") {
+  sources = [
+    "fint_test.go",
+    "main.go",
+    "parse.go",
+    "set.go",
+    "set_test.go",
+  ]
+
   deps = [
     ":proto_lib",
     "//third_party/golibs:github.com/golang/protobuf",

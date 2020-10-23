@@ -9,6 +9,7 @@ import("//build/host.gni")
 go_library("make-fuchsia-vol_lib") {
   name = "make-fuchsia-vol"
   deps = [ "//garnet/go/src/thinfs:thinfs_lib" ]
+  sources = [ "make-fuchsia-vol.go" ]
 }
 
 go_binary("make-fuchsia-vol") {

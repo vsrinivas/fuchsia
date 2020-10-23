@@ -15,6 +15,22 @@ go_library("gopkg") {
     "//garnet/go/src/fidl/compiler/backend/cpp",
     "//garnet/go/src/fidl/compiler/backend/types",
   ]
+  sources = [
+    "codegen/bits.tmpl.go",
+    "codegen/codegen.go",
+    "codegen/codegen_test.go",
+    "codegen/const.tmpl.go",
+    "codegen/enum.tmpl.go",
+    "codegen/header.tmpl.go",
+    "codegen/implementation.tmpl.go",
+    "codegen/protocol.tmpl.go",
+    "codegen/service.tmpl.go",
+    "codegen/struct.tmpl.go",
+    "codegen/table.tmpl.go",
+    "codegen/test_base.tmpl.go",
+    "codegen/union.tmpl.go",
+    "main.go",
+  ]
 }
 
 go_binary("fidlgen_hlcpp") {

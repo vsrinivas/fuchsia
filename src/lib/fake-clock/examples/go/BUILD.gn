@@ -12,6 +12,10 @@ import("//build/testing/environments.gni")
 go_library("fake_clock") {
   testonly = true
   name = "fake_clock"
+  sources = [
+    "fake_clock.go",
+    "fake_clock_test.go",
+  ]
 }
 
 go_test("fake_clock_test") {

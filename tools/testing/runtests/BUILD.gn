@@ -6,6 +6,14 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("runtests") {
+  sources = [
+    "data_sinks.go",
+    "data_sinks_test.go",
+    "output.go",
+    "poll.go",
+    "poll_test.go",
+    "runtests.go",
+  ]
   deps = [
     "//third_party/golibs:github.com/pkg/sftp",
     "//tools/botanist:botanist_lib",

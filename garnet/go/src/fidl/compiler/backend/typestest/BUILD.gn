@@ -11,4 +11,5 @@ go_library("typestest") {
     "//third_party/golibs:github.com/google/go-cmp",
   ]
   non_go_deps = [ "../goldens" ]
+  sources = [ "testutil.go" ]
 }

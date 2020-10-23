@@ -72,5 +72,6 @@ if (is_linux) {
       ":kernel",
       ":test_data",
     ]
+    sources = [ "qemu.go" ]
   }
 }

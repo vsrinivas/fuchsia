@@ -8,6 +8,10 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("main") {
+  sources = [
+    "main.go",
+    "main_test.go",
+  ]
   deps = [
     "//tools/build/ninjago/compdb",
     "//tools/build/ninjago/ninjagraph",

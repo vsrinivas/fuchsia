@@ -50,6 +50,21 @@ if (is_host) {
         ":test_avb_key",
       ]
     }
+    sources = [
+      "check/check.go",
+      "config/archive.go",
+      "config/device.go",
+      "config/installer.go",
+      "errutil/errutil.go",
+      "pave/pave.go",
+      "reboot_test/config.go",
+      "reboot_test/reboot_test.go",
+      "script/script.go",
+      "tracking_test/config.go",
+      "tracking_test/tracking_test.go",
+      "upgrade_test/config.go",
+      "upgrade_test/upgrade_test.go",
+    ]
   }
 
   # Add this to go_test()'s environments to disable a test in infra

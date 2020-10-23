@@ -7,6 +7,10 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("ninjagraph") {
+  sources = [
+    "ninjagraph.go",
+    "ninjagraph_test.go",
+  ]
   deps = [
     "//third_party/golibs:golang.org/x/sync",
     "//tools/build/ninjago/ninjalog",

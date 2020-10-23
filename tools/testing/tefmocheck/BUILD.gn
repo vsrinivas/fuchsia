@@ -7,6 +7,20 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("lib") {
+  sources = [
+    "mass_test_failure_check.go",
+    "mass_test_failure_check_test.go",
+    "no_tests_ran_check.go",
+    "no_tests_ran_check_test.go",
+    "run_checks.go",
+    "run_checks_test.go",
+    "string_in_log_check.go",
+    "string_in_log_check_test.go",
+    "swarming.go",
+    "task_state_check.go",
+    "task_state_check_test.go",
+    "types.go",
+  ]
   deps = [
     "//tools/bootserver:bootserverconstants",
     "//tools/botanist:constants",
@@ -20,6 +34,10 @@ go_library("lib") {
 
 go_library("main") {
   source_dir = "cmd"
+  sources = [
+    "main.go",
+    "main_test.go",
+  ]
   deps = [
     ":lib",
     "//tools/testing/runtests",

@@ -6,6 +6,16 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("sshutil") {
+  sources = [
+    "client.go",
+    "client_test.go",
+    "conn.go",
+    "conn_test.go",
+    "sshutil.go",
+    "sshutil_test.go",
+    "testserver.go",
+    "testserver_test.go",
+  ]
   deps = [
     ":constants",
     "//third_party/golibs:github.com/pkg/sftp",
@@ -17,6 +27,7 @@ go_library("sshutil") {
 
 go_library("constants") {
   source_dir = "constants"
+  sources = [ "constants.go" ]
 }
 
 go_test("sshutil_tests") {

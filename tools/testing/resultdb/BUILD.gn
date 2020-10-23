@@ -8,6 +8,12 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("main") {
+  sources = [
+    "main.go",
+    "main_test.go",
+    "summary.go",
+    "summary_test.go",
+  ]
   deps = [
     "//third_party/golibs:github.com/golang/protobuf",
     "//third_party/golibs:golang.org/x/sync",

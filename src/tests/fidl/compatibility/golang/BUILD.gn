@@ -16,6 +16,7 @@ go_library("lib") {
     "//src/lib/component",
     "//src/tests/fidl/compatibility:fidl($go_toolchain)",
   ]
+  sources = [ "go_server.go" ]
 }
 go_binary("go_server") {
   gopackage = "compatibility_test"

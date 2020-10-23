@@ -22,6 +22,12 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.update($go_toolchain)",
     "//src/lib/syslog/go",
   ]
+
+  sources = [
+    "amberctl/amberctl.go",
+    "urlscope/urlscope.go",
+    "urlscope/urlscope_test.go",
+  ]
 }
 
 package("pkgfs") {

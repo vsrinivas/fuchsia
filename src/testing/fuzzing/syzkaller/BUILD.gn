@@ -110,6 +110,7 @@ if (is_host) {
   go_library("syzkaller-go") {
     name = "github.com/google/syzkaller/..."
     source_dir = syzkaller_dir
+    allow_globbing = true
   }
 
   syz_ldflags = [

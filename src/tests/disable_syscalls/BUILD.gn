@@ -31,6 +31,8 @@ if (is_linux) {
     source_dir = "//src/tests/disable_syscalls/support"
 
     deps = [ "//src/testing/qemu" ]
+
+    sources = [ "support.go" ]
   }
 
   host_test_data("syscall_zbi") {
@@ -64,6 +66,7 @@ if (is_linux) {
         ":disable_syscalls_support_lib",
         "//src/testing/qemu",
       ]
+      forward_variables_from(invoker, [ "sources" ])
     }
 
     go_test("${split_name}_test") {
@@ -78,17 +81,24 @@ if (is_linux) {
   }
 
   split_go_test("disable_debugging_disable_serial") {
+    sources = [ "disable_debugging_disable_serial_test.go" ]
   }
   split_go_test("disable_debugging_enable_serial") {
+    sources = [ "disable_debugging_enable_serial_test.go" ]
   }
   split_go_test("disable_debugging_output_only_serial") {
+    sources = [ "disable_debugging_output_only_serial_test.go" ]
   }
   split_go_test("disabled_makes_ktrace_fail") {
+    sources = [ "disabled_makes_ktrace_fail_test.go" ]
   }
   split_go_test("enable_debugging") {
+    sources = [ "enable_debugging_test.go" ]
   }
   split_go_test("invalid_serial_setting") {
+    sources = [ "invalid_serial_setting_test.go" ]
   }
   split_go_test("ktrace_works_when_enabled") {
+    sources = [ "ktrace_works_when_enabled_test.go" ]
   }
 }

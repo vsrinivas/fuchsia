@@ -6,6 +6,13 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("serial") {
+  sources = [
+    "serial.go",
+    "serial_darwin.go",
+    "serial_linux.go",
+    "server.go",
+    "server_test.go",
+  ]
   deps = [
     "//third_party/golibs:golang.org/x/sys",
     "//tools/lib/ring",

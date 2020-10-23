@@ -24,6 +24,23 @@ group("tests") {
 }
 
 go_library("build") {
+  sources = [
+    "args.go",
+    "args_test.go",
+    "binaries.go",
+    "binaries_test.go",
+    "checkout_artifacts.go",
+    "images.go",
+    "modules.go",
+    "prebuilt_binaries.go",
+    "test_durations.go",
+    "test_durations_test.go",
+    "tests.go",
+    "tests_test.go",
+    "tools.go",
+    "util.go",
+    "util_test.go",
+  ]
   deps = [ "//tools/lib/osmisc" ]
 }
 

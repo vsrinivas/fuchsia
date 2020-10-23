@@ -22,6 +22,13 @@ group("tests") {
 
 go_library("main") {
   source_dir = "cmd"
+
+  sources = [
+    "main.go",
+    "up.go",
+    "up_test.go",
+  ]
+
   deps = [
     ":lib",
     "//third_party/golibs:cloud.google.com/go/storage",
@@ -36,6 +43,23 @@ go_library("main") {
 }
 
 go_library("lib") {
+  sources = [
+    "binaries.go",
+    "binaries_test.go",
+    "blobs.go",
+    "checkout_artifacts.go",
+    "host_tests.go",
+    "images.go",
+    "images_test.go",
+    "modules.go",
+    "modules_test.go",
+    "package_manifest.go",
+    "sign.go",
+    "sign_test.go",
+    "tools.go",
+    "tools_test.go",
+    "upload.go",
+  ]
   deps = [
     "//src/sys/pkg/bin/pm:pm_lib",
     "//tools/build",

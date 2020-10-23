@@ -6,6 +6,11 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("compdb") {
+  sources = [
+    "compdb.go",
+    "compdb_test.go",
+    "doc.go",
+  ]
 }
 
 if (is_host) {

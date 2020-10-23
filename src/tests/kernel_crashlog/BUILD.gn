@@ -23,6 +23,8 @@ if (is_linux) {
     name = "fuchsia.googlesource.com/tests/kernel_crashlog"
 
     deps = [ "//src/testing/qemu" ]
+
+    sources = [ "kernel_crashlog_test.go" ]
   }
 
   host_test_data("main_zbi") {

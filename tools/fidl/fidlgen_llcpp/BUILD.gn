@@ -15,6 +15,34 @@ go_library("gopkg") {
     "//garnet/go/src/fidl/compiler/backend/cpp",
     "//garnet/go/src/fidl/compiler/backend/types",
   ]
+  sources = [
+    "codegen/codegen.go",
+    "codegen/codegen_test.go",
+    "codegen/file_header.tmpl.go",
+    "codegen/file_source.tmpl.go",
+    "codegen/fragment_bits.tmpl.go",
+    "codegen/fragment_client.tmpl.go",
+    "codegen/fragment_client_async_methods.tmpl.go",
+    "codegen/fragment_client_sync_methods.tmpl.go",
+    "codegen/fragment_const.tmpl.go",
+    "codegen/fragment_enum.tmpl.go",
+    "codegen/fragment_event_sender.tmpl.go",
+    "codegen/fragment_protocol.tmpl.go",
+    "codegen/fragment_reply_c_flavor.tmpl.go",
+    "codegen/fragment_reply_caller_allocate.tmpl.go",
+    "codegen/fragment_send_event_c_flavor.tmpl.go",
+    "codegen/fragment_send_event_caller_allocate.tmpl.go",
+    "codegen/fragment_service.tmpl.go",
+    "codegen/fragment_struct.tmpl.go",
+    "codegen/fragment_sync_event_handler.tmpl.go",
+    "codegen/fragment_sync_request_caller_allocate.tmpl.go",
+    "codegen/fragment_sync_request_managed.tmpl.go",
+    "codegen/fragment_sync_server.tmpl.go",
+    "codegen/fragment_table.tmpl.go",
+    "codegen/fragment_type.tmpl.go",
+    "codegen/fragment_union.tmpl.go",
+    "main.go",
+  ]
 }
 
 go_binary("fidlgen_llcpp") {

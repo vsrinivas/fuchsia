@@ -8,6 +8,30 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("symbolize_lib") {
+  sources = [
+    "ast.go",
+    "demuxer.go",
+    "demuxer_test.go",
+    "dump.go",
+    "filter.go",
+    "filter_test.go",
+    "index.go",
+    "index_test.go",
+    "json.go",
+    "mapstore.go",
+    "mock_elf_test.go",
+    "parser.go",
+    "pipeline.go",
+    "presenter.go",
+    "regextokenizer.go",
+    "regextokenizer_test.go",
+    "repo.go",
+    "repo_test.go",
+    "symbolizer.go",
+    "symbolizer_test.go",
+    "triggers.go",
+  ]
+
   deps = [
     "//third_party/golibs:cloud.google.com/go/storage",
     "//tools/debug/elflib",
@@ -18,6 +42,9 @@ go_library("symbolize_lib") {
 
 go_library("main") {
   source_dir = "cmd"
+
+  sources = [ "main.go" ]
+
   deps = [
     ":symbolize_lib",
     "//tools/lib/color",

@@ -6,6 +6,13 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("ninjalog") {
+  sources = [
+    "doc.go",
+    "ninjalog.go",
+    "ninjalog_test.go",
+    "trace.go",
+    "trace_test.go",
+  ]
   deps = [
     "//third_party/golibs:github.com/google/shlex",
     "//tools/build/ninjago/compdb",

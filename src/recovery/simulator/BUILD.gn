@@ -25,6 +25,8 @@ if (is_linux) {
     source_dir = "//src/recovery/simulator/support"
 
     deps = [ "//src/testing/qemu" ]
+
+    sources = [ "support.go" ]
   }
 
   # These take >5m (the infra timeout) if they're all in one binary, so they
@@ -38,6 +40,7 @@ if (is_linux) {
         ":recovery_simulator_support_lib",
         "//src/testing/qemu",
       ]
+      forward_variables_from(invoker, [ "sources" ])
     }
 
     go_test("recovery_simulator_${split_name}") {
@@ -49,7 +52,9 @@ if (is_linux) {
   }
 
   split_go_test("boot_test") {
+    sources = [ "boot_test.go" ]
   }
   split_go_test("serial_test") {
+    sources = [ "serial_test.go" ]
   }
 }

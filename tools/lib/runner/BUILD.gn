@@ -6,6 +6,13 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("runner") {
+  sources = [
+    "batch.go",
+    "batch_test.go",
+    "doc.go",
+    "subprocess.go",
+    "subprocess_test.go",
+  ]
   deps = [ "//tools/lib/logger" ]
 }
 

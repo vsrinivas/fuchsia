@@ -9,6 +9,14 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("inspect") {
+  sources = [
+    "block.go",
+    "block.tmpl",
+    "blockgen.go",
+    "doc.go",
+    "heap.go",
+    "inspect_test.go",
+  ]
 }
 
 go_test("go_inspect_test") {

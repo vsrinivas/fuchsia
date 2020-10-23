@@ -6,6 +6,12 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("tftp") {
+  sources = [
+    "client.go",
+    "tftp.go",
+    "transfer.go",
+    "transfer_test.go",
+  ]
 }
 
 go_test("tftp_tests") {

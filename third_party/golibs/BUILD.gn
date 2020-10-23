@@ -4,8 +4,20 @@
 
 import("//build/go/go_library.gni")
 
-template("golib") {
+template("third_party_go_library") {
   go_library(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "name",
+                             "source_dir",
+                             "deps",
+                           ])
+    allow_globbing = true
+  }
+}
+
+template("golib") {
+  third_party_go_library(target_name) {
     name = target_name + "/..."
     source_dir = "//third_party/golibs/$name"
     forward_variables_from(invoker, [ "deps" ])
@@ -15,11 +27,11 @@ template("golib") {
 ##### NOTE: keep the following targets in alphabetical order.
 
 ### cloud.google.com/*
-go_library("cloud.google.com/go/compute/metadata") {
+third_party_go_library("cloud.google.com/go/compute/metadata") {
   name = "cloud.google.com/go/compute/metadata/..."
   source_dir = "//third_party/golibs/github.com/googleapis/google-cloud-go/compute/metadata"
 }
-go_library("cloud.google.com/go/iam") {
+third_party_go_library("cloud.google.com/go/iam") {
   name = "cloud.google.com/go/iam/..."
   source_dir = "//third_party/golibs/github.com/googleapis/google-cloud-go/iam"
   deps = [
@@ -32,7 +44,7 @@ go_library("cloud.google.com/go/iam") {
 
 # Actually aggregates the dependencies of other cloud.google.com/go/internal/*
 # packages as well. Use this as a convenience target for any such package.
-go_library("cloud.google.com/go/internal") {
+third_party_go_library("cloud.google.com/go/internal") {
   name = "cloud.google.com/go/internal/..."
   source_dir =
       "//third_party/golibs/github.com/googleapis/google-cloud-go/internal"
@@ -46,7 +58,7 @@ go_library("cloud.google.com/go/internal") {
     ":google.golang.org/grpc",
   ]
 }
-go_library("cloud.google.com/go/storage") {
+third_party_go_library("cloud.google.com/go/storage") {
   name = "cloud.google.com/go/storage/..."
   source_dir =
       "//third_party/golibs/github.com/googleapis/google-cloud-go/storage"
@@ -138,7 +150,7 @@ golib("github.com/tent/canonical-json-go") {
 ### go.opencensus.io/*
 # Actually aggregates the dependencies of other go.opencensus.io/*
 # packages as well. Use this as a convenience target for any such package.
-go_library("go.opencensus.io") {
+third_party_go_library("go.opencensus.io") {
   name = "go.opencensus.io/..."
   source_dir =
       "//third_party/golibs/github.com/census-instrumentation/opencensus-go"
@@ -179,7 +191,7 @@ golib("golang.org/x/sync") {
 }
 golib("golang.org/x/sys") {
 }
-go_library("golang.org/x/text") {
+third_party_go_library("golang.org/x/text") {
   name = "golang.org/x/text/..."
   source_dir = "//third_party/golibs/github.com/golang/text"
 }
@@ -187,12 +199,13 @@ golib("golang.org/x/xerrors") {
 }
 
 ### google.golang.org/*
-go_library("google.golang.org/genproto/googleapis/api/annotations") {
+third_party_go_library(
+    "google.golang.org/genproto/googleapis/api/annotations") {
   name = "google.golang.org/genproto/googleapis/api/annotations/..."
   source_dir = "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/api/annotations"
   deps = [ ":github.com/golang/protobuf" ]
 }
-go_library("google.golang.org/genproto/googleapis/iam/v1") {
+third_party_go_library("google.golang.org/genproto/googleapis/iam/v1") {
   name = "google.golang.org/genproto/googleapis/iam/v1/..."
   source_dir =
       "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/iam/v1"
@@ -203,17 +216,17 @@ go_library("google.golang.org/genproto/googleapis/iam/v1") {
     ":google.golang.org/grpc",
   ]
 }
-go_library("google.golang.org/genproto/googleapis/rpc/code") {
+third_party_go_library("google.golang.org/genproto/googleapis/rpc/code") {
   name = "google.golang.org/genproto/googleapis/rpc/code/..."
   source_dir = "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/rpc/code"
   deps = [ ":github.com/golang/protobuf" ]
 }
-go_library("google.golang.org/genproto/googleapis/rpc/status") {
+third_party_go_library("google.golang.org/genproto/googleapis/rpc/status") {
   name = "google.golang.org/genproto/googleapis/rpc/status/..."
   source_dir = "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/rpc/status"
   deps = [ ":github.com/golang/protobuf" ]
 }
-go_library("google.golang.org/genproto/googleapis/type/expr") {
+third_party_go_library("google.golang.org/genproto/googleapis/type/expr") {
   name = "google.golang.org/genproto/googleapis/type/expr/..."
   source_dir = "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/type/expr"
   deps = [ ":github.com/golang/protobuf" ]
@@ -221,7 +234,7 @@ go_library("google.golang.org/genproto/googleapis/type/expr") {
 
 # Actually aggregates the dependencies of other google.golang.org/grpc/*
 # packages as well. Use this as a convenience target for any such package.
-go_library("google.golang.org/grpc") {
+third_party_go_library("google.golang.org/grpc") {
   name = "google.golang.org/grpc/..."
   source_dir = "//third_party/golibs/github.com/grpc/grpc-go"
   deps = [
@@ -230,16 +243,16 @@ go_library("google.golang.org/grpc") {
     ":google.golang.org/genproto/googleapis/rpc/status",
   ]
 }
-go_library("google.golang.org/api/gensupport") {
+third_party_go_library("google.golang.org/api/gensupport") {
   name = "google.golang.org/api/gensupport/..."
   source_dir = "//third_party/golibs/github.com/googleapis/google-api-go-client/gensupport"
   deps = [ ":google.golang.org/api/googleapi" ]
 }
-go_library("google.golang.org/api/googleapi") {
+third_party_go_library("google.golang.org/api/googleapi") {
   name = "google.golang.org/api/googleapi/..."
   source_dir = "//third_party/golibs/github.com/googleapis/google-api-go-client/googleapi"
 }
-go_library("google.golang.org/api/internal") {
+third_party_go_library("google.golang.org/api/internal") {
   name = "google.golang.org/api/internal/..."
   source_dir =
       "//third_party/golibs/github.com/googleapis/google-api-go-client/internal"
@@ -248,12 +261,12 @@ go_library("google.golang.org/api/internal") {
     ":google.golang.org/grpc",
   ]
 }
-go_library("google.golang.org/api/iterator") {
+third_party_go_library("google.golang.org/api/iterator") {
   name = "google.golang.org/api/iterator/..."
   source_dir =
       "//third_party/golibs/github.com/googleapis/google-api-go-client/iterator"
 }
-go_library("google.golang.org/api/option") {
+third_party_go_library("google.golang.org/api/option") {
   name = "google.golang.org/api/option/..."
   source_dir =
       "//third_party/golibs/github.com/googleapis/google-api-go-client/option"
@@ -263,7 +276,7 @@ go_library("google.golang.org/api/option") {
     ":google.golang.org/grpc",
   ]
 }
-go_library("google.golang.org/api/storage/v1") {
+third_party_go_library("google.golang.org/api/storage/v1") {
   name = "google.golang.org/api/storage/v1/..."
   source_dir = "//third_party/golibs/github.com/googleapis/google-api-go-client/storage/v1"
   deps = [
@@ -273,7 +286,7 @@ go_library("google.golang.org/api/storage/v1") {
     ":google.golang.org/api/transport/http",
   ]
 }
-go_library("google.golang.org/api/transport/http") {
+third_party_go_library("google.golang.org/api/transport/http") {
   name = "google.golang.org/api/transport/http/..."
   source_dir = "//third_party/golibs/github.com/googleapis/google-api-go-client/transport/http"
   deps = [
@@ -283,13 +296,13 @@ go_library("google.golang.org/api/transport/http") {
     ":google.golang.org/api/option",
   ]
 }
-go_library("google.golang.org/protobuf") {
+third_party_go_library("google.golang.org/protobuf") {
   name = "google.golang.org/protobuf/..."
   source_dir = "//third_party/golibs/github.com/protocolbuffers/protobuf-go"
 }
 
 ### gopkg.in/*
-go_library("gopkg.in/check.v1") {
+third_party_go_library("gopkg.in/check.v1") {
   name = "gopkg.in/check.v1/..."
   source_dir = "//third_party/golibs/github.com/go-check/check"
   deps = [ ":github.com/kr/pretty" ]

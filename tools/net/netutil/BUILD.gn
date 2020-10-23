@@ -5,6 +5,7 @@
 import("//build/go/go_library.gni")
 
 go_library("netutil") {
+  sources = [ "netutil.go" ]
   deps = [
     ":constants",
     "//tools/lib/retry",
@@ -14,4 +15,6 @@ go_library("netutil") {
 
 go_library("constants") {
   source_dir = "constants"
+
+  sources = [ "constants.go" ]
 }

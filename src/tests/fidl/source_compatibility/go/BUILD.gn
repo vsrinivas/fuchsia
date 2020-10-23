@@ -20,4 +20,15 @@ go_library("fidl_changes_go_lib") {
     "../:fidl.test.during($go_toolchain)",
     "//src/lib/component",
   ]
+  sources = [
+    "client_1_before.go",
+    "client_2_before_during.go",
+    "client_3_after_during.go",
+    "client_4_after.go",
+    "main.go",
+    "server_1_before.go",
+    "server_2_before_during.go",
+    "server_3_after_during.go",
+    "server_4_after.go",
+  ]
 }

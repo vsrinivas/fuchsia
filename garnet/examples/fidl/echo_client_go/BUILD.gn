@@ -16,6 +16,9 @@ go_binary("echo_client_go_bin") {
 
 go_library("echo_client_go_lib") {
   name = "echo_client_go"
+
+  sources = [ "echo_client.go" ]
+
   deps = [
     "//garnet/examples/fidl/services:echo($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",

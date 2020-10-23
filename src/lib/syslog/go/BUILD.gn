@@ -14,6 +14,10 @@ go_library("go") {
     "//src/lib/component($go_toolchain)",
     "//third_party/golibs:github.com/pkg/errors",
   ]
+  sources = [
+    "logger.go",
+    "logger_test.go",
+  ]
 }
 
 go_test("syslog_test") {

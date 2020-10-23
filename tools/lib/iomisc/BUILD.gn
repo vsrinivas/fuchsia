@@ -6,6 +6,14 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("iomisc") {
+  sources = [
+    "doc.go",
+    "iomisc.go",
+    "match.go",
+    "match_test.go",
+    "reader.go",
+    "reader_test.go",
+  ]
   deps = [
     "//tools/lib/logger",
     "//tools/lib/ring",

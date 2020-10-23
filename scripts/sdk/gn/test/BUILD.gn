@@ -13,4 +13,5 @@ go_library("host_gnsdk_test_lib") {
     "//vendor/*",
   ]
   name = "gnsdktest"
+  sources = [ "host_test.go" ]
 }

@@ -15,6 +15,16 @@ go_library("gopkg") {
     "//garnet/go/src/fidl/compiler/backend/common",
     "//garnet/go/src/fidl/compiler/backend/types",
   ]
+  sources = [
+    "codegen/codegen.go",
+    "codegen/codegen_test.go",
+    "codegen/description.tmpl.go",
+    "codegen/ir.go",
+    "codegen/protocol.tmpl.go",
+    "codegen/struct.tmpl.go",
+    "codegen/union.tmpl.go",
+    "main.go",
+  ]
 }
 
 go_binary("fidlgen_syzkaller") {

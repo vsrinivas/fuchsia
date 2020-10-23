@@ -9,6 +9,10 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("benchmarking") {
+  sources = [
+    "results.go",
+    "results_test.go",
+  ]
 }
 
 go_test("go_benchmarking_test") {

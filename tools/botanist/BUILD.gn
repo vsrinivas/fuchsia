@@ -7,6 +7,14 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("botanist_lib") {
+  sources = [
+    "botanist.go",
+    "fileutil.go",
+    "fileutil_test.go",
+    "ip.go",
+    "pkg.go",
+    "pkg_test.go",
+  ]
   deps = [
     ":constants",
     "//src/sys/pkg/lib/repo",
@@ -25,6 +33,15 @@ go_library("botanist_lib") {
 
 go_library("target") {
   source_dir = "target"
+  sources = [
+    "aemu.go",
+    "aemu_test.go",
+    "device.go",
+    "device_test.go",
+    "errors.go",
+    "qemu.go",
+    "target.go",
+  ]
   deps = [
     ":constants",
     "//third_party/golibs:github.com/creack/pty",
@@ -44,6 +61,13 @@ go_library("target") {
 
 go_library("main") {
   source_dir = "cmd"
+  sources = [
+    "main.go",
+    "qemu.go",
+    "run.go",
+    "zedboot.go",
+    "zedboot_test.go",
+  ]
   deps = [
     ":botanist_lib",
     ":constants",
@@ -81,6 +105,7 @@ go_test("botanist_target_tests") {
 
 go_library("constants") {
   source_dir = "constants"
+  sources = [ "constants.go" ]
 }
 
 group("tests") {

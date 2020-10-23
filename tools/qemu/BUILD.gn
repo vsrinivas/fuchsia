@@ -6,6 +6,12 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("qemu") {
+  sources = [
+    "aemu.go",
+    "aemu_test.go",
+    "qemu.go",
+    "qemu_test.go",
+  ]
 }
 
 go_test("qemu_tests") {

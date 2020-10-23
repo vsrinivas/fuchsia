@@ -6,6 +6,15 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("common") {
+  sources = [
+    "formatter.go",
+    "identifiers.go",
+    "identifiers_test.go",
+    "names.go",
+    "names_test.go",
+    "strings.go",
+    "strings_test.go",
+  ]
 }
 
 go_test("fidlgen_common_test") {

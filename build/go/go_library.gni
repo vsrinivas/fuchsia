@@ -102,10 +102,15 @@ template("go_library") {
              "--deps",
            ] + rebase_path(dependent_libraries)
 
-    if (defined(invoker.sources)) {
-      args += [ "--sources" ] + invoker.sources
-    } else if (!defined(invoker.allow_globbing) || invoker.allow_globbing) {
+    if (defined(invoker.allow_globbing) && invoker.allow_globbing) {
+      assert(!defined(invoker.sources),
+             "sources cannot be listed when globbing is enabled")
       args += [ "--allow-globbing" ]
+      deps += [ "//build/go:globbing_allowlist" ]
+    } else {
+      assert(defined(invoker.sources) && invoker.sources != [],
+             "sources must be listed")
+      args += [ "--sources" ] + invoker.sources
     }
 
     if (defined(invoker.metadata)) {

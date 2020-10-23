@@ -51,6 +51,15 @@ if (is_linux) {
       ":bootserver_user_tools",
       ":main_zbi",
     ]
+    sources = [
+      "common.go",
+      "test_advert_frequency/test_advert_frequency_test.go",
+      "test_init_partition_tables/test_init_partition_tables_test.go",
+      "test_pave_no_bind/test_pave_no_bind_test.go",
+      "test_pave_no_bind_failure/test_pave_no_bind_failure_test.go",
+      "test_write_firmware_no_type/test_write_firmware_no_type_test.go",
+      "test_write_firmware_with_type/test_write_firmware_with_type_test.go",
+    ]
   }
 
   host_test_data("main_zbi") {

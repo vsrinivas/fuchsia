@@ -7,6 +7,13 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("bootserver_lib") {
+  sources = [
+    "boot.go",
+    "boot_test.go",
+    "image.go",
+    "image_test.go",
+    "mode.go",
+  ]
   deps = [
     ":bootserverconstants",
     "//third_party/golibs:cloud.google.com/go/storage",
@@ -23,10 +30,15 @@ go_library("bootserver_lib") {
 
 go_library("bootserverconstants") {
   source_dir = "bootserverconstants"
+  sources = [ "constants.go" ]
 }
 
 go_library("main") {
   source_dir = "cmd"
+  sources = [
+    "main.go",
+    "main_test.go",
+  ]
   deps = [
     ":bootserver_lib",
     "//tools/net/netboot",
@@ -38,6 +50,7 @@ go_library("main") {
 
 go_binary("bootserver") {
   # TODO(fxbug.dev/38517): Stop renaming once zircon bootserver goes away.
+
   output_name = "bootserver_new"
   gopackage = "go.fuchsia.dev/fuchsia/tools/bootserver/cmd"
   deps = [ ":main" ]

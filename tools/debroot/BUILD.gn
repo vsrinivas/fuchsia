@@ -12,6 +12,12 @@ go_library("main") {
     "//third_party/golibs:github.com/google/subcommands",
     "//third_party/golibs:golang.org/x/crypto",
   ]
+  sources = [
+    "debian-archive-keyring.gpg",
+    "main.go",
+    "packages.lock",
+    "packages.yml",
+  ]
 }
 
 go_binary("debroot") {

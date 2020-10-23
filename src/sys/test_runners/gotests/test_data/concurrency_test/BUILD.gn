@@ -13,6 +13,7 @@ go_library("concurrency_test") {
     "//examples/components/routing/fidl:echo($go_toolchain)",
     "//src/lib/component",
   ]
+  sources = [ "concurrency_test.go" ]
 }
 
 go_test("concurrency_test_driver_golang") {

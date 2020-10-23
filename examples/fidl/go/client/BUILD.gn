@@ -20,6 +20,7 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component",
   ]
+  sources = [ "main.go" ]
 }
 
 package("client") {

@@ -21,6 +21,8 @@ if (is_linux) {
     testonly = true
 
     deps = [ "//src/testing/qemu" ]
+
+    sources = [ "shutdown_test.go" ]
   }
 
   host_test_data("main_zbi") {

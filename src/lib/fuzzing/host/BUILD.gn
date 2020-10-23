@@ -23,6 +23,7 @@ if (is_host) {
 
   go_library("host_fuzzers_test_lib") {
     name = "fuzzing"
+    sources = [ "host_test.go" ]
   }
 
   go_test("host_fuzzers_test") {

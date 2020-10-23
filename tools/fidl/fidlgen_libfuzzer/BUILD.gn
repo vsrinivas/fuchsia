@@ -15,6 +15,18 @@ go_library("gopkg") {
     "//garnet/go/src/fidl/compiler/backend/cpp",
     "//garnet/go/src/fidl/compiler/backend/types",
   ]
+  sources = [
+    "codegen/bits.tmpl.go",
+    "codegen/codegen.go",
+    "codegen/codegen_test.go",
+    "codegen/enum.tmpl.go",
+    "codegen/header.tmpl.go",
+    "codegen/source.tmpl.go",
+    "codegen/struct.tmpl.go",
+    "codegen/table.tmpl.go",
+    "codegen/union.tmpl.go",
+    "main.go",
+  ]
 }
 
 go_binary("fidlgen_libfuzzer") {

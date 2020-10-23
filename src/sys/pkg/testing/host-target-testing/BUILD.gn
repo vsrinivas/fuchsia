@@ -32,6 +32,34 @@ go_library("host-target-testing") {
     "//tools/net/sshutil",
   ]
   non_go_deps = [ ":test_tools($host_toolchain)" ]
+  sources = [
+    "artifacts/archive.go",
+    "artifacts/build.go",
+    "artifacts/builder.go",
+    "avb/avb.go",
+    "avb/avb_test.go",
+    "device/device.go",
+    "device/monotonic.go",
+    "omaha/omaha.go",
+    "omaha/omaha_test.go",
+    "packages/package.go",
+    "packages/package_builder.go",
+    "packages/package_builder_test.go",
+    "packages/package_test.go",
+    "packages/repo.go",
+    "packages/server.go",
+    "paver/paver.go",
+    "paver/paver_test.go",
+    "sl4f/client.go",
+    "sl4f/file.go",
+    "sl4f/paver.go",
+    "sl4f/util.go",
+    "updater/updater.go",
+    "util/util.go",
+    "util/util_test.go",
+    "zbi/zbi.go",
+    "zbi/zbi_test.go",
+  ]
 }
 
 test_packages = [

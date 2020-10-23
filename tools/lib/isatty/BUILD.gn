@@ -5,4 +5,10 @@
 import("//build/go/go_library.gni")
 
 go_library("isatty") {
+  sources = [
+    "isatty.go",
+    "isatty_darwin.go",
+    "isatty_linux.go",
+    "isatty_stub.go",
+  ]
 }

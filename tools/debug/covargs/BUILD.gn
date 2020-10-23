@@ -10,14 +10,29 @@ go_library("codecoverage_api") {
   name =
       "go.fuchsia.dev/fuchsia/tools/debug/covargs/api/third_party/codecoverage"
   source_dir = "api/third_party/codecoverage"
+  sources = [
+    "code_coverage.pb.go",
+    "gen.go",
+  ]
   deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
 }
 
 go_library("llvm_api") {
   source_dir = "api/llvm"
+  sources = [
+    "doc.go",
+    "llvm.go",
+  ]
 }
 
 go_library("covargs_lib") {
+  sources = [
+    "profile.go",
+    "profile_test.go",
+    "report.go",
+    "report_test.go",
+  ]
+
   deps = [
     ":codecoverage_api",
     ":llvm_api",
@@ -31,6 +46,8 @@ go_library("covargs_lib") {
 
 go_library("main") {
   source_dir = "cmd"
+  sources = [ "main.go" ]
+
   deps = [
     ":covargs_lib",
     ":llvm_api",

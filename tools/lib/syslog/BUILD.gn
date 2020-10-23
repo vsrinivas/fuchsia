@@ -6,6 +6,10 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("syslog") {
+  sources = [
+    "syslog.go",
+    "syslog_test.go",
+  ]
   deps = [
     ":constants",
     "//tools/lib/logger",
@@ -21,4 +25,5 @@ go_test("syslog_tests") {
 
 go_library("constants") {
   source_dir = "constants"
+  sources = [ "constants.go" ]
 }

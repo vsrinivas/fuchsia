@@ -21,13 +21,43 @@ go_library("main") {
     "//third_party/golibs:github.com/google/subcommands",
     "//tools/lib/logger",
   ]
+
+  sources = [
+    "main.go",
+    "main_test.go",
+  ]
 }
 
 go_library("templates") {
   source_dir = "templates"
+
+  sources = [
+    "html.tmpl.go",
+    "json.tmpl.go",
+    "txt.tmpl.go",
+  ]
 }
 
 go_library("lib") {
+  sources = [
+    "config.go",
+    "config_test.go",
+    "file.go",
+    "file_test.go",
+    "file_tree.go",
+    "file_tree_test.go",
+    "license.go",
+    "license_test.go",
+    "licenses.go",
+    "licenses_test.go",
+    "metrics.go",
+    "metrics_test.go",
+    "template.go",
+    "template_test.go",
+    "traverse.go",
+    "traverse_test.go",
+  ]
+
   deps = [
     ":templates",
     "//third_party/golibs:golang.org/x/sync",
@@ -37,6 +67,7 @@ go_library("lib") {
 
 go_library("golden") {
   source_dir = "golden"
+  sources = [ "golden_test.go" ]
 }
 
 install_host_tools("host") {

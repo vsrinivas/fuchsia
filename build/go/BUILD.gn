@@ -23,3 +23,24 @@ if (current_toolchain == default_toolchain) {
     expected_label = go_toolchain
   }
 }
+
+group("globbing_allowlist") {
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  # This is an allowlist of packages that do not enforce that the source files
+  # are listed in `sources`. This is only intended to be used for third-party
+  # libraries.
+  visibility = [
+    "//src/testing/fuzzing/syzkaller:syzkaller-go",
+    "//third_party/go:*",
+    "//third_party/go/makefuchsia:*",
+    "//third_party/go/makeroot:*",
+    "//third_party/golibs:*",
+  ]
+}

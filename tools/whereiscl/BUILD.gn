@@ -9,16 +9,24 @@ import("//build/host.gni")
 
 go_library("lib") {
   deps = [ ":netutil" ]
+  sources = [
+    "changeinfo.go",
+    "changeinfo_test.go",
+    "gistatus.go",
+    "gistatus_test.go",
+  ]
 }
 
 go_library("main") {
   name = "main"
   source_dir = "cmd"
+  sources = [ "whereiscl.go" ]
   deps = [ ":lib" ]
 }
 
 go_library("netutil") {
   source_dir = "netutil"
+  sources = [ "netutil.go" ]
 }
 
 go_binary("whereiscl") {
@@ -33,6 +41,7 @@ install_host_tools("host") {
 
 go_library("testhelper") {
   source_dir = "testhelper"
+  sources = [ "testhelper.go" ]
 }
 
 go_test("whereiscl_test") {

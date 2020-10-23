@@ -18,6 +18,8 @@ go_library("battery_manager_lib") {
     "//src/lib/component",
     "//src/lib/syslog/go",
   ]
+
+  sources = [ "battery_manager_test.go" ]
 }
 
 go_test("battery_manager_test") {
