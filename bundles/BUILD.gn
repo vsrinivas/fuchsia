@@ -47,6 +47,7 @@ group("tools") {
     "//src/sys/tools/cs",
     "//src/sys/tools/log",
     "//src/sys/tools/runmany",
+    "//src/sys/tools/step",
     "//src/ui/tools:scenic",
     "//src/ui/tools/tiles_ctl",
     "//third_party/boringssl:boringssl_tool",

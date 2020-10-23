@@ -1,0 +1,57 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
+
+rustc_library("step_lib") {
+  edition = "2018"
+  source_root = "lib/mod.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/testing:test_utils_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates/transitional/rustyline",
+  ]
+
+  sources = [
+    "lib/events.rs",
+    "lib/mod.rs",
+  ]
+}
+
+rustc_binary("bin") {
+  edition = "2018"
+  source_root = "main.rs"
+
+  deps = [
+    ":step_lib",
+    "//src/lib/fuchsia-async",
+    "//src/sys/component_manager/testing:test_utils_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:structopt",
+  ]
+
+  sources = [ "main.rs" ]
+}
+
+package("step") {
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "bin"
+      dest = "step"
+      shell = true
+    },
+  ]
+}

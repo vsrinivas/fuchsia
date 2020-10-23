@@ -33,6 +33,7 @@ group("tools") {
     "//src/sys/pkg/bin/pm:host",
     "//src/sys/tools/cs",
     "//src/sys/tools/runmany",
+    "//src/sys/tools/step",
     "//src/ui/tools/tiles_ctl",
     "//third_party/curl",
     "//third_party/iperf",
