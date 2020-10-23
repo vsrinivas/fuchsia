@@ -64,9 +64,6 @@ pub struct Estimator<D: Diagnostics> {
     covariance_00: f64,
     /// The track of the estimate being managed.
     track: Track,
-    /// The utc offset calculated using the initial sample. This is a temporary variable that lets
-    /// us retain a fixed output until we are more confident in the internal state.
-    offset: zx::Duration,
     /// A diagnostics implementation for recording events of note.
     diagnostics: Arc<D>,
 }
@@ -87,7 +84,6 @@ impl<D: Diagnostics> Estimator<D> {
             estimate_0: 0f64,
             estimate_1: 1f64,
             covariance_00,
-            offset: utc - monotonic,
             track,
             diagnostics,
         }
@@ -140,11 +136,10 @@ impl<D: Diagnostics> Estimator<D> {
             offset: estimated_utc - self.monotonic,
             covariance: self.covariance_00 as u64,
         });
-        let input_utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
         info!(
             "received {:?} update to {}. Estimated UTC offset={}, covariance={:e}",
             self.track,
-            input_utc_chrono,
+            Utc.timestamp_nanos(utc.into_nanos()),
             (estimated_utc - monotonic).into_nanos(),
             self.covariance_00
         );
@@ -152,10 +147,10 @@ impl<D: Diagnostics> Estimator<D> {
 
     /// Returns the estimated utc at the supplied monotonic time.
     pub fn estimate(&self, monotonic: zx::Time) -> zx::Time {
-        // Until we have enough confidence in the filter behavior and clients ability to handle
-        // time corrections, we currently use only the first sample we receive. All others are used
-        // to update the internal state of the estimator but not the time it outputs.
-        self.offset + monotonic
+        // TODO(jsankey): Accomodate a oscillator frequency error when implementing the frequency
+        // correction algorithm.
+        let utc_at_last_update = self.reference_utc + f64_to_duration(self.estimate_0);
+        utc_at_last_update + (monotonic - self.monotonic)
     }
 }
 
@@ -197,6 +192,25 @@ mod test {
     }
 
     #[test]
+    fn apply_update() {
+        let diagnostics = Arc::new(FakeDiagnostics::new());
+        let mut estimator = Estimator::new(
+            TEST_TRACK,
+            Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1),
+            Arc::clone(&diagnostics),
+        );
+        estimator.update(Sample::new(*TIME_2 + OFFSET_2, *TIME_2, STD_DEV_1));
+
+        let expected_offset = (OFFSET_1 + OFFSET_2) / 2;
+        assert_eq!(estimator.estimate(*TIME_3), *TIME_3 + expected_offset);
+
+        diagnostics.assert_events(&[
+            create_estimate_event(OFFSET_1, *COV_1),
+            create_estimate_event(expected_offset, 242000000000000),
+        ]);
+    }
+
+    #[test]
     fn kalman_filter_performance() {
         // Note: The expected outputs for these test inputs have been validated using the time
         // synchronization simulator we created during algorithm development.
@@ -233,23 +247,6 @@ mod test {
             create_estimate_event(zx::Duration::from_nanos(10000000000000), 2500000000000000),
             create_estimate_event(zx::Duration::from_nanos(10000005887335), 2354934150544971),
             create_estimate_event(zx::Duration::from_nanos(9999985642105), 1911959512046394),
-        ]);
-    }
-
-    #[test]
-    fn update_ignored() {
-        let diagnostics = Arc::new(FakeDiagnostics::new());
-        let mut estimator = Estimator::new(
-            TEST_TRACK,
-            Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1),
-            Arc::clone(&diagnostics),
-        );
-        estimator.update(Sample::new(*TIME_2 + OFFSET_2, *TIME_2, STD_DEV_1));
-        assert_eq!(estimator.estimate(*TIME_3), *TIME_3 + OFFSET_1);
-        // Even though the update shouldn't affect the output yet it should be logged.
-        diagnostics.assert_events(&[
-            create_estimate_event(OFFSET_1, *COV_1),
-            create_estimate_event(zx::Duration::from_seconds(888), 242000000000000),
         ]);
     }
 

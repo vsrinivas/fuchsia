@@ -346,7 +346,7 @@ mod tests {
     }
 
     #[test]
-    fn subsequent_updates_ignored() {
+    fn subsequent_updates_accepted() {
         let mut executor = fasync::Executor::new().unwrap();
 
         let clock = create_clock();
@@ -374,11 +374,15 @@ mod tests {
         let updated_utc = clock.read().unwrap();
         let monotonic_after = zx::Time::get_monotonic();
 
-        // Check that the clock has been updated based on the first sample. The UTC should be
-        // bounded by the offset we supplied added to the monotonic window in which the calculation
-        // took place.
-        assert_geq!(updated_utc, monotonic_before + OFFSET);
-        assert_leq!(updated_utc, monotonic_after + OFFSET);
+        // Since we used the same covariance for the first two samples the offset in the kalman
+        // filter is roughly midway between the sample offsets, but slight closer to the second
+        // because oscillator uncertainty.
+        let expected_offset = zx::Duration::from_nanos(1666500000080699);
+
+        // Check that the clock has been updated. The UTC should be bounded by the expected offset
+        // added to the monotonic window in which the calculation took place.
+        assert_geq!(updated_utc, monotonic_before + expected_offset);
+        assert_leq!(updated_utc, monotonic_after + expected_offset);
 
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
@@ -387,9 +391,10 @@ mod tests {
             Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
             Event::EstimateUpdated {
                 track: *TEST_TRACK,
-                offset: zx::Duration::from_nanos(1666500000080699),
+                offset: expected_offset,
                 covariance: 3872000000562500,
             },
+            Event::UpdateClock { track: *TEST_TRACK },
         ]);
     }
 }
