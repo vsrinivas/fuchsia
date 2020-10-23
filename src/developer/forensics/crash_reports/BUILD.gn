@@ -331,6 +331,8 @@ source_set("store") {
   sources = [
     "store.cc",
     "store.h",
+    "store_metadata.cc",
+    "store_metadata.h",
   ]
 
   public_deps = [

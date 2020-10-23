@@ -271,6 +271,24 @@ executable("store_unittest_exe") {
   ]
 }
 
+executable("store_metadata_unittest_exe") {
+  testonly = true
+
+  # "store_metadata_unittest" is rather generic for the default_output_dir that is set
+  # to root_out_dir so instead we write the binary to target_out_dir.
+  sources = [ "store_metadata_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/crash_reports:store",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/utils:storage_size",
+    "//src/lib/files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 ###############################################################################
 # RESOURCES
 ###############################################################################
@@ -439,6 +457,14 @@ fuchsia_component("store_unittest") {
   deps = [ ":store_unittest_exe" ]
 }
 
+fuchsia_component("store_metadata_unittest") {
+  testonly = true
+
+  manifest = "meta/store_metadata_unittest.cmx"
+
+  deps = [ ":store_metadata_unittest_exe" ]
+}
+
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -458,6 +484,7 @@ fuchsia_test_package("crash-reports-tests") {
     ":report_util_unittest",
     ":sized_data_reader_unittest",
     ":store_unittest",
+    ":store_metadata_unittest",
   ]
 
   test_specs = {

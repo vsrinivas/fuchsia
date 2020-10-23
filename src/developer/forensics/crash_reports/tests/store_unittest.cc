@@ -306,7 +306,7 @@ TEST_F(StoreTest, Succeed_GarbageCollection) {
   // To make this test easier to understand, the below table shows when and why each report is being
   // garbage collected.
   //
-  // uid | program name  | garbage collection order | garbage collection reason
+  // report_id | program name  | garbage collection order | garbage collection reason
   // ----------------------------------------------------------------------------------------------
   // id1 | program_name1 |            n/a           |         n/a
   // id2 | program_name2 |             3            | oldest report in the store
@@ -348,7 +348,7 @@ TEST_F(StoreTest, Succeed_GarbageCollection) {
   EXPECT_THAT(garbage_collected_reports, UnorderedElementsAreArray({id2.value()}));
   EXPECT_FALSE(store_->Contains(id2.value()));
 
-  EXPECT_THAT(store_->GetAllReportIds(), UnorderedElementsAreArray({
+  EXPECT_THAT(store_->GetReports(), UnorderedElementsAreArray({
                                              id5.value(),
                                              id6.value(),
                                              id7.value(),

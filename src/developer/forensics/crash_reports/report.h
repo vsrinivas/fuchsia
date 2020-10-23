@@ -35,9 +35,15 @@ class Report {
 
   std::string ProgramShortname() const { return program_shortname_; }
   const std::map<std::string, std::string>& Annotations() const { return annotations_; }
+
   const std::map<std::string, SizedData>& Attachments() const { return attachments_; }
+  std::map<std::string, SizedData>& Attachments() { return attachments_; }
+
   const std::optional<SizedData>& Minidump() const { return minidump_; }
-  forensics::crash_reports::SnapshotUuid SnapshotUuid() const { return snapshot_uuid_; }
+  std::optional<SizedData>& Minidump() { return minidump_; }
+
+  const forensics::crash_reports::SnapshotUuid& SnapshotUuid() const { return snapshot_uuid_; }
+  forensics::crash_reports::SnapshotUuid& SnapshotUuid() { return snapshot_uuid_; }
 
  private:
   std::string program_shortname_;
