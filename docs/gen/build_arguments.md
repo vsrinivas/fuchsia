@@ -2091,6 +2091,15 @@ Path to file to use for recovery logo
 
 From //src/recovery/system/system_recovery_args.gni:7
 
+### rtc_c
+This is used to temporarily enable building with the C driver
+and will be removed once cpp driver is stabilized.
+See fxb/62176.
+
+**Current value (from the default):** `false`
+
+From //src/devices/rtc/drivers/pl031-rtc/BUILD.gn:12
+
 ### rust_cap_lints
 Sets the maximum lint level.
 "deny" will make all warnings into errors, "warn" preserves them as warnings, and "allow" will
@@ -3181,13 +3190,4 @@ From //build/config/arm.gni:28
 **Current value (from the default):** `8`
 
 From //build/config/arm.gni:12
-
-### rtc_c
-This is used to temporarily enable building with the C driver
-and will be removed once cpp driver is stabilized.
-See fxb/62176.
-
-**Current value (from the default):** `false`
-
-From //src/devices/rtc/drivers/pl031-rtc/BUILD.gn:11
 
