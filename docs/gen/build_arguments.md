@@ -679,7 +679,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/099d45e2e3a55098d7c752691b7c2b09a2e81e37/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/9dc24c4888700c9aba6a4068070840d9a2c8b9ad/runtime/dart/dart_component.gni#24)
 
 ### dart_default_build_cfg
 Non-product JIT
@@ -704,14 +704,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/099d45e2e3a55098d7c752691b7c2b09a2e81e37/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/9dc24c4888700c9aba6a4068070840d9a2c8b9ad/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/099d45e2e3a55098d7c752691b7c2b09a2e81e37/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/9dc24c4888700c9aba6a4068070840d9a2c8b9ad/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -961,7 +961,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/099d45e2e3a55098d7c752691b7c2b09a2e81e37/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/9dc24c4888700c9aba6a4068070840d9a2c8b9ad/runtime/dart/dart_component.gni#13)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1001,14 +1001,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/099d45e2e3a55098d7c752691b7c2b09a2e81e37/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/9dc24c4888700c9aba6a4068070840d9a2c8b9ad/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/099d45e2e3a55098d7c752691b7c2b09a2e81e37/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/9dc24c4888700c9aba6a4068070840d9a2c8b9ad/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -2727,6 +2727,8 @@ to true to avoid build failures. See that flag's documentation for details.
 From //src/connectivity/network/BUILD.gn:10
 
 ### use_null_vulkan_on_host
+TODO(liyl): Currently non-x64 platforms don't have Vulkan support,
+so we always use the null Vulkan implementation instead.
 
 Global arguments for whether we use a "null" Vulkan implementation on
 host vulkan_executables and vulkan_tests, so that any attempt to create a
@@ -2737,7 +2739,7 @@ This argument will affect all vulkan_{executable/test} build targets.
 
 **Current value (from the default):** `false`
 
-From //src/lib/vulkan/build/config.gni:31
+From //src/lib/vulkan/build/config.gni:40
 
 ### use_prebuilt_ffmpeg
 Use a prebuilt ffmpeg binary rather than building it locally.  See
@@ -2774,7 +2776,7 @@ it only works when use_null_vulkan_on_host is set to false.
 
 **Current value (from the default):** `true`
 
-From //src/lib/vulkan/build/config.gni:40
+From //src/lib/vulkan/build/config.gni:49
 
 ### use_thinlto
 Use ThinLTO variant of LTO if use_lto = true.
@@ -2872,7 +2874,7 @@ and descriptor files required to load the libraries.
 
 **Current value (from the default):** `"//prebuilt/third_party/vulkan_runtime/linux-x64"`
 
-From //src/lib/vulkan/build/config.gni:18
+From //src/lib/vulkan/build/config.gni:23
 
 ### vulkan_host_sdk_dir
 
@@ -2882,7 +2884,7 @@ headers and sources to Vulkan loader, layers and tools.
 
 **Current value (from the default):** `"//prebuilt/third_party/vulkansdk/linux/x86_64"`
 
-From //src/lib/vulkan/build/config.gni:11
+From //src/lib/vulkan/build/config.gni:16
 
 ### vulkan_sdk
 
@@ -3179,4 +3181,13 @@ From //build/config/arm.gni:28
 **Current value (from the default):** `8`
 
 From //build/config/arm.gni:12
+
+### rtc_c
+This is used to temporarily enable building with the C driver
+and will be removed once cpp driver is stabilized.
+See fxb/62176.
+
+**Current value (from the default):** `false`
+
+From //src/devices/rtc/drivers/pl031-rtc/BUILD.gn:11
 
