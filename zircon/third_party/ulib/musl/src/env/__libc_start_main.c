@@ -163,10 +163,9 @@ NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
     zx_handle_t handles[p.nhandles];
     p.buffer = buffer;
     p.handles = handles;
-    if (status == ZX_OK) {
-      status = processargs_read(bootstrap, buffer, p.nbytes, handles, p.nhandles, &p.procargs,
-                                &p.handle_info);
-    }
+    status = processargs_read(bootstrap, buffer, p.nbytes, handles, p.nhandles, &p.procargs,
+                              &p.handle_info);
+    _zx_handle_close(bootstrap);
     zx_handle_t main_thread_handle = ZX_HANDLE_INVALID;
     processargs_extract_handles(p.nhandles, handles, p.handle_info, &__zircon_process_self,
                                 &__zircon_job_default, &__zircon_vmar_root_self,
