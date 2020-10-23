@@ -3,14 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::events::{self, DaemonEvent, WireTrafficType},
-    crate::target::{Target, TargetEvent},
-    anyhow::{anyhow, bail, Context, Result},
-    async_std::task,
-    async_trait::async_trait,
-    ffx_fastboot::{
+    crate::fastboot::{
         continue_boot, erase, flash, oem, reboot, reboot_bootloader, set_active, stage,
     },
+    crate::target::{Target, TargetEvent},
+    anyhow::{anyhow, bail, Context, Result},
+    async_trait::async_trait,
     fidl_fuchsia_developer_bridge::{FastbootError, FastbootRequest, FastbootRequestStream},
     futures::prelude::*,
     futures::try_join,
@@ -194,32 +192,6 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
         }
         Ok(())
     }
-}
-
-pub(crate) fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
-    fuchsia_async::Task::spawn(async move {
-        loop {
-            log::debug!("Looking for fastboot devices");
-            let fastboot_devices = ffx_fastboot::find_devices();
-            for dev in fastboot_devices {
-                // Add to target collection
-                let nodename = format!("{:?}", dev);
-                queue
-                    .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(events::TargetInfo {
-                        nodename,
-                        serial: Some(dev.serial),
-                        ..Default::default()
-                    })))
-                    .await
-                    .unwrap_or_else(|err| {
-                        log::warn!("Fastboot discovery failed to enqueue event: {}", err)
-                    });
-            }
-            // Sleep
-            task::sleep(std::time::Duration::from_secs(3)).await;
-        }
-    })
-    .detach();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

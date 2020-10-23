@@ -4,6 +4,7 @@
 
 use {
     crate::events::{self, DaemonEvent, EventSynthesizer},
+    crate::fastboot::open_interface_with_serial,
     crate::net::IsLocalAddr,
     crate::onet::HostPipeConnection,
     crate::target_task::*,
@@ -12,7 +13,6 @@ use {
     async_std::sync::RwLock,
     async_trait::async_trait,
     chrono::{DateTime, Utc},
-    ffx_fastboot::open_interface_with_serial,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_remotecontrol::{

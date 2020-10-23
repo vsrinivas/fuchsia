@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    crate::events::{self, DaemonEvent, WireTrafficType},
     anyhow::{bail, Context, Result},
+    async_std::task,
     fastboot::{
         command::{ClientVariable, Command},
         reply::Reply,
@@ -15,6 +17,8 @@ use {
     },
     usb_bulk::{Interface, InterfaceInfo, Open},
 };
+
+pub mod client;
 
 //TODO(fxbug.dev/52733) - this info will probably get rolled into the target struct
 #[derive(Debug)]
@@ -203,26 +207,28 @@ pub fn oem<T: Read + Write>(interface: &mut T, cmd: &String, params: Vec<String>
     }
 }
 
-/// Tests are based on the [Zedmon power monitor](https://fuchsia.googlesource.com/zedmon).
-///
-/// In order to run them, the host should be connected to exactly one fastboot device
-/// The fastboot device should match the appropriate producting information and be running fastboot
-/// version 0.4.
-///
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_fastboot_enumeration() {
-        let serials = find_serial_numbers();
-        assert_eq!(serials.len(), 1, "Host should have exactly one fastboot device connected");
-    }
-
-    #[test]
-    pub fn test_find_devices() -> Result<()> {
-        let devices = find_devices();
-        assert_eq!(devices.len(), 1, "Host should have exactly one fastboot device connected");
-        Ok(())
-    }
+pub(crate) fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
+    fuchsia_async::Task::spawn(async move {
+        loop {
+            log::debug!("Looking for fastboot devices");
+            let fastboot_devices = find_devices();
+            for dev in fastboot_devices {
+                // Add to target collection
+                let nodename = format!("{:?}", dev);
+                queue
+                    .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(events::TargetInfo {
+                        nodename,
+                        serial: Some(dev.serial),
+                        ..Default::default()
+                    })))
+                    .await
+                    .unwrap_or_else(|err| {
+                        log::warn!("Fastboot discovery failed to enqueue event: {}", err)
+                    });
+            }
+            // Sleep
+            task::sleep(std::time::Duration::from_secs(3)).await;
+        }
+    })
+    .detach();
 }

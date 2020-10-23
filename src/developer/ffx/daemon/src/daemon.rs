@@ -6,7 +6,7 @@ use {
     crate::constants::get_socket,
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
-    crate::fastboot::{spawn_fastboot_discovery, Fastboot},
+    crate::fastboot::{client::Fastboot, spawn_fastboot_discovery},
     crate::mdns::MdnsTargetFinder,
     crate::target::{
         RcsConnection, SshAddrFetcher, Target, TargetCollection, TargetEvent, ToFidlTarget,
