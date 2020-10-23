@@ -117,7 +117,8 @@ class MockFunction {
   }
 
   void CallHelper(std::unique_ptr<Expectation>* exp) {
-    ASSERT_LT(expectation_index_, expectations_.size());
+    const bool enough_expectations_were_set = expectation_index_ < expectations_.size();
+    ZX_ASSERT(enough_expectations_were_set);
     *exp = std::move(expectations_[expectation_index_++]);
   }
 
@@ -185,7 +186,8 @@ class MockFunction<void, Ts...> {
   }
 
   void CallHelper(std::unique_ptr<Expectation>* exp) {
-    ASSERT_LT(expectation_index_, expectations_.size());
+    const bool enough_expectations_were_set = expectation_index_ < expectations_.size();
+    ZX_ASSERT(enough_expectations_were_set);
     *exp = std::move(expectations_[expectation_index_++]);
   }
 
