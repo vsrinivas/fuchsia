@@ -147,9 +147,9 @@ In `astro-audio`, this looks like:
 
 ```c
 static const device_fragment_t fragments[] = {
-    { countof(i2c_fragment), i2c_fragment },
-    { countof(fault_gpio_fragment), fault_gpio_fragment },
-    { countof(enable_gpio_fragment), enable_gpio_fragment },
+    { "i2c", countof(i2c_fragment), i2c_fragment },
+    { "gpio-fault", countof(fault_gpio_fragment), fault_gpio_fragment },
+    { "gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment },
 };
 ```
 
@@ -181,19 +181,19 @@ Argument                  | Meaning
 `props_count`             | How many entries are in `props`
 `fragments`              | The individual fragment devices
 `fragments_count`        | How many entries are in `fragments`
-`coresident_device_index` | Which devhost to use
+`coresident_device_index` | Which driver host to use
 
 The `dev` value must be the `zx_device_t` corresponding to the "`sys`"
 device (i.e., the platform bus driver's device).
 
-Note that the `coresident_device_index` is used to indicate which devhost
+Note that the `coresident_device_index` is used to indicate which driver host
 the new device should use.
-If you specify `UINT32_MAX`, the device will reside in a new devhost.
+If you specify `UINT32_MAX`, the device will reside in a new driver host.
 
 > Note that `astro-audio` uses **pbus_composite_device_add()** rather
-> than **composite_device_add()**.
+> than **device_add_composite()**.
 > The difference is that **pbus_composite_device_add()** is an API
-> provided by the platform bus driver that wraps **composite_device_add()** and
+> provided by the platform bus driver that wraps **device_add_composite()** and
 > inserts an additional fragment for ferrying over direct-access resources
 > such as MMIO, IRQs, and BTIs.
 
@@ -204,15 +204,14 @@ that implements a `ZX_PROTOCOL_COMPOSITE` protocol.
 This allows you to access all of the individual fragments that make up the
 composite device.
 
-The first thing to do is get a list of the devices.
-This is done via **composite_get_fragments()**:
+The first thing to retrieve a device for each fragment.
+This is done via **composite_get_fragment()**:
 
 ```c
-void composite_get_fragments (
+bool composite_get_fragment (
      composite_protocol_t* composite,
-     zx_device_t* fragments,
-     size_t fragment_count,
-     size_t* actual_count);
+     const char* fragment_name,
+     zx_device_t** fragment);
 ```
 
 The arguments are as follows:
@@ -220,9 +219,8 @@ The arguments are as follows:
 Argument          | Meaning
 ------------------|---------------------------------------------------
 `composite`       | The protocol handle
-`fragments`      | Pointer to an array of `zx_device_t*`
-`fragment_count` | Size of `fragments` array
-`actual_count`    | Actual number of entries filled in `fragments`
+`fragment_name`   | The name of the fragment you wish to fetch
+`fragment`        | Pointer to `zx_device_t` representing the fragment
 
 The program starts by calling **device_get_protocol()** to get the protocol for the
 composite driver:
@@ -235,33 +233,19 @@ auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
 
 Assuming there aren't any errors (`status` is equal to `ZX_OK`), the next step is to
 declare an array of `zx_device_t*` pointers to hold the devices, and call
-**composite_get_fragments()**:
+**composite_get_fragment()**:
 
-```c
-enum {
-    FRAGMENT_I2C,
-    FRAGMENT_GPIO,
-    FRAGMENT_COUNT
-};
-
-zx_device_t* fragments[FRAGMENT_COUNT];
-size_t actual;
-composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
-if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s: could not get our fragments", __FILE__);
+zx_device_t* fragment;
+bool found = composite_get_fragments(&composite, "fragment-name", &fragment);
+if (!found) {
+    zxlogf(ERROR, "%s: could not get fragment-name", __FILE__);
     return ZX_ERR_INTERNAL;
 }
 ```
 
-> The ordering of the devices returned by **device_get_fragments()**
-> is defined to be the same as the ordering given to the **device_add_composite()**
-> call by the board driver.
-> Therefore, any enums are for convenience, and are not inherently tied to the
-> ordering.
-> Many composite devices will have a fixed number of fragments in a specific
-> order, but there may also be composite devices that have a variable number
-> of fragments, in which case the fragments might be identified by device
-> metadata (via **device_get_metadata()**), or by some other means.
+> The name of fragment supplied to **device_get_fragment()**
+> is the same as the one in **device_fragment_t** entries supplied to
+> the **device_add_composite()** call by the board driver.
 
 ## Advanced Topics
 
@@ -285,7 +269,7 @@ When a device is added with `DEVICE_ADD_MUST_ISOLATE`, two devices
 end up being created:
 the normal device, in the same process as its parent, and a proxy.
 
-The proxy is created in a new devhost; if the normal device's
+The proxy is created in a new driver host; if the normal device's
 driver is `normal.so`, then its driver is `normal.proxy.so`.
 This driver is expected to implement a **create()** method which calls
 **device_add()** and stashes the IPC channel it's given.
