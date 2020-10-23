@@ -9,12 +9,13 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/fidl.h>
+
+#include "src/devices/rtc/drivers/pl031-rtc/pl031_rtc_bind.h"
 
 namespace rtc {
 
@@ -98,10 +99,4 @@ zx_driver_ops_t pl031_driver_ops = {
 
 }  // namespace rtc
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(pl031, rtc::pl031_driver_ops, "zircon", "0.1", 3)
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_RTC_PL031),
-ZIRCON_DRIVER_END(pl031)
-    // clang-format on
+ZIRCON_DRIVER(pl031, rtc::pl031_driver_ops, "zircon", "0.1")

@@ -1,0 +1,35 @@
+[
+    {
+        "name": "All Match",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.platform.BIND_PLATFORM_DEV_DID.RTC_PL031"
+        }
+    },
+    {
+        "name": "Missing Platform Device VID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.platform.BIND_PLATFORM_DEV_DID.RTC_PL031"
+        }
+    },
+    {
+        "name": "Missing Platform Device PID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.platform.BIND_PLATFORM_DEV_DID.RTC_PL031"
+        }
+    },
+    {
+        "name": "Missing Platform Device DID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC"
+        }
+    }
+]
