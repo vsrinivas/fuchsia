@@ -37,6 +37,51 @@ struct CpuidIo {
   uint32_t values_[4];
 };
 
+enum class Vendor {
+  kUnknown,
+  kIntel,
+  kAmd,
+};
+
+// The list is not exhaustive and is in chronological order within groupings.
+// Microarchictectures that use the same processor (and, say, differ only in
+// performance or SoC composition) are regarded as equivalent.
+enum class Microarchitecture {
+  kUnknown,
+
+  // Intel Core family (64-bit, display family 0x6).
+  kIntelCore2,
+  kIntelNehalem,
+  kIntelWestmere,
+  kIntelSandyBridge,
+  kIntelIvyBridge,
+  kIntelHaswell,
+  kIntelBroadwell,
+  // Includes Kaby/Coffee/Whiskey/Amber/Comet Lake.
+  kIntelSkylake,
+  // Includes Cascade/Cooper Lake.
+  kIntelSkylakeServer,
+  // A 10nm prototype only ever released on the Intel Core i3-8121U.
+  kIntelCannonLake,
+
+  // Intel Atom family.
+  kIntelBonnell,
+  kIntelSilvermont,
+  kIntelAirmont,
+  kIntelGoldmont,
+  kIntelGoldmontPlus,
+  kIntelTremont,
+
+  // AMD families.
+  kAmdFamily0x15,
+  kAmdFamily0x16,
+  kAmdFamily0x17,
+  kAmdFamily0x19,
+};
+
+std::string_view ToString(Vendor vendor);
+std::string_view ToString(Microarchitecture microarch);
+
 // A convenient and self-documenting wrapper for defining CPUID value bitsets
 // as hwreg register objects, along with their associated leaf and subleaf
 // values (which are always expected to be defined as static constexpr
@@ -74,6 +119,24 @@ struct CpuidVendorB : public CpuidValueBase<CpuidVendorB, 0x0, 0x0, CpuidIo::kEb
 struct CpuidVendorC : public CpuidValueBase<CpuidVendorC, 0x0, 0x0, CpuidIo::kEcx> {};
 struct CpuidVendorD : public CpuidValueBase<CpuidVendorD, 0x0, 0x0, CpuidIo::kEdx> {};
 
+template <typename Leaf0CpuidIoProvider>
+Vendor GetVendor(Leaf0CpuidIoProvider io) {
+  using namespace std::string_view_literals;
+
+  uint32_t ids[] = {
+      CpuidVendorB::Get().ReadFrom(&io).reg_value(),
+      CpuidVendorD::Get().ReadFrom(&io).reg_value(),
+      CpuidVendorC::Get().ReadFrom(&io).reg_value(),
+  };
+  std::string_view name{reinterpret_cast<char*>(ids), sizeof(ids)};
+  if (name == "GenuineIntel"sv) {
+    return Vendor::kIntel;
+  } else if (name == "AuthenticAMD"sv) {
+    return Vendor::kAmd;
+  }
+  return Vendor::kUnknown;
+}
+
 //---------------------------------------------------------------------------//
 // Leaf/Function 0x1.
 //
@@ -103,7 +166,17 @@ struct CpuidVersionInfo : public CpuidValueBase<CpuidVersionInfo, 0x1, 0x0, Cpui
 
   uint8_t family() const;
   uint8_t model() const;
+
+  // Attempts to derives the microarchitecture with the assumption that the
+  // system relates to a particular vendor.
+  Microarchitecture microarchitecture(Vendor vendor) const;
 };
+
+template <typename Leaf0CpuidIoProvider, typename Leaf1CpuidIoProvider>
+Microarchitecture GetMicroarchitecture(Leaf0CpuidIoProvider io0, Leaf1CpuidIoProvider io1) {
+  auto vendor = GetVendor(io0);
+  return CpuidVersionInfo::Get().ReadFrom(&io1).microarchitecture(vendor);
+}
 
 // [intel/vol2]: Table 3-10.  Feature Information Returned in the ECX Register.
 // [amd/vol3]: E.3.2, CPUID Fn0000_0001_ECX Feature Identifiers.
