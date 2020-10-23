@@ -391,8 +391,8 @@ impl SavedNetworksManager {
                             // passive connect.
                             if connected_passive && !network.hidden_stats.connected_passive {
                                 network.hidden_stats.connected_passive = true;
-                                has_change = true;
-                                // TODO(35918) Figure out the hidden probability
+                                network.update_hidden_prob();
+                                // TODO(60619): Update the stash with new probability if it has changed
                             }
                             if has_change {
                                 // Update persistent storage since a config has changed.
@@ -445,8 +445,7 @@ impl SavedNetworksManager {
                     // Don't update probability if this was already true
                     if !network.hidden_stats.seen_in_passive_scan_results {
                         network.hidden_stats.seen_in_passive_scan_results = true;
-                        // TODO(35918) Figure out the probability calculations. This will be zero
-                        // until we figure out a calculation, so we will never actively scan.
+                        network.update_hidden_prob();
                     }
                 }
                 // TODO(60619): Update the stash with new probability if it has changed
@@ -537,7 +536,10 @@ mod tests {
     use {
         super::*,
         crate::{
-            config_management::{HiddenStats, PerformanceStats},
+            config_management::{
+                HiddenStats, PerformanceStats, PROB_HIDDEN_DEFAULT, PROB_HIDDEN_IF_CONNECT_PASSIVE,
+                PROB_HIDDEN_IF_SEEN_PASSIVE,
+            },
             util::cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
         },
         cobalt_client::traits::AsEventCode,
@@ -787,7 +789,7 @@ mod tests {
         assert_variant!(saved_networks.lookup(network_id.clone()).await.as_slice(), [config] => {
             assert_eq!(config.has_ever_connected, true);
             assert_eq!(config.hidden_stats.connected_passive, false);
-            assert_eq!(config.hidden_probability, 0.0);
+            assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
         });
 
         saved_networks
@@ -802,7 +804,7 @@ mod tests {
         assert_variant!(saved_networks.lookup(network_id.clone()).await.as_slice(), [config] => {
             assert_eq!(config.has_ever_connected, true);
             assert_eq!(config.hidden_stats.connected_passive, true);
-            assert_eq!(config.hidden_probability, 0.0);
+            assert_eq!(config.hidden_probability, PROB_HIDDEN_IF_CONNECT_PASSIVE);
         });
 
         // Success connects should be saved as persistent data.
@@ -1037,11 +1039,11 @@ mod tests {
 
         assert_variant!(saved_networks.lookup(saved_seen_id).await.as_slice(), [config] => {
             assert_eq!(config.hidden_stats.seen_in_passive_scan_results, true);
-            assert_eq!(config.hidden_probability, 0.0);
+            assert_eq!(config.hidden_probability, PROB_HIDDEN_IF_SEEN_PASSIVE);
         });
         assert_variant!(saved_networks.lookup(saved_unseen_id).await.as_slice(), [config] => {
             assert_eq!(config.hidden_stats.seen_in_passive_scan_results, false);
-            assert_eq!(config.hidden_probability, 0.0);
+            assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
         });
     }
 
@@ -1410,7 +1412,7 @@ mod tests {
             credential,
             has_ever_connected: false,
             hidden_stats: HiddenStats::new(),
-            hidden_probability: 0.0,
+            hidden_probability: PROB_HIDDEN_DEFAULT,
             perf_stats: PerformanceStats::new(),
         }
     }

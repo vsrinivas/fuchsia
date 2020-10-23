@@ -23,6 +23,13 @@ const MAX_PASSWORD_LEN: usize = 63;
 pub const PSK_BYTE_LEN: usize = 32;
 /// constraint on valid SSID legnth
 const MAX_SSID_LEN: usize = 32;
+/// If we have seen a network in a passive scan, we will rarely actively scan for it.
+pub const PROB_HIDDEN_IF_SEEN_PASSIVE: f32 = 0.05;
+/// If we have connected to a network from a passive scan, we will never scan for it.
+pub const PROB_HIDDEN_IF_CONNECT_PASSIVE: f32 = 0.0;
+/// Default probability that we will actively scan for the network if we haven't seen it in any
+/// passive scan.
+pub const PROB_HIDDEN_DEFAULT: f32 = 0.333;
 
 pub type SaveError = fidl_policy::NetworkConfigChangeError;
 
@@ -142,9 +149,20 @@ impl NetworkConfig {
             credential,
             has_ever_connected,
             hidden_stats: HiddenStats::new(),
-            hidden_probability: 0.0,
+            hidden_probability: PROB_HIDDEN_DEFAULT,
             perf_stats: PerformanceStats::new(),
         })
+    }
+
+    // Update the network config's probability that we will actively scan for the network.
+    pub fn update_hidden_prob(&mut self) {
+        if self.hidden_stats.connected_passive {
+            self.hidden_probability = PROB_HIDDEN_IF_CONNECT_PASSIVE;
+        } else if self.hidden_stats.seen_in_passive_scan_results {
+            self.hidden_probability = PROB_HIDDEN_IF_SEEN_PASSIVE;
+        }
+        // Do not update the probability if we have not seen the network or connected
+        // to it from a passive scan.
     }
 }
 
@@ -416,7 +434,7 @@ mod tests {
                 security_type: SecurityType::None,
                 credential: credential,
                 has_ever_connected: false,
-                hidden_probability: 0.0,
+                hidden_probability: PROB_HIDDEN_DEFAULT,
                 hidden_stats: HiddenStats::new(),
                 perf_stats: PerformanceStats::new()
             }
@@ -441,7 +459,7 @@ mod tests {
                 security_type: SecurityType::Wpa2,
                 credential: credential,
                 has_ever_connected: false,
-                hidden_probability: 0.0,
+                hidden_probability: PROB_HIDDEN_DEFAULT,
                 hidden_stats: HiddenStats::new(),
                 perf_stats: PerformanceStats::new()
             }
@@ -467,7 +485,7 @@ mod tests {
                 security_type: SecurityType::Wpa2,
                 credential: credential,
                 has_ever_connected: false,
-                hidden_probability: 0.0,
+                hidden_probability: PROB_HIDDEN_DEFAULT,
                 hidden_stats: HiddenStats::new(),
                 perf_stats: PerformanceStats::new()
             }
@@ -679,5 +697,27 @@ mod tests {
             hidden_stats,
             HiddenStats { seen_in_passive_scan_results: false, connected_passive: false },
         );
+    }
+
+    #[test]
+    fn test_hidden_prob_calculation() {
+        let mut network_config = NetworkConfig::new(
+            NetworkIdentifier::new(b"some_ssid".to_vec(), SecurityType::None),
+            Credential::None,
+            false,
+        )
+        .expect("Failed to create network config");
+        assert_eq!(network_config.hidden_probability, PROB_HIDDEN_DEFAULT);
+        // Nothing has changed, so the probability shouldn't change either
+        network_config.update_hidden_prob();
+        assert_eq!(network_config.hidden_probability, PROB_HIDDEN_DEFAULT);
+
+        network_config.hidden_stats.seen_in_passive_scan_results = true;
+        network_config.update_hidden_prob();
+        assert_eq!(network_config.hidden_probability, PROB_HIDDEN_IF_SEEN_PASSIVE);
+
+        network_config.hidden_stats.connected_passive = true;
+        network_config.update_hidden_prob();
+        assert_eq!(network_config.hidden_probability, PROB_HIDDEN_IF_CONNECT_PASSIVE);
     }
 }
