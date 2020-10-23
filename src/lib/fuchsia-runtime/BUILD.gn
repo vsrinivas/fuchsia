@@ -3,9 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("fuchsia-runtime") {
   edition = "2018"
+  with_unit_tests = true
   deps = [
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
@@ -15,4 +18,20 @@ rustc_library("fuchsia-runtime") {
   ]
 
   sources = [ "src/lib.rs" ]
+}
+
+test_package("fuchsia-runtime-tests") {
+  deps = [ ":fuchsia-runtime_test" ]
+
+  tests = [
+    {
+      name = "fuchsia_runtime_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fuchsia-runtime-tests" ]
 }

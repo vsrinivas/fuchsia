@@ -324,7 +324,7 @@ mod tests {
         let mut randbuf = [0; 2];
         for type_val in 0..0xFF {
             if let Some(htype) = HandleType::from_u8(type_val as u8) {
-                zx::cprng_draw(&mut randbuf)?;
+                fuchsia_zircon::cprng_draw(&mut randbuf).unwrap();
                 let arg = u16::from_le_bytes(randbuf);
 
                 let info = HandleInfo::new(htype, arg);
@@ -369,6 +369,5 @@ mod tests {
         // Unknown handle type
         assert!(HandleInfo::try_from(0x00000000).is_err());
         assert!(HandleInfo::try_from(0x00000006).is_err());
-        assert!(HandleInfo::try_from(0x000000F3).is_err());
     }
 }
