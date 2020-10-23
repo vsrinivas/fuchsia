@@ -371,7 +371,6 @@ async fn package_from_repo_or_cache(
             // a bench they expect the newest version, or a failure. cache_packages are great for
             // running packages before networking is up, but for these two error conditions,
             // we know we have networking because we could talk to TUF.
-            fx_log_err!("wittrock: got resolver error {:?}", e);
             Err(e)
         }
     }
