@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -82,7 +82,7 @@ def create_test_workspace(sdk, output, workspace_info):
 
     if workspace_info.with_cc:
         # Generate tests to verify that headers compile fine.
-        for target, files in workspace_info.headers.iteritems():
+        for target, files in workspace_info.headers.items():
             if not files:
                 continue
             dir = os.path.join(output, 'headers', target[2:])

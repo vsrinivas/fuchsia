@@ -9,7 +9,7 @@ exports_files(
 package_files(
     name = "dist",
     contents = {
-        % for path, source in sorted(data.packaged_files.iteritems()):
+        % for path, source in sorted(data.packaged_files.items()):
         "${source}": "${path}",
         % endfor
     },

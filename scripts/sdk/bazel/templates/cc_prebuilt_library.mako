@@ -35,7 +35,7 @@ cc_library(
 
 # Architecture-specific targets
 
-% for arch, contents in sorted(data.prebuilts.iteritems()):
+% for arch, contents in sorted(data.prebuilts.items()):
 cc_import(
     name = "${arch}_prebuilts",
     % if data.is_static:
