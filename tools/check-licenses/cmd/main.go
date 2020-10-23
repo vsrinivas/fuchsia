@@ -6,6 +6,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -30,12 +32,18 @@ var (
 	prohibitedLicenseTypes       = flag.String("prohibited_license_types", "", "Comma separated list of license types that are prohibited. This arg is added to the list of prohibitedLicenseTypes in the config file.")
 )
 
-func validateArgs() {
+func mainImpl() error {
+	flag.Parse()
+	// TODO(jcecil): incorporate https://godoc.org/github.com/golang/glog
+	if *logLevel == 0 {
+		log.SetOutput(ioutil.Discard)
+	}
+
 	if _, err := os.Stat(*configFile); os.IsNotExist(err) {
-		log.Fatalf("Config file \"%v\" does not exist!", *configFile)
+		return fmt.Errorf("config file %q does not exist!", *configFile)
 	}
 	if err := config.Init(configFile); err != nil {
-		log.Fatalf("Failed to initialize config: %v", err)
+		return fmt.Errorf("failed to initialize config: %s", err)
 	}
 
 	if *skipDirs != "" {
@@ -74,14 +82,14 @@ func validateArgs() {
 
 	if *licensePatternDir != "" {
 		if info, err := os.Stat(*licensePatternDir); os.IsNotExist(err) && info.IsDir() {
-			log.Fatalf("License pattern directory path \"%v\" does not exist!", *licensePatternDir)
+			return fmt.Errorf("license pattern directory path %q does not exist!", *licensePatternDir)
 		}
 		config.LicensePatternDir = *licensePatternDir
 	}
 
 	if *baseDir != "" {
 		if info, err := os.Stat(*baseDir); os.IsNotExist(err) && info.IsDir() {
-			log.Fatalf("Base directory path \"%v\" does not exist!", *baseDir)
+			return fmt.Errorf("base directory path %q does not exist!", *baseDir)
 		}
 		config.BaseDir = *baseDir
 	}
@@ -92,15 +100,15 @@ func validateArgs() {
 		//config.Target = *target
 	}
 
-	//TODO: incorporate https://godoc.org/github.com/golang/glog
-	//and configure it using the logLevel argument
+	if err := checklicenses.Walk(&config); err != nil {
+		return fmt.Errorf("failed to analyze the given directory: %v", err)
+	}
+	return nil
 }
 
 func main() {
-	flag.Parse()
-	validateArgs()
-
-	if err := checklicenses.Walk(&config); err != nil {
-		log.Fatalf("Failed to analyze the given directory: %v", err)
+	if err := mainImpl(); err != nil {
+		fmt.Fprintf(os.Stderr, "check-licenses: %s\n", err)
+		os.Exit(1)
 	}
 }

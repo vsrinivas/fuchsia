@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -36,8 +37,7 @@ type copyrightRegex struct {
 func NewLicenses(root string, prohibitedLicenseTypes []string) (*Licenses, *UnlicensedFiles, error) {
 	licenses := Licenses{}
 	if err := licenses.Init(root, prohibitedLicenseTypes); err != nil {
-		fmt.Println("error initializing licenses")
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("error initializing licenses: %w", err)
 	}
 	unlicensedFiles := UnlicensedFiles{}
 	return &licenses, &unlicensedFiles, nil
@@ -69,6 +69,9 @@ func (licenses *Licenses) isLicenseAValidType(prohibitedLicenseTypes []string, c
 // Init loads all Licenses specified in the .lic directory as defined in Config
 func (licenses *Licenses) Init(root string, prohibitedLicenseTypes []string) error {
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if info.IsDir() {
 			return nil
 		}
@@ -131,7 +134,8 @@ func (licenses *Licenses) MatchSingleLicenseFile(data []byte, base string, metri
 	for i, license := range licenses.licenses {
 		result, found := sm.Load(i)
 		if !found {
-			fmt.Printf("single license file: No result found for key %d\n", i)
+			// TODO(jcecil): Is this an error?
+			log.Printf("single license file: No result found for key %d\n", i)
 			continue
 		}
 		if matched := result.([]byte); matched != nil {
@@ -237,7 +241,7 @@ func (licenses *Licenses) MatchFile(data []byte, path string, metrics *Metrics) 
 	for i, license := range licenses.licenses {
 		result, found := sm.Load(i)
 		if !found {
-			fmt.Printf("No result found for key %d\n", i)
+			log.Printf("No result found for key %d\n", i)
 			continue
 		}
 		if matched := result.([]byte); matched != nil {

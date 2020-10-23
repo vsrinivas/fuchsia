@@ -6,6 +6,7 @@ package checklicenses
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,7 +26,7 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 		root = config.BaseDir
 
 		recursiveHelper = func(root string) error {
-			err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+			return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
 					fmt.Printf("error walking the path %q: %v\n", root, err)
 					return err
@@ -33,7 +34,7 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 				if info.IsDir() {
 					for _, skipDir := range config.SkipDirs {
 						if info.Name() == skipDir || path == skipDir {
-							fmt.Printf("skipping a dir without errors: %+v \n", info.Name())
+							log.Printf("skipping a dir without errors: %s", info.Name())
 							return filepath.SkipDir
 						}
 					}
@@ -69,7 +70,7 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 				} else {
 					for _, skipFile := range config.SkipFiles {
 						if strings.ToLower(info.Name()) == strings.ToLower(skipFile) {
-							fmt.Printf("skipping a file without errors: %+v \n", info.Name())
+							log.Printf("skipping a file without errors: %s", info.Name())
 							return nil
 						}
 					}
@@ -87,10 +88,6 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 				}
 				return nil
 			})
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-			return nil
 		}
 	} else {
 		// TODO(solomonkinard) target specific file tree
@@ -101,6 +98,7 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 	})
 
 	if err := eg.Wait(); err != nil {
+		// TODO(jcecil): This must be an error.
 		fmt.Printf("error while traversing directory '%v", err)
 		return nil
 	}

@@ -6,6 +6,7 @@ package checklicenses
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"sync"
@@ -30,13 +31,14 @@ func Walk(config *Config) error {
 		go l.MatchChannelWorker(&wg)
 	}
 
-	fmt.Println("Starting singleLicenseFile walk")
+	log.Printf("Starting singleLicenseFile walk")
 	for tree := range file_tree.getSingleLicenseFileIterator() {
 		for singleLicenseFile := range tree.singleLicenseFiles {
 			func(base string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) {
 				eg.Go(func() error {
 					if err := processSingleLicenseFile(singleLicenseFile, metrics, licenses, config, tree); err != nil {
 						// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
+						// TODO(jcecil): Correctly skip symlink.
 						fmt.Printf("warning: %s. Skipping file: %s.\n", err, tree.getPath())
 					}
 					return nil
@@ -50,12 +52,13 @@ func Walk(config *Config) error {
 	}
 	eg.Wait()
 
-	fmt.Println("Starting regular file walk")
+	log.Println("Starting regular file walk")
 	for path := range file_tree.getFileIterator() {
 		func(path string, metrics *Metrics, licenses *Licenses, unlicensedFiles *UnlicensedFiles, config *Config, file_tree *FileTree) {
 			eg.Go(func() error {
 				if err := processFile(path, metrics, licenses, unlicensedFiles, config, file_tree); err != nil {
 					// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
+					// TODO(jcecil): Correctly skip symlink.
 					fmt.Printf("warning: %s. Skipping file: %s.\n", err, path)
 				}
 				return nil
@@ -64,7 +67,7 @@ func Walk(config *Config) error {
 	}
 	eg.Wait()
 
-	fmt.Println("Done")
+	log.Println("Done")
 
 	// Close each licenses's matchChannel goroutine by sending a nil object.
 	for _, l := range licenses.licenses {
@@ -115,7 +118,7 @@ func processSingleLicenseFile(base string, metrics *Metrics, licenses *Licenses,
 }
 
 func processFile(path string, metrics *Metrics, licenses *Licenses, unlicensedFiles *UnlicensedFiles, config *Config, file_tree *FileTree) error {
-	fmt.Printf("visited file or dir: %q\n", path)
+	log.Printf("visited file or dir: %q", path)
 	data, err := readFromFile(path, config.MaxReadSize)
 	if err != nil {
 		return err
@@ -140,11 +143,11 @@ func processFile(path string, metrics *Metrics, licenses *Licenses, unlicensedFi
 					if i == 0 {
 						metrics.increment("num_one_file_matched_to_one_single_license")
 					}
-					fmt.Printf("project license: %s\n", license.category)
+					log.Printf("project license: %s", license.category)
 					metrics.increment("num_one_file_matched_to_multiple_single_licenses")
 				}
 			}
-			fmt.Printf("File license: missing. Project license: exists. path: %s\n", path)
+			log.Printf("File license: missing. Project license: exists. path: %s", path)
 		}
 	}
 	return nil

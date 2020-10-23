@@ -36,11 +36,7 @@ func (metrics *Metrics) Init() {
 }
 
 func (metrics *Metrics) increment(key string) {
-
 	metrics.Lock()
-	if _, found := metrics.values[key]; !found {
-		fmt.Printf("error: metric key (%s) not found\n", key)
-	}
 	metrics.values[key]++
 	metrics.Unlock()
 }

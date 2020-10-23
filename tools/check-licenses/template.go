@@ -7,7 +7,7 @@ package checklicenses
 import (
 	"bytes"
 	"compress/gzip"
-	"fmt"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -95,7 +95,7 @@ func saveToOutputFile(file *os.File, licenses *Licenses, config *Config, metrics
 	case "json":
 		templateStr = templates.TemplateJson
 	default:
-		fmt.Println("error: no template found")
+		return errors.New("error: no template found")
 	}
 	tmpl := template.Must(template.New("name").Funcs(template.FuncMap{
 		"getPattern": func(license *License) string { return (*license).pattern.String() },
