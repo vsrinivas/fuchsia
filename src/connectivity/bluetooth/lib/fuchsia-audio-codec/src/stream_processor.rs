@@ -538,7 +538,7 @@ impl StreamProcessor {
                 let space_left = write.input_packet_size - size;
                 let left_to_write = bytes.len() - bytes_idx;
                 let buffer_vmo = write.input_buffers().get_mut(idx.0).expect("need buffer vmo");
-                if space_left as usize >= left_to_write {
+                if space_left as usize > left_to_write {
                     let write_buf = &bytes[bytes_idx..];
                     let write_len = write_buf.len();
                     buffer_vmo.write(write_buf, size)?;
