@@ -43,7 +43,8 @@ void DemoHarness::Init(InstanceParams instance_params) {
   std::set<std::string> device_extension_names;
   AppendPlatformSpecificDeviceExtensionNames(&device_extension_names);
   CreateDeviceAndQueue({std::move(device_extension_names),
-                        {VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME},
+                        {VK_KHR_MAINTENANCE1_EXTENSION_NAME, VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
+                         VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME},
                         surface});
 
   escher::GlslangInitializeProcess();

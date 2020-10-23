@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/examples/escher/common/demo_harness_linux.h"
+#include "src/ui/examples/escher/common/demo_harness_glfw.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -16,7 +16,7 @@
 
 static const char* kCacheDirectoryPath = "/tmp/escher_demoharness";
 
-static DemoHarnessLinux* g_harness = nullptr;
+static DemoHarnessGlfw* g_harness = nullptr;
 static GLFWwindow* g_window;
 // Current mouse position.
 static double g_x_pos = 0.0;
@@ -125,21 +125,21 @@ static void DemoGlfwMouseButtonCallback(GLFWwindow* window, int button, int acti
   }
 }
 
-// When running on Linux, New() instantiates a DemoHarnessLinux.
+// When running on Linux, New() instantiates a DemoHarnessGlfw.
 std::unique_ptr<DemoHarness> DemoHarness::New(DemoHarness::WindowParams window_params,
                                               DemoHarness::InstanceParams instance_params) {
-  auto harness = new DemoHarnessLinux(window_params);
+  auto harness = new DemoHarnessGlfw(window_params);
   harness->Init(std::move(instance_params));
   return std::unique_ptr<DemoHarness>(harness);
 }
 
-DemoHarnessLinux::DemoHarnessLinux(WindowParams window_params) : DemoHarness(window_params) {
+DemoHarnessGlfw::DemoHarnessGlfw(WindowParams window_params) : DemoHarness(window_params) {
   filesystem_ = escher::HackFilesystem::New();
 }
 
-std::string DemoHarnessLinux::GetCacheDirectoryPath() { return kCacheDirectoryPath; }
+std::string DemoHarnessGlfw::GetCacheDirectoryPath() { return kCacheDirectoryPath; }
 
-void DemoHarnessLinux::InitWindowSystem() {
+void DemoHarnessGlfw::InitWindowSystem() {
   FX_CHECK(!g_harness);
   g_harness = this;
 
@@ -147,7 +147,7 @@ void DemoHarnessLinux::InitWindowSystem() {
   FX_CHECK(glfwInit());
 }
 
-vk::SurfaceKHR DemoHarnessLinux::CreateWindowAndSurface(const WindowParams& params) {
+vk::SurfaceKHR DemoHarnessGlfw::CreateWindowAndSurface(const WindowParams& params) {
   FX_CHECK(!g_window);
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -168,7 +168,7 @@ vk::SurfaceKHR DemoHarnessLinux::CreateWindowAndSurface(const WindowParams& para
   return surface;
 }
 
-void DemoHarnessLinux::AppendPlatformSpecificInstanceExtensionNames(InstanceParams* params) {
+void DemoHarnessGlfw::AppendPlatformSpecificInstanceExtensionNames(InstanceParams* params) {
   // Get names of extensions required by GLFW.
   uint32_t extensions_count;
   const char** extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
@@ -177,16 +177,16 @@ void DemoHarnessLinux::AppendPlatformSpecificInstanceExtensionNames(InstancePara
   }
 }
 
-void DemoHarnessLinux::AppendPlatformSpecificDeviceExtensionNames(std::set<std::string>* names) {}
+void DemoHarnessGlfw::AppendPlatformSpecificDeviceExtensionNames(std::set<std::string>* names) {}
 
-void DemoHarnessLinux::ShutdownWindowSystem() {
+void DemoHarnessGlfw::ShutdownWindowSystem() {
   FX_CHECK(g_harness);
   g_harness = nullptr;
   g_window = nullptr;
   glfwTerminate();
 }
 
-void DemoHarnessLinux::RunForPlatform(Demo* demo) {
+void DemoHarnessGlfw::RunForPlatform(Demo* demo) {
   while (!this->ShouldQuit()) {
     if (!MaybeDrawFrame()) {
       // Too many frames already in flight.  Sleep for a moment before trying

@@ -26,8 +26,8 @@ static_library("common") {
   if (is_fuchsia) {
     deps += [ ":demo_harness_fuchsia" ]
   }
-  if (is_linux) {
-    deps += [ ":demo_harness_linux" ]
+  if (is_linux || is_mac) {
+    deps += [ ":demo_harness_glfw" ]
   }
 }
 
@@ -79,11 +79,11 @@ source_set("demo_harness_fuchsia") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-source_set("demo_harness_linux") {
+source_set("demo_harness_glfw") {
   visibility = [ ":*" ]
   sources = [
-    "demo_harness_linux.cc",
-    "demo_harness_linux.h",
+    "demo_harness_glfw.cc",
+    "demo_harness_glfw.h",
   ]
   deps = [ "//third_party/glfw" ]
   public_deps = [

@@ -186,7 +186,7 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
 # Guarantees that buildbots at least build the Escher examples on Linux,
 # even if they are not run.
 group("force_examples_to_build_on_host") {
-  if (is_host && is_linux) {
+  if (is_host) {
     deps = [
       "//src/ui/examples/escher/rainfall($host_toolchain)",
       "//src/ui/examples/escher/waterfall($host_toolchain)",

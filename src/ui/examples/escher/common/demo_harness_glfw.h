@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_
-#define SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_
+#ifndef SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_GLFW_H_
+#define SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_GLFW_H_
 
 #include "src/ui/examples/escher/common/demo_harness.h"
 
-class DemoHarnessLinux : public DemoHarness {
+class DemoHarnessGlfw : public DemoHarness {
  public:
-  DemoHarnessLinux(WindowParams window_params);
+  DemoHarnessGlfw(WindowParams window_params);
 
   // So that it can be called from GLFW callback.
   using DemoHarness::HandleKeyPress;
@@ -37,4 +37,4 @@ class DemoHarnessLinux : public DemoHarness {
   void RunForPlatform(Demo* demo) override;
 };
 
-#endif  // SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_
+#endif  // SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_GLFW_H_

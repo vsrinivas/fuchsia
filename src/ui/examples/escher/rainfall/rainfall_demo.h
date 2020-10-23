@@ -20,8 +20,8 @@ class Scene;
 
 class RainfallDemo : public Demo {
  public:
-  static constexpr uint32_t kDemoWidth = 2160;
-  static constexpr uint32_t kDemoHeight = 1140;
+  static constexpr uint32_t kDemoWidth = 1280;
+  static constexpr uint32_t kDemoHeight = 800;
 
   RainfallDemo(escher::EscherWeakPtr escher, int argc, char** argv);
   virtual ~RainfallDemo();
