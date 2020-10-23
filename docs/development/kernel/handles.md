@@ -70,6 +70,53 @@ VMOs can be held alive by the associated VMAR.
 The `handles` tool supports filtering and reverse filtering by object type; use
 `handles --help` to see all the options.
 
+## Handles in the debugger
+
+You can view handle information using the [debugger](/docs/development/debugger/debugger_usage.md).
+To do this, attach to the process in question and run the `handles` command. This shows the handle
+value, object type, and object koid:
+
+```
+[zxdb] handles
+  504103211  ZX_OBJ_TYPE_VMO        27851
+  504103271  ZX_OBJ_TYPE_VMO        27719
+  505151859  ZX_OBJ_TYPE_VMO        27720
+  505151867  ZX_OBJ_TYPE_VMO        27718
+  506200511  ZX_OBJ_TYPE_PORT       27976
+  507249163  ZX_OBJ_TYPE_VMAR       27716
+  508297363  ZX_OBJ_TYPE_VMO        28200
+  508297379  ZX_OBJ_TYPE_VMO        28187
+  508297387  ZX_OBJ_TYPE_SOCKET     28189
+  508297731  ZX_OBJ_TYPE_CLOCK       1263
+  508297735  ZX_OBJ_TYPE_LOG         1275
+  508297755  ZX_OBJ_TYPE_LOG         1275
+```
+
+You can also view basic information about a handle by calling `handle` and specifying a handle
+value:
+
+```
+[zxdb] handle 508302371
+          Type  ZX_OBJ_TYPE_CHANNEL
+         Value  508302371
+        Rights  ZX_RIGHT_TRANSFER
+                ZX_RIGHT_READ
+                ZX_RIGHT_WRITE
+                ZX_RIGHT_SIGNAL
+                ZX_RIGHT_SIGNAL_PEER
+                ZX_RIGHT_WAIT
+                ZX_RIGHT_INSPECT
+          Koid  31062
+  Related koid  31061
+
+```
+
+If the object referenced by the handle is related to another object (such as the other end of a
+channel, or the parent of a job) then `related_koid` is the koid of that other object. If there is
+no other related object, this value is zero. In this example, the related koid is the other end of
+the channel. This relationship is immutable: an object's `related_koid` does not change even if the
+related object no longer exists.
+
 ## Bad handle policy
 
 Using a handle after it has been [closed](/docs/reference/syscalls/handle_close.md)
