@@ -29,7 +29,7 @@ const AnnotationKeys kSupportedAnnotations = {
 AnnotationOr GetUptime() {
   const auto uptime = FormatDuration(zx::nsec(zx_clock_get_monotonic()));
   if (!uptime) {
-    FX_LOGS(ERROR) << "got negative uptime from zx_clock_get_monotonic()";
+    FX_LOGS(ERROR) << "Got negative uptime from zx_clock_get_monotonic()";
     return AnnotationOr(Error::kBadValue);
   }
 
@@ -39,7 +39,7 @@ AnnotationOr GetUptime() {
 AnnotationOr GetUtcTime(Clock* clock) {
   const auto time = CurrentUtcTime(clock);
   if (!time) {
-    FX_LOGS(ERROR) << "error getting UTC time from timekeeper::Clock::Now()";
+    FX_LOGS(ERROR) << "Error getting UTC time from timekeeper::Clock::Now()";
     return AnnotationOr(Error::kBadValue);
   }
 

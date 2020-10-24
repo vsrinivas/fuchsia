@@ -40,7 +40,7 @@ Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirec
     }
 
     if (!success) {
-      FX_LOGS(ERROR) << "Scenic failed to take screenshot";
+      FX_LOGS(WARNING) << "Scenic failed to take screenshot";
       scenic_.CompleteError(Error::kDefault);
     } else {
       scenic_.CompleteOk(std::move(raw_screenshot));

@@ -46,8 +46,10 @@ class ComponentLookup {
         if (result.is_response()) {
           introspect_.CompleteOk(std::move(result.response().component_info));
         } else {
+          // ZX_ERR_NOT_FOUND most likely means a thread from a process outside a component,
+          // which is not an error.
           if (result.err() != ZX_ERR_NOT_FOUND) {
-            FX_PLOGS(ERROR, result.err()) << "Failed FindComponentByProcessKoid";
+            FX_PLOGS(WARNING, result.err()) << "Failed FindComponentByProcessKoid";
           }
 
           introspect_.CompleteError(Error::kDefault);

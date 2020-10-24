@@ -39,15 +39,11 @@ CrashReportBuilder& CrashReportBuilder::SetMinidump(zx::vmo minidump) {
 
 CrashReportBuilder& CrashReportBuilder::SetComponentInfo(
     const fuchsia::sys::internal::SourceIdentity& component_info) {
-  if (!component_info.has_component_url()) {
-    FX_LOGS(ERROR) << "Did not receive a component url";
-  } else {
+  if (component_info.has_component_url()) {
     component_url_ = component_info.component_url();
   }
 
-  if (!component_info.has_realm_path()) {
-    FX_LOGS(ERROR) << "Did not receive a realm path";
-  } else {
+  if (component_info.has_realm_path()) {
     realm_path_ = "/" + fxl::JoinStrings(component_info.realm_path(), "/");
   }
 

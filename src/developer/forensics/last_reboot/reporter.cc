@@ -114,7 +114,7 @@ fuchsia::feedback::CrashReport CreateCrashReport(const RebootLog& reboot_log) {
   return crash_reporter_.WaitForDone().then([this](const ::fit::result<void, Error>& result) {
     delayed_crash_reporting_.Cancel();
     if (result.is_error()) {
-      FX_LOGS(ERROR) << "Failed to file a crash report: " << ToString(result.error());
+      FX_LOGS(WARNING) << "Failed to file a crash report: " << ToString(result.error());
     }
 
     return ::fit::ok();

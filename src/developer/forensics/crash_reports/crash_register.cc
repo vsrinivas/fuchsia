@@ -148,7 +148,7 @@ void CrashRegister::RestoreFromJson() {
 
   ParseResult ok = register_json_.Parse(json);
   if (!ok) {
-    FX_LOGS(ERROR) << "error parsing crash register as JSON at offset " << ok.Offset() << " "
+    FX_LOGS(ERROR) << "Error parsing crash register as JSON at offset " << ok.Offset() << " "
                    << GetParseError_En(ok.Code());
     files::DeletePath(register_filepath_, /*recursive=*/true);
     return;

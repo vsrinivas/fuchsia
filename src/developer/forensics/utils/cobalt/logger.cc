@@ -40,7 +40,7 @@ Logger::Logger(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirec
       logger_reconnection_backoff_(/*initial_delay=*/zx::msec(100), /*retry_factor=*/2u,
                                    /*max_delay=*/zx::hour(1)) {
   logger_.set_error_handler([this](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Error with fuchsia.cobalt.Logger";
+    FX_PLOGS(WARNING, status) << "Lost connection with fuchsia.cobalt.Logger";
     RetryConnectingToLogger();
   });
 
@@ -65,7 +65,7 @@ void Logger::ConnectToLogger(::fidl::InterfaceRequest<fuchsia::cobalt::Logger> l
   logger_factory_ = services_->Connect<LoggerFactory>();
 
   logger_factory_.set_error_handler([](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Error with fuchsia.cobalt.LoggerFactory";
+    FX_PLOGS(WARNING, status) << "Lost connection with fuchsia.cobalt.LoggerFactory";
   });
 
   // We don't need a long standing connection to the LoggerFactory so we unbind afer setting up the

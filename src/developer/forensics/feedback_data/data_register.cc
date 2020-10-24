@@ -139,7 +139,7 @@ void DataRegister::RestoreFromJson() {
 
   ParseResult ok = register_json_.Parse(json);
   if (!ok) {
-    FX_LOGS(ERROR) << "error parsing data register as JSON at offset " << ok.Offset() << " "
+    FX_LOGS(ERROR) << "Error parsing data register as JSON at offset " << ok.Offset() << " "
                    << GetParseError_En(ok.Code());
     files::DeletePath(register_filepath_, /*recursive=*/true);
     return;
