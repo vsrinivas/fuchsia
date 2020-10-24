@@ -28,12 +28,12 @@ class Command {
 
   bool Parse(const std::string& line);
 
-  const Err& parse_error() { return parse_error_; }
+  const std::string& parse_error() { return parse_error_; }
 
   AstBuilder& nodes() { return accumulated_nodes_; }
 
  public:
-  Err parse_error_;
+  std::string parse_error_;
   AstBuilder accumulated_nodes_;
 };
 

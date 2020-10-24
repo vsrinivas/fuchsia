@@ -27,10 +27,8 @@ Err Executor::Execute(std::unique_ptr<Command> command,
                       fit::function<void(const std::string&)> out_callback,
                       fit::function<void(const std::string&)> err_callback,
                       fit::callback<void()> done_callback) {
-  if (!command->parse_error().ok()) {
-    std::string msg = "Invalid command: ";
-    msg.append(command->parse_error().msg);
-    err_callback(msg);
+  if (!command->parse_error().empty()) {
+    err_callback("Parse:\n" + command->parse_error());
     return Err(ZX_ERR_NEXT, zx_status_get_string(ZX_ERR_NEXT));
   }
   if (command->nodes().empty()) {

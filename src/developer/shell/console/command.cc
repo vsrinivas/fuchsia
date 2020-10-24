@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
+#include <iomanip>
 #include <regex>
 #include <sstream>
 #include <string_view>
@@ -24,24 +25,78 @@ Command::~Command() = default;
 namespace {
 
 // Walk a parse tree for errors and collect their messages into the given output stringstream.
-void CollectErrors(const parser::ast::Node& node, std::stringstream* out) {
+void CollectErrors(std::string_view line, const parser::ast::Node& node, std::stringstream* out) {
   if (auto err = node.AsError()) {
-    if (out->tellp() > 0) {
-      (*out) << "\n";
+    size_t err_end = err->start() + err->Size();
+    size_t line_start_offset = 0;
+    size_t line_start = 1;
+
+    for (size_t i = 0; i < err->start(); i++) {
+      if (line[i] == '\n') {
+        line_start_offset = i + 1;
+        line_start++;
+      }
     }
 
-    (*out) << err->message();
+    size_t line_end = line_start;
+
+    for (size_t i = line_start_offset; i < err_end; i++) {
+      if (line[i] == '\n') {
+        line_end++;
+      }
+    }
+
+    size_t line_pad = std::to_string(line_end).size();
+    size_t line_number = line_start;
+    size_t start = line_start_offset;
+
+    do {
+      auto prev_width = out->width(line_pad);
+      (*out) << line_number;
+      out->width(prev_width);
+      (*out) << ": ";
+      size_t end = line.find('\n', start);
+
+      if (end == std::string::npos) {
+        end = line.size();
+      }
+
+      (*out) << line.substr(start, end - start) << "\n" << std::string(line_pad + 2, ' ');
+
+      for (size_t i = start; i <= end; i++) {
+        if (i == err->start()) {
+          (*out) << "^";
+
+          if (i != err_end) {
+            continue;
+          }
+        }
+
+        if (i < err->start()) {
+          (*out) << " ";
+        } else if (i == err_end) {
+          (*out) << " " << err->message();
+          break;
+        } else {
+          (*out) << "~";
+        }
+      }
+
+      (*out) << "\n\n";
+      start = end + 1;
+      line_number += 1;
+    } while (start <= err_end);
   } else {
     for (const auto& child : node.Children()) {
-      CollectErrors(*child, out);
+      CollectErrors(line, *child, out);
     }
   }
 }
 
 // Walk a parse tree for errors and collect their messages.
-std::string CollectErrors(const parser::ast::Node& node) {
+std::string CollectErrors(std::string_view line, const parser::ast::Node& node) {
   std::stringstream out;
-  CollectErrors(node, &out);
+  CollectErrors(line, node, &out);
   return out.str();
 }
 
@@ -168,7 +223,7 @@ bool Command::Parse(const std::string& line) {
   FX_DCHECK(node) << "Error handling failed.";
 
   if (node->HasErrors()) {
-    parse_error_ = Err(ErrorType::kBadParse, CollectErrors(*node));
+    parse_error_ = CollectErrors(line, *node);
     return false;
   }
 
