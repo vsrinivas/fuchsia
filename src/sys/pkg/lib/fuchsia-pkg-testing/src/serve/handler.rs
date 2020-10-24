@@ -478,3 +478,20 @@ impl UriPathHandler for Hang {
         pending().boxed()
     }
 }
+
+/// Handler that sends the header but then never sends body bytes.
+pub struct HangBody;
+
+impl UriPathHandler for HangBody {
+    fn handle(&self, _: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        async {
+            let content_length = body_to_bytes(response.into_body()).await.len();
+            Response::builder()
+                .status(hyper::StatusCode::OK)
+                .header(CONTENT_LENGTH, content_length)
+                .body(Body::wrap_stream(futures::stream::pending::<Result<Vec<u8>, String>>()))
+                .expect("valid response")
+        }
+        .boxed()
+    }
+}

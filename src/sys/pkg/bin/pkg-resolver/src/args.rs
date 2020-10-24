@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::DEFAULT_TUF_METADATA_DEADLINE, argh::FromArgs, std::time::Duration};
+use {
+    crate::{DEFAULT_BLOB_NETWORK_DEADLINE, DEFAULT_TUF_METADATA_DEADLINE},
+    argh::FromArgs,
+    std::time::Duration,
+};
 
 #[derive(Debug, Eq, FromArgs, PartialEq)]
 /// Arguments for the package resolver.
@@ -14,15 +18,26 @@ pub struct Args {
     #[argh(
         option,
         default = "DEFAULT_TUF_METADATA_DEADLINE",
-        from_str_fn(parse_tuf_metadata_deadline_seconds)
+        from_str_fn(parse_unsigned_integer_as_seconds)
     )]
     /// the deadline, in seconds, to use when performing TUF metadata operations.
     /// The default is 240 seconds. This flag exists for integration testing and
     /// should not be used elsewhere.
     pub tuf_metadata_deadline_seconds: Duration,
+
+    #[argh(
+        option,
+        default = "DEFAULT_BLOB_NETWORK_DEADLINE",
+        from_str_fn(parse_unsigned_integer_as_seconds)
+    )]
+    /// the deadline, in seconds, to use when waiting for bytes while performing
+    /// blob operations that use the network.
+    /// The default is 30 seconds. This flag exists for integration testing and
+    /// should not be used elsewhere.
+    pub blob_network_deadline_seconds: Duration,
 }
 
-fn parse_tuf_metadata_deadline_seconds(flag: &str) -> Result<Duration, String> {
+fn parse_unsigned_integer_as_seconds(flag: &str) -> Result<Duration, String> {
     if let Ok(duration) = flag.parse::<u64>() {
         Ok(Duration::from_secs(duration))
     } else {
@@ -51,7 +66,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_tuf_metadata_deadline_seconds_success() {
+    fn tuf_metadata_deadline_seconds_success() {
         assert_matches!(
             Args::from_args(&["pkg-resolver"], &["--tuf-metadata-deadline-seconds", "23"]),
             Ok(Args { tuf_metadata_deadline_seconds, .. })
@@ -60,11 +75,31 @@ mod tests {
     }
 
     #[test]
-    fn parse_tuf_metadata_deadline_seconds_failure() {
+    fn tuf_metadata_deadline_seconds_failure() {
         assert_matches!(
             Args::from_args(
                 &["pkg-resolver"],
                 &["--tuf-metadata-deadline-seconds", "not-an-integer"]
+            ),
+            Err(_)
+        );
+    }
+
+    #[test]
+    fn blob_network_deadline_seconds_success() {
+        assert_matches!(
+            Args::from_args(&["pkg-resolver"], &["--blob-network-deadline-seconds", "24"]),
+            Ok(Args { blob_network_deadline_seconds, .. })
+                if blob_network_deadline_seconds.as_secs() == 24
+        );
+    }
+
+    #[test]
+    fn blob_network_deadline_seconds_failure() {
+        assert_matches!(
+            Args::from_args(
+                &["pkg-resolver"],
+                &["--blob-network-deadline-seconds", "also-not-an-integer"]
             ),
             Err(_)
         );
@@ -77,6 +112,7 @@ mod tests {
             Ok(Args {
                 allow_local_mirror: false,
                 tuf_metadata_deadline_seconds: DEFAULT_TUF_METADATA_DEADLINE,
+                blob_network_deadline_seconds: DEFAULT_BLOB_NETWORK_DEADLINE,
             })
         );
     }

@@ -145,3 +145,72 @@ async fn update_tuf_client_deadline() {
 
     env.stop().await;
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn download_blob_header_deadline() {
+    let pkg = PackageBuilder::new("test").build().await.unwrap();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    let env = TestEnvBuilder::new().blob_network_deadline(Duration::from_secs(0)).build().await;
+
+    let server = repo
+        .server()
+        .uri_path_override_handler(handler::ForPathPrefix::new("/blobs/", handler::Hang))
+        .start()
+        .expect("Starting server succeeds");
+    let repo_config = server.make_repo_config("fuchsia-pkg://test".parse().unwrap());
+    env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
+
+    let result = env.resolve_package("fuchsia-pkg://test/test").await;
+    assert_eq!(result.unwrap_err(), Status::UNAVAILABLE);
+
+    env.assert_count_events(
+        metrics::FETCH_BLOB_METRIC_ID,
+        vec![metrics::FetchBlobMetricDimensionResult::BlobHeaderDeadlineExceeded],
+    )
+    .await;
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn download_blob_body_deadline() {
+    let pkg = PackageBuilder::new("test").build().await.unwrap();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    // pkg-resolver uses this deadline for both reading the entire blob header and for waiting for
+    // more bytes from the blob body, so the deadline needs to be long enough for downloading the
+    // header to succeed (including on asan builds).
+    let env = TestEnvBuilder::new().blob_network_deadline(Duration::from_secs(10)).build().await;
+
+    let server = repo
+        .server()
+        .uri_path_override_handler(handler::ForPathPrefix::new("/blobs/", handler::HangBody))
+        .start()
+        .expect("Starting server succeeds");
+    let repo_config = server.make_repo_config("fuchsia-pkg://test".parse().unwrap());
+    env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
+
+    let result = env.resolve_package("fuchsia-pkg://test/test").await;
+    assert_eq!(result.unwrap_err(), Status::UNAVAILABLE);
+
+    env.assert_count_events(
+        metrics::FETCH_BLOB_METRIC_ID,
+        vec![metrics::FetchBlobMetricDimensionResult::BlobBodyDeadlineExceeded],
+    )
+    .await;
+
+    env.stop().await;
+}

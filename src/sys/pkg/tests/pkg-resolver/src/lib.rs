@@ -245,6 +245,7 @@ where
     local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
     allow_local_mirror: bool,
     tuf_metadata_deadline: Option<Duration>,
+    blob_network_deadline: Option<Duration>,
 }
 
 impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
@@ -262,6 +263,7 @@ impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
             local_mirror_repo: None,
             allow_local_mirror: false,
             tuf_metadata_deadline: None,
+            blob_network_deadline: None,
         }
     }
 }
@@ -280,6 +282,7 @@ where
             self.local_mirror_repo,
             self.allow_local_mirror,
             self.tuf_metadata_deadline,
+            self.blob_network_deadline,
         )
         .await
     }
@@ -297,6 +300,7 @@ where
             local_mirror_repo: self.local_mirror_repo,
             allow_local_mirror: self.allow_local_mirror,
             tuf_metadata_deadline: self.tuf_metadata_deadline,
+            blob_network_deadline: self.blob_network_deadline,
         }
     }
     pub fn mounts(self, mounts: Mounts) -> TestEnvBuilder<PkgFsFn, P, impl FnOnce() -> Mounts> {
@@ -307,6 +311,7 @@ where
             local_mirror_repo: self.local_mirror_repo,
             allow_local_mirror: self.allow_local_mirror,
             tuf_metadata_deadline: self.tuf_metadata_deadline,
+            blob_network_deadline: self.blob_network_deadline,
         }
     }
     pub fn boot_arguments_service(
@@ -320,6 +325,7 @@ where
             local_mirror_repo: self.local_mirror_repo,
             allow_local_mirror: self.allow_local_mirror,
             tuf_metadata_deadline: self.tuf_metadata_deadline,
+            blob_network_deadline: self.blob_network_deadline,
         }
     }
 
@@ -340,6 +346,15 @@ where
             "tuf_metadata_deadline should only be set once"
         );
         self.tuf_metadata_deadline = Some(deadline);
+        self
+    }
+
+    pub fn blob_network_deadline(mut self, deadline: Duration) -> Self {
+        assert!(
+            self.blob_network_deadline.is_none(),
+            "blob_network_deadline should only be set once"
+        );
+        self.blob_network_deadline = Some(deadline);
         self
     }
 }
@@ -576,6 +591,7 @@ impl<P: PkgFs> TestEnv<P> {
         local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
         allow_local_mirror: bool,
         tuf_metadata_deadline: Option<Duration>,
+        blob_network_deadline: Option<Duration>,
     ) -> Self {
         let mut pkg_cache = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cmx"
@@ -622,6 +638,15 @@ impl<P: PkgFs> TestEnv<P> {
         let pkg_resolver = if let Some(deadline) = tuf_metadata_deadline {
             pkg_resolver.args(vec![
                 "--tuf-metadata-deadline-seconds".to_string(),
+                deadline.as_secs().to_string(),
+            ])
+        } else {
+            pkg_resolver
+        };
+
+        let pkg_resolver = if let Some(deadline) = blob_network_deadline {
+            pkg_resolver.args(vec![
+                "--blob-network-deadline-seconds".to_string(),
                 deadline.as_secs().to_string(),
             ])
         } else {

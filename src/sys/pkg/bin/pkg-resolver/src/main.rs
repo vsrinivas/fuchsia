@@ -87,6 +87,8 @@ const STATIC_FONT_REGISTRY_PATH: &str = "/config/data/font_packages.json";
 // TODO(fxbug.dev/62300) replace with granular deadlines in rust-tuf.
 const DEFAULT_TUF_METADATA_DEADLINE: Duration = Duration::from_secs(240);
 
+const DEFAULT_BLOB_NETWORK_DEADLINE: Duration = Duration::from_secs(30);
+
 fn main() -> Result<(), Error> {
     let startup_time = Instant::now();
     fuchsia_syslog::init_with_tags(&["pkg-resolver"]).expect("can't init logger");
@@ -165,6 +167,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         repo_manager.read().stats(),
         cobalt_sender.clone(),
         local_mirror,
+        args.blob_network_deadline_seconds,
     );
     futures.push(blob_fetch_queue.boxed_local());
 

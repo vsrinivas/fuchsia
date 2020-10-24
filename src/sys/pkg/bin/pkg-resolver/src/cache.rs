@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::{LocalMirrorProxy, PackageCacheProxy},
     fidl_fuchsia_pkg_ext::{BlobId, MirrorConfig, RepositoryConfig},
+    fuchsia_async::TimeoutExt as _,
     fuchsia_cobalt::CobaltSender,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_trace as trace,
@@ -28,6 +29,7 @@ use {
             atomic::{AtomicBool, Ordering},
             Arc,
         },
+        time::Duration,
     },
     tuf::metadata::TargetPath,
 };
@@ -333,6 +335,8 @@ impl ToResolveStatus for FetchError {
             FetchError::LocalMirror(_) => Status::INTERNAL,
             FetchError::NoBlobSource { .. } => Status::INTERNAL,
             FetchError::ConflictingBlobSources => Status::INTERNAL,
+            FetchError::BlobHeaderDeadlineExceeded => Status::UNAVAILABLE,
+            FetchError::BlobBodyDeadlineExceeded => Status::UNAVAILABLE,
         }
     }
 }
@@ -442,6 +446,7 @@ pub fn make_blob_fetch_queue(
     stats: Arc<Mutex<Stats>>,
     cobalt_sender: CobaltSender,
     local_mirror_proxy: Option<LocalMirrorProxy>,
+    blob_network_deadline: Duration,
 ) -> (impl Future<Output = ()>, BlobFetcher) {
     let http_client = Arc::new(fuchsia_hyper::new_https_client());
     let inspect = inspect::BlobFetcher::from_node(node);
@@ -465,6 +470,7 @@ pub fn make_blob_fetch_queue(
                     merkle,
                     context,
                     local_mirror_proxy.as_ref(),
+                    blob_network_deadline,
                 )
                 .map_err(Arc::new)
                 .await;
@@ -484,6 +490,7 @@ async fn fetch_blob(
     merkle: BlobId,
     context: FetchBlobContext,
     local_mirror_proxy: Option<&LocalMirrorProxy>,
+    blob_network_deadline: Duration,
 ) -> Result<(), FetchError> {
     let use_remote_mirror = context.mirrors.len() != 0;
     let use_local_mirror = context.use_local_mirror;
@@ -513,6 +520,7 @@ async fn fetch_blob(
                 merkle,
                 context.blob_kind,
                 context.expected_len,
+                blob_network_deadline,
                 &cache,
                 stats,
                 cobalt_sender,
@@ -536,6 +544,7 @@ async fn fetch_blob_http(
     merkle: BlobId,
     blob_kind: BlobKind,
     expected_len: Option<u64>,
+    blob_network_deadline: Duration,
     cache: &PackageCache,
     stats: Arc<Mutex<Stats>>,
     cobalt_sender: CobaltSender,
@@ -563,7 +572,15 @@ async fn fetch_blob_http(
                 cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
             {
                 inspect.state(inspect::Http::DownloadBlob);
-                let res = download_blob(&inspect, client, &blob_url, expected_len, blob).await;
+                let res = download_blob(
+                    &inspect,
+                    client,
+                    &blob_url,
+                    expected_len,
+                    blob,
+                    blob_network_deadline,
+                )
+                .await;
                 inspect.state(inspect::Http::CloseBlob);
                 blob_closer.close().await;
                 res?;
@@ -680,13 +697,17 @@ async fn download_blob(
     uri: &http::Uri,
     expected_len: Option<u64>,
     dest: pkgfs::install::Blob<pkgfs::install::NeedsTruncate>,
+    blob_network_deadline: Duration,
 ) -> Result<(), FetchError> {
     inspect.state(inspect::Http::HttpGet);
     let request = Request::get(uri)
         .body(Body::empty())
         .map_err(|e| FetchError::Http { e, uri: uri.to_string() })?;
-    let response =
-        client.request(request).await.map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })?;
+    let response = client
+        .request(request)
+        .map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })
+        .on_timeout(blob_network_deadline, || Err(FetchError::BlobHeaderDeadlineExceeded))
+        .await?;
 
     if response.status() != StatusCode::OK {
         return Err(FetchError::BadHttpStatus { code: response.status(), uri: uri.to_string() });
@@ -714,8 +735,11 @@ async fn download_blob(
     inspect.state(inspect::Http::ReadHttpBody);
     let mut chunks = response.into_body();
     let mut written = 0u64;
-    while let Some(chunk) =
-        chunks.try_next().await.map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })?
+    while let Some(chunk) = chunks
+        .try_next()
+        .map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })
+        .on_timeout(blob_network_deadline, || Err(FetchError::BlobBodyDeadlineExceeded))
+        .await?
     {
         if written + chunk.len() as u64 > expected_len {
             return Err(FetchError::BlobTooLarge { uri: uri.to_string() });
@@ -811,35 +835,39 @@ pub enum FetchError {
 
     #[error("Tried to request a blob with HTTP and local mirrors")]
     ConflictingBlobSources,
+
+    #[error("exceeded deadline waiting for http response header while downloading blob")]
+    BlobHeaderDeadlineExceeded,
+
+    #[error(
+        "exceeded deadline waiting for bytes from the http response body while downloading blob"
+    )]
+    BlobBodyDeadlineExceeded,
 }
 
 impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
     fn from(error: &FetchError) -> Self {
+        use metrics::FetchBlobMetricDimensionResult as EventCodes;
         match error {
-            FetchError::CreateBlob(_) => metrics::FetchBlobMetricDimensionResult::CreateBlob,
-            FetchError::BadHttpStatus { .. } => {
-                metrics::FetchBlobMetricDimensionResult::BadHttpStatus
-            }
-            FetchError::NoMirrors => metrics::FetchBlobMetricDimensionResult::NoMirrors,
-            FetchError::ContentLengthMismatch { .. } => {
-                metrics::FetchBlobMetricDimensionResult::ContentLengthMismatch
-            }
-            FetchError::UnknownLength { .. } => {
-                metrics::FetchBlobMetricDimensionResult::UnknownLength
-            }
-            FetchError::BlobTooSmall { .. } => {
-                metrics::FetchBlobMetricDimensionResult::BlobTooSmall
-            }
-            FetchError::BlobTooLarge { .. } => {
-                metrics::FetchBlobMetricDimensionResult::BlobTooLarge
-            }
-            FetchError::Truncate(_) => metrics::FetchBlobMetricDimensionResult::Truncate,
-            FetchError::Write(_) => metrics::FetchBlobMetricDimensionResult::Write,
-            FetchError::Hyper { .. } => metrics::FetchBlobMetricDimensionResult::Hyper,
-            FetchError::Http { .. } => metrics::FetchBlobMetricDimensionResult::Http,
-            FetchError::BlobUrl(_) => metrics::FetchBlobMetricDimensionResult::BlobUrl,
-            // TODO(fxbug.dev/59837): wire up LocalMirror errors to cobalt.
-            _ => todo!(),
+            FetchError::CreateBlob { .. } => EventCodes::CreateBlob,
+            FetchError::BadHttpStatus { .. } => EventCodes::BadHttpStatus,
+            FetchError::NoMirrors => EventCodes::NoMirrors,
+            FetchError::ContentLengthMismatch { .. } => EventCodes::ContentLengthMismatch,
+            FetchError::UnknownLength { .. } => EventCodes::UnknownLength,
+            FetchError::BlobTooSmall { .. } => EventCodes::BlobTooSmall,
+            FetchError::BlobTooLarge { .. } => EventCodes::BlobTooLarge,
+            FetchError::Truncate { .. } => EventCodes::Truncate,
+            FetchError::Write { .. } => EventCodes::Write,
+            FetchError::Hyper { .. } => EventCodes::Hyper,
+            FetchError::Http { .. } => EventCodes::Http,
+            FetchError::BlobUrl { .. } => EventCodes::BlobUrl,
+            FetchError::FidlError { .. } => EventCodes::FidlError,
+            FetchError::IoError { .. } => EventCodes::IoError,
+            FetchError::LocalMirror { .. } => EventCodes::LocalMirror,
+            FetchError::NoBlobSource { .. } => EventCodes::NoBlobSource,
+            FetchError::ConflictingBlobSources => EventCodes::ConflictingBlobSources,
+            FetchError::BlobHeaderDeadlineExceeded => EventCodes::BlobHeaderDeadlineExceeded,
+            FetchError::BlobBodyDeadlineExceeded => EventCodes::BlobBodyDeadlineExceeded,
         }
     }
 }
