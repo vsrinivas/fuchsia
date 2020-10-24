@@ -7,72 +7,138 @@
 
 BT_FILE_DEPS=(
   "tools/devshell/lib/fvm.sh"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/platform.sh"
+  "tools/devshell/lib/vars.sh"
 )
 
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/lib/fvm.sh"
+  source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
 
-  FUCHSIA_BUILD_DIR="${BT_TEMP_DIR}/out"
-  mkdir "${FUCHSIA_BUILD_DIR}"
+  FUCHSIA_BUILD_DIR="${BT_TEMP_DIR}/out/default"
+  mkdir -p "${FUCHSIA_BUILD_DIR}"
 
-  # These paths are expected to be relative to ${FUCHSIA_BUILD_DIR}.
-  IMAGE_FVM_RAW="fvm_test-fake_fvm.raw"
-  IMAGE_FVM_SPARSE="fvm_test-fake_fvm.sparse"
-  IMAGE_FVM_FASTBOOT="fvm_test-fake_fvm.fastboot"
-  touch "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}"
-  touch "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_SPARSE}"
-  touch "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_FASTBOOT}"
+  fvm_raw="${FUCHSIA_BUILD_DIR}/fvm.blk"
+  fvm_sparse="${FUCHSIA_BUILD_DIR}/fvm.sparse.blk"
+  fvm_fastboot="${FUCHSIA_BUILD_DIR}/fvm.fastboot.blk"
+  touch "${fvm_raw}"
+  touch "${fvm_sparse}"
+  touch "${fvm_fastboot}"
 }
 
 TEST_fx-fvm-find-raw-source() {
   # If all FVM files are present, we should use raw by default.
-  BT_ASSERT_EQ "$(fx-fvm-find-raw-source)" \
-      "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}"
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
+  cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
+if [[ "$@" == "--name storage-full --allow-empty images" ]] ; then
+  echo "fvm.blk"
+elif [[ "$@" == "--name storage-sparse --allow-empty images" ]] ; then
+  echo "fvm.sparse.blk"
+elif [[ "$@" == "--name fvm.fastboot --allow-empty images" ]] ; then
+  echo "fvm.fastboot.blk"
+fi
+EOF
+  BT_ASSERT_EQ "$(fx-fvm-find-raw-source)" "${fvm_raw}"
 }
 
 TEST_fx-fvm-find-raw-source_no_raw_path() {
   # If the raw FVM path is missing, fall back to sparse FVM.
-  unset IMAGE_FVM_RAW
-  BT_ASSERT_EQ "$(fx-fvm-find-raw-source)" \
-      "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_SPARSE}"
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
+  cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
+if [[ "$@" == "--name storage-full --allow-empty images" ]] ; then
+  echo ""
+elif [[ "$@" == "--name storage-sparse --allow-empty images" ]] ; then
+  echo "fvm.sparse.blk"
+elif [[ "$@" == "--name fvm.fastboot --allow-empty images" ]] ; then
+  echo "fvm.fastboot.blk"
+fi
+EOF
+
+  BT_ASSERT_EQ "$(fx-fvm-find-raw-source)" "${fvm_sparse}"
 }
 
 TEST_fx-fvm-find-raw-source_no_raw_or_sparse_path() {
   # If the raw and sparse FVM paths are missing, fall back to fastboot FVM.
-  unset IMAGE_FVM_RAW
-  unset IMAGE_FVM_SPARSE
-  BT_ASSERT_EQ "$(fx-fvm-find-raw-source)" \
-      "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_FASTBOOT}"
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
+  cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
+if [[ "$@" == "--name storage-full --allow-empty images" ]] ; then
+  echo ""
+elif [[ "$@" == "--name storage-sparse --allow-empty images" ]] ; then
+  echo ""
+elif [[ "$@" == "--name fvm.fastboot --allow-empty images" ]] ; then
+  echo "fvm.fastboot.blk"
+fi
+EOF
+
+  BT_ASSERT_EQ "$(fx-fvm-find-raw-source)" "${fvm_fastboot}"
 }
 
 TEST_fx-fvm-find-raw-source_no_paths() {
   # If all FVM paths are missing, output should be empty.
-  unset IMAGE_FVM_RAW
-  unset IMAGE_FVM_SPARSE
-  unset IMAGE_FVM_FASTBOOT
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
+  cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
+if [[ "$@" == "--name storage-full --allow-empty images" ]] ; then
+  echo ""
+elif [[ "$@" == "--name storage-sparse --allow-empty images" ]] ; then
+  echo ""
+elif [[ "$@" == "--name fvm.fastboot --allow-empty images" ]] ; then
+  echo ""
+fi
+EOF
+
   BT_ASSERT_EQ "$(fx-fvm-find-raw-source)" ""
 }
 
 TEST_fx-fvm-find-raw-source_no_raw_file() {
   # If the raw FVM file is missing, fall back to sparse FVM.
-  rm "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}"
-  BT_ASSERT_EQ "$(fx-fvm-find-raw-source)" \
-      "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_SPARSE}"
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
+  cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
+if [[ "$@" == "--name storage-full --allow-empty images" ]] ; then
+  echo "fvm.blk"
+elif [[ "$@" == "--name storage-sparse --allow-empty images" ]] ; then
+  echo "fvm.sparse.blk"
+elif [[ "$@" == "--name fvm.fastboot --allow-empty images" ]] ; then
+  echo "fvm.fastboot.blk"
+fi
+EOF
+  rm -f "${fvm_raw}"
+  BT_ASSERT_EQ "$(fx-fvm-find-raw-source)" "${fvm_sparse}"
 }
 
 TEST_fx-fvm-find-raw-source_no_raw_or_sparse_files() {
   # If the raw and sparse FVM files are missing, fall back to fastboot FVM.
-  rm "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}"
-  rm "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_SPARSE}"
-  BT_ASSERT_EQ "$(fx-fvm-find-raw-source)" \
-      "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_FASTBOOT}"
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
+  cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
+if [[ "$@" == "--name storage-full --allow-empty images" ]] ; then
+  echo "fvm.blk"
+elif [[ "$@" == "--name storage-sparse --allow-empty images" ]] ; then
+  echo "fvm.sparse.blk"
+elif [[ "$@" == "--name fvm.fastboot --allow-empty images" ]] ; then
+  echo "fvm.fastboot.blk"
+fi
+EOF
+  rm -f "${fvm_raw}"
+  rm -f "${fvm_sparse}"
+  BT_ASSERT_EQ "$(fx-fvm-find-raw-source)" "${fvm_fastboot}"
 }
 
 TEST_fx-fvm-find-raw-source_no_files() {
   # If all FVM files are missing, output should be empty.
-  rm "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}"
-  rm "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_SPARSE}"
-  rm "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_FASTBOOT}"
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
+  cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
+if [[ "$@" == "--name storage-full --allow-empty images" ]] ; then
+  echo "fvm.blk"
+elif [[ "$@" == "--name storage-sparse --allow-empty images" ]] ; then
+  echo "fvm.sparse.blk"
+elif [[ "$@" == "--name fvm.fastboot --allow-empty images" ]] ; then
+  echo "fvm.fastboot.blk"
+fi
+EOF
+  rm -f "${fvm_raw}"
+  rm -f "${fvm_sparse}"
+  rm -f "${fvm_fastboot}"
   BT_ASSERT_EQ "$(fx-fvm-find-raw-source)" ""
 }
 

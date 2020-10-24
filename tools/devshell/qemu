@@ -56,8 +56,9 @@ fx-zbi -o "${kernelzbi}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
 # Not all builds use an FVM so failing to find a source FVM is OK.
 fvm_source=$(fx-fvm-find-raw-source)
 if [[ -n "${fvm_source}" ]]; then
+  fvm_tool="${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts --name fvm --expect-one tools)"
   fvm_raw="${imgdir}/fvm_raw.blk"
-  fx-fvm-extend-image "${fvm_source}" "${fvm_raw}" "${IMAGE_SIZE}"
+  fx-fvm-extend-image "${fvm_tool}" "${fvm_source}" "${fvm_raw}" "${IMAGE_SIZE}"
   args+=(-d -D "${fvm_raw}" --diskfmt=raw)
 fi
 

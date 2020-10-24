@@ -20,11 +20,12 @@
 # Returns:
 #   0 on success, 1 on failure.
 function fx-fvm-extend-image {
-  fvm_in=$1
-  fvmimg=$2
+  fvm_tool="$1"
+  fvm_in="$2"
+  fvmimg="$3"
 
   # Store the decompressed file with a deterministic path to facilitate testing
-  "${HOST_OUT_DIR}/fvm" "${fvm_in}.decompressed" decompress --default "${fvm_in}"
+  "${fvm_tool}" "${fvm_in}.decompressed" decompress --default "${fvm_in}"
   # Rename the decompressed file to |fvmimg| and perform extension.
   mv "${fvm_in}.decompressed" "${fvmimg}"
 
@@ -36,8 +37,8 @@ function fx-fvm-extend-image {
   if [[ "$stat_output" =~ Size:\ ([0-9]+) ]]; then
     size="${BASH_REMATCH[1]}"
     recommended_size=$((size * 2))
-    if [[ $# -gt 2 && -n "$3" ]]; then
-      newsize=$3
+    if [[ $# -gt 2 && -n "$4" ]]; then
+      newsize=$4
       if [[ "${newsize}" -le "${size}" ]]; then
         fx-error "Image size has to be greater than ${size} bytes.  Recommended value is ${recommended_size} bytes."
         return 1
@@ -45,7 +46,9 @@ function fx-fvm-extend-image {
     else
       newsize="${recommended_size}"
     fi
-    "${HOST_OUT_DIR}/fvm" "${fvmimg}" extend --length "${newsize}" --length-is-lowerbound
+     echo >&2 "Creating disk image..."
+     "${fvm_tool}" "${fvmimg}" extend --length "${newsize}" --length-is-lowerbound
+     echo >&2 "done"
   else
     fx-error "Could not extend FVM, unable to stat FVM image ${fvm_in}"
     return 1
@@ -71,9 +74,9 @@ function fx-fvm-find-raw-source {
   # Look for source FVM formats in this order. Every build that uses an FVM
   # should produce at least one of these.
   source_fvms=(
-    "${IMAGE_FVM_RAW}"
-    "${IMAGE_FVM_SPARSE}"
-    "${IMAGE_FVM_FASTBOOT}"
+    "$(fx-command-run list-build-artifacts --name storage-full --allow-empty images)"
+    "$(fx-command-run list-build-artifacts --name storage-sparse --allow-empty images)"
+    "$(fx-command-run list-build-artifacts --name fvm.fastboot --allow-empty images)"
   )
 
   for source_fvm in "${source_fvms[@]}"; do

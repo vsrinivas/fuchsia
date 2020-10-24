@@ -24,13 +24,15 @@ PREBUILT_GRPCWEBPROXY_DIR=""
 # it requires --experiment-arm64 since there is no auto detection.
 FUCHSIA_ARCH="x64"
 
-# Export variables needed here but also in fx-image-common.sh
-FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
-export FUCHSIA_SDK_PATH
-FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
-export FUCHSIA_IMAGE_WORK_DIR
-DEFAULT_FUCHSIA_IMAGE="qemu-x64"
-DEFAULT_FUCHSIA_AUTHKEYS="$(get-fuchsia-auth-keys-file)"
+readonly FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
+readonly FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
+readonly IMAGE_DIR="${FUCHSIA_IMAGE_WORK_DIR}/image"
+readonly TOOL_DIR="$(get-fuchsia-sdk-tools-dir)"
+readonly DEFAULT_FUCHSIA_IMAGE="qemu-x64"
+readonly DEFAULT_FUCHSIA_AUTHKEYS="$(get-fuchsia-auth-keys-file)"
+readonly ZIRCONA_NAME="zircon-a.zbi"
+readonly QEMU_KERNEL_NAME="qemu-kernel.kernel"
+readonly FVM_NAME="storage-full.blk"
 
 # Download a URL $1 from CIPD, extract into directory $2
 function download-extract-cipd {
@@ -199,10 +201,7 @@ else
   ARCH="linux-amd64"
 fi
 
-# Export variables needed for fx emu and fx-image-common.sh
-export FUCHSIA_BUILD_DIR="${FUCHSIA_IMAGE_WORK_DIR}/image"
-export PREBUILT_AEMU_DIR="${DOWNLOADS_DIR}/aemu-${ARCH}-${LABEL_AEMU}"
-export FUCHSIA_ARCH
+readonly PREBUILT_AEMU_DIR="${DOWNLOADS_DIR}/aemu-${ARCH}-${LABEL_AEMU}"
 
 download-extract-cipd \
   "https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/aemu/${ARCH}/+/${VER_AEMU}" \
@@ -218,11 +217,18 @@ if (( ENABLE_GRPCWEBPROXY )); then
   EMU_ARGS+=( "-X" "${PREBUILT_GRPCWEBPROXY_DIR}" )
 fi
 
-# shellcheck disable=SC1090
-source "${SCRIPT_SRC_DIR}/fx-image-common.sh"
-
-if (( "${#EMU_ARGS[@]}" )); then
-  "${SCRIPT_SRC_DIR}/devshell/emu" -k "${auth_keys_file}" "${EMU_ARGS[@]}"
-else
-  "${SCRIPT_SRC_DIR}/devshell/emu" -k "${auth_keys_file}"
+cmd=(
+  "${SCRIPT_SRC_DIR}/devshell/emu"
+  -e "${PREBUILT_AEMU_DIR}"
+  -A "${FUCHSIA_ARCH}"
+  -K "${IMAGE_DIR}/${QEMU_KERNEL_NAME}"
+  -z "${IMAGE_DIR}/${ZIRCONA_NAME}"
+  -f "${IMAGE_DIR}/${FVM_NAME}"
+  -k "${auth_keys_file}"
+  -Z "${TOOL_DIR}/zbi"
+  -F "${TOOL_DIR}/fvm"
+)
+if (( "${#EMU_ARGS[@]}" )) ; then
+  cmd+=("${EMU_ARGS[@]}")
 fi
+exec "${cmd[@]}"
