@@ -16,7 +16,9 @@ The `rust-project.json` file format is currently unstable. Sometimes this can ca
 unexpected version mismatch where GN produces a `rust-project.json` that `rust-analyzer` is
 not expecting, causing `rust-analyzer` to not work correctly.
 
-Currently, use [the latest version of `rust-analyzer`][rust-analyzer-latest].
+### Currently supported version {#supported-rust-analyzer-version}
+
+Currently, use [the **latest version** of `rust-analyzer`][rust-analyzer-latest].
 
 ## Visual Studio Code {#visual-studio-code}
 
@@ -38,10 +40,6 @@ VSCode may recommend for Rust files.
 
 You can install the `rust-analyzer` extension directly
 [from the VSCode marketplace][vscode-rust-analyzer].
-If you notice that `rust-analyzer` is broken, it could be due to a breaking
-change in the `rust-project.json` file. You may need to
-[manually downgrade rust-analyzer][vscode-downgrade]
-to [a currently supported version](#rust-analyzer).
 
 Once you have installed the rust-analyzer extension, add the following
 configurations to your Workspace `settings.json` file:
@@ -77,9 +75,11 @@ invoking rustfmt, so you need to tell `rustup` about your Fuchsia checkout and i
 $ rustup toolchain link fuchsia-tools $FUCHSIA_DIR/prebuilt/third_party/rust_tools/<host os>
 ```
 
-e.g.
+For instance, on linux, you would use `linux-x64`, or on MacOS you would use `mac-x64` (there should
+only be one option in your Fuchsia directory, set up correctly for your host development system):
+
 ```shell
-$ rustup toolchain link fuchsia-tools $FUCHSIA_DIR/prebuilt/third_party/rust_tools/linux_x64/
+$ rustup toolchain link fuchsia-tools $FUCHSIA_DIR/prebuilt/third_party/rust_tools/linux-x64/
 ```
 
 Having done that, the `rust-analyzer` extension can be configured to use this toolchain and
@@ -108,6 +108,23 @@ in VSCode with the files that the `rust-analyzer` LSP is parsing and analyzing.
 
 Instead, open the actual path to the Fuchsia source in VSCode, so that the LSP and the editor see
 the same paths to all source files.
+
+### Troubleshooting issues with `rust-analyzer`
+
+If you notice that `rust-analyzer` is not working correctly, it could be due to a breaking
+change in the `rust-project.json` file.  The first thing to try in this case is to `jiri update`,
+rebase, and re-run `fx gen`, and see if the issue goes away:
+
+```shell
+$ jiri update
+$ git rebase
+$ fx gen
+```
+
+If not, you may need to [manually downgrade rust-analyzer][vscode-downgrade] to the
+[currently-supported version](#supported-rust-analyzer-version) if it's not the latest, or to a
+previous version you were using if the currently supported version is listed as "latest".
+
 
 ## Vim
 
