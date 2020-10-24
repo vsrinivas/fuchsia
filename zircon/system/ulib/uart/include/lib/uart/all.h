@@ -85,13 +85,17 @@ class KernelDriver {
   explicit KernelDriver(const T& uart) : variant_(uart) {}
 
   // ...or from another all::KernelDriver::uart() result.
-  explicit KernelDriver(const uart_type& uart) {
+  explicit KernelDriver(const uart_type& uart) { *this = uart; }
+
+  // Assignment is another way to reinitialize the configuration.
+  KernelDriver& operator=(const uart_type& uart) {
     internal::Visit(
         [this](auto&& uart) {
           using ThisUart = std::decay_t<decltype(uart)>;
           variant_.template emplace<OneDriver<ThisUart>>(uart);
         },
         uart);
+    return *this;
   }
 
   // If this ZBI item matches a supported driver, instantiate that driver and
@@ -117,8 +121,16 @@ class KernelDriver {
     internal::Visit(std::forward<T>(f), variant_, std::forward<Args>(args)...);
   }
 
-  // Extract the hardware configuration and state.
-  uart_type uart() {
+  // Apply f to selected driver.
+  template <typename T, typename... Args>
+  void Visit(T&& f, Args... args) const {
+    internal::Visit(std::forward<T>(f), variant_, std::forward<Args>(args)...);
+  }
+
+  // Extract the hardware configuration and state.  The return type is const
+  // just to make clear that this never returns a mutable reference like normal
+  // accessors do, it always copies.
+  const uart_type uart() const {
     uart_type driver;
     Visit([&driver](auto&& active) {
       const auto& uart = active.uart();

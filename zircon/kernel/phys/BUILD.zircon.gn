@@ -134,6 +134,7 @@ if (current_toolchain == default_toolchain) {
     ]
     deps = [
       "$zx/kernel/lib/arch",
+      "$zx/kernel/lib/boot-options",
       "$zx/system/ulib/uart",
       "$zx/system/ulib/zbitl",
     ]

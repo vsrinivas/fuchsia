@@ -355,6 +355,7 @@ class KernelDriver {
       : uart_(std::forward<Args>(args)...), io_(uart_.config(), uart_.pio_size()) {}
 
   // Access underlying hardware driver object.
+  const auto& uart() const { return uart_; }
   auto& uart() { return uart_; }
 
   // Access IoProvider object.
