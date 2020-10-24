@@ -5,6 +5,7 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/testing/golden_file.gni")
 import("//third_party/protobuf/proto_library.gni")
 
 go_library("proto_lib") {
@@ -55,4 +56,28 @@ proto_library("proto") {
   generate_cc = false
   generate_go = true
   generate_python = false
+}
+
+golden_file("context_pb_go_diff") {
+  current = "${root_gen_dir}/go-proto-gen/src/tools/integration/cmd/fint/proto/context.pb.go"
+  golden = "proto/context.pb.go"
+  deps = [ ":proto" ]
+  warn_on_changes = false
+}
+
+golden_file("static_pb_go_diff") {
+  current = "${root_gen_dir}/go-proto-gen/src/tools/integration/cmd/fint/proto/static.pb.go"
+  golden = "proto/static.pb.go"
+  deps = [ ":proto" ]
+  warn_on_changes = false
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    # The diff rules aren't really tests, but we want to ensure they're run in CQ.
+    ":context_pb_go_diff",
+    ":fint_tests",
+    ":static_pb_go_diff",
+  ]
 }
