@@ -102,9 +102,9 @@ std::map<std::string, std::string> MakeAnnotations() {
   return {{kAnnotationKey, kAnnotationValue}};
 }
 
-Report MakeReport(const std::size_t program_id) {
+Report MakeReport(const std::size_t report_id) {
   std::optional<Report> report =
-      Report::MakeReport(fxl::StringPrintf("program_%ld", program_id), MakeAnnotations(),
+      Report::MakeReport(fxl::StringPrintf("program_%ld", report_id), MakeAnnotations(),
                          MakeAttachments(), kSnapshotUuidValue, BuildAttachment(kMinidumpValue));
   FX_CHECK(report.has_value());
   return std::move(report.value());
@@ -131,7 +131,7 @@ class QueueTest : public UnitTestFixture {
   }
 
   void SetUpQueue(std::vector<bool> upload_attempt_results = std::vector<bool>{}) {
-    program_id_ = 1;
+    report_id_ = 1;
     state_ = QueueOps::SetStateToLeaveAsPending;
     expected_queue_contents_.clear();
     upload_attempt_results_ = upload_attempt_results;
@@ -160,9 +160,9 @@ class QueueTest : public UnitTestFixture {
     for (auto const& op : ops) {
       switch (op) {
         case QueueOps::AddNewReport:
-          FX_CHECK(queue_->Add(MakeReport(program_id_)));
+          FX_CHECK(queue_->Add(report_id_, MakeReport(report_id_)));
           RunLoopUntilIdle();
-          ++program_id_;
+          ++report_id_;
           if (!queue_->IsEmpty()) {
             AddExpectedReport(queue_->LatestReport());
           }
@@ -264,7 +264,7 @@ class QueueTest : public UnitTestFixture {
     return 0;
   }
 
-  size_t program_id_ = 1;
+  size_t report_id_ = 1;
   QueueOps state_ = QueueOps::SetStateToLeaveAsPending;
   std::vector<bool> upload_attempt_results_;
   std::vector<bool>::const_iterator next_upload_attempt_result_;

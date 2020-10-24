@@ -9,8 +9,6 @@
 
 #include <filesystem>
 #include <set>
-#include <tuple>
-#include <utility>
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
@@ -140,22 +138,21 @@ Store::Store(std::shared_ptr<InfoContext> info, const std::string& root_dir, Sto
   RemoveEmptyDirectories(root_dir_);
 
   metadata_.RecreateFromFilesystem();
-
-  auto all_report_ids = metadata_.Reports();
-  std::sort(all_report_ids.begin(), all_report_ids.end());
-  next_id_ = (all_report_ids.empty()) ? 0u : all_report_ids.back() + 1;
 }
 
-std::optional<ReportId> Store::Add(Report report,
-                                   std::vector<ReportId>* garbage_collected_reports) {
+bool Store::Add(const ReportId report_id, Report report,
+                std::vector<ReportId>* garbage_collected_reports) {
+  if (metadata_.Contains(report_id)) {
+    FX_LOGS(ERROR) << "Store already contains report for crash " << report_id;
+    return false;
+  }
+
   for (const auto& key : kReservedAttachmentNames) {
     if (report.Attachments().find(key) != report.Attachments().end()) {
       FX_LOGS(ERROR) << "Attachment is using reserved key: " << key;
-      return std::nullopt;
+      return false;
     }
   }
-
-  const ReportId report_id = next_id_++;
 
   const std::string program_dir = files::JoinPath(root_dir_, report.ProgramShortname());
   const std::string report_dir = files::JoinPath(program_dir, std::to_string(report_id));
@@ -164,7 +161,7 @@ std::optional<ReportId> Store::Add(Report report,
 
   if (!files::CreateDirectory(report_dir)) {
     FX_LOGS(ERROR) << "Failed to create directory for report: " << report_dir;
-    return std::nullopt;
+    return false;
   }
 
   const std::string annotations_json = FormatAnnotationsAsJson(report.Annotations());
@@ -188,7 +185,7 @@ std::optional<ReportId> Store::Add(Report report,
   // Ensure there's enough space in the store for the report.
   if (!MakeFreeSpace(report_size, garbage_collected_reports)) {
     FX_LOGS(ERROR) << "Failed to make space for report";
-    return std::nullopt;
+    return false;
   }
 
   std::vector<std::string> attachment_keys;
@@ -198,14 +195,14 @@ std::optional<ReportId> Store::Add(Report report,
     // Write the report's content to the the filesystem.
     if (!WriteData(files::JoinPath(report_dir, key), data)) {
       FX_LOGS(ERROR) << "Failed to write attachment " << key;
-      return std::nullopt;
+      return false;
     }
   }
 
   metadata_.Add(report_id, report.ProgramShortname(), std::move(attachment_keys), report_size);
 
   cleanup_on_error.cancel();
-  return report_id;
+  return true;
 }
 
 std::optional<Report> Store::Get(const ReportId report_id) {

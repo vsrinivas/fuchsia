@@ -22,8 +22,6 @@ using async::PostTask;
 using crashpad::FileReader;
 using UploadPolicy = Settings::UploadPolicy;
 
-constexpr char kStorePath[] = "/tmp/reports";
-
 void Queue::WatchSettings(Settings* settings) {
   settings->RegisterUploadPolicyWatcher(
       [this](const UploadPolicy& upload_policy) { OnUploadPolicyChange(upload_policy); });
@@ -52,34 +50,33 @@ bool Queue::Contains(const ReportId report_id) const {
          pending_reports_.end();
 }
 
-bool Queue::Add(Report report) {
+bool Queue::Add(const ReportId report_id, Report report) {
   // Attempt to upload a report before putting it in the store.
-  std::string server_report_id;
   if (state_ == State::Upload) {
+    std::string server_report_id;
     info_.RecordUploadAttemptNumber(1u);
-    if (Upload(report, &server_report_id)) {
+    if (Upload(report_id, report, &server_report_id)) {
       info_.MarkReportAsUploaded(server_report_id, 1u);
       return true;
     }
   }
 
   std::vector<ReportId> garbage_collected_reports;
-  std::optional<ReportId> local_report_id =
-      store_.Add(std::move(report), &garbage_collected_reports);
+  const bool success = store_.Add(report_id, std::move(report), &garbage_collected_reports);
 
   for (const auto& id : garbage_collected_reports) {
     GarbageCollect(id);
   }
 
-  if (!local_report_id.has_value()) {
+  if (!success) {
     return false;
   }
 
-  pending_reports_.push_back(local_report_id.value());
+  pending_reports_.push_back(report_id);
 
   // Early upload that failed.
   if (state_ == State::Upload) {
-    upload_attempts_[local_report_id.value()]++;
+    upload_attempts_[report_id]++;
   } else if (state_ == State::Archive) {
     ArchiveAll();
   }
@@ -110,7 +107,7 @@ bool Queue::Upload(const ReportId local_report_id) {
   info_.RecordUploadAttemptNumber(upload_attempts_[local_report_id]);
 
   std::string server_report_id;
-  if (Upload(report.value(), &server_report_id)) {
+  if (Upload(local_report_id, report.value(), &server_report_id)) {
     info_.MarkReportAsUploaded(server_report_id, upload_attempts_[local_report_id]);
     upload_attempts_.erase(local_report_id);
     store_.Remove(local_report_id);
@@ -122,13 +119,15 @@ bool Queue::Upload(const ReportId local_report_id) {
   return false;
 }
 
-bool Queue::Upload(const Report& report, std::string* server_report_id) {
+bool Queue::Upload(const ReportId local_report_id, const Report& report,
+                   std::string* server_report_id) {
   if (crash_server_->MakeRequest(report, server_report_id)) {
     FX_LOGS(INFO) << "Successfully uploaded report at https://crash.corp.google.com/"
                   << *server_report_id;
     return true;
   }
 
+  FX_LOGS(WARNING) << "Failed to upload local report " << local_report_id;
   return false;
 }
 

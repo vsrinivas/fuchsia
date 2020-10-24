@@ -47,6 +47,16 @@ constexpr zx::duration kSnapshotTimeout = zx::min(2);
 // the same snapshot in multiple reports is lost.
 constexpr zx::duration kSnapshotSharedRequestWindow = zx::sec(5);
 
+// Returns what the initial ReportId should be, based on the contents of the store in the filesystem.
+//
+// Note: This function traverses store in the filesystem to and should be used sparingly.
+ReportId SeedReportId() {
+  // The next ReportId will be one more than the largest in the store.
+  auto all_report_ids = StoreMetadata(kStorePath, kStoreMaxSize).Reports();
+  std::sort(all_report_ids.begin(), all_report_ids.end());
+  return (all_report_ids.empty()) ? 0u : all_report_ids.back() + 1;
+}
+
 }  // namespace
 
 std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
@@ -101,6 +111,8 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
     privacy_settings_watcher_.StartWatching();
   }
 
+  next_report_id_ = SeedReportId();
+
   queue_.WatchSettings(&settings_);
 
   info_.ExposeSettings(&settings_);
@@ -146,8 +158,9 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
                   return ::fit::error();
                 }
 
-                if (!queue_.Add(std::move(final_report.value()))) {
-                  FX_LOGS(ERROR) << "Error adding new report to the queue";
+                const auto report_id = next_report_id_++;
+                if (!queue_.Add(report_id, std::move(final_report.value()))) {
+                  FX_LOGS(ERROR) << "Error adding new report " << report_id << " to the queue";
                   return ::fit::error();
                 }
 

@@ -97,6 +97,7 @@ source_set("crash_reporter") {
     ":privacy_settings_ptr",
     ":product",
     ":queue",
+    ":report_id",
     ":settings",
     ":snapshot_manager",
     "//sdk/fidl/fuchsia.feedback",

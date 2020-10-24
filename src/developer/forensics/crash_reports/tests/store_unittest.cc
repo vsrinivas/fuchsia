@@ -77,7 +77,12 @@ class StoreTest : public UnitTestFixture {
     auto report = Report(program_shortname, annotations, std::move(attachments_data), snapshot_uuid,
                          std::move(minidump_data));
 
-    return store_->Add(std::move(report), garbage_collected_reports);
+    const ReportId report_id = next_report_id_++;
+    if (store_->Add(report_id, std::move(report), garbage_collected_reports)) {
+      return report_id;
+    }
+
+    return std::nullopt;
   }
 
   bool Get(const ReportId& id, std::string* program_shortname,
@@ -183,6 +188,8 @@ class StoreTest : public UnitTestFixture {
 
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<Store> store_;
+
+  ReportId next_report_id_{0};
 };
 
 TEST_F(StoreTest, Succeed_Add) {
@@ -349,11 +356,11 @@ TEST_F(StoreTest, Succeed_GarbageCollection) {
   EXPECT_FALSE(store_->Contains(id2.value()));
 
   EXPECT_THAT(store_->GetReports(), UnorderedElementsAreArray({
-                                             id5.value(),
-                                             id6.value(),
-                                             id7.value(),
-                                             id8.value(),
-                                         }));
+                                        id5.value(),
+                                        id6.value(),
+                                        id7.value(),
+                                        id8.value(),
+                                    }));
   EXPECT_THAT(GetProgramShortnames(), UnorderedElementsAreArray({
                                           "program_name2",
                                           "program_name3",

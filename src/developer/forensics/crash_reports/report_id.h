@@ -12,7 +12,7 @@ namespace crash_reports {
 
 using ReportId = uint64_t;
 
-}
+}  // namespace crash_reports
 }  // namespace forensics
 
 #endif  // SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_REPORT_ID_H_

@@ -31,9 +31,8 @@ class Store {
         StorageSize max_size);
 
   // Adds a report to the store and returns the ReportIds of any report garbage collected in the
-  // process. If the operation fails, std::nullopt is returned, else a unique identifier referring
-  // to the report is returned.
-  std::optional<ReportId> Add(Report report, std::vector<ReportId>* garbage_collected_reports);
+  // process.
+  bool Add(ReportId report_id, Report report, std::vector<ReportId>* garbage_collected_reports);
 
   // Gets a report from the store. If no report exists for |id| or there is an error reading the
   // report from the filesystem, return std::nullopt.
@@ -57,8 +56,6 @@ class Store {
   bool MakeFreeSpace(StorageSize required_space, std::vector<ReportId>* garbage_collected_reports);
 
   std::string root_dir_;
-
-  ReportId next_id_{0};
 
   StoreMetadata metadata_;
   StoreInfo info_;

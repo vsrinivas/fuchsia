@@ -20,6 +20,7 @@
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/privacy_settings_ptr.h"
 #include "src/developer/forensics/crash_reports/queue.h"
+#include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/settings.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/utils/errors.h"
@@ -67,6 +68,8 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   Settings settings_;
   PrivacySettingsWatcher privacy_settings_watcher_;
   fidl::DeviceIdProviderPtr device_id_provider_ptr_;
+
+  ReportId next_report_id_;
 };
 
 }  // namespace crash_reports

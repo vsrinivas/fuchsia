@@ -18,6 +18,8 @@ constexpr char kCrashServerUrlKey[] = "url";
 constexpr StorageSize kSnapshotAnnotationsMaxSize = StorageSize::Megabytes(5);
 constexpr StorageSize kSnapshotArchivesMaxSize = StorageSize::Megabytes(5);
 
+constexpr const char* kStorePath = "/tmp/reports";
+
 // Other report data can occupy up to 5 MB of memory.
 constexpr StorageSize kStoreMaxSize = StorageSize::Megabytes(5u);
 
