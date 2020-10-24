@@ -30,7 +30,14 @@ BT_SET_UP() {
   fx="$(btf::setup_fx)"
   btf::make_mock "${BT_TEMP_DIR}/out/default/image_paths.sh"
   btf::make_mock "${BT_TEMP_DIR}/${PREBUILT_VDL_DIR}/device_launcher"
-  btf::make_hosttools_mock "zbi"
+  
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
+  btf::make_mock "${BT_TEMP_DIR}/out/default/host/zbi"
+  cat >> "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
+if [[ "$@" == "--name zbi --expect-one tools" ]] ; then
+  echo "host/zbi"
+fi
+EOF
 }
 
 TEST_fx_vdl_default() {

@@ -671,9 +671,9 @@ function fx-run-ninja {
 }
 
 function fx-zbi {
-  "${FUCHSIA_BUILD_DIR}/host_x64/zbi" --compressed="$FUCHSIA_ZBI_COMPRESSION" "$@"
+  "${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts --name zbi --expect-one tools)" --compressed="$FUCHSIA_ZBI_COMPRESSION" "$@"
 }
 
 function fx-zbi-default-compression {
-  "${FUCHSIA_BUILD_DIR}/host_x64/zbi" "$@"
+  "${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts --name zbi --expect-one tools)" "$@"
 }
