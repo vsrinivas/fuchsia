@@ -163,7 +163,7 @@ class DriverImpl
     : public DriverBase<DriverImpl<KdrvExtra, KdrvConfig>, KdrvExtra, KdrvConfig, kPortCount> {
  public:
   template <typename... Args>
-  DriverImpl(Args&&... args)
+  explicit DriverImpl(Args&&... args)
       : DriverBase<DriverImpl, KdrvExtra, KdrvConfig, kPortCount>(std::forward<Args>(args)...) {}
 
   template <class IoProvider>

@@ -69,7 +69,7 @@ class DriverBase {
 
   DriverBase(const DriverBase&) = default;
 
-  DriverBase(const config_type& cfg) : cfg_(cfg) {}
+  explicit DriverBase(const config_type& cfg) : cfg_(cfg) {}
 
   // API to fill a ZBI item describing this UART.
   constexpr uint32_t type() const { return ZBI_TYPE_KERNEL_DRIVER; }

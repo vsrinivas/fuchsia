@@ -25,7 +25,7 @@ struct Driver {
 
   Driver(const Driver&) = default;
 
-  Driver(const config_type&) {}
+  explicit Driver(const config_type& config) {}
 
   // API to (not) fill a ZBI item describing this UART.
   constexpr uint32_t type() const { return 0; }

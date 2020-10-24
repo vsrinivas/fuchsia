@@ -26,7 +26,7 @@ struct Driver : public pl011::Driver {
 #elif defined(__x86_64__) || defined(__i386__)
 
 struct Driver : public ns8250::PioDriver {
-  Driver(dcfg_simple_pio_t cfg = ns8250::kLegacyConfig) : ns8250::PioDriver(cfg) {}
+  explicit Driver(dcfg_simple_pio_t cfg = ns8250::kLegacyConfig) : ns8250::PioDriver(cfg) {}
 };
 
 #else

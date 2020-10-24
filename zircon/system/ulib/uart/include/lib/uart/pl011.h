@@ -120,7 +120,7 @@ struct InterruptClearRegister {
 
 struct Driver : public DriverBase<Driver, KDRV_PL011_UART, dcfg_simple_t> {
   template <typename... Args>
-  Driver(Args&&... args)
+  explicit Driver(Args&&... args)
       : DriverBase<Driver, KDRV_PL011_UART, dcfg_simple_t>(std::forward<Args>(args)...) {}
 
   template <class IoProvider>
