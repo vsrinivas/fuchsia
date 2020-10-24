@@ -144,11 +144,10 @@ impl WlanPolicyFacade {
         Ok(scan_results.into_iter().collect())
     }
 
-    /// Connect to a network through the policy layer. The network muct have been saved first.
-    /// Returns an error if the connect command was not recieved, otherwise it returns a boolean
-    /// representing whether the connection was successful. Until listener updates are used, it
-    /// will return false.
-    /// NOTE - this will trigger a connection but will not yet return whether connection happened.
+    /// Connect to a network through the policy layer. The network must have been saved first.
+    /// Returns an error if the connect command was not recieved, otherwise returns the response
+    /// to the connect request as a string. A connection should be triggered if the reponse is
+    /// "Acknowledged".
     /// # Arguments:
     /// * `target_ssid': The SSID (network name) that we want to connect to.
     /// * `type`: Security type should be a string of the security type, either "none", "wep",
@@ -158,7 +157,7 @@ impl WlanPolicyFacade {
         &self,
         target_ssid: Vec<u8>,
         type_: fidl_policy::SecurityType,
-    ) -> Result<bool, Error> {
+    ) -> Result<String, Error> {
         let controller_guard = self.controller.read();
         let controller = controller_guard
             .inner
@@ -166,16 +165,22 @@ impl WlanPolicyFacade {
             .ok_or(format_err!("client controller has not been initialized"))?;
 
         let mut network_id = fidl_policy::NetworkIdentifier { ssid: target_ssid, type_ };
-        match controller.connect(&mut network_id).await.expect("Connect: failed to connect") {
-            fidl_common::RequestStatus::Acknowledged => {
-                // For now we will just check whether our request is acknowledged.
-                return Ok(false);
-            }
-            fidl_common::RequestStatus::RejectedNotSupported => bail!("RejectedNotSupported"),
-            _ => {
-                bail!("Scan: failed to send request");
-            }
+        let response = controller
+            .connect(&mut network_id)
+            .await
+            .map_err(|e| format_err!("Connect: failed to connect: {}", e))?;
+        Ok(Self::request_status_as_string(response))
+    }
+
+    fn request_status_as_string(response: fidl_common::RequestStatus) -> String {
+        match response {
+            fidl_common::RequestStatus::Acknowledged => "Acknowledged",
+            fidl_common::RequestStatus::RejectedNotSupported => "RejectedNotSupported",
+            fidl_common::RequestStatus::RejectedIncompatibleMode => "RejectedIncompatibleMode",
+            fidl_common::RequestStatus::RejectedAlreadyInUse => "RejectedAlreadyInUse",
+            fidl_common::RequestStatus::RejectedDuplicateRequest => "RejectedDuplicateRequest",
         }
+        .to_string()
     }
 
     /// Forget the specified saved network. Doesn't do anything if network not saved.
