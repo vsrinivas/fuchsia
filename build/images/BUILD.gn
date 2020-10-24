@@ -2303,7 +2303,7 @@ group("default-images") {
     recovery_label,
   ]
 
-  if (build_uefi_disk) {
+  if (build_uefi_disk && !bootfs_only) {
     deps += [ ":uefi-disk" ]
   }
 
