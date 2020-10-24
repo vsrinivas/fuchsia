@@ -6,8 +6,9 @@ package checklicenses
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
-	"os"
+	"strings"
 )
 
 type CustomProjectLicense struct {
@@ -39,27 +40,29 @@ type Config struct {
 	TextExtensions               map[string]struct{}
 }
 
-// Init populates Config object with values found in the json config file
-func (config *Config) Init(configJson *string) error {
-	jsonFile, err := os.Open(*configJson)
-	defer jsonFile.Close()
+// Init populates Config object with values found in the json config file.
+//
+// Both SkipFiles and SingleLicenseFiles are lowered.
+func (c *Config) Init(path string) error {
+	raw, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	byteValue, err := ioutil.ReadAll(jsonFile)
-	if err != nil {
+	if err = json.Unmarshal(raw, c); err != nil {
 		return err
 	}
-	if err = json.Unmarshal(byteValue, &config); err != nil {
-		return err
+	c.TextExtensions = map[string]struct{}{}
+	for _, item := range c.TextExtensionList {
+		c.TextExtensions[item] = struct{}{}
 	}
-	config.createTextExtensions()
+	for i := range c.SingleLicenseFiles {
+		c.SingleLicenseFiles[i] = strings.ToLower(c.SingleLicenseFiles[i])
+	}
+	for i := range c.SkipFiles {
+		c.SkipFiles[i] = strings.ToLower(c.SkipFiles[i])
+	}
+	if c.Target != "all" {
+		return errors.New("target must be \"all\"")
+	}
 	return nil
-}
-
-func (config *Config) createTextExtensions() {
-	config.TextExtensions = make(map[string]struct{})
-	for _, item := range config.TextExtensionList {
-		config.TextExtensions[item] = struct{}{}
-	}
 }

@@ -42,8 +42,6 @@ go_library("lib") {
   sources = [
     "config.go",
     "config_test.go",
-    "file.go",
-    "file_test.go",
     "file_tree.go",
     "file_tree_test.go",
     "license.go",

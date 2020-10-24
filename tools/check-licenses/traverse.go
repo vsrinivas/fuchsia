@@ -27,43 +27,42 @@ func Walk(config *Config) error {
 	}
 
 	for _, l := range licenses.licenses {
+		l := l
 		wg.Add(1)
-		go l.MatchChannelWorker(&wg)
+		go func() {
+			l.MatchChannelWorker()
+			wg.Done()
+		}()
 	}
 
 	log.Printf("Starting singleLicenseFile walk")
 	for tree := range file_tree.getSingleLicenseFileIterator() {
+		tree := tree
 		for singleLicenseFile := range tree.singleLicenseFiles {
-			func(base string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) {
-				eg.Go(func() error {
-					if err := processSingleLicenseFile(singleLicenseFile, metrics, licenses, config, tree); err != nil {
-						// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
-						// TODO(jcecil): Correctly skip symlink.
-						fmt.Printf("warning: %s. Skipping file: %s.\n", err, tree.getPath())
-					}
-					return nil
-				})
-			}(singleLicenseFile, metrics, licenses, config, tree)
-			// TODO: Delete the next line afet understanding why
-			// parallelizing this block of code results in missed
-			// authors.
-			eg.Wait()
+			singleLicenseFile := singleLicenseFile
+			eg.Go(func() error {
+				if err := processSingleLicenseFile(singleLicenseFile, metrics, licenses, config, tree); err != nil {
+					// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
+					// TODO(jcecil): Correctly skip symlink.
+					fmt.Printf("warning: %s. Skipping file: %s.\n", err, tree.getPath())
+				}
+				return nil
+			})
 		}
 	}
 	eg.Wait()
 
 	log.Println("Starting regular file walk")
 	for path := range file_tree.getFileIterator() {
-		func(path string, metrics *Metrics, licenses *Licenses, unlicensedFiles *UnlicensedFiles, config *Config, file_tree *FileTree) {
-			eg.Go(func() error {
-				if err := processFile(path, metrics, licenses, unlicensedFiles, config, file_tree); err != nil {
-					// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
-					// TODO(jcecil): Correctly skip symlink.
-					fmt.Printf("warning: %s. Skipping file: %s.\n", err, path)
-				}
-				return nil
-			})
-		}(path, metrics, licenses, unlicensedFiles, config, file_tree)
+		path := path
+		eg.Go(func() error {
+			if err := processFile(path, metrics, licenses, unlicensedFiles, config, file_tree); err != nil {
+				// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
+				// TODO(jcecil): Correctly skip symlink.
+				fmt.Printf("warning: %s. Skipping file: %s.\n", err, path)
+			}
+			return nil
+		})
 	}
 	eg.Wait()
 
@@ -135,11 +134,11 @@ func processFile(path string, metrics *Metrics, licenses *Licenses, unlicensedFi
 			for _, arr_license := range project.singleLicenseFiles {
 
 				for i, license := range arr_license {
-					license.Lock()
+					license.mu.Lock()
 					for author := range license.matches {
 						license.matches[author].files = append(license.matches[author].files, path)
 					}
-					license.Unlock()
+					license.mu.Unlock()
 					if i == 0 {
 						metrics.increment("num_one_file_matched_to_one_single_license")
 					}

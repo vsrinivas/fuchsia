@@ -20,7 +20,7 @@ func TestMainLoadConfig(t *testing.T) {
 		t.Errorf("%v(): got %v", t.Name(), err)
 	}
 	var config checklicenses.Config
-	if err := config.Init(&path); err != nil {
+	if err := config.Init(path); err != nil {
 		t.Errorf("%v(): got %v", t.Name(), err)
 	}
 }

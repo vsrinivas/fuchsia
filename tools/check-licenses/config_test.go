@@ -18,7 +18,7 @@ func TestConfigInit(t *testing.T) {
 		t.Errorf("%v(): got %v", t.Name(), err)
 	}
 	var config Config
-	if err := config.Init(&path); err != nil {
+	if err := config.Init(path); err != nil {
 		t.Errorf("%v(): got %v", t.Name(), err)
 	}
 	want := "."

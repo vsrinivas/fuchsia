@@ -21,76 +21,70 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 	var recursiveHelper func(string) error
 	var file_tree FileTree
 	file_tree.Init()
-	var root string
-	if config.Target == "all" {
-		root = config.BaseDir
+	root := config.BaseDir
 
-		recursiveHelper = func(root string) error {
-			return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					fmt.Printf("error walking the path %q: %v\n", root, err)
-					return err
-				}
-				if info.IsDir() {
-					for _, skipDir := range config.SkipDirs {
-						if info.Name() == skipDir || path == skipDir {
-							log.Printf("skipping a dir without errors: %s", info.Name())
-							return filepath.SkipDir
-						}
-					}
-
-					for _, customProjectLicense := range config.CustomProjectLicenses {
-						if path == customProjectLicense.ProjectRoot {
-							metrics.increment("num_single_license_files")
-							// TODO(omerlevran): Fix the directory and file_root having to repeat a
-							// directory.
-							file_tree.addSingleLicenseFile(path, customProjectLicense.LicenseLocation)
-							break
-						}
-					}
-
-					// Instead of using filepath.Walk to traverse the directory tree,
-					// we will instead call this same function recursively on each
-					// subtree, and return "filepath.SkipDir" to prevent filepath.Walk
-					// from entering the child directories. This allows us to parallelize
-					// the walk procedure.
-					//
-					// Special case: In the first loop, root == path.
-					// Returning filepath.SkipDir on that loop would cancel the entire
-					// walk procedure, and no files would be processed.
-					if root != path {
-						func(path string) {
-							eg.Go(func() error {
-								return recursiveHelper(path)
-							})
-						}(path)
+	recursiveHelper = func(root string) error {
+		return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Printf("error walking the path %q: %v\n", root, err)
+				return err
+			}
+			if info.IsDir() {
+				for _, skipDir := range config.SkipDirs {
+					if info.Name() == skipDir || path == skipDir {
+						log.Printf("skipping a dir without errors: %s", info.Name())
 						return filepath.SkipDir
 					}
-					return nil
-				} else {
-					for _, skipFile := range config.SkipFiles {
-						if strings.ToLower(info.Name()) == strings.ToLower(skipFile) {
-							log.Printf("skipping a file without errors: %s", info.Name())
-							return nil
-						}
+				}
+
+				for _, customProjectLicense := range config.CustomProjectLicenses {
+					if path == customProjectLicense.ProjectRoot {
+						metrics.increment("num_single_license_files")
+						// TODO(omerlevran): Fix the directory and file_root having to repeat a
+						// directory.
+						file_tree.addSingleLicenseFile(path, customProjectLicense.LicenseLocation)
+						break
 					}
 				}
-				if isSingleLicenseFile(info.Name(), config.SingleLicenseFiles) {
-					metrics.increment("num_single_license_files")
-					file_tree.addSingleLicenseFile(path, filepath.Base(path))
-				} else {
-					if isValidExtension(path, config) {
-						metrics.increment("num_non_single_license_files")
-						file_tree.addFile(path)
-					} else {
-						metrics.increment("num_extensions_excluded")
-					}
+
+				// Instead of using filepath.Walk to traverse the directory tree,
+				// we will instead call this same function recursively on each
+				// subtree, and return "filepath.SkipDir" to prevent filepath.Walk
+				// from entering the child directories. This allows us to parallelize
+				// the walk procedure.
+				//
+				// Special case: In the first loop, root == path.
+				// Returning filepath.SkipDir on that loop would cancel the entire
+				// walk procedure, and no files would be processed.
+				if root != path {
+					path := path
+					eg.Go(func() error {
+						return recursiveHelper(path)
+					})
+					return filepath.SkipDir
 				}
 				return nil
-			})
-		}
-	} else {
-		// TODO(solomonkinard) target specific file tree
+			} else {
+				for _, skipFile := range config.SkipFiles {
+					if strings.ToLower(info.Name()) == strings.ToLower(skipFile) {
+						log.Printf("skipping a file without errors: %s", info.Name())
+						return nil
+					}
+				}
+			}
+			if isSingleLicenseFile(info.Name(), config.SingleLicenseFiles) {
+				metrics.increment("num_single_license_files")
+				file_tree.addSingleLicenseFile(path, filepath.Base(path))
+			} else {
+				if isValidExtension(path, config) {
+					metrics.increment("num_non_single_license_files")
+					file_tree.addFile(path)
+				} else {
+					metrics.increment("num_extensions_excluded")
+				}
+			}
+			return nil
+		})
 	}
 
 	eg.Go(func() error {
@@ -191,31 +185,6 @@ func (file_tree *FileTree) getPath() string {
 	return sb.String()
 }
 
-func isValidExtension(path string, config *Config) bool {
-	extension := filepath.Ext(path)
-	if len(extension) == 0 {
-		return false
-	}
-	_, found := config.TextExtensions[extension[1:]]
-	return found
-}
-
-func readFromFile(path string, max_read_size int64) ([]byte, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	data := make([]byte, max_read_size)
-	count, err := file.Read(data)
-	if err != nil {
-		// TODO(solomonkinard) symlinks not found e.g. integration/fuchsia/infra/test_durations/README.md
-		return nil, err
-	}
-	data = data[:count]
-	return data, nil
-}
-
 func (file_tree *FileTree) getSingleLicenseFileIterator() <-chan *FileTree {
 	ch := make(chan *FileTree, 1)
 	go func() {
@@ -265,4 +234,40 @@ func (file_tree *FileTree) getFileIterator() <-chan string {
 		close(ch)
 	}()
 	return ch
+}
+
+func isValidExtension(path string, config *Config) bool {
+	extension := filepath.Ext(path)
+	if len(extension) == 0 {
+		return false
+	}
+	_, found := config.TextExtensions[extension[1:]]
+	return found
+}
+
+func readFromFile(path string, max_read_size int64) ([]byte, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	data := make([]byte, max_read_size)
+	count, err := file.Read(data)
+	if err != nil {
+		// TODO(solomonkinard) symlinks not found e.g. integration/fuchsia/infra/test_durations/README.md
+		return nil, err
+	}
+	data = data[:count]
+	return data, nil
+}
+
+func isSingleLicenseFile(name string, files []string) bool {
+	name = strings.ToLower(name)
+	for _, f := range files {
+		// example of file: LICENSE, LICENSE-THIRD-PARTY, ...
+		if strings.HasPrefix(name, f) {
+			return true
+		}
+	}
+	return false
 }

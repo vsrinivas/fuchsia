@@ -22,9 +22,15 @@ func TestLicenseAppend(t *testing.T) {
 		t.Errorf("%v(): got %v, want %v", t.Name(), len(license.matches), want)
 	}
 
-	wg := setupLicenseWorker(&license)
-	license.append("test_path_0")
-	closeLicenseWorker(&license, wg)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		license.MatchChannelWorker()
+		wg.Done()
+	}()
+	license.appendFile("test_path_0")
+	license.AddMatch(nil)
+	wg.Wait()
 
 	want = 1
 	if len(license.matches) != want {
@@ -34,18 +40,4 @@ func TestLicenseAppend(t *testing.T) {
 	if len(license.matches[""].files) != want {
 		t.Errorf("%v(): got %v, want %v", t.Name(), len(license.matches[""].files), want)
 	}
-}
-
-func setupLicenseWorker(l *License) *sync.WaitGroup {
-	// Start worker channel.
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go l.MatchChannelWorker(&wg)
-	return &wg
-}
-
-func closeLicenseWorker(l *License, wg *sync.WaitGroup) {
-	// Close worker channel.
-	l.AddMatch(nil)
-	wg.Wait()
 }

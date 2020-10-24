@@ -141,7 +141,7 @@ func (licenses *Licenses) MatchSingleLicenseFile(data []byte, base string, metri
 		if matched := result.([]byte); matched != nil {
 			metrics.increment("num_single_license_file_match")
 			path := strings.TrimSpace(file_tree.getPath() + base)
-			licenses.MatchAuthors(matched, data, path, license)
+			licenses.MatchAuthors(string(matched), data, path, license)
 			file_tree.Lock()
 			file_tree.singleLicenseFiles[base] = append(file_tree.singleLicenseFiles[base], license)
 			file_tree.Unlock()
@@ -204,7 +204,7 @@ func (license *Licenses) GetAuthorMatches(data []byte, regexs []copyrightRegex, 
 	return set
 }
 
-func (licenses *Licenses) MatchAuthors(matched []byte, data []byte, path string, lic *License) {
+func (licenses *Licenses) MatchAuthors(matched string, data []byte, path string, lic *License) {
 	// Use a set so that we don't have duplicate authors.
 	set := make(map[string]bool)
 	set = licenses.GetAuthorMatches(data, copyrightRegexs, set)
@@ -247,7 +247,7 @@ func (licenses *Licenses) MatchFile(data []byte, path string, metrics *Metrics) 
 		if matched := result.([]byte); matched != nil {
 			is_matched = true
 			metrics.increment("num_licensed")
-			licenses.MatchAuthors(matched, data, path, license)
+			licenses.MatchAuthors(string(matched), data, path, license)
 		}
 	}
 	return is_matched

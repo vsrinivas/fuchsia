@@ -99,12 +99,12 @@ func saveToOutputFile(file *os.File, licenses *Licenses, config *Config, metrics
 	}
 	tmpl := template.Must(template.New("name").Funcs(template.FuncMap{
 		"getPattern": func(license *License) string { return (*license).pattern.String() },
-		"getText":    func(license *License, author string) string { return string((*license).matches[author].value) },
+		"getText":    func(license *License, author string) string { return (*license).matches[author].value },
 		"getHTMLText": func(license *License, author string) string {
-			return strings.Replace(string((*license).matches[author].value), "\n", "<br />", -1)
+			return strings.Replace((*license).matches[author].value, "\n", "<br />", -1)
 		},
 		"getEscapedText": func(license *License, author string) string {
-			return strings.Replace(string((*license).matches[author].value), "\"", "\\\"", -1)
+			return strings.Replace((*license).matches[author].value, "\"", "\\\"", -1)
 		},
 		"getCategory": func(license *License) string {
 			return strings.TrimSuffix(string((*license).category), ".lic")

@@ -18,7 +18,7 @@ func TestFileTreeNew(t *testing.T) {
 		t.Fatal(err)
 	}
 	config := Config{}
-	if err := config.Init(&path); err != nil {
+	if err := config.Init(path); err != nil {
 		t.Fatal(err)
 	}
 	metrics := Metrics{}
@@ -26,5 +26,13 @@ func TestFileTreeNew(t *testing.T) {
 	config.BaseDir = folder
 	if NewFileTree(&config, &metrics) == nil {
 		t.Errorf("%v(): got %v, want %v", t.Name(), nil, "*FileTree")
+	}
+}
+
+func TestFileIsSingleLicense(t *testing.T) {
+	name := "LICENSE-THIRD-PARTY"
+	singleLicenseFiles := []string{"license", "readme"}
+	if !isSingleLicenseFile(name, singleLicenseFiles) {
+		t.Errorf("%v: %v is not a single license file", t.Name(), name)
 	}
 }
