@@ -188,6 +188,17 @@ reserve few blocks required for its operations.
 
 From //build/images/fvm.gni:78
 
+### blobfs_maximum_runtime_bytes
+blobfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
+can grow as needed if there are extra slices available in FVM. This limit prevents the blobfs
+partition from taking too much space away from other uses.
+
+Pass the empty string for no limit.
+
+**Current value (from the default):** `""`
+
+From //src/storage/fshost/BUILD.gn:16
+
 ### blobfs_minimum_data_bytes
 Number of bytes to reserve for data in the fs. This is in addition
 to what is reserved, if any, for the inodes. Data bytes constitutes
@@ -216,7 +227,7 @@ to accommodate the large number of metrics entries.
 
 **Current value (from the default):** `false`
 
-From //src/storage/blobfs/BUILD.gn:22
+From //src/storage/blobfs/BUILD.gn:23
 
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
@@ -679,7 +690,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/9dc24c4888700c9aba6a4068070840d9a2c8b9ad/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/abbc56d0ed43803948eb46c5ce39df53cf30d2cb/runtime/dart/dart_component.gni#24)
 
 ### dart_default_build_cfg
 Non-product JIT
@@ -704,14 +715,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/9dc24c4888700c9aba6a4068070840d9a2c8b9ad/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/abbc56d0ed43803948eb46c5ce39df53cf30d2cb/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/9dc24c4888700c9aba6a4068070840d9a2c8b9ad/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/abbc56d0ed43803948eb46c5ce39df53cf30d2cb/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -961,7 +972,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/9dc24c4888700c9aba6a4068070840d9a2c8b9ad/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/abbc56d0ed43803948eb46c5ce39df53cf30d2cb/runtime/dart/dart_component.gni#13)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1001,14 +1012,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/9dc24c4888700c9aba6a4068070840d9a2c8b9ad/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/abbc56d0ed43803948eb46c5ce39df53cf30d2cb/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/9dc24c4888700c9aba6a4068070840d9a2c8b9ad/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/abbc56d0ed43803948eb46c5ce39df53cf30d2cb/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -1863,6 +1874,17 @@ From //build/images/args.gni:69
 **Current value (from the default):** `""`
 
 From //build/images/fvm.gni:79
+
+### minfs_maximum_runtime_bytes
+minfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
+can grow as needed if there are extra slices available in FVM. This limit prevents the minfs
+partition from taking too much space away from other uses.
+
+Pass the empty string for no limit.
+
+**Current value (from the default):** `""`
+
+From //src/storage/fshost/BUILD.gn:23
 
 ### minfs_minimum_data_bytes
 
