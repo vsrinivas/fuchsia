@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
+
 group("lib") {
   testonly = true
-  if (!is_fuchsia) {
+  if (is_host) {
     public_deps = [
       "//src/security/scrutiny/lib/framework",
       "//src/security/scrutiny/lib/frontend",
