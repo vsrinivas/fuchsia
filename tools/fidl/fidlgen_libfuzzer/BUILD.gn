@@ -78,6 +78,7 @@ group("goldens") {
 
     # TODO(fxbug.dev/62521): Make empty service compile.
     "//zircon/tools/fidl/testdata:fidl.test.bindingsdenylist",
+    "//zircon/tools/fidl/testdata:fidl.test.service",
 
     # TODO(fxbug.dev/62533): Fix many issues.
     "//zircon/tools/fidl/testdata:fidl.test.handles",

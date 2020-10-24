@@ -18,5 +18,6 @@ using MultiHomogeneousMemberService =
     ::fidl::test::service::MultiHomogeneousMemberService;
 using MultiHeterogeneousMemberService =
     ::fidl::test::service::MultiHeterogeneousMemberService;
+using EmptyService = ::fidl::test::service::EmptyService;
 
 }  // namespace fuzzing

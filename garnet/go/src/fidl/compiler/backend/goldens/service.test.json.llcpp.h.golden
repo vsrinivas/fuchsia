@@ -43,6 +43,7 @@ class FirstProtocol;
 class SingleMemberService;
 class MultiHomogeneousMemberService;
 class MultiHeterogeneousMemberService;
+class EmptyService;
 
 extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
@@ -887,6 +888,39 @@ class MultiHeterogeneousMemberService final {
         ::llcpp::fidl::ServiceHandlerInterface::MemberHandler handler) {
       return service_handler_->AddMember("second_member", std::move(handler));
     }
+
+   private:
+    ::llcpp::fidl::ServiceHandlerInterface* service_handler_;  // Not owned.
+  };
+};
+
+class EmptyService final {
+  EmptyService() = default;
+
+ public:
+  static constexpr char Name[] = "fidl.test.service.EmptyService";
+
+  // Client protocol for connecting to member protocols of a service instance.
+  class ServiceClient final {
+    ServiceClient() = delete;
+
+   public:
+    ServiceClient(::zx::channel dir,
+                  ::fidl::internal::ConnectMemberFunc connect_func)
+        : dir_(std::move(dir)), connect_func_(connect_func) {}
+
+   private:
+    ::zx::channel dir_;
+    ::fidl::internal::ConnectMemberFunc connect_func_;
+  };
+
+  // Facilitates member protocol registration for servers.
+  class Handler final {
+   public:
+    // Constructs a FIDL Service-typed handler. Does not take ownership of
+    // |service_handler|.
+    explicit Handler(::llcpp::fidl::ServiceHandlerInterface* service_handler)
+        : service_handler_(service_handler) {}
 
    private:
     ::llcpp::fidl::ServiceHandlerInterface* service_handler_;  // Not owned.

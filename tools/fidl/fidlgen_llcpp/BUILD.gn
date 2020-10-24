@@ -95,6 +95,9 @@ group("goldens") {
 
     # TODO(fxbug.dev/62532): Fix many issues.
     "//zircon/tools/fidl/testdata:fidl.test.protocolrequest",
+
+    # TODO(fxbug.dev/62521): Make empty service compile.
+    "//zircon/tools/fidl/testdata:fidl.test.service",
   ]
 
   if (host_toolchain == current_toolchain) {
@@ -114,7 +117,6 @@ group("goldens") {
       "//zircon/tools/fidl/testdata:fidl.test.inheritancewithrecursivedecl",
       "//zircon/tools/fidl/testdata:fidl.test.protocols",
       "//zircon/tools/fidl/testdata:fidl.test.requestflexibleenvelope",
-      "//zircon/tools/fidl/testdata:fidl.test.service",
       "//zircon/tools/fidl/testdata:fidl.test.unionsandwich",
       "//zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose:bottom",
       "//zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose:middle",
@@ -133,6 +135,7 @@ group("goldens") {
       #"//zircon/tools/fidl/testdata:fidl.test.handlesintypes",
       #"//zircon/tools/fidl/testdata:fidl.test.nullable",
       #"//zircon/tools/fidl/testdata:fidl.test.protocolrequest",
+      #"//zircon/tools/fidl/testdata:fidl.test.service",
       #"//zircon/tools/fidl/testdata:fidl.test.union",
     ]
   }

@@ -691,6 +691,50 @@ impl SecondProtocolControlHandle {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct EmptyServiceMarker;
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceMarker for EmptyServiceMarker {
+    type Proxy = EmptyServiceProxy;
+    type Request = EmptyServiceRequest;
+    const SERVICE_NAME: &'static str = "fidl.test.service.EmptyService";
+}
+
+/// A request for one of the member protocols of EmptyService.
+///
+#[cfg(target_os = "fuchsia")]
+pub enum EmptyServiceRequest {}
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceRequest for EmptyServiceRequest {
+    type Service = EmptyServiceMarker;
+
+    fn dispatch(name: &str, channel: fidl::AsyncChannel) -> Self {
+        match name {
+            _ => panic!("no such member protocol name for service EmptyService"),
+        }
+    }
+
+    fn member_names() -> &'static [&'static str] {
+        &[]
+    }
+}
+#[cfg(target_os = "fuchsia")]
+pub struct EmptyServiceProxy(Box<dyn fidl::endpoints::MemberOpener>);
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceProxy for EmptyServiceProxy {
+    type Service = EmptyServiceMarker;
+
+    fn from_member_opener(opener: Box<dyn fidl::endpoints::MemberOpener>) -> Self {
+        Self(opener)
+    }
+}
+
+#[cfg(target_os = "fuchsia")]
+impl EmptyServiceProxy {}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SingleMemberServiceMarker;
 
 #[cfg(target_os = "fuchsia")]

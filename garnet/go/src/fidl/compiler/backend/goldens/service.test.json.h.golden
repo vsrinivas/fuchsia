@@ -51,6 +51,9 @@ class MultiHomogeneousMemberService;
 class MultiHeterogeneousMemberService;
 #endif  // __Fuchsia
 #ifdef __Fuchsia__
+class EmptyService;
+#endif  // __Fuchsia
+#ifdef __Fuchsia__
 
 class SecondProtocol {
  public:
@@ -507,6 +510,33 @@ class MultiHeterogeneousMemberService::Handler final {
       ::fidl::InterfaceRequestHandler<SecondProtocol> handler) {
     return service_->AddMember("second_member", std::move(handler));
   }
+
+ private:
+  ::fidl::ServiceHandlerBase* const service_;
+};
+#endif  // __Fuchsia
+#ifdef __Fuchsia__
+
+class EmptyService final {
+ public:
+  class Handler;
+
+  static constexpr char Name[] = "fidl.test.service.EmptyService";
+
+  explicit EmptyService(std::unique_ptr<::fidl::ServiceConnector> service)
+      : service_(std::move(service)) {}
+
+  explicit operator bool() const { return !!service_; }
+
+ private:
+  std::unique_ptr<::fidl::ServiceConnector> service_;
+};
+
+/// Facilitates member protocol registration for servers.
+class EmptyService::Handler final {
+ public:
+  /// Constructs a new |Handler|. Does not take ownership of |service|.
+  explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
 
  private:
   ::fidl::ServiceHandlerBase* const service_;

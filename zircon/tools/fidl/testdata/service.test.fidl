@@ -4,6 +4,9 @@
 
 library fidl.test.service;
 
+service EmptyService {
+};
+
 protocol FirstProtocol {
     MethodOnFirst();
 };
