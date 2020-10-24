@@ -6,8 +6,8 @@ use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_bluetooth::{Appearance, Uuid};
 use fidl_fuchsia_bluetooth_le::{
-    AdvertisingData, AdvertisingHandleMarker, AdvertisingParameters, ConnectionOptions,
-    ManufacturerData, PeripheralMarker, PeripheralProxy, ServiceData,
+    AdvertisingData, AdvertisingHandleMarker, AdvertisingModeHint, AdvertisingParameters,
+    ConnectionOptions, ManufacturerData, PeripheralMarker, PeripheralProxy, ServiceData,
 };
 use fuchsia_component as app;
 use fuchsia_syslog::macros::*;
@@ -297,8 +297,8 @@ impl BleAdvertiseFacade {
         let parameters = AdvertisingParameters {
             data: advertising_data,
             scan_response: scan_response,
-            mode_hint: None,
-            connectable: None,
+            mode_hint: Some(AdvertisingModeHint::VeryFast),
+            connectable: Some(connectable),
             connection_options: conn_opts,
         };
 

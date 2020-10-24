@@ -395,7 +395,6 @@ impl BluetoothSysFacade {
     pub async fn start_discovery(&self, discovery: bool) -> Result<(), Error> {
         let tag = "BluetoothSysFacade::start_discovery";
         if !discovery {
-            let _ = self.get_known_remote_devices().await?;
             self.inner.write().discovery_token = None;
             Ok(())
         } else {
@@ -428,6 +427,8 @@ impl BluetoothSysFacade {
             None => return Ok(self.inner.read().discovered_device_list.clone()),
         };
 
+        let default_return = self.inner.read().discovered_device_list.clone();
+
         let (discovered_devices, removed_peers) = match &mut self.inner.write().peer_watcher_stream
         {
             Some(stream) => {
@@ -439,10 +440,7 @@ impl BluetoothSysFacade {
                             format!("{:?}", format!("Peer Watcher Stream failed with: {:?}", e))
                         ),
                     },
-                    None => fx_err_and_bail!(
-                        &with_line!(tag),
-                        format!("{:?}", "Timed out waiting for peer_watcher_stream update.")
-                    ),
+                    None => return Ok(default_return),
                 }
             }
             None => fx_err_and_bail!(
@@ -463,6 +461,7 @@ impl BluetoothSysFacade {
                 known_devices.remove(&peer_id.value);
             }
         }
+        self.inner.write().discovered_device_list = known_devices;
 
         Ok(self.inner.read().discovered_device_list.clone())
     }
