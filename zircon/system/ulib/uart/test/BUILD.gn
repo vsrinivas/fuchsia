@@ -2,22 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxbug.dev/36139.                   #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
-group("tests") {
+group("test") {
   testonly = true
   deps = [ ":uart-unittests($host_toolchain)" ]
+
+  # Note uart-unittests-bootfs-test is not listed here because bootfs_test()
+  # deps are only allowed in bringup, but the host test is included in other
+  # configurations.  So //bundles/bringup:tests lists the bootfs_test() target
+  # directly.  Maybe one day bringup with bootfs packages will get done
+  # properly and the distinction between including a test in bringup and
+  # including a test in another configuration will not impose these kludges.
 }
 
 test("uart-unittests") {
@@ -34,6 +31,7 @@ test("uart-unittests") {
     "driver-tests.cc",
     "ns8250-tests.cc",
     "onlcr-tests.cc",
+    "parsing-tests.cc",
     "pl011-tests.cc",
   ]
   deps = [

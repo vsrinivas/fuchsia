@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_ALL_H_
-#define ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_ALL_H_
+#ifndef LIB_UART_ALL_H_
+#define LIB_UART_ALL_H_
 
+#include <stdio.h>
 #include <zircon/boot/image.h>
 
 #include <utility>
@@ -22,7 +23,12 @@ namespace uart {
 namespace internal {
 
 struct DummyDriver : public null::Driver {
-  static std::optional<DummyDriver> MaybeCreate(const zbi_header_t&, const void*) { return {}; }
+  template <typename... Args>
+  static std::optional<DummyDriver> MaybeCreate(Args&&...) {
+    return {};
+  }
+
+  void Unparse(FILE*) const { ZX_PANIC("DummyDriver should never be called!"); }
 };
 
 // std::visit is not pure-PIC-friendly.  hwreg implements a limited version
@@ -35,35 +41,40 @@ using hwreg::internal::Visit;
 
 namespace all {
 
-// uart::all::Driver<T, ...> instantiates T<..., foo::Driver, bar::Driver, ...>
-// for all the drivers supported by this kernel build.  Using a template that
-// takes a template template parameter is the only real way (short of macros)
-// to have a single list of the supported uart::xyz::Driver implementations.
-template <template <class... Drivers> class T, typename... Args>
-using Driver = T<Args...,
-                 // A default-constructed variant gets the null driver.
-                 null::Driver,
-#ifdef __aarch64__
-                 pl011::Driver,  // TODO(fxbug.dev/49423): many more...
+// uart::all::WithAllDrivers<Template, Args...> instantiates the template class
+// Template<Args..., foo::Driver, bar::Driver, ...> for all the drivers
+// supported by this kernel build (foo, bar, ...).  Using a template that takes
+// a template template parameter is the only real way (short of macros) to have
+// a single list of the supported uart::xyz::Driver implementations.
+template <template <class... Drivers> class Template, typename... Args>
+using WithAllDrivers = Template<
+    // Any additional template arguments precede the arguments for each driver.
+    Args...,
+    // A default-constructed variant gets the null driver.
+    null::Driver,
+#if defined(__aarch64__) || UART_ALL_DRIVERS
+    pl011::Driver,  // TODO(fxbug.dev/49423): many more...
 #endif
-#if defined(__x86_64__) || defined(__i386__)
-                 ns8250::MmioDriver, ns8250::PioDriver,
+#if defined(__x86_64__) || defined(__i386__) || UART_ALL_DRIVERS
+    ns8250::MmioDriver, ns8250::PioDriver,
 #endif
-                 // This is never used but permits a trailing comma above.
-                 internal::DummyDriver>;
+    // This is never used but permits a trailing comma above.
+    internal::DummyDriver>;
+
+// The hardware support object underlying whichever KernelDriver type is the
+// active variant can be extracted into this type and then used to construct a
+// new uart::all::KernelDriver instantiation in a different environment.
+//
+// The underlying UartDriver types and ktl::variant (aka std::variant) hold
+// only non-pointer data that can be transferred directly from one environment
+// to another, e.g. to hand off from physboot to the kernel.
+using Driver = WithAllDrivers<std::variant>;
 
 // uart::all::KernelDriver is a variant across all the KernelDriver types.
 template <template <typename> class IoProvider, typename Sync>
 class KernelDriver {
  public:
-  // The hardware support object underlying whichever KernelDriver type is the
-  // active variant can be extracted into this type and then used to construct
-  // a new uart::all::KernelDriver instantiation in a different environment.
-  //
-  // The underlying UartDriver types and ktl::variant (aka std::variant) hold
-  // only non-pointer data that can be transferred directly from one
-  // environment to another, e.g. to hand off from physboot to the kernel.
-  using uart_type = Driver<std::variant>;
+  using uart_type = Driver;
 
   // In default-constructed state, it's the null driver.
   KernelDriver() = default;
@@ -88,9 +99,16 @@ class KernelDriver {
   // in place and return false.  The expected procedure is to apply this to
   // each ZBI item in order, so that the latest one wins (e.g. one appended by
   // the boot loader will supersede one embedded in the original complete ZBI).
-  bool Match(const zbi_header_t& header, const void* payload) {
-    constexpr auto n = std::variant_size_v<decltype(variant_)>;
-    return DoMatch(std::make_index_sequence<n>(), header, payload);
+  bool Match(const zbi_header_t& header, const void* payload) { return DoMatch(header, payload); }
+
+  // This is like Match, but instead of matching a ZBI item, it matches a
+  // string value for the "kernel.serial" boot option.
+  bool Parse(std::string_view option) { return DoMatch(option); }
+
+  // Write out a string that Parse() can read back to recreate the driver
+  // state.  This doesn't preserve the driver state, only the configuration.
+  void Unparse(FILE* out = stdout) const {
+    Visit([out](const auto& active) { active.Unparse(out); });
   }
 
   // Apply f to selected driver.
@@ -114,25 +132,31 @@ class KernelDriver {
   using OneDriver = uart::KernelDriver<Uart, IoProvider, Sync>;
   template <class... Uart>
   using Variant = std::variant<OneDriver<Uart>...>;
-  Driver<Variant> variant_;
+  WithAllDrivers<Variant> variant_;
 
-  template <size_t I>
-  bool TryOneMatch(const zbi_header_t& header, const void* payload) {
+  template <size_t I, typename... Args>
+  bool TryOneMatch(Args&&... args) {
     using Try = std::variant_alternative_t<I, decltype(variant_)>;
-    if (auto driver = Try::uart_type::MaybeCreate(header, payload)) {
+    if (auto driver = Try::uart_type::MaybeCreate(std::forward<Args>(args)...)) {
       variant_.template emplace<I>(*driver);
       return true;
     }
     return false;
   }
 
-  template <size_t... I>
-  bool DoMatch(std::index_sequence<I...>, const zbi_header_t& header, const void* payload) {
-    return (TryOneMatch<I>(header, payload) || ...);
+  template <size_t... I, typename... Args>
+  bool DoMatchHelper(std::index_sequence<I...>, Args&&... args) {
+    return (TryOneMatch<I>(std::forward<Args>(args)...) || ...);
+  }
+
+  template <typename... Args>
+  bool DoMatch(Args&&... args) {
+    constexpr auto n = std::variant_size_v<decltype(variant_)>;
+    return DoMatchHelper(std::make_index_sequence<n>(), std::forward<Args>(args)...);
   }
 };
 
 }  // namespace all
 }  // namespace uart
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_ALL_H_
+#endif  // LIB_UART_ALL_H_

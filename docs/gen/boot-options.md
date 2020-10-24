@@ -12,6 +12,11 @@ string of lowercase hexadecimal digits.
 The original value will be scrubbed from memory as soon as possible and will be
 redacted from all diagnostic output.
 
+### kernel.serial=[none | legacy | qemu | \<type>,\<base>,\<irq>]
+**Default:** `none`
+
+TODO(53594)
+
 
 ## Options available only on x86 machines
 

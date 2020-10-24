@@ -258,6 +258,22 @@ void ParseIntValue(std::string_view value, T& result) {
   }
 }
 
+template <typename... Driver>
+struct UartParser {
+  uart::all::Driver& result_;
+
+  template <typename OneDriver>
+  bool MaybeCreate(std::string_view value) {
+    if (auto driver = OneDriver::MaybeCreate(value)) {
+      result_ = std::move(*driver);
+      return true;
+    }
+    return false;
+  }
+
+  bool Parse(std::string_view value) { return (MaybeCreate<Driver>(value) || ... || false); }
+};
+
 }  // namespace
 
 // Overloads for various types.
@@ -308,6 +324,18 @@ void BootOptions::PrintValue(const RedactedHex& value, FILE* out) {
   if (value.len > 0) {
     fprintf(out, "<redacted.%zu.hex.chars>", value.len);
   }
+}
+
+void BootOptions::Parse(std::string_view value, uart::all::Driver BootOptions::*member) {
+  if (!uart::all::WithAllDrivers<UartParser>{this->*member}.Parse(value)) {
+    // Probably has nowhere to go, but anyway.
+    printf("WARN: Unrecognized serial console setting '%.*s' ignored\n",
+           static_cast<int>(value.size()), value.data());
+  }
+}
+
+void BootOptions::PrintValue(const uart::all::Driver& value, FILE* out) {
+  std::visit([out](const auto& uart) { uart.Unparse(out); }, value);
 }
 
 #if BOOT_OPTIONS_TESTONLY_OPTIONS

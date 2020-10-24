@@ -21,7 +21,7 @@ zx_library("uart") {
   ]
   sdk_migrated = true
 
-  sources = []
+  sources = [ "parse.cc" ]
   public_deps = [
     # <lib/uart/uart.h> has #include <lib/arch/intrin.h>.
     "$zx/kernel/lib/arch:headers",
@@ -43,14 +43,12 @@ zx_library("uart-mock") {
   static = true
   host = true
   sdk = "source"
-  sdk_headers = [
-    "lib/uart/chars-from.h",
-    "lib/uart/mock.h",
-    "lib/uart/uart.h",
-  ]
+  sdk_headers = [ "lib/uart/mock.h" ]
   sdk_migrated = true
   sources = []
   public_deps = [
+    ":headers",
+
     # <lib/uart/mock.h> has #include <lib/mock-function/mock-function.h>.
     "$zx/system/ulib/mock-function:headers",
 
@@ -60,9 +58,4 @@ zx_library("uart-mock") {
   if (is_kernel) {
     public_deps += [ "$zx/kernel/lib/ktl:headers" ]
   }
-}
-
-group("tests") {
-  testonly = true
-  deps = [ "test:tests" ]
 }

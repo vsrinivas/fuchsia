@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_NS8250_H_
-#define ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_NS8250_H_
+#ifndef LIB_UART_NS8250_H_
+#define LIB_UART_NS8250_H_
 
 #include <zircon/boot/driver-config.h>
 
@@ -24,6 +24,9 @@ constexpr uint32_t kMaxBaudRate = 115200;
 constexpr uint8_t kFifoDepth16750 = 64;
 constexpr uint8_t kFifoDepth16550A = 16;
 constexpr uint8_t kFifoDepthGeneric = 1;
+
+// Traditional COM1 configuration.
+constexpr dcfg_simple_pio_t kLegacyConfig{.base = 0x3f8, .irq = 4};
 
 enum class InterruptType : uint8_t {
   kNone = 0b0001,
@@ -162,9 +165,31 @@ template <uint32_t KdrvExtra, typename KdrvConfig>
 class DriverImpl
     : public DriverBase<DriverImpl<KdrvExtra, KdrvConfig>, KdrvExtra, KdrvConfig, kPortCount> {
  public:
+  using Base = DriverBase<DriverImpl<KdrvExtra, KdrvConfig>, KdrvExtra, KdrvConfig, kPortCount>;
+
+  static constexpr std::string_view config_name() {
+    if constexpr (KdrvExtra == KDRV_I8250_MMIO_UART) {
+      return "mmio";
+    } else {
+      return "ioport";
+    }
+  }
+
   template <typename... Args>
-  explicit DriverImpl(Args&&... args)
-      : DriverBase<DriverImpl, KdrvExtra, KdrvConfig, kPortCount>(std::forward<Args>(args)...) {}
+  explicit DriverImpl(Args&&... args) : Base(std::forward<Args>(args)...) {}
+
+  static std::optional<DriverImpl> MaybeCreate(const zbi_header_t& header, const void* payload) {
+    return Base::MaybeCreate(header, payload);
+  }
+
+  static std::optional<DriverImpl> MaybeCreate(std::string_view string) {
+    if constexpr (KdrvExtra == KDRV_I8250_PIO_UART) {
+      if (string == "legacy") {
+        return DriverImpl{kLegacyConfig};
+      }
+    }
+    return Base::MaybeCreate(string);
+  }
 
   template <class IoProvider>
   void Init(IoProvider& io) {
@@ -297,10 +322,7 @@ using MmioDriver = DriverImpl<KDRV_I8250_MMIO_UART, dcfg_simple_t>;
 // uart::KernelDriver UartDriver API for direct PIO.
 using PioDriver = DriverImpl<KDRV_I8250_PIO_UART, dcfg_simple_pio_t>;
 
-// Traditional COM0 configuration.
-static constexpr dcfg_simple_pio_t kLegacyConfig{0x3f8, 4};
-
 }  // namespace ns8250
 }  // namespace uart
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_NS8250_H_
+#endif  // LIB_UART_NS8250_H_

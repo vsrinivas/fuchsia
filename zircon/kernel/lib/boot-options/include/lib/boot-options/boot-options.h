@@ -24,6 +24,8 @@
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
 #include "test-types.h"
 #endif
+#include <lib/uart/all.h>
+
 #include "types.h"
 
 struct BootOptions;  // Declared below.
@@ -108,6 +110,8 @@ struct BootOptions {
   OPTION_TYPE(TestEnum);
   OPTION_TYPE(TestStruct);
 #endif
+
+  OPTION_TYPE(uart::all::Driver);
 
 #undef OPTION_TYPE
 

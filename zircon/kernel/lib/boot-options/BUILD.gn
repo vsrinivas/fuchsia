@@ -68,7 +68,10 @@ if (is_host) {
     # This recompiles the library's source file rather than using the library
     # directly because the #if logic includes details for all machines when
     # building for the generator tool but not in the library.
-    defines = [ "BOOT_OPTIONS_GENERATOR=1" ]
+    defines = [
+      "BOOT_OPTIONS_GENERATOR=1",
+      "UART_ALL_DRIVERS=1",
+    ]
     include_dirs = [ "include" ]
     sources = [
       "boot-options.cc",

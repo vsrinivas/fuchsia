@@ -25,6 +25,10 @@ The original value will be scrubbed from memory as soon as possible and will be
 redacted from all diagnostic output.
 )""")
 
+DEFINE_OPTION("kernel.serial", uart::all::Driver, serial, {}, R"""(
+TODO(53594)
+)""")
+
 // x86-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 #if defined(__x86_64__) && !BOOT_OPTIONS_GENERATOR

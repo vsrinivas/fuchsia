@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_NULL_H_
-#define ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_NULL_H_
+#ifndef LIB_UART_NULL_H_
+#define LIB_UART_NULL_H_
 
 // uart::null::Driver is a bit bucket.
 // It also serves to demonstrate the API required by uart::KernelDriver.
@@ -27,6 +27,9 @@ struct Driver {
 
   explicit Driver(const config_type& config) {}
 
+  constexpr bool operator==(const Driver& other) const { return true; }
+  constexpr bool operator!=(const Driver& other) const { return false; }
+
   // API to (not) fill a ZBI item describing this UART.
   constexpr uint32_t type() const { return 0; }
   constexpr uint32_t extra() const { return 0; }
@@ -35,6 +38,16 @@ struct Driver {
 
   // API to (not) match a ZBI item describing this UART.
   static std::optional<Driver> MaybeCreate(const zbi_header_t&, const void*) { return {}; }
+
+  // API to match and reproduce configuration strings.
+  static std::optional<Driver> MaybeCreate(std::string_view string) {
+    if (string == "none") {
+      return Driver{};
+    }
+    return {};
+  }
+
+  void Unparse(FILE* out) const { fprintf(out, "none"); }
 
   // uart::KernelDriver UartDriver API
   //
@@ -97,4 +110,4 @@ class BasicIoProvider<null::Driver::config_type> {
 
 }  // namespace uart
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_NULL_H_
+#endif  // LIB_UART_NULL_H_

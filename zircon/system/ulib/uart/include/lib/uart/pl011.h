@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_PL011_H_
-#define ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_PL011_H_
+#ifndef LIB_UART_PL011_H_
+#define LIB_UART_PL011_H_
 
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
@@ -18,6 +18,9 @@
 
 namespace uart {
 namespace pl011 {
+
+// This is where QEMU puts its emulated PL011.
+constexpr dcfg_simple_t kQemuConfig{.mmio_phys = 0x09000000, .irq = 33};
 
 // We use expanded title (first clause in the Function column of the manual)
 // rather than the acronym (Name column in the manual) for readability, except
@@ -119,9 +122,23 @@ struct InterruptClearRegister {
 };
 
 struct Driver : public DriverBase<Driver, KDRV_PL011_UART, dcfg_simple_t> {
+  using Base = DriverBase<Driver, KDRV_PL011_UART, dcfg_simple_t>;
+
+  static constexpr std::string_view config_name() { return "pl011"; }
+
   template <typename... Args>
-  explicit Driver(Args&&... args)
-      : DriverBase<Driver, KDRV_PL011_UART, dcfg_simple_t>(std::forward<Args>(args)...) {}
+  explicit Driver(Args&&... args) : Base(std::forward<Args>(args)...) {}
+
+  static std::optional<Driver> MaybeCreate(const zbi_header_t& header, const void* payload) {
+    return Base::MaybeCreate(header, payload);
+  }
+
+  static std::optional<Driver> MaybeCreate(std::string_view string) {
+    if (string == "qemu") {
+      return Driver(kQemuConfig);
+    }
+    return Base::MaybeCreate(string);
+  }
 
   template <class IoProvider>
   void Init(IoProvider& io) {
@@ -207,4 +224,4 @@ struct Driver : public DriverBase<Driver, KDRV_PL011_UART, dcfg_simple_t> {
 }  // namespace pl011
 }  // namespace uart
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_PL011_H_
+#endif  // LIB_UART_PL011_H_

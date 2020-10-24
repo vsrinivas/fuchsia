@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_QEMU_H_
-#define ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_QEMU_H_
+#ifndef LIB_UART_QEMU_H_
+#define LIB_UART_QEMU_H_
 
 // QEMU-only tests and boot shims hard-code a particular driver configuration.
 
@@ -20,7 +20,7 @@ namespace qemu {
 #ifdef __aarch64__
 
 struct Driver : public pl011::Driver {
-  Driver(dcfg_simple_t cfg = {0x09000000, 33}) : pl011::Driver(cfg) {}
+  Driver(dcfg_simple_t cfg = pl011::kQemuConfig) : pl011::Driver(cfg) {}
 };
 
 #elif defined(__x86_64__) || defined(__i386__)
@@ -43,4 +43,4 @@ using KernelDriver = uart::KernelDriver<Driver, IoProvider, Sync>;
 }  // namespace qemu
 }  // namespace uart
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_QEMU_H_
+#endif  // LIB_UART_QEMU_H_

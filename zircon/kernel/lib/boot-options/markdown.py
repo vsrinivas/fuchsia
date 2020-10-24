@@ -10,18 +10,20 @@ import json
 import os
 import sys
 
+SPECIAL_TYPES = {
+    'SmallString': r'\<string>',
+    'RedactedHex': r'\<hexadecimal>',
+    'TestOption': 'test',
+    'uart::all::Driver': r'[none | legacy | qemu | \<type>,\<base>,\<irq>]',
+}
+
 
 def generate_doc(option):
     if isinstance(option['type'], list):
         option['type'] = '[%s]' % ' | '.join(option['type'])
-    elif option['type'] == 'SmallString':
-        option['type'] = '\<string>'
-    elif option['type'] == 'RedactedHex':
-        option['type'] = '\<hexadecimal>'
-    elif option['type'] == 'TestOption':
-        option['type'] = 'test'
     else:
-        option['type'] = '\<%s>' % option['type']
+        option['type'] = SPECIAL_TYPES.get(
+            option['type'], r'\<%s>' % option['type'])
     if option['default'] != '':
         if isinstance(option['default'], bool):
             option['default'] = 'true' if option['default'] else 'false'

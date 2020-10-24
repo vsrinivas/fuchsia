@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_UART_H_
-#define ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_UART_H_
+#ifndef LIB_UART_UART_H_
+#define LIB_UART_UART_H_
 
 #include <lib/arch/intrin.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -11,7 +11,9 @@
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
 
+#include <cstdlib>
 #include <optional>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -21,6 +23,21 @@
 #include "chars-from.h"
 
 namespace uart {
+
+// This template is specialized by payload configuration type (see below).
+// It parses bits out of strings from the "kernel.serial" boot option.
+template <typename Config>
+inline std::optional<Config> ParseConfig(std::string_view) {
+  static_assert(std::is_void_v<Config>, "missing specialization");
+  return {};
+}
+
+// This template is specialized by payload configuration type (see below).
+// It recreates a string for Parse.
+template <typename Config>
+inline void UnparseConfig(const Config& config, FILE* out) {
+  static_assert(std::is_void_v<Config>, "missing specialization");
+}
 
 // Specific hardware support is implemented in a class uart::xyz::Driver,
 // referred to here as UartDriver.  The uart::DriverBase template class
@@ -71,6 +88,11 @@ class DriverBase {
 
   explicit DriverBase(const config_type& cfg) : cfg_(cfg) {}
 
+  constexpr bool operator==(const Driver& other) const {
+    return memcmp(&cfg_, &other.cfg_, sizeof(cfg_)) == 0;
+  }
+  constexpr bool operator!=(const Driver& other) const { return !(*this == other); }
+
   // API to fill a ZBI item describing this UART.
   constexpr uint32_t type() const { return ZBI_TYPE_KERNEL_DRIVER; }
   constexpr uint32_t extra() const { return KdrvExtra; }
@@ -85,6 +107,26 @@ class DriverBase {
       return Driver{*reinterpret_cast<const config_type*>(payload)};
     }
     return {};
+  }
+
+  // API to match a configuration string.
+  static std::optional<Driver> MaybeCreate(std::string_view string) {
+    const auto config_name = Driver::config_name();
+    if (string.substr(0, config_name.size()) == config_name) {
+      string.remove_prefix(config_name.size());
+      auto config = ParseConfig<KdrvConfig>(string);
+      if (config) {
+        return Driver{*config};
+      }
+    }
+    return {};
+  }
+
+  // API to reproduce a configuration string.
+  void Unparse(FILE* out) const {
+    fprintf(out, "%.*s", static_cast<int>(Driver::config_name().size()),
+            Driver::config_name().data());
+    UnparseConfig<KdrvConfig>(cfg_, out);
   }
 
   // API for use in IoProvider setup.
@@ -379,6 +421,27 @@ class KernelDriver {
   };
 };
 
+// These specializations are defined in the library to cover all the ZBI item
+// payload types used by the various drivers.
+
+template <>
+std::optional<dcfg_simple_t> ParseConfig<dcfg_simple_t>(std::string_view string);
+
+template <>
+void UnparseConfig(const dcfg_simple_t& config, FILE* out);
+
+template <>
+std::optional<dcfg_simple_pio_t> ParseConfig<dcfg_simple_pio_t>(std::string_view string);
+
+template <>
+void UnparseConfig(const dcfg_simple_pio_t& config, FILE* out);
+
+template <>
+std::optional<dcfg_soc_uart_t> ParseConfig<dcfg_soc_uart_t>(std::string_view string);
+
+template <>
+void UnparseConfig(const dcfg_soc_uart_t& config, FILE* out);
+
 }  // namespace uart
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_UART_H_
+#endif  // LIB_UART_UART_H_

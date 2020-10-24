@@ -50,7 +50,7 @@ group("tests") {
     "sysconfig-client:tests",
     "tftp:tests",
     "trace-reader:tests",
-    "uart:tests",
+    "uart/test",
     "utf_conversion:tests",
     "zbi:tests",
     "zbi-bootfs:tests",
