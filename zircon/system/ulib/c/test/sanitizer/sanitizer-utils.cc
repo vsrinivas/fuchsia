@@ -11,10 +11,13 @@
 #include <pthread.h>
 #include <zircon/sanitizer.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 #include <array>
 #include <atomic>
 
+#include <fbl/algorithm.h>
 #include <zxtest/zxtest.h>
 #if __has_feature(address_sanitizer)
 #include <sanitizer/asan_interface.h>
@@ -26,9 +29,68 @@ namespace {
 
 #if __has_feature(address_sanitizer)
 
-// TODO(fxbug.dev/52653): These tests are flaky as they rely on the OS not decommitting
-//              memory automatically.
-#if 0
+constexpr size_t kMaxVmos = 8192;
+zx_info_vmo vmos[kMaxVmos];
+
+constexpr size_t kMaxMaps = 8192;
+zx_info_maps maps[kMaxMaps];
+
+// Returns the koid of the ASAN Shadow vmo.
+zx_status_t GetAsanShadowVmoKoid(zx_koid_t* vmo_koid) {
+  if (vmo_koid == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  uintptr_t shadow_offset = __sanitizer_shadow_bounds().shadow_base;
+
+  size_t actual, available;
+  zx_status_t res =
+      zx::process::self()->get_info(ZX_INFO_PROCESS_MAPS, maps, sizeof(maps), &actual, &available);
+  if (res != ZX_OK)
+    return res;
+  if (available > kMaxMaps)
+    return ZX_ERR_NO_RESOURCES;
+
+  for (size_t i = 0; i < actual; i++) {
+    if (maps[i].type != ZX_INFO_MAPS_TYPE_MAPPING)
+      continue;
+    if (shadow_offset >= maps[i].base && shadow_offset < maps[i].base + maps[i].size) {
+      *vmo_koid = maps[i].u.mapping.vmo_koid;
+      return ZX_OK;
+    }
+  }
+
+  return ZX_ERR_NOT_FOUND;
+}
+
+zx_status_t GetStats(zx_koid_t vmo_koid, uint64_t* committed_bytes,
+                     uint64_t* committed_change_events) {
+  size_t actual, available;
+  zx_status_t res =
+      zx::process::self()->get_info(ZX_INFO_PROCESS_VMOS, vmos, sizeof(vmos), &actual, &available);
+  if (res != ZX_OK)
+    return res;
+  if (available > kMaxVmos)
+    return ZX_ERR_NO_RESOURCES;
+
+  for (size_t i = 0; i < actual; i++) {
+    if (vmos[i].koid == vmo_koid) {
+      if (committed_bytes)
+        *committed_bytes = vmos[i].committed_bytes;
+      if (committed_change_events)
+        *committed_change_events = vmos[i].committed_change_events;
+      return ZX_OK;
+    }
+  }
+  return ZX_ERR_NOT_FOUND;
+}
+
+zx_status_t GetMemoryUsage(zx_koid_t vmo_koid, uint64_t* committed_bytes) {
+  return GetStats(vmo_koid, committed_bytes, /* Committed Change Events */ nullptr);
+}
+
+zx_status_t GetCommitChangeEvents(zx_koid_t vmo_koid, uint64_t* committed_change_events) {
+  return GetStats(vmo_koid, /* Memory Usage */ nullptr, committed_change_events);
+}
 
 // c++ complains if we try to do PAGE_SIZE << shadow_scale.
 constexpr size_t kPageSize = PAGE_SIZE;
@@ -65,56 +127,57 @@ static void PrefaultStackPages() {
                 (stackend >> shadow_scale) + shadow_offset);
 }
 
-static void GetMemoryUsage(size_t* usage) {
-  zx_info_task_stats_t task_stats;
-  ASSERT_OK(zx::process::self()->get_info(ZX_INFO_TASK_STATS, &task_stats,
-                                          sizeof(zx_info_task_stats_t), nullptr, nullptr));
-  *usage = task_stats.mem_private_bytes;
-}
-
 TEST(SanitizerUtilsTest, FillShadow) {
-  PrefaultStackPages();
+  zx_koid_t shadow_koid;
+  ASSERT_OK(GetAsanShadowVmoKoid(&shadow_koid));
+
+  uint64_t start_events, end_events;
+  uint64_t init_mem_use;
+  uint64_t alloc_mem_use;
+  uint64_t memset_mem_use;
+  uint64_t fill_shadow_mem_use;
 
   constexpr size_t len = 32 * kPageSize;
-  size_t init_mem_use;
-  GetMemoryUsage(&init_mem_use);
 
-  // Allocate some memory...
-  zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(0, 0, &vmo));
-  uintptr_t addr;
-  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
+  do {
+    ASSERT_OK(GetCommitChangeEvents(shadow_koid, &start_events));
 
-  size_t alloc_mem_use;
-  GetMemoryUsage(&alloc_mem_use);
+    PrefaultStackPages();
+
+    ASSERT_OK(GetMemoryUsage(shadow_koid, &init_mem_use));
+
+    // Allocate some memory...
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(0, 0, &vmo));
+    uintptr_t addr;
+    ASSERT_OK(
+        zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
+
+    ASSERT_OK(GetMemoryUsage(shadow_koid, &alloc_mem_use));
+
+    // ..and poison it.
+    ASAN_POISON_MEMORY_REGION((void*)addr, len);
+
+    // Snapshot the memory use after the allocation.
+    ASSERT_OK(GetMemoryUsage(shadow_koid, &memset_mem_use));
+
+    // Unpoison the shadow.
+    __sanitizer_fill_shadow(addr, len, /* value */ 0, /* threshold */ 0);
+
+    ASSERT_OK(GetMemoryUsage(shadow_koid, &fill_shadow_mem_use));
+    ASSERT_OK(GetCommitChangeEvents(shadow_koid, &end_events));
+
+    // Deallocate the memory.
+    ASSERT_OK(zx::vmar::root_self()->unmap(addr, len));
+  } while (end_events != start_events);
   EXPECT_GE(alloc_mem_use, init_mem_use, "");
-
-  // ..and poison it.
-  ASAN_POISON_MEMORY_REGION((void*)addr, len);
-
-  // Snapshot the memory use after the allocation.
-  size_t memset_mem_use;
-  GetMemoryUsage(&memset_mem_use);
-
-  // We expect the memory use to go up.
   EXPECT_GT(memset_mem_use, alloc_mem_use, "");
-
-  // Unpoison the shadow.
-  __sanitizer_fill_shadow(addr, len, 0, 0);
-
-  // Snapshot the memory use after unpoisoning.
-  size_t fill_shadow_mem_use;
-  GetMemoryUsage(&fill_shadow_mem_use);
-
-  // We expect the memory use to decrease.
   EXPECT_LT(fill_shadow_mem_use, memset_mem_use, "");
-
-  // Deallocate the memory.
-  ASSERT_OK(zx::vmar::root_self()->unmap(addr, len));
 }
 
 TEST(SanitizerUtilsTest, FillShadowSmall) {
-  PrefaultStackPages();
+  zx_koid_t shadow_koid;
+  ASSERT_OK(GetAsanShadowVmoKoid(&shadow_koid));
 
   size_t shadow_scale;
   __asan_get_shadow_mapping(&shadow_scale, nullptr);
@@ -134,67 +197,99 @@ TEST(SanitizerUtilsTest, FillShadowSmall) {
 
   for (const auto size : sizes) {
     for (const auto offset : offsets) {
-      ASSERT_OK(
-          zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
-      // Align base to the next shadow page, leaving one shadow page to its left.
-      uintptr_t base = (addr + (kPageSize << shadow_scale)) & -(kPageSize << shadow_scale);
+      uint64_t start_events, end_events;
+      uint64_t init_mem_use;
+      uint64_t final_mem_use;
 
-      size_t init_mem_use;
-      GetMemoryUsage(&init_mem_use);
+      do {
+        ASSERT_OK(GetCommitChangeEvents(shadow_koid, &start_events));
 
-      // Poison the shadow.
-      ASAN_POISON_MEMORY_REGION((void*)(base + offset), size);
+        PrefaultStackPages();
 
-      // Unpoison it.
-      __sanitizer_fill_shadow(base + offset, size, 0 /* val */, 0 /* threshold */);
+        ASSERT_OK(
+            zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
+        // Align base to the next shadow page, leaving one shadow page to its left.
+        uintptr_t base = (addr + (kPageSize << shadow_scale)) & -(kPageSize << shadow_scale);
 
-      size_t final_mem_use;
-      GetMemoryUsage(&final_mem_use);
+        ASSERT_OK(GetMemoryUsage(shadow_koid, &init_mem_use));
+
+        // Poison the shadow.
+        ASAN_POISON_MEMORY_REGION((void*)(base + offset), size);
+
+        // Unpoison it.
+        __sanitizer_fill_shadow(base + offset, size, 0 /* val */, 0 /* threshold */);
+
+        ASSERT_OK(GetMemoryUsage(shadow_koid, &final_mem_use));
+
+        ASSERT_OK(GetCommitChangeEvents(shadow_koid, &end_events));
+
+        // Deallocate the memory.
+        ASSERT_OK(zx::vmar::root_self()->unmap(addr, len));
+      } while (start_events != end_events);
 
       // At most we are leaving 2 ASAN shadow pages committed.
       EXPECT_LE(init_mem_use, final_mem_use, "");
       EXPECT_LE(final_mem_use - init_mem_use, kPageSize * 2, "");
-
-      // Deallocate the memory.
-      ASSERT_OK(zx::vmar::root_self()->unmap(addr, len));
     }
   }
 }
 
 TEST(SanitizerUtilsTest, FillShadowPartialPages) {
-  PrefaultStackPages();
+  zx_koid_t shadow_koid;
+  ASSERT_OK(GetAsanShadowVmoKoid(&shadow_koid));
 
   size_t shadow_scale;
   __asan_get_shadow_mapping(&shadow_scale, nullptr);
-  const size_t len = (kPageSize << shadow_scale) * 5;
+  const size_t len = (kPageSize << shadow_scale) * 7;
+  const size_t shadow_granule = (1 << shadow_scale);
 
-  // Snapshot the memory use at the beginning.
-  size_t init_mem_use;
-  GetMemoryUsage(&init_mem_use);
+  std::array<size_t, 4> paddings = {1, kPageSize, 127, (kPageSize) + 16};
 
-  for (int i = 0; i < 100; i++) {
-    // Allocate memory...
-    zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(0, 0, &vmo));
-    uintptr_t addr;
-    ASSERT_OK(
-        zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
-    // ..and poison it.
-    ASAN_POISON_MEMORY_REGION((void*)addr, len);
-    // Unpoison the shadow.
-    __sanitizer_fill_shadow(addr, len, 0, 0);
-    // Deallocate the memory.
-    ASSERT_OK(zx::vmar::root_self()->unmap(addr, len));
+  for (size_t padding : paddings) {
+    // __sanitizer_fill_shadow works with sizes aligned to shadow_granule.
+    padding = fbl::round_up(padding, shadow_granule);
+    uint64_t start_events, end_events;
+    uint64_t init_mem_use;
+    uint64_t final_mem_use;
+    do {
+      ASSERT_OK(GetCommitChangeEvents(shadow_koid, &start_events));
+
+      PrefaultStackPages();
+
+      // Allocate memory...
+      zx::vmo vmo;
+      ASSERT_OK(zx::vmo::create(0, 0, &vmo));
+      uintptr_t addr;
+      ASSERT_OK(
+          zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
+
+      // Leave the first and last shadow pages unpoisoned.
+      uintptr_t poison_base = addr + (kPageSize << shadow_scale);
+      size_t poison_len = len - (kPageSize << shadow_scale) * 2;
+
+      // Partially poison some of the memory.
+      poison_base += padding;
+      poison_len -= padding * 2;
+
+      ASSERT_OK(GetMemoryUsage(shadow_koid, &init_mem_use));
+
+      ASAN_POISON_MEMORY_REGION((void*)poison_base, poison_len);
+
+      // Unpoison the shadow.
+      __sanitizer_fill_shadow(poison_base, poison_len, /* value */ 0, /* threshold */ 0);
+
+      ASSERT_OK(GetMemoryUsage(shadow_koid, &final_mem_use));
+
+      ASSERT_OK(GetCommitChangeEvents(shadow_koid, &end_events));
+
+      // Deallocate the memory.
+      ASSERT_OK(zx::vmar::root_self()->unmap(addr, len));
+    } while (end_events != start_events);
+
+    // We expect the memory use to stay the same.
+    EXPECT_EQ(init_mem_use, final_mem_use, "");
   }
-
-  // Snapshot the memory use after unpoisoning.
-  size_t final_mem_use;
-  GetMemoryUsage(&final_mem_use);
-
-  // We expect the memory use to stay the same.
-  EXPECT_EQ(final_mem_use, init_mem_use, "");
 }
-#endif  // 0
 
 #endif
 
