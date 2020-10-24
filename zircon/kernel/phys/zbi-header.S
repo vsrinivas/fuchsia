@@ -31,8 +31,14 @@ ZBI_CONTAINER_HEADER(kZbiContainerHeader, PHYS_LOAD_END - kZbiItemHeader)
   .int ZBI_ITEM_NO_CRC32                // crc32
 .end_object
 
+#ifdef __x86_64__
+#define kEntryBias 0x100000
+#else
+#define kEntryBias 0
+#endif
+
 // zbi_kernel_t
 .object kZbiKernelHeader, rodata, nosection=nosection
-  .quad _start - kZbiContainerHeader
+  .quad _start - kZbiContainerHeader + kEntryBias
   .quad PHYS_RESERVE_MEMORY_SIZE
 .end_object

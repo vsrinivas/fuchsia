@@ -60,7 +60,7 @@ if (current_toolchain == default_toolchain) {
   # All the code gets built here in the phys environment.
 
   source_set("phys") {
-    sources = []  # TODO: "start.S"
+    sources = [ "start.S" ]
     include_dirs = [ "$zx/.." ]
     deps = [ "$zx/kernel/lib/arch" ]
   }

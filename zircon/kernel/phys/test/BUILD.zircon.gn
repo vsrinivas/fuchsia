@@ -130,28 +130,29 @@ foreach(test, common_tests) {
     deps = [ ":$test" ]
   }
 
-  if (current_cpu == "arm64") {  # TODO(mcgrathr): enable for x86
-    zbi_executable("zbi-$test.executable") {
-      testonly = true
-      deps = [
-        ":$test",
-        ":zbi-test-main",
-      ]
-    }
+  zbi_executable("zbi-$test.executable") {
+    testonly = true
+    deps = [
+      ":$test",
+      ":zbi-test-main",
+    ]
+  }
 
-    zbi_test("zbi-$test") {
-      args = []
-      deps = [
-        ":dummy.txt",
-        ":zbi-$test.executable",
-      ]
+  zbi_test("zbi-$test") {
+    args = []
+    deps = [
+      ":dummy.txt",
+      ":zbi-$test.executable",
+    ]
 
-      # TODO(mcgrathr): enable on hardware too
-      device_types = [ "QEMU" ]
+    # TODO(mcgrathr): enable on hardware too
+    device_types = [
+      "AEMU",
+      "QEMU",
+    ]
 
-      # Set a short timeout since the tests don't reliably reboot the machine.
-      timeout = qemu_short_timeout
-    }
+    # Set a short timeout since the tests don't reliably reboot the machine.
+    timeout = qemu_short_timeout
   }
 }
 
@@ -202,10 +203,9 @@ group("test") {
 
   deps = []
   foreach(test, common_tests) {
-    deps += [ ":qemu-$test" ]
-
-    if (current_cpu == "arm64") {  # TODO(mcgrathr): enable for x86
-      deps += [ ":zbi-$test" ]
-    }
+    deps += [
+      ":qemu-$test",
+      ":zbi-$test",
+    ]
   }
 }
