@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"unicode"
 )
 
 // License contains a searchable regex pattern for finding file matches in
@@ -69,7 +70,23 @@ func (l *License) MatchChannelWorker() {
 	}
 }
 
-var reAuthor = regexp.MustCompile(`(?i)Copyright(?: ©| \((?:C)\))? [\d]{4}(?:\s|,|-|[\d]{4})*(.*)?`)
+const cp = `(?: ©| \(C\))`
+const date = `[\d]{4}(?:\s|,|-|[\d]{4})*`
+const rights = `All Rights Reserved`
+
+var reAuthor = regexp.MustCompile(`(?i)Copyright` + cp + `? ` + date + `(.*)?`)
+
+var reCopyright = [...]*regexp.Regexp{
+	regexp.MustCompile(strings.ReplaceAll(
+		`(?i)Copyright`+cp+`? `+date+`[\s\\#\*\/]*(.*)(?: -)? `+rights, " ", `[\s\\#\*\/]*`)),
+	regexp.MustCompile(`(?i)Copyright` + cp + `? ` + date + `(.*)(?: -)? ` + rights),
+	regexp.MustCompile(`(?i)Copyright` + cp + `? ` + date + `(.*)(?:` + rights + `)?`),
+	regexp.MustCompile(`(?i)` + cp + ` ` + date + `[\s\\#\*\/]*(.*)(?:-)?`),
+	regexp.MustCompile(`(?i)Copyright` + cp + `? (.*?) ` + date),
+	regexp.MustCompile(`(?i)Copyright` + cp + `? by (.*) `),
+}
+
+var reAuthors = regexp.MustCompile(`(?i)(?:Contributed|Written|Authored) by (.*) ` + date)
 
 func parseAuthor(l string) string {
 	m := reAuthor.FindStringSubmatch(l)
@@ -82,4 +99,31 @@ func parseAuthor(l string) string {
 		a = a[:len(a)-len(rights)]
 	}
 	return a
+}
+
+// getAuthorMatches returns contributors and authors.
+func getAuthorMatches(data []byte) map[string]struct{} {
+	set := map[string]struct{}{}
+	for _, re := range reCopyright {
+		if m := re.FindAllSubmatch(data, -1); m != nil {
+			for _, author := range m {
+				// Remove nonletters or '>' from the beginning and end of string.
+				a := strings.TrimFunc(string(author[1]), func(r rune) bool {
+					return !(unicode.IsLetter(r) || r == '>')
+				})
+				set[a] = struct{}{}
+			}
+			break
+		}
+	}
+	if m := reAuthors.FindAllSubmatch(data, -1); m != nil {
+		for _, author := range m {
+			// Remove nonletters or '>' from the beginning and end of string.
+			a := strings.TrimFunc(string(author[1]), func(r rune) bool {
+				return !(unicode.IsLetter(r) || r == '>')
+			})
+			set[a] = struct{}{}
+		}
+	}
+	return set
 }
