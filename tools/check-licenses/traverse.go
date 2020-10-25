@@ -14,6 +14,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type UnlicensedFiles struct {
+	files []string
+}
+
 // Walk gathers all Licenses then checks for a match within each filtered file
 func Walk(config *Config) error {
 	var eg errgroup.Group
@@ -21,11 +25,11 @@ func Walk(config *Config) error {
 	metrics := new(Metrics)
 	metrics.Init()
 	file_tree := NewFileTree(config, metrics)
-	licenses, unlicensedFiles, err := NewLicenses(config.LicensePatternDir, config.ProhibitedLicenseTypes)
+	licenses, err := NewLicenses(config.LicensePatternDir, config.ProhibitedLicenseTypes)
 	if err != nil {
 		return err
 	}
-
+	unlicensedFiles := &UnlicensedFiles{}
 	for _, l := range licenses.licenses {
 		l := l
 		wg.Add(1)

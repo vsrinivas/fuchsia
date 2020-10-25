@@ -6,6 +6,7 @@ package checklicenses
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"unicode"
@@ -68,6 +69,27 @@ func (l *License) MatchChannelWorker() {
 		}
 		l.mu.Unlock()
 	}
+}
+
+func (l *License) matchAuthors(matched string, data []byte, path string) {
+	set := getAuthorMatches(data)
+	output := make([]string, 0, len(set))
+	for key := range set {
+		output = append(output, key)
+	}
+	// Sort the authors alphabetically and join them as one string.
+	sort.Strings(output)
+	authors := strings.Join(output, ", ")
+	// Replace < and > so that it doesn't cause special character highlights.
+	authors = strings.ReplaceAll(authors, "<", "&lt")
+	authors = strings.ReplaceAll(authors, ">", "&gt")
+
+	newMatch := &Match{
+		authors: authors,
+		value:   matched,
+		files:   []string{path},
+	}
+	l.AddMatch(newMatch)
 }
 
 const cp = `(?: ©| \(C\))`
