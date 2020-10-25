@@ -1936,7 +1936,7 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
 
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
-                    Journal::Options{.sequence_data_writes = false});
+                    Journal::Options());
 
     // Although we "WriteData" in a particular order, we can "and-then" data
     // to force an arbitrary order that we want. This is visible in the transaction

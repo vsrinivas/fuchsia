@@ -118,11 +118,6 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
         return writer_.WriteData(std::move(work));
       });
 
-  // Track write ops to ensure that invocations of |sync| can flush all prior work.
-  if (options_.sequence_data_writes) {
-    auto ordered_promise = metadata_sequencer_.wrap(std::move(promise));
-    return barrier_.wrap(std::move(ordered_promise));
-  }
   return barrier_.wrap(std::move(promise));
 }
 

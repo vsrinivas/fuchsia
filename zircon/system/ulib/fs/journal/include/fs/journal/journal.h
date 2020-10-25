@@ -58,15 +58,6 @@ class Journal final : public fit::executor {
   using Promise = fit::promise<void, zx_status_t>;
 
   struct Options {
-    // If true, make data writes always be issued to the device *after* the metadata is written from
-    // the previous transaction. This is necessary in cases where a file system wants to reuse a
-    // block that has been recently deallocated, and the file system is not aware of whether the
-    // transaction that deallocated the block is made it to the device yet. If the transaction has
-    // not made it to the device, then it would be possible for a data write to get there first and
-    // if there were to be a power-loss event, the file system would see new data with old
-    // metadata. See fxbug.dev/37958 for more details.
-    bool sequence_data_writes = true;
-
     // Pointer to MetricsTrait that helps journal maintain metrics.
     // The reference to MetricsTrait is dropped when Journal object is destroyed.
     // A nullptr implies that the user doesn't use/want journal metrics.
