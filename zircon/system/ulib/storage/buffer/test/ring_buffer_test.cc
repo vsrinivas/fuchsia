@@ -734,5 +734,45 @@ TEST(RingBufferTest, ReserveZeroBlocksReturnsError) {
   EXPECT_EQ(buffer->Reserve(0, &reservation), ZX_ERR_INVALID_ARGS);
 }
 
+TEST(RingBufferTest, OutOfOrderReleaseSucceeds) {
+  MockVmoidRegistry vmoid_registry;
+  std::unique_ptr<RingBuffer> buffer;
+  ASSERT_EQ(RingBuffer::Create(&vmoid_registry, 5, kBlockSize, "test-buffer", &buffer), ZX_OK);
+  {
+    // Three reservations that we free out-of-order.
+    RingBufferReservation reservation1;
+    RingBufferReservation reservation2;
+    RingBufferReservation reservation3;
+    EXPECT_EQ(buffer->Reserve(1, &reservation1), ZX_OK);
+    EXPECT_EQ(buffer->Reserve(1, &reservation2), ZX_OK);
+    // Should have wrapped now.
+    EXPECT_EQ(buffer->Reserve(1, &reservation3), ZX_OK);
+  }
+  RingBufferReservation reservation;
+  EXPECT_EQ(buffer->Reserve(4, &reservation), ZX_OK);
+}
+
+TEST(RingBufferTest, WrappedOutOfOrderReleaseSucceeds) {
+  MockVmoidRegistry vmoid_registry;
+  std::unique_ptr<RingBuffer> buffer;
+  ASSERT_EQ(RingBuffer::Create(&vmoid_registry, 5, kBlockSize, "test-buffer", &buffer), ZX_OK);
+  {
+    RingBufferReservation reservation;
+    EXPECT_EQ(buffer->Reserve(3, &reservation), ZX_OK);
+  }
+  {
+    // Three reservations that we free out-of-order and where they wrap (the buffer has 5 blocks).
+    RingBufferReservation reservation1;
+    RingBufferReservation reservation2;
+    RingBufferReservation reservation3;
+    EXPECT_EQ(buffer->Reserve(1, &reservation1), ZX_OK);
+    EXPECT_EQ(buffer->Reserve(1, &reservation2), ZX_OK);
+    // Should have wrapped now.
+    EXPECT_EQ(buffer->Reserve(1, &reservation3), ZX_OK);
+  }
+  RingBufferReservation reservation;
+  EXPECT_EQ(buffer->Reserve(4, &reservation), ZX_OK);
+}
+
 }  // namespace
 }  // namespace storage

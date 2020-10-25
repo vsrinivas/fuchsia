@@ -52,9 +52,12 @@ void internal::RingBufferState::Free(const RingBufferReservation& reservation) {
   if (reserved_start_ != reservation.start()) {
     // Freeing reservation out-of-order.
     //
-    // Ensure "pending_free_" stays sorted by the start index.
+    // Ensure "pending_free_" stays sorted by releasing order.
     for (size_t i = 0; i < pending_free_.size(); i++) {
-      if (reservation.start() < pending_free_[i].start) {
+      // Underflow here is OK, so long as results are unsigned.
+      static_assert(std::is_unsigned<decltype(reservation.start() - reserved_start_)>::value &&
+                    std::is_unsigned<decltype(pending_free_[i].start - reserved_start_)>::value);
+      if (reservation.start() - reserved_start_ < pending_free_[i].start - reserved_start_) {
         pending_free_.insert(i, Range{reservation.start(), reservation.length()});
         return;
       }
@@ -143,7 +146,7 @@ zx::status<size_t> RingBufferReservation::CopyRequests(
     fbl::Span<const storage::UnbufferedOperation> in_operations, size_t offset,
     std::vector<storage::BufferedOperation>* out_operations) {
   ZX_DEBUG_ASSERT_MSG(Reserved(), "Copying to invalid reservation");
-  out_operations->reserve(out_operations->capacity() + in_operations.size());
+  out_operations->reserve(out_operations->size() + in_operations.size());
 
   ZX_DEBUG_ASSERT_MSG(offset + BlockCount(in_operations) <= length(),
                       "Copying requests into a buffer beyond limit of prior reservation");

@@ -151,6 +151,9 @@ class RingBufferReservation {
   // The total length of this reservation, in blocks.
   size_t length() const { return view_.length(); }
 
+  // The capacity of the underlying buffer.
+  size_t capacity() const { return buffer_->capacity(); }
+
   vmoid_t vmoid() const;
 
   // Returns one block of data starting at block |index| within this reservation.
