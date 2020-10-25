@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <ddk/binding.h>
-#include <ddk/protocol/pciroot.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/acpi.h>
 #include <fbl/mutex.h>

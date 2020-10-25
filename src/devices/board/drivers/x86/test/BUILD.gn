@@ -7,11 +7,16 @@ import("//build/testing/bootfs_test.gni")
 
 test("x86-board") {
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "main.cc" ]
+  sources = [
+    "acpi.cc",
+    "main.cc",
+  ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
     "//sdk/lib/fdio",
+    "//third_party/acpica",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fdio-caller",
   ]
