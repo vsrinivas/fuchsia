@@ -34,12 +34,6 @@ type Match struct {
 	files   []string
 }
 
-// LicenseFindMatch runs concurrently for all licenses, synchronizing result production for subsequent consumption
-func (license *License) LicenseFindMatch(index int, data []byte, sm *sync.Map, wg *sync.WaitGroup) {
-	defer wg.Done()
-	sm.Store(index, license.pattern.Find(data))
-}
-
 func (l *License) appendFile(path string) {
 	p := l.pattern.String()
 	a := parseAuthor(p)

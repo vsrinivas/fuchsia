@@ -8,13 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
 )
 
 // Licenses is an object that facilitates operations on each License object in bulk
@@ -93,24 +91,11 @@ func (l *Licenses) GetFilesWithProhibitedLicenses() []string {
 
 func (l *Licenses) MatchSingleLicenseFile(data []byte, base string, metrics *Metrics, file_tree *FileTree) {
 	// TODO(solomonokinard) deduplicate Match*File()
-	var wg sync.WaitGroup
-	wg.Add(len(l.licenses))
-	var sm sync.Map
-	for i, license := range l.licenses {
-		go license.LicenseFindMatch(i, data, &sm, &wg)
-	}
-	wg.Wait()
-	for i, license := range l.licenses {
-		result, found := sm.Load(i)
-		if !found {
-			// TODO(jcecil): Is this an error?
-			log.Printf("single license file: No result found for key %d\n", i)
-			continue
-		}
-		if matched := result.([]byte); matched != nil {
+	for _, license := range l.licenses {
+		if m := license.pattern.Find(data); m != nil {
 			metrics.increment("num_single_license_file_match")
 			path := strings.TrimSpace(file_tree.getPath() + base)
-			license.matchAuthors(string(matched), data, path)
+			license.matchAuthors(string(m), data, path)
 			file_tree.Lock()
 			file_tree.singleLicenseFiles[base] = append(file_tree.singleLicenseFiles[base], license)
 			file_tree.Unlock()
@@ -118,29 +103,16 @@ func (l *Licenses) MatchSingleLicenseFile(data []byte, base string, metrics *Met
 	}
 }
 
-// MatchFile returns true if any License matches input data
+// MatchFile returns true if any License matches input data.
 func (l *Licenses) MatchFile(data []byte, path string, metrics *Metrics) bool {
-	is_matched := false
-	var wg sync.WaitGroup
-	wg.Add(len(l.licenses))
-	var sm sync.Map
-	for i, license := range l.licenses {
-		go license.LicenseFindMatch(i, data, &sm, &wg)
-	}
-	wg.Wait()
-	for i, license := range l.licenses {
-		result, found := sm.Load(i)
-		if !found {
-			log.Printf("No result found for key %d\n", i)
-			continue
-		}
-		if matched := result.([]byte); matched != nil {
-			is_matched = true
+	for _, license := range l.licenses {
+		if m := license.pattern.Find(data); m != nil {
 			metrics.increment("num_licensed")
-			license.matchAuthors(string(matched), data, path)
+			license.matchAuthors(string(m), data, path)
+			return true
 		}
 	}
-	return is_matched
+	return false
 }
 
 func contains(matches []string, item string) bool {
