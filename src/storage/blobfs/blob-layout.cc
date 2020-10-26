@@ -104,26 +104,13 @@ class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
   }
 
   zx::status<bool> HasMerkleTreeAndDataSharedBlock() const override {
-    // If the number of Merkle tree blocks + data blocks is greater than the total number of blocks
-    // then 1 of the blocks must be shared.
-    auto total_block_count = TotalBlockCount();
-    if (total_block_count.is_error()) {
-      return total_block_count.take_error();
+    uint64_t merkle_tree_block_remainder = MerkleTreeSize() % BlobfsBlockSize();
+    uint64_t data_block_remainder = DataSizeUpperBound() % BlobfsBlockSize();
+    // If either the Merkle tree or data are a block multiple then they can't share a block.
+    if (merkle_tree_block_remainder == 0 || data_block_remainder == 0) {
+      return zx::ok(false);
     }
-    auto data_block_count = DataBlockCount();
-    if (data_block_count.is_error()) {
-      return data_block_count.take_error();
-    }
-    auto merkle_tree_block_count = MerkleTreeBlockCount();
-    if (merkle_tree_block_count.is_error()) {
-      return merkle_tree_block_count.take_error();
-    }
-    BlockCountType block_sum;
-    if (!safemath::CheckAdd(data_block_count.value(), merkle_tree_block_count.value())
-             .AssignIfValid(&block_sum)) {
-      return zx::error(ZX_ERR_OUT_OF_RANGE);
-    }
-    return zx::ok(block_sum > total_block_count.value());
+    return zx::ok(merkle_tree_block_remainder + data_block_remainder <= BlobfsBlockSize());
   }
 
   BlobLayoutFormat Format() const override { return BlobLayoutFormat::kCompactMerkleTreeAtEnd; }
@@ -154,9 +141,8 @@ class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
 
  private:
   static ByteCountType CalulateMerkleTreeSize(ByteCountType file_size) {
-    // TODO(fxbug.dev/36663): Use the compact Merkle tree format.
     return digest::CalculateMerkleTreeSize(file_size, digest::kDefaultNodeSize,
-                                           /*use_compact_format=*/false);
+                                           /*use_compact_format=*/true);
   }
 };
 
