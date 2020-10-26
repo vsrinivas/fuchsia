@@ -4,7 +4,8 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//build/test/test_package.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 driver_module("sg-micro") {
   configs += [
@@ -39,9 +40,9 @@ driver_module("sg-micro") {
   ]
 }
 
-test("sgm37603a-test") {
+test("sgm37603a-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
-  output_name = "sgm37603a-test"
+  output_name = "sgm37603a-test-bin"
   sources = [
     "sgm37603a-test.cc",
     "sgm37603a.cc",
@@ -69,7 +70,12 @@ test("sgm37603a-test") {
   ]
 }
 
-bootfs_test("sgm37603a-test-bootfs-test") {
-  name = "sgm37603a-test"
+fuchsia_unittest_package("sgm37603a-test") {
+  executable_path = "test/sgm37603a-test-bin"
+  deps = [ ":sgm37603a-test-bin" ]
+}
+
+group("tests") {
+  testonly = true
   deps = [ ":sgm37603a-test" ]
 }

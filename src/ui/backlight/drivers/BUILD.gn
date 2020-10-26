@@ -4,8 +4,9 @@
 
 group("tests") {
   testonly = true
+
   deps = [
-    "drivers:tests",
-    "tests",
+    "sg-micro:tests",
+    "ti-lp8556:tests",
   ]
 }

@@ -91,8 +91,3 @@ group("tests") {
   testonly = true
   deps = [ ":ti-lp8556-test-package" ]
 }
-
-bootfs_test("ti-lp8556-test-bootfs-test") {
-  name = "ti-lp8556-test"
-  deps = [ ":ti-lp8556-test" ]
-}
