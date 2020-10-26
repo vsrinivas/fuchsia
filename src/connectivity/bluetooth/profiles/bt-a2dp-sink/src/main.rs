@@ -8,7 +8,12 @@ use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     async_helpers::component_lifecycle::ComponentLifecycleServer,
-    bt_a2dp::{codec::MediaCodecConfig, media_types::*, peer::ControllerPool, stream},
+    bt_a2dp::{
+        codec::{CodecNegotiation, MediaCodecConfig},
+        media_types::*,
+        peer::ControllerPool,
+        stream,
+    },
     bt_a2dp_metrics as metrics,
     bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory, StreamEndpoint},
     fidl::encoding::Decodable,
@@ -88,8 +93,10 @@ fn find_codec_cap<'a>(endpoint: &'a StreamEndpoint) -> Option<&'a ServiceCapabil
     endpoint.capabilities().iter().find(|cap| cap.category() == ServiceCategory::MediaCodec)
 }
 
+#[derive(Clone)]
 struct StreamsBuilder {
     cobalt_sender: CobaltSender,
+    codec_negotiation: CodecNegotiation,
     domain: Option<String>,
     aac_available: bool,
 }
@@ -102,19 +109,26 @@ impl StreamsBuilder {
         // TODO(fxbug.dev/1126): detect codecs, add streams for each codec
         // SBC is required
         let sbc_endpoint = Self::build_sbc_endpoint(avdtp::EndpointType::Sink)?;
-        let codec_cap = find_codec_cap(&sbc_endpoint).expect("just built");
-        let sbc_config = MediaCodecConfig::try_from(codec_cap)?;
+        let sbc_codec_cap = find_codec_cap(&sbc_endpoint).expect("just built");
+        let sbc_config = MediaCodecConfig::try_from(sbc_codec_cap)?;
         if let Err(e) = player::Player::test_playable(&sbc_config).await {
             warn!("Can't play required SBC audio: {}", e);
             return Err(e);
         }
 
+        let mut caps_available = vec![sbc_codec_cap.clone()];
+
         let aac_endpoint = Self::build_aac_endpoint(avdtp::EndpointType::Sink)?;
-        let codec_cap = find_codec_cap(&aac_endpoint).expect("just built");
-        let aac_config = MediaCodecConfig::try_from(codec_cap)?;
+        let aac_codec_cap = find_codec_cap(&aac_endpoint).expect("just built");
+        let aac_config = MediaCodecConfig::try_from(aac_codec_cap)?;
         let aac_available = player::Player::test_playable(&aac_config).await.is_ok();
 
-        Ok(Self { cobalt_sender, domain, aac_available })
+        if aac_available {
+            caps_available = vec![aac_codec_cap.clone(), sbc_codec_cap.clone()];
+        }
+        let codec_negotiation = CodecNegotiation::build(caps_available)?;
+
+        Ok(Self { cobalt_sender, codec_negotiation, domain, aac_available })
     }
 
     fn build_sbc_endpoint(
@@ -195,26 +209,25 @@ impl StreamsBuilder {
 
     fn into_session_gen(self) -> Box<connected_peers::PeerSessionFn> {
         Box::new(move |peer_id: &PeerId| {
-            let domain = self.domain.clone();
+            let clone = self.clone();
             let peer_id = peer_id.clone();
-            let cobalt_sender = self.cobalt_sender.clone();
-            let aac_available = self.aac_available.clone();
             let gen_fut = async move {
-                let (player_request_stream, session_id) = Self::setup_audio_session(domain).await?;
+                let (player_requests, session_id) = Self::setup_audio_session(clone.domain).await?;
                 info!("Session ID: {}", session_id);
-                let avrcp_task = AvrcpRelay::start(peer_id.clone(), player_request_stream)
+                let avrcp_task = AvrcpRelay::start(peer_id.clone(), player_requests)
                     .unwrap_or(fasync::Task::spawn(async {}));
 
-                let sink_task_builder = sink_task::SinkTaskBuilder::new(cobalt_sender, session_id);
+                let sink_task_builder =
+                    sink_task::SinkTaskBuilder::new(clone.cobalt_sender, session_id);
                 let mut streams = stream::Streams::new();
                 let sbc_endpoint = Self::build_sbc_endpoint(avdtp::EndpointType::Sink)?;
                 streams.insert(stream::Stream::build(sbc_endpoint, sink_task_builder.clone()));
 
-                if aac_available {
+                if clone.aac_available {
                     let aac_endpoint = Self::build_aac_endpoint(avdtp::EndpointType::Sink)?;
                     streams.insert(stream::Stream::build(aac_endpoint, sink_task_builder.clone()));
                 }
-                Ok((streams, avrcp_task))
+                Ok((streams, clone.codec_negotiation, avrcp_task))
             };
             fasync::Task::spawn(gen_fut)
         })
@@ -526,7 +539,11 @@ mod tests {
     fn no_streams_gen() -> Box<connected_peers::PeerSessionFn> {
         Box::new(|_peer_id| {
             fasync::Task::spawn(async {
-                Ok((stream::Streams::new(), fasync::Task::spawn(async {})))
+                Ok((
+                    stream::Streams::new(),
+                    CodecNegotiation::build(vec![]).unwrap(),
+                    fasync::Task::spawn(async {}),
+                ))
             })
         })
     }

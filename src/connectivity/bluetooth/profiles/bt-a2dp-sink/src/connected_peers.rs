@@ -4,8 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    bt_a2dp::media_types::*,
-    bt_a2dp::{peer::Peer, stream::Streams},
+    bt_a2dp::{codec::CodecNegotiation, peer::Peer, stream::Streams},
     bt_avdtp as avdtp,
     fidl_fuchsia_bluetooth_bredr::{ProfileDescriptor, ProfileProxy},
     fuchsia_async as fasync,
@@ -16,14 +15,14 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
-    log::{info, trace, warn},
+    log::{info, warn},
     std::{collections::HashMap, convert::TryInto, sync::Arc},
 };
 
-use crate::SBC_SEID;
+use crate::{AAC_SEID, SBC_SEID};
 
 pub type PeerSessionFn =
-    dyn Fn(&PeerId) -> fasync::Task<Result<(Streams, fasync::Task<()>), Error>>;
+    dyn Fn(&PeerId) -> fasync::Task<Result<(Streams, CodecNegotiation, fasync::Task<()>), Error>>;
 
 /// ConnectedPeers owns the set of connected peers and manages peers based on
 /// discovery, connections and disconnections.
@@ -70,44 +69,24 @@ impl ConnectedPeers {
         self.connected.contains_key(id)
     }
 
-    async fn start_streaming(peer: &DetachableWeak<PeerId, Peer>) -> Result<(), anyhow::Error> {
+    async fn start_streaming(
+        peer: &DetachableWeak<PeerId, Peer>,
+        negotiation: CodecNegotiation,
+    ) -> Result<(), anyhow::Error> {
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
         let remote_streams = strong.collect_capabilities().await?;
 
-        // Find the SBC stream, which should exist (it is required)
-        // TODO(fxbug.dev/39321): Prefer AAC when remote peer supports AAC.
-        let remote_stream = remote_streams
-            .iter()
-            .filter(|stream| stream.information().endpoint_type() == &avdtp::EndpointType::Source)
-            .find(|stream| stream.codec_type() == Some(&avdtp::MediaCodecType::AUDIO_SBC))
-            .ok_or(format_err!("Couldn't find a compatible stream"))?;
+        let (negotiated, remote_seid) =
+            negotiation.select(&remote_streams).ok_or(format_err!("No compatible stream found"))?;
 
-        // TODO(fxbug.dev/39321): Choose codec options based on availability and quality.
-        let sbc_media_codec_info = SbcCodecInfo::new(
-            SbcSamplingFrequency::FREQ44100HZ,
-            SbcChannelMode::JOINT_STEREO,
-            SbcBlockCount::SIXTEEN,
-            SbcSubBands::EIGHT,
-            SbcAllocation::LOUDNESS,
-            SbcCodecInfo::BITPOOL_MIN,
-            53, // Commonly used upper bound for bitpool value.
-        )?;
-
-        let sbc_settings = avdtp::ServiceCapability::MediaCodec {
-            media_type: avdtp::MediaType::Audio,
-            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-            codec_extra: sbc_media_codec_info.to_bytes().to_vec(),
+        let local_seid = match negotiated.codec_type() {
+            Some(&avdtp::MediaCodecType::AUDIO_SBC) => SBC_SEID.try_into()?,
+            Some(&avdtp::MediaCodecType::AUDIO_AAC) => AAC_SEID.try_into()?,
+            _ => return Err(format_err!("Negotiated codec type not recognized.")),
         };
 
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
-        let _ = strong
-            .stream_start(
-                SBC_SEID.try_into().unwrap(),
-                remote_stream.local_id().clone(),
-                sbc_settings.clone(),
-            )
-            .await?;
-        Ok(())
+        strong.stream_start(local_seid, remote_seid, negotiated).await.map_err(Into::into)
     }
 
     pub fn found(&mut self, id: PeerId, desc: ProfileDescriptor) {
@@ -127,7 +106,7 @@ impl ConnectedPeers {
             return;
         }
 
-        let (streams, session_task) = match (self.peer_session_gen)(&id).await {
+        let (streams, negotiation, session_task) = match (self.peer_session_gen)(&id).await {
             Ok(x) => x,
             Err(e) => {
                 warn!("Couldn't generate peer session for {}: {:?}", id, e);
@@ -168,8 +147,8 @@ impl ConnectedPeers {
         if initiator {
             let peer_clone = peer.clone();
             fuchsia_async::Task::local(async move {
-                if let Err(e) = ConnectedPeers::start_streaming(&peer_clone).await {
-                    trace!("Streaming ended with error: {:?}", e);
+                if let Err(e) = ConnectedPeers::start_streaming(&peer_clone, negotiation).await {
+                    info!("Peer {} start failed with error: {:?}", peer_clone.key(), e);
                     peer_clone.detach();
                 }
             })
@@ -198,6 +177,7 @@ impl Inspect for &mut ConnectedPeers {
 mod tests {
     use super::*;
 
+    use bt_a2dp::media_types::*;
     use bt_avdtp::Request;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream};
@@ -253,7 +233,13 @@ mod tests {
 
     fn no_streams_session_fn() -> Box<PeerSessionFn> {
         Box::new(|_peer_id| {
-            fasync::Task::spawn(async { Ok((Streams::new(), fasync::Task::spawn(async {}))) })
+            fasync::Task::spawn(async {
+                Ok((
+                    Streams::new(),
+                    CodecNegotiation::build(vec![]).unwrap(),
+                    fasync::Task::spawn(async {}),
+                ))
+            })
         })
     }
 
@@ -271,7 +257,7 @@ mod tests {
     }
 
     #[test]
-    fn connected_peers_connect_creates_peer() {
+    fn connect_creates_peer() {
         let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
         let (remote, channel) = Channel::create();
@@ -284,6 +270,119 @@ mod tests {
         };
 
         exercise_avdtp(&mut exec, remote, &peer);
+    }
+
+    #[test]
+    fn connect_initiation_uses_negotiation() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let (proxy, _stream) =
+            create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
+        let id = PeerId(1);
+        let (cobalt_sender, _) = fake_cobalt_sender();
+
+        let (remote, channel) = Channel::create();
+        let remote = avdtp::Peer::new(remote);
+
+        let aac_codec: avdtp::ServiceCapability = AacCodecInfo::new(
+            AacObjectType::MANDATORY_SNK,
+            AacSamplingFrequency::MANDATORY_SNK,
+            AacChannels::MANDATORY_SNK,
+            true,
+            0, // 0 = Unknown constant bitrate support (A2DP Sec. 4.5.2.4)
+        )
+        .unwrap()
+        .into();
+        let remote_aac_seid: avdtp::StreamEndpointId = 2u8.try_into().unwrap();
+
+        let sbc_codec: avdtp::ServiceCapability = SbcCodecInfo::new(
+            SbcSamplingFrequency::MANDATORY_SNK,
+            SbcChannelMode::MANDATORY_SNK,
+            SbcBlockCount::MANDATORY_SNK,
+            SbcSubBands::MANDATORY_SNK,
+            SbcAllocation::MANDATORY_SNK,
+            SbcCodecInfo::BITPOOL_MIN,
+            SbcCodecInfo::BITPOOL_MAX,
+        )
+        .unwrap()
+        .into();
+        let remote_sbc_seid: avdtp::StreamEndpointId = 1u8.try_into().unwrap();
+
+        let negotiation =
+            CodecNegotiation::build(vec![aac_codec.clone(), sbc_codec.clone()]).unwrap();
+
+        let session_fn: Box<PeerSessionFn> = Box::new(move |_peer_id| {
+            let negotiation_clone = negotiation.clone();
+            fasync::Task::spawn(async {
+                Ok((Streams::new(), negotiation_clone, fasync::Task::spawn(async {})))
+            })
+        });
+
+        let mut peers = ConnectedPeers::new(session_fn, proxy, cobalt_sender);
+
+        exec.run_singlethreaded(peers.connected(id, channel, true));
+
+        // Should discover remote streams, negotiate, and start.
+
+        let mut remote_requests = remote.take_request_stream();
+
+        match exec.run_singlethreaded(&mut remote_requests.next()) {
+            Some(Ok(avdtp::Request::Discover { responder })) => {
+                let endpoints = vec![
+                    avdtp::StreamInformation::new(
+                        remote_sbc_seid.clone(),
+                        false,
+                        avdtp::MediaType::Audio,
+                        avdtp::EndpointType::Source,
+                    ),
+                    avdtp::StreamInformation::new(
+                        remote_aac_seid.clone(),
+                        false,
+                        avdtp::MediaType::Audio,
+                        avdtp::EndpointType::Source,
+                    ),
+                ];
+                responder.send(&endpoints).expect("response succeeds");
+            }
+            x => panic!("Expected a discovery request, got {:?}", x),
+        };
+
+        for _twice in 1..=2 {
+            match exec.run_singlethreaded(&mut remote_requests.next()) {
+                Some(Ok(avdtp::Request::GetCapabilities { stream_id, responder })) => {
+                    if stream_id == remote_sbc_seid {
+                        responder.send(&vec![
+                            avdtp::ServiceCapability::MediaTransport,
+                            sbc_codec.clone(),
+                        ])
+                    } else if stream_id == remote_aac_seid {
+                        responder.send(&vec![
+                            avdtp::ServiceCapability::MediaTransport,
+                            aac_codec.clone(),
+                        ])
+                    } else {
+                        responder.reject(avdtp::ErrorCode::BadAcpSeid)
+                    }
+                    .expect("respond succeeds");
+                }
+                x => panic!("Expected a get capabilities request, got {:?}", x),
+            };
+        }
+
+        match exec.run_singlethreaded(&mut remote_requests.next()) {
+            Some(Ok(avdtp::Request::SetConfiguration {
+                local_stream_id,
+                remote_stream_id,
+                capabilities: _,
+                responder,
+            })) => {
+                // Should set the aac stream, matched with local AAC seid.
+                assert_eq!(remote_aac_seid, local_stream_id);
+                let local_aac_seid: avdtp::StreamEndpointId = AAC_SEID.try_into().unwrap();
+                assert_eq!(local_aac_seid, remote_stream_id);
+                responder.send().expect("response sends");
+            }
+            x => panic!("Expected a set configuration request, got {:?}", x),
+        };
     }
 
     #[test]
