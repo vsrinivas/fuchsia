@@ -673,12 +673,6 @@ impl TargetCollection {
             .await;
     }
 
-    pub async fn inner_lock(
-        &self,
-    ) -> async_std::sync::RwLockWriteGuard<'_, HashMap<String, Target>> {
-        self.inner.write().await
-    }
-
     pub async fn targets(&self) -> Vec<Target> {
         self.inner.read().await.values().map(|t| t.clone()).collect()
     }
@@ -710,6 +704,37 @@ impl TargetCollection {
                 t
             }
         }
+    }
+
+    /// Attempts to get a target based off of the default. Returns an error if
+    /// there is no target available (this doesn't await a new target).
+    pub async fn get_default(&self, n: Option<String>) -> Result<Target> {
+        let targets = self.inner.read().await;
+        match (targets.len(), n) {
+            (0, None) => return Err(anyhow!("no targets connected - is your device plugged in?")),
+            (1, None) => {
+                let res = targets
+                    .values()
+                    .next()
+                    .ok_or(anyhow!("no targets in cache"))
+                    .map(|t| t.clone())?;
+                log::debug!(
+                    "No default target selected, returning only target - {:?}",
+                    res.nodename(),
+                );
+                return Ok(res);
+            }
+            (_, None) => {
+                // n > 1 case (0 and 1 are covered, and this is an unsigned integer).
+                return Err(anyhow!("more than one target - specify a default target"));
+            }
+            (_, Some(nodename)) => {
+                return targets
+                    .get(&nodename)
+                    .ok_or(anyhow!("no targets found"))
+                    .map(|t| t.clone());
+            }
+        };
     }
 
     pub async fn get(&self, t: TargetQuery) -> Option<Target> {
@@ -1217,5 +1242,21 @@ mod test {
             test.addr.ssh_fmt(&mut res).unwrap();
             assert_eq!(std::str::from_utf8(&res[..]).unwrap(), test.expect);
         }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_get_default() {
+        let default = "clam-chowder-is-tasty";
+        let t = Target::new(default);
+        let t2 = Target::new("this-is-a-crunchy-falafel");
+        let tc = TargetCollection::new();
+        assert!(tc.get_default(None).await.is_err());
+        tc.merge_insert(clone_target(&t).await).await;
+        assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
+        assert_eq!(tc.get_default(None).await.unwrap(), t);
+        tc.merge_insert(t2).await;
+        assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
+        assert!(tc.get_default(None).await.is_err());
+        assert!(tc.get_default(Some("not_in_here".to_owned())).await.is_err());
     }
 }

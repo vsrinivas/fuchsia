@@ -2,19 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command};
+use {argh::FromArgs, ffx_config::FfxConfigBacked, ffx_core::ffx_command};
 
 #[ffx_command()]
-#[derive(FromArgs, Debug, PartialEq)]
+#[derive(FfxConfigBacked, FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "get-ssh-address", description = "get target's ssh address")]
 pub struct GetSshAddressCommand {
-    #[argh(
-        option,
-        short = 't',
-        description = "how long to wait for target address in fractional seconds. Zero returns immediately (default 1.0)"
-    )]
+    #[argh(option, short = 't')]
+    #[ffx_config_default(key = "target.interaction.timeout", default = "1.0")]
+    /// sets the timeout for getting the target's SSH address. Defaults to 1.0,
+    /// backed by "target.interaction.timeout" config value.
     pub timeout: Option<f64>,
-
-    #[argh(positional)]
-    pub nodename: Option<String>,
 }

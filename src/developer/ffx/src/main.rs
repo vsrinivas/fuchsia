@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     async_std::future::timeout,
     ffx_core::FfxError,
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
@@ -37,14 +37,24 @@ async fn get_daemon_proxy() -> Result<DaemonProxy> {
     find_and_connect().await
 }
 
+async fn proxy_timeout() -> Result<Duration> {
+    let proxy_timeout: ffx_config::Value = ffx_config::get(PROXY_TIMEOUT_SECS).await?;
+    Ok(Duration::from_millis(
+        (proxy_timeout
+            .as_f64()
+            .ok_or(anyhow!("unable to convert to float: {:?}", proxy_timeout))?
+            * 1000.0) as u64,
+    ))
+}
+
 async fn get_fastboot_proxy() -> Result<FastbootProxy> {
     let daemon_proxy = get_daemon_proxy().await?;
     let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
     let app: Ffx = argh::from_env();
-    let event_timeout = Duration::from_secs(ffx_config::get(PROXY_TIMEOUT_SECS).await?);
     timeout(
-        event_timeout,
-        daemon_proxy.get_fastboot(&app.target.unwrap_or("".to_string()), fastboot_server_end),
+        proxy_timeout().await?,
+        daemon_proxy
+            .get_fastboot(app.target().await?.as_ref().map(|s| s.as_str()), fastboot_server_end),
     )
     .await
     .context("timeout")?
@@ -56,10 +66,12 @@ async fn get_remote_proxy() -> Result<RemoteControlProxy> {
     let daemon_proxy = get_daemon_proxy().await?;
     let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
     let app: Ffx = argh::from_env();
-    let event_timeout = Duration::from_secs(ffx_config::get(PROXY_TIMEOUT_SECS).await?);
     timeout(
-        event_timeout,
-        daemon_proxy.get_remote_control(&app.target.unwrap_or("".to_string()), remote_server_end),
+        proxy_timeout().await?,
+        daemon_proxy.get_remote_control(
+            app.target().await?.as_ref().map(|s| s.as_str()),
+            remote_server_end,
+        ),
     )
     .await
     .context("timeout")?
@@ -83,9 +95,11 @@ fn is_daemon(subcommand: &Option<Subcommand>) -> bool {
 
 async fn run() -> Result<()> {
     let app: Ffx = argh::from_env();
+
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
     // properly have the runtime parameters.
-    ffx_config::init_config(&app.config, &app.env)?;
+    let overrides = app.runtime_config_overrides();
+    ffx_config::init_config(&app.config, &overrides, &app.env)?;
     let log_to_stdio = app.verbose || is_daemon(&app.subcommand);
     ffx_config::logging::init(log_to_stdio).await?;
     ffx_lib_suite::ffx_plugin_impl(

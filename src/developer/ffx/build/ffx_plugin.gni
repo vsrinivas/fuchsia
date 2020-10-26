@@ -161,6 +161,7 @@ template("ffx_plugin") {
       deps = args_deps + [
                "//src/developer/ffx/core:lib",
                "//src/developer/ffx/config:lib",
+               "//third_party/rust_crates:anyhow",
                "//third_party/rust_crates:argh",
              ]
       non_rust_deps = [ "//third_party/boringssl" ]
@@ -197,6 +198,7 @@ template("ffx_plugin") {
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:async-std",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
     ]

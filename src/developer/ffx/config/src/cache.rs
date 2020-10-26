@@ -55,19 +55,38 @@ pub fn env_file() -> Option<String> {
     FILE.path().to_str().map(|s| s.to_string())
 }
 
-pub fn init_config(runtime: &Option<String>, env_override: &Option<String>) -> Result<()> {
+pub fn init_config(
+    runtime: &Option<String>,
+    runtime_overrides: &Option<String>,
+    env_override: &Option<String>,
+) -> Result<()> {
     // If it's already been initialize, just fail silently. This will allow a setup method to be
     // called by unit tests over and over again without issue.
     if INIT.compare_and_swap(false, true, Ordering::Release) {
         Ok(())
     } else {
-        init_config_impl(runtime, env_override)
+        init_config_impl(runtime, runtime_overrides, env_override)
     }
 }
 
-fn init_config_impl(runtime: &Option<String>, env_override: &Option<String>) -> Result<()> {
-    let populated_runtime = populate_runtime_config(runtime)?;
-    let _ = populated_runtime.and_then(|v| RUNTIME.lock().unwrap().replace(v));
+fn init_config_impl(
+    runtime: &Option<String>,
+    runtime_overrides: &Option<String>,
+    env_override: &Option<String>,
+) -> Result<()> {
+    let mut populated_runtime = Value::Null;
+    vec![runtime, runtime_overrides].iter().try_for_each(|r| {
+        if let Some(v) = populate_runtime_config(r)? {
+            crate::api::value::merge(&mut populated_runtime, &v)
+        };
+        Result::<()>::Ok(())
+    })?;
+    match populated_runtime {
+        Value::Null => {}
+        _ => {
+            RUNTIME.lock().unwrap().replace(populated_runtime);
+        }
+    }
 
     let env_path = if let Some(f) = env_override {
         PathBuf::from(f)

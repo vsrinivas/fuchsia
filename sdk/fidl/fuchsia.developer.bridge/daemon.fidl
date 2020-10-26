@@ -33,15 +33,25 @@ protocol Daemon {
     /// Gets a remote control proxy for the given target.
     /// The target param expects an exact match with a target's
     /// nodename.
+    ///
+    /// If the target nodename is not included, this will return the remote
+    /// control instance for the target iff there is only one target in the
+    /// cache, else will return an error. If there are no targets in the cache,
+    /// will wait until the client chooses to time out.
     GetRemoteControl(
-        string:fuchsia.device.DEVICE_NAME_MAX target,
+        string:fuchsia.device.DEVICE_NAME_MAX? target,
         request<rc.RemoteControl> remote) -> () error DaemonError;
 
     /// Gets a fastboot proxy for the given target.
     /// The target param expects an exact match with a target's
     /// nodename.
+    ///
+    /// If the target nodename is not included, this will return the remote
+    /// control instance for the target iff there is only one target in the
+    /// cache, else will return an error. If there are no targets in the cache,
+    /// will wait until the client chooses to time out.
     GetFastboot(
-        string:fuchsia.device.DEVICE_NAME_MAX target,
+        string:fuchsia.device.DEVICE_NAME_MAX? target,
         request<Fastboot> fastboot) -> () error FastbootError;
 
     /// Attempts to get the SSH address for a given target.
@@ -57,6 +67,6 @@ protocol Daemon {
     /// * Timeout error if steps 1 and 2 don't happen in time.
     /// * Cache error if a target has appeared but suddenly disappears before
     ///   running the function to completion.
-    GetSshAddress(string:fuchsia.device.DEVICE_NAME_MAX target, zx.duration timeout)
+    GetSshAddress(string:fuchsia.device.DEVICE_NAME_MAX? target, zx.duration timeout)
         -> (TargetAddrInfo ip) error DaemonError;
 };

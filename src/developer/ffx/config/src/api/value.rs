@@ -261,3 +261,54 @@ impl<T: TryFrom<ConfigValue>> TryFrom<ConfigValue> for Vec<T> {
             .ok_or(anyhow!("no configuration value found").into())
     }
 }
+
+/// Merge's `Value` b into `Value` a.
+pub fn merge(a: &mut Value, b: &Value) {
+    match (a, b) {
+        (&mut Value::Object(ref mut a), &Value::Object(ref b)) => {
+            for (k, v) in b.iter() {
+                self::merge(a.entry(k.clone()).or_insert(Value::Null), v);
+            }
+        }
+        (a, b) => *a = b.clone(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_merge() {
+        let mut proto = Value::Null;
+        let a = json!({
+            "list": [ "first", "second" ],
+            "string": "This is a string",
+            "object" : {
+                "foo" : "foo-prime",
+                "bar" : "bar-prime"
+            }
+        });
+        let b = json!({
+            "list": [ "third" ],
+            "title": "This is a title",
+            "otherObject" : {
+                "yourHonor" : "I object!"
+            }
+        });
+        merge(&mut proto, &a);
+        assert_eq!(proto["list"].as_array().unwrap()[0].as_str().unwrap(), "first");
+        assert_eq!(proto["list"].as_array().unwrap()[1].as_str().unwrap(), "second");
+        assert_eq!(proto["string"].as_str().unwrap(), "This is a string");
+        assert_eq!(proto["object"]["foo"].as_str().unwrap(), "foo-prime");
+        assert_eq!(proto["object"]["bar"].as_str().unwrap(), "bar-prime");
+        merge(&mut proto, &b);
+        assert_eq!(proto["list"].as_array().unwrap()[0].as_str().unwrap(), "third");
+        assert_eq!(proto["title"].as_str().unwrap(), "This is a title");
+        assert_eq!(proto["string"].as_str().unwrap(), "This is a string");
+        assert_eq!(proto["object"]["foo"].as_str().unwrap(), "foo-prime");
+        assert_eq!(proto["object"]["bar"].as_str().unwrap(), "bar-prime");
+        assert_eq!(proto["otherObject"]["yourHonor"].as_str().unwrap(), "I object!");
+    }
+}

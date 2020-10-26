@@ -34,6 +34,7 @@ if (is_host) {
 
     deps = [
       ":config.json",
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:proc-macro-hack",
       "//third_party/rust_crates:proc-macro2",
       "//third_party/rust_crates:quote",

@@ -15,8 +15,5 @@
       "$HOME/.ssh/fuchsia_authorized_keys",
       "$FUCHSIA_DIR/.ssh/authorized_keys"
     ]
-  },
-  "events": {
-    "timeout_secs": 10
   }
 }

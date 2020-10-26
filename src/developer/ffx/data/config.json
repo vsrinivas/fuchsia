@@ -7,6 +7,6 @@
     "enabled": "$FFX_LOG_ENABLED"
   },
   "proxy": {
-    "timeout_secs": 10
+    "timeout_secs": 10.0
   }
 }

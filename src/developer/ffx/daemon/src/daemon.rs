@@ -84,6 +84,19 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
     }
 }
 
+macro_rules! default_target_or_err {
+    ($s:ident, $t:ident, $responder:ident, $e:expr $(,)?) => {
+        match $s.get_default_target($t).await {
+            Ok(t) => t,
+            Err(e) => {
+                log::warn!("{}", e);
+                $responder.send(&mut Err($e)).context("sending error response")?;
+                return Ok(());
+            }
+        }
+    };
+}
+
 impl Daemon {
     pub async fn new() -> Result<Daemon> {
         log::info!("Starting daemon overnet server");
@@ -106,6 +119,34 @@ impl Daemon {
         let mut mdns = MdnsTargetFinder::new(&config)?;
         mdns.start(queue.clone())?;
         Ok(Daemon { target_collection: target_collection.clone(), event_queue: queue })
+    }
+
+    pub async fn get_default_target(&self, n: Option<String>) -> Result<Target> {
+        let n_clone = n.clone();
+        // Infinite timeout here is fine, as the client dropping connection
+        // will lead to this being cleaned up eventually. It is the client's
+        // responsibility to determine their respective timeout(s).
+        self.event_queue
+            .wait_for(None, move |e| {
+                if let DaemonEvent::NewTarget(n) = e {
+                    // Gets either a target with the correct name if matching,
+                    // or returns true if there is ANY target at all.
+                    n_clone.as_ref().map(|s| s.eq(&n)).unwrap_or(true)
+                } else {
+                    false
+                }
+            })
+            .await?;
+
+        // TODO(awdavies): It's possible something might happen between the new
+        // target event and now, so it would make sense to give the
+        // user some information on what happened: likely something
+        // to do with the target suddenly being forced out of the cache
+        // (this isn't a problem yet, but will be once more advanced
+        // lifetime tracking is implemented). If a name isn't specified it's
+        // possible a secondary/tertiary target showed up, and those cases are
+        // handled here.
+        self.target_collection.get_default(n).await
     }
 
     #[cfg(test)]
@@ -168,40 +209,6 @@ impl Daemon {
         .detach();
     }
 
-    /// Attempts to get at most one target. If the target_selector is empty and there is only one
-    /// device connected, that target will be returned.  If there are more devices and no target
-    /// selector, an error is returned.  An error is also returned if there are no connected
-    /// devices.
-    /// TODO(fxbug.dev/47843): Implement target lookup for commands to deprecate this
-    /// function, and as a result remove the inner_lock() function.
-    async fn target_from_cache(&self, target_selector: String) -> Result<Target> {
-        let targets = self.target_collection.inner_lock().await;
-
-        if targets.len() == 0 {
-            return Err(anyhow!("no targets connected - is your device plugged in?"));
-        }
-
-        if targets.len() > 1 && target_selector.is_empty() {
-            return Err(anyhow!("more than one target - specify a target"));
-        }
-
-        let target = if target_selector.is_empty() && targets.len() == 1 {
-            let target = targets.values().next();
-            log::debug!("No target selector and only one target - using {:?}", target);
-            target
-        } else {
-            // TODO: Maybe don't require an exact selector match, but calculate string distances
-            // and try to make an educated guess.
-            log::debug!("Using target selector {}", target_selector);
-            targets.get(&target_selector)
-        };
-
-        match target {
-            Some(t) => Ok(t.clone()),
-            None => Err(anyhow!("no targets found")),
-        }
-    }
-
     pub async fn handle_request(&self, req: DaemonRequest) -> Result<()> {
         log::debug!("daemon received request: {:?}", req);
         match req {
@@ -234,16 +241,8 @@ impl Daemon {
                     .context("error sending response")?;
             }
             DaemonRequest::GetRemoteControl { target, remote, responder } => {
-                let target = match self.target_from_cache(target).await {
-                    Ok(t) => t,
-                    Err(e) => {
-                        log::warn!("{}", e);
-                        responder
-                            .send(&mut Err(DaemonError::TargetCacheError))
-                            .context("sending error response")?;
-                        return Ok(());
-                    }
-                };
+                let target =
+                    default_target_or_err!(self, target, responder, DaemonError::TargetCacheError);
                 match target.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await {
                     Ok(()) => (),
                     Err(e) => {
@@ -270,16 +269,8 @@ impl Daemon {
                 responder.send(&mut response).context("error sending response")?;
             }
             DaemonRequest::GetFastboot { target, fastboot, responder } => {
-                let target = match self.target_from_cache(target).await {
-                    Ok(t) => t,
-                    Err(e) => {
-                        log::warn!("{}", e);
-                        responder
-                            .send(&mut Err(FastbootError::Generic))
-                            .context("sending error response")?;
-                        return Ok(());
-                    }
-                };
+                let target =
+                    default_target_or_err!(self, target, responder, FastbootError::Generic);
                 let mut fastboot_manager = Fastboot::new(target);
                 let stream = fastboot.into_stream()?;
                 fuchsia_async::Task::spawn(async move {
@@ -308,27 +299,8 @@ impl Daemon {
                 std::process::exit(0);
             }
             DaemonRequest::GetSshAddress { responder, target, timeout } => {
-                let nodename = target.clone();
                 let fut = async move {
-                    let _res = self
-                        .event_queue
-                        .wait_for(None, move |e| {
-                            if let DaemonEvent::NewTarget(n) = e {
-                                n == nodename || nodename == "".to_owned()
-                            } else {
-                                false
-                            }
-                        })
-                        .await
-                        .map_err(|e| log::warn!("event wait err: {:?}", e));
-
-                    // TODO(awdavies): It's possible something might happen between the new
-                    // target event and now, so it would make sense to give the
-                    // user some information on what happened: likely something
-                    // to do with the target suddenly being forced out of the cache
-                    // (this isn't a problem yet, but will be once more advanced
-                    // lifetime tracking is implemented).
-                    let target = match self.target_from_cache(target).await {
+                    let target = match self.get_default_target(target).await {
                         Ok(t) => t,
                         Err(e) => {
                             log::warn!("{}", e);
@@ -369,16 +341,19 @@ impl Daemon {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use fidl_fuchsia_developer_bridge as bridge;
-    use fidl_fuchsia_developer_bridge::DaemonMarker;
-    use fidl_fuchsia_developer_remotecontrol as rcs;
-    use fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy};
-    use fidl_fuchsia_net as fidl_net;
-    use fidl_fuchsia_net::{IpAddress, Ipv4Address, Subnet};
-    use fidl_fuchsia_overnet_protocol::NodeId;
-    use fuchsia_async::Task;
-    use std::net::{SocketAddr, SocketAddrV6};
+    use {
+        super::*,
+        async_std::future::timeout,
+        fidl_fuchsia_developer_bridge as bridge,
+        fidl_fuchsia_developer_bridge::DaemonMarker,
+        fidl_fuchsia_developer_remotecontrol as rcs,
+        fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
+        fidl_fuchsia_net as fidl_net,
+        fidl_fuchsia_net::{IpAddress, Ipv4Address, Subnet},
+        fidl_fuchsia_overnet_protocol::NodeId,
+        fuchsia_async::Task,
+        std::net::{SocketAddr, SocketAddrV6},
+    };
 
     struct TestHookFakeRcs {
         tc: Weak<TargetCollection>,
@@ -524,7 +499,11 @@ mod test {
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
         let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
         ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
-        if let Ok(_) = daemon_proxy.get_remote_control("", remote_server_end).await.unwrap() {
+        if let Ok(_) = timeout(Duration::from_millis(10), async move {
+            daemon_proxy.get_remote_control(Some(""), remote_server_end).await.unwrap()
+        })
+        .await
+        {
             panic!("failure expected for multiple targets");
         }
         Ok(())
@@ -538,7 +517,8 @@ mod test {
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
         let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
         ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
-        if let Err(_) = daemon_proxy.get_remote_control("foobar", remote_server_end).await.unwrap()
+        if let Err(_) =
+            daemon_proxy.get_remote_control(Some("foobar"), remote_server_end).await.unwrap()
         {
             panic!("failure unexpected for multiple targets with a matching selector");
         }
@@ -553,7 +533,11 @@ mod test {
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
         let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
         ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
-        if let Ok(_) = daemon_proxy.get_remote_control("rando", remote_server_end).await.unwrap() {
+        if let Ok(_) = timeout(Duration::from_millis(10), async move {
+            daemon_proxy.get_remote_control(Some("rando"), remote_server_end).await.unwrap()
+        })
+        .await
+        {
             panic!("failure expected for multiple targets with a mismatched selector");
         }
         Ok(())
@@ -624,7 +608,7 @@ mod test {
         let (daemon_proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>()?;
         let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
         let timeout = std::i64::MAX;
-        let r = daemon_proxy.get_ssh_address("foobar", timeout).await?;
+        let r = daemon_proxy.get_ssh_address(Some("foobar"), timeout).await?;
 
         // This is from the `spawn_daemon_server_with_fake_target` impl.
         let want = Ok(bridge::TargetAddrInfo::Ip(bridge::TargetIp {
@@ -635,15 +619,15 @@ mod test {
         }));
         assert_eq!(r, want);
 
-        let r = daemon_proxy.get_ssh_address("toothpaste", 1000).await?;
+        let r = daemon_proxy.get_ssh_address(Some("toothpaste"), 10000).await?;
         assert_eq!(r, Err(DaemonError::Timeout));
 
         // Target with empty addresses should timeout.
         ctrl.send_mdns_discovery_event(Target::new("baz")).await;
-        let r = daemon_proxy.get_ssh_address("baz", 10000).await?;
+        let r = daemon_proxy.get_ssh_address(Some("baz"), 10000).await?;
         assert_eq!(r, Err(DaemonError::Timeout));
 
-        let r = daemon_proxy.get_ssh_address("foobar", timeout).await?;
+        let r = daemon_proxy.get_ssh_address(Some("foobar"), timeout).await?;
         assert_eq!(r, want);
 
         Ok(())

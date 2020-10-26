@@ -18,7 +18,6 @@ use {
         identity::identity,
     },
     anyhow::{anyhow, bail, Context, Result},
-    serde_json::Value,
     std::{
         convert::{From, TryFrom, TryInto},
         env::var,
@@ -27,6 +26,9 @@ use {
         path::PathBuf,
     },
 };
+
+pub use config_macros::FfxConfigBacked;
+pub use serde_json::Value;
 
 #[cfg(test)]
 use tempfile::NamedTempFile;
@@ -289,7 +291,7 @@ pub async fn get_sdk() -> Result<sdk::Sdk> {
     } else {
         ffx_core::ffx_bail!(
             "SDK directory could not be found. Please set with \
-                             `ffx config set sdk.root <PATH_TO_SDK_DIR>`"
+             `ffx config set sdk.root <PATH_TO_SDK_DIR>`"
         );
     }
 }
@@ -299,6 +301,9 @@ pub async fn get_sdk() -> Result<sdk::Sdk> {
 #[cfg(test)]
 mod test {
     use super::*;
+    // This is to get the FfxConfigBacked derive to compile, as it
+    // creates a token stream referencing `ffx_config` on the inside.
+    use crate as ffx_config;
     use serde_json::json;
 
     #[test]
@@ -367,5 +372,61 @@ mod test {
         let bad_elem_2: std::result::Result<Vec<u64>, ConfigError> = c(json!(["test"])).try_into();
         assert!(bad_elem_2.is_err());
         Ok(())
+    }
+
+    #[derive(FfxConfigBacked, Default)]
+    struct TestConfigBackedStruct {
+        #[ffx_config_default(key = "test.test.thing", default = "thing")]
+        value: Option<String>,
+
+        #[ffx_config_default(default = "what", key = "oops")]
+        reverse_value: Option<String>,
+
+        #[ffx_config_default(key = "other.test.thing")]
+        other_value: Option<f64>,
+    }
+
+    #[derive(FfxConfigBacked, Default)] // This should just compile despite having no config.
+    struct TestEmptyBackedStruct {}
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_config_backed_attribute() {
+        let mut empty_config_struct = TestConfigBackedStruct::default();
+        assert!(empty_config_struct.value.is_none());
+        assert_eq!(empty_config_struct.value().await.unwrap(), "thing");
+        assert!(empty_config_struct.reverse_value.is_none());
+        assert_eq!(empty_config_struct.reverse_value().await.unwrap(), "what");
+
+        ffx_config::set(
+            ("test.test.thing", ConfigLevel::User),
+            Value::String("config_value_thingy".to_owned()),
+        )
+        .await
+        .unwrap();
+        ffx_config::set(
+            ("other.test.thing", ConfigLevel::User),
+            Value::Number(serde_json::Number::from_f64(2f64).unwrap()),
+        )
+        .await
+        .unwrap();
+
+        // If this is set, this should pop up before the config values.
+        empty_config_struct.value = Some("wat".to_owned());
+        assert_eq!(empty_config_struct.value().await.unwrap(), "wat");
+        empty_config_struct.value = None;
+        assert_eq!(empty_config_struct.value().await.unwrap(), "config_value_thingy");
+        assert_eq!(empty_config_struct.other_value().await.unwrap().unwrap(), 2f64);
+        ffx_config::set(
+            ("other.test.thing", ConfigLevel::User),
+            Value::String("oaiwhfoiwh".to_owned()),
+        )
+        .await
+        .unwrap();
+
+        // Error from incorrect type set in the config.
+        assert!(empty_config_struct.other_value().await.is_err());
+
+        // This should just compile and drop without panicking is all.
+        let _ignore = TestEmptyBackedStruct {};
     }
 }

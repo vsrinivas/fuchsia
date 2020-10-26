@@ -25,9 +25,10 @@ async fn get_ssh_address_impl<W: Write>(
     cmd: GetSshAddressCommand,
     mut writer: W,
 ) -> Result<()> {
-    let timeout = Duration::from_nanos((cmd.timeout.unwrap_or(1.0) * 1000000000.0) as u64);
+    let timeout = Duration::from_nanos((cmd.timeout().await? * 1000000000.0) as u64);
+    let target: Option<ffx_config::Value> = ffx_config::get("target.default").await.ok();
     let res = daemon_proxy
-        .get_ssh_address(cmd.nodename.as_ref().unwrap_or(&"".to_owned()), timeout.as_nanos() as i64)
+        .get_ssh_address(target.as_ref().map(|s| s.as_str()).flatten(), timeout.as_nanos() as i64)
         .await?
         .map_err(|e| anyhow!("getting ssh addr: {:?}", e))?;
     let out = TargetAddr::from(res);

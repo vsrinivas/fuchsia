@@ -203,7 +203,10 @@ async fn doctor<W: Write>(
             let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
             match timeout(
                 retry_delay,
-                daemon.get_remote_control(&target.nodename.as_ref().unwrap(), remote_server_end),
+                daemon.get_remote_control(
+                    target.nodename.as_ref().map(|s| s.as_str()),
+                    remote_server_end,
+                ),
             )
             .await
             {
@@ -457,6 +460,7 @@ mod test {
             async move {
                 match req {
                     DaemonRequest::GetRemoteControl { remote, target, responder } => {
+                        let target = target.expect("target cannot be none");
                         if target == NODENAME {
                             serve_responsive_rcs(remote);
                         } else if target == UNRESPONSIVE_NODENAME {
@@ -523,19 +527,21 @@ mod test {
     }
 
     fn setup_daemon_server_list_fails() -> DaemonProxy {
-        spawn_local_stream_handler(move |req| async move {
-            match req {
-                DaemonRequest::GetRemoteControl { remote: _, target: _, responder: _ } => {
-                    panic!("unexpected daemon call");
-                }
-                DaemonRequest::EchoString { value, responder } => {
-                    responder.send(&value).unwrap();
-                }
-                DaemonRequest::ListTargets { value: _, responder: _ } => {
-                    // Do nothing
-                }
-                _ => {
-                    assert!(false, format!("got unexpected request: {:?}", req));
+        spawn_local_stream_handler(move |req| {
+            async move {
+                match req {
+                    DaemonRequest::GetRemoteControl { remote: _, target: _, responder: _ } => {
+                        panic!("unexpected daemon call");
+                    }
+                    DaemonRequest::EchoString { value, responder } => {
+                        responder.send(&value).unwrap();
+                    }
+                    DaemonRequest::ListTargets { value: _, responder: _ } => {
+                        // Do nothing
+                    }
+                    _ => {
+                        assert!(false, format!("got unexpected request: {:?}", req));
+                    }
                 }
             }
         })
