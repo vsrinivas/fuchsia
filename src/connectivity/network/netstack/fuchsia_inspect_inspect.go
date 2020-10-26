@@ -6,6 +6,7 @@ package netstack
 
 import (
 	"fmt"
+	"net"
 	"reflect"
 	"sort"
 	"strconv"
@@ -582,11 +583,14 @@ func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 	}
 
 	var netString string
+	var zeroAddress net.IP
 	switch common.NetProto {
 	case header.IPv4ProtocolNumber:
 		netString = "IPv4"
+		zeroAddress = net.IPv4zero
 	case header.IPv6ProtocolNumber:
 		netString = "IPv6"
+		zeroAddress = net.IPv6zero
 	default:
 		netString = "UNKNOWN"
 	}
@@ -608,8 +612,17 @@ func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 		transString = "UNKNOWN"
 	}
 
-	localAddr := fmt.Sprintf("%s:%d", common.ID.LocalAddress.String(), common.ID.LocalPort)
-	remoteAddr := fmt.Sprintf("%s:%d", common.ID.RemoteAddress.String(), common.ID.RemotePort)
+	localAddress := net.IP(common.ID.LocalAddress)
+	if len(localAddress) == 0 {
+		localAddress = zeroAddress
+	}
+	remoteAddress := net.IP(common.ID.RemoteAddress)
+	if len(remoteAddress) == 0 {
+		remoteAddress = zeroAddress
+	}
+
+	localAddr := net.JoinHostPort(localAddress.String(), strconv.FormatUint(uint64(common.ID.LocalPort), 10))
+	remoteAddr := net.JoinHostPort(remoteAddress.String(), strconv.FormatUint(uint64(common.ID.RemotePort), 10))
 	properties := []inspect.Property{
 		{Key: "NetworkProtocol", Value: inspect.PropertyValueWithStr(netString)},
 		{Key: "TransportProtocol", Value: inspect.PropertyValueWithStr(transString)},

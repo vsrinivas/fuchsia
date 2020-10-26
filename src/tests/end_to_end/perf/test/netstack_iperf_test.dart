@@ -166,7 +166,7 @@ void main(List<String> args) {
               results[j]['payload']['Socket Info'] != null) {
             for (final entry in results[j]['payload']['Socket Info'].entries) {
               if (entry.value['LocalAddress'] != null &&
-                  entry.value['LocalAddress'] == ':$port') {
+                  entry.value['LocalAddress'].endsWith(':$port')) {
                 return;
               }
             }

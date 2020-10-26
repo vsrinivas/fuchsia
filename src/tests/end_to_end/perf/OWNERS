@@ -1,9 +1,2 @@
 mseaborn@google.com
 nathanrogers@google.com
-
-per-file test/touch_input_latency_benchmarks.dart = jaeheon@google.com
-per-file test/touch_input_latency_benchmarks.dart = neelsa@google.com
-per-file test/touch_input_latency_benchmarks.dart = vickiecheng@google.com
-per-file test/touch_input_latency_benchmarks_test.dart = jaeheon@google.com
-per-file test/touch_input_latency_benchmarks_test.dart = neelsa@google.com
-per-file test/touch_input_latency_benchmarks_test.dart = vickiecheng@google.com

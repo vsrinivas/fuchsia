@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 	"gvisor.dev/gvisor/pkg/waiter"
@@ -80,7 +81,7 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	udpEP, err := ns.stack.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
+	udpEP, err := ns.stack.NewEndpoint(udp.ProtocolNumber, ipv6.ProtocolNumber, wq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,16 +117,22 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 			t.Fatalf("got GetChild(%s) = %v, want non-nil", name, child)
 		}
 
-		var protoName string
-		var expectInspectObj inspect.Object
-		// Update protocol specific expected values.
 		val, err := strconv.ParseUint(name, 10, 64)
 		if err != nil {
 			t.Fatalf("string parsing error %s", err)
 		}
+
+		// Update protocol specific expected values.
+		var (
+			networkProtoName, transportProtoName string
+			unspecifiedAddress                   string
+			expectInspectObj                     inspect.Object
+		)
 		switch val {
 		case key1:
-			protoName = "TCP"
+			networkProtoName = "IPv4"
+			transportProtoName = "TCP"
+			unspecifiedAddress = "0.0.0.0"
 			expectInspectObj = inspect.Object{
 				Name: "Stats",
 				Metrics: []inspect.Metric{
@@ -135,7 +142,9 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 				},
 			}
 		case key2:
-			protoName = "UDP"
+			networkProtoName = "IPv6"
+			transportProtoName = "UDP"
+			unspecifiedAddress = "[::]"
 			expectInspectObj = inspect.Object{
 				Name: "Stats",
 				Metrics: []inspect.Metric{
@@ -173,11 +182,11 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 		if diff := cmp.Diff(inspect.Object{
 			Name: name,
 			Properties: []inspect.Property{
-				{Key: "NetworkProtocol", Value: inspect.PropertyValueWithStr("IPv4")},
-				{Key: "TransportProtocol", Value: inspect.PropertyValueWithStr(protoName)},
+				{Key: "NetworkProtocol", Value: inspect.PropertyValueWithStr(networkProtoName)},
+				{Key: "TransportProtocol", Value: inspect.PropertyValueWithStr(transportProtoName)},
 				{Key: "State", Value: inspect.PropertyValueWithStr("INITIAL")},
-				{Key: "LocalAddress", Value: inspect.PropertyValueWithStr(":0")},
-				{Key: "RemoteAddress", Value: inspect.PropertyValueWithStr(":0")},
+				{Key: "LocalAddress", Value: inspect.PropertyValueWithStr(unspecifiedAddress + ":0")},
+				{Key: "RemoteAddress", Value: inspect.PropertyValueWithStr(unspecifiedAddress + ":0")},
 				{Key: "BindAddress", Value: inspect.PropertyValueWithStr("")},
 				{Key: "BindNICID", Value: inspect.PropertyValueWithStr("0")},
 				{Key: "RegisterNICID", Value: inspect.PropertyValueWithStr("0")},

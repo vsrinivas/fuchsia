@@ -31,8 +31,6 @@ import (
 	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
-const zeroIpAddr = header.IPv4Any
-
 type netstackImpl struct {
 	ns *Netstack
 }
@@ -107,7 +105,7 @@ func (ns *Netstack) getNetInterfaces2() []netstack.NetInterface2 {
 		}
 
 		if addrWithPrefix == (tcpip.AddressWithPrefix{}) {
-			addrWithPrefix = tcpip.AddressWithPrefix{Address: zeroIpAddr, PrefixLen: 0}
+			addrWithPrefix = tcpip.AddressWithPrefix{Address: header.IPv4Any, PrefixLen: 0}
 		}
 		mask := net.CIDRMask(addrWithPrefix.PrefixLen, len(addrWithPrefix.Address)*8)
 		broadaddr := []byte(addrWithPrefix.Address)
@@ -168,7 +166,7 @@ func (ni *netstackImpl) GetRouteTable(fidl.Context) ([]netstack.RouteTableEntry,
 		if r2.Gateway != nil {
 			gateway = *r2.Gateway
 		} else {
-			gateway = fidlconv.ToNetIpAddress(zeroIpAddr)
+			gateway = fidlconv.ToNetIpAddress(header.IPv4Any)
 		}
 		rt = append(rt, netstack.RouteTableEntry{
 			Destination: r2.Destination,
