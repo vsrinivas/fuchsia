@@ -1,0 +1,53 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+package virtual_device;
+
+option go_package = "go.fuchsia.dev/fuchsia/tools/virtual_device/proto";
+
+// VirtualDevice describes how to run Fuchsia using a vm or emulator.
+//
+// This message should capture the set of system images necessary to boot the
+// device, as well as the hardware characteristics of the device.
+//
+// Its primary purpose is to carry virtualization options across system
+// boundaries. For example, Fuchsia infra may pass a file containing this
+// message from the build to a tool that runs Fuchsia in QEMU, without
+// inspecting the message itself.
+message VirtualDevice {
+  // The name of this virtual device.
+  //
+  // This is meant to help humans identify this device.
+  string name = 1;
+
+  // The virtual machine or emulator that is meant to run this device.
+  oneof vm {
+    QEMU qemu = 2;
+    // TODO(kjharland): AEMU
+  }
+
+  // The following fields specify the set of system images used to boot Fuchsia.
+  // Each field's value is the name of the JSON object in images.json whose
+  // "path" property points to the corresponding image file.
+
+  // The system kernel image.
+  string kernel = 3;
+
+  // The initial ramdisk image.
+  string initrd = 4;
+
+  // The primary Fuchsia volume.
+  string fvm = 5;
+}
+
+// QEMU describes how to run a VirtualDevice in QEMU.
+message QEMU {
+  // The maximum supported QEMU version.
+  string max_version = 1;
+
+  // The minimum supported QEMU version.
+  string min_version = 2;
+}
