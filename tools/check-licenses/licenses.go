@@ -5,12 +5,14 @@
 package checklicenses
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime/trace"
 	"sort"
 	"strings"
 )
@@ -22,7 +24,8 @@ type Licenses struct {
 
 // NewLicenses returns a Licenses object with each license pattern loaded from
 // the .lic folder location specified in Config
-func NewLicenses(root string, prohibitedLicenseTypes []string) (*Licenses, error) {
+func NewLicenses(ctx context.Context, root string, prohibitedLicenseTypes []string) (*Licenses, error) {
+	defer trace.StartRegion(ctx, "NewLicenses").End()
 	f, err := os.Open(root)
 	if err != nil {
 		return nil, err

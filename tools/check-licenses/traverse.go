@@ -5,9 +5,11 @@
 package checklicenses
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"runtime/trace"
 	"strings"
 	"sync"
 
@@ -19,13 +21,13 @@ type UnlicensedFiles struct {
 }
 
 // Walk gathers all Licenses then checks for a match within each filtered file
-func Walk(config *Config) error {
+func Walk(ctx context.Context, config *Config) error {
 	var eg errgroup.Group
 	var wg sync.WaitGroup
 	metrics := new(Metrics)
 	metrics.Init()
-	file_tree := NewFileTree(config, metrics)
-	licenses, err := NewLicenses(config.LicensePatternDir, config.ProhibitedLicenseTypes)
+	file_tree := NewFileTree(ctx, config, metrics)
+	licenses, err := NewLicenses(ctx, config.LicensePatternDir, config.ProhibitedLicenseTypes)
 	if err != nil {
 		return err
 	}
@@ -39,7 +41,7 @@ func Walk(config *Config) error {
 		}()
 	}
 
-	log.Printf("Starting singleLicenseFile walk")
+	r := trace.StartRegion(ctx, "singleLicenseFile walk")
 	for tree := range file_tree.getSingleLicenseFileIterator() {
 		tree := tree
 		for singleLicenseFile := range tree.singleLicenseFiles {
@@ -55,8 +57,9 @@ func Walk(config *Config) error {
 		}
 	}
 	eg.Wait()
+	r.End()
 
-	log.Println("Starting regular file walk")
+	r = trace.StartRegion(ctx, "regular file walk")
 	for path := range file_tree.getFileIterator() {
 		path := path
 		eg.Go(func() error {
@@ -70,14 +73,14 @@ func Walk(config *Config) error {
 	}
 	eg.Wait()
 
-	log.Println("Done")
-
 	// Close each licenses's matchChannel goroutine by sending a nil object.
 	for _, l := range licenses.licenses {
 		l.AddMatch(nil)
 	}
 	wg.Wait()
+	r.End()
 
+	defer trace.StartRegion(ctx, "finalization").End()
 	if config.ExitOnProhibitedLicenseTypes {
 		filesWithProhibitedLicenses := licenses.GetFilesWithProhibitedLicenses()
 		if len(filesWithProhibitedLicenses) > 0 {

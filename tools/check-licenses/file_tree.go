@@ -5,18 +5,21 @@
 package checklicenses
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"runtime/trace"
 	"strings"
 	"sync"
 )
 
 // NewFileTree returns an instance of FileTree, given the input configuration
 // file.
-func NewFileTree(config *Config, metrics *Metrics) *FileTree {
+func NewFileTree(ctx context.Context, config *Config, metrics *Metrics) *FileTree {
+	defer trace.StartRegion(ctx, "NewFileTree").End()
 	var ft FileTree
 	ft.Init()
 	err := filepath.Walk(config.BaseDir, func(path string, info os.FileInfo, err error) error {

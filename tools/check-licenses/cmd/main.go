@@ -5,11 +5,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime/pprof"
+	"runtime/trace"
 	"strings"
 
 	checklicenses "go.fuchsia.dev/fuchsia/tools/check-licenses"
@@ -30,10 +33,35 @@ var (
 	exitOnProhibitedLicenseTypes = flag.Bool("exit_on_prohibited_license_types", false, "If true, exits if it encounters a prohibited license type.")
 	outputLicenseFile            = flag.Bool("output_license_file", true, "If true, outputs a license file with all the licenses for the project.")
 	prohibitedLicenseTypes       = flag.String("prohibited_license_types", "", "Comma separated list of license types that are prohibited. This arg is added to the list of prohibitedLicenseTypes in the config file.")
+	pproffile                    = flag.String("pprof", "", "generate file that can be parsed by go tool pprof")
+	tracefile                    = flag.String("trace", "", "generate file that can be parsed by go tool trace")
 )
 
 func mainImpl() error {
 	flag.Parse()
+	if *tracefile != "" {
+		f, err := os.Create(*tracefile)
+		if err != nil {
+			return fmt.Errorf("failed to create trace output file: %s", err)
+		}
+		defer f.Close()
+		if err := trace.Start(f); err != nil {
+			return fmt.Errorf("failed to start trace: %s", err)
+		}
+		defer trace.Stop()
+	}
+	if *pproffile != "" {
+		f, err := os.Create(*pproffile)
+		if err != nil {
+			return fmt.Errorf("failed to create pprof output file: %s", err)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			return fmt.Errorf("failed to start pprof: %s", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
 	// TODO(jcecil): incorporate https://godoc.org/github.com/golang/glog
 	if *logLevel == 0 {
 		log.SetOutput(ioutil.Discard)
@@ -100,7 +128,7 @@ func mainImpl() error {
 		//config.Target = *target
 	}
 
-	if err := checklicenses.Walk(&config); err != nil {
+	if err := checklicenses.Walk(context.Background(), &config); err != nil {
 		return fmt.Errorf("failed to analyze the given directory: %v", err)
 	}
 	return nil

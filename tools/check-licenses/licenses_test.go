@@ -5,6 +5,7 @@
 package checklicenses
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 
 func TestLicensesMatchSingleLicenseFile(t *testing.T) {
 	folder := mkDir(t)
-	l, err := NewLicenses(folder, []string{"gcc"})
+	l, err := NewLicenses(context.Background(), folder, []string{"gcc"})
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
 	}
@@ -32,7 +33,7 @@ func TestLicensesMatchSingleLicenseFile(t *testing.T) {
 
 func TestLicensesMatchFile(t *testing.T) {
 	folder := mkDir(t)
-	l, err := NewLicenses(folder, []string{"gcc"})
+	l, err := NewLicenses(context.Background(), folder, []string{"gcc"})
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
 	}
@@ -53,7 +54,7 @@ func TestLicensesMatchFile(t *testing.T) {
 
 func TestNewLicenses(t *testing.T) {
 	folder := mkDir(t)
-	l, err := NewLicenses(folder, []string{"gcc"})
+	l, err := NewLicenses(context.Background(), folder, []string{"gcc"})
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
 	}
