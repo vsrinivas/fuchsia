@@ -12,89 +12,67 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"golang.org/x/sync/errgroup"
 )
 
-// NewFileTree returns an instance of FileTree, given the input configuration file.
+// NewFileTree returns an instance of FileTree, given the input configuration
+// file.
 func NewFileTree(config *Config, metrics *Metrics) *FileTree {
-	var eg errgroup.Group
-	var recursiveHelper func(string) error
-	var file_tree FileTree
-	file_tree.Init()
-
-	recursiveHelper = func(root string) error {
-		return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				fmt.Printf("error walking the path %q: %v\n", root, err)
-				return err
-			}
-			if info.IsDir() {
-				for _, skipDir := range config.SkipDirs {
-					if info.Name() == skipDir || path == skipDir {
-						log.Printf("skipping a dir without errors: %s", info.Name())
-						return filepath.SkipDir
-					}
-				}
-
-				for _, customProjectLicense := range config.CustomProjectLicenses {
-					if path == customProjectLicense.ProjectRoot {
-						metrics.increment("num_single_license_files")
-						// TODO(omerlevran): Fix the directory and file_root having to repeat a
-						// directory.
-						file_tree.addSingleLicenseFile(path, customProjectLicense.LicenseLocation)
-						break
-					}
-				}
-
-				// TODO(omerlevran): Use filepath.Walk() as it is supposed to be used.
-				// It's faster.
-				if root != path {
-					path := path
-					eg.Go(func() error {
-						return recursiveHelper(path)
-					})
+	var ft FileTree
+	ft.Init()
+	err := filepath.Walk(config.BaseDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			for _, skipDir := range config.SkipDirs {
+				if info.Name() == skipDir || path == skipDir {
+					log.Printf("skipping: %s", path)
 					return filepath.SkipDir
 				}
-				return nil
 			}
-
-			if info.Size() == 0 {
-				// An empty file has no content to copyright. Skip.
-				return nil
-			}
-			for _, skipFile := range config.SkipFiles {
-				if strings.ToLower(info.Name()) == skipFile {
-					log.Printf("skipping a file without errors: %s", info.Name())
-					return nil
-				}
-			}
-			if isSingleLicenseFile(info.Name(), config.SingleLicenseFiles) {
-				metrics.increment("num_single_license_files")
-				file_tree.addSingleLicenseFile(path, filepath.Base(path))
-			} else {
-				if isValidExtension(path, config) {
-					metrics.increment("num_non_single_license_files")
-					file_tree.addFile(path)
-				} else {
-					metrics.increment("num_extensions_excluded")
+			for _, customProjectLicense := range config.CustomProjectLicenses {
+				if path == customProjectLicense.ProjectRoot {
+					metrics.increment("num_single_license_files")
+					// TODO(omerlevran): Fix the directory and file_root having to repeat
+					// a directory.
+					ft.addSingleLicenseFile(path, customProjectLicense.LicenseLocation)
+					break
 				}
 			}
 			return nil
-		})
-	}
+		}
 
-	eg.Go(func() error {
-		return recursiveHelper(config.BaseDir)
+		if info.Size() == 0 {
+			// An empty file has no content to copyright. Skip.
+			return nil
+		}
+		for _, skipFile := range config.SkipFiles {
+			if strings.ToLower(info.Name()) == skipFile {
+				log.Printf("skipping: %s", path)
+				return nil
+			}
+		}
+		if isSingleLicenseFile(info.Name(), config.SingleLicenseFiles) {
+			metrics.increment("num_single_license_files")
+			ft.addSingleLicenseFile(path, filepath.Base(path))
+			return nil
+		}
+		if isValidExtension(path, config) {
+			metrics.increment("num_non_single_license_files")
+			ft.addFile(path)
+		} else {
+			log.Printf("ignoring: %s", path)
+			metrics.increment("num_extensions_excluded")
+		}
+		return nil
 	})
-
-	if err := eg.Wait(); err != nil {
+	if err != nil {
 		// TODO(jcecil): This must be an error.
 		fmt.Printf("error while traversing directory '%v", err)
 		return nil
 	}
 
-	return &file_tree
+	return &ft
 }
 
 // FileTree is an in memory representation of the state of the repository.
@@ -116,8 +94,7 @@ func (license_file_tree *FileTree) Init() {
 func (file_tree *FileTree) getSetCurr(path string) *FileTree {
 	children := strings.Split(filepath.Dir(path), "/")
 	curr := file_tree
-	currBkp := curr
-	curr.Lock()
+	file_tree.Lock()
 	for _, child := range children {
 		if _, found := curr.children[child]; !found {
 			curr.children[child] = &FileTree{name: child, parent: curr}
@@ -125,7 +102,7 @@ func (file_tree *FileTree) getSetCurr(path string) *FileTree {
 		}
 		curr = curr.children[child]
 	}
-	currBkp.Unlock()
+	file_tree.Unlock()
 	return curr
 }
 
