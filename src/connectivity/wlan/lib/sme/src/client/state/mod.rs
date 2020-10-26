@@ -115,6 +115,7 @@ pub struct Associated {
     cap: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
     wmm_param: Option<ie::WmmParam>,
+    last_channel_switch_time: Option<zx::Time>,
 }
 
 statemachine!(
@@ -452,6 +453,7 @@ impl Associating {
             cap: self.cap,
             protection_ie: self.protection_ie,
             wmm_param,
+            last_channel_switch_time: None,
         })
     }
 
@@ -534,12 +536,14 @@ impl Associated {
                 last_snr: self.last_snr,
                 bssid: self.bss.bssid,
                 ssid: self.bss.ssid.clone(),
+                channel: Channel::from_fidl(self.bss.chan),
                 reason_code: ind.reason_code,
                 disconnect_source: if ind.locally_initiated {
                     DisconnectSource::Mlme
                 } else {
                     DisconnectSource::Ap
                 },
+                time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
             };
             context.info.report_disconnect(disconnect_info);
         }
@@ -587,12 +591,14 @@ impl Associated {
                     last_snr: self.last_snr,
                     bssid: self.bss.bssid,
                     ssid: self.bss.ssid.clone(),
+                    channel: Channel::from_fidl(self.bss.chan),
                     reason_code: ind.reason_code.into_primitive(),
                     disconnect_source: if ind.locally_initiated {
                         DisconnectSource::Mlme
                     } else {
                         DisconnectSource::Ap
                     },
+                    time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
                 };
                 context.info.report_disconnect(disconnect_info);
             }
@@ -667,9 +673,8 @@ impl Associated {
     }
 
     fn on_channel_switched(&mut self, info: fidl_mlme::ChannelSwitchInfo) {
-        // Right now we just update the stored bss description, but we may want to provide some
-        // notice or metric for this in the future.
-        self.bss.chan.primary = info.new_channel
+        self.bss.chan.primary = info.new_channel;
+        self.last_channel_switch_time.replace(now());
     }
 
     fn handle_timeout(
@@ -922,8 +927,10 @@ impl ClientState {
                     last_snr: state.last_snr,
                     bssid: state.bss.bssid,
                     ssid: state.bss.ssid.clone(),
+                    channel: Channel::from_fidl(state.bss.chan),
                     reason_code,
                     disconnect_source: DisconnectSource::User,
+                    time_since_channel_switch: state.last_channel_switch_time.map(|t| now() - t),
                 };
                 context.info.report_disconnect(disconnect_info);
             }
@@ -2537,6 +2544,7 @@ mod tests {
             cap: None,
             protection_ie: None,
             wmm_param: None,
+            last_channel_switch_time: None,
         })
         .into()
     }
@@ -2561,6 +2569,7 @@ mod tests {
             cap: None,
             protection_ie: None,
             wmm_param: None,
+            last_channel_switch_time: None,
         })
         .into()
     }
@@ -2590,6 +2599,7 @@ mod tests {
             cap: None,
             protection_ie: None,
             wmm_param: None,
+            last_channel_switch_time: None,
         })
         .into()
     }

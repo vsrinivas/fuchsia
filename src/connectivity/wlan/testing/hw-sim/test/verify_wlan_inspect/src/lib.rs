@@ -242,6 +242,11 @@ async fn verify_wlan_inspect() {
                     bssid_hash: AnyProperty,
                     ssid: "open",
                     ssid_hash: AnyProperty,
+                    channel: {
+                        primary: 1u64,
+                        cbw: "Cbw20",
+                        secondary80: 0u64,
+                    },
                     last_rssi: AnyProperty,
                     last_snr: AnyProperty,
                     reason_code: AnyProperty,

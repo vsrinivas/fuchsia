@@ -19,6 +19,7 @@ use {
     derivative::Derivative,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
+    wlan_common,
 };
 
 #[derive(Debug, PartialEq)]
@@ -335,8 +336,10 @@ pub struct DisconnectInfo {
     pub last_snr: i8,
     pub bssid: [u8; 6],
     pub ssid: Ssid,
+    pub channel: wlan_common::channel::Channel,
     pub reason_code: u16,
     pub disconnect_source: DisconnectSource,
+    pub time_since_channel_switch: Option<zx::Duration>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
