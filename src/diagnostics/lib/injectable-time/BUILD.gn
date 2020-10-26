@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("injectable-time") {
   version = "0.1.0"
@@ -18,20 +18,16 @@ rustc_library("injectable-time") {
   ]
 }
 
-test_package("injectable-time-tests") {
+fuchsia_unittest_package("injectable-time-test") {
+  manifest = "meta/injectable-time-test.cmx"
   deps = [ ":injectable-time_test" ]
-  tests = [
-    {
-      name = "injectable_time_lib_test"
-    },
-  ]
 }
 
 group("tests") {
   testonly = true
   deps = [
     # Since this uses system time, we want to test on both host and Fuchsia.
-    ":injectable-time-tests",
+    ":injectable-time-test",
     ":injectable-time_test($host_toolchain)",
   ]
 }

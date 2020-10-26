@@ -3,41 +3,48 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//build/rust/rustc_test.gni")
+
+bin_deps = [
+  "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+  "//src/connectivity/overnet/lib/hoist",
+  "//src/diagnostics/lib/selectors",
+  "//src/lib/diagnostics/data/rust",
+  "//src/lib/diagnostics/inspect/node-hierarchy/rust",
+  "//src/lib/fidl/rust/fidl",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:byteorder",
+  "//third_party/rust_crates:clap",
+  "//third_party/rust_crates:difference",
+  "//third_party/rust_crates:lazy_static",
+  "//third_party/rust_crates:libc",
+  "//third_party/rust_crates:log",
+  "//third_party/rust_crates:regex",
+  "//third_party/rust_crates:serde",
+  "//third_party/rust_crates:serde_json",
+  "//third_party/rust_crates:structopt",
+  "//third_party/rust_crates:tempfile",
+  "//third_party/rust_crates:termion",
+  "//third_party/rust_crates:thiserror",
+]
+
+bin_sources = [ "src/main.rs" ]
 
 rustc_binary("bin") {
   name = "diag_tool"
   version = "0.1.0"
-  with_unit_tests = true
   edition = "2018"
 
-  deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//src/connectivity/overnet/lib/hoist",
-    "//src/diagnostics/lib/selectors",
-    "//src/lib/diagnostics/data/rust",
-    "//src/lib/diagnostics/inspect/node-hierarchy/rust",
-    "//src/lib/fidl/rust/fidl",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:clap",
-    "//third_party/rust_crates:difference",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:regex",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:structopt",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:termion",
-    "//third_party/rust_crates:thiserror",
-  ]
+  deps = bin_deps
 
-  sources = [ "src/main.rs" ]
+  sources = bin_sources
+}
+
+rustc_test("diag-tool-unittests") {
+  deps = [ ":bin" ] + bin_deps
+  source_root = "src/main.rs"
+  sources = bin_sources
 }
 
 install_host_tools("diag_tool_host") {
@@ -45,18 +52,7 @@ install_host_tools("diag_tool_host") {
   outputs = [ "diag_tool" ]
 }
 
-test_package("diag_tool_tests") {
-  deps = [ ":bin_test" ]
-  tests = [
-    {
-      name = "diag_tool_bin_test"
-      dest = "diag_tool_bin_test"
-      environments = basic_envs
-    },
-  ]
-}
-
 group("host_tests") {
   testonly = true
-  deps = [ ":diag_tool_tests($host_toolchain)" ]
+  deps = [ ":diag-tool-unittests($host_toolchain)" ]
 }

@@ -21,5 +21,5 @@ fx set core.chromebook-x64 --with '//topaz/bundles:buildbot' --with //src/diagno
 To run the test:
 ```
 --with //src/diagnostics/validator/inspect/lib/cpp:tests
-fx run-test inspect_validator_test_cpp
+fx test inspect-validator-test-cpp
 ```

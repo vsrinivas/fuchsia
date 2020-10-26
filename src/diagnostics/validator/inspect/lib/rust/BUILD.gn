@@ -4,10 +4,9 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-rustc_binary("inspect_validator_rust_puppet_bin") {
+rustc_binary("bin") {
   name = "inspect_validator_rust_puppet"
   edition = "2018"
   testonly = true
@@ -34,33 +33,21 @@ rustc_binary("inspect_validator_rust_puppet_bin") {
   sources = [ "src/main.rs" ]
 }
 
-test_package("inspect_validator_test_rust") {
+fuchsia_component("inspect-validator-rust-puppet") {
+  testonly = true
+  manifest = "meta/inspect-validator-rust-puppet.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_unittest_package("inspect-validator-test-rust") {
+  manifest = "meta/validator.cmx"
   deps = [
-    ":inspect_validator_rust_puppet_bin",
+    ":inspect-validator-rust-puppet",
     "//src/diagnostics/validator/inspect:validator_bin",
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/inspect_validator_rust_puppet.cmx")
-      dest = "inspect_validator_rust_puppet.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "inspect_validator_rust_puppet"
-    },
-  ]
-
-  tests = [
-    {
-      name = "validator"
-      environments = basic_envs
-    },
   ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":inspect_validator_test_rust" ]
+  deps = [ ":inspect-validator-test-rust" ]
 }

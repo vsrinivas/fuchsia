@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/diag_tool_bin_test"
+        "binary": "bin/selectors_lib_test"
     },
     "sandbox": {
         "features": [

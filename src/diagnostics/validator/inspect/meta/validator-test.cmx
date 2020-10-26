@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/validator_bin_test"
+        "binary": "bin/validator_bin_test"
     },
     "sandbox": {
         "services": [

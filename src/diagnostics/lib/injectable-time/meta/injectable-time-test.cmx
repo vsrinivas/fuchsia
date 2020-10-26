@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/injectable_time_lib_test"
+        "binary": "bin/injectable_time_lib_test"
     },
     "sandbox": {
         "features": [

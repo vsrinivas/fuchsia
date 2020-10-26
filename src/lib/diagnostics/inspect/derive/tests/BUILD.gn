@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("fuchsia_inspect_derive_tests") {
   edition = "2018"
@@ -30,23 +30,22 @@ rustc_test("fuchsia_inspect_derive_import_tests") {
   sources = [ "src/import.rs" ]
 }
 
-test_package("fuchsia-inspect-derive-tests") {
-  deps = [
-    ":fuchsia_inspect_derive_import_tests",
-    ":fuchsia_inspect_derive_tests",
-  ]
+fuchsia_component("fuchsia-inspect-derive-test") {
+  testonly = true
+  manifest = "meta/fuchsia-inspect-derive-test.cmx"
+  deps = [ ":fuchsia_inspect_derive_tests" ]
+}
 
-  tests = [
-    {
-      name = "fuchsia_inspect_derive_tests"
-      dest = "fuchsia-inspect-derive-tests"
-      environments = basic_envs
-    },
-    {
-      name = "fuchsia_inspect_derive_import_tests"
-      dest = "fuchsia-inspect-derive-import-tests"
-      environments = basic_envs
-    },
+fuchsia_component("fuchsia-inspect-derive-import-test") {
+  testonly = true
+  manifest = "meta/fuchsia-inspect-derive-import-test.cmx"
+  deps = [ ":fuchsia_inspect_derive_import_tests" ]
+}
+
+fuchsia_test_package("fuchsia-inspect-derive-tests") {
+  test_components = [
+    ":fuchsia-inspect-derive-test",
+    ":fuchsia-inspect-derive-import-test",
   ]
 }
 

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/fuchsia-inspect-derive-tests"
+        "binary": "bin/fuchsia_inspect_derive_import_tests"
     },
     "sandbox": {
         "services": [

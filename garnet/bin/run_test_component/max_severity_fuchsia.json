@@ -297,7 +297,7 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/inspect_validator_test_rust#meta/validator.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/inspect-validator-test-rust#meta/inspect-validator-test-rust.cmx",
          "max_severity": "ERROR"
       },
       {

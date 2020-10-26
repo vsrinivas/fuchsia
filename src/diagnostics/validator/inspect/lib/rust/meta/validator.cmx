@@ -9,12 +9,12 @@
     "program": {
         "args": [
             "--url",
-            "fuchsia-pkg://fuchsia.com/inspect_validator_test_rust#meta/inspect_validator_rust_puppet.cmx",
+            "fuchsia-pkg://fuchsia.com/inspect-validator-test-rust#meta/inspect-validator-rust-puppet.cmx",
             "--output",
             "text",
             "--test-archive"
         ],
-        "binary": "test/validator"
+        "binary": "bin/validator"
     },
     "sandbox": {
         "services": [

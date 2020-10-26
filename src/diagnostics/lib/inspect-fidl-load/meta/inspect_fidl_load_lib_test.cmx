@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/inspect_fidl_load_lib_test"
-    }
-}

@@ -93,7 +93,7 @@ Puppet test to be run in CQ and CI.
 
 There are the following CMX files in [//src/diagnostics/validator/inspect/lib/rust/meta](/src/diagnostics/validator/inspect/lib/rust/meta):
 
-* [inspect_validator_rust_puppet.cmx](/src/diagnostics/validator/inspect/lib/rust/meta/inspect_validator_rust_puppet.cmx)
+* [inspect-validator-rust-puppet.cmx](/src/diagnostics/validator/inspect/lib/rust/meta/inspect-validator-rust-puppet.cmx)
 
   Lets the puppet binary run and use the logger. It's referred to in the
 `meta` section of `test_package("inspect_validator_test_rust")`.

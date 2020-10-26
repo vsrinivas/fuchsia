@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fuchsia-inspect-node-hierarchy") {
   version = "0.1.0"
@@ -37,14 +38,9 @@ rustc_library("fuchsia-inspect-node-hierarchy") {
   ]
 }
 
-test_package("fuchsia-inspect-node-hierarchy-tests") {
+fuchsia_unittest_package("fuchsia-inspect-node-hierarchy-test") {
+  executable_path = "bin/fuchsia_inspect_node_hierarchy_lib_test"
   deps = [ ":fuchsia-inspect-node-hierarchy_test" ]
-
-  tests = [
-    {
-      name = "fuchsia_inspect_node_hierarchy_lib_test"
-    },
-  ]
 }
 
 group("rust") {
@@ -53,5 +49,5 @@ group("rust") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fuchsia-inspect-node-hierarchy-tests" ]
+  deps = [ ":fuchsia-inspect-node-hierarchy-test" ]
 }
