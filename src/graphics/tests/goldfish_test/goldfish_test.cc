@@ -15,7 +15,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 TEST(GoldfishPipeTests, GoldfishPipeTest) {
   int fd = open("/dev/class/goldfish-pipe/000", O_RDWR);
@@ -65,7 +65,7 @@ TEST(GoldfishPipeTests, GoldfishPipeTest) {
     auto result = pipe.Write(1, 0);
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
-    EXPECT_EQ(result.Unwrap()->actual, 1);
+    EXPECT_EQ(result.Unwrap()->actual, 1U);
   }
 
   // Read 1 byte result.
@@ -73,7 +73,7 @@ TEST(GoldfishPipeTests, GoldfishPipeTest) {
     auto result = pipe.Read(1, 0);
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
-    EXPECT_EQ(result.Unwrap()->actual, 1);
+    EXPECT_EQ(result.Unwrap()->actual, 1U);
   }
 
   uint8_t result = 0;
@@ -175,7 +175,7 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
     EXPECT_EQ(result.Unwrap()->status, ZX_OK);
 
     info = std::move(result.Unwrap()->buffer_collection_info);
-    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_EQ(info.buffer_count, 1U);
     EXPECT_TRUE(info.buffers[0].vmo.is_valid());
   }
 
@@ -308,7 +308,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible) {
     EXPECT_EQ(result.Unwrap()->status, ZX_OK);
 
     info = std::move(result.Unwrap()->buffer_collection_info);
-    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_EQ(info.buffer_count, 1U);
     EXPECT_TRUE(info.buffers[0].vmo.is_valid());
     EXPECT_EQ(info.settings.buffer_settings.coherency_domain,
               llcpp::fuchsia::sysmem::CoherencyDomain::CPU);
@@ -397,7 +397,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisibleBuffer) {
     EXPECT_EQ(result.Unwrap()->status, ZX_OK);
 
     info = std::move(result.Unwrap()->buffer_collection_info);
-    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_EQ(info.buffer_count, 1U);
     EXPECT_TRUE(info.buffers[0].vmo.is_valid());
     EXPECT_EQ(info.settings.buffer_settings.coherency_domain,
               llcpp::fuchsia::sysmem::CoherencyDomain::CPU);
@@ -484,7 +484,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
     EXPECT_EQ(result.Unwrap()->status, ZX_OK);
 
     info = std::move(result.Unwrap()->buffer_collection_info);
-    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_EQ(info.buffer_count, 1u);
     EXPECT_TRUE(info.buffers[0].vmo.is_valid());
   }
 
@@ -596,7 +596,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer_CreateBuffer2) {
     EXPECT_EQ(result.Unwrap()->status, ZX_OK);
 
     info = std::move(result.Unwrap()->buffer_collection_info);
-    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_EQ(info.buffer_count, 1u);
     EXPECT_TRUE(info.buffers[0].vmo.is_valid());
   }
 
@@ -783,7 +783,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
     EXPECT_EQ(result.Unwrap()->status, ZX_OK);
 
     info = std::move(result.Unwrap()->buffer_collection_info);
-    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_EQ(info.buffer_count, 1u);
     EXPECT_TRUE(info.buffers[0].vmo.is_valid());
   }
 
@@ -936,7 +936,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateBuffer2Args) {
     EXPECT_EQ(result.Unwrap()->status, ZX_OK);
 
     info = std::move(result.Unwrap()->buffer_collection_info);
-    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_EQ(info.buffer_count, 1u);
     EXPECT_TRUE(info.buffers[0].vmo.is_valid());
   }
 
@@ -1040,7 +1040,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_GetNotCreatedColorBuffer) {
     EXPECT_EQ(result.Unwrap()->status, ZX_OK);
 
     info = std::move(result.Unwrap()->buffer_collection_info);
-    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_EQ(info.buffer_count, 1u);
     EXPECT_TRUE(info.buffers[0].vmo.is_valid());
   }
 
@@ -1092,7 +1092,7 @@ TEST(GoldfishAddressSpaceTests, GoldfishAddressSpaceTest) {
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
 
     paddr = result.Unwrap()->paddr;
-    EXPECT_NE(paddr, 0);
+    EXPECT_NE(paddr, 0U);
 
     vmo = std::move(result.Unwrap()->vmo);
     EXPECT_EQ(vmo.is_valid(), true);
@@ -1109,7 +1109,7 @@ TEST(GoldfishAddressSpaceTests, GoldfishAddressSpaceTest) {
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
 
     paddr2 = result.Unwrap()->paddr;
-    EXPECT_NE(paddr2, 0);
+    EXPECT_NE(paddr2, 0U);
     EXPECT_NE(paddr2, paddr);
 
     vmo2 = std::move(result.Unwrap()->vmo);
@@ -1272,7 +1272,7 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
 
     physical_addr = result.Unwrap()->paddr;
-    EXPECT_NE(physical_addr, 0);
+    EXPECT_NE(physical_addr, 0U);
 
     address_space_vmo = std::move(result.Unwrap()->vmo);
     EXPECT_EQ(address_space_vmo.is_valid(), true);
@@ -1309,7 +1309,7 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
     EXPECT_EQ(result.Unwrap()->status, ZX_OK);
 
     info = std::move(result.Unwrap()->buffer_collection_info);
-    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_EQ(info.buffer_count, 1U);
     EXPECT_TRUE(info.buffers[0].vmo.is_valid());
   }
 
@@ -1386,7 +1386,8 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
 
 int main(int argc, char** argv) {
   if (access("/dev/sys/platform/acpi/goldfish", F_OK) != -1) {
-    return zxtest::RunAllTests(argc, argv);
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
   }
   return 0;
 }

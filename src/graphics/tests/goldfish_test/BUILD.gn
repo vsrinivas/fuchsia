@@ -14,10 +14,10 @@ executable("bin") {
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/lib/fdio",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
   ]
 }
 
