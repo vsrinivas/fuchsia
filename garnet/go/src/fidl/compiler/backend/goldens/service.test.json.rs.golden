@@ -709,7 +709,7 @@ pub enum EmptyServiceRequest {}
 impl fidl::endpoints::UnifiedServiceRequest for EmptyServiceRequest {
     type Service = EmptyServiceMarker;
 
-    fn dispatch(name: &str, channel: fidl::AsyncChannel) -> Self {
+    fn dispatch(name: &str, _channel: fidl::AsyncChannel) -> Self {
         match name {
             _ => panic!("no such member protocol name for service EmptyService"),
         }
@@ -755,11 +755,11 @@ pub enum SingleMemberServiceRequest {
 impl fidl::endpoints::UnifiedServiceRequest for SingleMemberServiceRequest {
     type Service = SingleMemberServiceMarker;
 
-    fn dispatch(name: &str, channel: fidl::AsyncChannel) -> Self {
+    fn dispatch(name: &str, _channel: fidl::AsyncChannel) -> Self {
         match name {
             "single_member" => Self::SingleMember(
                 <FirstProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(
-                    channel,
+                    _channel,
                 ),
             ),
             _ => panic!("no such member protocol name for service SingleMemberService"),
@@ -814,16 +814,16 @@ pub enum MultiHeterogeneousMemberServiceRequest {
 impl fidl::endpoints::UnifiedServiceRequest for MultiHeterogeneousMemberServiceRequest {
     type Service = MultiHeterogeneousMemberServiceMarker;
 
-    fn dispatch(name: &str, channel: fidl::AsyncChannel) -> Self {
+    fn dispatch(name: &str, _channel: fidl::AsyncChannel) -> Self {
         match name {
             "first_member" => Self::FirstMember(
                 <FirstProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(
-                    channel,
+                    _channel,
                 ),
             ),
             "second_member" => Self::SecondMember(
                 <SecondProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(
-                    channel,
+                    _channel,
                 ),
             ),
             _ => panic!("no such member protocol name for service MultiHeterogeneousMemberService"),
@@ -884,16 +884,16 @@ pub enum MultiHomogeneousMemberServiceRequest {
 impl fidl::endpoints::UnifiedServiceRequest for MultiHomogeneousMemberServiceRequest {
     type Service = MultiHomogeneousMemberServiceMarker;
 
-    fn dispatch(name: &str, channel: fidl::AsyncChannel) -> Self {
+    fn dispatch(name: &str, _channel: fidl::AsyncChannel) -> Self {
         match name {
             "first_member" => Self::FirstMember(
                 <FirstProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(
-                    channel,
+                    _channel,
                 ),
             ),
             "second_member" => Self::SecondMember(
                 <FirstProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(
-                    channel,
+                    _channel,
                 ),
             ),
             _ => panic!("no such member protocol name for service MultiHomogeneousMemberService"),

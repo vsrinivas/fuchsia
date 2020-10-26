@@ -42,7 +42,12 @@ class {{ .Name }} final {
 class {{ .Name }}::Handler final {
  public:
   /// Constructs a new |Handler|. Does not take ownership of |service|.
-  explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
+  explicit Handler(::fidl::ServiceHandlerBase* service)
+  {{- with .Members }}
+      : service_(service) {}
+  {{- else }}
+      { (void)service; }
+  {{- end }}
 
   {{- range .Members }}
   /// Adds member "{{ .Name }}" to the service instance. |handler| is invoked when a connection
@@ -57,7 +62,9 @@ class {{ .Name }}::Handler final {
   {{- end }}
 
  private:
+  {{- with .Members }}
   ::fidl::ServiceHandlerBase* const service_;
+  {{- end }}
 };
 #endif // __Fuchsia
 {{- end }}

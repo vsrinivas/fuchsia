@@ -659,10 +659,10 @@ pub enum ServiceRequest {
 impl fidl::endpoints::UnifiedServiceRequest for ServiceRequest {
     type Service = ServiceMarker;
 
-    fn dispatch(name: &str, channel: fidl::AsyncChannel) -> Self {
+    fn dispatch(name: &str, _channel: fidl::AsyncChannel) -> Self {
         match name {
             "interface" => Self::Interface(
-                <InterfaceRequestStream as fidl::endpoints::RequestStream>::from_channel(channel),
+                <InterfaceRequestStream as fidl::endpoints::RequestStream>::from_channel(_channel),
             ),
             _ => panic!("no such member protocol name for service Service"),
         }

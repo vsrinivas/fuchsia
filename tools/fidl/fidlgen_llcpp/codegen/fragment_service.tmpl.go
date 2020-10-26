@@ -24,7 +24,11 @@ class {{ .Name }} final {
     ServiceClient() = delete;
    public:
     ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
-    : dir_(std::move(dir)), connect_func_(connect_func) {}
+    {{- with .Members }}
+        : dir_(std::move(dir)), connect_func_(connect_func) {}
+    {{- else }}
+        { (void)dir; (void)connect_func; }
+    {{- end }}
     {{- range .Members }}
   {{ "" }}
     // Connects to the member protocol "{{ .Name }}". Returns a |fidl::ClientChannel| on
@@ -56,8 +60,10 @@ class {{ .Name }} final {
     {{- end }}
 
    private:
+   {{- with .Members }}
     ::zx::channel dir_;
     ::fidl::internal::ConnectMemberFunc connect_func_;
+   {{- end }}
   };
 
   // Facilitates member protocol registration for servers.
@@ -65,7 +71,11 @@ class {{ .Name }} final {
    public:
     // Constructs a FIDL Service-typed handler. Does not take ownership of |service_handler|.
     explicit Handler(::llcpp::fidl::ServiceHandlerInterface* service_handler)
+    {{- with .Members }}
         : service_handler_(service_handler) {}
+    {{- else }}
+        { (void)service_handler; }
+    {{- end }}
 
     {{- range .Members }}
     {{ "" }}
@@ -81,7 +91,9 @@ class {{ .Name }} final {
     {{- end }}
 
    private:
+   {{- with .Members }}
     ::llcpp::fidl::ServiceHandlerInterface* service_handler_;  // Not owned.
+   {{- end }}
   };
 };
 {{- end }}

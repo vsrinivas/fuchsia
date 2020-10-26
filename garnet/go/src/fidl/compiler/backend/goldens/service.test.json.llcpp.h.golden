@@ -906,12 +906,12 @@ class EmptyService final {
 
    public:
     ServiceClient(::zx::channel dir,
-                  ::fidl::internal::ConnectMemberFunc connect_func)
-        : dir_(std::move(dir)), connect_func_(connect_func) {}
+                  ::fidl::internal::ConnectMemberFunc connect_func) {
+      (void)dir;
+      (void)connect_func;
+    }
 
    private:
-    ::zx::channel dir_;
-    ::fidl::internal::ConnectMemberFunc connect_func_;
   };
 
   // Facilitates member protocol registration for servers.
@@ -919,11 +919,11 @@ class EmptyService final {
    public:
     // Constructs a FIDL Service-typed handler. Does not take ownership of
     // |service_handler|.
-    explicit Handler(::llcpp::fidl::ServiceHandlerInterface* service_handler)
-        : service_handler_(service_handler) {}
+    explicit Handler(::llcpp::fidl::ServiceHandlerInterface* service_handler) {
+      (void)service_handler;
+    }
 
    private:
-    ::llcpp::fidl::ServiceHandlerInterface* service_handler_;  // Not owned.
   };
 };
 

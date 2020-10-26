@@ -36,11 +36,11 @@ pub enum {{ $service.Name }}Request {
 impl fidl::endpoints::UnifiedServiceRequest for {{ $service.Name }}Request {
     type Service = {{ $service.Name }}Marker;
 
-    fn dispatch(name: &str, channel: fidl::AsyncChannel) -> Self {
+    fn dispatch(name: &str, _channel: fidl::AsyncChannel) -> Self {
         match name {
             {{- range $member := $service.Members }}
             "{{ $member.Name }}" => Self::{{ $member.CamelName }}(
-                <{{ $member.ProtocolType }}RequestStream as fidl::endpoints::RequestStream>::from_channel(channel),
+                <{{ $member.ProtocolType }}RequestStream as fidl::endpoints::RequestStream>::from_channel(_channel),
             ),
             {{- end }}
             _ => panic!("no such member protocol name for service {{ $service.Name }}"),

@@ -86,9 +86,6 @@ group("goldens") {
 
     # TODO(fxbug.dev/62524): Fix Ord/Hash trait issue with fidl::Resource.
     "//zircon/tools/fidl/testdata:fidl.test.handles",
-
-    # TODO(fxbug.dev/62521): Make empty service compile.
-    "//zircon/tools/fidl/testdata:fidl.test.service",
   ]
 
   deps = []

@@ -32,10 +32,9 @@ class OnlyHlcpp final {
 class OnlyHlcpp::Handler final {
  public:
   /// Constructs a new |Handler|. Does not take ownership of |service|.
-  explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
+  explicit Handler(::fidl::ServiceHandlerBase* service) { (void)service; }
 
  private:
-  ::fidl::ServiceHandlerBase* const service_;
 };
 #endif  // __Fuchsia
 
