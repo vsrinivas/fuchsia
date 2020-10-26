@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("ltr-578als-bind") {
+  rules = "ltr-578als.bind"
+  output = "ltr-578als-bind.h"
+  tests = "ltr-578als-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("lite-on") {
   configs += [
@@ -18,6 +29,7 @@ driver_module("lite-on") {
   }
   sources = [ "ltr-578als.cc" ]
   deps = [
+    ":ltr-578als-bind",
     "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/banjo/ddk.protocol.i2c",
     "//src/devices/i2c/lib/device-protocol-i2c",
@@ -32,9 +44,6 @@ driver_module("lite-on") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
 
@@ -55,6 +64,7 @@ test("ltr-578als-test") {
     "ltr-578als.cc",
   ]
   deps = [
+    ":ltr-578als-bind",
     "//sdk/banjo/ddk.protocol.i2c",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
@@ -70,9 +80,6 @@ test("ltr-578als-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
 
@@ -90,5 +97,8 @@ unittest_package("ltr-578als-test-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":ltr-578als-test-package" ]
+  deps = [
+    ":ltr-578als-bind_test",
+    ":ltr-578als-test-package",
+  ]
 }

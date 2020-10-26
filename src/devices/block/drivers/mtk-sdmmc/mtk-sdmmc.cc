@@ -12,7 +12,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
@@ -25,6 +24,7 @@
 #include <hw/sdmmc.h>
 
 #include "dma_descriptors.h"
+#include "src/devices/block/drivers/mtk-sdmmc/mtk-sdmmc-bind.h"
 
 namespace {
 
@@ -915,9 +915,4 @@ static constexpr zx_driver_ops_t mtk_sdmmc_driver_ops = []() -> zx_driver_ops_t 
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(mtk_sdmmc, mtk_sdmmc_driver_ops, "zircon", "0.1", 5)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_MSDC0),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_MSDC1),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_MSDC2), ZIRCON_DRIVER_END(mtk_sdmmc)
+ZIRCON_DRIVER(mtk_sdmmc, mtk_sdmmc_driver_ops, "zircon", "0.1")

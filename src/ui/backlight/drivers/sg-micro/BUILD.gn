@@ -2,10 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
+
+bind_rules("sgm37603a-bind") {
+  rules = "sgm37603a.bind"
+  output = "sgm37603a-bind.h"
+  tests = "sgm37603a-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("sg-micro") {
   configs += [
@@ -19,6 +30,7 @@ driver_module("sg-micro") {
   ]
   sources = [ "sgm37603a.cc" ]
   deps = [
+    ":sgm37603a-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.i2c",
@@ -29,9 +41,6 @@ driver_module("sg-micro") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -48,6 +57,7 @@ test("sgm37603a-test-bin") {
     "sgm37603a.cc",
   ]
   deps = [
+    ":sgm37603a-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
@@ -58,9 +68,6 @@ test("sgm37603a-test-bin") {
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -77,5 +84,8 @@ fuchsia_unittest_package("sgm37603a-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":sgm37603a-test" ]
+  deps = [
+    ":sgm37603a-bind_test",
+    ":sgm37603a-test",
+  ]
 }

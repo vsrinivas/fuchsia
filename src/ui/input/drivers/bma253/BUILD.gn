@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("bma253-bind") {
+  rules = "bma253.bind"
+  output = "bma253-bind.h"
+  tests = "bma253-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("bma253") {
   configs += [
@@ -18,6 +29,7 @@ driver_module("bma253") {
   ]
   sources = [ "bma253.cc" ]
   deps = [
+    ":bma253-bind",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.hidbus",
@@ -28,9 +40,6 @@ driver_module("bma253") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -50,6 +59,7 @@ test("bma253-test") {
     "bma253.cc",
   ]
   deps = [
+    ":bma253-bind",
     "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/lib/fdio",
@@ -60,9 +70,6 @@ test("bma253-test") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//zircon/public/lib/fbl",
@@ -88,5 +95,8 @@ unittest_package("bma253-test-package") {
 }
 group("tests") {
   testonly = true
-  deps = [ ":bma253-test-package" ]
+  deps = [
+    ":bma253-bind_test",
+    ":bma253-test-package",
+  ]
 }

@@ -11,13 +11,14 @@
 #include <cmath>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/clock.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <soc/mt8167/mt8167-hw.h>
+
+#include "src/devices/thermal/drivers/mtk-thermal/mtk-thermal-bind.h"
 
 namespace {
 
@@ -635,8 +636,4 @@ static constexpr zx_driver_ops_t mtk_thermal_driver_ops = []() -> zx_driver_ops_
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(mtk_thermal, mtk_thermal_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_THERMAL),
-    ZIRCON_DRIVER_END(mtk_thermal)
+ZIRCON_DRIVER(mtk_thermal, mtk_thermal_driver_ops, "zircon", "0.1")

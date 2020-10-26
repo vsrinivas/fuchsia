@@ -8,11 +8,12 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+
+#include "src/devices/light-sensor/drivers/lite-on/ltr-578als-bind.h"
 
 namespace {
 
@@ -231,10 +232,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace light
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ltr_578als, light::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_LITE_ON_ALS),
-ZIRCON_DRIVER_END(ltr_578als)
-    // clang-format on
+ZIRCON_DRIVER(ltr_578als, light::driver_ops, "zircon", "0.1")

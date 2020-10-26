@@ -9,11 +9,12 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+
+#include "src/ui/input/drivers/bma253/bma253-bind.h"
 
 namespace {
 
@@ -205,7 +206,4 @@ static constexpr zx_driver_ops_t bma253_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(bma253, bma253_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_BOSCH_BMA253), ZIRCON_DRIVER_END(bma253)
+ZIRCON_DRIVER(bma253, bma253_driver_ops, "zircon", "0.1")

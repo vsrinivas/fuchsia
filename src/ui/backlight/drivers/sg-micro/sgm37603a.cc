@@ -7,13 +7,14 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/ui/backlight/drivers/sg-micro/sgm37603a-bind.h"
 
 namespace {
 
@@ -212,10 +213,4 @@ static constexpr zx_driver_ops_t sgm37603a_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(sgm37603a, sgm37603a_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_SG_MICRO_SGM37603A),
-ZIRCON_DRIVER_END(sgm37603a)
-    // clang-format on
+ZIRCON_DRIVER(sgm37603a, sgm37603a_driver_ops, "zircon", "0.1")
