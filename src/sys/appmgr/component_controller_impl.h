@@ -163,6 +163,10 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
   bool out_ready_ = false;
 
   uint32_t diagnostics_max_retries_ = 0;
+
+  // Current retry backoff ms for observing a diagnostics directory. This increases every failure up
+  // to OUT_DIAGNOSTICS_MAXIMUM_DELAY_MS.
+  uint32_t diagnostics_retry_backoff_ms_ = 0;
 };
 
 // The path to an instance of a component. Includes the realm path, component name, and the koid of

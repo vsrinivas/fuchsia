@@ -57,7 +57,8 @@ zx::process DuplicateProcess(const zx::process& process) {
 // Sadly the PseudoDir exposed in the SDK (and used by flutter) returns ZX_ERR_NOT_SUPPORTED on
 // Watch. A solution using a watcher is implemented in fxr/366977 pending watch support.
 const uint32_t MAX_RETRIES_OUT_DIAGNOSTICS = 30;
-const uint32_t OUT_DIAGNOSTICS_RETRY_DELAY_MS = 500;
+const uint32_t OUT_DIAGNOSTICS_INITIAL_RETRY_DELAY_MS = 500;
+const uint32_t OUT_DIAGNOSTICS_MAXIMUM_DELAY_MS = 15000;
 
 }  // namespace
 
@@ -119,7 +120,8 @@ ComponentControllerBase::ComponentControllerBase(
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
       ns_(std::move(ns)),
       weak_ptr_factory_(this),
-      diagnostics_max_retries_(diagnostics_max_retries) {
+      diagnostics_max_retries_(diagnostics_max_retries),
+      diagnostics_retry_backoff_ms_(OUT_DIAGNOSTICS_INITIAL_RETRY_DELAY_MS) {
   if (request.is_valid()) {
     binding_.Bind(std::move(request));
     binding_.set_error_handler([this](zx_status_t /*status*/) { Kill(); });
@@ -172,6 +174,10 @@ void ComponentControllerBase::NotifyDiagnosticsDirReady(uint32_t max_retries) {
           })
           .or_else([self = weak_ptr_factory_.GetWeakPtr(), max_retries](zx_status_t& status) {
             if (self && status == ZX_ERR_NOT_FOUND) {
+              zx::duration next_backoff_duration = zx::msec(self->diagnostics_retry_backoff_ms_);
+              self->diagnostics_retry_backoff_ms_ = std::min(
+                  self->diagnostics_retry_backoff_ms_ + OUT_DIAGNOSTICS_INITIAL_RETRY_DELAY_MS,
+                  OUT_DIAGNOSTICS_MAXIMUM_DELAY_MS);
               async::PostDelayedTask(
                   self->executor_.dispatcher(),
                   [self = std::move(self), max_retries]() {
@@ -179,7 +185,7 @@ void ComponentControllerBase::NotifyDiagnosticsDirReady(uint32_t max_retries) {
                       self->NotifyDiagnosticsDirReady(max_retries - 1);
                     }
                   },
-                  zx::msec(OUT_DIAGNOSTICS_RETRY_DELAY_MS));
+                  next_backoff_duration);
             }
             return fit::error(status);
           });
