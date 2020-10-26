@@ -22,14 +22,6 @@
 
 namespace {
 
-enum {
-  FRAGMENT_PDEV = 0,
-  FRAGMENT_EXPANDER_2,
-  FRAGMENT_EXPANDER_3,
-  FRAGMENT_SD0_CLOCK,
-  FRAGMENT_COUNT,
-};
-
 constexpr uint64_t kDmaBoundaryAlignment128M = 0x0800'0000;
 
 constexpr uint64_t kVs680CoreClockFreqHz = 200'000'000;
@@ -86,27 +78,17 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
 
   ddk::CompositeProtocolClient composite(parent);
   if (composite.is_valid()) {
-    zx_device_t* fragments[FRAGMENT_COUNT];
-    size_t fragment_count;
-    composite.GetFragments(fragments, std::size(fragments), &fragment_count);
-
-    if (fragment_count != std::size(fragments)) {
-      zxlogf(ERROR, "%s: Could not get fragments: expected %zu, got %zu", __FILE__,
-             std::size(fragments), fragment_count);
-      return ZX_ERR_NO_RESOURCES;
-    }
-
-    pdev = ddk::PDev(fragments[FRAGMENT_PDEV]);
+    pdev = ddk::PDev(composite);
 
     // TODO(bradenkell): The GPIO expander code will likely be specific to the EVK board. Remove it
     //                   when we get new hardware.
-    ddk::I2cChannel expander2(fragments[FRAGMENT_EXPANDER_2]);
+    ddk::I2cChannel expander2(composite, "i2c-expander-2");
     if (!expander2.is_valid()) {
       zxlogf(ERROR, "%s: Could not get I2C fragment", __FILE__);
       return ZX_ERR_NO_RESOURCES;
     }
 
-    ddk::I2cChannel expander3(fragments[FRAGMENT_EXPANDER_3]);
+    ddk::I2cChannel expander3(composite, "i2c-expander-3");
     if (!expander3.is_valid()) {
       zxlogf(ERROR, "%s: Could not get I2C fragment", __FILE__);
       return ZX_ERR_NO_RESOURCES;
@@ -119,7 +101,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
 
     // The SDIO core clock defaults to 100 MHz on VS680, even though the SDHCI capabilities register
     // says it is 200 MHz. Correct it so that the bus clock can be set properly.
-    ddk::ClockProtocolClient clock(fragments[FRAGMENT_SD0_CLOCK]);
+    ddk::ClockProtocolClient clock(composite, "clock-sd-0");
     if (clock.is_valid() && (status = clock.SetRate(kVs680CoreClockFreqHz)) != ZX_OK) {
       zxlogf(WARNING, "%s: Failed to set core clock frequency: %d", __FILE__, status);
     }

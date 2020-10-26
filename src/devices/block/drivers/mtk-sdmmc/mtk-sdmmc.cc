@@ -28,8 +28,6 @@
 
 namespace {
 
-enum { FRAGMENT_PDEV, FRAGMENT_RESET_GPIO, FRAGMENT_POWER_EN_GPIO, FRAGMENT_COUNT };
-
 constexpr uint32_t kIdentificationModeBusFreq = 400000;
 constexpr int kTuningDelayIterations = 4;
 
@@ -88,15 +86,7 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT] = {};
-  size_t fragment_count = 0;
-  composite.GetFragments(fragments, FRAGMENT_COUNT, &fragment_count);
-  if (fragment_count <= FRAGMENT_PDEV) {
-    zxlogf(ERROR, "%s: Failed to get fragments", __FILE__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
+  ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __FILE__);
     return ZX_ERR_NO_RESOURCES;
@@ -147,23 +137,9 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  ddk::GpioProtocolClient reset_gpio;
-  if (fragment_count > FRAGMENT_RESET_GPIO) {
-    reset_gpio = ddk::GpioProtocolClient(fragments[FRAGMENT_RESET_GPIO]);
-    if (!reset_gpio.is_valid()) {
-      zxlogf(ERROR, "%s: Failed to get reset GPIO", __FILE__);
-      return ZX_ERR_NO_RESOURCES;
-    }
-  }
-
-  ddk::GpioProtocolClient power_en_gpio;
-  if (fragment_count > FRAGMENT_POWER_EN_GPIO) {
-    power_en_gpio = ddk::GpioProtocolClient(fragments[FRAGMENT_POWER_EN_GPIO]);
-    if (!power_en_gpio.is_valid()) {
-      zxlogf(ERROR, "%s: Failed to get power enable GPIO", __FILE__);
-      return ZX_ERR_NO_RESOURCES;
-    }
-  }
+  // Both of these fragments are optional.
+  ddk::GpioProtocolClient reset_gpio(composite, "gpio-reset");
+  ddk::GpioProtocolClient power_en_gpio(composite, "gpio-power-enable");
 
   fbl::AllocChecker ac;
   std::unique_ptr<MtkSdmmc> device(new (&ac)

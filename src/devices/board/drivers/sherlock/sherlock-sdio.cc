@@ -203,7 +203,7 @@ constexpr device_fragment_part_t pwm_e_fragment[] = {
     {std::size(pwm_e_match), pwm_e_match},
 };
 constexpr device_fragment_t sdio_fragments[] = {
-    {"gpoi-wifi-power-on", std::size(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
+    {"gpio-wifi-power-on", std::size(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
     {"pwm", std::size(pwm_e_fragment), pwm_e_fragment},
 };
 

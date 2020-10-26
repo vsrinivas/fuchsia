@@ -76,12 +76,6 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   ddk::MmioBuffer mmio_;
 
  private:
-  enum {
-    FRAGMENT_PDEV,
-    FRAGMENT_GPIO_RESET,
-    FRAGMENT_COUNT,
-  };
-
   struct TuneWindow {
     uint32_t start = 0;
     uint32_t size = 0;

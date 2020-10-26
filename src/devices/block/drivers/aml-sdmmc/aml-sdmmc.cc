@@ -999,16 +999,7 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t fragment_count;
-  composite.GetFragments(fragments, std::size(fragments), &fragment_count);
-  // Only pdev fragment is required.
-  if (fragment_count < 1) {
-    AML_SDMMC_ERROR("AmlSdmmc: Could not get fragments");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
+  ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
     AML_SDMMC_ERROR("AmlSdmmc::Create: Could not get pdev: %d", status);
     return ZX_ERR_NO_RESOURCES;
@@ -1057,13 +1048,11 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  ddk::GpioProtocolClient reset_gpio;
-  if (fragment_count > FRAGMENT_GPIO_RESET) {
-    reset_gpio = fragments[FRAGMENT_GPIO_RESET];
-    if (!reset_gpio.is_valid()) {
-      AML_SDMMC_ERROR("AmlSdmmc::Create: Failed to get GPIO");
-      return ZX_ERR_NO_RESOURCES;
-    }
+  // Optional protocol.
+  ddk::GpioProtocolClient reset_gpio(composite, "gpio-wifi-power-on");
+  if (!reset_gpio.is_valid()) {
+    // Alternative name.
+    reset_gpio = ddk::GpioProtocolClient(composite, "gpio");
   }
 
   auto dev =
