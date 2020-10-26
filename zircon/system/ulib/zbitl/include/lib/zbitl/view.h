@@ -25,24 +25,26 @@ namespace zbitl {
 ///
 /// For example, the entries in a ZBI present in memory can be enumerated as follows:
 ///
-///     void ProcessZbiEntries(std::string_view data) {
-///       // Create the view.
-///       zbitl::View<std::string_view> view{data};
+/// ```
+/// void ProcessZbiEntries(std::string_view data) {
+///   // Create the view.
+///   zbitl::View<std::string_view> view{data};
 ///
-///       // Iterate over entries.
-///       for (const auto& entry : view) {
-///         printf("Found entry of type %x with payload size %ld.\n",
-///                entry.header->type,     // entry.header has type similar to "zbi_header_t *".
-///                entry.payload.size());  // entry.payload has type "std::string_view".
-///       }
+///   // Iterate over entries.
+///   for (const auto& entry : view) {
+///     printf("Found entry of type %x with payload size %ld.\n",
+///            entry.header->type,     // entry.header has type similar to "zbi_header_t *".
+///            entry.payload.size());  // entry.payload has type "std::string_view".
+///   }
 ///
-///       // Callers are required to check for errors (or call "ignore_error")
-///       // prior to object destruction. See "Error checking" below.
-///       if (auto error = view.take_error(); error.is_error()) {
-///         printf("Error encountered!\n");
-///         // ...
-///       }
-///     }
+///   // Callers are required to check for errors (or call "ignore_error")
+///   // prior to object destruction. See "Error checking" below.
+///   if (auto error = view.take_error(); error.is_error()) {
+///     printf("Error encountered!\n");
+///     // ...
+///   }
+/// }
+//  ```
 ///
 /// zbitl::View satisfies the C++20 std::forward_range concept; it satisfies the
 /// std::view concept if the Storage and Storage::error_type types support
