@@ -118,7 +118,6 @@ source_set("bcdc") {
     ":linuxisms",
     "//zircon/system/public",
   ]
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Sources for the driver core logic.
@@ -195,7 +194,6 @@ source_set("core") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   friend = [ "test/*" ]
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Source set including the driver sources, and the bus definitions conditionally compiled in on each

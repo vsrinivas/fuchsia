@@ -17,6 +17,10 @@
 #include "fwsignal.h"
 
 #include <threads.h>
+#include <zircon/errors.h>
+
+#include <cstdint>
+#include <limits>
 
 #include "bcdc.h"
 #include "brcmu_utils.h"
@@ -776,7 +780,7 @@ static void brcmf_fws_bus_txq_cleanup(struct brcmf_fws_info* fws,
     while (netbuf) {
       hslot = brcmf_netbuf_htod_tag_get_field(netbuf, HSLOT);
       hi = &fws->hanger.items[hslot];
-      WARN_ON(netbuf != hi->pkt);
+      WARN(netbuf != hi->pkt, "netbuf != hanger item pkt");
       hi->state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
       brcmu_pkt_buf_free_netbuf(netbuf);
       netbuf = brcmu_pktq_pdeq_match(txq, prec, fn, &ifidx);
@@ -827,7 +831,9 @@ static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct brcmf_netbuf
   }
   /* +2 is for Type[1] and Len[1] in TLV, plus TIM signal */
   data_offset += 2 + BRCMF_FWS_TYPE_PKTTAG_LEN;
-  fillers = round_up(data_offset, 4) - data_offset;
+  const auto fillers_unsized = round_up(data_offset, 4) - data_offset;
+  ZX_DEBUG_ASSERT(fillers_unsized >= 0 && fillers_unsized <= std::numeric_limits<uint8_t>::max());
+  fillers = static_cast<uint8_t>(fillers_unsized);
   data_offset += fillers;
 
   brcmf_netbuf_grow_head(netbuf, data_offset);
@@ -913,7 +919,7 @@ static void brcmf_fws_flow_control_check(struct brcmf_fws_info* fws, struct pktq
                                          uint8_t if_id) {
   struct brcmf_if* ifp = brcmf_get_ifp(fws->drvr, if_id);
 
-  if (WARN_ON(!ifp)) {
+  if (WARN(!ifp, "ifp null")) {
     return;
   }
 
@@ -982,7 +988,7 @@ static int brcmf_fws_macdesc_indicate(struct brcmf_fws_info* fws, uint8_t type, 
       BRCMF_DBG(TRACE, "relocate %s mac %pM", entry->name, addr);
     } else {
       BRCMF_DBG(TRACE, "use existing");
-      WARN_ON(entry->mac_handle != mac_handle);
+      WARN(entry->mac_handle != mac_handle, "fws entry mac_handle != mac_handle");
       /* TODO: what should we do here: continue, reinit, .. */
     }
   }
@@ -1255,7 +1261,12 @@ static zx_status_t brcmf_fws_enq(struct brcmf_fws_info* fws, enum brcmf_fws_netb
    * availability bitmap, if applicable
    */
   brcmf_fws_tim_update(fws, entry, fifo, true);
-  brcmf_fws_flow_control_check(fws, &entry->psq, brcmf_netbuf_if_flags_get_field(p, INDEX));
+  const auto if_id = brcmf_netbuf_if_flags_get_field(p, INDEX);
+  if (if_id > std::numeric_limits<uint8_t>::max()) {
+    BRCMF_ERR("brcmf_fws_enq failed: if_id invalid (overflow)");
+    return ZX_ERR_INTERNAL;
+  }
+  brcmf_fws_flow_control_check(fws, &entry->psq, static_cast<uint8_t>(if_id));
   return ZX_OK;
 }
 
@@ -1302,7 +1313,9 @@ static struct brcmf_netbuf* brcmf_fws_deq(struct brcmf_fws_info* fws, int fifo) 
 
     /* move dequeue position to ensure fair round-robin */
     fws->deq_node_pos[fifo] = (node_pos + i + 1) % num_nodes;
-    brcmf_fws_flow_control_check(fws, &entry->psq, brcmf_netbuf_if_flags_get_field(p, INDEX));
+    const auto if_id = brcmf_netbuf_if_flags_get_field(p, INDEX);
+    ZX_DEBUG_ASSERT(if_id <= std::numeric_limits<uint8_t>::max());
+    brcmf_fws_flow_control_check(fws, &entry->psq, static_cast<uint8_t>(if_id));
     /*
      * A packet has been picked up, update traffic
      * availability bitmap, if applicable
@@ -1341,9 +1354,14 @@ static zx_status_t brcmf_fws_txstatus_suppressed(struct brcmf_fws_info* fws, int
     BRCMF_DBG(DATA, "suppress %s: transit %d", entry->name, entry->transit_count);
   }
 
-  entry->generation = genbit;
+  if (genbit > std::numeric_limits<uint8_t>::max()) {
+    BRCMF_ERR("brcmf_fws_txstatus_suppressed failed: generation invalid (overflow)");
+    return ZX_ERR_INTERNAL;
+  }
+  const auto genbit_resized = static_cast<uint8_t>(genbit);
+  entry->generation = genbit_resized;
 
-  brcmf_netbuf_htod_tag_set_field(netbuf, GENERATION, genbit);
+  brcmf_netbuf_htod_tag_set_field(netbuf, GENERATION, genbit_resized);
   brcmf_workspace(netbuf)->htod_seq = seq;
   if (brcmf_netbuf_htod_seq_get_field(netbuf, FROMFW)) {
     brcmf_netbuf_htod_seq_set_field(netbuf, FROMDRV, 1);
@@ -1366,7 +1384,7 @@ static zx_status_t brcmf_fws_txstatus_suppressed(struct brcmf_fws_info* fws, int
 
 static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t flags, uint32_t hslot,
                                          uint32_t genbit, uint16_t seq) {
-  uint32_t fifo;
+  uint8_t fifo;
   zx_status_t ret;
   bool remove_from_hanger = true;
   struct brcmf_netbuf* netbuf;
@@ -1404,7 +1422,7 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
   if (workspace->mac_status == ZX_OK) {
     entry = workspace->mac;
   } else {
-    WARN_ON(true /*bad entry*/);
+    WARN(workspace->mac_status == ZX_OK, "bad entry");
     brcmu_pkt_buf_free_netbuf(netbuf);
     return ZX_ERR_INTERNAL;
   }
@@ -1416,7 +1434,12 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
   BRCMF_DBG(DATA, "%s flags %d htod %X seq %X", entry->name, flags, workspace->htod, seq);
 
   /* pick up the implicit credit from this packet */
-  fifo = brcmf_netbuf_htod_tag_get_field(netbuf, FIFO);
+  const auto fifo_unsized = brcmf_netbuf_htod_tag_get_field(netbuf, FIFO);
+  if (fifo_unsized > std::numeric_limits<uint8_t>::max()) {
+    BRCMF_ERR("brcmf_fws_txs_process failed: FIFO tag invalid (overflow)");
+    return ZX_ERR_INTERNAL;
+  }
+  fifo = static_cast<uint8_t>(fifo_unsized);
   if ((fws->fcmode == BRCMF_FWS_FCMODE_IMPLIED_CREDIT) ||
       (brcmf_netbuf_if_flags_get_field(netbuf, REQ_CREDIT)) ||
       (flags == BRCMF_FWS_TXSTATUS_HOST_TOSSED)) {
@@ -1444,8 +1467,6 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
 
 static enum brcmf_fws_should_schedule brcmf_fws_fifocreditback_indicate(struct brcmf_fws_info* fws,
                                                                         uint8_t* data) {
-  int i;
-
   if (fws->fcmode != BRCMF_FWS_FCMODE_EXPLICIT_CREDIT) {
     BRCMF_DBG(INFO, "ignored");
     return BRCMF_FWS_NOSCHEDULE;
@@ -1453,7 +1474,7 @@ static enum brcmf_fws_should_schedule brcmf_fws_fifocreditback_indicate(struct b
 
   BRCMF_DBG(DATA, "enter: data %pM", data);
   brcmf_fws_lock(fws);
-  for (i = 0; i < BRCMF_FWS_FIFO_COUNT; i++) {
+  for (uint8_t i = 0; i < BRCMF_FWS_FIFO_COUNT; i++) {
     brcmf_fws_return_credits(fws, i, data[i]);
   }
 
@@ -1475,7 +1496,9 @@ static enum brcmf_fws_should_schedule brcmf_fws_txstatus_indicate(struct brcmf_f
   fws->stats.txs_indicate++;
   memcpy(&status_le, data, sizeof(status_le));
   status = status_le;
-  flags = brcmf_txstatus_get_field(status, FLAGS);
+  const auto flags_unsized = brcmf_txstatus_get_field(status, FLAGS);
+  ZX_DEBUG_ASSERT(flags_unsized <= std::numeric_limits<uint8_t>::max());
+  flags = static_cast<uint8_t>(flags_unsized);
   hslot = brcmf_txstatus_get_field(status, HSLOT);
   genbit = brcmf_txstatus_get_field(status, GENERATION);
   if (BRCMF_FWS_MODE_GET_REUSESEQ(fws->mode)) {
@@ -1629,7 +1652,7 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
   if (flags & BRCMF_RXREORDER_NEW_HOLE) {
     if (rfi->pend_pkts) {
       brcmf_rxreorder_get_netbuf_list(rfi, rfi->exp_idx, rfi->exp_idx, &reorder_list);
-      WARN_ON(rfi->pend_pkts);
+      WARN(rfi->pend_pkts != 0, "pend_pkts not empty");
     } else {
       brcmf_netbuf_list_init(&reorder_list);
     }
@@ -1746,7 +1769,8 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
 
   BRCMF_DBG(HDRS, "enter: ifidx %d, netbuflen %u, siglen %d", ifp->ifidx, netbuf->len, siglen);
 
-  WARN_ON(siglen > (int32_t)netbuf->len);
+  ZX_DEBUG_ASSERT(siglen >= 0);
+  WARN(static_cast<uint32_t>(siglen) > netbuf->len, "siglen > netbuf len");
 
   if (!siglen) {
     return;
@@ -1909,7 +1933,8 @@ static void brcmf_fws_rollback_toq(struct brcmf_fws_info* fws, struct brcmf_netb
     brcmf_fws_txs_process(fws, BRCMF_FWS_TXSTATUS_HOST_TOSSED, hslot, 0, 0);
   } else {
     fws->stats.rollback_success++;
-    brcmf_fws_return_credits(fws, fifo, 1);
+    ZX_DEBUG_ASSERT(fifo >= 0 && fifo <= std::numeric_limits<uint8_t>::max());
+    brcmf_fws_return_credits(fws, static_cast<uint8_t>(fifo), 1);
     brcmf_fws_macdesc_return_req_credit(netbuf);
   }
 }
@@ -1956,7 +1981,12 @@ static zx_status_t brcmf_fws_commit_netbuf(struct brcmf_fws_info* fws, int fifo,
   if (entry->suppressed) {
     entry->suppr_transit_count++;
   }
-  ifidx = brcmf_netbuf_if_flags_get_field(netbuf, INDEX);
+  const auto ifidx_unsized = brcmf_netbuf_if_flags_get_field(netbuf, INDEX);
+  if (ifidx_unsized > std::numeric_limits<uint8_t>::max()) {
+    BRCMF_ERR("ifidx invalid (overflow)");
+    return ZX_ERR_INTERNAL;
+  }
+  ifidx = static_cast<uint8_t>(ifidx_unsized);
   brcmf_fws_unlock(fws);
   rc = brcmf_proto_txdata(fws->drvr, ifidx, data_offset, netbuf);
   brcmf_fws_lock(fws);
@@ -2018,7 +2048,11 @@ zx_status_t brcmf_fws_process_netbuf(struct brcmf_if* ifp, struct brcmf_netbuf* 
   /* set control buffer information */
   workspace->if_flags = 0;
   workspace->state = BRCMF_FWS_NETBUFSTATE_NEW;
-  brcmf_netbuf_if_flags_set_field(netbuf, INDEX, ifp->ifidx);
+  if (ifp->ifidx < 0 || ifp->ifidx > std::numeric_limits<uint16_t>::max()) {
+    BRCMF_ERR("ifidx invalid");
+    return ZX_ERR_INTERNAL;
+  }
+  brcmf_netbuf_if_flags_set_field(netbuf, INDEX, static_cast<uint16_t>(ifp->ifidx));
   if (!multicast) {
     fifo = brcmf_fws_prio2fifo[netbuf->priority];
   }
@@ -2053,7 +2087,8 @@ void brcmf_fws_reset_interface(struct brcmf_if* ifp) {
     return;
   }
 
-  brcmf_fws_macdesc_init(entry, ifp->mac_addr, ifp->ifidx);
+  ZX_DEBUG_ASSERT(ifp->ifidx >= 0 && ifp->ifidx <= std::numeric_limits<uint8_t>::max());
+  brcmf_fws_macdesc_init(entry, ifp->mac_addr, static_cast<uint8_t>(ifp->ifidx));
 }
 
 void brcmf_fws_add_interface(struct brcmf_if* ifp) {
@@ -2066,7 +2101,8 @@ void brcmf_fws_add_interface(struct brcmf_if* ifp) {
 
   entry = &fws->desc.iface[ifp->ifidx];
   ifp->fws_desc = entry;
-  brcmf_fws_macdesc_init(entry, ifp->mac_addr, ifp->ifidx);
+  ZX_DEBUG_ASSERT(ifp->ifidx >= 0 && ifp->ifidx <= std::numeric_limits<uint8_t>::max());
+  brcmf_fws_macdesc_init(entry, ifp->mac_addr, static_cast<uint8_t>(ifp->ifidx));
   brcmf_fws_macdesc_set_name(fws, entry);
   brcmu_pktq_init(&entry->psq, BRCMF_FWS_PSQ_PREC_COUNT, BRCMF_FWS_PSQ_LEN);
   BRCMF_DBG(TRACE, "added %s", entry->name);
@@ -2140,11 +2176,13 @@ static void brcmf_fws_dequeue_worker(WorkItem* worker) {
         (!fws->bus_flow_blocked)) {
       while (brcmf_fws_borrow_credit(fws) == ZX_OK) {
         netbuf = brcmf_fws_deq(fws, fifo);
+        ZX_DEBUG_ASSERT(fifo >= 0 && fifo <= std::numeric_limits<uint8_t>::max());
+        const auto fifo_resized = static_cast<uint8_t>(fifo);
         if (!netbuf) {
-          brcmf_fws_return_credits(fws, fifo, 1);
+          brcmf_fws_return_credits(fws, fifo_resized, 1);
           break;
         }
-        if (brcmf_fws_commit_netbuf(fws, fifo, netbuf) != ZX_OK) {
+        if (brcmf_fws_commit_netbuf(fws, fifo_resized, netbuf) != ZX_OK) {
           break;
         }
         if (fws->bus_flow_blocked) {
