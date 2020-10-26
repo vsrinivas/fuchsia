@@ -88,8 +88,6 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/client.h",
       "lib/fidl/llcpp/coding.h",
       "lib/fidl/llcpp/connect_service.h",
-      "lib/fidl/llcpp/decoded_message.h",
-      "lib/fidl/llcpp/encoded_message.h",
       "lib/fidl/llcpp/envelope.h",
       "lib/fidl/llcpp/errors.h",
       "lib/fidl/llcpp/failover_allocator.h",

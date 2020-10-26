@@ -6,8 +6,6 @@
 #define LIB_FIDL_LLCPP_SYNC_CALL_H_
 
 #include <lib/fidl/llcpp/coding.h>
-#include <lib/fidl/llcpp/decoded_message.h>
-#include <lib/fidl/llcpp/encoded_message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/traits.h>
 

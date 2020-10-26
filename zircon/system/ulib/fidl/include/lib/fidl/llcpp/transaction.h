@@ -6,8 +6,6 @@
 #define LIB_FIDL_LLCPP_TRANSACTION_H_
 
 #include <lib/fidl/cpp/message.h>
-#include <lib/fidl/llcpp/decoded_message.h>
-#include <lib/fidl/llcpp/encoded_message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/traits.h>
