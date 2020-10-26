@@ -23,10 +23,6 @@ source_set("verified-volume-client") {
 
 source_set("geometry") {
   sources = [ "geometry.cc" ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 test("geometry-test") {
@@ -165,9 +161,6 @@ driver_module("block-verity") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/digest",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("block-verity-test") {

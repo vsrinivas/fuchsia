@@ -18,7 +18,7 @@ DeviceInfo DeviceInfo::CreateFromDevice(zx_device_t* device) {
   block_protocol.Query(&blk, &upstream_op_size);
   ZX_ASSERT_MSG(kBlockSize % blk.block_size == 0,
                 "underlying block size must evenly divide virtual block size");
-  uint64_t hw_blocks_per_virtual_block = kBlockSize / blk.block_size;
+  uint32_t hw_blocks_per_virtual_block = kBlockSize / blk.block_size;
   uint64_t virtual_block_count = blk.block_count / hw_blocks_per_virtual_block;
   Geometry geometry(kBlockSize, kHashOutputSize, virtual_block_count);
   uint64_t op_size = upstream_op_size + sizeof(extra_op_t);
@@ -26,7 +26,7 @@ DeviceInfo DeviceInfo::CreateFromDevice(zx_device_t* device) {
 }
 
 DeviceInfo::DeviceInfo(zx_device_t* device, Geometry geometry_in, uint64_t upstream_op_size_in,
-                       uint64_t op_size_in, uint64_t hw_blocks_per_virtual_block_in)
+                       uint64_t op_size_in, uint32_t hw_blocks_per_virtual_block_in)
     : block_protocol(device),
       block_device(device),
       geometry(geometry_in),

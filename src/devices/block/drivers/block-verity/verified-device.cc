@@ -162,7 +162,11 @@ void VerifiedDevice::RequestBlocks(uint64_t start_block, uint64_t block_count, z
   fbl::AutoLock lock(&mtx_);
   block_op_t* block_op = reinterpret_cast<block_op_t*>(block_op_buf_.get());
   block_op->rw.command = BLOCK_OP_READ;
-  block_op->rw.length = block_count * info_.hw_blocks_per_virtual_block;
+  // The cast below is guaranteed not to overflow because
+  // `hw_block_per_virtual_block` is by construction at most 4096 (2**12) (and
+  // actually only expected to be at most 8 in reasonable operation) and
+  // `block_count` is guaranteed to be strictly less than 2**20.
+  block_op->rw.length = static_cast<uint32_t>(block_count * info_.hw_blocks_per_virtual_block);
   block_op->rw.offset_dev = start_block * info_.hw_blocks_per_virtual_block;
   block_op->rw.offset_vmo = 0;
   block_op->rw.vmo = vmo.get();

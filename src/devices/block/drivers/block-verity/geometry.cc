@@ -79,7 +79,7 @@ Geometry::Geometry(uint32_t block_size, uint32_t hash_size, uint64_t total_block
 HashLocation Geometry::IntegrityDataLocationForDataBlock(DataBlockIndex data_block_index) const {
   uint64_t to_pass = data_block_index / hashes_per_block_;
 
-  uint64_t block_offset = 0;
+uint64_t block_offset = 0;
 
   while (to_pass > 0) {
     // Skipping `to_pass` blocks
@@ -156,8 +156,11 @@ HashLocation Geometry::NextIntegrityBlockUp(uint32_t distance_from_leaf,
   // `unadjusted_offset_within_block` represents "If I'm scanning blocks within
   // the current next-tier-up stride, how many `current_tier_stride`s in the
   // next-tier-up stride do I pass over before I reach this block?".  It's the
-  // relative offset within that block.
-  uint32_t unadjusted_offset_within_block = block_in_tier_chunk / current_tier_stride;
+  // relative offset within that block.  It's guaranteed not to overflow
+  // uint32_t because we cap total block count at (2**20 - 1), so we'll never
+  // even get close to having an integrity block offset of 2**32.
+  uint32_t unadjusted_offset_within_block =
+      static_cast<uint32_t>(block_in_tier_chunk / current_tier_stride);
 
   // The last block at each tier in a non-full tree (which the vast majority of
   // trees will be) might be placed earlier than it would in a full tree.  We

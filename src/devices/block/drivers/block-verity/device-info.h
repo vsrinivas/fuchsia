@@ -22,7 +22,7 @@ namespace block_verity {
 // to the device.
 struct DeviceInfo {
   DeviceInfo(zx_device_t* device, Geometry geometry_in, uint64_t upstream_op_size_in,
-             uint64_t op_size_in, uint64_t hw_blocks_per_virtual_block);
+             uint64_t op_size_in, uint32_t hw_blocks_per_virtual_block);
   DeviceInfo(DeviceInfo&& other);
 
   // Disallow copy and assign.  Allow move.
@@ -49,8 +49,8 @@ struct DeviceInfo {
   uint64_t op_size;
 
   // The number of hardware blocks (sometimes 512-byte, sometimes 4k, etc) per
-  // virtual block (currently always 4k)
-  uint64_t hw_blocks_per_virtual_block;
+  // virtual block (currently always 4k).
+  uint32_t hw_blocks_per_virtual_block;
 
   // Returns true if the block device can be used by block_verity.  This may fail, for example, if
   // the constructor was unable to get a valid block protocol.
