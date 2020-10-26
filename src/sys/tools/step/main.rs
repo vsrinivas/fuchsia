@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error, fuchsia_async as fasync, step_lib::Shell, structopt::StructOpt,
+    anyhow::Error,
+    fuchsia_async as fasync,
+    step_lib::{does_component_exist, Shell},
+    structopt::StructOpt,
     test_utils_lib::opaque_test::OpaqueTest,
 };
 
@@ -26,6 +29,20 @@ async fn main() -> Result<(), Error> {
     println!("------------------ step is starting --------------------");
     println!("ARGUMENTS = {:#?}", args);
     println!("--------------------------------------------------------");
+
+    let is_valid_url =
+        args.component_url.starts_with("fuchsia-pkg://") && args.component_url.ends_with(".cm");
+    if !is_valid_url {
+        eprintln!("URLs must begin with \"fuchsia-pkg://\" and end with \".cm\"");
+        return Ok(());
+    }
+
+    if does_component_exist(&args.component_url).await {
+        println!("Component URL resolved successfully");
+    } else {
+        eprintln!("Component URL could not be resolved");
+        return Ok(());
+    }
 
     let mut test = OpaqueTest::default(&args.component_url).await.unwrap();
     println!("Component manager has started");
