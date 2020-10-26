@@ -92,11 +92,10 @@ func Walk(config *Config) error {
 	}
 
 	if config.OutputLicenseFile {
-		file, err := createOutputFile(config)
-		if err != nil {
+		path := config.OutputFilePrefix + "." + config.OutputFileExtension
+		if err := saveToOutputFile(path, licenses); err != nil {
 			return err
 		}
-		saveToOutputFile(file, licenses, config, metrics)
 	}
 	metrics.print()
 	return nil

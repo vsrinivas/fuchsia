@@ -7,10 +7,8 @@ package checklicenses
 import (
 	"bytes"
 	"compress/gzip"
-	"errors"
+	"fmt"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"text/template"
@@ -18,118 +16,104 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/templates"
 )
 
-func createOutputFile(config *Config) (*os.File, error) {
-	path := config.OutputFilePrefix + "." + config.OutputFileExtension
-	if shouldCompressOutputFile(config) {
-		path = strings.TrimSuffix(path, filepath.Ext(path))
-	}
-	return os.Create(path)
-}
-
-func shouldCompressOutputFile(config *Config) bool {
-	return config.OutputFileExtension == "html.gz"
-}
-
-func compressOutputFile(config *Config) error {
-	path := config.OutputFilePrefix + "." + config.OutputFileExtension
-	original_path := strings.TrimSuffix(path, filepath.Ext(path))
-	dat, err := ioutil.ReadFile(original_path)
-	if err != nil {
-		return err
-	}
-	var buf bytes.Buffer
-	zw := gzip.NewWriter(&buf)
-	_, err = zw.Write(dat)
-	if err != nil {
-		return err
-	}
-	if err := zw.Close(); err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(path, buf.Bytes(), 0644)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func saveToOutputFile(file *os.File, licenses *Licenses, config *Config, metrics *Metrics) error {
-	var unused []*License
-	var used []*License
-	table_of_contents := make(map[string][]*License)
-
+// saveToOutputFile writes to output the serialized licenses.
+//
+// It writes an uncompressed version too if a compressed version is requested.
+func saveToOutputFile(path string, licenses *Licenses) error {
 	// Sort the licenses in alphabetical order for consistency.
 	sort.Slice(licenses.licenses, func(i, j int) bool { return licenses.licenses[i].category < licenses.licenses[j].category })
-
-	for i := range licenses.licenses {
-		license := licenses.licenses[i]
-		if len(license.matches) == 0 {
-			unused = append(unused, license)
+	data := struct {
+		Used   []*License
+		Unused []*License
+	}{}
+	for _, l := range licenses.licenses {
+		if len(l.matches) == 0 {
+			data.Unused = append(data.Unused, l)
 		} else {
-			used = append(used, license)
-			for _, author := range license.matches {
-				for _, file := range author.files {
-					table_of_contents[file] = append(table_of_contents[file], license)
-				}
-			}
+			data.Used = append(data.Used, l)
 		}
 	}
 
-	object := struct {
-		Used            []*License
-		Unused          []*License
-		TableOfContents map[string][]*License
-	}{
-		used,
-		unused,
-		table_of_contents,
-	}
-	templateStr := templates.TemplateTxt
-	switch config.OutputFileExtension {
-	case "txt":
+	templateStr := ""
+	switch {
+	case strings.HasSuffix(path, ".txt"):
 		templateStr = templates.TemplateTxt
-	case "html":
+	case strings.HasSuffix(path, ".html") || strings.HasSuffix(path, ".html.gz"):
+		// TODO(omerlevran): Use html/template instead of text/template.
+		// text/template is inherently unsafe to generate HTML.
 		templateStr = templates.TemplateHtml
-	case "html.gz":
-		templateStr = templates.TemplateHtml
-	case "json":
+	case strings.HasSuffix(path, ".json"):
+		// TODO(omerlevran): Use encoding/json instead of hand-rolling out json.
 		templateStr = templates.TemplateJson
 	default:
-		return errors.New("error: no template found")
+		return fmt.Errorf("no template found for %s", path)
 	}
-	tmpl := template.Must(template.New("name").Funcs(template.FuncMap{
-		"getPattern": func(license *License) string { return (*license).pattern.String() },
-		"getText":    func(license *License, author string) string { return (*license).matches[author].value },
-		"getHTMLText": func(license *License, author string) string {
-			return strings.Replace((*license).matches[author].value, "\n", "<br />", -1)
-		},
-		"getEscapedText": func(license *License, author string) string {
-			return strings.Replace((*license).matches[author].value, "\"", "\\\"", -1)
-		},
-		"getCategory": func(license *License) string {
-			return strings.TrimSuffix(string((*license).category), ".lic")
-		},
-		"getFiles": func(license *License, author string) *[]string {
-			var files []string
-			for _, file := range license.matches[author].files {
-				files = append(files, file)
-			}
-			return &files
-		},
-		"getAuthors": func(license *License) *[]string {
-			var authors []string
-			for author := range license.matches {
-				authors = append(authors, author)
-			}
-			sort.Strings(authors)
-			return &authors
-		},
-	}).Parse(templateStr))
-	if err := tmpl.Execute(file, object); err != nil {
+	buf := bytes.Buffer{}
+	tmpl := template.Must(template.New("name").Funcs(funcMap).Parse(templateStr))
+	if err := tmpl.Execute(&buf, data); err != nil {
 		return err
 	}
-	if shouldCompressOutputFile(config) {
-		compressOutputFile(config)
+
+	// Special handling for compressed file.
+	const gz = ".gz"
+	if strings.HasSuffix(path, gz) {
+		// First write uncompressed, then compressed.
+		if err := ioutil.WriteFile(path[:len(path)-len(gz)], buf.Bytes(), 0666); err != nil {
+			return err
+		}
+		d, err := compressGZ(buf.Bytes())
+		if err != nil {
+			return err
+		}
+		return ioutil.WriteFile(path, d, 0666)
 	}
-	return nil
+
+	return ioutil.WriteFile(path, buf.Bytes(), 0666)
+}
+
+// compressGZ returns the compressed buffer with gzip format.
+func compressGZ(d []byte) ([]byte, error) {
+	buf := bytes.Buffer{}
+	zw := gzip.NewWriter(&buf)
+	if _, err := zw.Write(d); err != nil {
+		return nil, err
+	}
+	if err := zw.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+var funcMap = template.FuncMap{
+	"getPattern": func(l *License) string {
+		return l.pattern.String()
+	},
+	"getText": func(l *License, author string) string {
+		return l.matches[author].value
+	},
+	"getHTMLText": func(l *License, author string) string {
+		return strings.Replace(l.matches[author].value, "\n", "<br />", -1)
+	},
+	"getEscapedText": func(l *License, author string) string {
+		return strings.Replace(l.matches[author].value, "\"", "\\\"", -1)
+	},
+	"getCategory": func(l *License) string {
+		return strings.TrimSuffix(l.category, ".lic")
+	},
+	"getFiles": func(l *License, author string) []string {
+		var files []string
+		for _, file := range l.matches[author].files {
+			files = append(files, file)
+		}
+		sort.Strings(files)
+		return files
+	},
+	"getAuthors": func(l *License) []string {
+		var authors []string
+		for author := range l.matches {
+			authors = append(authors, author)
+		}
+		sort.Strings(authors)
+		return authors
+	},
 }
