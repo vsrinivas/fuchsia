@@ -65,7 +65,7 @@ if (current_toolchain == default_toolchain) {
       exclude_variant_tags += phys_exclude_variant_tags
 
       toolchain_args = {
-        if (optimize == "none") {
+        if (optimize == "none" || optimize == "profile") {
           # phys code doesn't stay sufficiently purely position-independent
           # without optimization.
           optimize = "debug"
