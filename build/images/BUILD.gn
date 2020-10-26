@@ -2253,10 +2253,7 @@ compiled_action("uefi-disk") {
   ]
 
   if (bootfs_only) {
-    args += [
-      "-ramdisk-only",
-      "-abr=false",
-    ]
+    args += [ "-ramdisk-only" ]
   }
 
   args += [ rebase_path(uefi_disk_path) ]
@@ -2303,7 +2300,7 @@ group("default-images") {
     recovery_label,
   ]
 
-  if (build_uefi_disk && !bootfs_only) {
+  if (build_uefi_disk) {
     deps += [ ":uefi-disk" ]
   }
 
