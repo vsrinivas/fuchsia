@@ -18,6 +18,14 @@
 
 namespace fidl {
 
+// Calculates the maximum possible message size for a FIDL type,
+// clamped at the Zircon channel packet size.
+// TODO(fxbug.dev/8093): Always request the message context.
+template <typename FidlType, const MessageDirection Direction = MessageDirection::kReceiving>
+constexpr uint32_t MaxSizeInChannel() {
+  return internal::ClampedMessageSize<FidlType, Direction>();
+}
+
 // An buffer holding data inline, sized specifically for |FidlType|.
 // It can be used to allocate request/response buffers when using the caller-allocate or in-place
 // flavor. For example:

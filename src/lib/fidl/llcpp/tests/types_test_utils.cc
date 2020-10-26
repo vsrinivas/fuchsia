@@ -4,6 +4,9 @@
 
 #include "types_test_utils.h"
 
+#include <lib/fidl/llcpp/traits.h>
+#include <zircon/assert.h>
+
 namespace llcpp_types_test_utils {
 
 void HandleChecker::AddEvent(const zx_handle_t event) {

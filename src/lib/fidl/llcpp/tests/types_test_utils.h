@@ -10,6 +10,7 @@
 
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/zx/event.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
