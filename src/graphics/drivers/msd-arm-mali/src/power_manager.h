@@ -55,6 +55,7 @@ class PowerManager {
     std::chrono::steady_clock::duration active_time;
   };
 
+  void UpdateReadyStatus(magma::RegisterIo* io);
   // Called to update timekeeping and possible update the gpu activity info.
   void UpdateGpuActiveLocked(bool active) MAGMA_REQUIRES(active_time_mutex_);
   std::deque<TimePeriod>& time_periods() { return time_periods_; }

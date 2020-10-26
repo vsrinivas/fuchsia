@@ -70,8 +70,10 @@ bool PowerManager::WaitForL2Disable(magma::RegisterIo* io) {
         registers::CoreReadyState::ReadBitmask(
             io, registers::CoreReadyState::CoreType::kL2,
             registers::CoreReadyState::StatusType::kPowerTransitioning);
-    if (!powered_on)
+    if (!powered_on) {
+      UpdateReadyStatus(io);
       return true;
+    }
     if (!power_state_semaphore_->Wait(1000))
       return false;
   }
@@ -84,21 +86,27 @@ bool PowerManager::WaitForShaderReady(magma::RegisterIo* io) {
     bool powered_on =
         registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kShader,
                                                registers::CoreReadyState::StatusType::kReady);
-    if (powered_on)
+    if (powered_on) {
+      UpdateReadyStatus(io);
       return true;
+    }
     if (!power_state_semaphore_->Wait(1000))
       return false;
   }
 }
 
 void PowerManager::ReceivedPowerInterrupt(magma::RegisterIo* io) {
+  UpdateReadyStatus(io);
+  power_state_semaphore_->Signal();
+}
+
+void PowerManager::UpdateReadyStatus(magma::RegisterIo* io) {
   std::lock_guard<std::mutex> lock(ready_status_mutex_);
   tiler_ready_status_ =
       registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kTiler,
                                              registers::CoreReadyState::StatusType::kReady);
   l2_ready_status_ = registers::CoreReadyState::ReadBitmask(
       io, registers::CoreReadyState::CoreType::kL2, registers::CoreReadyState::StatusType::kReady);
-  power_state_semaphore_->Signal();
 }
 
 void PowerManager::UpdateGpuActive(bool active) {
