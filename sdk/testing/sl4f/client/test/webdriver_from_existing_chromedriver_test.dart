@@ -6,19 +6,15 @@ import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart';
 
-class MockSsh extends Mock implements Ssh {}
-
 class MockSl4f extends Mock implements Sl4f {}
 
 void main(List<String> args) {
   MockSl4f sl4f;
-  MockSsh ssh;
   WebDriverConnector webDriverConnector;
 
   setUp(() {
     sl4f = MockSl4f();
-    ssh = MockSsh();
-    when(sl4f.ssh).thenReturn(ssh);
+    when(sl4f.target).thenReturn('[::1]');
     webDriverConnector =
         WebDriverConnector.fromExistingChromedriver(1234, sl4f);
   });

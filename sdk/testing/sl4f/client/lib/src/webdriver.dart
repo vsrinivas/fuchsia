@@ -41,6 +41,10 @@ class WebDriverConnector {
   /// Helper for instantiating WebDriver objects.
   final WebDriverHelper _webDriverHelper;
 
+  /// Helper for forwarding ports.
+  final PortForwarder _portForwarder;
+  PortForwarder get portForwarder => _portForwarder;
+
   /// A handle to the process running Chromedriver.
   ///
   /// Will be null if constructed using [fromExistingChromedriver()], or if
@@ -55,16 +59,19 @@ class WebDriverConnector {
   /// picked.
   int _chromedriverPort;
 
-  /// A mapping from an exposed port number on the DUT to an open WebDriver
+  /// A mapping from a target port number on the DUT to an open WebDriver
   /// session.
   Map<int, WebDriverSession> _webDriverSessions;
 
   WebDriverConnector(String chromeDriverPath, Sl4f sl4f,
-      {ProcessHelper processHelper, WebDriverHelper webDriverHelper})
+      {ProcessHelper processHelper,
+      WebDriverHelper webDriverHelper,
+      PortForwarder portForwarder})
       : _chromedriverPath = chromeDriverPath,
         _sl4f = sl4f,
         _processHelper = processHelper ?? ProcessHelper(),
         _webDriverHelper = webDriverHelper ?? WebDriverHelper(),
+        _portForwarder = portForwarder ?? PortForwarder.fromSl4f(sl4f),
         _webDriverSessions = {};
 
   WebDriverConnector.fromExistingChromedriver(int chromedriverPort, Sl4f sl4f)
@@ -72,6 +79,7 @@ class WebDriverConnector {
         _sl4f = sl4f,
         _webDriverHelper = WebDriverHelper(),
         _webDriverSessions = {},
+        _portForwarder = PortForwarder.fromSl4f(sl4f),
         // Chromedriver is already running so the below are set to null.
         _chromedriverPath = null,
         _processHelper = null;
@@ -106,10 +114,11 @@ class WebDriverConnector {
     }
 
     for (final session in _webDriverSessions.entries) {
-      await _sl4f.ssh.cancelPortForward(
-          port: session.value.localPort, remotePort: session.key);
+      await _portForwarder.stopPortForwarding(
+          session.value.accessPoint, session.key);
     }
     _webDriverSessions = {};
+    await _portForwarder.tearDown();
   }
 
   /// Get all nonEmpty Urls obtained from current _webDriverSessions.
@@ -168,13 +177,16 @@ class WebDriverConnector {
   /// given host.
   Future<List<String>> webSocketDebuggerUrlsForHost(String host,
       {Map<String, dynamic> filters}) async {
-    final portsForHost = (await _webDriverSessionsForHost(host))
-        .map((session) => session.localPort);
+    final accessPointsForHost = (await _webDriverSessionsForHost(host))
+        .map((session) => session.accessPoint);
 
     final devToolsUrls = <String>[];
-    for (final port in portsForHost) {
-      final request = await io.HttpClient()
-          .getUrl(Uri.parse('http://localhost:$port/json'));
+    for (final accessPoint in accessPointsForHost) {
+      final request = await io.HttpClient().getUrl(Uri(
+          scheme: 'http',
+          host: accessPoint.host,
+          port: accessPoint.port,
+          path: 'json'));
       final response = await request.close();
       final endpoints = json.decode(await utf8.decodeStream(response));
 
@@ -223,7 +235,7 @@ class WebDriverConnector {
     // Remove port forwarding for any ports that aren't open or shown.
     _webDriverSessions.removeWhere((port, session) {
       if (!ports.contains(port) || !_isSessionDisplayed(session)) {
-        _sl4f.ssh.cancelPortForward(port: session.localPort, remotePort: port);
+        _portForwarder.stopPortForwarding(session.accessPoint, port);
         return true;
       }
       return false;
@@ -250,28 +262,100 @@ class WebDriverConnector {
   /// on errors that may occur due to network issues.
   Future<WebDriverSession> _createWebDriverSession(int remotePort,
       {int tries = 5}) async {
-    // For a given Chrome context listening on
-    // port p on the DuT, we choose an unused local port x, and forward
-    // localhost:x to DuT:p, and create a WebDriver instance pointing to localhost:x.
-    final localPort = await _sl4f.ssh.forwardPort(remotePort: remotePort);
+    final accessPoint = await _portForwarder.forwardPort(remotePort);
     final webDriver = await retry(
-      () => _webDriverHelper.createDriver(localPort, _chromedriverPort),
+      () => _webDriverHelper.createDriver(accessPoint, _chromedriverPort),
       maxAttempts: tries,
     );
 
-    return WebDriverSession(localPort, webDriver);
+    return WebDriverSession(accessPoint, webDriver);
   }
+}
+
+/// A host and port pair.
+class HostAndPort {
+  final String host;
+  final int port;
+  HostAndPort(this.host, this.port);
 }
 
 /// A representation of a `WebDriver` connection from a host device to a DUT.
 class WebDriverSession {
-  /// The local port forwarded to the DUT.
-  final int localPort;
+  /// The host and port through which the debug port is accessible.
+  final HostAndPort accessPoint;
 
   /// The webdriver connection.
   final WebDriver webDriver;
 
-  WebDriverSession(this.localPort, this.webDriver);
+  WebDriverSession(this.accessPoint, this.webDriver);
+}
+
+abstract class PortForwarder {
+  factory PortForwarder.fromSl4f(Sl4f sl4f) {
+    // Chromedriver can't handle zone-id in ipv6 addresses. Since the TCP proxy requires
+    // Chromedriver to call the target address, fall back to ssh in the cases Chromedriver can't
+    // handle.
+    if (sl4f.target.startsWith('[') && sl4f.target.contains('%')) {
+      _log.warning('Using SSH to forward webdriver ports.');
+      return SshPortForwarder(sl4f);
+    }
+    return TcpPortForwarder(sl4f);
+  }
+
+  /// Open a tunnel to `targetPort` on the DUT. Returns the host and port through
+  /// which the tunnel is accessible.
+  Future<HostAndPort> forwardPort(int targetPort);
+
+  /// Stop forwarding a port previously opened with `forwardPort`.
+  Future<void> stopPortForwarding(HostAndPort openAddr, int targetPort);
+
+  /// Stop all proxies. Intended as a teardown step to clean up remaining proxies at the end of a
+  /// test.
+  Future<void> tearDown();
+}
+
+/// A PortForwarder that uses SSH.
+class SshPortForwarder implements PortForwarder {
+  final Sl4f _sl4f;
+
+  @override
+  Future<HostAndPort> forwardPort(int targetPort) async {
+    final openPort = await _sl4f.ssh.forwardPort(remotePort: targetPort);
+    return HostAndPort('localhost', openPort);
+  }
+
+  @override
+  Future<void> stopPortForwarding(HostAndPort openAddr, int targetPort) async =>
+      await _sl4f.ssh
+          .cancelPortForward(port: openAddr.port, remotePort: targetPort);
+
+  @override
+  Future<void> tearDown() async {}
+
+  SshPortForwarder(this._sl4f);
+}
+
+/// A PortForwarder that uses the TCP proxy on the DUT.
+class TcpPortForwarder implements PortForwarder {
+  final String _target;
+  final TcpProxyController _proxyControl;
+
+  @override
+  Future<HostAndPort> forwardPort(int targetPort) async {
+    final openPort = await _proxyControl.openProxy(targetPort);
+    return HostAndPort(_target, openPort);
+  }
+
+  @override
+  Future<void> stopPortForwarding(HostAndPort openAddr, int targetPort) async =>
+      await _proxyControl.dropProxy(targetPort);
+
+  @override
+  Future<void> tearDown() async => await _proxyControl.stopAllProxies();
+
+  TcpPortForwarder(Sl4f sl4f)
+      : _proxyControl = TcpProxyController(sl4f),
+        _target = sl4f.target;
 }
 
 /// A wrapper around static dart:io Process methods.
@@ -290,8 +374,10 @@ class WebDriverHelper {
 
   /// Create a new WebDriver pointing to Chromedriver on the given uri and with
   /// given desired capabilities.
-  WebDriver createDriver(int localPort, int chromedriverPort) {
-    final chromeOptions = {'debuggerAddress': 'localhost:$localPort'};
+  WebDriver createDriver(HostAndPort debuggerAddress, int chromedriverPort) {
+    final chromeOptions = {
+      'debuggerAddress': '${debuggerAddress.host}:${debuggerAddress.port}'
+    };
     final capabilities = sync_io.Capabilities.chrome;
     capabilities[sync_io.Capabilities.chromeOptions] = chromeOptions;
     return sync_io.createDriver(
