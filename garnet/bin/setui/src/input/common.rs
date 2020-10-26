@@ -16,6 +16,54 @@ use {
     serde::{Deserialize, Serialize},
 };
 
+/// Builder to simplify construction of fidl_fuchsia_ui_input::MediaButtonsEvent.
+/// # Example usage:
+/// ```
+/// MediaButtonsEventBuilder::new().set_volume(1).set_mic_mute(true).build();
+/// ```
+pub struct MediaButtonsEventBuilder {
+    volume: i8,
+    mic_mute: bool,
+    pause: bool,
+    camera_disable: bool,
+}
+
+#[allow(dead_code)]
+impl MediaButtonsEventBuilder {
+    pub fn new() -> Self {
+        // Create with defaults.
+        Self { volume: 0, mic_mute: false, pause: false, camera_disable: false }
+    }
+
+    pub fn build(self) -> MediaButtonsEvent {
+        MediaButtonsEvent {
+            volume: Some(self.volume),
+            mic_mute: Some(self.mic_mute),
+            pause: Some(self.pause),
+            camera_disable: Some(self.camera_disable),
+        }
+    }
+
+    pub fn set_volume(mut self, volume: i8) -> Self {
+        self.volume = volume;
+        self
+    }
+
+    pub fn set_mic_mute(mut self, mic_mute: bool) -> Self {
+        self.mic_mute = mic_mute;
+        self
+    }
+
+    pub fn set_pause(mut self, pause: bool) -> Self {
+        self.pause = pause;
+        self
+    }
+
+    pub fn set_camera_disable(mut self, camera_disable: bool) -> Self {
+        self.camera_disable = camera_disable;
+        self
+    }
+}
 /// The possible types of input to monitor.
 #[derive(Eq, PartialEq, Debug, Clone, Copy, Hash, Serialize, Deserialize)]
 pub enum InputType {

@@ -7,6 +7,7 @@ use {
     crate::fidl_clone::FIDLClone,
     crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
     crate::handler::device_storage::DeviceStorage,
+    crate::input::common::MediaButtonsEventBuilder,
     crate::internal::event,
     crate::message::base::MessengerType,
     crate::switchboard::base::{
@@ -24,7 +25,6 @@ use {
         AudioMarker, AudioProxy, AudioSettings, AudioStreamSettingSource, AudioStreamSettings,
         Volume,
     },
-    fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_component::server::NestedEnvironment,
     futures::future::BoxFuture,
     futures::lock::Mutex,
@@ -307,12 +307,8 @@ async fn test_max_volume_sound_on_press() {
 
     // Try to increase volume. Only serves to set the "last volume button press" event
     // to 1 (volume up).
-    let buttons_event = MediaButtonsEvent {
-        volume: Some(1),
-        mic_mute: Some(false),
-        pause: Some(false),
-        camera_disable: Some(false),
-    };
+    let buttons_event = MediaButtonsEventBuilder::new().set_volume(1).build();
+
     fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
 
     // Sets volume max again.

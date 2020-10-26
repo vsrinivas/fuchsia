@@ -8,6 +8,7 @@ use {
     crate::fidl_clone::FIDLClone,
     crate::handler::device_storage::testing::*,
     crate::handler::device_storage::DeviceStorage,
+    crate::input::common::MediaButtonsEventBuilder,
     crate::switchboard::base::{
         AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
     },
@@ -21,7 +22,6 @@ use {
     fidl::Error::ClientChannelClosed,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::*,
-    fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_component::server::NestedEnvironment,
     fuchsia_zircon::Status,
     futures::lock::Mutex,
@@ -336,12 +336,8 @@ async fn test_audio_input() {
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    let buttons_event = MediaButtonsEvent {
-        volume: Some(1),
-        mic_mute: Some(true),
-        pause: Some(false),
-        camera_disable: Some(false),
-    };
+    let buttons_event = MediaButtonsEventBuilder::new().set_volume(1).set_mic_mute(true).build();
+
     fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
 
     let updated_settings = audio_proxy.watch().await.expect("watch completed");
