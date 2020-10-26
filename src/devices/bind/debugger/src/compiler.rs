@@ -330,6 +330,9 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     keys.push(("BIND_SPI_BUS_ID".to_string(), 0x0A41));
     keys.push(("BIND_SPI_CHIP_SELECT".to_string(), 0x0A42));
 
+    // Registers binding variables at 0x0A8X
+    keys.push(("BIND_REGISTER_ID".to_string(), 0x0A80));
+
     // Fuchsia-defined topological path properties are at 0x0B00 through 0x0B7F.
     // Vendor-defined topological path properties are at 0x0B80 to 0x0BFF.
     // For vendor properties, it is recommended that a vendor ID be included

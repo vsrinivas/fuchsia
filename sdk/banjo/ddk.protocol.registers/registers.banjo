@@ -1,0 +1,14 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.registers;
+
+using zx;
+
+[Layout = "ddk-protocol"]
+protocol Registers {
+    /// Gets a channel for FIDL protocol.
+    /// |chan| : Channel for FIDL protocol.
+    Connect(handle<channel> chan) -> ();
+};

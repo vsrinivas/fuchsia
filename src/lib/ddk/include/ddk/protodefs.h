@@ -171,5 +171,6 @@ DDK_PROTOCOL_DEF(DSI,                     148, "dsi", PF_NOPUB)
 DDK_PROTOCOL_DEF(BT_VENDOR,               149, "bt-vendor", 0)
 DDK_PROTOCOL_DEF(DSI_BASE,                150, "dsi-base", 0)
 DDK_PROTOCOL_DEF(POWER_SENSOR,            151, "power-sensor", 0)
+DDK_PROTOCOL_DEF(REGISTERS,               152, "registers", 0)
 #undef DDK_PROTOCOL_DEF
 #endif
