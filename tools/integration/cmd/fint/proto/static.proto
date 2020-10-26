@@ -6,7 +6,7 @@ syntax = "proto3";
 
 package fint;
 
-option go_package = "proto";
+option go_package = "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint/proto";
 
 // Static contains all of the non-dynamic configuration values for building
 // Fuchsia. These values are "static" in the sense that they don't vary
@@ -21,9 +21,7 @@ message Static {
     // See http://go/totw-4 for more info.
     // TODO(olivernewman): Link to a public explanation if and when it becomes
     // available.
-    OPTIMIZE_UNSPECIFIED = 0;
-    DEBUG = 1;
-    RELEASE = 2;
+    OPTIMIZE_UNSPECIFIED = 0; DEBUG = 1; RELEASE = 2;
   }
 
   // The optimization level for the build.

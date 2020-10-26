@@ -6,7 +6,7 @@ syntax = "proto3";
 
 package fint;
 
-option go_package = "proto";
+option go_package = "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint/proto";
 
 // Context contains all of the dynamic configuration values for building
 // Fuchsia. These values are context-dependent in that they vary based on git
