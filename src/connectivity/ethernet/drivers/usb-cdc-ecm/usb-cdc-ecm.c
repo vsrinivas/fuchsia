@@ -7,13 +7,13 @@
 #include <string.h>
 #include <zircon/hw/usb/cdc.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb/composite.h>
 #include <usb/usb-request.h>
 
+#include "src/connectivity/ethernet/drivers/usb-cdc-ecm/ethernet_usb_cdc_ecm-bind.h"
 #include "usb-cdc-ecm-lib.h"
 
 // The maximum amount of memory we are willing to allocate to transaction buffers
@@ -689,7 +689,4 @@ static zx_driver_ops_t ecm_driver_ops = {
     .bind = ecm_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(ethernet_usb_cdc_ecm, ecm_driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE), BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_COMM),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_CDC_SUBCLASS_ETHERNET),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0), ZIRCON_DRIVER_END(ethernet_usb_cdc_ecm)
+ZIRCON_DRIVER(ethernet_usb_cdc_ecm, ecm_driver_ops, "zircon", "0.1")
