@@ -33,6 +33,7 @@
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/powerimpl.h>
 #include <ddktl/protocol/pwm.h>
+#include <ddktl/protocol/registers.h>
 #include <ddktl/protocol/rpmb.h>
 #include <ddktl/protocol/scpi.h>
 #include <ddktl/protocol/sdio.h>
@@ -103,6 +104,7 @@ class Fragment : public FragmentBase {
         ge2d_client_(parent, ZX_PROTOCOL_GE2D),
         scpi_client_(parent, ZX_PROTOCOL_SCPI),
         rpmb_client_(parent, ZX_PROTOCOL_RPMB),
+        registers_client_(parent, ZX_PROTOCOL_REGISTERS),
         vreg_client_(parent, ZX_PROTOCOL_VREG),
         dsi_client_(parent, ZX_PROTOCOL_DSI) {}
 
@@ -181,6 +183,10 @@ class Fragment : public FragmentBase {
   zx_status_t RpcRpmb(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                       uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                       zx::handle* resp_handles, uint32_t* resp_handle_count);
+  zx_status_t RpcRegisters(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                           uint32_t* out_resp_size, zx::handle* req_handles,
+                           uint32_t req_handle_count, zx::handle* resp_handles,
+                           uint32_t* resp_handle_count);
   zx_status_t RpcVreg(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                       uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                       zx::handle* resp_handles, uint32_t* resp_handle_count);
@@ -223,6 +229,7 @@ class Fragment : public FragmentBase {
   ProtocolClient<ddk::Ge2dProtocolClient, ge2d_protocol_t> ge2d_client_;
   ProtocolClient<ddk::ScpiProtocolClient, scpi_protocol_t> scpi_client_;
   ProtocolClient<ddk::RpmbProtocolClient, rpmb_protocol_t> rpmb_client_;
+  ProtocolClient<ddk::RegistersProtocolClient, registers_protocol_t> registers_client_;
   ProtocolClient<ddk::VregProtocolClient, vreg_protocol_t> vreg_client_;
   ProtocolClient<ddk::DsiProtocolClient, dsi_protocol_t> dsi_client_;
 };

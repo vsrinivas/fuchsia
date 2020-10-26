@@ -66,6 +66,9 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_PWM:
       proto->ops = &pwm_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_REGISTERS:
+      proto->ops = &registers_protocol_ops_;
+      return ZX_OK;
     case ZX_PROTOCOL_RPMB:
       proto->ops = &rpmb_protocol_ops_;
       return ZX_OK;
@@ -912,6 +915,16 @@ void FragmentProxy::VregGetRegulatorParams(vreg_params_t* out_params) {
   out_params->min_uv = resp.params.min_uv;
   out_params->step_size_uv = resp.params.step_size_uv;
   out_params->num_steps = resp.params.num_steps;
+}
+
+void FragmentProxy::RegistersConnect(zx::channel chan) {
+  RegistersProxyRequest req = {};
+  RegistersProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_REGISTERS;
+  req.op = RegistersOp::CONNECT;
+
+  zx_handle_t handle = chan.release();
+  Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
 }
 
 void FragmentProxy::RpmbConnectServer(zx::channel server) {

@@ -24,6 +24,7 @@
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/pwm.h>
+#include <ddktl/protocol/registers.h>
 #include <ddktl/protocol/rpmb.h>
 #include <ddktl/protocol/spi.h>
 #include <ddktl/protocol/sysmem.h>
@@ -49,6 +50,7 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::PDevProtocol<FragmentProxy>,
                       public ddk::PowerProtocol<FragmentProxy>,
                       public ddk::PwmProtocol<FragmentProxy>,
+                      public ddk::RegistersProtocol<FragmentProxy>,
                       public ddk::RpmbProtocol<FragmentProxy>,
                       public ddk::SpiProtocol<FragmentProxy>,
                       public ddk::SysmemProtocol<FragmentProxy>,
@@ -137,6 +139,7 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t PwmSetConfig(const pwm_config_t* config);
   zx_status_t PwmEnable();
   zx_status_t PwmDisable();
+  void RegistersConnect(zx::channel chan);
   void RpmbConnectServer(zx::channel server);
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);
   zx_status_t SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,

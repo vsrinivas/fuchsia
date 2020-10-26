@@ -340,6 +340,20 @@ struct RpmbProxyResponse {
   ProxyResponse header;
 };
 
+// ZX_PROTOCOL_REGISTERS proxy supprot.
+enum class RegistersOp {
+  CONNECT,
+};
+
+struct RegistersProxyRequest {
+  ProxyRequest header;
+  RegistersOp op;
+};
+
+struct RegistersProxyResponse {
+  ProxyResponse header;
+};
+
 // ZX_PROTOCOL_GOLDFISH_PIPE proxy support.
 enum class GoldfishPipeOp {
   CREATE,
