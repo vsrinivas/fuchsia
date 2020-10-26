@@ -6,6 +6,7 @@ package checklicenses
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -21,7 +22,6 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 	var recursiveHelper func(string) error
 	var file_tree FileTree
 	file_tree.Init()
-	root := config.BaseDir
 
 	recursiveHelper = func(root string) error {
 		return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
@@ -47,15 +47,8 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 					}
 				}
 
-				// Instead of using filepath.Walk to traverse the directory tree,
-				// we will instead call this same function recursively on each
-				// subtree, and return "filepath.SkipDir" to prevent filepath.Walk
-				// from entering the child directories. This allows us to parallelize
-				// the walk procedure.
-				//
-				// Special case: In the first loop, root == path.
-				// Returning filepath.SkipDir on that loop would cancel the entire
-				// walk procedure, and no files would be processed.
+				// TODO(omerlevran): Use filepath.Walk() as it is supposed to be used.
+				// It's faster.
 				if root != path {
 					path := path
 					eg.Go(func() error {
@@ -64,12 +57,16 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 					return filepath.SkipDir
 				}
 				return nil
-			} else {
-				for _, skipFile := range config.SkipFiles {
-					if strings.ToLower(info.Name()) == strings.ToLower(skipFile) {
-						log.Printf("skipping a file without errors: %s", info.Name())
-						return nil
-					}
+			}
+
+			if info.Size() == 0 {
+				// An empty file has no content to copyright. Skip.
+				return nil
+			}
+			for _, skipFile := range config.SkipFiles {
+				if strings.ToLower(info.Name()) == skipFile {
+					log.Printf("skipping a file without errors: %s", info.Name())
+					return nil
 				}
 			}
 			if isSingleLicenseFile(info.Name(), config.SingleLicenseFiles) {
@@ -88,7 +85,7 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 	}
 
 	eg.Go(func() error {
-		return recursiveHelper(root)
+		return recursiveHelper(config.BaseDir)
 	})
 
 	if err := eg.Wait(); err != nil {
@@ -253,7 +250,7 @@ func readFromFile(path string, max_read_size int64) ([]byte, error) {
 	defer file.Close()
 	data := make([]byte, max_read_size)
 	count, err := file.Read(data)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		// TODO(solomonkinard) symlinks not found e.g. integration/fuchsia/infra/test_durations/README.md
 		return nil, err
 	}
