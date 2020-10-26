@@ -9,14 +9,16 @@ use crate::agent::earcons::bluetooth_handler::BluetoothHandler;
 use crate::agent::earcons::volume_change_handler::VolumeChangeHandler;
 use crate::blueprint_definition;
 use crate::internal::agent::Payload;
-use crate::internal::event::Publisher;
+use crate::internal::event::{self, Publisher};
 use crate::internal::switchboard;
+use crate::message::base::MessageEvent;
 use crate::service_context::{ExternalServiceProxy, ServiceContextHandle};
 
 use fidl_fuchsia_media_sounds::PlayerProxy;
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::lock::Mutex;
+use futures::StreamExt;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -28,6 +30,7 @@ pub struct Agent {
     publisher: Publisher,
     sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
     switchboard_messenger: switchboard::message::Messenger,
+    event_factory: event::message::Factory,
 }
 
 /// Params that are common to handlers of the earcons agent.
@@ -51,14 +54,17 @@ impl Agent {
             publisher: context.get_publisher(),
             sound_player_connection: Arc::new(Mutex::new(None)),
             switchboard_messenger: messenger_result.unwrap(),
+            event_factory: context.event_factory().clone(),
         };
 
         fasync::Task::spawn(async move {
-            while let Ok((payload, client)) = context.agent_receptor.next_payload().await {
-                if let Payload::Invocation(invocation) = payload {
+            while let Some(message) = context.receptor.next().await {
+                if let MessageEvent::Message(Payload::Invocation(invocation), client) = message {
                     client.reply(Payload::Complete(agent.handle(invocation).await)).send().ack();
                 }
             }
+
+            fx_log_info!("Earcons agent done processing requests");
         })
         .detach();
     }
@@ -75,18 +81,18 @@ impl Agent {
             sound_player_connection: self.sound_player_connection.clone(),
         };
 
-        if VolumeChangeHandler::create(
+        if let Err(e) = VolumeChangeHandler::create(
+            &self.event_factory,
             self.publisher.clone(),
             common_earcons_params.clone(),
             self.switchboard_messenger.clone(),
         )
         .await
-        .is_err()
         {
             // For now, report back as an error to prevent issues on
             // platforms that don't support the handler's dependencies.
             // TODO(fxbug.dev/61341): Handle with config
-            fx_log_err!("Could not set up VolumeChangeHandler");
+            fx_log_err!("Could not set up VolumeChangeHandler: {:?}", e);
         }
 
         if BluetoothHandler::create(self.publisher.clone(), common_earcons_params.clone())

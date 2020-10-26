@@ -124,17 +124,10 @@ impl Authority for AuthorityImpl {
             .await
             .map_err(|_| format_err!("could not register"))?;
         let signature = messenger.get_signature();
-
-        let (_, event_receptor) = self
-            .event_factory
-            .create(MessengerType::Unbound)
-            .await
-            .map_err(|_| format_err!("could not register"))?;
         blueprint
             .create(
                 Context::new(
                     agent_receptor,
-                    event_receptor,
                     blueprint.get_descriptor(),
                     self.switchboard_messenger_factory.clone(),
                     self.event_factory.clone(),

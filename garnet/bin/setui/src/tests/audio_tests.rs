@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use {
     crate::agent::restore_agent,
     crate::audio::{create_default_modified_timestamps, default_audio_info},
@@ -17,6 +16,7 @@ use {
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::fakes::sound_player_service::SoundPlayerService,
     crate::tests::test_failure_utils::create_test_env_with_failures,
+    crate::AgentType,
     crate::EnvironmentBuilder,
     fidl::Error::ClientChannelClosed,
     fidl_fuchsia_media::AudioRenderUsage,
@@ -162,6 +162,7 @@ async fn create_environment(
     let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
         .settings(&[SettingType::Audio])
+        .agents(&[AgentType::MediaButtons.into()])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

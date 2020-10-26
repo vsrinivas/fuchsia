@@ -42,10 +42,6 @@ async fn test_media_buttons_proxied() {
         agent_hub.create(MessengerType::Unbound).await.expect("Unable to create agent messenger");
     let signature = messenger.get_signature();
 
-    // Create the event receptor for use by the agent.
-    let (_, agent_event_receptor) =
-        event_hub.create(MessengerType::Unbound).await.expect("Unable to create event messenger");
-
     // Create the messenger where we will send the invocations.
     let (agent_messenger, _) =
         agent_hub.create(MessengerType::Unbound).await.expect("Unable to create agent messenger");
@@ -56,7 +52,6 @@ async fn test_media_buttons_proxied() {
     // Create the agent context and agent.
     let context = Context::new(
         agent_receptor,
-        agent_event_receptor,
         Descriptor::Component("test_media_buttons_agent"),
         switchboard::message::create_hub(),
         event_hub,

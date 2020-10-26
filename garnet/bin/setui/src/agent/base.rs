@@ -1,9 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::internal::agent::message::Receptor as AgentReceptor;
+use crate::internal::agent::message::Receptor;
 use crate::internal::event;
-use crate::internal::event::message::Receptor as EventReceptor;
 use crate::internal::switchboard;
 use crate::message::base::MessengerType;
 use crate::service_context::ServiceContextHandle;
@@ -39,8 +38,8 @@ pub enum Descriptor {
 }
 
 pub struct Context {
-    pub agent_receptor: AgentReceptor,
-    pub event_receptor: EventReceptor,
+    pub receptor: Receptor,
+    event_factory: event::message::Factory,
     publisher: event::Publisher,
     switchboard_messenger_factory: switchboard::message::Factory,
     pub available_components: HashSet<SettingType>,
@@ -48,21 +47,21 @@ pub struct Context {
 
 impl Context {
     pub async fn new(
-        agent_receptor: AgentReceptor,
-        event_receptor: EventReceptor,
+        receptor: Receptor,
         descriptor: Descriptor,
         switchboard_messenger_factory: switchboard::message::Factory,
         event_factory: event::message::Factory,
         available_components: HashSet<SettingType>,
     ) -> Self {
+        let publisher = event::Publisher::create(
+            &event_factory,
+            MessengerType::Addressable(event::Address::Agent(descriptor)),
+        )
+        .await;
         Self {
-            agent_receptor,
-            event_receptor,
-            publisher: event::Publisher::create(
-                &event_factory,
-                MessengerType::Addressable(event::Address::Agent(descriptor)),
-            )
-            .await,
+            receptor,
+            event_factory,
+            publisher,
             switchboard_messenger_factory,
             available_components,
         }
@@ -78,6 +77,10 @@ impl Context {
             self.switchboard_messenger_factory.create(MessengerType::Unbound).await?;
 
         Ok(messenger)
+    }
+
+    pub fn event_factory(&self) -> &event::message::Factory {
+        &self.event_factory
     }
 
     pub fn get_publisher(&self) -> event::Publisher {

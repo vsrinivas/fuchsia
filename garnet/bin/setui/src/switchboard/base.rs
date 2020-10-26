@@ -299,7 +299,7 @@ pub struct AudioStream {
     pub user_volume_muted: bool,
 }
 
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub struct InputInfo {
     pub microphone: Microphone,
 }

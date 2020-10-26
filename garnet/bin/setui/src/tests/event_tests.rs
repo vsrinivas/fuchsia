@@ -50,7 +50,7 @@ async fn test_agent_event_propagation() {
             *publisher_capture.lock().await = Some(context.get_publisher());
 
             fasync::Task::spawn(async move {
-                while let Ok((payload, client)) = context.agent_receptor.next_payload().await {
+                while let Ok((payload, client)) = context.receptor.next_payload().await {
                     if let agent::Payload::Invocation(_) = payload {
                         client
                             .reply(agent::Payload::Complete(Err(AgentError::UnhandledLifespan)))

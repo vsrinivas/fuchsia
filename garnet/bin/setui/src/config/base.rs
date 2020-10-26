@@ -31,36 +31,12 @@ pub fn get_default_agent_types() -> HashSet<AgentType> {
     return vec![AgentType::Restore].into_iter().collect();
 }
 
-impl From<AgentType> for Option<BlueprintHandle> {
-    fn from(agent_type: AgentType) -> Option<BlueprintHandle> {
+impl From<AgentType> for BlueprintHandle {
+    fn from(agent_type: AgentType) -> BlueprintHandle {
         match agent_type {
-            AgentType::Earcons => Some(crate::agent::earcons::agent::blueprint::create()),
-            // TODO(fxb/57919): Enable when media buttons agent is fully implemented.
-            AgentType::MediaButtons => None,
-            AgentType::Restore => Some(crate::agent::restore_agent::blueprint::create()),
+            AgentType::Earcons => crate::agent::earcons::agent::blueprint::create(),
+            AgentType::MediaButtons => crate::agent::media_buttons::blueprint::create(),
+            AgentType::Restore => crate::agent::restore_agent::blueprint::create(),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // Validates that MediaButtonsAgent is the only agent that maps to no agent creation when
-    // using the default agent mapping.
-    #[test]
-    fn test_default_agent_mapping() {
-        assert!(
-            <Option<BlueprintHandle> as From<AgentType>>::from(AgentType::Earcons).is_some(),
-            "Earcons agent should be enabled"
-        );
-        assert!(
-            <Option<BlueprintHandle> as From<AgentType>>::from(AgentType::MediaButtons).is_none(),
-            "MediaButtons agent should be disabled"
-        );
-        assert!(
-            <Option<BlueprintHandle> as From<AgentType>>::from(AgentType::Restore).is_some(),
-            "Restore agent should be enabled"
-        );
     }
 }

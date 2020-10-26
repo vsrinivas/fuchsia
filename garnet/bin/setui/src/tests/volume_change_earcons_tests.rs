@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use {
-    crate::agent::earcons,
-    crate::agent::restore_agent,
     crate::audio::default_audio_info,
     crate::fidl_clone::FIDLClone,
     crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
@@ -20,6 +17,7 @@ use {
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::fakes::sound_player_service::{SoundEventReceiver, SoundPlayerService},
     crate::tests::scaffold,
+    crate::AgentType,
     crate::EnvironmentBuilder,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::{
@@ -171,7 +169,11 @@ async fn create_environment(
         .service(ServiceRegistry::serve(service_registry))
         .event_subscribers(&[scaffold::event::subscriber::Blueprint::create(create_subscriber)])
         .settings(&[SettingType::Audio])
-        .agents(&[restore_agent::blueprint::create(), earcons::agent::blueprint::create()])
+        .agents(&[
+            AgentType::Restore.into(),
+            AgentType::Earcons.into(),
+            AgentType::MediaButtons.into(),
+        ])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

@@ -7,16 +7,13 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
-use async_trait::async_trait;
-use {
-    crate::input::{InputMonitor, InputMonitorHandle, InputType},
-    crate::switchboard::base::{
-        ControllerStateResult, InputInfo, InputInfoSources, Microphone, SettingRequest,
-        SettingResponse,
-    },
-    futures::lock::Mutex,
-    std::sync::Arc,
+use crate::input::ButtonType;
+use crate::switchboard::base::{
+    ControllerStateResult, InputInfo, InputInfoSources, Microphone, SettingRequest, SettingResponse,
 };
+use async_trait::async_trait;
+use futures::lock::Mutex;
+use std::sync::Arc;
 
 impl DeviceStorageCompatible for InputInfoSources {
     const KEY: &'static str = "input_info";
@@ -38,9 +35,6 @@ struct InputControllerInner {
     /// Client to communicate with persistent store and notify on.
     client: ClientProxy<InputInfoSources>,
 
-    /// Handles and reports the media button states.
-    input_monitor: InputMonitorHandle<InputInfoSources>,
-
     /// Local tracking of the hardware mic state.
     hardware_mic_muted: bool,
 
@@ -51,13 +45,7 @@ struct InputControllerInner {
 impl InputControllerInner {
     /// Gets the input state.
     async fn get_info(&mut self) -> Result<InputInfo, ControllerError> {
-        let input_info = self.client.read().await;
-        let mut input_monitor = self.input_monitor.lock().await;
-        input_monitor.ensure_monitor().await;
-        self.hardware_mic_muted =
-            input_monitor.get_mute_state().unwrap_or(input_info.hw_microphone.muted);
         let muted = self.hardware_mic_muted || self.software_mic_muted;
-
         Ok(InputInfo { microphone: Microphone { muted } })
     }
 
@@ -65,29 +53,27 @@ impl InputControllerInner {
     // TODO(fxbug.dev/57917): After config is implemented, this should return a ControllerStateResult.
     async fn restore(&mut self) {
         let input_info = self.client.read().await;
-        // Get hardware state.
-        let mut input_monitor = self.input_monitor.lock().await;
-        input_monitor.ensure_monitor().await;
-        self.hardware_mic_muted =
-            input_monitor.get_mute_state().unwrap_or(input_info.hw_microphone.muted);
-
-        // Get software state.
+        self.hardware_mic_muted = input_info.hw_microphone.muted;
         self.software_mic_muted = input_info.sw_microphone.muted;
     }
 
-    /// Sets the software mic state to [muted].
-    async fn set_mic_mute(&mut self, muted: bool) -> SettingHandlerResult {
+    /// Sets the software mic state to `muted`.
+    async fn set_sw_mic_mute(&mut self, muted: bool) -> SettingHandlerResult {
         let mut input_info = self.client.read().await;
         input_info.sw_microphone.muted = muted;
 
-        let mut input_monitor = self.input_monitor.lock().await;
-        input_monitor.ensure_monitor().await;
-
-        self.hardware_mic_muted =
-            input_monitor.get_mute_state().unwrap_or(input_info.hw_microphone.muted);
         self.software_mic_muted = muted;
 
-        input_info.hw_microphone.muted = self.hardware_mic_muted;
+        // Store the newly set value.
+        write(&self.client, input_info, false).await.into_handler_result()
+    }
+
+    /// Sets the hardware mic state to `muted`.
+    async fn set_hw_mic_mute(&mut self, muted: bool) -> SettingHandlerResult {
+        let mut input_info = self.client.read().await;
+        input_info.hw_microphone.muted = muted;
+
+        self.hardware_mic_muted = muted;
 
         // Store the newly set value.
         write(&self.client, input_info, false).await.into_handler_result()
@@ -106,7 +92,6 @@ impl data_controller::Create<InputInfoSources> for InputController {
         Ok(Self {
             inner: Arc::new(Mutex::new(InputControllerInner {
                 client: client.clone(),
-                input_monitor: InputMonitor::create(client.clone(), vec![InputType::Microphone]),
                 hardware_mic_muted: false,
                 software_mic_muted: false,
             })),
@@ -117,7 +102,6 @@ impl data_controller::Create<InputInfoSources> for InputController {
 #[async_trait]
 impl controller::Handle for InputController {
     async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
-        #[allow(unreachable_patterns)]
         match request {
             SettingRequest::Restore => {
                 // Get hardware state.
@@ -126,14 +110,19 @@ impl controller::Handle for InputController {
                 Some(Ok(None))
             }
             SettingRequest::SetMicMute(muted) => {
-                Some((*self.inner.lock().await).set_mic_mute(muted).await)
+                Some(self.inner.lock().await.set_sw_mic_mute(muted).await)
             }
             SettingRequest::Get => Some(
-                (*self.inner.lock().await)
+                self.inner
+                    .lock()
+                    .await
                     .get_info()
                     .await
                     .map(|info| Some(SettingResponse::Input(info))),
             ),
+            SettingRequest::OnButton(ButtonType::MicrophoneMute(state)) => {
+                Some(self.inner.lock().await.set_hw_mic_mute(state).await)
+            }
             _ => None,
         }
     }

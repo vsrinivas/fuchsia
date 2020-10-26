@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::agent::media_buttons,
     crate::agent::restore_agent,
     crate::fidl_clone::FIDLClone,
     crate::handler::device_storage::testing::*,
@@ -116,7 +117,7 @@ async fn create_environment(
 
     let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
-        .agents(&[restore_agent::blueprint::create()])
+        .agents(&[restore_agent::blueprint::create(), media_buttons::blueprint::create()])
         .settings(&[SettingType::Input])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await

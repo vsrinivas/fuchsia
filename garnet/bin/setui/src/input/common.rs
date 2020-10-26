@@ -6,7 +6,6 @@ use {
     crate::handler::base::Event,
     crate::handler::device_storage::DeviceStorageCompatible,
     crate::handler::setting_handler::persist::ClientProxy,
-    crate::internal::event::Publisher,
     crate::service_context::{ExternalServiceProxy, ServiceContextHandle},
     anyhow::{format_err, Error},
     fidl::endpoints::create_request_stream,
@@ -25,9 +24,12 @@ use {
     std::sync::Arc,
 };
 
+#[allow(dead_code)]
 pub type InputMonitorHandle<T> = Arc<Mutex<InputMonitor<T>>>;
+#[allow(dead_code)]
 pub type MediaButtonEventSender = futures::channel::mpsc::UnboundedSender<MediaButtonsEvent>;
 
+#[allow(dead_code)]
 /// Monitors the media buttons for changes and maintains the state.
 pub struct InputMonitor<T: Send + Sync + DeviceStorageCompatible + 'static> {
     /// Provides service context and notifier.
@@ -70,6 +72,7 @@ pub enum VolumeGain {
     Down,
 }
 
+#[allow(dead_code)]
 impl<T> InputMonitor<T>
 where
     T: DeviceStorageCompatible + Send + Sync + 'static,
@@ -142,19 +145,6 @@ pub async fn monitor_media_buttons(
     let presenter_service =
         service_context_handle.lock().await.connect::<DeviceListenerRegistryMarker>().await?;
 
-    monitor_media_buttons_internal(presenter_service, sender).await
-}
-
-pub async fn monitor_media_buttons_using_publisher(
-    publisher: Publisher,
-    service_context_handle: ServiceContextHandle,
-    sender: futures::channel::mpsc::UnboundedSender<MediaButtonsEvent>,
-) -> Result<(), Error> {
-    let presenter_service = service_context_handle
-        .lock()
-        .await
-        .connect_with_publisher::<DeviceListenerRegistryMarker>(publisher)
-        .await?;
     monitor_media_buttons_internal(presenter_service, sender).await
 }
 

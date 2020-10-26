@@ -1,25 +1,22 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::audio::{
+    create_default_modified_timestamps, default_audio_info, ModifiedTimestamps, StreamVolumeControl,
+};
 use crate::handler::base::{Event, SettingHandlerResult, State};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
-use crate::input::{InputMonitor, InputMonitorHandle, InputType};
+use crate::input::ButtonType;
+use crate::internal::common::now;
+use crate::switchboard::base::*;
 use async_trait::async_trait;
-use {
-    crate::audio::{
-        create_default_modified_timestamps, default_audio_info, ModifiedTimestamps,
-        StreamVolumeControl,
-    },
-    crate::internal::common::now,
-    crate::switchboard::base::*,
-    fuchsia_async as fasync,
-    futures::lock::Mutex,
-    std::collections::HashMap,
-    std::sync::Arc,
-};
+use fuchsia_async as fasync;
+use futures::lock::Mutex;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 fn get_streams_array_from_map(
     stream_map: &HashMap<AudioStreamType, StreamVolumeControl>,
@@ -39,7 +36,7 @@ pub struct VolumeController {
     client: ClientProxy<AudioInfo>,
     audio_service_connected: bool,
     stream_volume_controls: HashMap<AudioStreamType, StreamVolumeControl>,
-    input_monitor: InputMonitorHandle<AudioInfo>,
+    mic_mute_state: bool,
     modified_timestamps: ModifiedTimestamps,
 }
 
@@ -49,10 +46,7 @@ impl VolumeController {
             client: client.clone(),
             stream_volume_controls: HashMap::new(),
             audio_service_connected: false,
-            input_monitor: InputMonitor::create(
-                client.clone(),
-                vec![InputType::Microphone, InputType::VolumeButtons],
-            ),
+            mic_mute_state: false,
             modified_timestamps: create_default_modified_timestamps(),
         }));
 
@@ -76,16 +70,8 @@ impl VolumeController {
 
     async fn get_info(&mut self) -> Result<AudioInfo, ControllerError> {
         let mut audio_info = self.client.read().await;
-        self.input_monitor.lock().await.ensure_monitor().await;
 
-        audio_info.input = AudioInputInfo {
-            mic_mute: self
-                .input_monitor
-                .lock()
-                .await
-                .get_mute_state()
-                .unwrap_or(audio_info.input.mic_mute),
-        };
+        audio_info.input = AudioInputInfo { mic_mute: self.mic_mute_state };
         audio_info.modified_timestamps = Some(self.modified_timestamps.clone());
         Ok(audio_info)
     }
@@ -103,6 +89,15 @@ impl VolumeController {
         }
 
         Ok(None)
+    }
+
+    async fn set_mic_mute_state(&mut self, mic_mute_state: bool) -> SettingHandlerResult {
+        self.mic_mute_state = mic_mute_state;
+
+        let mut audio_info = self.client.read().await;
+        audio_info.input.mic_mute = self.mic_mute_state;
+
+        write(&self.client, audio_info, false).await.into_handler_result()
     }
 
     /// Updates the state with the given streams' volume levels.
@@ -206,16 +201,22 @@ impl data_controller::Create<AudioInfo> for AudioController {
 #[async_trait]
 impl controller::Handle for AudioController {
     async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
-        #[allow(unreachable_patterns)]
         match request {
             SettingRequest::Restore => Some(self.volume.lock().await.restore().await.map(|_| None)),
             SettingRequest::SetVolume(volume) => {
                 Some(self.volume.lock().await.set_volume(volume).await)
             }
-            SettingRequest::Get => Some(match self.volume.lock().await.get_info().await {
-                Ok(info) => Ok(Some(SettingResponse::Audio(info))),
-                Err(e) => Err(e),
-            }),
+            SettingRequest::Get => Some(
+                self.volume
+                    .lock()
+                    .await
+                    .get_info()
+                    .await
+                    .map(|info| Some(SettingResponse::Audio(info))),
+            ),
+            SettingRequest::OnButton(ButtonType::MicrophoneMute(state)) => {
+                Some(self.volume.lock().await.set_mic_mute_state(state).await)
+            }
             _ => None,
         }
     }

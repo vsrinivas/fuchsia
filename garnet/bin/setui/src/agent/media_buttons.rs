@@ -16,7 +16,7 @@ use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{SettingRequest, SettingType};
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::StreamExt;
 
 blueprint_definition!(Descriptor::Component("buttons_agent"), MediaButtonsAgent::create);
@@ -48,11 +48,13 @@ impl MediaButtonsAgent {
         };
 
         fasync::Task::spawn(async move {
-            while let Ok((payload, client)) = context.agent_receptor.next_payload().await {
+            while let Ok((payload, client)) = context.receptor.next_payload().await {
                 if let Payload::Invocation(invocation) = payload {
                     client.reply(Payload::Complete(agent.handle(invocation).await)).send().ack();
                 }
             }
+
+            fx_log_info!("Media buttons agent done processing requests");
         })
         .detach()
     }

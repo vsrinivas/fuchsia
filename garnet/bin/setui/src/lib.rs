@@ -176,7 +176,7 @@ impl Environment {
 pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     configuration: Option<ServiceConfiguration>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
-    agent_mapping_func: Option<Box<dyn Fn(AgentType) -> Option<AgentBlueprintHandle>>>,
+    agent_mapping_func: Option<Box<dyn Fn(AgentType) -> AgentBlueprintHandle>>,
     event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
     storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
@@ -267,7 +267,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
     pub fn agent_mapping<F>(mut self, agent_mapping_func: F) -> EnvironmentBuilder<T>
     where
-        F: Fn(AgentType) -> Option<AgentBlueprintHandle> + 'static,
+        F: Fn(AgentType) -> AgentBlueprintHandle + 'static,
     {
         self.agent_mapping_func = Some(Box::new(agent_mapping_func));
         self
@@ -331,10 +331,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         let agent_blueprints = self
             .agent_mapping_func
             .map(|agent_mapping_func| {
-                agent_types
-                    .into_iter()
-                    .filter_map(|agent_type| (agent_mapping_func)(agent_type))
-                    .collect()
+                agent_types.into_iter().map(|agent_type| (agent_mapping_func)(agent_type)).collect()
             })
             .unwrap_or(self.agent_blueprints);
 
