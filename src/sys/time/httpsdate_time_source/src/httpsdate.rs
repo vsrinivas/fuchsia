@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::datatypes::HttpsSample;
 use crate::inspect::InspectDiagnostics;
 use anyhow::Error;
 use async_trait::async_trait;
-use fidl_fuchsia_time_external::{Properties, Status, TimeSample};
+use fidl_fuchsia_time_external::{Properties, Status};
 use fuchsia_async::{self as fasync, TimeoutExt};
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc::Sender, lock::Mutex, SinkExt};
@@ -118,7 +119,7 @@ impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
             let attempt = attempt_iter.next().unwrap_or(u32::MAX);
             match self.poll_time_once().await {
                 Ok(sample) => {
-                    self.inspect.success();
+                    self.inspect.success(&sample);
                     sink.send(Status::Ok.into()).await?;
                     sink.send(sample.into()).await?;
                     return Ok(());
@@ -157,22 +158,26 @@ impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
     }
 
     /// Poll for time once without retries.
-    async fn poll_time_once(&self) -> Result<TimeSample, HttpsDateError> {
+    async fn poll_time_once(&self) -> Result<HttpsSample, HttpsDateError> {
         let mut client_lock = self.client.lock().await;
 
-        let monotonic_before = zx::Time::get_monotonic().into_nanos();
+        let monotonic_before = zx::Time::get_monotonic();
         // We assume here that the time reported by an HTTP server is truncated down a second. We
         // provide the median value of the range of possible actual UTC times, which makes the
         // error distribution symmetric.
         let utc =
             client_lock.request_utc(&self.request_uri).await? + zx::Duration::from_millis(500);
-        let monotonic_after = zx::Time::get_monotonic().into_nanos();
-        let monotonic_center = (monotonic_before + monotonic_after) / 2;
+        let monotonic_after = zx::Time::get_monotonic();
+        let monotonic_center = zx::Time::from_nanos(
+            (monotonic_before.into_nanos() + monotonic_after.into_nanos()) / 2,
+        );
 
-        Ok(TimeSample {
-            utc: Some(utc.into_nanos()),
-            monotonic: Some(monotonic_center),
-            standard_deviation: Some(STANDARD_DEVIATION.into_nanos()),
+        Ok(HttpsSample {
+            utc,
+            monotonic: monotonic_center,
+            standard_deviation: STANDARD_DEVIATION,
+            final_bound_size: monotonic_after - monotonic_before + zx::Duration::from_seconds(1),
+            round_trip_times: vec![monotonic_after - monotonic_before],
         })
     }
 }
@@ -180,7 +185,7 @@ impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector};
     use futures::{
         channel::{mpsc::channel, oneshot},
         future::pending,
@@ -406,6 +411,11 @@ mod test {
             inspector,
             root: {
                 success_count: 1u64,
+                last_successful: contains {
+                    round_trip_times: AnyProperty,
+                    monotonic: AnyProperty,
+                    bound_size: AnyProperty
+                },
                 failure_counts: {
                     NoCertificatesPresented: 1u64,
                     NetworkError: 2u64,

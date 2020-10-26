@@ -30,6 +30,7 @@ rustc_binary("bin") {
   ]
 
   sources = [
+    "src/datatypes.rs",
     "src/httpsdate.rs",
     "src/inspect.rs",
     "src/main.rs",
