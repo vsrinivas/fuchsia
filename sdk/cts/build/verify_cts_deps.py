@@ -16,24 +16,8 @@ that the target may verify its own dependencies.
 
 import argparse
 import os
+import re
 import sys
-
-# These must be fully qualified labels (without a toolchain).
-ALLOWED_CTS_DEPS = [
-    '//sdk/testing/sl4f/client:client',
-    '//sdk:sdk',
-    '//src/sys/pkg/bin/pm:host',
-    '//sdk/cts/tools/package_manager:pm_test_package_gather_deps',
-    '//third_party/dart-pkg/pub/archive:archive',
-    '//third_party/dart-pkg/pub/async:async',
-    '//third_party/dart-pkg/pub/file:file',
-    '//third_party/dart-pkg/pub/logging:logging',
-    '//third_party/dart-pkg/pub/path:path',
-    '//third_party/dart-pkg/pub/quiver:quiver',
-    '//third_party/dart-pkg/pub/retry:retry',
-    '//third_party/dart-pkg/pub/test:test',
-    '//zircon/public/lib/zxtest:zxtest',
-]
 
 CTS_EXTENSION = '.this_is_cts'
 
@@ -50,7 +34,7 @@ class VerifyCtsDeps:
     Raises: ValueError if any parameter is empty or if root_build_dir does not exist.
     """
 
-    def __init__(self, root_build_dir, cts_file, invoker_label, deps):
+    def __init__(self, root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps, allowed_cts_dirs):
         if root_build_dir and os.path.exists(root_build_dir):
             self.root_build_dir = root_build_dir
         else:
@@ -70,6 +54,16 @@ class VerifyCtsDeps:
             self.deps = deps
         else:
             raise ValueError('deps cannot be empty.')
+
+        if allowed_cts_deps:
+            self.allowed_cts_deps = allowed_cts_deps
+        else:
+            raise ValueError('allowed_cts_deps cannot be empty')
+
+        if allowed_cts_dirs:
+            self.allowed_cts_dirs = allowed_cts_dirs
+        else:
+            raise ValueError('allowed_cts_dirs cannot be empty')
 
     def get_file_path(self, dep):
         """Returns the path to a CTS file.
@@ -108,8 +102,19 @@ class VerifyCtsDeps:
         """
         unaccepted_deps = []
         for dep in self.deps:
-            if dep not in ALLOWED_CTS_DEPS and not os.path.exists(
-                    self.get_file_path(dep)):
+            dep_found = False
+
+            if dep in self.allowed_cts_deps or os.path.exists(self.get_file_path(dep)):
+                dep_found = True
+            else:
+                # Dep isn't in the allow list and a CTS file doesn't exist. Check if
+                # all targets in dep's directory are allowed (//sdk/*).
+                for allowed_dir in self.allowed_cts_dirs:
+                    pattern = re.compile(allowed_dir)
+                    if pattern.match(dep):
+                        dep_found = True
+
+            if not dep_found:
                 unaccepted_deps.append(dep)
 
         return unaccepted_deps
@@ -149,10 +154,24 @@ def main():
         help=
         'A list of at least one GN label representing the target\'s dependencies.'
     )
+    parser.add_argument(
+        '--allowed_cts_deps',
+        nargs='+',
+        required=True,
+        help='The list of allowed CTS dependencies in allowed_cts_deps.gni')
+    parser.add_argument(
+        '--allowed_cts_dirs',
+        nargs='+',
+        required=True,
+        help='The list of allowed CTS dependency directories in allowed_cts_deps.gni')
     args = parser.parse_args()
     try:
-        cts_element = VerifyCtsDeps(
-            args.root_build_dir, args.output, args.invoker_label, args.deps)
+        cts_element = VerifyCtsDeps(args.root_build_dir,
+                                    args.output,
+                                    args.invoker_label,
+                                    args.deps,
+                                    args.allowed_cts_deps,
+                                    args.allowed_cts_dirs)
     except ValueError as e:
         print('ValueError: %s' % e)
         return 1

@@ -1,0 +1,15 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Individual dependencies that are approved for use in CTS.
+ALLOWED_CTS_DEPS = [
+  "//src/sys/pkg/bin/pm:host",
+  "//zircon/public/lib/zxtest:zxtest",
+]
+
+# All targets in these directories and their subdirectories are approved for use in CTS.
+ALLOWED_CTS_DIRS = [
+  "//sdk/*",
+  "//third_party/dart-pkg/pub/*",
+]
