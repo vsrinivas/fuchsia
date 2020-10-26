@@ -108,4 +108,9 @@ class SetUi {
     final result = await _sl4f.request('setui_facade.GetIntl');
     return IntlInfo.fromJson(result);
   }
+
+  Future<bool> isMicMuted() async {
+    final result = await _sl4f.request('setui_facade.IsMicMuted');
+    return result == 'true';
+  }
 }

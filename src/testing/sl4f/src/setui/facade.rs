@@ -7,7 +7,9 @@ use anyhow::{format_err, Error};
 use serde_json::{from_value, to_value, Value};
 
 use crate::setui::types::{IntlInfo, NetworkType, SetUiResult};
-use fidl_fuchsia_settings::{ConfigurationInterfaces, IntlMarker, SetupMarker, SetupSettings};
+use fidl_fuchsia_settings::{
+    AudioMarker, ConfigurationInterfaces, IntlMarker, SetupMarker, SetupSettings,
+};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog::macros::fx_log_info;
 
@@ -101,6 +103,20 @@ impl SetUiFacade {
         };
         let intl_info: IntlInfo = intl_service_proxy.watch().await?.into();
         return Ok(to_value(&intl_info)?);
+    }
+
+    /// Reports the AudioInput (mic muted) state.
+    ///
+    /// Returns true if mic is muted or false if mic is unmuted.
+    pub async fn is_mic_muted(&self) -> Result<Value, Error> {
+        let audio_proxy = match connect_to_service::<AudioMarker>() {
+            Ok(proxy) => proxy,
+            Err(e) => bail!("Failed to connect to Setup Audio service {:?}.", e),
+        };
+        match audio_proxy.watch().await?.input {
+            Some(audio_input) => Ok(to_value(audio_input.muted)?),
+            _ => Err(format_err!("Cannot read audio input.")),
+        }
     }
 }
 

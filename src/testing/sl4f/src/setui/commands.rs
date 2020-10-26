@@ -18,6 +18,7 @@ impl Facade for SetUiFacade {
             SetUiMethod::GetNetwork => self.get_network_setting().await,
             SetUiMethod::SetIntl => self.set_intl_setting(args).await,
             SetUiMethod::GetIntl => self.get_intl_setting().await,
+            SetUiMethod::IsMicMuted => self.is_mic_muted().await,
         }
     }
 }

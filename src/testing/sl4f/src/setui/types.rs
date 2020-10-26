@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 /// Supported setUi commands.
 pub enum SetUiMethod {
+    IsMicMuted,
     SetNetwork,
     GetNetwork,
     SetIntl,
@@ -23,6 +24,7 @@ impl std::str::FromStr for SetUiMethod {
             "GetNetwork" => Ok(SetUiMethod::GetNetwork),
             "SetIntl" => Ok(SetUiMethod::SetIntl),
             "GetIntl" => Ok(SetUiMethod::GetIntl),
+            "IsMicMuted" => Ok(SetUiMethod::IsMicMuted),
             _ => return Err(format_err!("invalid SetUi SL4F method: {}", method)),
         }
     }
