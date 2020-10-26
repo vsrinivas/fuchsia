@@ -129,16 +129,12 @@ zx::status<LazyBuffer*> VnodeMinfs::GetIndirectFile() {
 
 #ifdef __Fuchsia__
 
-// Since we cannot yet register the filesystem as a paging service (and cleanly
-// fault on pages when they are actually needed), we currently read an entire
-// file to a VMO when a file's data block are accessed.
-//
 // TODO(smklein): Even this hack can be optimized; a bitmap could be used to
 // track all 'empty/read/dirty' blocks for each vnode, rather than reading
 // the entire file.
 //
 // TODO(fxbug.dev/51589): Add init metrics.
-zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
+zx_status_t VnodeMinfs::InitVmo() {
   if (vmo_.is_valid()) {
     return ZX_OK;
   }
@@ -387,7 +383,7 @@ zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, size
 
   zx_status_t status;
 #ifdef __Fuchsia__
-  if ((status = InitVmo(transaction)) != ZX_OK) {
+  if ((status = InitVmo()) != ZX_OK) {
     return status;
   } else if ((status = vmo_.read(vdata, off, len)) != ZX_OK) {
     return status;
@@ -445,7 +441,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* d
 #ifdef __Fuchsia__
   // TODO(planders): Once we are splitting up write transactions, assert this on host as well.
   ZX_DEBUG_ASSERT(len <= TransactionLimits::kMaxWriteBytes);
-  if ((status = InitVmo(transaction)) != ZX_OK) {
+  if ((status = InitVmo()) != ZX_OK) {
     return status;
   }
 
@@ -488,7 +484,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* d
     }
 
     IssueWriteback(transaction, n, bno + fs_->Info().dat_block, 1);
-#else  // __Fuchsia__
+#else   // __Fuchsia__
     blk_t bno;
     if ((status = BlockGetWritable(transaction, n, &bno))) {
       break;
@@ -539,7 +535,8 @@ zx_status_t VnodeMinfs::GetAttributes(fs::VnodeAttributes* a) {
   // This transaction exists because acquiring the block size and block
   // count may be unsafe without locking.
   //
-  // TODO: Improve locking semantics of pending data allocation to make this less confusing.
+  // TODO(unknown): Improve locking semantics of pending data allocation to make this less
+  // confusing.
   Transaction transaction(fs_);
   *a = fs::VnodeAttributes();
   a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic)) | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
@@ -703,7 +700,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
 #ifdef __Fuchsia__
   // TODO(smklein): We should only init up to 'len'; no need
   // to read in the portion of a large file we plan on deleting.
-  if ((status = InitVmo(transaction)) != ZX_OK) {
+  if ((status = InitVmo()) != ZX_OK) {
     FS_TRACE_ERROR("minfs: Truncate failed to initialize VMO: %d\n", status);
     return ZX_ERR_IO;
   }
@@ -776,7 +773,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
         }
         IssueWriteback(transaction, rel_bno, bno + fs_->Info().dat_block, 1);
       }
-#else  // __Fuchsia__
+#else   // __Fuchsia__
       if (bno != 0) {
         if (fs_->bc_->Readblk(bno + fs_->Info().dat_block, bdata)) {
           return ZX_ERR_IO;

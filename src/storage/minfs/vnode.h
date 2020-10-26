@@ -66,6 +66,7 @@ class VnodeMinfs : public fs::Vnode,
                    public fbl::Recyclable<VnodeMinfs> {
 #endif
  public:
+  explicit VnodeMinfs(Minfs* fs);
   ~VnodeMinfs() override;
 
   // Allocates a new Vnode and initializes the in-memory inode structure given the type, where
@@ -133,7 +134,7 @@ class VnodeMinfs : public fs::Vnode,
   // Should update the in-memory representation of the Vnode, but not necessarily
   // write it out to persistent storage.
   //
-  // TODO: Upgrade internal size to 64-bit integer.
+  // TODO(unknown): Upgrade internal size to 64-bit integer.
   virtual void SetSize(uint32_t new_size) = 0;
 
   // Accesses a block in the vnode at |vmo_offset| relative to the start of the file,
@@ -174,6 +175,9 @@ class VnodeMinfs : public fs::Vnode,
   void GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) final;
   void GetMountState(GetMountStateCompleter::Sync& completer) final;
 
+  // Returns a copy of unowned vmo.
+  zx::unowned_vmo vmo() const { return zx::unowned_vmo(vmo_.get()); }
+
 #endif
   Minfs* Vfs() { return fs_; }
 
@@ -211,20 +215,6 @@ class VnodeMinfs : public fs::Vnode,
   // bnos
   zx_status_t BlocksShrink(PendingWork* transaction, blk_t start);
 
-  // TODO(smklein): These operations and members are protected as a historical artifact
-  // of "File + Directory + Vnode" being a single class. They should be transitioned to
-  // private.
- protected:
-  explicit VnodeMinfs(Minfs* fs);
-
-  // fs::Vnode interface.
-  zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
-  zx_status_t SetAttributes(fs::VnodeAttributesUpdate a) final;
-#ifdef __Fuchsia__
-  zx_status_t QueryFilesystem(llcpp::fuchsia::io::FilesystemInfo* out) final;
-  zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
-#endif
-
   // Although file sizes don't need to be block-aligned, the underlying VMO is
   // always kept at a size which is a multiple of |kMinfsBlockSize|.
   //
@@ -234,12 +224,21 @@ class VnodeMinfs : public fs::Vnode,
   // assumption.
   void ValidateVmoTail(uint64_t inode_size) const;
 
+ private:
+  // fs::Vnode interface.
+  zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
+  zx_status_t SetAttributes(fs::VnodeAttributesUpdate a) final;
+#ifdef __Fuchsia__
+  zx_status_t QueryFilesystem(llcpp::fuchsia::io::FilesystemInfo* out) final;
+  zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
+#endif
+
   // Get the disk block 'bno' corresponding to the 'n' block
   //
   // May or may not allocate |bno|; certain Vnodes (like File) delay allocation
   // until writeback, and will return a sentinel value of zero.
   //
-  // TODO: Use types to represent that |bno|, as an output, is optional.
+  // TODO(unknown): Use types to represent that |bno|, as an output, is optional.
   zx_status_t BlockGetWritable(Transaction* transaction, blk_t n, blk_t* bno);
 
   // Get the disk block 'bno' corresponding to relative block address |n| within the file.
@@ -259,15 +258,22 @@ class VnodeMinfs : public fs::Vnode,
 
   void Sync(SyncCallback closure) final;
   zx_status_t AttachRemote(fs::MountChannel h) final;
-  zx_status_t InitVmo(PendingWork* transaction);
+
+  // Initializes vmo that contains file's data by reading data from the disk.
+  // Since we cannot yet register the filesystem as a paging service (and
+  // cleanly fault on pages when they are actually needed), we currently read an
+  // entire file to a VMO when a file's data block are accessed.
+  zx_status_t InitVmo();
 
   // Use the watcher container to implement a directory watcher
   void Notify(fbl::StringPiece name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
 #endif
+
   uint32_t FdCount() const { return fd_count_; }
 
   Minfs* const fs_;
+
 #ifdef __Fuchsia__
   // TODO(smklein): When we have can register MinFS as a pager service, and
   // it can properly handle pages faults on a vnode's contents, then we can

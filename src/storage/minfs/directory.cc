@@ -80,18 +80,18 @@ Directory::Directory(Minfs* fs) : VnodeMinfs(fs) {}
 
 Directory::~Directory() = default;
 
-blk_t Directory::GetBlockCount() const { return inode_.block_count; }
+blk_t Directory::GetBlockCount() const { return GetInode()->block_count; }
 
-uint64_t Directory::GetSize() const { return inode_.size; }
+uint64_t Directory::GetSize() const { return GetInode()->size; }
 
-void Directory::SetSize(uint32_t new_size) { inode_.size = new_size; }
+void Directory::SetSize(uint32_t new_size) { GetMutableInode()->size = new_size; }
 
 void Directory::AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno,
                                      blk_t* out_bno) {
   bool using_new_block = (old_bno == 0);
   if (using_new_block) {
-    fs_->BlockNew(transaction, out_bno);
-    inode_.block_count++;
+    Vfs()->BlockNew(transaction, out_bno);
+    GetMutableInode()->block_count++;
   }
 }
 
@@ -100,7 +100,7 @@ void Directory::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old
   // If we found a block that was previously allocated, delete it.
   if (old_bno != 0) {
     transaction->DeallocateBlock(old_bno);
-    inode_.block_count--;
+    GetMutableInode()->block_count--;
   }
 }
 
@@ -113,7 +113,7 @@ void Directory::IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t
       .dev_offset = dev_offset,
       .length = count,
   };
-  UnownedVmoBuffer buffer(zx::unowned_vmo(vmo_.get()));
+  UnownedVmoBuffer buffer(vmo());
   transaction->EnqueueMetadata(operation, &buffer);
 }
 
@@ -134,7 +134,7 @@ zx_status_t Directory::DirentCallbackFind(fbl::RefPtr<Directory> vndir, Dirent* 
 
 zx_status_t Directory::CanUnlink() const {
   // directories must be empty (dirent_count == 2)
-  if (inode_.dirent_count != 2) {
+  if (GetInode()->dirent_count != 2) {
     // if we have more than "." and "..", not empty, cannot unlink
     return ZX_ERR_NOT_EMPTY;
 #ifdef __Fuchsia__
@@ -213,11 +213,11 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
     TruncateInternal(transaction, off + kMinfsDirentSize);
   }
 
-  inode_.dirent_count--;
+  GetMutableInode()->dirent_count--;
 
   if (MinfsMagicType(childvn->GetInode()->magic) == kMinfsTypeDir) {
     // Child directory had '..' which pointed to parent directory
-    inode_.link_count--;
+    GetMutableInode()->link_count--;
   }
 
   status = childvn->RemoveInodeLink(transaction);
@@ -238,7 +238,7 @@ zx_status_t Directory::DirentCallbackUnlink(fbl::RefPtr<Directory> vndir, Dirent
 
   fbl::RefPtr<VnodeMinfs> vn;
   zx_status_t status;
-  if ((status = vndir->fs_->VnodeGet(&vn, de->ino)) < 0) {
+  if ((status = vndir->Vfs()->VnodeGet(&vn, de->ino)) < 0) {
     return status;
   }
 
@@ -261,7 +261,7 @@ zx_status_t Directory::DirentCallbackForceUnlink(fbl::RefPtr<Directory> vndir, D
 
   fbl::RefPtr<VnodeMinfs> vn;
   zx_status_t status;
-  if ((status = vndir->fs_->VnodeGet(&vn, de->ino)) < 0) {
+  if ((status = vndir->Vfs()->VnodeGet(&vn, de->ino)) < 0) {
     return status;
   }
   return vndir->UnlinkChild(args->transaction, std::move(vn), de, &args->offs);
@@ -284,7 +284,7 @@ zx_status_t Directory::DirentCallbackAttemptRename(fbl::RefPtr<Directory> vndir,
 
   fbl::RefPtr<VnodeMinfs> vn;
   zx_status_t status;
-  if ((status = vndir->fs_->VnodeGet(&vn, de->ino)) < 0) {
+  if ((status = vndir->Vfs()->VnodeGet(&vn, de->ino)) < 0) {
     return status;
   }
   if (args->ino == vn->GetIno()) {
@@ -419,11 +419,11 @@ zx_status_t Directory::AppendDirent(DirArgs* args) {
 
   if (args->type == kMinfsTypeDir) {
     // Child directory has '..' which will point to parent directory
-    inode_.link_count++;
+    GetMutableInode()->link_count++;
   }
 
-  inode_.dirent_count++;
-  inode_.seq_num++;
+  GetMutableInode()->dirent_count++;
+  GetMutableInode()->seq_num++;
   InodeSync(args->transaction, kMxFsSyncMtime);
   args->transaction->PinVnode(fbl::RefPtr(this));
   return ZX_OK;
@@ -464,7 +464,7 @@ zx_status_t Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
       case kDirIteratorNext:
         break;
       case kDirIteratorSaveSync:
-        inode_.seq_num++;
+        GetMutableInode()->seq_num++;
         InodeSync(args->transaction, kMxFsSyncMtime);
         args->transaction->PinVnode(fbl::RefPtr(this));
         return ZX_OK;
@@ -506,15 +506,15 @@ zx_status_t Directory::LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPi
   args.name = name;
 
   bool success = false;
-  fs::Ticker ticker(fs_->StartTicker());
+  fs::Ticker ticker(Vfs()->StartTicker());
   auto get_metrics = fbl::MakeAutoCall(
-      [&ticker, &success, this]() { fs_->UpdateLookupMetrics(success, ticker.End()); });
+      [&ticker, &success, this]() { Vfs()->UpdateLookupMetrics(success, ticker.End()); });
 
   if (zx_status_t status = ForEachDirent(&args, DirentCallbackFind); status != ZX_OK) {
     return status;
   }
   fbl::RefPtr<VnodeMinfs> vn;
-  if (zx_status_t status = fs_->VnodeGet(&vn, args.ino); status != ZX_OK) {
+  if (zx_status_t status = Vfs()->VnodeGet(&vn, args.ino); status != ZX_OK) {
     return status;
   }
   *out = std::move(vn);
@@ -549,7 +549,7 @@ zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
   DirentBuffer dirent_buffer;
   Dirent* de = &dirent_buffer.dirent;
 
-  if (off != 0 && dc->seqno != inode_.seq_num) {
+  if (off != 0 && dc->seqno != GetInode()->seq_num) {
     // The offset *might* be invalid, if we called Readdir after a directory
     // has been modified. In this case, we need to re-read the directory
     // until we get to the direntry at or after the previously identified offset.
@@ -596,7 +596,7 @@ zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
 done:
   // save our place in the DirCookie
   dc->off = off;
-  dc->seqno = inode_.seq_num;
+  dc->seqno = GetInode()->seq_num;
   *out_actual = df.BytesFilled();
   ZX_DEBUG_ASSERT(*out_actual <= len);  // Otherwise, we're overflowing the input buffer.
   return ZX_OK;
@@ -614,9 +614,9 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
   }
 
   bool success = false;
-  fs::Ticker ticker(fs_->StartTicker());
+  fs::Ticker ticker(Vfs()->StartTicker());
   auto get_metrics = fbl::MakeAutoCall(
-      [&ticker, &success, this]() { fs_->UpdateCreateMetrics(success, ticker.End()); });
+      [&ticker, &success, this]() { Vfs()->UpdateCreateMetrics(success, ticker.End()); });
 
   if (IsUnlinked()) {
     return ZX_ERR_BAD_STATE;
@@ -648,7 +648,7 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
 
   // Calculate maximum blocks to reserve for the current directory, based on the size and offset
   // of the new direntry (Assuming that the offset is the current size of the directory).
-  auto reserve_blocks_or = GetRequiredBlockCount(GetSize(), args.reclen, fs_->BlockSize());
+  auto reserve_blocks_or = GetRequiredBlockCount(GetSize(), args.reclen, Vfs()->BlockSize());
   if (reserve_blocks_or.is_error()) {
     return reserve_blocks_or.error_value();
   }
@@ -656,17 +656,17 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
   // Reserve 1 additional block for the new directory's initial . and .. entries.
   blk_t reserve_blocks = reserve_blocks_or.value() + 1;
 
-  ZX_DEBUG_ASSERT(reserve_blocks <= fs_->Limits().GetMaximumMetaDataBlocks());
+  ZX_DEBUG_ASSERT(reserve_blocks <= Vfs()->Limits().GetMaximumMetaDataBlocks());
 
   // In addition to reserve_blocks, reserve 1 inode for the vnode to be created.
   std::unique_ptr<Transaction> transaction;
-  if ((status = fs_->BeginTransaction(1, reserve_blocks, &transaction)) != ZX_OK) {
+  if ((status = Vfs()->BeginTransaction(1, reserve_blocks, &transaction)) != ZX_OK) {
     return status;
   }
 
   // mint a new inode and vnode for it
   fbl::RefPtr<VnodeMinfs> vn;
-  if ((status = fs_->VnodeNew(transaction.get(), &vn, type)) < 0) {
+  if ((status = Vfs()->VnodeNew(transaction.get(), &vn, type)) < 0) {
     return status;
   }
 
@@ -691,7 +691,7 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
 
   transaction->PinVnode(fbl::RefPtr(this));
   transaction->PinVnode(vn);
-  fs_->CommitTransaction(std::move(transaction));
+  Vfs()->CommitTransaction(std::move(transaction));
 
   if ((status = vn->OpenValidating(fs::VnodeConnectionOptions(), nullptr)) != ZX_OK) {
     return status;
@@ -705,13 +705,13 @@ zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
   TRACE_DURATION("minfs", "Directory::Unlink", "name", name);
   ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
   bool success = false;
-  fs::Ticker ticker(fs_->StartTicker());
+  fs::Ticker ticker(Vfs()->StartTicker());
   auto get_metrics = fbl::MakeAutoCall(
-      [&ticker, &success, this]() { fs_->UpdateUnlinkMetrics(success, ticker.End()); });
+      [&ticker, &success, this]() { Vfs()->UpdateUnlinkMetrics(success, ticker.End()); });
 
   zx_status_t status;
   std::unique_ptr<Transaction> transaction;
-  if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
+  if ((status = Vfs()->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
     return status;
   }
 
@@ -725,7 +725,7 @@ zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
     return status;
   }
   transaction->PinVnode(fbl::RefPtr(this));
-  fs_->CommitTransaction(std::move(transaction));
+  Vfs()->CommitTransaction(std::move(transaction));
   success = true;
   return ZX_OK;
 }
@@ -756,9 +756,9 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
                               bool dst_must_be_dir) {
   TRACE_DURATION("minfs", "Directory::Rename", "src", oldname, "dst", newname);
   bool success = false;
-  fs::Ticker ticker(fs_->StartTicker());
+  fs::Ticker ticker(Vfs()->StartTicker());
   auto get_metrics = fbl::MakeAutoCall(
-      [&ticker, &success, this]() { fs_->UpdateRenameMetrics(success, ticker.End()); });
+      [&ticker, &success, this]() { Vfs()->UpdateRenameMetrics(success, ticker.End()); });
 
   ZX_DEBUG_ASSERT(fs::vfs_valid_name(oldname));
   ZX_DEBUG_ASSERT(fs::vfs_valid_name(newname));
@@ -783,7 +783,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   if ((status = ForEachDirent(&args, DirentCallbackFind)) < 0) {
     return status;
   }
-  if ((status = fs_->VnodeGet(&oldvn, args.ino)) < 0) {
+  if ((status = Vfs()->VnodeGet(&oldvn, args.ino)) < 0) {
     return status;
   }
   if (oldvn->IsDirectory()) {
@@ -821,13 +821,13 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
 
   // Reserve potential blocks to add a new direntry to newdir.
   auto reserved_blocks_or =
-      GetRequiredBlockCount(newdir->GetInode()->size, args.reclen, fs_->BlockSize());
+      GetRequiredBlockCount(newdir->GetInode()->size, args.reclen, Vfs()->BlockSize());
   if (reserved_blocks_or.is_error()) {
     return reserved_blocks_or.error_value();
   }
 
   std::unique_ptr<Transaction> transaction;
-  if ((status = fs_->BeginTransaction(0, reserved_blocks_or.value(), &transaction)) != ZX_OK) {
+  if ((status = Vfs()->BeginTransaction(0, reserved_blocks_or.value(), &transaction)) != ZX_OK) {
     return status;
   }
 
@@ -873,7 +873,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   }
   transaction->PinVnode(oldvn);
   transaction->PinVnode(newdir);
-  fs_->CommitTransaction(std::move(transaction));
+  Vfs()->CommitTransaction(std::move(transaction));
   success = true;
   return ZX_OK;
 }
@@ -913,13 +913,14 @@ zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targe
   }
 
   // Reserve potential blocks to write a new direntry.
-  auto reserved_blocks_or = GetRequiredBlockCount(GetInode()->size, args.reclen, fs_->BlockSize());
+  auto reserved_blocks_or =
+      GetRequiredBlockCount(GetInode()->size, args.reclen, Vfs()->BlockSize());
   if (reserved_blocks_or.is_error()) {
     return reserved_blocks_or.error_value();
   }
 
   std::unique_ptr<Transaction> transaction;
-  if ((status = fs_->BeginTransaction(0, reserved_blocks_or.value(), &transaction)) != ZX_OK) {
+  if ((status = Vfs()->BeginTransaction(0, reserved_blocks_or.value(), &transaction)) != ZX_OK) {
     return status;
   }
 
@@ -934,7 +935,7 @@ zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targe
   target->InodeSync(transaction.get(), kMxFsSyncDefault);
   transaction->PinVnode(fbl::RefPtr(this));
   transaction->PinVnode(target);
-  fs_->CommitTransaction(std::move(transaction));
+  Vfs()->CommitTransaction(std::move(transaction));
   return ZX_OK;
 }
 
