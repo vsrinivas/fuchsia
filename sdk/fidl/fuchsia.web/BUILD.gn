@@ -18,6 +18,7 @@ fidl("fuchsia.web") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.media.sessions2",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.net.http",

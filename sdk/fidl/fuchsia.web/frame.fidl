@@ -4,6 +4,7 @@
 
 library fuchsia.web;
 
+using fuchsia.logger;
 using fuchsia.media.sessions2;
 using fuchsia.mem;
 using fuchsia.ui.gfx;
@@ -223,20 +224,28 @@ protocol Frame {
     SetNavigationEventListener(NavigationEventListener? listener);
 
     /// If set to a value other than [`ConsoleLogLevel.NONE`], allows web content to log messages
-    /// to the system logger using the console APIs (`debug()`, `log()`, `info()`, `warn()` and
+    /// to the [`fuchsia.logger/LogSink`] configured for this [`Frame`], via the
+    /// `console` object (e.g. using `debug()`, `log()`, `info()`, `warn()` and
     /// `error()`).
     /// The default value is [`ConsoleLogLevel.NONE`].
     ///
     /// As the system log may be persisted, it is recommended that [`ConsoleLogLevel.NONE`] be used
     /// in Incognito and other private browsing modes.
     ///
-    /// When logged to the system logger:
-    /// - `debug()`, `log()` and `info()` logs are logged with `INFO` severity level in
-    ///   [`fuchsia.logger/LogLevelFilter`].
-    /// - `warn()` logs are logged with `WARN` severity level in [`fuchsia.logger/LogLevelFilter`].
-    /// - `error()` logs are logged with `ERROR` severity level in
-    ///   [`fuchsia.logger/LogLevelFilter`].
+    /// Log lines are written to the [`fuchsia.logger/LogsSink`] configured
+    /// for this [`fuchsia.web/Frame`], with severities mapped as follows:
+    /// - `debug()`, `log()` and `info()` are logged at `INFO` severity.
+    /// - `warn()` is logged at `WARN` severity.
+    /// - `error()` is logged at `ERROR` severity.
     SetJavaScriptLogLevel(ConsoleLogLevel level);
+
+    /// Specifies where to emit `console` log output to. By default log output will be routed to a
+    /// [`fuchsia.logger/LogSink`] obtained via the [`fuchsia.web/Context`]'s service directory.
+    ///
+    /// - `sink`: The [`fuchsia.logger/LogSink`] to use to emit logs. Passing a `null` handle
+    ///   resets logging to use the default [`fuchsia.logger/LogSink`].
+    [Transitional]
+    SetConsoleLogSink(fuchsia.logger.LogSink? sink);
 
     /// Enables or disables the processing of the specified `types` of user inputs.
     /// `allow` specifies whether to enable or disable the specified `types`.
