@@ -54,10 +54,17 @@ macro_rules! make_structs_and_support_functions {
         make_structs_and_support_functions!(@print_func $($field,)*);
     };
 
-    (@print_func $last_field:ident, $($field:ident),* $(,)?) => {
+    (@print_func $nodename:ident, $last_field:ident, $($field:ident),* $(,)?) => {
         #[inline]
-        fn format_fields(target: &StringifiedTarget, limits: &Limits) -> String {
+        fn format_fields(target: &StringifiedTarget, limits: &Limits, default_nodename: &str) -> String {
             let mut s = String::with_capacity(limits.capacity());
+            write!(s, "{:width$}",
+                   if target.$nodename == default_nodename {
+                       format!("{}*", target.$nodename)
+                   } else {
+                       target.$nodename.clone()
+                   },
+                   width = limits.$nodename + PADDING_SPACES).unwrap();
             $(
                 write!(s, "{:width$}", target.$field, width = limits.$field + PADDING_SPACES).unwrap();
             )*
@@ -68,8 +75,8 @@ macro_rules! make_structs_and_support_functions {
     };
 }
 
-// First field is printed last in this implementation, everything else is printed in order.
-make_structs_and_support_functions!(rcs_state, nodename, target_type, target_state, addresses, age,);
+// Second field is printed last in this implementation, everything else is printed in order.
+make_structs_and_support_functions!(nodename, rcs_state, target_type, target_state, addresses, age,);
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum StringifyError {
@@ -150,8 +157,11 @@ pub struct TargetFormatter {
 }
 
 impl TargetFormatter {
-    pub fn lines(&self) -> Vec<String> {
-        self.targets.iter().map(|t| format_fields(t, &self.limits)).collect()
+    pub fn lines(&self, default_nodename: Option<&str>) -> Vec<String> {
+        self.targets
+            .iter()
+            .map(|t| format_fields(t, &self.limits, default_nodename.unwrap_or("")))
+            .collect()
     }
 }
 
@@ -213,14 +223,14 @@ mod test {
     #[test]
     fn test_empty_formatter() {
         let formatter = TargetFormatter::try_from(Vec::<bridge::Target>::new()).unwrap();
-        let lines = formatter.lines();
+        let lines = formatter.lines(None);
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].len(), 47); // Just some manual math.
         assert_eq!(&lines[0], "NAME    TYPE    STATE    ADDRS/IP    AGE    RCS");
     }
 
-    #[test]
-    fn test_formatter_one_target() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_formatter_one_target() {
         let formatter = TargetFormatter::try_from(vec![
             make_valid_target(),
             bridge::Target {
@@ -238,10 +248,20 @@ mod test {
             },
         ])
         .unwrap();
-        let lines = formatter.lines();
+        let lines = formatter.lines(Some("fooberdoober"));
         assert_eq!(lines.len(), 3);
 
         // TODO(awdavies): This can probably function better via golden files.
+        assert_eq!(&lines[0],
+                   "NAME            TYPE       STATE      ADDRS/IP                                           AGE     RCS");
+        assert_eq!(
+            &lines[1],
+            "fooberdoober*   Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N"
+        );
+        assert_eq!(&lines[2], "lorberding      Unknown    Unknown    [fe80::101:101:101:101%2]                          2m0s    N");
+
+        let lines = formatter.lines(None);
+        assert_eq!(lines.len(), 3);
         assert_eq!(&lines[0],
                    "NAME            TYPE       STATE      ADDRS/IP                                           AGE     RCS");
         assert_eq!(

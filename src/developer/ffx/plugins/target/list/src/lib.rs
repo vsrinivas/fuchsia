@@ -39,7 +39,9 @@ async fn list_impl<W: Write>(
                 _ => {
                     let formatter = TargetFormatter::try_from(r)
                         .map_err(|e| anyhow!("target malformed: {:?}", e))?;
-                    writeln!(writer, "{}", formatter.lines().join("\n"))?;
+                    let v: Option<ffx_config::Value> = ffx_config::get("target.default").await.ok();
+                    let default = v.as_ref().map(|s| s.as_str()).flatten();
+                    writeln!(writer, "{}", formatter.lines(default).join("\n"))?;
                 }
             };
             Ok(())
