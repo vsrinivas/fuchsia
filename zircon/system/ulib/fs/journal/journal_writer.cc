@@ -174,9 +174,6 @@ fit::result<void, zx_status_t> JournalWriter::Sync() {
     event.set_success(false);
     return fit::error(ZX_ERR_IO_REFUSED);
   }
-  if (!IsJournalingEnabled()) {
-    return fit::ok();
-  }
 
   if (next_sequence_number_ == journal_superblock_.sequence_number()) {
     FS_TRACE_DEBUG("Sync: Skipping write to info block (no sequence update)\n");

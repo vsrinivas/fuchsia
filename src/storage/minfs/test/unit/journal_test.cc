@@ -44,21 +44,9 @@ TEST_F(JournalIntegrationTest, FsckWithRepairDoesReplayJournal) {
   EXPECT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
 }
 
-TEST_F(JournalIntegrationTest, FsckWithoutRepairDoesNotReplayJournal) {
+TEST_F(JournalIntegrationTest, FsckWithReadOnlyDoesNotReplayJournal) {
   auto bcache = CutOffDevice(write_count() - kCreateEntryCutoff);
-  EXPECT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
-}
-
-TEST_F(JournalIntegrationTest, CreateWithoutRepairDoesNotReplayJournal) {
-  auto bcache = CutOffDevice(write_count() - kCreateEntryCutoff);
-
-  MountOptions options = {};
-  options.repair_filesystem = false;
-  options.use_journal = false;
-  std::unique_ptr<Minfs> fs;
-  EXPECT_OK(Minfs::Create(std::move(bcache), options, &fs));
-  bcache = Minfs::Destroy(std::move(fs));
-  EXPECT_NOT_OK(Fsck(std::move(bcache), FsckOptions(), &bcache));
+  EXPECT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false, .read_only = true}, &bcache));
 }
 
 TEST_F(JournalIntegrationTest, CreateWithRepairDoesReplayJournal) {
@@ -113,9 +101,9 @@ TEST_F(JournalUnlinkTest, FsckWithRepairDoesReplayJournal) {
   EXPECT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
 }
 
-TEST_F(JournalUnlinkTest, FsckWithoutRepairDoesNotReplayJournal) {
+TEST_F(JournalUnlinkTest, ReadOnlyFsckDoesNotReplayJournal) {
   auto bcache = CutOffDevice(write_count() - kUnlinkCutoff);
-  EXPECT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
+  EXPECT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false, .read_only = true}, &bcache));
 }
 
 class JournalGrowFvmTest : public JournalIntegrationFixture {

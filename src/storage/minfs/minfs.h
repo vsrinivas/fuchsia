@@ -48,8 +48,8 @@ enum class UpdateBackupSuperblock {
 };
 
 // Determines the kind of directory layout the filesystem server should expose to the outside world.
-// TODO(fxbug.dev/34531): When all users migrate to the export directory, delete this enum, since only
-// |kExportDirectory| would be used.
+// TODO(fxbug.dev/34531): When all users migrate to the export directory, delete this enum, since
+// only |kExportDirectory| would be used.
 enum class ServeLayout {
   // The root of the filesystem is exposed directly.
   kDataRootOnly,
@@ -77,8 +77,6 @@ struct MountOptions {
   // Determines if the filesystem performs actions like replaying the journal, repairing the
   // superblock, etc.
   bool repair_filesystem = true;
-  // Determines if the journal will be used to perform writeback.
-  bool use_journal = true;
   // For testing only: if true, run fsck after every transaction.
   bool fsck_after_every_transaction = false;
 

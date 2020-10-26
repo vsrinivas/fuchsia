@@ -64,12 +64,6 @@ Journal::Journal(TransactionHandler* transaction_handler, JournalSuperblock jour
   ZX_ASSERT(writeback_buffer_->BlockSize() == kJournalBlockSize);
 }
 
-Journal::Journal(TransactionHandler* transaction_handler,
-                 std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer)
-    : writeback_buffer_(std::move(writeback_buffer)),
-      metrics_(std::make_shared<JournalMetrics>(nullptr, 0, 0)),
-      writer_(transaction_handler, metrics_) {}
-
 Journal::~Journal() {
   sync_completion_t completion;
   schedule_task(Sync().then([&completion](const fit::result<void, zx_status_t>& result) {
@@ -123,11 +117,6 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
 
 Journal::Promise Journal::WriteMetadata(std::vector<storage::UnbufferedOperation> operations) {
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriteMetadata);
-  if (!journal_buffer_) {
-    ZX_DEBUG_ASSERT(!writer_.IsJournalingEnabled());
-    event.set_success(false);
-    return WriteData(std::move(operations));
-  }
 
   auto block_count_or =
       CheckOperationsAndGetTotalBlockCount<storage::OperationType::kWrite>(operations);

@@ -33,7 +33,7 @@ package ramdisk
 //		fprintf(stderr, "handle invalid after clone\n");
 //		return ZX_ERR_INTERNAL;
 //  }
-//  char* argv[5] = {"/pkg/bin/blobfs", "-m", "-j", "mkfs", 0};
+//  char* argv[5] = {"/pkg/bin/blobfs", "-m", "mkfs", 0};
 // 	return fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], (const char* const *)argv, NULL, 1, actions, process_out, NULL);
 // }
 //
@@ -65,7 +65,7 @@ package ramdisk
 //		fprintf(stderr, "handle invalid after clone\n");
 //		return ZX_ERR_INTERNAL;
 //  }
-//  char* argv[5] = {"/pkg/bin/blobfs", "-m", "-j", "mount", 0};
+//  char* argv[5] = {"/pkg/bin/blobfs", "-m", "mount", 0};
 // 	return fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], (const char* const *)argv, NULL, 2, actions, process_out, NULL);
 // }
 import "C"

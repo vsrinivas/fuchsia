@@ -68,8 +68,6 @@ pub struct FSOptions {
     pub verbose: bool,
     /// Configure metric collection by the filesystem. Applies to mounting.
     pub metrics: bool,
-    /// Enable journaling in the filesystem. Applies to mounting and fsck.
-    pub journal: bool,
 }
 
 /// Describes the information for working with a particular native filesystem.
@@ -135,7 +133,7 @@ impl Layout for Blobfs {
     }
 
     fn options() -> FSOptions {
-        FSOptions { readonly: false, verbose: false, metrics: false, journal: true }
+        FSOptions { readonly: false, verbose: false, metrics: false }
     }
 }
 
@@ -168,7 +166,7 @@ impl Layout for Minfs {
     }
 
     fn options() -> FSOptions {
-        FSOptions { readonly: false, verbose: false, metrics: false, journal: true }
+        FSOptions { readonly: false, verbose: false, metrics: false }
     }
 }
 
@@ -210,7 +208,7 @@ impl Layout for Factoryfs {
     // factoryfs doesn't actually support any options, so even though it is "read only" we don't
     // use the readonly flag.
     fn options() -> FSOptions {
-        FSOptions { readonly: false, verbose: false, metrics: false, journal: false }
+        FSOptions { readonly: false, verbose: false, metrics: false }
     }
 }
 
@@ -232,11 +230,6 @@ where
             mount_point: None,
             launcher: FSLauncher::new(FSType::options()),
         })
-    }
-
-    /// Configure journal support.
-    pub fn set_journal(&mut self, enable: bool) {
-        self.launcher.options.journal = enable;
     }
 
     /// Mount the filesystem as read only.
@@ -448,9 +441,6 @@ where
         actions: Vec<SpawnAction<'_>>,
     ) -> Result<zx::Process, Error> {
         let mut args = vec![FSType::path()];
-        if self.options.journal {
-            args.push(cstr!("--journal"));
-        }
         if self.options.metrics {
             args.push(cstr!("--metrics"));
         }
@@ -504,12 +494,8 @@ mod tests {
             }
         }
 
-        let launcher: FSLauncher<Blobfs, TestLauncherNoArgs> = FSLauncher::new(FSOptions {
-            readonly: false,
-            journal: false,
-            verbose: false,
-            metrics: false,
-        });
+        let launcher: FSLauncher<Blobfs, TestLauncherNoArgs> =
+            FSLauncher::new(FSOptions { readonly: false, verbose: false, metrics: false });
         let res = launcher.run_command(cstr!("mount"), vec![]);
         assert_eq!(res.unwrap_err().downcast_ref::<ExpectedError>().unwrap(), &ExpectedError);
     }
@@ -526,7 +512,6 @@ mod tests {
                     args,
                     &[
                         cstr!("/pkg/bin/blobfs"),
-                        cstr!("--journal"),
                         cstr!("--metrics"),
                         cstr!("--readonly"),
                         cstr!("--verbose"),
@@ -537,12 +522,8 @@ mod tests {
             }
         }
 
-        let launcher: FSLauncher<Blobfs, TestLauncherAllArgs> = FSLauncher::new(FSOptions {
-            readonly: true,
-            journal: true,
-            verbose: true,
-            metrics: true,
-        });
+        let launcher: FSLauncher<Blobfs, TestLauncherAllArgs> =
+            FSLauncher::new(FSOptions { readonly: true, verbose: true, metrics: true });
         let res = launcher.run_command(cstr!("mount"), vec![]);
         assert_eq!(res.unwrap_err().downcast_ref::<ExpectedError>().unwrap(), &ExpectedError);
     }

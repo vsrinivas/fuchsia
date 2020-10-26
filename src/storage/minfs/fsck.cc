@@ -781,11 +781,9 @@ zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, const FsckOptions& 
   if (fsck_options.repair) {
     options.readonly_after_initialization = false;
     options.repair_filesystem = true;
-    options.use_journal = true;
   } else {
     options.readonly_after_initialization = false;
     options.repair_filesystem = false;
-    options.use_journal = false;
   }
   options.fsck_after_every_transaction = false;
   options.readonly = fsck_options.read_only;

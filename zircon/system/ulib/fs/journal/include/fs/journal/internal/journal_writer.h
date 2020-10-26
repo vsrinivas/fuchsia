@@ -79,12 +79,6 @@ class JournalWriter {
   // In all other cases, returns ZX_OK.
   fit::result<void, zx_status_t> Sync();
 
-  // Returns true if journaling is "on", and metadata is treated differently
-  // from regular data.
-  //
-  // This method is thread-safe.
-  [[nodiscard]] bool IsJournalingEnabled() const { return entries_length_ != 0; }
-
   // Returns true if all writeback is "off", and no further data will be written to the
   // device.
   [[nodiscard]] bool IsWritebackEnabled() const { return transaction_handler_; }

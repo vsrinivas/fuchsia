@@ -8,7 +8,6 @@
 #include <memory>
 
 #include <blobfs/fsck.h>
-#include <fs/journal/replay.h>
 #include <fs/trace.h>
 
 #include "blobfs-checker.h"
@@ -38,7 +37,7 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, MountOptions
   BlobfsChecker checker(std::move(blobfs), checker_options);
 
   // Apply writeback and validate FVM data before walking the contents of the filesystem.
-  status = checker.Initialize(options->journal);
+  status = checker.Initialize();
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to initialize filesystem; not checking internals\n");
     return status;

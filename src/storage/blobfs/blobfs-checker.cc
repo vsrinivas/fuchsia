@@ -128,15 +128,13 @@ zx_status_t BlobfsChecker::Check() {
 BlobfsChecker::BlobfsChecker(std::unique_ptr<Blobfs> blobfs, Options options)
     : blobfs_(std::move(blobfs)), options_(options) {}
 
-zx_status_t BlobfsChecker::Initialize(bool apply_journal) {
+zx_status_t BlobfsChecker::Initialize() {
 #ifdef __Fuchsia__
-  if (apply_journal) {
-    auto status = fs::ReplayJournal(blobfs_.get(), blobfs_.get(), JournalStartBlock(blobfs_->info_),
-                                    JournalBlocks(blobfs_->info_), kBlobfsBlockSize);
-    if (status.is_error()) {
-      FS_TRACE_ERROR("blobfs: Unable to apply journal contents: %d\n", status.error_value());
-      return status.error_value();
-    }
+  auto status = fs::ReplayJournal(blobfs_.get(), blobfs_.get(), JournalStartBlock(blobfs_->info_),
+                                  JournalBlocks(blobfs_->info_), kBlobfsBlockSize);
+  if (status.is_error()) {
+    FS_TRACE_ERROR("blobfs: Unable to apply journal contents: %d\n", status.error_value());
+    return status.error_value();
   }
 
   if (zx_status_t status =

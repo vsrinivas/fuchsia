@@ -96,7 +96,6 @@ class MountTestTemplate : public zxtest::Test {
                                .metrics = false,
                                .verbose = true,
                                .repair_filesystem = repairable,
-                               .use_journal = false,
                                .fvm_data_slices = default_mkfs_options.fvm_data_slices};
   }
 

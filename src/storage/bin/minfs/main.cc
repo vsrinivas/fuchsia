@@ -119,7 +119,6 @@ int usage(const std::vector<Command>& commands) {
           "options:\n"
           "    -v|--verbose                    Some debug messages\n"
           "    -r|--readonly                   Mount filesystem read-only (after repair)\n"
-          "    -j|--journal                    Enable journaling for writeback\n"
           "    -m|--metrics                    Collect filesystem metrics\n"
           "    -s|--fvm_data_slices SLICES     When mkfs on top of FVM,\n"
           "                                    preallocate |SLICES| slices of data. \n"
@@ -160,7 +159,6 @@ int CreateBcacheUpdatingOptions(std::unique_ptr<block_client::RemoteBlockDevice>
 
 int main(int argc, char** argv) {
   minfs::MountOptions options;
-  options.use_journal = false;
 
   const std::vector<Command> commands = {
       Command{"create", Mkfs, "initialize filesystem"},
@@ -177,7 +175,6 @@ int main(int argc, char** argv) {
     static struct option opts[] = {
         {"readonly", no_argument, nullptr, 'r'},
         {"metrics", no_argument, nullptr, 'm'},
-        {"journal", no_argument, nullptr, 'j'},
         {"verbose", no_argument, nullptr, 'v'},
         {"fvm_data_slices", required_argument, nullptr, 's'},
         {"fsck_after_every_transaction", no_argument, nullptr, 'f'},
@@ -185,7 +182,7 @@ int main(int argc, char** argv) {
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "rmjvsh:", opts, &opt_index);
+    int c = getopt_long(argc, argv, "rmvs:h", opts, &opt_index);
     if (c < 0) {
       break;
     }
@@ -195,9 +192,6 @@ int main(int argc, char** argv) {
         break;
       case 'm':
         options.metrics = true;
-        break;
-      case 'j':
-        options.use_journal = true;
         break;
       case 'v':
         options.verbose = true;

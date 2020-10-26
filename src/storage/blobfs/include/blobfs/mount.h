@@ -25,8 +25,8 @@ using block_client::BlockDevice;
 #define FS_HANDLE_DIAGNOSTICS_DIR PA_HND(PA_USER0, 2)
 
 // Determines the kind of directory layout the filesystem server should expose to the outside world.
-// TODO(fxbug.dev/34531): When all users migrate to the export directory, delete this enum, since only
-// |kExportDirectory| would be used.
+// TODO(fxbug.dev/34531): When all users migrate to the export directory, delete this enum, since
+// only |kExportDirectory| would be used.
 enum class ServeLayout {
   // The root of the filesystem is exposed directly
   kDataRootOnly,
@@ -51,7 +51,6 @@ struct MountOptions {
   Writability writability = Writability::Writable;
   bool verbose = false;
   bool metrics = false;
-  bool journal = false;
   bool pager = false;
   // Default cache policy.
   CachePolicy cache_policy = CachePolicy::EvictImmediately;

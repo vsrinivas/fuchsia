@@ -163,8 +163,6 @@ int usage() {
       "options: -v|--verbose   Additional debug logging\n"
       "         -r|--readonly              Mount filesystem read-only\n"
       "         -m|--metrics               Collect filesystem metrics\n"
-      "         -j|--journal               Utilize the blobfs journal\n"
-      "                                    For fsck, the journal is replayed before verification\n"
       "         -p|--pager                 Enable user pager\n"
       "         -c|--compression [alg]     compression algorithm to apply to newly stored blobs.\n"
       "                                    Does not affect any blobs already stored on-disk.\n"
@@ -198,7 +196,6 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         {"verbose", no_argument, nullptr, 'v'},
         {"readonly", no_argument, nullptr, 'r'},
         {"metrics", no_argument, nullptr, 'm'},
-        {"journal", no_argument, nullptr, 'j'},
         {"pager", no_argument, nullptr, 'p'},
         {"compression", required_argument, nullptr, 'c'},
         {"compression_level", required_argument, nullptr, 'l'},
@@ -207,7 +204,7 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "vrmjpc:l:e:h", opts, &opt_index);
+    int c = getopt_long(argc, argv, "vrmpc:l:e:h", opts, &opt_index);
 
     if (c < 0) {
       break;
@@ -218,9 +215,6 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         break;
       case 'm':
         options->metrics = true;
-        break;
-      case 'j':
-        options->journal = true;
         break;
       case 'p':
         options->pager = true;

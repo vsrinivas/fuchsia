@@ -25,8 +25,6 @@ typedef struct init_options {
   bool collect_metrics;
   // Ensures that requests to the mountpoint will be propagated to the underlying FS
   bool wait_until_ready;
-  // Enable journaling on the file system (if supported).
-  bool enable_journal;
   // Enable paging on the file system (if supported).
   bool enable_pager;
   // An optional compression algorithm specifier for the filesystem to use when storing files (if
@@ -66,7 +64,6 @@ typedef struct fsck_options {
   bool never_modify;   // Fsck still looks for problems, but it does not try to resolve them.
   bool always_modify;  // Fsck never asks to resolve problems; it assumes it should fix them.
   bool force;          // Force fsck to check the filesystem integrity, even if it is "clean".
-  bool apply_journal;  // Apply journal prior to running the consistency checker.
 } fsck_options_t;
 
 __EXPORT

@@ -113,12 +113,11 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
     static struct option opts[] = {
         {"verbose", no_argument, nullptr, 'v'},
         {"metrics", no_argument, nullptr, 'm'},
-        {"journal", no_argument, nullptr, 'j'},
         {"help", no_argument, nullptr, 'h'},
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "vmj:h", opts, &opt_index);
+    int c = getopt_long(argc, argv, "vmh", opts, &opt_index);
 
     if (c < 0) {
       break;
@@ -129,11 +128,6 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         break;
       case 'v':
         options->verbose = true;
-        break;
-      case 'j':
-        // ignore journal.
-        // TODO manalib Instead of ignoring this flag in the filesystem code,if the file
-        // system doesn't support journaling, fs-host shouldn't set the flag.
         break;
       case 'h':
       default:

@@ -75,11 +75,6 @@ class Journal final : public fit::executor {
           std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer,
           uint64_t journal_start_block, Options options);
 
-  // Constructs a journal where metadata and data are both treated as data, effectively
-  // disabling the journal.
-  Journal(fs::TransactionHandler* transaction_handler,
-          std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer);
-
   // Synchronizes with the background thread to ensure all enqueued work is complete before
   // returning.
   ~Journal() final;

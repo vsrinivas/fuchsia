@@ -440,7 +440,6 @@ zx_status_t BlockDevice::MountFilesystem() {
     case DISK_FORMAT_FACTORYFS: {
       fprintf(stderr, "fshost: BlockDevice::MountFilesystem(factoryfs)\n");
       mount_options_t options = default_mount_options;
-      options.enable_journal = false;
       options.collect_metrics = false;
       options.readonly = true;
 
@@ -453,7 +452,6 @@ zx_status_t BlockDevice::MountFilesystem() {
     case DISK_FORMAT_BLOBFS: {
       fprintf(stderr, "fshost: BlockDevice::MountFilesystem(blobfs)\n");
       mount_options_t options = default_mount_options;
-      options.enable_journal = true;
       options.collect_metrics = true;
       std::optional<std::string> algorithm = std::nullopt;
       std::optional<std::string> eviction_policy = std::nullopt;

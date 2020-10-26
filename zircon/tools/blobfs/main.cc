@@ -171,7 +171,7 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
       }
       mtx.lock();
       merkle_list_.insert(merkle_list_.end(), std::make_move_iterator(local_merkle_list.begin()),
-        std::make_move_iterator(local_merkle_list.end()));
+                          std::make_move_iterator(local_merkle_list.end()));
       mtx.unlock();
     }));
   }
@@ -233,8 +233,7 @@ zx_status_t BlobfsCreator::Fsck() {
     return status;
   }
 
-  bool apply_journal = false;
-  return blobfs::Fsck(std::move(vn), apply_journal);
+  return blobfs::Fsck(std::move(vn));
 }
 
 zx_status_t BlobfsCreator::UsedDataSize() {

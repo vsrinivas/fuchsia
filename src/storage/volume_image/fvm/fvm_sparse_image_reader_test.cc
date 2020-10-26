@@ -158,7 +158,6 @@ TEST(FvmSparseImageReaderTest, ImageWithMinfsPassesFsck) {
       .never_modify = true,
       .always_modify = false,
       .force = true,
-      .apply_journal = false,
   };
   ASSERT_EQ(fsck(path, DISK_FORMAT_MINFS, &options, launch_stdio_sync), 0);
 }

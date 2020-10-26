@@ -333,7 +333,7 @@ int Mkfs(int fd, uint64_t block_count) {
   // All in-memory structures have been created successfully. Dump everything to disk.
   // Initialize on-disk journal.
   fs::WriteBlocksFn write_blocks_fn = [fd, &info](fbl::Span<const uint8_t> buffer,
-                                                 uint64_t block_offset, uint64_t block_count) {
+                                                  uint64_t block_offset, uint64_t block_count) {
     ZX_ASSERT((block_offset + block_count) <= JournalBlocks(info));
     ZX_ASSERT(buffer.size() >= (block_count * kBlobfsBlockSize));
     return WriteBlocks(fd, JournalStartBlock(info) + block_offset, block_count, buffer.data());
@@ -529,8 +529,7 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
   if ((status = blobfs_create_sparse(&blob, std::move(fd), start, end, extent_lengths)) != ZX_OK) {
     return status;
   }
-  bool apply_journal = false;
-  if ((status = Fsck(std::move(blob), apply_journal)) != ZX_OK) {
+  if ((status = Fsck(std::move(blob))) != ZX_OK) {
     return status;
   }
   return ZX_OK;

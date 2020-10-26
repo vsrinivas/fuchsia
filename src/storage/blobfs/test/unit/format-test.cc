@@ -19,7 +19,6 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
   MountOptions options = {};
   options.writability = Writability::ReadOnlyFilesystem;
   options.metrics = false;
-  options.journal = true;
   std::unique_ptr<Blobfs> blobfs = nullptr;
   return Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs);
 }
@@ -221,9 +220,8 @@ TEST(FormatFilesystemTest, FormatFVMDeviceWithTooLargeBlockSize) {
   ASSERT_EQ(ZX_ERR_IO, CheckMountability(std::move(device)));
 }
 
-// Validates that a formatted filesystem, mounted as writable, is converted
-// to read-only on a device that is not writable.
-TEST(FormatFilesystemTest, FormatDeviceNoJournalAutoConvertReadonly) {
+// Validates that a formatted filesystem, can't be mounted as writable on a read-only device.
+TEST(FormatFilesystemTest, DeviceNotWritableAutoConvertReadonly) {
   const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = kBlobfsBlockSize;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
@@ -233,10 +231,9 @@ TEST(FormatFilesystemTest, FormatDeviceNoJournalAutoConvertReadonly) {
   MountOptions mount_options = {};
   mount_options.writability = Writability::Writable;
   mount_options.metrics = false;
-  mount_options.journal = false;
   std::unique_ptr<Blobfs> fs = nullptr;
-  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), &mount_options, zx::resource(), &fs), ZX_OK);
-  ASSERT_EQ(Writability::ReadOnlyDisk, fs->writability());
+  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), &mount_options, zx::resource(), &fs),
+            ZX_ERR_ACCESS_DENIED);
 }
 
 // Validates that a formatted filesystem mounted as writable with a journal cannot be mounted on a
@@ -252,7 +249,6 @@ TEST(FormatFilesystemTest, FormatDeviceWithJournalCannotAutoConvertReadonly) {
   MountOptions options = {};
   options.writability = Writability::Writable;
   options.metrics = false;
-  options.journal = true;
   std::unique_ptr<Blobfs> blobfs = nullptr;
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
             Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs));

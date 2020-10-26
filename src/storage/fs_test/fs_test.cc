@@ -355,7 +355,6 @@ class MinfsInstance : public FilesystemInstance {
         .never_modify = true,
         .always_modify = false,
         .force = true,
-        .apply_journal = false,
     };
     return zx::make_status(
         fsck(device_path_.c_str(), DISK_FORMAT_MINFS, &options, launch_stdio_sync));
@@ -557,7 +556,6 @@ class FatfsInstance : public FilesystemInstance {
         .never_modify = true,
         .always_modify = false,
         .force = true,
-        .apply_journal = false,
     };
     return zx::make_status(
         fsck(device_path_.c_str(), DISK_FORMAT_FAT, &options, launch_stdio_sync));
@@ -602,7 +600,6 @@ class BlobfsInstance : public FilesystemInstance {
         .never_modify = true,
         .always_modify = false,
         .force = true,
-        .apply_journal = false,
     };
     return zx::make_status(
         fsck(device_path_.c_str(), DISK_FORMAT_BLOBFS, &options, launch_stdio_sync));

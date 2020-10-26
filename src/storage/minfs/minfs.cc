@@ -1104,16 +1104,9 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
 
 zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& options,
                           std::unique_ptr<Minfs>* out) {
-  // To use the journal, it must first be replayed.
-  if (!options.repair_filesystem && options.use_journal) {
-    FS_TRACE_ERROR("minfs: Journal replay is required to utilize journal");
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   // Read the superblock before replaying the journal.
   Superblock info;
-  bool repair = options.repair_filesystem;
-  zx_status_t status = LoadSuperblockWithRepair(bc.get(), repair, &info);
+  zx_status_t status = LoadSuperblockWithRepair(bc.get(), options.repair_filesystem, &info);
   if (status != ZX_OK) {
     return status;
   }
@@ -1125,7 +1118,7 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
 
   // Replay the journal before loading any other structures.
   fs::JournalSuperblock journal_superblock = {};
-  if (options.repair_filesystem) {
+  if (!options.readonly) {
     status = ReplayJournalReloadSuperblock(bc.get(), &info, &journal_superblock);
     if (status != ZX_OK) {
       return status;
@@ -1163,32 +1156,25 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
   }
 
 #ifdef __Fuchsia__
-  if (options.use_journal) {
-    ZX_ASSERT(options.repair_filesystem);
+  if (!options.readonly) {
     status = fs->InitializeJournal(std::move(journal_superblock));
     if (status != ZX_OK) {
       FS_TRACE_ERROR("minfs: Cannot initialize journal\n");
       return status;
     }
-  } else if (!options.readonly) {
-    status = fs->InitializeUnjournalledWriteback();
+  }
+
+  if (options.repair_filesystem && (info.flags & kMinfsFlagFVM)) {
+    // After replaying the journal, it's now safe to repair the FVM slices.
+    const size_t kBlocksPerSlice = info.slice_size / info.BlockSize();
+    zx_status_t status;
+    status = CheckSlices(&info, kBlocksPerSlice, device, /*repair_slices=*/true);
     if (status != ZX_OK) {
-      FS_TRACE_ERROR("minfs: Cannot initialize non-journal writeback\n");
       return status;
     }
   }
 
-  if (options.repair_filesystem) {
-    if (info.flags & kMinfsFlagFVM) {
-      // After replaying the journal, it's now safe to repair the FVM slices.
-      const size_t kBlocksPerSlice = info.slice_size / info.BlockSize();
-      zx_status_t status;
-      status = CheckSlices(&info, kBlocksPerSlice, device, /*repair_slices=*/true);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-
+  if (!options.readonly) {
     // On a read-write filesystem we unset the kMinfsFlagClean flag to indicate that the filesystem
     // may begin receiving modifications.
     //
@@ -1204,19 +1190,22 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
       FS_TRACE_ERROR("minfs: Cannot purge unlinked list\n");
       return status;
     }
+
+    if (options.readonly_after_initialization) {
+      // The filesystem should still be "writable"; we set the dirty bit while
+      // purging the unlinked list. Invoking StopWriteback here unsets the dirty bit.
+      fs->StopWriteback();
+    }
   }
-  if (!options.readonly && options.readonly_after_initialization) {
-    // The filesystem should still be "writable"; we set the dirty bit while
-    // purging the unlinked list. Invoking StopWriteback here unsets the dirty bit.
-    fs->StopWriteback();
-  }
+
   fs->SetReadonly(options.readonly || options.readonly_after_initialization);
+
   fs->mount_state_ = {
       .readonly_after_initialization = options.readonly_after_initialization,
       .collect_metrics = options.metrics,
       .verbose = options.verbose,
       .repair_filesystem = options.repair_filesystem,
-      .use_journal = options.use_journal,
+      .use_journal = true,
   };
 
   if (options.fsck_after_every_transaction && fs->journal_) {
@@ -1273,25 +1262,7 @@ zx_status_t Minfs::InitializeJournal(fs::JournalSuperblock journal_superblock) {
 
   journal_ = std::make_unique<fs::Journal>(GetMutableBcache(), std::move(journal_superblock),
                                            std::move(journal_buffer), std::move(writeback_buffer),
-                                           JournalStartBlock(sb_->Info()),
-                                           fs::Journal::Options());
-  return ZX_OK;
-}
-
-zx_status_t Minfs::InitializeUnjournalledWriteback() {
-  if (journal_ != nullptr) {
-    FS_TRACE_ERROR("minfs: Writeback was already initialized.\n");
-    return ZX_ERR_ALREADY_EXISTS;
-  }
-  std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer;
-  zx_status_t status = storage::BlockingRingBuffer::Create(
-      bc_.get(), WritebackCapacity(), BlockSize(), "minfs-writeback-buffer", &writeback_buffer);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("minfs: Cannot create data writeback buffer\n");
-    return status;
-  }
-
-  journal_ = std::make_unique<fs::Journal>(GetMutableBcache(), std::move(writeback_buffer));
+                                           JournalStartBlock(sb_->Info()), fs::Journal::Options());
   return ZX_OK;
 }
 

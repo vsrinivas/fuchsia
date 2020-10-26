@@ -63,7 +63,6 @@ void FilesystemTest::Mount() {
   ASSERT_TRUE(fd);
 
   init_options_t options = default_init_options;
-  options.enable_journal = environment_->use_journal();
   options.enable_pager = environment_->use_pager();
   if (environment_->write_compression_algorithm()) {
     options.write_compression_algorithm = *environment_->write_compression_algorithm();
@@ -161,7 +160,6 @@ zx_status_t FilesystemTest::CheckFs() {
       .never_modify = true,
       .always_modify = false,
       .force = true,
-      .apply_journal = true,
   };
   return fsck(device_path_.c_str(), format_type(), &test_fsck_options, launch_stdio_sync);
 }

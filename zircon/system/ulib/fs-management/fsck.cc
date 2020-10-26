@@ -46,9 +46,6 @@ zx_status_t FsckNativeFs(const char* device_path, const fsck_options_t* options,
   if (options->verbose) {
     argv.push_back("-v");
   }
-  if (options->apply_journal) {
-    argv.push_back("-j");
-  }
   // TODO(smklein): Add support for modify, force flags. Without them,
   // we have "never_modify=true" and "force=true" effectively on by default.
   argv.push_back("fsck");

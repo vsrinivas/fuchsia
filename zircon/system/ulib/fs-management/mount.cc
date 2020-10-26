@@ -94,7 +94,6 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
       .verbose_mount = options->verbose_mount,
       .collect_metrics = options->collect_metrics,
       .wait_until_ready = options->wait_until_ready,
-      .enable_journal = options->enable_journal,
       .enable_pager = options->enable_pager,
       .write_compression_algorithm = options->write_compression_algorithm,
       // TODO(jfsulliv): This is currently only used in tests. Plumb through mount options if
@@ -140,7 +139,6 @@ const mount_options_t default_mount_options = {
     .collect_metrics = false,
     .wait_until_ready = true,
     .create_mountpoint = false,
-    .enable_journal = true,
     .enable_pager = false,
     .write_compression_algorithm = nullptr,
     .cache_eviction_policy = nullptr,
@@ -162,7 +160,6 @@ const fsck_options_t default_fsck_options = {
     .never_modify = false,
     .always_modify = false,
     .force = false,
-    .apply_journal = false,
 };
 
 enum DiskFormatLogVerbosity {

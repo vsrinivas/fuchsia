@@ -47,8 +47,6 @@ int parse_args(int argc, char** argv, fsck_options_t* options, disk_format_t* df
   while (argc > 1) {
     if (!strcmp(argv[1], "-v")) {
       options->verbose = true;
-    } else if (!strcmp(argv[1], "-j")) {
-      options->apply_journal = true;
     } else {
       break;
     }

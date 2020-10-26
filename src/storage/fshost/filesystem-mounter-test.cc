@@ -72,7 +72,7 @@ class TestMounter : public FilesystemMounter {
 
   zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len,
                        uint32_t fs_flags) final {
-    if (argc != 3) {
+    if (argc != 2) {
       return ZX_ERR_INVALID_ARGS;
     }
 
@@ -102,8 +102,7 @@ class TestMounter : public FilesystemMounter {
         ADD_FAILURE("Unexpected filesystem type");
     }
 
-    EXPECT_STR_EQ(argv[1], "--journal");
-    EXPECT_STR_EQ(argv[2], "mount");
+    EXPECT_STR_EQ(argv[1], "mount");
 
     EXPECT_EQ(ids[0], FS_HANDLE_ROOT_ID);
     EXPECT_EQ(ids[1], FS_HANDLE_BLOCK_DEVICE_ID);

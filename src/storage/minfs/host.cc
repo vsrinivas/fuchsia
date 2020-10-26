@@ -132,7 +132,6 @@ static const minfs::MountOptions kDefaultMountOptions = {
     .metrics = false,
     .verbose = false,
     .repair_filesystem = false,
-    .use_journal = false,
 };
 
 int emu_mount_bcache(std::unique_ptr<minfs::Bcache> bc) {

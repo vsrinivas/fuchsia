@@ -100,22 +100,6 @@ zx::status<std::unique_ptr<Journal>> InitializeJournal(
                                           journal_start, options));
 }
 
-// Writeback enabled, journaling disabled.
-zx_status_t InitializeUnjournalledWriteback(fs::TransactionHandler* transaction_handler,
-                                            VmoidRegistry* registry,
-                                            std::unique_ptr<Journal>* out_journal) {
-  std::unique_ptr<BlockingRingBuffer> writeback_buffer;
-  zx_status_t status = BlockingRingBuffer::Create(registry, WriteBufferSize(), kBlobfsBlockSize,
-                                                  "data-writeback-buffer", &writeback_buffer);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Cannot create writeback buffer: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  *out_journal = std::make_unique<Journal>(transaction_handler, std::move(writeback_buffer));
-  return ZX_OK;
-}
-
 const char* CachePolicyToString(CachePolicy policy) {
   switch (policy) {
     case CachePolicy::NeverEvict:
@@ -201,61 +185,52 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     fs->metrics_->Collect();
   }
 
-  if (options->journal) {
-    if (options->writability == blobfs::Writability::ReadOnlyDisk) {
-      FS_TRACE_ERROR("blobfs: Replaying the journal requires a writable disk\n");
-      return ZX_ERR_ACCESS_DENIED;
-    }
-    FS_TRACE_INFO("blobfs: Replaying journal\n");
-    auto journal_superblock_or = fs::ReplayJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
-                                                   JournalBlocks(fs->info_), kBlobfsBlockSize);
-    if (journal_superblock_or.is_error()) {
-      FS_TRACE_ERROR("blobfs: Failed to replay journal\n");
-      return journal_superblock_or.error_value();
-    }
-    JournalSuperblock journal_superblock = std::move(journal_superblock_or.value());
-    FS_TRACE_DEBUG("blobfs: Journal replayed\n");
+  if (options->writability == blobfs::Writability::ReadOnlyDisk) {
+    FS_TRACE_ERROR("blobfs: Replaying the journal requires a writable disk\n");
+    return ZX_ERR_ACCESS_DENIED;
+  }
+  FS_TRACE_INFO("blobfs: Replaying journal\n");
+  auto journal_superblock_or = fs::ReplayJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
+                                                 JournalBlocks(fs->info_), kBlobfsBlockSize);
+  if (journal_superblock_or.is_error()) {
+    FS_TRACE_ERROR("blobfs: Failed to replay journal\n");
+    return journal_superblock_or.error_value();
+  }
+  JournalSuperblock journal_superblock = std::move(journal_superblock_or.value());
+  FS_TRACE_DEBUG("blobfs: Journal replayed\n");
 
-    switch (options->writability) {
-      case blobfs::Writability::Writable: {
-        FS_TRACE_DEBUG("blobfs: Initializing journal for writeback\n");
-        auto journal_or = InitializeJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
-                                            JournalBlocks(fs->info_), std::move(journal_superblock),
-                                            fs->metrics_);
-        if (journal_or.is_error()) {
-          FS_TRACE_ERROR("blobfs: Failed to initialize journal\n");
-          return journal_or.error_value();
-        }
-        fs->journal_ = std::move(journal_or.value());
-        if (zx_status_t status = fs->ReloadSuperblock(); status != ZX_OK) {
-          FS_TRACE_ERROR("blobfs: Failed to re-load superblock\n");
-          return status;
-        }
-        {
-          // Change to true to enable fsck at the end of every transaction, which is useful to check
-          // that every transaction leaves the file system in a consistent state.
-          bool fsck_at_end_of_every_transaction = false;
-          if (fsck_at_end_of_every_transaction) {
-            fs->journal_->set_write_metadata_callback(
-                fit::bind_member(fs.get(), &Blobfs::FsckAtEndOfTransaction));
-          }
-        }
-        break;
+  switch (options->writability) {
+    case blobfs::Writability::Writable: {
+      FS_TRACE_DEBUG("blobfs: Initializing journal for writeback\n");
+      auto journal_or =
+          InitializeJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
+                            JournalBlocks(fs->info_), std::move(journal_superblock), fs->metrics_);
+      if (journal_or.is_error()) {
+        FS_TRACE_ERROR("blobfs: Failed to initialize journal\n");
+        return journal_or.error_value();
       }
-      case blobfs::Writability::ReadOnlyFilesystem:
-        // Journal uninitialized.
-        break;
-      default:
-        FS_TRACE_ERROR("blobfs: Unexpected writability option for journaling\n");
-        return ZX_ERR_NOT_SUPPORTED;
+      fs->journal_ = std::move(journal_or.value());
+      if (zx_status_t status = fs->ReloadSuperblock(); status != ZX_OK) {
+        FS_TRACE_ERROR("blobfs: Failed to re-load superblock\n");
+        return status;
+      }
+      {
+        // Change to true to enable fsck at the end of every transaction, which is useful to check
+        // that every transaction leaves the file system in a consistent state.
+        bool fsck_at_end_of_every_transaction = false;
+        if (fsck_at_end_of_every_transaction) {
+          fs->journal_->set_write_metadata_callback(
+              fit::bind_member(fs.get(), &Blobfs::FsckAtEndOfTransaction));
+        }
+      }
+      break;
     }
-  } else if (options->writability == blobfs::Writability::Writable) {
-    FS_TRACE_INFO("blobfs: Initializing writeback (no journal)\n");
-    status = InitializeUnjournalledWriteback(fs.get(), fs.get(), &fs->journal_);
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Failed to initialize writeback (unjournaled)\n");
-      return status;
-    }
+    case blobfs::Writability::ReadOnlyFilesystem:
+      // Journal uninitialized.
+      break;
+    default:
+      FS_TRACE_ERROR("blobfs: Unexpected writability option for journaling\n");
+      return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Validate the FVM after replaying the journal.

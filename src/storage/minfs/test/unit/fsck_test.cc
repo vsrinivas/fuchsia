@@ -319,7 +319,7 @@ void CreateUnlinkedDirectoryWithEntry(std::unique_ptr<Minfs> fs,
 TEST_F(ConsistencyCheckerFixtureVerbose, UnlinkedDirectoryHasBadEntryCount) {
   std::unique_ptr<Bcache> bcache;
   ASSERT_NO_FATAL_FAILURES(CreateUnlinkedDirectoryWithEntry(TakeFs(), &bcache));
-  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
+  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false, .read_only = true}, &bcache));
 }
 
 TEST_F(ConsistencyCheckerFixtureVerbose, CorruptSuperblock) {

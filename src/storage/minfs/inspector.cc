@@ -60,7 +60,6 @@ zx_status_t Inspector::CreateRoot(std::unique_ptr<Bcache> bc,
   MountOptions options = {};
   options.readonly_after_initialization = true;
   options.repair_filesystem = false;
-  options.use_journal = false;
   std::unique_ptr<Minfs> fs;
   zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
   if (status != ZX_OK) {

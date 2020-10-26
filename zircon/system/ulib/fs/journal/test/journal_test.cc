@@ -2277,56 +2277,6 @@ TEST_F(JournalTest, MetadataOperationTooLargeToFitInJournalFails) {
   EXPECT_EQ(metadata_status, ZX_ERR_NO_SPACE);
 }
 
-// Tests that the journal can be bypassed with an explicit constructor.
-TEST_F(JournalTest, InactiveJournalTreatsMetdataLikeData) {
-  storage::VmoBuffer buffer = registry()->InitializeBuffer(5);
-  const std::vector<storage::UnbufferedOperation> operations = {
-      {
-          zx::unowned_vmo(buffer.vmo().get()),
-          {
-              storage::OperationType::kWrite,
-              .vmo_offset = 0,
-              .dev_offset = 20,
-              .length = 2,
-          },
-      },
-      {
-          zx::unowned_vmo(buffer.vmo().get()),
-          {
-              storage::OperationType::kWrite,
-              .vmo_offset = 1,
-              .dev_offset = 200,
-              .length = 3,
-          },
-      },
-  };
-
-  JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
-                                  registry()->writeback(), 0);
-  MockTransactionHandler::TransactionCallback callbacks[] = {
-      // Data is still treated like data.
-      [&](const std::vector<storage::BufferedOperation>& requests) {
-        verifier.VerifyDataWrite(operations[0], requests);
-        verifier.ExtendDataOffset(operations[0].op.length);
-        return ZX_OK;
-      },
-      // Metadata is also treated like data.
-      [&](const std::vector<storage::BufferedOperation>& requests) {
-        verifier.VerifyDataWrite(operations[1], requests);
-        verifier.ExtendDataOffset(operations[1].op.length);
-        return ZX_OK;
-      },
-  };
-  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
-
-  {
-    Journal journal(&handler, take_data_buffer());
-    auto promise =
-        journal.WriteData({operations[0]}).and_then(journal.WriteMetadata({operations[1]}));
-    journal.schedule_task(std::move(promise));
-  }
-}
-
 // Tests that when data operations fail, subsequent operations also fail to avoid
 // leaving the device in an inconsistent state.
 TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
