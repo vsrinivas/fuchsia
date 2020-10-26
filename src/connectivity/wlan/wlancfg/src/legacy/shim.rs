@@ -273,6 +273,7 @@ async fn connect(
     let connect_req = client_fsm::ConnectRequest {
         network: fidl_policy::NetworkIdentifier::from(network_id),
         credential,
+        metadata: None,
     };
 
     // Get the state machine to begin connecting to the desired network.

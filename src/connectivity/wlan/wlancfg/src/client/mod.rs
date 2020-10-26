@@ -240,6 +240,7 @@ async fn handle_client_request_connect(
     let connect_req = client_fsm::ConnectRequest {
         network: network_id,
         credential: network_config.credential.clone(),
+        metadata: None,
     };
 
     let mut iface_manager = iface_manager.lock().await;
@@ -292,7 +293,8 @@ async fn handle_client_request_save_network(
     }
 
     // Attempt to connect to the new network if there is an idle client interface.
-    let connect_req = client_fsm::ConnectRequest { network: net_id, credential: credential };
+    let connect_req =
+        client_fsm::ConnectRequest { network: net_id, credential: credential, metadata: None };
     match iface_manager.has_idle_client().await {
         Ok(true) => {
             info!("Idle interface available, will attempt connection to new saved network");

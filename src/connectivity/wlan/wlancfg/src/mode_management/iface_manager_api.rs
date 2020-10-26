@@ -386,6 +386,7 @@ mod tests {
                 type_: fidl_policy::SecurityType::None,
             },
             credential: Credential::None,
+            metadata: None,
         };
         let connect_fut = test_values.iface_manager.connect(req.clone());
         pin_mut!(connect_fut);
@@ -424,6 +425,7 @@ mod tests {
                 type_: fidl_policy::SecurityType::None,
             },
             credential: Credential::None,
+            metadata: None,
         };
         let connect_fut = test_values.iface_manager.connect(req.clone());
         pin_mut!(connect_fut);

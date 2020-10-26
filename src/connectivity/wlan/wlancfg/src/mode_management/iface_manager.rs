@@ -6,8 +6,7 @@ use {
     crate::{
         access_point::{state_machine as ap_fsm, state_machine::AccessPointApi, types as ap_types},
         client::{
-            network_selection::{NetworkMetadata, NetworkSelector},
-            state_machine as client_fsm, types as client_types,
+            network_selection::NetworkSelector, state_machine as client_fsm, types as client_types,
         },
         config_management::{Credential, SavedNetworksManager},
         mode_management::{
@@ -673,7 +672,14 @@ async fn initiate_network_selection(
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     network_selector: Arc<NetworkSelector>,
     network_selection_futures: &mut FuturesUnordered<
-        BoxFuture<'static, Option<(client_types::NetworkIdentifier, Credential, NetworkMetadata)>>,
+        BoxFuture<
+            'static,
+            Option<(
+                client_types::NetworkIdentifier,
+                Credential,
+                client_types::NetworkSelectionMetadata,
+            )>,
+        >,
     >,
 ) {
     if iface_manager.has_idle_client()
@@ -693,19 +699,22 @@ async fn handle_network_selection_results(
     network_selection_result: Option<(
         client_types::NetworkIdentifier,
         Credential,
-        NetworkMetadata,
+        client_types::NetworkSelectionMetadata,
     )>,
     iface_manager: &mut IfaceManagerService,
     disconnected_clients: &mut HashSet<u16>,
     reconnect_monitor_interval: &mut i64,
     connectivity_monitor_timer: &mut fasync::Interval,
 ) {
-    if let Some((network_id, credential, _network_metadata)) = network_selection_result {
+    if let Some((network_id, credential, network_metadata)) = network_selection_result {
         *reconnect_monitor_interval = 1;
 
         if iface_manager.has_idle_client() {
-            let connect_req =
-                client_fsm::ConnectRequest { network: network_id, credential: credential };
+            let connect_req = client_fsm::ConnectRequest {
+                network: network_id,
+                credential: credential,
+                metadata: Some(network_metadata),
+            };
 
             // Any client interfaces that have recently presented as idle will be
             // reconnected.
@@ -734,7 +743,14 @@ async fn handle_terminated_state_machine(
     selector: Arc<NetworkSelector>,
     disconnected_clients: &mut HashSet<u16>,
     network_selection_futures: &mut FuturesUnordered<
-        BoxFuture<'static, Option<(client_types::NetworkIdentifier, Credential, NetworkMetadata)>>,
+        BoxFuture<
+            'static,
+            Option<(
+                client_types::NetworkIdentifier,
+                Credential,
+                client_types::NetworkSelectionMetadata,
+            )>,
+        >,
     >,
 ) {
     match terminated_fsm.role {
@@ -953,7 +969,13 @@ mod tests {
         };
         let credential = Credential::Password(password.as_bytes().to_vec());
 
-        client_fsm::ConnectRequest { network, credential }
+        client_fsm::ConnectRequest {
+            network,
+            credential,
+            metadata: Some(client_types::NetworkSelectionMetadata {
+                observed_in_passive_scan: true,
+            }),
+        }
     }
 
     /// Holds all of the boilerplate required for testing IfaceManager.
@@ -3680,7 +3702,11 @@ mod tests {
         let mut network_selection_futures = FuturesUnordered::<
             BoxFuture<
                 'static,
-                Option<(client_types::NetworkIdentifier, Credential, NetworkMetadata)>,
+                Option<(
+                    client_types::NetworkIdentifier,
+                    Credential,
+                    client_types::NetworkSelectionMetadata,
+                )>,
             >,
         >::new();
 

@@ -32,7 +32,7 @@ impl From<ScanResult> for fidl_policy::ScanResult {
 }
 
 // An internal version of fidl_policy::Bss with extended information
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Bss {
     /// MAC address for the AP interface.
     pub bssid: [u8; 6],
@@ -58,4 +58,10 @@ impl From<Bss> for fidl_policy::Bss {
             timestamp_nanos: Some(input.timestamp_nanos),
         }
     }
+}
+
+/// Additional data used during network selection and connection.
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct NetworkSelectionMetadata {
+    pub observed_in_passive_scan: bool,
 }

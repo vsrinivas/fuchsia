@@ -51,13 +51,9 @@ struct ScanResultCache {
 struct InternalNetworkData {
     credential: Credential,
     has_ever_connected: bool,
-    rssi: Option<i8>,
-    compatible: bool,
     recent_failure_count: u8,
+    bss_list: Vec<types::Bss>,
 }
-
-#[derive(Debug, PartialEq)]
-pub struct NetworkMetadata {}
 
 impl NetworkSelector {
     pub fn new(saved_network_manager: Arc<SavedNetworksManager>, cobalt_api: CobaltSender) -> Self {
@@ -143,20 +139,7 @@ impl NetworkSelector {
         let scan_result_guard = self.scan_result_cache.lock().await;
         for scan_result in &*scan_result_guard.results {
             if let Some(hashmap_entry) = networks.get_mut(&scan_result.id) {
-                // Extract the max RSSI from all the BSS in scan_result.entries
-                if let Some(max_rssi) =
-                    scan_result.entries.iter().map(|bss| bss.rssi).max_by(|a, b| a.cmp(b))
-                {
-                    let compatibility =
-                        scan_result.compatibility == types::Compatibility::Supported;
-                    trace!(
-                        "Augmenting network with RSSI {} and compatibility {}",
-                        max_rssi,
-                        compatibility
-                    );
-                    hashmap_entry.rssi = Some(max_rssi);
-                    hashmap_entry.compatible = compatibility;
-                }
+                hashmap_entry.bss_list = scan_result.entries.clone();
             }
         }
         networks
@@ -171,7 +154,7 @@ impl NetworkSelector {
         &self,
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         ignore_list: &Vec<types::NetworkIdentifier>,
-    ) -> Option<(types::NetworkIdentifier, Credential, NetworkMetadata)> {
+    ) -> Option<(types::NetworkIdentifier, Credential, types::NetworkSelectionMetadata)> {
         self.perform_scan(iface_manager).await;
         let saved_networks = load_saved_networks(Arc::clone(&self.saved_network_manager)).await;
         let networks = self.augment_networks_with_scan_data(saved_networks).await;
@@ -208,8 +191,7 @@ async fn load_saved_networks(
                     credential: saved_network.credential.clone(),
                     has_ever_connected: saved_network.has_ever_connected,
                     recent_failure_count: recent_failure_count,
-                    rssi: None,
-                    compatible: false,
+                    bss_list: vec![],
                 },
             );
         };
@@ -222,8 +204,7 @@ async fn load_saved_networks(
                 credential: saved_network.credential,
                 has_ever_connected: saved_network.has_ever_connected,
                 recent_failure_count: recent_failure_count,
-                rssi: None,
-                compatible: false,
+                bss_list: vec![],
             },
         );
     }
@@ -266,18 +247,18 @@ impl ScanResultUpdate for NetworkSelectorScanUpdater {
 fn find_best_network(
     networks: &HashMap<types::NetworkIdentifier, InternalNetworkData>,
     ignore_list: &Vec<types::NetworkIdentifier>,
-) -> Option<(types::NetworkIdentifier, Credential, NetworkMetadata)> {
+) -> Option<(types::NetworkIdentifier, Credential, types::NetworkSelectionMetadata)> {
     networks
         .iter()
         .filter(|(id, data)| {
-            // Filter out networks that are incompatible
-            if !data.compatible {
+            // Filter out networks that don't have at least 1 compatible bss
+            if !data.bss_list.iter().any(|bss| bss.compatible) {
                 trace!("Network is incompatible, filtering");
                 return false;
             };
             // Filter out networks not present in scan results
-            if data.rssi.is_none() {
-                trace!("RSSI not present, filtering");
+            if data.bss_list.is_empty() {
+                trace!("BSS list not present, filtering");
                 return false;
             };
             // Filter out networks we've been told to ignore
@@ -297,11 +278,30 @@ fn find_best_network(
             }
 
             // Both networks have failures, sort by RSSI
-            let rssi_a = data_a.rssi.unwrap();
-            let rssi_b = data_b.rssi.unwrap();
+            let rssi_a = highest_compatible_rssi(&data_a.bss_list).unwrap();
+            let rssi_b = highest_compatible_rssi(&data_b.bss_list).unwrap();
             rssi_a.partial_cmp(&rssi_b).unwrap()
         })
-        .map(|(id, data)| (id.clone(), data.credential.clone(), NetworkMetadata {}))
+        .map(|(id, data)| {
+            (
+                id.clone(),
+                data.credential.clone(),
+                types::NetworkSelectionMetadata {
+                    observed_in_passive_scan: data
+                        .bss_list
+                        .iter()
+                        .all(|bss| bss.observed_in_passive_scan),
+                },
+            )
+        })
+}
+
+fn highest_compatible_rssi(bss_list: &Vec<types::Bss>) -> Option<i8> {
+    bss_list
+        .iter()
+        .filter(|bss| bss.compatible)
+        .max_by(|bss_1, bss_2| bss_1.rssi.partial_cmp(&bss_2.rssi).unwrap())
+        .map(|bss| bss.rssi)
 }
 
 fn record_metrics_on_scan(
@@ -555,8 +555,7 @@ mod tests {
             InternalNetworkData {
                 credential: credential_1,
                 has_ever_connected: true,
-                rssi: None,
-                compatible: false,
+                bss_list: vec![],
                 recent_failure_count: 0,
             },
         );
@@ -565,8 +564,7 @@ mod tests {
             InternalNetworkData {
                 credential: credential_2.clone(),
                 has_ever_connected: false,
-                rssi: None,
-                compatible: false,
+                bss_list: vec![],
                 recent_failure_count: 1,
             },
         );
@@ -576,8 +574,7 @@ mod tests {
             InternalNetworkData {
                 credential: credential_2,
                 has_ever_connected: false,
-                rssi: None,
-                compatible: false,
+                bss_list: vec![],
                 recent_failure_count: 1,
             },
         );
@@ -686,8 +683,7 @@ mod tests {
             InternalNetworkData {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                rssi: None,
-                compatible: false,
+                bss_list: vec![],
                 recent_failure_count: 0,
             },
         );
@@ -696,8 +692,7 @@ mod tests {
             InternalNetworkData {
                 credential: credential_2.clone(),
                 has_ever_connected: false,
-                rssi: None,
-                compatible: false,
+                bss_list: vec![],
                 recent_failure_count: 0,
             },
         );
@@ -761,8 +756,7 @@ mod tests {
             InternalNetworkData {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                rssi: Some(-10),  // strongest RSSI
-                compatible: true, // compatible
+                bss_list: mock_scan_results[0].entries.clone(),
                 recent_failure_count: 0,
             },
         );
@@ -771,8 +765,7 @@ mod tests {
             InternalNetworkData {
                 credential: credential_2.clone(),
                 has_ever_connected: false,
-                rssi: Some(-15),
-                compatible: false, // DisallowedNotSupported
+                bss_list: mock_scan_results[1].entries.clone(),
                 recent_failure_count: 0,
             },
         );
@@ -805,8 +798,26 @@ mod tests {
             InternalNetworkData {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                rssi: Some(-10),
-                compatible: true,
+                bss_list: vec![
+                    types::Bss {
+                        bssid: [0, 1, 2, 3, 4, 5],
+                        rssi: -14,
+                        frequency: 2400,
+                        timestamp_nanos: 0,
+                        snr_db: 1,
+                        observed_in_passive_scan: true,
+                        compatible: true,
+                    },
+                    types::Bss {
+                        bssid: [6, 7, 8, 9, 10, 11],
+                        rssi: -10,
+                        frequency: 2410,
+                        timestamp_nanos: 1,
+                        snr_db: 2,
+                        observed_in_passive_scan: true,
+                        compatible: true,
+                    },
+                ],
                 recent_failure_count: 0,
             },
         );
@@ -815,8 +826,15 @@ mod tests {
             InternalNetworkData {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                rssi: Some(-15),
-                compatible: true,
+                bss_list: vec![types::Bss {
+                    bssid: [12, 13, 14, 15, 16, 17],
+                    rssi: -12,
+                    frequency: 2400,
+                    timestamp_nanos: 0,
+                    snr_db: 1,
+                    observed_in_passive_scan: true,
+                    compatible: true,
+                }],
                 recent_failure_count: 0,
             },
         );
@@ -824,7 +842,11 @@ mod tests {
         // stronger network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_1.clone(), credential_1.clone(), NetworkMetadata {})
+            (
+                test_id_1.clone(),
+                credential_1.clone(),
+                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+            )
         );
 
         // make the other network stronger
@@ -833,8 +855,15 @@ mod tests {
             InternalNetworkData {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                rssi: Some(-5),
-                compatible: true,
+                bss_list: vec![types::Bss {
+                    bssid: [12, 13, 14, 15, 16, 17],
+                    rssi: -5,
+                    frequency: 2400,
+                    timestamp_nanos: 0,
+                    snr_db: 1,
+                    observed_in_passive_scan: false,
+                    compatible: true,
+                }],
                 recent_failure_count: 0,
             },
         );
@@ -842,7 +871,11 @@ mod tests {
         // stronger network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_2.clone(), credential_2.clone(), NetworkMetadata {})
+            (
+                test_id_2.clone(),
+                credential_2.clone(),
+                types::NetworkSelectionMetadata { observed_in_passive_scan: false }
+            )
         );
     }
 
@@ -865,8 +898,15 @@ mod tests {
             InternalNetworkData {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                rssi: Some(-10),
-                compatible: true,
+                bss_list: vec![types::Bss {
+                    bssid: [0, 1, 2, 3, 4, 5],
+                    rssi: -14,
+                    frequency: 2400,
+                    timestamp_nanos: 0,
+                    snr_db: 1,
+                    observed_in_passive_scan: true,
+                    compatible: true,
+                }],
                 recent_failure_count: 0,
             },
         );
@@ -875,8 +915,15 @@ mod tests {
             InternalNetworkData {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                rssi: Some(-15),
-                compatible: true,
+                bss_list: vec![types::Bss {
+                    bssid: [6, 7, 8, 9, 10, 11],
+                    rssi: -15,
+                    frequency: 2410,
+                    timestamp_nanos: 1,
+                    snr_db: 2,
+                    observed_in_passive_scan: true,
+                    compatible: true,
+                }],
                 recent_failure_count: 0,
             },
         );
@@ -884,7 +931,11 @@ mod tests {
         // stronger network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_1.clone(), credential_1.clone(), NetworkMetadata {})
+            (
+                test_id_1.clone(),
+                credential_1.clone(),
+                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+            )
         );
 
         // mark the stronger network as having a failure
@@ -893,8 +944,15 @@ mod tests {
             InternalNetworkData {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                rssi: Some(-10),
-                compatible: true,
+                bss_list: vec![types::Bss {
+                    bssid: [0, 1, 2, 3, 4, 5],
+                    rssi: -14,
+                    frequency: 2400,
+                    timestamp_nanos: 0,
+                    snr_db: 1,
+                    observed_in_passive_scan: true,
+                    compatible: true,
+                }],
                 recent_failure_count: 2,
             },
         );
@@ -902,7 +960,11 @@ mod tests {
         // weaker network (with no failures) returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_2.clone(), credential_2.clone(), NetworkMetadata {})
+            (
+                test_id_2.clone(),
+                credential_2.clone(),
+                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+            )
         );
 
         // give them both the same number of failures
@@ -911,8 +973,15 @@ mod tests {
             InternalNetworkData {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                rssi: Some(-15),
-                compatible: true,
+                bss_list: vec![types::Bss {
+                    bssid: [6, 7, 8, 9, 10, 11],
+                    rssi: -15,
+                    frequency: 2410,
+                    timestamp_nanos: 1,
+                    snr_db: 2,
+                    observed_in_passive_scan: true,
+                    compatible: true,
+                }],
                 recent_failure_count: 1,
             },
         );
@@ -920,7 +989,11 @@ mod tests {
         // stronger network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_1.clone(), credential_1.clone(), NetworkMetadata {})
+            (
+                test_id_1.clone(),
+                credential_1.clone(),
+                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+            )
         );
     }
 
@@ -943,8 +1016,26 @@ mod tests {
             InternalNetworkData {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                rssi: Some(1),
-                compatible: true,
+                bss_list: vec![
+                    types::Bss {
+                        bssid: [0, 1, 2, 3, 4, 5],
+                        rssi: -14,
+                        frequency: 2400,
+                        timestamp_nanos: 0,
+                        snr_db: 1,
+                        observed_in_passive_scan: true,
+                        compatible: true,
+                    },
+                    types::Bss {
+                        bssid: [6, 7, 8, 9, 10, 11],
+                        rssi: -10,
+                        frequency: 2410,
+                        timestamp_nanos: 1,
+                        snr_db: 2,
+                        observed_in_passive_scan: true,
+                        compatible: false,
+                    },
+                ],
                 recent_failure_count: 0,
             },
         );
@@ -953,8 +1044,15 @@ mod tests {
             InternalNetworkData {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                rssi: Some(2),
-                compatible: true,
+                bss_list: vec![types::Bss {
+                    bssid: [12, 13, 14, 15, 16, 17],
+                    rssi: -12,
+                    frequency: 2400,
+                    timestamp_nanos: 0,
+                    snr_db: 1,
+                    observed_in_passive_scan: true,
+                    compatible: true,
+                }],
                 recent_failure_count: 0,
             },
         );
@@ -962,7 +1060,11 @@ mod tests {
         // stronger network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_2.clone(), credential_2.clone(), NetworkMetadata {})
+            (
+                test_id_2.clone(),
+                credential_2.clone(),
+                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+            )
         );
 
         // mark it as incompatible
@@ -971,8 +1073,15 @@ mod tests {
             InternalNetworkData {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                rssi: Some(2),
-                compatible: false,
+                bss_list: vec![types::Bss {
+                    bssid: [12, 13, 14, 15, 16, 17],
+                    rssi: -12,
+                    frequency: 2400,
+                    timestamp_nanos: 0,
+                    snr_db: 1,
+                    observed_in_passive_scan: true,
+                    compatible: false,
+                }],
                 recent_failure_count: 0,
             },
         );
@@ -980,12 +1089,16 @@ mod tests {
         // other network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_1.clone(), credential_1.clone(), NetworkMetadata {})
+            (
+                test_id_1.clone(),
+                credential_1.clone(),
+                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+            )
         );
     }
 
     #[test]
-    fn find_best_network_no_rssi() {
+    fn find_best_network_no_bss_list() {
         // build network hashmap
         let mut networks = HashMap::new();
         let test_id_1 = types::NetworkIdentifier {
@@ -1003,8 +1116,7 @@ mod tests {
             InternalNetworkData {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                rssi: None, // No RSSI
-                compatible: true,
+                bss_list: vec![],
                 recent_failure_count: 0,
             },
         );
@@ -1013,8 +1125,7 @@ mod tests {
             InternalNetworkData {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                rssi: None, // No RSSI
-                compatible: true,
+                bss_list: vec![],
                 recent_failure_count: 0,
             },
         );
@@ -1022,20 +1133,31 @@ mod tests {
         // no network returned
         assert!(find_best_network(&networks, &vec![]).is_none());
 
-        // add RSSI
+        // add a bss
         networks.insert(
             test_id_2.clone(),
             InternalNetworkData {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                rssi: Some(20),
-                compatible: true,
+                bss_list: vec![types::Bss {
+                    bssid: [12, 13, 14, 15, 16, 17],
+                    rssi: -12,
+                    frequency: 2400,
+                    timestamp_nanos: 0,
+                    snr_db: 1,
+                    observed_in_passive_scan: false,
+                    compatible: true,
+                }],
                 recent_failure_count: 0,
             },
         );
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_2.clone(), credential_2.clone(), NetworkMetadata {})
+            (
+                test_id_2.clone(),
+                credential_2.clone(),
+                types::NetworkSelectionMetadata { observed_in_passive_scan: false }
+            )
         );
     }
 
@@ -1058,8 +1180,15 @@ mod tests {
             InternalNetworkData {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                rssi: Some(1),
-                compatible: true,
+                bss_list: vec![types::Bss {
+                    bssid: [0, 1, 2, 3, 4, 5],
+                    rssi: -14,
+                    frequency: 2400,
+                    timestamp_nanos: 0,
+                    snr_db: 1,
+                    observed_in_passive_scan: true,
+                    compatible: true,
+                }],
                 recent_failure_count: 0,
             },
         );
@@ -1068,8 +1197,15 @@ mod tests {
             InternalNetworkData {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                rssi: Some(2),
-                compatible: true,
+                bss_list: vec![types::Bss {
+                    bssid: [12, 13, 14, 15, 16, 17],
+                    rssi: -12,
+                    frequency: 2400,
+                    timestamp_nanos: 0,
+                    snr_db: 1,
+                    observed_in_passive_scan: true,
+                    compatible: true,
+                }],
                 recent_failure_count: 0,
             },
         );
@@ -1077,13 +1213,21 @@ mod tests {
         // stronger network returned
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
-            (test_id_2.clone(), credential_2.clone(), NetworkMetadata {})
+            (
+                test_id_2.clone(),
+                credential_2.clone(),
+                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+            )
         );
 
         // ignore the stronger network, other network returned
         assert_eq!(
             find_best_network(&networks, &vec![test_id_2.clone()]).unwrap(),
-            (test_id_1.clone(), credential_1.clone(), NetworkMetadata {})
+            (
+                test_id_1.clone(),
+                credential_1.clone(),
+                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+            )
         );
     }
 
@@ -1273,13 +1417,27 @@ mod tests {
 
         // Check that we pick a network
         let results = exec.run_singlethreaded(&mut network_selection_fut);
-        assert_eq!(results, Some((test_id_1.clone(), credential_1.clone(), NetworkMetadata {})));
+        assert_eq!(
+            results,
+            Some((
+                test_id_1.clone(),
+                credential_1.clone(),
+                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+            ))
+        );
 
         // Ignore that network, check that we pick the other one
         let results = exec.run_singlethreaded(
             network_selector.get_best_network(test_values.iface_manager, &vec![test_id_1.clone()]),
         );
-        assert_eq!(results, Some((test_id_2.clone(), credential_2.clone(), NetworkMetadata {})));
+        assert_eq!(
+            results,
+            Some((
+                test_id_2.clone(),
+                credential_2.clone(),
+                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+            ))
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1331,7 +1489,11 @@ mod tests {
         // Check that we choose the config saved as WPA2
         assert_eq!(
             network_selector.get_best_network(test_values.iface_manager.clone(), &vec![]).await,
-            Some((id.clone(), credential, NetworkMetadata {}))
+            Some((
+                id.clone(),
+                credential,
+                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+            ))
         );
         assert_eq!(
             network_selector.get_best_network(test_values.iface_manager, &vec![id]).await,
@@ -1372,8 +1534,26 @@ mod tests {
                     format!("password {}", rng.gen::<i32>()).as_bytes().to_vec(),
                 ),
                 has_ever_connected: false,
-                rssi: None,
-                compatible: false,
+                bss_list: vec![
+                    types::Bss {
+                        bssid: [0, 1, 2, 3, rng.gen::<u8>(), rng.gen::<u8>()],
+                        rssi: rng.gen::<i8>(),
+                        frequency: 2400,
+                        timestamp_nanos: 0,
+                        snr_db: 1,
+                        observed_in_passive_scan: rng.gen::<bool>(),
+                        compatible: true,
+                    },
+                    types::Bss {
+                        bssid: [12, 13, 14, 15, rng.gen::<u8>(), rng.gen::<u8>()],
+                        rssi: rng.gen::<i8>(),
+                        frequency: 2400,
+                        timestamp_nanos: 0,
+                        snr_db: 1,
+                        observed_in_passive_scan: rng.gen::<bool>(),
+                        compatible: rng.gen::<bool>(),
+                    },
+                ],
                 recent_failure_count: 0,
             },
         )
@@ -1453,8 +1633,7 @@ mod tests {
             InternalNetworkData {
                 credential: Credential::Password("foo_pass".as_bytes().to_vec()),
                 has_ever_connected: false,
-                rssi: None,
-                compatible: false,
+                bss_list: vec![],
                 recent_failure_count: 0,
             },
         );
@@ -1463,8 +1642,7 @@ mod tests {
             InternalNetworkData {
                 credential: Credential::Password("bar_pass".as_bytes().to_vec()),
                 has_ever_connected: false,
-                rssi: None,
-                compatible: false,
+                bss_list: vec![],
                 recent_failure_count: 0,
             },
         );
