@@ -17,6 +17,9 @@
 pub use fuchsia_macro::{component, test};
 use std::future::Future;
 
+#[cfg(not(target_os = "fuchsia"))]
+mod host;
+
 //
 // LOGGING INITIALIZATION
 //
@@ -40,12 +43,16 @@ pub fn init_logging_for_test(test_name: &str) {
 /// Initialize logging
 #[doc(hidden)]
 #[cfg(not(target_os = "fuchsia"))]
-pub fn init_logging_for_component() {}
+pub fn init_logging_for_component() {
+    crate::host::logger::init()
+}
 
 /// Initialize logging
 #[doc(hidden)]
 #[cfg(not(target_os = "fuchsia"))]
-pub fn init_logging_for_test(_name: &'static str) {}
+pub fn init_logging_for_test(_name: &'static str) {
+    crate::host::logger::init()
+}
 
 //
 // MAIN FUNCTION WRAPPERS

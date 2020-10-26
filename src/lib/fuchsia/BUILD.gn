@@ -15,10 +15,19 @@ rustc_library("fuchsia") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:argh",
   ]
+  sources = [ "src/lib.rs" ]
   if (is_fuchsia) {
     deps += [ "//src/lib/syslog/rust:syslog" ]
+  } else {
+    sources += [
+      "src/host/logger.rs",
+      "src/host/mod.rs",
+    ]
+    deps += [
+      "//third_party/rust_crates:chrono",
+      "//third_party/rust_crates:log",
+    ]
   }
-  sources = [ "src/lib.rs" ]
 
   enforce_source_listing = true
 }

@@ -46,6 +46,7 @@ if (is_host) {
     deps = [
       ":lib",
       "//src/connectivity/overnet/lib/hoist",
+      "//src/lib/fuchsia",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:async-std",

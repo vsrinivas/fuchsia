@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(not(target_os = "fuchsia"))]
-
-use anyhow::Error;
 use log::{LevelFilter, Metadata, Record};
+use std::sync::Once;
 
 struct Logger;
 
@@ -42,15 +40,11 @@ impl log::Log for Logger {
 }
 
 static LOGGER: Logger = Logger;
+static START: Once = Once::new();
 
-lazy_static::lazy_static! {
-    static ref START_RESULT: Result<(), log::SetLoggerError> =
-        log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Info));
-}
-
-pub fn init() -> Result<(), Error> {
-    if let Err(e) = &*START_RESULT {
-        return Err(anyhow::format_err!("{}", e));
-    }
-    Ok(())
+pub(crate) fn init() {
+    START.call_once(|| {
+        log::set_logger(&LOGGER).expect("failed to set logger");
+        log::set_max_level(LevelFilter::Info);
+    })
 }

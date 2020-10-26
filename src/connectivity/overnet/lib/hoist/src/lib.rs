@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #[cfg(not(target_os = "fuchsia"))]
-pub mod logger;
-#[cfg(not(target_os = "fuchsia"))]
 mod not_fuchsia;
 #[cfg(not(target_os = "fuchsia"))]
 pub use not_fuchsia::*;
@@ -72,7 +70,6 @@ mod test {
     }
 
     fn init() {
-        logger::init().unwrap();
         #[cfg(not(target_os = "fuchsia"))]
         lazy_static::initialize(&ASCENDD);
     }

@@ -4,8 +4,7 @@
 
 use {anyhow::Error, ascendd_lib::run_ascendd};
 
-#[async_std::main]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
-    hoist::logger::init()?;
     run_ascendd(argh::from_env(), Box::new(async_std::io::stderr())).await
 }

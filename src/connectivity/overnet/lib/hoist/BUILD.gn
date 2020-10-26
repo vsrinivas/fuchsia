@@ -48,10 +48,7 @@ rustc_library("hoist") {
       "//third_party/rust_crates:slab",
     ]
     test_deps += [ "//src/connectivity/overnet/tools/ascendd:lib" ]
-    sources += [
-      "src/logger.rs",
-      "src/not_fuchsia.rs",
-    ]
+    sources += [ "src/not_fuchsia.rs" ]
   }
 }
 
