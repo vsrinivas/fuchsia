@@ -114,6 +114,7 @@ impl Peer {
             let weak = Arc::downgrade(&self.inner);
             let mut task_lock = self.start_stream_task.lock();
             task_lock.replace(fasync::Task::local(async move {
+                trace!("Dwelling to start remotely-opened stream..");
                 fasync::Timer::new(Self::STREAM_DWELL.after_now()).await;
                 PeerInner::start_opened(weak).await
             }));
@@ -520,14 +521,16 @@ impl PeerInner {
                 if self.opening.is_some() {
                     return responder.reject(ServiceCategory::None, avdtp::ErrorCode::BadState);
                 }
-                self.opening = Some(local_stream_id.clone());
                 let peer_id = self.peer_id;
                 let stream = match self.get_mut(&local_stream_id) {
                     Err(e) => return responder.reject(ServiceCategory::None, e),
                     Ok(stream) => stream,
                 };
                 match stream.configure(&peer_id, &remote_stream_id, capabilities) {
-                    Ok(_) => responder.send(),
+                    Ok(_) => {
+                        self.opening = Some(local_stream_id.clone());
+                        responder.send()
+                    }
                     Err((category, code)) => responder.reject(category, code),
                 }
             }
@@ -1251,14 +1254,7 @@ mod tests {
         )
         .expect("sbc codec info");
 
-        vec![
-            avdtp::ServiceCapability::MediaTransport,
-            avdtp::ServiceCapability::MediaCodec {
-                media_type: avdtp::MediaType::Audio,
-                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                codec_extra: sbc_codec_info.to_bytes().to_vec(),
-            },
-        ]
+        vec![avdtp::ServiceCapability::MediaTransport, sbc_codec_info.into()]
     }
 
     /// Test that the remote end can configure and start a stream.
@@ -1365,6 +1361,54 @@ mod tests {
 
         // Should have stopped the media task on suspend.
         assert!(!media_task.is_started());
+    }
+
+    #[test]
+    fn test_peer_set_config_reject_first() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        let (avdtp, remote) = setup_avdtp_peer();
+        let (profile_proxy, _requests) =
+            create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
+        let mut streams = Streams::new();
+        let test_builder = TestMediaTaskBuilder::new();
+        streams.insert(Stream::build(make_sbc_endpoint(1), test_builder.builder()));
+
+        let _peer = Peer::create(PeerId(1), avdtp, streams, profile_proxy, None);
+        let remote_peer = avdtp::Peer::new(remote);
+
+        let sbc_endpoint_id = 1_u8.try_into().expect("should be able to get sbc endpointid");
+
+        let wrong_freq_sbc = &[SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ44100HZ, // 44.1 is not supported by the caps from above.
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::SIXTEEN,
+            SbcSubBands::EIGHT,
+            SbcAllocation::LOUDNESS,
+            /* min_bpv= */ 53,
+            /* max_bpv= */ 53,
+        )
+        .expect("sbc codec info")
+        .into()];
+
+        let set_config_fut =
+            remote_peer.set_configuration(&sbc_endpoint_id, &sbc_endpoint_id, wrong_freq_sbc);
+        pin_mut!(set_config_fut);
+
+        match exec.run_until_stalled(&mut set_config_fut) {
+            Poll::Ready(Err(avdtp::Error::RemoteConfigRejected(_, _))) => {}
+            x => panic!("Set capabilities should have been rejected but got {:?}", x),
+        };
+
+        let sbc_caps = sbc_capabilities();
+        let set_config_fut =
+            remote_peer.set_configuration(&sbc_endpoint_id, &sbc_endpoint_id, &sbc_caps);
+        pin_mut!(set_config_fut);
+
+        match exec.run_until_stalled(&mut set_config_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Set capabilities should be ready but got {:?}", x),
+        };
     }
 
     #[test]
