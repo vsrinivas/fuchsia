@@ -38,9 +38,6 @@ source_set("lib_source") {
   public = all_hdrs
   sources = all_src
   public_deps = all_deps
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 bind_rules("wlanif_bind") {
