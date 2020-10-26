@@ -500,12 +500,19 @@ func (g *Graph) CriticalPath() ([]ninjalog.Step, error) {
 	}
 
 	var criticalPath []ninjalog.Step
-	for lastCriticalNode.criticalInput != nil {
-		// Phony edges don't have steps associated with them.
-		if lastCriticalNode.In.Step != nil {
-			criticalPath = append(criticalPath, *lastCriticalNode.In.Step)
-		}
+	for lastCriticalNode != nil {
+		n := lastCriticalNode
 		lastCriticalNode = lastCriticalNode.criticalInput
+
+		// Pure input files (for example source code files) don't have In edges on them.
+		if n.In == nil {
+			continue
+		}
+		// Phony edges don't have steps associated with them.
+		if n.In.Step == nil {
+			continue
+		}
+		criticalPath = append(criticalPath, *n.In.Step)
 	}
 	// Reverse the critical path to follow chronological order.
 	for left, right := 0, len(criticalPath)-1; left < right; left, right = left+1, right-1 {
