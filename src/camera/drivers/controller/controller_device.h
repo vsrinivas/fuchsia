@@ -41,15 +41,15 @@ class ControllerDevice : public ControllerDeviceType,
                          public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerDevice);
-  explicit ControllerDevice(zx_device_t* parent, zx_device_t* isp, zx_device_t* gdc,
-                            zx_device_t* ge2d, zx_device_t* sysmem, zx::event event)
+  explicit ControllerDevice(zx_device_t* parent, ddk::CompositeProtocolClient& composite,
+                            zx::event event)
       : ControllerDeviceType(parent),
-        isp_(isp),
-        gdc_(gdc),
-        ge2d_(ge2d),
+        isp_(composite, "isp"),
+        gdc_(composite, "gdc"),
+        ge2d_(composite, "ge2d"),
         shutdown_event_(std::move(event)),
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        sysmem_(sysmem) {}
+        sysmem_(composite, "sysmem") {}
 
   ~ControllerDevice() { ShutDown(); }
 

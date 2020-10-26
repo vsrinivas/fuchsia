@@ -28,9 +28,16 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
     zx::event event;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &event));
 
-    controller_device_ = std::make_unique<ControllerDevice>(
-        fake_ddk::kFakeParent, fake_ddk::kFakeParent, fake_ddk::kFakeParent, fake_ddk::kFakeParent,
-        fake_ddk::kFakeParent, std::move(event));
+    composite_protocol_ops_t ops = {
+        .get_fragment = [](void* ctx, const char* name, zx_device_t** out) -> bool {
+          *out = fake_ddk::kFakeParent;
+          return true;
+        }};
+    composite_protocol_t proto{&ops, &ops};
+
+    ddk::CompositeProtocolClient composite(&proto);
+    controller_device_ =
+        std::make_unique<ControllerDevice>(fake_ddk::kFakeParent, composite, std::move(event));
   }
 
   void TearDown() override {

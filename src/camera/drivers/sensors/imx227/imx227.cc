@@ -433,17 +433,7 @@ zx_status_t Imx227Device::Create(zx_device_t* parent, std::unique_ptr<Imx227Devi
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  std::array<zx_device_t*, FRAGMENT_COUNT> fragments;
-  size_t actual;
-  composite.GetFragments(fragments.data(), FRAGMENT_COUNT, &actual);
-  if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s Could not get fragments", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  auto sensor_device = std::make_unique<Imx227Device>(
-      parent, fragments[FRAGMENT_I2C], fragments[FRAGMENT_GPIO_VANA], fragments[FRAGMENT_GPIO_VDIG],
-      fragments[FRAGMENT_GPIO_CAM_RST], fragments[FRAGMENT_CLK24], fragments[FRAGMENT_MIPICSI]);
+  auto sensor_device = std::make_unique<Imx227Device>(parent, composite);
 
   zx_status_t status = sensor_device->InitPdev();
   if (status != ZX_OK) {

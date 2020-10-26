@@ -34,12 +34,6 @@ constexpr uint32_t kGdc = 1;
 constexpr uint32_t kAxiAlignment = 16;
 constexpr uint32_t kWordSize = 4;
 
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_SENSOR,
-  FRAGMENT_COUNT,
-};
-
 }  // namespace
 
 static inline uint32_t AxiWordAlign(zx_paddr_t value) {
@@ -483,15 +477,7 @@ zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite.GetFragments(fragments, FRAGMENT_COUNT, &actual);
-  if (actual != FRAGMENT_COUNT) {
-    FX_LOGST(ERROR, kTag) << "Could not get fragments";
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
+  ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
     FX_LOGST(ERROR, kTag) << "ZX_PROTOCOL_PDEV not available";
     return ZX_ERR_NO_RESOURCES;

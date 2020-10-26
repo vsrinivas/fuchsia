@@ -67,27 +67,14 @@ using DeviceType = ddk::Device<Imx227Device, ddk::Unbindable>;
 class Imx227Device : public DeviceType,
                      public ddk::CameraSensor2Protocol<Imx227Device, ddk::base_protocol> {
  public:
-  enum {
-    FRAGMENT_PDEV,
-    FRAGMENT_MIPICSI,
-    FRAGMENT_I2C,
-    FRAGMENT_GPIO_VANA,
-    FRAGMENT_GPIO_VDIG,
-    FRAGMENT_GPIO_CAM_RST,
-    FRAGMENT_CLK24,
-    FRAGMENT_COUNT,
-  };
-
-  Imx227Device(zx_device_t* device, zx_device_t* i2c, zx_device_t* gpio_vana,
-               zx_device_t* gpio_vdig, zx_device_t* gpio_cam_rst, zx_device_t* clk24,
-               zx_device_t* mipicsi)
+  Imx227Device(zx_device_t* device, ddk::CompositeProtocolClient composite)
       : DeviceType(device),
-        i2c_(i2c),
-        gpio_vana_enable_(gpio_vana),
-        gpio_vdig_enable_(gpio_vdig),
-        gpio_cam_rst_(gpio_cam_rst),
-        clk24_(clk24),
-        mipi_(mipicsi) {}
+        i2c_(composite, "i2c"),
+        gpio_vana_enable_(composite, "gpio-vana"),
+        gpio_vdig_enable_(composite, "gpio-vdig"),
+        gpio_cam_rst_(composite, "gpio-reset"),
+        clk24_(composite, "clock-sensor"),
+        mipi_(composite, "mipicsi") {}
 
   static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Imx227Device>* device_out);
   static zx_status_t CreateAndBind(void* ctx, zx_device_t* parent);

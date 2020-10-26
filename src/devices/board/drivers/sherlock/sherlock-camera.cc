@@ -298,7 +298,7 @@ static const device_fragment_part_t mipicsi_fragment[] = {
     {countof(mipicsi_match), mipicsi_match},
 };
 static const device_fragment_t imx227_sensor_fragments[] = {
-    {"mipcsi", countof(mipicsi_fragment), mipicsi_fragment},
+    {"mipicsi", countof(mipicsi_fragment), mipicsi_fragment},
     {"i2c", countof(i2c_fragment), i2c_fragment},
     {"gpio-vana", countof(gpio_vana_fragment), gpio_vana_fragment},
     {"gpio-vdig", countof(gpio_vdig_fragment), gpio_vdig_fragment},

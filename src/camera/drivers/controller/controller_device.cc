@@ -18,16 +18,6 @@ namespace camera {
 
 constexpr auto kTag = "camera_controller";
 
-namespace {
-enum {
-  FRAGMENT_ISP,
-  FRAGMENT_GDC,
-  FRAGMENT_GE2D,
-  FRAGMENT_SYSMEM,
-  FRAGMENT_COUNT,
-};
-}  // namespace
-
 void ControllerDevice::DdkUnbind(ddk::UnbindTxn txn) {
   ShutDown();
   txn.Reply();
@@ -99,33 +89,25 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite.GetFragments(fragments, FRAGMENT_COUNT, &actual);
-  if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s: Could not get fragments", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::GdcProtocolClient gdc(fragments[FRAGMENT_GDC]);
+  ddk::GdcProtocolClient gdc(composite, "gdc");
   if (!gdc.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_GDC not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::Ge2dProtocolClient ge2d(fragments[FRAGMENT_GE2D]);
+  ddk::Ge2dProtocolClient ge2d(composite, "ge2d");
   if (!ge2d.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_GE2D not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::IspProtocolClient isp(fragments[FRAGMENT_ISP]);
+  ddk::IspProtocolClient isp(composite, "isp");
   if (!isp.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_ISP not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::SysmemProtocolClient sysmem(fragments[FRAGMENT_SYSMEM]);
+  ddk::SysmemProtocolClient sysmem(composite, "sysmem");
   if (!sysmem.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_SYSMEM not available", __func__);
     return ZX_ERR_NO_RESOURCES;
@@ -138,9 +120,7 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
     return status;
   }
 
-  auto controller = std::make_unique<ControllerDevice>(
-      parent, fragments[FRAGMENT_ISP], fragments[FRAGMENT_GDC], fragments[FRAGMENT_GE2D],
-      fragments[FRAGMENT_SYSMEM], std::move(event));
+  auto controller = std::make_unique<ControllerDevice>(parent, composite, std::move(event));
 
   status = controller->StartThread();
   if (status != ZX_OK) {
