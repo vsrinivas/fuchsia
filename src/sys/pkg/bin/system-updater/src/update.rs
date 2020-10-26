@@ -49,7 +49,7 @@ pub(super) use {
     environment::{NamespaceBuildInfo, NamespaceCobaltConnector},
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum CommitAction {
     /// A reboot is required to apply the update, which should be performed by the system updater.
     Reboot,
@@ -191,7 +191,7 @@ async fn update(
                 fx_log_info!("system update in ForceRecovery mode complete, rebooting...");
             }
             // Second priority: Use the attached reboot controller.
-            (UpdateMode::Normal, Some(mut reboot_controller), _) => {
+            (UpdateMode::Normal, Some(reboot_controller), _) => {
                 fx_log_info!("system update complete, waiting for initiator to signal reboot.");
                 match reboot_controller.wait_to_reboot().await {
                     CommitAction::Reboot => {

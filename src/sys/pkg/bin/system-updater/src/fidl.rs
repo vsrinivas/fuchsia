@@ -14,10 +14,9 @@ use {
         RebootControllerRequest, UpdateResult,
     },
     fidl_fuchsia_update_installer_ext::State,
-    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
-    fuchsia_syslog::fx_log_err,
-    futures::{channel::mpsc, prelude::*},
+    fuchsia_syslog::{fx_log_err, fx_log_info},
+    futures::prelude::*,
     parking_lot::Mutex,
     std::{convert::TryInto, sync::Arc},
 };
@@ -122,38 +121,32 @@ impl FidlServer {
 
                 // If a reboot controller is specified, set up a task that fowards reboot controller
                 // requests to the update attempt task.
-                let (mut reboot_sender, reboot_receiver) = mpsc::channel(0);
                 let reboot_controller = if let Some(server_end) = reboot_controller {
-                    fasync::Task::spawn(
-                        async move {
-                            let mut stream = server_end.into_stream()?;
-                            while let Some(request) = stream
-                                .try_next()
-                                .await
-                                .context("while receiving RebootController request")?
-                            {
-                                let control_req = match request {
-                                    RebootControllerRequest::Unblock { .. } => {
-                                        ControlRequest::Unblock
-                                    }
-                                    RebootControllerRequest::Detach { .. } => {
-                                        ControlRequest::Detach
-                                    }
-                                };
-                                reboot_sender.send(control_req).await?;
+                    let mut stream = server_end.into_stream()?;
+                    Some(RebootController::spawn(async move {
+                        match stream.next().await {
+                            None => {
+                                fx_log_info!("RebootController channel closed, unblocking reboot");
+                                ControlRequest::Unblock
                             }
-                            Ok(())
+                            Some(Err(e)) => {
+                                fx_log_err!(
+                                    "error serving RebootController, unblocking reboot: {:#}",
+                                    anyhow!(e)
+                                );
+                                ControlRequest::Unblock
+                            }
+                            Some(Ok(RebootControllerRequest::Unblock { .. })) => {
+                                ControlRequest::Unblock
+                            }
+                            Some(Ok(RebootControllerRequest::Detach { .. })) => {
+                                ControlRequest::Detach
+                            }
                         }
-                        .unwrap_or_else(|e: Error| {
-                            fx_log_err!("error serving RebootController: {:#}", anyhow!(e))
-                        }),
-                    )
-                    .detach();
-                    Some(RebootController::new(reboot_receiver))
+                    }))
                 } else {
-                    // Explicitly drop reboot sender so that the receiver end closes, and we reboot immediately
-                    // when it's ready.
-                    drop(reboot_sender);
+                    // Not providing a reboot controller is equivalent to immediately unblocking
+                    // the reboot.
                     None
                 };
 

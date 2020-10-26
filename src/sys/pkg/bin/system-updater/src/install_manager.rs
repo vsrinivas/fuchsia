@@ -64,6 +64,7 @@ async fn run<N, U, E>(
                     return;
                 }
             };
+        let reboot_controller = reboot_controller.unwrap_or_else(RebootController::unblocked);
 
         // We connect to FIDL services on each update attempt (rather than once at the
         // beginning) to prevent stale connections.
@@ -80,7 +81,8 @@ async fn run<N, U, E>(
         // Now we can actually start the task that manages the update attempt.
         let update_url = &config.update_url.clone();
         let should_write_recovery = config.should_write_recovery;
-        let (attempt_id, attempt_stream) = updater.update(config, env, reboot_controller).await;
+        let (attempt_id, attempt_stream) =
+            updater.update(config, env, Some(reboot_controller)).await;
         futures::pin_mut!(attempt_stream);
 
         // Set up inspect nodes.
@@ -634,13 +636,12 @@ mod tests {
         );
 
         // Fails because we can't attach reboot controller in second start request.
-        let (_, receiver) = mpsc::channel(0);
         assert_eq!(
             install_manager_ch
                 .start_update(
                     ConfigBuilder::new().allow_attach_to_existing_attempt(true).build().unwrap(),
                     notifier4,
-                    Some(RebootController::new(receiver))
+                    Some(RebootController::unblocked()),
                 )
                 .await,
             Ok(Err(UpdateNotStartedReason::AlreadyInProgress))
