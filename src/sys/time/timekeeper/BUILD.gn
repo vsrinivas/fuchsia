@@ -5,7 +5,6 @@
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
-import("//third_party/cobalt/metrics_registry.gni")
 
 rustc_binary("bin") {
   name = "timekeeper"
@@ -13,7 +12,6 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    ":time_metrics_registry",
     "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone-rustc",
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
@@ -32,6 +30,7 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/time/lib/inspect-writable",
+    "//src/sys/time/lib/time_metrics_registry",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
@@ -87,14 +86,6 @@ config_data("timekeeper_config") {
   for_pkg = "sysmgr"
   outputs = [ "timekeeper.config" ]
   sources = [ "service.config" ]
-}
-
-metrics_registry("time_metrics_registry") {
-  # This must match the ID of our Cobalt project as specified in:
-  # third_party/cobalt_config/projects.yaml
-  project_id = 6
-  generate_rust = true
-  generate_binarypb = false
 }
 
 resource("testdata") {
