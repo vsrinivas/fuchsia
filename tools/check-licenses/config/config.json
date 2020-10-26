@@ -130,9 +130,7 @@
       "projectRoot": "prebuilt/third_party/jq/linux-x64",
       "licenseLocation": "linux-x64/share/doc/jq/COPYING "
     }
-
   ],
-  "goldenLicenses": "golden",
   "licensePatternDir": "tools/check-licenses/golden/patterns",
   "baseDir": ".",
   "target": "all",

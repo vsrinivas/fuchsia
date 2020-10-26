@@ -7,7 +7,7 @@ package checklicenses
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"os"
 	"strings"
 )
 
@@ -33,7 +33,7 @@ type Config struct {
 	Product                      string                 `json:"product"`
 	SingleLicenseFiles           []string               `json:"singleLicenseFiles"`
 	LicensePatternDir            string                 `json:"licensePatternDir"`
-	CustomProjectLicenses        []CustomProjectLicense `json:"CustomProjectLicenses"`
+	CustomProjectLicenses        []CustomProjectLicense `json:"customProjectLicenses"`
 	BaseDir                      string                 `json:"baseDir"`
 	Target                       string                 `json:"target"`
 	LogLevel                     string                 `json:"logLevel"`
@@ -44,11 +44,14 @@ type Config struct {
 //
 // Both SkipFiles and SingleLicenseFiles are lowered.
 func (c *Config) Init(path string) error {
-	raw, err := ioutil.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	if err = json.Unmarshal(raw, c); err != nil {
+	defer f.Close()
+	d := json.NewDecoder(f)
+	d.DisallowUnknownFields()
+	if err = d.Decode(c); err != nil {
 		return err
 	}
 	c.TextExtensions = map[string]struct{}{}
