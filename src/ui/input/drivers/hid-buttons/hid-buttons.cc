@@ -55,11 +55,14 @@ void HidButtonsDevice::Notify(uint32_t type) {
     zxlogf(INFO, "FDR (up and down buttons) pressed");
   }
 
-  // Notify
-  fbl::AutoLock lock(&channels_lock_);
-  for (auto const& interface : button2channels_[type]) {
-    interface->binding()->OnNotify(static_cast<ButtonType>(buttons_[type].id),
-                                   debounce_states_[type].value);
+  // Notify anyone registered for this ButtonType.
+  {
+    fbl::AutoLock lock(&channels_lock_);
+    ButtonType button_type = static_cast<ButtonType>(buttons_[type].id);
+    bool button_value = debounce_states_[type].value;
+    for (ButtonsNotifyInterface* interface : registered_notifiers_[button_type]) {
+      interface->binding()->OnNotify(button_type, button_value);
+    }
   }
 
   debounce_states_[type].enqueued = false;
@@ -260,6 +263,13 @@ zx_status_t HidButtonsDevice::ConfigureInterrupt(uint32_t idx, uint64_t int_port
 
 zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
                                    fbl::Array<buttons_button_config_t> buttons) {
+  {
+    fbl::AutoLock lock(&channels_lock_);
+    for (uint8_t raw_type = 0; raw_type < static_cast<uint8_t>(ButtonType::MAX); raw_type++) {
+      ButtonType type = static_cast<ButtonType>(raw_type);
+      registered_notifiers_[type] = std::set<ButtonsNotifyInterface*>();
+    }
+  }
   zx_status_t status;
 
   buttons_ = std::move(buttons);
@@ -527,14 +537,16 @@ bool HidButtonsDevice::GetState(ButtonType type) {
 
 zx_status_t HidButtonsDevice::RegisterNotify(uint8_t types, ButtonsNotifyInterface* notify) {
   fbl::AutoLock lock(&channels_lock_);
-  for (const auto& [type, button] : button_map_) {
-    auto it = find(button2channels_[button].begin(), button2channels_[button].end(), notify);
-    if ((types & (1 << type)) && (it == button2channels_[button].end())) {
-      button2channels_[button].push_back(notify);
-    }
-    if (!(types & (1 << type)) && (it != button2channels_[button].end())) {
-      // types already registered and not listed in the client's request are removed
-      button2channels_[button].erase(it);
+  // Go through each type in ButtonType and update our registration.
+  for (uint8_t raw_type = 0; raw_type < static_cast<uint8_t>(ButtonType::MAX); raw_type++) {
+    ButtonType type = static_cast<ButtonType>(raw_type);
+    auto& notify_set = registered_notifiers_[type];
+    if ((types & (1 << raw_type)) == 0) {
+      // Our type does not exist in the bitmask and so we should de-register.
+      notify_set.erase(notify);
+    } else {
+      // Our type exists in the bitmask and so we should register.
+      notify_set.insert(notify);
     }
   }
   return ZX_OK;
@@ -542,12 +554,9 @@ zx_status_t HidButtonsDevice::RegisterNotify(uint8_t types, ButtonsNotifyInterfa
 
 void HidButtonsDevice::ClosingChannel(ButtonsNotifyInterface* notify) {
   fbl::AutoLock lock(&channels_lock_);
-  for (const auto& [type, button] : button_map_) {
-    auto it = find(button2channels_[button].begin(), button2channels_[button].end(), notify);
-    // Note: not all buttons may have the channel to be closed (it may be in any buttons either)
-    if (it != button2channels_[button].end()) {
-      button2channels_[button].erase(it);
-    }
+  // Remove this notifier from anything it's registered to listen to.
+  for (auto& [type, notify_set] : registered_notifiers_) {
+    notify_set.erase(notify);
   }
 
   // release ownership

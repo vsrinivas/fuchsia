@@ -18,6 +18,7 @@
 #include <list>
 #include <map>
 #include <optional>
+#include <set>
 #include <vector>
 
 #include <ddk/metadata/buttons.h>
@@ -66,8 +67,7 @@ class HidButtonsDevice : public DeviceType {
     buttons_gpio_config_t config;
   };
 
-  explicit HidButtonsDevice(zx_device_t* device)
-      : DeviceType(device), button2channels_(static_cast<size_t>(ButtonType::MAX)) {}
+  explicit HidButtonsDevice(zx_device_t* device) : DeviceType(device) {}
   virtual ~HidButtonsDevice() = default;
 
   // Hidbus Protocol Functions.
@@ -106,14 +106,13 @@ class HidButtonsDevice : public DeviceType {
   zx::port port_;
 
   fbl::Mutex channels_lock_;
-  // only for DIRECT; interfaces_, gpios_ and buttons_ are 1:1:1 in the same order
-  // button2channels_ stores the IDs of the channels, where the IDs are equivalent to the
-  //    addresses/pointers to the ButtonsNotifyInterface struct containing the unowned channel.
-  //    the ID allows us to identify the unowned channel so we can remove it from this struct
-  //    when the corresponding channel is closed.
-  std::vector<std::vector<ButtonsNotifyInterface*>> button2channels_ TA_GUARDED(channels_lock_);
+  // A map of ButtonTypes to the interfaces that have to be notified when they are pressed.
+  std::map<ButtonType, std::set<ButtonsNotifyInterface*>> registered_notifiers_
+      TA_GUARDED(channels_lock_);
+  // A map of BUTTONS_ID_ values to an index into the buttons_ array.
+  std::map<uint8_t, uint32_t> button_map_;
+
   std::list<ButtonsNotifyInterface> interfaces_ TA_GUARDED(channels_lock_);  // owns the channels
-  std::map<uint8_t, uint32_t> button_map_;  // Button ID to Button Number
 
   HidButtonsHidBusFunction* hidbus_function_;
   HidButtonsButtonsFunction* buttons_function_;
