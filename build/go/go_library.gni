@@ -37,6 +37,9 @@
 #   non_go_deps (optional)
 #     List of labels for non-Go targets this library depends on.
 #
+#   public_non_go_deps (optional)
+#     List of labels for non-Go targets this library publicly depends on.
+#
 #   metadata (optional)
 #     Scope giving the metadata of this library.
 #
@@ -92,6 +95,14 @@ template("go_library") {
       deps += invoker.non_go_deps
     }
 
+    public_deps = []
+    if (defined(invoker.public_deps)) {
+      public_deps += invoker.public_deps
+    }
+    if (defined(invoker.public_non_go_deps)) {
+      public_deps += invoker.public_non_go_deps
+    }
+
     inputs = dependent_libraries
 
     args = name_args + [
@@ -111,6 +122,7 @@ template("go_library") {
       assert(defined(invoker.sources) && invoker.sources != [],
              "sources must be listed")
       args += [ "--sources" ] + invoker.sources
+      inputs += rebase_path(invoker.sources, ".", source_dir)
     }
 
     if (defined(invoker.metadata)) {

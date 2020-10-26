@@ -95,7 +95,7 @@ template("generated_go") {
         rebase_path(f.src),
       ]
 
-      deps = copy_deps
+      public_deps = copy_deps
     }
   }
 
@@ -112,6 +112,12 @@ template("generated_go") {
 
     # Specify each of the files composing the library.
     sources = gen_files
+
+    public_non_go_deps = gen_names
+    if (defined(invoker.public_non_go_deps)) {
+      public_non_go_deps += invoker.public_non_go_deps
+    }
+
     forward_variables_from(invoker,
                            [
                              "deps",
