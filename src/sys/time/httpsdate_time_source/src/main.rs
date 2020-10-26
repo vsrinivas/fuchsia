@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 mod datatypes;
+mod diagnostics;
 mod httpsdate;
-mod inspect;
 
+use crate::diagnostics::InspectDiagnostics;
 use crate::httpsdate::{HttpsDateUpdateAlgorithm, RetryStrategy};
-use crate::inspect::InspectDiagnostics;
 use anyhow::{Context, Error};
 use fidl_fuchsia_time_external::{PushSourceRequestStream, Status};
 use fuchsia_async as fasync;

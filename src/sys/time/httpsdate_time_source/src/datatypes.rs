@@ -8,6 +8,7 @@ use push_source::Update;
 
 /// An internal representation of a `fuchsia.time.external.TimeSample` that contains
 /// additional metrics.
+#[derive(Clone, Debug, PartialEq)]
 pub struct HttpsSample {
     /// The utc time sample.
     pub utc: zx::Time,

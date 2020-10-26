@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::datatypes::HttpsSample;
+use crate::diagnostics::Diagnostics;
 use fuchsia_inspect::{
     ArrayProperty, IntArrayProperty, IntProperty, Node, NumericProperty, Property, UintProperty,
 };
@@ -40,9 +41,10 @@ impl InspectDiagnostics {
             last_successful: Mutex::new(None),
         }
     }
+}
 
-    /// Log a successful poll to inspect.
-    pub fn success(&self, sample: &HttpsSample) {
+impl Diagnostics for InspectDiagnostics {
+    fn success(&self, sample: &HttpsSample) {
         self.success_count.add(1);
         let mut last_successful_lock = self.last_successful.lock();
         match &*last_successful_lock {
@@ -56,14 +58,13 @@ impl InspectDiagnostics {
         }
     }
 
-    /// Log a failed poll to inspect.
-    pub fn failure(&self, error: HttpsDateError) {
+    fn failure(&self, error: &HttpsDateError) {
         let mut failure_counts_lock = self.failure_counts.lock();
-        match failure_counts_lock.get(&error) {
+        match failure_counts_lock.get(error) {
             Some(uint_property) => uint_property.add(1),
             None => {
                 failure_counts_lock
-                    .insert(error, self.failure_node.create_uint(format!("{:?}", error), 1));
+                    .insert(*error, self.failure_node.create_uint(format!("{:?}", error), 1));
             }
         }
     }
@@ -242,7 +243,7 @@ mod test {
             }
         );
 
-        inspect.failure(HttpsDateError::NoCertificatesPresented);
+        inspect.failure(&HttpsDateError::NoCertificatesPresented);
         assert_inspect_tree!(
             inspector,
             root: contains {
@@ -252,8 +253,8 @@ mod test {
             }
         );
 
-        inspect.failure(HttpsDateError::NoCertificatesPresented);
-        inspect.failure(HttpsDateError::NetworkError);
+        inspect.failure(&HttpsDateError::NoCertificatesPresented);
+        inspect.failure(&HttpsDateError::NetworkError);
         assert_inspect_tree!(
             inspector,
             root: contains {

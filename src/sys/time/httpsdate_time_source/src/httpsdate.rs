@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::datatypes::HttpsSample;
-use crate::inspect::InspectDiagnostics;
+use crate::diagnostics::Diagnostics;
 use anyhow::Error;
 use async_trait::async_trait;
 use fidl_fuchsia_time_external::{Properties, Status};
@@ -61,19 +61,23 @@ impl HttpsDateClient for NetworkTimeClient {
 }
 
 /// An |UpdateAlgorithm| that retrieves UTC time by pulling dates off of HTTP responses.
-pub struct HttpsDateUpdateAlgorithm<C: HttpsDateClient + Send> {
+pub struct HttpsDateUpdateAlgorithm<C: HttpsDateClient + Send, D: Diagnostics> {
     /// Strategy defining how long to wait after successes and failures.
     retry_strategy: RetryStrategy,
     /// Uri requested to obtain time.
     request_uri: Uri,
     /// Client used to make requests.
     client: Mutex<C>,
-    /// Object managing inspect output.
-    inspect: InspectDiagnostics,
+    /// Object managing diagnostics output.
+    diagnostics: D,
 }
 
 #[async_trait]
-impl<C: HttpsDateClient + Send> UpdateAlgorithm for HttpsDateUpdateAlgorithm<C> {
+impl<C, D> UpdateAlgorithm for HttpsDateUpdateAlgorithm<C, D>
+where
+    C: HttpsDateClient + Send,
+    D: Diagnostics,
+{
     async fn update_device_properties(&self, _properties: Properties) {
         // since our samples are polled independently for now, we don't need to use
         // device properties yet.
@@ -89,25 +93,25 @@ impl<C: HttpsDateClient + Send> UpdateAlgorithm for HttpsDateUpdateAlgorithm<C> 
     }
 }
 
-impl HttpsDateUpdateAlgorithm<NetworkTimeClient> {
+impl<D: Diagnostics> HttpsDateUpdateAlgorithm<NetworkTimeClient, D> {
     /// Create a new |HttpsDateUpdateAlgorithm|.
-    pub fn new(
-        retry_strategy: RetryStrategy,
-        request_uri: Uri,
-        inspect: InspectDiagnostics,
-    ) -> Self {
-        Self::with_client(retry_strategy, request_uri, inspect, NetworkTimeClient::new())
+    pub fn new(retry_strategy: RetryStrategy, request_uri: Uri, diagnostics: D) -> Self {
+        Self::with_client(retry_strategy, request_uri, diagnostics, NetworkTimeClient::new())
     }
 }
 
-impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
+impl<C, D> HttpsDateUpdateAlgorithm<C, D>
+where
+    C: HttpsDateClient + Send,
+    D: Diagnostics,
+{
     fn with_client(
         retry_strategy: RetryStrategy,
         request_uri: Uri,
-        inspect: InspectDiagnostics,
+        diagnostics: D,
         client: C,
     ) -> Self {
-        Self { retry_strategy, request_uri, client: Mutex::new(client), inspect }
+        Self { retry_strategy, request_uri, client: Mutex::new(client), diagnostics }
     }
 
     /// Repeatedly poll for a time until one sample is successfully retrieved. Pushes updates to
@@ -119,13 +123,13 @@ impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
             let attempt = attempt_iter.next().unwrap_or(u32::MAX);
             match self.poll_time_once().await {
                 Ok(sample) => {
-                    self.inspect.success(&sample);
+                    self.diagnostics.success(&sample);
                     sink.send(Status::Ok.into()).await?;
                     sink.send(sample.into()).await?;
                     return Ok(());
                 }
                 Err(http_error) => {
-                    self.inspect.failure(http_error);
+                    self.diagnostics.failure(&http_error);
                     if Some(http_error) != last_error {
                         last_error = Some(http_error);
                         let status = match http_error {
@@ -185,7 +189,7 @@ impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector};
+    use crate::diagnostics::FakeDiagnostics;
     use futures::{
         channel::{mpsc::channel, oneshot},
         future::pending,
@@ -195,7 +199,7 @@ mod test {
     };
     use lazy_static::lazy_static;
     use matches::assert_matches;
-    use std::{collections::VecDeque, iter::FromIterator};
+    use std::{collections::VecDeque, iter::FromIterator, sync::Arc};
 
     /// Test retry strategy with minimal wait periods.
     const TEST_RETRY_STRATEGY: RetryStrategy = RetryStrategy {
@@ -280,11 +284,11 @@ mod test {
 
         let (client, _response_complete_fut) =
             TestClient::with_responses(vec![Ok(zx::Time::from_nanos(2030))]);
-        let inspect = InspectDiagnostics::new(Inspector::new().root());
+        let diagnostics = Arc::new(FakeDiagnostics::new());
         let update_algorithm = HttpsDateUpdateAlgorithm::with_client(
             TEST_RETRY_STRATEGY,
             TEST_URI.clone(),
-            inspect,
+            diagnostics,
             client,
         );
         let (sender, mut receiver) = channel(0);
@@ -322,22 +326,22 @@ mod test {
         ];
         let (client, response_complete_fut) =
             TestClient::with_responses(reported_utc_times.iter().map(|utc| Ok(*utc)));
-        let inspector = Inspector::new();
+        let diagnostics = Arc::new(FakeDiagnostics::new());
         let update_algorithm = HttpsDateUpdateAlgorithm::with_client(
             TEST_RETRY_STRATEGY,
             TEST_URI.clone(),
-            InspectDiagnostics::new(inspector.root()),
+            Arc::clone(&diagnostics),
             client,
         );
 
-        let monotonic_before = zx::Time::get_monotonic().into_nanos();
+        let monotonic_before = zx::Time::get_monotonic();
 
         let (sender, receiver) = channel(0);
         let _update_task =
             fasync::Task::spawn(async move { update_algorithm.generate_updates(sender).await });
         let updates = receiver.take_until(response_complete_fut).collect::<Vec<_>>().await;
 
-        let monotonic_after = zx::Time::get_monotonic().into_nanos();
+        let monotonic_after = zx::Time::get_monotonic();
 
         // The first update should indicate status OK, and any subsequent status updates should
         // indicate OK.
@@ -357,16 +361,29 @@ mod test {
         assert_eq!(samples.len(), expected_utc_times.len());
         for (expected_utc_time, sample) in expected_utc_times.iter().zip(samples) {
             assert_eq!(expected_utc_time.into_nanos(), sample.utc.unwrap());
-            assert!(sample.monotonic.unwrap() >= monotonic_before);
-            assert!(sample.monotonic.unwrap() <= monotonic_after);
+            assert!(sample.monotonic.unwrap() >= monotonic_before.into_nanos());
+            assert!(sample.monotonic.unwrap() <= monotonic_after.into_nanos());
             assert_eq!(sample.standard_deviation.unwrap(), STANDARD_DEVIATION.into_nanos());
         }
-        assert_inspect_tree!(
-            inspector,
-            root: contains {
-                success_count: expected_utc_times.len() as u64,
-            }
-        );
+
+        assert_eq!(diagnostics.successes().len(), expected_utc_times.len());
+        for (expected_utc_time, sample) in expected_utc_times.iter().zip(diagnostics.successes()) {
+            assert_eq!(expected_utc_time, &sample.utc);
+            assert!(sample.monotonic >= monotonic_before);
+            assert!(sample.monotonic <= monotonic_after);
+            assert_eq!(sample.standard_deviation, STANDARD_DEVIATION);
+            assert!(
+                sample.final_bound_size
+                    <= monotonic_after - monotonic_before + zx::Duration::from_seconds(1)
+            );
+            assert_eq!(sample.round_trip_times.len(), 1);
+            assert!(sample
+                .round_trip_times
+                .iter()
+                .all(|rtt| *rtt <= monotonic_after - monotonic_before));
+        }
+
+        assert!(diagnostics.failures().is_empty());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -380,11 +397,11 @@ mod test {
             Ok(reported_utc),
         ];
         let (client, response_complete_fut) = TestClient::with_responses(injected_responses);
-        let inspector = Inspector::new();
+        let diagnostics = Arc::new(FakeDiagnostics::new());
         let update_algorithm = HttpsDateUpdateAlgorithm::with_client(
             TEST_RETRY_STRATEGY,
             TEST_URI.clone(),
-            InspectDiagnostics::new(inspector.root()),
+            Arc::clone(&diagnostics),
             client,
         );
 
@@ -407,20 +424,14 @@ mod test {
             Update::Status(_) => panic!("Expected a sample but got an update"),
         }
 
-        assert_inspect_tree!(
-            inspector,
-            root: {
-                success_count: 1u64,
-                last_successful: contains {
-                    round_trip_times: AnyProperty,
-                    monotonic: AnyProperty,
-                    bound_size: AnyProperty
-                },
-                failure_counts: {
-                    NoCertificatesPresented: 1u64,
-                    NetworkError: 2u64,
-                },
-            }
+        assert_eq!(diagnostics.successes().len(), 1);
+        assert_eq!(
+            diagnostics.failures(),
+            vec![
+                HttpsDateError::NetworkError,
+                HttpsDateError::NetworkError,
+                HttpsDateError::NoCertificatesPresented
+            ]
         );
     }
 }
