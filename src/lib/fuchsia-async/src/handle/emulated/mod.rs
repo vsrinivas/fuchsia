@@ -1214,7 +1214,7 @@ mod test {
         assert_ne!(new_handle.raw_handle(), orig_raw);
         let replaced_handle = unsafe { Handle::from_raw(orig_raw) };
         assert!(replaced_handle.is_dangling());
-        std::mem::ManuallyDrop::new(replaced_handle);
+        std::mem::forget(replaced_handle);
 
         let new_basic_info = new_handle.basic_info().unwrap();
         assert_eq!(new_basic_info.koid, orig_basic_info.koid);
