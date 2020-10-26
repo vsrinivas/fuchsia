@@ -229,7 +229,7 @@ mod tests {
         let second_cursor_position = Position { x: 10.0, y: -10.0 };
         let descriptor = mouse_device_descriptor(DEVICE_ID);
         let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+            zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![
             create_mouse_event(
                 mouse::MouseLocation::Relative(first_cursor_position),
@@ -292,7 +292,7 @@ mod tests {
         let cursor_relative_position = Position { x: 50.0, y: 75.0 };
         let descriptor = mouse_device_descriptor(DEVICE_ID);
         let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+            zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             mouse::MouseLocation::Relative(cursor_relative_position),
             fidl_ui_input::PointerEventPhase::Move,
@@ -342,7 +342,7 @@ mod tests {
         let second_cursor_position = Position { x: 10.0, y: 20.0 };
         let descriptor = mouse_device_descriptor(DEVICE_ID);
         let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+            zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
 
         let input_events = vec![
             create_mouse_event(
