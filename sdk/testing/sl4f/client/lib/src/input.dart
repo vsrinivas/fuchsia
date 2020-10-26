@@ -142,7 +142,7 @@ class Input {
               'y1': fingerPos[1].y
             })
         .toList();
-    final result = await _sl4f.request('input_facade.multiFingerSwipe', {
+    final result = await _sl4f.request('input_facade.MultiFingerSwipe', {
       'fingers': fingers,
       'duration': duration.inMilliseconds,
     });
