@@ -21,6 +21,8 @@ pub struct EventStream {
     component_log_node: BoundedListNode,
 }
 
+const RECENT_EVENT_LIMIT: usize = 200;
+
 impl EventStream {
     /// Creates a new event listener.
     pub fn new(node: inspect::Node) -> Self {
@@ -28,7 +30,8 @@ impl EventStream {
         let components_seen_running = node.create_uint("components_seen_running", 0);
         let components_stopped = node.create_uint("components_stopped", 0);
         let diagnostics_directories_seen = node.create_uint("diagnostics_directories_seen", 0);
-        let component_log_node = BoundedListNode::new(node.create_child("recent_events"), 50);
+        let component_log_node =
+            BoundedListNode::new(node.create_child("recent_events"), RECENT_EVENT_LIMIT);
         Self {
             sources: Vec::new(),
             node,
