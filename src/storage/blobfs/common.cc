@@ -75,8 +75,8 @@ void DumpSuperblock(const Superblock& info, FILE* out) {
 
 // Number of blocks reserved for the Merkle Tree.
 uint32_t ComputeNumMerkleTreeBlocks(const Inode& blobNode) {
-  size_t merkle_size =
-      digest::CalculateMerkleTreeSize(blobNode.blob_size, digest::kDefaultNodeSize);
+  size_t merkle_size = digest::CalculateMerkleTreeSize(blobNode.blob_size, digest::kDefaultNodeSize,
+                                                       /*use_compact_format=*/false);
   if (merkle_size > std::numeric_limits<uint32_t>::max()) {
     FS_TRACE_ERROR("blobfs: Merkle tree blocks (%s) max exceeded: %zu\n",
                    Digest(blobNode.merkle_root_hash).ToString().c_str(), merkle_size);

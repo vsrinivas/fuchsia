@@ -48,15 +48,22 @@ size_t NodeDigest::Append(const void* buf, size_t buf_len) {
   digest_.Update(buf, len);
   to_append_ -= len;
   if (to_append_ == 0) {
-    static const uint8_t kZeroes[64] = {0};
-    while (pad_len_ > sizeof(kZeroes)) {
-      digest_.Update(kZeroes, sizeof(kZeroes));
-      pad_len_ -= sizeof(kZeroes);
-    }
-    digest_.Update(kZeroes, pad_len_);
-    digest_.Final();
+    PadWithZeros();
   }
   return len;
+}
+
+void NodeDigest::PadWithZeros() {
+  static const uint8_t kZeroes[64] = {0};
+  size_t padding = to_append_ + pad_len_;
+  while (padding > sizeof(kZeroes)) {
+    digest_.Update(kZeroes, sizeof(kZeroes));
+    padding -= sizeof(kZeroes);
+  }
+  digest_.Update(kZeroes, padding);
+  digest_.Final();
+  to_append_ = 0;
+  pad_len_ = 0;
 }
 
 }  // namespace digest

@@ -33,6 +33,10 @@ class MerkleTree {
   size_t GetNodeSize() const { return hash_list_.GetNodeSize(); }
   void SetNodeSize(size_t node_size) { hash_list_.SetNodeSize(); }
 
+  // When set to |true| the hash lists in the tree will not contain padding.
+  void SetUseCompactFormat(bool use_compact_format);
+  bool GetUseCompactFormat() { return use_compact_format_; }
+
   // Returns true if |data_off| is aligned to a node boundary.
   bool IsAligned(size_t data_off) const { return hash_list_.IsAligned(data_off); }
 
@@ -62,6 +66,10 @@ class MerkleTree {
   // |next_| layer of the tree, until the last layer, which produces the root digest.
   HL hash_list_;
   std::unique_ptr<MT> next_;
+
+ private:
+  // Whether the hash lists should be stored compactly or with padding.
+  bool use_compact_format_ = false;
 };
 
 }  // namespace internal
@@ -113,7 +121,8 @@ class MerkleTreeVerifier : public internal::MerkleTree<const uint8_t, const void
 // |data_size|.  It does NOT include room for the root digest.
 //
 // Panics if |node_size| does not satisfy |NodeDigest::IsValidNodeSize|.
-size_t CalculateMerkleTreeSize(size_t data_size, size_t node_size);
+// |use_compact_format| specifies if the size should not include padding in the hash lists.
+size_t CalculateMerkleTreeSize(size_t data_size, size_t node_size, bool use_compact_format);
 
 }  // namespace digest
 

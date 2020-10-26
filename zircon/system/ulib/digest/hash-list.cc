@@ -12,6 +12,7 @@
 #include <digest/digest.h>
 #include <digest/hash-list.h>
 #include <digest/node-digest.h>
+#include <fbl/algorithm.h>
 
 namespace digest {
 namespace internal {
@@ -65,16 +66,22 @@ zx_status_t HashListBase::ProcessData(const uint8_t *buf, size_t buf_len, size_t
   zx_status_t rc;
   data_off_ = data_off;
   list_off_ = GetListOffset(data_off);
+  size_t data_len_with_padding =
+      pad_data_to_node_size_ ? fbl::round_up(data_len_, GetNodeSize()) : data_len_;
   while (buf_len != 0) {
     if (node_digest_.IsAligned(data_off_) &&
-        (rc = node_digest_.Reset(data_off_, data_len_)) != ZX_OK) {
+        (rc = node_digest_.Reset(data_off_, data_len_with_padding)) != ZX_OK) {
       return rc;
     }
     size_t chunk = node_digest_.Append(buf, buf_len);
     buf += chunk;
     buf_len -= chunk;
     data_off_ += chunk;
-    if (node_digest_.IsAligned(data_off_) || data_off_ == data_len_) {
+    bool at_end_of_data = data_off_ == data_len_;
+    if (at_end_of_data && pad_data_to_node_size_) {
+      node_digest_.PadWithZeros();
+    }
+    if (node_digest_.IsAligned(data_off_) || at_end_of_data) {
       HandleOne();
     }
   }

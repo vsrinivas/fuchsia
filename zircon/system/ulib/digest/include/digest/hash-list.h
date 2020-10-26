@@ -46,6 +46,12 @@ class HashListBase {
   // |SIZE_MAX - NodeSize + 1|, i.e. the maximum node-aligned value of type |size_t|.
   zx_status_t SetDataLength(size_t data_len);
 
+  // Sets whether the hash list should pad the length of the data it's given up to the next multiple
+  // of the node size.
+  void SetPadDataToNodeSize(bool pad_data_to_node_size) {
+    pad_data_to_node_size_ = pad_data_to_node_size;
+  }
+
   // Returns the corresponding offset in the hash list for an offset in the data. This method
   // does not check if |data_off| is within bounds.
   size_t GetListOffset(size_t data_off) const;
@@ -84,6 +90,10 @@ class HashListBase {
   // Contents, offset, and length of the hash list.
   size_t list_off_ = 0;
   size_t list_len_ = 0;
+
+  // Whether the hash list should pad the length of the data it's given up to the next multiple of
+  // the node size.
+  bool pad_data_to_node_size_ = false;
 };
 
 // |digest::internal::HashList| contains code templated on the list type. Callers MUST NOT use this

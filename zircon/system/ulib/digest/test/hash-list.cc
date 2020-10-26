@@ -127,6 +127,30 @@ TEST(HashListCreator, Append) {
   EXPECT_OK(creator.Append(buf, sizeof(buf)));
 }
 
+TEST(HashListCreator, AppendWithPadDataToNodeSizeProducesTheSameHashListAsWithout) {
+  const size_t data_len = kNodeSize * 4;
+  const size_t padding = 500;
+  uint8_t data[data_len] = {0x00};
+  memset(data, 0xff, data_len - padding);
+
+  uint8_t list[kListLen];
+  HashListCreator creator;
+  creator.SetPadDataToNodeSize(true);
+  EXPECT_OK(creator.SetNodeSize(kNodeSize));
+  EXPECT_OK(creator.SetDataLength(data_len - padding));
+  EXPECT_OK(creator.SetList(list, kListLen));
+  EXPECT_OK(creator.Append(data, data_len - padding));
+
+  uint8_t expected_list[kListLen];
+  HashListCreator expected_creator;
+  EXPECT_OK(expected_creator.SetNodeSize(kNodeSize));
+  EXPECT_OK(expected_creator.SetDataLength(data_len));
+  EXPECT_OK(expected_creator.SetList(expected_list, kListLen));
+  EXPECT_OK(expected_creator.Append(data, data_len));
+
+  EXPECT_EQ(memcmp(list, expected_list, kListLen), 0);
+}
+
 TEST(HashListVerifier, Verify) {
   uint8_t buf[kDataLen];
   srand(0);

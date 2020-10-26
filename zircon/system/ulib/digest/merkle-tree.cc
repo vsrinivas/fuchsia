@@ -37,7 +37,9 @@ zx_status_t MerkleTree<T, VP, MT, HL>::SetDataLength(size_t data_len) {
     return ZX_ERR_NO_MEMORY;
   }
   next_->hash_list_.SetNodeId(hash_list_.GetNodeId() + 1);
-  return next_->SetDataLength(fbl::round_up(list_len, GetNodeSize()));
+  next_->SetUseCompactFormat(use_compact_format_);
+  size_t next_len = use_compact_format_ ? list_len : fbl::round_up(list_len, GetNodeSize());
+  return next_->SetDataLength(next_len);
 }
 
 template <typename T, typename VP, class MT, class HL>
@@ -66,6 +68,14 @@ zx_status_t MerkleTree<T, VP, MT, HL>::SetTree(VP tree, size_t tree_len, VP root
   return next_->SetTree(list + list_len, tree_len - list_len, root, root_len);
 }
 
+template <typename T, typename VP, class MT, class HL>
+void MerkleTree<T, VP, MT, HL>::SetUseCompactFormat(bool use_compact_format) {
+  use_compact_format_ = use_compact_format;
+  // The data is only padded to the node size when creating a hash list of a hash list and not
+  // when creating a hash list of the leaf data.
+  hash_list_.SetPadDataToNodeSize(use_compact_format_ && hash_list_.GetNodeId());
+}
+
 }  // namespace internal
 
 // MerkleTreeCreator
@@ -80,6 +90,9 @@ internal::MerkleTree<uint8_t, void *, MerkleTreeCreator, HashListCreator>::GetTr
 template zx_status_t internal::MerkleTree<uint8_t, void *, MerkleTreeCreator,
                                           HashListCreator>::SetTree(void *tree, size_t tree_len,
                                                                     void *root, size_t root_len);
+
+template void internal::MerkleTree<uint8_t, void *, MerkleTreeCreator,
+                                   HashListCreator>::SetUseCompactFormat(bool use_compact_format);
 
 // static
 zx_status_t MerkleTreeCreator::Create(const void *data, size_t data_len,
@@ -134,10 +147,13 @@ zx_status_t MerkleTreeCreator::Append(const void *buf, size_t buf_len) {
   if (hash_list_.data_off() != hash_list_.data_len()) {
     return ZX_OK;
   }
-  list = hash_list_.list() + hash_list_.list_off();
-  list_len = hash_list_.list_len() - hash_list_.list_off();
-  memset(list, 0, list_len);
-  return next_->Append(list, list_len);
+  if (!GetUseCompactFormat()) {
+    list = hash_list_.list() + hash_list_.list_off();
+    list_len = hash_list_.list_len() - hash_list_.list_off();
+    memset(list, 0, list_len);
+    return next_->Append(list, list_len);
+  }
+  return ZX_OK;
 }
 
 // MerkleTreeVerifier
@@ -152,6 +168,9 @@ template size_t internal::MerkleTree<const uint8_t, const void *, MerkleTreeVeri
 template zx_status_t
 internal::MerkleTree<const uint8_t, const void *, MerkleTreeVerifier, HashListVerifier>::SetTree(
     const void *tree, size_t tree_len, const void *root, size_t root_len);
+
+template void internal::MerkleTree<const uint8_t, const void *, MerkleTreeVerifier,
+                                   HashListVerifier>::SetUseCompactFormat(bool use_compact_format);
 
 // static
 zx_status_t MerkleTreeVerifier::Verify(const void *buf, size_t buf_len, size_t data_off,
@@ -184,11 +203,13 @@ zx_status_t MerkleTreeVerifier::Verify(const void *buf, size_t buf_len, size_t d
   return next_->Verify(buf, buf_len, data_off);
 }
 
-size_t CalculateMerkleTreeSize(size_t data_size, size_t node_size) {
+size_t CalculateMerkleTreeSize(size_t data_size, size_t node_size, bool use_compact_format) {
   ZX_ASSERT_MSG(NodeDigest::IsValidNodeSize(node_size), "node_size=%lu", node_size);
   size_t merkle_tree_size = 0;
   while (data_size > node_size) {
-    data_size = fbl::round_up(CalculateHashListSize(data_size, node_size), node_size);
+    size_t list_size = CalculateHashListSize(data_size, node_size);
+    // The non compact format pads the hash list to be a multiple of the node size.
+    data_size = use_compact_format ? list_size : fbl::round_up(list_size, node_size);
     merkle_tree_size += data_size;
   }
   return merkle_tree_size;

@@ -68,6 +68,9 @@ class NodeDigest {
   // the number of bytes hashed.
   size_t Append(const void* buf, size_t buf_len);
 
+  // Appends zeros to fill up the rest of the node.
+  void PadWithZeros();
+
   // Returns |true| if |node_size| is a power of 2 between |kMinNodeSize| and |kMaxNodeSize|.
   static constexpr bool IsValidNodeSize(size_t node_size) {
     return node_size >= kMinNodeSize && node_size <= kMaxNodeSize && fbl::is_pow2(node_size);

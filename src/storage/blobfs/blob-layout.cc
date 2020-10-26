@@ -155,7 +155,8 @@ class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
  private:
   static ByteCountType CalulateMerkleTreeSize(ByteCountType file_size) {
     // TODO(fxbug.dev/36663): Use the compact Merkle tree format.
-    return digest::CalculateMerkleTreeSize(file_size, digest::kDefaultNodeSize);
+    return digest::CalculateMerkleTreeSize(file_size, digest::kDefaultNodeSize,
+                                           /*use_compact_format=*/false);
   }
 };
 
@@ -228,7 +229,8 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
 
  private:
   static ByteCountType CalculateMerkleTreeSize(ByteCountType file_size) {
-    return digest::CalculateMerkleTreeSize(file_size, digest::kDefaultNodeSize);
+    return digest::CalculateMerkleTreeSize(file_size, digest::kDefaultNodeSize,
+                                           /*use_compact_format=*/false);
   }
 };
 

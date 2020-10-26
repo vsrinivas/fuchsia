@@ -114,6 +114,31 @@ TEST(NodeDigest, ResetAndAppend) {
   }
 }
 
+TEST(NodeDigest, ResetAndAppendWithPadding) {
+  Digest expected;
+  ASSERT_OK(expected.Parse("68999bc08b8eacc1fc0db17e64f8f7c600cc109ce114692113eb1ec9dcf3c1a2"));
+
+  // 7000 bytes of data but the last 6500 are all zeros.
+  const size_t data_size = 7000;
+  const size_t padding = 6500;
+  uint8_t data[data_size] = {0x00};
+  memset(data, 0xff, data_size - padding);
+
+  NodeDigest node_digest;
+  EXPECT_OK(node_digest.SetNodeSize(8192));
+
+  // Validate that explicitly passing the padding zeros is correct.
+  node_digest.Reset(0, data_size);
+  node_digest.Append(data, data_size);
+  EXPECT_EQ(node_digest.get(), expected);
+
+  // Let the node digest supply the padding zeros.
+  node_digest.Reset(0, data_size);
+  node_digest.Append(data, data_size - padding);
+  node_digest.PadWithZeros();
+  EXPECT_EQ(node_digest.get(), expected);
+}
+
 TEST(NodeDigest, MinNodeSizeIsValid) { EXPECT_TRUE(NodeDigest::IsValidNodeSize(kMinNodeSize)); }
 
 TEST(NodeDigest, MaxNodeSizeIsValid) { EXPECT_TRUE(NodeDigest::IsValidNodeSize(kMaxNodeSize)); }
