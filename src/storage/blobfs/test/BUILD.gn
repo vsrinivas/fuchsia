@@ -95,6 +95,7 @@ test("blobfs_unittest") {
     "unit/blobfs-pager-test.cc",
     "unit/blobfs-test.cc",
     "unit/blobfs_inspector_test.cc",
+    "unit/common-test.cc",
     "unit/compression-settings-test.cc",
     "unit/compressor-test.cc",
     "unit/create-tests.cc",

@@ -57,7 +57,7 @@ constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
 
 std::unique_ptr<MockBlockDevice> CreateAndFormatDevice() {
   auto device = std::make_unique<MockBlockDevice>(kNumBlocks, kBlockSize);
-  EXPECT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  EXPECT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
   return device;
 }
 

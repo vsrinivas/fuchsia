@@ -16,6 +16,7 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
+#include <blobfs/blob-layout.h>
 #include <blobfs/format.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
@@ -56,7 +57,8 @@ uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available);
 // This method should also be invoked to create FVM-based superblocks, but it is the responsibility
 // of the caller to update |info->flags| to include |kBlobFlagFVM|, and fill in all
 // FVM-specific fields.
-void InitializeSuperblock(uint64_t block_count, Superblock* info);
+void InitializeSuperblock(uint64_t block_count, BlobLayoutFormat blob_layout_format,
+                          Superblock* info);
 
 // Computes the number of blocks necessary to store the merkle tree for the blob, based on its size.
 // May return 0 for small blobs (for which only the root digest is sufficient to verify the entire
@@ -69,6 +71,11 @@ inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {
   assert(kBlobfsBlockSize <= (n + 1) * kBlobfsBlockSize);  // Avoid overflow
   return fs::GetBlock(kBlobfsBlockSize, bm.StorageUnsafe()->GetData(), n);
 }
+
+// Returns the blob layout format used in |info|. Panics if the blob layout format is invalid.
+// |CheckSuperblock| should be used to validate |info| before trying to access the blob layout
+// format.
+BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info);
 
 // Fills |out| with the VMO names for a blob with inode index |node_index|.
 void FormatBlobDataVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);

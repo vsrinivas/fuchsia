@@ -208,7 +208,7 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
 
 }  // namespace
 
-zx_status_t FormatFilesystem(BlockDevice* device) {
+zx_status_t FormatFilesystem(BlockDevice* device, const FilesystemOptions& options) {
   zx_status_t status;
   fuchsia_hardware_block_BlockInfo block_info = {};
   status = device->BlockGetInfo(&block_info);
@@ -230,7 +230,7 @@ zx_status_t FormatFilesystem(BlockDevice* device) {
 
   uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
   Superblock superblock;
-  InitializeSuperblock(blocks, &superblock);
+  InitializeSuperblock(blocks, options.blob_layout_format, &superblock);
 
   status = TryFormattingFVM(device, &superblock);
   if (status != ZX_OK) {

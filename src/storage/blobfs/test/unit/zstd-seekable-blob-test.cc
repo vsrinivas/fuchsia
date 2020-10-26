@@ -62,7 +62,7 @@ class ZSTDSeekableBlobTest : public testing::Test {
                             }};
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
-    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+    ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
     loop_.StartThread();
 
     ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
@@ -155,7 +155,7 @@ class ZSTDSeekableBlobWrongAlgorithmTest : public ZSTDSeekableBlobTest {
                             }};
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
-    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+    ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
     loop_.StartThread();
 
     // Construct BlobFS with non-seekable ZSTD algorithm. This should cause errors in the seekable
@@ -184,7 +184,7 @@ class ZSTDSeekAndReadTest : public ZSTDSeekableBlobTest {
 
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
-    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+    ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
     loop_.StartThread();
 
     // Construct BlobFS with non-seekable ZSTD algorithm. This should cause errors in the seekable

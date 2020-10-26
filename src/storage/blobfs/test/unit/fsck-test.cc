@@ -22,7 +22,7 @@ constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
 TEST(FsckTest, TestEmpty) {
   auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
   ASSERT_TRUE(device);
-  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
 
   MountOptions options;
   ASSERT_EQ(Fsck(std::move(device), &options), ZX_OK);
@@ -39,7 +39,7 @@ TEST(FsckTest, TestUnmountable) {
 TEST(FsckTest, TestCorrupted) {
   auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
   ASSERT_TRUE(device);
-  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
 
   char block[kBlobfsBlockSize];
   DeviceBlockRead(device.get(), block, sizeof(block), kSuperblockOffset);
@@ -54,7 +54,7 @@ TEST(FsckTest, TestCorrupted) {
 TEST(FsckTest, TestOverflow) {
   auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
   ASSERT_TRUE(device);
-  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
 
   char block[kBlobfsBlockSize];
   DeviceBlockRead(device.get(), block, sizeof(block), kSuperblockOffset);

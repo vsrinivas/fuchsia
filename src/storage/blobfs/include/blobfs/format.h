@@ -107,14 +107,15 @@ struct __PACKED Superblock {
   // backwards-incompatible change.
   uint64_t reserved2;  // Unused.
 
-  // The following fields are only valid with (flags & kBlobFlagFVM):
-  uint64_t slice_size;      // Underlying slice size.
-  uint64_t deprecated1;     // Unused but not necessarily 0 (saved total vslices in old vers.).
-  uint32_t abm_slices;      // Slices allocated to block bitmap.
-  uint32_t ino_slices;      // Slices allocated to node map.
-  uint32_t dat_slices;      // Slices allocated to file data section.
-  uint32_t journal_slices;  // Slices allocated to journal section.
-  uint8_t reserved[8080];
+  // The following 6 fields are only valid with (flags & kBlobFlagFVM):
+  uint64_t slice_size;         // Underlying slice size.
+  uint64_t deprecated1;        // Unused but not necessarily 0 (saved total vslices in old vers.).
+  uint32_t abm_slices;         // Slices allocated to block bitmap.
+  uint32_t ino_slices;         // Slices allocated to node map.
+  uint32_t dat_slices;         // Slices allocated to file data section.
+  uint32_t journal_slices;     // Slices allocated to journal section.
+  uint8_t blob_layout_format;  // The layout format that the blobs are in.
+  uint8_t reserved[8079];
 };
 
 static_assert(sizeof(Superblock) == kBlobfsBlockSize, "Invalid blobfs superblock size");

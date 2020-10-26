@@ -25,7 +25,7 @@ using block_client::FakeBlockDevice;
 
 void CreateAndFormatDevice(std::unique_ptr<FakeBlockDevice>* out) {
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlobfsBlockSize);
-  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
 
   *out = std::move(device);
 }

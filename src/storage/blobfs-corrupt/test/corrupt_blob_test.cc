@@ -98,7 +98,7 @@ void MockBlockDevice::WriteBlock(uint64_t block_num, uint64_t fs_block_size, con
 
 std::unique_ptr<MockBlockDevice> CreateAndFormatDevice() {
   auto device = std::make_unique<MockBlockDevice>(kNumBlocks, kBlockSize);
-  EXPECT_OK(blobfs::FormatFilesystem(device.get()));
+  EXPECT_OK(blobfs::FormatFilesystem(device.get(), blobfs::FilesystemOptions{}));
   if (CURRENT_TEST_HAS_FAILURES()) {
     return nullptr;
   }

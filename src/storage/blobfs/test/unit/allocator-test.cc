@@ -537,7 +537,7 @@ TEST(AllocatorTest, FreedBlocksAreReservedUntilTransactionCommits) {
   constexpr uint32_t kNumBlocks = 200 * kBlobfsBlockSize / kBlockSize;
   constexpr size_t kBlobSize = 150000;
   auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
-  EXPECT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  EXPECT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread();
   std::unique_ptr<Blobfs> fs;

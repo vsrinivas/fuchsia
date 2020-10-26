@@ -20,7 +20,7 @@ void FdioTest::SetUp() {
 
   auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
   block_device_ = device.get();
-  ASSERT_OK(FormatFilesystem(block_device_));
+  ASSERT_OK(FormatFilesystem(block_device_, FilesystemOptions{}));
 
   zx::channel root_client, root_server;
   ASSERT_OK(zx::channel::create(0, &root_client, &root_server));

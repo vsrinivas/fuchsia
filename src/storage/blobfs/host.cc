@@ -20,6 +20,7 @@
 #include <optional>
 #include <utility>
 
+#include <blobfs/blob-layout.h>
 #include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
 #include <blobfs/host.h>
@@ -308,7 +309,8 @@ zx_status_t GetBlockCount(int fd, uint64_t* out) {
 
 int Mkfs(int fd, uint64_t block_count) {
   Superblock info;
-  InitializeSuperblock(block_count, &info);
+  // TODO(fxbug.dev/36663): Add support for setting the blob layout format.
+  InitializeSuperblock(block_count, BlobLayoutFormat::kPaddedMerkleTreeAtStart, &info);
   zx_status_t status = CheckSuperblock(&info, block_count);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to initialize superblock: %d\n", status);

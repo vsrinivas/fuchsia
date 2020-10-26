@@ -14,19 +14,24 @@
 namespace blobfs {
 
 // Possible formats for how a blob can be layed out in storage.
-enum class BlobLayoutFormat : uint8_t {
+// This enum is serialized and stored in blobfs's superblock which prevents the enum values from
+// being changed.
+enum class BlobLayoutFormat : decltype(Superblock::blob_layout_format) {
   // The "Padded Merkle Tree at Start" layout stores the Merkle tree in the padded format at the
   // start of the blob.  The data is stored at the start of the block following the Merkle tree.
   // | block 001 | block 002 | block 003 | block 004 | block 005 | ... | block 579 | block 580 |
   // |<-       Padded Merkle Tree      ->|<-                  Data                 ->|
-  kPaddedMerkleTreeAtStart,
+  // This is the layout format that was in use prior to the layout format being added to the
+  // superblock.  The new field was added to a section of the superpblock that was already zero and
+  // to maintain backwards compatibility this enum value has the value zero.
+  kPaddedMerkleTreeAtStart = 0,
 
   // The "Compact Merkle Tree at End" layout stores the data at the start of the blob.  The Merkle
   // tree is stored in the compact format after the data and aligned so it ends at the end of the
   // blob.  The Merkle tree and the data may share a block.
   // | block 001 | block 002 | ... | block 576 | block 577 | block 578 | block 579 |
   // |<-                  Data                 ->|      |<- Compact Merkle Tree  ->|
-  kCompactMerkleTreeAtEnd,
+  kCompactMerkleTreeAtEnd = 1,
 };
 
 // Layout information for where the data and Merkle tree are positioned in a blob.

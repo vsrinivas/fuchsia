@@ -43,7 +43,7 @@ class ZSTDCompressedBlockCollectionTest : public testing::Test {
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
     ASSERT_TRUE(device);
-    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+    ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
     loop_.StartThread();
 
     ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),

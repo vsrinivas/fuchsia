@@ -71,7 +71,7 @@ NandTest::Connection::Connection(const char* dev_root, zx::vmo vmo, bool create_
 
   if (create_filesystem) {
     // Create an empty blobfs on the block device.
-    ASSERT_OK(blobfs::FormatFilesystem(device.get()));
+    ASSERT_OK(blobfs::FormatFilesystem(device.get(), FilesystemOptions{}));
   }
 
   zx::channel root_client, root_server;

@@ -7,6 +7,7 @@
 #include <iostream>
 #include <memory>
 
+#include <blobfs/blob-layout.h>
 #include <blobfs/common.h>
 #include <blobfs/format.h>
 #include <disk_inspector/buffer_factory.h>
@@ -102,7 +103,7 @@ void CreateFakeBlobfsHandler(std::unique_ptr<FakeTransactionHandler>* handler) {
 
   // Superblock.
   Superblock superblock;
-  InitializeSuperblock(kBlockCount, &superblock);
+  InitializeSuperblock(kBlockCount, BlobLayoutFormat::kPaddedMerkleTreeAtStart, &superblock);
   memcpy(device->Data(kSuperblockOffset), &superblock, sizeof(superblock));
 
   // Allocation bitmap.

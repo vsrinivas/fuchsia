@@ -31,7 +31,7 @@ class BlobTest : public testing::Test {
   void SetUp() override {
     auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
     device_ = device.get();
-    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+    ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
 
     MountOptions options;
     ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),

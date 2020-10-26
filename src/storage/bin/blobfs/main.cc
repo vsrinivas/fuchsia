@@ -102,7 +102,8 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* opt
 }
 
 zx_status_t Mkfs(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
-  return blobfs::FormatFilesystem(device.get());
+  // TODO(fxbug.dev/36663): Add support for setting the blob layout format.
+  return blobfs::FormatFilesystem(device.get(), blobfs::FilesystemOptions{});
 }
 
 zx_status_t Fsck(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {

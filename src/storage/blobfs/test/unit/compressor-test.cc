@@ -410,7 +410,7 @@ class BlobfsTestFixture : public testing::Test {
   BlobfsTestFixture() {
     constexpr uint64_t kBlockCount = 1024;
     auto device = std::make_unique<block_client::FakeBlockDevice>(kBlockCount, kBlobfsBlockSize);
-    EXPECT_EQ(FormatFilesystem(device.get()), ZX_OK);
+    EXPECT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
     blobfs::MountOptions options;
     EXPECT_EQ(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs_),
               ZX_OK);

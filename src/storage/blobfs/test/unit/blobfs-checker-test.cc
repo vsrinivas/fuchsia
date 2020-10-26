@@ -37,7 +37,7 @@ class BlobfsCheckerTest : public testing::Test {
   void SetUp() override {
     auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
     ASSERT_TRUE(device);
-    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+    ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
     loop_.StartThread();
 
     MountOptions options;

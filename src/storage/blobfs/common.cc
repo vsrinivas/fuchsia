@@ -6,9 +6,12 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/assert.h>
 
 #include <limits>
 
+#include <blobfs/blob-layout.h>
+#include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <digest/node-digest.h>
@@ -29,6 +32,7 @@ using digest::Digest;
 namespace blobfs {
 
 namespace {
+
 // Dumps the content of superblock to |out|. Does nothing if |out| is nullptr.
 void DumpSuperblock(const Superblock& info, FILE* out) {
   if (out == nullptr) {
@@ -64,11 +68,23 @@ void DumpSuperblock(const Superblock& info, FILE* out) {
           "\n"
           "info.dat_slices: %" PRIu32
           "\n"
-          "info.journal_slices: %" PRIu32 "\n",
+          "info.journal_slices: %" PRIu32
+          "\n"
+          "info.blob_layout_format: %" PRIu8 "\n",
           info.magic0, info.magic1, info.version, info.flags, info.block_size,
           info.data_block_count, info.journal_block_count, info.inode_count, info.alloc_block_count,
           info.alloc_inode_count, info.slice_size, info.abm_slices, info.ino_slices,
-          info.dat_slices, info.journal_slices);
+          info.dat_slices, info.journal_slices, info.blob_layout_format);
+}
+
+// Validates that this version of blobfs knows how to handle |format|.
+bool IsValidBlobLayoutFormat(BlobLayoutFormat format) {
+  switch (format) {
+    case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
+    case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
+      return true;
+  }
+  return false;
 }
 
 }  // namespace
@@ -190,6 +206,11 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
       return ZX_ERR_INVALID_ARGS;
     }
   }
+
+  if (!IsValidBlobLayoutFormat(static_cast<BlobLayoutFormat>(info->blob_layout_format))) {
+    FS_TRACE_ERROR("blobfs: Unkown blob layout format: %u\n", info->blob_layout_format);
+    return ZX_ERR_INVALID_ARGS;
+  }
   return ZX_OK;
 }
 
@@ -213,7 +234,8 @@ uint32_t BlocksRequiredForBits(uint64_t bit_count) {
 
 uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available) { return current + available; }
 
-void InitializeSuperblock(uint64_t block_count, Superblock* info) {
+void InitializeSuperblock(uint64_t block_count, BlobLayoutFormat blob_layout_format,
+                          Superblock* info) {
   uint64_t inodes = kBlobfsDefaultInodeCount;
   memset(info, 0x00, sizeof(*info));
   info->magic0 = kBlobfsMagic0;
@@ -226,6 +248,8 @@ void InitializeSuperblock(uint64_t block_count, Superblock* info) {
   info->inode_count = inodes;
   info->alloc_block_count = kStartBlockMinimum;
   info->alloc_inode_count = 0;
+  info->blob_layout_format =
+      static_cast<decltype(Superblock::blob_layout_format)>(blob_layout_format);
 
   // Temporarily set the data_block_count to the total block_count so we can estimate the number
   // of pre-data blocks.
@@ -257,6 +281,14 @@ void InitializeSuperblock(uint64_t block_count, Superblock* info) {
     info->journal_block_count = 0;
     info->data_block_count = 0;
   }
+}
+
+BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info) {
+  BlobLayoutFormat format = static_cast<BlobLayoutFormat>(info.blob_layout_format);
+  ZX_ASSERT_MSG(IsValidBlobLayoutFormat(format),
+                "Invalid blob layout format.  Use CheckSuperblock to validate the Superblock "
+                "before using it.");
+  return format;
 }
 
 constexpr char kBlobVmoNamePrefix[] = "blob";
