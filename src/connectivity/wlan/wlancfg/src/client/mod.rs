@@ -7,7 +7,8 @@ use {
     crate::{
         client::state_machine as client_fsm,
         config_management::{
-            Credential, NetworkConfigError, NetworkIdentifier, SaveError, SavedNetworksManager,
+            self, Credential, NetworkConfigError, NetworkIdentifier, SaveError,
+            SavedNetworksManager,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
         util::listener,
@@ -180,6 +181,7 @@ async fn handle_client_requests(
                     Arc::clone(&iface_manager),
                     iterator,
                     Arc::clone(&network_selector),
+                    Arc::clone(&saved_networks),
                 );
                 // The scan handler is infallible and should not block handling of further request.
                 // Detach the future here so we continue responding to other requests.
@@ -251,13 +253,25 @@ async fn handle_client_request_scan(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     output_iterator: fidl::endpoints::ServerEnd<fidl_fuchsia_wlan_policy::ScanResultIteratorMarker>,
     network_selector: Arc<network_selection::NetworkSelector>,
+    saved_networks: SavedNetworksPtr,
 ) {
+    let potentially_hidden_saved_networks =
+        config_management::select_subset_potentially_hidden_networks(
+            saved_networks.get_networks().await,
+        );
+
     scan::perform_scan(
         iface_manager,
         Some(output_iterator),
         network_selector.generate_scan_result_updater(),
         scan::LocationSensorUpdater {},
-        |_| None, // TODO(35919): include all partially hidden networks here
+        |_| {
+            if potentially_hidden_saved_networks.is_empty() {
+                None
+            } else {
+                Some(potentially_hidden_saved_networks)
+            }
+        },
     )
     .await
 }

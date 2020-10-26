@@ -34,7 +34,7 @@ use {
 };
 
 const RECENT_FAILURE_WINDOW: Duration = Duration::from_secs(60 * 5); // 5 minutes
-const STALE_SCAN_AGE: Duration = Duration::from_secs(15); // TODO(61992) Optimize this value
+const STALE_SCAN_AGE: Duration = Duration::from_secs(10); // TODO(61992) Optimize this value
 
 pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
@@ -100,29 +100,39 @@ impl NetworkSelector {
             info!("Scan results are {:?} old, triggering a scan", scan_age);
 
             let mut cobalt_api_clone = self.cobalt_api.lock().await.clone();
+            let potentially_hidden_saved_networks =
+                config_management::select_subset_potentially_hidden_networks(
+                    self.saved_network_manager.get_networks().await,
+                );
+
             scan::perform_scan(
                 iface_manager,
                 None,
                 self.generate_scan_result_updater(),
                 scan::LocationSensorUpdater {},
                 |_| {
-                    let active_scan_request_count = 0;
-                    let active_scan_request_count_metric = match active_scan_request_count {
-                        0 => ActiveScanSsidsRequested::Zero,
-                        1 => ActiveScanSsidsRequested::One,
-                        2..=4 => ActiveScanSsidsRequested::TwoToFour,
-                        5..=10 => ActiveScanSsidsRequested::FiveToTen,
-                        11..=20 => ActiveScanSsidsRequested::ElevenToTwenty,
-                        21..=50 => ActiveScanSsidsRequested::TwentyOneToFifty,
-                        51..=100 => ActiveScanSsidsRequested::FiftyOneToOneHundred,
-                        101..=usize::MAX => ActiveScanSsidsRequested::OneHundredAndOneOrMore,
-                        _ => unreachable!(),
-                    };
+                    let active_scan_request_count_metric =
+                        match potentially_hidden_saved_networks.len() {
+                            0 => ActiveScanSsidsRequested::Zero,
+                            1 => ActiveScanSsidsRequested::One,
+                            2..=4 => ActiveScanSsidsRequested::TwoToFour,
+                            5..=10 => ActiveScanSsidsRequested::FiveToTen,
+                            11..=20 => ActiveScanSsidsRequested::ElevenToTwenty,
+                            21..=50 => ActiveScanSsidsRequested::TwentyOneToFifty,
+                            51..=100 => ActiveScanSsidsRequested::FiftyOneToOneHundred,
+                            101..=usize::MAX => ActiveScanSsidsRequested::OneHundredAndOneOrMore,
+                            _ => unreachable!(),
+                        };
                     cobalt_api_clone.log_event(
                         ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_METRIC_ID,
                         active_scan_request_count_metric,
                     );
-                    None // TODO(35920): include potentially hidden networks
+
+                    if potentially_hidden_saved_networks.is_empty() {
+                        None
+                    } else {
+                        Some(potentially_hidden_saved_networks)
+                    }
                 },
             )
             .await;

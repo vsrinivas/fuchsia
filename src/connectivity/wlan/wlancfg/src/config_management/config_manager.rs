@@ -16,6 +16,7 @@ use {
     fuchsia_cobalt::CobaltSender,
     futures::lock::Mutex,
     log::{error, info},
+    rand::Rng,
     std::{
         clone::Clone,
         collections::{hash_map::Entry, HashMap},
@@ -122,7 +123,7 @@ impl SavedNetworksManager {
     #[cfg(test)]
     pub async fn new_for_test() -> Result<Self, anyhow::Error> {
         use crate::util::cobalt::create_mock_cobalt_sender;
-        use rand::{distributions::Alphanumeric, thread_rng, Rng};
+        use rand::{distributions::Alphanumeric, thread_rng};
 
         let stash_id: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
         let path: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
@@ -145,7 +146,7 @@ impl SavedNetworksManager {
         legacy_tmp_path: impl AsRef<Path>,
     ) -> (Self, fidl_fuchsia_stash::StoreAccessorRequestStream) {
         use crate::util::cobalt::create_mock_cobalt_sender;
-        use rand::{distributions::Alphanumeric, thread_rng, Rng};
+        use rand::{distributions::Alphanumeric, thread_rng};
 
         let id: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
         use fidl::endpoints::create_proxy;
@@ -464,6 +465,25 @@ impl SavedNetworksManager {
             .flatten()
             .collect()
     }
+}
+
+/// Returns a subset of potentially hidden saved networks, filtering probabilistically based
+/// on how certain they are to be hidden.
+pub fn select_subset_potentially_hidden_networks(
+    saved_networks: Vec<NetworkConfig>,
+) -> Vec<Vec<u8>> {
+    saved_networks
+        .into_iter()
+        .filter(|saved_network| {
+            // Roll a dice to see if we should scan for it. The function gen_range(low, high)
+            // has an inclusive lower bound and exclusive upper bound, so using it as
+            // `hidden_probability > gen_range(0, 1)` means that:
+            // - hidden_probability of 1 will _always_ be selected
+            // - hidden_probability of 0 will _never_ be selected
+            saved_network.hidden_probability > rand::thread_rng().gen_range(0.0, 1.0)
+        })
+        .map(|network| network.ssid)
+        .collect()
 }
 
 /// Returns a security type that could have been upgraded to the provided security type
@@ -1565,5 +1585,67 @@ mod tests {
 
         // No more metrics
         assert!(cobalt_events.try_next().is_err());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn probabilistic_choosing_of_hidden_networks() {
+        // Create three networks with 1, 0, 0.5 hidden probability
+        let ssid_hidden = b"hidden".to_vec();
+        let mut net_config_hidden = NetworkConfig::new(
+            NetworkIdentifier::new(ssid_hidden.clone(), SecurityType::Wpa2),
+            Credential::Password(b"password".to_vec()),
+            false,
+        )
+        .expect("failed to create network config");
+        net_config_hidden.hidden_probability = 1.0;
+
+        let ssid_not_hidden = b"not_hidden".to_vec();
+        let mut net_config_not_hidden = NetworkConfig::new(
+            NetworkIdentifier::new(ssid_not_hidden.clone(), SecurityType::Wpa2),
+            Credential::Password(b"password".to_vec()),
+            false,
+        )
+        .expect("failed to create network config");
+        net_config_not_hidden.hidden_probability = 0.0;
+
+        let ssid_maybe_hidden = b"maybe_hidden".to_vec();
+        let mut net_config_maybe_hidden = NetworkConfig::new(
+            NetworkIdentifier::new(ssid_maybe_hidden.clone(), SecurityType::Wpa2),
+            Credential::Password(b"password".to_vec()),
+            false,
+        )
+        .expect("failed to create network config");
+        net_config_maybe_hidden.hidden_probability = 0.5;
+
+        let mut maybe_hidden_selection_count = 0;
+        let mut hidden_selection_count = 0;
+
+        // Run selection many times, to ensure the probability is working as expected.
+        for _ in 1..100 {
+            let selected_networks = select_subset_potentially_hidden_networks(vec![
+                net_config_hidden.clone(),
+                net_config_not_hidden.clone(),
+                net_config_maybe_hidden.clone(),
+            ]);
+            // The 1.0 probability should always be picked
+            assert!(selected_networks.contains(&ssid_hidden));
+            // The 0 probability should never be picked
+            assert!(!selected_networks.contains(&ssid_not_hidden));
+
+            // Keep track of how often the networks were selected
+            if selected_networks.contains(&ssid_maybe_hidden) {
+                maybe_hidden_selection_count += 1;
+            }
+            if selected_networks.contains(&ssid_hidden) {
+                hidden_selection_count += 1;
+            }
+        }
+
+        // The 0.5 probability network should be picked at least once, but not every time. With 100
+        // runs, the chances of either of these assertions flaking is 1 / (0.5^100), i.e. 1 in 1e30.
+        // Even with a hypothetical 1,000,000 test runs per day, there would be an average of 1e24
+        // days between flakes due to this test.
+        assert!(maybe_hidden_selection_count > 0);
+        assert!(maybe_hidden_selection_count < hidden_selection_count);
     }
 }
