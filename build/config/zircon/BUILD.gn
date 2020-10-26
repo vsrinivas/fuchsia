@@ -741,10 +741,6 @@ config("temporarily_disable_ubsan_do_not_use") {
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/ulib/trace-reader:*",
 
-    # TODO(fxbug.dev/41876): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/system/dev/block/mbr:*",
-
     # TODO(fxbug.dev/41757): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/ulib/zstd:*",
