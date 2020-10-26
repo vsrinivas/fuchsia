@@ -119,6 +119,10 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseImage(ContentId image_id) override;
 
+  // Called just before the FIDL client receives the event of the same name, indicating that this
+  // Flatland instance should allow an additional |num_present_tokens| calls to Present().
+  void OnPresentTokensReturned(uint32_t num_present_tokens);
+
   // For validating the transform hierarchy in tests only. For the sake of testing, the "root" will
   // always be the top-most TransformHandle from the TransformGraph owned by this Flatland. If
   // currently linked to a parent, that means the link_origin. If not, that means the local_root_.
@@ -133,12 +137,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
 
   // Users are not allowed to use zero as a transform ID.
   static constexpr TransformId kInvalidId = 0;
-
-  // This is the maximum number of pending Present() calls the user can have in flight. Since the
-  // current implementation is synchronous, there can only be one call to Present() at a time.
-  //
-  // TODO(fxbug.dev/36161): Tune this number once we have a non-synchronous present flow.
-  static constexpr uint32_t kMaxPresents = 1;
 
   // The unique SessionId for this Flatland instance. Used to schedule Presents and register
   // UberStructs with the UberStructSystem.
@@ -165,8 +163,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // True if any function has failed since the previous call to Present(), false otherwise.
   bool failure_since_previous_present_ = false;
 
-  // The number of pipelined Present() operations available to the client.
-  uint32_t num_presents_remaining_ = kMaxPresents;
+  // The number of Present() calls remaining before the client runs out. Incremented when
+  // OnPresentTokensReturned() is called, decremented by 1 for each Present() call.
+  uint32_t present_tokens_remaining_ = 1;
 
   // Must be managed by a shared_ptr because the implementation uses weak_from_this().
   std::shared_ptr<escher::FenceQueue> fence_queue_ = std::make_shared<escher::FenceQueue>();

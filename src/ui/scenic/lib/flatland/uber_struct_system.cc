@@ -37,9 +37,9 @@ void UberStructSystem::RemoveSession(scheduling::SessionId session_id) {
   uber_struct_map_.erase(session_id);
 }
 
-scheduling::SessionUpdater::UpdateResults UberStructSystem::UpdateSessions(
+UberStructSystem::UpdateResults UberStructSystem::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update) {
-  scheduling::SessionUpdater::UpdateResults results;
+  UpdateResults results;
   for (const auto& [session_id, present_id] : sessions_to_update) {
     // Find the queue associated with this SessonId. It may not exist if the SessionId is
     // associated with a GFX session instead of a Flatland one.
@@ -48,12 +48,15 @@ scheduling::SessionUpdater::UpdateResults UberStructSystem::UpdateSessions(
       continue;
     }
 
+    bool successful_update = false;
+    uint32_t present_tokens = 0;
+
     // Pop entries from that queue until the correct PresentId is found, then commit that
     // UberStruct to the snapshot. If the next pending UberStruct has a PresentId greater than the
     // target one, the update has failed because PresentIds are strictly increasing.
-    bool successful_update = false;
     auto pending_struct = queue_kv->second->Pop();
     while (pending_struct.has_value()) {
+      ++present_tokens;
       if (pending_struct->present_id == present_id) {
         uber_struct_map_[session_id] = std::move(pending_struct->uber_struct);
         successful_update = true;
@@ -66,7 +69,9 @@ scheduling::SessionUpdater::UpdateResults UberStructSystem::UpdateSessions(
     }
 
     if (!successful_update) {
-      results.sessions_with_failed_updates.insert(session_id);
+      results.scheduling_results.sessions_with_failed_updates.insert(session_id);
+    } else {
+      results.present_tokens[session_id] = present_tokens;
     }
   }
   return results;

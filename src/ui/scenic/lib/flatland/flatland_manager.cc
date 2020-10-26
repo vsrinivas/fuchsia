@@ -40,7 +40,7 @@ void FlatlandManager::CreateFlatland(
   FX_DCHECK(result.second);
 
   auto& instance = result.first->second;
-  instance->binding.Bind(std::move(request), instance->loop.dispatcher());
+  instance->binding->Bind(std::move(request), instance->loop.dispatcher());
 
   // Run the waiter on the main thread, not the instance thread, so that it can clean up and join
   // the instance thread.
@@ -53,9 +53,57 @@ void FlatlandManager::CreateFlatland(
   const std::string name = "Flatland ID=" + std::to_string(id);
   status = instance->loop.StartThread(name.c_str());
   FX_DCHECK(status == ZX_OK);
+
+  // TODO(fxbug.dev/44211): this logic may move into FrameScheduler
+  // Send the client their initial allotment of present tokens minus one since clients assume they
+  // start with one.
+  SendPresentTokens(instance.get(), scheduling::FrameScheduler::kMaxPresentsInFlight - 1u);
+}
+
+scheduling::SessionUpdater::UpdateResults FlatlandManager::UpdateSessions(
+    const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
+    uint64_t trace_id) {
+  auto results = uber_struct_system_->UpdateSessions(sessions_to_update);
+
+  // Return tokens to each session that didn't fail to update.
+  for (const auto& [session_id, num_present_tokens] : results.present_tokens) {
+    auto instance_kv = flatland_instances_.find(session_id);
+    FX_DCHECK(instance_kv != flatland_instances_.end());
+
+    SendPresentTokens(instance_kv->second.get(), num_present_tokens);
+  }
+
+  // TODO(fxbug.dev/62292): there shouldn't ever be sessions with failed updates, but if there
+  // somehow are, those sessions should probably be closed.
+  FX_DCHECK(results.scheduling_results.sessions_with_failed_updates.empty());
+
+  return results.scheduling_results;
+}
+
+void FlatlandManager::OnFramePresented(
+    const std::unordered_map<scheduling::SessionId,
+                             std::map<scheduling::PresentId, /*latched_time*/ zx::time>>&
+        latched_times,
+    scheduling::PresentTimestamps present_times) {
+  // TODO(fxbug.dev/62669): add a present2_helper to each Flatland instance and trigger them from
+  // here.
 }
 
 size_t FlatlandManager::GetSessionCount() const { return flatland_instances_.size(); }
+
+void FlatlandManager::SendPresentTokens(FlatlandInstance* instance, uint32_t num_present_tokens) {
+  // The FIDL binding must be accessed on the thread it is bound to. |instance| may be destroyed
+  // before the task is dispatched, so capture a weak_ptr to the binding since the tokens do not
+  // need to be returned when the instance is destroyed.
+  std::weak_ptr<FlatlandInstance::ImplBinding> weak_binding = instance->binding;
+  async::PostTask(instance->loop.dispatcher(), [weak_binding, num_present_tokens]() {
+    // First return tokens to the instance, then return tokens to the client.
+    if (auto binding = weak_binding.lock()) {
+      binding->impl()->OnPresentTokensReturned(num_present_tokens);
+      binding->events().OnPresentTokensReturned(num_present_tokens);
+    }
+  });
+}
 
 void FlatlandManager::RemoveFlatlandInstance(scheduling::SessionId session_id) {
   auto instance_kv = flatland_instances_.find(session_id);

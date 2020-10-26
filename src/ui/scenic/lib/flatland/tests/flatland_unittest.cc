@@ -68,7 +68,18 @@ struct PresentArgs {
   std::vector<zx::event> release_fences;
 
   // Arguments to the PRESENT_WITH_ARGS macro.
+
+  // If true, skips the session update associated with the Present(), meaning the new UberStruct
+  // will not be in the snapshot and the release fences will not be signaled.
   bool skip_session_update_and_release_fences = false;
+
+  // The number of present tokens that should be returned to the client.
+  uint32_t present_tokens_returned = 1;
+
+  // If PRESENT_WITH_ARGS is called with |expect_success| = false, the error that should be
+  // expected as the return value from Present().
+  fuchsia::ui::scenic::internal::Error expected_error =
+      fuchsia::ui::scenic::internal::Error::BAD_OPERATION;
 };
 
 struct GlobalIdPair {
@@ -101,11 +112,8 @@ struct GlobalIdPair {
     flatland.Present(args.requested_presentation_time.get(), std::move(args.acquire_fences), \
                      std::move(args.release_fences), [&](Flatland_Present_Result result) {   \
                        EXPECT_EQ(!expect_success, result.is_err());                          \
-                       if (expect_success) {                                                 \
-                         EXPECT_EQ(1u, result.response().num_presents_remaining);            \
-                       } else {                                                              \
-                         EXPECT_EQ(fuchsia::ui::scenic::internal::Error::BAD_OPERATION,      \
-                                   result.err());                                            \
+                       if (!expect_success) {                                                \
+                         EXPECT_EQ(args.expected_error, result.err());                       \
                        }                                                                     \
                        processed_callback = true;                                            \
                      });                                                                     \
@@ -121,6 +129,7 @@ struct GlobalIdPair {
         ApplySessionUpdatesAndSignalFences();                                                \
       }                                                                                      \
     }                                                                                        \
+    flatland.OnPresentTokensReturned(args.present_tokens_returned);                          \
   }
 
 // Identical to PRESENT_WITH_ARGS, but supplies an empty PresentArgs to the Present() call.
@@ -450,9 +459,56 @@ class FlatlandTest : public gtest::TestLoopFixture {
 namespace flatland {
 namespace test {
 
-TEST_F(FlatlandTest, PresentShouldReturnOne) {
+TEST_F(FlatlandTest, PresentShouldReturnSuccess) {
   Flatland flatland = CreateFlatland();
   PRESENT(flatland, true);
+}
+
+TEST_F(FlatlandTest, PresentErrorNoTokens) {
+  Flatland flatland = CreateFlatland();
+
+  // Present, but return no tokens so the client has none left.
+  {
+    PresentArgs args;
+    args.present_tokens_returned = 0;
+    PRESENT_WITH_ARGS(flatland, std::move(args), true);
+  }
+
+  // Present again, which should fail because the client has no tokens.
+  {
+    PresentArgs args;
+    args.expected_error = fuchsia::ui::scenic::internal::Error::NO_PRESENTS_REMAINING;
+    PRESENT_WITH_ARGS(flatland, std::move(args), false);
+  }
+}
+
+TEST_F(FlatlandTest, MultiplePresentTokensAvailable) {
+  Flatland flatland = CreateFlatland();
+
+  // Return one extra present token, meaning the instance now has two.
+  flatland.OnPresentTokensReturned(1);
+
+  // Present, but return no tokens so the client has only one left.
+  {
+    PresentArgs args;
+    args.present_tokens_returned = 0;
+    PRESENT_WITH_ARGS(flatland, std::move(args), true);
+  }
+
+  // Present again, which should succeed because the client already has an extra token even though
+  // the previous PRESENT_WITH_ARGS returned none.
+  {
+    PresentArgs args;
+    args.present_tokens_returned = 0;
+    PRESENT_WITH_ARGS(flatland, std::move(args), true);
+  }
+
+  // A third Present() will fail since the previous two calls consumed the two tokens.
+  {
+    PresentArgs args;
+    args.expected_error = fuchsia::ui::scenic::internal::Error::NO_PRESENTS_REMAINING;
+    PRESENT_WITH_ARGS(flatland, std::move(args), false);
+  }
 }
 
 TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {

@@ -48,20 +48,14 @@ using fuchsia::ui::scenic::internal::Flatland_Present_Result;
     flatland->Present(/*requested_presentation_time=*/0, /*acquire_fences=*/{},          \
                       /*release_fences=*/{}, [&](Flatland_Present_Result result) {       \
                         EXPECT_EQ(!expect_success, result.is_err());                     \
-                        if (expect_success) {                                            \
-                          EXPECT_EQ(1u, result.response().num_presents_remaining);       \
-                        } else {                                                         \
+                        if (!expect_success) {                                           \
                           EXPECT_EQ(fuchsia::ui::scenic::internal::Error::BAD_OPERATION, \
                                     result.err());                                       \
                         }                                                                \
                         processed_callback = true;                                       \
                       });                                                                \
     /* Wait for the worker thread to process the request. */                             \
-    RunLoopUntil([this, session_id] { return HasSessionUpdate(session_id); });           \
-    /* Trigger the Present callback on the test looper. */                               \
-    RunLoopUntilIdle();                                                                  \
-    EXPECT_TRUE(processed_callback);                                                     \
-    ApplySessionUpdates();                                                               \
+    RunLoopUntil([&processed_callback] { return processed_callback; });                  \
   }
 
 namespace {
@@ -92,17 +86,15 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
     ON_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _))
         .WillByDefault(::testing::Invoke(
             [&](zx::time requested_presentation_time, scheduling::SchedulingIdPair id_pair) {
-              // The ID must be already registered.
+              // The ID pair must be already registered.
               EXPECT_TRUE(pending_presents_.count(id_pair));
 
-              // Ensure IDs are strictly increasing.
-              auto current_id_kv = pending_session_updates_.find(id_pair.session_id);
-              EXPECT_TRUE(current_id_kv == pending_session_updates_.end() ||
-                          current_id_kv->second < id_pair.present_id);
+              // Ensure present IDs are strictly increasing.
+              auto& queue = pending_session_updates_[id_pair.session_id];
+              EXPECT_TRUE(queue.empty() || queue.back() < id_pair.present_id);
 
-              // Only save the latest PresentId: the UberStructSystem will flush all Presents prior
-              // to it.
-              pending_session_updates_[id_pair.session_id] = id_pair.present_id;
+              // Save the pending present ID.
+              queue.push(id_pair.present_id);
             }));
 
     flatland_presenter_ = std::shared_ptr<FlatlandPresenter>(mock_flatland_presenter_);
@@ -130,16 +122,21 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
     gtest::RealLoopFixture::TearDown();
   }
 
-  // Applies the most recently scheduled session update for each session.
-  void ApplySessionUpdates() {
-    uber_struct_system_->UpdateSessions(pending_session_updates_);
-    pending_presents_.clear();
-    pending_session_updates_.clear();
+  // Returns the number of currently pending session updates for |session_id|.
+  size_t GetNumPendingSessionUpdates(scheduling::SessionId session_id) {
+    const auto& queue = pending_session_updates_[session_id];
+    return queue.size();
   }
 
-  // Returns true if |session_id| currently has a session update pending.
-  bool HasSessionUpdate(scheduling::SessionId session_id) const {
-    return pending_session_updates_.count(session_id);
+  // Returns the next pending PresentId for |session_id| and removes it from the list of pending
+  // session updates. Fails if |session_id| has no pending presents.
+  scheduling::PresentId PopPendingPresent(scheduling::SessionId session_id) {
+    auto& queue = pending_session_updates_[session_id];
+    EXPECT_FALSE(queue.empty());
+
+    auto next_present_id = queue.front();
+    queue.pop();
+    return next_present_id;
   }
 
  protected:
@@ -148,13 +145,14 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
 
   std::unique_ptr<FlatlandManager> manager_;
 
+  // Storage for |mock_flatland_presenter_|.
+  std::set<scheduling::SchedulingIdPair> pending_presents_;
+  std::unordered_map<scheduling::SessionId, std::queue<scheduling::PresentId>>
+      pending_session_updates_;
+
  private:
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
   const std::shared_ptr<LinkSystem> link_system_;
-
-  // Storage for |mock_flatland_presenter_|.
-  std::unordered_set<scheduling::SchedulingIdPair> pending_presents_;
-  std::unordered_map<scheduling::SessionId, scheduling::PresentId> pending_session_updates_;
 };
 
 }  // namespace
@@ -194,23 +192,102 @@ TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
   EXPECT_FALSE(flatland.is_bound());
 }
 
-TEST_F(FlatlandManagerTest, FlatlandsPublishToSharedUberStructSystem) {
+TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
+  // Setup a Flatland instance with an OnPresentTokensReturned() callback.
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
+  manager_->CreateFlatland(flatland.NewRequest());
+  const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
+
+  uint32_t returned_tokens = 0;
+  flatland.events().OnPresentTokensReturned = [&returned_tokens](uint32_t present_tokens) {
+    returned_tokens = present_tokens;
+  };
+
+  // Run until the instance receives the initial allotment of tokens.
+  RunLoopUntil([&returned_tokens]() { return returned_tokens != 0; });
+
+  EXPECT_EQ(returned_tokens, scheduling::FrameScheduler::kMaxPresentsInFlight - 1u);
+}
+
+TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
+  // Setup two Flatland instances with OnPresentTokensReturned() callbacks.
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
   manager_->CreateFlatland(flatland1.NewRequest());
   const scheduling::SessionId id1 = uber_struct_system_->GetLatestInstanceId();
+
+  uint32_t returned_tokens1 = 0;
+  flatland1.events().OnPresentTokensReturned = [&returned_tokens1](uint32_t present_tokens) {
+    returned_tokens1 = present_tokens;
+  };
 
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2;
   manager_->CreateFlatland(flatland2.NewRequest());
   const scheduling::SessionId id2 = uber_struct_system_->GetLatestInstanceId();
 
-  RunLoopUntilIdle();
+  uint32_t returned_tokens2 = 0;
+  flatland2.events().OnPresentTokensReturned = [&returned_tokens2](uint32_t present_tokens) {
+    returned_tokens2 = present_tokens;
+  };
 
-  // Both instances publish to the shared UberStructSystem.
+  // Run both instances receive their initial allotment of tokens, then forget those tokens.
+  RunLoopUntil([&returned_tokens1]() { return returned_tokens1 != 0; });
+  returned_tokens1 = 0;
+
+  RunLoopUntil([&returned_tokens2]() { return returned_tokens2 != 0; });
+  returned_tokens2 = 0;
+
+  // Present both instances twice, but don't update sessions.
   PRESENT(flatland1, id1, true);
+  PRESENT(flatland1, id1, true);
+
+  PRESENT(flatland2, id2, true);
   PRESENT(flatland2, id2, true);
 
   auto snapshot = uber_struct_system_->Snapshot();
-  EXPECT_EQ(snapshot.size(), 2ul);
+  EXPECT_TRUE(snapshot.empty());
+
+  EXPECT_EQ(GetNumPendingSessionUpdates(id1), 2ul);
+  EXPECT_EQ(GetNumPendingSessionUpdates(id2), 2ul);
+
+  // Update the first session, but only with the first PresentId, which should push an UberStruct
+  // and return one token to the first instance.
+  auto next_present_id1 = PopPendingPresent(id1);
+  manager_->UpdateSessions({{id1, next_present_id1}}, /*trace_id=*/0);
+
+  snapshot = uber_struct_system_->Snapshot();
+  EXPECT_EQ(snapshot.size(), 1u);
+  EXPECT_TRUE(snapshot.count(id1));
+  EXPECT_FALSE(snapshot.count(id2));
+
+  RunLoopUntil([&returned_tokens1]() { return returned_tokens1 != 0; });
+
+  EXPECT_EQ(returned_tokens1, 1u);
+  EXPECT_EQ(returned_tokens2, 0u);
+
+  EXPECT_EQ(GetNumPendingSessionUpdates(id1), 1ul);
+  EXPECT_EQ(GetNumPendingSessionUpdates(id2), 2ul);
+
+  returned_tokens1 = 0;
+
+  // Update only the second session and consume both PresentIds, which should push an UberStruct
+  // and return two tokens to the second instance.
+  auto next_present_id2 = PopPendingPresent(id2);
+  next_present_id2 = PopPendingPresent(id2);
+
+  manager_->UpdateSessions({{id2, next_present_id2}}, /*trace_id=*/0);
+
+  snapshot = uber_struct_system_->Snapshot();
+  EXPECT_EQ(snapshot.size(), 2u);
+  EXPECT_TRUE(snapshot.count(id1));
+  EXPECT_TRUE(snapshot.count(id2));
+
+  RunLoopUntil([&returned_tokens2]() { return returned_tokens2 != 0; });
+
+  EXPECT_EQ(returned_tokens1, 0u);
+  EXPECT_EQ(returned_tokens2, 2u);
+
+  EXPECT_EQ(GetNumPendingSessionUpdates(id1), 1ul);
+  EXPECT_EQ(GetNumPendingSessionUpdates(id2), 0ul);
 }
 
 #undef PRESENT

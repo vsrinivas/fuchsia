@@ -59,6 +59,13 @@ Flatland::~Flatland() {
 
 void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
                        std::vector<zx::event> release_fences, PresentCallback callback) {
+  if (present_tokens_remaining_ == 0) {
+    callback(fit::error(Error::NO_PRESENTS_REMAINING));
+    // TODO(fxbug.dev/62292): kill the channel.
+    return;
+  }
+  present_tokens_remaining_--;
+
   auto root_handle = GetRoot();
 
   // TODO(fxbug.dev/40818): Decide on a proper limit on compute time for topological sorting.
@@ -204,10 +211,7 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
         },
         std::move(acquire_fences));
 
-    // TODO(fxbug.dev/36161): Once present operations can be pipelined, this variable will change
-    // state based on the number of outstanding Present calls. Until then, this call is synchronous,
-    // and we can always return 1 as the number of remaining presents.
-    callback(fit::ok(num_presents_remaining_));
+    callback(fit::ok());
   } else {
     // TODO(fxbug.dev/56869): determine if pending link operations should still be run here.
     callback(fit::error(Error::BAD_OPERATION));
@@ -947,6 +951,10 @@ void Flatland::ReleaseImage(ContentId image_id) {
   // Even though the handle is released, it may still be referenced by client Transforms. The
   // image_metadatas_ map preserves the entry until it shows up in the dead_transforms list.
   content_handles_.erase(image_id);
+}
+
+void Flatland::OnPresentTokensReturned(uint32_t num_present_tokens) {
+  present_tokens_remaining_ += num_present_tokens;
 }
 
 TransformHandle Flatland::GetRoot() const {

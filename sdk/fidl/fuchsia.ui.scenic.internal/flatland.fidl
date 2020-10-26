@@ -10,6 +10,7 @@ using zx;
 // The set of error codes returned by Flatland::Present().
 enum Error {
     BAD_OPERATION = 0;
+    NO_PRESENTS_REMAINING = 1;
 };
 
 // TODO(fxbug.dev/36766): Unify with math types for other APIs.
@@ -170,17 +171,22 @@ protocol Flatland {
     /// TODO(fxbug.dev/36166): Present should stop execution, and kill the channel, when irrecoverable errors
     /// are detected.
     ///
-    /// The client may only call Present() a certain number of times before it must wait for this
-    /// function to return. This number or presents remaining is the return value of this function.
-    /// The number of presents remaining will never drop without a corresponding call to Present()
-    /// by the client. However, it may stay the same, or even increase, with each return from
-    /// Present().
+    /// The client may only call Present() when they have a non-zero number of "present tokens",
+    /// which are tracked by the server. The server increments the counter when it fires the
+    /// OnPresentTokensReturned() event, which informs the client when it receives additional
+    /// tokens. Each Present() call uses one "present token" and decrements the server count by
+    /// one. If the client calls Present() when no tokens remain, it will return
+    /// `NO_PRESENTS_REMAINING`.
     ///
-    /// num_presents_remaining will always be >= 1. Present() will not return until the client is
-    /// allowed to call Present() again.
+    /// The client should assume that prior to receiving any OnPresentTokensReturned() events, they
+    /// have one present token.
     Present(zx.time requested_presentation_time, vector<zx.handle:EVENT>:16 acquire_fences,
-            vector<zx.handle:EVENT>:16 release_fences)
-        -> (uint32 num_presents_remaining) error Error;
+            vector<zx.handle:EVENT>:16 release_fences) -> () error Error;
+
+    /// This event is fired to give the client additional present tokens, indicating that the
+    /// client can call Present() additional times. `present_tokens` will always be greater than
+    /// zero.
+    -> OnPresentTokensReturned(uint32 present_tokens);
 
     // ***** Graph management *****
 
