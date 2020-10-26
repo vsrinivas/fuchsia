@@ -12,6 +12,7 @@
 #include <kernel/cpu.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
+#include <ktl/atomic.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
@@ -60,7 +61,7 @@ struct PerfmonStateBase {
 extern bool perfmon_supported;
 
 // This is accessed atomically as it is also accessed by the PMI handler.
-extern int perfmon_active;
+extern ktl::atomic<int> perfmon_active;
 
 // The functions performing |mtrace_control()| operations.
 

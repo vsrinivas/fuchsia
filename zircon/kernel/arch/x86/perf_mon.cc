@@ -54,6 +54,7 @@
 #include <kernel/mutex.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
+#include <ktl/atomic.h>
 #include <ktl/iterator.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
@@ -575,7 +576,7 @@ zx_status_t arch_perfmon_init() {
 
   if (!perfmon_supported)
     return ZX_ERR_NOT_SUPPORTED;
-  if (atomic_load(&perfmon_active))
+  if (perfmon_active.load())
     return ZX_ERR_BAD_STATE;
   if (perfmon_state)
     return ZX_ERR_BAD_STATE;
@@ -594,7 +595,7 @@ zx_status_t arch_perfmon_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo) 
 
   if (!perfmon_supported)
     return ZX_ERR_NOT_SUPPORTED;
-  if (atomic_load(&perfmon_active))
+  if (perfmon_active.load())
     return ZX_ERR_BAD_STATE;
   if (!perfmon_state)
     return ZX_ERR_BAD_STATE;
@@ -957,7 +958,7 @@ zx_status_t arch_perfmon_stage_config(ArchPmuConfig* config) {
 
   if (!perfmon_supported)
     return ZX_ERR_NOT_SUPPORTED;
-  if (atomic_load(&perfmon_active))
+  if (perfmon_active.load())
     return ZX_ERR_BAD_STATE;
   if (!perfmon_state)
     return ZX_ERR_BAD_STATE;
@@ -1388,7 +1389,7 @@ static zx_status_t x86_perfmon_map_buffers_locked(PerfmonState* state) {
 
 static void x86_perfmon_start_cpu_task(void* raw_context) {
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(!atomic_load(&perfmon_active) && raw_context);
+  DEBUG_ASSERT(!perfmon_active.load() && raw_context);
 
   auto state = reinterpret_cast<PerfmonState*>(raw_context);
 
@@ -1424,7 +1425,7 @@ zx_status_t arch_perfmon_start() {
 
   if (!perfmon_supported)
     return ZX_ERR_NOT_SUPPORTED;
-  if (atomic_load(&perfmon_active))
+  if (perfmon_active.load())
     return ZX_ERR_BAD_STATE;
   if (!perfmon_state)
     return ZX_ERR_BAD_STATE;
@@ -1462,7 +1463,7 @@ zx_status_t arch_perfmon_start() {
   }
 
   mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_perfmon_start_cpu_task, state);
-  atomic_store(&perfmon_active, true);
+  perfmon_active.store(true);
 
   return ZX_OK;
 }
@@ -1563,7 +1564,7 @@ static void x86_perfmon_stop_cpu_task(void* raw_context) {
   apic_pmi_mask();
 
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(!atomic_load(&perfmon_active));
+  DEBUG_ASSERT(!perfmon_active.load());
   DEBUG_ASSERT(raw_context);
 
   auto state = reinterpret_cast<PerfmonState*>(raw_context);
@@ -1588,7 +1589,7 @@ void arch_perfmon_stop_locked() TA_REQ(PerfmonLock::Get()) {
     // Nothing to do.
     return;
   }
-  if (!atomic_load(&perfmon_active)) {
+  if (!perfmon_active.load()) {
     // Nothing to do.
     return;
   }
@@ -1597,7 +1598,7 @@ void arch_perfmon_stop_locked() TA_REQ(PerfmonLock::Get()) {
 
   // Do this before anything else so that any PMI interrupts from this point
   // on won't try to access potentially unmapped memory.
-  atomic_store(&perfmon_active, false);
+  perfmon_active.store(false);
 
   // TODO(dje): Check clobbering of values - user should be able to do
   // multiple stops and still read register values.
@@ -1621,7 +1622,7 @@ void arch_perfmon_stop() {
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
 static void x86_perfmon_reset_task(void* raw_context) {
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(!atomic_load(&perfmon_active));
+  DEBUG_ASSERT(!perfmon_active.load());
   DEBUG_ASSERT(!raw_context);
 
   disable_counters();
@@ -1651,9 +1652,9 @@ void arch_perfmon_fini() {
     return;
   }
 
-  if (atomic_load(&perfmon_active)) {
+  if (perfmon_active.load()) {
     arch_perfmon_stop_locked();
-    DEBUG_ASSERT(!atomic_load(&perfmon_active));
+    DEBUG_ASSERT(!perfmon_active.load());
   }
 
   mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_perfmon_reset_task, nullptr);
@@ -1898,7 +1899,7 @@ static bool pmi_interrupt_handler(x86_iframe_t* frame, PerfmonState* state) {
 }
 
 void apic_pmi_interrupt_handler(x86_iframe_t* frame) TA_REQ(PerfmonLock::Get()) {
-  if (!atomic_load(&perfmon_active)) {
+  if (!perfmon_active.load()) {
     apic_issue_eoi();
     return;
   }

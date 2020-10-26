@@ -16,16 +16,17 @@
 // "event", but some events are not counters. Internally, we use the
 // term "counter" when we know the event is a counter.
 
+#include <ktl/atomic.h>
 #include <lib/perfmon.h>
 
 bool perfmon_supported = false;
 
-int perfmon_active = false;
+ktl::atomic<int> perfmon_active;
 
 PerfmonStateBase::PerfmonStateBase(unsigned n_cpus) : num_cpus(n_cpus) {}
 
 PerfmonStateBase::~PerfmonStateBase() {
-  DEBUG_ASSERT(!atomic_load(&perfmon_active));
+  DEBUG_ASSERT(!perfmon_active.load());
 
   if (cpu_data) {
     for (unsigned cpu = 0; cpu < num_cpus; ++cpu) {
