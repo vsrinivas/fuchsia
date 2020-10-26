@@ -30,13 +30,45 @@
 
 namespace buttons {
 
+namespace {
+
+uint32_t to_bit_mask(ButtonType type) { return 1 << static_cast<uint8_t>(type); }
+
+// Takes in a BUTTON_ID_ value and returns a bitmask of ButtonTypes that are associated with this
+// button id. Bit position corresponds to ButtonType e.g (1 << ButtonType::VOLUME_UP) is the bit
+// for the volume_up button type.
+uint32_t ButtonIdToButtonTypeBitMask(uint8_t button_id) {
+  switch (button_id) {
+    case BUTTONS_ID_VOLUME_UP:
+      return to_bit_mask(ButtonType::VOLUME_UP);
+    case BUTTONS_ID_VOLUME_DOWN:
+      return to_bit_mask(ButtonType::VOLUME_DOWN);
+    case BUTTONS_ID_FDR:
+      return to_bit_mask(ButtonType::RESET);
+    case BUTTONS_ID_MIC_MUTE:
+      return to_bit_mask(ButtonType::MUTE);
+    case BUTTONS_ID_PLAY_PAUSE:
+      return to_bit_mask(ButtonType::PLAY_PAUSE);
+    case BUTTONS_ID_KEY_A:
+      return to_bit_mask(ButtonType::KEY_A);
+    case BUTTONS_ID_KEY_M:
+      return to_bit_mask(ButtonType::KEY_M);
+    case BUTTONS_ID_CAM_MUTE:
+      return to_bit_mask(ButtonType::CAM_MUTE);
+    default:
+      return 0;
+  }
+}
+
 bool input_reports_are_equal(const buttons_input_rpt_t& lhs, const buttons_input_rpt_t& rhs) {
   return (lhs.rpt_id == rhs.rpt_id && lhs.volume_up == rhs.volume_up &&
           lhs.volume_down == rhs.volume_down && lhs.reset == rhs.reset && lhs.mute == rhs.mute &&
           lhs.camera_access_disabled == rhs.camera_access_disabled);
 }
 
-void HidButtonsDevice::Notify(uint32_t type) {
+}  // namespace
+
+void HidButtonsDevice::Notify(uint32_t button_index) {
   // HID Report
   buttons_input_rpt_t input_rpt;
   size_t out_len;
@@ -51,21 +83,29 @@ void HidButtonsDevice::Notify(uint32_t type) {
       last_report_ = input_rpt;
     }
   }
-  if (fdr_gpio_.has_value() && fdr_gpio_.value() == type) {
+  if (buttons_[button_index].id == BUTTONS_ID_FDR) {
     zxlogf(INFO, "FDR (up and down buttons) pressed");
   }
 
   // Notify anyone registered for this ButtonType.
   {
     fbl::AutoLock lock(&channels_lock_);
-    ButtonType button_type = static_cast<ButtonType>(buttons_[type].id);
-    bool button_value = debounce_states_[type].value;
-    for (ButtonsNotifyInterface* interface : registered_notifiers_[button_type]) {
-      interface->binding()->OnNotify(button_type, button_value);
+    uint32_t types = ButtonIdToButtonTypeBitMask(buttons_[button_index].id);
+    bool button_value = debounce_states_[button_index].value;
+    // Go through each ButtonType and send notifications.
+    for (uint8_t raw_type = 0; raw_type < static_cast<uint8_t>(ButtonType::MAX); raw_type++) {
+      if ((types & (1 << raw_type)) == 0) {
+        continue;
+      }
+
+      ButtonType type = static_cast<ButtonType>(raw_type);
+      for (ButtonsNotifyInterface* interface : registered_notifiers_[type]) {
+        interface->binding()->OnNotify(type, button_value);
+      }
     }
   }
 
-  debounce_states_[type].enqueued = false;
+  debounce_states_[button_index].enqueued = false;
 }
 
 int HidButtonsDevice::Thread() {
@@ -315,12 +355,19 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
       return ZX_ERR_INTERNAL;
     }
     if (buttons_[i].id == BUTTONS_ID_FDR) {
-      fdr_gpio_ = buttons_[i].gpioA_idx;
-      zxlogf(INFO, "FDR (up and down buttons) setup to GPIO %u", *fdr_gpio_);
+      zxlogf(INFO, "FDR (up and down buttons) setup to GPIO %u", buttons_[i].gpioA_idx);
     }
 
-    // Button type to order (index)
-    button_map_[buttons_[i].id] = i;
+    // Update the button_map_ array which maps ButtonTypes to the button.
+    uint32_t types = ButtonIdToButtonTypeBitMask(buttons_[i].id);
+    for (uint8_t raw_type = 0; raw_type < static_cast<uint8_t>(ButtonType::MAX); raw_type++) {
+      if ((types & (1 << raw_type)) == 0) {
+        continue;
+      }
+
+      ButtonType type = static_cast<ButtonType>(raw_type);
+      button_map_[type] = i;
+    }
   }
 
   // Setup.
@@ -421,17 +468,6 @@ void HidButtonsDevice::DdkUnbind(ddk::UnbindTxn txn) {
 void HidButtonsDevice::DdkRelease() { delete this; }
 
 static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
-  // ButtonType and buttons_id happen to be the same, in the future might need a map,
-  // combine declarations with ddk/metadata/buttons.h, or replace. Bug 36834
-  static_assert(static_cast<uint8_t>(ButtonType::VOLUME_UP) == BUTTONS_ID_VOLUME_UP,
-                "ButtonType doesn't match BUTTONS_ID, volume up");
-  static_assert(static_cast<uint8_t>(ButtonType::VOLUME_DOWN) == BUTTONS_ID_VOLUME_DOWN,
-                "ButtonType doesn't match BUTTONS_ID, volume down");
-  static_assert(static_cast<uint8_t>(ButtonType::RESET) == BUTTONS_ID_FDR,
-                "ButtonType doesn't match BUTTONS_ID, reset/fdr");
-  static_assert(static_cast<uint8_t>(ButtonType::MUTE) == BUTTONS_ID_MIC_MUTE,
-                "ButtonType doesn't match BUTTONS_ID, mute/mic mute");
-
   fbl::AllocChecker ac;
   auto dev = fbl::make_unique_checked<buttons::HidButtonsDevice>(&ac, parent);
   if (!ac.check()) {
@@ -531,7 +567,7 @@ zx_status_t HidButtonsDevice::ButtonsGetChannel(zx::channel chan, async_dispatch
 
 bool HidButtonsDevice::GetState(ButtonType type) {
   uint8_t val;
-  gpio_read(&gpios_[buttons_[button_map_[static_cast<uint8_t>(type)]].gpioA_idx].gpio, &val);
+  gpio_read(&gpios_[buttons_[button_map_[type]].gpioA_idx].gpio, &val);
   return static_cast<bool>(val);
 }
 

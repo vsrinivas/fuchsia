@@ -165,10 +165,8 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
 
   void FakeInterrupt(ButtonType type) {
     // Issue the first interrupt.
-    zx_port_packet packet = {kPortKeyInterruptStart + button_map_[static_cast<uint8_t>(type)],
-                             ZX_PKT_TYPE_USER,
-                             ZX_OK,
-                             {}};
+    zx_port_packet packet = {
+        kPortKeyInterruptStart + button_map_[type], ZX_PKT_TYPE_USER, ZX_OK, {}};
     zx_status_t status = port_.queue(&packet);
     ZX_ASSERT(status == ZX_OK);
   }
@@ -439,7 +437,6 @@ TEST(HidButtonsTest, GetStateTest) {
 
     // Reconfigure Polarity due to interrupt.
     device.GetGpio(1).ExpectRead(ZX_OK, 1);  // Read value.
-
     auto result = client.GetState(ButtonType::MUTE);
     EXPECT_EQ(result->pressed, true);
   }  // Close Client

@@ -96,7 +96,7 @@ class HidButtonsDevice : public DeviceType {
 
   zx_status_t Bind(fbl::Array<Gpio> gpios, fbl::Array<buttons_button_config_t> buttons);
   virtual void ClosingChannel(ButtonsNotifyInterface* notify);
-  virtual void Notify(uint32_t type);
+  virtual void Notify(uint32_t button_index);
 
  protected:
   // Protected for unit testing.
@@ -109,8 +109,8 @@ class HidButtonsDevice : public DeviceType {
   // A map of ButtonTypes to the interfaces that have to be notified when they are pressed.
   std::map<ButtonType, std::set<ButtonsNotifyInterface*>> registered_notifiers_
       TA_GUARDED(channels_lock_);
-  // A map of BUTTONS_ID_ values to an index into the buttons_ array.
-  std::map<uint8_t, uint32_t> button_map_;
+  // A map of ButtonType values to an index into the buttons_ array.
+  std::map<ButtonType, uint32_t> button_map_;
 
   std::list<ButtonsNotifyInterface> interfaces_ TA_GUARDED(channels_lock_);  // owns the channels
 
@@ -130,7 +130,6 @@ class HidButtonsDevice : public DeviceType {
   ddk::HidbusIfcProtocolClient client_ TA_GUARDED(client_lock_);
   fbl::Array<buttons_button_config_t> buttons_;
   fbl::Array<Gpio> gpios_;
-  std::optional<uint8_t> fdr_gpio_;
 
   struct debounce_state {
     bool enqueued;
