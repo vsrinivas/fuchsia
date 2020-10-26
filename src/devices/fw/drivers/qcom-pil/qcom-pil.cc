@@ -179,15 +179,7 @@ zx_status_t PilDevice::Bind() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* fragments[kClockCount + 1];
-  size_t actual;
-  composite.GetFragments(fragments, std::size(fragments), &actual);
-  if (actual != std::size(fragments)) {
-    zxlogf(ERROR, "%s could not get fragments", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  pdev_ = fragments[0];
+  pdev_ = ddk::PDev(composite);
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "%s could not get pdev protocol", __func__);
     return ZX_ERR_NOT_SUPPORTED;
@@ -204,8 +196,10 @@ zx_status_t PilDevice::Bind() {
     return status;
   }
 
+  clks_[kCryptoAhbClk] = ddk::ClockProtocolClient(composite, "clock-crypto-ahb");
+  clks_[kCryptoAxiClk] = ddk::ClockProtocolClient(composite, "clock-crypto-axi");
+  clks_[kCryptoClk] = ddk::ClockProtocolClient(composite, "clock-crypto");
   for (unsigned i = 0; i < kClockCount; i++) {
-    clks_[i] = fragments[i + 1];
     if (!clks_[i].is_valid()) {
       zxlogf(ERROR, "%s GetClk failed %d", __func__, status);
       return status;
@@ -223,6 +217,7 @@ zx_status_t PilDevice::Bind() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+  size_t actual;
   status =
       device_get_metadata(parent_, DEVICE_METADATA_PRIVATE, fw_.data(), metadata_size, &actual);
   if (status != ZX_OK || metadata_size != actual) {
