@@ -67,7 +67,7 @@ func main() {
 				return err
 			}
 			// ResultSink HTTP authorization scheme is documented at
-			// https://fuchsia.googlesource.com/third_party/luci-go/+/refs/heads/master/resultdb/sink/proto/v1/sink.proto#29
+			// https://fuchsia.googlesource.com/third_party/luci-go/+/HEAD/resultdb/sink/proto/v1/sink.proto#29
 			req.Header.Add("Authorization", fmt.Sprintf("ResultSink %s", ctx.AuthToken))
 			req.Header.Add("Accept", "application/json")
 			req.Header.Add("Content-Type", "application/json")

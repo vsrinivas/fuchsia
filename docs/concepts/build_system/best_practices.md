@@ -570,7 +570,7 @@ forward_variables_from(invoker, [ "visibility" ])
 ### `exec_script()` {#exec-script}
 
 GN's built-in function
-[exec_script](https://gn.googlesource.com/gn/+/master/docs/reference.md#func_exec_script)
+[exec_script](https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_exec_script)
 is a powerful tool for augmenting GN's abilities. Like `action()`,
 `exec_script()` can invoke an external tool. Unlike `action()`, `exec_script()`
 can invoke the tool **synchronously** with build generation, meaning that you

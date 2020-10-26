@@ -104,7 +104,7 @@ cipd set-tag fuchsia_internal/test_data/debug/large_test_data -version FZIh6hPkZ
 ## Fetch configuration
 
 To cause the package to be downloaded, there is an entry in the
-[prebuilts](https://fuchsia.googlesource.com/integration/+/refs/heads/master/prebuilts) file of
+[prebuilts](https://fuchsia.googlesource.com/integration/+/HEAD/prebuilts) file of
 `//integration` (in the internal repo it's in the `fuchsia` subdirectory).
 
 To update to a new package, you must have the internal integration repository checked out. See the

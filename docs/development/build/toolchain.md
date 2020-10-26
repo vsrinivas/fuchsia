@@ -504,4 +504,4 @@ Talks:
 * [2016 LLVM Developers’ Meeting: C. Bieneman "Developing and Shipping LLVM and Clang with CMake"](https://www.youtube.com/watch?v=StF77Cx7pz8)
 * [2017 LLVM Developers’ Meeting: Petr Hosek "Compiling cross-toolchains with CMake and runtimes build"](https://www.youtube.com/watch?v=OCQGpUzXDsY)
 
-[//prebuilt/integration]: https://fuchsia.googlesource.com/integration/+/refs/heads/master/prebuilts
+[//prebuilt/integration]: https://fuchsia.googlesource.com/integration/+/HEAD/prebuilts

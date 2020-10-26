@@ -23,7 +23,7 @@ use version::Version;
 /// Omaha has historically supported multiple methods of counting devices.  Currently, the
 /// only recommended method is the Client Regulated - Date method.
 ///
-/// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#client-regulated-counting-date-based
+/// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#client-regulated-counting-date-based
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum UserCounting {
     ClientRegulatedByDate(
@@ -54,7 +54,7 @@ pub struct App {
 
     /// This is the fingerprint for the application package.
     ///
-    /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#packages--fingerprints
+    /// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#packages--fingerprints
     pub fingerprint: Option<String>,
 
     /// The app's current cohort information (cohort id, hint, etc).  This is both provided to Omaha

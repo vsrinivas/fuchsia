@@ -73,7 +73,7 @@ To visualize an FXT trace, you can use the
 ### JSON trace {#json-trace}
 
 To visualize this data, you can use Chromium's
-[Trace-Viewer](https://github.com/catapult-project/catapult/tree/master/tracing).
+[Trace-Viewer](https://github.com/catapult-project/catapult/tree/HEAD/tracing).
 
 ## Analyze a trace file {#analyze-a-trace-file}
 

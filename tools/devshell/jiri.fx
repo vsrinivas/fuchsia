@@ -7,5 +7,5 @@
 ### multi-purpose tool for multi-repo development.
 ## Usage: run `fx jiri help`
 ##
-## Or check https://fuchsia.googlesource.com/jiri/+/refs/heads/master/README.md for more information
+## Or check https://fuchsia.googlesource.com/jiri/+/HEAD/README.md for more information
 

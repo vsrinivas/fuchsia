@@ -140,7 +140,7 @@ failure ours is built around the standard library's `std::error::Error` trait
 rather than a separate trait `failure::Fail`. The standard library has adopted
 the necessary improvements for this to be possible as part of [RFC 2504].
 
-[RFC 2504]: https://github.com/rust-lang/rfcs/blob/master/text/2504-fix-error.md
+[RFC 2504]: https://github.com/rust-lang/rfcs/blob/HEAD/text/2504-fix-error.md
 
 <br>
 

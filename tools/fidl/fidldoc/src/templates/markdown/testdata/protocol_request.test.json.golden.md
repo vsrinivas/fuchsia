@@ -6,11 +6,11 @@
 ## **PROTOCOLS**
 
 ## Child {#Child}
-*Defined in [fidl.test.protocolrequest/protocol_request.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocol_request.test.fidl#3)*
+*Defined in [fidl.test.protocolrequest/protocol_request.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/protocol_request.test.fidl#3)*
 
 
 ## Parent {#Parent}
-*Defined in [fidl.test.protocolrequest/protocol_request.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocol_request.test.fidl#6)*
+*Defined in [fidl.test.protocolrequest/protocol_request.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/protocol_request.test.fidl#6)*
 
 
 ### GetChild {#fidl.test.protocolrequest/Parent.GetChild}

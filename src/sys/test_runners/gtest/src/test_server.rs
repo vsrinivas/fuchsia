@@ -565,7 +565,7 @@ async fn get_tests(
 /// Returns `true` if the test case is disabled, based on its name. (This is apparently the only
 /// way that gtest tests can be disabled.)
 /// See
-/// https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#temporarily-disabling-tests
+/// https://github.com/google/googletest/blob/HEAD/googletest/docs/advanced.md#temporarily-disabling-tests
 fn is_test_case_enabled(case_name: &str) -> bool {
     !case_name.contains("DISABLED_")
 }

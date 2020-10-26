@@ -13,7 +13,7 @@ import sys
 def tricium_output(abi_changes: Iterator[ClassifiedChange]):
     '''
     Generates output to match the Message proto in:
-    https://chromium.googlesource.com/infra/infra/+/refs/heads/master/go/src/infra/tricium/api/v1/data.proto#135
+    https://chromium.googlesource.com/infra/infra/+/HEAD/go/src/infra/tricium/api/v1/data.proto#135
     '''
 
     messages: List[dict] = []

@@ -7,4 +7,4 @@
 ### jq is a utility for manipulating JSON on the command-line.
 ## usage: run `fx jq --help`
 ##
-## Or check https://fuchsia.googlesource.com/third_party/github.com/stedolan/jq/+/refs/heads/master/docs for more information
+## Or check https://fuchsia.googlesource.com/third_party/github.com/stedolan/jq/+/HEAD/docs for more information

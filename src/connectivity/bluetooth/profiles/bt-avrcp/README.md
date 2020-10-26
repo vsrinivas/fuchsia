@@ -6,14 +6,14 @@ specified by the Bluetooth SIG in the
 
 The `bt-avrcp` component is a system service that is created when needed -
 typically as a side effect of launching the
-[bt-a2dp-sink](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/connectivity/bluetooth/profiles/bt-a2dp-sink/)
+[bt-a2dp-sink](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/bluetooth/profiles/bt-a2dp-sink/)
 or
-[bt-avrcp-target](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/connectivity/bluetooth/profiles/bt-avrcp-target/)
+[bt-avrcp-target](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/bluetooth/profiles/bt-avrcp-target/)
 components. Once launched, `bt-avrcp` will persist until explicitly terminated.
 
 The component registers both the Controller (CT) and Target (TG) roles with the
 BR/EDR
-[Profile](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.bluetooth.bredr/profile.fidl)
+[Profile](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.bluetooth.bredr/profile.fidl)
 Service.
 
 ## Build configuration

@@ -72,7 +72,7 @@ class Finding {
   //   root, followed by an arbitrary number of subcategories, for example
   //   "ClangTidy/llvm-header-guard".
   //
-  // https://chromium.googlesource.com/infra/infra/+/refs/heads/master/go/src/infra/tricium/api/v1/data.proto
+  // https://chromium.googlesource.com/infra/infra/+/HEAD/go/src/infra/tricium/api/v1/data.proto
   inline const std::string& subcategory() const { return subcategory_; }
 
   // The annotation, as a human consumable text string.

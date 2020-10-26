@@ -45,16 +45,16 @@ tests.
 To work with `bt-host` unit tests, you need a solid understanding of the
 following resources:
 
-  + [GTest primer](https://github.com/google/googletest/blob/master/googletest/docs/primer.md)
-    + [Test fixtures](https://github.com/google/googletest/blob/master/googletest/docs/primer.md#test-fixtures-using-the-same-data-configuration-for-multiple-tests-same-data-multiple-tests)
+  + [GTest primer](https://github.com/google/googletest/blob/HEAD/googletest/docs/primer.md)
+    + [Test fixtures](https://github.com/google/googletest/blob/HEAD/googletest/docs/primer.md#test-fixtures-using-the-same-data-configuration-for-multiple-tests-same-data-multiple-tests)
 
 The following topics occasionally come up while writing `bt-host` tests and can
 be referenced as needed:
 
-  + [Advanced googletest topics](https://github.com/google/googletest/blob/master/googletest/docs/advanced.md)
-  + [Assertion placement](https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#assertion-placement)
-  + [Death tests](https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#death-tests)
-  + [Scoped tracing](https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#adding-traces-to-assertions)
+  + [Advanced googletest topics](https://github.com/google/googletest/blob/HEAD/googletest/docs/advanced.md)
+  + [Assertion placement](https://github.com/google/googletest/blob/HEAD/googletest/docs/advanced.md#assertion-placement)
+  + [Death tests](https://github.com/google/googletest/blob/HEAD/googletest/docs/advanced.md#death-tests)
+  + [Scoped tracing](https://github.com/google/googletest/blob/HEAD/googletest/docs/advanced.md#adding-traces-to-assertions)
 
 ### `bt-host` unit test overview
 
@@ -112,7 +112,7 @@ fixtures typically use the GTest `SetUp()` method to initialize the test
 fixture.
 
 Note: The GTest FAQs have
-[some subtle guidance about when to use the constructor vs. `SetUp`](https://github.com/google/googletest/blob/master/googletest/docs/faq.md#should-i-use-the-constructordestructor-of-the-test-fixture-or-setupteardown-ctorvssetup),
+[some subtle guidance about when to use the constructor vs. `SetUp`](https://github.com/google/googletest/blob/HEAD/googletest/docs/faq.md#should-i-use-the-constructordestructor-of-the-test-fixture-or-setupteardown-ctorvssetup),
 but it is a `bt-host` best practice to use `SetUp()`.
 
 ```C++

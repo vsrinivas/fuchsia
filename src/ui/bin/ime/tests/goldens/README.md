@@ -8,7 +8,7 @@ used in code or tests and serves as a human-readable reference for manual conver
 Unicode CLDRs to Fuchsia keyboard layouts.
 
 1. <https://www.unicode.org/reports/tr35/tr35-keyboards.html#Definitions>
-2. <https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.ui.input2/keys.fidl>
+2. <https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.ui.input2/keys.fidl>
 
 en-us.json
 ---

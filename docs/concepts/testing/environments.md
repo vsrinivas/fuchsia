@@ -62,7 +62,7 @@ anyone without special consultation with the infra team.
 ### Dimensions
 
 `dimensions` here refer to
-[Swarming](https://chromium.googlesource.com/infra/luci/luci-py/+/master/appengine/swarming/doc/)
+[Swarming](https://chromium.googlesource.com/infra/luci/luci-py/+/HEAD/appengine/swarming/doc/)
 dimensions, where Swarming is the task distribution system used by the infra. A
 dimension is effectively a key-value pair that describes a bot property that can
 be targeted.

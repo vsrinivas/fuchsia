@@ -1,13 +1,13 @@
 # Profile Test Server Library
 
 The Profile Test Server Library provides functionality to help write integration tests
-for Fuchsia Bluetooth [profiles](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/connectivity/bluetooth/profiles/).
+for Fuchsia Bluetooth [profiles](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/bluetooth/profiles/).
 
 The library provides tools for registering a peer in the piconet, registering a client for direct peer
 manipulation, and various other convenience methods to simplify writing integration tests.
 
-The library uses the [ProfileTest](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.bluetooth.bredr/profile_test.fidl)
-API. It is expected that integration tests will leverage the [Profile Test Server](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/connectivity/bluetooth/tests/bt-profile-test-server/), which manages a fake piconet of peers.
+The library uses the [ProfileTest](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.bluetooth.bredr/profile_test.fidl)
+API. It is expected that integration tests will leverage the [Profile Test Server](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/bluetooth/tests/bt-profile-test-server/), which manages a fake piconet of peers.
 
 # Build Configuration
 

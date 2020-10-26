@@ -5,7 +5,7 @@ allows end-to-end tests to access [driver services](#facades-in-sl4f) (for
 instance, Audio, Screen, Input, Diagnostics, and WebDriver) on a Fuchsia device.
 
 Note: Fuchsia integrates with
-[Android Comms Testing Suite](https://android.googlesource.com/platform/tools/test/connectivity/+/master/acts/README.md){: .external}
+[Android Comms Testing Suite](https://android.googlesource.com/platform/tools/test/connectivity/+/HEAD/acts/README.md){: .external}
 (ACTS), which enables Fuchsia devices to adapt the existing connectivity tests
 for Android. SL4F serves as a bridge between ACTS and a Fuchsia device.
 

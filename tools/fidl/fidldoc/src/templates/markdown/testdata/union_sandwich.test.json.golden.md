@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### SandwichUnionSize8Alignment4 {#SandwichUnionSize8Alignment4}
-*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/union_sandwich.test.fidl#14)*
+*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/union_sandwich.test.fidl#14)*
 
 
 
@@ -38,7 +38,7 @@
 </table>
 
 ### SandwichUnionSize12Alignment4 {#SandwichUnionSize12Alignment4}
-*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/union_sandwich.test.fidl#24)*
+*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/union_sandwich.test.fidl#24)*
 
 
 
@@ -68,7 +68,7 @@
 </table>
 
 ### StructSize16Alignment8 {#StructSize16Alignment8}
-*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/union_sandwich.test.fidl#30)*
+*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/union_sandwich.test.fidl#30)*
 
 
 
@@ -91,7 +91,7 @@
 </table>
 
 ### SandwichUnionSize24Alignment8 {#SandwichUnionSize24Alignment8}
-*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/union_sandwich.test.fidl#39)*
+*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/union_sandwich.test.fidl#39)*
 
 
 
@@ -121,7 +121,7 @@
 </table>
 
 ### SandwichUnionSize36Alignment4 {#SandwichUnionSize36Alignment4}
-*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/union_sandwich.test.fidl#49)*
+*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/union_sandwich.test.fidl#49)*
 
 
 
@@ -159,7 +159,7 @@
 ## **UNIONS**
 
 ### UnionSize8Alignment4 {#UnionSize8Alignment4}
-*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/union_sandwich.test.fidl#10)*
+*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/union_sandwich.test.fidl#10)*
 
 
 <table>
@@ -172,7 +172,7 @@
         </tr></table>
 
 ### UnionSize12Alignment4 {#UnionSize12Alignment4}
-*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/union_sandwich.test.fidl#20)*
+*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/union_sandwich.test.fidl#20)*
 
 
 <table>
@@ -185,7 +185,7 @@
         </tr></table>
 
 ### UnionSize24Alignment8 {#UnionSize24Alignment8}
-*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/union_sandwich.test.fidl#35)*
+*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/union_sandwich.test.fidl#35)*
 
 
 <table>
@@ -198,7 +198,7 @@
         </tr></table>
 
 ### UnionSize36Alignment4 {#UnionSize36Alignment4}
-*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/union_sandwich.test.fidl#45)*
+*Defined in [fidl.test.unionsandwich/union_sandwich.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/union_sandwich.test.fidl#45)*
 
 
 <table>

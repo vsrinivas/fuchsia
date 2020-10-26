@@ -1,6 +1,6 @@
 # GN SDK
 
-The GN SDK frontend produces a [GN](https://gn.googlesource.com/gn/+/refs/heads/master/README.md) workspace.
+The GN SDK frontend produces a [GN](https://gn.googlesource.com/gn/+/HEAD/README.md) workspace.
 
 ## Directory structure
 

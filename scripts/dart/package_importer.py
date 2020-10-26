@@ -46,7 +46,7 @@ def parse_packages_file(dot_packages_path):
     with open(dot_packages_path) as dot_packages:
         # The packages specification says both '\r' and '\n' are valid line
         # delimiters, which matches Python's 'universal newline' concept.
-        # Packages specification: https://github.com/dart-lang/dart_enhancement_proposals/blob/master/Accepted/0005%20-%20Package%20Specification/DEP-pkgspec.md
+        # Packages specification: https://github.com/dart-lang/dart_enhancement_proposals/blob/HEAD/Accepted/0005%20-%20Package%20Specification/DEP-pkgspec.md
         contents = dot_packages.read()
         for line in unicode.splitlines(unicode(contents)):
             if line.startswith('#'):

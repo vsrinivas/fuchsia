@@ -161,7 +161,7 @@ The bundle of open-source fonts is uploaded to the
 ### Jiri prebuilts
 
 The contents of the CIPD package make their way into a Fuchsia checkout via the
-[`prebuilts` jiri manifest](https://fuchsia.googlesource.com/integration/+/refs/heads/master/prebuilts):
+[`prebuilts` jiri manifest](https://fuchsia.googlesource.com/integration/+/HEAD/prebuilts):
 
 <!--
 TODO: Fix fuchsia/integration GoB permissions.
@@ -196,7 +196,7 @@ several font-related build arguments. The two most important ones are
 #### `*.font_pkgs.json` files {:#font-pkgs-json}
 
 These files are designed to be parseable by GN's simple JSON parser,
-[`read_file`](https://gn.googlesource.com/gn/+/master/docs/reference.md#func_read_file).
+[`read_file`](https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_read_file).
 They contain a list of entries of the form
 
 ```json
@@ -361,7 +361,7 @@ After any needed `local_font_bundle`s, font `packages`, and/or
 
 A `font_collection` traverses the transitive closure all of the font assets,
 packages, and groups that it contains. It collects their
-[GN metadata](https://gn.googlesource.com/gn/+/master/docs/reference.md#var_metadata)
+[GN metadata](https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#var_metadata)
 to build lists of which fonts are available as local files and which as font
 packages.
 

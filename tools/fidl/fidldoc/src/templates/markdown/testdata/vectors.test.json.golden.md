@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### ExampleUseOfVectors {#ExampleUseOfVectors}
-*Defined in [fidl.test.vectors/vectors.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/vectors.test.fidl#7)*
+*Defined in [fidl.test.vectors/vectors.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/vectors.test.fidl#7)*
 
 
 

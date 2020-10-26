@@ -23,7 +23,7 @@ This file may refer to a common set of options by way of an `include` directive:
 include: relative/path/to/options.file
 ```
 
-A canonical set is available at [//topaz/tools/analysis_options.yaml](https://fuchsia.googlesource.com/topaz/+/master/tools/analysis_options.yaml)
+A canonical set is available at [//topaz/tools/analysis_options.yaml](https://fuchsia.googlesource.com/topaz/+/HEAD/tools/analysis_options.yaml)
 It is customary to merely include that set from a local options file:
 
 ```

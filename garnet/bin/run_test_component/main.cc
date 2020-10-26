@@ -518,7 +518,7 @@ int main(int argc, const char** argv) {
     printf("----------------xxxxx----------------\n");
     printf(
         "Failing this test. See "
-        "https://fuchsia.googlesource.com/fuchsia/+/master/docs/concepts/testing/"
+        "https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/concepts/testing/"
         "test_component.md#restricting-log-severity for guidance.\n");
     fflush(stdout);
     ret_code = 1;

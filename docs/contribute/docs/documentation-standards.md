@@ -9,7 +9,7 @@ This document outlines standards, structure, tone, and best practices for Fuchsi
     should be kept in the same directory as the source code. These docs are usually in the form of
     `README.md` files embedded throughout the Fuchsia codebase.
   * **General documentation for Fuchsia developers:** Fuchsia documentation should
-    be created in <code>/master/docs/</code>.
+    be created in <code>/HEAD/docs/</code>.
     In the `/docs/` directory, you should create documentation in one of these sub-directories:
 
     * <code>get-started</code>:

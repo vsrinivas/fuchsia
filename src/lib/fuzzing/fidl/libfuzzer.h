@@ -10,7 +10,7 @@
 #include <zircon/compiler.h>
 
 // Defines the interface by LLVM exposed for fuzzing.
-// See https://github.com/llvm/llvm-project/blob/master/compiler-rt/lib/fuzzer/FuzzerInterface.h
+// See https://github.com/llvm/llvm-project/blob/HEAD/compiler-rt/lib/fuzzer/FuzzerInterface.h
 
 extern "C" {
 

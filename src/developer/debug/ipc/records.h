@@ -114,7 +114,7 @@ struct ExceptionRecord {
 };
 
 // Note: see "ps" source:
-// https://fuchsia.googlesource.com/fuchsia/+/master/src/sys/bin/psutils/ps.c
+// https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/sys/bin/psutils/ps.c
 struct ProcessTreeRecord {
   enum class Type : uint32_t { kJob, kProcess };
 

@@ -9,7 +9,7 @@
 //! and [OpenThread's `spinel.h`][openthread-spinel].
 //!
 //! [draft-rquattle-spinel-unified-00]: https://tools.ietf.org/html/draft-rquattle-spinel-unified-00
-//! [openthread-spinel]: https://github.com/openthread/openthread/blob/master/src/lib/spinel/spinel.h
+//! [openthread-spinel]: https://github.com/openthread/openthread/blob/HEAD/src/lib/spinel/spinel.h
 
 use spinel_pack::*;
 

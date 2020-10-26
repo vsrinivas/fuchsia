@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### StructSmallArray {#StructSmallArray}
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/arrays.test.fidl#3)*
+*Defined in [fidl.test.arrays/arrays.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/arrays.test.fidl#3)*
 
 
 
@@ -24,7 +24,7 @@
 </table>
 
 ### StructLargeArray {#StructLargeArray}
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/arrays.test.fidl#7)*
+*Defined in [fidl.test.arrays/arrays.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/arrays.test.fidl#7)*
 
 
 
@@ -48,7 +48,7 @@
 ### TableSmallArray {#TableSmallArray}
 
 
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/arrays.test.fidl#11)*
+*Defined in [fidl.test.arrays/arrays.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/arrays.test.fidl#11)*
 
 
 
@@ -66,7 +66,7 @@
 ### TableLargeArray {#TableLargeArray}
 
 
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/arrays.test.fidl#15)*
+*Defined in [fidl.test.arrays/arrays.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/arrays.test.fidl#15)*
 
 
 
@@ -86,7 +86,7 @@
 ## **UNIONS**
 
 ### UnionSmallArray {#UnionSmallArray}
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/arrays.test.fidl#19)*
+*Defined in [fidl.test.arrays/arrays.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/arrays.test.fidl#19)*
 
 
 <table>
@@ -99,7 +99,7 @@
         </tr></table>
 
 ### UnionLargeArray {#UnionLargeArray}
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/arrays.test.fidl#23)*
+*Defined in [fidl.test.arrays/arrays.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/arrays.test.fidl#23)*
 
 
 <table>

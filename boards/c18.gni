@@ -21,7 +21,7 @@ custom_signing_script_tools = [
 # NOTE: The signing script also depends on the "mkimage" tool being installed
 # on your Ubuntu system. The latter is not provided by the Fuchsia build. To get
 # it see instructions as in:
-# https://github.com/google/syzkaller/blob/master/docs/linux/setup_ubuntu-host_odroid-c2-board_arm64-kernel.md
+# https://github.com/google/syzkaller/blob/HEAD/docs/linux/setup_ubuntu-host_odroid-c2-board_arm64-kernel.md
 
 # required tool for packaging script
 board_package_labels += [ "//tools/vboot_reference:futility_host" ]

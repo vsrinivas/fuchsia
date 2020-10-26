@@ -5,4 +5,4 @@ toc:
 - title: "Wireless"
   path: /docs/concepts/networking/wireless_networking.md
 - title: "Telephony"
-  path: https://fuchsia.googlesource.com/fuchsia/+/master/src/connectivity/telephony/
+  path: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/telephony/

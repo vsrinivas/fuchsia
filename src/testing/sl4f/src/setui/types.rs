@@ -89,7 +89,7 @@ impl Into<fidl_fuchsia_settings::IntlSettings> for IntlInfo {
 
 /// Unicode BCP-47 Locale Identifier
 /// Reference LocaleId definition in
-/// https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.intl/intl.fidl
+/// https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.intl/intl.fidl
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct LocaleId {
     pub id: String,
@@ -109,7 +109,7 @@ impl From<LocaleId> for fidl_fuchsia_intl::LocaleId {
 
 /// Selection of [temperature units](https://en.wikipedia.org/wiki/Degree_(temperature)).
 /// Reference TemperatureUnit definition in
-/// https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.intl/intl.fidl
+/// https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.intl/intl.fidl
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum TemperatureUnit {
     Celsius,
@@ -138,7 +138,7 @@ impl From<TemperatureUnit> for fidl_fuchsia_intl::TemperatureUnit {
 /// maximum number that the hour indicator will ever show.
 ///
 /// Reference HourCycle definition in
-/// https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.settings/intl.fidl
+/// https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.settings/intl.fidl
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum HourCycle {
     Unknown,

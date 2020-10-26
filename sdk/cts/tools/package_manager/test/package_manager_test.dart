@@ -22,7 +22,7 @@ const _timeout = Timeout(Duration(minutes: 5));
 
 void printErrorHelp() {
   print('If this test fails, see '
-      'https://fuchsia.googlesource.com/a/fuchsia/+/master/sdk/cts/tools/package_manager/README.md'
+      'https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/sdk/cts/tools/package_manager/README.md'
       ' for details!');
 }
 

@@ -3,14 +3,14 @@
 This directory contains the Input Report Reader, a library which binds to
 the [InputReport Drivers](/sdk/fidl/fuchsia.input.report/)
 and parses their reports into
-[fuchsia.ui.input:InputReports](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_reports.fidl).
+[fuchsia.ui.input:InputReports](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.ui.input/input_reports.fidl).
 
 ## USAGE
 
 This program cannot be run directly. It exists in the system
 as a library used by [`RootPresenter`](/src/ui/bin/root_presenter/README.md).
 
-This library should not be used in new programs, as [fuchsia.ui.input:InputReports](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_reports.fidl) is deprecated.
+This library should not be used in new programs, as [fuchsia.ui.input:InputReports](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.ui.input/input_reports.fidl) is deprecated.
 
 ### TEST
 

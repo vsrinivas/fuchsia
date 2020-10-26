@@ -281,7 +281,7 @@ mod test {
 
                 // Merge declarations with config file
                 declarations["config"] = fidl_config.clone();
-                declarations["tag"] = json!("master");
+                declarations["tag"] = json!("HEAD");
 
                 let result =
                     render_template(&template.handlebars, "interface".to_string(), &declarations)

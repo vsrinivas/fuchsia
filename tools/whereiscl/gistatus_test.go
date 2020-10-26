@@ -16,7 +16,7 @@ import (
 func TestGetGIStatus_passed(t *testing.T) {
 	transport := th.MockTransport{}
 	transport.AddResponse(
-		"https://fuchsia.googlesource.com/integration/+/refs/heads/master/stem?format=TEXT",
+		"https://fuchsia.googlesource.com/integration/+/HEAD/stem?format=TEXT",
 		base64.StdEncoding.EncodeToString([]byte(`
 <manifest>
   <projects>
@@ -61,7 +61,7 @@ func TestGetGIStatus_passed(t *testing.T) {
 func TestGetGIStatus_pending(t *testing.T) {
 	transport := th.MockTransport{}
 	transport.AddResponse(
-		"https://fuchsia.googlesource.com/integration/+/refs/heads/master/stem?format=TEXT",
+		"https://fuchsia.googlesource.com/integration/+/HEAD/stem?format=TEXT",
 		base64.StdEncoding.EncodeToString([]byte(`
 <manifest>
   <projects>

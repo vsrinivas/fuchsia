@@ -66,7 +66,7 @@ class PointerStreamTracker {
   //
   // Note: this is a map holding just a few keys and follows the map type selection guidance
   // described at:
-  // https://chromium.googlesource.com/chromium/src/+/master/base/containers/README.md#map-and-set-selection
+  // https://chromium.googlesource.com/chromium/src/+/HEAD/base/containers/README.md#map-and-set-selection
   std::map<StreamID, uint32_t> pointer_event_callbacks_;
 
   // Holds the streams in progress tracked by the tracker. A stream of pointer events is considered

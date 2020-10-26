@@ -1,7 +1,7 @@
 #Using FIDL Proxies with Plugins
 
 FFX plugins can communicate with a target device using FIDL through
-[Overnet](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/connectivity/overnet/).
+[Overnet](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/overnet/).
 
 Extending the example from the [plugins](plugins.md) page we can add
 FIDL proxies to the parameter list for plugins:
@@ -75,5 +75,5 @@ communicate with two proxies without mappings.  It's enough to just
 add these proxies to the parameter list without changing the
 ffx_plugin annotation:
 
-- [DaemonProxy](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.developer.bridge/daemon.fidl) - more info can be found [here](daemon.md)
-- [Remote Control Service (RCS)](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.developer.remotecontrol/remote-control.fidl) - more info can be found [here](rcs.md)
+- [DaemonProxy](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.developer.bridge/daemon.fidl) - more info can be found [here](daemon.md)
+- [Remote Control Service (RCS)](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.developer.remotecontrol/remote-control.fidl) - more info can be found [here](rcs.md)

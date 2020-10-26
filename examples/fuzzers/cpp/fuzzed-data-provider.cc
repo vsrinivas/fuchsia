@@ -4,8 +4,8 @@
 
 // A fuzzer that uses the FuzzedDataProvider library to consume fuzzing input.
 // See also:
-// https://github.com/google/fuzzing/blob/master/docs/split-inputs.md#fuzzed-data-provider
-// https://github.com/llvm/llvm-project/blob/master/compiler-rt/include/fuzzer/FuzzedDataProvider.h
+// https://github.com/google/fuzzing/blob/HEAD/docs/split-inputs.md#fuzzed-data-provider
+// https://github.com/llvm/llvm-project/blob/HEAD/compiler-rt/include/fuzzer/FuzzedDataProvider.h
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>

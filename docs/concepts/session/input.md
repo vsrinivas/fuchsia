@@ -97,7 +97,7 @@ impl InputHandler for MouseHandler {
    </td>
   </tr>
   <tr>
-   <td><a href="https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/session/lib/input/src/input_device.rs#27">InputEvent</a>
+   <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/session/lib/input/src/input_device.rs#27">InputEvent</a>
    </td>
    <td>An event from an input device containing context (a DeviceDescriptor) and state (e.g. phase
    and location of a button press). The input pipeline generates InputEvents from InputReports and

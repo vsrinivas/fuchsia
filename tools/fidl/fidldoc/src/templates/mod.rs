@@ -357,7 +357,7 @@ mod test {
     #[test]
     fn sl_test() {
         let fidl_json = json!({
-            "tag": "master",
+            "tag": "HEAD",
             "config": json!({
                 "source": json!({
                     "baseUrl": "https://example.com/",
@@ -371,13 +371,13 @@ mod test {
             "line": 42
         });
 
-        assert_eq!(sl(&fidl_json, &location_line), "https://example.com/master/sample.fidl#42");
+        assert_eq!(sl(&fidl_json, &location_line), "https://example.com/HEAD/sample.fidl#42");
 
         let location_no_line = json!({
             "filename": "foobar.fidl"
         });
 
-        assert_eq!(sl(&fidl_json, &location_no_line), "https://example.com/master/foobar.fidl");
+        assert_eq!(sl(&fidl_json, &location_no_line), "https://example.com/HEAD/foobar.fidl");
 
         let location_with_folders = json!({
             "filename": "../../sdk/fidl/fuchsia.bluetooth/address.fidl"
@@ -385,7 +385,7 @@ mod test {
 
         assert_eq!(
             sl(&fidl_json, &location_with_folders),
-            "https://example.com/master/sdk/fidl/fuchsia.bluetooth/address.fidl"
+            "https://example.com/HEAD/sdk/fidl/fuchsia.bluetooth/address.fidl"
         );
 
         let location_with_folders_and_line = json!({
@@ -395,7 +395,7 @@ mod test {
 
         assert_eq!(
             sl(&fidl_json, &location_with_folders_and_line),
-            "https://example.com/master/sdk/fidl/fuchsia.bluetooth/address.fidl#9"
+            "https://example.com/HEAD/sdk/fidl/fuchsia.bluetooth/address.fidl#9"
         );
     }
 

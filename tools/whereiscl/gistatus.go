@@ -29,7 +29,7 @@ func downloadGIManifest(name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	u.Path = "/integration/+/refs/heads/master/" + name
+	u.Path = "/integration/+/HEAD/" + name
 	q := u.Query()
 	q.Set("format", "TEXT")
 	u.RawQuery = q.Encode()

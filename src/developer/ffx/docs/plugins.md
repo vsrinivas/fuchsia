@@ -14,7 +14,7 @@ directory.
 
 You will need to create a GN build target for your plugin. You"ll need to use
 to use the "ffx_plugin" build rule template defined
-[here](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/developer/ffx/build/ffx_plugin.gni).
+[here](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/developer/ffx/build/ffx_plugin.gni).
 
 Your BUILD.gn file should look something like this:
 
@@ -89,7 +89,7 @@ set to "true".
 
 Lastly, you"ll need to add the plugin as a dependency to FFX to include it in
 the build. You"ll need to edit this
-[file](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/developer/ffx/BUILD.gn#23)
+[file](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/developer/ffx/BUILD.gn#23)
 to add your ffx_plugin target.
 
 And that"s it!  You should now see the output:

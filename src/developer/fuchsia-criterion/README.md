@@ -40,4 +40,4 @@ $ fx shell my_fib_bench -n
 ```
 
 [Criterion benchmark suite]: https://github.com/bheisler/criterion.rs
-[Fuchsia benchmarking schema]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/benchmarking/results_schema.md
+[Fuchsia benchmarking schema]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/benchmarking/results_schema.md

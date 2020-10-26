@@ -29,7 +29,7 @@
 ## `fx set-device`, otherwise it will try to find a connected device.
 ##
 ## For more information on flags supported by on-device log_listener, look at
-## the source code in https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/log_listener/src/main.rs#314
+## the source code in https://fuchsia.googlesource.com/fuchsia/+/HEAD/garnet/bin/log_listener/src/main.rs#314
 ##
 
 set -o pipefail

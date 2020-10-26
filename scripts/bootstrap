@@ -21,7 +21,7 @@ fi
 # The fetched script will
 # - create "fuchsia" directory if it does not exist,
 # - download "jiri" command to "fuchsia/.jiri_root/bin"
-curl -s "https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT" | base64 --decode | bash -s fuchsia
+curl -s "https://fuchsia.googlesource.com/jiri/+/HEAD/scripts/bootstrap_jiri?format=TEXT" | base64 --decode | bash -s fuchsia
 cd fuchsia
 
 .jiri_root/bin/jiri import -name=integration flower https://fuchsia.googlesource.com/integration

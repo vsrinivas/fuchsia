@@ -218,6 +218,6 @@ You likely forgot to run both commands of **Build step**.
 [gn-main]: https://gn.googlesource.com/gn/
 [gn-preso]: https://docs.google.com/presentation/d/15Zwb53JcncHfEwHpnG_PoIbbzQ3GQi_cpujYwbpcbZo/
 [ninja-main]: https://ninja-build.org/
-[gn-reference]: https://gn.googlesource.com/gn/+/master/docs/reference.md
+[gn-reference]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md
 [build-project]: /build/
 [zircon-getting-started]: /docs/zircon/getting_started.md

@@ -18,7 +18,7 @@
 // This file contains a subset of adapted Chromium Fuchsia tests to make sure
 // nothing broke on the import boundary.
 //
-// See also: https://chromium.googlesource.com/chromium/src/+/master/fuchsia
+// See also: https://chromium.googlesource.com/chromium/src/+/HEAD/fuchsia
 namespace {
 
 // This is a black box smoke test for whether the web runner in a given system
@@ -29,7 +29,7 @@ namespace {
 // subresource load for the image.
 //
 // See also:
-// https://chromium.googlesource.com/chromium/src/+/master/fuchsia/runners/web/web_runner_smoke_test.cc
+// https://chromium.googlesource.com/chromium/src/+/HEAD/fuchsia/runners/web/web_runner_smoke_test.cc
 TEST(WebRunnerIntegrationTest, Smoke) {
   web_runner_tests::TestServer server;
   FX_CHECK(server.FindAndBindPort());
@@ -97,7 +97,7 @@ class ChromiumAppTest : public gtest::RealLoopFixture {
 // This test ensures that we can interact with the fuchsia.web FIDL.
 //
 // See also
-// https://chromium.googlesource.com/chromium/src/+/master/fuchsia/engine/browser/context_impl_browsertest.cc
+// https://chromium.googlesource.com/chromium/src/+/HEAD/fuchsia/engine/browser/context_impl_browsertest.cc
 TEST_F(ChromiumAppTest, CreateAndNavigate) {
   MockNavigationEventListener navigation_event_listener;
   fidl::Binding<fuchsia::web::NavigationEventListener> navigation_event_listener_binding(

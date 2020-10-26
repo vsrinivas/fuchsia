@@ -25,7 +25,7 @@
 //!
 //! [Criterion benchmark suite]: https://github.com/bheisler/criterion.rs
 //! [default]: https://doc.rust-lang.org/std/default/trait.Default.html#tymethod.default
-//! [Fuchsia benchmarking schema]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/benchmarking/results_schema.md
+//! [Fuchsia benchmarking schema]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/benchmarking/results_schema.md
 
 #![deny(missing_docs)]
 
@@ -64,7 +64,7 @@ impl FuchsiaCriterion {
     /// argument providing the path for JSON file where the micro-benchmark results should be
     /// stored. The format respects the [Fuchsia benchmarking schema].
     ///
-    /// [Fuchsia benchmarking schema]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/benchmarking/results_schema.md
+    /// [Fuchsia benchmarking schema]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/benchmarking/results_schema.md
     pub fn fuchsia_bench() -> Self {
         fn help_and_exit(name: &str, wrong_args: Option<String>) -> ! {
             println!(

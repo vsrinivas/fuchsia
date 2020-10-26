@@ -7,4 +7,4 @@
 ### Fargo is a prototype Fuchsia-specific wrapper around Cargo
 ## usage: run `fx fargo help`
 ##
-## Or check https://fuchsia.googlesource.com/fargo/+/refs/heads/master/README.md for more information
+## Or check https://fuchsia.googlesource.com/fargo/+/HEAD/README.md for more information

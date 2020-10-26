@@ -13,7 +13,7 @@
 # key-value pair; it describes a bot property that can be targeted. Below are
 # the published dimensions for the platforms we have available to test on.
 # For more general Swarming documentation see
-# https://chromium.googlesource.com/infra/luci/luci-py/+/master/appengine/swarming/doc/
+# https://chromium.googlesource.com/infra/luci/luci-py/+/HEAD/appengine/swarming/doc/
 
 # All Swarming dimension keys that Fuchsia test authors may use to target test
 # platforms.

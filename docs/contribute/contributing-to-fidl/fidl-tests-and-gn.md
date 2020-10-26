@@ -386,7 +386,7 @@ tests. Using `fx test`, we can already
 *   [Fuchsia package URLs][package_url]
 
 <!-- xrefs -->
-[gn-targets]: https://gn.googlesource.com/gn/+/refs/heads/master/docs/language.md#Targets
+[gn-targets]: https://gn.googlesource.com/gn/+/HEAD/docs/language.md#Targets
 [package]: /docs/concepts/packages/package.md
 [components]: /docs/concepts/components/v2
 [run_fuchsia_tests]: /docs/development/testing/run_fuchsia_tests.md

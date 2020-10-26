@@ -21,7 +21,7 @@ const _defaultManifest = 'package-repositories.json';
 /// 'package-repositories.json'.
 /// The 'targets.json' file is expected to follow the syntax defined in
 ///  https://fuchsia.dev/fuchsia-src/concepts/system/software_update_system
-/// and https://github.com/theupdateframework/specification/blob/master/tuf-spec.md.
+/// and https://github.com/theupdateframework/specification/blob/HEAD/tuf-spec.md.
 class PackageRepository {
   String targetsFile;
   String blobsDirectory;

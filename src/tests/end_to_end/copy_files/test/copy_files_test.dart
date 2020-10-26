@@ -13,7 +13,7 @@ const _timeout = Timeout(Duration(minutes: 1));
 
 void printErrorHelp() {
   print('If this test fails, see '
-      'https://fuchsia.googlesource.com/a/fuchsia/+/master/src/tests/end_to_end/copy_tests/README.md'
+      'https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/src/tests/end_to_end/copy_tests/README.md'
       ' for details!');
 }
 

@@ -1,14 +1,14 @@
 # Simplest Embedder
 
 This is the usage example for the
-[`scenic::BaseView`](https://fuchsia.googlesource.com/fuchsia/+/master/src/lib/ui/base_view/base_view.h)
+[`scenic::BaseView`](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/lib/ui/base_view/base_view.h)
 class, which simplifies the creation of components that can act as both parents
 and children in the Scenic view tree.
 
 ## Note on `ExamplePresenter`
 
 Includes a simple implementation of
-[`fuchsia.ui.policy.Presenter`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.policy/presenter.fidl)
+[`fuchsia.ui.policy.Presenter`](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.ui.policy/presenter.fidl)
 which it uses instead of connecting to `root_presenter`; the topology is
 analogous to how Peridot's `basemgr` connects the `base_shell` to
 `root_presenter`.

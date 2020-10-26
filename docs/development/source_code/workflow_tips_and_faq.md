@@ -132,7 +132,7 @@ $ git rebase JIRI_HEAD
 ```
 
 You can find more information on parts of workflows below.
-You can find more information on general git workflows in [gitworkflows(7)](https://github.com/git/git/blob/master/Documentation/gitworkflows.txt).
+You can find more information on general git workflows in [gitworkflows(7)](https://github.com/git/git/blob/HEAD/Documentation/gitworkflows.txt).
 You can find more information on git in general at [git-scm.com/doc](https://git-scm.com/doc).
 
 #### Rebasing
@@ -201,7 +201,7 @@ $ git stash pop # uncommitted changes will come back
 ### Q: I use **fx** and **jiri** a lot. How are they related?
 
 A: They are not related.
-[`jiri`](https://fuchsia.googlesource.com/jiri/+/master/) is a wrapper around
+[`jiri`](https://fuchsia.googlesource.com/jiri/+/HEAD/) is a wrapper around
 git that provides support for managing more than one git repository in sync
 (the Fuchsia code base is composed of many git repositories), as well as
 synchronizing a set of prebuilt artifacts, such as those found in

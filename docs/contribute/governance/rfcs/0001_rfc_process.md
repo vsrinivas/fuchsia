@@ -293,7 +293,7 @@ existing processes:
    ideas from the IETF process, including some of the terminology.
 
  * *Rust RFC process.* The Rust community runs an [RFC
-   process](https://github.com/rust-lang/rfcs/blob/master/text/0002-rfc-process.md),
+   process](https://github.com/rust-lang/rfcs/blob/HEAD/text/0002-rfc-process.md),
    which has been effective at making decisions for somewhat similar software
    engineering project. The process described in this document is fairly
    directly modelled after the Rust RFC process.

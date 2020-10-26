@@ -26,7 +26,7 @@ from area_dependency_exceptions import exceptions
 
 allowed_deps = [
     # These dependencies are always allowed:
-    # https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/source_code/layout.md#dependency-structure
+    # https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/source_code/layout.md#dependency-structure
     '//build',
     '//prebuilt',
     '//sdk',

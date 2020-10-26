@@ -44,7 +44,7 @@ def main(name, argv):
                 print('To continue building, create the following file:')
                 print(golden_file)
                 print('Once the build is complete, follow instructions to regenerate goldens:')
-                print('https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/tools/fidl/fidldoc/README.md')
+                print('https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/fidl/fidldoc/README.md')
                 exit(1)
 
     exit(0)

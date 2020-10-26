@@ -28,7 +28,7 @@ type Step struct {
 	End   time.Duration
 	// modification time, but not convertable to absolute real time.
 	// on POSIX, time_t is used, but on Windows different type is used.
-	// htts://github.com/martine/ninja/blob/master/src/timestamp.h
+	// htts://github.com/martine/ninja/blob/HEAD/src/timestamp.h
 	Restat  int
 	Out     string
 	CmdHash uint64

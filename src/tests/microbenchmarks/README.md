@@ -9,7 +9,7 @@ that it covers more than just Zircon.
 ## Writing Benchmarks
 
 This uses Zircon's
-[perftest](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/perftest/)
+[perftest](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/perftest/)
 library.
 
 ## Running Benchmarks

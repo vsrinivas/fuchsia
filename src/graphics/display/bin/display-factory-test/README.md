@@ -1,6 +1,6 @@
 # display_png
 
-`display_png` is a [Carnelian](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/lib/ui/carnelian/)-based program used to test displays.
+`display_png` is a [Carnelian](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/lib/ui/carnelian/)-based program used to test displays.
 
     Usage: display_png [--file <file>] [--gamma-file <gamma-file>] [--gamma-divisor <gamma-divisor>] [--background <background>] [--position <position>] [--timeout <timeout>]
 

@@ -15,7 +15,7 @@
 //
 // This uses the JSON output format described in the Fuchsia Tracing
 // Usage Guide:
-// https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/tracing_usage_guide.md#benchmark-result-export
+// https://fuchsia.googlesource.com/fuchsia/+/HEAD/garnet/docs/tracing_usage_guide.md#benchmark-result-export
 //
 // Having a library for this should allow us to more easily change the JSON
 // output format while ensuring that various performance tests are updated

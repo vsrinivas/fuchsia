@@ -393,7 +393,7 @@ func Test_processInput(t *testing.T) {
 func Test_writeOutputSizes(t *testing.T) {
 	// Ensure that the output conforms to the schema
 	// documented here:
-	// https://chromium.googlesource.com/infra/gerrit-plugins/binary-size/+/master/README.md
+	// https://chromium.googlesource.com/infra/gerrit-plugins/binary-size/+/HEAD/README.md
 	sizes := map[string]*ComponentSize{
 		"a": {
 			Size:   1,

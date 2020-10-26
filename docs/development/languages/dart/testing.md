@@ -43,6 +43,6 @@ So if there are packages that have no tests at all, they won't be considered in
 the denominator of the report, which can give you a misleadingly high coverage
 number.
 
-[dart_fuchsia_test]: https://fuchsia.googlesource.com/topaz/+/master/runtime/dart/dart_fuchsia_test.gni
+[dart_fuchsia_test]: https://fuchsia.googlesource.com/topaz/+/HEAD/runtime/dart/dart_fuchsia_test.gni
 [dart_test]: /build/dart/test.gni
-[flutter_test]: https://fuchsia.googlesource.com/topaz/+/master/runtime/dart/flutter_test.gni
+[flutter_test]: https://fuchsia.googlesource.com/topaz/+/HEAD/runtime/dart/flutter_test.gni

@@ -19,7 +19,7 @@ namespace virtio {
 // clang-format off
 
 // These are Linux input event codes:
-// https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
+// https://github.com/torvalds/linux/blob/HEAD/include/uapi/linux/input-event-codes.h
 const uint8_t kEventCodeMap[] = {
     0,                                  // KEY_RESERVED (0)
     41,                                 // KEY_ESC (1)

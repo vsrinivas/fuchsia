@@ -49,7 +49,7 @@ impl LazyNode {
 }
 
 // Utility class that wraps around the methods specified Tree protocol.
-// FIDL API is defined here: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.inspect/tree.fidl#43
+// FIDL API is defined here: https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.inspect/tree.fidl#43
 struct LazyNodeFetcher {
     channel: TreeProxy,
 }

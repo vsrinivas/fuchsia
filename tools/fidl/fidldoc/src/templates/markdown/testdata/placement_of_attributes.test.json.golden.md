@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## ExampleProtocol {#ExampleProtocol}
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#22)*
+*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#22)*
 
 
 ### Method {#example/ExampleProtocol.Method}
@@ -29,7 +29,7 @@
 ## **STRUCTS**
 
 ### ExampleStruct {#ExampleStruct}
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#28)*
+*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#28)*
 
 
 
@@ -51,7 +51,7 @@
 ### ExampleEnum {#ExampleEnum}
 Type: <code>uint32</code>
 
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#16)*
+*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#16)*
 
 
 
@@ -69,7 +69,7 @@ Type: <code>uint32</code>
 ### ExampleTable {#ExampleTable}
 
 
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#34)*
+*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#34)*
 
 
 
@@ -89,7 +89,7 @@ Type: <code>uint32</code>
 ## **UNIONS**
 
 ### ExampleUnion {#ExampleUnion}
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#43)*
+*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#43)*
 
 
 <table>
@@ -102,7 +102,7 @@ Type: <code>uint32</code>
         </tr></table>
 
 ### ExampleXUnion {#ExampleXUnion}
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#49)*
+*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#49)*
 
 
 <table>
@@ -121,7 +121,7 @@ Type: <code>uint32</code>
 ### ExampleBits {#ExampleBits}
 Type: <code>uint32</code>
 
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#7)*
+*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#7)*
 
 
 
@@ -138,7 +138,7 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr id="EXAMPLE_CONST">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#13">EXAMPLE_CONST</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#13">EXAMPLE_CONST</a></td>
             <td>
                     <code>0</code>
                 </td>
@@ -154,7 +154,7 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="TypeAlias">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#40">TypeAlias</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#40">TypeAlias</a></td>
             <td>
                 <code>uint32</code></td>
             <td></td>

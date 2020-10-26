@@ -56,7 +56,7 @@ using
 * [async](/zircon/system/ulib/async)
   (C and C++)
 * [fuchsia-async](/src/lib/fuchsia-async/) (Rust)
-* [zxwait](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/zxwait/) (Go)
+* [zxwait](https://fuchsia.googlesource.com/third_party/go/+/HEAD/src/syscall/zx/zxwait/) (Go)
 
 ## FIDL
 
@@ -100,7 +100,7 @@ backend can be written in whatever language you prefer. Typically, language
 maintainer choose either Go or the target language.
 
  * [fidlgen](/garnet/go/src/fidl/compiler/backend) (C++, Rust, and Go)
- * [fidlgen_dart](https://fuchsia.googlesource.com/topaz/+/master/bin/fidlgen_dart) (Dart)
+ * [fidlgen_dart](https://fuchsia.googlesource.com/topaz/+/HEAD/bin/fidlgen_dart) (Dart)
 
 ### Generated code
 
@@ -157,8 +157,8 @@ deserialization, and dispatch.
  * [C](/zircon/system/ulib/fidl)
  * [C++](/sdk/lib/fidl/cpp/)
  * [Rust](/src/lib/fidl/rust/fidl)
- * [Dart](https://fuchsia.googlesource.com/topaz/+/master/public/dart/fidl/)
- * [Go](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/)
+ * [Dart](https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fidl/)
+ * [Go](https://fuchsia.googlesource.com/third_party/go/+/HEAD/src/syscall/zx/fidl/)
 
 ## POSIX-style IO
 

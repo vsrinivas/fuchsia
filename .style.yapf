@@ -1,5 +1,5 @@
 # For documentation of these options see
-# https://github.com/google/yapf/blob/master/README.rst
+# https://github.com/google/yapf/blob/HEAD/README.rst
 [style]
 based_on_style = google
 # Just a preference based on experience. Allowed by Google style guide

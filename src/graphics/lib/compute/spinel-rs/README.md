@@ -40,4 +40,4 @@ Temporary way of generating documentation:
 fx gen-cargo . && cargo doc --open
 ```
 
-[Spinel]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/
+[Spinel]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/

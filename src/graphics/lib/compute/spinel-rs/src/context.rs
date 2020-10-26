@@ -104,11 +104,11 @@ impl Drop for ContextInner {
 /// Also creates and stores a [spn_path_builder_t] and a [spn_raster_builder_t].
 /// [spn_path_builder_create] [spn_raster_builder_create]
 ///
-/// [spn_context_t]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#15
-/// [spn_path_builder_t]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#34
-/// [spn_path_builder_create]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#39
-/// [spn_raster_builder_t]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#123
-/// [spn_raster_builder_create]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#128
+/// [spn_context_t]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#15
+/// [spn_path_builder_t]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#34
+/// [spn_path_builder_create]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#39
+/// [spn_raster_builder_t]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#123
+/// [spn_raster_builder_create]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#128
 #[derive(Clone, Debug)]
 pub struct Context {
     pub(crate) inner: Rc<RefCell<ContextInner>>,

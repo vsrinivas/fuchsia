@@ -17,7 +17,7 @@ pub trait Encoding {
 
 /// An encoding that can parse the legacy [logger/syslog wire format]
 ///
-/// [logger/syslog wire format]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/syslog/include/lib/syslog/wire_format.h
+/// [logger/syslog wire format]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/syslog/include/lib/syslog/wire_format.h
 #[derive(Clone, Debug)]
 pub struct LegacyEncoding;
 

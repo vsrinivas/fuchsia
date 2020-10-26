@@ -2173,7 +2173,7 @@ From //build/rust/config.gni:49
 
 ### rust_v0_symbol_mangling
 Controls whether the rust compiler uses v0 symbol mangling scheme
-(see https://github.com/rust-lang/rfcs/blob/master/text/2603-rust-symbol-name-mangling-v0.md).
+(see https://github.com/rust-lang/rfcs/blob/HEAD/text/2603-rust-symbol-name-mangling-v0.md).
 The v0 symbol mangling scheme requires upstream LLVM support when demangling,
 so it is not on by default.
 TODO(fxbug.dev/57302): Enable v0 mangling by default.

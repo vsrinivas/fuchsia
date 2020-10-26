@@ -49,7 +49,7 @@ To download the Fuchsia source, do the following:
 1.  Run the bootstrap script:
 
     ```posix-terminal
-    curl -s "https://fuchsia.googlesource.com/fuchsia/+/master/scripts/bootstrap?format=TEXT" | base64 --decode | bash
+    curl -s "https://fuchsia.googlesource.com/fuchsia/+/HEAD/scripts/bootstrap?format=TEXT" | base64 --decode | bash
     ```
 
     If you see the `Invalid authentication credentials` error during the

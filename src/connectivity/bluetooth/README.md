@@ -94,7 +94,7 @@ the [`bluetooth-tests`](tests/BUILD.gn) package.
   ```
 
 * Or use the `--gtest_filter`
-[flag](https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#running-a-subset-of-the-tests) to run a subset of the tests:
+[flag](https://github.com/google/googletest/blob/HEAD/googletest/docs/advanced.md#running-a-subset-of-the-tests) to run a subset of the tests:
 
   ```
   # This only runs the L2CAP unit tests.

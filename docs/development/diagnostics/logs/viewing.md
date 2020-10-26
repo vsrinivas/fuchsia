@@ -130,4 +130,4 @@ This aggregate log is run through the equivalent of `fx symbolize` before upload
 [`dlog`]: /src/diagnostics/dlog/dlog.c
 [botanist]: /tools/botanist/cmd/main.go
 [testrunner]: /tools/testing/testrunner/cmd/main.go
-[Swarming]: https://chromium.googlesource.com/infra/luci/luci-py/+/master/appengine/swarming/doc/README.md
+[Swarming]: https://chromium.googlesource.com/infra/luci/luci-py/+/HEAD/appengine/swarming/doc/README.md

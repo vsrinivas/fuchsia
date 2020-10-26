@@ -5,7 +5,7 @@ authors = ["Joshua Liebow-Feeser <joshlf@google.com>", "Ghanan Gowripalan <ghana
 edition = "2018"
 description = "RFC 1071 checksum computation (the \"internet checksum\")"
 license-file = "LICENSE"
-repository = "https://fuchsia.googlesource.com/fuchsia/+/master/src/connectivity/lib/internet-checksum"
+repository = "https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/lib/internet-checksum"
 categories = ["algorithms", "network-programming", "no-std"]
 keywords = ["rfc1071", "checksum", "internet", "ipv4", "tcp"]
 

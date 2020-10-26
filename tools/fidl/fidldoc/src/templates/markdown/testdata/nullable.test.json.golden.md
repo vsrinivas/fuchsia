@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## SimpleProtocol {#SimpleProtocol}
-*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/nullable.test.fidl#17)*
+*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/nullable.test.fidl#17)*
 
 
 ### Add {#fidl.test.nullable/SimpleProtocol.Add}
@@ -43,7 +43,7 @@
 ## **STRUCTS**
 
 ### StructWithNullableString {#StructWithNullableString}
-*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/nullable.test.fidl#5)*
+*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/nullable.test.fidl#5)*
 
 
 
@@ -59,7 +59,7 @@
 </table>
 
 ### StructWithNullableVector {#StructWithNullableVector}
-*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/nullable.test.fidl#9)*
+*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/nullable.test.fidl#9)*
 
 
 
@@ -75,7 +75,7 @@
 </table>
 
 ### StructWithNullableHandle {#StructWithNullableHandle}
-*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/nullable.test.fidl#13)*
+*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/nullable.test.fidl#13)*
 
 
 
@@ -91,7 +91,7 @@
 </table>
 
 ### StructWithNullableProtocol {#StructWithNullableProtocol}
-*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/nullable.test.fidl#21)*
+*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/nullable.test.fidl#21)*
 
 
 
@@ -107,7 +107,7 @@
 </table>
 
 ### StructWithNullableRequest {#StructWithNullableRequest}
-*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/nullable.test.fidl#25)*
+*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/nullable.test.fidl#25)*
 
 
 
@@ -123,7 +123,7 @@
 </table>
 
 ### Int32Wrapper {#Int32Wrapper}
-*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/nullable.test.fidl#29)*
+*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/nullable.test.fidl#29)*
 
 
 
@@ -139,7 +139,7 @@
 </table>
 
 ### StructWithNullableStruct {#StructWithNullableStruct}
-*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/nullable.test.fidl#33)*
+*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/nullable.test.fidl#33)*
 
 
 
@@ -155,7 +155,7 @@
 </table>
 
 ### StructWithNullableUnion {#StructWithNullableUnion}
-*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/nullable.test.fidl#42)*
+*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/nullable.test.fidl#42)*
 
 
 
@@ -179,7 +179,7 @@
 ## **UNIONS**
 
 ### SimpleUnion {#SimpleUnion}
-*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/nullable.test.fidl#37)*
+*Defined in [fidl.test.nullable/nullable.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/nullable.test.fidl#37)*
 
 
 <table>

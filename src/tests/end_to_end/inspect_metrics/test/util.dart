@@ -113,6 +113,6 @@ dynamic multiValue(dynamic matcher, {dynamic length}) {
 
 void printErrorHelp() {
   print('If this test fails, see '
-      'https://fuchsia.googlesource.com/a/fuchsia/+/master/src/tests/end_to_end/inspect_metrics/README.md'
+      'https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/src/tests/end_to_end/inspect_metrics/README.md'
       ' for details!');
 }

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 # Build arguments used in the context of verified boot.
-# See [this document](https://android.googlesource.com/platform/external/avb/+/master/README.md)
+# See [this document](https://android.googlesource.com/platform/external/avb/+/HEAD/README.md)
 # for more information.
 
 import("//build/config/fuchsia/zircon.gni")

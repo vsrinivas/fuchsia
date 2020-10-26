@@ -30,9 +30,9 @@ Integration and unit tests for this functionality are:
 - [//src/sys/pkg/bin/system-update-checker](system-update-checker)
 - [//src/sys/pkg/tests/system-update-checker](system-update-checker-tests)
 
-[update_fidl]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.update/update.fidl
-[omaha-client-service]: https://fuchsia.googlesource.com/fuchsia/+/master/src/sys/pkg/bin/omaha-client
-[omaha-client]: https://fuchsia.googlesource.com/fuchsia/+/master/src/sys/pkg/lib/omaha-client
-[system-update-checker]: https://fuchsia.googlesource.com/fuchsia/+/master/src/sys/pkg/bin/system-update-checker
-[system-update-checker-tests]: https://fuchsia.googlesource.com/fuchsia/+/master/src/sys/pkg/tests/system-update-checker
+[update_fidl]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.update/update.fidl
+[omaha-client-service]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/sys/pkg/bin/omaha-client
+[omaha-client]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/sys/pkg/lib/omaha-client
+[system-update-checker]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/sys/pkg/bin/system-update-checker
+[system-update-checker-tests]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/sys/pkg/tests/system-update-checker
 

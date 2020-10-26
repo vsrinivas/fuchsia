@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### Baz {#Baz}
-*Defined in [top/top.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/top.test.fidl#5)*
+*Defined in [top/top.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/top.test.fidl#5)*
 
 
 

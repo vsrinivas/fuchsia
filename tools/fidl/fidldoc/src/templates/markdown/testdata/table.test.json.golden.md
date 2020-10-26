@@ -14,7 +14,7 @@
 ### EmptyTable {#EmptyTable}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/table.test.fidl#3)*
+*Defined in [fidl.test.table/table.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/table.test.fidl#3)*
 
 
 
@@ -25,7 +25,7 @@
 ### SimpleTable {#SimpleTable}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/table.test.fidl#6)*
+*Defined in [fidl.test.table/table.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/table.test.fidl#6)*
 
 
 
@@ -71,7 +71,7 @@
 ### OlderSimpleTable {#OlderSimpleTable}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/table.test.fidl#14)*
+*Defined in [fidl.test.table/table.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/table.test.fidl#14)*
 
 
 
@@ -96,7 +96,7 @@
 ### NewerSimpleTable {#NewerSimpleTable}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/table.test.fidl#19)*
+*Defined in [fidl.test.table/table.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/table.test.fidl#19)*
 
 
 
@@ -156,7 +156,7 @@
 ### ReverseOrdinalTable {#ReverseOrdinalTable}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/table.test.fidl#29)*
+*Defined in [fidl.test.table/table.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/table.test.fidl#29)*
 
 
 

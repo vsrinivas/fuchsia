@@ -15,7 +15,7 @@
 
 // Implementation based on the spec located at:
 //
-// https://github.com/qemu/qemu/blob/master/docs/interop/qcow2.txt
+// https://github.com/qemu/qemu/blob/HEAD/docs/interop/qcow2.txt
 
 // Compute the number of L1 table entries required to hold all mappings for a
 // disk of |disk_size|.

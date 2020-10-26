@@ -45,7 +45,7 @@ For macOS 10.13 (High Sierra) and later versions, do the following:
 1.  Install [Homebrew](https://brew.sh){:.external}:
 
     ```posix-terminal
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     ```
 
 1.  Install TunTap:

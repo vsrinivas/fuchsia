@@ -3,7 +3,7 @@
 Updated: 2020-09
 
 This is a platform- and product-agnostic implementation of the client end of the
-[Omaha Protocol](https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md)
+[Omaha Protocol](https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md)
 protocol for signaling that updates are available to a device or application.
 
 # Overview

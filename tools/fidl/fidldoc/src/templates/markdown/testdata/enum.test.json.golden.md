@@ -12,7 +12,7 @@
 ### MyStrictEnum {#MyStrictEnum}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.enum/enum.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/enum.test.fidl#3)*
+*Defined in [fidl.test.enum/enum.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/enum.test.fidl#3)*
 
 
 
@@ -30,7 +30,7 @@ Type: <code>uint32</code>
 ### MyFlexibleEnum {#MyFlexibleEnum}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.enum/enum.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/enum.test.fidl#8)*
+*Defined in [fidl.test.enum/enum.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/enum.test.fidl#8)*
 
 
 
@@ -48,7 +48,7 @@ Type: <code>uint32</code>
 ### MyFlexibleEnumWithCustomUnknown {#MyFlexibleEnumWithCustomUnknown}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.enum/enum.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/enum.test.fidl#13)*
+*Defined in [fidl.test.enum/enum.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/enum.test.fidl#13)*
 
 
 

@@ -1053,7 +1053,7 @@ templates. These unsupported features include:
 [cml-format]: /docs/concepts/components/v2/component_manifests.md
 [cmx-format]: /docs/concepts/components/v1/component_manifests.md
 [component-index]: /src/sys/component_index/component_index.gni
-[executable]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_executable
+[executable]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_executable
 [fx-test]: https://www.fuchsia.dev/reference/tools/fx/cmd/test.md
 [fxb-55739]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=55739
 [glossary-component]: /docs/glossary.md#component
@@ -1063,11 +1063,11 @@ templates. These unsupported features include:
 [glossary-fuchsia-pkg-url]: /docs/glossary.md#fuchsia-pkg-url
 [glossary-gn]: /docs/glossary.md#gn
 [glossary-package]: /docs/glossary.md#fuchsia-package
-[gn-get-target-outputs]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_get_target_outputs
+[gn-get-target-outputs]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_get_target_outputs
 [package-name]: /docs/concepts/packages/package_url.md#package-name
 [pm]: /src/sys/pkg/bin/pm/README.md
 [rustc-binary]: /build/rust/rustc_binary.gni
 [rustc-test]: /build/rust/rustc_test.gni
 [source-code-layout]: /docs/concepts/source_code/layout.md
-[source-expansion-placeholders]: https://gn.googlesource.com/gn/+/master/docs/reference.md#placeholders
+[source-expansion-placeholders]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#placeholders
 [working-with-packages]: /docs/development/idk/documentation/packages.md

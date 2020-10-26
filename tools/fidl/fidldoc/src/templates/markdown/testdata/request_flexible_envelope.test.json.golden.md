@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## Protocol {#Protocol}
-*Defined in [fidl.test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/request_flexible_envelope.test.fidl#13)*
+*Defined in [fidl.test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/request_flexible_envelope.test.fidl#13)*
 
 
 ### RequestStrictResponseFlexible {#fidl.test.requestflexibleenvelope/Protocol.RequestStrictResponseFlexible}
@@ -70,7 +70,7 @@
 ## **UNIONS**
 
 ### FlexibleFoo {#FlexibleFoo}
-*Defined in [fidl.test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/request_flexible_envelope.test.fidl#3)*
+*Defined in [fidl.test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/request_flexible_envelope.test.fidl#3)*
 
 
 <table>
@@ -89,7 +89,7 @@
         </tr></table>
 
 ### StrictFoo {#StrictFoo}
-*Defined in [fidl.test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/request_flexible_envelope.test.fidl#8)*
+*Defined in [fidl.test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/request_flexible_envelope.test.fidl#8)*
 
 
 <table>

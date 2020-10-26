@@ -604,7 +604,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
 
   // The emitted signature, eg "[runtests][PASSED] /test/name", is used by the CQ/CI testrunners to
   // match test names and outcomes. Changes to this format must be matched in
-  // https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/tools/testing/runtests/output.go
+  // https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/testing/runtests/output.go
   std::unique_ptr<Result> result;
   if (proc_info.return_code == 0) {
     result = std::make_unique<Result>(test_name, SUCCESS, 0, duration_milliseconds);

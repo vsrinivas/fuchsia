@@ -82,7 +82,7 @@ There are no longer any unstable features used in Fuchsia! The last one was
 [Rust 2018: an early preview]: https://internals.rust-lang.org/t/rust-2018-an-early-preview/7776
 [Rust 2018: the home stretch]: https://internals.rust-lang.org/t/rust-2018-the-home-stretch/7810
 
-[prebuilts]: https://fuchsia.googlesource.com/integration/+/refs/heads/master/prebuilts
+[prebuilts]: https://fuchsia.googlesource.com/integration/+/HEAD/prebuilts
 [rust builder]: https://ci.chromium.org/p/fuchsia/g/rust/console
 [third_party/rust]: https://fuchsia.googlesource.com/third_party/rust/
 [tracking issues]: https://github.com/rust-lang/rust/issues?q=is%3Aopen+is%3Aissue+label%3AC-tracking-issue

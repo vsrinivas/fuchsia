@@ -179,7 +179,7 @@ about the component to the hub. For instance, appmgr exposes
   The [testing][rust-6] module supports the `assert_inspect_tree!` macro to
   match Inspect data for testing.
 
-* {[Dart](https://fuchsia.googlesource.com/topaz/+/refs/heads/master/public/dart/fuchsia_inspect/)}
+* {[Dart](https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/)}
 
   The Dart Inspect Library provides [write][dart-1] support for the Inspect File Format.
 

@@ -53,7 +53,7 @@ class EngineImpl : public Engine {
   void Start(std::vector<std::string> options, StartCallback callback) override;
 
   // LLVM C ABI functions
-  // See https://github.com/llvm/llvm-project/blob/master/compiler-rt/lib/fuzzer/FuzzerInterface.h
+  // See https://github.com/llvm/llvm-project/blob/HEAD/compiler-rt/lib/fuzzer/FuzzerInterface.h
   int Initialize(int *argc, char ***argv);
   int TestOneInput(const uint8_t *data, size_t size);
 

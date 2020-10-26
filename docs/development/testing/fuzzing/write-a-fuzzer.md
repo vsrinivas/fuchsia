@@ -212,4 +212,4 @@ Next, you can [build](build-a-fuzzer.md) your newly created fuzzer using GN and 
 [dictionary]: https://llvm.org/docs/LibFuzzer.html#dictionaries
 [fuzz-crate]: /src/lib/fuzzing/rust/src/lib.rs
 [fuzz-target]: https://llvm.org/docs/LibFuzzer.html#fuzz-target
-[fuzzed-data-provider]: https://github.com/google/fuzzing/blob/master/docs/split-inputs.md#fuzzed-data-provider
+[fuzzed-data-provider]: https://github.com/google/fuzzing/blob/HEAD/docs/split-inputs.md#fuzzed-data-provider

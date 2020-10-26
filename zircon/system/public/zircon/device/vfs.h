@@ -10,7 +10,7 @@
 // NOTE: All the defines here with the exception of ZX_FS_RIGHTS and ZX_FS_RIGHTS_SPACE are
 // mirrored from the constants in io.fidl, and their values must be kept in sync.
 // The FIDL definition is the source of truth:
-// https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/fidl/fuchsia-io/io.fidl
+// https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/fidl/fuchsia-io/io.fidl
 // Refer to link for documentation on detailed semantics of the flags.
 // TODO(yifeit): Assert that these values are kept in sync with io.fidl. Cannot do it here as this
 // header is used for both Fuchsia and host.

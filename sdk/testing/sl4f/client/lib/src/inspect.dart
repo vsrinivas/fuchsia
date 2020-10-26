@@ -50,7 +50,7 @@ class Inspect {
   ///   a/*/test.cmx:path/to/*/node:prop
   ///   a/*/test.cmx:root
   ///
-  /// See: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.diagnostics/selector.fidl
+  /// See: https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.diagnostics/selector.fidl
   ///
   /// Returns an empty list if nothing is found.
   Future<List<Map<String, dynamic>>> snapshot(

@@ -5,7 +5,7 @@
 library fuchsia.firebase.messaging;
 
 /// From FIRMessagingError at
-/// https://github.com/firebase/firebase-ios-sdk/blob/master/Firebase/Messaging/Public/FIRMessaging.h
+/// https://github.com/firebase/firebase-ios-sdk/blob/HEAD/Firebase/Messaging/Public/FIRMessaging.h
 enum MessagingErrorCode {
     /// Couldn't validate request from this client.
     AUTHENTICATION = 1;
@@ -29,7 +29,7 @@ enum MessagingErrorCode {
     INVALID_TOPIC_NAME = 8;
 };
 
-/// From https://github.com/grpc/grpc/blob/master/doc/statuscodes.md.
+/// From https://github.com/grpc/grpc/blob/HEAD/doc/statuscodes.md.
 enum CoreErrorCode {
     /// Not an error; returned on success.
     OK = 0;

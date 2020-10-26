@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 #
-# Derivative work of https://chromium.googlesource.com/chromium/src/+/refs/heads/master/build/config/fuchsia/prepare_package_inputs.py
+# Derivative work of https://chromium.googlesource.com/chromium/src/+/HEAD/build/config/fuchsia/prepare_package_inputs.py
 #
 """Creates a archive manifest used for Fuchsia package generation."""
 

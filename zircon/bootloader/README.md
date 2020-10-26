@@ -26,7 +26,7 @@ during boot, or by invoking `dm reboot-bootloader` from Fuchsia.
 ### Protocol Information
 
 Gigaboot implements the fastboot over UDP protocol described
-[here](https://android.googlesource.com/platform/system/core/+/master/fastboot/README.md).
+[here](https://android.googlesource.com/platform/system/core/+/HEAD/fastboot/README.md).
 
 ### Supported Commands
 
@@ -41,7 +41,7 @@ Gigaboot implements the fastboot over UDP protocol described
 | `set_active [a|b]` | Marks one of the (a\|b) slots active. |
 
 The partitions available for flashing/erasing are listed
-[here](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/system/public/zircon/hw/gpt.h).
+[here](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/public/zircon/hw/gpt.h).
 
 ### Supported Variables
 

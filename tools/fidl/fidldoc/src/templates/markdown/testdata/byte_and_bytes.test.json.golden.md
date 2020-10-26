@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### ByteAndBytes {#ByteAndBytes}
-*Defined in [fidl.test.byteandbytes/byte_and_bytes.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/byte_and_bytes.test.fidl#3)*
+*Defined in [fidl.test.byteandbytes/byte_and_bytes.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/byte_and_bytes.test.fidl#3)*
 
 
 

@@ -3,7 +3,7 @@
 This document describes policies for importing external dependencies.
 
  * All external dependencies must be pinned to a specific git hash or
-   [CIPD](https://chromium.googlesource.com/infra/luci/luci-go/+/master/cipd/)
+   [CIPD](https://chromium.googlesource.com/infra/luci/luci-go/+/HEAD/cipd/)
    package version using a [JIRI](https://fuchsia.googlesource.com/jiri/)
    manifest. This policy prevents changes in other repositories from breaking
    the Fuchsia build.

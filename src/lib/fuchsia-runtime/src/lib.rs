@@ -49,7 +49,7 @@ extern "C" {
 /// Short descriptions of each handle type are given, but more complete documentation may be found
 /// in the [processargs.h] header.
 ///
-/// [processargs.h]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/public/zircon/processargs.h
+/// [processargs.h]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/public/zircon/processargs.h
 #[repr(u8)]
 #[derive(FromPrimitive, Copy, Clone, Debug, Eq, PartialEq)]
 pub enum HandleType {

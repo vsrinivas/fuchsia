@@ -106,4 +106,4 @@ in its component manifest, which might look something like the below.
 The component consuming the configuration can look in its `/config/data`
 directory to see all the configuration files supplied to it.
 
-[gn-placeholders]: https://gn.googlesource.com/gn/+/master/docs/reference.md#placeholders
+[gn-placeholders]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#placeholders

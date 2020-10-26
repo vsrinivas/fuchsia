@@ -20,7 +20,7 @@ pub const PROTOCOL_V3: &str = "3.0";
 /// For more information about cohorts, see the 'cohort', 'cohorthint', and 'cohortname' attributes
 /// of the Request.App object at:
 ///
-/// https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#app-request
+/// https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#app-request
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Cohort {
     /// This is the cohort id itself.

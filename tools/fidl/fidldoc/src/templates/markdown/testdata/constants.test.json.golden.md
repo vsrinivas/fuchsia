@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### Struct {#Struct}
-*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#41)*
+*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#41)*
 
 
 
@@ -58,7 +58,7 @@
 ### EnumType {#EnumType}
 Type: <code>int32</code>
 
-*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#16)*
+*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#16)*
 
 
 
@@ -72,7 +72,7 @@ Type: <code>int32</code>
 ### Enum {#Enum}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#33)*
+*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#33)*
 
 
 
@@ -94,7 +94,7 @@ Type: <code>uint32</code>
 ### BitsType {#BitsType}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#22)*
+*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#22)*
 
 
 
@@ -116,7 +116,7 @@ Type: <code>uint32</code>
 ### Bits {#Bits}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#37)*
+*Defined in [fidl.test.constants/constants.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#37)*
 
 
 
@@ -133,7 +133,7 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr id="UINT8">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#3">UINT8</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#3">UINT8</a></td>
             <td>
                     <code>4</code>
                 </td>
@@ -141,7 +141,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="UINT16">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#4">UINT16</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#4">UINT16</a></td>
             <td>
                     <code>4</code>
                 </td>
@@ -149,7 +149,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="UINT32">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#5">UINT32</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#5">UINT32</a></td>
             <td>
                     <code>4</code>
                 </td>
@@ -157,7 +157,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="UINT64">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#6">UINT64</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#6">UINT64</a></td>
             <td>
                     <code>4</code>
                 </td>
@@ -165,7 +165,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="INT8">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#7">INT8</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#7">INT8</a></td>
             <td>
                     <code>4</code>
                 </td>
@@ -173,7 +173,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="INT16">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#8">INT16</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#8">INT16</a></td>
             <td>
                     <code>4</code>
                 </td>
@@ -181,7 +181,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="INT32">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#9">INT32</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#9">INT32</a></td>
             <td>
                     <code>4</code>
                 </td>
@@ -189,7 +189,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="INT64">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#10">INT64</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#10">INT64</a></td>
             <td>
                     <code>4</code>
                 </td>
@@ -197,7 +197,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="FLOAT32">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#11">FLOAT32</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#11">FLOAT32</a></td>
             <td>
                     <code>3.14159</code>
                 </td>
@@ -205,7 +205,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="FLOAT64">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#12">FLOAT64</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#12">FLOAT64</a></td>
             <td>
                     <code>3.14159</code>
                 </td>
@@ -213,7 +213,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="BOOL">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#13">BOOL</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#13">BOOL</a></td>
             <td>
                     <code>true</code>
                 </td>
@@ -221,18 +221,18 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="STRING">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#14">STRING</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#14">STRING</a></td>
             <td><code>string</code></td>
                     <td><code>String</code></td>
             <td></td>
         </tr>
     <tr id="enumVal">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#19">enumVal</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#19">enumVal</a></td>
             
             <td></td>
         </tr>
     <tr id="enumPrimitiveVal">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#20">enumPrimitiveVal</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#20">enumPrimitiveVal</a></td>
             <td>
                     <code><a class='link' href='#EnumType.VALUE'>EnumType.VALUE</a></code>
                 </td>
@@ -240,12 +240,12 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="bitsVal">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#27">bitsVal</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#27">bitsVal</a></td>
             
             <td></td>
         </tr>
     <tr id="bitsPrimitiveVal">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#28">bitsPrimitiveVal</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#28">bitsPrimitiveVal</a></td>
             <td>
                     <code><a class='link' href='#BitsType.VALUE'>BitsType.VALUE</a></code>
                 </td>
@@ -253,12 +253,12 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
     <tr id="orResult">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#30">orResult</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#30">orResult</a></td>
             
             <td></td>
         </tr>
     <tr id="orResultPrimitiveVal">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/constants.test.fidl#31">orResultPrimitiveVal</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/constants.test.fidl#31">orResultPrimitiveVal</a></td>
             <td>
                     <code></code>
                 </td>

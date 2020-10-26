@@ -8,7 +8,7 @@
 ## **PROTOCOLS**
 
 ## Interface {#Interface}
-*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/doc_comments.test.fidl#112)*
+*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/doc_comments.test.fidl#112)*
 
 <p>interface comment #1</p>
 <p>interface comment #3</p>
@@ -42,7 +42,7 @@
 ## **STRUCTS**
 
 ### Struct {#Struct}
-*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/doc_comments.test.fidl#72)*
+*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/doc_comments.test.fidl#72)*
 
 <p>struct comment #1</p>
 <p>struct comment #3</p>
@@ -68,7 +68,7 @@
 ### MyStrictEnum {#MyStrictEnum}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/doc_comments.test.fidl#42)*
+*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/doc_comments.test.fidl#42)*
 
 <p>strict enum comment #1.</p>
 <p>strict enum comment #2.</p>
@@ -92,7 +92,7 @@ Type: <code>uint32</code>
 ### MyFlexibleEnum {#MyFlexibleEnum}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/doc_comments.test.fidl#57)*
+*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/doc_comments.test.fidl#57)*
 
 <p>flexible enum comment #1.</p>
 <p>flexible enum comment #2.</p>
@@ -120,7 +120,7 @@ Type: <code>uint32</code>
 ### Table {#Table}
 
 
-*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/doc_comments.test.fidl#102)*
+*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/doc_comments.test.fidl#102)*
 
 <p>table comment #1</p>
 <p>table comment #3</p>
@@ -144,7 +144,7 @@ Type: <code>uint32</code>
 ## **UNIONS**
 
 ### StrictUnion {#StrictUnion}
-*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/doc_comments.test.fidl#82)*
+*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/doc_comments.test.fidl#82)*
 
 <p>strict union comment #1</p>
 <p>strict union comment #3</p>
@@ -161,7 +161,7 @@ Type: <code>uint32</code>
         </tr></table>
 
 ### FlexibleUnion {#FlexibleUnion}
-*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/doc_comments.test.fidl#92)*
+*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/doc_comments.test.fidl#92)*
 
 <p>flexible union comment #1</p>
 <p>flexible union comment #3</p>
@@ -184,7 +184,7 @@ Type: <code>uint32</code>
 ### MyStrictBits {#MyStrictBits}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/doc_comments.test.fidl#9)*
+*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/doc_comments.test.fidl#9)*
 
 <p>strict bits comment #1</p>
 <p>strict bits comment #2</p>
@@ -208,7 +208,7 @@ Type: <code>uint32</code>
 ### MyFlexibleBits {#MyFlexibleBits}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/doc_comments.test.fidl#23)*
+*Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/doc_comments.test.fidl#23)*
 
 <p>flexible bits comment #1</p>
 <p>flexible bits comment #2</p>
@@ -235,7 +235,7 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr id="C">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/doc_comments.test.fidl#37">C</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/doc_comments.test.fidl#37">C</a></td>
             <td>
                     <code>4</code>
                 </td>

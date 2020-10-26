@@ -22,7 +22,7 @@ The renderer achieves its performance through a few principles that are present 
 ## Getting started with mold
 
 * read the mold [API reference](https://fuchsia-docs.firebaseapp.com/rust/mold/)
-* check out the [Carnelian clockface example](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/lib/ui/carnelian/examples/clockface.rs)
+* check out the [Carnelian clockface example](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/lib/ui/carnelian/examples/clockface.rs)
 
 ## Example
 

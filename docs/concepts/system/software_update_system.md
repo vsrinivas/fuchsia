@@ -2,7 +2,7 @@
 
 Fuchsia is a project that constantly gets updates for new features, enhancements,
 and security fixes. Fuchsia's software update system makes use of
-[The Update Framework (TUF) version 1.0](https://github.com/theupdateframework/specification/blob/master/tuf-spec.md).
+[The Update Framework (TUF) version 1.0](https://github.com/theupdateframework/specification/blob/HEAD/tuf-spec.md).
 However, Fuchsia does have some differences from TUF:
 
 * [Specification version](#specification-version)

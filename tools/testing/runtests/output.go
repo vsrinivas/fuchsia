@@ -22,7 +22,7 @@ const (
 // TestPassed reads in the output from a runtests invocation of a single test and returns whether
 // that test succeeded. The expected signature, eg "[runtests][PASSED] /test/name", must match the
 // one in
-// https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/system/ulib/runtests-utils/fuchsia-run-test.cc
+// https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/runtests-utils/fuchsia-run-test.cc
 func TestPassed(ctx context.Context, testOutput io.Reader, name string) (bool, error) {
 	resultSignature := fmt.Sprintf("(%s|%s) %s", regexp.QuoteMeta(SuccessSignature), regexp.QuoteMeta(FailureSignature), regexp.QuoteMeta(name))
 	resultSignatureRE, err := regexp.Compile(resultSignature)

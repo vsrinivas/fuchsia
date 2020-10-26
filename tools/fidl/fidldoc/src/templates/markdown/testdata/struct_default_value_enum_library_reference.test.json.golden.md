@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### Foo {#Foo}
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#5)*
+*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#5)*
 
 
 

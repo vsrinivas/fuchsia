@@ -70,7 +70,7 @@ sudo apt-get install ccache
 ```
 
 For macOS, see
-[Using CCache on Mac](https://chromium.googlesource.com/chromium/src.git/+/master/docs/ccache_mac.md){:.external}
+[Using CCache on Mac](https://chromium.googlesource.com/chromium/src.git/+/HEAD/docs/ccache_mac.md){:.external}
 for installation instructions.
 
 `ccache` is enabled automatically if your `CCACHE_DIR` environment variable

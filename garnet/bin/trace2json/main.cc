@@ -61,7 +61,7 @@ void PrintHelpMessage() {
          "trace format)."
       << std::endl
       << "Fuchsia trace format: "
-         "https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/tracing/"
+         "https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/tracing/"
          "trace-format/"
       << std::endl
       << "Chrome trace format: "

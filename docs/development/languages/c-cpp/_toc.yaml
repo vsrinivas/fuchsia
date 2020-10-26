@@ -19,7 +19,7 @@ toc:
 - title: "Logging"
   path: /docs/development/languages/c-cpp/logging.md
 - title: "Perftest micro-benchmark library"
-  path: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/perftest/README.md
+  path: https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/perftest/README.md
 - title: "C++ in Zircon"
   path: /docs/development/languages/c-cpp/cxx.md
 - title: "Compile time collections"

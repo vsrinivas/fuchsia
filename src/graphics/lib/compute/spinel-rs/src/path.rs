@@ -26,7 +26,7 @@ impl Drop for PathInner {
 
 /// Spinel path created by a `PathBuilder`. [spn_path_t]
 ///
-/// [spn_path_t]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#50
+/// [spn_path_t]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#50
 #[derive(Clone, Debug)]
 pub struct Path {
     pub(crate) inner: Rc<PathInner>,

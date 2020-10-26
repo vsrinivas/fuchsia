@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## SomeProtocol {#SomeProtocol}
-*Defined in [fidl.test.handles/handles.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#45)*
+*Defined in [fidl.test.handles/handles.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/handles.test.fidl#45)*
 
 
 
@@ -14,7 +14,7 @@
 ## **STRUCTS**
 
 ### Handles {#Handles}
-*Defined in [fidl.test.handles/handles.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#52)*
+*Defined in [fidl.test.handles/handles.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/handles.test.fidl#52)*
 
 
 
@@ -260,7 +260,7 @@
 ### obj_type {#obj_type}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.handles/handles.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#6)*
+*Defined in [fidl.test.handles/handles.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/handles.test.fidl#6)*
 
 
 
@@ -401,17 +401,17 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="aliased_plain_handle">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#48">aliased_plain_handle</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/handles.test.fidl#48">aliased_plain_handle</a></td>
             <td>
                 <code>handle</code></td>
             <td></td>
         </tr><tr id="aliased_subtype_handle">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#49">aliased_subtype_handle</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/handles.test.fidl#49">aliased_subtype_handle</a></td>
             <td>
                 <code>handle</code></td>
             <td></td>
         </tr><tr id="aliased_rights_handle">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#50">aliased_rights_handle</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/HEAD/handles.test.fidl#50">aliased_rights_handle</a></td>
             <td>
                 <code>handle</code></td>
             <td></td>

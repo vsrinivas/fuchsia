@@ -16,7 +16,7 @@ use crate::{
 ///
 /// Is actually a thin wrapper over the [spn_raster_builder_t] stored in [`Context`].
 ///
-/// [spn_raster_builder_t]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#123
+/// [spn_raster_builder_t]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#123
 ///
 /// # Examples
 ///
@@ -52,7 +52,7 @@ impl RasterBuilder {
     /// Allocates the `spn_raster_builder` which contains all the internal (host) raster-related
     /// data. [spn_raster_builder_create]
     ///
-    /// [spn_raster_builder_create]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#128
+    /// [spn_raster_builder_create]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#128
     pub fn new(context: &Context) -> Self {
         Self {
             context: Rc::clone(&context.inner),
@@ -65,7 +65,7 @@ impl RasterBuilder {
     /// Fills current `Raster` with `path` by applying the 2D `transform` and rectangular `clip`.
     /// [spn_raster_fill]
     ///
-    /// [spn_raster_fill]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#175
+    /// [spn_raster_fill]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#175
     pub fn fill(mut self, path: Path, transform: Transform, clip: Clip) -> Self {
         if !transform.is_finite() {
             panic!("{:?} does not have finite f32 values", transform);
@@ -89,8 +89,8 @@ impl RasterBuilder {
     /// Builds `Raster` and resets builder. Calls [spn_raster_begin] and [spn_raster_end] to
     /// allocate the path.
     ///
-    /// [spn_raster_begin]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#144
-    /// [spn_raster_end]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#147
+    /// [spn_raster_begin]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#144
+    /// [spn_raster_end]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#147
     pub fn build(self) -> Option<Raster> {
         macro_rules! success {
             ( $result:expr, $raster_builder:expr $( , )? ) => {{

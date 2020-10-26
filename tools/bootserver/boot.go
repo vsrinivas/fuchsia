@@ -56,7 +56,7 @@ func bootserverArgToName(arg string) (string, bool) {
 
 // Maps netsvc name to the index at which the corresponding file should be transferred if
 // present. The indices correspond to the ordering given in
-// https://go.fuchsia.dev/zircon/+/master/system/host/bootserver/bootserver.c
+// https://go.fuchsia.dev/zircon/+/HEAD/system/host/bootserver/bootserver.c
 var transferOrderMap = map[string]int{
 	constants.CmdlineNetsvcName:        1,
 	constants.FvmNetsvcName:            2,

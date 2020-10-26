@@ -8,7 +8,7 @@ library fuchsia.legacymetrics;
 /// events are batched and uploaded at a regular interval. If this service is
 /// unable to upload events, it will try persisting them for later re-upload.
 /// For similar behavior, see Chromium's MetricsService:
-/// https://chromium.googlesource.com/chromium/src.git/+/refs/heads/master/components/metrics/metrics_service.cc
+/// https://chromium.googlesource.com/chromium/src.git/+/HEAD/components/metrics/metrics_service.cc
 [Discoverable]
 protocol MetricsRecorder {
     /// Processes and enqueues a batch of events for upload. Returns after the

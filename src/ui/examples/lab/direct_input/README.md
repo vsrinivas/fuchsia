@@ -30,22 +30,22 @@ There are two packages, each containing an independent binary.
 Some high-level functionality provided by DirectInput:
 
 * Receive low-level input reports from Zircon, via an
-[InputReader](https://fuchsia.googlesource.com/fuchsia/+/master/src/ui/lib/input_report_reader/input_reader.h).
+[InputReader](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/ui/lib/input_report_reader/input_reader.h).
 * Manage input devices and associated state, via
-[InputDeviceImpl](https://fuchsia.googlesource.com/fuchsia/+/master/src/lib/ui/input/input_device_impl.h)
+[InputDeviceImpl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/lib/ui/input/input_device_impl.h)
 and
-[DeviceState](https://fuchsia.googlesource.com/fuchsia/+/master/src/lib/ui/input/device_state.h).
+[DeviceState](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/lib/ui/input/device_state.h).
 * Transform low-level input report into a FIDL
-[InputEvent](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_events.fidl)
+[InputEvent](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.ui.input/input_events.fidl)
 struct, via DeviceState.
 
 It forwards InputEvents **to** Scenic to be routed to the correct destination
 based on hit testing. Scenic will send an InputEvent to a
-[View](https://fuchsia.googlesource.com/fuchsia/+/master/src/ui/scenic/lib/gfx/resources/view.h)
+[View](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/ui/scenic/lib/gfx/resources/view.h)
 over its
-[SessionListener](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic/session.fidl),
+[SessionListener](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.ui.scenic/session.fidl),
 as a
-[session event](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic/events.fidl).
+[session event](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.ui.scenic/events.fidl).
 
 To receive InputEvents **from** Scenic, DirectInput implements the following
 callback, given to its session as the event handler:
@@ -70,7 +70,7 @@ To exercise the multi-View case, DirectInput requests a child program to be
 launched, and sets up a ViewHolder into which the child can vend its View.
 DirectInput requests the child to *create* a View into the provided ViewHolder
 through the
-[ViewProvider](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.app/view_provider.fidl)
+[ViewProvider](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.ui.app/view_provider.fidl)
 interface, implemented by the child.
 
 ### DirectInputChild

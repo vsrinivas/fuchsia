@@ -12,7 +12,7 @@ instructions to get your development environment set up.
 ## Source Code Layout
 
 The layout of the `//src/session` directory follows the [Fuchsia Source Code
-Layout](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/source_code/layout.md#).
+Layout](https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/source_code/layout.md#).
 
 The `session_manager` code lives in `//src/session/bin/session_manager`. High
 level descriptions of the contents in the session subdirectories are as follows:

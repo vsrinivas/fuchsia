@@ -1581,15 +1581,15 @@ This section is under construction.
 [rust-part4-integration]: /examples/diagnostics/inspect/codelab/rust/part_4/tests/integration_test.rs
 [rust-part4-integration-meta]: /examples/diagnostics/inspect/codelab/rust/meta/integration_test_part_4.cmx
 
-[inspect-dart-codelab]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab
-[dart-part1]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1
-[dart-part1-main]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart
-[dart-part1-reverser]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1/lib/reverser.dart
-[dart-part1-build]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1/BUILD.gn
-[dart-client-main]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/client/lib/main.dart#9
-[dart-part2-meta]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_2/meta/inspect_dart_codelab_part_2.cmx
-[dart-part3-unittest]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_3/test/reverser_test.dart
-[dart-part4-integration]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_4/test/integration_test.dart
-[dart-part4-integration-meta]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_4/meta/inspect_dart_codelab_part_4_integration_tests.cmx
+[inspect-dart-codelab]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab
+[dart-part1]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_1
+[dart-part1-main]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart
+[dart-part1-reverser]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_1/lib/reverser.dart
+[dart-part1-build]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_1/BUILD.gn
+[dart-client-main]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/client/lib/main.dart#9
+[dart-part2-meta]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_2/meta/inspect_dart_codelab_part_2.cmx
+[dart-part3-unittest]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_3/test/reverser_test.dart
+[dart-part4-integration]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_4/test/integration_test.dart
+[dart-part4-integration-meta]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_4/meta/inspect_dart_codelab_part_4_integration_tests.cmx
 
 [fuchsia-inspect-derive]: /docs/development/languages/rust/ergonomic_inspect.md

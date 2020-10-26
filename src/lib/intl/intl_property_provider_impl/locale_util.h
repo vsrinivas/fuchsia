@@ -52,7 +52,7 @@ fit::result<std::string, zx_status_t> ExtractBcp47CalendarId(
 // given day of the week. Used for "First day of week" extension in locale IDs.
 //
 // See
-// https://github.com/unicode-org/cldr/blob/master/common/bcp47/calendar.xml.
+// https://github.com/unicode-org/cldr/blob/HEAD/common/bcp47/calendar.xml.
 std::string ToDayOfWeekString(UCalendarDaysOfWeek day_of_week);
 
 }  // namespace intl

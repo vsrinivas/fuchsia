@@ -13,7 +13,7 @@ use serde_json::{Map, Value};
 ///
 /// This holds the data for a response from the Omaha service.
 ///
-/// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#response
+/// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#response
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct Response {
     /// The current Omaha protocol version (which this is meant to be used with, is 3.0.  This

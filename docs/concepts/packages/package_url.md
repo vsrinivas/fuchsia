@@ -47,7 +47,7 @@ These identifying characteristics are not intended to be shown to end-users
 during normal operation (exception: developers and system administrators).
 Consequently, we may eschew concerns related to localization of names.
 
-[TUF Specification]: https://github.com/theupdateframework/specification/blob/master/tuf-spec.md#4-document-formats
+[TUF Specification]: https://github.com/theupdateframework/specification/blob/HEAD/tuf-spec.md#4-document-formats
 
 ## Repository identity
 

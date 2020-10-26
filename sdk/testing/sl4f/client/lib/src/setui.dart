@@ -94,7 +94,7 @@ class SetUi {
   /// [locale] accepts Unicode BCP-47 Locale Identifier.
   ///
   /// Reference LocaleId definition in
-  /// https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.intl/intl.fidl
+  /// https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.intl/intl.fidl
   Future<void> setLocale(String locale) async {
     _log.info('Setting Locale to $locale}');
     await _sl4f.request('setui_facade.SetIntl', {

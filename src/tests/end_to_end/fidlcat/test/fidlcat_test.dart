@@ -14,7 +14,7 @@ enum RunMode { withAgent, withoutAgent }
 
 void printErrorHelp() {
   print('If this test fails, see '
-      'https://fuchsia.googlesource.com/a/fuchsia/+/master/src/tests/end_to_end/fidlcat/README.md'
+      'https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/src/tests/end_to_end/fidlcat/README.md'
       ' for details!');
 }
 

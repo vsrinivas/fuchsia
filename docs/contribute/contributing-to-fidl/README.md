@@ -602,10 +602,10 @@ fidl fmt --library my_library.fidl -i
 [cpp-style]: /docs/development/languages/c-cpp/cpp-style.md
 [be-c]: /zircon/tools/fidl/lib/c_generator.cc
 [be-hlcpp]: /tools/fidl/fidlgen_hlcpp/
-[be-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidlgen_dart/
+[be-dart]: https://fuchsia.googlesource.com/topaz/+/HEAD/bin/fidlgen_dart/
 [be-go]: /tools/fidl/fidlgen_go/
 [be-rust]: /tools/fidl/fidlgen_rust/
-[bindings_test-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_bindings_test
+[bindings_test-dart]: https://fuchsia.googlesource.com/topaz/+/HEAD/bin/fidl_bindings_test
 [fidlc-source]: /zircon/tools/fidl/
 [fidlc-coding-tables-tests]: /src/lib/fidl/c/coding_tables_tests/
 [fidl-simple]: /src/lib/fidl/c/simple_tests/
@@ -614,11 +614,11 @@ fidl fmt --library my_library.fidl -i
 [jsonir]: /docs/reference/fidl/language/json-ir.md
 [rtl-c]: /zircon/system/ulib/fidl/
 [rtl-cpp]: /src/lib/fidl/llcpp/tests/
-[rtl-dart]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fidl/
-[rtl-go]: https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/
+[rtl-dart]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fidl/
+[rtl-go]: https://fuchsia.googlesource.com/third_party/go/+/HEAD/src/syscall/zx/fidl/
 [rtl-rust]: /src/lib/fidl/rust/fidl/
 [getting_started]: /docs/get-started/index.md
 [compat_readme]: /src/tests/fidl/compatibility/README.md
 [go-test-flags]: https://golang.org/cmd/go/#hdr-Testing_flags
 [fidl-misc]: https://fuchsia.googlesource.com/fidl-misc
-[fidldev]: https://fuchsia.googlesource.com/fidl-misc/+/refs/heads/master/fidldev
+[fidldev]: https://fuchsia.googlesource.com/fidl-misc/+/HEAD/fidldev

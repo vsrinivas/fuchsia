@@ -7,6 +7,6 @@
 ### run the cipd command line tool
 ## See usage and detailed help by running `fx cipd -h`
 ##
-## Or check https://github.com/luci/luci-go/tree/master/cipd for more information
+## Or check https://github.com/luci/luci-go/tree/HEAD/cipd for more information
 
 

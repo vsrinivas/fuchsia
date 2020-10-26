@@ -137,6 +137,6 @@ root hash and put in a directory at the root of the TUF file tree called 'blobs'
 [pkg-struct]: /src/sys/pkg/bin/pm/README.md#structure-of-a-fuchsia-package "Package structure"
 [TUF-home]: https://theupdateframework.github.io "TUF Homepage"
 [pkg-doc]: /docs/concepts/build_system/fuchsia_build_system_overview.md "Build overview"
-[flutter-gni]: https://fuchsia.googlesource.com/topaz/+/master/runtime/flutter_runner/flutter_app.gni "Flutter GN build template"
+[flutter-gni]: https://fuchsia.googlesource.com/topaz/+/HEAD/runtime/flutter_runner/flutter_app.gni "Flutter GN build template"
 [paver]: /docs/development/hardware/paving.md "Fuchsia paver"
 [OTA]: #triggering-an-ota "Triggering an OTA"

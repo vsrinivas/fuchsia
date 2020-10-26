@@ -7,5 +7,5 @@
 ### meta-build system that generates build files for Ninja
 ## usage: run `fx gn help`
 ##
-## Or check https://fuchsia.googlesource.com/jiri/+/refs/heads/master/README.md for more information
+## Or check https://fuchsia.googlesource.com/jiri/+/HEAD/README.md for more information
 

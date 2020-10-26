@@ -22,7 +22,7 @@ $ cargo gnaw --manifest-path ~/fuchsia/third_party/rust_crates/Cargo.toml -o ~/f
 
 ## How it works
 
-Cargo GNaw operates on vendored crates to convert them into [GN](https://gn.googlesource.com/gn/+/master/docs/reference.md) rules. The resulting BUILD.gn file is expected
+Cargo GNaw operates on vendored crates to convert them into [GN](https://gn.googlesource.com/gn/+/HEAD/docs/reference.md) rules. The resulting BUILD.gn file is expected
 to be vendored with the crates and provides targets for the GN build system to reference.
 
 All top-level crates are given an easy to use GN alias group that references the version exposed in the Cargo.toml.

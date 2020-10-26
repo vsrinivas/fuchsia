@@ -27,7 +27,7 @@ enum PathCommand {
 ///
 /// Is actually a thin wrapper over the [spn_path_builder_t] stored in [`Context`].
 ///
-/// [spn_path_builder_t]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#34
+/// [spn_path_builder_t]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#34
 ///
 /// # Examples
 ///
@@ -71,14 +71,14 @@ impl PathBuilder {
     ///
     /// `start_point` is the first `end-point`. [spn_path_move_to]
     ///
-    /// [spn_path_move_to]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#73
+    /// [spn_path_move_to]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#73
     pub fn new(context: &Context, start_point: Point) -> Self {
         Self { context: Rc::clone(&context.inner), cmds: vec![PathCommand::Move(start_point)] }
     }
 
     /// Adds line from `end-point` to `point`. [spn_path_line_to]
     ///
-    /// [spn_path_line_to]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#77
+    /// [spn_path_line_to]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#77
     pub fn line_to(mut self, point: Point) -> Self {
         panic_if_not_finite!(point);
 
@@ -89,7 +89,7 @@ impl PathBuilder {
     /// Adds quadratic Bézier from `end-point` to `point[1]` with `point[0]` as a control point.
     /// [spn_path_quad_to]
     ///
-    /// [spn_path_quad_to]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#92
+    /// [spn_path_quad_to]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#92
     pub fn quad_to(mut self, points: [Point; 2]) -> Self {
         for point in &points {
             panic_if_not_finite!(point);
@@ -101,7 +101,7 @@ impl PathBuilder {
 
     /// Adds smooth quadratic Bézier from `end-point` to `point`. [spn_path_quad_smooth_to]
     ///
-    /// [spn_path_quad_smooth_to]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#97
+    /// [spn_path_quad_smooth_to]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#97
     pub fn quad_smooth_to(mut self, point: Point) -> Self {
         panic_if_not_finite!(point);
 
@@ -112,7 +112,7 @@ impl PathBuilder {
     /// Adds cubic Bézier from `end-point` to `point[2]` with `point[0]` and `point[1]` as control
     /// points. [spn_path_cubic_to]
     ///
-    /// [spn_path_cubic_to]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#81
+    /// [spn_path_cubic_to]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#81
     pub fn cubic_to(mut self, points: [Point; 3]) -> Self {
         for point in &points {
             panic_if_not_finite!(point);
@@ -125,7 +125,7 @@ impl PathBuilder {
     /// Adds smooth cubic Bézier from `end-point` to `point[1]` with `point[0]` as control point.
     /// [spn_path_cubic_smooth_to]
     ///
-    /// [spn_path_cubic_smooth_to]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#87
+    /// [spn_path_cubic_smooth_to]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#87
     pub fn cubic_smooth_to(mut self, points: [Point; 2]) -> Self {
         for point in &points {
             panic_if_not_finite!(point);
@@ -138,7 +138,7 @@ impl PathBuilder {
     /// Adds rational quadratic Bézier from `end-point` to `point[1]` with `point[0]` as a control
     /// point and `w0` as weight. [spn_path_rat_quad_to]
     ///
-    /// [spn_path_rat_quad_to]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#101
+    /// [spn_path_rat_quad_to]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#101
     pub fn rat_quad_to(mut self, points: [Point; 2], w0: f32) -> Self {
         for point in &points {
             panic_if_not_finite!(point);
@@ -155,7 +155,7 @@ impl PathBuilder {
     /// Adds rational cubic Bézier from `end-point` to `point[2]` with `point[0]` and `point[1]` as
     /// control points, and `w0` and `w1` as weights. [spn_path_rat_cubic_to]
     ///
-    /// [spn_path_rat_cubic_to]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#107
+    /// [spn_path_rat_cubic_to]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#107
     pub fn rat_cubic_to(mut self, points: [Point; 3], w0: f32, w1: f32) -> Self {
         for point in &points {
             panic_if_not_finite!(point);
@@ -193,8 +193,8 @@ impl PathBuilder {
     ///
     /// If there is not enough memory to allocate the path, `None` is returned instead.
     ///
-    /// [spn_path_begin]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#55
-    /// [spn_path_end]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#58
+    /// [spn_path_begin]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#55
+    /// [spn_path_end]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#58
     pub fn build(mut self) -> Option<Path> {
         macro_rules! success {
             ( $result:expr, $path_builder:expr $( , )? ) => {{

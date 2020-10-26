@@ -73,7 +73,7 @@ void main() {
 
     test('link_to_code', () async {
       const String codelink =
-          'https://fuchsia.googlesource.com/fuchsia/+/master/src/testing/BUILD.gn';
+          'https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/testing/BUILD.gn';
 
       List<String> links = [codelink];
 
@@ -88,7 +88,7 @@ void main() {
     });
     test('link_to_project', () async {
       const String codelink =
-          'https://fuchsia.googlesource.com/topaz/+/master/tools/doc_checker/';
+          'https://fuchsia.googlesource.com/topaz/+/HEAD/tools/doc_checker/';
 
       List<String> links = [codelink];
 
@@ -223,9 +223,9 @@ void main() {
     test('uri to docs', () async {
       List<String> links = [
         // This should be an error, use /docs/...
-        'https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/README.md',
+        'https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/README.md',
         // This should be OK, since it goes to owners
-        'https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/some/path/OWNERS'
+        'https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/some/path/OWNERS'
       ];
 
       String pageLabel = '//docs/somewhere/index.md';

@@ -294,10 +294,10 @@ Additional `fx fuzz` commands can be used to [run a fuzzer](run-a-fuzzer.md).
 [fuzzer.gni]: /build/fuzzing/fuzzer.gni
 [fx-build]: /docs/development/build/fx.md#execute-a-build
 [fx-set]: /docs/development/build/fx.md#configure-a-build
-[gn-deps]: https://gn.googlesource.com/gn/+/master/docs/reference.md#var_deps
+[gn-deps]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#var_deps
 [gn-package]: /build/package.gni
-[gn-targets]: https://gn.googlesource.com/gn/+/master/docs/language.md#Targets
-[gn-templates]: https://gn.googlesource.com/gn/+/master/docs/language.md#Templates
+[gn-targets]: https://gn.googlesource.com/gn/+/HEAD/docs/language.md#Targets
+[gn-templates]: https://gn.googlesource.com/gn/+/HEAD/docs/language.md#Templates
 [go_fuzzer.gni]: /build/go/go_fuzzer.gni
 [known_variants]: /docs/gen/build_arguments.md#known_variants
 [lsan]: https://clang.llvm.org/docs/LeakSanitizer.html

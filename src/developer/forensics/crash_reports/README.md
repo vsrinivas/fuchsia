@@ -4,7 +4,7 @@ For development, it is often easier to dump the crash information in the logs as
 the crash happens on device. For devices in the field, we want to be able to
 send a report to a remote crash server as well as we might not have access to
 the devices' logs. We use
-[Crashpad](https://chromium.googlesource.com/crashpad/crashpad/+/master/README.md)
+[Crashpad](https://chromium.googlesource.com/crashpad/crashpad/+/HEAD/README.md)
 as the third-party client library to talk to the remote crash server.
 
 We control via JSON configuration files whether we upload the Crashpad reports

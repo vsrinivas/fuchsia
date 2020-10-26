@@ -53,6 +53,6 @@ If all of the above are running, you can now test the implementation using:
 $ fx run-test intl_property_manager_tests
 ```
 
-[1]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.intl/property_provider.fidl
-[2]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.intl/intl.fidl#69
-[3]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/intl/manager/fidl/manager.test.fidl
+[1]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.intl/property_provider.fidl
+[2]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.intl/intl.fidl#69
+[3]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/garnet/examples/intl/manager/fidl/manager.test.fidl

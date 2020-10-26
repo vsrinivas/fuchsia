@@ -81,4 +81,4 @@ dashboard only allows triaging bugs in monorail.
 
 See this link for more information about the [Sheriff rotation]
 
-[Sheriff rotation]: https://chromium.googlesource.com/chromium/src/+/master/docs/speed/perf_regression_sheriffing.md
+[Sheriff rotation]: https://chromium.googlesource.com/chromium/src/+/HEAD/docs/speed/perf_regression_sheriffing.md

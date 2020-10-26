@@ -53,7 +53,7 @@
 //!
 //! [zx_process_create]: https://fuchsia.dev/fuchsia-src/reference/syscalls/process_create.md
 //! [zx_job_set_policy]: https://fuchsia.dev/fuchsia-src/reference/syscalls/job_set_policy.md
-//! [fuchsia.process.Launcher]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/fidl/fuchsia-process/launcher.fidl
+//! [fuchsia.process.Launcher]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/fidl/fuchsia-process/launcher.fidl
 //
 // TODO: Consider supporting this for processes that do not meet the above requirements (nearly
 // all), where it can optionally build the process directly if able or delegate to a remote

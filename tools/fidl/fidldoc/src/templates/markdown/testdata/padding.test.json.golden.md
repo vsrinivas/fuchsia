@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### Padding1ByteEnd {#Padding1ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#3)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#3)*
 
 
 
@@ -31,7 +31,7 @@
 </table>
 
 ### Padding2ByteEnd {#Padding2ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#9)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#9)*
 
 
 
@@ -54,7 +54,7 @@
 </table>
 
 ### Padding3ByteEnd {#Padding3ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#15)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#15)*
 
 
 
@@ -77,7 +77,7 @@
 </table>
 
 ### Padding4ByteEnd {#Padding4ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#21)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#21)*
 
 
 
@@ -100,7 +100,7 @@
 </table>
 
 ### Padding5ByteEnd {#Padding5ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#27)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#27)*
 
 
 
@@ -130,7 +130,7 @@
 </table>
 
 ### Padding6ByteEnd {#Padding6ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#34)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#34)*
 
 
 
@@ -153,7 +153,7 @@
 </table>
 
 ### Padding7ByteEnd {#Padding7ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#40)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#40)*
 
 
 
@@ -176,7 +176,7 @@
 </table>
 
 ### Padding1ByteMiddle {#Padding1ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#46)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#46)*
 
 
 
@@ -199,7 +199,7 @@
 </table>
 
 ### Padding2ByteMiddle {#Padding2ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#52)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#52)*
 
 
 
@@ -222,7 +222,7 @@
 </table>
 
 ### Padding3ByteMiddle {#Padding3ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#58)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#58)*
 
 
 
@@ -245,7 +245,7 @@
 </table>
 
 ### Padding4ByteMiddle {#Padding4ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#64)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#64)*
 
 
 
@@ -268,7 +268,7 @@
 </table>
 
 ### Padding5ByteMiddle {#Padding5ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#70)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#70)*
 
 
 
@@ -298,7 +298,7 @@
 </table>
 
 ### Padding6ByteMiddle {#Padding6ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#77)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#77)*
 
 
 
@@ -321,7 +321,7 @@
 </table>
 
 ### Padding7ByteMiddle {#Padding7ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#83)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#83)*
 
 
 
@@ -344,7 +344,7 @@
 </table>
 
 ### Padding4ByteAlignmentLength12 {#Padding4ByteAlignmentLength12}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#93)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#93)*
 
 
 
@@ -381,7 +381,7 @@
 </table>
 
 ### Padding2ByteAlignmentLength6 {#Padding2ByteAlignmentLength6}
-*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/padding.test.fidl#102)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/padding.test.fidl#102)*
 
 
 

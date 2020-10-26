@@ -26,7 +26,7 @@ impl Drop for RasterInner {
 
 /// Spinel raster created by a `RasterBuilder`. [spn_raster_t]
 ///
-/// [spn_raster_t]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#139
+/// [spn_raster_t]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/graphics/lib/compute/spinel/spinel.h#139
 #[derive(Clone, Debug)]
 pub struct Raster {
     pub(crate) inner: Rc<RasterInner>,

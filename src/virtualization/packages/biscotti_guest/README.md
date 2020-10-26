@@ -1,7 +1,7 @@
 # Biscotti Guest
 
 The `biscotti_guest` is a guest system based off the
-[Termina VM](https://chromium.googlesource.com/chromiumos/docs/+/master/containers_and_vms.md).
+[Termina VM](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/containers_and_vms.md).
 
 ## Building the Kernel
 

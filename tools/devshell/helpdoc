@@ -96,7 +96,7 @@ function main {
     print-redacted-fx-help
     echo '```'
     echo
-    echo "[fx source code](https://fuchsia.googlesource.com/fuchsia/+/master/scripts/fx)"
+    echo "[fx source code](https://fuchsia.googlesource.com/fuchsia/+/HEAD/scripts/fx)"
   } > "${base_out}/fx.md"
 
   local dirs
@@ -131,7 +131,7 @@ function main {
         echo "## Contrib subcommands"
         echo
         echo "Subcommands that have been contributed by project members that have other levels of support, ownership, or both."
-        echo "The [OWNERS file](https://fuchsia.googlesource.com/fuchsia/+/master/tools/devshell/contrib/OWNERS) in the"
+        echo "The [OWNERS file](https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/devshell/contrib/OWNERS) in the"
         echo "contrib directory provides a pointer to the member that supports each script."
         echo
         _md_main_table_header
@@ -324,7 +324,7 @@ function handle-command {
     echo '```'
     if [[ -z "${vendor}" ]]; then
       echo
-      echo "[${cmd_name} source code](https://fuchsia.googlesource.com/fuchsia/+/master/${rel_path})"
+      echo "[${cmd_name} source code](https://fuchsia.googlesource.com/fuchsia/+/HEAD/${rel_path})"
     fi
   } > "${filename}"
 

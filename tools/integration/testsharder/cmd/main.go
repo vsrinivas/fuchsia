@@ -36,7 +36,7 @@ func usage() {
 
 Shards tests produced by a build.
 For more information on the modes in which the testsharder may be run, see
-See https://go.fuchsia.dev/fuchsia/tools/+/master/testsharder/mode.go.
+See https://go.fuchsia.dev/fuchsia/tools/+/HEAD/testsharder/mode.go.
 `)
 }
 

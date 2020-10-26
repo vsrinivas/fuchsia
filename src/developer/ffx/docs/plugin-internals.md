@@ -10,7 +10,7 @@ edited after compile time.
 It also means that any dynamic ability to add plugins must come before compile
 time. To accomplish this, FFX uses GN build rules to generate the final argh
 structure from the supplied plugin dependencies.  You can see that code
-[here](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/developer/ffx/build/ffx.gni#35).
+[here](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/developer/ffx/build/ffx.gni#35).
 
 Internal libraries to FFX require access to top level CLI flags and parameters.
 For example, the config library needs access to the "--config" flag:
@@ -53,7 +53,7 @@ pub async fn ffx_plugin_impl(<Your methods inputs>) -> Result<(), Error> {
 The ffx_plugin template requires enough dependencies to allow for the code
 generated via the Rust attributes to compile. Therefore the ffx_plugin template
 gets the following
-[dependencies](https://fuchsia.googlesource.com/fuchsia/+/refs/hea%20ds/master/src/developer/ffx/build/ffx_plugin.gni#99)
+[dependencies](https://fuchsia.googlesource.com/fuchsia/+/refs/hea%20ds/HEAD/src/developer/ffx/build/ffx_plugin.gni#99)
 for free:
 
  + //sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc

@@ -43,7 +43,7 @@ MemoryAllocationResult AllocateExportableMemoryDedicatedToImageIfRequired(
     vk::Image dedicated_image, vk::MemoryPropertyFlags flags,
     const vk::DispatchLoaderDynamic& dispatch) {
   // We use the StructureChain provided by vulkan.hpp (see https://github.com/
-  // KhronosGroup/Vulkan-Hpp/blob/master/README.md for details ) to get chaining
+  // KhronosGroup/Vulkan-Hpp/blob/HEAD/README.md for details ) to get chaining
   // of MemoryRequirements2 and MemoryDedicatedRequirementsKHR structures.
   auto get_requirements_result =
       device.getImageMemoryRequirements2KHR<vk::MemoryRequirements2KHR,

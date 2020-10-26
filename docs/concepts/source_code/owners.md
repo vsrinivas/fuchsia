@@ -40,5 +40,5 @@ validuser2@example.com
 # COMPONENT: TopComponent>SubComponent
 ```
 
-[find-owners]: https://gerrit.googlesource.com/plugins/find-owners/+/master/src/main/resources/Documentation/about.md
-[owners-syntax]: https://gerrit.googlesource.com/plugins/find-owners/+/master/src/main/resources/Documentation/syntax.md
+[find-owners]: https://gerrit.googlesource.com/plugins/find-owners/+/HEAD/src/main/resources/Documentation/about.md
+[owners-syntax]: https://gerrit.googlesource.com/plugins/find-owners/+/HEAD/src/main/resources/Documentation/syntax.md

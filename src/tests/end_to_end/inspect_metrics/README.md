@@ -77,7 +77,7 @@ appmgr through the Archivist.
 Unit tests for this functionality are present at 
 [//src/sys/appmgr/cpu_watcher_unittest.cc][appmgr-tests]
 
-[archivist-tests]: https://fuchsia.googlesource.com/a/fuchsia/+/master/src/diagnostics/archivist/tests/
-[fshost-tests]: https://fuchsia.googlesource.com/a/fuchsia/+/master/src/storage/fshost/inspect-manager-test.cc
-[memory-tests]: https://fuchsia.googlesource.com/a/fuchsia/+/master/src/developer/memory/monitor/tests/
-[appmgr-tests]: https://fuchsia.googlesource.com/a/fuchsia/+/master/src/sys/appmgr/cpu_watcher_unittest.cc
+[archivist-tests]: https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/src/diagnostics/archivist/tests/
+[fshost-tests]: https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/src/storage/fshost/inspect-manager-test.cc
+[memory-tests]: https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/src/developer/memory/monitor/tests/
+[appmgr-tests]: https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/src/sys/appmgr/cpu_watcher_unittest.cc

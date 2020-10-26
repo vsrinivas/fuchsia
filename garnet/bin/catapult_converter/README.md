@@ -5,7 +5,7 @@ This directory contains the `catapult_converter` command line tool
 which takes perf test results in [our format] and converts them to the
 [Catapult Dashboard](https://github.com/catapult-project/catapult)'s
 [JSON "HistogramSet" format](
-https://github.com/catapult-project/catapult/blob/master/docs/histogram-set-json-format.md).
+https://github.com/catapult-project/catapult/blob/HEAD/docs/histogram-set-json-format.md).
 
 ## Parameters
 
@@ -59,6 +59,6 @@ This is an optional parameter that the Catapult dashboard accepts:
 * a_productVersions: The system version, like '0.20200123.2.1'.
 
 For more information on Catapult's format, see [How to Write
-Metrics](https://github.com/catapult-project/catapult/blob/master/docs/how-to-write-metrics.md).
+Metrics](https://github.com/catapult-project/catapult/blob/HEAD/docs/how-to-write-metrics.md).
 
 [our format]: /docs/development/benchmarking/results_schema.md

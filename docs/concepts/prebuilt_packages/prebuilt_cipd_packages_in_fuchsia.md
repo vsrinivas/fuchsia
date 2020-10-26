@@ -1,7 +1,7 @@
 # Prebuilt CIPD packages in Fuchsia
 
 The Fuchsia project uses Chrome Infrastructure Package Deployment
-([CIPD](https://github.com/luci/luci-go/tree/master/cipd){: .external}) to store
+([CIPD](https://github.com/luci/luci-go/tree/HEAD/cipd){: .external}) to store
 and distribute prebuilt files.
 
 Note: A CIPD store is not a package server for Fuchsia devices. In other words,
@@ -10,7 +10,7 @@ a Fuchsia device doesn't run components from prebuilt CIPD packages.
 A CIPD package is an arbitrary collection of files, stored in
 [a remote content-addressed store](https://chrome-infra-packages.appspot.com/p/fuchsia){: .external},
 and is distributed to a Fuchsia checkout through the
-<code>[jiri](https://fuchsia.googlesource.com/jiri/+/master/){:.external}</code>
+<code>[jiri](https://fuchsia.googlesource.com/jiri/+/HEAD/){:.external}</code>
 tool. Also, using the `cipd` command-line tool, you can download a CIPD package
 directly, for example, to examine its content.
 
@@ -37,7 +37,7 @@ process.
 used for this CIPD package instances.</figcaption> </figure>
 
 When you publish a new revision of your prebuilt package to CIPD, the `latest`
-[ref](https://github.com/luci/luci-go/tree/master/cipd#refs){: .external} in the
+[ref](https://github.com/luci/luci-go/tree/HEAD/cipd#refs){: .external} in the
 CIPD store automatically points to the new revision. Fuchsia’s CI system
 monitors your package’s `latest` ref. When it detects that the `latest` ref is
 updated, the system fetches the new package and rolls it into the Fuchsia

@@ -26,7 +26,7 @@ pub const HEADER_APP_ID: &str = "X-Goog-Update-AppId";
 ///
 /// This holds the data for constructing a request to the Omaha service.
 ///
-/// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#request
+/// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#request
 #[derive(Debug, Default, Serialize)]
 pub struct Request {
     /// The current Omaha protocol version (which this is meant to be used with, is 3.0.  This
@@ -110,7 +110,7 @@ impl Default for InstallSource {
 
 /// Information about the platform / operating system.
 ///
-/// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#os
+/// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#os
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 pub struct OS {
     /// The device platform (e.g. 'Fuchsia')
@@ -132,7 +132,7 @@ pub struct OS {
 /// While unlikely, it's possible for a single request to have an update check, a ping, and for it
 /// to be reporting an event.
 ///
-/// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#app-request
+/// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#app-request
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct App {
     /// This is the GUID or product ID that uniquely identifies the product to Omaha.
@@ -192,7 +192,7 @@ pub struct App {
 
 /// This is an update check for the parent App object.
 ///
-/// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#updatecheck-request
+/// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#updatecheck-request
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 pub struct UpdateCheck {
     /// If the update is disabled, the client will not honor an 'update' response.  The default
@@ -213,10 +213,10 @@ impl UpdateCheck {
 
 /// This is a status ping to the Omaha service.
 ///
-/// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#ping-request
+/// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#ping-request
 ///
 /// These pings only support the Client-Regulated Counting method (Date-based).  For more info, see
-/// https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#client-regulated-Counting-days-based
+/// https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#client-regulated-Counting-days-based
 #[derive(Debug, Default, Clone, Eq, PartialEq, Serialize)]
 pub struct Ping {
     /// This is the January 1, 2007 epoch-based value for the date that was previously sent to the
@@ -240,7 +240,7 @@ pub struct Ping {
 
 /// An event that is being reported to the Omaha service.
 ///
-/// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#event-request
+/// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#event-request
 #[derive(Debug, Default, Clone, Eq, PartialEq, Serialize)]
 pub struct Event {
     /// This is the event type for the event (see the enum for more information).
@@ -287,7 +287,7 @@ impl Event {
 
 /// The type of event that is being reported.  These are specified by the Omaha protocol.
 ///
-/// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#event-request
+/// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#event-request
 #[derive(Debug, Clone, Eq, PartialEq, Serialize_repr)]
 #[repr(u8)]
 pub enum EventType {
@@ -321,7 +321,7 @@ impl Default for EventType {
 
 /// The result of event that is being reported.  These are specified by the Omaha protocol.
 ///
-/// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#event-request
+/// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#event-request
 #[derive(Debug, Clone, Eq, PartialEq, Serialize_repr)]
 #[repr(u8)]
 pub enum EventResult {
@@ -365,7 +365,7 @@ impl Default for EventErrorCode {
 
 /// The GUID used in Omaha protocol for sessionid and requestid.
 ///
-/// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#guids
+/// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#guids
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct GUID {
     uuid: uuid::Uuid,

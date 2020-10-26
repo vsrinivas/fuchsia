@@ -333,9 +333,9 @@ extern "C" LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 ```
 
 [asan]: https://clang.llvm.org/docs/AddressSanitizer.html
-[fuzzer-interface]: https://github.com/llvm/llvm-project/blob/master/compiler-rt/lib/fuzzer/FuzzerInterface.h
+[fuzzer-interface]: https://github.com/llvm/llvm-project/blob/HEAD/compiler-rt/lib/fuzzer/FuzzerInterface.h
 [golang-cgo]: https://golang.org/cmd/cgo/
 [manual-poison]: https://github.com/google/sanitizers/wiki/AddressSanitizerManualPoisoning
 [one-way-function]: https://en.wikipedia.org/wiki/One-way_function
 [rust-ffi]: https://doc.rust-lang.org/nomicon/ffi.html
-[structure-aware-fuzzing]: https://github.com/google/fuzzing/blob/master/docs/structure-aware-fuzzing.md
+[structure-aware-fuzzing]: https://github.com/google/fuzzing/blob/HEAD/docs/structure-aware-fuzzing.md

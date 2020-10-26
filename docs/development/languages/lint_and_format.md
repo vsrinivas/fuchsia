@@ -191,7 +191,7 @@ TODO(fxbug.dev/27310): Document go vet once implementation details are finalized
 
 ## Dart
 
-Dart uses [`dartfmt`](https://github.com/dart-lang/dart_style) and [`dartanalyzer`](https://github.com/dart-lang/sdk/tree/master/pkg/analyzer_cli). These are distributed as prebuilts from the Dart toolchain. The
+Dart uses [`dartfmt`](https://github.com/dart-lang/dart_style) and [`dartanalyzer`](https://github.com/dart-lang/sdk/tree/HEAD/pkg/analyzer_cli). These are distributed as prebuilts from the Dart toolchain. The
 `dartanalyzer` is run as part of the build rather than as a check, as it performs type-checking and
 other assertive checks.
 
@@ -234,7 +234,7 @@ $ZIRCON_BUILD_DIR/tools/fidl-lint $FILES
 
 ## GN
 
-GN files use the [`gn format`](https://gn.googlesource.com/gn/+/master/docs/reference.md#cmd_format) subcommand. There is not a linter. This is distributed as part of the GN
+GN files use the [`gn format`](https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#cmd_format) subcommand. There is not a linter. This is distributed as part of the GN
 prebuilt.
 
 It runs on source files as follows:

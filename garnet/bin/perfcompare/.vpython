@@ -3,7 +3,7 @@
 # automatically when perfcompare is run using vpython.
 #
 # vpython is described here:
-# https://chromium.googlesource.com/infra/infra/+/master/doc/users/vpython.md
+# https://chromium.googlesource.com/infra/infra/+/HEAD/doc/users/vpython.md
 
 wheel <
   name: "infra/python/wheels/numpy/${vpython_platform}"

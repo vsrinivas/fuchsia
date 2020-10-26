@@ -4,7 +4,7 @@ This page explains how to integrate your software into the Fuchsia project as a
 [prebuilt CIPD package](/docs/concepts/prebuilt_packages/prebuilt_cipd_packages_in_fuchsia.md).
 
 To publish your prebuilt package to
-[CIPD](https://github.com/luci/luci-go/tree/master/cipd){:.external},
+[CIPD](https://github.com/luci/luci-go/tree/HEAD/cipd){:.external},
 see the following guidelines:
 
 *   [Prerequisites](#prerequisites)
@@ -121,7 +121,7 @@ identifier.
 ### version
 
 To identify the source of prebuilt packages,
-[tag](https://github.com/luci/luci-go/tree/master/cipd#tags){: .external} each
+[tag](https://github.com/luci/luci-go/tree/HEAD/cipd#tags){: .external} each
 revision with a version identifier in the form of:
 
 ```none

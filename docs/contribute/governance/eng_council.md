@@ -179,4 +179,4 @@ The current members of the Fuchsia Eng Council are listed in
 
 [rfc-process]: /docs/contribute/governance/rfcs/README.md
 [rough-consensus]: https://en.wikipedia.org/wiki/Rough_consensus
-[rfc-owners]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/contribute/governance/rfcs/OWNERS
+[rfc-owners]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/contribute/governance/rfcs/OWNERS

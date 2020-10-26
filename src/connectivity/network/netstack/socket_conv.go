@@ -35,12 +35,12 @@ import (
 import "C"
 
 // Functions below are adapted from
-// https://github.com/google/gvisor/blob/master/pkg/sentry/socket/netstack/netstack.go
+// https://github.com/google/gvisor/blob/HEAD/pkg/sentry/socket/netstack/netstack.go
 //
 // At the time of writing, this command produces a reasonable diff:
 //
 /*
-   curl -sfSL https://raw.githubusercontent.com/google/gvisor/master/pkg/sentry/socket/netstack/netstack.go |
+   curl -sfSL https://raw.githubusercontent.com/google/gvisor/HEAD/pkg/sentry/socket/netstack/netstack.go |
    sed s/linux/C/g | \
    sed 's/, outLen)/)/g' | \
    sed 's/(t, /(/g' | \

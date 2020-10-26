@@ -1109,7 +1109,7 @@ success("Vectors") {
 }
 
 // This tests the default input used in fidlviz:
-// https://fuchsia.googlesource.com/fidl-misc/+/refs/heads/master/fidlviz/
+// https://fuchsia.googlesource.com/fidl-misc/+/HEAD/fidlviz/
 success("FidlvizDemo") {
     // TODO(fxbug.dev/36441): Implement handles in all backends.
     bindings_allowlist = [dart,go,rust],

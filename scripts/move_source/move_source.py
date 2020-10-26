@@ -338,7 +338,7 @@ to the directory:
   %s
 
 to better match Fuchsia's desired source layout:
-https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/source_code/layout.md
+https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/source_code/layout.md
 
 ''' % (os.path.basename(dest), source, dest, source, dest)
 

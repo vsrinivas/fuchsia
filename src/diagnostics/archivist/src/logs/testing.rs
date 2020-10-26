@@ -468,7 +468,7 @@ impl TestDebugEntry {
     }
 
     /// Creates a byte representation of the klog, following format in zircon
-    /// https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/kernel/lib/debuglog/include/lib/debuglog.h#52
+    /// https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/kernel/lib/debuglog/include/lib/debuglog.h#52
     pub fn to_vec(&self) -> Vec<u8> {
         let datalen = self.log.len() as u16;
 

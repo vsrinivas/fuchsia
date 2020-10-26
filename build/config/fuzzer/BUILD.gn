@@ -11,7 +11,7 @@ import("//build/toolchain/variant.gni")
 #   https://llvm.org/docs/LibFuzzer.html#fuzzer-usage
 #     Specifies the the fuzzing flags for LLVM.
 #
-#   https://github.com/llvm/llvm-project/blob/master/compiler-rt/lib/fuzzer/FuzzerTracePC.cpp
+#   https://github.com/llvm/llvm-project/blob/HEAD/compiler-rt/lib/fuzzer/FuzzerTracePC.cpp
 #     Includes details on which types of coverage are enabled for fuzzing.
 #
 #   https://clang.llvm.org/docs/SanitizerCoverage.html

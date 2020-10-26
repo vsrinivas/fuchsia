@@ -11,7 +11,7 @@
 // This sub-fixture uses fuchsia.web FIDL services to interact with Chromium.
 //
 // See also:
-// https://chromium.googlesource.com/chromium/src/+/master/fuchsia/engine/test/web_engine_browser_test.h
+// https://chromium.googlesource.com/chromium/src/+/HEAD/fuchsia/engine/test/web_engine_browser_test.h
 class WebContext {
  public:
   WebContext(sys::ComponentContext* component_context, fuchsia::web::ContextFeatureFlags flags);

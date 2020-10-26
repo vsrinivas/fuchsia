@@ -14,9 +14,9 @@ In the Zircon checkout after running `scripts/download-prebuilt`,
 `scripts/gn` and `scripts/ninja` provide access to the prebuilt binaries.
 
 [Ninja]: https://ninja-build.org/manual.html
-[QuickStart]: https://gn.googlesource.com/gn/+/master/docs/quick_start.md
-[Language]: https://gn.googlesource.com/gn/+/master/docs/language.md
-[Reference]: https://gn.googlesource.com/gn/+/master/docs/reference.md
+[QuickStart]: https://gn.googlesource.com/gn/+/HEAD/docs/quick_start.md
+[Language]: https://gn.googlesource.com/gn/+/HEAD/docs/language.md
+[Reference]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md
 
 ## Two-phase operation: `gn` and `ninja`
 

@@ -64,7 +64,7 @@ impl OtaUpdateChannelConfig {
             return Err(ChannelConfigError::ChannelNameLength(channel_name.len()));
         }
         // Cohort is limited to ASCII characters 32 to 126 (inclusive).
-        // https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#attributes-3
+        // https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#attributes-3
         if channel_name.bytes().any(|b| b < 32 || b > 126) {
             return Err(ChannelConfigError::ChannelNameInvalid(channel_name));
         }
