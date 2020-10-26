@@ -6,7 +6,7 @@ use anyhow::{format_err, Context as _, Error};
 use bt_a2dp as a2dp;
 use fidl_fuchsia_media::{AudioFormat, AudioUncompressedFormat, DomainFormat, PcmFormat};
 use fuchsia_async as fasync;
-use fuchsia_audio_codec::{StreamProcessor, StreamProcessorOutputStream};
+use fuchsia_audio_codec::StreamProcessor;
 use fuchsia_trace as trace;
 use fuchsia_zircon::{self as zx, DurationNum};
 use futures::{
@@ -15,16 +15,16 @@ use futures::{
     task::{Context, Poll},
     FutureExt, Stream, StreamExt,
 };
-use log::info;
+use log::{info, trace};
 use std::{collections::VecDeque, pin::Pin};
 
 pub struct EncodedStream {
     /// The input media stream
     source: BoxStream<'static, fuchsia_audio_device_output::Result<Vec<u8>>>,
-    /// The underlying encoder object
-    encoder: StreamProcessor,
+    /// The encoder input.
+    encoder: Box<dyn AsyncWrite + Unpin + Send>,
     /// The underlying encoder stream
-    encoded_stream: StreamProcessorOutputStream,
+    encoded_stream: BoxStream<'static, Result<Vec<u8>, Error>>,
     /// Bytes that have been sent to the encoder and not flushed.
     unflushed_bytecount: usize,
     /// Bytes that are buffered to send to the encoder
@@ -57,8 +57,9 @@ impl EncodedStream {
         let pcm_input_format = DomainFormat::Audio(AudioFormat::Uncompressed(
             AudioUncompressedFormat::Pcm(input_format),
         ));
-        let mut encoder = StreamProcessor::create_encoder(pcm_input_format, encoder_settings)?;
-        let encoded_stream = encoder.take_output_stream()?;
+        let mut encoder =
+            Box::new(StreamProcessor::create_encoder(pcm_input_format, encoder_settings)?);
+        let encoded_stream = encoder.take_output_stream()?.boxed();
 
         Ok(Self {
             source,
@@ -69,6 +70,26 @@ impl EncodedStream {
             encoder_input_cursor: 0,
             pcm_bytes_per_encoded_packet,
         })
+    }
+
+    /// Build a test version of this, that replaces the encoder with a set of streams that are
+    /// given in the constructor.
+    #[cfg(test)]
+    fn build_test(
+        source: BoxStream<'static, fuchsia_audio_device_output::Result<Vec<u8>>>,
+        encoder: Box<dyn AsyncWrite + Unpin + Send>,
+        encoded_stream: BoxStream<'static, Result<Vec<u8>, Error>>,
+        pcm_bytes_per_encoded_packet: usize,
+    ) -> Self {
+        Self {
+            source,
+            encoder,
+            encoded_stream,
+            unflushed_bytecount: 0,
+            encoder_input_buffers: VecDeque::new(),
+            encoder_input_cursor: 0,
+            pcm_bytes_per_encoded_packet,
+        }
     }
 
     /// Run a preliminary test for a encoding audio in `input_format` into the codec `config`.
@@ -88,7 +109,7 @@ impl EncodedStream {
                 }
             }
             Some(Err(e)) => Err(e),
-            None => Err(format_err!("SBC encoder ended stream")),
+            None => Err(format_err!("Encoder ended stream")),
         }
     }
 }
@@ -106,16 +127,21 @@ impl Stream for EncodedStream {
                 }
                 Some(Err(e)) => return Poll::Ready(Some(Err(e.into()))),
                 Some(Ok(bytes)) => {
-                    trace::instant!("bt-a2dp-source", "Media:PacketReceived", trace::Scope::Thread);
+                    trace::instant!( "bt-a2dp-source", "Media:PacketReceived", 
+                        trace::Scope::Thread, "bytes" => bytes.len() as u64);
                     self.encoder_input_buffers.push_back(bytes)
                 }
             }
         }
+
         // Push audio into the encoder.
         while let Some(vec) = self.encoder_input_buffers.pop_front() {
             let cursor = self.encoder_input_cursor;
             match Pin::new(&mut self.encoder).poll_write(cx, &vec[cursor..]) {
-                Poll::Pending => break,
+                Poll::Pending => {
+                    self.encoder_input_buffers.push_front(vec);
+                    break;
+                }
                 Poll::Ready(Err(e)) => return Poll::Ready(Some(Err(e.into()))),
                 Poll::Ready(Ok(written)) => {
                     self.encoder_input_cursor = cursor + written;
@@ -123,16 +149,20 @@ impl Stream for EncodedStream {
                     // flush() if we have sent enough bytes to generate a frame
                     if self.unflushed_bytecount > self.pcm_bytes_per_encoded_packet {
                         // Attempt to flush.
-                        if self.encoder.send_packet().is_ok() {
+                        if let Poll::Ready(Ok(())) = Pin::new(&mut self.encoder).poll_flush(cx) {
                             self.unflushed_bytecount = 0;
                         }
                     }
                     if self.encoder_input_cursor != vec.len() {
+                        trace!(
+                            "{} left in {} byte buffer..",
+                            vec.len() - self.encoder_input_cursor,
+                            vec.len()
+                        );
                         self.encoder_input_buffers.push_front(vec);
-                        continue;
                     } else {
                         // Reset to the front of the next buffer.
-                        self.encoder_input_cursor = 0
+                        self.encoder_input_cursor = 0;
                     }
                 }
             }
@@ -182,5 +212,177 @@ impl SilenceStream {
             next_frame_timer: fasync::Timer::new(fasync::Time::INFINITE_PAST),
             last_frame_time: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use futures::io;
+    use std::sync::{Arc, Mutex};
+
+    /// A stream that just returns a looping string of numbers.
+    #[derive(Clone)]
+    struct CountingStream(Arc<Mutex<CountingStreamInner>>);
+
+    struct CountingStreamInner {
+        next: u16,
+        ready_bytes: usize,
+    }
+
+    impl Default for CountingStream {
+        fn default() -> Self {
+            Self(Arc::new(Mutex::new(CountingStreamInner { next: 0, ready_bytes: 0 })))
+        }
+    }
+
+    impl CountingStream {
+        fn set_bytes_ready(&self, bytes: usize) {
+            self.0.lock().unwrap().ready_bytes = bytes;
+        }
+    }
+
+    impl futures::Stream for CountingStream {
+        type Item = fuchsia_audio_device_output::Result<Vec<u8>>;
+
+        fn poll_next(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+            let s = Pin::into_inner(self);
+            let mut locked = s.0.lock().unwrap();
+            if locked.ready_bytes == 0 {
+                return Poll::Pending;
+            }
+            let len = (locked.ready_bytes / std::mem::size_of::<u16>()) as u16;
+            let mut vec = Vec::with_capacity(locked.ready_bytes);
+            for i in 0..len {
+                vec.extend_from_slice(&mut locked.next.wrapping_add(i).to_be_bytes());
+            }
+            locked.next = locked.next.wrapping_add(len);
+            locked.ready_bytes = 0;
+            Poll::Ready(Some(Ok(vec)))
+        }
+    }
+
+    /// An "encoder" that just buffers the input and sends it to the output when it's asked for.
+
+    #[derive(Clone)]
+    struct PassthroughEncoder(Arc<Mutex<PassthroughEncoderInner>>);
+
+    struct PassthroughEncoderInner {
+        // The k
+        buffered: VecDeque<Vec<u8>>,
+        stalled: bool,
+    }
+
+    impl Default for PassthroughEncoder {
+        fn default() -> Self {
+            Self(Arc::new(Mutex::new(PassthroughEncoderInner {
+                buffered: VecDeque::new(),
+                stalled: false,
+            })))
+        }
+    }
+
+    impl PassthroughEncoder {
+        fn stall_input(&self, stall: bool) {
+            self.0.lock().unwrap().stalled = stall;
+        }
+
+        fn push_input(&self, input: Vec<u8>) {
+            self.0.lock().unwrap().buffered.push_front(input);
+        }
+
+        fn get_output(&self) -> Option<Vec<u8>> {
+            self.0.lock().unwrap().buffered.pop_back()
+        }
+
+        fn is_stalled(&self) -> bool {
+            self.0.lock().unwrap().stalled
+        }
+    }
+
+    impl AsyncWrite for PassthroughEncoder {
+        fn poll_write(
+            self: Pin<&mut Self>,
+            _cx: &mut Context<'_>,
+            buf: &[u8],
+        ) -> Poll<io::Result<usize>> {
+            if self.is_stalled() {
+                Poll::Pending
+            } else {
+                self.push_input(buf.iter().cloned().collect());
+                Poll::Ready(Ok(buf.len()))
+            }
+        }
+
+        fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+            Poll::Ready(Ok(()))
+        }
+    }
+
+    impl Stream for PassthroughEncoder {
+        type Item = Result<Vec<u8>, Error>;
+
+        fn poll_next(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+            if let Some(vec) = self.get_output() {
+                Poll::Ready(Some(Ok(vec)))
+            } else {
+                Poll::Pending
+            }
+        }
+    }
+
+    #[test]
+    fn test_stalled_encoder_input() {
+        let input_stream = CountingStream::default();
+        let passthrough = PassthroughEncoder::default();
+        let passthrough_input = passthrough.clone();
+        let passthrough_output = passthrough.clone();
+        let mut stream = EncodedStream::build_test(
+            input_stream.clone().boxed(),
+            Box::new(passthrough_input),
+            passthrough_output.boxed(),
+            /* pcm bytes per encoded packet */ 500,
+        );
+
+        let mut noop_cx = Context::from_waker(futures::task::noop_waker_ref());
+
+        // Polling for the next thing should run a whole cycle without an issue.
+        input_stream.set_bytes_ready(2);
+        match stream.poll_next_unpin(&mut noop_cx) {
+            Poll::Ready(Some(Ok(data))) => assert_eq!(vec![0, 0], data),
+            x => panic!("Expected ready poll, got {:?}", x),
+        };
+
+        // Stall the input of the encoder.
+        passthrough.stall_input(true);
+
+        // Polling should queue up because the encoder is stalled.
+        input_stream.set_bytes_ready(2);
+        assert!(stream.poll_next_unpin(&mut noop_cx).is_pending());
+        input_stream.set_bytes_ready(2);
+        assert!(stream.poll_next_unpin(&mut noop_cx).is_pending());
+
+        // Unstall the input of the encoder.
+        passthrough.stall_input(false);
+
+        // Next time we poll, we didn't skip any packets.
+        input_stream.set_bytes_ready(2);
+        match stream.poll_next_unpin(&mut noop_cx) {
+            Poll::Ready(Some(Ok(data))) => assert_eq!(vec![0, 1], data),
+            x => panic!("Expected ready poll, got {:?}", x),
+        };
+        match stream.poll_next_unpin(&mut noop_cx) {
+            Poll::Ready(Some(Ok(data))) => assert_eq!(vec![0, 2], data),
+            x => panic!("Expected ready poll, got {:?}", x),
+        };
+        match stream.poll_next_unpin(&mut noop_cx) {
+            Poll::Ready(Some(Ok(data))) => assert_eq!(vec![0, 3], data),
+            x => panic!("Expected ready poll, got {:?}", x),
+        };
     }
 }
