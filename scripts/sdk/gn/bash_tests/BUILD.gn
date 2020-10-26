@@ -62,7 +62,6 @@ host_script_test_data("gn_sdk_bash_tests") {
         "//scripts/sdk/gn/base/bin/fserve.sh",
         "//scripts/sdk/gn/base/bin/fssh.sh",
         "//scripts/sdk/gn/base/bin/fuchsia-common.sh",
-        "//scripts/sdk/gn/base/bin/fx-image-common.sh",
         "//scripts/sdk/gn/base/bin/devshell/lib/image_build_vars.sh",
       ]
     },

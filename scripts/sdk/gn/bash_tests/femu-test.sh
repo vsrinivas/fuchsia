@@ -186,13 +186,13 @@ INPUT
 # Verifies that fx emu starts up grpcwebproxy correctly
 TEST_femu_grpcwebproxy() {
 
-  # Create fake "kill" command so when emu tries to kill grpcwebproxy, it doesn't fail
-  # this test. Need to embed "enable -n kill" into fx-image-common.sh to disable the
-  # bash builtin kill so we can intercept it.
-  cat >"${PATH_DIR_FOR_TEST}/kill.mock_side_effects" <<INPUT
+  # Search and replace the existing kill grpcwebproxy command with a test we control. Normally
+  # bash provides a builtin kill but this cannot be intercepted without adding "enable -n kill"
+  # somewhere.
+  cat >"${PATH_DIR_FOR_TEST}/fakekill.mock_side_effects" <<INPUT
 echo "$@"
 INPUT
-  echo "enable -n kill" >> "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fx-image-common.sh"
+  sed -i "s/ kill / fakekill /g" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/emu"
 
   # Create fake ZIP file download so femu.sh doesn't try to download it, and
   # later on provide a mocked emulator script so it doesn't try to unzip it.
@@ -338,7 +338,6 @@ BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/femu.sh
   scripts/sdk/gn/base/bin/devshell/lib/image_build_vars.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
-  scripts/sdk/gn/base/bin/fx-image-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
   tools/devshell/emu
   tools/devshell/lib/fvm.sh
@@ -359,7 +358,7 @@ BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/arm64/fvm
   mocked/grpcwebproxy-dir/grpcwebproxy
   _isolated_path_for/ip
-  _isolated_path_for/kill
+  _isolated_path_for/fakekill
   _isolated_path_for/sudo
   # Create fake "stty sane" command so that fx emu test succeeds when < /dev/null is being used
   _isolated_path_for/stty
