@@ -8,12 +8,12 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 
 #include "msm8x53-sdhci-reg.h"
+#include "src/devices/block/drivers/msm8x53-sdhci/msm8x53-sdhci-bind.h"
 
 namespace {
 
@@ -122,7 +122,4 @@ static constexpr zx_driver_ops_t msm8x53_sdhci_driver_ops = []() -> zx_driver_op
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(msm8x53_sdhci, msm8x53_sdhci_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_QUALCOMM),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_QUALCOMM_SDC1), ZIRCON_DRIVER_END(msm8x53_sdhci)
+ZIRCON_DRIVER(msm8x53_sdhci, msm8x53_sdhci_driver_ops, "zircon", "0.1")

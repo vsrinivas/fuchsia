@@ -15,6 +15,7 @@ group("tests") {
     "fvm:tests",
     "gpt:tests",
     "mbr:tests",
+    "msm8x53-sdhci:tests",
     "mtk-sdmmc:tests",
     "ramdisk:tests",
     "sdhci:tests",
