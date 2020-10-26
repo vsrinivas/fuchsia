@@ -20,6 +20,10 @@ action("copy_lib") {
     # The .pyc files may be produced while this action is running,
     # so we don't want to try to copy them while the're being written.
     "--ignore_pattern",
+    "__pycache__",
+    "--ignore_pattern",
+    "*.pyc.*",
+    "--ignore_pattern",
     "*.pyc",
   ]
   inputs = [
