@@ -12,6 +12,7 @@
 #include <set>
 
 #include <blobfs/common.h>
+#include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
@@ -25,6 +26,10 @@
 
 namespace blobfs {
 namespace {
+
+using ::testing::TestParamInfo;
+using ::testing::TestWithParam;
+using ::testing::ValuesIn;
 
 using block_client::FakeBlockDevice;
 
@@ -84,9 +89,9 @@ class FakeTransferBuffer : public pager::TransferBuffer {
   std::set<uint64_t> mapped_addresses_;
 };
 
-class BlobLoaderTest : public testing::Test {
+class BlobLoaderTest : public TestWithParam<CompressionAlgorithm> {
  public:
-  void Init(CompressionAlgorithm algorithm) {
+  void SetUp() override {
     srand(testing::UnitTest::GetInstance()->random_seed());
 
     auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
@@ -95,7 +100,7 @@ class BlobLoaderTest : public testing::Test {
     loop_.StartThread();
 
     MountOptions options = {.compression_settings = {
-                                .compression_algorithm = algorithm,
+                                .compression_algorithm = GetParam(),
                             }};
     ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
               ZX_OK);
@@ -179,30 +184,20 @@ class BlobLoaderTest : public testing::Test {
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 };
 
-template <CompressionAlgorithm A>
-class BlobLoaderTestVariant : public BlobLoaderTest {
- public:
-  void SetUp() final { Init(A); }
-};
+// A seperate parameterized test fixture that will only be run with compression algorithms that
+// support paging.
+using BlobLoaderPagedTest = BlobLoaderTest;
 
-class UncompressedBlobLoaderTest
-    : public BlobLoaderTestVariant<CompressionAlgorithm::UNCOMPRESSED> {};
-class ZstdCompressedBlobLoaderTest : public BlobLoaderTestVariant<CompressionAlgorithm::ZSTD> {};
-class ZstdSeekableCompressedBlobLoaderTest
-    : public BlobLoaderTestVariant<CompressionAlgorithm::ZSTD_SEEKABLE> {};
-class ChunkCompressedBlobLoaderTest : public BlobLoaderTestVariant<CompressionAlgorithm::CHUNKED> {
-};
-
-void DoTest_NullBlob(BlobLoaderTest* test) {
+TEST_P(BlobLoaderTest, NullBlob) {
   size_t blob_len = 0;
   std::unique_ptr<BlobInfo> info;
-  test->AddRandomBlob(blob_len, &info);
-  ASSERT_EQ(test->Sync(), ZX_OK);
+  AddRandomBlob(blob_len, &info);
+  ASSERT_EQ(Sync(), ZX_OK);
 
-  BlobLoader loader = test->CreateLoader();
+  BlobLoader loader = CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
-  ASSERT_EQ(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
+  ASSERT_EQ(loader.LoadBlob(LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
 
   EXPECT_FALSE(data.vmo().is_valid());
   EXPECT_EQ(data.size(), 0ul);
@@ -211,21 +206,16 @@ void DoTest_NullBlob(BlobLoaderTest* test) {
   EXPECT_EQ(info->size_merkle, 0ul);
 }
 
-TEST_F(ZstdCompressedBlobLoaderTest, Test_NullBlob) { DoTest_NullBlob(this); }
-TEST_F(ZstdSeekableCompressedBlobLoaderTest, Test_NullBlob) { DoTest_NullBlob(this); }
-TEST_F(ChunkCompressedBlobLoaderTest, Test_NullBlob) { DoTest_NullBlob(this); }
-TEST_F(UncompressedBlobLoaderTest, Test_NullBlob) { DoTest_NullBlob(this); }
-
-void DoTest_SmallBlob(BlobLoaderTest* test) {
+TEST_P(BlobLoaderTest, SmallBlob) {
   size_t blob_len = 1024;
   std::unique_ptr<BlobInfo> info;
-  test->AddRandomBlob(blob_len, &info);
-  ASSERT_EQ(test->Sync(), ZX_OK);
+  AddRandomBlob(blob_len, &info);
+  ASSERT_EQ(Sync(), ZX_OK);
 
-  BlobLoader loader = test->CreateLoader();
+  BlobLoader loader = CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
-  ASSERT_EQ(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
+  ASSERT_EQ(loader.LoadBlob(LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
@@ -235,24 +225,19 @@ void DoTest_SmallBlob(BlobLoaderTest* test) {
   EXPECT_EQ(info->size_merkle, 0ul);
 }
 
-TEST_F(ZstdCompressedBlobLoaderTest, SmallBlob) { DoTest_SmallBlob(this); }
-TEST_F(ZstdSeekableCompressedBlobLoaderTest, SmallBlob) { DoTest_SmallBlob(this); }
-TEST_F(ChunkCompressedBlobLoaderTest, SmallBlob) { DoTest_SmallBlob(this); }
-TEST_F(UncompressedBlobLoaderTest, SmallBlob) { DoTest_SmallBlob(this); }
-
-void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
+TEST_P(BlobLoaderPagedTest, SmallBlob) {
   size_t blob_len = 1024;
   std::unique_ptr<BlobInfo> info;
-  test->AddRandomBlob(blob_len, &info);
-  ASSERT_EQ(test->Sync(), ZX_OK);
+  AddRandomBlob(blob_len, &info);
+  ASSERT_EQ(Sync(), ZX_OK);
 
   auto buffer_ptr = std::make_unique<FakeTransferBuffer>(info->data.get(), info->size_data);
-  FakeTransferBuffer& buffer = test->InitPager(std::move(buffer_ptr));
-  BlobLoader loader = test->CreateLoader();
+  FakeTransferBuffer& buffer = InitPager(std::move(buffer_ptr));
+  BlobLoader loader = CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
   std::unique_ptr<pager::PageWatcher> page_watcher;
-  ASSERT_EQ(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle),
+  ASSERT_EQ(loader.LoadBlobPaged(LookupInode(*info), nullptr, &page_watcher, &data, &merkle),
             ZX_OK);
 
   ASSERT_TRUE(data.vmo().is_valid());
@@ -268,20 +253,16 @@ void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
   EXPECT_EQ(info->size_merkle, 0ul);
 }
 
-TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
-TEST_F(ChunkCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
-TEST_F(UncompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
-
-void DoTest_LargeBlob(BlobLoaderTest* test) {
+TEST_P(BlobLoaderTest, LargeBlob) {
   size_t blob_len = 1 << 18;
   std::unique_ptr<BlobInfo> info;
-  test->AddRandomBlob(blob_len, &info);
-  ASSERT_EQ(test->Sync(), ZX_OK);
+  AddRandomBlob(blob_len, &info);
+  ASSERT_EQ(Sync(), ZX_OK);
 
-  BlobLoader loader = test->CreateLoader();
+  BlobLoader loader = CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
-  ASSERT_EQ(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
+  ASSERT_EQ(loader.LoadBlob(LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
@@ -292,21 +273,16 @@ void DoTest_LargeBlob(BlobLoaderTest* test) {
   EXPECT_EQ(memcmp(merkle.start(), info->merkle.get(), info->size_merkle), 0);
 }
 
-TEST_F(ZstdCompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
-TEST_F(ZstdSeekableCompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
-TEST_F(ChunkCompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
-TEST_F(UncompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
-
-void DoTest_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
+TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
   size_t blob_len = (1 << 18) - 1;
   std::unique_ptr<BlobInfo> info;
-  test->AddRandomBlob(blob_len, &info);
-  ASSERT_EQ(test->Sync(), ZX_OK);
+  AddRandomBlob(blob_len, &info);
+  ASSERT_EQ(Sync(), ZX_OK);
 
-  BlobLoader loader = test->CreateLoader();
+  BlobLoader loader = CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
-  ASSERT_EQ(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
+  ASSERT_EQ(loader.LoadBlob(LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
@@ -317,32 +293,19 @@ void DoTest_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
   EXPECT_EQ(memcmp(merkle.start(), info->merkle.get(), info->size_merkle), 0);
 }
 
-TEST_F(ZstdCompressedBlobLoaderTest, LargeBlob_NonAlignedLength) {
-  DoTest_LargeBlob_NonAlignedLength(this);
-}
-TEST_F(ZstdSeekableCompressedBlobLoaderTest, LargeBlob_NonAlignedLength) {
-  DoTest_LargeBlob_NonAlignedLength(this);
-}
-TEST_F(ChunkCompressedBlobLoaderTest, LargeBlob_NonAlignedLength) {
-  DoTest_LargeBlob_NonAlignedLength(this);
-}
-TEST_F(UncompressedBlobLoaderTest, LargeBlob_NonAlignedLength) {
-  DoTest_LargeBlob_NonAlignedLength(this);
-}
-
-void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
+TEST_P(BlobLoaderPagedTest, LargeBlob) {
   size_t blob_len = 1 << 18;
   std::unique_ptr<BlobInfo> info;
-  test->AddRandomBlob(blob_len, &info);
-  ASSERT_EQ(test->Sync(), ZX_OK);
+  AddRandomBlob(blob_len, &info);
+  ASSERT_EQ(Sync(), ZX_OK);
 
   auto buffer_ptr = std::make_unique<FakeTransferBuffer>(info->data.get(), info->size_data);
-  FakeTransferBuffer& buffer = test->InitPager(std::move(buffer_ptr));
-  BlobLoader loader = test->CreateLoader();
+  FakeTransferBuffer& buffer = InitPager(std::move(buffer_ptr));
+  BlobLoader loader = CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
   std::unique_ptr<pager::PageWatcher> page_watcher;
-  ASSERT_EQ(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle),
+  ASSERT_EQ(loader.LoadBlobPaged(LookupInode(*info), nullptr, &page_watcher, &data, &merkle),
             ZX_OK);
 
   ASSERT_TRUE(data.vmo().is_valid());
@@ -359,23 +322,19 @@ void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
   EXPECT_EQ(memcmp(merkle.start(), info->merkle.get(), info->size_merkle), 0);
 }
 
-TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
-TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
-TEST_F(UncompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
-
-void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
+TEST_P(BlobLoaderPagedTest, LargeBlobWithNonAlignedLength) {
   size_t blob_len = (1 << 18) - 1;
   std::unique_ptr<BlobInfo> info;
-  test->AddRandomBlob(blob_len, &info);
-  ASSERT_EQ(test->Sync(), ZX_OK);
+  AddRandomBlob(blob_len, &info);
+  ASSERT_EQ(Sync(), ZX_OK);
 
   auto buffer_ptr = std::make_unique<FakeTransferBuffer>(info->data.get(), info->size_data);
-  FakeTransferBuffer& buffer = test->InitPager(std::move(buffer_ptr));
-  BlobLoader loader = test->CreateLoader();
+  FakeTransferBuffer& buffer = InitPager(std::move(buffer_ptr));
+  BlobLoader loader = CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
   std::unique_ptr<pager::PageWatcher> page_watcher;
-  ASSERT_EQ(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle),
+  ASSERT_EQ(loader.LoadBlobPaged(LookupInode(*info), nullptr, &page_watcher, &data, &merkle),
             ZX_OK);
 
   ASSERT_TRUE(data.vmo().is_valid());
@@ -392,15 +351,45 @@ void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
   EXPECT_EQ(memcmp(merkle.start(), info->merkle.get(), info->size_merkle), 0);
 }
 
-TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
-  DoTest_Paged_LargeBlob_NonAlignedLength(this);
+std::string GetCompressionAlgorithmName(CompressionAlgorithm compression_algorithm) {
+  // CompressionAlgorithmToString can't be used because it contains underscores which aren't
+  // allowed in test names.
+  switch (compression_algorithm) {
+    case CompressionAlgorithm::UNCOMPRESSED:
+      return "Uncompressed";
+    case CompressionAlgorithm::LZ4:
+      return "Lz4";
+    case CompressionAlgorithm::ZSTD:
+      return "Zstd";
+    case CompressionAlgorithm::ZSTD_SEEKABLE:
+      return "ZstdSeekable";
+    case CompressionAlgorithm::CHUNKED:
+      return "Chunked";
+  }
 }
-TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
-  DoTest_Paged_LargeBlob_NonAlignedLength(this);
+
+std::string GetTestParamName(const TestParamInfo<CompressionAlgorithm>& param) {
+  return GetCompressionAlgorithmName(param.param);
 }
-TEST_F(UncompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
-  DoTest_Paged_LargeBlob_NonAlignedLength(this);
-}
+
+constexpr std::array<CompressionAlgorithm, 4> kCompressionAlgorithms = {
+    CompressionAlgorithm::UNCOMPRESSED,
+    CompressionAlgorithm::ZSTD,
+    CompressionAlgorithm::ZSTD_SEEKABLE,
+    CompressionAlgorithm::CHUNKED,
+};
+
+constexpr std::array<CompressionAlgorithm, 3> kPagingCompressionAlgorithms = {
+    CompressionAlgorithm::UNCOMPRESSED,
+    CompressionAlgorithm::ZSTD_SEEKABLE,
+    CompressionAlgorithm::CHUNKED,
+};
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobLoaderTest, ValuesIn(kCompressionAlgorithms),
+                         GetTestParamName);
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobLoaderPagedTest, ValuesIn(kPagingCompressionAlgorithms),
+                         GetTestParamName);
 
 }  // namespace
 }  // namespace blobfs
