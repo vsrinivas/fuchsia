@@ -7,7 +7,6 @@ package checklicenses
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -55,12 +54,12 @@ func NewFileTree(ctx context.Context, config *Config, metrics *Metrics) *FileTre
 				return nil
 			}
 		}
-		if isSingleLicenseFile(info.Name(), config.SingleLicenseFiles) {
+		if hasLowerPrefix(info.Name(), config.SingleLicenseFiles) {
 			metrics.increment("num_single_license_files")
 			ft.addSingleLicenseFile(path, filepath.Base(path))
 			return nil
 		}
-		if isValidExtension(path, config) {
+		if hasExt(info.Name(), config.TextExtensionList) {
 			metrics.increment("num_non_single_license_files")
 			ft.addFile(path)
 		} else {
@@ -213,35 +212,24 @@ func (file_tree *FileTree) getFileIterator() <-chan string {
 	return ch
 }
 
-func isValidExtension(path string, config *Config) bool {
-	extension := filepath.Ext(path)
-	if len(extension) == 0 {
-		return false
+// hasExt returns true if path has one of the extensions in the list.
+func hasExt(path string, exts []string) bool {
+	if ext := filepath.Ext(path); ext != "" {
+		ext = ext[1:]
+		for _, e := range exts {
+			if e == ext {
+				return true
+			}
+		}
 	}
-	_, found := config.TextExtensions[extension[1:]]
-	return found
+	return false
 }
 
-func readFromFile(path string, max_read_size int64) ([]byte, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	data := make([]byte, max_read_size)
-	count, err := file.Read(data)
-	if err != nil && err != io.EOF {
-		// TODO(solomonkinard) symlinks not found e.g. integration/fuchsia/infra/test_durations/README.md
-		return nil, err
-	}
-	data = data[:count]
-	return data, nil
-}
-
-func isSingleLicenseFile(name string, files []string) bool {
+// hasLowerPrefix returns true if the name has one of files as a prefix in
+// lower case.
+func hasLowerPrefix(name string, files []string) bool {
 	name = strings.ToLower(name)
 	for _, f := range files {
-		// example of file: LICENSE, LICENSE-THIRD-PARTY, ...
 		if strings.HasPrefix(name, f) {
 			return true
 		}

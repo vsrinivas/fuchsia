@@ -30,10 +30,10 @@ func TestFileTreeNew(t *testing.T) {
 	}
 }
 
-func TestFileIsSingleLicense(t *testing.T) {
+func TestHasLowerPrefix(t *testing.T) {
 	name := "LICENSE-THIRD-PARTY"
 	singleLicenseFiles := []string{"license", "readme"}
-	if !isSingleLicenseFile(name, singleLicenseFiles) {
+	if !hasLowerPrefix(name, singleLicenseFiles) {
 		t.Errorf("%v: %v is not a single license file", t.Name(), name)
 	}
 }

@@ -7,6 +7,8 @@ package checklicenses
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"runtime/trace"
@@ -64,8 +66,7 @@ func Walk(ctx context.Context, config *Config) error {
 		path := path
 		eg.Go(func() error {
 			if err := processFile(path, metrics, licenses, unlicensedFiles, config, file_tree); err != nil {
-				// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
-				// TODO(jcecil): Correctly skip symlink.
+				// TODO(jcecil): Correctly skip symlink and return errors.
 				fmt.Printf("warning: %s. Skipping file: %s.\n", err, path)
 			}
 			return nil
@@ -106,15 +107,8 @@ func Walk(ctx context.Context, config *Config) error {
 
 func processSingleLicenseFile(base string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) error {
 	path := strings.TrimSpace(file_tree.getPath() + base)
-
-	// For singe license files, we increase the max read size
-	// to be the size of the file.
-	max_read_size := config.MaxReadSize
-	file_stats, err := os.Stat(path)
-	if err == nil {
-		max_read_size = file_stats.Size()
-	}
-	data, err := readFromFile(path, max_read_size)
+	// For singe license files, we read the whole file.
+	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -124,10 +118,13 @@ func processSingleLicenseFile(base string, metrics *Metrics, licenses *Licenses,
 
 func processFile(path string, metrics *Metrics, licenses *Licenses, unlicensedFiles *UnlicensedFiles, config *Config, file_tree *FileTree) error {
 	log.Printf("visited file or dir: %q", path)
-	data, err := readFromFile(path, config.MaxReadSize)
+	// TODO(omerlevran): Reuse the buffer.
+	data := make([]byte, config.MaxReadSize)
+	n, err := readFile(path, data)
 	if err != nil {
 		return err
 	}
+	data = data[:n]
 	is_matched := licenses.MatchFile(data, path, metrics)
 	if !is_matched {
 		project := file_tree.getProjectLicense(path)
@@ -158,4 +155,16 @@ func processFile(path string, metrics *Metrics, licenses *Licenses, unlicensedFi
 	return nil
 }
 
-// TODO(solomonkinard) tools/zedmon/client/pubspec.yaml" error reading: EOF
+// readFile returns up to n bytes from the file.
+func readFile(path string, d []byte) (int, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	n, err := f.Read(d)
+	if err == io.EOF {
+		err = nil
+	}
+	return n, err
+}

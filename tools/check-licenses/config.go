@@ -26,7 +26,7 @@ type Config struct {
 	ExitOnProhibitedLicenseTypes bool                   `json:"exitOnProhibitedLicenseTypes"`
 	ExitOnUnlicensedFiles        bool                   `json:"exitOnUnlicensedFiles"`
 	OutputLicenseFile            bool                   `json:"outputLicenseFile"`
-	MaxReadSize                  int64                  `json:"maxReadSize"`
+	MaxReadSize                  int                    `json:"maxReadSize"`
 	SeparatorWidth               int                    `json:"separatorWidth"`
 	OutputFilePrefix             string                 `json:"outputFilePrefix"`
 	OutputFileExtension          string                 `json:"outputFileExtension"`
@@ -37,7 +37,6 @@ type Config struct {
 	BaseDir                      string                 `json:"baseDir"`
 	Target                       string                 `json:"target"`
 	LogLevel                     string                 `json:"logLevel"`
-	TextExtensions               map[string]struct{}
 }
 
 // Init populates Config object with values found in the json config file.
@@ -54,15 +53,14 @@ func (c *Config) Init(path string) error {
 	if err = d.Decode(c); err != nil {
 		return err
 	}
-	c.TextExtensions = map[string]struct{}{}
-	for _, item := range c.TextExtensionList {
-		c.TextExtensions[item] = struct{}{}
-	}
 	for i := range c.SingleLicenseFiles {
 		c.SingleLicenseFiles[i] = strings.ToLower(c.SingleLicenseFiles[i])
 	}
 	for i := range c.SkipFiles {
 		c.SkipFiles[i] = strings.ToLower(c.SkipFiles[i])
+	}
+	if c.BaseDir == "" {
+		c.BaseDir = "."
 	}
 	if c.Target != "all" {
 		return errors.New("target must be \"all\"")

@@ -67,9 +67,6 @@ func mainImpl() error {
 		log.SetOutput(ioutil.Discard)
 	}
 
-	if _, err := os.Stat(*configFile); os.IsNotExist(err) {
-		return fmt.Errorf("config file %q does not exist!", *configFile)
-	}
 	if err := config.Init(*configFile); err != nil {
 		return fmt.Errorf("failed to initialize config: %s", err)
 	}
