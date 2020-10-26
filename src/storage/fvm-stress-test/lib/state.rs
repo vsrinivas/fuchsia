@@ -208,7 +208,7 @@ impl VolumeOperator {
         debug!("Range = {:?}", range);
         debug!("Num slices to append = {}", num_slices_to_append);
 
-        // This may fail if we:
+        // This is allowed to fail if we:
         // 1. run out of space
         // 2. collide with an existing range
         // 3. give unsupported ranges
@@ -285,7 +285,7 @@ impl VolumeOperator {
 
         debug!("Range = {:?}", subrange);
 
-        // This may fail if we:
+        // This is allowed to fail if we:
         // 1. run out of space
         // 2. collide with an existing range
         // 3. give unsupported ranges

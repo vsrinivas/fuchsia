@@ -20,6 +20,7 @@ rustc_library("fvm-stress-test-lib") {
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/ramdevice_client",

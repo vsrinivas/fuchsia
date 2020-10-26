@@ -5,15 +5,16 @@
 use {
     anyhow::Error,
     argh::FromArgs,
-    fasync::futures::future::join_all,
+    fasync::{futures::future::join_all, Task},
     fuchsia_async as fasync,
     fvm_stress_test_lib::{
         fvm::{random_guid, GUID_TYPE},
         state::VolumeOperator,
-        utils::init_fvm,
+        utils::{init_fvm, FVM_DRIVER_PATH},
     },
-    log::{info, set_logger, set_max_level, LevelFilter},
+    log::{debug, info, set_logger, set_max_level, LevelFilter},
     rand::{rngs::SmallRng, FromEntropy, Rng, SeedableRng},
+    std::{thread::sleep, time::Duration},
 };
 
 #[derive(Clone, Debug, FromArgs)]
@@ -62,6 +63,13 @@ struct Args {
     /// Usually, the volume information sets this value to 2^64.
     #[argh(option)]
     max_vslice_count: Option<u64>,
+
+    /// controls how often the FVM driver gets rebound (in seconds).
+    /// When the FVM driver rebinds, its internal state is reset, similar
+    /// to the device being disconnected and reconnected.
+    /// disabled if set to 0.
+    #[argh(option, default = "0")]
+    rebind_repeat_secs: u64,
 }
 
 // A simple logger that prints to stdout
@@ -136,7 +144,7 @@ async fn main() -> Result<(), Error> {
     }));
 
     // Setup FVM and wait until it is ready
-    let (_test, _ramdisk, mut volume_manger) =
+    let (_test, controller, _ramdisk, mut volume_manger) =
         init_fvm(args.ramdisk_block_size, args.ramdisk_block_count, args.fvm_slice_size).await;
 
     let mut rng = SmallRng::from_seed(seed.to_le_bytes());
@@ -161,7 +169,7 @@ async fn main() -> Result<(), Error> {
 
         let num_operations = args.num_operations;
         // Start a new thread to operate on this volume
-        let task = fasync::Task::blocking(async move {
+        let task = Task::blocking(async move {
             for i in 0..num_operations {
                 operator.do_random_operation(i + 1).await;
             }
@@ -170,6 +178,18 @@ async fn main() -> Result<(), Error> {
 
         // Add this thread task to the list
         tasks.push(task);
+    }
+
+    if args.rebind_repeat_secs > 0 {
+        // Setup a task that repeatedly rebinds the FVM driver
+        Task::blocking(async move {
+            loop {
+                sleep(Duration::from_secs(args.rebind_repeat_secs));
+                debug!("Rebinding FVM driver...");
+                controller.rebind(FVM_DRIVER_PATH).await.unwrap().unwrap();
+            }
+        })
+        .detach();
     }
 
     join_all(tasks).await;

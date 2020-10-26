@@ -4,7 +4,7 @@
 
 use {
     crate::fvm::VolumeManager,
-    fidl_fuchsia_device::ControllerMarker,
+    fidl_fuchsia_device::{ControllerMarker, ControllerProxy},
     fidl_fuchsia_hardware_block_volume::VolumeManagerMarker,
     fuchsia_component::client::connect_to_service_at_path,
     fuchsia_zircon::{sys::zx_status_t, Status},
@@ -24,11 +24,14 @@ extern "C" {
     pub fn fvm_init(fd: c_int, slice_size: usize) -> zx_status_t;
 }
 
+// Path to the fvm driver, from the perspective of isolated-devmgr's namespace
+pub const FVM_DRIVER_PATH: &str = "/pkg/bin/driver/fvm.so";
+
 pub async fn init_fvm(
     ramdisk_block_size: u64,
     ramdisk_block_count: u64,
     fvm_slice_size: usize,
-) -> (OpaqueTest, RamdiskClient, VolumeManager) {
+) -> (OpaqueTest, ControllerProxy, RamdiskClient, VolumeManager) {
     let test: OpaqueTest =
         OpaqueTest::default("fuchsia-pkg://fuchsia.com/fvm-stress-test#meta/root.cm")
             .await
@@ -64,8 +67,8 @@ pub async fn init_fvm(
     Status::ok(status).unwrap();
 
     // Start the FVM driver
-    let proxy = connect_to_service_at_path::<ControllerMarker>(ramdisk_path).unwrap();
-    proxy.bind("/pkg/bin/driver/fvm.so").await.unwrap().unwrap();
+    let controller = connect_to_service_at_path::<ControllerMarker>(ramdisk_path).unwrap();
+    controller.bind(FVM_DRIVER_PATH).await.unwrap().unwrap();
 
     // Wait until the FVM driver is available
     let fvm_path = PathBuf::from(ramdisk_path).join("fvm");
@@ -73,8 +76,11 @@ pub async fn init_fvm(
     ramdevice_client::wait_for_device(fvm_path, Duration::from_secs(5)).unwrap();
 
     // Connect to the Volume Manager
-    let proxy = connect_to_service_at_path::<VolumeManagerMarker>(fvm_path).unwrap();
+    let volume_manager = {
+        let proxy = connect_to_service_at_path::<VolumeManagerMarker>(fvm_path).unwrap();
+        let block_path = dev_path.join("class/block");
+        VolumeManager::new(proxy, block_path)
+    };
 
-    let volume_manager = VolumeManager::new(proxy, dev_path);
-    (test, ramdisk, volume_manager)
+    (test, controller, ramdisk, volume_manager)
 }
