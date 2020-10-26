@@ -20,82 +20,8 @@
 
 namespace fidl {
 
-namespace internal {
-
-template <typename Sub>
-struct FromFailureMixin {
-  // Initialize ourself from one of EncodeResult, LinearizeResult, in the case of
-  // error hence there is no message.
-  template <typename SomeResult>
-  static Sub FromFailure(SomeResult failure) {
-    ZX_DEBUG_ASSERT(failure.status != ZX_OK);
-    return Sub(failure.status, failure.error);
-  }
-};
-
-}  // namespace internal
-
 // The table of any FIDL method with zero in/out parameters.
 extern "C" const fidl_type_t _llcpp_coding_AnyZeroArgMessageTable;
-
-// Holds a |EncodedMessage| in addition to |status| and |error|.
-// This is typically the return type of fidl::Encode and other FIDL methods which
-// have encoding as the last step.
-// If |status| is ZX_OK, |message| contains a valid encoded message of type FidlType.
-// Otherwise, |error| contains a human-readable string for debugging purposes.
-template <typename FidlType>
-struct EncodeResult final : internal::FromFailureMixin<EncodeResult<FidlType>> {
-  zx_status_t status = ZX_ERR_INTERNAL;
-  const char* error = nullptr;
-  EncodedMessage<FidlType> message;
-
-  EncodeResult() = default;
-
-  EncodeResult(zx_status_t status, const char* error,
-               EncodedMessage<FidlType> message = EncodedMessage<FidlType>())
-      : status(status), error(error), message(std::move(message)) {}
-};
-
-// Holds a |DecodedMessage| in addition to |status| and |error|.
-// This is typically the return type of fidl::Linearize and other FIDL methods which
-// have linearization as the last step.
-// If |status| is ZX_OK, |message| contains a valid message in decoded form, of type FidlType.
-// Otherwise, |error| contains a human-readable string for debugging purposes.
-template <typename FidlType>
-struct LinearizeResult final : internal::FromFailureMixin<LinearizeResult<FidlType>> {
-  zx_status_t status = ZX_ERR_INTERNAL;
-  const char* error = nullptr;
-  DecodedMessage<FidlType> message;
-
-  LinearizeResult() = default;
-
-  LinearizeResult(zx_status_t status, const char* error,
-                  DecodedMessage<FidlType> message = DecodedMessage<FidlType>())
-      : status(status), error(error), message(std::move(message)) {
-    ZX_DEBUG_ASSERT(status != ZX_OK || this->message.is_valid());
-  }
-};
-
-// Serializes the content of the message in-place.
-// The message's contents are always consumed by this operation, even in case of an error.
-template <typename FidlType>
-EncodeResult<FidlType> Encode(DecodedMessage<FidlType> msg) {
-  static_assert(IsFidlType<FidlType>::value, "FIDL type required");
-  static_assert(FidlType::Type != nullptr, "FidlType should have a coding table");
-  EncodeResult<FidlType> result;
-  result.message.bytes() = std::move(msg.bytes_);
-  uint32_t actual_handles = 0;
-
-  fidl_trace(WillLLCPPInPlaceEncode);
-  result.status = fidl_encode(FidlType::Type, result.message.bytes().data(),
-                              result.message.bytes().actual(), result.message.handles().data(),
-                              result.message.handles().capacity(), &actual_handles, &result.error);
-  fidl_trace(DidLLCPPInPlaceEncode, FidlType::Type, result.message.bytes().data(),
-             result.message.bytes().actual(), actual_handles);
-
-  result.message.handles().set_actual(actual_handles);
-  return result;
-}
 
 #ifdef __Fuchsia__
 
@@ -132,23 +58,6 @@ zx_status_t Write(const zx::unowned_channel& chan, EncodedMessage<FidlType> enco
 template <typename FidlType>
 zx_status_t Write(const zx::channel& chan, EncodedMessage<FidlType> encoded_msg) {
   return Write(zx::unowned_channel(chan), std::move(encoded_msg));
-}
-
-// Encode and write |decoded_msg| down a channel. Used for sending one-way calls and events.
-template <typename FidlType>
-zx_status_t Write(const zx::unowned_channel& chan, DecodedMessage<FidlType> decoded_msg) {
-  static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
-  fidl::EncodeResult<FidlType> encode_result = fidl::Encode(std::move(decoded_msg));
-  if (encode_result.status != ZX_OK) {
-    return encode_result.status;
-  }
-  return Write(chan, std::move(encode_result.message));
-}
-
-// Encode and write |decoded_msg| down a channel. Used for sending one-way calls and events.
-template <typename FidlType>
-zx_status_t Write(const zx::channel& chan, DecodedMessage<FidlType> decoded_msg) {
-  return Write(zx::unowned_channel(chan), std::move(decoded_msg));
 }
 
 // If |RequestType::ResponseType| exists, use that. Otherwise, fallback to |ResponseType|.

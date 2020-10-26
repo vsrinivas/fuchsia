@@ -97,13 +97,12 @@ class AsyncTearDownVnode : public FdCountVnode {
 };
 
 void SendSync(const zx::channel& client) {
-  fidl::Buffer<llcpp::fuchsia::io::Node::SyncRequest> buffer;
-  memset(buffer.view().begin(), 0, buffer.view().capacity());
-  fidl::BytePart bytes = buffer.view();
-  bytes.set_actual(bytes.capacity());
-  new (bytes.data()) llcpp::fuchsia::io::Node::SyncRequest(5);
-  fidl::DecodedMessage<llcpp::fuchsia::io::Node::SyncRequest> message(std::move(bytes));
-  ASSERT_OK(fidl::Write(client, std::move(message)));
+  FIDL_ALIGNDECL
+  llcpp::fuchsia::io::Node::SyncRequest request(5);
+  fidl::OwnedOutgoingMessage<llcpp::fuchsia::io::Node::SyncRequest> encoded(&request);
+  ASSERT_OK(encoded.status());
+  encoded.Write(client.get());
+  ASSERT_OK(encoded.status());
 }
 
 // Helper function which creates a VFS with a served Vnode,

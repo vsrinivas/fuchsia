@@ -45,25 +45,25 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
     state->NextStep();  // End: Decode. Begin: Teardown.
   }
 
-  // Encode the result with fidl::Encode and compare against the expected encode_result.
-  auto reference_encode_result = fidl::Encode(fidl::DecodedMessage<FidlType>(
-      fidl::BytePart(test_data.data(), static_cast<unsigned int>(test_data.size()),
-                     static_cast<unsigned int>(test_data.size()))));
-  if (reference_encode_result.status != ZX_OK) {
-    std::cout << "fidl::Encode failed with error: " << reference_encode_result.error << std::endl;
+  // Reencode the decoded result and compare against the initial (expected) encode_result.
+  fidl::OwnedOutgoingMessage<FidlType> reencoded(reinterpret_cast<FidlType*>(test_data.data()));
+  if (!reencoded.ok()) {
+    std::cout << "fidl::Encode failed with error: " << reencoded.error() << std::endl;
     return false;
   }
-  auto& reference_bytes = reference_encode_result.message.bytes();
-  if (encoded_message.byte_actual() != reference_bytes.actual()) {
-    std::cout << "output size mismatch - encoded reference size was " << reference_bytes.actual()
-              << " but expected encode result size was" << encoded_message.byte_actual() << std::endl;
+
+  fidl::OutgoingMessage& reencoded_message = reencoded.GetOutgoingMessage();
+  if (encoded_message.byte_actual() != reencoded_message.byte_actual()) {
+    std::cout << "output size mismatch - reencoded size was " << reencoded_message.byte_actual()
+              << " but expected encode result size was" << encoded_message.byte_actual()
+              << std::endl;
     return false;
   }
   bool success = true;
   for (uint32_t i = 0; i < encoded_message.byte_actual(); ++i) {
-    if (encoded_message.bytes()[i] != reference_bytes.data()[i]) {
-      std::cout << "At offset " << i << " reference got 0x" << std::setw(2) << std::setfill('0')
-                << std::hex << int(reference_bytes.data()[i]) << " but fidl::Decode got 0x"
+    if (encoded_message.bytes()[i] != reencoded_message.bytes()[i]) {
+      std::cout << "At offset " << i << " reencoded got 0x" << std::setw(2) << std::setfill('0')
+                << std::hex << int(reencoded_message.bytes()[i]) << " but expected was 0x"
                 << int(encoded_message.bytes()[i]) << std::dec << std::endl;
       success = false;
     }
