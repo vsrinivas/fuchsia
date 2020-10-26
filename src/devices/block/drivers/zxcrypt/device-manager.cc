@@ -26,6 +26,7 @@
 
 #include "src/devices/block/drivers/zxcrypt/device-info.h"
 #include "src/devices/block/drivers/zxcrypt/device.h"
+#include "src/devices/block/drivers/zxcrypt/zxcrypt-bind.h"
 
 namespace zxcrypt {
 
@@ -212,9 +213,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace zxcrypt
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(zxcrypt, zxcrypt::driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF_AUTOBIND,
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK),
-ZIRCON_DRIVER_END(zxcrypt)
-    // clang-format on
+ZIRCON_DRIVER(zxcrypt, zxcrypt::driver_ops, "zircon", "0.1")

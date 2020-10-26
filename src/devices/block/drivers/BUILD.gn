@@ -21,5 +21,6 @@ group("tests") {
     "sdmmc:tests",
     "usb-mass-storage:tests",
     "virtio:tests",
+    "zxcrypt:tests",
   ]
 }

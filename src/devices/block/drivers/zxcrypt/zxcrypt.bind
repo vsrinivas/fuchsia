@@ -1,0 +1,3 @@
+using fuchsia.hardware.block;
+
+fuchsia.BIND_PROTOCOL == fuchsia.hardware.block.BIND_PROTOCOL.DEVICE;
