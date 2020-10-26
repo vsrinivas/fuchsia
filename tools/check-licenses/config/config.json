@@ -86,8 +86,8 @@
     "gnu",
     "redhat"
   ],
-  "exitOnProhibitedLicenseTypes": true,
-  "exitOnUnlicensedFiles": true,
+  "exitOnProhibitedLicenseTypes": false,
+  "exitOnUnlicensedFiles": false,
   "outputLicenseFile": true,
   "outputFilePrefix": "NOTICE",
   "outputFileExtension": "html.gz",
