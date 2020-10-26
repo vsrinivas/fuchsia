@@ -151,7 +151,7 @@ fn main() {
             CapabilityDecl::Storage(StorageDecl {
                 name: Some("minfs".to_string()),
                 source: Some(Ref::Parent(ParentRef {})),
-                source_path: Some("/data".to_string()),
+                source_path: Some("data".to_string()),
                 subdir: None,
             }),
             CapabilityDecl::Runner(RunnerDecl {

@@ -380,17 +380,11 @@ impl<'a> ValidationContext<'a> {
         if use_.service.is_some() && use_.r#as.is_some() {
             return Err(Error::validate("\"as\" field cannot be used with \"service\""));
         }
-        if let Some(protocol) = use_.protocol.as_ref() {
-            for protocol in protocol.iter() {
-                if protocol.is_name() && use_.r#as.is_some() {
-                    return Err(Error::validate("\"as\" field cannot be used with \"protocol\""));
-                }
-            }
+        if use_.protocol.is_some() && use_.r#as.is_some() {
+            return Err(Error::validate("\"as\" field cannot be used with \"protocol\""));
         }
         if use_.directory.is_some() && use_.r#as.is_some() {
-            if use_.directory.as_ref().unwrap().is_name() {
-                return Err(Error::validate("\"as\" field cannot be used with \"directory\""));
-            }
+            return Err(Error::validate("\"as\" field cannot be used with \"directory\""));
         }
         if use_.runner.is_some() && use_.r#as.is_some() {
             return Err(Error::validate("\"as\" field cannot be used with \"runner\""));
@@ -409,6 +403,9 @@ impl<'a> ValidationContext<'a> {
         }
 
         if let Some(event_stream) = use_.event_stream.as_ref() {
+            if use_.path.is_none() {
+                return Err(Error::validate("\"path\" should be present with \"event_stream\""));
+            }
             let events = event_stream.to_vec();
             for event in events {
                 if !self.all_event_names.contains(event) {
@@ -522,13 +519,11 @@ impl<'a> ValidationContext<'a> {
         if let Some(protocol) = expose.protocol.as_ref() {
             for protocol in protocol {
                 if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
-                    if let cml::NameOrPath::Name(protocol) = protocol {
-                        if !self.all_protocols.contains(protocol) {
-                            return Err(Error::validate(format!(
+                    if !self.all_protocols.contains(protocol) {
+                        return Err(Error::validate(format!(
                            "Protocol \"{}\" is exposed from self, so it must be declared as a \"protocol\" in \"capabilities\"",
                            protocol
                        )));
-                        }
                     }
                 }
             }
@@ -537,32 +532,23 @@ impl<'a> ValidationContext<'a> {
         // Ensure that directories exposed from self are defined in `capabilities`.
         if let Some(directory) = &expose.directory {
             if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
-                if let cml::NameOrPath::Name(directory) = directory {
-                    if !self.all_directories.contains(directory) {
-                        return Err(Error::validate(format!(
+                if !self.all_directories.contains(directory) {
+                    return Err(Error::validate(format!(
                            "Directory \"{}\" is exposed from self, so it must be declared as a \"directory\" in \"capabilities\"",
                            directory
                        )));
-                    }
                 }
             }
         }
 
-        // Ensure directory rights are specified if exposing from self.
-        if let Some(directory) = expose.directory.as_ref() {
+        // Ensure directory rights are valid.
+        if let Some(_) = expose.directory.as_ref() {
             if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_)
                 || expose.rights.is_some()
             {
-                match &expose.rights {
-                    Some(rights) => self.validate_directory_rights(&rights)?,
-                    None => {
-                        if directory.is_path() {
-                            return Err(Error::validate(
-                            "Rights required for this expose statement as it is exposing from self.",
-                        ));
-                        }
-                    }
-                };
+                if let Some(rights) = expose.rights.as_ref() {
+                    self.validate_directory_rights(&rights)?;
+                }
             }
 
             // Exposing a subdirectory makes sense for routing but when exposing to framework,
@@ -644,13 +630,11 @@ impl<'a> ValidationContext<'a> {
         if let Some(protocol) = offer.protocol.as_ref() {
             for protocol in protocol.iter() {
                 if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
-                    if let cml::NameOrPath::Name(protocol) = protocol {
-                        if !self.all_protocols.contains(protocol) {
-                            return Err(Error::validate(format!(
+                    if !self.all_protocols.contains(protocol) {
+                        return Err(Error::validate(format!(
                            "Protocol \"{}\" is offered from self, so it must be declared as a \"protocol\" in \"capabilities\"",
                            protocol
                        )));
-                        }
                     }
                 }
             }
@@ -659,30 +643,21 @@ impl<'a> ValidationContext<'a> {
         // Ensure that directories offered from self are defined in `capabilities`.
         if let Some(directory) = &offer.directory {
             if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
-                if let cml::NameOrPath::Name(directory) = directory {
-                    if !self.all_directories.contains(directory) {
-                        return Err(Error::validate(format!(
+                if !self.all_directories.contains(directory) {
+                    return Err(Error::validate(format!(
                            "Directory \"{}\" is offered from self, so it must be declared as a \"directory\" in \"capabilities\"",
                            directory
                        )));
-                    }
                 }
             }
         }
 
-        // Ensure directory rights are specified if offering from self.
-        if let Some(directory) = offer.directory.as_ref() {
+        // Ensure directory rights are valid.
+        if let Some(_) = offer.directory.as_ref() {
             if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) || offer.rights.is_some() {
-                match &offer.rights {
-                    Some(rights) => self.validate_directory_rights(&rights)?,
-                    None => {
-                        if directory.is_path() {
-                            return Err(Error::validate(
-                                "Rights required for this offer as it is offering from self.",
-                            ));
-                        }
-                    }
-                };
+                if let Some(rights) = offer.rights.as_ref() {
+                    self.validate_directory_rights(&rights)?;
+                }
             }
         }
 
@@ -1148,11 +1123,11 @@ mod tests {
             "expose": [
                 // Here are some services to expose.
                 { "service": "fuchsia.logger.Log", "from": "#logger", },
-                { "directory": "/volumes/blobfs", "from": "self", "rights": ["rw*"]},
+                { "directory": "blobfs", "from": "#logger", "rights": ["rw*"]},
             ],
             "children": [
                 {
-                    'name': 'logger',
+                    name: 'logger',
                     'url': 'fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm',
                 },
             ],
@@ -1166,7 +1141,7 @@ mod tests {
         let input = r##"{
     "use": [
         {
-            "protocol": "/svc/fuchsia.logger.Log",
+            "protocol": "fuchsia.logger.Log",
             "from": "self",
         },
     ],
@@ -1217,11 +1192,8 @@ mod tests {
                   { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                   { "service": "fuchsia.sys2.Realm", "from": "framework" },
                   { "protocol": "CoolFonts", "path": "/svc/MyFonts" },
-                  { "protocol": "/fonts/CoolFonts", "as": "/svc/MyFonts2" },
                   { "protocol": "fuchsia.test.hub.HubReport", "from": "framework" },
-                  { "protocol": "/svc/fuchsia.test.hub.HubReport2", "from": "framework" },
                   { "protocol": ["fuchsia.ui.scenic.Scenic", "fuchsia.logger.LogSink"] },
-                  { "protocol": ["/svc/fuchsia.ui.scenic.Scenic2", "/svc/fuchsia.logger.LogSink2"] },
                   {
                     "directory": "assets",
                     "path": "/data/assets",
@@ -1231,16 +1203,6 @@ mod tests {
                     "directory": "config",
                     "from": "parent",
                     "path": "/data/config",
-                    "rights": ["rx*"],
-                    "subdir": "fonts/all",
-                  },
-                  {
-                    "directory": "/data/assets2",
-                    "rights": ["rw*"],
-                  },
-                  {
-                    "directory": "/data/config2",
-                    "from": "parent",
                     "rights": ["rx*"],
                     "subdir": "fonts/all",
                   },
@@ -1262,11 +1224,8 @@ mod tests {
                     }
                   },
                   {
-                    "event_stream": [ "started", "stopped", "launched" ]
-                  },
-                  {
                     "event_stream": [ "started", "stopped", "launched" ],
-                    "as": "/svc/my_stream"
+                    "path": "/svc/my_stream"
                   },
                 ]
             }),
@@ -1282,7 +1241,7 @@ mod tests {
         ),
         test_cml_use_missing_props(
             json!({
-                "use": [ { "as": "/svc/fuchsia.logger.Log" } ]
+                "use": [ { "path": "/svc/fuchsia.logger.Log" } ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "`use` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"event\", \"event_stream\""
         ),
@@ -1325,23 +1284,23 @@ mod tests {
         test_cml_use_invalid_from(
             json!({
                 "use": [
-                  { "service": "/fonts/CoolFonts", "from": "self" }
+                  { "service": "CoolFonts", "from": "self" }
                 ]
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", or none"
         ),
-        test_cml_use_bad_as(
+        test_cml_use_bad_path(
             json!({
                 "use": [
                     {
-                        "protocol": ["/fonts/CoolFonts", "/fonts/FunkyFonts"],
-                        "as": "/fonts/MyFonts"
+                        "protocol": ["CoolFonts", "FunkyFonts"],
+                        "path": "/MyFonts"
                     }
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field can only be specified when one `protocol` is supplied."
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"path\" field can only be specified when one `protocol` is supplied."
         ),
-        test_cml_use_bad_duplicate_target_paths(
+        test_cml_use_bad_duplicate_target_names(
             json!({
                 "use": [
                   { "protocol": "fuchsia.sys2.Realm" },
@@ -1358,13 +1317,14 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a name or path or nonempty array of names or paths, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a name or nonempty array of names, with unique elements"
         ),
         test_cml_use_bad_subdir(
             json!({
                 "use": [
                   {
-                    "directory": "/data/config",
+                    "directory": "config",
+                    "path": "/config",
                     "from": "parent",
                     "rights": [ "r*" ],
                     "subdir": "/",
@@ -1387,8 +1347,8 @@ mod tests {
         test_cml_use_disallows_nested_dirs(
             json!({
                 "use": [
-                    { "directory": "/foo/bar", "rights": [ "r*" ] },
-                    { "directory": "/foo/bar/baz", "rights": [ "r*" ] },
+                    { "directory": "foobar", "path": "/foo/bar", "rights": [ "r*" ] },
+                    { "directory": "foobarbaz", "path": "/foo/bar/baz", "rights": [ "r*" ] },
                 ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "directory \"/foo/bar/baz\" is a prefix of \"use\" target directory \"/foo/bar\""
@@ -1406,7 +1366,7 @@ mod tests {
             json!({
                 "use": [
                     { "directory": "foobar", "path": "/foo/bar", "rights": [ "r*" ] },
-                    { "protocol": "/foo/bar/fuchsia.2" },
+                    { "protocol": "fuchsia", "path": "/foo/bar/fuchsia.2" },
                 ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "protocol \"/foo/bar/fuchsia.2\" is a prefix of \"use\" target directory \"/foo/bar\""
@@ -1414,7 +1374,7 @@ mod tests {
         test_cml_use_disallows_filter_on_non_events(
             json!({
                 "use": [
-                    { "directory": "/foo/bar", "rights": [ "r*" ], "filter": {"path": "/diagnostics"} },
+                    { "directory": "foobar", "path": "/foo/bar", "rights": [ "r*" ], "filter": {"path": "/diagnostics"} },
                 ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"filter\" can only be used with \"event\""
@@ -1451,10 +1411,25 @@ mod tests {
                 "use": [
                     {
                         "event_stream": ["destroyed"],
+                        "path": "/svc/stream",
                     },
                 ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Event \"destroyed\" in event stream not found in any \"use\" declaration."
+        ),
+        test_cml_use_event_stream_missing_path(
+            json!({
+                "use": [
+                    {
+                        "event": [ "destroyed" ],
+                        "from": "parent",
+                    },
+                    {
+                        "event_stream": [ "destroyed" ],
+                    },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"path\" should be present with \"event_stream\""
         ),
         test_cml_use_bad_filter_in_event(
             json!({
@@ -1500,26 +1475,27 @@ mod tests {
                         "from": "self",
                     },
                     {
-                        "protocol": "/svc/A",
+                        "protocol": ["B", "C"],
                         "from": "self",
                     },
                     {
-                        "protocol": ["/svc/B", "/svc/C"],
-                        "from": "self",
-                    },
-                    {
-                        "directory": "/volumes/blobfs",
+                        "directory": "blobfs",
                         "from": "self",
                         "rights": ["r*"],
                         "subdir": "blob",
                     },
-                    { "directory": "/hub", "from": "framework" },
+                    { "directory": "hub", "from": "framework" },
                     { "runner": "elf", "from": "#logger",  },
                     { "resolver": "pkg_resolver", "from": "#logger" },
                 ],
                 "capabilities": [
                     { "service": "fuchsia.fonts.Provider" },
-                    { "protocol": "A" },
+                    { "protocol": ["A", "B", "C"] },
+                    {
+                        "directory": "blobfs",
+                        "path": "/blobfs",
+                        "rights": ["rw*"],
+                    },
                 ],
                 "children": [
                     {
@@ -1583,43 +1559,33 @@ mod tests {
         ),
         test_cml_expose_duplicate_target_names(
             json!({
-                "expose": [
-                    { "service": "logger", "from": "#logger", "as": "thing" },
-                    { "protocol": "thing", "from": "self" },
-                ],
                 "capabilities": [
-                    { "protocol": "thing" },
+                    { "protocol": "logger" },
+                ],
+                "expose": [
+                    { "protocol": "logger", "from": "self", "as": "thing" },
+                    { "directory": "thing", "from": "#child" , "rights": ["rx*"] },
                 ],
                 "children": [
                     {
-                        "name": "logger",
-                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "name": "child",
+                        "url": "fuchsia-pkg://",
                     },
                 ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"thing\" is a duplicate \"expose\" target capability for \"parent\""
         ),
-        test_cml_expose_duplicate_target_paths(
-            json!({
-                "expose": [
-                    { "protocol": "/svc/logger", "from": "#logger", "as": "/thing" },
-                    { "directory": "/thing", "from": "self" , "rights": ["rx*"] },
-                ],
-                "children": [
-                    {
-                        "name": "logger",
-                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-                    },
-                ],
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/thing\" is a duplicate \"expose\" target capability for \"parent\""
-        ),
         test_cml_expose_invalid_multiple_from(
             json!({
-                    "expose": [ {
-                        "protocol": "/svc/fuchsia.logger.Log",
-                        "from": [ "self", "#logger" ],
-                    } ],
+                    "capabilities": [
+                        { "protocol": "fuchsia.logger.Log" },
+                    ],
+                    "expose": [
+                        {
+                            "protocol": "fuchsia.logger.Log",
+                            "from": [ "self", "#logger" ],
+                        },
+                    ],
                     "children": [
                         {
                             "name": "logger",
@@ -1632,7 +1598,7 @@ mod tests {
         test_cml_expose_bad_from(
             json!({
                 "expose": [ {
-                    "service": "/loggers/fuchsia.logger.Log", "from": "parent"
+                    "service": "fuchsia.logger.Log", "from": "parent"
                 } ]
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid value: string \"parent\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
@@ -1642,9 +1608,9 @@ mod tests {
             json!({
                 "expose": [
                     {
-                        "protocol": ["/svc/A", "/svc/B"],
-                        "from": "self",
-                        "as": "/thing"
+                        "protocol": ["A", "B"],
+                        "from": "#echo_server",
+                        "as": "thing"
                     },
                 ],
                 "children": [
@@ -1661,18 +1627,24 @@ mod tests {
                 "expose": [
                     {
                         "protocol": [],
-                        "from": "self",
-                        "as": "/thing"
-                    }
+                        "from": "#child",
+                        "as": "thing"
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "fuchsia-pkg://",
+                    },
                 ],
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a name or path or nonempty array of names or paths, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a name or nonempty array of names, with unique elements"
         ),
         test_cml_expose_bad_subdir(
             json!({
                 "expose": [
                     {
-                        "directory": "/volumes/blobfs",
+                        "directory": "blobfs",
                         "from": "self",
                         "rights": ["r*"],
                         "subdir": "/",
@@ -1683,15 +1655,27 @@ mod tests {
         ),
         test_cml_expose_invalid_subdir_to_framework(
             json!({
+                "capabilities": [
+                    {
+                        "directory": "foo",
+                        "rights": ["r*"],
+                        "path": "/foo",
+                    },
+                ],
                 "expose": [
                     {
-                        "directory": "/volumes/blobfs",
+                        "directory": "foo",
                         "from": "self",
                         "to": "framework",
-                        "rights": ["r*"],
                         "subdir": "blob",
                     },
-                ]
+                ],
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "fuchsia-pkg://",
+                    },
+                ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "`subdir` is not supported for expose to framework. Directly expose the subdirectory instead."
         ),
@@ -1822,14 +1806,26 @@ mod tests {
         ),
         test_cml_expose_to_framework_ok(
             json!({
+                "capabilities": [
+                    {
+                        "directory": "foo",
+                        "path": "/foo",
+                        "rights": ["r*"],
+                    },
+                ],
                 "expose": [
                     {
-                        "directory": "/foo",
+                        "directory": "foo",
                         "from": "self",
-                        "rights": ["r*"],
                         "to": "framework"
                     }
-                ]
+                ],
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "fuchsia-pkg://",
+                    },
+                ],
             }),
             Ok(())
         ),
@@ -1837,7 +1833,7 @@ mod tests {
             json!({
                 "expose": [
                     {
-                        "directory": "/foo",
+                        "directory": "foo",
                         "from": "#logger",
                         "to": "framework"
                     }
@@ -1879,24 +1875,9 @@ mod tests {
                         "dependency": "weak_for_migration"
                     },
                     {
-                        "protocol": "/svc/fuchsia.fonts.LegacyProvider",
-                        "from": "parent",
-                        "to": [ "#echo_server" ],
-                        "dependency": "weak_for_migration"
-                    },
-                    {
                         "protocol": [
                             "fuchsia.settings.Accessibility",
                             "fuchsia.ui.scenic.Scenic"
-                        ],
-                        "from": "parent",
-                        "to": [ "#echo_server" ],
-                        "dependency": "strong"
-                    },
-                    {
-                        "protocol": [
-                            "/svc/fuchsia.settings.Accessibility",
-                            "/svc/fuchsia.ui.scenic.Scenic"
                         ],
                         "from": "parent",
                         "to": [ "#echo_server" ],
@@ -1909,12 +1890,6 @@ mod tests {
                         "rights": ["r*"]
                     },
                     {
-                        "directory": "/data/assets",
-                        "from": "self",
-                        "to": [ "#echo_server" ],
-                        "rights": ["rw*"]
-                    },
-                    {
                         "directory": "index",
                         "subdir": "files",
                         "from": "parent",
@@ -1922,17 +1897,10 @@ mod tests {
                         "dependency": "weak_for_migration"
                     },
                     {
-                        "directory": "/data/index",
-                        "subdir": "files",
-                        "from": "parent",
-                        "to": [ "#modular" ],
-                        "dependency": "weak_for_migration"
-                    },
-                    {
-                        "directory": "/hub",
+                        "directory": "hub",
                         "from": "framework",
                         "to": [ "#modular" ],
-                        "as": "/hub",
+                        "as": "hub",
                         "dependency": "strong"
                     },
                     {
@@ -1986,7 +1954,7 @@ mod tests {
                     {
                         "storage": "data",
                         "from": "parent",
-                        "backing_dir": "/minfs",
+                        "backing_dir": "minfs",
                     },
                 ],
             }),
@@ -2037,7 +2005,7 @@ mod tests {
                     {
                         "storage": "abcdefghijklmnopqrstuvwxyz0123456789_-storage",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
-                        "backing_dir": "/example"
+                        "backing_dir": "example"
                     }
                 ]
             }),
@@ -2101,11 +2069,13 @@ mod tests {
         ),
         test_cml_offer_invalid_multiple_from(
             json!({
-                    "offer": [ {
-                        "protocol": "/svc/fuchsia.logger.Log",
-                        "from": [ "self", "#logger" ],
-                        "to": [ "#echo_server" ],
-                    } ],
+                    "offer": [
+                        {
+                            "protocol": "fuchsia.logger.Log",
+                            "from": [ "parent", "#logger" ],
+                            "to": [ "#echo_server" ],
+                        },
+                    ],
                     "children": [
                         {
                             "name": "logger",
@@ -2121,11 +2091,19 @@ mod tests {
         ),
         test_cml_offer_empty_targets(
             json!({
-                "offer": [ {
-                    "service": "fuchsia.logger.Log",
-                    "from": "#logger",
-                    "to": []
-                } ]
+                "offer": [
+                    {
+                        "service": "fuchsia.logger.Log",
+                        "from": "#child",
+                        "to": []
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "fuchsia-pkg://",
+                    },
+                ],
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a nonempty array of offer targets, with unique elements"
         ),
@@ -2179,13 +2157,13 @@ mod tests {
                 "offer": [
                     {
                         "protocol": [],
-                        "from": "self",
+                        "from": "parent",
                         "to": [ "#echo_server" ],
-                        "as": "/thing"
+                        "as": "thing"
                     },
                 ],
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a name or path or nonempty array of names or paths, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a name or nonempty array of names, with unique elements"
         ),
         test_cml_offer_target_equals_from(
             json!({
@@ -2215,7 +2193,7 @@ mod tests {
                 "capabilities": [ {
                     "storage": "minfs",
                     "from": "#logger",
-                    "backing_dir": "/minfs",
+                    "backing_dir": "minfs-dir",
                 } ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Storage offer target \"#logger\" is same as source"
@@ -2224,55 +2202,20 @@ mod tests {
             json!({
                 "offer": [
                     {
-                        "service": "logger",
-                        "from": "#logger",
+                        "protocol": "logger",
+                        "from": "parent",
                         "to": [ "#echo_server" ],
                         "as": "thing"
                     },
                     {
-                        "directory": "thing",
-                        "from": "self",
-                        "to": [ "#echo_server" ],
-                    },
-                ],
-                "capabilities": [
-                    {
-                        "directory": "thing",
-                        "path": "/thing",
-                        "rights": [ "r*" ],
-                    },
-                ],
-                "children": [
-                    {
-                        "name": "logger",
-                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-                    },
-                    {
-                        "name": "echo_server",
-                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
-                    },
-                ],
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"thing\" is a duplicate \"offer\" target capability for \"#echo_server\""
-        ),
-        test_cml_offer_duplicate_target_paths(
-            json!({
-                "offer": [
-                    {
-                        "protocol": "/svc/logger",
-                        "from": "self",
-                        "to": [ "#echo_server" ],
-                        "as": "/thing"
-                    },
-                    {
-                        "protocol": "/svc/logger",
-                        "from": "self",
+                        "protocol": "logger",
+                        "from": "parent",
                         "to": [ "#scenic" ],
                     },
                     {
-                        "directory": "/thing",
+                        "directory": "thing",
                         "from": "parent",
-                        "to": [ "#echo_server" ]
+                        "to": [ "#echo_server" ],
                     }
                 ],
                 "children": [
@@ -2286,7 +2229,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/thing\" is a duplicate \"offer\" target capability for \"#echo_server\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"thing\" is a duplicate \"offer\" target capability for \"#echo_server\""
         ),
         test_cml_offer_duplicate_storage_names(
             json!({
@@ -2305,7 +2248,7 @@ mod tests {
                 "capabilities": [ {
                     "storage": "cache",
                     "from": "self",
-                    "backing_dir": "/minfs"
+                    "backing_dir": "minfs"
                 } ],
                 "children": [ {
                     "name": "echo_server",
@@ -2319,10 +2262,10 @@ mod tests {
             json!({
                 "offer": [
                     {
-                        "protocol": ["/svc/A", "/svc/B"],
-                        "from": "self",
+                        "protocol": ["A", "B"],
+                        "from": "parent",
                         "to": [ "#echo_server" ],
-                        "as": "/thing"
+                        "as": "thing"
                     },
                 ],
                 "children": [
@@ -2338,7 +2281,7 @@ mod tests {
             json!({
                 "offer": [
                     {
-                        "directory": "/data/index",
+                        "directory": "index",
                         "subdir": "/",
                         "from": "parent",
                         "to": [ "#modular" ],
@@ -2569,13 +2512,13 @@ mod tests {
             json!({
                     "offer": [
                         {
-                            "protocol": "/svc/fuchsia.logger.Log",
+                            "protocol": "fuchsia.logger.Log",
                             "from": "#a",
                             "to": [ "#b" ],
                             "dependency": "strong"
                         },
                         {
-                            "directory": "/data",
+                            "directory": "data",
                             "from": "#b",
                             "to": [ "#c" ],
                         },
@@ -2627,13 +2570,13 @@ mod tests {
             json!({
                     "offer": [
                         {
-                            "protocol": "/svc/fuchsia.logger.Log",
+                            "protocol": "fuchsia.logger.Log",
                             "from": "#child_a",
                             "to": [ "#child_b" ],
                             "dependency": "weak_for_migration"
                         },
                         {
-                            "directory": "/data",
+                            "directory": "data",
                             "from": "#child_b",
                             "to": [ "#child_a" ],
                         },
@@ -2655,9 +2598,9 @@ mod tests {
             json!({
                 "offer": [
                     {
-                        "directory": "/foo/bar",
+                        "directory": "mydir",
                         "rights": [ "r*" ],
-                        "from": "self",
+                        "from": "parent",
                         "to": [ "#logger" ],
                         "filter": {"path": "/diagnostics"}
                     },
@@ -3019,17 +2962,17 @@ mod tests {
                     {
                         "storage": "a",
                         "from": "#minfs",
-                        "backing_dir": "/minfs",
+                        "backing_dir": "minfs",
                     },
                     {
                         "storage": "b",
                         "from": "parent",
-                        "backing_dir": "/data",
+                        "backing_dir": "data",
                     },
                     {
                         "storage": "c",
                         "from": "self",
-                        "backing_dir": "/storage",
+                        "backing_dir": "storage",
                     },
                 ],
                 "children": [
@@ -3047,7 +2990,7 @@ mod tests {
                     {
                         "storage": "abcdefghijklmnopqrstuvwxyz0123456789_-storage",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
-                        "backing_dir": "/example",
+                        "backing_dir": "example",
                     },
                 ],
                 "children": [
@@ -3064,7 +3007,7 @@ mod tests {
                     "capabilities": [ {
                         "storage": "minfs",
                         "from": "#missing",
-                        "backing_dir": "/minfs"
+                        "backing_dir": "minfs"
                     } ]
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"capabilities\" source \"#missing\" does not appear in \"children\""
@@ -3524,7 +3467,7 @@ mod tests {
                 ],
                 "offer": [
                     {
-                        "protocol": "/svc/fuchsia.logger.Log",
+                        "protocol": "fuchsia.logger.Log",
                         "from": "#a",
                         "to": [ "#b" ],
                         "dependency": "strong"
@@ -3562,7 +3505,8 @@ mod tests {
             json!({
                 "use": [
                   {
-                    "directory": "/foo/bar",
+                    "directory": "mydir",
+                    "path": "/mydir",
                     "rights": ["connect", "enumerate", "read_bytes", "write_bytes",
                                "execute", "update_attributes", "get_attributes", "traverse",
                                "modify_directory", "admin"],
@@ -3575,7 +3519,8 @@ mod tests {
             json!({
                 "use": [
                   {
-                    "directory": "/foo/bar",
+                    "directory": "mydir",
+                    "path": "/mydir",
                     "rights": ["cAnnect", "enumerate"],
                   },
                 ]
@@ -3586,7 +3531,8 @@ mod tests {
             json!({
                 "use": [
                   {
-                    "directory": "/foo/bar",
+                    "directory": "mydir",
+                    "path": "/mydir",
                     "rights": ["connect", "connect"],
                   },
                 ]
@@ -3597,7 +3543,8 @@ mod tests {
             json!({
                 "use": [
                   {
-                    "directory": "/foo/bar",
+                    "directory": "mydir",
+                    "path": "/mydir",
                     "rights": [],
                   },
                 ]
@@ -3608,8 +3555,9 @@ mod tests {
             json!({
                 "use": [
                   {
-                    "directory": "/foo/bar",
+                    "directory": "mydir",
                     "rights": ["r*"],
+                    "path": "/mydir",
                   },
                 ]
             }),
@@ -3619,8 +3567,9 @@ mod tests {
             json!({
                 "use": [
                   {
-                    "directory": "/foo/bar",
+                    "directory": "mydir",
                     "rights": ["w*", "read_bytes"],
+                    "path": "/mydir",
                   },
                 ]
             }),
@@ -3630,7 +3579,8 @@ mod tests {
             json!({
                 "use": [
                   {
-                    "directory": "/foo/bar",
+                    "directory": "mydir",
+                    "path": "/mydir",
                     "rights": ["r*", "read_bytes"],
                   },
                 ]
@@ -3641,7 +3591,8 @@ mod tests {
             json!({
                 "use": [
                   {
-                    "directory": "/foo/bar",
+                    "directory": "mydir",
+                    "path": "/mydir",
                     "rights": ["w*", "x*"],
                   },
                 ]
@@ -3651,39 +3602,10 @@ mod tests {
         test_cml_rights_use_invalid(
             json!({
                 "use": [
-                  { "directory": "/foo", },
+                  { "directory": "mydir", "path": "/mydir" },
                 ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Rights required for this use statement."
-        ),
-        test_cml_rights_offer_dir_invalid(
-            json!({
-                "offer": [
-                  {
-                    "directory": "/foo",
-                    "from": "self",
-                    "to": [ "#echo_server" ],
-                  },
-                ],
-                "children": [
-                  {
-                    "name": "echo_server",
-                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
-                  }
-                ],
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Rights required for this offer as it is offering from self."
-        ),
-        test_cml_rights_expose_dir_invalid(
-            json!({
-                "expose": [
-                  {
-                    "directory": "/foo/bar",
-                    "from": "self",
-                  },
-                ]
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Rights required for this expose statement as it is exposing from self."
         ),
         test_cml_path(
             json!({

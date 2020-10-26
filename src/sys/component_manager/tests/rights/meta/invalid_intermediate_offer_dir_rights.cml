@@ -21,7 +21,7 @@
         {
             directory: "read_write",
             from: "parent",
-            as: "/read_write_dup",
+            as: "read_write_dup",
             to: [ "#use_dir_rights" ],
         },
 

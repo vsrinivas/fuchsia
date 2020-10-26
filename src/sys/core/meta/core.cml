@@ -40,7 +40,7 @@
             storage: "data",
             from: "parent",
             subdir: "persistent",
-            backing_dir: "/minfs",
+            backing_dir: "minfs",
         },
         { protocol: "fuchsia.appmgr.Startup" },
     ],

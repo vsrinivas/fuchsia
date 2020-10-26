@@ -34,7 +34,7 @@
         {
             storage: "minfs",
             from: "parent",
-            backing_dir: "/data",
+            backing_dir: "data",
         },
         {
             runner: "dart_runner",
@@ -77,7 +77,7 @@
                 "destroyed",
                 "diagnostics_ready",
             ],
-            as: "/svc/my_stream",
+            path: "/svc/my_stream",
         },
     ],
     offer: [

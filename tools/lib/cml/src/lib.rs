@@ -40,8 +40,8 @@ lazy_static! {
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum CapabilityId {
     Service(Name),
-    Protocol(NameOrPath),
-    Directory(NameOrPath),
+    Protocol(Name),
+    Directory(Name),
     // A service in a `use` declaration has a target path in the component's namespace.
     UsedService(Path),
     // A protocol in a `use` declaration has a target path in the component's namespace.
@@ -114,41 +114,32 @@ impl CapabilityId {
                     };
                     Ok(vec![CapabilityId::UsedService(path)])
                 }
-                _ => Ok(vec![CapabilityId::Service(alias_or_name(alias, n)?)]),
+                _ => Ok(vec![CapabilityId::Service(alias_or_name(alias, n))]),
             };
         } else if let Some(OneOrMany::One(protocol)) = clause.protocol() {
             return match (clause_type, protocol) {
                 (RoutingClauseType::Capability, protocol) => {
                     Ok(vec![CapabilityId::Protocol(protocol)])
                 }
-                (RoutingClauseType::Use, NameOrPath::Path(protocol)) => {
-                    Ok(vec![CapabilityId::UsedProtocol(alias_or_path(alias, &protocol)?)])
-                }
-                (RoutingClauseType::Use, NameOrPath::Name(protocol)) => {
+                (RoutingClauseType::Use, protocol) => {
                     let path = match path {
                         Some(path) => path.clone(),
                         None => format!("/svc/{}", protocol).parse().unwrap(),
                     };
                     Ok(vec![CapabilityId::UsedProtocol(path)])
                 }
-                (_, protocol) => {
-                    Ok(vec![CapabilityId::Protocol(alias_or_name_or_path(alias, &protocol))])
-                }
+                (_, protocol) => Ok(vec![CapabilityId::Protocol(alias_or_name(alias, &protocol))]),
             };
         } else if let Some(OneOrMany::Many(protocols)) = clause.protocol() {
             return match clause_type {
-                RoutingClauseType::Use if protocols.len() == 1 => match &protocols[0] {
-                    NameOrPath::Path(protocol) => {
-                        Ok(vec![CapabilityId::UsedProtocol(alias_or_path(alias, protocol)?)])
-                    }
-                    NameOrPath::Name(protocol) => {
-                        let path = match path {
-                            Some(path) => path.clone(),
-                            None => format!("/svc/{}", protocol).parse().unwrap(),
-                        };
-                        Ok(vec![CapabilityId::UsedProtocol(path)])
-                    }
-                },
+                RoutingClauseType::Use if protocols.len() == 1 => {
+                    let protocol = &protocols[0];
+                    let path = match path {
+                        Some(path) => path.clone(),
+                        None => format!("/svc/{}", protocol).parse().unwrap(),
+                    };
+                    Ok(vec![CapabilityId::UsedProtocol(path)])
+                }
                 RoutingClauseType::Use => {
                     if alias.is_some() {
                         return Err(Error::validate(
@@ -162,14 +153,9 @@ impl CapabilityId {
                     }
                     Ok(protocols
                         .iter()
-                        .map(|protocol: &NameOrPath| match protocol {
-                            NameOrPath::Path(protocol) => {
-                                CapabilityId::UsedProtocol(protocol.clone())
-                            }
-                            NameOrPath::Name(protocol) => {
-                                let protocol: Path = format!("/svc/{}", protocol).parse().unwrap();
-                                CapabilityId::UsedProtocol(protocol)
-                            }
+                        .map(|protocol: &Name| {
+                            let protocol: Path = format!("/svc/{}", protocol).parse().unwrap();
+                            CapabilityId::UsedProtocol(protocol)
                         })
                         .collect())
                 }
@@ -184,11 +170,11 @@ impl CapabilityId {
                     }
                     Ok(protocols
                         .iter()
-                        .map(|protocol: &NameOrPath| CapabilityId::Protocol(protocol.clone()))
+                        .map(|protocol: &Name| CapabilityId::Protocol(protocol.clone()))
                         .collect())
                 }
                 _ if protocols.len() == 1 => {
-                    Ok(vec![CapabilityId::Protocol(alias_or_name_or_path(alias, &protocols[0]))])
+                    Ok(vec![CapabilityId::Protocol(alias_or_name(alias, &protocols[0]))])
                 }
                 _ => {
                     if alias.is_some() {
@@ -198,7 +184,7 @@ impl CapabilityId {
                     }
                     Ok(protocols
                         .iter()
-                        .map(|protocol: &NameOrPath| CapabilityId::Protocol(protocol.clone()))
+                        .map(|protocol: &Name| CapabilityId::Protocol(protocol.clone()))
                         .collect())
                 }
             };
@@ -207,10 +193,7 @@ impl CapabilityId {
                 (RoutingClauseType::Capability, directory) => {
                     Ok(vec![CapabilityId::Directory(directory)])
                 }
-                (RoutingClauseType::Use, NameOrPath::Path(directory)) => {
-                    Ok(vec![CapabilityId::UsedDirectory(alias_or_path(alias, &directory)?)])
-                }
-                (RoutingClauseType::Use, NameOrPath::Name(_)) => {
+                (RoutingClauseType::Use, _) => {
                     if path.is_none() {
                         return Err(Error::validate(
                             "\"path\" field should be present for `use directory`.",
@@ -219,22 +202,20 @@ impl CapabilityId {
                     Ok(vec![CapabilityId::UsedDirectory(path.unwrap().clone())])
                 }
                 (_, directory) => {
-                    Ok(vec![CapabilityId::Directory(alias_or_name_or_path(alias, &directory))])
+                    Ok(vec![CapabilityId::Directory(alias_or_name(alias, &directory))])
                 }
             };
         } else if let Some(n) = clause.storage().as_ref() {
-            return Ok(vec![CapabilityId::Storage(alias_or_name(alias, n)?)]);
+            return Ok(vec![CapabilityId::Storage(alias_or_name(alias, n))]);
         } else if let Some(n) = clause.runner().as_ref() {
-            return Ok(vec![CapabilityId::Runner(alias_or_name(alias, n)?)]);
+            return Ok(vec![CapabilityId::Runner(alias_or_name(alias, n))]);
         } else if let Some(n) = clause.resolver().as_ref() {
-            return Ok(vec![CapabilityId::Resolver(alias_or_name(alias, n)?)]);
+            return Ok(vec![CapabilityId::Resolver(alias_or_name(alias, n))]);
         } else if let Some(OneOrMany::One(n)) = clause.event().as_ref() {
-            return Ok(vec![CapabilityId::Event(alias_or_name(alias, n)?)]);
+            return Ok(vec![CapabilityId::Event(alias_or_name(alias, n))]);
         } else if let Some(OneOrMany::Many(events)) = clause.event().as_ref() {
             return match (alias, clause.filter(), events.len()) {
-                (Some(valid_alias), _, 1) => {
-                    Ok(vec![CapabilityId::Event(valid_alias.extract_name_borrowed()?.clone())])
-                }
+                (Some(alias), _, 1) => Ok(vec![CapabilityId::Event(alias.clone())]),
                 (None, Some(_), 1) => Ok(vec![CapabilityId::Event(events[0].clone())]),
                 (Some(_), None, _) => Err(Error::validate(
                     "\"as\" field can only be specified when one `event` is supplied",
@@ -252,9 +233,9 @@ impl CapabilityId {
             };
         } else if let Some(_) = clause.event_stream().as_ref() {
             return Ok(vec![CapabilityId::EventStream(alias_or_path(
-                alias,
+                path,
                 &DEFAULT_EVENT_STREAM_PATH,
-            )?)]);
+            ))]);
         }
 
         // Unknown capability type.
@@ -656,7 +637,7 @@ impl Document {
                     let alias = use_.r#as();
                     let events: Vec<_> = event.to_vec();
                     if events.len() == 1 {
-                        let event_name = alias_or_name(alias, &events[0])?.clone();
+                        let event_name = alias_or_name(alias, &events[0]).clone();
                         all_events.push(event_name);
                     } else {
                         let mut events = events.into_iter().cloned().collect();
@@ -806,7 +787,7 @@ pub struct Capability {
     pub from: Option<CapabilityFromRef>,
     pub path: Option<Path>,
     pub rights: Option<Rights>,
-    pub backing_dir: Option<NameOrPath>,
+    pub backing_dir: Option<Name>,
     pub subdir: Option<RelativePath>,
 }
 
@@ -814,13 +795,13 @@ pub struct Capability {
 #[serde(deny_unknown_fields)]
 pub struct Use {
     pub service: Option<Name>,
-    pub protocol: Option<OneOrMany<NameOrPath>>,
-    pub directory: Option<NameOrPath>,
+    pub protocol: Option<OneOrMany<Name>>,
+    pub directory: Option<Name>,
     pub storage: Option<Name>,
     pub runner: Option<Name>,
     pub from: Option<UseFromRef>,
     pub path: Option<Path>,
-    pub r#as: Option<NameOrPath>,
+    pub r#as: Option<Name>,
     pub rights: Option<Rights>,
     pub subdir: Option<RelativePath>,
     pub event: Option<OneOrMany<Name>>,
@@ -832,12 +813,12 @@ pub struct Use {
 #[serde(deny_unknown_fields)]
 pub struct Expose {
     pub service: Option<Name>,
-    pub protocol: Option<OneOrMany<NameOrPath>>,
-    pub directory: Option<NameOrPath>,
+    pub protocol: Option<OneOrMany<Name>>,
+    pub directory: Option<Name>,
     pub runner: Option<Name>,
     pub resolver: Option<Name>,
     pub from: OneOrMany<ExposeFromRef>,
-    pub r#as: Option<NameOrPath>,
+    pub r#as: Option<Name>,
     pub to: Option<ExposeToRef>,
     pub rights: Option<Rights>,
     pub subdir: Option<RelativePath>,
@@ -847,15 +828,15 @@ pub struct Expose {
 #[serde(deny_unknown_fields)]
 pub struct Offer {
     pub service: Option<Name>,
-    pub protocol: Option<OneOrMany<NameOrPath>>,
-    pub directory: Option<NameOrPath>,
+    pub protocol: Option<OneOrMany<Name>>,
+    pub directory: Option<Name>,
     pub storage: Option<Name>,
     pub runner: Option<Name>,
     pub resolver: Option<Name>,
     pub event: Option<OneOrMany<Name>>,
     pub from: OneOrMany<OfferFromRef>,
     pub to: OfferTo,
-    pub r#as: Option<NameOrPath>,
+    pub r#as: Option<Name>,
     pub rights: Option<Rights>,
     pub subdir: Option<RelativePath>,
     pub dependency: Option<DependencyType>,
@@ -898,8 +879,8 @@ pub enum RoutingClauseType {
 
 pub trait CapabilityClause {
     fn service(&self) -> &Option<Name>;
-    fn protocol(&self) -> Option<OneOrMany<NameOrPath>>;
-    fn directory(&self) -> Option<NameOrPath>;
+    fn protocol(&self) -> Option<OneOrMany<Name>>;
+    fn directory(&self) -> Option<Name>;
     fn storage(&self) -> &Option<Name>;
     fn runner(&self) -> &Option<Name>;
     fn resolver(&self) -> &Option<Name>;
@@ -917,7 +898,7 @@ pub trait CapabilityClause {
 }
 
 pub trait AsClause {
-    fn r#as(&self) -> Option<&NameOrPath>;
+    fn r#as(&self) -> Option<&Name>;
 }
 
 pub trait PathClause {
@@ -936,16 +917,14 @@ impl CapabilityClause for Capability {
     fn service(&self) -> &Option<Name> {
         &self.service
     }
-    fn protocol(&self) -> Option<OneOrMany<NameOrPath>> {
+    fn protocol(&self) -> Option<OneOrMany<Name>> {
         self.protocol.as_ref().map(|o| match o {
-            OneOrMany::One(n) => OneOrMany::One(NameOrPath::Name(n.clone())),
-            OneOrMany::Many(v) => {
-                OneOrMany::Many(v.iter().map(|n| NameOrPath::Name(n.clone())).collect())
-            }
+            OneOrMany::One(n) => OneOrMany::One(n.clone()),
+            OneOrMany::Many(v) => OneOrMany::Many(v.iter().map(|n| n.clone()).collect()),
         })
     }
-    fn directory(&self) -> Option<NameOrPath> {
-        self.directory.as_ref().map(|n| NameOrPath::Name(n.clone()))
+    fn directory(&self) -> Option<Name> {
+        self.directory.as_ref().map(|n| n.clone())
     }
     fn storage(&self) -> &Option<Name> {
         &self.storage
@@ -988,7 +967,7 @@ impl CapabilityClause for Capability {
 }
 
 impl AsClause for Capability {
-    fn r#as(&self) -> Option<&NameOrPath> {
+    fn r#as(&self) -> Option<&Name> {
         None
     }
 }
@@ -1015,10 +994,10 @@ impl CapabilityClause for Use {
     fn service(&self) -> &Option<Name> {
         &self.service
     }
-    fn protocol(&self) -> Option<OneOrMany<NameOrPath>> {
+    fn protocol(&self) -> Option<OneOrMany<Name>> {
         self.protocol.clone()
     }
-    fn directory(&self) -> Option<NameOrPath> {
+    fn directory(&self) -> Option<Name> {
         self.directory.clone()
     }
     fn storage(&self) -> &Option<Name> {
@@ -1070,7 +1049,7 @@ impl FilterClause for Use {
 }
 
 impl AsClause for Use {
-    fn r#as(&self) -> Option<&NameOrPath> {
+    fn r#as(&self) -> Option<&Name> {
         self.r#as.as_ref()
     }
 }
@@ -1099,10 +1078,10 @@ impl CapabilityClause for Expose {
     }
     // TODO(fxbug.dev/340156): Only OneOrMany::One protocol is supported for now. Teach `expose` rules to accept
     // `Many` protocols.
-    fn protocol(&self) -> Option<OneOrMany<NameOrPath>> {
+    fn protocol(&self) -> Option<OneOrMany<Name>> {
         self.protocol.clone()
     }
-    fn directory(&self) -> Option<NameOrPath> {
+    fn directory(&self) -> Option<Name> {
         self.directory.clone()
     }
     fn storage(&self) -> &Option<Name> {
@@ -1144,7 +1123,7 @@ impl CapabilityClause for Expose {
 }
 
 impl AsClause for Expose {
-    fn r#as(&self) -> Option<&NameOrPath> {
+    fn r#as(&self) -> Option<&Name> {
         self.r#as.as_ref()
     }
 }
@@ -1177,10 +1156,10 @@ impl CapabilityClause for Offer {
     fn service(&self) -> &Option<Name> {
         &self.service
     }
-    fn protocol(&self) -> Option<OneOrMany<NameOrPath>> {
+    fn protocol(&self) -> Option<OneOrMany<Name>> {
         self.protocol.clone()
     }
-    fn directory(&self) -> Option<NameOrPath> {
+    fn directory(&self) -> Option<Name> {
         self.directory.clone()
     }
     fn storage(&self) -> &Option<Name> {
@@ -1226,7 +1205,7 @@ impl CapabilityClause for Offer {
 }
 
 impl AsClause for Offer {
-    fn r#as(&self) -> Option<&NameOrPath> {
+    fn r#as(&self) -> Option<&Name> {
         self.r#as.as_ref()
     }
 }
@@ -1273,12 +1252,12 @@ where
     r.into()
 }
 
-pub fn alias_or_name(alias: Option<&NameOrPath>, name: &Name) -> Result<Name, Error> {
-    Ok(alias.map(|a| a.extract_name_borrowed()).transpose()?.unwrap_or(name).clone())
+pub fn alias_or_name(alias: Option<&Name>, name: &Name) -> Name {
+    alias.unwrap_or(name).clone()
 }
 
-pub fn alias_or_path(alias: Option<&NameOrPath>, path: &Path) -> Result<Path, Error> {
-    Ok(alias.map(|a| a.extract_path_borrowed()).transpose()?.unwrap_or(path).clone())
+pub fn alias_or_path(alias: Option<&Path>, path: &Path) -> Path {
+    alias.unwrap_or(path).clone()
 }
 
 pub fn alias_or_name_or_path(alias: Option<&NameOrPath>, id: &NameOrPath) -> NameOrPath {
@@ -1540,13 +1519,6 @@ mod tests {
         );
         assert_eq!(
             CapabilityId::from_clause(
-                &Offer { protocol: Some(OneOrMany::One("/a".parse().unwrap())), ..empty_offer() },
-                RoutingClauseType::Offer
-            )?,
-            vec![CapabilityId::Protocol("/a".parse().unwrap())]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
                 &Offer {
                     protocol: Some(OneOrMany::Many(vec![
                         "a".parse().unwrap(),
@@ -1559,22 +1531,6 @@ mod tests {
             vec![
                 CapabilityId::Protocol("a".parse().unwrap()),
                 CapabilityId::Protocol("b".parse().unwrap())
-            ]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &Offer {
-                    protocol: Some(OneOrMany::Many(vec![
-                        "/a".parse().unwrap(),
-                        "/b".parse().unwrap()
-                    ],)),
-                    ..empty_offer()
-                },
-                RoutingClauseType::Offer
-            )?,
-            vec![
-                CapabilityId::Protocol("/a".parse().unwrap()),
-                CapabilityId::Protocol("/b".parse().unwrap())
             ]
         );
         assert_eq!(
@@ -1622,13 +1578,6 @@ mod tests {
         );
         assert_eq!(
             CapabilityId::from_clause(
-                &Offer { directory: Some("/a".parse().unwrap()), ..empty_offer() },
-                RoutingClauseType::Offer
-            )?,
-            vec![CapabilityId::Directory("/a".parse().unwrap())]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
                 &Use {
                     directory: Some("a".parse().unwrap()),
                     path: Some("/b".parse().unwrap()),
@@ -1659,17 +1608,6 @@ mod tests {
                 RoutingClauseType::Offer
             )?,
             vec![CapabilityId::Service("b".parse().unwrap())]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &Offer {
-                    protocol: Some(OneOrMany::One("/a".parse().unwrap())),
-                    r#as: Some("/b".parse().unwrap()),
-                    ..empty_offer()
-                },
-                RoutingClauseType::Offer
-            )?,
-            vec![CapabilityId::Protocol("/b".parse().unwrap())]
         );
 
         // Error case.

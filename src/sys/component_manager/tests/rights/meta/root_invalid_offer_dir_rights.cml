@@ -29,7 +29,7 @@
         {
             directory: "read_write",
             from: "#expose_dir_rights",
-            as: "/read_write_dup",
+            as: "read_write_dup",
             to: [ "#use_dir_rights" ],
         },
         {

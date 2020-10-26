@@ -192,7 +192,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                 .ok_or_else(|| Error::internal("no capability"))?;
             let source_ids = p.to_vec();
             for (source_id, target_id) in source_ids.into_iter().zip(target_ids.into_iter()) {
-                let target_path = cml::NameOrPath::Path(target_id.extract_path()?);
+                let target_path = target_id.extract_path()?;
                 out_uses.push(fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                     source: Some(clone_fsys_ref(&source)?),
                     source_path: Some(source_id.clone().into()),
@@ -201,10 +201,8 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
             }
         } else if let Some(p) = use_.directory() {
             let source = extract_use_source(use_)?;
-            let target_path = cml::NameOrPath::Path(
-                one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
-                    .extract_path()?,
-            );
+            let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
+                .extract_path()?;
             let rights = translate::extract_required_rights(use_, "use")?;
             let subdir = extract_use_subdir(use_);
             out_uses.push(fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
@@ -215,10 +213,8 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                 subdir: subdir.map(|s| s.into()),
             }));
         } else if let Some(s) = use_.storage() {
-            let target_path = cml::NameOrPath::Path(
-                one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
-                    .extract_path()?,
-            );
+            let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
+                .extract_path()?;
             out_uses.push(fsys::UseDecl::Storage(fsys::UseStorageDecl {
                 source_name: Some(s.to_string()),
                 target_path: Some(target_path.into()),
@@ -377,8 +373,11 @@ fn translate_offer(
                 // TODO: This logic could be simplified to use iter::zip() if
                 // extract_all_targets_for_each_child returned separate vectors for targets and
                 // target_ids instead of the cross product of them.
-                let source_id =
-                    if source_ids.len() == 1 { source_ids[0].clone() } else { target_id.clone() };
+                let source_id = if source_ids.len() == 1 {
+                    source_ids[0].clone()
+                } else {
+                    target_id.extract_name_borrowed()?.clone()
+                };
                 out_offers.push(fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
                     source: Some(clone_fsys_ref(&source)?),
                     source_path: Some(source_id.clone().into()),
@@ -779,7 +778,7 @@ where
 {
     if let Some(as_) = to_obj.r#as() {
         // We've already validated that when `as` is specified, only 1 source id exists.
-        Some(OneOrMany::One(as_.clone()))
+        Some(OneOrMany::One(cml::NameOrPath::Name(as_.clone())))
     } else {
         if let Some(n) = in_obj.service() {
             if let cml::RoutingClauseType::Use = clause_type {
@@ -795,9 +794,7 @@ where
             }
         } else if let Some(p) = in_obj.protocol() {
             Some(match p {
-                OneOrMany::One(cml::NameOrPath::Name(n))
-                    if clause_type == cml::RoutingClauseType::Use =>
-                {
+                OneOrMany::One(n) if clause_type == cml::RoutingClauseType::Use => {
                     if let Some(path) = to_obj.path() {
                         OneOrMany::One(cml::NameOrPath::Path(path.clone()))
                     } else {
@@ -806,24 +803,16 @@ where
                         ))
                     }
                 }
-                OneOrMany::One(cml::NameOrPath::Name(n))
-                    if clause_type == cml::RoutingClauseType::Use =>
-                {
-                    OneOrMany::One(cml::NameOrPath::Name(n.clone()))
-                }
-                OneOrMany::One(path) => OneOrMany::One(path.clone()),
+                OneOrMany::One(n) => OneOrMany::One(cml::NameOrPath::Name(n)),
                 OneOrMany::Many(v) => {
                     let many = v
                         .iter()
-                        .map(|p| match p {
-                            cml::NameOrPath::Name(n) => {
-                                if let cml::RoutingClauseType::Use = clause_type {
-                                    cml::NameOrPath::Path(format!("/svc/{}", n).parse().unwrap())
-                                } else {
-                                    cml::NameOrPath::Name(n.clone())
-                                }
+                        .map(|n| {
+                            if let cml::RoutingClauseType::Use = clause_type {
+                                cml::NameOrPath::Path(format!("/svc/{}", n).parse().unwrap())
+                            } else {
+                                cml::NameOrPath::Name(n.clone())
                             }
-                            path => path.clone(),
                         })
                         .collect();
                     OneOrMany::Many(many)
@@ -831,12 +820,11 @@ where
             })
         } else if let Some(d) = in_obj.directory() {
             Some(match d {
-                cml::NameOrPath::Name(_) if clause_type == cml::RoutingClauseType::Use => {
+                _ if clause_type == cml::RoutingClauseType::Use => {
                     let path = to_obj.path().expect("no path on use directory");
                     OneOrMany::One(cml::NameOrPath::Path(path.clone()))
                 }
-                cml::NameOrPath::Name(n) => OneOrMany::One(cml::NameOrPath::Name(n.clone())),
-                path => OneOrMany::One(path.clone()),
+                n => OneOrMany::One(cml::NameOrPath::Name(n.clone())),
             })
         } else if let Some(n) = in_obj.storage() {
             if clause_type == cml::RoutingClauseType::Use {
@@ -853,6 +841,10 @@ where
             Some(OneOrMany::One(cml::NameOrPath::Name(event.clone())))
         } else if let Some(OneOrMany::Many(events)) = in_obj.event() {
             Some(OneOrMany::Many(events.iter().map(|e| cml::NameOrPath::Name(e.clone())).collect()))
+        } else if let Some(_) = in_obj.event_stream() {
+            Some(OneOrMany::One(cml::NameOrPath::Path(
+                to_obj.path().expect("no path on event stream").clone(),
+            )))
         } else {
             None
         }
@@ -1021,20 +1013,11 @@ mod tests {
                     { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                     { "service": "fuchsia.sys2.Realm", "from": "framework" },
                     { "protocol": "LegacyCoolFonts", "path": "/svc/fuchsia.fonts.LegacyProvider" },
-                    { "protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider2" },
                     { "protocol": "fuchsia.sys2.LegacyRealm", "from": "framework" },
-                    { "protocol": "/svc/fuchsia.sys2.LegacyRealm2", "from": "framework" },
                     { "directory": "assets", "rights" : ["read_bytes"], "path": "/data/assets" },
-                    { "directory": "/data/assets2", "rights" : ["read_bytes"]},
                     {
                         "directory": "config",
                         "path": "/data/config",
-                        "from": "parent",
-                        "rights": ["read_bytes"],
-                        "subdir": "fonts",
-                    },
-                    {
-                        "directory": "/data/config2",
                         "from": "parent",
                         "rights": ["read_bytes"],
                         "subdir": "fonts",
@@ -1078,23 +1061,9 @@ mod tests {
                     ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
-                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("/fonts/LegacyCoolFonts".to_string()),
-                            target_path: Some("/svc/fuchsia.fonts.LegacyProvider2".to_string()),
-                        }
-                    ),
-                    fsys::UseDecl::Protocol (
-                        fsys::UseProtocolDecl {
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                             source_path: Some("fuchsia.sys2.LegacyRealm".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.LegacyRealm".to_string()),
-                        }
-                    ),
-                    fsys::UseDecl::Protocol (
-                        fsys::UseProtocolDecl {
-                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                            source_path: Some("/svc/fuchsia.sys2.LegacyRealm2".to_string()),
-                            target_path: Some("/svc/fuchsia.sys2.LegacyRealm2".to_string()),
                         }
                     ),
                     fsys::UseDecl::Directory (
@@ -1109,26 +1078,8 @@ mod tests {
                     fsys::UseDecl::Directory (
                         fsys::UseDirectoryDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("/data/assets2".to_string()),
-                            target_path: Some("/data/assets2".to_string()),
-                            rights: Some(fio2::Operations::ReadBytes),
-                            subdir: None,
-                        }
-                    ),
-                    fsys::UseDecl::Directory (
-                        fsys::UseDirectoryDecl {
-                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_path: Some("config".to_string()),
                             target_path: Some("/data/config".to_string()),
-                            rights: Some(fio2::Operations::ReadBytes),
-                            subdir: Some("fonts".to_string()),
-                        }
-                    ),
-                    fsys::UseDecl::Directory (
-                        fsys::UseDirectoryDecl {
-                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("/data/config2".to_string()),
-                            target_path: Some("/data/config2".to_string()),
                             rights: Some(fio2::Operations::ReadBytes),
                             subdir: Some("fonts".to_string()),
                         }
@@ -1218,18 +1169,7 @@ mod tests {
                         "to": "parent"
                     },
                     {
-                        "protocol": "/loggers/fuchsia.logger.LegacyLog",
-                        "from": "#logger",
-                        "as": "/svc/fuchsia.logger.LegacyLog2",
-                        "to": "parent"
-                    },
-                    {
                         "protocol": [ "A", "B" ],
-                        "from": "self",
-                        "to": "parent"
-                    },
-                    {
-                        "protocol": [ "/A", "/B" ],
                         "from": "self",
                         "to": "parent"
                     },
@@ -1239,14 +1179,7 @@ mod tests {
                         "to": "framework",
                         "rights": ["r*"],
                     },
-                    {
-                        "directory": "/volumes/blobfs/blob",
-                        "from": "self",
-                        "to": "framework",
-                        "rights": ["r*"],
-                    },
                     { "directory": "hub", "from": "framework" },
-                    { "directory": "/hub", "from": "framework" },
                     { "runner": "web", "from": "self" },
                     { "runner": "web", "from": "#logger", "to": "parent", "as": "web-rename" },
                     { "resolver": "my_resolver", "from": "#logger", "to": "parent", "as": "pkg_resolver" }
@@ -1318,17 +1251,6 @@ mod tests {
                     ),
                     fsys::ExposeDecl::Protocol (
                         fsys::ExposeProtocolDecl {
-                            source: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "logger".to_string(),
-                                collection: None,
-                            })),
-                            source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
-                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            target_path: Some("/svc/fuchsia.logger.LegacyLog2".to_string()),
-                        }
-                    ),
-                    fsys::ExposeDecl::Protocol (
-                        fsys::ExposeProtocolDecl {
                             source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                             source_path: Some("A".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -1341,22 +1263,6 @@ mod tests {
                             source_path: Some("B".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             target_path: Some("B".to_string()),
-                        }
-                    ),
-                    fsys::ExposeDecl::Protocol (
-                        fsys::ExposeProtocolDecl {
-                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                            source_path: Some("/A".to_string()),
-                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            target_path: Some("/A".to_string()),
-                        }
-                    ),
-                    fsys::ExposeDecl::Protocol (
-                        fsys::ExposeProtocolDecl {
-                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                            source_path: Some("/B".to_string()),
-                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            target_path: Some("/B".to_string()),
                         }
                     ),
                     fsys::ExposeDecl::Directory (
@@ -1375,34 +1281,10 @@ mod tests {
                     ),
                     fsys::ExposeDecl::Directory (
                         fsys::ExposeDirectoryDecl {
-                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                            source_path: Some("/volumes/blobfs/blob".to_string()),
-                            target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                            target_path: Some("/volumes/blobfs/blob".to_string()),
-                            rights: Some(
-                                fio2::Operations::Connect | fio2::Operations::Enumerate |
-                                fio2::Operations::Traverse | fio2::Operations::ReadBytes |
-                                fio2::Operations::GetAttributes
-                            ),
-                            subdir: None,
-                        }
-                    ),
-                    fsys::ExposeDecl::Directory (
-                        fsys::ExposeDirectoryDecl {
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                             source_path: Some("hub".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             target_path: Some("hub".to_string()),
-                            rights: None,
-                            subdir: None,
-                        }
-                    ),
-                    fsys::ExposeDecl::Directory (
-                        fsys::ExposeDirectoryDecl {
-                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                            source_path: Some("/hub".to_string()),
-                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            target_path: Some("/hub".to_string()),
                             rights: None,
                             subdir: None,
                         }
@@ -1514,23 +1396,10 @@ mod tests {
                         "dependency": "weak_for_migration"
                     },
                     {
-                        "protocol": "/svc/fuchsia.logger.LegacyLog",
-                        "from": "#logger",
-                        "to": [ "#netstack" ],
-                        "dependency": "weak_for_migration"
-                    },
-                    {
                         "protocol": "fuchsia.logger.LegacyLog",
                         "from": "#logger",
                         "to": [ "#modular" ],
                         "as": "fuchsia.logger.LegacySysLog",
-                        "dependency": "strong"
-                    },
-                    {
-                        "protocol": "/svc/fuchsia.logger.LegacyLog",
-                        "from": "#logger",
-                        "to": [ "#modular" ],
-                        "as": "/svc/fuchsia.logger.LegacySysLog",
                         "dependency": "strong"
                     },
                     {
@@ -1542,21 +1411,7 @@ mod tests {
                         "to": [ "#modular" ]
                     },
                     {
-                        "protocol": [
-                            "/svc/fuchsia.setui.SetUiService",
-                            "/svc/fuchsia.wlan.service.Wlan"
-                        ],
-                        "from": "parent",
-                        "to": [ "#modular" ]
-                    },
-                    {
                         "directory": "assets",
-                        "from": "parent",
-                        "to": [ "#netstack" ],
-                        "dependency": "weak_for_migration"
-                    },
-                    {
-                        "directory": "/data/assets",
                         "from": "parent",
                         "to": [ "#netstack" ],
                         "dependency": "weak_for_migration"
@@ -1570,24 +1425,10 @@ mod tests {
                         "dependency": "strong"
                     },
                     {
-                        "directory": "/data/assets",
-                        "from": "parent",
-                        "to": [ "#modular" ],
-                        "as": "/data",
-                        "subdir": "index/file",
-                        "dependency": "strong"
-                    },
-                    {
                         "directory": "hub",
                         "from": "framework",
                         "to": [ "#modular" ],
                         "as": "hub",
-                    },
-                    {
-                        "directory": "/hub",
-                        "from": "framework",
-                        "to": [ "#modular" ],
-                        "as": "/hub",
                     },
                     {
                         "storage": "data",
@@ -1658,7 +1499,7 @@ mod tests {
                     { "service": "my.service.Service" },
                     {
                         "storage": "data",
-                        "backing_dir": "/minfs",
+                        "backing_dir": "minfs",
                         "from": "#logger",
                     },
                 ],
@@ -1738,40 +1579,11 @@ mod tests {
                                 name: "logger".to_string(),
                                 collection: None,
                             })),
-                            source_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
-                            target: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "netstack".to_string(),
-                                collection: None,
-                            })),
-                            target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
-                            dependency_type: Some(fsys::DependencyType::WeakForMigration),
-                        }
-                    ),
-                    fsys::OfferDecl::Protocol (
-                        fsys::OfferProtocolDecl {
-                            source: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "logger".to_string(),
-                                collection: None,
-                            })),
                             source_path: Some("fuchsia.logger.LegacyLog".to_string()),
                             target: Some(fsys::Ref::Collection(fsys::CollectionRef {
                                 name: "modular".to_string(),
                             })),
                             target_path: Some("fuchsia.logger.LegacySysLog".to_string()),
-                            dependency_type: Some(fsys::DependencyType::Strong),
-                        }
-                    ),
-                    fsys::OfferDecl::Protocol (
-                        fsys::OfferProtocolDecl {
-                            source: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "logger".to_string(),
-                                collection: None,
-                            })),
-                            source_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
-                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
-                                name: "modular".to_string(),
-                            })),
-                            target_path: Some("/svc/fuchsia.logger.LegacySysLog".to_string()),
                             dependency_type: Some(fsys::DependencyType::Strong),
                         }
                     ),
@@ -1797,28 +1609,6 @@ mod tests {
                             dependency_type: Some(fsys::DependencyType::Strong),
                         }
                     ),
-                    fsys::OfferDecl::Protocol (
-                        fsys::OfferProtocolDecl {
-                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("/svc/fuchsia.setui.SetUiService".to_string()),
-                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
-                                name: "modular".to_string(),
-                            })),
-                            target_path: Some("/svc/fuchsia.setui.SetUiService".to_string()),
-                            dependency_type: Some(fsys::DependencyType::Strong),
-                        }
-                    ),
-                    fsys::OfferDecl::Protocol (
-                        fsys::OfferProtocolDecl {
-                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("/svc/fuchsia.wlan.service.Wlan".to_string()),
-                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
-                                name: "modular".to_string(),
-                            })),
-                            target_path: Some("/svc/fuchsia.wlan.service.Wlan".to_string()),
-                            dependency_type: Some(fsys::DependencyType::Strong),
-                        }
-                    ),
                     fsys::OfferDecl::Directory (
                         fsys::OfferDirectoryDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -1828,20 +1618,6 @@ mod tests {
                                 collection: None,
                             })),
                             target_path: Some("assets".to_string()),
-                            rights: None,
-                            subdir: None,
-                            dependency_type: Some(fsys::DependencyType::WeakForMigration),
-                        }
-                    ),
-                    fsys::OfferDecl::Directory (
-                        fsys::OfferDirectoryDecl {
-                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("/data/assets".to_string()),
-                            target: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "netstack".to_string(),
-                                collection: None,
-                            })),
-                            target_path: Some("/data/assets".to_string()),
                             rights: None,
                             subdir: None,
                             dependency_type: Some(fsys::DependencyType::WeakForMigration),
@@ -1862,38 +1638,12 @@ mod tests {
                     ),
                     fsys::OfferDecl::Directory (
                         fsys::OfferDirectoryDecl {
-                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("/data/assets".to_string()),
-                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
-                                name: "modular".to_string(),
-                            })),
-                            target_path: Some("/data".to_string()),
-                            rights: None,
-                            subdir: Some("index/file".to_string()),
-                            dependency_type: Some(fsys::DependencyType::Strong),
-                        }
-                    ),
-                    fsys::OfferDecl::Directory (
-                        fsys::OfferDirectoryDecl {
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                             source_path: Some("hub".to_string()),
                             target: Some(fsys::Ref::Collection(fsys::CollectionRef {
                                 name: "modular".to_string(),
                             })),
                             target_path: Some("hub".to_string()),
-                            rights: None,
-                            subdir: None,
-                            dependency_type: Some(fsys::DependencyType::Strong),
-                        }
-                    ),
-                    fsys::OfferDecl::Directory (
-                        fsys::OfferDirectoryDecl {
-                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                            source_path: Some("/hub".to_string()),
-                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
-                                name: "modular".to_string(),
-                            })),
-                            target_path: Some("/hub".to_string()),
                             rights: None,
                             subdir: None,
                             dependency_type: Some(fsys::DependencyType::Strong),
@@ -2020,7 +1770,7 @@ mod tests {
                                 name: "logger".to_string(),
                                 collection: None,
                             })),
-                            source_path: Some("/minfs".to_string()),
+                            source_path: Some("minfs".to_string()),
                             subdir: None,
                         }
                     )
@@ -2188,7 +1938,7 @@ mod tests {
                     },
                     {
                         "storage": "mystorage2",
-                        "backing_dir": "/storage2",
+                        "backing_dir": "storage2",
                         "from": "#minfs",
                     },
                     {
@@ -2271,7 +2021,7 @@ mod tests {
                                 name: "minfs".to_string(),
                                 collection: None,
                             })),
-                            source_path: Some("/storage2".to_string()),
+                            source_path: Some("storage2".to_string()),
                             subdir: None,
                         }
                     ),
@@ -2721,40 +2471,6 @@ mod tests {
     }
 
     #[test]
-    fn test_compile_compact() {
-        let input = json!({
-            "use": [
-                { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
-                { "protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
-                { "directory": "/data/assets", "rights": ["read_bytes"] }
-            ]
-        });
-        let output = fsys::ComponentDecl {
-            uses: Some(vec![
-                fsys::UseDecl::Service(fsys::UseServiceDecl {
-                    source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                    source_name: Some("CoolFonts".to_string()),
-                    target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
-                }),
-                fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
-                    source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                    source_path: Some("/fonts/LegacyCoolFonts".to_string()),
-                    target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
-                }),
-                fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
-                    source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                    source_path: Some("/data/assets".to_string()),
-                    target_path: Some("/data/assets".to_string()),
-                    rights: Some(fio2::Operations::ReadBytes),
-                    subdir: None,
-                }),
-            ]),
-            ..default_component_decl()
-        };
-        compile_test(input, output);
-    }
-
-    #[test]
     fn test_invalid_json() {
         let tmp_dir = TempDir::new().unwrap();
         let tmp_in_path = tmp_dir.path().join("test.cml");
@@ -2762,7 +2478,7 @@ mod tests {
 
         let input = json!({
             "expose": [
-                { "directory": "/volumes/blobfs", "from": "parent" }
+                { "directory": "blobfs", "from": "parent" }
             ]
         });
         File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
