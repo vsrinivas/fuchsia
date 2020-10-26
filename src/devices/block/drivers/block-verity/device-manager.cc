@@ -23,6 +23,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 
+#include "src/devices/block/drivers/block-verity/block-verity-bind.h"
 #include "src/devices/block/drivers/block-verity/config.h"
 #include "src/devices/block/drivers/block-verity/device.h"
 #include "src/devices/block/drivers/block-verity/superblock-verifier.h"
@@ -396,9 +397,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace block_verity
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(block_verity, block_verity::driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF_AUTOBIND,
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK),
-ZIRCON_DRIVER_END(block_verity)
-    // clang-format on
+ZIRCON_DRIVER(block_verity, block_verity::driver_ops, "zircon", "0.1")
