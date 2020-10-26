@@ -12,7 +12,6 @@
 #include <memory>
 
 #include <crypto/secret.h>
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
