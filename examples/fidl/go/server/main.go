@@ -15,19 +15,25 @@ import (
 	"fidl/fuchsia/examples"
 )
 
-// Struct implementing the EchoWithCtx interface. It contains an EchoEventProxy
-// to be able to send events to the client.
+// echoImpl implements the server functionality of the `Echo` protocol.
+//
+// It holds an `EchoEventProxy` in order to send events to the client.
 type echoImpl struct {
 	eventSender examples.EchoEventProxy
 }
 
-// Handles an EchoString request by replying with the request value.
-func (echo *echoImpl) EchoString(_ fidl.Context, inValue string) (string, error) {
+// Assert that `*echoImpl` implements the `EchoWithCtx` interface.
+var _ examples.EchoWithCtx = (*echoImpl)(nil)
+
+// EchoString implements the server-side `EchoString` FIDL method. It replies
+// with the request value.
+func (*echoImpl) EchoString(_ fidl.Context, inValue string) (string, error) {
 	log.Println("Received EchoString request", inValue)
 	return inValue, nil
 }
 
-// Handles a SendString request by sending an OnString event with the request value.
+// SendString implements the server-side `SendString` FIDL method. It sends an
+// `OnString` event with the request value.
 func (echo *echoImpl) SendString(_ fidl.Context, inValue string) error {
 	log.Println("Received SendString request", inValue)
 	if err := echo.eventSender.OnString(inValue); err != nil {
