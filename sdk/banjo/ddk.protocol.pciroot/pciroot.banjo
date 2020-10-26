@@ -6,6 +6,28 @@ library ddk.protocol.pciroot;
 using zircon.hw.pci;
 using zx;
 
+const uint8 DEVICES_PER_BUS = 64;
+const uint8 FUNCTIONS_PER_DEVICE = 8;
+const uint8 PINS_PER_FUNCTION = 4;
+
+/// This type is not used directly in any protocol methods. Instead it exists to
+/// allow both the Pciroot provider and Pci Bus Driver client to agree on a
+/// format for the routing table stored inside the PciPlatformInfo irq routing
+/// vmo.
+/// Equivalent to uint32_t table[DEVICES_PER_BUS][FUNCTIONS_PER_DEVICE][PINS_PER_FUNCTION in C]
+struct PciLegacyIrqRoutingTable {
+    array<array<array<uint32>:PINS_PER_FUNCTION>:FUNCTIONS_PER_DEVICE>:DEVICES_PER_BUS table;
+};
+
+/// This represents one of the vectors wired up for PCI legacy interrupts. How
+/// the bus driver uses them depends on the irq routing table provided to them.
+/// The vector is supplied because interrupt objects cannot be inspected with
+/// zx_get_object_info.
+struct PciLegacyIrq {
+    handle<interrupt> interrupt;
+    uint32 vector;
+};
+
 /// This structure is the primary means of passing PCI platform information from
 /// the platform bus implementation to the PCI bus driver. If an ecam is found
 /// for this segment group then a handle to a VMO for it will be provided via
@@ -17,6 +39,8 @@ struct PciPlatformInfo {
     uint8 end_bus_num;
     uint16 segment_group;
     handle<vmo> ecam_vmo;
+    handle<vmo> irq_routing_vmo;
+    vector<PciLegacyIrq> legacy_irqs;
 };
 
 enum PciAddressSpace : uint8 {
