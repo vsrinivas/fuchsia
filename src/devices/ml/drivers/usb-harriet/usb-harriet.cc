@@ -95,7 +95,7 @@ static constexpr zx_driver_ops_t harriet_driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(usb_harriet, usb_harriet::harriet_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
     BI_ABORT_IF(NE, BIND_USB_VID, GOOGLE_USB_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, HARRIET_USB_PID),
 ZIRCON_DRIVER_END(usb_harriet)

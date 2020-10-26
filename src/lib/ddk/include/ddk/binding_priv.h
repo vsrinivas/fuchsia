@@ -69,7 +69,7 @@ __BEGIN_CDECLS
 #define BIND_PCI_REVISION 0x0105
 
 // usb binding variables at 0x02XX
-// these are used for both ZX_PROTOCOL_USB and ZX_PROTOCOL_USB_FUNCTION
+// these are used for both ZX_PROTOCOL_USB_INTERFACE and ZX_PROTOCOL_USB_FUNCTION
 #define BIND_USB_VID 0x0200
 #define BIND_USB_PID 0x0201
 #define BIND_USB_CLASS 0x0202

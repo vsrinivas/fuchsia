@@ -239,9 +239,9 @@ impl Migrator {
                 self.libraries.insert(Library::Pci);
                 "fuchsia.pci.BIND_PROTOCOL.DEVICE"
             }
-            "ZX_PROTOCOL_USB" => {
+            "ZX_PROTOCOL_USB_INTERFACE" => {
                 self.libraries.insert(Library::Usb);
-                "fuchsia.usb.BIND_PROTOCOL.DEVICE"
+                "fuchsia.usb.BIND_PROTOCOL.INTERFACE"
             }
             "ZX_PROTOCOL_USB_FUNCTION" => {
                 self.libraries.insert(Library::Usb);

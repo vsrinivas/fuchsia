@@ -34,7 +34,7 @@ Multiple Zircon IPC protocols are used for communication between modules.
 The top half provides a protocol interface that conforms to `ZX_PROTOCOL_ETHERNET_IMPL`.
 The bottom half provides a protocol interface that conforms to whatever the
 hardware is connected to (for example, this might be `ZX_PROTOCOL_PCI`, for
-PCI-based ethernet cards, or `ZX_PROTOCOL_USB` for USB-based ethernet devices,
+PCI-based ethernet cards, or `ZX_PROTOCOL_USB_INTERFACE` for USB-based ethernet devices,
 and so on).
 We'll focus on the PCI version here.
 

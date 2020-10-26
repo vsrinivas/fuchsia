@@ -501,7 +501,7 @@ static constexpr zx_driver_ops_t ftdi_driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(ftdi, ftdi_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
     BI_MATCH_IF(EQ, BIND_USB_VID, ftdi_serial::kFtdiUsbVid),
     BI_MATCH_IF(EQ, BIND_USB_PID, ftdi_serial::kFtdiUsb232rPid),
     BI_MATCH_IF(EQ, BIND_USB_PID, ftdi_serial::kFtdiUsb232hPid),

@@ -21,7 +21,7 @@
     "name": "USB",
     "expected": "match",
     "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
       "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.REALTEK",
       "fuchsia.BIND_USB_PID": "0xc820"
     }

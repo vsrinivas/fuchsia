@@ -257,7 +257,7 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     keys.push(("BIND_PCI_REVISION".to_string(), 0x0105));
 
     // usb binding variables at 0x02XX
-    // these are used for both ZX_PROTOCOL_USB and ZX_PROTOCOL_USB_FUNCTION
+    // these are used for both ZX_PROTOCOL_USB_INTERFACE and ZX_PROTOCOL_USB_FUNCTION
     keys.push(("BIND_USB_VID".to_string(), 0x0200));
     keys.push(("BIND_USB_PID".to_string(), 0x0201));
     keys.push(("BIND_USB_CLASS".to_string(), 0x0202));

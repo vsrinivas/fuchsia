@@ -73,7 +73,7 @@ This example bind program can be found at [//tools/bindc/examples/gizmo.bind](/t
 using fuchsia.usb;
 
 // The device must be a USB device.
-fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.INTERFACE;
 
 if fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.INTEL {
   // If the device's vendor is Intel, the device class must be audio.
@@ -190,7 +190,7 @@ device.
     "name": "Intel",
     "expected": "match",
     "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
       "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.INTEL",
       "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.AUDIO"
     }
@@ -426,7 +426,7 @@ This example device specification can be found at
 [//tools/bindc/examples/gizmo.dev](/tools/bindc/examples/gizmo.dev).
 
 ```
-fuchsia.BIND_PROTOCOL = fuchsia.usb.BIND_PROTOCOL.DEVICE
+fuchsia.BIND_PROTOCOL = fuchsia.usb.BIND_PROTOCOL.INTERFACE
 fuchsia.BIND_USB_VID = fuchsia.usb.BIND_USB_VID.REALTEK
 fuchsia.BIND_USB_CLASS = fuchsia.usb.BIND_USB_CLASS.VIDEO
 fuchsia.BIND_USB_SUBCLASS = fuchsia.usb.BIND_USB_SUBCLASS.VIDEO_CONTROL
@@ -532,7 +532,7 @@ The output of the debugger when running the host tool command
 [above](#running-the-debugger-host) is:
 
 ```
-Line 4: Condition statement succeeded: fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.DEVICE;
+Line 4: Condition statement succeeded: fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.INTERFACE;
 Line 6: If statement condition failed: fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.INTEL
     Actual value of `fuchsia.BIND_USB_VID` was `fuchsia.usb.BIND_USB_VID.REALTEK` [0xbda].
 Line 9: If statement condition succeeded: fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.REALTEK

@@ -747,7 +747,7 @@ static zx_driver_ops_t usb_bt_hci_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(bt_transport_usb, usb_bt_hci_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_WIRELESS),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_BLUETOOTH),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_BLUETOOTH),

@@ -356,7 +356,7 @@ static constexpr zx_driver_ops_t kHciTestDriverOps = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(usb_HciTest, usb::kHciTestDriverOps, "zircon", "0.1", 6)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
     BI_ABORT_IF(NE, BIND_USB_VID, GOOGLE_USB_VID),
     BI_ABORT_IF(NE, BIND_USB_PID, GOOGLE_USB_FUNCTION_TEST_PID),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),

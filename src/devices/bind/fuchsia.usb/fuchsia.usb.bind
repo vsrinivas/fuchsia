@@ -4,8 +4,19 @@
 
 library fuchsia.usb;
 
+// TODO(fxb/62024): For now these protocol definitions are manually defined to match protodefs.h.
+// Usually fuchsia.<namespace>.BIND_PROTOCOL.DEVICE would map to ZX_PROTOCOL_<namespace>, but in
+// this case it maps to ZX_PROTOCOL_USB_DEVICE. This is because the USB protocol is implemented by
+// two kinds of drivers: those that acquire an entire device (ZX_PROTOCOL_USB_DEVICE) and those
+// acquire a single interface of the device (ZX_PROTOCOL_USB_INTERFACE). ZX_PROTOCOL_USB is still
+// used for the banjo protocol for both kinds of drivers.
 extend uint fuchsia.BIND_PROTOCOL {
-  DEVICE = 0x26,
+  DEVICE = 34,
+  BUS = 35,
+  COMPOSITE = 36,
+  DCI = 37,
+  INTERFACE = 38,
+  PERIPHERAL = 39,
   FUNCTION = 40,
 };
 

@@ -956,7 +956,7 @@ static constexpr zx_driver_ops_t usb_mass_storage_driver_ops = []() {
 }  // namespace ums
 // clang-format off
 ZIRCON_DRIVER_BEGIN(usb_mass_storage, ums::usb_mass_storage_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_MSC),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_MSC_SCSI),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_MSC_BULK_ONLY),

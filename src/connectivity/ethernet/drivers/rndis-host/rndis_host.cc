@@ -708,7 +708,7 @@ static zx_driver_ops_t rndis_driver_ops = []() {
 // covers the tethered device case.
 // clang-format off
 ZIRCON_DRIVER_BEGIN(rndishost, rndis_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_WIRELESS),
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_WIRELESS_MISC),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_WIRELESS_MISC_RNDIS),

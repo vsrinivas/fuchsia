@@ -986,7 +986,7 @@ static zx_driver_ops_t qmi_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(qmi_usb, qmi_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
     BI_ABORT_IF(NE, BIND_USB_VID, SIERRA_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, EM7565_PID),
 ZIRCON_DRIVER_END(qmi_usb)

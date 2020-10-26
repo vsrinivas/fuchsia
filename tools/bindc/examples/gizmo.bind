@@ -1,7 +1,7 @@
 using fuchsia.usb;
 
 // The device must be a USB device.
-fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.INTERFACE;
 
 if fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.INTEL {
   // If the device's vendor is Intel, the device class must be audio.

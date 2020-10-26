@@ -67,7 +67,7 @@ zx_status_t UsbComposite::AddInterface(const usb_interface_descriptor_t* interfa
   snprintf(name, sizeof(name), "ifc-%03d", interface_desc->bInterfaceNumber);
 
   zx_device_prop_t props[] = {
-      {BIND_PROTOCOL, 0, ZX_PROTOCOL_USB},
+      {BIND_PROTOCOL, 0, ZX_PROTOCOL_USB_INTERFACE},
       {BIND_USB_VID, 0, device_desc_.idVendor},
       {BIND_USB_PID, 0, device_desc_.idProduct},
       {BIND_USB_CLASS, 0, interface->usb_class()},
@@ -105,7 +105,7 @@ zx_status_t UsbComposite::AddInterfaceAssoc(const usb_interface_assoc_descriptor
   snprintf(name, sizeof(name), "asc-%03d", assoc_desc->iFunction);
 
   zx_device_prop_t props[] = {
-      {BIND_PROTOCOL, 0, ZX_PROTOCOL_USB},
+      {BIND_PROTOCOL, 0, ZX_PROTOCOL_USB_INTERFACE},
       {BIND_USB_VID, 0, device_desc_.idVendor},
       {BIND_USB_PID, 0, device_desc_.idProduct},
       {BIND_USB_CLASS, 0, interface->usb_class()},
@@ -360,7 +360,12 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace usb_composite
 
-// The '*' in the version string is important. This marks this driver as a fallback,
-// to allow other drivers to bind against ZX_PROTOCOL_USB_DEVICE to handle more specific cases.
+// clang-format off
+
+// The '*' in the version string is important. This marks this driver as a fallback, to allow other
+// drivers to bind against ZX_PROTOCOL_USB_DEVICE to handle more specific cases.
 ZIRCON_DRIVER_BEGIN(usb_composite, usb_composite::driver_ops, "zircon", "*0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE), ZIRCON_DRIVER_END(usb_composite)
+  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE),
+ZIRCON_DRIVER_END(usb_composite)
+
+// clang-format on
