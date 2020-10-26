@@ -35,11 +35,14 @@ Future<void> main(List<String> args) async {
     usePlatformView: arguments['usePlatformView'],
   );
 
-  runApp(TestApp(
-    connection,
-    showOverlay: arguments['showOverlay'],
-    hitTestable: arguments['hitTestable'],
-    focusable: arguments['focusable'],
+  runApp(MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: TestApp(
+      connection,
+      showOverlay: arguments['showOverlay'],
+      hitTestable: arguments['hitTestable'],
+      focusable: arguments['focusable'],
+    ),
   ));
 }
 
@@ -63,39 +66,36 @@ class TestApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MediaQuery(
-      data: MediaQueryData.fromWindow(window),
-      child: Listener(
-        onPointerDown: (_) => _backgroundColor.value = _black,
-        child: AnimatedBuilder(
-            animation: _backgroundColor,
-            builder: (context, snapshot) {
-              return Container(
-                color: _backgroundColor.value,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
+    return Listener(
+      onPointerDown: (_) => _backgroundColor.value = _black,
+      child: AnimatedBuilder(
+          animation: _backgroundColor,
+          builder: (context, snapshot) {
+            return Container(
+              color: _backgroundColor.value,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 200,
+                    height: 200,
+                    child: ChildView(
+                      connection: connection,
+                      hitTestable: hitTestable,
+                      focusable: focusable,
+                    ),
+                  ),
+                  if (showOverlay)
+                    Container(
+                      margin: EdgeInsets.only(left: 200, bottom: 200),
                       width: 200,
                       height: 200,
-                      child: ChildView(
-                        connection: connection,
-                        hitTestable: hitTestable,
-                        focusable: focusable,
-                      ),
+                      color: Color.fromARGB(255, 0, 255, 0),
                     ),
-                    if (showOverlay)
-                      Container(
-                        margin: EdgeInsets.only(left: 200, bottom: 200),
-                        width: 200,
-                        height: 200,
-                        color: Color.fromARGB(255, 0, 255, 0),
-                      ),
-                  ],
-                ),
-              );
-            }),
-      ),
+                ],
+              ),
+            );
+          }),
     );
   }
 }
