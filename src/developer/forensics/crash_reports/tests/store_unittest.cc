@@ -50,7 +50,7 @@ class StoreTest : public UnitTestFixture {
   void MakeNewStore(const StorageSize max_size) {
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
-    store_ = std::make_unique<Store>(info_context_, tmp_dir_.path(), max_size);
+    store_ = std::make_unique<Store>(&tags_, info_context_, tmp_dir_.path(), max_size);
   }
 
   std::optional<ReportId> Add(const std::string& program_shortname,
@@ -184,6 +184,7 @@ class StoreTest : public UnitTestFixture {
     return programs;
   }
   timekeeper::TestClock clock_;
+  LogTags tags_;
   std::shared_ptr<InfoContext> info_context_;
 
   files::ScopedTempDir tmp_dir_;

@@ -142,7 +142,8 @@ class QueueTest : public UnitTestFixture {
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     crash_server_->AddSnapshotManager(snapshot_manager_.get());
 
-    queue_ = std::make_unique<Queue>(dispatcher(), services(), info_context_, crash_server_.get());
+    queue_ = std::make_unique<Queue>(dispatcher(), services(), info_context_, &tags_,
+                                     crash_server_.get());
     ASSERT_TRUE(queue_);
     queue_->WatchSettings(&settings_);
   }
@@ -228,6 +229,7 @@ class QueueTest : public UnitTestFixture {
                 UnorderedElementsAre(kAttachmentKey, kMinidumpKey));
   }
 
+  LogTags tags_;
   std::unique_ptr<Queue> queue_;
   std::vector<ReportId> expected_queue_contents_;
   std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_;

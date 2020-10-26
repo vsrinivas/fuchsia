@@ -18,6 +18,7 @@
 #include "src/developer/forensics/crash_reports/crash_server.h"
 #include "src/developer/forensics/crash_reports/info/crash_reporter_info.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
+#include "src/developer/forensics/crash_reports/log_tags.h"
 #include "src/developer/forensics/crash_reports/privacy_settings_ptr.h"
 #include "src/developer/forensics/crash_reports/queue.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
@@ -57,6 +58,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const Config* config_;
+  LogTags tags_;
   const ErrorOr<std::string> build_version_;
   CrashRegister* crash_register_;
   const UtcTimeProvider utc_provider_;

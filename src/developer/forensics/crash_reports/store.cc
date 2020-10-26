@@ -11,6 +11,7 @@
 #include <set>
 #include <vector>
 
+#include "src/developer/forensics/crash_reports/report_util.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/utils/sized_data.h"
 #include "src/lib/files/directory.h"
@@ -129,8 +130,9 @@ bool ReadSnapshotUuid(const std::string& path, SnapshotUuid* snapshot_uuid) {
 
 }  // namespace
 
-Store::Store(std::shared_ptr<InfoContext> info, const std::string& root_dir, StorageSize max_size)
-    : root_dir_(root_dir), metadata_(root_dir, max_size), info_(std::move(info)) {
+Store::Store(LogTags* tags, std::shared_ptr<InfoContext> info, const std::string& root_dir,
+             StorageSize max_size)
+    : root_dir_(root_dir), metadata_(root_dir, max_size), tags_(tags), info_(std::move(info)) {
   info_.LogMaxStoreSize(max_size);
 
   // Clean up any empty directories under |root_dir_|. This may happen if the component stops
@@ -138,18 +140,22 @@ Store::Store(std::shared_ptr<InfoContext> info, const std::string& root_dir, Sto
   RemoveEmptyDirectories(root_dir_);
 
   metadata_.RecreateFromFilesystem();
+
+  for (const auto report_id : metadata_.Reports()) {
+    tags_->Register(report_id, {Logname(metadata_.ReportProgram(report_id))});
+  }
 }
 
 bool Store::Add(const ReportId report_id, Report report,
                 std::vector<ReportId>* garbage_collected_reports) {
   if (metadata_.Contains(report_id)) {
-    FX_LOGS(ERROR) << "Store already contains report for crash " << report_id;
+    FX_LOGST(ERROR, tags_->Get(report_id)) << "Duplicate local report id";
     return false;
   }
 
   for (const auto& key : kReservedAttachmentNames) {
     if (report.Attachments().find(key) != report.Attachments().end()) {
-      FX_LOGS(ERROR) << "Attachment is using reserved key: " << key;
+      FX_LOGST(ERROR, tags_->Get(report_id)) << "Attachment is using reserved key: " << key;
       return false;
     }
   }
@@ -184,7 +190,7 @@ bool Store::Add(const ReportId report_id, Report report,
 
   // Ensure there's enough space in the store for the report.
   if (!MakeFreeSpace(report_size, garbage_collected_reports)) {
-    FX_LOGS(ERROR) << "Failed to make space for report";
+    FX_LOGST(ERROR, tags_->Get(report_id)) << "Failed to make space for report";
     return false;
   }
 

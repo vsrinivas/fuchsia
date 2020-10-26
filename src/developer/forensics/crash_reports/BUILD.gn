@@ -94,6 +94,7 @@ source_set("crash_reporter") {
   public_deps = [
     ":crash_register",
     ":crash_server",
+    ":log_tags",
     ":privacy_settings_ptr",
     ":product",
     ":queue",
@@ -147,6 +148,20 @@ source_set("errors") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:errors",
   ]
+}
+
+source_set("log_tags") {
+  sources = [
+    "log_tags.cc",
+    "log_tags.h",
+  ]
+
+  public_deps = [
+    ":report_id",
+    "//sdk/lib/syslog/cpp",
+  ]
+
+  deps = [ "//src/lib/fxl" ]
 }
 
 source_set("main") {
@@ -207,6 +222,7 @@ source_set("queue") {
 
   public_deps = [
     ":crash_server",
+    ":log_tags",
     ":report_id",
     ":settings",
     ":store",
@@ -337,6 +353,7 @@ source_set("store") {
   ]
 
   public_deps = [
+    ":log_tags",
     ":report",
     ":report_id",
     "//src/developer/forensics/crash_reports/info",
@@ -344,6 +361,7 @@ source_set("store") {
   ]
 
   deps = [
+    ":report_util",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
     "//src/lib/fxl",

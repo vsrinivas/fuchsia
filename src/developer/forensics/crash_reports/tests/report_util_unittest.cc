@@ -36,6 +36,25 @@ TEST(Shorten, ShortensCorrectly) {
   }
 }
 
+TEST(Logname, MakesLognameCorrectly) {
+  const std::map<std::string, std::string> name_to_logname = {
+      // Does nothing.
+      {"system", "system"},
+      // Remove leading whitespace.
+      {"    system", "system"},
+      // Remove trailing whitespace.
+      {"system    ", "system"},
+      // Extracts foo_bar.
+      {"fuchsia-pkg://fuchsia.com/foo-bar#meta/foo_bar.cmx", "foo_bar"},
+      // Extracts foo_bar.
+      {"fuchsia.com:foo-bar#meta:foo_bar.cmx", "foo_bar"},
+  };
+
+  for (const auto& [name, logname] : name_to_logname) {
+    EXPECT_EQ(Logname(name), logname);
+  }
+}
+
 }  // namespace
 }  // namespace crash_reports
 }  // namespace forensics

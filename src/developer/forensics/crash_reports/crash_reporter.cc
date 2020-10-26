@@ -47,7 +47,8 @@ constexpr zx::duration kSnapshotTimeout = zx::min(2);
 // the same snapshot in multiple reports is lost.
 constexpr zx::duration kSnapshotSharedRequestWindow = zx::sec(5);
 
-// Returns what the initial ReportId should be, based on the contents of the store in the filesystem.
+// Returns what the initial ReportId should be, based on the contents of the store in the
+// filesystem.
 //
 // Note: This function traverses store in the filesystem to and should be used sparingly.
 ReportId SeedReportId() {
@@ -89,12 +90,13 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       executor_(dispatcher),
       services_(services),
       config_(std::move(config)),
+      tags_(),
       build_version_(build_version),
       crash_register_(crash_register),
       utc_provider_(services_, clock),
       snapshot_manager_(std::move(snapshot_manager)),
       crash_server_(std::move(crash_server)),
-      queue_(dispatcher_, services_, info_context, crash_server_.get()),
+      queue_(dispatcher_, services_, info_context, &tags_, crash_server_.get()),
       info_(info_context),
       privacy_settings_watcher_(dispatcher, services_, &settings_),
       device_id_provider_ptr_(dispatcher_, services_) {
@@ -126,7 +128,11 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
     return;
   }
   const std::string program_name = report.program_name();
-  FX_LOGS(INFO) << "Generating report for '" << program_name << "'";
+  const auto report_id = next_report_id_++;
+
+  tags_.Register(report_id, {Logname(program_name)});
+
+  FX_LOGST(INFO, tags_.Get(report_id)) << "Generating report";
 
   auto snapshot_uuid_promise = snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout);
   auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
@@ -137,7 +143,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
       ::fit::join_promises(std::move(snapshot_uuid_promise), std::move(device_id_promise),
                            std::move(product_promise))
           .and_then(
-              [this, report = std::move(report), program_name](
+              [this, report = std::move(report), report_id](
                   std::tuple<::fit::result<SnapshotUuid>, ::fit::result<std::string, Error>,
                              ::fit::result<Product>>& results) mutable -> ::fit::result<void> {
                 auto snapshot_uuid = std::move(std::get<0>(results));
@@ -154,21 +160,21 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
                     std::move(report), snapshot_uuid.value(), utc_provider_.CurrentTime(),
                     device_id, build_version_, product.value());
                 if (!final_report.has_value()) {
-                  FX_LOGS(ERROR) << "Error generating report";
+                  FX_LOGST(ERROR, tags_.Get(report_id)) << "Error generating report";
                   return ::fit::error();
                 }
 
-                const auto report_id = next_report_id_++;
                 if (!queue_.Add(report_id, std::move(final_report.value()))) {
-                  FX_LOGS(ERROR) << "Error adding new report " << report_id << " to the queue";
+                  FX_LOGST(ERROR, tags_.Get(report_id)) << "Error adding new report to the queue";
                   return ::fit::error();
                 }
 
                 return ::fit::ok();
               })
-          .then([this, callback = std::move(callback)](::fit::result<void>& result) {
+          .then([this, callback = std::move(callback), report_id](::fit::result<void>& result) {
             if (result.is_error()) {
-              FX_LOGS(ERROR) << "Failed to file report. Won't retry.";
+              FX_LOGST(ERROR, tags_.Get(report_id)) << "Failed to file report. Won't retry.";
+              tags_.Unregister(report_id);
               info_.LogCrashState(cobalt::CrashState::kDropped);
               callback(::fit::error(ZX_ERR_INTERNAL));
             } else {

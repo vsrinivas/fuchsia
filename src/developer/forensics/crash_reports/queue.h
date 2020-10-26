@@ -15,6 +15,7 @@
 #include "src/developer/forensics/crash_reports/crash_server.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/info/queue_info.h"
+#include "src/developer/forensics/crash_reports/log_tags.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/settings.h"
@@ -29,7 +30,7 @@ namespace crash_reports {
 class Queue {
  public:
   Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-        std::shared_ptr<InfoContext> info_context, CrashServer* crash_server);
+        std::shared_ptr<InfoContext> info_context, LogTags* tags, CrashServer* crash_server);
 
   // Allow the queue's functionality to change based on the upload policy.
   void WatchSettings(Settings* settings);
@@ -67,14 +68,14 @@ class Queue {
   // Attempts to upload a report.
   //
   // Returns false if the report needs to be processed again.
-  bool Upload(ReportId local_report_id);
+  bool Upload(ReportId report_id);
 
   // Make a request to the crash server to attempt to upload a report.
   //
   // Returns false if the upload failed.
-  bool Upload(ReportId local_report_id, const Report& report, std::string* server_report_id);
+  bool Upload(ReportId report_id, const Report& report, std::string* server_report_id);
 
-  void GarbageCollect(ReportId local_report_id);
+  void GarbageCollect(ReportId report_id);
 
   // Callback to update |state_| on upload policy changes.
   void OnUploadPolicyChange(const Settings::UploadPolicy& upload_policy);
@@ -87,6 +88,7 @@ class Queue {
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
+  LogTags* tags_;
   Store store_;
   CrashServer* crash_server_;
   QueueInfo info_;

@@ -28,10 +28,11 @@ void Queue::WatchSettings(Settings* settings) {
 }
 
 Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-             std::shared_ptr<InfoContext> info_context, CrashServer* crash_server)
+             std::shared_ptr<InfoContext> info_context, LogTags* tags, CrashServer* crash_server)
     : dispatcher_(dispatcher),
       services_(services),
-      store_(info_context, kStorePath, kStoreMaxSize),
+      tags_(tags),
+      store_(tags_, info_context, kStorePath, kStoreMaxSize),
       crash_server_(crash_server),
       info_(std::move(info_context)),
       network_reconnection_backoff_(/*initial_delay=*/zx::min(1), /*retry_factor=*/2u,
@@ -56,6 +57,7 @@ bool Queue::Add(const ReportId report_id, Report report) {
     std::string server_report_id;
     info_.RecordUploadAttemptNumber(1u);
     if (Upload(report_id, report, &server_report_id)) {
+      tags_->Unregister(report_id);
       info_.MarkReportAsUploaded(server_report_id, 1u);
       return true;
     }
@@ -95,56 +97,55 @@ size_t Queue::ProcessAll() {
   }
 }
 
-bool Queue::Upload(const ReportId local_report_id) {
-  std::optional<Report> report = store_.Get(local_report_id);
+bool Queue::Upload(const ReportId report_id) {
+  std::optional<Report> report = store_.Get(report_id);
   if (!report.has_value()) {
     // |pending_reports_| is kept in sync with |store_| so Get should only ever fail if the report
     // is deleted from the store by an external influence, e.g., the filesystem flushes /cache.
     return true;
   }
 
-  upload_attempts_[local_report_id]++;
-  info_.RecordUploadAttemptNumber(upload_attempts_[local_report_id]);
+  upload_attempts_[report_id]++;
+  info_.RecordUploadAttemptNumber(upload_attempts_[report_id]);
 
   std::string server_report_id;
-  if (Upload(local_report_id, report.value(), &server_report_id)) {
-    info_.MarkReportAsUploaded(server_report_id, upload_attempts_[local_report_id]);
-    upload_attempts_.erase(local_report_id);
-    store_.Remove(local_report_id);
+  if (Upload(report_id, report.value(), &server_report_id)) {
+    info_.MarkReportAsUploaded(server_report_id, upload_attempts_[report_id]);
+    upload_attempts_.erase(report_id);
+    store_.Remove(report_id);
     return true;
   }
-
-  FX_LOGS(WARNING) << "Error uploading local report " << std::to_string(local_report_id);
 
   return false;
 }
 
-bool Queue::Upload(const ReportId local_report_id, const Report& report,
-                   std::string* server_report_id) {
+bool Queue::Upload(const ReportId report_id, const Report& report, std::string* server_report_id) {
   if (crash_server_->MakeRequest(report, server_report_id)) {
-    FX_LOGS(INFO) << "Successfully uploaded report at https://crash.corp.google.com/"
-                  << *server_report_id;
+    FX_LOGST(INFO, tags_->Get(report_id))
+        << "Successfully uploaded report at https://crash.corp.google.com/" << *server_report_id;
     return true;
   }
 
-  FX_LOGS(WARNING) << "Failed to upload local report " << local_report_id;
+  FX_LOGST(WARNING, tags_->Get(report_id)) << "Failed to upload local report ";
   return false;
 }
 
-void Queue::GarbageCollect(const ReportId local_report_id) {
-  FX_LOGS(INFO) << "Garbage collected local report " << std::to_string(local_report_id);
-  info_.MarkReportAsGarbageCollected(upload_attempts_[local_report_id]);
-  upload_attempts_.erase(local_report_id);
-  pending_reports_.erase(
-      std::remove(pending_reports_.begin(), pending_reports_.end(), local_report_id),
-      pending_reports_.end());
+void Queue::GarbageCollect(const ReportId report_id) {
+  FX_LOGST(INFO, tags_->Get(report_id)) << "Garbage collected local report";
+  info_.MarkReportAsGarbageCollected(upload_attempts_[report_id]);
+  tags_->Unregister(report_id);
+  upload_attempts_.erase(report_id);
+  pending_reports_.erase(std::remove(pending_reports_.begin(), pending_reports_.end(), report_id),
+                         pending_reports_.end());
 }
 
 size_t Queue::UploadAll() {
   std::vector<ReportId> new_pending_reports;
-  for (const auto& local_report_id : pending_reports_) {
-    if (!Upload(local_report_id)) {
-      new_pending_reports.push_back(local_report_id);
+  for (const auto& report_id : pending_reports_) {
+    if (!Upload(report_id)) {
+      new_pending_reports.push_back(report_id);
+    } else {
+      tags_->Unregister(report_id);
     }
   }
 
@@ -156,10 +157,10 @@ size_t Queue::UploadAll() {
 
 size_t Queue::ArchiveAll() {
   size_t successful = 0;
-  for (const auto& local_report_id : pending_reports_) {
-    FX_LOGS(INFO) << "Archiving local report " << std::to_string(local_report_id)
-                  << " under /tmp/reports";
-    info_.MarkReportAsArchived(upload_attempts_[local_report_id]);
+  for (const auto& report_id : pending_reports_) {
+    FX_LOGST(INFO, tags_->Get(report_id)) << "Archiving local report under /tmp/reports";
+    info_.MarkReportAsArchived(upload_attempts_[report_id]);
+    tags_->Unregister(report_id);
   }
 
   pending_reports_.clear();

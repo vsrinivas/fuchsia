@@ -11,6 +11,7 @@
 
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/info/store_info.h"
+#include "src/developer/forensics/crash_reports/log_tags.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/store_metadata.h"
@@ -27,7 +28,7 @@ class Store {
   // will be stored in /tmp/store/foo/<report ReportId>.
   // |max_size| is the maximum size the store can take, garbage collecting the reports of lowest
   // ReportIds.
-  Store(std::shared_ptr<InfoContext> info_context, const std::string& root_dir,
+  Store(LogTags* tags, std::shared_ptr<InfoContext> info_context, const std::string& root_dir,
         StorageSize max_size);
 
   // Adds a report to the store and returns the ReportIds of any report garbage collected in the
@@ -58,6 +59,7 @@ class Store {
   std::string root_dir_;
 
   StoreMetadata metadata_;
+  LogTags* tags_;
   StoreInfo info_;
 };
 

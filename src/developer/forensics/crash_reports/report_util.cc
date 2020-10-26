@@ -45,6 +45,26 @@ std::string Shorten(std::string program_name) {
              : program_name.substr(0, last_non_whitespace + 1);
 }
 
+std::string Logname(std::string name) {
+  // Normalize |name|.
+  name = Shorten(name);
+
+  // Find the last colon in |name|.
+  const size_t last_colon = name.find_last_of(":");
+  if (last_colon == std::string::npos) {
+    return name;
+  }
+
+  // Determine if there's a ".cmx" suffix in |name|.
+  const size_t cmx_suffix = name.find_last_of(".cmx");
+  if (cmx_suffix == std::string::npos || cmx_suffix <= last_colon) {
+    return name;
+  }
+
+  // Extract the string between the last colon and the ".cmx" suffix.
+  return name.substr(last_colon + 1, cmx_suffix - sizeof(".cmx") - last_colon + 1);
+}
+
 namespace {
 
 // The crash server expects a specific key for client-provided program uptimes.
