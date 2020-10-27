@@ -132,7 +132,7 @@ impl ReaderServer {
                 }
             })
             // buffer a small number in memory in case later components time out
-            .buffered(constants::IN_MEMORY_SNAPSHOT_LIMIT)
+            .buffer_unordered(constants::MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER)
             // filter each component's inspect
             .map(move |populated| server.filter_snapshot(populated))
             // turn each of the vecs of filtered snapshots into their own streams

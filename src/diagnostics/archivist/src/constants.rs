@@ -26,7 +26,7 @@ pub const LEGACY_METRICS_ARCHIVE_ACCESSOR_NAME: &str =
 
 /// The maximum number of Inspect files that can be simultaneously snapshotted and formatted per
 /// reader.
-pub const MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER: usize = 2;
+pub const MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER: usize = 4;
 
 /// The maximum number of bytes in a formatted content VMO.
 pub const FORMATTED_CONTENT_CHUNK_SIZE_TARGET: usize = 1 << 20; // 1 MiB
