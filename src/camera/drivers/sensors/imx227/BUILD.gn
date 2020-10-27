@@ -8,15 +8,15 @@ import("//build/driver_package.gni")
 
 bind_rules("imx227_bind") {
   rules = "imx227.bind"
-  output = "imx227-bind.h"
-  tests = "tests.json"
+  output = "bind.h"
+  tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.composite",
     "//src/devices/bind/fuchsia.platform",
   ]
 }
 
-group("tests") {
+group("bind_test") {
   testonly = true
   deps = [ ":imx227_bind_test" ]
 }

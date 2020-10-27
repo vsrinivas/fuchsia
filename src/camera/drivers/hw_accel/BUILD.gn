@@ -8,3 +8,11 @@ group("hw_accel") {
     "ge2d",
   ]
 }
+
+group("bind_test") {
+  testonly = true
+  deps = [
+    "gdc:bind_test",
+    "ge2d:bind_test",
+  ]
+}

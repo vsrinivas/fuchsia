@@ -15,7 +15,7 @@
 #include <fbl/vector.h>
 #include <usb/usb.h>
 
-#include "src/camera/drivers/usb_video/usb_video_bind.h"
+#include "src/camera/drivers/usb_video/bind.h"
 #include "src/camera/drivers/usb_video/usb_video_stream.h"
 #include "src/camera/drivers/usb_video/uvc_format.h"
 

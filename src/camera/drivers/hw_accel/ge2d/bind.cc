@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/camera/drivers/hw_accel/ge2d/bind.h"
+
 #include <lib/driver-unit-test/utils.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/camera/drivers/hw_accel/ge2d/ge2d-bind.h"
 #include "src/camera/drivers/hw_accel/ge2d/ge2d.h"
 
 namespace ge2d {

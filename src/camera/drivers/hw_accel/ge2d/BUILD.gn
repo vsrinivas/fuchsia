@@ -8,15 +8,15 @@ import("//build/driver_package.gni")
 
 bind_rules("ge2d_bind") {
   rules = "ge2d.bind"
-  output = "ge2d-bind.h"
-  tests = "tests.json"
+  output = "bind.h"
+  tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.composite",
     "//src/devices/bind/fuchsia.platform",
   ]
 }
 
-group("tests") {
+group("bind_test") {
   testonly = true
   deps = [ ":ge2d_bind_test" ]
 }

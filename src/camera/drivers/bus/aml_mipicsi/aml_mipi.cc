@@ -12,8 +12,8 @@
 
 #include <ddk/debug.h>
 
-#include "src/camera/drivers/bus/aml_mipicsi/aml_mipi_bind.h"
 #include "src/camera/drivers/bus/aml_mipicsi/aml_mipi_regs.h"
+#include "src/camera/drivers/bus/aml_mipicsi/bind.h"
 
 // NOTE: A lot of magic numbers, they come from vendor
 //       source code.

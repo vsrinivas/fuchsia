@@ -20,7 +20,7 @@
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 
-#include "src/camera/drivers/hw_accel/gdc/gdc-bind.h"
+#include "src/camera/drivers/hw_accel/gdc/bind.h"
 #include "src/camera/drivers/hw_accel/gdc/gdc_regs.h"
 
 namespace gdc {

@@ -8,12 +8,12 @@ import("//build/driver_package.gni")
 
 bind_rules("aml_mipi_bind") {
   rules = "aml_mipi.bind"
-  output = "aml_mipi_bind.h"
-  tests = "tests.json"
+  output = "bind.h"
+  tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
-group("tests") {
+group("bind_test") {
   testonly = true
   deps = [ ":aml_mipi_bind_test" ]
 }

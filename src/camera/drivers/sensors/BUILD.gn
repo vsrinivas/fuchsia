@@ -5,3 +5,8 @@
 group("sensors") {
   deps = [ "imx227" ]
 }
+
+group("bind_test") {
+  testonly = true
+  deps = [ "imx227:bind_test" ]
+}

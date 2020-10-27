@@ -23,6 +23,16 @@ group("drivers") {
   ]
 }
 
+group("bind_tests") {
+  testonly = true
+  deps = [
+    "bus:bind_test",
+    "hw_accel:bind_test",
+    "sensors:bind_test",
+    "usb_video:bind_test",
+  ]
+}
+
 # Use this target to include actual drivers and tests,
 # but not supporting libraries.
 group("all") {

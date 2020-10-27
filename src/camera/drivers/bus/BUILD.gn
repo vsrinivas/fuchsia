@@ -6,7 +6,7 @@ group("bus") {
   deps = [ "aml_mipicsi" ]
 }
 
-group("tests") {
+group("bind_test") {
   testonly = true
-  deps = [ "aml_mipicsi:tests" ]
+  deps = [ "aml_mipicsi:bind_test" ]
 }

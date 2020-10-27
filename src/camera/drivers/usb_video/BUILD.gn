@@ -10,8 +10,8 @@ import("//build/test/test_package.gni")
 
 bind_rules("usb_video_bind") {
   rules = "usb_video.bind"
-  output = "usb_video_bind.h"
-  tests = "tests.json"
+  output = "bind.h"
+  tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 
@@ -115,8 +115,10 @@ unittest_package("usb_video_test_package") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":usb_video_bind_test",
-    ":usb_video_test_package",
-  ]
+  deps = [ ":usb_video_test_package" ]
+}
+
+group("bind_test") {
+  testonly = true
+  deps = [ ":usb_video_bind_test" ]
 }

@@ -20,8 +20,8 @@
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 
+#include "src/camera/drivers/sensors/imx227/bind.h"
 #include "src/camera/drivers/sensors/imx227/constants.h"
-#include "src/camera/drivers/sensors/imx227/imx227-bind.h"
 #include "src/camera/drivers/sensors/imx227/imx227_modes.h"
 #include "src/camera/drivers/sensors/imx227/imx227_seq.h"
 #include "src/camera/drivers/sensors/imx227/mipi_ccs_regs.h"

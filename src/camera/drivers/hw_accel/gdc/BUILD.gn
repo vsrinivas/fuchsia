@@ -9,15 +9,15 @@ import("//src/camera/debug.gni")
 
 bind_rules("gdc_bind") {
   rules = "gdc.bind"
-  output = "gdc-bind.h"
-  tests = "tests.json"
+  output = "bind.h"
+  tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.composite",
     "//src/devices/bind/fuchsia.platform",
   ]
 }
 
-group("tests") {
+group("bind_test") {
   testonly = true
   deps = [ ":gdc_bind_test" ]
 }
