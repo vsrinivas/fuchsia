@@ -177,7 +177,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
       EXPECT_EQ(ZX_OK, directory_binding_.Bind(std::move(exposed_dir), loop_.dispatcher()));
     });
     directory().SetOpenHandler([this](std::string path, auto object) {
-      EXPECT_EQ("svc/fuchsia.driver.framework.DriverHost", path);
+      EXPECT_EQ(fdf::DriverHost::Name_, path);
       EXPECT_EQ(ZX_OK, driver_host_binding_.Bind(object.TakeChannel(), loop_.dispatcher()));
     });
   }

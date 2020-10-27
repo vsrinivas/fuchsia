@@ -10,7 +10,6 @@
 
 #include <unordered_set>
 
-#include <fbl/string_printf.h>
 #include <fs/service.h>
 
 #include "src/devices/lib/driver2/start_args.h"
@@ -316,10 +315,10 @@ zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost()
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  auto path = fbl::StringPrintf("svc/%s", fdf::DriverHost::Name);
-  status = fdio_service_connect_at(create->get(), path.data(), server_end.release());
+  status = fdio_service_connect_at(create->get(), fdf::DriverHost::Name, server_end.release());
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to connect to service '%s': %s", path.data(), zx_status_get_string(status));
+    LOGF(ERROR, "Failed to connect to service '%s': %s", fdf::DriverHost::Name,
+         zx_status_get_string(status));
     return zx::error(status);
   }
 
