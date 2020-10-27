@@ -35,20 +35,20 @@ whenever you use the link in the doc. This makes links easy to update in the doc
 
 <span class="compare-better">Recommended</span>: Create an identifer where you want the link.
 
-In this example, it's called `fuchsia-home`:
+In this example, the link identifier is called `fuchsia-home`:
 
 ```none
-   [Fuchsia home page][fuchsia-home]
+Welcome to the [Fuchsia home page][fuchsia-home].
 ```
 
 And then define it at the bottom of the document:
 
-<pre class="prettyprint"><code> [fuchsia-home]: https://fuchsia.dev/ </code></pre>
+<pre><code>[fuchsia-home]: https://fuchsia.dev/</code></pre>
 
-<span class="compare-worse">Not recommended</span>: Writing an in-line link like the following.
+<span class="compare-worse">Not recommended</span>: Writing an in-line link like the following:
 
 ```none
-   [Fuchsia home page](www.fuchsia.dev)
+Welcome to the [Fuchsia home page](www.fuchsia.dev).
 ```
 
 You can read more about reference style links in the external
@@ -79,18 +79,15 @@ dashes (`-`) instead, using `{#section-title}`. Also, use dashes for file names.
 <span class="compare-better">Recommended</span>: Using dashes for anchors
 
 ```none
-
 ## This is a section header {#this-is-a-section-header}
-
 ```
-
 
 ## Code samples
 
 ### Use posix-terminal for shell command examples
 
-<span class="compare-better">Recommended</span>: Allow readers to easily copy the content in a code block by adding
-`posix-terminal` after <code>```</code> for a shell command.
+<span class="compare-better">Recommended</span>: Allow readers to easily copy the content
+in a code block by adding `posix-terminal` after <code>```</code> for a shell command.
 
 <pre>
 <code>```posix-terminal
@@ -112,11 +109,11 @@ $ fx update
 
 ### Use none to disable the copy feature
 
-<span class="compare-better">Recommended</span>: Add `none` after <code>```</code> for code or output examples that do not
-require readers to copy the content
+<span class="compare-better">Recommended</span>: Add `none {:.devsite-disable-click-to-copy}`
+after <code>```</code> for code or output examples that do not require readers to copy the content.
 
 <pre>
-<code>```none
+<code>```none {:.devsite-disable-click-to-copy}
 $ my_command
 It won't be necessary to copy and paste this code block.
 ```</code>
@@ -124,13 +121,13 @@ It won't be necessary to copy and paste this code block.
 
 This code block is rendered without the copy icon in the top right corner:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 $ my_command
 It won't be necessary to copy and paste this code block.
 ```
 
-<span class="compare-worse">Not recommended</span>: Enable the copy feature for view-only content. If you don't specify
-anything after <code>```</code>, the copy feature is enabled by default.
+<span class="compare-worse">Not recommended</span>: Enable the copy feature for view-only content.
+If you don't specify anything after <code>```</code>, the copy feature is enabled by default.
 
 <pre>
 <code>```
