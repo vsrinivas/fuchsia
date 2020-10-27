@@ -8,6 +8,10 @@
 namespace registers {
 
 enum RegisterId : uint64_t {
+#ifdef FACTORY_BUILD
+  REGISTER_USB_PHY_FACTORY,
+#endif  // FACTORY_BUILD
+
   REGISTER_ID_COUNT,
 };
 

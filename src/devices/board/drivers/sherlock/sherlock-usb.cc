@@ -146,12 +146,6 @@ constexpr pbus_mmio_t usb_phy_mmios[] = {
         .base = T931_USBPHY21_BASE,
         .length = T931_USBPHY21_LENGTH,
     },
-#ifdef FACTORY_BUILD
-    {
-        .base = T931_USB_BASE,
-        .length = T931_USB_LENGTH,
-    },
-#endif  // FACTORY_BUILD
 };
 
 constexpr pbus_irq_t usb_phy_irqs[] = {

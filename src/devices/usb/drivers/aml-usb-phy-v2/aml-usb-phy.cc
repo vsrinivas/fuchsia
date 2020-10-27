@@ -295,27 +295,6 @@ void AmlUsbPhy::RemoveXhciDevice(SetModeCompletion completion) {
   }
 }
 
-zx_status_t AmlUsbPhy::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  llcpp::fuchsia::hardware::registers::Device::Dispatch(this, msg, &transaction);
-  return transaction.Status();
-}
-
-void AmlUsbPhy::WriteRegister32(uint64_t address, uint32_t mask, uint32_t value,
-                                WriteRegister32Completer::Sync& completer) {
-  if (!factory_mmio_.has_value()) {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-  constexpr auto kUsbBaseAddress = 0xff400000;
-  if ((address < kUsbBaseAddress) || (address >= kUsbBaseAddress + factory_mmio_->get_size())) {
-    completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
-    return;
-  }
-  factory_mmio_->ModifyBits32(value, mask, address - kUsbBaseAddress);
-  completer.ReplySuccess();
-}
-
 zx_status_t AmlUsbPhy::AddDwc2Device() {
   if (dwc2_device_) {
     return ZX_ERR_BAD_STATE;
@@ -374,11 +353,6 @@ zx_status_t AmlUsbPhy::Init() {
   status = pdev_.MapMmio(3, &usbphy21_mmio_);
   if (status != ZX_OK) {
     return status;
-  }
-  status = pdev_.MapMmio(4, &factory_mmio_);
-  if (status != ZX_OK) {
-    // Device doesn't support factory mode
-    factory_mmio_->reset();
   }
 
   status = pdev_.GetInterrupt(0, &irq_);

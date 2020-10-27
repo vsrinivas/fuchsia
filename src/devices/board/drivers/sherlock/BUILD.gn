@@ -97,6 +97,7 @@ template("sherlock_driver") {
       "//src/devices/lib/broadcom",
       "//src/devices/lib/driver",
       "//src/devices/lib/focaltech",
+      "//src/devices/lib/metadata:llcpp",
       "//src/devices/lib/mmio",
       "//src/devices/lib/thermal",
       "//src/devices/lib/ti",
