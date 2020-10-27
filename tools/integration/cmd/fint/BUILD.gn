@@ -48,12 +48,17 @@ go_test("fint_tests") {
   deps = [ ":fint_lib" ]
 }
 
-proto_library("proto") {
-  sources = [
-    "proto/context.proto",
-    "proto/static.proto",
-  ]
+proto_library("context") {
+  sources = [ "proto/context.proto" ]
   generate_cc = false
+  generate_go = true
+  generate_python = false
+}
+
+proto_library("static") {
+  sources = [ "proto/static.proto" ]
+  generate_cc = false
+  generate_descriptor_set = true
   generate_go = true
   generate_python = false
 }
@@ -61,14 +66,21 @@ proto_library("proto") {
 golden_file("context_pb_go_diff") {
   current = "${root_gen_dir}/go-proto-gen/src/tools/integration/cmd/fint/proto/context.pb.go"
   golden = "proto/context.pb.go"
-  deps = [ ":proto" ]
+  deps = [ ":context" ]
   warn_on_changes = false
 }
 
 golden_file("static_pb_go_diff") {
   current = "${root_gen_dir}/go-proto-gen/src/tools/integration/cmd/fint/proto/static.pb.go"
   golden = "proto/static.pb.go"
-  deps = [ ":proto" ]
+  deps = [ ":static" ]
+  warn_on_changes = false
+}
+
+golden_file("static_desc_pb_diff") {
+  current = "${target_out_dir}/static.desc.pb"
+  golden = "proto/static.desc.pb"
+  deps = [ ":static" ]
   warn_on_changes = false
 }
 
@@ -78,6 +90,7 @@ group("tests") {
     # The diff rules aren't really tests, but we want to ensure they're run in CQ.
     ":context_pb_go_diff",
     ":fint_tests",
+    ":static_desc_pb_diff",
     ":static_pb_go_diff",
   ]
 }
