@@ -8,6 +8,7 @@ use {
     std::{cmp::Ordering, collections::HashSet},
     wlan_common::{
         bss::{BssDescriptionExt, Protection},
+        channel::Channel,
         ie::{self, rsn::rsne, wsc},
     },
 };
@@ -48,7 +49,7 @@ impl ClientConfig {
             ssid: bss.ssid.clone(),
             rx_dbm: get_rx_dbm(bss),
             snr_db: bss.snr_db,
-            channel: bss.chan.primary,
+            channel: Channel::from_fidl(bss.chan),
             protection: bss.get_protection(),
             compatible: self.is_bss_compatible(bss),
             ht_cap: bss.ht_cap.as_ref().map(|cap| **cap),
@@ -117,7 +118,7 @@ pub struct BssInfo {
     pub ssid: Ssid,
     pub rx_dbm: i8,
     pub snr_db: i8,
-    pub channel: u8,
+    pub channel: wlan_common::channel::Channel,
     pub protection: Protection,
     pub compatible: bool,
     pub ht_cap: Option<fidl_mlme::HtCapabilities>,
@@ -150,7 +151,7 @@ mod tests {
         crate::client::test_utils::{fake_bss_with_bssid, fake_wmm_param},
         fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
         std::{cmp::Ordering, convert::TryInto},
-        wlan_common::ie,
+        wlan_common::{channel::Cbw, ie},
         zerocopy::AsBytes,
     };
 
@@ -286,7 +287,7 @@ mod tests {
                 ssid: vec![],
                 rx_dbm: -5,
                 snr_db: 0,
-                channel: 1,
+                channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wpa2Personal,
                 compatible: true,
                 ht_cap: Some(fidl_mlme::HtCapabilities {
@@ -309,7 +310,7 @@ mod tests {
                 ssid: vec![],
                 rx_dbm: -5,
                 snr_db: 0,
-                channel: 1,
+                channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wpa2Personal,
                 compatible: true,
                 ht_cap: Some(fidl_mlme::HtCapabilities {
@@ -330,7 +331,7 @@ mod tests {
                 ssid: vec![],
                 rx_dbm: -5,
                 snr_db: 0,
-                channel: 1,
+                channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wep,
                 compatible: false,
                 ht_cap: Some(fidl_mlme::HtCapabilities {
@@ -352,7 +353,7 @@ mod tests {
                 ssid: vec![],
                 rx_dbm: -5,
                 snr_db: 0,
-                channel: 1,
+                channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wep,
                 compatible: true,
                 ht_cap: Some(fidl_mlme::HtCapabilities {

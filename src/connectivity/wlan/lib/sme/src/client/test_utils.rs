@@ -132,7 +132,7 @@ pub fn fake_bss_info() -> BssInfo {
         ssid: b"foo".to_vec(),
         rx_dbm: 0,
         snr_db: 0,
-        channel: 1,
+        channel: channel::Channel { primary: 1, cbw: channel::Cbw::Cbw20 },
         protection: Protection::Wpa2Personal,
         compatible: true,
         ht_cap: Some(fidl_mlme::HtCapabilities {

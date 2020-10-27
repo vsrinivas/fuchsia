@@ -4,6 +4,7 @@
 
 use {
     crate::client::{bss::BssInfo, Status as SmeStatus},
+    fidl_fuchsia_wlan_common as fidl_common,
     fuchsia_inspect::{
         BoolProperty, BytesProperty, IntProperty, Node, Property, StringProperty, UintProperty,
     },
@@ -224,7 +225,7 @@ pub struct BssInfoNode {
     ssid_hash: StringProperty,
     rx_dbm: IntProperty,
     snr_db: IntProperty,
-    channel: UintProperty,
+    channel: ChannelNode,
     protection: StringProperty,
     _is_wmm_assoc: BoolProperty,
     _wmm_param: Option<BssWmmParamNode>,
@@ -241,7 +242,7 @@ impl BssInfoNode {
         let ssid_hash = node.create_string("ssid_hash", hasher.hash(&bss_info.ssid[..]));
         let rx_dbm = node.create_int("rx_dbm", bss_info.rx_dbm as i64);
         let snr_db = node.create_int("snr_db", bss_info.snr_db as i64);
-        let channel = node.create_uint("channel", bss_info.channel as u64);
+        let channel = ChannelNode::new(node.create_child("channel"), bss_info.channel.to_fidl());
         let protection = node.create_string("protection", format!("{}", bss_info.protection));
         let is_wmm_assoc = node.create_bool("is_wmm_assoc", bss_info.wmm_param.is_some());
         let wmm_param = bss_info
@@ -278,7 +279,7 @@ impl BssInfoNode {
         self.ssid_hash.set(&hasher.hash(&bss_info.ssid[..]));
         self.rx_dbm.set(bss_info.rx_dbm as i64);
         self.snr_db.set(bss_info.snr_db as i64);
-        self.channel.set(bss_info.channel as u64);
+        self.channel.update(bss_info.channel.to_fidl());
         self.protection.set(&format!("{}", bss_info.protection));
         match &bss_info.ht_cap {
             Some(ht_cap) => match self.ht_cap.as_mut() {
@@ -311,6 +312,28 @@ impl BssInfoNode {
                 self.wsc.take();
             }
         }
+    }
+}
+
+pub struct ChannelNode {
+    _node: Node,
+    primary: UintProperty,
+    cbw: StringProperty,
+    secondary80: UintProperty,
+}
+
+impl ChannelNode {
+    pub fn new(node: Node, channel: fidl_common::WlanChan) -> Self {
+        let primary = node.create_uint("primary", channel.primary as u64);
+        let cbw = node.create_string("cbw", format!("{:?}", channel.cbw));
+        let secondary80 = node.create_uint("secondary80", channel.secondary80 as u64);
+        Self { _node: node, primary, cbw, secondary80 }
+    }
+
+    pub fn update(&mut self, channel: fidl_common::WlanChan) {
+        self.primary.set(channel.primary as u64);
+        self.cbw.set(&format!("{:?}", channel.cbw));
+        self.secondary80.set(channel.secondary80 as u64);
     }
 }
 
