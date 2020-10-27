@@ -245,13 +245,16 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
         let ret = self
             .frame_handler
             .send_request(CmdReset)
-            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
+            .or_else(|_| futures::future::ready(ret))
+            .boxed()
+            .on_timeout(Time::after(DEFAULT_TIMEOUT), ncp_cmd_timeout!(self))
+            .await?;
+
+        self.wait_for_state(DriverState::is_initialized)
+            .boxed()
+            .map(|_| Ok(ret))
+            .on_timeout(Time::after(DEFAULT_TIMEOUT), ncp_cmd_timeout!(self))
             .await
-            .or(ret)?;
-
-        self.wait_for_state(DriverState::is_initialized).await;
-
-        Ok(ret)
     }
 
     async fn set_active(&self, enabled: bool) -> ZxResult<()> {
