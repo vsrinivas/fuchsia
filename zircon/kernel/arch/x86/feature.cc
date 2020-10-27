@@ -549,6 +549,9 @@ void x86_feature_debug(void) {
   if (g_amd_retpoline)
     printf("amd_retpoline ");
 #endif
+#ifdef X64_KERNEL_JCC_WORKAROUND
+  printf("jcc_fix ");
+#endif
   printf("\n");
 }
 

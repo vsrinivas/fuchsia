@@ -48,7 +48,10 @@ config("abi") {
   # This is not part of the ABI contract per se, but it's part of the
   # "expected resilience of generated code" contract that should be uniform
   # across all the privileged code.
-  configs = [ ":retpoline" ]
+  configs = [
+    ":retpoline",
+    ":skylake_jcc",
+  ]
 }
 
 config("retpoline") {
@@ -67,6 +70,18 @@ config("retpoline") {
     }
   }
   defines = [ "KERNEL_RETPOLINE=1" ]
+}
+
+# Mitigate errata in Intel Skylake family of CPUs that cause control transfer instructions to
+# execute incorrectly when they end at or cross 32-byte boundaries. (fxbug.dev/44204)
+config("skylake_jcc") {
+  visibility = [ ":*" ]
+  if (is_gcc) {
+    cflags = [ "-Wa,-mbranches-within-32B-boundaries" ]
+  } else {
+    cflags = [ "-mbranches-within-32B-boundaries" ]
+  }
+  defines = [ "X64_KERNEL_JCC_WORKAROUND" ]
 }
 
 # This is used pervasively throughout the kernel on x86.
