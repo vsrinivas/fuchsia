@@ -15,10 +15,7 @@ use {
         App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
-    euclid::{
-        default::{Point2D, Transform2D, Vector2D},
-        Angle,
-    },
+    euclid::default::{Point2D, Transform2D, Vector2D},
     fuchsia_trace_provider,
     fuchsia_zircon::{AsHandleRef, Event, Signals},
     std::collections::BTreeMap,
@@ -106,11 +103,12 @@ impl ViewAssistant for SvgViewAssistant {
         let last_position = rendering.last_position;
         let rasters = self.rasters.get_or_insert_with(|| {
             let shed = carnelian::render::Shed::open("/pkg/data/static/fuchsia.shed").unwrap();
-            let size = 50.0;
-            let min_size = context.size.width.min(context.size.height);
-            let transform = Transform2D::create_rotation(Angle::degrees(90.0))
-                .pre_translate(Vector2D::new(-size / 2.0, -size / 2.0))
-                .post_scale(min_size / size, min_size / size)
+            let size = shed.size();
+            let min_side = size.width.min(size.height);
+            let min_screen_side = context.size.width.min(context.size.height);
+            let scale_factor = min_screen_side / min_side * 0.75;
+            let transform = Transform2D::create_translation(-size.width / 2.0, -size.height / 2.0)
+                .post_scale(scale_factor, scale_factor)
                 .post_translate(Vector2D::new(context.size.width / 2.0, context.size.height / 2.0));
 
             shed.rasters(render_context, Some(&transform))
