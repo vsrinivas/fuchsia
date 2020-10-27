@@ -80,10 +80,13 @@ impl Puppet {
             stream.next().await.unwrap()?
         {
             info!("Received a structured socket.");
-            // TODO(fxbug.dev/61495): Validate that this is in fact a datagram socket.
-            let socket = Socket::from_socket(socket)?;
+            assert!(
+                socket.info()?.options.contains(zx::SocketOpts::DATAGRAM),
+                "log sockets must be created in datagram mode"
+            );
+
             Ok(Self {
-                socket,
+                socket: Socket::from_socket(socket)?,
                 url: puppet_url.to_string(),
                 proxy,
                 info,
