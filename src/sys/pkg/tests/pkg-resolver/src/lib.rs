@@ -29,7 +29,10 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_inspect::reader::{self, NodeHierarchy},
+    fuchsia_inspect::{
+        reader::{self, NodeHierarchy},
+        testing::TreeAssertion,
+    },
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder, Repository},
     fuchsia_url::pkg_url::RepoUrl,
@@ -812,6 +815,13 @@ impl<P: PkgFs> TestEnv<P> {
         fdio::service_connect(&path.to_string_lossy().to_string(), server_end.into_channel())
             .expect("failed to connect to Tree service");
         reader::read_from_tree(&tree).await.expect("failed to get inspect hierarchy")
+    }
+
+    /// Wait until pkg-resolver inspect state satisfies `desired_state`.
+    pub async fn wait_for_pkg_resolver_inspect_state(&self, desired_state: TreeAssertion<String>) {
+        while desired_state.run(&self.pkg_resolver_inspect_hierarchy().await).is_err() {
+            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
+        }
     }
 
     /// Wait until at least `expected_event_codes.len()` events of metric id `expected_metric_id`

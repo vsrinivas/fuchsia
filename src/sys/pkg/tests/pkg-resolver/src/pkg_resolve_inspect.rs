@@ -11,6 +11,7 @@ use {
         assert_inspect_tree,
         reader::Property,
         testing::{AnyProperty, PropertyAssertion},
+        tree_assertion,
     },
     fuchsia_pkg_testing::{serve::handler as UriHandler, PackageBuilder, RepositoryBuilder},
     lib::MountsBuilder,
@@ -214,6 +215,17 @@ async fn package_and_blob_queues() {
 
     let resolve_fut = env.resolve_package("fuchsia-pkg://original.example.com/just_meta_far");
     let unblocker = unblocking_closure_receiver.await.unwrap();
+
+    env.wait_for_pkg_resolver_inspect_state(tree_assertion!(
+        root: contains {
+            blob_fetcher: contains {
+                pkg.meta_far_merkle_root().to_string() => contains {
+                    state: "read http body"
+                }
+            }
+        }
+    ))
+    .await;
 
     assert_inspect_tree!(
         env.pkg_resolver_inspect_hierarchy().await,
