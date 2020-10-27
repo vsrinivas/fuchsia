@@ -62,6 +62,9 @@ var (
 
 	// Per-test timeout.
 	perTestTimeout time.Duration
+
+	// Logger level.
+	level = logger.InfoLevel
 )
 
 func usage() {
@@ -82,6 +85,7 @@ func main() {
 	flag.StringVar(&snapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
 	// TODO(fxbug.dev/36480): Support different timeouts for different tests.
 	flag.DurationVar(&perTestTimeout, "per-test-timeout", 0, "Per-test timeout, applied to all tests. Ignored if <= 0.")
+	flag.Var(&level, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
 	flag.Usage = usage
 	flag.Parse()
 
@@ -96,7 +100,7 @@ func main() {
 	// Our mDNS library doesn't use the logger library.
 	log.SetFlags(logFlags)
 
-	log := logger.NewLogger(logger.InfoLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "testrunner ")
+	log := logger.NewLogger(level, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "testrunner ")
 	log.SetFlags(logFlags)
 	ctx := logger.WithLogger(context.Background(), log)
 
