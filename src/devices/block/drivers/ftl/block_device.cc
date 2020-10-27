@@ -14,6 +14,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
+#include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -112,7 +113,7 @@ zx_status_t BlockDevice::Bind() {
   if (status != ZX_OK) {
     return status;
   }
-  return DdkAdd(kDeviceName);
+  return DdkAdd(ddk::DeviceAddArgs(kDeviceName).set_inspect_vmo(inspector_.DuplicateVmo()));
 }
 
 void BlockDevice::DdkUnbind(ddk::UnbindTxn txn) {
