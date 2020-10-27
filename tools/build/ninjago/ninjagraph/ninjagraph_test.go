@@ -576,6 +576,22 @@ func TestPopulateEdgesWithRealBuild(t *testing.T) {
 	}
 }
 
+func TestCriticalPathWithRealBuild(t *testing.T) {
+	graph := readTestGraph(t)
+
+	cp, err := graph.CriticalPath()
+	if err != nil {
+		t.Fatalf("CriticalPath() got error: %v", err)
+	}
+	cp2, err := graph.CriticalPathV2()
+	if err != nil {
+		t.Fatalf("CriticalPathV2() got error: %v", err)
+	}
+	if diff := cmp.Diff(cp, cp2); diff != "" {
+		t.Errorf("CriticalPath() and CriticalPathV2() returned different critical paths (-v1, +v2):\n%s", diff)
+	}
+}
+
 func BenchmarkCriticalPath(b *testing.B) {
 	graph := readTestGraph(b)
 
@@ -699,6 +715,12 @@ func TestCriticalPath(t *testing.T) {
 	step5 := ninjalog.Step{Start: 100, End: 200, Out: "5"}
 	edge5 := &Edge{Inputs: []int64{2, 4}, Outputs: []int64{5}, Step: &step5}
 
+	step6 := ninjalog.Step{Start: 20, End: 30, Out: "6"}
+	edge6 := &Edge{Inputs: []int64{2, 7}, Outputs: []int64{6}, Step: &step6}
+
+	step7 := ninjalog.Step{Start: 10, End: 20, Out: "7"}
+	edge7 := &Edge{Inputs: []int64{2}, Outputs: []int64{7}, Step: &step7}
+
 	clearEdgeMemoizations := func() {
 		for _, e := range []*Edge{edge1, edge2, edge3, edge4, edge4LateStart, edge5} {
 			e.earliestStart = nil
@@ -793,6 +815,22 @@ func TestCriticalPath(t *testing.T) {
 				Edges: []*Edge{edge2, edge4LateStart, edge5},
 			},
 			want: []ninjalog.Step{step2, step5},
+		},
+		{
+			// 1 -> 2 -------> 6
+			//       \     /
+			//        -> 7
+			desc: "multiple inputs all on critical path",
+			graph: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1, Outs: []*Edge{edge2}},
+					2: {ID: 2, In: edge2, Outs: []*Edge{edge6, edge7}},
+					6: {ID: 6, In: edge6},
+					7: {ID: 7, In: edge7, Outs: []*Edge{edge6}},
+				},
+				Edges: []*Edge{edge2, edge6, edge7},
+			},
+			want: []ninjalog.Step{step2, step7, step6},
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {

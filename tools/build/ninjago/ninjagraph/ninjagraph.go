@@ -721,9 +721,33 @@ func (g *Graph) CriticalPathV2() ([]ninjalog.Step, error) {
 			if err != nil {
 				return nil, fmt.Errorf("calculating total float: %w", err)
 			}
-			if tf == 0 {
+			if tf != 0 {
+				continue
+			}
+
+			if nextCriticalEdge == nil {
 				nextCriticalEdge = n.In
-				break
+				continue
+			}
+			// Among all the inputs, pick the one that finishes the last, so we don't
+			// accidentally skip actions when multiple inputs of the same node are on
+			// the critical path.
+			//
+			// For example, imagine a graph:
+			// 1 -> 2 -------> 4
+			//       \     /
+			//        -> 3
+			// When we are at 4, we want to pick up 3 as the next step, not 2.
+			lfNew, err := g.latestFinish(n.In)
+			if err != nil {
+				return nil, fmt.Errorf("calculating latest finish: %w", err)
+			}
+			lfCur, err := g.latestFinish(nextCriticalEdge)
+			if err != nil {
+				return nil, fmt.Errorf("calculating latest finish: %w", err)
+			}
+			if lfNew > lfCur {
+				nextCriticalEdge = n.In
 			}
 		}
 		criticalEdge = nextCriticalEdge
