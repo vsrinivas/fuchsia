@@ -477,6 +477,70 @@ TEST(FakeBlockDeviceTest, BlockLimitResetsDevice) {
   EXPECT_EQ(ZX_OK, device->FifoTransaction(&request, 1));
 }
 
+TEST(FakeBlockDeviceTest, Hook) {
+  FakeBlockDevice device(kBlockCountDefault, kBlockSizeDefault);
+
+  const size_t kVmoBlocks = 1;
+  zx::vmo vmo;
+  storage::OwnedVmoid vmoid;
+  ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, kVmoBlocks, &vmo, &vmoid));
+  char v = 1;
+  ASSERT_EQ(vmo.write(&v, 0, 1), ZX_OK);
+
+  block_fifo_request_t request = {
+      .opcode = BLOCKIO_WRITE,
+      .vmoid = vmoid.get(),
+      .length = 5555,
+      .vmo_offset = 1234,
+      .dev_offset = 5678,
+  };
+  device.set_hook([&](const block_fifo_request_t& request, const zx::vmo* vmo) {
+    EXPECT_NE(vmo, nullptr);
+    if (vmo) {
+      char v = 0;
+      EXPECT_EQ(vmo->read(&v, 0, 1), ZX_OK);
+      EXPECT_EQ(v, 1);
+    }
+    EXPECT_EQ(request.opcode, BLOCKIO_WRITE);
+    EXPECT_EQ(request.vmo_offset, 1234);
+    EXPECT_EQ(request.dev_offset, 5678);
+    EXPECT_EQ(request.length, 5555);
+    EXPECT_EQ(request.vmoid, vmoid.get());
+    return ZX_ERR_WRONG_TYPE;
+  });
+  EXPECT_EQ(device.FifoTransaction(&request, 1), ZX_ERR_WRONG_TYPE);
+  device.set_hook({});
+}
+
+TEST(FakeBlockDeviceTest, WipeZeroesDevice) {
+  FakeBlockDevice device(kBlockCountDefault, kBlockSizeDefault);
+
+  const size_t kVmoBlocks = 1;
+  zx::vmo vmo;
+  storage::OwnedVmoid vmoid;
+  ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, kVmoBlocks, &vmo, &vmoid));
+  char v = 1;
+  ASSERT_EQ(vmo.write(&v, 0, 1), ZX_OK);
+
+  block_fifo_request_t request = {
+      .opcode = BLOCKIO_WRITE,
+      .vmoid = vmoid.get(),
+      .length = 1,
+      .vmo_offset = 0,
+      .dev_offset = 700,
+  };
+  EXPECT_EQ(device.FifoTransaction(&request, 1), ZX_OK);
+
+  device.Wipe();
+
+  request.opcode = BLOCKIO_READ;
+  request.vmo_offset = 1;
+  EXPECT_EQ(device.FifoTransaction(&request, 1), ZX_OK);
+
+  EXPECT_EQ(vmo.read(&v, kBlockSizeDefault, 1), ZX_OK);
+  EXPECT_EQ(v, 0);
+}
+
 TEST(FakeFVMBlockDeviceTest, QueryVolume) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);

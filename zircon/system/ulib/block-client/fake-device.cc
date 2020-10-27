@@ -121,6 +121,14 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
     // does.
     WaitOnPaused();
 
+    if (hook_) {
+      auto iter = vmos_.find(requests[i].vmoid);
+      if (zx_status_t status = hook_(requests[i], iter == vmos_.end() ? nullptr : &iter->second);
+          status != ZX_OK) {
+        return status;
+      }
+    }
+
     zx::ticks start_tick = zx::ticks::now();
     switch (requests[i].opcode & BLOCKIO_OP_MASK) {
       case BLOCKIO_READ: {
@@ -198,6 +206,12 @@ zx_status_t FakeBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_
   return ZX_OK;
 }
 
+void FakeBlockDevice::Wipe() {
+  fbl::AutoLock lock(&lock_);
+  ZX_ASSERT(block_device_.op_range(ZX_VMO_OP_ZERO, 0, block_count_ * block_size_, nullptr, 0) ==
+            ZX_OK);
+}
+
 zx_status_t FakeBlockDevice::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) {
   zx::vmo xfer_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
@@ -208,7 +222,7 @@ zx_status_t FakeBlockDevice::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* 
   fbl::AutoLock lock(&lock_);
   // Find a free vmoid.
   vmoid_t vmoid = 1;
-  for (const auto &[used_vmoid, vmo] : vmos_) {
+  for (const auto& [used_vmoid, vmo] : vmos_) {
     if (used_vmoid > vmoid)
       break;
     if (used_vmoid == std::numeric_limits<vmoid_t>::max())

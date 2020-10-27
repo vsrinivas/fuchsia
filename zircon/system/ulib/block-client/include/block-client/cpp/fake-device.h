@@ -8,6 +8,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 
+#include <functional>
 #include <map>
 #include <optional>
 
@@ -30,6 +31,8 @@ namespace block_client {
 // This class is not movable or copyable.
 class FakeBlockDevice : public BlockDevice {
  public:
+  using Hook = std::function<zx_status_t(const block_fifo_request_t&, const zx::vmo*)>;
+
   FakeBlockDevice(uint64_t block_count, uint32_t block_size);
   FakeBlockDevice(const FakeBlockDevice&) = delete;
   FakeBlockDevice& operator=(const FakeBlockDevice&) = delete;
@@ -88,6 +91,12 @@ class FakeBlockDevice : public BlockDevice {
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override;
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final;
 
+  // Not thread safe.  Should be called only when the device is not active.
+  void set_hook(Hook hook) { hook_ = hook; }
+
+  // Wipes the device to a zeroed state.
+  void Wipe();
+
  protected:
   // Resizes the block device to be at least |new_size| bytes.
   void ResizeDeviceToAtLeast(uint64_t new_size);
@@ -118,6 +127,7 @@ class FakeBlockDevice : public BlockDevice {
   std::map<vmoid_t, zx::vmo> vmos_ __TA_GUARDED(lock_);
   zx::vmo block_device_ __TA_GUARDED(lock_);
   mutable storage_metrics::BlockDeviceMetrics stats_ __TA_GUARDED(lock_) = {};
+  Hook hook_;
 };
 
 // An extension of FakeBlockDevice that allows for testing on FVM devices.
