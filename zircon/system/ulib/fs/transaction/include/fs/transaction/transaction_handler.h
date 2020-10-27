@@ -40,7 +40,8 @@ class TransactionHandler {
   // filesystem-level block numbers.  This method blocks until the operation completes, so it is
   // suitable for host-based reads and writes and for simple Fuchsia-based reads. Regular Fuchsia IO
   // is expected to be issued using the RunRequests method.  A default implementation is provided.
-  virtual zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer);
+  virtual zx_status_t RunOperation(const storage::Operation& operation,
+                                   storage::BlockBuffer* buffer);
 
   // Runs the provided operations against the backing block device.
   // The values inside |operations| are expected to be filesystem-level block numbers.
@@ -49,6 +50,8 @@ class TransactionHandler {
   // upgraded to be fully asynchronous at some point.
   // The caller should use a BufferedOperationsBuilder to construct the request.
   virtual zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations) = 0;
+
+  virtual zx_status_t Flush() { return ZX_ERR_NOT_SUPPORTED; }
 };
 
 }  // namespace fs

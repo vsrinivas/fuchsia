@@ -7,13 +7,13 @@
 #include <vector>
 
 #include <block-client/cpp/fake-device.h>
+#include <gtest/gtest.h>
 #include <sanitizer/lsan_interface.h>
-#include <zxtest/zxtest.h>
 
 namespace {
 
-using storage::BufferedOperation;
 using storage::BlockBuffer;
+using storage::BufferedOperation;
 using storage::Operation;
 using storage::OperationType;
 
@@ -63,11 +63,9 @@ class MockTransactionHandler : public fs::DeviceTransactionHandler {
   MockBlockDevice device_;
 };
 
-class TransactionHandlerTest : public zxtest::Test {
+class TransactionHandlerTest : public testing::Test {
  public:
-  void SetUp() final {
-    handler_ = std::make_unique<MockTransactionHandler>();
-  }
+  void SetUp() final { handler_ = std::make_unique<MockTransactionHandler>(); }
 
  protected:
   std::unique_ptr<MockTransactionHandler> handler_;
@@ -75,36 +73,36 @@ class TransactionHandlerTest : public zxtest::Test {
 
 TEST_F(TransactionHandlerTest, RunRequestsNoRequests) {
   std::vector<BufferedOperation> operations;
-  EXPECT_OK(handler_->RunRequests(operations));
-  EXPECT_EQ(0, handler_->GetRequests().size());
+  EXPECT_EQ(handler_->RunRequests(operations), ZX_OK);
+  EXPECT_EQ(0u, handler_->GetRequests().size());
 }
 
 TEST_F(TransactionHandlerTest, RunRequestsOneRequest) {
   const vmoid_t kVmoid = 4;
   std::vector<BufferedOperation> operations = {{kVmoid, {OperationType::kWrite, 1, 2, 3}}};
-  EXPECT_OK(handler_->RunRequests(operations));
+  EXPECT_EQ(handler_->RunRequests(operations), ZX_OK);
 
   const std::vector<block_fifo_request_t>& requests = handler_->GetRequests();
-  EXPECT_EQ(1, requests.size());
+  EXPECT_EQ(1u, requests.size());
   EXPECT_EQ(1 * kBlockRatio, requests[0].vmo_offset);
   EXPECT_EQ(2 * kBlockRatio, requests[0].dev_offset);
   EXPECT_EQ(3 * kBlockRatio, requests[0].length);
   EXPECT_EQ(kVmoid, requests[0].vmoid);
-  EXPECT_EQ(BLOCKIO_WRITE, requests[0].opcode);
+  EXPECT_EQ(unsigned{BLOCKIO_WRITE}, requests[0].opcode);
 }
 
 TEST_F(TransactionHandlerTest, RunRequestsTrim) {
   const vmoid_t kVmoid = 4;
   std::vector<BufferedOperation> operations = {{kVmoid, {OperationType::kTrim, 1, 2, 3}}};
-  EXPECT_OK(handler_->RunRequests(operations));
+  EXPECT_EQ(handler_->RunRequests(operations), ZX_OK);
 
   const std::vector<block_fifo_request_t>& requests = handler_->GetRequests();
-  EXPECT_EQ(1, requests.size());
+  EXPECT_EQ(1u, requests.size());
   EXPECT_EQ(1 * kBlockRatio, requests[0].vmo_offset);
   EXPECT_EQ(2 * kBlockRatio, requests[0].dev_offset);
   EXPECT_EQ(3 * kBlockRatio, requests[0].length);
   EXPECT_EQ(kVmoid, requests[0].vmoid);
-  EXPECT_EQ(BLOCKIO_TRIM, requests[0].opcode);
+  EXPECT_EQ(unsigned{BLOCKIO_TRIM}, requests[0].opcode);
 }
 
 TEST_F(TransactionHandlerTest, RunRequestsManyRequests) {
@@ -112,24 +110,24 @@ TEST_F(TransactionHandlerTest, RunRequestsManyRequests) {
   operations.push_back({10, {OperationType::kRead, 11, 12, 13}});
   operations.push_back({20, {OperationType::kRead, 24, 25, 26}});
   operations.push_back({30, {OperationType::kRead, 37, 38, 39}});
-  EXPECT_OK(handler_->RunRequests(operations));
+  EXPECT_EQ(handler_->RunRequests(operations), ZX_OK);
 
   const std::vector<block_fifo_request_t>& requests = handler_->GetRequests();
-  EXPECT_EQ(3, requests.size());
-  EXPECT_EQ(BLOCKIO_READ, requests[0].opcode);
+  EXPECT_EQ(3u, requests.size());
+  EXPECT_EQ(unsigned{BLOCKIO_READ}, requests[0].opcode);
   EXPECT_EQ(10, requests[0].vmoid);
   EXPECT_EQ(11 * kBlockRatio, requests[0].vmo_offset);
   EXPECT_EQ(12 * kBlockRatio, requests[0].dev_offset);
   EXPECT_EQ(13 * kBlockRatio, requests[0].length);
 
-  EXPECT_EQ(BLOCKIO_READ, requests[1].opcode);
-  EXPECT_EQ(20, requests[1].vmoid);
+  EXPECT_EQ(unsigned{BLOCKIO_READ}, requests[1].opcode);
+  EXPECT_EQ(20u, requests[1].vmoid);
   EXPECT_EQ(24 * kBlockRatio, requests[1].vmo_offset);
   EXPECT_EQ(25 * kBlockRatio, requests[1].dev_offset);
   EXPECT_EQ(26 * kBlockRatio, requests[1].length);
 
-  EXPECT_EQ(BLOCKIO_READ, requests[2].opcode);
-  EXPECT_EQ(30, requests[2].vmoid);
+  EXPECT_EQ(unsigned{BLOCKIO_READ}, requests[2].opcode);
+  EXPECT_EQ(30u, requests[2].vmoid);
   EXPECT_EQ(37 * kBlockRatio, requests[2].vmo_offset);
   EXPECT_EQ(38 * kBlockRatio, requests[2].dev_offset);
   EXPECT_EQ(39 * kBlockRatio, requests[2].length);
@@ -137,10 +135,19 @@ TEST_F(TransactionHandlerTest, RunRequestsManyRequests) {
 
 TEST_F(TransactionHandlerTest, RunRequestsFails) {
   std::vector<BufferedOperation> operations = {{0, {OperationType::kWrite, 1, 2, 3}}};
-  EXPECT_OK(handler_->RunRequests(operations));
+  EXPECT_EQ(handler_->RunRequests(operations), ZX_OK);
 
-  EXPECT_NOT_OK(handler_->RunRequests(operations));
+  EXPECT_NE(handler_->RunRequests(operations), ZX_OK);
 }
+
+TEST_F(TransactionHandlerTest, FlushCallsFlush) {
+  handler_->Flush();
+  const std::vector<block_fifo_request_t>& requests = handler_->GetRequests();
+  EXPECT_EQ(1u, requests.size());
+  EXPECT_EQ(unsigned{BLOCKIO_FLUSH}, requests[0].opcode);
+}
+
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
 
 using TransactionHandlerCrashTest = TransactionHandlerTest;
 
@@ -148,13 +155,17 @@ TEST_F(TransactionHandlerCrashTest, RunRequestsMixedRequests) {
   std::vector<BufferedOperation> operations;
   operations.push_back({10, {OperationType::kRead, 11, 12, 13}});
   operations.push_back({20, {OperationType::kWrite, 24, 25, 26}});
-  ASSERT_DEATH(([this, operations]() {
+  ASSERT_DEATH(
+      {
 #if __has_feature(address_sanitizer) || __has_feature(leak_sanitizer)
-    // Disable LSAN, this thread is expected to leak by way of a crash.
-    __lsan::ScopedDisabler _;
+        // Disable LSAN, this thread is expected to leak by way of a crash.
+        __lsan::ScopedDisabler _;
 #endif
-    handler_->RunRequests(operations);
-  }));
+        handler_->RunRequests(operations);
+      },
+      "");
 }
+
+#endif  // ZX_DEBUG_ASSERT_IMPLEMENTED
 
 }  // namespace

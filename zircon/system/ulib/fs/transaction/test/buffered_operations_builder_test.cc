@@ -4,9 +4,9 @@
 
 #include "fs/transaction/buffered_operations_builder.h"
 
+#include <gtest/gtest.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/buffer/vmoid_registry.h>
-#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -62,7 +62,7 @@ TEST(BufferedOperationsBuilderTest, OneRequest) {
   builder.Add(operation, &buffer);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(1, requests.size());
+  ASSERT_EQ(1u, requests.size());
   EXPECT_EQ(kVmoid1, requests[0].vmoid);
   EXPECT_EQ(OperationType::kWrite, requests[0].op.type);
   EXPECT_EQ(operation.vmo_offset, requests[0].op.vmo_offset);
@@ -93,17 +93,17 @@ TEST(BufferedOperationsBuilderTest, TwoRequestDifferentVmo) {
   builder.Add(operation, &buffer_2);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(2, requests.size());
+  ASSERT_EQ(2u, requests.size());
   EXPECT_EQ(kVmoid1, requests[0].vmoid);
   EXPECT_EQ(kVmoid2, requests[1].vmoid);
   EXPECT_EQ(OperationType::kWrite, requests[0].op.type);
   EXPECT_EQ(OperationType::kWrite, requests[1].op.type);
-  EXPECT_EQ(0, requests[0].op.vmo_offset);
-  EXPECT_EQ(0, requests[0].op.dev_offset);
-  EXPECT_EQ(1, requests[0].op.length);
-  EXPECT_EQ(1, requests[1].op.vmo_offset);
-  EXPECT_EQ(1, requests[1].op.dev_offset);
-  EXPECT_EQ(1, requests[1].op.length);
+  EXPECT_EQ(0u, requests[0].op.vmo_offset);
+  EXPECT_EQ(0u, requests[0].op.dev_offset);
+  EXPECT_EQ(1u, requests[0].op.length);
+  EXPECT_EQ(1u, requests[1].op.vmo_offset);
+  EXPECT_EQ(1u, requests[1].op.dev_offset);
+  EXPECT_EQ(1u, requests[1].op.length);
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestMergeOperations) {
@@ -125,12 +125,12 @@ TEST(BufferedOperationsBuilderTest, TwoRequestMergeOperations) {
   builder.Add(operation, &buffer);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(1, requests.size());
+  ASSERT_EQ(1u, requests.size());
   EXPECT_EQ(kVmoid1, requests[0].vmoid);
   EXPECT_EQ(OperationType::kWrite, requests[0].op.type);
-  EXPECT_EQ(0, requests[0].op.vmo_offset);
-  EXPECT_EQ(0, requests[0].op.dev_offset);
-  EXPECT_EQ(2, requests[0].op.length);
+  EXPECT_EQ(0u, requests[0].op.vmo_offset);
+  EXPECT_EQ(0u, requests[0].op.dev_offset);
+  EXPECT_EQ(2u, requests[0].op.length);
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestDifferentType) {
@@ -153,17 +153,17 @@ TEST(BufferedOperationsBuilderTest, TwoRequestDifferentType) {
   builder.Add(operation, &buffer);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(2, requests.size());
+  ASSERT_EQ(2u, requests.size());
   EXPECT_EQ(kVmoid1, requests[0].vmoid);
   EXPECT_EQ(kVmoid1, requests[1].vmoid);
   EXPECT_EQ(OperationType::kWrite, requests[0].op.type);
   EXPECT_EQ(OperationType::kRead, requests[1].op.type);
-  EXPECT_EQ(0, requests[0].op.vmo_offset);
-  EXPECT_EQ(0, requests[0].op.dev_offset);
-  EXPECT_EQ(1, requests[0].op.length);
-  EXPECT_EQ(1, requests[1].op.vmo_offset);
-  EXPECT_EQ(1, requests[1].op.dev_offset);
-  EXPECT_EQ(1, requests[1].op.length);
+  EXPECT_EQ(0u, requests[0].op.vmo_offset);
+  EXPECT_EQ(0u, requests[0].op.dev_offset);
+  EXPECT_EQ(1u, requests[0].op.length);
+  EXPECT_EQ(1u, requests[1].op.vmo_offset);
+  EXPECT_EQ(1u, requests[1].op.dev_offset);
+  EXPECT_EQ(1u, requests[1].op.length);
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestVmoGap) {
@@ -185,17 +185,17 @@ TEST(BufferedOperationsBuilderTest, TwoRequestVmoGap) {
   builder.Add(operation, &buffer);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(2, requests.size());
+  ASSERT_EQ(2u, requests.size());
   EXPECT_EQ(kVmoid1, requests[0].vmoid);
   EXPECT_EQ(kVmoid1, requests[1].vmoid);
   EXPECT_EQ(OperationType::kWrite, requests[0].op.type);
   EXPECT_EQ(OperationType::kWrite, requests[1].op.type);
-  EXPECT_EQ(0, requests[0].op.vmo_offset);
-  EXPECT_EQ(0, requests[0].op.dev_offset);
-  EXPECT_EQ(1, requests[0].op.length);
-  EXPECT_EQ(2, requests[1].op.vmo_offset);
-  EXPECT_EQ(1, requests[1].op.dev_offset);
-  EXPECT_EQ(1, requests[1].op.length);
+  EXPECT_EQ(0u, requests[0].op.vmo_offset);
+  EXPECT_EQ(0u, requests[0].op.dev_offset);
+  EXPECT_EQ(1u, requests[0].op.length);
+  EXPECT_EQ(2u, requests[1].op.vmo_offset);
+  EXPECT_EQ(1u, requests[1].op.dev_offset);
+  EXPECT_EQ(1u, requests[1].op.length);
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestDeviceGap) {
@@ -217,17 +217,17 @@ TEST(BufferedOperationsBuilderTest, TwoRequestDeviceGap) {
   builder.Add(operation, &buffer);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(2, requests.size());
+  ASSERT_EQ(2u, requests.size());
   EXPECT_EQ(kVmoid1, requests[0].vmoid);
   EXPECT_EQ(kVmoid1, requests[1].vmoid);
   EXPECT_EQ(OperationType::kWrite, requests[0].op.type);
   EXPECT_EQ(OperationType::kWrite, requests[1].op.type);
-  EXPECT_EQ(0, requests[0].op.vmo_offset);
-  EXPECT_EQ(0, requests[0].op.dev_offset);
-  EXPECT_EQ(1, requests[0].op.length);
-  EXPECT_EQ(1, requests[1].op.vmo_offset);
-  EXPECT_EQ(2, requests[1].op.dev_offset);
-  EXPECT_EQ(1, requests[1].op.length);
+  EXPECT_EQ(0u, requests[0].op.vmo_offset);
+  EXPECT_EQ(0u, requests[0].op.dev_offset);
+  EXPECT_EQ(1u, requests[0].op.length);
+  EXPECT_EQ(1u, requests[1].op.vmo_offset);
+  EXPECT_EQ(2u, requests[1].op.dev_offset);
+  EXPECT_EQ(1u, requests[1].op.length);
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestReplaceOperation) {
@@ -248,12 +248,12 @@ TEST(BufferedOperationsBuilderTest, TwoRequestReplaceOperation) {
   builder.Add(operation, &buffer);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(1, requests.size());
+  ASSERT_EQ(1u, requests.size());
   EXPECT_EQ(kVmoid1, requests[0].vmoid);
   EXPECT_EQ(OperationType::kRead, requests[0].op.type);
-  EXPECT_EQ(0, requests[0].op.vmo_offset);
-  EXPECT_EQ(0, requests[0].op.dev_offset);
-  EXPECT_EQ(2, requests[0].op.length);
+  EXPECT_EQ(0u, requests[0].op.vmo_offset);
+  EXPECT_EQ(0u, requests[0].op.dev_offset);
+  EXPECT_EQ(2u, requests[0].op.length);
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestDifferentDeviceOffset) {
@@ -275,17 +275,17 @@ TEST(BufferedOperationsBuilderTest, TwoRequestDifferentDeviceOffset) {
   builder.Add(operation, &buffer);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(2, requests.size());
+  ASSERT_EQ(2u, requests.size());
   EXPECT_EQ(kVmoid1, requests[0].vmoid);
   EXPECT_EQ(kVmoid1, requests[1].vmoid);
   EXPECT_EQ(OperationType::kRead, requests[0].op.type);
   EXPECT_EQ(OperationType::kRead, requests[1].op.type);
-  EXPECT_EQ(0, requests[0].op.vmo_offset);
-  EXPECT_EQ(0, requests[0].op.dev_offset);
-  EXPECT_EQ(1, requests[0].op.length);
-  EXPECT_EQ(0, requests[1].op.vmo_offset);
-  EXPECT_EQ(2, requests[1].op.dev_offset);
-  EXPECT_EQ(2, requests[1].op.length);
+  EXPECT_EQ(0u, requests[0].op.vmo_offset);
+  EXPECT_EQ(0u, requests[0].op.dev_offset);
+  EXPECT_EQ(1u, requests[0].op.length);
+  EXPECT_EQ(0u, requests[1].op.vmo_offset);
+  EXPECT_EQ(2u, requests[1].op.dev_offset);
+  EXPECT_EQ(2u, requests[1].op.length);
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestDifferentVmoOffset) {
@@ -307,17 +307,17 @@ TEST(BufferedOperationsBuilderTest, TwoRequestDifferentVmoOffset) {
   builder.Add(operation, &buffer);
 
   auto requests = builder.TakeOperations();
-  ASSERT_EQ(2, requests.size());
+  ASSERT_EQ(2u, requests.size());
   EXPECT_EQ(kVmoid1, requests[0].vmoid);
   EXPECT_EQ(kVmoid1, requests[1].vmoid);
   EXPECT_EQ(OperationType::kRead, requests[0].op.type);
   EXPECT_EQ(OperationType::kRead, requests[1].op.type);
-  EXPECT_EQ(0, requests[0].op.vmo_offset);
-  EXPECT_EQ(0, requests[0].op.dev_offset);
-  EXPECT_EQ(1, requests[0].op.length);
-  EXPECT_EQ(2, requests[1].op.vmo_offset);
-  EXPECT_EQ(0, requests[1].op.dev_offset);
-  EXPECT_EQ(2, requests[1].op.length);
+  EXPECT_EQ(0u, requests[0].op.vmo_offset);
+  EXPECT_EQ(0u, requests[0].op.dev_offset);
+  EXPECT_EQ(1u, requests[0].op.length);
+  EXPECT_EQ(2u, requests[1].op.vmo_offset);
+  EXPECT_EQ(0u, requests[1].op.dev_offset);
+  EXPECT_EQ(2u, requests[1].op.length);
 }
 
 }  // namespace

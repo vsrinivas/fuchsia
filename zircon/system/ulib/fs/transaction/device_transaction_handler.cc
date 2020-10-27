@@ -52,4 +52,9 @@ zx_status_t DeviceTransactionHandler::RunRequests(
   return GetDevice()->FifoTransaction(&block_requests[0], operations.size());
 }
 
+zx_status_t DeviceTransactionHandler::Flush() {
+  block_fifo_request_t request = {.opcode = BLOCKIO_FLUSH};
+  return GetDevice()->FifoTransaction(&request, 1);
+}
+
 }  // namespace fs

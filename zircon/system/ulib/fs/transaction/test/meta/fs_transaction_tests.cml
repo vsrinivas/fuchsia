@@ -1,0 +1,18 @@
+{
+    program: {
+        binary: "test/fs_transaction_test",
+    },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        { runner: "gtest_runner" },
+        { protocol: "fuchsia.process.Launcher" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}
