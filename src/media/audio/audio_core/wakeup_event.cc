@@ -43,9 +43,13 @@ zx_status_t WakeupEvent::Signal() const { return AssertWakeupEventSignal(event_)
 void WakeupEvent::OnSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                             zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Async wait failed";
+    // Cancellation is normal behavior
+    if (status != ZX_ERR_CANCELED) {
+      FX_PLOGS(ERROR, status) << "Async wait failed";
+    }
     return;
   }
+
   if (signal->observed & kWakeupEventSignal) {
     // Deassert first so that the process handler can reassert if necessary.
     status = DeassertWakeupEventSignal(event_);
@@ -69,4 +73,5 @@ void WakeupEvent::OnSignals(async_dispatcher_t* dispatcher, async::WaitBase* wai
     }
   }
 }
+
 }  // namespace media::audio
