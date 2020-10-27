@@ -5,6 +5,8 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 bind_rules("goldfish-bind") {
   rules = "goldfish.bind"
@@ -12,6 +14,25 @@ bind_rules("goldfish-bind") {
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }
+
+common_deps = [
+  ":goldfish-bind",
+  "//sdk/banjo/ddk.protocol.acpi",
+  "//sdk/banjo/ddk.protocol.goldfish.pipe",
+  "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
+  "//src/devices/lib/driver",
+  "//src/devices/lib/mmio",
+  "//src/lib/ddk",
+  "//src/lib/ddktl",
+  "//zircon/public/lib/fbl",
+  "//zircon/public/lib/fidl-llcpp",
+  "//zircon/public/lib/zircon-internal",
+  "//zircon/public/lib/zx",
+  "//zircon/system/ulib/async-loop:async-loop-cpp",
+  "//zircon/system/ulib/async-loop:async-loop-default",
+  "//zircon/system/ulib/trace",
+  "//zircon/system/ulib/trace:trace-driver",
+]
 
 driver_module("goldfish_driver") {
   output_name = "goldfish"
@@ -25,24 +46,7 @@ driver_module("goldfish_driver") {
     "pipe_device.h",
   ]
 
-  deps = [
-    ":goldfish-bind",
-    "//sdk/banjo/ddk.protocol.acpi",
-    "//sdk/banjo/ddk.protocol.goldfish.pipe",
-    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
-    "//src/devices/lib/driver",
-    "//src/devices/lib/mmio",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl-llcpp",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/trace:trace-driver",
-  ]
+  deps = common_deps
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
@@ -66,7 +70,47 @@ driver_package("goldfish") {
   ]
 }
 
+test("goldfish-pipe-device-test") {
+  output_name = "goldfish-pipe-device-test"
+  sources = [
+    "instance.cc",
+    "pipe.cc",
+    "pipe_device.cc",
+    "pipe_device_test.cc",
+  ]
+  deps = common_deps + [
+           "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+           "//sdk/banjo/ddk.protocol.acpi:ddk.protocol.acpi_mock",
+           "//src/devices/testing/fake-bti",
+           "//src/devices/testing/fake_ddk",
+           "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
+           "//zircon/public/lib/mock-function",
+           "//zircon/public/lib/sync",
+           "//zircon/public/lib/zircon-internal",
+           "//zircon/public/lib/zx",
+           "//zircon/public/lib/zxtest",
+         ]
+
+  configs += [ "//build/config:all_source" ]
+}
+
+unittest_package("goldfish-pipe-device-test-package") {
+  package_name = "goldfish-pipe-device-test"
+  deps = [ ":goldfish-pipe-device-test" ]
+
+  tests = [
+    {
+      name = "goldfish-pipe-device-test"
+      environments = basic_envs
+    },
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [ ":goldfish-bind_test" ]
+
+  if (target_cpu == "x64") {
+    deps += [ ":goldfish-pipe-device-test-package" ]
+  }
 }
