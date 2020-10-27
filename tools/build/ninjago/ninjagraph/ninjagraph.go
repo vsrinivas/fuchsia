@@ -732,3 +732,93 @@ func (g *Graph) CriticalPathV2() ([]ninjalog.Step, error) {
 	sort.Slice(criticalPath, func(i, j int) bool { return criticalPath[i].Start < criticalPath[j].Start })
 	return criticalPath, nil
 }
+
+// parallelizableEdges returns all edges that can be run in parallel with the
+// input edge.
+func (g *Graph) parallelizableEdges(edge *Edge) ([]*Edge, error) {
+	if edge.Step == nil {
+		return nil, fmt.Errorf("input edge has no step associated to it, this should not happen if edges are correctly populated")
+	}
+
+	latestFinish, err := g.latestFinish(edge)
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []*Edge
+	for _, e := range g.Edges {
+		if e == edge || e.Rule == "phony" || e.Rule == ninjagoArtificialSinkRule {
+			continue
+		}
+		if e.Step == nil {
+			return nil, fmt.Errorf("step is missing on edge, step can be populated by calling `PopulateEdges`")
+		}
+
+		es, err := g.earliestStart(e)
+		if err != nil {
+			return nil, err
+		}
+		lf, err := g.latestFinish(e)
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO(jayzhuang): validate whether the checks below are good enough to get
+		// all parallelizable edges.
+
+		// This check covers 2 possibilities:
+		//
+		// edge:     |oooooooo|
+		// e:    |-----------------|
+		//
+		// or
+		//
+		// edge: |ooooooooo|
+		// e:       |------------|
+		if lf >= latestFinish && es < latestFinish {
+			ret = append(ret, e)
+			continue
+		}
+	}
+	return ret, nil
+}
+
+// drag returns drag of the input edge. Drag is the amount of time an action
+// on the critical path is adding the total build time.
+//
+// NOTE: drag calculation assumes unconstrained parallelism, such that actions
+// can always begin as soon as their inputs are satisfied and never wait to be
+// scheduled on an available machine resources (CPU, RAM, I/O).
+//
+// https://en.wikipedia.org/wiki/Critical_path_drag
+func (g *Graph) drag(edge *Edge) (time.Duration, error) {
+	if edge.Step == nil {
+		return 0, fmt.Errorf("step is missing on edge, step can be populated by calling `PopulateEdges`")
+	}
+
+	tf, err := g.totalFloat(edge)
+	if err != nil {
+		return 0, fmt.Errorf("calculating total float: %w", err)
+	}
+	if tf != 0 {
+		// This edge is not on the critical path, so drag = 0.
+		return 0, fmt.Errorf("drag called for non-critical edge")
+	}
+
+	edges, err := g.parallelizableEdges(edge)
+	if err != nil {
+		return 0, fmt.Errorf("getting parallelizable edges: %w", err)
+	}
+
+	drag := edge.Step.Duration()
+	for _, e := range edges {
+		tf, err := g.totalFloat(e)
+		if err != nil {
+			return 0, fmt.Errorf("calculating total float of parallel edges: %w", err)
+		}
+		if tf < drag {
+			drag = tf
+		}
+	}
+	return drag, nil
+}

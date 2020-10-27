@@ -968,6 +968,25 @@ func TestTotalFloat(t *testing.T) {
 	}
 
 	for _, want := range []struct {
+		input           *Edge
+		parallelizables []*Edge
+	}{
+		{input: edge1},
+		{input: edge2, parallelizables: []*Edge{edge6, edge8}},
+		{input: edge3, parallelizables: []*Edge{edge6, edge8}},
+		{input: edge4, parallelizables: []*Edge{edge7, edge8}},
+		{input: edge5},
+	} {
+		got, err := g.parallelizableEdges(want.input)
+		if err != nil {
+			t.Errorf("parallelizableEdges(edge outputting %v) error: %v", want.input.Outputs, err)
+		}
+		if !cmp.Equal(got, want.parallelizables, cmpopts.IgnoreUnexported(Edge{})) {
+			t.Errorf("parallelizableEdges(edge outputting %v) = %s, want: %s", want.input.Outputs, edgesToStr(got), edgesToStr(want.parallelizables))
+		}
+	}
+
+	for _, want := range []struct {
 		input          *Edge
 		earliestStart  time.Duration
 		earliestFinish time.Duration
@@ -1054,6 +1073,29 @@ func TestTotalFloat(t *testing.T) {
 			if got := mustDuration(t, want.input, fn.f); got != fn.want {
 				t.Errorf("%s(edge outputting %v) = %s, want: %s", fn.name, want.input.Outputs, got, fn.want)
 			}
+		}
+	}
+
+	for _, want := range []struct {
+		input *Edge
+		err   bool
+		drag  time.Duration
+	}{
+		{input: edge1, drag: 10},
+		{input: edge2, drag: 15},
+		{input: edge3, drag: 5},
+		{input: edge4, drag: 5},
+		{input: edge5, drag: 20},
+		{input: edge6, err: true},
+		{input: edge7, err: true},
+		{input: edge8, err: true},
+	} {
+		got, err := g.drag(want.input)
+		if (err != nil) != want.err {
+			t.Errorf("drag(edge outputting %v) got error: %v, want error: %t", want.input.Outputs, err, want.err)
+		}
+		if got != want.drag {
+			t.Errorf("drag(edge outputting %v) = %s, want: %s", want.input.Outputs, got, want.drag)
 		}
 	}
 }
