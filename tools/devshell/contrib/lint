@@ -177,7 +177,7 @@ declare CLANG_TIDY_CMD=(
   -clang-tidy-binary "${CLANG_TIDY}"
   -clang-apply-replacements-binary "${CLANG_APPLY_REPLACEMENTS}"
 )
-if [[ -z "${FIX_OPTION}" ]]; then
+if [[ -n "${FIX_OPTION}" ]]; then
   CLANG_TIDY_CMD+=( ${FIX_OPTION} )
 fi
 
