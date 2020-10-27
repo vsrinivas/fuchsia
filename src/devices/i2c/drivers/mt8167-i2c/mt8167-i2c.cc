@@ -187,41 +187,36 @@ int Mt8167I2c::TestThread() {
   return 0;
 }
 
-zx_status_t Mt8167I2c::GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* gpios) {
+zx_status_t Mt8167I2c::GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* out) {
   ddk::CompositeProtocolClient composite(parent());
   if (!composite.is_valid()) {
     zxlogf(ERROR, "%s: Could not get composite protocol", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  auto fragment_count = composite.GetFragmentCount();
-  if (fragment_count != kMaxFragments) {
-    zxlogf(ERROR, "%s Wrong number of fragments %u", __func__, fragment_count);
-    return ZX_ERR_INTERNAL;
-  }
-  size_t actual = 0;
-  zx_device_t* fragments[kMaxFragments];
-  composite.GetFragments(fragments, fragment_count, &actual);
-  if (actual != fragment_count) {
-    return ZX_ERR_INTERNAL;
-  }
 
-  size_t gpio_count = kMaxFragments - 1;  // kMaxFragments is 1 pdev + 6 GPIOs for 3 I2C busses.
-
+  constexpr size_t kGpioCount = 6;
   fbl::AllocChecker ac;
-  gpios->reset(new (&ac) ddk::GpioProtocolClient[gpio_count], gpio_count);
+  fbl::Array<ddk::GpioProtocolClient> gpios(new (&ac) ddk::GpioProtocolClient[kGpioCount],
+                                            kGpioCount);
   if (!ac.check()) {
     zxlogf(ERROR, "%s ZX_ERR_NO_MEMORY", __FUNCTION__);
     return ZX_ERR_NO_MEMORY;
   }
 
-  for (uint32_t i = 0; i < gpio_count; i++) {
-    auto status = device_get_protocol(fragments[i + 1], ZX_PROTOCOL_GPIO, &((*gpios)[i]));
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s ZX_PROTOCOL_GPIO failed", __FUNCTION__);
-      return status;
+  gpios[0] = ddk::GpioProtocolClient(composite, "gpio-sda-0");
+  gpios[1] = ddk::GpioProtocolClient(composite, "gpio-scl-0");
+  gpios[2] = ddk::GpioProtocolClient(composite, "gpio-sda-1");
+  gpios[3] = ddk::GpioProtocolClient(composite, "gpio-scl-1");
+  gpios[4] = ddk::GpioProtocolClient(composite, "gpio-sda-2");
+  gpios[5] = ddk::GpioProtocolClient(composite, "gpio-scl-2");
+  for (uint32_t i = 0; i < kGpioCount; i++) {
+    if (!gpios[i].is_valid()) {
+      zxlogf(ERROR, "%s failed to get gpio fragment", __FUNCTION__);
+      return ZX_ERR_NO_RESOURCES;
     }
   }
 
+  *out = std::move(gpios);
   return ZX_OK;
 }
 
@@ -271,19 +266,8 @@ zx_status_t Mt8167I2c::Bind() {
     zxlogf(ERROR, "%s: Could not get composite protocol", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  auto fragment_count = composite.GetFragmentCount();
-  if (fragment_count != kMaxFragments) {
-    zxlogf(ERROR, "%s Wrong number of fragments %u", __func__, fragment_count);
-    return ZX_ERR_INTERNAL;
-  }
-  size_t actual = 0;
-  zx_device_t* fragments[kMaxFragments];
-  composite.GetFragments(fragments, fragment_count, &actual);
-  if (actual != fragment_count) {
-    return ZX_ERR_INTERNAL;
-  }
 
-  ddk::PDev pdev = fragments[0];
+  ddk::PDev pdev(composite);
   pdev_device_info_t info;
   status = pdev.GetDeviceInfo(&info);
   if (status != ZX_OK) {
