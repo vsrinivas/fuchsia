@@ -52,15 +52,23 @@ The policy details are listed below, but requires exposition of the focus chain.
 
 ## Focus chain: focus path in a view tree
 
+If we think about just the view parts of the scene graph, they form a tree
+hierarchy; we call this the view tree. Parent views have tremendous power over
+child views: the power to reposition the child's view, enforce clip boundaries
+on the child's view, hide the child's UI content, etc. Because of the inherent
+power of the view hierarchy, we use it as a basis of hierarchy outside of
+Scenic. This hierarchy, which changes dynamically based on view focusing, is
+represented with a "focus chain".
+
 In a data structure sense, a focus chain is merely a vector of ViewRefs. The
 canonical definition is
 [fuchsia.ui.focus.FocusChain](/sdk/fidl/fuchsia.ui.focus/focus_chain.fidl).
 
-However, the focus chain is tied intimately to the view tree. It captures a
-snapshot of view authority, starting from the root view, walking down through
-descendants, and terminating at the focused view. It is thus ordered in amount
-of authority, from most to least. Views outside the focus chain have no
-authority.
+However, it's more than just that. The focus chain is tied intimately to the
+view tree. It captures a snapshot of view authority, starting from the root
+view, walking down through descendants, and terminating at the focused view. It
+is thus ordered in amount of authority, from most to least. Views outside the
+focus chain have no view-based authority.
 
 Intuitively, the focus chain is the path from view tree's root node to the
 focused node.

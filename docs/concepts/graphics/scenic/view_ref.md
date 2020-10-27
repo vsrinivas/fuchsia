@@ -40,6 +40,13 @@ The global scene graph can be thought of as a tree of Views, each containing UI
 content and embedding other Views. Because we have a ViewRef for each View, we
 can also think of the view tree as a tree of ViewRefs.
 
+In a view tree, parent views have tremendous power over child views: the power
+to reposition the child's view, enforce clip boundaries on the child's view,
+hide the child's UI content, etc. Because of the inherent power of the view
+hierarchy, we use it as a basis of hierarchy outside of Scenic. This hierarchy,
+which changes dynamically based on view focusing, is represented with a
+"[focus chain](focus_chain.md)".
+
 ### How is a ViewRef used?
 
 Typically, a UI client uses a ViewRef to self-identify itself to manager-type
