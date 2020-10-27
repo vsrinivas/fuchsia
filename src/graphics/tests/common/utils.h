@@ -10,12 +10,33 @@
 
 #include "vulkan/vulkan_core.h"
 
+#include "vulkan/vulkan.hpp"
+
 #define RTN_MSG(err, ...)                          \
   {                                                \
     fprintf(stderr, "%s:%d ", __FILE__, __LINE__); \
     fprintf(stderr, __VA_ARGS__);                  \
     fflush(stderr);                                \
     return err;                                    \
+  }
+
+#define RTN_MSG_VK(err, r, ...)                                         \
+  if (r != VK_SUCCESS) {                                                \
+    fprintf(stderr, "%s:%d:\n\t(vk::Result::e%s) ", __FILE__, __LINE__, \
+            vk::to_string(vk::Result(r)).c_str());                      \
+    fprintf(stderr, __VA_ARGS__);                                       \
+    fprintf(stderr, "\n");                                              \
+    fflush(stderr);                                                     \
+    return err;                                                         \
+  }
+
+#define RTN_MSG_VKH(err, r, ...)                                                                   \
+  if (r != vk::Result::eSuccess) {                                                                 \
+    fprintf(stderr, "%s:%d:\n\t(vk::Result::e%s) ", __FILE__, __LINE__, vk::to_string(r).c_str()); \
+    fprintf(stderr, __VA_ARGS__);                                                                  \
+    fprintf(stderr, "\n");                                                                         \
+    fflush(stderr);                                                                                \
+    return err;                                                                                    \
   }
 
 //
