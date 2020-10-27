@@ -10,8 +10,8 @@ use {
 };
 
 use crate::rfcomm::{
-    channel::SessionChannel,
-    frame::{Frame, UserData},
+    channel::{FlowControlMode, FlowControlledData, SessionChannel},
+    frame::Frame,
     types::{RfcommError, Role, DLCI, MAX_RFCOMM_FRAME_SIZE},
 };
 
@@ -217,6 +217,20 @@ impl SessionMultiplexer {
         channel
     }
 
+    /// Sets the flow control mode of the RFCOMM channel associated with the `dlci` to use
+    /// the provided `flow_control`.
+    /// Returns an Error if the DLCI is not registered, or if the SessionChannel has already
+    /// been established.
+    pub fn set_flow_control(
+        &mut self,
+        dlci: DLCI,
+        flow_control: FlowControlMode,
+    ) -> Result<(), RfcommError> {
+        self.channels.get_mut(&dlci).map_or(Err(RfcommError::InvalidDLCI(dlci)), |channel| {
+            channel.set_flow_control(flow_control)
+        })
+    }
+
     /// Attempts to establish a SessionChannel for the provided `dlci`.
     /// `user_data_sender` is used by the SessionChannel to relay any received UserData
     /// frames from the client associated with the channel.
@@ -251,8 +265,12 @@ impl SessionMultiplexer {
         self.channels.remove(dlci).is_some()
     }
 
-    /// Sends `user_data` to the SessionChannel associated with the `dlci`.
-    pub fn send_user_data(&mut self, dlci: DLCI, user_data: UserData) -> Result<(), RfcommError> {
+    /// Sends `user_data` received from the peer to the SessionChannel associated with the `dlci`.
+    pub fn receive_user_data(
+        &mut self,
+        dlci: DLCI,
+        user_data: FlowControlledData,
+    ) -> Result<(), RfcommError> {
         if let Some(session_channel) = self.channels.get_mut(&dlci) {
             return session_channel.receive_user_data(user_data);
         }

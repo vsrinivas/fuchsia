@@ -15,7 +15,9 @@ mod remote_port_negotiation;
 mod test_command;
 
 pub use self::{
-    dlc_parameter_negotiation::{CreditBasedFlowHandshake, ParameterNegotiationParams},
+    dlc_parameter_negotiation::{
+        CreditBasedFlowHandshake, ParameterNegotiationParams, DEFAULT_INITIAL_CREDITS,
+    },
     flow_control::FlowControlParams,
     modem_status::ModemStatusParams,
     non_supported::NonSupportedCommandParams,

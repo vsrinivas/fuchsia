@@ -16,8 +16,9 @@ use crate::rfcomm::{
 /// Defined in GSM 7.10 Section 5.4.6.3.1.
 const DLC_PARAMETER_NEGOTIATION_LENGTH: usize = 8;
 
-/// The default amount of credits used for a parameter negotiation command.
-const DEFAULT_INITIAL_CREDITS: u8 = 8;
+/// The default initial credit amount for the peer during parameter negotiation.
+/// This is chosen as the maximum initial credits allowed as per RFCOMM 5.5.3.
+pub const DEFAULT_INITIAL_CREDITS: u8 = 7;
 
 pub_decodable_enum! {
     /// The Credit Based Flow Handshake variants defined in RFCOMM Table 5.3.
@@ -56,14 +57,11 @@ pub struct ParameterNegotiationParams {
     pub credit_based_flow_handshake: CreditBasedFlowHandshake,
     pub priority: u8,
     pub max_frame_size: u16,
-    // TODO(fxbug.dev/58668): Update to explicit type when Credit Based Flow is implemented.
     pub initial_credits: u8,
 }
 
 impl ParameterNegotiationParams {
     /// Returns the default parameters for a Parameter Negotiation command.
-    // TODO(fxbug.dev/59585): Remove this when the PN command is used in production.
-    #[allow(unused)]
     pub fn default_command(dlci: DLCI) -> Self {
         Self {
             dlci,

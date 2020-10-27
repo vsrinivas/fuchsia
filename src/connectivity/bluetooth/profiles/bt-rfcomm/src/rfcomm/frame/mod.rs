@@ -118,6 +118,12 @@ pub struct UserData {
     pub information: Vec<u8>,
 }
 
+impl UserData {
+    pub fn is_empty(&self) -> bool {
+        self.information.is_empty()
+    }
+}
+
 impl Decodable for UserData {
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         Ok(Self { information: buf.to_vec() })
@@ -442,18 +448,22 @@ impl Frame {
         }
     }
 
-    pub fn make_user_data_frame(role: Role, dlci: DLCI, user_data: UserData) -> Self {
-        // TODO(58668): When credit based flow control is supported, the `poll_final` bit
-        // is redefined for UIH frames. See RFCOMM 6.5.2. We should set this bit
-        // accordingly, depending on the existence of credits. However, in all other cases
-        // the poll_final bit is always unset.
+    pub fn make_user_data_frame(
+        role: Role,
+        dlci: DLCI,
+        user_data: UserData,
+        credits: Option<u8>,
+    ) -> Self {
+        // When credit based flow control is supported, the `poll_final` bit is redefined
+        // for UIH frames. See RFCOMM 6.5.2. If credits are provided, then the `poll_final` bit
+        // should be set.
         Self {
             role,
             dlci,
             data: FrameData::UnnumberedInfoHeaderCheck(UIHData::User(user_data)),
-            poll_final: false, // Unset for UIH frames.
+            poll_final: credits.is_some(),
             command_response: CommandResponse::Command,
-            credits: None,
+            credits,
         }
     }
 

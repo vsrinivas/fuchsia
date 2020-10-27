@@ -21,10 +21,12 @@ use {
 mod multiplexer;
 
 use self::multiplexer::{ParameterNegotiationState, SessionMultiplexer, SessionParameters};
+use crate::rfcomm::channel::{Credits, FlowControlMode, FlowControlledData};
 use crate::rfcomm::frame::{
     mux_commands::{
         CreditBasedFlowHandshake, ModemStatusParams, MuxCommand, MuxCommandIdentifier,
         MuxCommandParams, NonSupportedCommandParams, ParameterNegotiationParams,
+        DEFAULT_INITIAL_CREDITS,
     },
     Encodable, Frame, FrameData, FrameParseError, UIHData, UserData,
 };
@@ -64,8 +66,9 @@ impl OutstandingFrames {
             return Ok(false);
         }
 
-        // MuxCommands are a special case. Namely, there can be multiple outstanding MuxCommands
-        // at once. Our implementation will not attempt to send duplicate MuxCommands,
+        // MuxCommands are a special case. Namely, there cannot be multiple outstanding
+        // MuxCommands of the same type on the same DLCI. Our implementation will not
+        // attempt to send duplicate MuxCommands.
         if let FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(data)) = &frame.data {
             return match self.mux_commands.entry(data.identifier()) {
                 Entry::Occupied(_) => {
@@ -78,16 +81,22 @@ impl OutstandingFrames {
             };
         }
 
-        // Otherwise, it's a non-MuxCommand frame. We only care about frames that require a
+        // There can be multiple outstanding user data frames as no response is required.
+        if let FrameData::UnnumberedInfoHeaderCheck(UIHData::User(_)) = &frame.data {
+            return Ok(false);
+        }
+
+        // Otherwise, it's a non-UIH frame. We only care about frames that require a
         // response (i.e Command frames with the P bit set).
         // See GSM 5.4.4.1 and 5.4.4.2 for the exact interpretation of the poll_final bit.
         if frame.poll_final {
             return match self.commands.entry(frame.dlci) {
                 Entry::Occupied(_) => {
-                    // There can only be one outstanding command frame with P/F = 1 per DLCI.
-                    // TODO(fxbug.dev/60900): Our implementation should never try to send more
-                    // than one command frame on the same DLCI. However, it may make sense to
-                    // make this more intelligent and queue for later.
+                    // There can only be one outstanding command frame with P/F = 1 per
+                    // DLCI.
+                    // TODO(fxbug.dev/60900): Our implementation should never try to send
+                    // more than one command frame on the same DLCI. However, it may make
+                    // sense to make this more intelligent and queue for later.
                     Err(RfcommError::Other(format_err!("Command Frame outstanding")))
                 }
                 Entry::Vacant(entry) => {
@@ -235,12 +244,28 @@ impl SessionInner {
             credit_based_flow: params.credit_based_flow(),
             max_frame_size: usize::from(params.max_frame_size),
         };
-        self.multiplexer().negotiate_parameters(requested_parameters);
+        let updated_parameters = self.multiplexer().negotiate_parameters(requested_parameters);
 
         // Reserve the DLCI if it doesn't exist.
         self.multiplexer().find_or_create_session_channel(params.dlci);
-        // TODO(fxbug.dev/58668): Modify the reserved channel with the parsed credits when
-        // credit-based flow control is implemented.
+
+        // Set the flow control method depending on the negotiated parameters.
+        let flow_control = if updated_parameters.credit_based_flow() {
+            // The credits provided in the peer's response `params` is our (local) credit count.
+            // `DEFAULT_INITIAL_CREDITS` is always assigned as the peer's (remote) credit count.
+            let credits = Credits::new(
+                usize::from(params.initial_credits),
+                usize::from(DEFAULT_INITIAL_CREDITS),
+            );
+            FlowControlMode::CreditBased(credits)
+        } else {
+            FlowControlMode::None
+        };
+        // The result is irrelevant because the DLCI was just created and can't be established
+        // already. Setting the initial credits should always succeed.
+        if let Err(e) = self.multiplexer().set_flow_control(params.dlci, flow_control) {
+            error!("Setting flow control failed: {:?}", e);
+        }
     }
 
     /// Relays the `channel` opened for the provided `server_channel` to the local clients
@@ -433,9 +458,10 @@ impl SessionInner {
                 // Update the session specific parameters.
                 self.finish_parameter_negotiation(&pn_command);
 
-                // Reply back with the negotiated parameters as a response - most parameters
-                // are simply echoed. Only credit-based flow control and max frame size are
-                // negotiated in this implementation.
+                // Reply back with the negotiated parameters as a response - most parameters are
+                // simply echoed.
+                // Session-wide parameters: Credit-based flow & max frame size are negotiated.
+                // DLC-specific parameters: Initial credit count is set to a default value.
                 let mut pn_response = pn_command.clone();
                 let updated_parameters = self.multiplexer().parameters();
                 pn_response.credit_based_flow_handshake = if updated_parameters.credit_based_flow()
@@ -445,6 +471,7 @@ impl SessionInner {
                     CreditBasedFlowHandshake::Unsupported
                 };
                 pn_response.max_frame_size = updated_parameters.max_frame_size() as u16;
+                pn_response.initial_credits = DEFAULT_INITIAL_CREDITS;
                 MuxCommandParams::ParameterNegotiation(pn_response)
             }
             MuxCommandParams::RemotePortNegotiation(command) => {
@@ -483,11 +510,15 @@ impl SessionInner {
         }
     }
 
-    /// Handles a received UserData payload and routes to the appropriate multiplexed channel.
+    /// Handles a received user `user_data` payload with optional `credits` and routes to the RFCOMM
+    /// channel specified by `dlci`.
+    ///
     /// If routing fails, sends a DM response over the provided `dlci`.
-    async fn handle_user_data(&mut self, dlci: DLCI, data: UserData) {
+    async fn handle_user_data(&mut self, dlci: DLCI, user_data: UserData, credits: Option<u8>) {
         // In general, UserData frames do not need to be acknowledged.
-        if let Err(e) = self.multiplexer().send_user_data(dlci, data) {
+        if let Err(e) =
+            self.multiplexer().receive_user_data(dlci, FlowControlledData { user_data, credits })
+        {
             // If there was an error sending the user data for any reason, we reply with
             // a DM to indicate failure.
             warn!("Couldn't relay user data: {:?}", e);
@@ -546,24 +577,25 @@ impl SessionInner {
     /// Handles an incoming Frame received from the peer. Returns a flag indicating whether
     /// the session should terminate, or an error if the frame was unable to be handled.
     async fn handle_frame(&mut self, frame: Frame) -> Result<bool, RfcommError> {
+        let (dlci, credits) = (frame.dlci, frame.credits);
         match frame.data {
             FrameData::SetAsynchronousBalancedMode => {
-                self.handle_sabm_command(frame.dlci).await;
+                self.handle_sabm_command(dlci).await;
             }
             FrameData::UnnumberedAcknowledgement => {
-                self.handle_ua_response(frame.dlci).await;
+                self.handle_ua_response(dlci).await;
             }
             FrameData::DisconnectedMode => {
                 // TODO(fxbug.dev/59585): Handle DM response when the initiator role is
                 // supported.
                 return Err(RfcommError::NotImplemented);
             }
-            FrameData::Disconnect => return Ok(self.handle_disconnect_command(frame.dlci).await),
+            FrameData::Disconnect => return Ok(self.handle_disconnect_command(dlci).await),
             FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(data)) => {
                 self.handle_mux_command(&data).await?;
             }
             FrameData::UnnumberedInfoHeaderCheck(UIHData::User(data)) => {
-                self.handle_user_data(frame.dlci, data).await;
+                self.handle_user_data(dlci, data, credits).await;
             }
         }
         Ok(false)
@@ -818,7 +850,7 @@ mod tests {
                 credit_based_flow_handshake,
                 priority: 12,
                 max_frame_size,
-                initial_credits: 3,
+                initial_credits: DEFAULT_INITIAL_CREDITS,
             }),
             command_response,
         };
@@ -970,11 +1002,13 @@ mod tests {
         // SABM command should be retrievable.
         assert_eq!(outstanding_frames.remove_frame(&DLCI::MUX_CONTROL_DLCI), Some(sabm_command));
 
-        // User data frames shouldn't be registered - poll_final = false always for user data frames.
+        // User data frames shouldn't ever be registered as they require no response. In particular,
+        // the `poll_final` bit is redefined for UserData frames.
         let user_data = Frame::make_user_data_frame(
             Role::Initiator,
             random_dlci,
             UserData { information: vec![] },
+            Some(10), // Random amount of credits
         );
         assert_matches!(outstanding_frames.register_frame(&user_data), Ok(false));
 
@@ -1293,9 +1327,14 @@ mod tests {
         let mut outgoing_frames_stream = Box::pin(outgoing_frames.next());
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
-        // Establish a user DLCI - the RFCOMM channel should be delivered to the channel
-        // receiver.
+        // Establish a user DLCI with an adequate amount of credits - the RFCOMM channel should
+        // be delivered to the channel receiver.
         let user_dlci = DLCI::try_from(8).unwrap();
+        session.multiplexer().find_or_create_session_channel(user_dlci);
+        assert!(session
+            .multiplexer()
+            .set_flow_control(user_dlci, FlowControlMode::CreditBased(Credits::new(100, 100)))
+            .is_ok());
         let mut profile_client_channel = {
             let mut establish_fut = Box::pin(session.establish_session_channel(user_dlci));
             assert!(exec.run_until_stalled(&mut establish_fut).is_pending());
@@ -1311,6 +1350,7 @@ mod tests {
                 Role::Initiator,
                 user_dlci,
                 UserData { information: pattern.clone() },
+                Some(10), // Random amount of credits.
             );
             let mut handle_fut = Box::pin(session.handle_frame(user_data_frame));
             assert!(exec.run_until_stalled(&mut handle_fut).is_ready());
@@ -1333,6 +1373,7 @@ mod tests {
             Role::Responder,
             user_dlci,
             UserData { information: response },
+            Some(156), // CREDIT_HIGH_WATER_MARK - (100 (initial credits) - 1 (received frames))
         );
         match exec.run_until_stalled(&mut outgoing_frames_stream) {
             Poll::Ready(Some(frame)) => assert_eq!(frame, expected_frame),
