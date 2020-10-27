@@ -7,7 +7,7 @@ use {
         continue_boot, erase, flash, oem, reboot, reboot_bootloader, set_active, stage,
     },
     crate::target::{Target, TargetEvent},
-    anyhow::{anyhow, bail, Context, Result},
+    anyhow::{bail, Context, Result},
     async_trait::async_trait,
     fidl_fuchsia_developer_bridge::{FastbootError, FastbootRequest, FastbootRequestStream},
     futures::prelude::*,
@@ -92,7 +92,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                             e
                         );
                         responder
-                            .send(&mut Err(FastbootError::Generic))
+                            .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;
                     }
                 }
@@ -103,7 +103,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                     Err(e) => {
                         log::error!("Error erasing \"{}\": {:?}", partition_name, e);
                         responder
-                            .send(&mut Err(FastbootError::Generic))
+                            .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;
                     }
                 }
@@ -113,7 +113,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                 Err(e) => {
                     log::error!("Error rebooting: {:?}", e);
                     responder
-                        .send(&mut Err(FastbootError::Generic))
+                        .send(&mut Err(FastbootError::ProtocolError))
                         .context("sending error response")?;
                 }
             },
@@ -121,26 +121,30 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                 match reboot_bootloader(usb) {
                     Ok(_) => {
                         match try_join!(
-                            self.target.events.wait_for(Some(Duration::from_secs(10)), |e| {
-                                e == TargetEvent::Rediscovered
-                            }),
+                            self.target
+                                .events
+                                .wait_for(Some(Duration::from_secs(10)), |e| {
+                                    e == TargetEvent::Rediscovered
+                                })
+                                .map_err(|_| FastbootError::RediscoveredError),
                             async move {
                                 listener
-                                    .into_proxy()?
+                                    .into_proxy()
+                                    .map_err(|e| FastbootError::CommunicationError)?
                                     .on_reboot()
-                                    .map_err(|e| anyhow!("could not send reboot event: {:?}", e))
+                                    .map_err(|e| FastbootError::CommunicationError)
                             }
                         ) {
                             Ok(_) => {
-                                log::info!("Rediscovered reboot target");
+                                log::debug!("Rediscovered reboot target");
                                 self.clear_usb();
                                 responder.send(&mut Ok(()))?;
                             }
                             Err(e) => {
-                                log::warn!("{}", e);
-                                responder
-                                    .send(&mut Err(FastbootError::Generic))
-                                    .context("sending error response")?;
+                                log::error!("Error rebooting and rediscovering target: {:?}", e);
+                                // Clear the usb connection just to be sure.
+                                self.clear_usb();
+                                responder.send(&mut Err(e)).context("sending error response")?;
                                 return Ok(());
                             }
                         }
@@ -148,7 +152,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                     Err(e) => {
                         log::error!("Error rebooting: {:?}", e);
                         responder
-                            .send(&mut Err(FastbootError::Generic))
+                            .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;
                     }
                 }
@@ -158,7 +162,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                 Err(e) => {
                     log::error!("Error continuing boot: {:?}", e);
                     responder
-                        .send(&mut Err(FastbootError::Generic))
+                        .send(&mut Err(FastbootError::ProtocolError))
                         .context("sending error response")?;
                 }
             },
@@ -167,7 +171,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                 Err(e) => {
                     log::error!("Error setting active: {:?}", e);
                     responder
-                        .send(&mut Err(FastbootError::Generic))
+                        .send(&mut Err(FastbootError::ProtocolError))
                         .context("sending error response")?;
                 }
             },
@@ -176,7 +180,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                 Err(e) => {
                     log::error!("Error setting active: {:?}", e);
                     responder
-                        .send(&mut Err(FastbootError::Generic))
+                        .send(&mut Err(FastbootError::ProtocolError))
                         .context("sending error response")?;
                 }
             },
@@ -185,7 +189,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                 Err(e) => {
                     log::error!("Error sending oem \"{}\": {:?}", command, e);
                     responder
-                        .send(&mut Err(FastbootError::Generic))
+                        .send(&mut Err(FastbootError::ProtocolError))
                         .context("sending error response")?;
                 }
             },
@@ -205,7 +209,8 @@ mod test {
         fastboot::reply::Reply,
         fidl::endpoints::{create_endpoints, create_proxy_and_stream},
         fidl_fuchsia_developer_bridge::{
-            FastbootMarker, FastbootProxy, RebootListenerMarker, RebootListenerRequest,
+            FastbootError, FastbootMarker, FastbootProxy, RebootListenerMarker,
+            RebootListenerRequest,
         },
         std::io::BufWriter,
         tempfile::NamedTempFile,
@@ -298,15 +303,44 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_flash_sends_protocol_error_after_unexpected_reply() -> Result<()> {
+        let file: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
+        let mut buffer = BufWriter::new(&file);
+        buffer.write_all(b"Test")?;
+        buffer.flush()?;
+        let (_, proxy) = setup(vec![Reply::Data(6)]);
+        let filepath = file.path().to_str().ok_or(anyhow!("error getting tempfile path"))?;
+        let res = proxy.flash("test", filepath).await?;
+        assert_eq!(res.err(), Some(FastbootError::ProtocolError));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_erase() -> Result<()> {
         let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
         proxy.erase("test").await?.map_err(|e| anyhow!("error erase: {:?}", e))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_erase_sends_protocol_error_after_unexpected_reply() -> Result<()> {
+        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]);
+        let res = proxy.erase("test").await?;
+        assert_eq!(res.err(), Some(FastbootError::ProtocolError));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_reboot() -> Result<()> {
         let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
         proxy.reboot().await?.map_err(|e| anyhow!("error reboot: {:?}", e))
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_reboot_sends_protocol_error_after_unexpected_reply() -> Result<()> {
+        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]);
+        let res = proxy.reboot().await?;
+        assert_eq!(res.err(), Some(FastbootError::ProtocolError));
+        Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -334,15 +368,76 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_reboot_bootloader_sends_protocol_error_after_unexpected_reply() -> Result<()> {
+        let (reboot_client, _) = create_endpoints::<RebootListenerMarker>()?;
+        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]);
+        let res = proxy.reboot_bootloader(reboot_client).await?;
+        assert_eq!(res.err(), Some(FastbootError::ProtocolError));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_reboot_bootloader_sends_communication_error_if_reboot_listener_dropped(
+    ) -> Result<()> {
+        let (reboot_client, _) = create_endpoints::<RebootListenerMarker>()?;
+        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
+        let res = proxy.reboot_bootloader(reboot_client).await?;
+        assert_eq!(res.err(), Some(FastbootError::CommunicationError));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_reboot_bootloader_sends_rediscovered_error_if_not_rediscovered() -> Result<()> {
+        let (reboot_client, reboot_server) = create_endpoints::<RebootListenerMarker>()?;
+        let mut stream = reboot_server.into_stream()?;
+        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
+        try_join!(
+            async move {
+                // Should only need to wait for the first request.
+                if let Some(RebootListenerRequest::OnReboot { control_handle: _ }) =
+                    stream.try_next().await?
+                {
+                    // Don't push rediscovered event
+                    return Ok(());
+                }
+                bail!("did not receive reboot event");
+            },
+            proxy
+                .reboot_bootloader(reboot_client)
+                .map_err(|e| anyhow!("error rebooting to bootloader: {:?}", e)),
+        )
+        .and_then(|(_, reboot)| {
+            assert_eq!(reboot.err(), Some(FastbootError::RediscoveredError));
+            Ok(())
+        })
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_continue_boot() -> Result<()> {
         let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
         proxy.continue_boot().await?.map_err(|e| anyhow!("error continue boot: {:?}", e))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_continue_boot_sends_protocol_error_after_unexpected_reply() -> Result<()> {
+        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]);
+        let res = proxy.continue_boot().await?;
+        assert_eq!(res.err(), Some(FastbootError::ProtocolError));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_set_active() -> Result<()> {
         let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
         proxy.set_active("a").await?.map_err(|e| anyhow!("error set active: {:?}", e))
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_set_active_sends_protocol_error_after_unexpected_reply() -> Result<()> {
+        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]);
+        let res = proxy.set_active("a").await?;
+        assert_eq!(res.err(), Some(FastbootError::ProtocolError));
+        Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -360,8 +455,29 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_stage_sends_protocol_error_after_unexpected_reply() -> Result<()> {
+        let file: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
+        let mut buffer = BufWriter::new(&file);
+        buffer.write_all(b"Test")?;
+        buffer.flush()?;
+        let (_, proxy) = setup(vec![Reply::Data(6)]);
+        let filepath = file.path().to_str().ok_or(anyhow!("error getting tempfile path"))?;
+        let res = proxy.stage(filepath).await?;
+        assert_eq!(res.err(), Some(FastbootError::ProtocolError));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_oem() -> Result<()> {
         let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
         proxy.oem("a").await?.map_err(|e| anyhow!("error oem: {:?}", e))
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_oem_sends_protocol_error_after_unexpected_reply() -> Result<()> {
+        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]);
+        let res = proxy.oem("a").await?;
+        assert_eq!(res.err(), Some(FastbootError::ProtocolError));
+        Ok(())
     }
 }

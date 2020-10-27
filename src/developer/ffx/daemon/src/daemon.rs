@@ -270,7 +270,7 @@ impl Daemon {
             }
             DaemonRequest::GetFastboot { target, fastboot, responder } => {
                 let target =
-                    default_target_or_err!(self, target, responder, FastbootError::Generic);
+                    default_target_or_err!(self, target, responder, FastbootError::TargetError);
                 let mut fastboot_manager = Fastboot::new(target);
                 let stream = fastboot.into_stream()?;
                 fuchsia_async::Task::spawn(async move {

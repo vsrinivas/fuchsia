@@ -158,15 +158,15 @@ impl Flash for FlashManifestV1 {
                     if let Some(RebootListenerRequest::OnReboot { control_handle: _ }) =
                         stream.try_next().await?
                     {
-                        log::info!("Received reboot signal");
+                        log::debug!("Received reboot signal");
                         Ok(())
                     } else {
                         bail!("Did not receive reboot signal");
                     }
                 }
             )
-            .map(|(reboot, _)| {
-                reboot.map_err(|e| anyhow!("failed booting to bootloader: {:?}", e)).unwrap()
+            .and_then(|(reboot, _)| {
+                reboot.map_err(|e| anyhow!("failed booting to bootloader: {:?}", e))
             })?;
         }
         for partition in &product.partitions {

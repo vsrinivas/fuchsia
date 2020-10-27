@@ -5,7 +5,10 @@
 library fuchsia.developer.bridge;
 
 enum FastbootError {
-    GENERIC = 1;
+    PROTOCOL_ERROR = 1;
+    COMMUNICATION_ERROR = 2;
+    REDISCOVERED_ERROR = 3;
+    TARGET_ERROR = 4;
 };
 
 /// Callback event listener for when the device reboots to the
