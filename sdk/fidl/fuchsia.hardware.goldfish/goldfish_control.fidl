@@ -13,8 +13,18 @@ enum BufferHandleType : uint32 {
 };
 
 /// Color buffer formats.
+///
+/// Goldfish control device accepts GL format values as "internalFormat"
+/// argument when creating color buffers. All format types should be
+/// defined using their format definitions in GL headers.
 enum ColorBufferFormatType : uint32 {
+    // Equals to GL_LUMINANCE
+    LUMINANCE = 0x1909;
+    // Equals to GL_RG
+    RG = 0x8227;
+    // Equals to GL_RGBA
     RGBA = 0x1908;
+    // Equals to GL_BGRA
     BGRA = 0x80E1;
 };
 
