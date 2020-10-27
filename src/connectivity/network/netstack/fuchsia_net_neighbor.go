@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"syscall/zx/fidl"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
@@ -20,7 +21,36 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
+const (
+	nudTag = "nud"
+)
+
 var ErrNotImplemented = errors.New("not implemented")
+
+type nudDispatcher struct{}
+
+var _ stack.NUDDispatcher = (*nudDispatcher)(nil)
+
+// OnNeighborAdded implements stack.NUDDispatcher.
+func (*nudDispatcher) OnNeighborAdded(nicID tcpip.NICID, ipAddr tcpip.Address, linkAddr tcpip.LinkAddress, state stack.NeighborState, updatedAt time.Time) {
+	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
+	// is able to be inspected.
+	_ = syslog.InfoTf(nudTag, "added neighbor %s with linkAddr = %s on NIC %d with state = %s, updatedAt = %s", ipAddr, linkAddr, nicID, state, updatedAt)
+}
+
+// OnNeighborChanged implements stack.NUDDispatcher.
+func (*nudDispatcher) OnNeighborChanged(nicID tcpip.NICID, ipAddr tcpip.Address, linkAddr tcpip.LinkAddress, state stack.NeighborState, updatedAt time.Time) {
+	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
+	// is able to be inspected.
+	_ = syslog.InfoTf(nudTag, "changed neighbor %s with linkAddr = %s on NIC %d with state = %s, updatedAt = %s", ipAddr, linkAddr, nicID, state, updatedAt)
+}
+
+// OnNeighborRemoved implements stack.NUDDispatcher.
+func (*nudDispatcher) OnNeighborRemoved(nicID tcpip.NICID, ipAddr tcpip.Address, linkAddr tcpip.LinkAddress, state stack.NeighborState, updatedAt time.Time) {
+	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
+	// is able to be inspected.
+	_ = syslog.InfoTf(nudTag, "removed neighbor %s with linkAddr = %s on NIC %d with state = %s, updatedAt = %s", ipAddr, linkAddr, nicID, state, updatedAt)
+}
 
 type neighborImpl struct {
 	ns *Netstack
