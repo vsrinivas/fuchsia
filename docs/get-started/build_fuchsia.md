@@ -1,9 +1,12 @@
 # Configure and build Fuchsia {#configure-and-build-fuchsia}
 
-To build Fuchsia, you need to be able to run the `fx` command in your terminal.
+This document describes how to set up and build Fuchsia.
 
-Note: If you haven't set up your build environment, see
-[Set up environment variables](/docs/get-started/get_fuchsia_source.md#set-up-environment-variables).
+## Prerequisites
+
+Before you can set up and build Fuchsia, you need to follow the steps in
+[get the Fuchsia source code](/docs/get-started/get_fuchsia_source.md)
+to download Fuchsia source code and set up your environment variables.
 
 ## Set build configuration
 
@@ -17,25 +20,29 @@ The `fx set` command takes <var>PRODUCT</var> and <var>BOARD</var> arguments,
 which define the
 [product and board](/docs/concepts/build_system/boards_and_products.md)
 configuration of your build. This configuration informs the build system what
-packages to build for your Fuchsia device. 
+packages to build for your Fuchsia device.
 
-For the core set of Fuchsia features, the build configuration is
-
-```posix-terminal
-fx set core.x64
-```
-
-where `core` is a product with a minimal feature set, which includes
-common network capabilities, and `x64` refers to the x64 architecture.
-
-For a Fuchsia emulator with the core set of Fuchsia features, the build configuration is
+For a Fuchsia emulator with the core set of Fuchsia features, the build configuration is:
 
 ```posix-terminal
 fx set core.qemu-x64
 ```
 
+In this example:
+
+  * `core` is a product with the minimum feature set for Fuchsia, which includes
+     common network capabilities.
+  * `qemu-x64` is the board, which refers to the x64 architecture on the
+     Fuchsia Emulator (FEMU) which is based on the open source emulator, QEMU.
+
+For a Fuchsia device with the core set of Fuchsia features, the build configuration is
+
+```posix-terminal
+fx set core.x64
+```
+
 See [Configure a build](/docs/development/build/fx.md#configure-a-build) for
-more options.
+more product and board options.
 
 ### Speed up the build {#speed-up-the-build}
 
@@ -112,7 +119,15 @@ information.
 
 ## Next steps
 
- * See [Explore Fuchsia](/docs/get-started/explore_fuchsia.md)
-   in the getting started guide to learn more about how Fuchsia is structured.
- * See [Set up the Fuchsia emulator (FEMU)](/docs/get-started/set_up_femu.md)
-   to set up the Fuchsia emulator.
+Set up Fuchsia on an emulator or a device:
+
+ * To set up a Fuchsia emulator and experiment with Fuchsia, follow the steps in
+   [Set up the Fuchsia emulator (FEMU)](/docs/get-started/set_up_femu.md).
+ * To set up a hardware device, follow the steps in 
+   [Installing Fuchsia on a device](/docs/development/hardware/paving.md) and the
+   [build and pave quickstart](/docs/development/build/build_and_pave_quickstart.md).
+
+Once you have set up the emulator or paved a device with Fuchsia, see:
+ 
+ *  [Explore Fuchsia](/docs/get-started/explore_fuchsia.md) to learn more about how Fuchsia
+    is structured and common workflows.

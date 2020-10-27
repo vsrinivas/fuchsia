@@ -9,8 +9,7 @@ toc:
   path: /docs/get-started/get_fuchsia_source.md
 - title: "Configure and build Fuchsia"
   path: /docs/get-started/build_fuchsia.md
-- title: "Explore Fuchsia"
-  path: /docs/get-started/explore_fuchsia.md
-- heading: "Set up a Fuchsia emulator"
 - title: "Set up the Fuchsia emulator (FEMU)"
   path: /docs/get-started/set_up_femu.md
+- title: "Explore Fuchsia"
+  path: /docs/get-started/explore_fuchsia.md

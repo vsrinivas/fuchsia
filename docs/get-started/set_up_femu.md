@@ -1,8 +1,6 @@
 # Set up the Fuchsia emulator (FEMU)
 
-This document describes how to set up the
-Fuchsia emulator (FEMU). For more information, see the
-[Fuchsia emulator (FEMU) overview](/docs/concepts/emulator/index.md).
+This document describes how to set up the Fuchsia emulator (FEMU).
 
 ## Prerequisites
 
@@ -37,10 +35,7 @@ You need to install
 [TunTap](http://tuntaposx.sourceforge.net/index.xhtml){:.external}, kernel
 extensions that allow macOS to create virtual network interfaces.
 
-For macOS 10.9 (Mavericks) and 10.10 (Yosemite), install TunTap using this
-[installation package](http://tuntaposx.sourceforge.net/download.xhtml){:.external}.
-
-For macOS 10.13 (High Sierra) and later versions, do the following:
+To install TunTap on macOS:
 
 1.  Install [Homebrew](https://brew.sh){:.external}:
 
@@ -82,8 +77,21 @@ The most common way to run FEMU is with networking enabled, using the following 
 fx emu -N
 ```
 
-For more options on running FEMU, see
-[Running the Fuchsia Emulator](/docs/development/run/femu.md).
+Once you run the command, a separate window opens with the title "Android Emulator" where you
+can run shell commands on your Fuchsia emulator, just like you would on a Fuchsia device.
+
+Note: If you don't have access to the GUI in Linux, you will get an error and a suggestion to
+run the emulator using `xvfb-run`. `xvfb-run fx emu` loads FEMU using a virtual framebuffer
+and allows FEMU to work without a GUI. 
 
 Note: If you need to reach the internet from FEMU, configure IP
 forwarding and IPv4 support on the emulator TAP interface.
+
+## Next steps
+
+ *  For more options on running FEMU, see [Running the Fuchsia Emulator](/docs/development/run/femu.md).
+ *  To learn more about how FEMU works, see the
+    [Fuchsia emulator (FEMU) overview](/docs/concepts/emulator/index.md).
+ *  To learn more about Fucshia device commands and Fuchsia workflows, see
+    [Explore Fuchsia](/docs/get-started/explore_fuchsia.md).
+

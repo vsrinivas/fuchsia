@@ -1,46 +1,40 @@
 # Explore Fuchsia {#explore-fuchsia}
 
-When Fuchsia is booted and displays the `$` prompt in the shell, you can now run
-[components](/docs/concepts/components/v2). In Fuchsia, components are the basic
-unit of executable software.
+In Fuchsia, components are the basic unit of executable software.
+When a Fuchsia device or emulator is booted and displays the `$` prompt in the shell,
+you can run [components](/docs/concepts/components/v2). 
 
-To run components on your Fuchsia device, see
+To try running an example component on your Fuchsia device, see
 [Run an example component](/docs/development/run/run-examples.md).
 
 ## Run shell commands
 
-To shutdown or reboot Fuchsia, use the following `dm` commands in the shell:
+Device commands in Fuchsia use the command `dm`. For example, to get a list
+of device commands, use the following command:
 
-```sh
-dm shutdown
+```posix-terminal
+dm help
+```
+
+To reboot Fuchsia, use the following command:
+
+```posix-terminal
 dm reboot
 ```
 
 See
 [Connect to a target shell](/docs/development/build/fx.md#connect-to-a-target-shell)
-for more information.
-
-## Select a tab {#select-a-tab}
-
-Fuchsia shows multiple tabs in the shell. At the top of the screen, the
-currently selected tab is highlighted in yellow.
-
-The following keyboard shortcuts help you navigate the terminal:
-
--   Alt+Tab switches between tabs.
--   Alt+F{1,2,...} switches directly to a tab.
-    -   Tab zero is the console, which displays the boot and component log.
-    -   Tabs 1, 2 and 3 contain shells.
-    -   Tabs 4 and higher contain components you've launched.
--   Alt+Up/Down scrolls up and down by lines.
--   Shift+PgUp/PgDown scrolls up and down by half page.
--   Ctrl+Alt+Delete reboots.
+for more information on connecting to your Fuchsia device or emulator.
 
 ## Write software for Fuchsia
 
-For an example of writing [FIDL](/docs/development/languages/fidl) APIs and client
+FIDL (Fuchsia Interface Definition Language) is the Interprocess Communication (IPC) system for
+Fuchsia. For an example of writing [FIDL](/docs/development/languages/fidl) APIs and client
 and server components, review the
-[FIDL tutorials](/docs/development/languages/fidl/tutorials/overview.md)
+[FIDL tutorials](/docs/development/languages/fidl/tutorials/overview.md).
+
+You can also read the [FIDL concepts doc](/docs/concepts/fidl/overview.md) to get a brief
+overview of what FIDL is, including its design goals, requirements, and workflows.
 
 ## Run tests
 
