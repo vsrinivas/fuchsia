@@ -26,7 +26,10 @@ namespace component {
 using fuchsia::sys::internal::CrashIntrospect_FindComponentByThreadKoid_Response;
 using fuchsia::sys::internal::CrashIntrospect_FindComponentByThreadKoid_Result;
 
-const uint8_t kDefaultThreadCacheTimeoutSec = 10;
+// Exceptions have a TTL of 5 minutes in the exception handler so this timeout should be higher
+// to preserve the mapping for exceptions that have expired. There is still a chance that exception
+// handling takes longer, but we at least want to cover expired exceptions.
+const zx::duration kDefaultThreadCacheTimeout = zx::min(10);
 
 CrashIntrospector::CrashIntrospector() : weak_ptr_factory_(this) {}
 
@@ -98,7 +101,7 @@ void CrashIntrospector::AddThreadToCache(
     // result will die at end of this statement
   });
 
-  timeout_task->PostDelayed(async_get_default_dispatcher(), zx::sec(kDefaultThreadCacheTimeoutSec));
+  timeout_task->PostDelayed(async_get_default_dispatcher(), kDefaultThreadCacheTimeout);
 
   thread_cache_.emplace(thread_koid,
                         std::make_pair(std::move(timeout_task), fidl::Clone(component_info)));
