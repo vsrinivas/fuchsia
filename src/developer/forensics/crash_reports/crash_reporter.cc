@@ -157,14 +157,14 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
                 }
 
                 std::optional<Report> final_report = MakeReport(
-                    std::move(report), snapshot_uuid.value(), utc_provider_.CurrentTime(),
-                    device_id, build_version_, product.value());
+                    std::move(report), report_id, snapshot_uuid.value(),
+                    utc_provider_.CurrentTime(), device_id, build_version_, product.value());
                 if (!final_report.has_value()) {
                   FX_LOGST(ERROR, tags_.Get(report_id)) << "Error generating report";
                   return ::fit::error();
                 }
 
-                if (!queue_.Add(report_id, std::move(final_report.value()))) {
+                if (!queue_.Add(std::move(final_report.value()))) {
                   FX_LOGST(ERROR, tags_.Get(report_id)) << "Error adding new report to the queue";
                   return ::fit::error();
                 }

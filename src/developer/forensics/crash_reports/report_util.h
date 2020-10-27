@@ -42,7 +42,7 @@ std::string Logname(std::string name);
 // * Most attachments are shared across all crash reports, e.g., |snapshot|.archive().
 // * Some attachments are report-specific, e.g., Dart exception stack trace.
 // * Adds any attachments from |report|.
-std::optional<Report> MakeReport(fuchsia::feedback::CrashReport input_report,
+std::optional<Report> MakeReport(fuchsia::feedback::CrashReport input_report, ReportId report_id,
                                  const SnapshotUuid& snapshot_uuid,
                                  const std::optional<zx::time_utc>& current_time,
                                  const ::fit::result<std::string, Error>& device_id,

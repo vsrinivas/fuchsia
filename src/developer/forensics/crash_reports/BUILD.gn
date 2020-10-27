@@ -248,6 +248,7 @@ source_set("report") {
   ]
 
   public_deps = [
+    ":report_id",
     ":snapshot_manager",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",

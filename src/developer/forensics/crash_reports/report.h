@@ -12,6 +12,7 @@
 #include <optional>
 #include <string>
 
+#include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/utils/sized_data.h"
 
@@ -22,16 +23,18 @@ namespace crash_reports {
 class Report {
  public:
   // Return a Report unless there are issues reading a fuchsia::mem::Buffer.
-  static std::optional<Report> MakeReport(const std::string& program_shortname,
+  static std::optional<Report> MakeReport(ReportId report_id, const std::string& program_shortname,
                                           const std::map<std::string, std::string>& annotations,
                                           std::map<std::string, fuchsia::mem::Buffer> attachments,
                                           forensics::crash_reports::SnapshotUuid snapshot_uuid,
                                           std::optional<fuchsia::mem::Buffer> minidump);
 
-  Report(const std::string& program_shortname,
+  Report(ReportId report_id, const std::string& program_shortname,
          const std::map<std::string, std::string>& annotations,
          std::map<std::string, SizedData> attachments, SnapshotUuid snapshot_uuid,
          std::optional<SizedData> minidump);
+
+  ReportId Id() const { return id_; }
 
   std::string ProgramShortname() const { return program_shortname_; }
   const std::map<std::string, std::string>& Annotations() const { return annotations_; }
@@ -46,6 +49,7 @@ class Report {
   forensics::crash_reports::SnapshotUuid& SnapshotUuid() { return snapshot_uuid_; }
 
  private:
+  ReportId id_;
   std::string program_shortname_;
   std::map<std::string, std::string> annotations_;
   std::map<std::string, SizedData> attachments_;

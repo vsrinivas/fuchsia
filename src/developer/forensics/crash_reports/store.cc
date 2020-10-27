@@ -146,22 +146,21 @@ Store::Store(LogTags* tags, std::shared_ptr<InfoContext> info, const std::string
   }
 }
 
-bool Store::Add(const ReportId report_id, Report report,
-                std::vector<ReportId>* garbage_collected_reports) {
-  if (metadata_.Contains(report_id)) {
-    FX_LOGST(ERROR, tags_->Get(report_id)) << "Duplicate local report id";
+bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports) {
+  if (metadata_.Contains(report.Id())) {
+    FX_LOGST(ERROR, tags_->Get(report.Id())) << "Duplicate local report id";
     return false;
   }
 
   for (const auto& key : kReservedAttachmentNames) {
     if (report.Attachments().find(key) != report.Attachments().end()) {
-      FX_LOGST(ERROR, tags_->Get(report_id)) << "Attachment is using reserved key: " << key;
+      FX_LOGST(ERROR, tags_->Get(report.Id())) << "Attachment is using reserved key: " << key;
       return false;
     }
   }
 
   const std::string program_dir = files::JoinPath(root_dir_, report.ProgramShortname());
-  const std::string report_dir = files::JoinPath(program_dir, std::to_string(report_id));
+  const std::string report_dir = files::JoinPath(program_dir, std::to_string(report.Id()));
 
   auto cleanup_on_error = fit::defer([report_dir] { DeletePath(report_dir); });
 
@@ -190,7 +189,7 @@ bool Store::Add(const ReportId report_id, Report report,
 
   // Ensure there's enough space in the store for the report.
   if (!MakeFreeSpace(report_size, garbage_collected_reports)) {
-    FX_LOGST(ERROR, tags_->Get(report_id)) << "Failed to make space for report";
+    FX_LOGST(ERROR, tags_->Get(report.Id())) << "Failed to make space for report";
     return false;
   }
 
@@ -205,7 +204,7 @@ bool Store::Add(const ReportId report_id, Report report,
     }
   }
 
-  metadata_.Add(report_id, report.ProgramShortname(), std::move(attachment_keys), report_size);
+  metadata_.Add(report.Id(), report.ProgramShortname(), std::move(attachment_keys), report_size);
 
   cleanup_on_error.cancel();
   return true;
@@ -252,8 +251,8 @@ std::optional<Report> Store::Get(const ReportId report_id) {
     }
   }
 
-  return Report(metadata_.ReportProgram(report_id), std::move(annotations), std::move(attachments),
-                std::move(snapshot_uuid), std::move(minidump));
+  return Report(report_id, metadata_.ReportProgram(report_id), std::move(annotations),
+                std::move(attachments), std::move(snapshot_uuid), std::move(minidump));
 }
 
 std::vector<ReportId> Store::GetReports() const { return metadata_.Reports(); }

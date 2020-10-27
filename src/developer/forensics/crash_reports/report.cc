@@ -27,7 +27,8 @@ std::optional<SizedData> MakeAttachment(const fuchsia::mem::Buffer& buffer) {
 
 }  // namespace
 
-std::optional<Report> Report::MakeReport(const std::string& program_shortname,
+std::optional<Report> Report::MakeReport(const ReportId report_id,
+                                         const std::string& program_shortname,
                                          const std::map<std::string, std::string>& annotations,
                                          std::map<std::string, fuchsia::mem::Buffer> attachments,
                                          forensics::crash_reports::SnapshotUuid snapshot_uuid,
@@ -48,16 +49,17 @@ std::optional<Report> Report::MakeReport(const std::string& program_shortname,
   std::optional<SizedData> minidump_copy =
       minidump.has_value() ? MakeAttachment(minidump.value()) : std::nullopt;
 
-  return Report(program_shortname, annotations, std::move(attachment_copies),
+  return Report(report_id, program_shortname, annotations, std::move(attachment_copies),
                 std::move(snapshot_uuid), std::move(minidump_copy));
 }
 
-Report::Report(const std::string& program_shortname,
+Report::Report(const ReportId report_id, const std::string& program_shortname,
                const std::map<std::string, std::string>& annotations,
                std::map<std::string, SizedData> attachments,
                forensics::crash_reports::SnapshotUuid snapshot_uuid,
                std::optional<SizedData> minidump)
-    : program_shortname_(program_shortname),
+    : id_(report_id),
+      program_shortname_(program_shortname),
       annotations_(annotations),
       attachments_(std::move(attachments)),
       snapshot_uuid_(std::move(snapshot_uuid)),

@@ -230,7 +230,7 @@ void AddCrashServerAnnotations(const std::string& program_name,
 
 }  // namespace
 
-std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report,
+std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const ReportId report_id,
                                  const SnapshotUuid& snapshot_uuid,
                                  const std::optional<zx::time_utc>& current_time,
                                  const ::fit::result<std::string, Error>& device_id,
@@ -251,8 +251,8 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report,
   AddCrashServerAnnotations(program_name, current_time, device_id, os_version, product,
                             should_process, &annotations);
 
-  return Report::MakeReport(shortname, annotations, std::move(attachments), snapshot_uuid,
-                            std::move(minidump));
+  return Report::MakeReport(report_id, shortname, annotations, std::move(attachments),
+                            snapshot_uuid, std::move(minidump));
 }
 
 }  // namespace crash_reports

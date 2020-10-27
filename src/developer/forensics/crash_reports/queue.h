@@ -36,7 +36,7 @@ class Queue {
   void WatchSettings(Settings* settings);
 
   // Add a report to the queue.
-  bool Add(ReportId report_id, Report report);
+  bool Add(Report report);
 
   // Processes the pending reports based on the queue's internal state. Returns the number of
   // reports successfully processed.
@@ -73,7 +73,7 @@ class Queue {
   // Make a request to the crash server to attempt to upload a report.
   //
   // Returns false if the upload failed.
-  bool Upload(ReportId report_id, const Report& report, std::string* server_report_id);
+  bool Upload(const Report& report, std::string* server_report_id);
 
   void GarbageCollect(ReportId report_id);
 

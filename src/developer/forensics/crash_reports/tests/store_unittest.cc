@@ -74,11 +74,11 @@ class StoreTest : public UnitTestFixture {
       minidump_data = MakeSizedData(minidump.value());
     }
 
-    auto report = Report(program_shortname, annotations, std::move(attachments_data), snapshot_uuid,
-                         std::move(minidump_data));
-
     const ReportId report_id = next_report_id_++;
-    if (store_->Add(report_id, std::move(report), garbage_collected_reports)) {
+    auto report = Report(report_id, program_shortname, annotations, std::move(attachments_data),
+                         snapshot_uuid, std::move(minidump_data));
+
+    if (store_->Add(std::move(report), garbage_collected_reports)) {
       return report_id;
     }
 

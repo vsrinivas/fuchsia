@@ -51,20 +51,20 @@ bool Queue::Contains(const ReportId report_id) const {
          pending_reports_.end();
 }
 
-bool Queue::Add(const ReportId report_id, Report report) {
+bool Queue::Add(Report report) {
   // Attempt to upload a report before putting it in the store.
   if (state_ == State::Upload) {
     std::string server_report_id;
     info_.RecordUploadAttemptNumber(1u);
-    if (Upload(report_id, report, &server_report_id)) {
-      tags_->Unregister(report_id);
+    if (Upload(report, &server_report_id)) {
+      tags_->Unregister(report.Id());
       info_.MarkReportAsUploaded(server_report_id, 1u);
       return true;
     }
   }
 
   std::vector<ReportId> garbage_collected_reports;
-  const bool success = store_.Add(report_id, std::move(report), &garbage_collected_reports);
+  const bool success = store_.Add(std::move(report), &garbage_collected_reports);
 
   for (const auto& id : garbage_collected_reports) {
     GarbageCollect(id);
@@ -74,11 +74,11 @@ bool Queue::Add(const ReportId report_id, Report report) {
     return false;
   }
 
-  pending_reports_.push_back(report_id);
+  pending_reports_.push_back(report.Id());
 
   // Early upload that failed.
   if (state_ == State::Upload) {
-    upload_attempts_[report_id]++;
+    upload_attempts_[report.Id()]++;
   } else if (state_ == State::Archive) {
     ArchiveAll();
   }
@@ -109,7 +109,7 @@ bool Queue::Upload(const ReportId report_id) {
   info_.RecordUploadAttemptNumber(upload_attempts_[report_id]);
 
   std::string server_report_id;
-  if (Upload(report_id, report.value(), &server_report_id)) {
+  if (Upload(report.value(), &server_report_id)) {
     info_.MarkReportAsUploaded(server_report_id, upload_attempts_[report_id]);
     upload_attempts_.erase(report_id);
     store_.Remove(report_id);
@@ -119,14 +119,14 @@ bool Queue::Upload(const ReportId report_id) {
   return false;
 }
 
-bool Queue::Upload(const ReportId report_id, const Report& report, std::string* server_report_id) {
+bool Queue::Upload(const Report& report, std::string* server_report_id) {
   if (crash_server_->MakeRequest(report, server_report_id)) {
-    FX_LOGST(INFO, tags_->Get(report_id))
+    FX_LOGST(INFO, tags_->Get(report.Id()))
         << "Successfully uploaded report at https://crash.corp.google.com/" << *server_report_id;
     return true;
   }
 
-  FX_LOGST(WARNING, tags_->Get(report_id)) << "Failed to upload local report ";
+  FX_LOGST(WARNING, tags_->Get(report.Id())) << "Failed to upload local report ";
   return false;
 }
 

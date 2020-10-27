@@ -33,7 +33,7 @@ class Store {
 
   // Adds a report to the store and returns the ReportIds of any report garbage collected in the
   // process.
-  bool Add(ReportId report_id, Report report, std::vector<ReportId>* garbage_collected_reports);
+  bool Add(Report report, std::vector<ReportId>* garbage_collected_reports);
 
   // Gets a report from the store. If no report exists for |id| or there is an error reading the
   // report from the filesystem, return std::nullopt.

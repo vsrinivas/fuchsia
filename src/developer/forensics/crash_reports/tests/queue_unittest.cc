@@ -104,7 +104,7 @@ std::map<std::string, std::string> MakeAnnotations() {
 
 Report MakeReport(const std::size_t report_id) {
   std::optional<Report> report =
-      Report::MakeReport(fxl::StringPrintf("program_%ld", report_id), MakeAnnotations(),
+      Report::MakeReport(report_id, fxl::StringPrintf("program_%ld", report_id), MakeAnnotations(),
                          MakeAttachments(), kSnapshotUuidValue, BuildAttachment(kMinidumpValue));
   FX_CHECK(report.has_value());
   return std::move(report.value());
@@ -161,7 +161,7 @@ class QueueTest : public UnitTestFixture {
     for (auto const& op : ops) {
       switch (op) {
         case QueueOps::AddNewReport:
-          FX_CHECK(queue_->Add(report_id_, MakeReport(report_id_)));
+          FX_CHECK(queue_->Add(MakeReport(report_id_)));
           RunLoopUntilIdle();
           ++report_id_;
           if (!queue_->IsEmpty()) {
