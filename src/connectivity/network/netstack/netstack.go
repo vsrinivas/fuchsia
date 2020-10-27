@@ -443,7 +443,7 @@ func addressWithPrefixRoute(nicid tcpip.NICID, addr tcpip.AddressWithPrefix) tcp
 func (ns *Netstack) name(nicid tcpip.NICID) string {
 	name := ns.stack.FindNICNameFromID(nicid)
 	if len(name) == 0 {
-		name = fmt.Sprintf("unknown NIC(id=%d)", nicid)
+		name = fmt.Sprintf("unknown(NICID=%d)", nicid)
 	}
 	return name
 }

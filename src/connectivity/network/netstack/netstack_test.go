@@ -396,7 +396,7 @@ func TestEndpoint_Close(t *testing.T) {
 func TestNICName(t *testing.T) {
 	ns := newNetstack(t)
 
-	if want, got := "unknown NIC(id=0)", ns.name(0); got != want {
+	if want, got := "unknown(NICID=0)", ns.name(0); got != want {
 		t.Fatalf("got ns.name(0) = %q, want %q", got, want)
 	}
 

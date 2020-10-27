@@ -216,6 +216,7 @@ func Main() {
 	}
 
 	ndpDisp := newNDPDispatcher()
+	var nudDisp nudDispatcher
 
 	stk := tcpipstack.New(tcpipstack.Options{
 		NetworkProtocols: []tcpipstack.NetworkProtocolFactory{
@@ -267,7 +268,7 @@ func Main() {
 		// (fxbug.dev/61723) for Neighbor Unreachability Detection. This enables
 		// inspection and modification of entries in the neighbor cache.
 		UseNeighborCache: true,
-		NUDDisp:          &nudDispatcher{},
+		NUDDisp:          &nudDisp,
 
 		// Raw sockets are typically used for implementing custom protocols. We intend
 		// to support custom protocols through structured FIDL APIs in the future, so
@@ -306,6 +307,7 @@ func Main() {
 	ns.interfaceWatchers.mu.lastObserved = make(map[tcpip.NICID]interfaces.Properties)
 
 	cobaltClient := NewCobaltClient()
+	nudDisp.ns = ns
 	ndpDisp.ns = ns
 	ndpDisp.dhcpv6Obs.init(func() {
 		cobaltClient.Register(&ndpDisp.dhcpv6Obs)
@@ -506,7 +508,7 @@ func Main() {
 	}
 
 	{
-		impl := &neighborImpl{ns: ns}
+		impl := &neighborImpl{stack: stk}
 
 		viewStub := neighbor.ViewWithCtxStub{Impl: impl}
 		appCtx.OutgoingService.AddService(

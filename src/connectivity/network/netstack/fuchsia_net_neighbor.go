@@ -7,6 +7,7 @@ package netstack
 import (
 	"errors"
 	"fmt"
+	"syscall/zx"
 	"syscall/zx/fidl"
 	"time"
 
@@ -22,38 +23,38 @@ import (
 )
 
 const (
-	nudTag = "nud"
+	nudTag = "NUD"
 )
 
-var ErrNotImplemented = errors.New("not implemented")
-
-type nudDispatcher struct{}
+type nudDispatcher struct {
+	ns *Netstack
+}
 
 var _ stack.NUDDispatcher = (*nudDispatcher)(nil)
 
 // OnNeighborAdded implements stack.NUDDispatcher.
-func (*nudDispatcher) OnNeighborAdded(nicID tcpip.NICID, ipAddr tcpip.Address, linkAddr tcpip.LinkAddress, state stack.NeighborState, updatedAt time.Time) {
+func (d *nudDispatcher) OnNeighborAdded(nicID tcpip.NICID, addr tcpip.Address, linkAddr tcpip.LinkAddress, state stack.NeighborState, _ time.Time) {
 	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
 	// is able to be inspected.
-	_ = syslog.InfoTf(nudTag, "added neighbor %s with linkAddr = %s on NIC %d with state = %s, updatedAt = %s", ipAddr, linkAddr, nicID, state, updatedAt)
+	_ = syslog.InfoTf(nudTag, "ADD %s NIC=%s LinkAddress=%s %s", addr, d.ns.name(nicID), linkAddr, state)
 }
 
 // OnNeighborChanged implements stack.NUDDispatcher.
-func (*nudDispatcher) OnNeighborChanged(nicID tcpip.NICID, ipAddr tcpip.Address, linkAddr tcpip.LinkAddress, state stack.NeighborState, updatedAt time.Time) {
+func (d *nudDispatcher) OnNeighborChanged(nicID tcpip.NICID, addr tcpip.Address, linkAddr tcpip.LinkAddress, state stack.NeighborState, _ time.Time) {
 	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
 	// is able to be inspected.
-	_ = syslog.InfoTf(nudTag, "changed neighbor %s with linkAddr = %s on NIC %d with state = %s, updatedAt = %s", ipAddr, linkAddr, nicID, state, updatedAt)
+	_ = syslog.InfoTf(nudTag, "MOD %s NIC=%s LinkAddress=%s %s", addr, d.ns.name(nicID), linkAddr, state)
 }
 
 // OnNeighborRemoved implements stack.NUDDispatcher.
-func (*nudDispatcher) OnNeighborRemoved(nicID tcpip.NICID, ipAddr tcpip.Address, linkAddr tcpip.LinkAddress, state stack.NeighborState, updatedAt time.Time) {
+func (d *nudDispatcher) OnNeighborRemoved(nicID tcpip.NICID, addr tcpip.Address, linkAddr tcpip.LinkAddress, state stack.NeighborState, _ time.Time) {
 	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
 	// is able to be inspected.
-	_ = syslog.InfoTf(nudTag, "removed neighbor %s with linkAddr = %s on NIC %d with state = %s, updatedAt = %s", ipAddr, linkAddr, nicID, state, updatedAt)
+	_ = syslog.InfoTf(nudTag, "DEL %s NIC=%s LinkAddress=%s %s", addr, d.ns.name(nicID), linkAddr, state)
 }
 
 type neighborImpl struct {
-	ns *Netstack
+	stack *stack.Stack
 }
 
 var _ neighbor.ViewWithCtx = (*neighborImpl)(nil)
@@ -62,8 +63,8 @@ func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neighbor.EntryIter
 	// TODO(fxbug.dev/59425): Watch for changes.
 	var items []neighbor.EntryIteratorItem
 
-	for nicID := range n.ns.stack.NICInfo() {
-		neighbors, err := n.ns.stack.Neighbors(nicID)
+	for nicID := range n.stack.NICInfo() {
+		neighbors, err := n.stack.Neighbors(nicID)
 		switch err {
 		case nil:
 		case tcpip.ErrNotSupported:
@@ -102,7 +103,7 @@ func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neighbor.EntryIter
 
 func (n *neighborImpl) GetUnreachabilityConfig(ctx fidl.Context, interfaceID uint64) (neighbor.ViewGetUnreachabilityConfigResult, error) {
 	// TODO(fxbug.dev/51776): Implement fuchsia.net.neighbor/View.GetUnreachabilityConfigs
-	return neighbor.ViewGetUnreachabilityConfigResult{}, ErrNotImplemented
+	return neighbor.ViewGetUnreachabilityConfigResult{}, &zx.Error{Status: zx.ErrNotSupported}
 }
 
 var _ neighbor.ControllerWithCtx = (*neighborImpl)(nil)
@@ -111,28 +112,28 @@ func (n *neighborImpl) AddEntry(ctx fidl.Context, interfaceID uint64, neighborIP
 	// TODO(fxbug.dev/51777): Implement fuchsia.net.neighbor/Controller.AddEntry
 	resp := neighbor.ControllerAddEntryResponse{}
 	result := neighbor.ControllerAddEntryResultWithResponse(resp)
-	return result, ErrNotImplemented
+	return result, &zx.Error{Status: zx.ErrNotSupported}
 }
 
 func (n *neighborImpl) RemoveEntry(ctx fidl.Context, interfaceID uint64, neighborIP net.IpAddress) (neighbor.ControllerRemoveEntryResult, error) {
 	// TODO(fxbug.dev/51778): Implement fuchsia.net.neighbor/Controller.RemoveEntry
 	resp := neighbor.ControllerRemoveEntryResponse{}
 	result := neighbor.ControllerRemoveEntryResultWithResponse(resp)
-	return result, ErrNotImplemented
+	return result, &zx.Error{Status: zx.ErrNotSupported}
 }
 
 func (n *neighborImpl) ClearEntries(ctx fidl.Context, interfaceID uint64) (neighbor.ControllerClearEntriesResult, error) {
 	// TODO(fxbug.dev/51779): Implement fuchsia.net.neighbor/Controller.ClearEntries
 	resp := neighbor.ControllerClearEntriesResponse{}
 	result := neighbor.ControllerClearEntriesResultWithResponse(resp)
-	return result, ErrNotImplemented
+	return result, &zx.Error{Status: zx.ErrNotSupported}
 }
 
 func (n *neighborImpl) UpdateUnreachabilityConfig(ctx fidl.Context, interfaceID uint64, config neighbor.UnreachabilityConfig) (neighbor.ControllerUpdateUnreachabilityConfigResult, error) {
 	// TODO(fxbug.dev/51780): Implement fuchsia.net.neighbor/Controller.UpdateUnreachabilityConfig
 	resp := neighbor.ControllerUpdateUnreachabilityConfigResponse{}
 	result := neighbor.ControllerUpdateUnreachabilityConfigResultWithResponse(resp)
-	return result, ErrNotImplemented
+	return result, &zx.Error{Status: zx.ErrNotSupported}
 }
 
 // neighborEntryIterator queues events received from the neighbor table for
