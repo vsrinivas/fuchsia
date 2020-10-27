@@ -20,3 +20,4 @@
 19 fuchsia-boot://klog
 20 fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx
 21 fuchsia-pkg://fuchsia.com/weavestack#meta/weavestack.cmx
+22 fuchsia-boot:///#meta/archivist.cm
