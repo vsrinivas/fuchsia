@@ -11,7 +11,7 @@
         {
             name: "driver_manager",
             url: "fuchsia-boot:///#meta/driver_manager.cm",
-            environment: "#ddk-env",
+            environment: "#driver_manager-env",
         },
         {
             name: "fshost",
@@ -722,7 +722,7 @@
             __stop_timeout_ms: 1200000,
         },
         {
-            name: "ddk-env",
+            name: "driver_manager-env",
             extends: "realm",
 
             // 1 minute
