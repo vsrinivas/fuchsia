@@ -11,36 +11,7 @@
 #include <fidl/tables_generator.h>
 #include <perftest/perftest.h>
 
-struct Benchmark {
-  const char* name;
-  const char* fidl;
-};
-
-constexpr Benchmark benchmarks[] = {Benchmark{
-    .name = "Struct/16",
-    .fidl = R"FIDL(
-library example;
-
-struct TestStruct {
-    int8 f0;
-    int8 f1;
-    int8 f2;
-    int8 f3;
-    int8 f4;
-    int8 f5;
-    int8 f6;
-    int8 f7;
-    int8 f8;
-    int8 f9;
-    int8 f10;
-    int8 f11;
-    int8 f12;
-    int8 f13;
-    int8 f14;
-    int8 f15;
-};
-)FIDL",
-}};
+#include "benchmarks.h"
 
 // This measures the time to compile the given input fidl text and generate
 // JSON IR output, which is discarded after it is produced in-memory.
@@ -62,12 +33,18 @@ bool RunBenchmark(perftest::RepeatState* state, const char* fidl) {
     fidl::flat::Library library(&all_libraries, &reporter, &typespace,
                                 fidl::ordinals::GetGeneratedOrdinal64, experimental_flags);
     auto ast = parser.Parse();
-    if (!parser.Success())
+    if (!parser.Success()) {
+      reporter.PrintReports();
       return false;
-    if (!library.ConsumeFile(std::move(ast)))
+    }
+    if (!library.ConsumeFile(std::move(ast))) {
+      reporter.PrintReports();
       return false;
-    if (!library.Compile())
+    }
+    if (!library.Compile()) {
+      reporter.PrintReports();
       return false;
+    }
     fidl::JSONGenerator json_generator(&library);
     json_generator.Produce();
   }
