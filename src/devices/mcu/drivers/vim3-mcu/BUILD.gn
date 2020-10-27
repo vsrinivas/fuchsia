@@ -43,6 +43,9 @@ test("vim3-mcu-test") {
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/no_ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
