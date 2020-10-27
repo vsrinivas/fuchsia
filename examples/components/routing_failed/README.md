@@ -1,9 +1,8 @@
 # Failed routing Example
 
 This directory contains an example of failed [capability
-routing](docs/concepts/components/component_manifests#capability-routing) in [Component
-Framework](docs/concepts/components/introduction.md)
-([Components v2](docs/glossary.md#components-v2)).
+routing][capability-routing] in [Component Framework][cf-intro] ([Components
+v2][cfv2]).
 
 ## Building
 
@@ -37,3 +36,7 @@ To see component manager's log of the failed capability routing, run:
 ```bash
 $ fx klog
 ```
+
+[capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[cf-intro]: /docs/concepts/components/v2/introduction.md
+[cfv2]: /docs/glossary.md#components-v2
