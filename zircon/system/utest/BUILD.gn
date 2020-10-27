@@ -17,7 +17,6 @@ group("tests") {
     "fs-test-utils:tests",
     "fvm:tests",
     "libc:tests",
-    "minfs-micro-benchmark:tests",
     "service:tests",
     "stdio:stdio-test-package",
   ]

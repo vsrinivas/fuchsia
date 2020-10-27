@@ -146,6 +146,51 @@ test("minfs-host") {
   ]
 }
 
+test("minfs-micro-benchmark") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [
+    "micro-benchmark/block-device-utils.cc",
+    "micro-benchmark/minfs-costs.cc",
+    "micro-benchmark/minfs-tests.cc",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
+    "//sdk/lib/fdio",
+    "//src/storage/minfs",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/digest",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/fs-management",
+    "//zircon/system/ulib/fs-test-utils",
+    "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/gpt",
+    "//zircon/system/ulib/memfs",
+    "//zircon/system/ulib/memfs:memfs-cpp",
+    "//zircon/system/ulib/perftest",
+    "//zircon/system/ulib/storage-metrics",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-engine",
+  ]
+}
+
 fuzzer("minfs-fuzzer") {
   sources = [ "unit/fuzz.cc" ]
   deps = [
@@ -195,6 +240,20 @@ fuchsia_unittest_component("minfs-unit-test") {
   deps = [ ":minfs-unit" ]
 }
 
+isolated_devmgr_unittest_component("minfs-micro-benchmark-test") {
+  executable_path = "test/minfs-micro-benchmark"
+
+  deps = [
+    ":minfs-micro-benchmark",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
+    "//src/storage/bin/minfs",
+  ]
+}
+
 fuchsia_test_package("minfs-tests") {
   if (is_fuchsia) {
     # TODO(fxbug.dev/61773): Remove this once minfs-integration-test no longer
@@ -210,5 +269,6 @@ fuchsia_test_package("minfs-tests") {
     ":minfs-integration-test",
     ":minfs-power-test",
     ":minfs-unit-test",
+    ":minfs-micro-benchmark-test",
   ]
 }

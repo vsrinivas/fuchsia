@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_MINFS_MICRO_BENCHMARK_BLOCK_DEVICE_UTILS_H_
-#define ZIRCON_SYSTEM_UTEST_MINFS_MICRO_BENCHMARK_BLOCK_DEVICE_UTILS_H_
+#ifndef SRC_STORAGE_MINFS_TEST_MICRO_BENCHMARK_BLOCK_DEVICE_UTILS_H_
+#define SRC_STORAGE_MINFS_TEST_MICRO_BENCHMARK_BLOCK_DEVICE_UTILS_H_
 
 #include <errno.h>
 #include <fcntl.h>
@@ -80,4 +80,4 @@ class BlockDevice {
 
 }  // namespace minfs_micro_benchmanrk
 
-#endif  // ZIRCON_SYSTEM_UTEST_MINFS_MICRO_BENCHMARK_BLOCK_DEVICE_UTILS_H_
+#endif  // SRC_STORAGE_MINFS_TEST_MICRO_BENCHMARK_BLOCK_DEVICE_UTILS_H_

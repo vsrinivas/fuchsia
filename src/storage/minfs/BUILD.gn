@@ -19,6 +19,7 @@ static_library("minfs") {
     "bcache.h",
     "format.h",
     "fsck.h",
+    "metrics.h",
     "minfs.h",
     "transaction_limits.h",
   ]
@@ -174,7 +175,7 @@ group("tests") {
   testonly = true
   deps = [
     "test:minfs-fuzzers",
-    "test:minfs-tests",
     "test:minfs-host($host_toolchain)",
+    "test:minfs-tests",
   ]
 }
