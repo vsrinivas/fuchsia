@@ -825,52 +825,52 @@ class StrictPizzaOrPasta {
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static StrictPizzaOrPasta WithPizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>&& val) {
     StrictPizzaOrPasta result;
     result.set_pizza(std::move(val));
     return result;
   }
 
   void set_pizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::union ::Pizza& mutable_pizza() {
+  ::llcpp::fidl::test::union_::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pizza*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union ::Pizza& pizza() const {
+  const ::llcpp::fidl::test::union_::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pizza*>(
         envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static StrictPizzaOrPasta WithPasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>&& val) {
     StrictPizzaOrPasta result;
     result.set_pasta(std::move(val));
     return result;
   }
 
   void set_pasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::union ::Pasta& mutable_pasta() {
+  ::llcpp::fidl::test::union_::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pasta*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union ::Pasta& pasta() const {
+  const ::llcpp::fidl::test::union_::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pasta*>(
         envelope_.data.get());
   }
   Tag which() const {
@@ -899,16 +899,16 @@ class StrictPizzaOrPasta {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza> to_destroy =
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza> to_destroy =
             static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>>(
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>>(
                 std::move(envelope_.data));
         break;
       }
       case 2: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta> to_destroy =
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta> to_destroy =
             static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>>(
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>>(
                 std::move(envelope_.data));
         break;
       }
@@ -944,52 +944,52 @@ class PizzaOrPasta {
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static PizzaOrPasta WithPizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>&& val) {
     PizzaOrPasta result;
     result.set_pizza(std::move(val));
     return result;
   }
 
   void set_pizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::union ::Pizza& mutable_pizza() {
+  ::llcpp::fidl::test::union_::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pizza*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union ::Pizza& pizza() const {
+  const ::llcpp::fidl::test::union_::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pizza*>(
         envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static PizzaOrPasta WithPasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>&& val) {
     PizzaOrPasta result;
     result.set_pasta(std::move(val));
     return result;
   }
 
   void set_pasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::union ::Pasta& mutable_pasta() {
+  ::llcpp::fidl::test::union_::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pasta*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union ::Pasta& pasta() const {
+  const ::llcpp::fidl::test::union_::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pasta*>(
         envelope_.data.get());
   }
   Tag which() const {
@@ -1017,16 +1017,16 @@ class PizzaOrPasta {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza> to_destroy =
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza> to_destroy =
             static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>>(
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>>(
                 std::move(envelope_.data));
         break;
       }
       case 2: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta> to_destroy =
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta> to_destroy =
             static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>>(
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>>(
                 std::move(envelope_.data));
         break;
       }
@@ -1063,52 +1063,52 @@ class FlexiblePizzaOrPasta {
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static FlexiblePizzaOrPasta WithPizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>&& val) {
     FlexiblePizzaOrPasta result;
     result.set_pizza(std::move(val));
     return result;
   }
 
   void set_pizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::union ::Pizza& mutable_pizza() {
+  ::llcpp::fidl::test::union_::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pizza*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union ::Pizza& pizza() const {
+  const ::llcpp::fidl::test::union_::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pizza*>(
         envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static FlexiblePizzaOrPasta WithPasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>&& val) {
     FlexiblePizzaOrPasta result;
     result.set_pasta(std::move(val));
     return result;
   }
 
   void set_pasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::union ::Pasta& mutable_pasta() {
+  ::llcpp::fidl::test::union_::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pasta*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union ::Pasta& pasta() const {
+  const ::llcpp::fidl::test::union_::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pasta*>(
         envelope_.data.get());
   }
   Tag which() const;
@@ -1134,16 +1134,16 @@ class FlexiblePizzaOrPasta {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza> to_destroy =
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza> to_destroy =
             static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>>(
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>>(
                 std::move(envelope_.data));
         break;
       }
       case 2: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta> to_destroy =
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta> to_destroy =
             static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>>(
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>>(
                 std::move(envelope_.data));
         break;
       }
@@ -1179,52 +1179,52 @@ class ExplicitPizzaOrPasta {
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static ExplicitPizzaOrPasta WithPizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>&& val) {
     ExplicitPizzaOrPasta result;
     result.set_pizza(std::move(val));
     return result;
   }
 
   void set_pizza(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::union ::Pizza& mutable_pizza() {
+  ::llcpp::fidl::test::union_::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pizza*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union ::Pizza& pizza() const {
+  const ::llcpp::fidl::test::union_::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::union ::Pizza*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pizza*>(
         envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static ExplicitPizzaOrPasta WithPasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>&& val) {
     ExplicitPizzaOrPasta result;
     result.set_pasta(std::move(val));
     return result;
   }
 
   void set_pasta(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::union ::Pasta& mutable_pasta() {
+  ::llcpp::fidl::test::union_::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pasta*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union ::Pasta& pasta() const {
+  const ::llcpp::fidl::test::union_::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::union ::Pasta*>(
+    return *static_cast<::llcpp::fidl::test::union_::Pasta*>(
         envelope_.data.get());
   }
   Tag which() const {
@@ -1253,16 +1253,16 @@ class ExplicitPizzaOrPasta {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza> to_destroy =
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza> to_destroy =
             static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pizza>>(
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>>(
                 std::move(envelope_.data));
         break;
       }
       case 4: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta> to_destroy =
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta> to_destroy =
             static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Pasta>>(
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>>(
                 std::move(envelope_.data));
         break;
       }
@@ -2321,26 +2321,26 @@ class XUnionContainingEmptyStruct {
   bool is_empty() const { return ordinal_ == Ordinal::kEmpty; }
 
   static XUnionContainingEmptyStruct WithEmpty(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Empty>&& val) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Empty>&& val) {
     XUnionContainingEmptyStruct result;
     result.set_empty(std::move(val));
     return result;
   }
 
   void set_empty(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Empty>&& elem) {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Empty>&& elem) {
     ordinal_ = Ordinal::kEmpty;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::fidl::test::union ::Empty& mutable_empty() {
+  ::llcpp::fidl::test::union_::Empty& mutable_empty() {
     ZX_ASSERT(ordinal_ == Ordinal::kEmpty);
-    return *static_cast<::llcpp::fidl::test::union ::Empty*>(
+    return *static_cast<::llcpp::fidl::test::union_::Empty*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::union ::Empty& empty() const {
+  const ::llcpp::fidl::test::union_::Empty& empty() const {
     ZX_ASSERT(ordinal_ == Ordinal::kEmpty);
-    return *static_cast<::llcpp::fidl::test::union ::Empty*>(
+    return *static_cast<::llcpp::fidl::test::union_::Empty*>(
         envelope_.data.get());
   }
   Tag which() const;
@@ -2365,9 +2365,9 @@ class XUnionContainingEmptyStruct {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Empty> to_destroy =
+        ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Empty> to_destroy =
             static_cast<
-                ::fidl::tracking_ptr<::llcpp::fidl::test::union ::Empty>>(
+                ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Empty>>(
                 std::move(envelope_.data));
         break;
       }
@@ -2393,7 +2393,7 @@ struct StructWithNullableXUnion {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
-  ::llcpp::fidl::test::union ::OlderSimpleUnion x1 = {};
+  ::llcpp::fidl::test::union_::OlderSimpleUnion x1 = {};
   void _CloseHandles();
 
   // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
@@ -2748,9 +2748,9 @@ class TestProtocol final {
   struct StrictXUnionHenceResponseMayBeStackAllocatedResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::union ::StrictBoundedXUnion xu;
+    ::llcpp::fidl::test::union_::StrictBoundedXUnion xu;
     explicit StrictXUnionHenceResponseMayBeStackAllocatedResponse(
-        ::llcpp::fidl::test::union ::StrictBoundedXUnion& xu)
+        ::llcpp::fidl::test::union_::StrictBoundedXUnion& xu)
         : xu(std::move(xu)) {
       _InitHeader();
     }
@@ -2772,7 +2772,7 @@ class TestProtocol final {
      public:
       UnownedOutgoingMessage(
           uint8_t* _bytes, uint32_t _byte_size,
-          ::llcpp::fidl::test::union ::StrictBoundedXUnion& xu)
+          ::llcpp::fidl::test::union_::StrictBoundedXUnion& xu)
           : message_(
                 _bytes, _byte_size,
                 sizeof(StrictXUnionHenceResponseMayBeStackAllocatedResponse),
@@ -2821,7 +2821,7 @@ class TestProtocol final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
-          ::llcpp::fidl::test::union ::StrictBoundedXUnion& xu)
+          ::llcpp::fidl::test::union_::StrictBoundedXUnion& xu)
           : message_(bytes_, sizeof(bytes_), xu) {}
       explicit OwnedOutgoingMessage(
           StrictXUnionHenceResponseMayBeStackAllocatedResponse* response)
@@ -3070,9 +3070,9 @@ class TestProtocol final {
   struct FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::union ::OlderSimpleUnion xu;
+    ::llcpp::fidl::test::union_::OlderSimpleUnion xu;
     explicit FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
-        ::llcpp::fidl::test::union ::OlderSimpleUnion& xu)
+        ::llcpp::fidl::test::union_::OlderSimpleUnion& xu)
         : xu(std::move(xu)) {
       _InitHeader();
     }
@@ -3093,7 +3093,7 @@ class TestProtocol final {
     class UnownedOutgoingMessage final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
-                             ::llcpp::fidl::test::union ::OlderSimpleUnion& xu)
+                             ::llcpp::fidl::test::union_::OlderSimpleUnion& xu)
           : message_(
                 _bytes, _byte_size,
                 sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse),
@@ -3142,7 +3142,7 @@ class TestProtocol final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage(
-          ::llcpp::fidl::test::union ::OlderSimpleUnion& xu)
+          ::llcpp::fidl::test::union_::OlderSimpleUnion& xu)
           : message_(bytes_, sizeof(bytes_), xu) {}
       explicit OwnedOutgoingMessage(
           FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* response)
@@ -3770,9 +3770,9 @@ class TestProtocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(::llcpp::fidl::test::union ::StrictBoundedXUnion xu);
+      ::fidl::Result Reply(::llcpp::fidl::test::union_::StrictBoundedXUnion xu);
       ::fidl::Result Reply(::fidl::BytePart _buffer,
-                           ::llcpp::fidl::test::union ::StrictBoundedXUnion xu);
+                           ::llcpp::fidl::test::union_::StrictBoundedXUnion xu);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -3799,9 +3799,9 @@ class TestProtocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(::llcpp::fidl::test::union ::OlderSimpleUnion xu);
+      ::fidl::Result Reply(::llcpp::fidl::test::union_::OlderSimpleUnion xu);
       ::fidl::Result Reply(::fidl::BytePart _buffer,
-                           ::llcpp::fidl::test::union ::OlderSimpleUnion xu);
+                           ::llcpp::fidl::test::union_::OlderSimpleUnion xu);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -3856,7 +3856,7 @@ struct NullableUnionStruct {
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = false;
 
-  ::llcpp::fidl::test::union ::Union the_union = {};
+  ::llcpp::fidl::test::union_::Union the_union = {};
   void _CloseHandles();
 
   // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
@@ -4428,7 +4428,7 @@ class TestProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Allocates 16
   // bytes of request buffer on the stack. The callback is stored on the heap.
   ::fidl::Result StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fit::callback<void(::llcpp::fidl::test::union ::StrictBoundedXUnion xu)>
+      ::fit::callback<void(::llcpp::fidl::test::union_::StrictBoundedXUnion xu)>
           _cb);
   // Asynchronous variant of
   // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Caller
@@ -4456,7 +4456,7 @@ class TestProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // 16 bytes of request buffer on the stack. The callback is stored on the
   // heap.
   ::fidl::Result FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fit::callback<void(::llcpp::fidl::test::union ::OlderSimpleUnion xu)>
+      ::fit::callback<void(::llcpp::fidl::test::union_::OlderSimpleUnion xu)>
           _cb);
   // Asynchronous variant of
   // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Caller

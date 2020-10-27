@@ -789,17 +789,28 @@ func changeIfReserved(i types.Identifier, ext string) string {
 	return str
 }
 
-func formatLibrary(library types.LibraryIdentifier, sep string) string {
+type identifierTransform bool
+
+const (
+	keepPartIfReserved   identifierTransform = false
+	changePartIfReserved identifierTransform = true
+)
+
+func formatLibrary(library types.LibraryIdentifier, sep string, identifierTransform identifierTransform) string {
 	parts := []string{}
 	for _, part := range library {
-		parts = append(parts, string(part))
+		if identifierTransform == changePartIfReserved {
+			parts = append(parts, changeIfReserved(part, ""))
+		} else {
+			parts = append(parts, string(part))
+		}
 	}
 	name := strings.Join(parts, sep)
 	return changeIfReserved(types.Identifier(name), "")
 }
 
 func formatNamespace(library types.LibraryIdentifier, appendNamespace string) string {
-	ns := "::" + formatLibrary(library, "::")
+	ns := "::" + formatLibrary(library, "::", changePartIfReserved)
 	if len(appendNamespace) > 0 {
 		ns = ns + "::" + appendNamespace
 	}
@@ -818,11 +829,11 @@ func formatLLNamespace(library types.LibraryIdentifier, appendNamespace string) 
 }
 
 func formatLibraryPrefix(library types.LibraryIdentifier) string {
-	return formatLibrary(library, "_")
+	return formatLibrary(library, "_", keepPartIfReserved)
 }
 
 func formatLibraryPath(library types.LibraryIdentifier) string {
-	return formatLibrary(library, "/")
+	return formatLibrary(library, "/", keepPartIfReserved)
 }
 
 type compiler struct {

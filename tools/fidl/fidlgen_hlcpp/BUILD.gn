@@ -81,9 +81,6 @@ group("goldens") {
 
   # Keep this in sync with hlcpp_denylist in fidlgen_libfuzzer/BUILD.gn.
   denylist = [
-    # TODO(fxbug.dev/55889): Escape "union" keyword.
-    "//zircon/tools/fidl/testdata:fidl.test.union",
-
     # TODO(fxbug.dev/62520): Insert enum/bits <-> primitive conversions.
     "//zircon/tools/fidl/testdata:fidl.test.consts",
 

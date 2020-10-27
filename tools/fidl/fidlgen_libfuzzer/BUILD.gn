@@ -70,9 +70,6 @@ group("goldens") {
 
   # This is needed because libfuzzer depends on HLCPP bindings.
   hlcpp_denylist = [
-    # TODO(fxbug.dev/55889): Escape "union" keyword.
-    "//zircon/tools/fidl/testdata:fidl.test.union",
-
     # TODO(fxbug.dev/62520): Insert enum/bits <-> primitive conversions.
     "//zircon/tools/fidl/testdata:fidl.test.consts",
 
