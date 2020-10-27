@@ -8,9 +8,8 @@ use diagnostics_stream::{parse::parse_record, Record, Severity, Value};
 use fidl_fuchsia_logger::LogSinkRequest;
 use fidl_fuchsia_logger::LogSinkRequestStream;
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
-use fidl_fuchsia_validate_logs::{LogSinkPuppetMarker, LogSinkPuppetProxy};
-use fuchsia_async::Socket;
-use fuchsia_component::client::App;
+use fidl_fuchsia_validate_logs::{LogSinkPuppetMarker, LogSinkPuppetProxy, PuppetInfo};
+use fuchsia_async::{Socket, Task};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
@@ -40,8 +39,9 @@ struct Puppet {
     url: String,
     start_time: zx::Time,
     socket: Socket,
+    info: PuppetInfo,
     proxy: LogSinkPuppetProxy,
-    _app: App,
+    _app_watchdog: Task<()>,
     _env: EnvironmentControllerProxy,
 }
 
@@ -52,7 +52,7 @@ impl Puppet {
 
         let start_time = zx::Time::get_monotonic();
         info!(%puppet_url, "launching");
-        let (_env, _app) = fs
+        let (_env, mut app) = fs
             .launch_component_in_nested_environment(
                 puppet_url.to_owned(),
                 None,
@@ -62,11 +62,18 @@ impl Puppet {
 
         fs.take_and_serve_directory_handle()?;
 
-        info!("Connecting to puppet.");
-        let proxy = _app.connect_to_service::<LogSinkPuppetMarker>()?;
+        info!("Connecting to puppet and spawning watchdog.");
+        let proxy = app.connect_to_service::<LogSinkPuppetMarker>()?;
+        let _app_watchdog = Task::spawn(async move {
+            let status = app.wait().await;
+            panic!("puppet should not exit! status: {:?}", status);
+        });
 
         info!("Waiting for LogSink connection.");
         let mut stream = fs.next().await.unwrap();
+
+        info!("Requesting info from the puppet.");
+        let info = proxy.get_info().await?;
 
         info!("Waiting for LogSink.Connect call.");
         if let LogSinkRequest::ConnectStructured { socket, control_handle: _ } =
@@ -75,7 +82,15 @@ impl Puppet {
             info!("Received a structured socket.");
             // TODO(fxbug.dev/61495): Validate that this is in fact a datagram socket.
             let socket = Socket::from_socket(socket)?;
-            Ok(Self { socket, url: puppet_url.to_string(), proxy, start_time, _app, _env })
+            Ok(Self {
+                socket,
+                url: puppet_url.to_string(),
+                proxy,
+                info,
+                start_time,
+                _app_watchdog,
+                _env,
+            })
         } else {
             Err(anyhow::format_err!("shouldn't ever receive legacy connections"))
         }
@@ -96,10 +111,14 @@ impl Puppet {
 
         assert_eq!(
             self.read_record().await?,
-            RecordAssertion::new(self.start_time..zx::Time::get_monotonic(), Severity::Info)
-                .add_tag(self.moniker())
-                .add_string("message", "Puppet started.")
-                .build()
+            RecordAssertion::new(
+                &self.info,
+                self.start_time..zx::Time::get_monotonic(),
+                Severity::Info
+            )
+            .add_tag(self.moniker())
+            .add_string("message", "Puppet started.")
+            .build()
         );
 
         info!("Starting the LogSink socket test.");
@@ -110,7 +129,7 @@ impl Puppet {
         let after = zx::Time::get_monotonic();
         assert_eq!(
             self.read_record().await?,
-            RecordAssertion::new(before..after, Severity::Warn)
+            RecordAssertion::new(&self.info, before..after, Severity::Warn)
                 .add_tag(self.moniker())
                 .add_tag("test_log")
                 .add_string("foo", "bar")
@@ -144,9 +163,7 @@ impl TestRecord {
                     }
                     _ => anyhow::bail!("found non-text tag"),
                 }
-            } else if
-            // TODO(adamperry): remove this hack in follow up which gets pid/tid from puppet
-            name != "pid" && name != "tid" {
+            } else {
                 sorted_args.insert(name, value);
             }
         }
@@ -170,13 +187,22 @@ struct RecordAssertion {
 }
 
 impl RecordAssertion {
-    fn new(valid_times: Range<zx::Time>, severity: Severity) -> RecordAssertionBuilder {
-        RecordAssertionBuilder {
+    fn new(
+        info: &PuppetInfo,
+        valid_times: Range<zx::Time>,
+        severity: Severity,
+    ) -> RecordAssertionBuilder {
+        let mut builder = RecordAssertionBuilder {
             valid_times,
             severity,
             tags: BTreeSet::new(),
             arguments: BTreeMap::new(),
-        }
+        };
+
+        builder.add_unsigned("pid", info.pid);
+        builder.add_unsigned("tid", info.tid);
+
+        builder
     }
 }
 
@@ -213,6 +239,11 @@ impl RecordAssertionBuilder {
 
     fn add_string(&mut self, name: &str, value: &str) -> &mut Self {
         self.arguments.insert(name.to_owned(), Value::Text(value.to_owned()));
+        self
+    }
+
+    fn add_unsigned(&mut self, name: &str, value: u64) -> &mut Self {
+        self.arguments.insert(name.to_owned(), Value::UnsignedInt(value));
         self
     }
 }

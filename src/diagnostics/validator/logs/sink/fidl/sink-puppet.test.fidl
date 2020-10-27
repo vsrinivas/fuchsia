@@ -4,9 +4,18 @@
 
 library fuchsia.validate.logs;
 
-/// Implemented by the "puppet under test" and consumed by the log sink validator.
+using zx;
+
+struct PuppetInfo {
+    zx.koid pid;
+    zx.koid tid;
+};
+
 [Discoverable]
 protocol LogSinkPuppet {
+    /// Returns the information the puppet knows about itself.
+    GetInfo() -> (PuppetInfo info);
+
     /// Logs a record.
     EmitLog() -> ();
 };

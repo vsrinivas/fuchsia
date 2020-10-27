@@ -8,4 +8,6 @@ fidl("sink-puppet") {
   name = "fuchsia.validate.logs"
 
   sources = [ "sink-puppet.test.fidl" ]
+
+  public_deps = [ "$zx/vdso/zx" ]
 }
