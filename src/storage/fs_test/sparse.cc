@@ -40,7 +40,7 @@ TEST_P(SparseTest, ReadAfterSparseWriteReturnsCorrectData) {
   // Create a random write buffer of data
   std::vector<uint8_t> wbuf(write_size());
   unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
-  std::cerr << "Sparse test using seed: " << seed << std::endl;
+  std::cout << "Sparse test using seed: " << seed << std::endl;
   for (size_t i = 0; i < write_size(); i++) {
     wbuf[i] = (uint8_t)rand_r(&seed);
   }

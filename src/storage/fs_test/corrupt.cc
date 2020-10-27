@@ -66,7 +66,7 @@ TEST(CorruptTest, CorruptTest) {
     std::random_device random;
     std::uniform_int_distribution distribution(0, 20000);
     const int usec = distribution(random);
-    std::cerr << "sleeping for " << usec << "us" << std::endl;
+    std::cout << "sleeping for " << usec << "us" << std::endl;
     zx_nanosleep(zx_deadline_after(zx::usec(usec).get()));
 
     // Unbind the NAND driver.

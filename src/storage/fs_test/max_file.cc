@@ -65,7 +65,7 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
   const char* data = data_a;
   for (;;) {
     if (sz >= max_cap) {
-      std::cerr << "Approaching physical memory capacity: " << sz << " bytes";
+      std::cout << "Approaching physical memory capacity: " << sz << " bytes" << std::endl;
       r = 0;
       break;
     }
@@ -73,17 +73,17 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
     const int offset = sz % sizeof(data_a);
     const int len = sizeof(data_a) - offset;
     if ((r = write(fd.get(), data + offset, len)) < 0) {
-      std::cerr << "bigfile received error: " << strerror(errno);
+      std::cout << "bigfile received error: " << strerror(errno) << std::endl;
       if ((errno == EFBIG) || (errno == ENOSPC)) {
         // Either the file should be too big (EFBIG) or the file should
         // consume the whole volume (ENOSPC).
-        std::cerr << "(This was an expected error)";
+        std::cout << "(This was an expected error)" << std::endl;
         r = 0;
       }
       break;
     }
     if ((sz + r) % kPrintSize < (sz % kPrintSize)) {
-      std::cerr << "wrote " << (sz + r) / kMb << " MB";
+      std::cout << "wrote " << (sz + r) / kMb << " MB" << std::endl;
     }
     sz += r;
     if (r == len) {
@@ -94,7 +94,7 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
     }
   }
   ASSERT_EQ(r, 0) << "Saw an unexpected error from write";
-  std::cerr << "wrote " << sz << " bytes";
+  std::cout << "wrote " << sz << " bytes" << std::endl;
 
   struct stat buf;
   ASSERT_EQ(fstat(fd.get(), &buf), 0);
@@ -154,7 +154,7 @@ TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
   const char* data = data_a;
   for (;;) {
     if (*sz >= max_cap) {
-      std::cerr << "Approaching physical memory capacity: " << *sz << " bytes";
+      std::cout << "Approaching physical memory capacity: " << *sz << " bytes" << std::endl;
       r = 0;
       break;
     }
@@ -162,15 +162,15 @@ TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
     const int offset = *sz % sizeof(data_a);
     const int len = sizeof(data_a) - offset;
     if ((r = write(fd, data + offset, len)) <= 0) {
-      std::cerr << "bigfile received error: " << strerror(errno);
+      std::cout << "bigfile received error: " << strerror(errno);
       // Either the file should be too big (EFBIG) or the file should
       // consume the whole volume (ENOSPC).
       ASSERT_TRUE(errno == EFBIG || errno == ENOSPC);
-      std::cerr << "(This was an expected error)";
+      std::cout << "(This was an expected error)";
       break;
     }
     if ((*sz + r) % kPrintSize < (*sz % kPrintSize)) {
-      std::cerr << "wrote " << (*sz + r) / kMb << " MB";
+      std::cout << "wrote " << (*sz + r) / kMb << " MB";
     }
     *sz += r;
     if (r == len) {
@@ -181,8 +181,8 @@ TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
       ASSERT_LT(r, len);
     }
   }
-  std::cerr << "wrote " << sz_a << " bytes (to A)";
-  std::cerr << "wrote " << sz_b << " bytes (to B)";
+  std::cout << "wrote " << sz_a << " bytes (to A)";
+  std::cout << "wrote " << sz_b << " bytes (to B)";
 
   struct stat buf;
   ASSERT_EQ(fstat(fda.get(), &buf), 0);

@@ -75,7 +75,7 @@ TEST_P(MaxInodeTest, UseAllInodes) {
   size_t d = 0;
   while (true) {
     if (d % 100 == 0) {
-      std::cerr << "Creating directory (containing 100 files): " << d << std::endl;
+      std::cout << "Creating directory (containing 100 files): " << d << std::endl;
     }
     const std::string dname = GetPath(std::to_string(d));
     if (mkdir(dname.c_str(), 0666) < 0) {
@@ -101,7 +101,7 @@ TEST_P(MaxInodeTest, UseAllInodes) {
   ASSERT_NO_FATAL_FAILURE(EnsureCannotGrow());
 
   if (ShouldRemount()) {
-    std::cerr << "Unmounting, Verifying, Re-mounting..." << std::endl;
+    std::cout << "Unmounting, Verifying, Re-mounting..." << std::endl;
     EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
     EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
     EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
@@ -110,7 +110,7 @@ TEST_P(MaxInodeTest, UseAllInodes) {
   size_t directory_count = d;
   for (size_t d = 0; d < directory_count; d++) {
     if (d % 100 == 0) {
-      std::cerr << "Deleting directory (containing 100 files): " << d << std::endl;
+      std::cout << "Deleting directory (containing 100 files): " << d << std::endl;
     }
     const std::string dname = GetPath(std::to_string(d));
     for (size_t f = 0; f < kFilesPerDirectory; f++) {
@@ -145,7 +145,7 @@ TEST_P(MaxDataTest, UseAllData) {
 
   size_t f = 0;
   while (true) {
-    std::cerr << "Creating 20 MB file " << f << std::endl;
+    std::cout << "Creating 20 MB file " << f << std::endl;
     const std::string fname = GetPath(std::to_string(f));
     fbl::unique_fd fd(open(fname.c_str(), O_CREAT | O_RDWR | O_EXCL));
     if (!fd) {
@@ -172,7 +172,7 @@ TEST_P(MaxDataTest, UseAllData) {
   ASSERT_NO_FATAL_FAILURE(EnsureCannotGrow());
 
   if (ShouldRemount()) {
-    std::cerr << "Unmounting, Verifying, Re-mounting..." << std::endl;
+    std::cout << "Unmounting, Verifying, Re-mounting..." << std::endl;
     EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
     EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
     EXPECT_EQ(fs().Mount().status_value(), ZX_OK);

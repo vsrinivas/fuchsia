@@ -102,7 +102,7 @@ TEST_P(PersistWithDataTest, ReadsReturnWrittenDataAfterRemount) {
   };
   std::unique_ptr<uint8_t[]> buffers[std::size(files)];
   unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
-  std::cerr << "Persistent data test using seed: " << seed << std::endl;
+  std::cout << "Persistent data test using seed: " << seed << std::endl;
   fbl::AllocChecker ac;
   for (size_t i = 0; i < std::size(files); i++) {
     buffers[i].reset(new (&ac) uint8_t[buffer_size()]);

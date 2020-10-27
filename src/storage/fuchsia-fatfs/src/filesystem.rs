@@ -27,7 +27,7 @@ use {
 };
 
 pub struct FatFilesystemInner {
-    filesystem: FileSystem,
+    filesystem: Option<FileSystem>,
     // We don't implement unpin: we want `filesystem` to be pinned so that we can be sure
     // references to filesystem objects (see refs.rs) will remain valid across different locks.
     _pinned: PhantomPinned,
@@ -36,35 +36,52 @@ pub struct FatFilesystemInner {
 impl FatFilesystemInner {
     /// Get the root fatfs Dir.
     pub fn root_dir(&self) -> Dir<'_> {
-        self.filesystem.root_dir()
+        self.filesystem.as_ref().unwrap().root_dir()
     }
 
     pub fn with_disk<F, T>(&self, func: F) -> T
     where
         F: FnOnce(&Box<dyn Disk>) -> T,
     {
-        self.filesystem.with_disk(func)
+        self.filesystem.as_ref().unwrap().with_disk(func)
     }
 
     pub fn shut_down(&mut self) -> Result<(), Status> {
-        self.filesystem.flush().map_err(fatfs_error_to_status)
-        // TODO(fxbug.dev/55291): send flush to the underlying block device.
+        self.filesystem.take().ok_or(Status::BAD_STATE)?.unmount().map_err(fatfs_error_to_status)
     }
 
     pub fn cluster_size(&self) -> u32 {
-        self.filesystem.cluster_size()
+        self.filesystem.as_ref().map_or(0, |f| f.cluster_size())
     }
 
     pub fn total_clusters(&self) -> Result<u32, Status> {
-        Ok(self.filesystem.stats().map_err(fatfs_error_to_status)?.total_clusters())
+        Ok(self
+            .filesystem
+            .as_ref()
+            .ok_or(Status::BAD_STATE)?
+            .stats()
+            .map_err(fatfs_error_to_status)?
+            .total_clusters())
     }
 
     pub fn free_clusters(&self) -> Result<u32, Status> {
-        Ok(self.filesystem.stats().map_err(fatfs_error_to_status)?.free_clusters())
+        Ok(self
+            .filesystem
+            .as_ref()
+            .ok_or(Status::BAD_STATE)?
+            .stats()
+            .map_err(fatfs_error_to_status)?
+            .free_clusters())
     }
 
     pub fn sector_size(&self) -> Result<u16, Status> {
-        Ok(self.filesystem.stats().map_err(fatfs_error_to_status)?.sector_size())
+        Ok(self
+            .filesystem
+            .as_ref()
+            .ok_or(Status::BAD_STATE)?
+            .stats()
+            .map_err(fatfs_error_to_status)?
+            .sector_size())
     }
 }
 
@@ -80,7 +97,7 @@ impl FatFilesystem {
         options: FsOptions<DefaultTimeProvider, LossyOemCpConverter>,
     ) -> Result<(Pin<Arc<Self>>, Arc<FatDirectory>), Error> {
         let inner = Mutex::new(FatFilesystemInner {
-            filesystem: fatfs::FileSystem::new(disk, options)?,
+            filesystem: Some(fatfs::FileSystem::new(disk, options)?),
             _pinned: PhantomPinned,
         });
         let result = Arc::pin(FatFilesystem { inner, dirty_task: Mutex::new(None) });
@@ -89,7 +106,8 @@ impl FatFilesystem {
 
     #[cfg(test)]
     pub fn from_filesystem(filesystem: FileSystem) -> (Pin<Arc<Self>>, Arc<FatDirectory>) {
-        let inner = Mutex::new(FatFilesystemInner { filesystem, _pinned: PhantomPinned });
+        let inner =
+            Mutex::new(FatFilesystemInner { filesystem: Some(filesystem), _pinned: PhantomPinned });
         let result = Arc::pin(FatFilesystem { inner, dirty_task: Mutex::new(None) });
         (result.clone(), result.root_dir())
     }
@@ -114,7 +132,7 @@ impl FatFilesystem {
     pub fn mark_dirty(self: &Pin<Arc<Self>>) {
         let clone = self.clone();
         let task = Timer::new(Time::after(Duration::from_seconds(1))).then(|_| async move {
-            let _ = clone.lock().unwrap().filesystem.flush();
+            let _ = clone.lock().unwrap().filesystem.as_ref().map(|f| f.flush());
         });
 
         let task = Task::spawn(task);
@@ -378,14 +396,14 @@ mod tests {
         {
             let fs_lock = fs.filesystem().lock().unwrap();
             // fs should be dirty until the timer expires.
-            assert!(fs_lock.filesystem.is_dirty());
+            assert!(fs_lock.filesystem.as_ref().unwrap().is_dirty());
         }
         // Wait some time for the flush to happen. Don't hold the lock while waiting, otherwise
         // the flush will get stuck waiting on the lock.
         Timer::new(Time::after(Duration::from_millis(1500))).await;
         {
             let fs_lock = fs.filesystem().lock().unwrap();
-            assert_eq!(fs_lock.filesystem.is_dirty(), false);
+            assert_eq!(fs_lock.filesystem.as_ref().unwrap().is_dirty(), false);
         }
     }
 }

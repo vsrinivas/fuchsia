@@ -103,7 +103,7 @@ TEST_P(LargeTruncateTest, RepeatedlyWritingAndTruncatingLargeFileSucceeds) {
   ASSERT_TRUE(ac.check());
 
   unsigned seed = static_cast<unsigned>(zx_ticks_get());
-  std::cerr << "Truncate test using seed: " << seed;
+  std::cout << "Truncate test using seed: " << seed;
   srand(seed);
   for (unsigned n = 0; n < buffer_size(); n++) {
     buf[n] = static_cast<uint8_t>(rand_r(&seed));

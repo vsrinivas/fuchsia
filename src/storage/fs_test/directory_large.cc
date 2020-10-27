@@ -30,12 +30,12 @@ TEST_P(DirectoryMaxTest, Max) {
   for (;; ++i) {
     const std::string path = GetPath(dir + std::to_string(i)) + std::string(kLargePathLength, '.');
     if (i % 100 == 0) {
-      std::cerr << "Wrote " << i << " direntries" << std::endl;
+      std::cout << "Wrote " << i << " direntries" << std::endl;
     }
 
     fbl::unique_fd fd(open(path.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
     if (!fd) {
-      std::cerr << "Wrote " << i << " direntries" << std::endl;
+      std::cout << "Wrote " << i << " direntries" << std::endl;
       break;
     }
   }

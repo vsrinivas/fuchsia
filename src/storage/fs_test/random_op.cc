@@ -92,7 +92,7 @@ class RandomOpTest : public FilesystemTest {
 
     w->opcnt++;
     if (env.debug()) {
-      std::cerr << w->name << "[" << w->opcnt << "] " << fn << std::endl;
+      std::cout << w->name << "[" << w->opcnt << "] " << fn << std::endl;
     }
   }
 
@@ -436,7 +436,7 @@ class RandomOpTest : public FilesystemTest {
 
     // Close the worker's personal fd (if it is open) and
     // unlink the worker directory.
-    std::cerr << "work thread(" << w->name << ") done" << std::endl;
+    std::cout << "work thread(" << w->name << ") done" << std::endl;
     TaskCloseFd(w);
     unlink(w->env.GetPath(w->name).c_str());
 

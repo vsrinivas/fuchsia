@@ -115,17 +115,17 @@ Status Worker::Rw(bool do_read) {
   if (do_read) {
     uint8_t buffer[kBufSize];
     if ((r = read(fd_.get(), buffer, xfer)) < 0) {
-      std::cerr << "worker('" << name_ << "') read failed @" << pos_ << ": " << strerror(errno)
+      std::cout << "worker('" << name_ << "') read failed @" << pos_ << ": " << strerror(errno)
                 << std::endl;
       return kFail;
     }
     if (memcmp(buffer, buffer_.u8 + off, r)) {
-      std::cerr << "worker('" << name_ << ") verify failed @" << pos_ << std::endl;
+      std::cout << "worker('" << name_ << ") verify failed @" << pos_ << std::endl;
       return kFail;
     }
   } else {
     if ((r = write(fd_.get(), buffer_.u8 + off, xfer)) < 0) {
-      std::cerr << "worker('" << name_ << "') write failed @" << pos_ << ": " << strerror(errno)
+      std::cout << "worker('" << name_ << "') write failed @" << pos_ << ": " << strerror(errno)
                 << std::endl;
       return kFail;
     }
@@ -142,7 +142,7 @@ Status Worker::Writer() {
   Status r = Rw(false);
   if (r == kDone) {
     if (lseek(fd_.get(), 0, SEEK_SET) != 0) {
-      std::cerr << "worker('" << name_ << "') seek failed: " << strerror(errno) << std::endl;
+      std::cout << "worker('" << name_ << "') seek failed: " << strerror(errno) << std::endl;
       return kFail;
     }
     // Reset data_random_.
@@ -176,7 +176,7 @@ Status RwWorkersTest::DoWork() {
         return kFail;
       }
       if (w.status() == kDone) {
-        std::cerr << "worker('" << w.name() << "') finished" << std::endl;
+        std::cout << "worker('" << w.name() << "') finished" << std::endl;
         EXPECT_EQ(unlink(w.name().c_str()), 0);
       }
     }
@@ -221,12 +221,12 @@ RwWorkersTest::RwWorkersTest() {
 int DoThreadedWork(void* arg) {
   Worker* w = static_cast<Worker*>(arg);
 
-  std::cerr << "work thread(" << w->name() << ") started" << std::endl;
+  std::cout << "work thread(" << w->name() << ") started" << std::endl;
   while (w->Work() == kBusy) {
     thrd_yield();
   }
 
-  std::cerr << "work thread(" << w->name() << ") " << (w->status() == kDone ? "finished" : "failed")
+  std::cout << "work thread(" << w->name() << ") " << (w->status() == kDone ? "finished" : "failed")
             << std::endl;
   EXPECT_EQ(unlink(w->name().c_str()), 0);
 

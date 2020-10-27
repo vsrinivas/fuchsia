@@ -59,7 +59,7 @@ zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDisk(
       zx::make_status(mapper.CreateAndMap(options.device_block_size * options.device_block_count,
                                           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
   if (status.is_error()) {
-    std::cerr << "Unable to create VMO for ramdisk: " << status.status_string();
+    std::cout << "Unable to create VMO for ramdisk: " << status.status_string() << std::endl;
     return status.take_error();
   }
 
@@ -135,7 +135,7 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
 
   status = zx::make_status(wait_for_device("/dev/misc/nand-ctl", zx::sec(10).get()));
   if (status.is_error()) {
-    std::cerr << "Timed out waiting for /dev/misc/nand-ctl to appear";
+    std::cout << "Timed out waiting for /dev/misc/nand-ctl to appear" << std::endl;
     return status.take_error();
   }
 
@@ -150,14 +150,14 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
       .nand_info.nand_class = fuchsia_hardware_nand_Class_FTL};
   status = zx::make_status(ramdevice_client::RamNand::Create(&config, &ram_nand));
   if (status.is_error()) {
-    std::cerr << "RamNand::Create failed: " << status.status_string();
+    std::cout << "RamNand::Create failed: " << status.status_string() << std::endl;
     return status.take_error();
   }
 
   std::string ftl_path = std::string(ram_nand->path()) + "/ftl/block";
   status = zx::make_status(wait_for_device(ftl_path.c_str(), zx::sec(10).get()));
   if (status.is_error()) {
-    std::cerr << "Timed out waiting for RamNand";
+    std::cout << "Timed out waiting for RamNand" << std::endl;
     return status.take_error();
   }
   return zx::ok(std::make_pair(*std::move(ram_nand), std::move(ftl_path)));
@@ -169,7 +169,7 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
                      zx::channel* outgoing_directory = nullptr) {
   auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
-    std::cerr << "Could not open device: " << device_path << ": errno=" << errno;
+    std::cout << "Could not open device: " << device_path << ": errno=" << errno << std::endl;
     return zx::error(ZX_ERR_BAD_STATE);
   }
 
@@ -180,7 +180,8 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
     zx::channel server;
     auto status = zx::make_status(zx::channel::create(0, outgoing_directory, &server));
     if (status.is_error()) {
-      std::cerr << "Unable to create channel for outgoing directory: " << status.status_string();
+      std::cout << "Unable to create channel for outgoing directory: " << status.status_string()
+                << std::endl;
       return status;
     }
     options.outgoing_directory.client = outgoing_directory->get();
@@ -195,8 +196,8 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
   auto status = zx::make_status(mount(fd.release(), StripTrailingSlash(mount_path).c_str(), format,
                                       &options, launch_stdio_async));
   if (status.is_error()) {
-    std::cerr << "Could not mount " << disk_format_string(format)
-              << " file system: " << status.status_string();
+    std::cout << "Could not mount " << disk_format_string(format)
+              << " file system: " << status.status_string() << std::endl;
     return status;
   }
   return zx::ok();
@@ -209,7 +210,7 @@ zx::status<> FsUnbind(const std::string& mount_path) {
   }
   if (auto status = zx::make_status(fdio_ns_unbind(ns, StripTrailingSlash(mount_path).c_str()));
       status.is_error()) {
-    std::cerr << "Unable to unbind: " << status.status_string() << std::endl;
+    std::cout << "Unable to unbind: " << status.status_string() << std::endl;
     return status;
   }
   return zx::ok();
@@ -220,18 +221,18 @@ zx::status<> FsDirectoryAdminUnmount(const std::string& mount_path) {
   constexpr int kAdmin = 0x0000'0004;
   int fd = open(mount_path.c_str(), O_DIRECTORY | kAdmin);
   if (fd < 0) {
-    std::cerr << "Unable to open mount point: " << strerror(errno) << std::endl;
+    std::cout << "Unable to open mount point: " << strerror(errno) << std::endl;
     return zx::error(ZX_ERR_INTERNAL);
   }
   zx_handle_t handle;
   if (auto status = zx::make_status(fdio_get_service_handle(fd, &handle)); status.is_error()) {
-    std::cerr << "Unable to get service handle: " << status.status_string() << std::endl;
+    std::cout << "Unable to get service handle: " << status.status_string() << std::endl;
     return status;
   }
   if (auto status =
           zx::make_status(fs::Vfs::UnmountHandle(zx::channel(handle), zx::time::infinite()));
       status.is_error()) {
-    std::cerr << "Unable to unmount: " << status.status_string() << std::endl;
+    std::cout << "Unable to unmount: " << status.status_string() << std::endl;
     return status;
   }
   return zx::ok();
@@ -319,8 +320,8 @@ zx::status<> Filesystem::Format(const std::string& device_path, disk_format_t fo
   options.sectors_per_cluster = 2;  // 1 KiB cluster size
   auto status = zx::make_status(mkfs(device_path.c_str(), format, launch_stdio_sync, &options));
   if (status.is_error()) {
-    std::cerr << "Could not format " << disk_format_string(format)
-              << " file system: " << status.status_string();
+    std::cout << "Could not format " << disk_format_string(format)
+              << " file system: " << status.status_string() << std::endl;
     return status;
   }
   return zx::ok();
@@ -389,7 +390,8 @@ zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Make(
     auto fvm_partition_or =
         isolated_devmgr::CreateFvmPartition(nand_device_path, options.fvm_slice_size);
     if (fvm_partition_or.is_error()) {
-      std::cerr << "Failed to create FVM partition: " << fvm_partition_or.status_string();
+      std::cout << "Failed to create FVM partition: " << fvm_partition_or.status_string()
+                << std::endl;
       return fvm_partition_or.take_error();
     }
 
@@ -444,7 +446,7 @@ zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Open(
     }
   }
   if (status.is_error()) {
-    std::cerr << "Unable to bind FVM: " << status.status_string();
+    std::cout << "Unable to bind FVM: " << status.status_string() << std::endl;
     return status.take_error();
   }
 
@@ -452,7 +454,7 @@ zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Open(
   const std::string device_path = ftl_device_path + "/fvm/fs-test-partition-p-1/block";
   status = zx::make_status(wait_for_device(device_path.c_str(), zx::sec(10).get()));
   if (status.is_error()) {
-    std::cerr << "Timed out waiting for Minfs partition to show up";
+    std::cout << "Timed out waiting for Minfs partition to show up" << std::endl;
     return status.take_error();
   }
   return zx::ok(std::make_unique<MinfsInstance>(std::move(ram_nand), device_path));
@@ -538,12 +540,12 @@ class FatfsInstance : public FilesystemInstance {
     auto status = zx::make_status(fdio_service_connect_at(
         outgoing_directory_.get(), service_name.c_str(), admin.NewRequest().TakeChannel().get()));
     if (status.is_error()) {
-      std::cerr << "Unable to connect to admin service: " << status.status_string();
+      std::cout << "Unable to connect to admin service: " << status.status_string() << std::endl;
       return status;
     }
     status = zx::make_status(admin->Shutdown());
     if (status.is_error()) {
-      std::cerr << "Shut down failed: " << status.status_string();
+      std::cout << "Shut down failed: " << status.status_string() << std::endl;
       return status;
     }
     outgoing_directory_.reset();
@@ -662,7 +664,7 @@ TestFilesystem::~TestFilesystem() {
     if (mounted_) {
       auto status = Unmount();
       if (status.is_error()) {
-        std::cerr << "warning: failed to unmount: " << status.status_string();
+        std::cout << "warning: failed to unmount: " << status.status_string() << std::endl;
       }
     }
     rmdir(mount_path_.c_str());
