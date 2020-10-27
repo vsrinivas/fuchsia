@@ -117,8 +117,8 @@ func TestGenArgs(t *testing.T) {
 
 	testCases := []struct {
 		name        string
-		contextSpec fintpb.Context
-		staticSpec  fintpb.Static
+		contextSpec *fintpb.Context
+		staticSpec  *fintpb.Static
 		// Args that are expected to be included in the return value. Order does
 		// not matter.
 		expectedArgs []string
@@ -134,7 +134,7 @@ func TestGenArgs(t *testing.T) {
 		},
 		{
 			name: "arm64 release",
-			staticSpec: fintpb.Static{
+			staticSpec: &fintpb.Static{
 				TargetArch: fintpb.Static_ARM64,
 				Optimize:   fintpb.Static_RELEASE,
 			},
@@ -142,7 +142,7 @@ func TestGenArgs(t *testing.T) {
 		},
 		{
 			name: "clang toolchain",
-			contextSpec: fintpb.Context{
+			contextSpec: &fintpb.Context{
 				ClangToolchainDir: "/tmp/clang_toolchain",
 			},
 			expectedArgs: []string{
@@ -151,17 +151,17 @@ func TestGenArgs(t *testing.T) {
 		},
 		{
 			name: "clang toolchain with goma not allowed",
-			contextSpec: fintpb.Context{
+			contextSpec: &fintpb.Context{
 				ClangToolchainDir: "/tmp/clang_toolchain",
 			},
-			staticSpec: fintpb.Static{
+			staticSpec: &fintpb.Static{
 				UseGoma: true,
 			},
 			expectErr: true,
 		},
 		{
 			name: "gcc toolchain",
-			contextSpec: fintpb.Context{
+			contextSpec: &fintpb.Context{
 				GccToolchainDir: "/tmp/gcc_toolchain",
 			},
 			expectedArgs: []string{
@@ -170,20 +170,20 @@ func TestGenArgs(t *testing.T) {
 		},
 		{
 			name: "gcc toolchain with goma not allowed",
-			contextSpec: fintpb.Context{
+			contextSpec: &fintpb.Context{
 				GccToolchainDir: "/tmp/gcc_toolchain",
 			},
-			staticSpec: fintpb.Static{
+			staticSpec: &fintpb.Static{
 				UseGoma: true,
 			},
 			expectErr: true,
 		},
 		{
 			name: "rust toolchain with goma",
-			contextSpec: fintpb.Context{
+			contextSpec: &fintpb.Context{
 				RustToolchainDir: "/tmp/rust_toolchain",
 			},
-			staticSpec: fintpb.Static{
+			staticSpec: &fintpb.Static{
 				UseGoma: true,
 			},
 			expectedArgs: []string{
@@ -194,7 +194,7 @@ func TestGenArgs(t *testing.T) {
 		},
 		{
 			name: "test durations file",
-			staticSpec: fintpb.Static{
+			staticSpec: &fintpb.Static{
 				TestDurationsFile: "test_durations/foo.json",
 			},
 			checkoutFiles: []string{"test_durations/foo.json"},
@@ -202,7 +202,7 @@ func TestGenArgs(t *testing.T) {
 		},
 		{
 			name: "fall back to default test durations file",
-			staticSpec: fintpb.Static{
+			staticSpec: &fintpb.Static{
 				TestDurationsFile:        "test_durations/foo.json",
 				DefaultTestDurationsFile: "test_durations/default.json",
 			},
@@ -210,7 +210,7 @@ func TestGenArgs(t *testing.T) {
 		},
 		{
 			name: "product",
-			staticSpec: fintpb.Static{
+			staticSpec: &fintpb.Static{
 				Product: "products/core.gni",
 			},
 			expectedArgs: []string{
@@ -220,7 +220,7 @@ func TestGenArgs(t *testing.T) {
 		},
 		{
 			name: "board",
-			staticSpec: fintpb.Static{
+			staticSpec: &fintpb.Static{
 				Board: "boards/x64.gni",
 			},
 			expectedArgs: []string{
@@ -230,7 +230,7 @@ func TestGenArgs(t *testing.T) {
 		},
 		{
 			name: "packages",
-			staticSpec: fintpb.Static{
+			staticSpec: &fintpb.Static{
 				BasePackages:     []string{"//b"},
 				CachePackages:    []string{"//c"},
 				UniversePackages: []string{"//u1", "//u2"},
@@ -243,7 +243,7 @@ func TestGenArgs(t *testing.T) {
 		},
 		{
 			name: "packages with product",
-			staticSpec: fintpb.Static{
+			staticSpec: &fintpb.Static{
 				Product:          "products/core.gni",
 				BasePackages:     []string{"//b"},
 				CachePackages:    []string{"//c"},
@@ -257,10 +257,10 @@ func TestGenArgs(t *testing.T) {
 		},
 		{
 			name: "variant",
-			contextSpec: fintpb.Context{
+			contextSpec: &fintpb.Context{
 				CacheDir: "/cache",
 			},
-			staticSpec: fintpb.Static{
+			staticSpec: &fintpb.Static{
 				Variants: []string{`thinlto`, `{variant="asan-fuzzer"}`},
 			},
 			expectedArgs: []string{
@@ -270,14 +270,14 @@ func TestGenArgs(t *testing.T) {
 		},
 		{
 			name: "release version",
-			contextSpec: fintpb.Context{
+			contextSpec: &fintpb.Context{
 				ReleaseVersion: "1234",
 			},
 			expectedArgs: []string{`build_info_version="1234"`},
 		},
 		{
 			name: "sdk id",
-			contextSpec: fintpb.Context{
+			contextSpec: &fintpb.Context{
 				SdkId: "789",
 			},
 			expectedArgs: []string{`sdk_id="789"`, `build_sdk_archives=true`},
@@ -286,17 +286,17 @@ func TestGenArgs(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			baseStaticSpec := fintpb.Static{
+			baseStaticSpec := &fintpb.Static{
 				TargetArch: fintpb.Static_X64,
 				Optimize:   fintpb.Static_DEBUG,
 			}
-			proto.Merge(&baseStaticSpec, &tc.staticSpec)
+			proto.Merge(baseStaticSpec, tc.staticSpec)
 			tc.staticSpec = baseStaticSpec
 
-			baseContextSpec := fintpb.Context{
+			baseContextSpec := &fintpb.Context{
 				CheckoutDir: t.TempDir(),
 			}
-			proto.Merge(&baseContextSpec, &tc.contextSpec)
+			proto.Merge(baseContextSpec, tc.contextSpec)
 			tc.contextSpec = baseContextSpec
 
 			// Replace all instances of the magic checkoutDir string with the
@@ -313,7 +313,7 @@ func TestGenArgs(t *testing.T) {
 				}
 			}
 
-			args, err := genArgs(&tc.staticSpec, &tc.contextSpec, platform)
+			args, err := genArgs(tc.staticSpec, tc.contextSpec, platform)
 			if err != nil {
 				if tc.expectErr {
 					return
