@@ -165,9 +165,9 @@ zx_status_t GpioLight::Init() {
     }
   }
 
-  zx_device_t* fragments[fragment_count];
+  composite_device_fragment_t fragments[fragment_count];
   size_t actual;
-  composite.GetFragments(fragments, fragment_count, &actual);
+  composite.GetFragmentsNew(fragments, fragment_count, &actual);
   if (actual != fragment_count) {
     return ZX_ERR_INTERNAL;
   }
@@ -181,7 +181,7 @@ zx_status_t GpioLight::Init() {
 
   for (uint32_t i = 0; i < gpio_count_; i++) {
     auto* gpio = &gpios_[i];
-    auto status = device_get_protocol(fragments[i + 1], ZX_PROTOCOL_GPIO, gpio);
+    auto status = device_get_protocol(fragments[i + 1].device, ZX_PROTOCOL_GPIO, gpio);
     if (status != ZX_OK) {
       return status;
     }

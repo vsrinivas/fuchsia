@@ -526,8 +526,8 @@ static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "%s Could not get fragment count", __func__);
     return ZX_ERR_INTERNAL;
   }
-  zx_device_t* fragments[fragment_count];
-  composite.GetFragments(fragments, fragment_count, &actual);
+  composite_device_fragment_t fragments[fragment_count];
+  composite.GetFragmentsNew(fragments, fragment_count, &actual);
   if (actual != fragment_count) {
     zxlogf(ERROR, "%s Fragment count did not match", __func__);
     return ZX_ERR_INTERNAL;
@@ -539,7 +539,7 @@ static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
   for (uint32_t i = 0; i < n_gpios; ++i) {
-    status = device_get_protocol(fragments[i], ZX_PROTOCOL_GPIO, &gpios[i].gpio);
+    status = device_get_protocol(fragments[i].device, ZX_PROTOCOL_GPIO, &gpios[i].gpio);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s Could not get protocol", __func__);
       return ZX_ERR_INTERNAL;
