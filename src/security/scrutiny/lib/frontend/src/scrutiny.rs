@@ -11,7 +11,7 @@ use {
         shell::Shell,
     },
     anyhow::{Error, Result},
-    clap::{App, Arg},
+    clap::{App, Arg, ArgMatches},
     log::error,
     scrutiny::{
         engine::{
@@ -82,11 +82,9 @@ impl Scrutiny {
         Ok(Self { manager, dispatcher, scheduler, visualizer, shell, config })
     }
 
-    /// Parses all the command line arguments passed in and returns a
-    /// ScrutinyConfig. If arguments are passed as a vector they will be read
-    /// instead of the command line.
-    pub fn args(inline_arguments: Option<Vec<String>>) -> Result<Config> {
-        let app = App::new("scrutiny")
+    /// Declares the Scrutiny command line interface.
+    fn cmdline() -> App<'static, 'static> {
+        App::new("scrutiny")
             .version("1.0")
             .author("Fuchsia Authors")
             .about("An extendable security auditing framework")
@@ -138,13 +136,12 @@ impl Scrutiny {
                     be served relative to the scrutiny service root.",
                     )
                     .default_value("/scripts/scrutiny"),
-            );
-        let args = if let Some(inline_arguments) = inline_arguments {
-            app.get_matches_from(inline_arguments)
-        } else {
-            app.get_matches()
-        };
+            )
+    }
 
+    /// Parses all the command line arguments passed in and returns a
+    /// ScrutinyConfig.
+    fn cmdline_to_config(args: ArgMatches<'static>) -> Result<Config> {
         let mut config = Config::default();
         if let Some(command) = args.value_of("command") {
             config.launch.command = Some(command.to_string());
@@ -175,6 +172,20 @@ impl Scrutiny {
             server_config.visualizer_path = args.value_of("visualizer").unwrap().to_string();
         }
         Ok(config)
+    }
+
+    /// Parses all the command line arguments passed in from the environment
+    /// and returns a ScrutinyConfig.
+    pub fn args_from_env() -> Result<Config> {
+        let app = Scrutiny::cmdline();
+        Scrutiny::cmdline_to_config(app.get_matches())
+    }
+
+    /// Parses arguments directly from the vector instead of the environmetn
+    /// and returns a ScrutinyConfig.
+    pub fn args_inline(inline_arguments: Vec<String>) -> Result<Config> {
+        let app = Scrutiny::cmdline();
+        Scrutiny::cmdline_to_config(app.get_matches_from(inline_arguments))
     }
 
     /// Utility function to register a plugin.
@@ -235,63 +246,63 @@ mod tests {
 
     #[test]
     fn scrutiny_script_args() {
-        let result = Scrutiny::args(Some(
+        let result = Scrutiny::args_inline(
             vec!["scrutiny", "-s", "foo"].into_iter().map(String::from).collect(),
-        ))
+        )
         .unwrap();
         assert_eq!(result.launch.script_path.unwrap(), "foo".to_string());
     }
 
     #[test]
     fn scrutiny_command_args() {
-        let result = Scrutiny::args(Some(
+        let result = Scrutiny::args_inline(
             vec!["scrutiny", "-c", "bar"].into_iter().map(String::from).collect(),
-        ))
+        )
         .unwrap();
         assert_eq!(result.launch.command.unwrap(), "bar".to_string());
     }
 
     #[test]
     fn scrutiny_model_path_args() {
-        let result = Scrutiny::args(Some(
+        let result = Scrutiny::args_inline(
             vec!["scrutiny", "-m", "baz"].into_iter().map(String::from).collect(),
-        ))
+        )
         .unwrap();
         assert_eq!(result.runtime.model.path, "baz".to_string());
     }
 
     #[test]
     fn scrutiny_logging_path_args() {
-        let result = Scrutiny::args(Some(
+        let result = Scrutiny::args_inline(
             vec!["scrutiny", "-l", "test_log"].into_iter().map(String::from).collect(),
-        ))
+        )
         .unwrap();
         assert_eq!(result.runtime.logging.path, "test_log".to_string());
     }
 
     #[test]
     fn scrutiny_logging_verbosity_args() {
-        let result = Scrutiny::args(Some(
+        let result = Scrutiny::args_inline(
             vec!["scrutiny", "-v", "warn"].into_iter().map(String::from).collect(),
-        ))
+        )
         .unwrap();
         assert_eq!(result.runtime.logging.verbosity, LoggingVerbosity::Warn);
     }
 
     #[test]
     fn scrutiny_port_args() {
-        let result = Scrutiny::args(Some(
+        let result = Scrutiny::args_inline(
             vec!["scrutiny", "-p", "1234"].into_iter().map(String::from).collect(),
-        ))
+        )
         .unwrap();
         assert_eq!(result.runtime.server.unwrap().port, 1234);
     }
 
     #[test]
     fn scrutiny_visualizer_args() {
-        let result = Scrutiny::args(Some(
+        let result = Scrutiny::args_inline(
             vec!["scrutiny", "-i", "test_viz"].into_iter().map(String::from).collect(),
-        ))
+        )
         .unwrap();
         assert_eq!(result.runtime.server.unwrap().visualizer_path, "test_viz".to_string());
     }

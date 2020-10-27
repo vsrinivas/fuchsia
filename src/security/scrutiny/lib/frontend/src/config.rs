@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use serde::{Deserialize, Serialize};
+
 /// The Scrutiny Configuration determines how the framework runtime will be setup
 /// when it launches. This includes determining what features the runtime will
 /// include and how those features will operate. Since Scrutiny has a variety
 /// of usages from shells to static analysis this configuration is intended to
 /// be the source of truth for configuring Scrutiny to meet its requirements.
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Config {
     pub launch: LaunchConfig,
     pub runtime: RuntimeConfig,
@@ -33,6 +36,7 @@ impl Config {
 
 /// Launch configuration describes events that run after the framework has
 /// launched such as scripts, commands etc.
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct LaunchConfig {
     /// Runs a command on launch.
     pub command: Option<String>,
@@ -52,6 +56,7 @@ impl LaunchConfig {
 /// The Runtime configuration determines which features of the Scrutiny
 /// Framework should be available. Changing the runtime configuration could
 /// disable certain features for certain usages.
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct RuntimeConfig {
     /// Configuration about logging such as where logs are stored and its
     /// verbosity level.
@@ -88,6 +93,7 @@ impl RuntimeConfig {
 
 /// Logging is a required feature of the Scrutiny runtime. Every configuration
 /// must include a logging configuration.
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct LoggingConfig {
     pub path: String,
     pub verbosity: LoggingVerbosity,
@@ -103,7 +109,7 @@ impl LoggingConfig {
 }
 
 /// The verbosity level at which logged messages will appear.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub enum LoggingVerbosity {
     Error,
     Warn,
@@ -115,6 +121,7 @@ pub enum LoggingVerbosity {
 
 /// The DataModel is a required feature of the Scrutiny runtime. Every
 /// configuration must include a model configuration.
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct ModelConfig {
     /// Path to the model data.
     pub path: String,
@@ -133,6 +140,7 @@ impl ModelConfig {
 /// determined. It determines which set of plugins from lib/plugins will be
 /// loaded on runtime launch and this directly impacts what Data Collectors
 /// and DataControllers are available.
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct PluginConfig {
     pub plugins: Vec<String>,
 }
@@ -156,6 +164,7 @@ impl PluginConfig {
 
 /// The Scrutiny Server is an optional runtime feature that launches a server
 /// to display the Scrutiny visualizers.
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct ServerConfig {
     /// The port to run the server from.
     pub port: u16,

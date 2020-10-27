@@ -14,7 +14,7 @@ use {
 /// be used by binaries that wish to launch a full copy of the Scrutiny
 /// framework with default settings.
 pub fn launch() -> Result<()> {
-    let mut app = Scrutiny::new(Scrutiny::args(None)?)?;
+    let mut app = Scrutiny::new(Scrutiny::args_from_env()?)?;
     app.plugin(CorePlugin::new())?;
     app.plugin(SearchPlugin::new())?;
     app.plugin(EnginePlugin::new(app.scheduler(), app.dispatcher(), app.plugin_manager()))?;
