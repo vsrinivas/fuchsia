@@ -85,6 +85,29 @@ Status ChunkedDecompressor::Decompress(const SeekTable& table, const void* input
   return kStatusOk;
 }
 
+Status ChunkedDecompressor::DecompressFrame(const void* compressed_buffer,
+                                            size_t compressed_buffer_len, void* dst, size_t dst_len,
+                                            size_t* bytes_written_out) {
+  size_t decompressed_size = ZSTD_decompressDCtx(context_->inner_, dst, dst_len,
+                                                 compressed_buffer, compressed_buffer_len);
+  if (ZSTD_isError(decompressed_size)) {
+    FX_LOGS(ERROR) << "Decompression failed: " << ZSTD_getErrorName(decompressed_size);
+    if (LikelyCorrupton(ZSTD_getErrorCode(decompressed_size))) {
+      return kStatusErrIoDataIntegrity;
+    }
+    return kStatusErrInternal;
+  }
+
+  if (decompressed_size != dst_len) {
+    FX_LOGS(ERROR) << "Decompressed " << decompressed_size << " bytes, expected "
+                   << dst_len;
+    return kStatusErrIoDataIntegrity;
+  }
+
+  *bytes_written_out = decompressed_size;
+  return kStatusOk;
+}
+
 Status ChunkedDecompressor::DecompressFrame(const SeekTable& table, unsigned table_index,
                                             const void* compressed_buffer,
                                             size_t compressed_buffer_len, void* dst, size_t dst_len,
@@ -97,24 +120,8 @@ Status ChunkedDecompressor::DecompressFrame(const SeekTable& table, unsigned tab
     return kStatusErrBufferTooSmall;
   }
 
-  size_t decompressed_size = ZSTD_decompressDCtx(context_->inner_, dst, entry.decompressed_size,
-                                                 compressed_buffer, entry.compressed_size);
-  if (ZSTD_isError(decompressed_size)) {
-    FX_LOGS(ERROR) << "Decompression failed: " << ZSTD_getErrorName(decompressed_size);
-    if (LikelyCorrupton(ZSTD_getErrorCode(decompressed_size))) {
-      return kStatusErrIoDataIntegrity;
-    }
-    return kStatusErrInternal;
-  }
-
-  if (decompressed_size != entry.decompressed_size) {
-    FX_LOGS(ERROR) << "Decompressed " << decompressed_size << " bytes, expected "
-                   << entry.decompressed_size;
-    return kStatusErrIoDataIntegrity;
-  }
-
-  *bytes_written_out = decompressed_size;
-  return kStatusOk;
+  return DecompressFrame(
+      compressed_buffer, entry.compressed_size, dst, entry.decompressed_size, bytes_written_out);
 }
 
 }  // namespace chunked_compression

@@ -521,4 +521,52 @@ TEST(ChunkedDecompressorTest, Decompress_CorruptHeader) {
   EXPECT_NE(reader.Parse(compressed_data.get(), compressed_len, compressed_len, &table), kStatusOk);
 }
 
+TEST(ChunkedDecompressorTest, RawDecompressFrame_WrongDecompressionLength) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
+  size_t chunk_size = CompressionParams::MinChunkSize();
+  // 2 data frames
+  size_t len = (2 * chunk_size);
+  fbl::Array<uint8_t> data(new uint8_t[len], len);
+  RandomFill(data.get(), len);
+
+  CompressionParams params;
+  ChunkedCompressor compressor(params);
+
+  size_t compressed_limit = compressor.ComputeOutputSizeLimit(len);
+  fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
+  size_t compressed_len;
+  ASSERT_EQ(compressor.Compress(data.get(), len, compressed_data.get(), compressed_limit,
+                                &compressed_len),
+            kStatusOk);
+  ASSERT_LE(compressed_len, compressed_limit);
+
+  fbl::Array<uint8_t> out_buf(new uint8_t[chunk_size], chunk_size);
+
+  SeekTable table;
+  HeaderReader reader;
+  ASSERT_OK(reader.Parse(compressed_data.get(), compressed_len, compressed_len, &table));
+
+  ChunkedDecompressor decompressor;
+
+  uint8_t* frame_start = compressed_data.get() + table.Entries()[0].compressed_offset;
+  size_t frame_length = table.Entries()[0].compressed_size;
+  size_t output_len = table.Entries()[0].decompressed_size;
+
+  size_t bytes_written;
+  // First frame uses the correct table outputs.
+  EXPECT_EQ(decompressor.DecompressFrame(frame_start, frame_length, out_buf.get(),
+                                         output_len, &bytes_written),
+            kStatusOk);
+
+  frame_start = compressed_data.get() + table.Entries()[1].compressed_offset;
+  frame_length = table.Entries()[1].compressed_size;
+  size_t wrong_output_len = table.Entries()[1].decompressed_size + 1;
+
+  // Second frame takes an incorrect table output, so we cannot verify that the entire frame was
+  // decompressed as expected.
+  EXPECT_EQ(decompressor.DecompressFrame(frame_start, frame_length, out_buf.get(),
+                                         wrong_output_len, &bytes_written),
+            kStatusErrIoDataIntegrity);
+}
+
 }  // namespace chunked_compression

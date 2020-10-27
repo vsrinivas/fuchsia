@@ -71,6 +71,15 @@ class ChunkedDecompressor {
   Status Decompress(const SeekTable& table, const void* input, size_t len, void* output,
                     size_t output_len, size_t* bytes_written_out);
 
+  // |input_frame| should start at the frame's first byte, and |input_frame_len| must be big enough
+  // to span the entire frame.
+  // |output| starts at the first byte to write the result, and |output_len| must be the resulting
+  // decompressed size.
+  //
+  // Returns the number of decompressed bytes written in |bytes_written_out|.
+  Status DecompressFrame(const void* input_frame, size_t input_frame_len, void* output,
+                         size_t output_len, size_t* bytes_written_out);
+
   // Reads the |table_index|'th frame of the decompressed archive described by |table| from
   // |input_frame|, and writes the decompressed frame to |output|.
   //

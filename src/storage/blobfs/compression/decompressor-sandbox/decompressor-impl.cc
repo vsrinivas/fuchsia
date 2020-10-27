@@ -8,7 +8,7 @@
 
 #include "src/storage/blobfs/compression/decompressor-sandbox/decompressor-impl.h"
 
-#include <fuchsia/blobfs/internal/llcpp/fidl.h>
+#include <fbl/auto_call.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -17,6 +17,7 @@
 #include <lib/trace/event.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
+#include <src/lib/chunked-compression/chunked-decompressor.h>
 #include <threads.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -26,9 +27,7 @@
 #include <blobfs/compression-settings.h>
 #include <compression/decompressor.h>
 #include <compression/external-decompressor.h>
-#include <fbl/auto_call.h>
-#include <zstd/zstd.h>
-#include <zstd/zstd_errors.h>
+#include <fuchsia/blobfs/internal/llcpp/fidl.h>
 
 
 namespace {
@@ -54,34 +53,11 @@ zx_status_t DecompressChunked(const fzl::OwnedVmoMapper& decompressed_mapper,
                               const llcpp::fuchsia::blobfs::internal::Range decompressed,
                               const llcpp::fuchsia::blobfs::internal::Range compressed,
                               size_t* bytes_decompressed) {
-  ZSTD_DCtx* decompression_context = ZSTD_createDCtx();
-  auto free_decompression_context = fbl::MakeAutoCall([&]() {
-    ZSTD_freeDCtx(decompression_context);
-    decompression_context = nullptr;
-  });
-
   const uint8_t* src = static_cast<const uint8_t*>(compressed_mapper.start()) + compressed.offset;
   uint8_t* dst = static_cast<uint8_t*>(decompressed_mapper.start()) + decompressed.offset;
-  // TODO(fxbug.dev/62396): Expose this simple call through the chunked-compression lib
-  // so that the error handling and context logic can all be hidden in there.
-  *bytes_decompressed =
-      ZSTD_decompressDCtx(decompression_context, dst, decompressed.size, src, compressed.size);
-  if (ZSTD_isError(*bytes_decompressed)) {
-    *bytes_decompressed = ZSTD_getErrorCode(*bytes_decompressed);
-    switch (ZSTD_getErrorCode(*bytes_decompressed)) {
-      case ZSTD_error_checksum_wrong:
-      case ZSTD_error_corruption_detected:
-      case ZSTD_error_prefix_unknown:
-        return ZX_ERR_IO_DATA_INTEGRITY;
-      default:
-        return ZX_ERR_INTERNAL;
-    }
-  }
-  if (*bytes_decompressed != decompressed.size) {
-    *bytes_decompressed = 0;
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
-  return ZX_OK;
+  chunked_compression::ChunkedDecompressor decompressor;
+  return decompressor.DecompressFrame(
+      src, compressed.size, dst, decompressed.size, bytes_decompressed);
 }
 
 zx_status_t DecompressFull(const fzl::OwnedVmoMapper& decompressed_mapper,
