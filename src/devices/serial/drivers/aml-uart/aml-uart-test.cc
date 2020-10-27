@@ -235,7 +235,7 @@ class AmlUartHarness : public zxtest::Test {
     info.serial_class = fuchsia_hardware_serial_Class_BLUETOOTH_HCI;
     info.serial_vid = PDEV_VID_BROADCOM;
     info.serial_pid = PDEV_PID_BCM43458;
-    auto uart = std::make_unique<serial::AmlUart>(fake_ddk::kFakeParent, *pdev_.proto(), info,
+    auto uart = std::make_unique<serial::AmlUart>(fake_ddk::kFakeParent, pdev_.proto(), info,
                                                   ddk::MmioBuffer(pdev_.GetMmio()));
     zx_status_t status = uart->Init();
     ASSERT_OK(status);

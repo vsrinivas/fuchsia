@@ -41,22 +41,11 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* fragments[1];
-  size_t fragment_count;
-  composite.GetFragments(fragments, std::size(fragments), &fragment_count);
-  // Only pdev fragment is required.
-  if (fragment_count < 1) {
-    zxlogf(ERROR, "AmlUart: Could not get fragments");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(fragments[0]);
+  ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "AmlUart::Create: Could not get pdev");
     return ZX_ERR_NO_RESOURCES;
   }
-  pdev_protocol_t proto;
-  pdev.GetProto(&proto);
 
   serial_port_info_t info;
   size_t actual;
@@ -71,15 +60,15 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_INTERNAL;
   }
 
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&proto, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  std::optional<ddk::MmioBuffer> mmio;
+  status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: pdev_map_&mmio__buffer failed %d", __func__, status);
     return status;
   }
 
   fbl::AllocChecker ac;
-  auto* uart = new (&ac) AmlUart(parent, proto, info, ddk::MmioBuffer(mmio));
+  auto* uart = new (&ac) AmlUart(parent, pdev, info, *std::move(mmio));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -310,7 +299,7 @@ zx_status_t AmlUart::SerialImplAsyncEnable(bool enable) {
   fbl::AutoLock al(&enable_lock_);
 
   if (enable && !enabled_) {
-    zx_status_t status = pdev_get_interrupt(&pdev_, 0, 0, irq_.reset_and_get_address());
+    zx_status_t status = pdev_.GetInterrupt(0, &irq_);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: pdev_get_interrupt failed %d", __func__, status);
       return status;

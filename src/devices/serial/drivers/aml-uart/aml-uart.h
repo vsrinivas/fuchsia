@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_AML_UART_AML_UART_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_AML_UART_AML_UART_H_
 
-#include <lib/device-protocol/platform-device.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/fit/function.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -53,7 +53,7 @@ class AmlUart : public DeviceType,
 
   zx_status_t Init();
 
-  explicit AmlUart(zx_device_t* parent, const pdev_protocol_t& pdev,
+  explicit AmlUart(zx_device_t* parent, const ddk::PDev& pdev,
                    const serial_port_info_t& serial_port_info, ddk::MmioBuffer mmio)
       : DeviceType(parent),
         pdev_(pdev),
@@ -77,7 +77,7 @@ class AmlUart : public DeviceType,
   fit::closure MakeReadCallbackLocked(zx_status_t status, void* buf, size_t len) TA_REQ(read_lock_);
   fit::closure MakeWriteCallbackLocked(zx_status_t status) TA_REQ(write_lock_);
 
-  const pdev_protocol_t pdev_;
+  ddk::PDev pdev_;
   const serial_port_info_t serial_port_info_;
   ddk::MmioBuffer mmio_;
   zx::interrupt irq_;
