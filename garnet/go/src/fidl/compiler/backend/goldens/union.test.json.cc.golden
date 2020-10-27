@@ -1646,8 +1646,8 @@ FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::operator=(
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
-        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
-        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
         break;
     }
   }
@@ -2043,8 +2043,8 @@ OlderSimpleUnion& OlderSimpleUnion::operator=(OlderSimpleUnion&& other) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
-        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
-        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
         break;
     }
   }
@@ -2564,8 +2564,8 @@ NewerSimpleUnion& NewerSimpleUnion::operator=(NewerSimpleUnion&& other) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
-        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
-        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
         break;
     }
   }
@@ -2806,8 +2806,8 @@ FlexibleUnion& FlexibleUnion::operator=(FlexibleUnion&& other) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
-        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
-        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
         break;
     }
   }
@@ -3046,8 +3046,8 @@ FlexibleFoo& FlexibleFoo::operator=(FlexibleFoo&& other) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
-        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
-        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
         break;
     }
   }
@@ -3382,8 +3382,8 @@ ExplicitXUnion& ExplicitXUnion::operator=(ExplicitXUnion&& other) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
-        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
-        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
         break;
     }
   }
@@ -3931,8 +3931,8 @@ ExplicitFoo& ExplicitFoo::operator=(ExplicitFoo&& other) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
-        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
-        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
         break;
     }
   }
@@ -4153,8 +4153,8 @@ XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::operator=(
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
-        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
-        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
         break;
     }
   }

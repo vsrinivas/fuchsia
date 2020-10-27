@@ -223,8 +223,8 @@ FlexibleFoo& FlexibleFoo::operator=(FlexibleFoo&& other) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
-        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
-        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
         break;
     }
   }

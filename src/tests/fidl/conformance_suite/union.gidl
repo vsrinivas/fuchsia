@@ -96,8 +96,7 @@ success("FlexibleUnionUnknownValue") {
 success("FlexibleResourceUnionUnknownValue") {
     // llcpp is tested by hand since it cannot construct unknown unions (and
     // they do not store bytes & handles), see fxr/423117
-    // TODO(fxbug.dev/62819): Fix crash in HLCPP.
-    bindings_denylist = [llcpp,hlcpp],
+    bindings_denylist = [llcpp],
     value = TestFlexibleResourceXUnionInStruct {
         xu: SampleResourceXUnion{
             1234: {
@@ -117,8 +116,7 @@ success("FlexibleResourceUnionUnknownValue") {
 
 success("FlexibleResourceUnionUnknownValueWithHandles") {
     // TODO(fxbug.dev/36441): Implement handles in all backends.
-    // TODO(fxbug.dev/62819): Fix crash in HLCPP.
-    bindings_denylist = [llcpp,hlcpp],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),

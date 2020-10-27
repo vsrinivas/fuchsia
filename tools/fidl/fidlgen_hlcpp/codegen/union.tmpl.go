@@ -255,8 +255,8 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
         break;
     {{- if .IsFlexible }}
       default:
-        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
-        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_= std::move(other.unknown_data_);
         break;
     {{- end }}
     }
