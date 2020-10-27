@@ -33,7 +33,11 @@ mod tests {
             "check_reported_time_in_dart_vm",
         ])
         .unwrap();
-        tests_intl_timezone::check_reported_time_with_update(DART_TIME_SERVICE_URL).await
+        tests_intl_timezone::check_reported_time_with_update(
+            DART_TIME_SERVICE_URL,
+            /*get_view=*/ false,
+        )
+        .await
     }
 } // tests
 

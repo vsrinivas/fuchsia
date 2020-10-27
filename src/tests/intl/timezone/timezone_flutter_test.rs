@@ -25,7 +25,11 @@ mod tests {
             "check_reported_time_in_flutter_vm",
         ])
         .unwrap();
-        tests_intl_timezone::check_reported_time_with_update(FLUTTER_TIME_SERVICE_URL).await
+        tests_intl_timezone::check_reported_time_with_update(
+            FLUTTER_TIME_SERVICE_URL,
+            /*get_view=*/ true,
+        )
+        .await
     }
 } // tests
 

@@ -97,7 +97,15 @@ impl Drop for ScopedTimezone {
 
 /// Launch the time server.  The function blocks until the launched time
 /// server says it has started serving its outgoing directory.
-async fn launch_time_service(launcher: &LauncherProxy, url: &str) -> Result<client::App, Error> {
+///
+/// If `get_view` is set, the launcher will attempt to get a view provider.
+/// This is required to start the Dart VM when a Flutter runner is
+/// used, but is unnecessary when a Dart runner is used.
+async fn launch_time_service(
+    launcher: &LauncherProxy,
+    url: &str,
+    get_view: bool,
+) -> Result<client::App, Error> {
     let app = client::launch(&launcher, url.to_string(), None)
         .context("failed to launch the dart service under test")?;
     // Keep filtering the events that the component controller emits, until
@@ -120,21 +128,25 @@ async fn launch_time_service(launcher: &LauncherProxy, url: &str) -> Result<clie
     // [START flutter_runner_trick]
     // This part is only relevant for launching Flutter apps.  Flutter will not
     // start a Dart VM unless a view is requested.
-    let view_provider = app.connect_to_service::<ViewProviderMarker>();
-    match view_provider {
-        Err(_) => fx_log_debug!("could not connect to view provider.  This is expected in dart."),
-        Ok(ref view_provider) => {
-            fx_log_debug!("connected to view provider");
-            let token_pair = scenic::ViewTokenPair::new()?;
-            let mut viewref_pair = scenic::ViewRefPair::new()?;
+    if get_view {
+        let view_provider = app.connect_to_service::<ViewProviderMarker>();
+        match view_provider {
+            Err(_) => {
+                fx_log_debug!("could not connect to view provider.  This is expected in dart.")
+            }
+            Ok(ref view_provider) => {
+                fx_log_debug!("connected to view provider");
+                let token_pair = scenic::ViewTokenPair::new()?;
+                let mut viewref_pair = scenic::ViewRefPair::new()?;
 
-            view_provider
-                .create_view_with_view_ref(
-                    token_pair.view_token.value,
-                    &mut viewref_pair.control_ref,
-                    &mut viewref_pair.view_ref,
-                )
-                .with_context(|| "could not create a scenic view")?;
+                view_provider
+                    .create_view_with_view_ref(
+                        token_pair.view_token.value,
+                        &mut viewref_pair.control_ref,
+                        &mut viewref_pair.view_ref,
+                    )
+                    .with_context(|| "could not create a scenic view")?;
+            }
         }
     }
     // [END flutter_runner_trick]
@@ -231,7 +243,13 @@ async fn loop_until_matching_time(
 /// Starts a component that uses Dart's idea of the system time zone to report time zone
 /// information.  The test fixture compares its own idea of local time with the one in the dart VM.
 /// Ostensibly, those two times should be the same up to the current date and current hour.
-pub async fn check_reported_time_with_update(server_url: &str) -> Result<(), Error> {
+/// 'get_view` is set if launching a Dart time server requires getting a ViewProvider to kick
+/// off program execution -- which is unnecessary for a Dart runner but required for a Flutter
+/// runner.
+pub async fn check_reported_time_with_update(
+    server_url: &str,
+    get_view: bool,
+) -> Result<(), Error> {
     let _icu_data_loader = icu_data::Loader::new().with_context(|| "could not load ICU data")?;
     let _setter = ScopedTimezone::try_new(TIMEZONE_NAME).await.unwrap();
 
@@ -239,7 +257,7 @@ pub async fn check_reported_time_with_update(server_url: &str) -> Result<(), Err
     let detailed_format = formatter_for_timezone(FULL_TIMESTAMP_FORMAT, TIMEZONE_NAME);
 
     let launcher = client::launcher().context("Failed to get the launcher")?;
-    let app = launch_time_service(&launcher, server_url)
+    let app = launch_time_service(&launcher, server_url, get_view)
         .await
         .context("failed to launch the dart service under test")?;
 
