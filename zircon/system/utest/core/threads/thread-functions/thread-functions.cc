@@ -141,3 +141,8 @@ void threads_test_run_fn(void* arg) {
   zx_object_signal(event, 0u, ZX_USER_SIGNAL_0);
   zx_object_wait_one(event, ZX_USER_SIGNAL_1, ZX_TIME_INFINITE, NULL);
 }
+
+void threads_test_wait_event_fn(void* typeless_arg) {
+  auto arg = reinterpret_cast<syscall_suspended_reg_state_test_arg*>(typeless_arg);
+  arg->status = zx_object_wait_one(arg->event, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, &arg->observed);
+}

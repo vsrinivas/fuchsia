@@ -1727,3 +1727,91 @@ TEST(Threads, X86AcFlagUserCopy) {
   ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL);
 #endif
 }
+
+// Verify that syscalls preserve general purpose register state.
+//
+// When suspended during a syscall, see that argument register read via zx_thread_read_state() match
+// the state at the time of the syscall.
+TEST(Threads, SyscallSuspendedRegisterState) {
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+
+  zx::thread thread;
+  zxr_thread_t zxrthread;
+  syscall_suspended_reg_state_test_arg arg{event.get(), 0, ZX_OK};
+
+  // Create a thread that waits for a signal then terminates.
+  ASSERT_TRUE(
+      start_thread(threads_test_wait_event_fn, &arg, &zxrthread, thread.reset_and_get_address()));
+  wait_thread_blocked(thread.get(), ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
+
+  // The thread is now blocked in the syscall.  Time to suspend it and read its registers.
+  zx::handle suspend_token;
+  suspend_thread_synchronous(thread.get(), suspend_token.reset_and_get_address());
+
+  zx_thread_state_general_regs_t actual_regs{};
+  ASSERT_OK(thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &actual_regs, sizeof(actual_regs)));
+
+  // We can't verify all the registers since the thread made the call through the vdso, which may
+  // have trashed some of them.  We can, however, verify the registers that held the syscall
+  // argument.
+#if defined(__x86_64__)
+  // Note, the 4th syscall argument is passed in r10 rather than rcx.
+  EXPECT_EQ(actual_regs.rdi, arg.event);                                  // 1st arg
+  EXPECT_EQ(actual_regs.rsi, ZX_USER_SIGNAL_0);                           // 2nd arg
+  EXPECT_EQ(actual_regs.rdx, ZX_TIME_INFINITE);                           // 3rd arg
+  EXPECT_EQ(actual_regs.r10, reinterpret_cast<uint64_t>(&arg.observed));  // 4th arg
+  EXPECT_EQ(actual_regs.rax, ZX_ERR_INTERNAL_INTR_RETRY);                 // syscall result
+#elif defined(__aarch64__)
+  // We can't check the 1st arg because x0 is also used to store the result.
+  EXPECT_EQ(actual_regs.r[1], ZX_USER_SIGNAL_0);                           // 2nd arg
+  EXPECT_EQ(actual_regs.r[2], ZX_TIME_INFINITE);                           // 3rd arg
+  EXPECT_EQ(actual_regs.r[3], reinterpret_cast<uint64_t>(&arg.observed));  // 4th arg
+  EXPECT_EQ(actual_regs.r[0], ZX_ERR_INTERNAL_INTR_RETRY);                 // syscall result
+#else
+#error unsupported platform
+#endif
+
+  suspend_token.reset();
+  ASSERT_OK(event.signal(0, ZX_USER_SIGNAL_0));
+  ASSERT_OK(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+}
+
+// Verify that a debugger can modify the syscall result of a suspended thread.
+TEST(Threads, SyscallDebuggerModifyResult) {
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+
+  zx::thread thread;
+  zxr_thread_t zxrthread;
+  syscall_suspended_reg_state_test_arg arg{event.get(), 0, ZX_OK};
+
+  // Create a thread that waits for a signal then terminates.
+  ASSERT_TRUE(
+      start_thread(threads_test_wait_event_fn, &arg, &zxrthread, thread.reset_and_get_address()));
+  wait_thread_blocked(thread.get(), ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
+
+  // The thread is now blocked in the syscall.  Time to suspend it and read its registers.
+  zx::handle suspend_token;
+  suspend_thread_synchronous(thread.get(), suspend_token.reset_and_get_address());
+  zx_thread_state_general_regs_t actual_regs{};
+  ASSERT_OK(thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &actual_regs, sizeof(actual_regs)));
+
+  // Change the syscall result to ZX_ERR_CANCELED.
+#if defined(__x86_64__)
+  EXPECT_EQ(actual_regs.rax, ZX_ERR_INTERNAL_INTR_RETRY);
+  actual_regs.rax = ZX_ERR_CANCELED;
+#elif defined(__aarch64__)
+  EXPECT_EQ(actual_regs.r[0], ZX_ERR_INTERNAL_INTR_RETRY);
+  actual_regs.r[0] = ZX_ERR_CANCELED;
+#else
+#error unsupported platform
+#endif
+  ASSERT_OK(thread.write_state(ZX_THREAD_STATE_GENERAL_REGS, &actual_regs, sizeof(actual_regs)));
+
+  // Resume and see that the syscall did complete with ZX_ERR_CANCELED.
+  suspend_token.reset();
+  ASSERT_OK(event.signal(0, ZX_USER_SIGNAL_0));
+  ASSERT_OK(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  ASSERT_EQ(arg.status, ZX_ERR_CANCELED);
+}

@@ -15,9 +15,9 @@
 
 __BEGIN_CDECLS
 
-// the structure used to hold the general purpose integer registers
-// when a syscall is suspended
-
+// This structure holds the user general purpose integer registers during syscalls.
+//
+// It has a very specific layout and must be kept in sync with the assembly code in syscall.S.
 typedef struct {
   uint64_t rax;
   uint64_t rbx;
@@ -26,7 +26,6 @@ typedef struct {
   uint64_t rsi;
   uint64_t rdi;
   uint64_t rbp;
-  uint64_t rsp;
   uint64_t r8;
   uint64_t r9;
   uint64_t r10;
@@ -37,6 +36,8 @@ typedef struct {
   uint64_t r15;
   uint64_t rip;
   uint64_t rflags;
+  // rsp is the last field so we can simply "pop %rsp" when returning from a syscall.
+  uint64_t rsp;
 } x86_syscall_general_regs_t;
 
 __END_CDECLS

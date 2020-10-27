@@ -60,4 +60,16 @@ void threads_test_atomic_store(void* arg);
 // signal 1 to stop running.
 void threads_test_run_fn(void* arg);
 
+struct syscall_suspended_reg_state_test_arg {
+  zx_handle_t event;
+  zx_signals_t observed;
+  zx_status_t status;
+};
+
+// Waits on |event| for ZX_USER_SIGNAL_0, stores the observed signals in |observed|, stores the
+// syscall result in |status|.
+//
+// |arg| is a syscall_suspended_reg_state_test_arg.
+void threads_test_wait_event_fn(void* arg);
+
 #endif  // ZIRCON_SYSTEM_UTEST_CORE_THREADS_THREAD_FUNCTIONS_THREAD_FUNCTIONS_H_

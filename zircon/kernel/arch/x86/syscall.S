@@ -196,18 +196,17 @@
     jmp     .Lcleanup_and_return
 .endm
 
-// x86_syscall (below) leaves the stack misaligned by 8, so the macros
-// need to account for that.
+// These macros ensure the stack pointer remains 16-byte aligned.
 .macro pre_push n
-.if \n % 2 == 0
+.if \n % 2 == 1
     push_value $0
 .endif
 .endm
 
 .macro post_pop n
-.if \n % 2 == 0
+.if \n % 2 == 1
     add_to_sp ((\n + 1) * 8)
-.else
+.elseif \n != 0
     add_to_sp (\n * 8)
 .endif
 .endm
@@ -258,8 +257,8 @@
      *  rbx - saved
      *  rcx - modified as part of syscall instruction
      *  rdx - arg 3
-     *  rdi - arg 1
      *  rsi - arg 2
+     *  rdi - arg 1
      *  rbp - saved
      *  rsp - saved
      *  r8  - arg 5
@@ -293,15 +292,37 @@ FUNCTION_LABEL(x86_syscall)
     mov     %gs:PERCPU_KERNEL_SP_OFFSET, %rsp
     .cfi_def_cfa %rsp, 0
 
-    /* save away the user stack pointer */
-    push_value %gs:PERCPU_SAVED_USER_SP_OFFSET
+    // Save all the general purpose registers in a x86_syscall_general_regs_t
+    // struct on the kernel's stack.
+    //
+    // By saving (and later restoring) all of the registers rather than just
+    // the bare minimum, we ensure that kernel data is not inadvertently
+    // leaked back to user mode.
+    push_value %gs:PERCPU_SAVED_USER_SP_OFFSET  // User stack
+    push_value %r11  // RFLAGS
+    push_value %rcx  // RIP
+    push_value %r15
+    push_value %r14
+    push_value %r13
+    push_value %r12
+    push_value $0    // R11 was trashed by the syscall instruction.
+    push_value %r10
+    push_value %r9
+    push_value %r8
+    push_value %rbp
+    push_value %rdi
+    push_value %rsi
+    push_value %rdx
+    push_value $0    // RCX was trashed by the syscall instruction.
+    push_value %rbx
+    push_value %rax
 
-    push_value %r11 /* user RFLAGS */
-    push_value %rcx /* user RIP */
-
+    // At this point:
+    //   rsp points at a x86_syscall_general_regs_t struct
+    //   rsp is 16-byte aligned
+    //
     // Any changes to the stack here need to be reflected in
     // pre_push and post_pop macros above to maintain alignment.
-    // Verify the syscall is in range and jump to it.
 
     // Bounds-check system call number and jump to handler.
     cmp     $ZX_SYS_COUNT, %rax
@@ -319,26 +340,18 @@ FUNCTION_LABEL(x86_syscall)
 
 .Lcleanup_and_return:
 
-    /* at this point:
-       rax = syscall result
-       rdx = non-zero if thread was signaled */
+    // At this point:
+    //   rax = syscall result
+    //   rdx = non-zero if thread was signaled
+    //   rsp = address of x86_syscall_general_regs_t
 
-    /* restore the registers from which SYSRET restores user state */
-    pop_value %rcx /* user RIP */
-    pop_value %r11 /* user RFLAGS */
-
-    /* zero out trashed arg registers */
-    xorl    %edi, %edi
-    xorl    %esi, %esi
-    /* Don't zero %rdx yet -- it contains the "is_signaled" indicator */
-    xorl    %r10d, %r10d
-    xorl    %r8d, %r8d
-    xorl    %r9d, %r9d
+    // Save syscall result to the x86_syscall_general_regs_t on the stack to ensure it's not trashed
+    // by upcoming function calls and to ensure debuggers can see and modify it if the thread was
+    // suspened.
+    movq    %rax, (%rsp)
 
     cmp     $0, %rdx
     jnz     .Lthread_signaled
-
-    /*xor     %rdx, %rdx - already zero */
 
 .Lreturn_from_syscall:
 #if LK_DEBUGLEVEL > 2
@@ -357,22 +370,8 @@ bad:
     // TODO(fxbug.dev/33667): Can this be folded together w/ MD_CLEAR below?
     test    %rax, %rax
     jz      1f
-    // Before calling a function, we must preserve any registers we need for SYSRET.
-    pushq   %rax  // Save the syscall return value
-    pushq   %rcx  // Save user RIP
-    pushq   %r11  // Save user RFLAGS
-    pushq   $0    // Align stack
     movq    %rax, %rdi
     call    x86_cpu_maybe_l1d_flush
-    popq    %rdx  // $0 (Trashed)
-    popq    %r11  // Restore user RFLAGS
-    popq    %rcx  // Restore user RIP
-    popq    %rax  // Restore syscall return
-    xorl    %edi, %edi  // Zero registers clobbered by the call; prevents leaking scratch state
-    xorl    %esi, %esi  // to userspace.
-    xorl    %r8d, %r8d
-    xorl    %r9d, %r9d
-    xorl    %r10d, %r10d
 1:
     // If we are affected by the MDS speculative execution vulnerability, flush microarchitectural
     // buffers via mds_buff_overwrite(). x86_mds_flush_select() will NOP out the flush where it is
@@ -382,8 +381,36 @@ syscall_maybe_mds_buff_overwrite:
     call mds_buff_overwrite
     APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_mds_flush_select, syscall_maybe_mds_buff_overwrite, 5)
 
-    /* restore the user stack */
-    pop_value %rsp
+    // Restore general purpose registers just before returning.
+    //
+    // It is critical that all registers are reset.  The callee-saved registers must be restored per
+    // the ABI.  The other registers might contain private kernel data that must not be leaked to
+    // user mode.  To ensure data is not leaked in call-clobbered registers, we restored them to
+    // their previous values.  Alternatively, we could simply zero them out to ensure data is not
+    // leaked.   However, this code path is shared with the path taken by a thread returning to user
+    // mode after its registers have been modified by a debugger so we restore them all to keep it
+    // simple (except for RCX and R11 which are clobbered by the SYSRET instruction).
+    //
+    // TODO(fxbug.dev/62790): Make the restored register state completely capture the thread's state
+    // and make syscalls act more like atomic instructions.
+    pop_value %rax
+    pop_value %rbx
+    pop_value %rcx  // Will be overwritten with RIP later on.
+    pop_value %rdx
+    pop_value %rsi
+    pop_value %rdi
+    pop_value %rbp
+    pop_value %r8
+    pop_value %r9
+    pop_value %r10
+    pop_value %r11  // Will be overwritten with RFLAGS later on.
+    pop_value %r12
+    pop_value %r13
+    pop_value %r14
+    pop_value %r15
+    pop_value %rcx  // RIP
+    pop_value %r11  // RFLAGS
+    pop_value %rsp  // User stack
 
     /* put the user gs back */
     swapgs
@@ -396,51 +423,10 @@ syscall_maybe_mds_buff_overwrite:
     /* re-enable interrupts to maintain kernel preemptiveness */
     sti
 
-    /* fill in x86_syscall_general_regs_t
-       Because we don't save the regs unless we have to a lot of the original
-       values are gone. The user just has to deal with it. One important thing
-       to do here is not leak kernel values to userspace. */
-    movq    (%rsp), %rdi /* user rsp */
-    push_value %r11 /* rflags */
-    push_value %rcx /* rip */
-    push_value %r15
-    push_value %r14
-    push_value %r13
-    push_value %r12
-    push_value %r11
-    push_value %r10
-    push_value %r9
-    push_value %r8
-    push_value %rdi /* rsp */
-    push_value %rbp
-    push_value $0
-    push_value %rsi
-    push_value $0 /* instead of signaled flag */
-    push_value %rcx
-    push_value %rbx
-    push_value %rax
-
+    // Pass a pointer to the x86_syscall_general_regs_t struct as first arg.
     movq    %rsp, %rdi
     call    x86_syscall_process_pending_signals
 
-    pop_value %rax
-    pop_value %rbx
-    pop_value %rcx
-    pop_value %rdx
-    pop_value %rsi
-    pop_value %rdi
-    pop_value %rbp
-    pop_value %r8 /* discard any changed %rsp value - TODO(dje): check ok */
-    pop_value %r8
-    pop_value %r9
-    pop_value %r10
-    pop_value %r11
-    pop_value %r12
-    pop_value %r13
-    pop_value %r14
-    pop_value %r15
-    pop_value %rcx
-    pop_value %r11
     cli
     jmp     .Lreturn_from_syscall
 
