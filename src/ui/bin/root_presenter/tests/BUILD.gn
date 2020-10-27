@@ -50,6 +50,7 @@ executable("root_presenter_unittests") {
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.media.sounds",
     "//sdk/fidl/fuchsia.recovery",
+    "//sdk/fidl/fuchsia.recovery.policy",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.activity",
     "//sdk/fidl/fuchsia.ui.brightness",

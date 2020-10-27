@@ -54,6 +54,10 @@ FactoryResetManager::FactoryResetManager(sys::ComponentContext& context,
         auto handler = std::make_unique<WatchHandler>(State());
         countdown_bindings_.AddBinding(std::move(handler), std::move(request));
       });
+  context.outgoing()->AddPublicService<fuchsia::recovery::policy::Device>(
+      [this](fidl::InterfaceRequest<fuchsia::recovery::policy::Device> request) {
+        policy_bindings_.AddBinding(this, std::move(request));
+      });
 
   context.svc()->Connect(factory_reset_.NewRequest());
   FX_DCHECK(factory_reset_);
@@ -64,8 +68,11 @@ FactoryResetManager::FactoryResetManager(sys::ComponentContext& context,
 bool FactoryResetManager::OnMediaButtonReport(
     const fuchsia::ui::input::MediaButtonsReport& report) {
   switch (factory_reset_state_) {
-    case FactoryResetState::NONE: {
-      return HandleReportOnNoneState(report);
+    case FactoryResetState::ALLOWED: {
+      return HandleReportOnAllowedState(report);
+    }
+    case FactoryResetState::DISALLOWED: {
+      return HandleReportOnDisallowedState(report);
     }
     case FactoryResetState::BUTTON_COUNTDOWN: {
       return HandleReportOnButtonCountdown(report);
@@ -144,7 +151,7 @@ fuchsia::recovery::ui::FactoryResetCountdownState FactoryResetManager::State() c
   return state;
 }
 
-bool FactoryResetManager::HandleReportOnNoneState(
+bool FactoryResetManager::HandleReportOnAllowedState(
     const fuchsia::ui::input::MediaButtonsReport& report) {
   if (!report.reset) {
     return false;
@@ -158,13 +165,21 @@ bool FactoryResetManager::HandleReportOnNoneState(
   return true;
 }
 
+bool FactoryResetManager::HandleReportOnDisallowedState(
+    const fuchsia::ui::input::MediaButtonsReport& report) {
+  return report.reset;
+}
+
 bool FactoryResetManager::HandleReportOnButtonCountdown(
     const fuchsia::ui::input::MediaButtonsReport& report) {
+  FX_DCHECK(factory_reset_state_ != FactoryResetState::DISALLOWED)
+      << "HandleReportOnButtonCountdown should not be called when on DISALLOWED state.";
+
   // If the reset button is no longer held, cancel the button countdown. Otherwise, ignore the
   // report.
   if (!report.reset) {
     start_reset_countdown_after_timeout_.Cancel();
-    factory_reset_state_ = FactoryResetState::NONE;
+    factory_reset_state_ = FactoryResetState::ALLOWED;
   }
 
   return true;
@@ -172,12 +187,15 @@ bool FactoryResetManager::HandleReportOnButtonCountdown(
 
 bool FactoryResetManager::HandleReportOnResetCountdown(
     const fuchsia::ui::input::MediaButtonsReport& report) {
+  FX_DCHECK(factory_reset_state_ != FactoryResetState::DISALLOWED)
+      << "HandleReportOnResetCountdown should not be called when on DISALLOWED state.";
+
   // If the reset button is no longer held, cancel the reset countdown and notify the state change.
   // Otherwise, ignore the report.
   if (!report.reset) {
     FX_LOGS(WARNING) << "Factory reset canceled";
     reset_after_timeout_.Cancel();
-    factory_reset_state_ = FactoryResetState::NONE;
+    factory_reset_state_ = FactoryResetState::ALLOWED;
     deadline_ = ZX_TIME_INFINITE_PAST;
     NotifyStateChange();
   }
@@ -199,6 +217,31 @@ void FactoryResetManager::StartFactoryResetCountdown() {
       fit::bind_member(this, &FactoryResetManager::PlayCompleteSoundThenReset));
   async::PostDelayedTask(async_get_default_dispatcher(), reset_after_timeout_.callback(),
                          kResetCountdownDuration);
+}
+
+void FactoryResetManager::SetIsLocalResetAllowed(bool allowed) {
+  if (factory_reset_state_ == FactoryResetState::DISALLOWED && allowed) {
+    // If Factory reset was disallowed, and if the new policy is allowed, switch to the ALLOWED
+    // state.
+    factory_reset_state_ = FactoryResetState::ALLOWED;
+  }
+
+  if (!allowed) {
+    // If the reset button was held, cancel the button countdown and notify the state change.
+    if (factory_reset_state_ == FactoryResetState::BUTTON_COUNTDOWN) {
+      start_reset_countdown_after_timeout_.Cancel();
+    }
+
+    // If the reset button was held, cancel the reset countdown and notify the state change.
+    if (factory_reset_state_ == FactoryResetState::RESET_COUNTDOWN) {
+      reset_after_timeout_.Cancel();
+      deadline_ = ZX_TIME_INFINITE_PAST;
+      NotifyStateChange();
+    }
+
+    // Disable Factory reset.
+    factory_reset_state_ = FactoryResetState::DISALLOWED;
+  }
 }
 
 }  // namespace root_presenter

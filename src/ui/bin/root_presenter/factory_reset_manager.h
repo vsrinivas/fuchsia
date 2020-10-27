@@ -7,6 +7,7 @@
 
 #include <fuchsia/media/sounds/cpp/fidl.h>
 #include <fuchsia/recovery/cpp/fidl.h>
+#include <fuchsia/recovery/policy/cpp/fidl.h>
 #include <fuchsia/recovery/ui/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -22,7 +23,8 @@ constexpr zx::duration kResetCountdownDuration = zx::sec(10);
 constexpr zx::duration kButtonCountdownDuration = zx::msec(500);
 
 enum class FactoryResetState {
-  NONE,
+  ALLOWED,           // Factory reset is allowed by policy.
+  DISALLOWED,        // Factory reset is disallowed by policy.
   BUTTON_COUNTDOWN,  // Countdown before factory reset starts counting down.
   RESET_COUNTDOWN,   // Countdown until factory reset is triggered.
   TRIGGER_RESET      // Factory reset is being triggered.
@@ -32,7 +34,7 @@ enum class FactoryResetState {
 // when the FDR button or both volume buttons are pressed, count down to
 // 10 seconds. If the buttons aren't released before the countdown is over,
 // trigger factory reset.
-class FactoryResetManager {
+class FactoryResetManager : public fuchsia::recovery::policy::Device {
  public:
   // Handler per FIDL connection to FactoryResetCountdown which keeps track of any hanging
   // callbacks and calls them back on change.
@@ -67,7 +69,8 @@ class FactoryResetManager {
 
  private:
   // Handles MediaButtonReports and returns true if the report is processed.
-  bool HandleReportOnNoneState(const fuchsia::ui::input::MediaButtonsReport& report);
+  bool HandleReportOnAllowedState(const fuchsia::ui::input::MediaButtonsReport& report);
+  bool HandleReportOnDisallowedState(const fuchsia::ui::input::MediaButtonsReport& report);
   bool HandleReportOnButtonCountdown(const fuchsia::ui::input::MediaButtonsReport& report);
   bool HandleReportOnResetCountdown(const fuchsia::ui::input::MediaButtonsReport& report);
 
@@ -78,9 +81,12 @@ class FactoryResetManager {
 
   void NotifyStateChange();
 
+  // Changes policy to enable or disable factory reset.
+  void SetIsLocalResetAllowed(bool allowed) override;
+
   fuchsia::recovery::ui::FactoryResetCountdownState State() const;
 
-  FactoryResetState factory_reset_state_ = FactoryResetState::NONE;
+  FactoryResetState factory_reset_state_ = FactoryResetState::ALLOWED;
 
   // The time when a factory reset is scheduled to happen. Only valid if coundown_started_ is true
   zx_time_t deadline_ = 0u;
@@ -91,6 +97,7 @@ class FactoryResetManager {
 
   fidl::BindingSet<fuchsia::recovery::ui::FactoryResetCountdown, std::unique_ptr<WatchHandler>>
       countdown_bindings_;
+  fidl::BindingSet<fuchsia::recovery::policy::Device> policy_bindings_;
 
   // We wrap the delayed task we post on the async loop to timeout in a
   // CancelableClosure so we can cancel it if the buttons are released.

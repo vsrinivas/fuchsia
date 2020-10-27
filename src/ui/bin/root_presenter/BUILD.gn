@@ -69,6 +69,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    ":factory_reset_manager",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.media.sounds",
     "//sdk/fidl/fuchsia.recovery",
@@ -94,7 +95,6 @@ source_set("lib") {
     ":activity_notifier",
     ":color_transform",
     ":displays",
-    ":factory_reset_manager",
     ":media_buttons_handler",
     ":safe_presenter",
     "//sdk/fidl/fuchsia.accessibility",
@@ -180,6 +180,7 @@ source_set("factory_reset_manager") {
   public_deps = [
     "//sdk/fidl/fuchsia.media.sounds",
     "//sdk/fidl/fuchsia.recovery",
+    "//sdk/fidl/fuchsia.recovery.policy",
     "//sdk/fidl/fuchsia.recovery.ui",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
