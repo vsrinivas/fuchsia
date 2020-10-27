@@ -33,6 +33,7 @@ if (is_host) {
     ]
 
     sources = [
+      "src/config.rs",
       "src/launcher.rs",
       "src/lib.rs",
       "src/logo.rs",

@@ -3,9 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::{logo, rest::service::RestService, rest::visualizer::Visualizer, shell::Shell},
+    crate::{
+        config::{Config, LoggingVerbosity},
+        logo,
+        rest::service::RestService,
+        rest::visualizer::Visualizer,
+        shell::Shell,
+    },
     anyhow::{Error, Result},
-    clap::{App, Arg, ArgMatches},
+    clap::{App, Arg},
     log::error,
     scrutiny::{
         engine::{
@@ -14,7 +20,7 @@ use {
         },
         model::model::DataModel,
     },
-    simplelog::{Config, LevelFilter, WriteLogger},
+    simplelog::{Config as SimpleLogConfig, LevelFilter, WriteLogger},
     std::env,
     std::fs::File,
     std::io::{self, BufRead, BufReader, ErrorKind},
@@ -24,58 +30,62 @@ use {
 const FUCHSIA_DIR: &str = "FUCHSIA_DIR";
 
 /// Holds a reference to core objects required by the application to run.
-pub struct ScrutinyApp {
+pub struct Scrutiny {
     manager: Arc<Mutex<PluginManager>>,
     dispatcher: Arc<RwLock<ControllerDispatcher>>,
     scheduler: Arc<Mutex<CollectorScheduler>>,
-    visualizer: Arc<RwLock<Visualizer>>,
+    visualizer: Option<Arc<RwLock<Visualizer>>>,
     shell: Shell,
-    args: ArgMatches<'static>,
+    config: Config,
 }
 
-impl ScrutinyApp {
+impl Scrutiny {
     /// Creates the DataModel, ControllerDispatcher, CollectorScheduler and
     /// PluginManager.
-    pub fn new(args: ArgMatches<'static>) -> Result<Self> {
-        let log_level = match args.value_of("verbosity").unwrap() {
-            "error" => LevelFilter::Error,
-            "warn" => LevelFilter::Warn,
-            "info" => LevelFilter::Info,
-            "debug" => LevelFilter::Debug,
-            "trace" => LevelFilter::Trace,
-            _ => LevelFilter::Off,
+    pub fn new(config: Config) -> Result<Self> {
+        let log_level = match config.runtime.logging.verbosity {
+            LoggingVerbosity::Error => LevelFilter::Error,
+            LoggingVerbosity::Warn => LevelFilter::Warn,
+            LoggingVerbosity::Info => LevelFilter::Info,
+            LoggingVerbosity::Debug => LevelFilter::Debug,
+            LoggingVerbosity::Trace => LevelFilter::Trace,
+            LoggingVerbosity::Off => LevelFilter::Off,
         };
         if log_level != LevelFilter::Off
-            && args.value_of("command").is_none()
-            && args.value_of("script").is_none()
+            && config.launch.command.is_none()
+            && config.launch.script_path.is_none()
         {
             logo::print_logo();
         }
         WriteLogger::init(
             log_level,
-            Config::default(),
-            File::create(args.value_of("log").unwrap()).unwrap(),
+            SimpleLogConfig::default(),
+            File::create(config.runtime.logging.path.clone()).unwrap(),
         )
         .unwrap();
-        let model = Arc::new(DataModel::connect(args.value_of("model").unwrap().to_string())?);
+        let model = Arc::new(DataModel::connect(config.runtime.model.path.clone())?);
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
-        let visualizer = Arc::new(RwLock::new(Visualizer::new(
-            env::var(FUCHSIA_DIR).expect("Unable to retrieve $FUCHSIA_DIR, has it been set?"),
-            args.value_of("visualizer").unwrap().to_string(),
-        )));
+        let visualizer = if let Some(server_config) = &config.runtime.server {
+            Some(Arc::new(RwLock::new(Visualizer::new(
+                env::var(FUCHSIA_DIR).expect("Unable to retrieve $FUCHSIA_DIR, has it been set?"),
+                server_config.visualizer_path.clone(),
+            ))))
+        } else {
+            None
+        };
         let scheduler = Arc::new(Mutex::new(CollectorScheduler::new(Arc::clone(&model))));
         let manager = Arc::new(Mutex::new(PluginManager::new(
             Arc::clone(&scheduler),
             Arc::clone(&dispatcher),
         )));
         let shell = Shell::new(Arc::clone(&manager), Arc::clone(&dispatcher));
-        Ok(Self { manager, dispatcher, scheduler, visualizer, shell, args })
+        Ok(Self { manager, dispatcher, scheduler, visualizer, shell, config })
     }
 
-    /// Parses all the commond line arguments passed in and returns. If
-    /// arguments are passed as a vector they will be read instead of the
-    /// command line.
-    pub fn args(inline_arguments: Option<Vec<String>>) -> ArgMatches<'static> {
+    /// Parses all the command line arguments passed in and returns a
+    /// ScrutinyConfig. If arguments are passed as a vector they will be read
+    /// instead of the command line.
+    pub fn args(inline_arguments: Option<Vec<String>>) -> Result<Config> {
         let app = App::new("scrutiny")
             .version("1.0")
             .author("Fuchsia Authors")
@@ -129,11 +139,42 @@ impl ScrutinyApp {
                     )
                     .default_value("/scripts/scrutiny"),
             );
-        if let Some(inline_arguments) = inline_arguments {
+        let args = if let Some(inline_arguments) = inline_arguments {
             app.get_matches_from(inline_arguments)
         } else {
             app.get_matches()
+        };
+
+        let mut config = Config::default();
+        if let Some(command) = args.value_of("command") {
+            config.launch.command = Some(command.to_string());
         }
+        if let Some(script_path) = args.value_of("script") {
+            config.launch.script_path = Some(script_path.to_string());
+        }
+        config.runtime.logging.path = args.value_of("log").unwrap().to_string();
+        config.runtime.logging.verbosity = match args.value_of("verbosity").unwrap() {
+            "error" => LoggingVerbosity::Error,
+            "warn" => LoggingVerbosity::Warn,
+            "info" => LoggingVerbosity::Info,
+            "debug" => LoggingVerbosity::Debug,
+            "trace" => LoggingVerbosity::Trace,
+            _ => LoggingVerbosity::Off,
+        };
+        config.runtime.model.path = args.value_of("model").unwrap().to_string();
+        if let Some(server_config) = &mut config.runtime.server {
+            if let Ok(port) = args.value_of("port").unwrap().parse::<u16>() {
+                server_config.port = port;
+            } else {
+                error!("Port provided was not a valid port number.");
+                return Err(Error::new(io::Error::new(
+                    ErrorKind::InvalidInput,
+                    "Invaild argument.",
+                )));
+            }
+            server_config.visualizer_path = args.value_of("visualizer").unwrap().to_string();
+        }
+        Ok(config)
     }
 
     /// Utility function to register a plugin.
@@ -163,11 +204,11 @@ impl ScrutinyApp {
     pub fn run(&mut self) -> Result<()> {
         self.scheduler.lock().unwrap().schedule()?;
 
-        if let Some(command) = self.args.value_of("command") {
+        if let Some(command) = &self.config.launch.command {
             // Spin lock on the schedulers to finish.
             while !self.scheduler.lock().unwrap().all_idle() {}
             self.shell.execute(command.to_string());
-        } else if let Some(script) = self.args.value_of("script") {
+        } else if let Some(script) = &self.config.launch.script_path {
             // Spin lock on the schedulers to finish.
             while !self.scheduler.lock().unwrap().all_idle() {}
             let script_file = BufReader::new(File::open(script)?);
@@ -175,14 +216,12 @@ impl ScrutinyApp {
                 self.shell.execute(line?);
             }
         } else {
-            if let Ok(port) = self.args.value_of("port").unwrap().parse::<u16>() {
-                RestService::spawn(self.dispatcher.clone(), self.visualizer.clone(), port)?;
-            } else {
-                error!("Port provided was not a valid port number.");
-                return Err(Error::new(io::Error::new(
-                    ErrorKind::InvalidInput,
-                    "Invaild argument.",
-                )));
+            if let Some(server_config) = &self.config.runtime.server {
+                RestService::spawn(
+                    self.dispatcher.clone(),
+                    self.visualizer.clone().unwrap(),
+                    server_config.port,
+                )?;
             }
             self.shell.run();
         }
@@ -195,12 +234,65 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_help_arguments() {
-        ScrutinyApp::args(Some(vec!["--help".to_string()]));
+    fn scrutiny_script_args() {
+        let result = Scrutiny::args(Some(
+            vec!["scrutiny", "-s", "foo"].into_iter().map(String::from).collect(),
+        ))
+        .unwrap();
+        assert_eq!(result.launch.script_path.unwrap(), "foo".to_string());
     }
 
     #[test]
-    fn test_script_arguments() {
-        ScrutinyApp::args(Some(vec!["--script foo".to_string()]));
+    fn scrutiny_command_args() {
+        let result = Scrutiny::args(Some(
+            vec!["scrutiny", "-c", "bar"].into_iter().map(String::from).collect(),
+        ))
+        .unwrap();
+        assert_eq!(result.launch.command.unwrap(), "bar".to_string());
+    }
+
+    #[test]
+    fn scrutiny_model_path_args() {
+        let result = Scrutiny::args(Some(
+            vec!["scrutiny", "-m", "baz"].into_iter().map(String::from).collect(),
+        ))
+        .unwrap();
+        assert_eq!(result.runtime.model.path, "baz".to_string());
+    }
+
+    #[test]
+    fn scrutiny_logging_path_args() {
+        let result = Scrutiny::args(Some(
+            vec!["scrutiny", "-l", "test_log"].into_iter().map(String::from).collect(),
+        ))
+        .unwrap();
+        assert_eq!(result.runtime.logging.path, "test_log".to_string());
+    }
+
+    #[test]
+    fn scrutiny_logging_verbosity_args() {
+        let result = Scrutiny::args(Some(
+            vec!["scrutiny", "-v", "warn"].into_iter().map(String::from).collect(),
+        ))
+        .unwrap();
+        assert_eq!(result.runtime.logging.verbosity, LoggingVerbosity::Warn);
+    }
+
+    #[test]
+    fn scrutiny_port_args() {
+        let result = Scrutiny::args(Some(
+            vec!["scrutiny", "-p", "1234"].into_iter().map(String::from).collect(),
+        ))
+        .unwrap();
+        assert_eq!(result.runtime.server.unwrap().port, 1234);
+    }
+
+    #[test]
+    fn scrutiny_visualizer_args() {
+        let result = Scrutiny::args(Some(
+            vec!["scrutiny", "-i", "test_viz"].into_iter().map(String::from).collect(),
+        ))
+        .unwrap();
+        assert_eq!(result.runtime.server.unwrap().visualizer_path, "test_viz".to_string());
     }
 }

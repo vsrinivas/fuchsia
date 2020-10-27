@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::scrutiny::ScrutinyApp,
+    crate::scrutiny::Scrutiny,
     anyhow::Result,
     scrutiny_plugins::{
         core::core::CorePlugin, engine::EnginePlugin, search::SearchPlugin, toolkit::ToolkitPlugin,
@@ -14,7 +14,7 @@ use {
 /// be used by binaries that wish to launch a full copy of the Scrutiny
 /// framework with default settings.
 pub fn launch() -> Result<()> {
-    let mut app = ScrutinyApp::new(ScrutinyApp::args(None))?;
+    let mut app = Scrutiny::new(Scrutiny::args(None)?)?;
     app.plugin(CorePlugin::new())?;
     app.plugin(SearchPlugin::new())?;
     app.plugin(EnginePlugin::new(app.scheduler(), app.dispatcher(), app.plugin_manager()))?;
