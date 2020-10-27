@@ -7,6 +7,7 @@ use {
         builtin::{
             arguments::Arguments as BootArguments,
             capability::BuiltinCapability,
+            irq_resource::IrqResource,
             kernel_stats::KernelStats,
             log::{ReadOnlyLog, WriteOnlyLog},
             mmio_resource::MmioResource,
@@ -344,6 +345,7 @@ pub struct BuiltinEnvironment {
 
     // Framework capabilities.
     pub boot_args: Arc<BootArguments>,
+    pub irq_resource: Option<Arc<IrqResource>>,
     pub kernel_stats: Option<Arc<KernelStats>>,
     pub process_launcher: Option<Arc<ProcessLauncher>>,
     pub root_job: Arc<RootJob>,
@@ -417,6 +419,9 @@ impl BuiltinEnvironment {
         let mmio_resource_handle =
             take_startup_handle(HandleType::MmioResource.into()).map(zx::Resource::from);
 
+        let irq_resource_handle =
+            take_startup_handle(HandleType::IrqResource.into()).map(zx::Resource::from);
+
         let root_resource_handle =
             take_startup_handle(HandleType::Resource.into()).map(zx::Resource::from);
 
@@ -481,6 +486,12 @@ impl BuiltinEnvironment {
         let mmio_resource = mmio_resource_handle.map(MmioResource::new);
         if let Some(mmio_resource) = mmio_resource.as_ref() {
             model.root_realm.hooks.install(mmio_resource.hooks()).await;
+        }
+
+        // Set up the IrqResource service.
+        let irq_resource = irq_resource_handle.map(IrqResource::new);
+        if let Some(irq_resource) = irq_resource.as_ref() {
+            model.root_realm.hooks.install(irq_resource.hooks()).await;
         }
 
         // Set up RootResource service.
@@ -557,6 +568,7 @@ impl BuiltinEnvironment {
             read_only_log,
             write_only_log,
             mmio_resource,
+            irq_resource,
             root_resource,
             system_controller,
             utc_time_maintainer,

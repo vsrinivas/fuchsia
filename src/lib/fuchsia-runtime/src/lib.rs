@@ -157,6 +157,11 @@ pub enum HandleType {
     /// Equivalent to PA_MMIO_RESOURCE.
     MmioResource = 0x50,
 
+    /// A Handle to an IRQ resource object.
+    ///
+    /// Equivalent to PA_IRQ_RESOURCE.
+    IrqResource = 0x51,
+
     /// A handle type with user-defined meaning.
     ///
     /// Equivalent to PA_USER0.

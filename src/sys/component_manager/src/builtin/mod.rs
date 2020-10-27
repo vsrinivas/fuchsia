@@ -4,6 +4,7 @@
 
 pub mod arguments;
 pub mod capability;
+pub mod irq_resource;
 pub mod kernel_stats;
 pub mod log;
 pub mod mmio_resource;

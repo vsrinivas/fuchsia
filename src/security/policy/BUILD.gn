@@ -14,6 +14,7 @@ group("appmgr_policy_eng") {
     ":appmgr_durable_data_allowlist_eng",
     ":appmgr_factory_data_allowlist_eng",
     ":appmgr_hub_allowlist_eng",
+    ":appmgr_irq_resource_allowlist_eng",
     ":appmgr_mmio_resource_allowlist_eng",
     ":appmgr_package_cache_allowlist_eng",
     ":appmgr_package_resolver_allowlist_eng",
@@ -74,6 +75,18 @@ config_data("appmgr_hub_allowlist_eng") {
   outputs = [ "allowlist/hub.txt" ]
 }
 
+config_data("appmgr_irq_resource_allowlist_eng") {
+  for_pkg = "appmgr"
+  sources = [ "irq_resource_allowlist_eng.txt" ]
+  outputs = [ "allowlist/irq_resource.txt" ]
+}
+
+config_data("appmgr_mmio_resource_allowlist_eng") {
+  for_pkg = "appmgr"
+  sources = [ "mmio_resource_allowlist_eng.txt" ]
+  outputs = [ "allowlist/mmio_resource.txt" ]
+}
+
 config_data("appmgr_package_cache_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "package_cache_allowlist_eng.txt" ]
@@ -96,12 +109,6 @@ config_data("appmgr_root_job_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "root_job_allowlist_eng.txt" ]
   outputs = [ "allowlist/root_job.txt" ]
-}
-
-config_data("appmgr_mmio_resource_allowlist_eng") {
-  for_pkg = "appmgr"
-  sources = [ "mmio_resource_allowlist_eng.txt" ]
-  outputs = [ "allowlist/mmio_resource.txt" ]
 }
 
 config_data("appmgr_root_resource_allowlist_eng") {

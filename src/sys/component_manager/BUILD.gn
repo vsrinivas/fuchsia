@@ -78,6 +78,7 @@ template("component_manager") {
   sources = [
     "src/builtin/arguments.rs",
     "src/builtin/capability.rs",
+    "src/builtin/irq_resource.rs",
     "src/builtin/kernel_stats.rs",
     "src/builtin/log.rs",
     "src/builtin/mmio_resource.rs",

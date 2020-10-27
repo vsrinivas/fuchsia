@@ -9,6 +9,7 @@ fidl("fuchsia.kernel") {
   api = "fuchsia.kernel.api"
 
   sources = [
+    "irq-resource.fidl",
     "kernel-counter.fidl",
     "kernel-debug.fidl",
     "kernel-mexec.fidl",
