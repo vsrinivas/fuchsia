@@ -257,7 +257,7 @@ type TableFrameItem struct {
 }
 
 type Table struct {
-	types.Attributes
+	types.Table
 	Namespace      string
 	Name           string
 	TableType      string
@@ -302,7 +302,7 @@ type TableMember struct {
 }
 
 type Struct struct {
-	types.Attributes
+	types.Struct
 	Namespace     string
 	Name          string
 	TableType     string
@@ -1314,7 +1314,7 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace, false)
 	tableType := c.compileTableType(val.Name)
 	r := Struct{
-		Attributes:   val.Attributes,
+		Struct:       val,
 		Namespace:    c.namespace,
 		Name:         name,
 		TableType:    tableType,
@@ -1409,7 +1409,7 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace, false)
 	tableType := c.compileTableType(val.Name)
 	r := Table{
-		Attributes:     val.Attributes,
+		Table:          val,
 		Namespace:      c.namespace,
 		Name:           name,
 		TableType:      tableType,

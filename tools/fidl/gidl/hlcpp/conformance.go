@@ -7,7 +7,6 @@ package hlcpp
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"text/template"
 
 	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
@@ -63,7 +62,7 @@ TEST(Conformance, {{ .Name }}_Decode) {
 	auto bytes = {{ .Bytes }};
 	auto handles = {{ .Handles }};
 	EXPECT_TRUE(fidl::Equals(
-		fidl::test::util::DecodedBytes<{{ .ValueType }}>(bytes, handles),
+		fidl::test::util::DecodedBytes<{{ .ValueType }}>(std::move(bytes), std::move(handles)),
 		{{ .ValueVar }}));
 }
 {{- if .FuchsiaOnly }}
@@ -102,7 +101,8 @@ TEST(Conformance, {{ .Name }}_Decode_Failure) {
 	const auto handle_defs = {{ .HandleDefs }};
 	{{- end }}
 	auto bytes = {{ .Bytes }};
-	fidl::test::util::CheckDecodeFailure<{{ .ValueType }}>(bytes, {{ .ErrorCode }});
+	auto handles = {{ .Handles }};
+	fidl::test::util::CheckDecodeFailure<{{ .ValueType }}>(std::move(bytes), std::move(handles), {{ .ErrorCode }});
 	{{- if .HandleDefs }}
 	for (const auto handle : handle_defs) {
 		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
@@ -182,6 +182,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		valueBuilder := newCppValueBuilder()
 		valueVar := valueBuilder.visit(encodeSuccess.Value, decl)
 		valueBuild := valueBuilder.String()
+		fuchsiaOnly := decl.IsResourceType() || len(encodeSuccess.HandleDefs) > 0
 		for _, encoding := range encodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -193,8 +194,8 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				ValueVar:    valueVar,
 				ValueType:   declName(decl),
 				Bytes:       buildBytes(encoding.Bytes),
-				Handles:     buildHandles(encoding.Handles),
-				FuchsiaOnly: decl.IsResource(),
+				Handles:     buildRawHandles(encoding.Handles),
+				FuchsiaOnly: fuchsiaOnly,
 			})
 		}
 	}
@@ -211,6 +212,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		valueBuilder := newCppValueBuilder()
 		valueVar := valueBuilder.visit(decodeSuccess.Value, decl)
 		valueBuild := valueBuilder.String()
+		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -222,8 +224,8 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				ValueVar:    valueVar,
 				ValueType:   declName(decl),
 				Bytes:       buildBytes(encoding.Bytes),
-				Handles:     buildHandles(encoding.Handles),
-				FuchsiaOnly: decl.IsResource(),
+				Handles:     buildRawHandles(encoding.Handles),
+				FuchsiaOnly: fuchsiaOnly,
 			})
 		}
 	}
@@ -242,6 +244,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		valueVar := valueBuilder.visit(encodeFailure.Value, decl)
 		valueBuild := valueBuilder.String()
 		errorCode := cppErrorCode(encodeFailure.Err)
+		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
 		for _, wireFormat := range encodeFailure.WireFormats {
 			if !wireFormatSupported(wireFormat) {
 				continue
@@ -253,7 +256,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 				ValueVar:    valueVar,
 				ValueType:   declName(decl),
 				ErrorCode:   errorCode,
-				FuchsiaOnly: decl.IsResource(),
+				FuchsiaOnly: fuchsiaOnly,
 			})
 		}
 	}
@@ -269,6 +272,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 		}
 		valueType := cppConformanceType(decodeFailure.Type)
 		errorCode := cppErrorCode(decodeFailure.Err)
+		fuchsiaOnly := decl.IsResourceType() || len(decodeFailure.HandleDefs) > 0
 		for _, encoding := range decodeFailure.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -278,9 +282,9 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 				HandleDefs:  BuildHandleDefs(decodeFailure.HandleDefs),
 				ValueType:   valueType,
 				Bytes:       buildBytes(encoding.Bytes),
-				Handles:     buildHandles(encoding.Handles),
+				Handles:     buildRawHandles(encoding.Handles),
 				ErrorCode:   errorCode,
-				FuchsiaOnly: decl.IsResource(),
+				FuchsiaOnly: fuchsiaOnly,
 			})
 		}
 	}
@@ -303,33 +307,4 @@ func cppErrorCode(code gidlir.ErrorCode) string {
 
 func cppConformanceType(gidlTypeString string) string {
 	return "conformance::" + gidlTypeString
-}
-
-func buildBytes(bytes []byte) string {
-	var builder strings.Builder
-	builder.WriteString("std::vector<uint8_t>{")
-	for i, b := range bytes {
-		builder.WriteString(fmt.Sprintf("0x%02x,", b))
-		if i%8 == 7 {
-			builder.WriteString("\n")
-		}
-	}
-	builder.WriteString("}")
-	return builder.String()
-}
-
-func buildHandles(handles []gidlir.Handle) string {
-	if len(handles) == 0 {
-		return "std::vector<zx_handle_t>{}"
-	}
-	var builder strings.Builder
-	builder.WriteString("std::vector<zx_handle_t>{\n")
-	for i, h := range handles {
-		builder.WriteString(fmt.Sprintf("handle_defs[%d],", h))
-		if i%8 == 7 {
-			builder.WriteString("\n")
-		}
-	}
-	builder.WriteString("}")
-	return builder.String()
 }

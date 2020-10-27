@@ -174,6 +174,10 @@ var _ = []NamedDeclaration{
 type RecordDeclaration interface {
 	NamedDeclaration
 
+	// IsResourceType returns true if the type is marked as a resource, meaning
+	// it may contain handles.
+	IsResourceType() bool
+
 	// AllFields returns the names of all fields in the type.
 	FieldNames() []string
 
@@ -407,7 +411,7 @@ func (decl *StructDecl) IsNullable() bool {
 	return decl.nullable
 }
 
-func (decl *StructDecl) IsResource() bool {
+func (decl *StructDecl) IsResourceType() bool {
 	return decl.structDecl.IsResourceType()
 }
 
@@ -490,6 +494,10 @@ type TableDecl struct {
 	schema    Schema
 }
 
+func (decl *TableDecl) IsResourceType() bool {
+	return decl.tableDecl.IsResourceType()
+}
+
 func (decl *TableDecl) Name() string {
 	return string(decl.tableDecl.Name)
 }
@@ -565,6 +573,10 @@ type UnionDecl struct {
 
 func (decl *UnionDecl) IsNullable() bool {
 	return decl.nullable
+}
+
+func (decl *UnionDecl) IsResourceType() bool {
+	return decl.unionDecl.IsResourceType()
 }
 
 func (decl *UnionDecl) Name() string {

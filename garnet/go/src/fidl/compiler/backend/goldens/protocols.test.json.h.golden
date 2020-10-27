@@ -138,6 +138,7 @@ constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x8b550d7c29f740clu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 class WithErrorSyntax_ResponseAsStruct_Response final {
  public:
   static const fidl_type_t* FidlType;
@@ -178,7 +179,9 @@ inline zx_status_t Clone(
 
 using WithErrorSyntax_ResponseAsStruct_ResponsePtr =
     ::std::unique_ptr<WithErrorSyntax_ResponseAsStruct_Response>;
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 class WithErrorSyntax_ResponseAsStruct_Result final {
  public:
   static const fidl_type_t* FidlType;
@@ -299,7 +302,9 @@ inline zx_status_t Clone(
 
 using WithErrorSyntax_ResponseAsStruct_ResultPtr =
     ::std::unique_ptr<WithErrorSyntax_ResponseAsStruct_Result>;
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 class WithErrorSyntax_ErrorAsPrimitive_Response final {
  public:
   static const fidl_type_t* FidlType;
@@ -335,7 +340,9 @@ inline zx_status_t Clone(
 
 using WithErrorSyntax_ErrorAsPrimitive_ResponsePtr =
     ::std::unique_ptr<WithErrorSyntax_ErrorAsPrimitive_Response>;
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 class WithErrorSyntax_ErrorAsPrimitive_Result final {
  public:
   static const fidl_type_t* FidlType;
@@ -452,7 +459,9 @@ inline zx_status_t Clone(
 
 using WithErrorSyntax_ErrorAsPrimitive_ResultPtr =
     ::std::unique_ptr<WithErrorSyntax_ErrorAsPrimitive_Result>;
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 class WithErrorSyntax_ErrorAsEnum_Response final {
  public:
   static const fidl_type_t* FidlType;
@@ -484,6 +493,8 @@ inline zx_status_t Clone(
 
 using WithErrorSyntax_ErrorAsEnum_ResponsePtr =
     ::std::unique_ptr<WithErrorSyntax_ErrorAsEnum_Response>;
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 
 class Transitional {
@@ -1402,6 +1413,7 @@ class WithAndWithoutRequestResponse_SyncProxy
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 class WithErrorSyntax_ErrorAsEnum_Result final {
  public:
   static const fidl_type_t* FidlType;
@@ -1513,6 +1525,8 @@ inline zx_status_t Clone(
 
 using WithErrorSyntax_ErrorAsEnum_ResultPtr =
     ::std::unique_ptr<WithErrorSyntax_ErrorAsEnum_Result>;
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 
 class WithErrorSyntax {
@@ -1836,6 +1850,7 @@ struct Equality<::fidl::test::protocols::obj_type> {
   }
 };
 
+#ifdef __Fuchsia__
 template <>
 struct CodingTraits<
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
@@ -1879,6 +1894,9 @@ struct Equality<
     return true;
   }
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct IsFidlXUnion<
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
@@ -1964,6 +1982,9 @@ struct Equality<
     }
   }
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct CodingTraits<
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
@@ -2001,6 +2022,9 @@ struct Equality<
     return true;
   }
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct IsFidlXUnion<
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
@@ -2086,6 +2110,9 @@ struct Equality<
     }
   }
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct CodingTraits<
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
@@ -2118,6 +2145,8 @@ struct Equality<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response> {
     return true;
   }
 };
+#endif  // __Fuchsia__
+
 template <>
 struct CodingTraits<::fidl::test::protocols::ErrorEnun> {
   static constexpr size_t inline_size_old =
@@ -2149,6 +2178,7 @@ struct Equality<::fidl::test::protocols::ErrorEnun> {
   }
 };
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlXUnion<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
     : public std::true_type {};
@@ -2226,4 +2256,5 @@ struct Equality<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result> {
     }
   }
 };
+#endif  // __Fuchsia__
 }  // namespace fidl

@@ -256,7 +256,7 @@ decode_success("ValueTableUnknownReservedDropped") {
 decode_success("ResourceTableUnknownReservedDropped") {
     // TODO(fxbug.dev/61848): Move these to ResourceTableUnknownReservedStored
     // and delete this test.
-    bindings_allowlist = [llcpp,rust],
+    bindings_allowlist = [hlcpp,llcpp,rust],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -386,7 +386,7 @@ decode_success("ValueTableUnknownTrailingDropped") {
 decode_success("ResourceTableUnknownTrailingDropped") {
     // TODO(fxbug.dev/61848): Move these to ResourceTableUnknownTrailingStored
     // and delete this test.
-    bindings_allowlist = [llcpp,rust],
+    bindings_allowlist = [hlcpp,llcpp,rust],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -489,7 +489,7 @@ decode_success("ResourceTableUnknownTrailingStored") {
 decode_success("ValueTableUnknownTrailingHandlesDropped") {
     // TODO(fxbug.dev/61848): Move these to ValueTableUnknownTrailingHandlesRejected
     // and delete this test.
-    bindings_allowlist = [rust],
+    bindings_allowlist = [hlcpp,rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -524,7 +524,7 @@ decode_success("ValueTableUnknownTrailingHandlesDropped") {
 decode_success("ResourceTableUnknownTrailingHandlesDropped") {
     // TODO(fxbug.dev/61848): Move these to ResourceTableUnknownTrailingHandlesStored
     // and delete this test.
-    bindings_allowlist = [rust],
+    bindings_allowlist = [hlcpp,rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -1344,7 +1344,7 @@ success("Vectors") {
 // https://fuchsia.googlesource.com/fidl-misc/+/HEAD/fidlviz/
 success("FidlvizDemo") {
     // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_allowlist = [dart,go,rust],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
     },

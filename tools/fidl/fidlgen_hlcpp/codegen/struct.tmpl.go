@@ -12,7 +12,7 @@ class {{ .Name }};
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "StructDeclaration" }}
-{{ if .IsResource }}
+{{ if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- end }}
 {{- range .DocComments }}
@@ -71,14 +71,14 @@ inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& _value,
 }
 
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
-{{- if .IsResource }}
+{{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{ end }}
 
 {{- end }}
 
 {{- define "StructDefinition" }}
-{{- if .IsResource }}
+{{- if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- end }}
 extern "C" const fidl_type_t {{ .TableType }};
@@ -113,14 +113,14 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
   {{- end }}
   return ZX_OK;
 }
-{{- if .IsResource }}
+{{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{ end }}
 
 {{- end }}
 
 {{- define "StructTraits" }}
-{{- if .IsResource }}
+{{- if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- end }}
 template <>
@@ -158,7 +158,7 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
     return true;
   }
 };
-{{- if .IsResource }}
+{{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{ end }}
 

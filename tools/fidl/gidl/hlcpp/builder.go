@@ -161,9 +161,16 @@ func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.Record
 
 		if field.Key.IsUnknown() {
 			unknownData := field.Value.(gidlir.UnknownData)
-			b.Builder.WriteString(fmt.Sprintf(
-				"%s%s_experimental_set_unknown_data(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n",
-				containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes)))
+			if decl.IsResourceType() {
+				b.Builder.WriteString(fmt.Sprintf(
+					"%s%s_experimental_set_unknown_data(static_cast<fidl_xunion_tag_t>(%dlu), %s, %s);\n",
+					containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes),
+					buildHandles(unknownData.Handles)))
+			} else {
+				b.Builder.WriteString(fmt.Sprintf(
+					"%s%s_experimental_set_unknown_data(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n",
+					containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes)))
+			}
 			continue
 		}
 
@@ -273,4 +280,50 @@ func primitiveTypeName(subtype fidlir.PrimitiveSubtype) string {
 	default:
 		panic(fmt.Sprintf("unexpected subtype %s", subtype))
 	}
+}
+
+func buildBytes(bytes []byte) string {
+	var builder strings.Builder
+	builder.WriteString("std::vector<uint8_t>{")
+	for i, b := range bytes {
+		builder.WriteString(fmt.Sprintf("0x%02x,", b))
+		if i%8 == 7 {
+			builder.WriteString("\n")
+		}
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
+func buildRawHandles(handles []gidlir.Handle) string {
+	if len(handles) == 0 {
+		return "std::vector<zx_handle_t>{}"
+	}
+	var builder strings.Builder
+	builder.WriteString("std::vector<zx_handle_t>{\n")
+	for i, h := range handles {
+		builder.WriteString(fmt.Sprintf("handle_defs[%d],", h))
+		if i%8 == 7 {
+			builder.WriteString("\n")
+		}
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
+func buildHandles(handles []gidlir.Handle) string {
+	if len(handles) == 0 {
+		return "std::vector<zx::handle>{}"
+	}
+	var builder strings.Builder
+	// Initializer-list vectors only work for copyable types. zx::handle has no
+	// copy constructor, so we use an immediately-invoked lambda instead.
+	builder.WriteString("([&handle_defs] {\n")
+	builder.WriteString("std::vector<zx::handle> v;\n")
+	for _, h := range handles {
+		builder.WriteString(fmt.Sprintf("v.emplace_back(handle_defs[%d]);\n", h))
+	}
+	builder.WriteString("return v;\n")
+	builder.WriteString("})()")
+	return builder.String()
 }

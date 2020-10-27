@@ -65,7 +65,6 @@ flexible union SampleXUnion {
     3: SimpleTable st;
 };
 
-[BindingsDenylist = "hlcpp"]
 flexible resource union SampleResourceXUnion {
     1: uint32 u;
     2: SimpleUnion su;
@@ -98,13 +97,12 @@ struct TestFlexibleXUnionInStruct {
     SampleXUnion xu;
 };
 
-[BindingsDenylist = "hlcpp"]
 resource struct TestFlexibleResourceXUnionInStruct {
     SampleResourceXUnion xu;
 };
 
 // TODO(fxbug.dev/36441): Allow bindings to compile on host with handles.
-[BindingsDenylist = "hlcpp, llcpp"]
+[BindingsDenylist = "llcpp"]
 resource struct FidlvizDemo {
     uint8 f1;
     int8 f2;

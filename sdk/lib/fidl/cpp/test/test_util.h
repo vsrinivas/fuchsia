@@ -108,8 +108,10 @@ bool ValueToBytes(Input input, const std::vector<uint8_t>& bytes,
 }
 
 template <class Output>
-void CheckDecodeFailure(std::vector<uint8_t> input, const zx_status_t expected_failure_code) {
-  Message message(BytePart(input.data(), input.capacity(), input.size()), HandlePart());
+void CheckDecodeFailure(std::vector<uint8_t> input, std::vector<zx_handle_t> handles,
+                        const zx_status_t expected_failure_code) {
+  Message message(BytePart(input.data(), input.capacity(), input.size()),
+                  HandlePart(handles.data(), handles.capacity(), handles.size()));
 
   const char* error = nullptr;
   EXPECT_EQ(expected_failure_code, message.Decode(Output::FidlType, &error)) << error;

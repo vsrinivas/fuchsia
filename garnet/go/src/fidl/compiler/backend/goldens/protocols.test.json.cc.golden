@@ -7,6 +7,7 @@ namespace fidl {
 namespace test {
 namespace protocols {
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 const fidl_type_t* WithErrorSyntax_ResponseAsStruct_Response::FidlType =
@@ -52,6 +53,9 @@ zx_status_t WithErrorSyntax_ResponseAsStruct_Response::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
 const fidl_type_t* WithErrorSyntax_ResponseAsStruct_Result::FidlType =
@@ -255,6 +259,9 @@ void WithErrorSyntax_ResponseAsStruct_Result::EnsureStorageInitialized(
     }
   }
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 const fidl_type_t* WithErrorSyntax_ErrorAsPrimitive_Response::FidlType =
@@ -292,6 +299,9 @@ zx_status_t WithErrorSyntax_ErrorAsPrimitive_Response::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 const fidl_type_t* WithErrorSyntax_ErrorAsPrimitive_Result::FidlType =
@@ -495,6 +505,9 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::EnsureStorageInitialized(
     }
   }
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 const fidl_type_t* WithErrorSyntax_ErrorAsEnum_Response::FidlType =
@@ -530,6 +543,8 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Response::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 namespace {
 
@@ -1624,6 +1639,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestWithResponse(
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 const fidl_type_t* WithErrorSyntax_ErrorAsEnum_Result::FidlType =
@@ -1829,6 +1845,8 @@ void WithErrorSyntax_ErrorAsEnum_Result::EnsureStorageInitialized(
     }
   }
 }
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 namespace {
 

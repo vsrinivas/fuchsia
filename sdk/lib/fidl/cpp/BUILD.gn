@@ -219,7 +219,6 @@ source_set("test_sources") {
     "internal/stub_controller_unittest.cc",
     "synchronous_interface_ptr_unittest.cc",
     "thread_safe_binding_set_unittest.cc",
-    "xunion_handles_unittest.cc",
   ]
 
   deps = [
