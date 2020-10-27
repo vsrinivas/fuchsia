@@ -8,6 +8,7 @@ import("//build/packages/prebuilt_package.gni")
 import("//build/packages/prebuilt_test_manifest.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
+import("build_args.gni")
 
 declare_args() {
   # Set to use the most recent canary version of prebuilt Chromium components
@@ -53,6 +54,10 @@ prebuilt_package("web_engine_pkg") {
   package_name = "web_engine"
   archive =
       prebuilt_archive_base_path + "/arch/" + target_cpu + "/web_engine.far"
+  if (chromium_build_dir != "") {
+    archive =
+        chromium_build_dir + "/gen/fuchsia/engine/web_engine/web_engine.far"
+  }
   debug_archive = debug_archive_base_path + "/web_engine.symbols.tar.bz2"
 }
 
@@ -77,6 +82,10 @@ prebuilt_package("web_runner_pkg") {
   package_name = "web_runner"
   archive =
       prebuilt_archive_base_path + "/arch/" + target_cpu + "/web_runner.far"
+  if (chromium_build_dir != "") {
+    archive =
+        chromium_build_dir + "/gen/fuchsia/runners/web_runner/web_runner.far"
+  }
   debug_archive = debug_archive_base_path + "/web_runner.symbols.tar.bz2"
 }
 
