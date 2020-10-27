@@ -331,24 +331,17 @@ zx_status_t Mt8167sGpu::Bind() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Zeroth fragment is pdev
-  zx_device_t* fragments[kClockCount + 1];
-  size_t actual;
-  composite.GetFragments(fragments, std::size(fragments), &actual);
-  if (actual != std::size(fragments)) {
-    GPU_ERROR("could not retrieve all our fragments\n");
-    return ZX_ERR_INTERNAL;
-  }
-
+  clks_[0] = ddk::ClockProtocolClient(composite, "clock-1");
+  clks_[1] = ddk::ClockProtocolClient(composite, "clock-2");
+  clks_[2] = ddk::ClockProtocolClient(composite, "clock-3");
   for (unsigned i = 0; i < kClockCount; i++) {
-    clks_[i] = fragments[i + 1];
     if (!clks_[i].is_valid()) {
       zxlogf(ERROR, "%s could not get clock", __func__);
       return ZX_ERR_INTERNAL;
     }
   }
 
-  ddk::PDev pdev(fragments[0]);
+  ddk::PDev pdev(composite);
   auto status = pdev.MapMmio(kMfgMmioIndex, &real_gpu_buffer_);
   if (status != ZX_OK) {
     GPU_ERROR("pdev_map_mmio_buffer failed\n");
