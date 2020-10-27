@@ -22,17 +22,9 @@ zx_status_t PwmInitDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t fragment_count;
-  composite.GetFragments(fragments, countof(fragments), &fragment_count);
-  if (fragment_count != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "PwmInitDevice: Could not get fragments");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PwmProtocolClient pwm(fragments[FRAGMENT_PWM]);
-  ddk::GpioProtocolClient wifi_gpio(fragments[FRAGMENT_WIFI_GPIO]);
-  ddk::GpioProtocolClient bt_gpio(fragments[FRAGMENT_BT_GPIO]);
+  ddk::PwmProtocolClient pwm(composite, "pwm");
+  ddk::GpioProtocolClient wifi_gpio(composite, "gpio-wifi");
+  ddk::GpioProtocolClient bt_gpio(composite, "gpio-bt");
   if (!pwm.is_valid() || !wifi_gpio.is_valid() || !bt_gpio.is_valid()) {
     zxlogf(ERROR, "%s: could not get fragments", __func__);
     return ZX_ERR_NO_RESOURCES;
