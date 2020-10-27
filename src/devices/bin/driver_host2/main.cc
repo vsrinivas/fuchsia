@@ -21,12 +21,6 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     LOGF(INFO, "Failed to redirect stdout to debuglog, assuming test environment and continuing");
   }
-  // TODO(fxbug.dev/33183): Wrap in stdout-to-debuglog flag check
-  status = log_to_debuglog();
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to reconfigure logger to use debuglog: %s", zx_status_get_string(status));
-    return status;
-  }
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
