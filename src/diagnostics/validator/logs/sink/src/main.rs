@@ -11,8 +11,12 @@ use fidl_fuchsia_sys::EnvironmentControllerProxy;
 use fuchsia_async::Socket;
 use fuchsia_component::client::App;
 use fuchsia_component::server::ServiceFs;
+use fuchsia_zircon as zx;
 use futures::prelude::*;
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    ops::Range,
+};
 use tracing::*;
 
 /// Validate Log VMO formats written by 'puppet' programs controlled by
@@ -33,6 +37,7 @@ async fn main() -> Result<(), Error> {
 
 struct Puppet {
     url: String,
+    start_time: zx::Time,
     socket: Socket,
     _app: App,
     _env: EnvironmentControllerProxy,
@@ -43,6 +48,7 @@ impl Puppet {
         let mut fs = ServiceFs::new();
         fs.add_fidl_service(|s: LogSinkRequestStream| s);
 
+        let start_time = zx::Time::get_monotonic();
         info!(%puppet_url, "launching");
         let (_env, _app) = fs
             .launch_component_in_nested_environment(
@@ -61,28 +67,28 @@ impl Puppet {
             stream.next().await.unwrap()?
         {
             info!("Received a structured socket.");
+            // TODO(fxbug.dev/61495): Validate that this is in fact a datagram socket.
             let socket = Socket::from_socket(socket)?;
-            Ok(Self { socket, url: puppet_url.to_string(), _app, _env })
+            Ok(Self { socket, url: puppet_url.to_string(), start_time, _app, _env })
         } else {
             Err(anyhow::format_err!("shouldn't ever receive legacy connections"))
         }
     }
 
+    // TODO(fxbug.dev/61538) validate we can log arbitrary messages
     async fn test(&self) -> Result<(), Error> {
         info!("Running the LogSink socket test.");
 
         let mut buf: Vec<u8> = vec![];
-        // TODO(fxbug.dev/61495): Validate that this is in fact a datagram socket.
         let bytes_read = self.socket.read_datagram(&mut buf).await.unwrap();
         let actual = TestRecord::parse(&buf[0..bytes_read])?;
-
-        // TODO(fxbug.dev/61538) validate we can log arbitrary messages
         let moniker = self.url.rsplit('/').next().unwrap();
-        let expected = TestRecord::new(actual.timestamp, Severity::Warn)
-            .add_tag(moniker)
-            .add_tag("test_log")
-            .add_string("foo", "bar")
-            .build();
+        let expected =
+            RecordAssertion::new(self.start_time..zx::Time::get_monotonic(), Severity::Warn)
+                .add_tag(moniker)
+                .add_tag("test_log")
+                .add_string("foo", "bar")
+                .build();
         assert_eq!(actual, expected);
 
         info!("Tested LogSink socket successfully.");
@@ -99,10 +105,6 @@ struct TestRecord {
 }
 
 impl TestRecord {
-    fn new(timestamp: i64, severity: Severity) -> TestRecordBuilder {
-        TestRecordBuilder { timestamp, severity, tags: BTreeSet::new(), arguments: BTreeMap::new() }
-    }
-
     fn parse(buf: &[u8]) -> Result<Self, Error> {
         let Record { timestamp, severity, arguments } = parse_record(buf)?.0;
 
@@ -127,17 +129,51 @@ impl TestRecord {
     }
 }
 
-struct TestRecordBuilder {
-    timestamp: i64,
+impl PartialEq<RecordAssertion> for TestRecord {
+    fn eq(&self, rhs: &RecordAssertion) -> bool {
+        rhs.eq(self)
+    }
+}
+
+#[derive(Debug)]
+struct RecordAssertion {
+    valid_times: Range<zx::Time>,
     severity: Severity,
     tags: BTreeSet<String>,
     arguments: BTreeMap<String, Value>,
 }
 
-impl TestRecordBuilder {
-    fn build(&mut self) -> TestRecord {
-        TestRecord {
-            timestamp: self.timestamp,
+impl RecordAssertion {
+    fn new(valid_times: Range<zx::Time>, severity: Severity) -> RecordAssertionBuilder {
+        RecordAssertionBuilder {
+            valid_times,
+            severity,
+            tags: BTreeSet::new(),
+            arguments: BTreeMap::new(),
+        }
+    }
+}
+
+impl PartialEq<TestRecord> for RecordAssertion {
+    fn eq(&self, rhs: &TestRecord) -> bool {
+        self.valid_times.contains(&zx::Time::from_nanos(rhs.timestamp))
+            && self.severity == rhs.severity
+            && self.tags == rhs.tags
+            && self.arguments == rhs.arguments
+    }
+}
+
+struct RecordAssertionBuilder {
+    valid_times: Range<zx::Time>,
+    severity: Severity,
+    tags: BTreeSet<String>,
+    arguments: BTreeMap<String, Value>,
+}
+
+impl RecordAssertionBuilder {
+    fn build(&mut self) -> RecordAssertion {
+        RecordAssertion {
+            valid_times: self.valid_times.clone(),
             severity: self.severity,
             tags: std::mem::replace(&mut self.tags, Default::default()),
             arguments: std::mem::replace(&mut self.arguments, Default::default()),
