@@ -10,8 +10,13 @@ executable("puppet") {
   sources = [ "puppet.cc" ]
 
   deps = [
+    "../../fidl:sink-puppet",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp:backend",
     "//sdk/lib/syslog/cpp:cpp",
+    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

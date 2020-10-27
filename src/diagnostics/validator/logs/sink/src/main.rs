@@ -8,6 +8,7 @@ use diagnostics_stream::{parse::parse_record, Record, Severity, Value};
 use fidl_fuchsia_logger::LogSinkRequest;
 use fidl_fuchsia_logger::LogSinkRequestStream;
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
+use fidl_fuchsia_validate_logs::{LogSinkPuppetMarker, LogSinkPuppetProxy};
 use fuchsia_async::Socket;
 use fuchsia_component::client::App;
 use fuchsia_component::server::ServiceFs;
@@ -39,6 +40,7 @@ struct Puppet {
     url: String,
     start_time: zx::Time,
     socket: Socket,
+    proxy: LogSinkPuppetProxy,
     _app: App,
     _env: EnvironmentControllerProxy,
 }
@@ -59,6 +61,10 @@ impl Puppet {
             .unwrap();
 
         fs.take_and_serve_directory_handle()?;
+
+        info!("Connecting to puppet.");
+        let proxy = _app.connect_to_service::<LogSinkPuppetMarker>()?;
+
         info!("Waiting for LogSink connection.");
         let mut stream = fs.next().await.unwrap();
 
@@ -69,27 +75,47 @@ impl Puppet {
             info!("Received a structured socket.");
             // TODO(fxbug.dev/61495): Validate that this is in fact a datagram socket.
             let socket = Socket::from_socket(socket)?;
-            Ok(Self { socket, url: puppet_url.to_string(), start_time, _app, _env })
+            Ok(Self { socket, url: puppet_url.to_string(), proxy, start_time, _app, _env })
         } else {
             Err(anyhow::format_err!("shouldn't ever receive legacy connections"))
         }
     }
 
-    // TODO(fxbug.dev/61538) validate we can log arbitrary messages
-    async fn test(&self) -> Result<(), Error> {
-        info!("Running the LogSink socket test.");
-
+    async fn read_record(&self) -> Result<TestRecord, Error> {
         let mut buf: Vec<u8> = vec![];
         let bytes_read = self.socket.read_datagram(&mut buf).await.unwrap();
-        let actual = TestRecord::parse(&buf[0..bytes_read])?;
-        let moniker = self.url.rsplit('/').next().unwrap();
-        let expected =
-            RecordAssertion::new(self.start_time..zx::Time::get_monotonic(), Severity::Warn)
-                .add_tag(moniker)
+        TestRecord::parse(&buf[0..bytes_read])
+    }
+
+    fn moniker(&self) -> &str {
+        self.url.rsplit('/').next().unwrap()
+    }
+
+    async fn test(&self) -> Result<(), Error> {
+        info!("Ensuring we received the init message.");
+
+        assert_eq!(
+            self.read_record().await?,
+            RecordAssertion::new(self.start_time..zx::Time::get_monotonic(), Severity::Info)
+                .add_tag(self.moniker())
+                .add_string("message", "Puppet started.")
+                .build()
+        );
+
+        info!("Starting the LogSink socket test.");
+
+        let before = zx::Time::get_monotonic();
+        // TODO(fxbug.dev/61538) validate we can log arbitrary messages
+        self.proxy.emit_log().await?;
+        let after = zx::Time::get_monotonic();
+        assert_eq!(
+            self.read_record().await?,
+            RecordAssertion::new(before..after, Severity::Warn)
+                .add_tag(self.moniker())
                 .add_tag("test_log")
                 .add_string("foo", "bar")
-                .build();
-        assert_eq!(actual, expected);
+                .build()
+        );
 
         info!("Tested LogSink socket successfully.");
         Ok(())

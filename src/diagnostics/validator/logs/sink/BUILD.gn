@@ -10,6 +10,7 @@ rustc_binary("bin") {
   edition = "2018"
   with_unit_tests = true
   deps = [
+    "fidl:sink-puppet-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/diagnostics/stream/rust",
