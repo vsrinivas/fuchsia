@@ -14,8 +14,8 @@ Like any other Fuchsia program, a Fuchsia test is a
 may be viewed as a [realm][realms], or tree of components, also called a *test
 realm*. The component at the root of the test realm is known as the *test root*.
 
-For a component to be a test, it must [manifests-expose][manifests-expose] and
-implement the [`fuchsia.test.Suite`](#test-suite-protocol) protocol.
+For a component to be a test, it must implement and [expose][manifests-expose]
+the [`fuchsia.test.Suite`](#test-suite-protocol) protocol.
 
 Components in the test realm may play various roles, as defined in
 [test roles](#test-roles).
@@ -40,34 +40,34 @@ where test results are reported through stdout and exit codes. Most commonly, a
 test will not implement the `fuchsia.test.Suite` protocol from scratch, but
 would instead use a *test runner* that integrates a language-native testing
 library with the protocol. The test component does this by declaring it uses the
-appropriate test runner in the [test driver][test-roles]'s manifest. For
+appropriate test runner in the [test driver](#test-roles)'s manifest. For
 example, for a C++ gtest, the test driver's manifest would contain the
 following:
 
-```json
+```json5
 // test_driver.cml
 {
     ...
-    "use": [
+    use: [
         ...
         // Use the gtest runner
         {
-            "runner": "gtest_runner",
+            runner: "gtest_runner",
         },
     ],
-    "expose": [
+    expose: [
         ...
         // Test driver must still expose fuchsia.test.Suite
         {
-            "protocol": "/svc/fuchsia.test.Suite",
-            "from": "self",
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
         },
     ],
 }
 ```
 
 However, it's cumbersome for a test to manually implement this protocol. For
-this reason, the Fuchsia Test Runner Frameworks provides a set of special runners
+this reason, the Fuchsia Test Runner Framework provides a set of special runners
 called *test runners*. A test runner integrates a [test driver](#test-roles)
 that uses a language-native test library (such as C++ `gtest` or rust `libtest`)
 with the test suite protocol. If your component declares it uses the appropriate
@@ -94,7 +94,7 @@ the test, as follows:
     (either directly or through a [test runner](#test-runners)) the
     [`fuchsia.test.Suite`][test-suite-protocol] protocol. This role may be, but
     is not necessarily, owned by the [test root](#tests-as-components).
--   Capability provider: A component that provides a capability which the test
+-   Capability provider: A component that provides a capability that the test
     will exercise somehow. The component may either provide a "fake"
     implementation of the capability for test, or a "real" implementation that
     is equivalent to what production uses.
