@@ -236,6 +236,15 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			if test.OS == "mac" && runtime.GOOS != "darwin" {
 				return fmt.Errorf("cannot run mac tests when GOOS = %q", runtime.GOOS)
 			}
+			// Initialize the fuchsia SSH tester to run the snapshot at the end in case
+			// we ran any host-target interaction tests.
+			if fuchsiaTester == nil && sshKeyFile != "" {
+				var err error
+				fuchsiaTester, err = newFuchsiaSSHTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout)
+				if err != nil {
+					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
+				}
+			}
 			if localTester == nil {
 				localEnv := append(os.Environ(),
 					// Tell tests written in Rust to print stack on failures.
