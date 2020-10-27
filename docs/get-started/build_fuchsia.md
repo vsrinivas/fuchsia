@@ -12,9 +12,9 @@ to download Fuchsia source code and set up your environment variables.
 
 To set your build configuration for Fuchsia, run the following command:
 
-```posix-terminal
-fx set <var>product</var>.<var>board</var>
-```
+<pre class="prettyprint">
+<code class="devsite-terminal">fx set <var>product</var>.<var>board</var></code>
+</pre>
 
 The `fx set` command takes <var>PRODUCT</var> and <var>BOARD</var> arguments,
 which define the
