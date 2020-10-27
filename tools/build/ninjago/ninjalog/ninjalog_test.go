@@ -6,8 +6,11 @@ package ninjalog
 
 import (
 	"bytes"
+	"compress/gzip"
 	"container/heap"
+	"flag"
 	"io/ioutil"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -20,6 +23,8 @@ import (
 )
 
 var (
+	testNinjalog = flag.String("test_ninjalog", "../test_data/ninja_log.gz", "Path to ../test_data/ninja_log.gz; only used in GN build")
+
 	logTestCase = `# ninja log v5
 76	187	0	resources/inspector/devtools_extension_api.js	75430546595be7c2
 80	284	0	gen/autofill_regex_constants.cc	fa33c8d7ce1d8791
@@ -508,27 +513,37 @@ func TestWeightedTime(t *testing.T) {
 	}
 }
 
-func BenchmarkParse(b *testing.B) {
-	data, err := ioutil.ReadFile("testdata/ninja_log")
+func readAndUnzip(b *testing.B, path string) *gzip.Reader {
+	f, err := os.Open(path)
 	if err != nil {
-		b.Errorf(`ReadFile("testdata/ninja_log")=_, %v; want_, <nil>`, err)
+		b.Fatalf("Failed to read %q: %v", path, err)
 	}
+	b.Cleanup(func() { f.Close() })
 
+	unzipped, err := gzip.NewReader(f)
+	if err != nil {
+		b.Fatalf("Failed to unzip %q: %v", path, err)
+	}
+	b.Cleanup(func() { unzipped.Close() })
+	return unzipped
+}
+
+func BenchmarkParse(b *testing.B) {
+	data, err := ioutil.ReadAll(readAndUnzip(b, *testNinjalog))
+	if err != nil {
+		b.Fatalf("ioutil.ReadAll(readAnUnzip(b, %s)) got error: %v", *testNinjalog, err)
+	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := Parse(".ninja_log", bytes.NewReader(data))
-		if err != nil {
+		if _, err := Parse("ninja_log", bytes.NewReader(data)); err != nil {
 			b.Errorf(`Parse()=_, %v; want=_, <nil>`, err)
 		}
 	}
 }
 
 func BenchmarkDedup(b *testing.B) {
-	data, err := ioutil.ReadFile("testdata/ninja_log")
-	if err != nil {
-		b.Errorf(`ReadFile("testdata/ninja_log")=_, %v; want_, <nil>`, err)
-	}
-
-	njl, err := Parse(".ninja_log", bytes.NewReader(data))
+	r := readAndUnzip(b, *testNinjalog)
+	njl, err := Parse(".ninja_log", r)
 	if err != nil {
 		b.Errorf(`Parse()=_, %v; want=_, <nil>`, err)
 	}
@@ -541,12 +556,8 @@ func BenchmarkDedup(b *testing.B) {
 }
 
 func BenchmarkFlow(b *testing.B) {
-	data, err := ioutil.ReadFile("testdata/ninja_log")
-	if err != nil {
-		b.Errorf(`ReadFile("testdata/ninja_log")=_, %v; want_, <nil>`, err)
-	}
-
-	njl, err := Parse(".ninja_log", bytes.NewReader(data))
+	r := readAndUnzip(b, *testNinjalog)
+	njl, err := Parse(".ninja_log", r)
 	if err != nil {
 		b.Errorf(`Parse()=_, %v; want=_, <nil>`, err)
 	}
@@ -560,12 +571,8 @@ func BenchmarkFlow(b *testing.B) {
 }
 
 func BenchmarkToTraces(b *testing.B) {
-	data, err := ioutil.ReadFile("testdata/ninja_log")
-	if err != nil {
-		b.Errorf(`ReadFile("testdata/ninja_log")=_, %v; want_, <nil>`, err)
-	}
-
-	njl, err := Parse(".ninja_log", bytes.NewReader(data))
+	r := readAndUnzip(b, *testNinjalog)
+	njl, err := Parse(".ninja_log", r)
 	if err != nil {
 		b.Errorf(`Parse()=_, %v; want=_, <nil>`, err)
 	}
@@ -578,11 +585,11 @@ func BenchmarkToTraces(b *testing.B) {
 }
 
 func BenchmarkDedupFlowToTraces(b *testing.B) {
-	data, err := ioutil.ReadFile("testdata/ninja_log")
+	data, err := ioutil.ReadAll(readAndUnzip(b, *testNinjalog))
 	if err != nil {
-		b.Errorf(`ReadFile("testdata/ninja_log")=_, %v; want_, <nil>`, err)
+		b.Fatalf("ioutil.ReadAll(readAnUnzip(b, %s)) got error: %v", *testNinjalog, err)
 	}
-
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		njl, err := Parse(".ninja_log", bytes.NewReader(data))
 		if err != nil {

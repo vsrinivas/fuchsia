@@ -5,6 +5,7 @@
 package ninjagraph
 
 import (
+	"compress/gzip"
 	"flag"
 	"fmt"
 	"os"
@@ -19,7 +20,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog"
 )
 
-var testDataFlag = flag.String("test_data_dir", "../test_data", "Path to ../test_data/; only used in GN build")
+var testDataDir = flag.String("test_data_dir", "../test_data", "Path to ../test_data/; only used in GN build")
 
 // This ordering is not perfect but good enough for these tests, since we always
 // have unique Rule names in edges.
@@ -288,44 +289,28 @@ func TestFromDOTErrors(t *testing.T) {
 }
 
 func TestParsingFileFromRealBuild(t *testing.T) {
-	dotFilePath := filepath.Join(*testDataFlag, "graph.dot")
+	dotFilePath := filepath.Join(*testDataDir, "graph.dot.gz")
 	dotFile, err := os.Open(dotFilePath)
 	if err != nil {
 		t.Fatalf("Failed to open file %q: %s", dotFilePath, err)
 	}
 	defer dotFile.Close()
 
-	wantCXXEdge := Edge{
-		Inputs:  []int64{0x17471d0},
-		Outputs: []int64{0x1747150},
-		Rule:    "cxx",
+	dotFileUnzipped, err := gzip.NewReader(dotFile)
+	if err != nil {
+		t.Fatalf("Failed to unzip file %q: %s", dotFilePath, err)
 	}
-	wantLinkEdge := Edge{
-		Inputs:  []int64{0x1747150, 0x1719e30, 0x1745bc0},
-		Outputs: []int64{0x1747530},
-		Rule:    "link",
-	}
-	want := Graph{
-		Nodes: map[int64]*Node{
-			0x1747530: {ID: 0x1747530, Path: "gn", In: &wantLinkEdge},
-			0x1747150: {ID: 0x1747150, Path: "src/gn/gn_main.o", In: &wantCXXEdge, Outs: []*Edge{&wantLinkEdge}},
-			0x17471d0: {ID: 0x17471d0, Path: "../src/gn/gn_main.cc", Outs: []*Edge{&wantCXXEdge}},
-			0x1719e30: {ID: 0x1719e30, Path: "base.a", Outs: []*Edge{&wantLinkEdge}},
-			0x1745bc0: {ID: 0x1745bc0, Path: "gn_lib.a", Outs: []*Edge{&wantLinkEdge}},
-		},
-		Edges: []*Edge{&wantCXXEdge, &wantLinkEdge},
-	}
+	defer dotFileUnzipped.Close()
 
-	got, err := FromDOT(dotFile)
+	got, err := FromDOT(dotFileUnzipped)
 	if err != nil {
 		t.Fatalf("FromDOT failed: %s", err)
 	}
-	opts := []cmp.Option{
-		cmpopts.IgnoreUnexported(Graph{}, Node{}, Edge{}),
-		orderEdgesByRule,
+	if gotNodes := len(got.Nodes); gotNodes != 12369 {
+		t.Errorf("FromDOT(Zircon build graph) got %d nodes, want 12369", gotNodes)
 	}
-	if diff := cmp.Diff(want, got, opts...); diff != "" {
-		t.Errorf("FromDOT(small gn build graph) =\n%#v\nwant:\n%#v\ndiff(-want +got):\n%s", got, want, diff)
+	if gotEdges := len(got.Edges); gotEdges != 10568 {
+		t.Errorf("FromDOT(Zircon build graph) got %d edges, want 10567", gotEdges)
 	}
 }
 
@@ -536,40 +521,40 @@ func TestPopulateEdgesErrors(t *testing.T) {
 	}
 }
 
-func readTestGraph(tb testing.TB) Graph {
-	ninjaLogPath := filepath.Join(*testDataFlag, "ninja_log")
-	ninjaLogFile, err := os.Open(ninjaLogPath)
+func readAndUnzip(tb testing.TB, path string) *gzip.Reader {
+	f, err := os.Open(path)
 	if err != nil {
-		tb.Fatalf("Failed to open Ninja log with path %s: %v", ninjaLogPath, err)
+		tb.Fatalf("Failed to read %q: %v", path, err)
 	}
-	defer ninjaLogFile.Close()
-	ninjaLog, err := ninjalog.Parse(ninjaLogPath, ninjaLogFile)
+	tb.Cleanup(func() { f.Close() })
+
+	unzipped, err := gzip.NewReader(f)
 	if err != nil {
-		tb.Fatalf("Failed to parse Ninja log from path %s: %v", ninjaLogPath, err)
+		tb.Fatalf("Failed to unzip %q: %v", path, err)
+	}
+	tb.Cleanup(func() { unzipped.Close() })
+	return unzipped
+}
+
+func readTestGraph(tb testing.TB) Graph {
+	ninjaLogPath := filepath.Join(*testDataDir, "ninja_log.gz")
+	ninjaLog, err := ninjalog.Parse(ninjaLogPath, readAndUnzip(tb, ninjaLogPath))
+	if err != nil {
+		tb.Fatalf("Failed to parse Ninja log %q: %v", ninjaLogPath, err)
 	}
 	steps := ninjalog.Dedup(ninjaLog.Steps)
 
-	compdbPath := filepath.Join(*testDataFlag, "compdb.json")
-	compdbFile, err := os.Open(compdbPath)
+	compdbPath := filepath.Join(*testDataDir, "compdb.json.gz")
+	commands, err := compdb.Parse(readAndUnzip(tb, compdbPath))
 	if err != nil {
-		tb.Fatalf("Failed to open compdb with path %s: %v", compdbPath, err)
-	}
-	defer compdbFile.Close()
-	commands, err := compdb.Parse(compdbFile)
-	if err != nil {
-		tb.Fatalf("Failed to parse compdb from path %s: %v", compdbPath, err)
+		tb.Fatalf("Failed to parse compdb from path %q: %v", compdbPath, err)
 	}
 	steps = ninjalog.Populate(steps, commands)
 
-	dotFilePath := filepath.Join(*testDataFlag, "graph.dot")
-	dotFile, err := os.Open(dotFilePath)
+	dotFilePath := filepath.Join(*testDataDir, "graph.dot.gz")
+	graph, err := FromDOT(readAndUnzip(tb, dotFilePath))
 	if err != nil {
-		tb.Fatalf("Failed to open Ninja graph with path %s: %v", dotFilePath, err)
-	}
-	defer dotFile.Close()
-	graph, err := FromDOT(dotFile)
-	if err != nil {
-		tb.Fatalf("Failed to parse Ninja graph from path %s: %v", dotFilePath, err)
+		tb.Fatalf("Failed to parse Ninja graph %q: %v", dotFilePath, err)
 	}
 
 	if err := graph.PopulateEdges(steps); err != nil {
@@ -592,9 +577,11 @@ func TestPopulateEdgesWithRealBuild(t *testing.T) {
 }
 
 func BenchmarkCriticalPath(b *testing.B) {
+	graph := readTestGraph(b)
+
 	b.Run("CriticalPath", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			graph := readTestGraph(b)
+			clearMemoization(&graph)
 			if _, err := graph.CriticalPath(); err != nil {
 				b.Fatalf("CriticalPath() got error: %v", err)
 			}
@@ -603,12 +590,92 @@ func BenchmarkCriticalPath(b *testing.B) {
 
 	b.Run("CriticalPathV2", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			graph := readTestGraph(b)
+			clearMemoization(&graph)
 			if _, err := graph.CriticalPathV2(); err != nil {
 				b.Fatalf("CriticalPathV2() got error: %v", err)
 			}
 		}
 	})
+}
+
+func TestCriticalPathDrag(t *testing.T) {
+	graph := readTestGraph(t)
+
+	if err := graph.addSink(); err != nil {
+		t.Fatalf("addSink() got error: %v", err)
+	}
+
+	type edgeDrag struct {
+		edge *Edge
+		drag time.Duration
+	}
+
+	var criticalEdges []edgeDrag
+	for _, e := range graph.Edges {
+		if e.Rule == "phony" || e.Rule == ninjagoArtificialSinkRule {
+			continue
+		}
+		tf, err := graph.totalFloat(e)
+		if err != nil {
+			t.Fatalf("totalFloat got error: %v", err)
+		}
+		if tf != 0 {
+			continue
+		}
+		drag, err := graph.drag(e)
+		if err != nil {
+			t.Fatalf("drag got error: %v", err)
+		}
+		criticalEdges = append(criticalEdges, edgeDrag{edge: e, drag: drag})
+	}
+
+	steps, err := graph.CriticalPathV2()
+	if err != nil {
+		t.Fatalf("CriticalPathV2 got error: %v", err)
+	}
+	totalBuildTime := totalDuration(steps)
+
+	for _, e := range criticalEdges {
+		clearMemoization(&graph)
+
+		origEnd := e.edge.Step.End
+		// Reduce this edge's duration to 0.
+		e.edge.Step.End = e.edge.Step.Start
+
+		// Calculate the new critical path, expect build speed improvement to
+		// equal to this edge's drag.
+		steps, err = graph.CriticalPathV2()
+		if err != nil {
+			t.Fatalf("CriticalPathV2 got error: %v", err)
+		}
+		newTotalBuildTime := totalDuration(steps)
+
+		// Revert this edge's duration back so it doesn't affect later iterations.
+		e.edge.Step.End = origEnd
+
+		if got := totalBuildTime - newTotalBuildTime; got != e.drag {
+			t.Errorf("After changing build duration of edge producing %s to zero, got build time improvement: %s, drag: %s", e.edge.Step.Out, got, e.drag)
+		}
+	}
+}
+
+func clearMemoization(graph *Graph) {
+	for _, n := range graph.Nodes {
+		n.criticalInput = nil
+		n.criticalBuildDuration = nil
+	}
+	for _, edge := range graph.Edges {
+		edge.earliestStart = nil
+		edge.latestFinish = nil
+	}
+}
+
+func totalDuration(steps []ninjalog.Step) time.Duration {
+	var d time.Duration
+	for _, step := range steps {
+		d += step.Duration()
+	}
+	return d
 }
 
 func TestCriticalPath(t *testing.T) {

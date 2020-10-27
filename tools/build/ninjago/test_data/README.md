@@ -1,17 +1,16 @@
 # Ninja Test Data
 
-Test data is a manually fabricated build graph of gn.
+Test data is from a Zircon build.
 
-gn at 501b49a3ab4f0d099457b6e5b62c709a1d2311be
+Fuchsia at c365fdad3a1fec2877d95d13715ed423da73c55f
 
 ```bash
-git clone https://gn.googlesource.com/gn
-cd gn
-git checkout 501b49a3ab4f0d099457b6e5b62c709a1d2311be
-python build/gen.py
-ninja -C out gn
-cp out/.ninja_log ninja_lot
-ninja -C out -t compdb > compdb.json
-ninja -C out -t graph gn > graph.dot
-# Then manually simplify the graph.
+cd fuchsia
+git checkout c365fdad3a1fec2877d95d13715ed423da73c55f
+fx set core.x64
+fx clean-build
+cp out/default.zircon/.ninja_log ninja_log
+ninja -C out/default.zircon -t compdb > compdb.json
+ninja -C out/default.zircon -t graph gn > graph.dot
+gzip ninja_log compdb.json graph.dot
 ```

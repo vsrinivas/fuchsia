@@ -6,9 +6,11 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"flag"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -19,13 +21,28 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog"
 )
 
-var testDataFlag = flag.String("test_data_dir", "../test_data", "Path to ../test_data/; only used in GN build")
+var testDataDir = flag.String("test_data_dir", "../test_data", "Path to ../test_data/; only used in GN build")
+
+func readAndUnzip(t *testing.T, path string) *gzip.Reader {
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("Failed to read %q: %v", path, err)
+	}
+	t.Cleanup(func() { f.Close() })
+
+	unzipped, err := gzip.NewReader(f)
+	if err != nil {
+		t.Fatalf("Failed to unzip %q: %v", path, err)
+	}
+	t.Cleanup(func() { unzipped.Close() })
+	return unzipped
+}
 
 func TestExtractAndSerializeBuildStats(t *testing.T) {
-	graph, steps, err := constructGraph(paths{
-		ninjalog: filepath.Join(*testDataFlag, "ninja_log"),
-		compdb:   filepath.Join(*testDataFlag, "compdb.json"),
-		graph:    filepath.Join(*testDataFlag, "graph.dot"),
+	graph, steps, err := constructGraph(inputs{
+		ninjalog: readAndUnzip(t, filepath.Join(*testDataDir, "ninja_log.gz")),
+		compdb:   readAndUnzip(t, filepath.Join(*testDataDir, "compdb.json.gz")),
+		graph:    readAndUnzip(t, filepath.Join(*testDataDir, "graph.dot.gz")),
 	})
 	if err != nil {
 		t.Fatalf("Failed to construct graph: %v", err)

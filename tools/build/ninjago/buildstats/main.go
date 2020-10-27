@@ -48,8 +48,8 @@ func init() {
 	flag.Var(&level, "level", "output verbosity, can be fatal, error, warning, info, debug or trace")
 }
 
-type paths struct {
-	ninjalog, compdb, graph string
+type inputs struct {
+	ninjalog, compdb, graph io.Reader
 }
 
 // action describes a build action.
@@ -94,35 +94,20 @@ type buildStats struct {
 //
 // Steps used to populate the graph are also returned so they can be used in
 // later steps.
-func constructGraph(ps paths) (ninjagraph.Graph, []ninjalog.Step, error) {
-	f, err := os.Open(ps.ninjalog)
-	if err != nil {
-		return ninjagraph.Graph{}, nil, fmt.Errorf("opening ninjalog: %v", err)
-	}
-	defer f.Close()
-	njl, err := ninjalog.Parse(*ninjalogPath, f)
+func constructGraph(ins inputs) (ninjagraph.Graph, []ninjalog.Step, error) {
+	njl, err := ninjalog.Parse(*ninjalogPath, ins.ninjalog)
 	if err != nil {
 		return ninjagraph.Graph{}, nil, fmt.Errorf("parsing ninjalog: %v", err)
 	}
 	steps := ninjalog.Dedup(njl.Steps)
 
-	f, err = os.Open(ps.compdb)
-	if err != nil {
-		return ninjagraph.Graph{}, nil, fmt.Errorf("opening compdb: %v", err)
-	}
-	defer f.Close()
-	commands, err := compdb.Parse(f)
+	commands, err := compdb.Parse(ins.compdb)
 	if err != nil {
 		return ninjagraph.Graph{}, nil, fmt.Errorf("parsing compdb: %v", err)
 	}
 	steps = ninjalog.Populate(steps, commands)
 
-	f, err = os.Open(ps.graph)
-	if err != nil {
-		return ninjagraph.Graph{}, nil, fmt.Errorf("openinng Ninja graph: %v", err)
-	}
-	defer f.Close()
-	graph, err := ninjagraph.FromDOT(f)
+	graph, err := ninjagraph.FromDOT(ins.graph)
 	if err != nil {
 		return ninjagraph.Graph{}, nil, fmt.Errorf("parsing Ninja graph: %v", err)
 	}
@@ -224,10 +209,25 @@ func main() {
 	}
 
 	log.Infof("Reading input files and constructing graph.")
-	graph, steps, err := constructGraph(paths{
-		ninjalog: *ninjalogPath,
-		compdb:   *compdbPath,
-		graph:    *graphPath,
+	ninjalog, err := os.Open(*ninjalogPath)
+	if err != nil {
+		log.Fatalf("Failed to read Ninja log %q: %v", *ninjalogPath, err)
+	}
+	defer ninjalog.Close()
+	compdb, err := os.Open(*compdbPath)
+	if err != nil {
+		log.Fatalf("Failed to read compdb %q: %v", *compdbPath, err)
+	}
+	defer compdb.Close()
+	graphFile, err := os.Open(*graphPath)
+	if err != nil {
+		log.Fatalf("Failed to read graph %q: %v", *graphPath, err)
+	}
+	defer graphFile.Close()
+	graph, steps, err := constructGraph(inputs{
+		ninjalog: ninjalog,
+		compdb:   compdb,
+		graph:    graphFile,
 	})
 	if err != nil {
 		log.Fatalf("Failed to construct graph: %v", err)
