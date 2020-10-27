@@ -28,9 +28,8 @@ App::App(sys::ComponentContext* component_context, async_dispatcher_t* dispatche
       input_reader_(this),
       fdr_manager_(std::make_unique<FactoryResetManager>(*component_context_,
                                                          std::make_shared<MediaRetriever>())),
-      activity_notifier_(dispatcher, ActivityNotifierImpl::kDefaultInterval, *component_context_),
       focuser_binding_(this),
-      media_buttons_handler_(&activity_notifier_) {
+      media_buttons_handler_() {
   FX_DCHECK(component_context_);
 
   input_reader_.Start();
@@ -74,7 +73,7 @@ void App::PresentView(
   auto presentation = std::make_unique<Presentation>(
       component_context_, scenic_.get(), session_.get(), compositor_->id(),
       std::move(view_holder_token), std::move(presentation_request), safe_presenter_.get(),
-      &activity_notifier_, display_startup_rotation_adjustment,
+      display_startup_rotation_adjustment,
       /*on_client_death*/ [this] { ShutdownPresentation(); });
 
   SetPresentation(std::move(presentation));

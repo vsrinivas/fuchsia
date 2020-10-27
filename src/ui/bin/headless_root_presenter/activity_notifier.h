@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_BIN_ROOT_PRESENTER_ACTIVITY_NOTIFIER_H_
-#define SRC_UI_BIN_ROOT_PRESENTER_ACTIVITY_NOTIFIER_H_
+#ifndef SRC_UI_BIN_HEADLESS_ROOT_PRESENTER_ACTIVITY_NOTIFIER_H_
+#define SRC_UI_BIN_HEADLESS_ROOT_PRESENTER_ACTIVITY_NOTIFIER_H_
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
@@ -77,4 +77,4 @@ class ActivityNotifierImpl : public ActivityNotifier {
 
 }  // namespace root_presenter
 
-#endif  // SRC_UI_BIN_ROOT_PRESENTER_ACTIVITY_NOTIFIER_H_
+#endif  // SRC_UI_BIN_HEADLESS_ROOT_PRESENTER_ACTIVITY_NOTIFIER_H_

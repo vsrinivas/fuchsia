@@ -16,7 +16,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/input/input_device_impl.h"
-#include "src/ui/bin/root_presenter/activity_notifier.h"
+#include "src/ui/bin/headless_root_presenter/activity_notifier.h"
 #include "src/ui/bin/root_presenter/factory_reset_manager.h"
 #include "src/ui/bin/root_presenter/media_buttons_handler.h"
 #include "src/ui/lib/input_report_reader/input_reader.h"

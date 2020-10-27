@@ -43,32 +43,11 @@ class MockListener : public fuchsia::ui::policy::MediaButtonsListener {
   std::unique_ptr<fuchsia::ui::input::MediaButtonsEvent> last_event_;
 };
 
-class MockActivityNotifier : public ActivityNotifier {
- public:
-  void ReceiveInputEvent(const fuchsia::ui::input::InputEvent& event) override {
-    FX_CHECK(false) << "unimplemented.";
-  }
-  void ReceiveMediaButtonsEvent(const fuchsia::ui::input::MediaButtonsEvent& event) override {
-    if (!last_event_) {
-      last_event_ = std::make_unique<fuchsia::ui::input::MediaButtonsEvent>();
-    }
-    event.Clone(last_event_.get());
-    media_button_event_count_++;
-  }
-
-  fuchsia::ui::input::MediaButtonsEvent* GetLastEvent() { return last_event_.get(); }
-  uint32_t GetMediaButtonEventCount() { return media_button_event_count_; }
-
- private:
-  uint32_t media_button_event_count_ = 0;
-  std::unique_ptr<fuchsia::ui::input::MediaButtonsEvent> last_event_;
-};
-
 class MediaButtonsHandlerTest : public gtest::TestLoopFixture,
                                 public ui_input::InputDeviceImpl::Listener {
  public:
   void SetUp() final {
-    handler = std::make_unique<MediaButtonsHandler>(&activity_notifier);
+    handler = std::make_unique<MediaButtonsHandler>();
 
     fuchsia::ui::input::DeviceDescriptor device_descriptor;
     device_descriptor.media_buttons =
@@ -113,7 +92,6 @@ class MediaButtonsHandlerTest : public gtest::TestLoopFixture,
   std::unique_ptr<ui_input::InputDeviceImpl> device;
 
   std::unique_ptr<MediaButtonsHandler> handler;
-  MockActivityNotifier activity_notifier;
   bool device_added;
 
  private:
@@ -138,9 +116,6 @@ TEST_F(MediaButtonsHandlerTest, ReportAfterRegistration) {
 
   EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
   EXPECT_TRUE(listener->GetLastEvent()->volume() == -1);
-
-  EXPECT_TRUE(activity_notifier.GetMediaButtonEventCount() == 1);
-  EXPECT_TRUE(activity_notifier.GetLastEvent()->volume() == -1);
 }
 
 // This test exercises delivering a report to handler before registration. Upon
@@ -164,10 +139,6 @@ TEST_F(MediaButtonsHandlerTest, ReportBeforeRegistration) {
 
   EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
   EXPECT_TRUE(listener->GetLastEvent()->mic_mute());
-
-  // |activity_notifier| receives all inputs before registration
-  EXPECT_TRUE(activity_notifier.GetMediaButtonEventCount() == 2);
-  EXPECT_TRUE(activity_notifier.GetLastEvent()->mic_mute());
 }
 
 // This test ensures multiple listeners receive messages when dispatched by an
@@ -186,9 +157,6 @@ TEST_F(MediaButtonsHandlerTest, MultipleListeners) {
 
   EXPECT_TRUE(listener2->GetMediaButtonEventCount() == 1);
   EXPECT_TRUE(listener2->GetLastEvent()->volume() == 1);
-
-  EXPECT_TRUE(activity_notifier.GetMediaButtonEventCount() == 1);
-  EXPECT_TRUE(activity_notifier.GetLastEvent()->volume() == 1);
 }
 
 // This test checks that pause is wired up correctly.
@@ -203,17 +171,11 @@ TEST_F(MediaButtonsHandlerTest, PauseButton) {
   EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
   EXPECT_TRUE(listener->GetLastEvent()->pause());
 
-  EXPECT_TRUE(activity_notifier.GetMediaButtonEventCount() == 1);
-  EXPECT_TRUE(activity_notifier.GetLastEvent()->pause());
-
   media_buttons.pause = false;
   DispatchReport(media_buttons);
 
   EXPECT_TRUE(listener->GetMediaButtonEventCount() == 2);
   EXPECT_FALSE(listener->GetLastEvent()->pause());
-
-  EXPECT_TRUE(activity_notifier.GetMediaButtonEventCount() == 2);
-  EXPECT_FALSE(activity_notifier.GetLastEvent()->pause());
 }
 
 // This test ensures that the camera button state is sent forward

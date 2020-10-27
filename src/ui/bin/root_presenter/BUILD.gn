@@ -74,7 +74,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.media.sounds",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.recovery.ui",
-    "//sdk/fidl/fuchsia.ui.activity",
     "//sdk/fidl/fuchsia.ui.brightness",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
@@ -92,7 +91,6 @@ source_set("lib") {
   ]
 
   deps = [
-    ":activity_notifier",
     ":color_transform",
     ":displays",
     ":media_buttons_handler",
@@ -133,25 +131,6 @@ source_set("displays") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-source_set("activity_notifier") {
-  sources = [
-    "activity_notifier.cc",
-    "activity_notifier.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.activity",
-    "//sdk/fidl/fuchsia.ui.input",
-  ]
-  deps = [
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//src/lib/ui/input",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
 source_set("media_buttons_handler") {
   sources = [
     "media_buttons_handler.cc",
@@ -163,7 +142,6 @@ source_set("media_buttons_handler") {
     "//sdk/fidl/fuchsia.ui.policy",
   ]
   deps = [
-    ":activity_notifier",
     "//sdk/lib/sys/cpp",
     "//src/lib/ui/input",
   ]

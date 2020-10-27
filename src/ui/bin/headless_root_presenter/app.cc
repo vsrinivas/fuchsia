@@ -20,8 +20,7 @@ App::App(const fxl::CommandLine& command_line, async::Loop* loop,
       fdr_manager_(std::make_unique<root_presenter::FactoryResetManager>(
           *component_context_.get(), std::make_shared<root_presenter::MediaRetriever>())),
       activity_notifier_(loop->dispatcher(), root_presenter::ActivityNotifierImpl::kDefaultInterval,
-                         *component_context_.get()),
-      media_buttons_handler_(&activity_notifier_) {
+                         *component_context_.get()) {
   FX_DCHECK(component_context_);
 
   if (use_input_reader) {

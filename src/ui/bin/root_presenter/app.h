@@ -25,7 +25,6 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/input/input_device_impl.h"
-#include "src/ui/bin/root_presenter/activity_notifier.h"
 #include "src/ui/bin/root_presenter/color_transform_handler.h"
 #include "src/ui/bin/root_presenter/factory_reset_manager.h"
 #include "src/ui/bin/root_presenter/media_buttons_handler.h"
@@ -111,8 +110,6 @@ class App : public fuchsia::ui::policy::Presenter,
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
   std::unique_ptr<scenic::Session> session_;
-
-  ActivityNotifierImpl activity_notifier_;
 
   // This is a privileged interface between Root Presenter and Scenic. It forwards the requests
   // incoming from accessibility services to start listening for pointer events.

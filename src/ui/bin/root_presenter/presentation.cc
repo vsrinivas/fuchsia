@@ -35,12 +35,11 @@ Presentation::Presentation(
     scenic::Session* session, scenic::ResourceId compositor_id,
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-    SafePresenter* safe_presenter, ActivityNotifier* activity_notifier,
-    int32_t display_startup_rotation_adjustment, std::function<void()> on_client_death)
+    SafePresenter* safe_presenter, int32_t display_startup_rotation_adjustment,
+    std::function<void()> on_client_death)
     : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
-      activity_notifier_(activity_notifier),
       layer_(session_),
       renderer_(session_),
       scene_(session_),
@@ -437,8 +436,6 @@ void Presentation::ResetClipSpaceTransform() {
 void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   TRACE_DURATION("input", "presentation_on_event");
   FX_VLOGS(1) << "OnEvent " << event;
-
-  activity_notifier_->ReceiveInputEvent(event);
 
   injector_->OnEvent(event);
 }

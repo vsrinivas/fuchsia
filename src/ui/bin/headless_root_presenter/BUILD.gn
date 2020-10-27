@@ -70,6 +70,7 @@ source_set("lib") {
   ]
 
   deps = [
+    ":activity_notifier",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.ui.input",
@@ -78,10 +79,28 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/ui/input",
-    "//src/ui/bin/root_presenter:activity_notifier",
     "//src/ui/bin/root_presenter:media_buttons_handler",
     "//src/ui/lib/input_report_reader",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/trace",
+  ]
+}
+
+source_set("activity_notifier") {
+  sources = [
+    "activity_notifier.cc",
+    "activity_notifier.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.activity",
+    "//sdk/fidl/fuchsia.ui.input",
+  ]
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/ui/input",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }

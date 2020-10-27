@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/bin/root_presenter/activity_notifier.h"
+#include "src/ui/bin/headless_root_presenter/activity_notifier.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>

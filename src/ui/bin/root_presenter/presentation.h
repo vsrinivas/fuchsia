@@ -19,7 +19,6 @@
 
 #include "src/lib/ui/input/device_state.h"
 #include "src/lib/ui/input/input_device_impl.h"
-#include "src/ui/bin/root_presenter/activity_notifier.h"
 #include "src/ui/bin/root_presenter/displays/display_metrics.h"
 #include "src/ui/bin/root_presenter/displays/display_model.h"
 #include "src/ui/bin/root_presenter/injector.h"
@@ -47,8 +46,8 @@ class Presentation : fuchsia::ui::policy::Presentation,
                scenic::Session* session, scenic::ResourceId compositor_id,
                fuchsia::ui::views::ViewHolderToken view_holder_token,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-               SafePresenter* safe_presenter, ActivityNotifier* activity_notifier,
-               int32_t display_startup_rotation_adjustment, std::function<void()> on_client_death);
+               SafePresenter* safe_presenter, int32_t display_startup_rotation_adjustment,
+               std::function<void()> on_client_death);
   ~Presentation() override;
 
   void RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier);
@@ -96,8 +95,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   fuchsia::ui::scenic::Scenic* const scenic_;
   scenic::Session* const session_;
   scenic::ResourceId compositor_id_;
-
-  ActivityNotifier* activity_notifier_;
 
   scenic::Layer layer_;
   scenic::Renderer renderer_;

@@ -10,8 +10,6 @@
 using fuchsia::ui::policy::MediaButtonsListenerPtr;
 
 namespace root_presenter {
-MediaButtonsHandler::MediaButtonsHandler(ActivityNotifier* activity_notifier)
-    : activity_notifier_(activity_notifier) {}
 
 bool MediaButtonsHandler::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
   if (!input_device->descriptor()->media_buttons) {
@@ -81,7 +79,6 @@ fuchsia::ui::input::MediaButtonsEvent CreateMediaButtonsEvent(
 
 void MediaButtonsHandler::OnEvent(fuchsia::ui::input::InputReport report) {
   FX_CHECK(report.media_buttons);
-  activity_notifier_->ReceiveMediaButtonsEvent(CreateMediaButtonsEvent(report));
   for (auto& listener : media_buttons_listeners_) {
     listener->OnMediaButtonsEvent(CreateMediaButtonsEvent(report));
   }
