@@ -4,6 +4,10 @@
 
 package artifactory
 
+import (
+	"archive/tar"
+)
+
 // Upload is a struct that contains source and destination paths to files to
 // upload to GCS.
 type Upload struct {
@@ -31,4 +35,8 @@ type Upload struct {
 
 	// Metadata contains the metadata to be uploaded with the file.
 	Metadata map[string]string
+
+	// TarHeader tells whether or not to compress with tar and contains the
+	// associated header.
+	TarHeader *tar.Header
 }

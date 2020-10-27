@@ -5,6 +5,7 @@
 package main
 
 import (
+	"archive/tar"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -228,7 +229,10 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	}
 
 	// Sign the images for release builds.
-	images := artifactory.ImageUploads(m, path.Join(buildsUUIDDir, imageDirName))
+	images, err := artifactory.ImageUploads(m, path.Join(buildsUUIDDir, imageDirName))
+	if err != nil {
+		return err
+	}
 	if pkey != nil {
 		images, err = artifactory.Sign(images, pkey)
 		if err != nil {
@@ -322,7 +326,7 @@ type dataSink interface {
 	// Write writes the content of a reader to a sink object at the given name.
 	// If an object at that name does not exists, it will be created; else it
 	// will be overwritten.
-	write(ctx context.Context, name string, reader io.Reader, compress bool, metadata map[string]string) error
+	write(ctx context.Context, upload *artifactory.Upload) error
 }
 
 // CloudSink is a GCS-backed data sink.
@@ -366,19 +370,30 @@ func (h *hasher) Write(p []byte) (int, error) {
 	return n, err
 }
 
-func (s *cloudSink) write(ctx context.Context, name string, reader io.Reader, compress bool, metadata map[string]string) error {
-	obj := s.bucket.Object(name)
+func (s *cloudSink) write(ctx context.Context, upload *artifactory.Upload) error {
+	var reader io.Reader
+	if upload.Source != "" {
+		f, err := os.Open(upload.Source)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		reader = f
+	} else {
+		reader = bytes.NewBuffer(upload.Contents)
+	}
+	obj := s.bucket.Object(upload.Destination)
 	// Setting timeouts to fail fast on hung connections.
 	tctx, cancel := context.WithTimeout(ctx, perFileUploadTimeout)
 	defer cancel()
 	sw := obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(tctx)
 	sw.ChunkSize = chunkSize
 	sw.ContentType = "application/octet-stream"
-	if compress {
+	if upload.Compress {
 		sw.ContentEncoding = "gzip"
 	}
-	if metadata != nil {
-		sw.Metadata = metadata
+	if upload.Metadata != nil {
+		sw.Metadata = upload.Metadata
 	}
 
 	// We optionally compress on the fly, and calculate the MD5 on the
@@ -390,10 +405,19 @@ func (s *cloudSink) write(ctx context.Context, name string, reader io.Reader, co
 	// Note that a gzip compressor would need to be closed before the storage
 	// writer that it wraps is.
 	h := &hasher{md5.New(), sw}
-	var writeErr, zipErr error
-	if compress {
+	var writeErr, tarErr, zipErr error
+	if upload.Compress {
 		gzw := gzip.NewWriter(h)
-		_, writeErr = io.Copy(gzw, reader)
+		if upload.TarHeader != nil {
+			tw := tar.NewWriter(gzw)
+			writeErr = tw.WriteHeader(upload.TarHeader)
+			if writeErr == nil {
+				_, writeErr = io.Copy(tw, reader)
+			}
+			tarErr = tw.Close()
+		} else {
+			_, writeErr = io.Copy(gzw, reader)
+		}
 		zipErr = gzw.Close()
 	} else {
 		_, writeErr = io.Copy(h, reader)
@@ -405,12 +429,15 @@ func (s *cloudSink) write(ctx context.Context, name string, reader io.Reader, co
 	// Note: consider an errorsmisc.FirstNonNil() helper if see this logic again.
 	err := writeErr
 	if err == nil {
+		err = tarErr
+	}
+	if err == nil {
 		err = zipErr
 	}
 	if err == nil {
 		err = closeErr
 	}
-	if err = checkGCSErr(ctx, err, name); err != nil {
+	if err = checkGCSErr(ctx, err, upload.Destination); err != nil {
 		return err
 	}
 
@@ -424,20 +451,20 @@ func (s *cloudSink) write(ctx context.Context, name string, reader io.Reader, co
 	for {
 		attrs, err := obj.Attrs(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to confirm MD5 for %s due to: %w", name, err)
+			return fmt.Errorf("failed to confirm MD5 for %s due to: %w", upload.Destination, err)
 		}
 		if len(attrs.MD5) == 0 {
 			time.Sleep(t)
 			if t += t / 2; t > max {
 				t = max
 			}
-			logger.Debugf(ctx, "waiting for MD5 for %s", name)
+			logger.Debugf(ctx, "waiting for MD5 for %s", upload.Destination)
 			continue
 		}
 		if !bytes.Equal(attrs.MD5, d) {
-			return fmt.Errorf("MD5 mismatch for %s", name)
+			return fmt.Errorf("MD5 mismatch for %s", upload.Destination)
 		}
-		logger.Infof(ctx, "Uploaded: %s", name)
+		logger.Infof(ctx, "Uploaded: %s", upload.Destination)
 		break
 	}
 	return nil
@@ -565,18 +592,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 
 			logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
 			if err := retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(uploadRetryBackoff), maxUploadAttempts), func() error {
-				var src io.Reader
-				if upload.Source != "" {
-					f, err := os.Open(upload.Source)
-					if err != nil {
-						return err
-					}
-					defer f.Close()
-					src = f
-				} else {
-					src = bytes.NewBuffer(upload.Contents)
-				}
-				if err := dest.write(ctx, upload.Destination, src, upload.Compress, upload.Metadata); err != nil {
+				if err := dest.write(ctx, &upload); err != nil {
 					return fmt.Errorf("%s: %w", upload.Destination, err)
 				}
 				return nil

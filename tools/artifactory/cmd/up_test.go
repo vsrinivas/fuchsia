@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"io/ioutil"
@@ -44,14 +45,25 @@ func (s *memSink) objectExistsAt(ctx context.Context, name string) (bool, error)
 	return true, nil
 }
 
-func (s *memSink) write(ctx context.Context, name string, r io.Reader, _ bool, _ map[string]string) error {
+func (s *memSink) write(ctx context.Context, upload *artifactory.Upload) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	content, err := ioutil.ReadAll(r)
+	var reader io.Reader
+	if upload.Source != "" {
+		f, err := os.Open(upload.Source)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		reader = f
+	} else {
+		reader = bytes.NewBuffer(upload.Contents)
+	}
+	content, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return err
 	}
-	s.contents[name] = content
+	s.contents[upload.Destination] = content
 	return nil
 }
 

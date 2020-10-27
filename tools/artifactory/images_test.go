@@ -5,6 +5,10 @@
 package artifactory
 
 import (
+	"archive/tar"
+	"io"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -14,11 +18,12 @@ import (
 
 // Implements imgModules
 type mockModules struct {
-	imgs []build.Image
+	imgs     []build.Image
+	buildDir string
 }
 
 func (m mockModules) BuildDir() string {
-	return "BUILD_DIR"
+	return m.buildDir
 }
 
 func (m mockModules) ImageManifest() string {
@@ -30,7 +35,29 @@ func (m mockModules) Images() []build.Image {
 }
 
 func TestImageUploads(t *testing.T) {
+	// Create a temporary disk.raw image.
+	dir, err := ioutil.TempDir("", "testBuildDir")
+	if err != nil {
+		t.Fatalf("failed to create fake build dir: %s", err)
+	}
+	defer os.RemoveAll(dir)
+	f, err := ioutil.TempFile(dir, "disk.raw")
+	if err != nil {
+		t.Fatalf("failed to create fake disk.raw: %s", err)
+	}
+	defer f.Close()
+	if _, err := io.WriteString(f, "Hello World!"); err != nil {
+		t.Fatalf("failed to write to fake disk.raw file: %s", err)
+	}
+	if err := f.Sync(); err != nil {
+		t.Fatalf("failed to sync fake disk.raw: %s", err)
+	}
+	info, err := f.Stat()
+	if err != nil {
+		t.Fatalf("failed to get file info for fake disk.raw: %s", err)
+	}
 	m := &mockModules{
+		buildDir: dir,
 		imgs: []build.Image{
 			{
 				PaveArgs: []string{"--bootloader"},
@@ -61,36 +88,54 @@ func TestImageUploads(t *testing.T) {
 				Path: "qemu-kernel.bin",
 				Type: "kernel",
 			},
+			{
+				Name: "uefi-disk",
+				Path: filepath.Base(f.Name()),
+				Type: "blk",
+			},
 		},
 	}
-
 	expected := []Upload{
 		{
 			Source:      "BUILD_DIR/IMAGE_MANIFEST",
 			Destination: "namespace/IMAGE_MANIFEST",
 		},
 		{
-			Source:      filepath.Join("BUILD_DIR", "bootloader"),
+			Source:      filepath.Join(dir, "bootloader"),
 			Destination: "namespace/bootloader",
 			Compress:    true,
 		},
 		{
-			Source:      filepath.Join("BUILD_DIR", "zedboot.zbi"),
+			Source:      filepath.Join(dir, "zedboot.zbi"),
 			Destination: "namespace/zedboot.zbi",
 			Compress:    true,
 		},
 		{
-			Source:      filepath.Join("BUILD_DIR", "fuchsia.zbi"),
+			Source:      filepath.Join(dir, "fuchsia.zbi"),
 			Destination: "namespace/fuchsia.zbi",
 			Compress:    true,
 		},
 		{
-			Source:      filepath.Join("BUILD_DIR", "qemu-kernel.bin"),
+			Source:      filepath.Join(dir, "qemu-kernel.bin"),
 			Destination: "namespace/qemu-kernel.bin",
 			Compress:    true,
 		},
+		{
+			Source:      f.Name(),
+			Destination: filepath.Join("namespace", gceUploadName),
+			Compress:    true,
+			TarHeader: &tar.Header{
+				Format: tar.FormatGNU,
+				Name:   gceImageName,
+				Mode:   0666,
+				Size:   info.Size(),
+			},
+		},
 	}
-	actual := imageUploads(m, "namespace")
+	actual, err := imageUploads(m, "namespace")
+	if err != nil {
+		t.Fatalf("imageUploads failed: %s", err)
+	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("unexpected image uploads:\nexpected: %v\nactual: %v\n", expected, actual)
 	}
