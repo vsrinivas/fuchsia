@@ -382,9 +382,6 @@ struct zx_device
 
   char name_[ZX_DEVICE_NAME_MAX + 1] = {};
 
-  // The fuchsia.Device.Manager.Coordinator protocol
-  zx::channel coordinator_rpc_;
-
   friend class fbl::Recyclable<zx_device_t>;
   void fbl_recycle();
 
