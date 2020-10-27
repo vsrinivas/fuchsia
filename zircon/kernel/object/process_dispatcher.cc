@@ -414,6 +414,11 @@ void ProcessDispatcher::FinishDeadTransition() {
     }
   }
   if (kill_job) {
+    char proc_name[ZX_MAX_NAME_LEN];
+    char job_name[ZX_MAX_NAME_LEN];
+    get_name(proc_name);
+    kill_job->get_name(job_name);
+    printf("critical-process: process '%s' died, killing job '%s'\n", proc_name, job_name);
     kill_job->Kill(ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
   }
 }
