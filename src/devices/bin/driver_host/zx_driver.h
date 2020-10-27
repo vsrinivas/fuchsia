@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST_ZX_DRIVER_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST_ZX_DRIVER_H_
 
+#include <fuchsia/device/manager/llcpp/fidl.h>
+#include <lib/fidl/llcpp/client.h>
 #include <zircon/types.h>
 
 #include <fbl/intrusive_double_list.h>
@@ -26,7 +28,7 @@ struct CreationContext {
   fbl::RefPtr<zx_device_t> parent;
   fbl::RefPtr<zx_device_t> child;
   zx::unowned_channel device_controller_rpc;
-  zx::unowned_channel coordinator_rpc;
+  llcpp::fuchsia::device::manager::Coordinator::ClientImpl* coordinator_client;
 };
 
 void set_bind_context(internal::BindContext* ctx);

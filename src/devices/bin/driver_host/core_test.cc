@@ -142,9 +142,12 @@ class CoreTest : public zxtest::Test {
     zx::channel coordinator_local, coordinator_remote;
     ASSERT_OK(zx::channel::create(0, &coordinator_local, &coordinator_remote));
 
+    fidl::Client<llcpp::fuchsia::device::manager::Coordinator> client;
+    client.Bind(std::move(coordinator_remote), ctx_.loop().dispatcher());
+
     std::unique_ptr<DeviceControllerConnection> conn;
     ASSERT_OK(DeviceControllerConnection::Create(&ctx_, device, std::move(controller_local),
-                                                 std::move(coordinator_remote), &conn));
+                                                 std::move(client), &conn));
 
     ASSERT_OK(coordinator_.Connect(coordinator_.dispatcher(), std::move(coordinator_local)));
     // Leak this here to pretend its being managed by an async loop.  It'll be later reclaimed when

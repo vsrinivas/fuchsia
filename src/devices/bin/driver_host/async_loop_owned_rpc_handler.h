@@ -63,13 +63,10 @@ class AsyncLoopOwnedRpcHandler {
     return old;
   }
 
-  void set_coordinator_channel(zx::channel h) { coordinator_rpc = std::move(h); }
-
   using WaitType =
       async::WaitMethod<AsyncLoopOwnedRpcHandler<T>, &AsyncLoopOwnedRpcHandler<T>::HandleRpcEntry>;
 
  private:
-  zx::channel coordinator_rpc;
   WaitType wait_{this, ZX_HANDLE_INVALID, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED};
 };
 

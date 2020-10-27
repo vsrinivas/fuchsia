@@ -264,7 +264,7 @@ struct zx_device
 
   // The RPC channel is owned by |conn|
   // fuchsia.device.manager.Coordinator
-  zx::unowned_channel coordinator_rpc;
+  llcpp::fuchsia::device::manager::Coordinator::ClientImpl* coordinator_client;
 
   fit::callback<void(zx_status_t)> init_cb;
 

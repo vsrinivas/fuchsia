@@ -46,8 +46,7 @@ static thread_local CreationContext* g_creation_context;
 void set_bind_context(internal::BindContext* ctx) { g_bind_context = ctx; }
 
 void set_creation_context(CreationContext* ctx) {
-  ZX_DEBUG_ASSERT(!ctx || ctx->device_controller_rpc->is_valid() ||
-                  ctx->coordinator_rpc->is_valid());
+  ZX_DEBUG_ASSERT(!ctx || ctx->device_controller_rpc->is_valid() || ctx->coordinator_client);
   g_creation_context = ctx;
 }
 
@@ -457,7 +456,7 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
     dev->set_flag(DEV_FLAG_ADDED);
     dev->unset_flag(DEV_FLAG_BUSY);
     dev->rpc = zx::unowned_channel(creation_ctx->device_controller_rpc);
-    dev->coordinator_rpc = zx::unowned_channel(creation_ctx->coordinator_rpc);
+    dev->coordinator_client = creation_ctx->coordinator_client;
     creation_ctx->child = dev;
     mark_dead.cancel();
     return ZX_OK;

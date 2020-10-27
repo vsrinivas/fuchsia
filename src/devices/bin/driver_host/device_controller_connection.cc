@@ -223,15 +223,16 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync&
   driver_host_context_->DeviceCompleteRemoval(this->dev());
 }
 
-DeviceControllerConnection::DeviceControllerConnection(DriverHostContext* ctx,
-                                                       fbl::RefPtr<zx_device> dev, zx::channel rpc,
-                                                       zx::channel coordinator_rpc)
-    : driver_host_context_(ctx), dev_(std::move(dev)) {
+DeviceControllerConnection::DeviceControllerConnection(
+    DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
+    fidl::Client<llcpp::fuchsia::device::manager::Coordinator> coordinator_client)
+    : driver_host_context_(ctx),
+      dev_(std::move(dev)),
+      coordinator_client_(std::move(coordinator_client)) {
   dev_->rpc = zx::unowned_channel(rpc);
-  dev_->coordinator_rpc = zx::unowned_channel(coordinator_rpc);
+  dev_->coordinator_client = coordinator_client_.get();
   dev_->conn.store(this);
   set_channel(std::move(rpc));
-  set_coordinator_channel(std::move(coordinator_rpc));
 }
 
 DeviceControllerConnection::~DeviceControllerConnection() {
@@ -242,12 +243,12 @@ DeviceControllerConnection::~DeviceControllerConnection() {
   dev_->rpc = zx::unowned_channel();
 }
 
-zx_status_t DeviceControllerConnection::Create(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
-                                               zx::channel controller_rpc,
-                                               zx::channel coordinator_rpc,
-                                               std::unique_ptr<DeviceControllerConnection>* conn) {
+zx_status_t DeviceControllerConnection::Create(
+    DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel controller_rpc,
+    fidl::Client<llcpp::fuchsia::device::manager::Coordinator> coordinator_client,
+    std::unique_ptr<DeviceControllerConnection>* conn) {
   *conn = std::make_unique<DeviceControllerConnection>(
-      ctx, std::move(dev), std::move(controller_rpc), std::move(coordinator_rpc));
+      ctx, std::move(dev), std::move(controller_rpc), std::move(coordinator_client));
   if (*conn == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }

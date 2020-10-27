@@ -23,13 +23,15 @@ class DeviceControllerConnection
       public llcpp::fuchsia::io::Directory::Interface {
  public:
   // |ctx| must outlive this connection
-  DeviceControllerConnection(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
-                             zx::channel coordinator_rpc);
+  DeviceControllerConnection(
+      DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
+      fidl::Client<llcpp::fuchsia::device::manager::Coordinator> coordinator_client);
 
   // |ctx| must outlive this connection
-  static zx_status_t Create(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
-                            zx::channel coordinator_rpc,
-                            std::unique_ptr<DeviceControllerConnection>* conn);
+  static zx_status_t Create(
+      DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
+      fidl::Client<llcpp::fuchsia::device::manager::Coordinator> coordinator_client,
+      std::unique_ptr<DeviceControllerConnection>* conn);
 
   ~DeviceControllerConnection();
 
@@ -45,6 +47,7 @@ class DeviceControllerConnection
   const fbl::RefPtr<zx_device> dev_;
 
  private:
+  fidl::Client<llcpp::fuchsia::device::manager::Coordinator> coordinator_client_;
   // Fidl methods
   void BindDriver(::fidl::StringView driver_path, ::zx::vmo driver,
                   BindDriverCompleter::Sync& _completer) override;
