@@ -550,6 +550,7 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 	if totalBudget > blobFsBudget {
 		report.WriteString(
 			fmt.Sprintf("WARNING: Total per-component data budget [%s] exceeds total system data budget [%s]\n", formatSize(totalBudget), formatSize(blobFsBudget)))
+		overBudget = true
 	}
 
 	return overBudget, report.String()
