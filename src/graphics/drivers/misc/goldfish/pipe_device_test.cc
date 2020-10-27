@@ -302,6 +302,38 @@ TEST_F(PipeDeviceTest, CreatePipe) {
   EXPECT_TRUE(ddk_.Ok());
 }
 
+TEST_F(PipeDeviceTest, CreatePipeMultiThreading) {
+  ASSERT_OK(dut_->Bind());
+
+  auto create_pipe = [this](size_t num_pipes, std::vector<int32_t>* ids) {
+    for (size_t i = 0; i < num_pipes; i++) {
+      int32_t id;
+      zx::vmo vmo;
+      dut_->GoldfishPipeCreate(&id, &vmo);
+      ids->push_back(id);
+    }
+  };
+
+  std::vector<int32_t> ids_1, ids_2;
+  constexpr size_t kNumPipesPerThread = 1000u;
+  std::thread create_pipe_thread_1(
+      [create_pipe, ids = &ids_1]() { create_pipe(kNumPipesPerThread, ids); });
+  std::thread create_pipe_thread_2(
+      [create_pipe, ids = &ids_2]() { create_pipe(kNumPipesPerThread, ids); });
+  create_pipe_thread_1.join();
+  create_pipe_thread_2.join();
+
+  std::vector<int32_t> set_intersect, set_union;
+
+  std::set_intersection(ids_1.begin(), ids_1.end(), ids_2.begin(), ids_2.end(),
+                        std::back_inserter(set_intersect));
+  std::set_union(ids_1.begin(), ids_1.end(), ids_2.begin(), ids_2.end(),
+                 std::back_inserter(set_union));
+
+  ASSERT_EQ(set_intersect.size(), 0u);
+  ASSERT_EQ(set_union.size(), 2 * kNumPipesPerThread);
+}
+
 TEST_F(PipeDeviceTest, Exec) {
   ASSERT_OK(dut_->Bind());
 

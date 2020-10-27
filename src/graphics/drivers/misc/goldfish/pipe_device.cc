@@ -191,9 +191,8 @@ zx_status_t PipeDevice::GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo) {
     return status;
   }
 
-  int32_t id = next_pipe_id_++;
-
   fbl::AutoLock lock(&pipes_lock_);
+  int32_t id = next_pipe_id_++;
   ZX_DEBUG_ASSERT(pipes_.count(id) == 0);
   pipes_[id] = std::make_unique<Pipe>(paddr, std::move(pmt), zx::event());
 

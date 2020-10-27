@@ -71,7 +71,7 @@ class PipeDevice : public DeviceType,
   zx::bti bti_;
   ddk::IoBuffer io_buffer_;
   thrd_t irq_thread_{};
-  int32_t next_pipe_id_ = 1;
+  int32_t next_pipe_id_ TA_GUARDED(pipes_lock_) = 1;
 
   fbl::Mutex mmio_lock_;
   std::optional<ddk::MmioBuffer> mmio_ TA_GUARDED(mmio_lock_);
