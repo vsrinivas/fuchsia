@@ -93,16 +93,39 @@ success("FlexibleUnionUnknownValue") {
     },
 }
 
-success("FlexibleUnionUnknownValueWithHandles") {
-    bindings_allowlist = [dart,go,rust],
+success("FlexibleResourceUnionUnknownValue") {
+    // llcpp is tested by hand since it cannot construct unknown unions (and
+    // they do not store bytes & handles), see fxr/423117
+    bindings_denylist = [llcpp,hlcpp],
+    value = TestFlexibleResourceXUnionInStruct {
+        xu: SampleResourceXUnion{
+            1234: {
+                // padding must be included in the raw bytes
+                bytes = [0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00],
+            },
+        },
+    },
+    bytes = {
+        v1 = [
+            num(1234):8,  // invalid ordinal
+            num(8):4, num(0):4, repeat(0xff):8, // envelope
+            0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
+        ],
+    },
+}
+
+success("FlexibleResourceUnionUnknownValueWithHandles") {
+    // TODO(fxbug.dev/36441): Implement handles in all backends.
+    // TODO(fxbug.dev/62819): Fix crash in HLCPP.
+    bindings_denylist = [llcpp,hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
         #2 = channel(),
         #3 = channel(),
     },
-    value = TestFlexibleXUnionInStruct {
-        xu: SampleXUnion {
+    value = TestFlexibleResourceXUnionInStruct {
+        xu: SampleResourceXUnion {
             1234: {
                 // padding must be included in the raw bytes
                 bytes = [0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00],
@@ -158,6 +181,32 @@ decode_failure("StrictUnionUnknownValueWithHandles") {
         ]
     },
     err = STRICT_UNION_UNKNOWN_FIELD,
+}
+
+decode_failure("FlexibleUnionUnknownValueWithHandles") {
+    // TODO(fxbug.dev/62772): Add bindings here as they properly implement the
+    // value/resource distinction for flexible types.
+    bindings_allowlist = [],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = channel(),
+        #3 = channel(),
+    },
+    type = TestFlexibleXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(1234):8,  // invalid ordinal
+            num(8):4, num(4):4, repeat(0xff):8, // envelope
+            0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
+        ],
+    },
+    handles = {
+        v1 = [
+            #0, #1, #2, #3,
+        ]
+    },
+    err = NON_RESOURCE_UNKNOWN_HANDLES,
 }
 
 encode_failure("StrictUnionUnknownValue") {

@@ -16,6 +16,20 @@ struct StructOfSimpleTable {
     SimpleTable table;
 };
 
+[BindingsDenylist = "hlcpp"]
+resource table SimpleResourceTable {
+    1: int64 x;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: int64 y;
+};
+
+[BindingsDenylist = "hlcpp"]
+resource struct StructOfSimpleResourceTable {
+    SimpleResourceTable table;
+};
+
 struct SimpleTableThenUint64 {
     SimpleTable table;
     uint64 number;

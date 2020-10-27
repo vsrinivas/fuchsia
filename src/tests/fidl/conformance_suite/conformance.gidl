@@ -222,11 +222,10 @@ success("ReverseOrdinalTable") {
     },
 }
 
-decode_success("TableWithUnknownReservedFieldsNotStored") {
-    // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
-    // each binding, they should be added to the denylist here and added to
-    // the allowlist in the test below.
-    bindings_denylist = [dart,go],
+decode_success("ValueTableUnknownReservedDropped") {
+    // TODO(fxbug.dev/61848): Move these to ValueTableUnknownReservedStored and
+    // delete this test.
+    bindings_allowlist = [hlcpp,llcpp,rust],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -254,9 +253,39 @@ decode_success("TableWithUnknownReservedFieldsNotStored") {
     },
 }
 
-// this test is the same as TableWithUnknownReservedFieldsNotStored, but expects
-// that the unknown data is stored in the value instead of discarded
-decode_success("TableWithUnknownReservedFields") {
+decode_success("ResourceTableUnknownReservedDropped") {
+    // TODO(fxbug.dev/61848): Move these to ResourceTableUnknownReservedStored
+    // and delete this test.
+    bindings_allowlist = [llcpp,rust],
+    bytes = {
+        v1 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+    },
+    value = StructOfSimpleResourceTable {
+        table: SimpleResourceTable {
+            x: 42,
+            y: 67,
+        },
+    },
+}
+
+decode_success("ValueTableUnknownReservedStored") {
+    // TODO(fxbug.dev/61848): Move the rest from ValueTableUnknownReservedDropped.
     bindings_allowlist = [dart,go],
     bytes = {
         v1 = [
@@ -288,11 +317,43 @@ decode_success("TableWithUnknownReservedFields") {
     },
 }
 
-decode_success("TableWithUnknownTrailingFieldsNotStored") {
-    // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
-    // each binding, they should be added to the denylist here and added to
-    // the allowlist in the test below.
-    bindings_denylist = [dart,go],
+decode_success("ResourceTableUnknownReservedStored") {
+    // TODO(fxbug.dev/61788): Move the rest from ResourceTableUnknownReservedDropped.
+    bindings_allowlist = [dart,go],
+    bytes = {
+        v1 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+    },
+    value = StructOfSimpleResourceTable {
+        table: SimpleResourceTable {
+            x: 42,
+            y: 67,
+            3: {
+                bytes = [1, 2, 3, 4, 5, 6, 7, 8]
+            },
+        },
+    },
+}
+
+decode_success("ValueTableUnknownTrailingDropped") {
+    // TODO(fxbug.dev/61848): Move these to ValueTableUnknownTrailingStored and
+    // delete this test.
+    bindings_allowlist = [hlcpp,llcpp,rust],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -322,9 +383,41 @@ decode_success("TableWithUnknownTrailingFieldsNotStored") {
     },
 }
 
-// this test is the same as TableWithUnknownTrailingFieldsNotStored, but expects
-// that the unknown data is stored in the value instead of discarded
-decode_success("TableWithUnknownTrailingFields") {
+decode_success("ResourceTableUnknownTrailingDropped") {
+    // TODO(fxbug.dev/61848): Move these to ResourceTableUnknownTrailingStored
+    // and delete this test.
+    bindings_allowlist = [llcpp,rust],
+    bytes = {
+        v1 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+    },
+    value = StructOfSimpleResourceTable {
+        table: SimpleResourceTable {
+            x: 42,
+            y: 67,
+        },
+    },
+}
+
+decode_success("ValueTableUnknownTrailingStored") {
+    // TODO(fxbug.dev/61848): Move the rest from ValueTableUnknownTrailingDropped.
     bindings_allowlist = [dart,go],
     bytes = {
         v1 = [
@@ -358,9 +451,44 @@ decode_success("TableWithUnknownTrailingFields") {
     },
 }
 
-decode_success("TableWithUnknownTrailingFieldsAndHandlesNotStored") {
-    // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
-    // each binding, they should be removed from the allowlist here
+decode_success("ResourceTableUnknownTrailingStored") {
+    // TODO(fxbug.dev/61848): Move the rest from ResourceTableUnknownTrailingDropped.
+    bindings_allowlist = [dart,go],
+    bytes = {
+        v1 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+    },
+    value = StructOfSimpleResourceTable {
+        table: SimpleResourceTable {
+            x: 42,
+            y: 67,
+            6: {
+                bytes = [1, 2, 3, 4, 5, 6, 7, 8]
+            },
+        },
+    },
+}
+
+decode_success("ValueTableUnknownTrailingHandlesDropped") {
+    // TODO(fxbug.dev/61848): Move these to ValueTableUnknownTrailingHandlesRejected
+    // and delete this test.
     bindings_allowlist = [rust],
     handle_defs = {
         #0 = event(),
@@ -393,10 +521,44 @@ decode_success("TableWithUnknownTrailingFieldsAndHandlesNotStored") {
     }
 }
 
+decode_success("ResourceTableUnknownTrailingHandlesDropped") {
+    // TODO(fxbug.dev/61848): Move these to ResourceTableUnknownTrailingHandlesStored
+    // and delete this test.
+    bindings_allowlist = [rust],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    value = StructOfSimpleResourceTable {
+        table: SimpleResourceTable {
+            y: 67,
+        },
+    },
+    bytes = {
+        v1 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 2
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 3
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 4
+            num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
+            num(8):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(67):8, // field Y
+            0xde, 0xad, 0xbe, 0xef, padding:4, // unknown bytes
+        ],
+    },
+    handles = {
+        v1 = [
+            #0, #1, #2,
+        ]
+    }
+}
 
-// this test is the same as TableWithUnknownTrailingFieldsAndHandlesNotStored,
-// but expects that the unknown data is stored in the value instead of discarded
-decode_success("TableWithUnknownTrailingFieldsAndHandles") {
+decode_success("ValueTableUnknownTrailingHandlesIncorrectlyStored") {
+    // TODO(fxbug.dev/61848): Move these to ValueTableUnknownTrailingHandlesRejected
+    // and delete this test.
     bindings_allowlist = [dart,go],
     handle_defs = {
         #0 = event(),
@@ -405,6 +567,76 @@ decode_success("TableWithUnknownTrailingFieldsAndHandles") {
     },
     value = StructOfSimpleTable {
         table: SimpleTable {
+            y: 67,
+            6: {
+                bytes = [0xde, 0xad, 0xbe, 0xef, padding:4],
+                handles = [#0, #1, #2],
+            },
+        },
+    },
+    bytes = {
+        v1 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 2
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 3
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 4
+            num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
+            num(8):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(67):8, // field Y
+            0xde, 0xad, 0xbe, 0xef, padding:4, // unknown bytes
+        ],
+    },
+    handles = {
+        v1 = [
+            #0, #1, #2,
+        ]
+    }
+}
+
+decode_failure("ValueTableUnknownTrailingHandlesRejected") {
+    // TODO(fxbug.dev/61848): Move the rest from ValueTableUnknownTrailingHandlesDropped
+    // and ValueTableUnknownTrailingHandlesIncorrectlyStored.
+    bindings_allowlist = [],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    type = StructOfSimpleTable,
+    bytes = {
+        v1 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 2
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 3
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 4
+            num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
+            num(8):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(67):8, // field Y
+            0xde, 0xad, 0xbe, 0xef, padding:4, // unknown bytes
+        ],
+    },
+    handles = {
+        v1 = [
+            #0, #1, #2,
+        ]
+    },
+    err = NON_RESOURCE_UNKNOWN_HANDLES,
+}
+
+decode_success("ResourceTableUnknownTrailingHandlesStored") {
+    // TODO(fxbug.dev/61848): Move the rest from ResourceTableUnknownTrailingHandlesDropped.
+    bindings_allowlist = [dart,go],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    value = StructOfSimpleResourceTable {
+        table: SimpleResourceTable {
             y: 67,
             6: {
                 bytes = [0xde, 0xad, 0xbe, 0xef, padding:4],

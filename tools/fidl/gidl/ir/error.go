@@ -23,6 +23,7 @@ const (
 	InvalidPaddingByte                    = "INVALID_PADDING_BYTE"
 	ExtraHandles                          = "EXTRA_HANDLES"
 	TooFewHandles                         = "TOO_FEW_HANDLES"
+	NonResourceUnknownHandles             = "NON_RESOURCE_UNKNOWN_HANDLES"
 )
 
 var AllErrorCodes = map[ErrorCode]struct{}{
@@ -39,4 +40,5 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	InvalidPaddingByte:          {},
 	ExtraHandles:                {},
 	TooFewHandles:               {},
+	NonResourceUnknownHandles:   {},
 }
