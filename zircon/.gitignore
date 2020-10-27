@@ -6,3 +6,4 @@
 /third_party/rapidjson
 /third_party/scudo/gwp_asan
 /third_party/scudo/src
+/third_party/llvm-libc
