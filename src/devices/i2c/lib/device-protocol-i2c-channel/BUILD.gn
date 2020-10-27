@@ -10,6 +10,7 @@ zx_library("device-protocol-i2c-channel") {
   sources = []
   public_deps = [
     "//sdk/banjo/ddk.protocol.composite",
+
     # <lib/device-protocol-i2c-channel/i2c-channel.h> has #include <ddktl/protocol/i2c.h>
     "//sdk/banjo/ddk.protocol.i2c",
 

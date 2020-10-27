@@ -35,10 +35,7 @@ template("cts_element") {
              "--invoker_label",
              invoker_label,
              "--deps",
-           ] + fully_qualified_deps + [
-             "--allowed_cts_deps"
-           ] + ALLOWED_CTS_DEPS + [
-             "--allowed_cts_dirs"
-           ] + ALLOWED_CTS_DIRS
+           ] + fully_qualified_deps + [ "--allowed_cts_deps" ] +
+           ALLOWED_CTS_DEPS + [ "--allowed_cts_dirs" ] + ALLOWED_CTS_DIRS
   }
 }

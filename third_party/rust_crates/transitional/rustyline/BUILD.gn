@@ -23,9 +23,9 @@ rustc_library("rustyline") {
   ]
 
   if (current_os == "fuchsia") {
-    deps += ["//src/lib/zircon/rust:fuchsia-zircon"]
+    deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
   } else {
-    deps += ["//third_party/rust_crates:nix"]
+    deps += [ "//third_party/rust_crates:nix" ]
   }
 
   sources = [
@@ -46,8 +46,8 @@ rustc_library("rustyline") {
   ]
 
   if (current_os == "fuchsia") {
-    sources += ["//third_party/rust-mirrors/rustyline/src/tty/fuchsia.rs"]
+    sources += [ "//third_party/rust-mirrors/rustyline/src/tty/fuchsia.rs" ]
   } else {
-    sources += ["//third_party/rust-mirrors/rustyline/src/tty/unix.rs"]
+    sources += [ "//third_party/rust-mirrors/rustyline/src/tty/unix.rs" ]
   }
 }

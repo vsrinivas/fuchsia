@@ -39,7 +39,8 @@ sanitizer_default_options("lsan_default_options") {
 # marked that way, the asan_default_options default above will be removed.
 sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
   visibility = [
-    "*",  # TODO(fxbug.dev/45047): constrain this and give each a TODO(nnnnn) comment
+    "*",  # TODO(fxbug.dev/45047): constrain this and give each a TODO(nnnnn)
+          # comment
   ]
 
   args = [ "detect_leaks=0" ]

@@ -44,9 +44,7 @@ fidl("fidl_test") {
 
   testonly = true
 
-  sources = [
-    "fidl_test.test.fidl"
-  ]
+  sources = [ "fidl_test.test.fidl" ]
 }
 
 fidl("collision_test") {
@@ -54,7 +52,5 @@ fidl("collision_test") {
 
   testonly = true
 
-  sources = [
-    "collision.test.fidl"
-  ]
+  sources = [ "collision.test.fidl" ]
 }

@@ -236,8 +236,8 @@ template("zbi") {
 
   zbi_input(input_target) {
     visibility = [
-      ":$rspfile_target",
       ":$json_target",
+      ":$rspfile_target",
     ]
     forward_variables_from(invoker,
                            [

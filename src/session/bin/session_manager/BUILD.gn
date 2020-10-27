@@ -25,8 +25,8 @@ rustc_library("lib") {
 
   visibility = [
     "//src/session/bin/session_manager/*",
-    "//src/session/tests/session_manager/*",
     "//src/session/examples/*",
+    "//src/session/tests/session_manager/*",
     "//src/session/tools/*",
   ]
 

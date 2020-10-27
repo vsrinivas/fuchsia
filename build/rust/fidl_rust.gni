@@ -50,7 +50,8 @@ template("fidl_rust") {
       "--output-filename",
       rebase_path(filename, root_build_dir),
       "--rustfmt",
-      rebase_path("//prebuilt/third_party/rust_tools/$host_platform/bin/rustfmt"),
+      rebase_path(
+          "//prebuilt/third_party/rust_tools/$host_platform/bin/rustfmt"),
     ]
 
     deps = [ ":$main_target_name($fidl_toolchain)" ]

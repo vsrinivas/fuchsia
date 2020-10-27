@@ -28,7 +28,6 @@ static_library("parser") {
   ]
 
   public_deps = [ "//sdk/lib/syslog/cpp" ]
-
 }
 
 test("parser_tests_bin") {

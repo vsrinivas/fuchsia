@@ -62,6 +62,7 @@ rustc_fuzzer("fat-fuzzer") {
   corpus = "corpus"
   options = [
     "-rss_limit_mb=3072",
+
     # Set a reasonably low per-task timeout in case the filesystem has problems that cause infinite
     # loops in the fuzzing code (e.g. cycles in the directory tree).
     "-timeout=60",

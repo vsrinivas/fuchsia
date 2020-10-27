@@ -313,9 +313,8 @@ group("magma-arm-mali") {
 }
 
 group("magma-arm-mali-system") {
-  public_deps = [
-    "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-vulkan-system",
-  ]
+  public_deps =
+      [ "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-vulkan-system" ]
 }
 
 group("magma-arm-mali-config") {

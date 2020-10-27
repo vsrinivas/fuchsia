@@ -7,9 +7,7 @@ import("//build/config/mac/mac_sdk.gni")
 import("//build/config/sysroot.gni")
 
 config("compiler") {
-  cflags = [
-    "-mmacosx-version-min=" + mac_sdk_min,
-  ]
+  cflags = [ "-mmacosx-version-min=" + mac_sdk_min ]
   cflags_cc = [
     # macOS needs this to not complain about C++17isms that older macOS
     # system libc++ doesn't support. However, we use our own toolchain's
