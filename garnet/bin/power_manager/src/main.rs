@@ -33,40 +33,11 @@ use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_trace_provider;
 use log;
-use stdout_to_debuglog;
-
-struct SimpleLogger;
-
-impl log::Log for SimpleLogger {
-    fn enabled(&self, _metadata: &log::Metadata<'_>) -> bool {
-        true
-    }
-
-    fn log(&self, record: &log::Record<'_>) {
-        if self.enabled(record.metadata()) {
-            if record.level() == log::Level::Error {
-                println!(
-                    "[power_manager] {}: {}({}): {}",
-                    record.level(),
-                    record.file().unwrap_or("??"),
-                    record.line().unwrap_or(0),
-                    record.args()
-                );
-            } else {
-                println!("[power_manager] {}: {}", record.level(), record.args());
-            }
-        }
-    }
-
-    fn flush(&self) {}
-}
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Setup logging
-    stdout_to_debuglog::init().await?;
-    log::set_logger(&SimpleLogger).expect("Failed to set SimpleLogger as global logger");
-    log::set_max_level(log::LevelFilter::Info);
+    fuchsia_syslog::init()?;
     log::info!("started");
 
     // Setup tracing

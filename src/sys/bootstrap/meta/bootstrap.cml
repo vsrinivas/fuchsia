@@ -180,7 +180,6 @@
                 "#console",
                 "#driver_manager",
                 "#fshost",
-                "#power_manager",
                 "#ptysvc",
                 "#pwrbtn-monitor",
                 "#shutdown_shim",
@@ -521,6 +520,7 @@
                 "#driver_manager",
                 "#fshost",
                 "#netsvc",
+                "#power_manager",
             ],
         },
         {
