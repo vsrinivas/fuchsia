@@ -10,8 +10,10 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"math"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,6 +36,8 @@ var (
 	// https://github.com/ninja-build/ninja/blob/6c5e886aacd98766fe43539c2c8ae7f3ca2af2aa/src/graphviz.cc#L53
 	edgePattern = regexp.MustCompile(`^"0x([0-9a-f]+)" -> "0x([0-9a-f]+)"(?: \[label=" ?([^"]+)")?`)
 )
+
+const ninjagoArtificialSinkRule = "🏁ninjago_artificial_sink_rule"
 
 // graphvizNode is a node in Ninja's Graphviz output.
 //
@@ -136,6 +140,12 @@ type Edge struct {
 	// joining with ninja_log. After the join, all steps on non-phony edges are
 	// populated.
 	Step *ninjalog.Step
+
+	// Fields to memoize earliest start and latest finish for critical path
+	// calculation based on float.
+	//
+	// https://en.wikipedia.org/wiki/Critical_path_method
+	earliestStart, latestFinish *time.Duration
 }
 
 // Graph is a Ninja build graph.
@@ -144,6 +154,11 @@ type Graph struct {
 	Nodes map[int64]*Node
 	// Edges contains all edges in the graph.
 	Edges []*Edge
+
+	// sink is an edge that marks the completion of the build.
+	//
+	// This edge will only be populated after `addSink`.
+	sink *Edge
 }
 
 // addEdge adds an edge to the graph and updates the related nodes accordingly.
@@ -518,5 +533,202 @@ func (g *Graph) CriticalPath() ([]ninjalog.Step, error) {
 	for left, right := 0, len(criticalPath)-1; left < right; left, right = left+1, right-1 {
 		criticalPath[left], criticalPath[right] = criticalPath[right], criticalPath[left]
 	}
+	return criticalPath, nil
+}
+
+// addSink adds a sink edge to the graph.
+//
+// The added edge takes all pure outputs (output files that are not inputs to
+// any existing edges) as input, and outputs nothing. This edge marks the
+// completion of the build. It is necessary for calculating critical path using
+// float, because floats of actions are calculated against the completion of the
+// whole build.
+func (g *Graph) addSink() error {
+	if len(g.Edges) == 0 || g.sink != nil {
+		return nil
+	}
+
+	var pureOutputs []int64
+	for id, n := range g.Nodes {
+		if len(n.Outs) == 0 {
+			pureOutputs = append(pureOutputs, id)
+		}
+	}
+
+	if len(pureOutputs) == 0 {
+		return fmt.Errorf("the build graph doesn't output anything")
+	}
+
+	sink := Edge{
+		Inputs: pureOutputs,
+		Rule:   ninjagoArtificialSinkRule,
+		// A step with 0 duration is necessary to facilitate drag calculation.
+		Step: &ninjalog.Step{},
+	}
+	for _, id := range pureOutputs {
+		g.Nodes[id].Outs = []*Edge{&sink}
+	}
+	g.Edges = append(g.Edges, &sink)
+	g.sink = &sink
+	return nil
+}
+
+// totalFloat calculates total float of an edge. Float is the amount of time an
+// action can be delayed without affecting the completion time of the build.
+//
+// https://en.wikipedia.org/wiki/Float_(project_management)
+func (g *Graph) totalFloat(edge *Edge) (time.Duration, error) {
+	es, err := g.earliestStart(edge)
+	if err != nil {
+		return 0, fmt.Errorf("calculating earliest start: %w", err)
+	}
+	ls, err := g.latestStart(edge)
+	if err != nil {
+		return 0, fmt.Errorf("calculating latest start: %w", err)
+	}
+	return ls - es, nil
+}
+
+// earliestStart returns the earliest time an edge can start in the build.
+func (g *Graph) earliestStart(edge *Edge) (time.Duration, error) {
+	if edge.earliestStart != nil {
+		return *edge.earliestStart, nil
+	}
+
+	// Earliest start of this action is the latest earliest finish of all its
+	// dependencies.
+	var es time.Duration
+	for _, input := range edge.Inputs {
+		n, ok := g.Nodes[input]
+		if !ok {
+			return 0, fmt.Errorf("node %x not found", input)
+		}
+		in := n.In
+		if in == nil {
+			// The input node is a pure input (for example source code file), so
+			// there's no action generating that node.
+			continue
+		}
+		ef, err := g.earliestFinish(in)
+		if err != nil {
+			return 0, fmt.Errorf("calculating earliest start for action generating %s: %v", n.Path, err)
+		}
+		if ef > es {
+			es = ef
+		}
+	}
+	edge.earliestStart = &es
+	return es, nil
+}
+
+// earliestFinish returns the earliest time an edge can finish in the build.
+func (g *Graph) earliestFinish(edge *Edge) (time.Duration, error) {
+	es, err := g.earliestStart(edge)
+	if err != nil {
+		return 0, err
+	}
+	// Phony rules don't actually run anything, so they have a duration of 0.
+	if edge.Rule == "phony" {
+		return es, nil
+	}
+	if edge.Step == nil {
+		return 0, fmt.Errorf("step is missing on edge, step can be populated by calling `PopulateEdges`")
+	}
+	return es + edge.Step.Duration(), nil
+}
+
+// latestStart returns the latest time an edge can start in the build.
+func (g *Graph) latestStart(edge *Edge) (time.Duration, error) {
+	lf, err := g.latestFinish(edge)
+	if err != nil {
+		return 0, err
+	}
+	// Phony rules don't actually run anything, so they have a duration of 0.
+	if edge.Rule == "phony" {
+		return lf, nil
+	}
+	if edge.Step == nil {
+		return 0, fmt.Errorf("step is missing on edge, step can be populated by calling `PopulateEdges`")
+	}
+	return lf - edge.Step.Duration(), nil
+}
+
+// latestFinish returns the latest time an edge can finish in the build.
+func (g *Graph) latestFinish(edge *Edge) (time.Duration, error) {
+	if edge.latestFinish != nil {
+		return *edge.latestFinish, nil
+	}
+	if len(edge.Outputs) == 0 {
+		return g.earliestFinish(edge)
+	}
+
+	// Latest finish of this action is the earliest latest start of all its
+	// dependents.
+	lf := time.Duration(math.MaxInt64)
+	for _, output := range edge.Outputs {
+		n, ok := g.Nodes[output]
+		if !ok {
+			return 0, fmt.Errorf("node %x not found", output)
+		}
+		for _, out := range n.Outs {
+			ls, err := g.latestStart(out)
+			if err != nil {
+				return 0, err
+			}
+			if ls < lf {
+				lf = ls
+			}
+		}
+	}
+	edge.latestFinish = &lf
+	return lf, nil
+}
+
+// CriticalPathV2 calculates critical path by looking for all actions with zero
+// float.
+//
+// A critical path is the path through the build that results in the latest
+// completion of the build.
+func (g *Graph) CriticalPathV2() ([]ninjalog.Step, error) {
+	if len(g.Edges) == 0 {
+		return nil, nil
+	}
+
+	if err := g.addSink(); err != nil {
+		return nil, fmt.Errorf("adding sink to graph: %w", err)
+	}
+
+	criticalEdge := g.sink
+	var criticalPath []ninjalog.Step
+	for criticalEdge != nil {
+		if criticalEdge.Rule != "phony" && criticalEdge.Rule != ninjagoArtificialSinkRule {
+			if criticalEdge.Step == nil {
+				return nil, fmt.Errorf("step is missing on edge, step can be populated by calling `PopulateEdges`")
+			}
+			criticalPath = append(criticalPath, *criticalEdge.Step)
+		}
+
+		var nextCriticalEdge *Edge
+		for _, id := range criticalEdge.Inputs {
+			n, ok := g.Nodes[id]
+			if !ok {
+				return nil, fmt.Errorf("node %x not found", id)
+			}
+			if n.In == nil {
+				continue
+			}
+			tf, err := g.totalFloat(n.In)
+			if err != nil {
+				return nil, fmt.Errorf("calculating total float: %w", err)
+			}
+			if tf == 0 {
+				nextCriticalEdge = n.In
+				break
+			}
+		}
+		criticalEdge = nextCriticalEdge
+	}
+
+	sort.Slice(criticalPath, func(i, j int) bool { return criticalPath[i].Start < criticalPath[j].Start })
 	return criticalPath, nil
 }

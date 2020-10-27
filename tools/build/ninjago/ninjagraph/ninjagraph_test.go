@@ -6,6 +6,7 @@ package ninjagraph
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -252,8 +253,7 @@ func TestFromDOT(t *testing.T) {
 			}
 			opts := []cmp.Option{
 				cmpopts.EquateEmpty(),
-				cmpopts.IgnoreUnexported(Node{}),
-				cmpopts.IgnoreUnexported(Edge{}),
+				cmpopts.IgnoreUnexported(Graph{}, Node{}, Edge{}),
 				orderEdgesByRule,
 			}
 			if diff := cmp.Diff(tc.want, got, opts...); diff != "" {
@@ -321,8 +321,7 @@ func TestParsingFileFromRealBuild(t *testing.T) {
 		t.Fatalf("FromDOT failed: %s", err)
 	}
 	opts := []cmp.Option{
-		cmpopts.IgnoreUnexported(Node{}),
-		cmpopts.IgnoreUnexported(Edge{}),
+		cmpopts.IgnoreUnexported(Graph{}, Node{}, Edge{}),
 		orderEdgesByRule,
 	}
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
@@ -460,11 +459,7 @@ func TestPopulateEdges(t *testing.T) {
 			if err := tc.graph.PopulateEdges(tc.steps); err != nil {
 				t.Errorf("PopulateEdges(%v) failed: %v", tc.steps, err)
 			}
-			opts := []cmp.Option{
-				cmpopts.IgnoreUnexported(Node{}),
-				cmpopts.IgnoreUnexported(Edge{}),
-			}
-			if diff := cmp.Diff(tc.wantGraph, tc.graph, opts...); diff != "" {
+			if diff := cmp.Diff(tc.wantGraph, tc.graph, cmpopts.IgnoreUnexported(Graph{}, Node{}, Edge{})); diff != "" {
 				t.Errorf("PopulateEdges(%v) got graph diff (-want +got):\n%s", tc.steps, diff)
 			}
 		})
@@ -541,48 +536,50 @@ func TestPopulateEdgesErrors(t *testing.T) {
 	}
 }
 
-// TODO(jayzhuang): This test should probably be separated into an integration
-// test.
-func TestPopulateEdgesWithRealBuild(t *testing.T) {
+func readTestGraph(tb testing.TB) Graph {
 	ninjaLogPath := filepath.Join(*testDataFlag, "ninja_log")
 	ninjaLogFile, err := os.Open(ninjaLogPath)
 	if err != nil {
-		t.Fatalf("Failed to open Ninja log with path %s: %v", ninjaLogPath, err)
+		tb.Fatalf("Failed to open Ninja log with path %s: %v", ninjaLogPath, err)
 	}
 	defer ninjaLogFile.Close()
 	ninjaLog, err := ninjalog.Parse(ninjaLogPath, ninjaLogFile)
 	if err != nil {
-		t.Fatalf("Failed to parse Ninja log from path %s: %v", ninjaLogPath, err)
+		tb.Fatalf("Failed to parse Ninja log from path %s: %v", ninjaLogPath, err)
 	}
 	steps := ninjalog.Dedup(ninjaLog.Steps)
 
 	compdbPath := filepath.Join(*testDataFlag, "compdb.json")
 	compdbFile, err := os.Open(compdbPath)
 	if err != nil {
-		t.Fatalf("Failed to open compdb with path %s: %v", compdbPath, err)
+		tb.Fatalf("Failed to open compdb with path %s: %v", compdbPath, err)
 	}
 	defer compdbFile.Close()
 	commands, err := compdb.Parse(compdbFile)
 	if err != nil {
-		t.Fatalf("Failed to parse compdb from path %s: %v", compdbPath, err)
+		tb.Fatalf("Failed to parse compdb from path %s: %v", compdbPath, err)
 	}
 	steps = ninjalog.Populate(steps, commands)
 
 	dotFilePath := filepath.Join(*testDataFlag, "graph.dot")
 	dotFile, err := os.Open(dotFilePath)
 	if err != nil {
-		t.Fatalf("Failed to open Ninja graph with path %s: %v", dotFilePath, err)
+		tb.Fatalf("Failed to open Ninja graph with path %s: %v", dotFilePath, err)
 	}
 	defer dotFile.Close()
 	graph, err := FromDOT(dotFile)
 	if err != nil {
-		t.Fatalf("Failed to parse Ninja graph from path %s: %v", dotFilePath, err)
+		tb.Fatalf("Failed to parse Ninja graph from path %s: %v", dotFilePath, err)
 	}
 
 	if err := graph.PopulateEdges(steps); err != nil {
-		t.Fatalf("Failed to populate parsed Ninja graph with deduplicated steps: %v", err)
+		tb.Fatalf("Failed to populate parsed Ninja graph with deduplicated steps: %v", err)
 	}
+	return graph
+}
 
+func TestPopulateEdgesWithRealBuild(t *testing.T) {
+	graph := readTestGraph(t)
 	for _, e := range graph.Edges {
 		if isPhony, gotNilStep := e.Rule == "phony", e.Step == nil; isPhony != gotNilStep {
 			var outputs []string
@@ -592,6 +589,26 @@ func TestPopulateEdgesWithRealBuild(t *testing.T) {
 			t.Errorf("Invalid edge after `PopulateEdges`, isPhony (%t) != gotNilStep (%t), outputs of this edge: %v", isPhony, gotNilStep, outputs)
 		}
 	}
+}
+
+func BenchmarkCriticalPath(b *testing.B) {
+	b.Run("CriticalPath", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			graph := readTestGraph(b)
+			if _, err := graph.CriticalPath(); err != nil {
+				b.Fatalf("CriticalPath() got error: %v", err)
+			}
+		}
+	})
+
+	b.Run("CriticalPathV2", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			graph := readTestGraph(b)
+			if _, err := graph.CriticalPathV2(); err != nil {
+				b.Fatalf("CriticalPathV2() got error: %v", err)
+			}
+		}
+	})
 }
 
 func TestCriticalPath(t *testing.T) {
@@ -614,6 +631,13 @@ func TestCriticalPath(t *testing.T) {
 
 	step5 := ninjalog.Step{Start: 100, End: 200, Out: "5"}
 	edge5 := &Edge{Inputs: []int64{2, 4}, Outputs: []int64{5}, Step: &step5}
+
+	clearEdgeMemoizations := func() {
+		for _, e := range []*Edge{edge1, edge2, edge3, edge4, edge4LateStart, edge5} {
+			e.earliestStart = nil
+			e.latestFinish = nil
+		}
+	}
 
 	for _, tc := range []struct {
 		desc  string
@@ -705,12 +729,23 @@ func TestCriticalPath(t *testing.T) {
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
+			// Clear memoization fields because we are reusing pointers to edges.
+			defer clearEdgeMemoizations()
+
 			got, err := tc.graph.CriticalPath()
 			if err != nil {
 				t.Fatalf("CriticalPath() got error: %v", err)
 			}
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("CriticalPath() got diff (-want, +got):\n%s", diff)
+			}
+
+			got, err = tc.graph.CriticalPathV2()
+			if err != nil {
+				t.Fatalf("CriticalPathV2() got error: %v", err)
+			}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("CriticalPathV2() got diff (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -750,4 +785,292 @@ func TestCriticalPathErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAddSink(t *testing.T) {
+	edge2 := &Edge{Inputs: []int64{1}, Outputs: []int64{2}}
+	edge3 := &Edge{Inputs: []int64{1}, Outputs: []int64{3}}
+
+	for _, v := range []struct {
+		desc  string
+		graph Graph
+		want  []*Edge
+	}{
+		{
+			desc: "empty graph",
+		},
+		{
+			// 1 -> 2
+			desc: "single pure output",
+			graph: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1, Outs: []*Edge{edge2}},
+					2: {ID: 2, In: edge2},
+				},
+				Edges: []*Edge{edge2},
+			},
+			want: []*Edge{
+				edge2,
+				{
+					Inputs: []int64{2},
+					Rule:   ninjagoArtificialSinkRule,
+					Step:   &ninjalog.Step{},
+				},
+			},
+		},
+		{
+			// 1 ----> 2
+			//    \
+			//     --> 3
+			desc: "multiple pure outputs",
+			graph: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1, Outs: []*Edge{edge2, edge3}},
+					2: {ID: 2, In: edge2},
+					3: {ID: 3, In: edge3},
+				},
+				Edges: []*Edge{edge2, edge3},
+			},
+			want: []*Edge{
+				edge2,
+				edge3,
+				{
+					Inputs: []int64{2, 3},
+					Rule:   ninjagoArtificialSinkRule,
+					Step:   &ninjalog.Step{},
+				},
+			},
+		},
+	} {
+		t.Run(v.desc, func(t *testing.T) {
+			if err := v.graph.addSink(); err != nil {
+				t.Fatalf("addSink() got error: %v", err)
+			}
+			opts := []cmp.Option{
+				cmpopts.IgnoreUnexported(Edge{}),
+				// Input IDs on sink edge has indeterministic order.
+				cmpopts.SortSlices(func(i, j int64) bool { return i < j }),
+			}
+			if diff := cmp.Diff(v.graph.Edges, v.want, opts...); diff != "" {
+				t.Errorf("After addSink(), got graph.Edges diff (-want, +got):\n%s", diff)
+			}
+
+			// addSink should be idempotent.
+			if err := v.graph.addSink(); err != nil {
+				t.Fatalf("addSink() got error: %v", err)
+			}
+			if diff := cmp.Diff(v.graph.Edges, v.want, opts...); diff != "" {
+				t.Errorf("After addSink(), got graph.Edges diff (-want, +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestTotalFloat(t *testing.T) {
+	step1 := ninjalog.Step{End: 10}
+	edge1 := &Edge{
+		Outputs: []int64{1},
+		Step:    &step1,
+	}
+
+	step2 := ninjalog.Step{Start: 10, End: 30}
+	edge2 := &Edge{
+		Inputs:  []int64{1},
+		Outputs: []int64{2},
+		Step:    &step2,
+	}
+
+	step3 := ninjalog.Step{Start: 30, End: 35}
+	edge3 := &Edge{
+		Inputs:  []int64{2},
+		Outputs: []int64{3},
+		Step:    &step3,
+	}
+
+	step4 := ninjalog.Step{Start: 35, End: 45}
+	edge4 := &Edge{
+		Inputs:  []int64{3},
+		Outputs: []int64{4},
+		Step:    &step4,
+	}
+
+	step5 := ninjalog.Step{Start: 45, End: 65}
+	edge5 := &Edge{
+		Inputs:  []int64{4, 7, 8},
+		Outputs: []int64{5},
+		Step:    &step5,
+	}
+
+	step6 := ninjalog.Step{Start: 10, End: 25}
+	edge6 := &Edge{
+		Inputs:  []int64{1},
+		Outputs: []int64{6},
+		Step:    &step6,
+	}
+
+	step7 := ninjalog.Step{Start: 35, End: 40}
+	edge7 := &Edge{
+		Inputs:  []int64{3, 6},
+		Outputs: []int64{7},
+		Step:    &step7,
+	}
+
+	step8 := ninjalog.Step{Start: 10, End: 25}
+	edge8 := &Edge{
+		Inputs:  []int64{1},
+		Outputs: []int64{8},
+		Step:    &step8,
+	}
+
+	// Test graph based on https://en.wikipedia.org/wiki/Critical_path_drag#/media/File:SimpleAONwDrag3.png.
+	g := Graph{
+		Nodes: map[int64]*Node{
+			1: {ID: 1, In: edge1, Outs: []*Edge{edge2, edge6, edge8}},
+			2: {ID: 2, In: edge2, Outs: []*Edge{edge3}},
+			3: {ID: 3, In: edge3, Outs: []*Edge{edge4, edge7}},
+			4: {ID: 4, In: edge4, Outs: []*Edge{edge5}},
+
+			5: {ID: 5, In: edge5},
+
+			6: {ID: 6, In: edge6, Outs: []*Edge{edge7}},
+			7: {ID: 7, In: edge7, Outs: []*Edge{edge5}},
+
+			8: {ID: 8, In: edge8, Outs: []*Edge{edge5}},
+		},
+		Edges: []*Edge{edge1, edge2, edge3, edge4, edge5, edge6, edge7, edge8},
+	}
+
+	t.Log(`In graph:
+    -----> 6 ----------> 7 --
+  /                 /         \
+ /                 /           \
+1 -----> 2 -----> 3 -----> 4 ----->5
+ \                             /
+  \                           /
+    -----------> 8 ----------`)
+
+	wantCriticalPath := []ninjalog.Step{step1, step2, step3, step4, step5}
+
+	got, err := g.CriticalPath()
+	if err != nil {
+		t.Fatalf("CriticalPath failed: %v", err)
+	}
+	if diff := cmp.Diff(wantCriticalPath, got); diff != "" {
+		t.Errorf("CriticalPath got: %v, want: %v, diff (-want +got):\n%s", got, wantCriticalPath, diff)
+	}
+
+	got, err = g.CriticalPathV2()
+	if err != nil {
+		t.Fatalf("CriticalPathV2 failed: %v", err)
+	}
+	if diff := cmp.Diff(wantCriticalPath, got); diff != "" {
+		t.Errorf("CriticalPathV2 got: %v, want: %v, diff (-want +got):\n%s", got, wantCriticalPath, diff)
+	}
+
+	for _, want := range []struct {
+		input          *Edge
+		earliestStart  time.Duration
+		earliestFinish time.Duration
+		latestStart    time.Duration
+		latestFinish   time.Duration
+		totalFloat     time.Duration
+	}{
+		{
+			input:          edge1,
+			earliestStart:  0,
+			earliestFinish: 10,
+			latestStart:    0,
+			latestFinish:   10,
+			totalFloat:     0,
+		},
+		{
+			input:          edge2,
+			earliestStart:  10,
+			earliestFinish: 30,
+			latestStart:    10,
+			latestFinish:   30,
+			totalFloat:     0,
+		},
+		{
+			input:          edge3,
+			earliestStart:  30,
+			earliestFinish: 35,
+			latestStart:    30,
+			latestFinish:   35,
+			totalFloat:     0,
+		},
+		{
+			input:          edge4,
+			earliestStart:  35,
+			earliestFinish: 45,
+			latestStart:    35,
+			latestFinish:   45,
+			totalFloat:     0,
+		},
+		{
+			input:          edge5,
+			earliestStart:  45,
+			earliestFinish: 65,
+			latestStart:    45,
+			latestFinish:   65,
+			totalFloat:     0,
+		},
+		{
+			input:          edge6,
+			earliestStart:  10,
+			earliestFinish: 25,
+			latestStart:    25,
+			latestFinish:   40,
+			totalFloat:     15,
+		},
+		{
+			input:          edge7,
+			earliestStart:  35,
+			earliestFinish: 40,
+			latestStart:    40,
+			latestFinish:   45,
+			totalFloat:     5,
+		},
+		{
+			input:          edge8,
+			earliestStart:  10,
+			earliestFinish: 25,
+			latestStart:    30,
+			latestFinish:   45,
+			totalFloat:     20,
+		},
+	} {
+		for _, fn := range []struct {
+			name string
+			f    func(*Edge) (time.Duration, error)
+			want time.Duration
+		}{
+			{name: "earliestStart", f: g.earliestStart, want: want.earliestStart},
+			{name: "earliestFinish", f: g.earliestFinish, want: want.earliestFinish},
+			{name: "latestStart", f: g.latestStart, want: want.latestStart},
+			{name: "latestFinish", f: g.latestFinish, want: want.latestFinish},
+			{name: "totalFloat", f: g.totalFloat, want: want.totalFloat},
+		} {
+			if got := mustDuration(t, want.input, fn.f); got != fn.want {
+				t.Errorf("%s(edge outputting %v) = %s, want: %s", fn.name, want.input.Outputs, got, fn.want)
+			}
+		}
+	}
+}
+
+func edgesToStr(edges []*Edge) string {
+	var ss []string
+	for _, e := range edges {
+		ss = append(ss, fmt.Sprintf("edge outputting %v", e.Outputs))
+	}
+	return "[" + strings.Join(ss, ", ") + "]"
+}
+
+func mustDuration(t *testing.T, edge *Edge, f func(*Edge) (time.Duration, error)) time.Duration {
+	t.Helper()
+	d, err := f(edge)
+	if err != nil {
+		t.Fatalf("Failed to get duration: %v", err)
+	}
+	return d
 }
