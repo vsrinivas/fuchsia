@@ -44,7 +44,7 @@ group("tests") {
     "http-client:tests",
     "lib:tests",
     "mdns:tests",
-    "net-cli:net-cli-tests",
+    "net-cli:tests",
     "netcfg:tests",
     "netdump:tests",
     "netstack:tests",

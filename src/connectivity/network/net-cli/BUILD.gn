@@ -4,8 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "net"
@@ -63,16 +62,21 @@ package("net-cli") {
       shell = true
     },
   ]
-}
 
-test_package("net-cli-tests") {
-  deps = [ ":bin_test" ]
-
-  tests = [
+  meta = [
     {
-      name = "net_bin_test"
-      dest = "net_bin_test"
-      environments = [ emu_env ]
+      path = "meta/net.cmx"
+      dest = "net.cmx"
     },
   ]
+}
+
+fuchsia_unittest_package("net-cli-tests") {
+  deps = [ ":bin_test" ]
+  executable_path = "bin/net_bin_test"
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":net-cli-tests" ]
 }

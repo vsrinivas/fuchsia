@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/net"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.filter",
+            "fuchsia.net.neighbor.Controller",
+            "fuchsia.net.neighbor.View",
+            "fuchsia.net.stack.Stack",
+            "fuchsia.net.stack.log",
+            "fuchsia.netstack.Netstack"
+        ]
+    }
+}
