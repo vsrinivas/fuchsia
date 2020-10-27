@@ -106,13 +106,14 @@ Header Header::FromGrowableSliceCount(size_t usable_partitions, size_t initial_u
   ZX_ASSERT(usable_partitions == kMaxUsablePartitions);
   Header result{
       .magic = kMagic,
-      .version = kVersion,
+      .format_version = kCurrentFormatVersion,
       .pslice_count = 0,  // Will be set properly below.
       .slice_size = slice_size,
       .fvm_partition_size = kBlockSize,  // Will be set properly below.
       .vpartition_table_size = PartitionTableByteSizeForUsablePartitionCount(usable_partitions),
       .allocation_table_size = AllocTableByteSizeForUsableSliceCount(max_usable_slices),
       .generation = 0,
+      .oldest_revision = kCurrentRevision,
   };
 
   // Set the pslice_count and fvm_partition_size now that we know the metadata size.
@@ -125,13 +126,14 @@ std::string Header::ToString() const {
   std::stringstream ss;
   ss << "FVM Header" << std::endl;
   ss << "  magic: " << std::to_string(magic) << std::endl;
-  ss << "  version: " << std::to_string(version) << std::endl;
+  ss << "  format_version: " << std::to_string(format_version) << std::endl;
   ss << "  pslice_count: " << std::to_string(pslice_count) << std::endl;
   ss << "  slice_size: " << std::to_string(slice_size) << std::endl;
   ss << "  fvm_partition_size: " << std::to_string(fvm_partition_size) << std::endl;
   ss << "  vpartition_table_size: " << std::to_string(vpartition_table_size) << std::endl;
   ss << "  allocation_table_size: " << std::to_string(allocation_table_size) << std::endl;
   ss << "  generation: " << std::to_string(generation) << std::endl;
+  ss << "  oldest_revision: " << std::to_string(oldest_revision) << std::endl;
   return ss.str();
 }
 

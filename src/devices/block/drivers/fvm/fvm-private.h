@@ -10,6 +10,7 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -93,8 +94,12 @@ class VPartitionManager : public ManagerDeviceType {
                     const block_impl_protocol_t* bp);
   ~VPartitionManager();
 
-  // For tests to inject a configuration. This should include both copies of the metadata.
-  void SetMetadataForTest(fzl::OwnedVmoMapper metadata_vmo);
+  // Allocates the partition, returning it without adding it to the device manager. Production code
+  // will go through the FIDL API, this is exposed separately to allow testing without FIDL.
+  zx::status<std::unique_ptr<VPartition>> AllocatePartition(
+      uint64_t slice_count, const fuchsia_hardware_block_partition_GUID* type,
+      const fuchsia_hardware_block_partition_GUID* instance, const char* name_data,
+      size_t name_size, uint32_t flags);
 
  private:
   static const fuchsia_hardware_block_volume_VolumeManager_ops* Ops() {
@@ -193,7 +198,8 @@ class VPartitionManager : public ManagerDeviceType {
   const size_t block_op_size_;
   block_impl_protocol_t bp_;
 
-  // For replying to the device init hook.
+  // For replying to the device init hook. Empty when not initialized by the DDK yet and when run
+  // in unit tests. To allow for test operation, null check this and ignore the txn if unset.
   std::optional<ddk::InitTxn> init_txn_;
 
   // Worker completion.

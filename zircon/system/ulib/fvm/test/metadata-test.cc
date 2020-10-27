@@ -168,7 +168,7 @@ TEST(CreateMetadata, HeaderHasBadVersionFails) {
   constexpr size_t kSlices = 1024;
   constexpr size_t kSliceSize = 32 * 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
-  header.version = kVersion + 1;
+  header.format_version = kCurrentFormatVersion + 1;
 
   auto result = Metadata::Synthesize(header, nullptr, 0, nullptr, 0);
   ASSERT_NE(result.status_value(), ZX_OK);

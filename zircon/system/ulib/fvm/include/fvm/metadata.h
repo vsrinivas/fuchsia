@@ -38,8 +38,8 @@ class HeapMetadataBuffer : public MetadataBuffer {
 
   std::unique_ptr<MetadataBuffer> Create(size_t size) const override;
 
-  void* data() const override { return buffer_.get(); };
-  size_t size() const override { return size_; };
+  void* data() const override { return buffer_.get(); }
+  size_t size() const override { return size_; }
 
  private:
   std::unique_ptr<uint8_t[]> buffer_;

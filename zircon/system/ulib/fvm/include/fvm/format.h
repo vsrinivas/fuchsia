@@ -66,8 +66,15 @@ namespace fvm {
 // Unique identifier mapped to a GPT partition that contains a FVM.
 static constexpr uint64_t kMagic = 0x54524150204d5646;
 
-// Current version of the FVM format being handled by this library.
-static constexpr uint64_t kVersion = 0x00000001;
+// Current version of the format and the revision of the software. The format version determines
+// backwards-compatibility. The revision should be incremented for any minor change in how data is
+// stored (including format versions but also for anything minor) and does not imply anything about
+// backwards compatibility. The revision is used to updated the oldest_revision field in the
+// header.
+//
+// See //src/storage/docs/versioning.md for more.
+static constexpr uint64_t kCurrentFormatVersion = 1;
+static constexpr uint64_t kCurrentRevision = 1;
 
 // Defines the block size of that the FVM driver exposes.
 static constexpr uint64_t kBlockSize = 8192;
@@ -223,8 +230,9 @@ struct Header {
   // Unique identifier for this format type. Expected to be kMagic.
   uint64_t magic = kMagic;
 
-  // Version of the format. The current version is kVersion.
-  uint64_t version = kVersion;
+  // Version of the overall format. If this is larger than kCurrentFormatVersion the driver must
+  // not access the data. See also "oldest_revision" below and //src/storage/docs/versioning.md.
+  uint64_t format_version = kCurrentFormatVersion;
 
   // The number of physical slices which can be addressed and allocated by the virtual parititons.
   // This is the number of slices that will fit in the current fvm_partition_size, minus the size
@@ -267,6 +275,14 @@ struct Header {
   // Integrity check of the entire metadata (one copy). When computing the hash (use
   // fvm::UpdateHash() to compute), this field is is considered to be 0-filled.
   uint8_t hash[digest::kSha256Length] = {0};
+
+  // The oldest revision of the software that has written to this FVM instance. When opening for
+  // writes, the driver should check this and lower it if the current revision is lower than the
+  // one stored in this header. This does not say anything about backwards-compatibility, that is
+  // determined by format_version above.
+  //
+  // See //src/storage/docs/versioning.md for more.
+  uint64_t oldest_revision = kCurrentRevision;
 
   // Fill remainder of the block.
   uint8_t reserved[0];

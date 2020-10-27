@@ -59,13 +59,6 @@ VPartitionManager::VPartitionManager(zx_device_t* parent, const block_info_t& in
 
 VPartitionManager::~VPartitionManager() = default;
 
-void VPartitionManager::SetMetadataForTest(fzl::OwnedVmoMapper metadata_vmo) {
-  fbl::AutoLock lock(&lock_);
-
-  metadata_ = std::move(metadata_vmo);
-  slice_size_ = GetFvmLocked()->slice_size;
-}
-
 // static
 zx_status_t VPartitionManager::Bind(void* /*unused*/, zx_device_t* dev) {
   block_info_t block_info;
@@ -146,10 +139,14 @@ static void IoCallback(void* cookie, zx_status_t status, block_op_t* op) {
 zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off, size_t len,
                                           uint32_t command) const {
   const size_t block_size = info_.block_size;
-  const size_t max_transfer = info_.max_transfer_size / block_size;
   size_t len_remaining = len / block_size;
   size_t vmo_offset = 0;
   size_t dev_offset = off / block_size;
+
+  // The operation may need to be chuncked according to the block device's limits. We don't check
+  // explicitly for BLOCK_MAX_TRANSFER_UNBOUNDED because the transfers are still limited to 32-bits
+  // and that constant is the largest 32-bit value.
+  const size_t max_transfer = info_.max_transfer_size / block_size;
   const size_t num_data_txns = fbl::round_up(len_remaining, max_transfer) / max_transfer;
 
   // Add a "FLUSH" operation to write requests.
@@ -198,8 +195,6 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off, size_t le
 zx_status_t VPartitionManager::Load() {
   fbl::AutoLock lock(&lock_);
 
-  ZX_DEBUG_ASSERT(init_txn_.has_value());
-
   // Let DdkRelease know the thread was successfully created. It is guaranteed
   // that DdkRelease will not be run until after we reply to |init_txn_|.
   initialization_thread_started_ = true;
@@ -212,7 +207,8 @@ zx_status_t VPartitionManager::Load() {
   auto auto_detach = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
     zxlogf(ERROR, "Aborting Driver Load");
     // This will schedule the device to be unbound.
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    if (init_txn_)
+      init_txn_->Reply(ZX_ERR_INTERNAL);
   });
 
   zx::vmo vmo;
@@ -350,7 +346,8 @@ zx_status_t VPartitionManager::Load() {
   // Begin initializing the underlying partitions
 
   // This will make the device visible and able to be unbound.
-  init_txn_->Reply(ZX_OK);
+  if (init_txn_)
+    init_txn_->Reply(ZX_OK);
   auto_detach.cancel();
 
   // 0th vpartition is invalid
@@ -434,6 +431,10 @@ zx_status_t VPartitionManager::Load() {
 zx_status_t VPartitionManager::WriteFvmLocked() {
   fvm::Header* header = GetFvmLocked();
   header->generation++;
+
+  // Track the oldest revision of the driver that has written to this FVM metadata.
+  if (header->oldest_revision > fvm::kCurrentRevision)
+    header->oldest_revision = fvm::kCurrentRevision;
 
   size_t metadata_used_bytes = header->GetMetadataUsedBytes();
   UpdateHash(header, metadata_used_bytes);
@@ -701,57 +702,64 @@ zx_status_t VPartitionManager::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* 
   return fuchsia_hardware_block_volume_VolumeManager_dispatch(this, txn, msg, Ops());
 }
 
-zx_status_t VPartitionManager::FIDLAllocatePartition(
+zx::status<std::unique_ptr<VPartition>> VPartitionManager::AllocatePartition(
     uint64_t slice_count, const fuchsia_hardware_block_partition_GUID* type,
     const fuchsia_hardware_block_partition_GUID* instance, const char* name_data, size_t name_size,
-    uint32_t flags, fidl_txn_t* txn) {
-  const auto reply = fuchsia_hardware_block_volume_VolumeManagerAllocatePartition_reply;
-
-  constexpr size_t max_name_len =
-      std::min<size_t>(fuchsia_hardware_block_partition_NAME_LENGTH, kMaxVPartitionNameLength);
+    uint32_t flags) {
   if (slice_count >= std::numeric_limits<uint32_t>::max()) {
-    return reply(txn, ZX_ERR_OUT_OF_RANGE);
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
   if (slice_count == 0) {
-    return reply(txn, ZX_ERR_OUT_OF_RANGE);
-  }
-  if (name_size > max_name_len) {
-    return reply(txn, ZX_ERR_INVALID_ARGS);
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
+  // Validate the name. It should fit and not have any NULL terminators in it.
+  constexpr size_t kMaxNameLen =
+      std::min<size_t>(fuchsia_hardware_block_partition_NAME_LENGTH, kMaxVPartitionNameLength);
+  if (name_size > kMaxNameLen) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
   std::string name(name_data, name_size);
-
-  // Check that name does not have any NULL terminators in it.
   if (name.find('\0') != std::string::npos) {
-    return reply(txn, ZX_ERR_INVALID_ARGS);
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  zx_status_t status;
   std::unique_ptr<VPartition> vpart;
   {
     fbl::AutoLock lock(&lock_);
     size_t vpart_entry;
-    if ((status = FindFreeVPartEntryLocked(&vpart_entry)) != ZX_OK) {
-      return reply(txn, status);
+    if (zx_status_t status = FindFreeVPartEntryLocked(&vpart_entry); status != ZX_OK) {
+      return zx::error(status);
     }
 
-    if ((status = VPartition::Create(this, vpart_entry, &vpart)) != ZX_OK) {
-      return reply(txn, status);
+    if (zx_status_t status = VPartition::Create(this, vpart_entry, &vpart); status != ZX_OK) {
+      return zx::error(status);
     }
 
     auto* entry = GetVPartEntryLocked(vpart_entry);
     *entry = VPartitionEntry(type->value, instance->value, 0, std::move(name), flags);
 
-    if ((status = AllocateSlicesLocked(vpart.get(), 0, slice_count)) != ZX_OK) {
+    if (zx_status_t status = AllocateSlicesLocked(vpart.get(), 0, slice_count); status != ZX_OK) {
       entry->slices = 0;  // Undo VPartition allocation
-      return reply(txn, status);
+      return zx::error(status);
     }
   }
-  if ((status = AddPartition(std::move(vpart))) != ZX_OK) {
-    return reply(txn, status);
+
+  return zx::ok(std::move(vpart));
+}
+
+zx_status_t VPartitionManager::FIDLAllocatePartition(
+    uint64_t slice_count, const fuchsia_hardware_block_partition_GUID* type,
+    const fuchsia_hardware_block_partition_GUID* instance, const char* name_data, size_t name_size,
+    uint32_t flags, fidl_txn_t* txn) {
+  auto partition_or = AllocatePartition(slice_count, type, instance, name_data, name_size, flags);
+  zx_status_t status = partition_or.status_value();
+  if (partition_or.is_ok()) {
+    // Register the created partition with the device manager.
+    status = AddPartition(std::move(partition_or.value()));
   }
 
-  return reply(txn, ZX_OK);
+  return fuchsia_hardware_block_volume_VolumeManagerAllocatePartition_reply(txn, status);
 }
 
 zx_status_t VPartitionManager::FIDLQuery(fidl_txn_t* txn) {

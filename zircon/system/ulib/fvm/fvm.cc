@@ -86,8 +86,11 @@ std::optional<SuperblockType> ValidateHeader(const void* primary_metadata,
       fprintf(stderr, "fvm: Bad magic\n");
       return false;
     }
-    if (header.version > kVersion) {
-      fprintf(stderr, "fvm: Header Version does not match fvm driver\n");
+    if (header.format_version > kCurrentFormatVersion) {
+      fprintf(stderr,
+              "fvm: Header format version (=%" PRIu64 ") does not match fvm driver (=%" PRIu64
+              ")\n",
+              header.format_version, kCurrentFormatVersion);
       return false;
     }
 
