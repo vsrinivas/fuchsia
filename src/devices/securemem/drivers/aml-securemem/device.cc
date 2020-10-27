@@ -24,13 +24,6 @@
 
 namespace amlogic_secure_mem {
 
-enum : size_t {
-  kFragmentPDev,
-  kFragmentSysmem,
-  kFragmentTee,
-  kFragmentCount,
-};
-
 zx_status_t AmlogicSecureMemDevice::Create(void* ctx, zx_device_t* parent) {
   std::unique_ptr<AmlogicSecureMemDevice> sec_mem(new AmlogicSecureMemDevice(parent));
 
@@ -55,28 +48,21 @@ zx_status_t AmlogicSecureMemDevice::Bind() {
     return status;
   }
 
-  std::array<zx_device_t*, kFragmentCount> fragments;
-  size_t actual_count;
-  composite.GetFragments(fragments.data(), fragments.size(), &actual_count);
-  if (actual_count != countof(fragments)) {
-    LOG(ERROR, "Unable to composite_get_fragments()");
-    return ZX_ERR_INTERNAL;
-  }
-
-  status = ddk::PDevProtocolClient::CreateFromDevice(fragments[kFragmentPDev], &pdev_proto_client_);
+  status = ddk::PDevProtocolClient::CreateFromComposite(
+      composite, "ddk.protocol.platform.device.PDev", &pdev_proto_client_);
   if (status != ZX_OK) {
     LOG(ERROR, "Unable to get pdev protocol - status: %d", status);
     return status;
   }
 
-  status = ddk::SysmemProtocolClient::CreateFromDevice(fragments[kFragmentSysmem],
-                                                       &sysmem_proto_client_);
+  status =
+      ddk::SysmemProtocolClient::CreateFromComposite(composite, "sysmem", &sysmem_proto_client_);
   if (status != ZX_OK) {
     LOG(ERROR, "Unable to get sysmem protocol - status: %d", status);
     return status;
   }
 
-  status = ddk::TeeProtocolClient::CreateFromDevice(fragments[kFragmentTee], &tee_proto_client_);
+  status = ddk::TeeProtocolClient::CreateFromComposite(composite, "tee", &tee_proto_client_);
   if (status != ZX_OK) {
     LOG(ERROR, "ddk::TeeProtocolClient::CreateFromDevice() failed - status: %d", status);
     return status;
