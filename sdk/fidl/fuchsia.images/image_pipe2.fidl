@@ -141,7 +141,9 @@ protocol ImagePipe2 {
     /// The `acquire_fences` are a set of fences which must all be signaled by the
     /// producer before the consumer presents the image.
     /// The `release_fences` are set of fences which must all be signaled by the
-    /// consumer before it is safe for the producer to free or modify the image.
+    /// consumer before it is safe for the producer to free or modify the image or re-use the
+    /// acquire fences. The acquire fences are not unsignaled by the consumer.
+    ///
     /// `presentation_time` specifies the time on or after which the
     /// client would like the enqueued operations should take visible effect
     /// (light up pixels on the screen), expressed in nanoseconds in the
