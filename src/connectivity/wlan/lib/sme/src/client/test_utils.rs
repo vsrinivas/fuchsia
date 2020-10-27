@@ -135,6 +135,12 @@ pub fn fake_bss_info() -> BssInfo {
         channel: 1,
         protection: Protection::Wpa2Personal,
         compatible: true,
+        ht_cap: Some(fidl_mlme::HtCapabilities {
+            bytes: fake_ht_capabilities().as_bytes().try_into().unwrap(),
+        }),
+        vht_cap: Some(fidl_mlme::VhtCapabilities {
+            bytes: fake_vht_capabilities().as_bytes().try_into().unwrap(),
+        }),
         probe_resp_wsc: None,
         wmm_param: None,
     }

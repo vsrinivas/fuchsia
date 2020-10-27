@@ -4,7 +4,9 @@
 
 use {
     crate::client::{bss::BssInfo, Status as SmeStatus},
-    fuchsia_inspect::{BoolProperty, IntProperty, Node, Property, StringProperty, UintProperty},
+    fuchsia_inspect::{
+        BoolProperty, BytesProperty, IntProperty, Node, Property, StringProperty, UintProperty,
+    },
     fuchsia_inspect_contrib::nodes::{BoundedListNode, NodeExt, TimeProperty},
     fuchsia_zircon as zx,
     parking_lot::Mutex,
@@ -226,6 +228,8 @@ pub struct BssInfoNode {
     protection: StringProperty,
     _is_wmm_assoc: BoolProperty,
     _wmm_param: Option<BssWmmParamNode>,
+    ht_cap: Option<BytesProperty>,
+    vht_cap: Option<BytesProperty>,
     wsc: Option<BssWscNode>,
 }
 
@@ -244,6 +248,8 @@ impl BssInfoNode {
             .wmm_param
             .as_ref()
             .map(|p| BssWmmParamNode::new(node.create_child("wmm_param"), &p));
+        let ht_cap = bss_info.ht_cap.map(|cap| node.create_bytes("ht_cap", cap.bytes));
+        let vht_cap = bss_info.vht_cap.map(|cap| node.create_bytes("vht_cap", cap.bytes));
 
         let mut this = Self {
             node,
@@ -257,6 +263,8 @@ impl BssInfoNode {
             protection,
             _is_wmm_assoc: is_wmm_assoc,
             _wmm_param: wmm_param,
+            ht_cap,
+            vht_cap,
             wsc: None,
         };
         this.update_wsc_node(bss_info);
@@ -272,6 +280,24 @@ impl BssInfoNode {
         self.snr_db.set(bss_info.snr_db as i64);
         self.channel.set(bss_info.channel as u64);
         self.protection.set(&format!("{}", bss_info.protection));
+        match &bss_info.ht_cap {
+            Some(ht_cap) => match self.ht_cap.as_mut() {
+                Some(ht_cap_prop) => ht_cap_prop.set(&ht_cap.bytes),
+                None => self.ht_cap = Some(self.node.create_bytes("ht_cap", ht_cap.bytes)),
+            },
+            None => {
+                self.ht_cap.take();
+            }
+        }
+        match &bss_info.vht_cap {
+            Some(vht_cap) => match self.vht_cap.as_mut() {
+                Some(vht_cap_prop) => vht_cap_prop.set(&vht_cap.bytes),
+                None => self.vht_cap = Some(self.node.create_bytes("vht_cap", vht_cap.bytes)),
+            },
+            None => {
+                self.vht_cap.take();
+            }
+        }
         self.update_wsc_node(bss_info);
     }
 

@@ -4,7 +4,7 @@
 
 use {
     crate::{Config, Ssid},
-    fidl_fuchsia_wlan_mlme::BssDescription,
+    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription},
     std::{cmp::Ordering, collections::HashSet},
     wlan_common::{
         bss::{BssDescriptionExt, Protection},
@@ -51,6 +51,8 @@ impl ClientConfig {
             channel: bss.chan.primary,
             protection: bss.get_protection(),
             compatible: self.is_bss_compatible(bss),
+            ht_cap: bss.ht_cap.as_ref().map(|cap| **cap),
+            vht_cap: bss.vht_cap.as_ref().map(|cap| **cap),
             probe_resp_wsc,
             wmm_param,
         }
@@ -118,6 +120,8 @@ pub struct BssInfo {
     pub channel: u8,
     pub protection: Protection,
     pub compatible: bool,
+    pub ht_cap: Option<fidl_mlme::HtCapabilities>,
+    pub vht_cap: Option<fidl_mlme::VhtCapabilities>,
     pub probe_resp_wsc: Option<wsc::ProbeRespWsc>,
     pub wmm_param: Option<ie::WmmParam>,
 }
@@ -145,8 +149,9 @@ mod tests {
         super::*,
         crate::client::test_utils::{fake_bss_with_bssid, fake_wmm_param},
         fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
-        std::cmp::Ordering,
+        std::{cmp::Ordering, convert::TryInto},
         wlan_common::ie,
+        zerocopy::AsBytes,
     };
 
     enum ProtectionCfg {
@@ -284,6 +289,12 @@ mod tests {
                 channel: 1,
                 protection: Protection::Wpa2Personal,
                 compatible: true,
+                ht_cap: Some(fidl_mlme::HtCapabilities {
+                    bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap()
+                }),
+                vht_cap: Some(fidl_mlme::VhtCapabilities {
+                    bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap()
+                }),
                 probe_resp_wsc: None,
                 wmm_param: None,
             }
@@ -301,6 +312,12 @@ mod tests {
                 channel: 1,
                 protection: Protection::Wpa2Personal,
                 compatible: true,
+                ht_cap: Some(fidl_mlme::HtCapabilities {
+                    bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap()
+                }),
+                vht_cap: Some(fidl_mlme::VhtCapabilities {
+                    bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap()
+                }),
                 probe_resp_wsc: None,
                 wmm_param: Some(wmm_param),
             }
@@ -316,6 +333,12 @@ mod tests {
                 channel: 1,
                 protection: Protection::Wep,
                 compatible: false,
+                ht_cap: Some(fidl_mlme::HtCapabilities {
+                    bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap()
+                }),
+                vht_cap: Some(fidl_mlme::VhtCapabilities {
+                    bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap()
+                }),
                 probe_resp_wsc: None,
                 wmm_param: None,
             }
@@ -332,6 +355,12 @@ mod tests {
                 channel: 1,
                 protection: Protection::Wep,
                 compatible: true,
+                ht_cap: Some(fidl_mlme::HtCapabilities {
+                    bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap()
+                }),
+                vht_cap: Some(fidl_mlme::VhtCapabilities {
+                    bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap()
+                }),
                 probe_resp_wsc: None,
                 wmm_param: None,
             }
@@ -405,11 +434,14 @@ mod tests {
             rcpi_dbmh: _rcpi_dbmh,
             rsni_dbh: 0,
 
-            ht_cap: None,
+            ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap(),
+            })),
             ht_op: None,
-            vht_cap: None,
+            vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap(),
+            })),
             vht_op: None,
-
             chan: fidl_common::WlanChan {
                 primary: 1,
                 secondary80: 0,
