@@ -72,7 +72,7 @@ template("gidl") {
   }
 }
 
-template("gidl_source_set") {
+template("_gidl_cc_source_set") {
   assert(defined(invoker.type))
   assert(defined(invoker.fidl))
   assert(defined(invoker.inputs))
@@ -120,7 +120,7 @@ template("gidl_source_set") {
 }
 
 template("gidl_hlcpp_conformance") {
-  gidl_source_set(target_name) {
+  _gidl_cc_source_set(target_name) {
     type = "conformance"
     language = "hlcpp"
     forward_variables_from(invoker, "*")
@@ -128,7 +128,7 @@ template("gidl_hlcpp_conformance") {
 }
 
 template("gidl_llcpp_conformance") {
-  gidl_source_set(target_name) {
+  _gidl_cc_source_set(target_name) {
     type = "conformance"
     language = "llcpp"
     bindings_suffix = "_llcpp"
@@ -137,7 +137,7 @@ template("gidl_llcpp_conformance") {
 }
 
 template("gidl_hlcpp_benchmarks") {
-  gidl_source_set(target_name) {
+  _gidl_cc_source_set(target_name) {
     type = "benchmark"
     language = "hlcpp"
     forward_variables_from(invoker, "*")
@@ -145,7 +145,7 @@ template("gidl_hlcpp_benchmarks") {
 }
 
 template("gidl_llcpp_benchmarks") {
-  gidl_source_set(target_name) {
+  _gidl_cc_source_set(target_name) {
     type = "benchmark"
     language = "llcpp"
     bindings_suffix = "_llcpp"
@@ -154,7 +154,7 @@ template("gidl_llcpp_benchmarks") {
 }
 
 template("gidl_walker_benchmarks") {
-  gidl_source_set(target_name) {
+  _gidl_cc_source_set(target_name) {
     type = "benchmark"
     language = "walker"
     bindings_suffix = "_llcpp"
@@ -163,7 +163,7 @@ template("gidl_walker_benchmarks") {
 }
 
 template("gidl_reference_benchmarks") {
-  gidl_source_set(target_name) {
+  _gidl_cc_source_set(target_name) {
     type = "benchmark"
     language = "reference"
     bindings_suffix = "_llcpp"
