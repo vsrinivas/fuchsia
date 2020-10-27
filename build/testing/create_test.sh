@@ -20,5 +20,5 @@ shift 1
 
 echo "#!/bin/bash" > $OUTFILE
 echo "" >> $OUTFILE
-echo "${TOOL} $@" >> $OUTFILE
+echo "${TOOL} $@" '$@' >> $OUTFILE
 chmod a+x $OUTFILE
