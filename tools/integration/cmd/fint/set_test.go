@@ -97,18 +97,6 @@ func TestToGNValue(t *testing.T) {
 	})
 }
 
-func assertContains(t *testing.T, list []string, targets []string) {
-	seen := make(map[string]bool)
-	for _, item := range list {
-		seen[item] = true
-	}
-	for _, target := range targets {
-		if !seen[target] {
-			t.Errorf("Expected to find %q in %+v", target, list)
-		}
-	}
-}
-
 func TestGenArgs(t *testing.T) {
 	platform := "linux-x64"
 	// A magic string that will be replaced with the actual path to a mock
@@ -122,6 +110,9 @@ func TestGenArgs(t *testing.T) {
 		// Args that are expected to be included in the return value. Order does
 		// not matter.
 		expectedArgs []string
+		// Whether `expectedArgs` must be found in the same relative order in
+		// the return value. Disabled by default to make tests less fragile.
+		orderMatters bool
 		// Whether we expect genArgs to return an error.
 		expectErr bool
 		// Relative paths to files to create in the checkout dir prior to
@@ -282,6 +273,22 @@ func TestGenArgs(t *testing.T) {
 			},
 			expectedArgs: []string{`sdk_id="789"`, `build_sdk_archives=true`},
 		},
+		{
+			name: "sorts imports first",
+			staticSpec: &fintpb.Static{
+				GnArgs:  []string{`foo="bar"`, `import("//foo.gni")`},
+				Product: "products/core.gni",
+			},
+			expectedArgs: []string{
+				`import("//foo.gni")`,
+				`import("//products/core.gni")`,
+				// This must come after all imports but before any other variables.
+				`if (!defined(zircon_extra_args)) { zircon_extra_args = {} }`,
+				`build_info_product="core"`,
+				`foo="bar"`,
+			},
+			orderMatters: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -323,7 +330,114 @@ func TestGenArgs(t *testing.T) {
 				t.Fatalf("Expected genArgs() to return an error, but got nil")
 			}
 
-			assertContains(t, args, tc.expectedArgs)
+			assertSubset(t, tc.expectedArgs, args, tc.orderMatters)
+		})
+	}
+}
+
+// assertSubset checks that every item in `subset` is also in `set`. If
+// `orderMatters`, then we'll also check that the relative ordering of the items
+// in `subset` is the same as their relative ordering in `set`.
+func assertSubset(t *testing.T, subset, set []string, orderMatters bool) {
+	if isSub, msg := isSubset(subset, set, orderMatters); !isSub {
+		t.Fatalf(msg)
+	}
+}
+
+// isSubset is extracted from `assertSubset()` to make it possible to test this
+// logic.
+func isSubset(subset, set []string, orderMatters bool) (bool, string) {
+	indices := make(map[string]int)
+	for i, item := range set {
+		if duplicateIndex, ok := indices[item]; ok {
+			// Disallowing duplicates makes this function simpler, and we have
+			// no need to handle duplicates.
+			return false, fmt.Sprintf("Duplicate item %q found at indices %d and %d", item, duplicateIndex, i)
+		}
+		indices[item] = i
+	}
+
+	var previousIndex int
+	for i, target := range subset {
+		index, ok := indices[target]
+		if !ok {
+			return false, fmt.Sprintf("Expected to find %q in %+v", target, set)
+		} else if orderMatters && index < previousIndex {
+			return false, fmt.Sprintf("Expected %q to precede %q, but it came after", subset[i-1], target)
+		}
+		previousIndex = index
+	}
+	return true, ""
+}
+
+func TestAssertSubset(t *testing.T) {
+	testCases := []struct {
+		name          string
+		subset        []string
+		set           []string
+		orderMatters  bool
+		expectFailure bool
+	}{
+		{
+			name:   "empty subset and set",
+			subset: []string{},
+			set:    []string{},
+		},
+		{
+			name:   "empty subset",
+			subset: []string{},
+			set:    []string{"foo"},
+		},
+		{
+			name:          "empty set",
+			subset:        []string{"foo"},
+			set:           []string{},
+			expectFailure: true,
+		},
+		{
+			name:   "non-empty and equal",
+			subset: []string{"foo", "bar"},
+			set:    []string{"foo", "bar"},
+		},
+		{
+			name:   "non-empty strict subset",
+			subset: []string{"foo"},
+			set:    []string{"foo", "bar"},
+		},
+		{
+			name:          "one item missing from set",
+			subset:        []string{"foo", "bar", "baz"},
+			set:           []string{"foo", "bar"},
+			expectFailure: true,
+		},
+		{
+			name:   "order does not matter",
+			subset: []string{"foo", "bar"},
+			set:    []string{"bar", "foo"},
+		},
+		{
+			name:          "order matters if specified",
+			subset:        []string{"foo", "bar"},
+			set:           []string{"bar", "foo"},
+			orderMatters:  true,
+			expectFailure: true,
+		},
+		{
+			name:          "duplicate in set",
+			subset:        []string{"foo"},
+			set:           []string{"foo", "foo"},
+			expectFailure: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			isSub, msg := isSubset(tc.subset, tc.set, tc.orderMatters)
+			if tc.expectFailure && isSub {
+				t.Errorf("Expected assertSubset() to fail but it passed")
+			} else if !tc.expectFailure && !isSub {
+				t.Errorf("Expected assertSubset() to pass but it failed: %s", msg)
+			}
 		})
 	}
 }

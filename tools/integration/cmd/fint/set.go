@@ -164,10 +164,6 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 		if staticSpec.UseGoma {
 			return nil, fmt.Errorf("goma is not supported for builds using a custom gcc toolchain")
 		}
-		// TODO(olivernewman): Do we need to check if `zircon_extra_args` is
-		// undefined and initialize it to an empty scope if so? The recipes pass
-		// this as an arg, but it's ugly and may be unnecessary:
-		// `if (!defined(zircon_extra_args)) { zircon_extra_args = {} }`
 		vars["zircon_extra_args.gcc_tool_dir"] = filepath.Join(contextSpec.GccToolchainDir, "bin")
 	}
 	if contextSpec.RustToolchainDir != "" {
@@ -223,8 +219,8 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 			continue
 		}
 		// If product is set, append to the corresponding list variable instead
-		// of overwriting it to avoid overwriting the packages set by the
-		// product.
+		// of overwriting it to avoid overwriting any packages set in the
+		// imported product file.
 		// TODO(olivernewman): Is it safe to always append whether or not
 		// product is set?
 		if staticSpec.Product == "" {
@@ -245,24 +241,43 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 	// if staticSpec.CollectMetrics is set, once we have a plan for exposing the
 	// tracelog's location to the recipe for upload.
 
-	var args []string
-	args = append(args, staticSpec.GnArgs...)
+	var normalArgs []string
+	var importArgs []string
+	for _, arg := range staticSpec.GnArgs {
+		if strings.HasPrefix(arg, "import(") {
+			importArgs = append(importArgs, arg)
+		} else {
+			normalArgs = append(normalArgs, arg)
+		}
+	}
 
 	for k, v := range vars {
-		args = append(args, fmt.Sprintf("%s=%s", k, toGNValue(v)))
+		normalArgs = append(normalArgs, fmt.Sprintf("%s=%s", k, toGNValue(v)))
 	}
 	for k, v := range appends {
-		args = append(args, fmt.Sprintf("%s+=%s", k, toGNValue(v)))
+		normalArgs = append(normalArgs, fmt.Sprintf("%s+=%s", k, toGNValue(v)))
 	}
+	sort.Strings(normalArgs)
 
-	sort.Strings(imports)
-	var importArgs []string
 	for _, p := range imports {
 		importArgs = append(importArgs, fmt.Sprintf(`import("//%s")`, p))
 	}
+	sort.Strings(importArgs)
 
-	sort.Strings(args)
-	return append(importArgs, args...), nil
+	var finalArgs []string
+
+	// Ensure that imports come before args that set or modify variables, as
+	// otherwise the imported files might blindly redefine variables set or
+	// modified by other arguments.
+	finalArgs = append(finalArgs, importArgs...)
+	// Initialize `zircon_extra_args` before any variable-setting args, so that
+	// it's safe for subsequent args to do things like `zircon_extra_args.foo =
+	// "bar"` without worrying about initializing zircon_extra_args if it hasn't
+	// yet been defined. But do it after all imports in case one of the imported
+	// files sets `zircon_extra_args`.
+	finalArgs = append(finalArgs, "if (!defined(zircon_extra_args)) { zircon_extra_args = {} }")
+	finalArgs = append(finalArgs, normalArgs...)
+	return finalArgs, nil
 }
 
 // toGNValue converts a Go value to a string representation of the corresponding
