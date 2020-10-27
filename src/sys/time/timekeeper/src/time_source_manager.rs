@@ -196,6 +196,9 @@ impl<T: TimeSource, D: Diagnostics, M: MonotonicProvider> TimeSourceManager<T, D
                 })?;
 
             match event {
+                TimeSourceEvent::StatusChange { status } if self.last_status == Some(status) => {
+                    info!("Ignoring repeated {:?} state of {:?}", self.role, status);
+                }
                 TimeSourceEvent::StatusChange { status } => {
                     info!("{:?} changed state to {:?}", self.role, status);
                     self.diagnostics.record(Event::TimeSourceStatus { role: self.role, status });
@@ -203,6 +206,19 @@ impl<T: TimeSource, D: Diagnostics, M: MonotonicProvider> TimeSourceManager<T, D
                 }
                 TimeSourceEvent::Sample(sample) => match self.validate_sample(&sample) {
                     Ok(arrival) => {
+                        // The current API leaves the potential for a race condition between a
+                        // source declaring itself OK and sending the first sample. Since the
+                        // non-OK states describe reasons a time source is incapable of sending
+                        // samples, we mark a source as OK if we receive a valid sample from any
+                        // other state.
+                        if self.last_status != Some(Status::Ok) {
+                            info!("{:?} setting state to OK on receipt of valid sample", self.role);
+                            self.diagnostics.record(Event::TimeSourceStatus {
+                                role: self.role,
+                                status: Status::Ok,
+                            });
+                            self.last_status = Some(Status::Ok);
+                        }
                         self.last_accepted_sample_arrival = Some(arrival);
                         return Ok(sample);
                     }
@@ -224,9 +240,7 @@ impl<T: TimeSource, D: Diagnostics, M: MonotonicProvider> TimeSourceManager<T, D
             _ => zx::Time::INFINITE_PAST,
         };
 
-        if self.last_status != Some(Status::Ok) {
-            Err(SampleValidationError::StatusNotOk)
-        } else if sample.utc < self.backstop {
+        if sample.utc < self.backstop {
             Err(SampleValidationError::BeforeBackstop)
         } else if sample.monotonic > current_monotonic {
             Err(SampleValidationError::MonotonicInFuture)
@@ -367,25 +381,26 @@ mod test {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn invalid_status() {
+    async fn sample_implies_ok() {
         let time_source = FakeTimeSource::events(vec![
-            // Should be ignored since time source is not yet OK.
+            // Should be accepted even though time source is not currently OK.
             TimeSourceEvent::from(create_sample(BACKSTOP_FACTOR + 1, 1)),
-            TimeSourceEvent::StatusChange { status: Status::Network },
-            // Should be ignored since time source is not yet OK.
-            TimeSourceEvent::from(create_sample(BACKSTOP_FACTOR + 2, 2)),
+            // Should not be recorded since we moved the source to OK on receiving the sample.
             TimeSourceEvent::StatusChange { status: Status::Ok },
-            TimeSourceEvent::from(create_sample(BACKSTOP_FACTOR + 3, 3)),
+            TimeSourceEvent::StatusChange { status: Status::Network },
+            // Should be accepted even though time source is not curently OK.
+            TimeSourceEvent::from(create_sample(BACKSTOP_FACTOR + 2, 2)),
         ]);
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let mut manager = create_manager(time_source, Arc::clone(&diagnostics));
 
-        assert_eq!(manager.next_sample().await, create_sample(BACKSTOP_FACTOR + 3, 3));
+        assert_eq!(manager.next_sample().await, create_sample(BACKSTOP_FACTOR + 1, 1));
+        assert_eq!(manager.next_sample().await, create_sample(BACKSTOP_FACTOR + 2, 2));
+        assert_eq!(manager.last_status, Some(Status::Ok));
 
         diagnostics.assert_events(&[
-            Event::SampleRejected { role: TEST_ROLE, error: SVE::StatusNotOk },
+            Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Network },
-            Event::SampleRejected { role: TEST_ROLE, error: SVE::StatusNotOk },
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
         ]);
     }
@@ -401,9 +416,8 @@ mod test {
                 Ok(TimeSourceEvent::from(create_sample(BACKSTOP_FACTOR + 2, 2))),
             ],
             vec![
-                // Should be ignored since time source is not yet OK.
-                Ok(TimeSourceEvent::from(create_sample(BACKSTOP_FACTOR + 3, 2))),
                 Ok(TimeSourceEvent::StatusChange { status: Status::Ok }),
+                Ok(TimeSourceEvent::from(create_sample(BACKSTOP_FACTOR + 3, 2))),
                 Ok(TimeSourceEvent::from(create_sample(BACKSTOP_FACTOR + 4, 3))),
             ],
         ]);
@@ -411,12 +425,12 @@ mod test {
         let mut manager = create_manager_delays_disabled(time_source, Arc::clone(&diagnostics));
 
         assert_eq!(manager.next_sample().await, create_sample(BACKSTOP_FACTOR + 1, 1));
+        assert_eq!(manager.next_sample().await, create_sample(BACKSTOP_FACTOR + 3, 2));
         assert_eq!(manager.next_sample().await, create_sample(BACKSTOP_FACTOR + 4, 3));
 
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
             Event::TimeSourceFailed { role: TEST_ROLE, error: TSE::CallFailed },
-            Event::SampleRejected { role: TEST_ROLE, error: SVE::StatusNotOk },
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
         ]);
     }

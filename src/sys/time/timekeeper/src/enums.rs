@@ -106,7 +106,6 @@ pub enum StartClockSource {
 /// The reasons a received time sample may not be valid.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SampleValidationError {
-    StatusNotOk,
     MonotonicInFuture,
     MonotonicTooOld,
     BeforeBackstop,
