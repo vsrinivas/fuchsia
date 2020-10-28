@@ -121,11 +121,11 @@ func (n *neighborImpl) RemoveEntry(ctx fidl.Context, interfaceID uint64, neighbo
 	return result, &zx.Error{Status: zx.ErrNotSupported}
 }
 
-func (n *neighborImpl) ClearEntries(ctx fidl.Context, interfaceID uint64) (neighbor.ControllerClearEntriesResult, error) {
-	// TODO(fxbug.dev/51779): Implement fuchsia.net.neighbor/Controller.ClearEntries
-	resp := neighbor.ControllerClearEntriesResponse{}
-	result := neighbor.ControllerClearEntriesResultWithResponse(resp)
-	return result, &zx.Error{Status: zx.ErrNotSupported}
+func (n *neighborImpl) ClearEntries(_ fidl.Context, interfaceID uint64) (neighbor.ControllerClearEntriesResult, error) {
+	if err := n.stack.ClearNeighbors(tcpip.NICID(interfaceID)); err != nil {
+		return neighbor.ControllerClearEntriesResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
+	}
+	return neighbor.ControllerClearEntriesResultWithResponse(neighbor.ControllerClearEntriesResponse{}), nil
 }
 
 func (n *neighborImpl) UpdateUnreachabilityConfig(ctx fidl.Context, interfaceID uint64, config neighbor.UnreachabilityConfig) (neighbor.ControllerUpdateUnreachabilityConfigResult, error) {

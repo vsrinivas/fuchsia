@@ -11,6 +11,7 @@ rustc_test("neighbor") {
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
     "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor-rustc",
     "//src/connectivity/lib/net-declare",
+    "//src/connectivity/lib/net-types",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",
     "//src/lib/async-utils",
@@ -18,6 +19,9 @@ rustc_test("neighbor") {
     "//src/lib/fuchsia-async",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
+    "//src/lib/network/packet",
+    "//src/lib/network/packet-formats",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
