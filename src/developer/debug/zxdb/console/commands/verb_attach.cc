@@ -104,6 +104,13 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
 
   uint64_t koid = 0;
   if (ReadUint64Arg(cmd, 0, "process koid", &koid).ok()) {
+    // Check for duplicate koids before doing anything else to avoid creating a container target
+    // in this case. It's easy to hit enter twice which will cause a duplicate attach. The
+    // duplicate target is the only reason to check here, the attach will fail later if there's
+    // a duplicate (say, created in a race condition).
+    if (context->session()->system().ProcessFromKoid(koid))
+      return Err("Process " + std::to_string(koid) + " is already being debugged.");
+
     // Attach to a process by KOID.
     auto err_or_target = GetRunnableTarget(context, cmd);
     if (err_or_target.has_error())

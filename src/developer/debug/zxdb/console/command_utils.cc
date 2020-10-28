@@ -654,9 +654,6 @@ void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on
 
     OutputBuffer out;
     if (err.has_error()) {
-      if (target) {
-        out.Append(fxl::StringPrintf("Process %d ", console->context().IdForTarget(target.get())));
-      }
       out.Append(err);
     } else if (target) {
       out.Append(FormatTarget(&console->context(), target.get()));

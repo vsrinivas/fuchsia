@@ -33,10 +33,11 @@ TEST_F(VerbAttach, Bad) {
 
 TEST_F(VerbAttach, Koid) {
   constexpr uint64_t kKoid = 7890u;
-  console().ProcessInputLine("attach 7890");
+  const char kCommand[] = "attach 7890";
+  console().ProcessInputLine(kCommand);
 
   // This should create a new process context and give "process 2" because the default console test
-  // harness makes a mock runnin process by default.
+  // harness makes a mock running process #1 by default.
   ASSERT_TRUE(attach_remote_api()->last_attach);
   ASSERT_EQ(kKoid, attach_remote_api()->last_attach->request.koid);
   debug_ipc::AttachReply reply;
@@ -50,6 +51,12 @@ TEST_F(VerbAttach, Koid) {
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ("Attached Process 2 state=Running koid=7890 name=\"some process\"",
             event.output.AsString());
+
+  // Attaching to the same process again should give an error.
+  console().ProcessInputLine(kCommand);
+  event = console().GetOutputEvent();
+  EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ("Process 7890 is already being debugged.", event.output.AsString());
 }
 
 TEST_F(VerbAttach, Filter) {

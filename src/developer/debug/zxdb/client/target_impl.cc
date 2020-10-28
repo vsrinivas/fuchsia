@@ -255,11 +255,17 @@ void TargetImpl::HandleAttachStatus(Callback callback, uint64_t koid, debug_ipc:
   if (status == debug_ipc::kZxErrIO) {
     err = Err("Error launching: Binary not found [%s]", debug_ipc::ZxStatusToString(status));
   } else if (status == debug_ipc::kZxErrAlreadyBound) {
-    // Already bound means that the user is trying to re-attach, so we need to ask for the "status"
-    // for that particular process.
-    //
-    // We avoid sending the initial attach request as in most cases the agent won't be connected to
-    // the process we want to attach to, so it's not really efficient to pre-track this case.
+    // Already bound can mean two things. In the first case, it could be a mistake where the user
+    // is trying to attach to the same process twice.
+    if (system_->ProcessFromKoid(koid)) {
+      callback(GetWeakPtr(),
+               Err("Process " + std::to_string(koid) + " is already being debugged."));
+      return;
+    }
+
+    // The other case for "already bound" is that the agent is attached to that process already
+    // but the debugger doesn't know about it. This can happen when connecting to an already-running
+    // debug agent. In this case, get the status to sync with the agent.
     debug_ipc::ProcessStatusRequest request = {};
     request.process_koid = koid;
 

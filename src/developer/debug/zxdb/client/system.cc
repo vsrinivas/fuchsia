@@ -897,6 +897,17 @@ void System::OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids
 }
 
 void System::AttachToProcess(uint64_t pid, Target::Callback callback) {
+  // Don't allow attaching to a process more than once.
+  if (Process* process = ProcessFromKoid(pid)) {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [callback = std::move(callback),
+                    weak_target = process->GetTarget()->GetWeakPtr(), pid]() mutable {
+          callback(weak_target,
+                   Err("Process " + std::to_string(pid) + " is already being debugged."));
+        });
+    return;
+  }
+
   // See if there is a target that is not attached.
   Target* open_slot = nullptr;
   for (auto& target : targets_) {
