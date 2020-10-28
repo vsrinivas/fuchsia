@@ -131,7 +131,7 @@ class VmoStore : public VmoStoreBase<Backing> {
       : VmoStoreBase<Backing>(std::forward<StoreArgs>(store_args)...),
         options_(std::move(options)){
 
-        };
+        }
 
   // Registers a VMO with this store, returning the key used to access that VMO on success.
   template <typename... MetaArgs>
