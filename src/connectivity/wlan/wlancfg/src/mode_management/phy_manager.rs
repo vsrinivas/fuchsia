@@ -340,21 +340,16 @@ impl PhyManagerApi for PhyManager {
     }
 
     async fn destroy_ap_iface(&mut self, iface_id: u16) -> Result<(), PhyManagerError> {
-        let iface_info = match self.query_iface(iface_id).await? {
-            Some(iface_info) => iface_info,
-            None => return Err(PhyManagerError::IfaceQueryFailure),
-        };
-        let phy_container = match self.phys.get_mut(&iface_info.phy_id) {
-            Some(phy_container) => phy_container,
-            None => return Err(PhyManagerError::IfaceQueryFailure),
-        };
-
-        if phy_container.ap_ifaces.remove(&iface_id) {
-            match destroy_iface(&self.device_service, iface_id).await {
-                Ok(()) => {}
-                Err(e) => {
-                    phy_container.ap_ifaces.insert(iface_id);
-                    return Err(e);
+        // If the interface has already been destroyed, return Ok.  Only error out in the case that
+        // the request to destroy the interface results in a failure.
+        for (_, phy_container) in self.phys.iter_mut() {
+            if phy_container.ap_ifaces.remove(&iface_id) {
+                match destroy_iface(&self.device_service, iface_id).await {
+                    Ok(()) => {}
+                    Err(e) => {
+                        phy_container.ap_ifaces.insert(iface_id);
+                        return Err(e);
+                    }
                 }
             }
         }
@@ -1341,18 +1336,6 @@ mod tests {
             let destroy_ap_iface_future = phy_manager.destroy_ap_iface(fake_iface_id);
             pin_mut!(destroy_ap_iface_future);
             assert!(exec.run_until_stalled(&mut destroy_ap_iface_future).is_pending());
-
-            // Send back a query interface respone
-            let mut iface_response =
-                create_iface_response(MacRole::Ap, 1, 1, 1, [0, 1, 2, 3, 4, 5]);
-            assert!(exec.run_until_stalled(&mut destroy_ap_iface_future).is_pending());
-            send_query_iface_response(
-                &mut exec,
-                &mut test_values.stream,
-                Some(&mut iface_response),
-            );
-
-            assert!(exec.run_until_stalled(&mut destroy_ap_iface_future).is_pending());
             send_destroy_iface_response(&mut exec, &mut test_values.stream, ZX_OK);
 
             assert!(exec.run_until_stalled(&mut destroy_ap_iface_future).is_ready());
@@ -1369,7 +1352,7 @@ mod tests {
     #[test]
     fn stop_invalid_ap_iface() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
+        let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
@@ -1391,11 +1374,10 @@ mod tests {
             // Remove a non-existent AP iface ID
             let destroy_ap_iface_future = phy_manager.destroy_ap_iface(2);
             pin_mut!(destroy_ap_iface_future);
-            assert!(exec.run_until_stalled(&mut destroy_ap_iface_future).is_pending());
-
-            // Send back an empty response
-            send_query_iface_response(&mut exec, &mut test_values.stream, None);
-            assert!(exec.run_until_stalled(&mut destroy_ap_iface_future).is_ready());
+            assert_variant!(
+                exec.run_until_stalled(&mut destroy_ap_iface_future),
+                Poll::Ready(Ok(()))
+            );
         }
 
         assert!(phy_manager.phys.contains_key(&fake_phy_id));
