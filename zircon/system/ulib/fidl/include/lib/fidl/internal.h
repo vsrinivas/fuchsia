@@ -23,16 +23,12 @@
 #include <type_traits>
 #endif  // __cplusplus
 
-#ifdef __Fuchsia__
-#ifdef __cplusplus
-zx_status_t FidlHandleCloseMany(const zx_handle_t* handles, size_t num_handles);
-zx_status_t FidlHandleCloseMany(const zx_handle_disposition_t* handle_dispositions,
-                                size_t num_handles);
-zx_status_t FidlHandleCloseMany(const zx_handle_info_t* handle_infos, size_t num_handles);
-#endif  // __cplusplus
-#endif  // __Fuchsia__
-
 __BEGIN_CDECLS
+
+zx_status_t FidlHandleCloseMany(const zx_handle_t* handles, size_t num_handles);
+zx_status_t FidlHandleDispositionCloseMany(const zx_handle_disposition_t* handle_dispositions,
+                                           size_t num_handles);
+zx_status_t FidlHandleInfoCloseMany(const zx_handle_info_t* handle_infos, size_t num_handles);
 
 // All sizes here are given as uint32_t. Fidl message sizes are bounded to well below UINT32_MAX.
 // This also applies to arrays and vectors. For arrays, element_count * element_size will always fit

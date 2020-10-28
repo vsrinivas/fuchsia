@@ -438,30 +438,24 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     return ZX_ERR_INVALID_ARGS;
   }
 
-#ifdef __Fuchsia__
   if (unlikely(decoder.unknown_handle_idx() > 0)) {
-    (void)zx_handle_close_many(decoder.unknown_handles(), decoder.unknown_handle_idx());
+    (void)FidlHandleCloseMany(decoder.unknown_handles(), decoder.unknown_handle_idx());
   }
-#endif
   return ZX_OK;
 }
 
 void close_handles_op(const zx_handle_t* handles, uint32_t max_idx) {
-#ifdef __Fuchsia__
   if (handles) {
     // Return value intentionally ignored. This is best-effort cleanup.
     FidlHandleCloseMany(handles, max_idx);
   }
-#endif
 }
 
 void close_handle_infos_op(const zx_handle_info_t* handle_infos, uint32_t max_idx) {
-#ifdef __Fuchsia__
   if (handle_infos) {
     // Return value intentionally ignored. This is best-effort cleanup.
-    FidlHandleCloseMany(handle_infos, max_idx);
+    FidlHandleInfoCloseMany(handle_infos, max_idx);
   }
-#endif
 }
 
 }  // namespace
