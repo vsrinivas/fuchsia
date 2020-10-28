@@ -5,7 +5,7 @@
 #### CATEGORY=Code submission and review
 #### EXECUTABLE=${FUCHSIA_DIR}/tools/devshell/contrib/gerrit-submit-lib/submit.py
 ### Submits chains of CLs to Gerrit
-## usage: submit.py [-h] [--host HOST] [--num-retries N] CL
+## usage: submit.py [-h] [--host HOST] [--num-retries N] [-n] [-t] [--ignore-comments] CL
 ##
 ## Submit a chain of CLs, specified by giving the CL number of the end of the
 ## chain. The command will poll indefinitely until the chain is submitted or an
@@ -42,13 +42,18 @@
 ##
 ##    fx gerrit-submit --host myteam-review.googlesource.com 12345
 ##
-##
 ## positional arguments:
-##   CL               Gerrit CL to submit. May either be a CL number or Gerrit Change-ID.
+##   CL                 Gerrit CL to submit. May either be a CL number or Gerrit
+##                      Change-ID.
 ##
 ## optional arguments:
-##   -h, --help       show this help message and exit
-##   --host HOST      Gerrit host to connect to.
-##                    Defaults to "fuchsia-review.googlesource.com".
-##   --num-retries N  number of times to retry a failed submission.
-##                    Defaults to 0.
+##   -h, --help         show this help message and exit
+##   --host HOST        Gerrit host to connect to.
+##                      Defaults to "fuchsia-review.googlesource.com".
+##   --num-retries N    number of times to retry a failed submission.
+##                      Defaults to 0.
+##   -n, --dry-run      If specified, show the set of CLs that would be
+##                      submitted, but dont actually submit.
+##   -t, --batch        If specified, dont prompt before starting submit.
+##   --ignore-comments  If specified, allow submission of CLs that still have
+##                      unresolved comments on them.

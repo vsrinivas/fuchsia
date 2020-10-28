@@ -179,8 +179,12 @@ class GerritServer:
     return dependencies
 
 
-def should_submit(cl: Change) -> bool:
-  return cl.submittable() and not cl.has_unresolved_comments()
+def should_submit(cl: Change, abort_on_unresolved_comments: bool = True) -> bool:
+  if not cl.submittable():
+    return False
+  if abort_on_unresolved_comments and cl.has_unresolved_comments():
+    return False
+  return True
 
 
 def shorten(s: str, max_len: int = 60) -> str:
@@ -208,10 +212,13 @@ class SubmitError(Exception):
     super().__init__(message)
 
 
-def ensure_changes_submittable(changes: List[Change]) -> None:
+def ensure_changes_submittable(
+    changes: List[Change],
+    abort_on_unresolved_comments: bool = True,
+) -> None:
   """Ensure that the given list of changes are submittable."""
   for cl in changes:
-    if cl.status != ChangeStatus.MERGED and not should_submit(cl):
+    if cl.status != ChangeStatus.MERGED and not should_submit(cl, abort_on_unresolved_comments):
       raise SubmitError("CL %d can not be submitted: %s" % (
           cl.id, cl.status.submit_error_description() or "unknown error"))
 
@@ -332,6 +339,9 @@ instances. Other instances can be specified using the "--host" parameter:
   parser.add_argument('-t', '--batch', action='store_true',
                       help='If specified, don''t prompt before starting '
                            'submit.')
+  parser.add_argument('--ignore-comments', action='store_true',
+                      help='If specified, allow submission of CLs that still '
+                           'have unresolved comments on them.')
   return parser.parse_args()
 
 
@@ -402,7 +412,7 @@ def main() -> int:
   print_changes(changes)
 
   # Ensure we can submit the chain.
-  ensure_changes_submittable(changes)
+  ensure_changes_submittable(changes, abort_on_unresolved_comments=not args.ignore_comments)
 
   # Submit the changes.
   if not args.dry_run:

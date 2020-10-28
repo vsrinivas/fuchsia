@@ -207,6 +207,30 @@ class TestSubmit(unittest.TestCase):
       mock.call('17', 2),
     ])
 
+  def test_ensure_changes_submittable(self) -> None:
+    needs_votes_cl = submit.Change(
+        'abc', {'status': 'NEW', 'submittable': False})
+    unresolved_cl = submit.Change(
+        'abc', {'status': 'NEW', 'submittable': True, 'unresolved_comment_count': 2})
+    ready_cl = submit.Change(
+        'abc', {'status': 'NEW', 'submittable': True})
+
+    # These should work without exception.
+    submit.ensure_changes_submittable([])
+    submit.ensure_changes_submittable([ready_cl])
+    submit.ensure_changes_submittable([ready_cl, ready_cl])
+    submit.ensure_changes_submittable([unresolved_cl], abort_on_unresolved_comments=False)
+
+    # Expect these to abort.
+    self.assertRaises(submit.SubmitError,
+                      lambda: submit.ensure_changes_submittable([needs_votes_cl]))
+    self.assertRaises(submit.SubmitError,
+                      lambda: submit.ensure_changes_submittable([ready_cl, needs_votes_cl]))
+    self.assertRaises(submit.SubmitError,
+                      lambda: submit.ensure_changes_submittable([needs_votes_cl, ready_cl]))
+    self.assertRaises(submit.SubmitError,
+                      lambda: submit.ensure_changes_submittable([unresolved_cl]))
+
 
   def test_submit_cl_error_description(self) -> None:
     c = submit.Change('abc', {'status': 'NEW', 'submittable': True, 'unresolved_comment_count': 2})
