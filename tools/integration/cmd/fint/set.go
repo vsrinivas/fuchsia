@@ -23,6 +23,10 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 )
 
+const (
+	fuchsiaDirEnvVar = "FUCHSIA_DIR"
+)
+
 type subprocessRunner interface {
 	Run(ctx context.Context, cmd []string, stdout, stderr io.Writer) error
 }
@@ -37,21 +41,27 @@ func (*SetCommand) Name() string { return "set" }
 func (*SetCommand) Synopsis() string { return "runs gn gen with args based on the input specs." }
 
 func (*SetCommand) Usage() string {
-	return `
-fint set -context <path> -static <path>
+	return `fint set -static <path> [-context <path>]
 
 flags:
 `
 }
 
 func (c *SetCommand) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.staticSpecPath, "static", "", "path to a Static .textproto")
-	f.StringVar(&c.contextSpecPath, "context", "", "path to a Context .textproto")
+	f.StringVar(&c.staticSpecPath, "static", "", "path to a Static .textproto file.")
+	f.StringVar(
+		&c.contextSpecPath,
+		"context",
+		"",
+		("path to a Context .textproto file. If unset, the " +
+			fuchsiaDirEnvVar +
+			" will be used to locate the checkout."),
+	)
 }
 
 func (c *SetCommand) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.staticSpecPath == "" || c.contextSpecPath == "" {
-		logger.Errorf(ctx, "-static and -context flags are required")
+	if c.staticSpecPath == "" {
+		logger.Errorf(ctx, "-static flag is required")
 		return subcommands.ExitUsageError
 	}
 	if err := c.run(ctx); err != nil {
@@ -62,9 +72,6 @@ func (c *SetCommand) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interfac
 }
 
 func (c *SetCommand) run(ctx context.Context) error {
-	logger.Debugf(ctx, "static spec path: %s", c.staticSpecPath)
-	logger.Debugf(ctx, "context spec path: %s", c.contextSpecPath)
-
 	bytes, err := ioutil.ReadFile(c.staticSpecPath)
 	if err != nil {
 		return err
@@ -75,14 +82,25 @@ func (c *SetCommand) run(ctx context.Context) error {
 		return err
 	}
 
-	bytes, err = ioutil.ReadFile(c.contextSpecPath)
-	if err != nil {
-		return err
-	}
+	var contextSpec *fintpb.Context
+	if c.contextSpecPath != "" {
+		bytes, err = ioutil.ReadFile(c.contextSpecPath)
+		if err != nil {
+			return err
+		}
 
-	contextSpec, err := parseContext(string(bytes))
-	if err != nil {
-		return err
+		contextSpec, err = parseContext(string(bytes))
+		if err != nil {
+			return err
+		}
+	} else {
+		// The -context flag should always be set in production, but fall back
+		// to looking up the `fuchsiaDirEnvVar` to determine the checkout and
+		// build directories to make fint less cumbersome to run manually.
+		contextSpec, err = defaultContextSpec()
+		if err != nil {
+			return err
+		}
 	}
 
 	platform, err := getPlatform()
@@ -97,6 +115,17 @@ func (c *SetCommand) run(ctx context.Context) error {
 
 	runner := &runner.SubprocessRunner{}
 	return runGen(ctx, runner, contextSpec, platform, genArgs)
+}
+
+func defaultContextSpec() (*fintpb.Context, error) {
+	checkoutDir, found := os.LookupEnv(fuchsiaDirEnvVar)
+	if !found {
+		return nil, fmt.Errorf("$%s must be set if -context is not set", fuchsiaDirEnvVar)
+	}
+	return &fintpb.Context{
+		CheckoutDir: checkoutDir,
+		BuildDir:    filepath.Join(checkoutDir, "out", "default"),
+	}, nil
 }
 
 func runGen(ctx context.Context, runner subprocessRunner, contextSpec *fintpb.Context, platform string, args []string) error {
