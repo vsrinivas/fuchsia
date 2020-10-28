@@ -215,6 +215,7 @@ if [[ "${ACTION}" == "start" ]]; then
       --host_port_map="${PORT_MAP}" \
       --output_launched_device_proto="${VDL_PROTO}" \
       --ga=true \
-      --emu_log="/tmp/emulator_log.log"
+      --emu_log="/tmp/emulator_log.log" \
+      --audio=true
 fi
 

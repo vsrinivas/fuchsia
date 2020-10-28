@@ -51,7 +51,7 @@ TEST_fx_vdl_default() {
     "--tuntap=false" \
     _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ \
     "--ga=true" \
-    _ANY_
+    _ANY_ _ANY_
 }
 
 TEST_fx_vdl_tuntap() {
@@ -66,7 +66,7 @@ TEST_fx_vdl_tuntap() {
   "--tuntap=true" \
   _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ \
   "--ga=true" \
-  _ANY_
+  _ANY_ _ANY_
 }
 
 TEST_fx_vdl_headless_tuntap() {
@@ -81,7 +81,7 @@ TEST_fx_vdl_headless_tuntap() {
   "--tuntap=true" \
   _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ \
   "--ga=true" \
-  _ANY_
+  _ANY_ _ANY_
 }
 
 TEST_fx_vdl_tuntap_script() {
@@ -97,7 +97,7 @@ TEST_fx_vdl_tuntap_script() {
   "--upscript=./script" \
   _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ \
   "--ga=true" \
-  _ANY_
+  _ANY_ _ANY_
 }
 
 BT_RUN_TESTS "$@"
