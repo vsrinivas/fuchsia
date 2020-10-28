@@ -55,11 +55,11 @@ contains a file for every infra builder that runs tests using the
 [`fuchsia/fuchsia` recipe](https://fuchsia.googlesource.com/infra/recipes/+/fbb7310f9df6c98428010fd0b36110fdfe4b9bfa/recipes/fuchsia/fuchsia.py).
 These files are updated periodically with recent duration data for each test.
 
-When the infrastructure does a build, it dynamically looks up the name of the
-current builder and passes the corresponding test duration file into the
-build via the `test_durations_file` GN argument. The file is then renamed to
-`test_durations.json` and copied into the output directory by the
-`test_durations` target from the root `//BUILD.gn`.
+Each builder takes the path to its corresponding test duration file as an
+argument and passes that path into the build via the `test_durations_file` GN
+argument. The file is then renamed to `test_durations.json` and copied into
+the output directory by the `test_durations` target from the root
+`//BUILD.gn`.
 
 testsharder then reads `test_durations.json` from the build output directory
 and uses the duration data to divide tests into shards of approximately equal
@@ -91,4 +91,16 @@ Updates to the duration files may also affect testsharder's output, so
 duration file updates go through CQ before landing to ensure that they don't
 cause any ordering-related test breakages.
 
-<!-- TODO(olivernewman) document multipliers -->
+### Test modifiers
+
+Testsharder has an optional `-modifiers` flag that allows customization of
+test retry strategies and sharding, such as the
+[`MULTIPLY` feature](https://fuchsia.dev/fuchsia-src/concepts/testing/testability_rubric#recommended_test_for_flakiness_if_supported)
+and separate sharding of affected tests in CQ.
+
+`-modifiers` should point to a JSON file containing a list of objects
+conforming to the `TestModifier` schema (see `test_modifer.go`). Each
+`TestModifier` applies to a single test or a subset of tests (in order to
+support fuzzy matching for `MULTIPLY`) and determines how many times the test
+should run, and whether the test must pass on *every* run to be considered
+successful, or whether it need only pass once.
