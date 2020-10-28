@@ -132,7 +132,7 @@ class VmObject : public VmHierarchyBase,
   // public API
   virtual zx_status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }
 
-  virtual uint64_t size() const { return 0; }
+  virtual uint64_t size() const TA_EXCL(lock_) { return 0; }
   virtual uint32_t create_options() const { return 0; }
 
   // Returns true if the object is backed by RAM.

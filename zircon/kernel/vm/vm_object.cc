@@ -359,10 +359,6 @@ zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
 
   Guard<Mutex> guard{&lock_};
 
-  if (unlikely(!InRange(start_offset, len, size()))) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
   const size_t end_offset = static_cast<size_t>(start_offset + len);
   size_t op_start_offset = static_cast<size_t>(start_offset);
 
@@ -413,6 +409,8 @@ zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
           arch_sync_cache_range(cache_op_addr, cache_op_len);
           break;
       }
+    } else if (status == ZX_ERR_OUT_OF_RANGE) {
+      return status;
     }
 
     op_start_offset += cache_op_len;

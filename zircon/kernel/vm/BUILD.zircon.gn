@@ -26,6 +26,7 @@ zx_library("vm") {
     "vm_address_region.cc",
     "vm_address_region_or_mapping.cc",
     "vm_aspace.cc",
+    "vm_cow_pages.cc",
     "vm_mapping.cc",
     "vm_object.cc",
     "vm_object_paged.cc",
