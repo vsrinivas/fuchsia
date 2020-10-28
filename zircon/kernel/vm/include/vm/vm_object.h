@@ -84,6 +84,10 @@ class VmHierarchyBase : public fbl::RefCountedUpgradeable<VmHierarchyBase> {
   // Pointer to state shared across all objects in a hierarchy.
   fbl::RefPtr<VmHierarchyState> const hierarchy_state_ptr_;
 
+  // Convenience helpers that forward operations to the referenced hierarchy state.
+  void IncrementHierarchyGenerationCountLocked() TA_REQ(lock_);
+  uint64_t GetHierarchyGenerationCountLocked() const TA_REQ(lock_);
+
  private:
   using DeferredDeleteState = fbl::SinglyLinkedListNodeState<fbl::RefPtr<VmHierarchyBase>>;
   struct DeferredDeleteTraits {
@@ -112,12 +116,42 @@ class VmHierarchyState : public fbl::RefCounted<VmHierarchyState> {
   // vmo parent_ refs.
   void DoDeferredDelete(fbl::RefPtr<VmHierarchyBase> vmo) TA_EXCL(lock_);
 
+  // This should be called whenever a change is made to the VMO tree or the VMO's page list, that
+  // could result in page attribution counts to change for any VMO in this tree.
+  void IncrementHierarchyGenerationCountLocked() TA_REQ(lock_) {
+    DEBUG_ASSERT(hierarchy_generation_count_ != 0);
+    hierarchy_generation_count_++;
+  }
+
+  // Get the current generation count.
+  uint64_t GetHierarchyGenerationCountLocked() const TA_REQ(lock_) {
+    DEBUG_ASSERT(hierarchy_generation_count_ != 0);
+    return hierarchy_generation_count_;
+  }
+
  private:
   DECLARE_MUTEX(VmHierarchyState) lock_;
   bool running_delete_ TA_GUARDED(lock_) = false;
   fbl::SinglyLinkedListCustomTraits<fbl::RefPtr<VmHierarchyBase>,
                                     VmHierarchyBase::DeferredDeleteTraits>
       delete_list_ TA_GUARDED(lock_);
+
+  // Each VMO hierarchy has a generation count, which is incremented on any change to the hierarchy
+  // - either in the VMO tree, or the page lists of VMO's.
+  //
+  // The generation count is used to implement caching for page attribution counts, which get
+  // queried frequently to periodically track memory usage on the system. Attributing pages to a
+  // VMO is an expensive operation and involves walking the VMO tree, quite often multiple times.
+  // If the generation count does not change between two successive queries, we can avoid
+  // re-counting attributed pages, and simply return the previously cached value.
+  //
+  // The generation count starts at 1 to ensure that there can be no cached values initially, and is
+  // used to implement caching for page attribution counts, which get queried frequently to
+  // periodically track memory usage on the system. Attributing pages to a VMO is an expensive
+  // operation and involves walking the VMO tree, quite often multiple times. If the generation
+  // count does not change between two successive queries, we can avoid re-counting attributed
+  // pages, and simply return the previously cached value.
+  uint64_t hierarchy_generation_count_ TA_GUARDED(lock_) = 1;
 };
 
 // The base vm object that holds a range of bytes of data

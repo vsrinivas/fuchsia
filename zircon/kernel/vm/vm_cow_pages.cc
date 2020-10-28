@@ -248,10 +248,7 @@ bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
     pmm_free_page(page);
     *page_or_marker = VmPageOrMarker::Marker();
     eviction_event_count_++;
-    if (paged_ref_) {
-      AssertHeld(paged_ref_->lock_ref());
-      paged_ref_->IncrementHierarchyGenerationCountLocked();
-    }
+    IncrementHierarchyGenerationCountLocked();
     return true;
   }
   return false;
@@ -1534,11 +1531,7 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
   }
 
   // If we made it here, we committed a new page in this VMO.
-  // TODO: have a better page lookup API between VmObjectPaged and VmCowPages to relocate this
-  // logic.
-  DEBUG_ASSERT(paged_ref_);
-  AssertHeld(paged_ref_->lock_ref());
-  paged_ref_->IncrementHierarchyGenerationCountLocked();
+  IncrementHierarchyGenerationCountLocked();
 
   return ZX_OK;
 }
@@ -2778,10 +2771,7 @@ bool VmCowPages::EvictPage(vm_page_t* page, uint64_t offset) {
   pmm_page_queues()->Remove(page);
 
   eviction_event_count_++;
-  DEBUG_ASSERT(paged_ref_);
-  AssertHeld(paged_ref_->lock_ref());
-  paged_ref_->IncrementHierarchyGenerationCountLocked();
-
+  IncrementHierarchyGenerationCountLocked();
   // |page| is now owned by the caller.
   return true;
 }

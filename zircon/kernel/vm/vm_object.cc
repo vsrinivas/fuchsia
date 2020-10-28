@@ -467,6 +467,16 @@ void VmObject::VmoCursor::AdvanceIf(const VmObject* h) {
 VmHierarchyBase::VmHierarchyBase(fbl::RefPtr<VmHierarchyState> state)
     : lock_(state->lock_ref()), hierarchy_state_ptr_(ktl::move(state)) {}
 
+void VmHierarchyBase::IncrementHierarchyGenerationCountLocked() {
+  AssertHeld(hierarchy_state_ptr_->lock_ref());
+  hierarchy_state_ptr_->IncrementHierarchyGenerationCountLocked();
+}
+
+uint64_t VmHierarchyBase::GetHierarchyGenerationCountLocked() const {
+  AssertHeld(hierarchy_state_ptr_->lock_ref());
+  return hierarchy_state_ptr_->GetHierarchyGenerationCountLocked();
+}
+
 void VmHierarchyState::DoDeferredDelete(fbl::RefPtr<VmHierarchyBase> vmo) {
   Guard<Mutex> guard{&lock_};
   // If a parent has multiple children then it's possible for a given object to already be

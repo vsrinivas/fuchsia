@@ -185,7 +185,7 @@ class VmObjectPaged final : public VmObject {
   // Used to cache the page attribution count for this VMO. Also tracks the hierarchy generation
   // count at the time of caching the attributed page count.
   struct CachedPageAttribution {
-    uint32_t generation_count = kGenerationCountUnset;
+    uint64_t generation_count = 0;
     size_t page_count = 0;
   };
 
@@ -196,7 +196,7 @@ class VmObjectPaged final : public VmObject {
   }
 
   // Exposed for testing.
-  uint32_t GetHierarchyGenerationCount() const {
+  uint64_t GetHierarchyGenerationCount() const {
     Guard<Mutex> guard{&lock_};
     return GetHierarchyGenerationCountLocked();
   }
@@ -207,13 +207,6 @@ class VmObjectPaged final : public VmObject {
   using RangeChangeOp = VmCowPages::RangeChangeOp;
   // Apply the specified operation to all mappings in the given range.
   void RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) TA_REQ(lock_);
-
-  // Increment the generation count of the VMO hierarchy this VMO is a part of. Walks up the VMO
-  // tree to the root.
-  //
-  // This should be called whenever a change is made to the VMO tree or the VMO's page list, that
-  // could result in page attribution counts to change for any VMO in this tree.
-  void IncrementHierarchyGenerationCountLocked() TA_REQ(lock_);
 
  private:
   // private constructor (use Create())
@@ -242,10 +235,6 @@ class VmObjectPaged final : public VmObject {
 
   // Internal decommit range helper that expects the lock to be held.
   zx_status_t DecommitRangeLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
-
-  // Get the current generation count of the VMO hierarchy this VMO is a part of. Walks up the VMO
-  // tree to the root.
-  uint32_t GetHierarchyGenerationCountLocked() const TA_REQ(lock_);
 
   // see AttributedPagesInRange
   size_t AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
@@ -282,22 +271,6 @@ class VmObjectPaged final : public VmObject {
   // Record the user_id_ of the original parent, in case we make
   // a bidirectional clone and end up changing parent_.
   uint64_t original_parent_user_id_ TA_GUARDED(lock_) = 0;
-
-  static constexpr uint32_t kGenerationCountUnset = 0;
-  static constexpr uint32_t kGenerationCountInitial = 1;
-
-  // Each VMO hierarchy has a generation count, which is incremented on any change to the hierarchy
-  // - either in the VMO tree, or the page lists of VMO's. The root of the VMO tree owns the
-  // generation count for the hierarchy, every other VMO in the tree has its generation count set to
-  // |kGenerationCountInitial|. We move the generation count up and down the tree (to the current
-  // root) as required, as clones and hidden parents come and go.
-  //
-  // The generation count is used to implement caching for page attribution counts, which get
-  // queried frequently to periodically track memory usage on the system. Attributing pages to a
-  // VMO is an expensive operation and involves walking the VMO tree, quite often multiple times.
-  // If the generation count does not change between two successive queries, we can avoid
-  // re-counting attributed pages, and simply return the previously cached value.
-  uint32_t hierarchy_generation_count_ TA_GUARDED(lock_) = kGenerationCountInitial;
 
   // Tracks the last cached page attribution count.
   mutable CachedPageAttribution cached_page_attribution_ TA_GUARDED(lock_) = {};

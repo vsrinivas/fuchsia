@@ -410,11 +410,6 @@ void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden
     AssertHeld(parent_->lock_ref());
     hidden_parent->InitializeOriginalParentLocked(parent_, 0);
     parent_->ReplaceChildLocked(this, hidden_parent.get());
-  } else {
-    // The |hidden_parent| is the now the root of this vmo hierarchy. Move the
-    // |hierarchy_generation_count_| into the |hidden_parent|.
-    hidden_parent->hierarchy_generation_count_ = hierarchy_generation_count_;
-    hierarchy_generation_count_ = kGenerationCountInitial;
   }
   hidden_parent->AddChildLocked(this);
   parent_ = hidden_parent;
@@ -725,12 +720,6 @@ void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
   VmObjectPaged* typed_child = static_cast<VmObjectPaged*>(child);
   AssertHeld(typed_child->lock_);
 
-  // Merging of most information happened when we asked our cow_pages parallel node to remove itself
-  // as a child. The only item we are responsible for merging is the hierarchy_generation_count.
-  if (!parent_) {
-    typed_child->hierarchy_generation_count_ = hierarchy_generation_count_;
-  }
-
   // The child which removed itself and led to the invocation should have a reference
   // to us, in addition to child.parent_ which we are about to clear.
   DEBUG_ASSERT(ref_count_debug() >= 2);
@@ -798,41 +787,6 @@ void VmObjectPaged::DumpLocked(uint depth, bool verbose) const {
   cow_pages_locked()->DumpLocked(depth, verbose);
 }
 
-void VmObjectPaged::IncrementHierarchyGenerationCountLocked() {
-  auto vmo = this;
-  AssertHeld(vmo->lock_);
-  while (vmo->parent_) {
-    DEBUG_ASSERT(vmo->hierarchy_generation_count_ == kGenerationCountInitial);
-    vmo = vmo->parent_.get();
-    DEBUG_ASSERT(vmo);
-  }
-
-  if (vmo->hierarchy_generation_count_ == UINT32_MAX) {
-    // Wrap around to the initial value in case of overflow.
-    vmo->hierarchy_generation_count_ = kGenerationCountInitial;
-    // Invalidate the cached page attribution value (resetting its generation count to
-    // |kGenerationCountUnset|), thereby forcing a recompute on the next
-    // |AttributedPagesInRangeLocked()| call. This handles the corner case where the cached
-    // |generation_count| was |kGenerationCountInitial|, resulting in a false cache hit.
-    cached_page_attribution_ = {};
-  } else {
-    ++vmo->hierarchy_generation_count_;
-  }
-  DEBUG_ASSERT(vmo->hierarchy_generation_count_ != kGenerationCountUnset);
-}
-
-uint32_t VmObjectPaged::GetHierarchyGenerationCountLocked() const {
-  auto vmo = this;
-  AssertHeld(vmo->lock_);
-  while (vmo->parent_) {
-    DEBUG_ASSERT(vmo->hierarchy_generation_count_ == kGenerationCountInitial);
-    vmo = vmo->parent_.get();
-    DEBUG_ASSERT(vmo);
-  }
-  DEBUG_ASSERT(vmo->hierarchy_generation_count_ != kGenerationCountUnset);
-  return vmo->hierarchy_generation_count_;
-}
-
 size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const {
   if (is_hidden()) {
     return 0;
@@ -845,7 +799,7 @@ size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len
 
   vmo_attribution_queries_all.Add(1);
 
-  uint32_t gen_count;
+  uint64_t gen_count;
   bool update_cached_attribution = false;
   // Use cached value if generation count has not changed since the last time we attributed pages.
   // Only applicable for attribution over the entire VMO, not a partial range.
