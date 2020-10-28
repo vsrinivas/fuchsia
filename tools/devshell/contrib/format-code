@@ -10,7 +10,7 @@
 ##           [--dry-run] [--verbose] [--all]
 ##           [--files=FILES,[FILES ...]]
 ##           [--target=GN_TARGET]
-##           [--git] [-- PATTERN]
+##           [--git] [--changed-lines] [-- PATTERN]
 ##
 ##   --dry-run Stops the program short of running the formatters
 ##   --all     Formats all code in the git repo under the current working
@@ -23,6 +23,11 @@
 ##             commit in the upstream branch (or against HEAD if no such commit
 ##             is found).  Files that are locally modified, staged or touched by
 ##             any commits introduced on the local branch are formatted.
+##   --changed-lines
+##             Format changed lines only. Only supported on a subset of languages
+##             (currently, just C++). Unsupported languages will continue to have
+##             the entire file formatted. "Changes" are relative to the git
+##             commit that would be used by "--git".
 ##   --verbose Print all formatting commands prior to execution.
 ##    -- PATTERN
 ##             For --all or --git, passes along -- PATTERN to `git ls-files`
@@ -53,28 +58,59 @@ function get-diff-base() {
   fi
 }
 
-function format-cmd() {
-  if [ -f "$1" ]; then
-    case "$1" in
-      *.c | *.cc | *.cpp | *.h | *.hh | *.hpp | *.proto | *.ts)
-        printf "${CLANG_CMD}" ;;
+# Execute a command, printing it first if VERBOSE is set.
+function print-and-execute() {
+  if [[ -n "${VERBOSE}" ]]; then
+    echo "$@"
+  fi
+  "$@"
+}
 
-      *.cmx) printf "${JSON_FMT_CMD}" ;;
-      *.cml) printf "${CML_FMT_CMD}" ;;
-      *.dart) printf "${DART_CMD}" ;;
-      *.fidl) printf "${FIDL_CMD}" ;;
-      *.gn) printf "${GN_CMD}" ;;
-      *.gni) printf "${GN_CMD}" ;;
-      *.go) printf "${GO_CMD}" ;;
-      *.py) printf "${PY_CMD}" ;;
-      *.rs) printf "${RUST_FMT_CMD}" ;;
-      *.triage) printf "${JSON5_FMT_CMD}" ;;
-    esac
+# Format the given C++ file.
+function format-cc-file() {
+  if [[ -n ${CHANGED_LINES} ]]; then
+    # Only update changed lines.
+    local changed_line_commands=$(git-print-changed-lines "$1" "--lines=%dF:%dL ")
+    if [[ -n ${changed_line_commands} ]]; then
+        print-and-execute ${CLANG_CMD} ${changed_line_commands} "$1"
+    fi
+  else
+    # Update entire files.
+    print-and-execute ${CLANG_CMD} "$1"
+  fi
+  # Unconditionally update header guards.
+  if [[ $1 =~ .*\.h ]]; then
+    print-and-execute ${FIX_HEADER_GUARDS_CMD} "$1"
   fi
 }
 
-function hg-cmd() {
-  [[ $1 =~ .*\.h ]] && printf "${FIX_HEADER_GUARDS_CMD}"
+# Run the given format command on a single file, warning if "CHANGED_LINES" is set.
+function format-full-file() {
+  local command="$1"
+  local file="$2"
+  if [ -n "${CHANGED_LINES}" ]; then
+    echo "Warning: cannot format only modified lines; formatting full file ${file}" >&2
+  fi
+  print-and-execute ${command} "${file}"
+}
+
+# Format the given file.
+function format-file() {
+  case "$1" in
+    *.c | *.cc | *.cpp | *.h | *.hh | *.hpp | *.proto | *.ts)
+      format-cc-file "$1" ;;
+
+    *.cmx) format-full-file "${JSON_FMT_CMD}" "$1" ;;
+    *.cml) format-full-file "${CML_FMT_CMD}"  "$1";;
+    *.dart) format-full-file "${DART_CMD}"  "$1";;
+    *.fidl) format-full-file "${FIDL_CMD}" "$1" ;;
+    *.gn) format-full-file "${GN_CMD}" "$1" ;;
+    *.gni) format-full-file "${GN_CMD}" "$1" ;;
+    *.go) format-full-file "${GO_CMD}" "$1" ;;
+    *.py) format-full-file "${PY_CMD}" "$1" ;;
+    *.rs) format-full-file "${RUST_FMT_CMD}" "$1" ;;
+    *.triage) format-full-file "${JSON5_FMT_CMD}" "$1";;
+  esac
 }
 
 # Removes leading //, resolves to absolute path, and resolves globs.  The first
@@ -98,6 +134,7 @@ function canonicalize() {
 
 DRY_RUN=
 VERBOSE=
+CHANGED_LINES=
 
 fx-config-read
 
@@ -107,6 +144,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --verbose) VERBOSE="1" ;;
     --dry-run) DRY_RUN="1" ;;
+    --changed-lines) CHANGED_LINES="1" ;;
     --all) GET_FILES=get_all_files ;;
     --git) GET_FILES=get_git_files ;;
     --files=*)
@@ -134,6 +172,20 @@ get_git_files() {
 
 get_all_files() {
   FILES=$(canonicalize "${PWD}" $(git ls-files "${GIT_FILTER[@]}"))
+}
+
+# Print lines changed in the given file.
+#
+# "Changes" are calculated relative to `git-diff-base`.
+git-print-changed-lines() {
+  # Have git run `/usr/bin/diff` on the input file.
+  #
+  # We in turn ask `diff` to print for each new or modified line the format
+  # string in `$2`. Details about the format string can be found in the man
+  # page for diff, under `--new-group-format`.
+  git difftool -y \
+    -x "diff --new-group-format='$2' --line-format=''" \
+    $(get-diff-base) -- "$1"
 }
 
 $GET_FILES
@@ -193,33 +245,29 @@ done
 
 [[ -n "${RUST_ENTRY_POINT}" ]] && ${RUST_ENTRY_POINT_FMT_CMD} "${RUST_ENTRY_POINT}"
 
-declare HAS_MARKDOWN=
+# Format files.
 for file in ${FILES[@]}; do
   # Git reports deleted files, which we don't want to try to format
   [[ ! -f "${file}" ]] && continue
 
   # Format the file
-  declare fcmd=$(format-cmd ${file})
-  declare hgcmd=$(hg-cmd ${file})
-  if [[ -n "${VERBOSE}" ]]; then
-    echo ${fcmd} "${file}"
-  fi
-  [[ -n "${fcmd}" ]] && ${fcmd} "${file}"
-  [[ -n "${hgcmd}" ]] && ${hgcmd} "${file}"
+  format-file ${file}
+done
 
-  # Collect markdown
+# If a Markdown change is present (including a deletion of a markdown file),
+# check the entire project.
+declare HAS_MARKDOWN=
+for file in ${FILES[@]}; do
   if [[ ${file} == *.md ]]; then
     HAS_MARKDOWN="1";
   fi
 done
-
-# Markdown change detected, check entire project
 if [[ -n "${HAS_MARKDOWN}" ]]; then
   if [[ ! -x "${MARKDOWN_FMT_TOOL_ABS}" ]] ; then
     fx-info "doc-checker not built; building now..."
     fx-command-run build --no-zircon "${MARKDOWN_FMT_TOOL}"
   fi
-  "${MARKDOWN_FMT_TOOL_ABS}" --local-links-only --root "${FUCHSIA_DIR}";
+  print-and-execute "${MARKDOWN_FMT_TOOL_ABS}" --local-links-only --root "${FUCHSIA_DIR}";
 fi
 
 # The last thing this script does is often the [[ -n "${hgcmd}" ]], which will
