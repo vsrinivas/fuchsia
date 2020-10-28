@@ -7,13 +7,20 @@ use {
     crate::pointer_hack_server::PointerHackServer,
     crate::touch_pointer_hack::*,
     anyhow::{Context, Error},
+    fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
+    fuchsia_syslog::fx_log_warn,
     futures::StreamExt,
     input::{
-        ime_handler::ImeHandler, input_device, input_handler::InputHandler,
-        input_pipeline::InputPipeline, mouse_handler::MouseHandler,
-        shortcut_handler::ShortcutHandler, touch_handler::TouchHandler, Position, Size,
+        ime_handler::ImeHandler,
+        input_device,
+        input_handler::InputHandler,
+        input_pipeline::{self, InputPipeline},
+        mouse_handler::MouseHandler,
+        shortcut_handler::ShortcutHandler,
+        touch_handler::TouchHandler,
+        Position, Size,
     },
     scene_management::{self, FlatSceneManager, SceneManager, ScreenCoordinates},
 };
@@ -28,6 +35,9 @@ use {
 pub async fn handle_input(
     scene_manager: FlatSceneManager,
     pointer_hack_server: &PointerHackServer,
+    input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
+        InputDeviceRegistryRequestStream,
+    >,
 ) -> Result<(), Error> {
     let input_pipeline = InputPipeline::new(
         vec![
@@ -40,7 +50,14 @@ pub async fn handle_input(
     .await
     .context("Failed to create InputPipeline.")?;
 
-    input_pipeline.handle_input_events().await;
+    let input_device_registry_fut = handle_input_device_registry_request_streams(
+        input_device_registry_request_stream_receiver,
+        input_pipeline.input_device_types.clone(),
+        input_pipeline.input_event_sender.clone(),
+        input_pipeline.input_device_bindings.clone(),
+    );
+    let input_pipeline_fut = input_pipeline.handle_input_events();
+    futures::join!(input_device_registry_fut, input_pipeline_fut);
     Ok(())
 }
 
@@ -143,4 +160,36 @@ async fn add_touch_hack(
     );
 
     handlers.push(Box::new(touch_hack));
+}
+
+async fn handle_input_device_registry_request_streams(
+    stream_receiver: futures::channel::mpsc::UnboundedReceiver<InputDeviceRegistryRequestStream>,
+    input_device_types: Vec<input_device::InputDeviceType>,
+    input_event_sender: futures::channel::mpsc::Sender<input_device::InputEvent>,
+    input_device_bindings: input_pipeline::InputDeviceBindingHashMap,
+) {
+    // It's unlikely that multiple clients will concurrently connect to the InputDeviceRegistry.
+    // However, if multiple clients do connect concurrently, we don't want said clients
+    // depending on the serialization that would be provided by `for_each()`.
+    stream_receiver
+        .for_each_concurrent(None, |stream| async {
+            match InputPipeline::handle_input_device_registry_request_stream(
+                stream,
+                &input_device_types,
+                &input_event_sender,
+                &input_device_bindings,
+            )
+            .await
+            {
+                Ok(()) => (),
+                Err(e) => {
+                    fx_log_warn!(
+                        "failure while serving InputDeviceRegistry: {}; \
+                         will continue serving other clients",
+                        e
+                    );
+                }
+            }
+        })
+        .await;
 }

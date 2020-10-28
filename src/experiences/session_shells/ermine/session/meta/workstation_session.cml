@@ -13,7 +13,12 @@
         },
     ],
     capabilities: [
-        { protocol: "fuchsia.session.ElementManager" },
+        {
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.session.ElementManager",
+            ],
+        },
     ],
     use: [
         { runner: "elf" },
@@ -49,7 +54,10 @@
     ],
     expose: [
         {
-            protocol: "fuchsia.session.ElementManager",
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.session.ElementManager",
+            ],
             from: "self",
         },
     ],

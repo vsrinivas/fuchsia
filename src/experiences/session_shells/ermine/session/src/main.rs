@@ -8,6 +8,7 @@
 #[macro_use]
 mod input_testing_utilities;
 mod element_repository;
+mod input_device_registry_server;
 mod mouse_pointer_hack;
 mod pointer_hack_server;
 mod touch_pointer_hack;
@@ -16,11 +17,13 @@ mod workstation_input_pipeline;
 use {
     crate::{
         element_repository::{ElementEventHandler, ElementManagerServer, ElementRepository},
+        input_device_registry_server::InputDeviceRegistryServer,
         pointer_hack_server::PointerHackServer,
     },
     anyhow::{Context as _, Error},
     element_management::SimpleElementManager,
     fidl::endpoints::DiscoverableService,
+    fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_session::{
         ElementManagerMarker, ElementManagerRequestStream, GraphicalPresenterMarker,
     },
@@ -36,7 +39,7 @@ use {
         client::{connect_to_service, launch_with_options, App, LaunchOptions},
         server::ServiceFs,
     },
-    fuchsia_syslog::fx_log_info,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::{try_join, StreamExt},
     scene_management::{self, SceneManager},
@@ -46,6 +49,7 @@ use {
 
 enum ExposedServices {
     ElementManager(ElementManagerRequestStream),
+    InputDeviceRegistry(InputDeviceRegistryRequestStream),
 }
 
 /// The maximum number of open requests to this component.
@@ -84,15 +88,19 @@ async fn launch_ermine(
 
 async fn expose_services(
     element_server: ElementManagerServer<SimpleElementManager>,
+    input_device_registry_server: InputDeviceRegistryServer,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
-    fs.dir("svc").add_fidl_service(ExposedServices::ElementManager);
+    fs.dir("svc")
+        .add_fidl_service(ExposedServices::ElementManager)
+        .add_fidl_service(ExposedServices::InputDeviceRegistry);
 
     fs.take_and_serve_directory_handle()?;
 
     // create a reference so that we can use this within the `for_each_concurrent` generator.
     // If we do not create a ref we will run into issues with the borrow checker.
     let element_server_ref = &element_server;
+    let input_device_registry_server_ref = &input_device_registry_server;
     fs.for_each_concurrent(
         NUM_CONCURRENT_REQUESTS,
         move |service_request: ExposedServices| async move {
@@ -101,6 +109,32 @@ async fn expose_services(
                     // TODO(47079): handle error
                     fx_log_info!("received incoming element manager request");
                     let _ = element_server_ref.handle_request(request_stream).await;
+                }
+                ExposedServices::InputDeviceRegistry(request_stream) => {
+                    match input_device_registry_server_ref.handle_request(request_stream).await {
+                        Ok(()) => (),
+                        Err(e) => {
+                            // If `handle_request()` returns `Err`, then the `unbounded_send()` call
+                            // from `handle_request()` failed with either:
+                            // * `TrySendError::SendErrorKind::Full`, or
+                            // * `TrySendError::SendErrorKind::Disconnected`.
+                            //
+                            // These are unexpected, because:
+                            // * `Full` can't happen, because `InputDeviceRegistryServer`
+                            //   uses an `UnboundedSender`.
+                            // * `Disconnected` is highly unlikely, because the corresponding
+                            //   `UnboundedReceiver` lives in `main::input_fut`, and `input_fut`'s
+                            //   lifetime is nearly as long as `input_device_registry_server`'s.
+                            //
+                            // Nonetheless, InputDeviceRegistry isn't critical to production use.
+                            // So we just log the error and move on.
+                            fx_log_err!(
+                                "failed to forward InputDeviceRegistryRequestStream: {:?}; \
+                                 must restart to enable input injection",
+                                e
+                            )
+                        }
+                    }
                 }
             }
         },
@@ -163,8 +197,15 @@ async fn main() -> Result<(), Error> {
         scene_manager.add_view_to_scene(view_provider, Some("Ermine".to_string())).await?;
     let set_focus_fut = set_view_focus(Arc::downgrade(&scene_manager.focuser), view_ref);
 
-    let services_fut = expose_services(element_repository.make_server());
-    let input_fut = workstation_input_pipeline::handle_input(scene_manager, &pointer_hack_server);
+    let (input_device_registry_server, input_device_registry_request_stream_receiver) =
+        input_device_registry_server::make_server_and_receiver();
+    let services_fut =
+        expose_services(element_repository.make_server(), input_device_registry_server);
+    let input_fut = workstation_input_pipeline::handle_input(
+        scene_manager,
+        &pointer_hack_server,
+        input_device_registry_request_stream_receiver,
+    );
     let element_manager_fut = element_repository.run_with_handler(&mut handler);
     let focus_fut = input::focus_listening::handle_focus_changes();
 

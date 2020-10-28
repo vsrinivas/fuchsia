@@ -18,6 +18,7 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -43,6 +44,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:rand",
   ]
 
@@ -53,6 +55,7 @@ rustc_binary("bin") {
     "src/element_repository/event_handler.rs",
     "src/element_repository/mod.rs",
     "src/element_repository/testing_utils.rs",
+    "src/input_device_registry_server.rs",
     "src/input_testing_utilities.rs",
     "src/main.rs",
     "src/mouse_pointer_hack.rs",
