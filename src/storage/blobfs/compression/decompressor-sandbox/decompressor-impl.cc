@@ -97,6 +97,7 @@ void HandleFifo(const zx::vmo& compressed_vmo, const fzl::OwnedVmoMapper& decomp
       break;
     case CompressionAlgorithm::LZ4:
     case CompressionAlgorithm::ZSTD:
+    case CompressionAlgorithm::ZSTD_SEEKABLE:
       if (request->decompressed.offset != 0 || request->compressed.offset != 0) {
         bytes_decompressed = 0;
         response->status = ZX_ERR_NOT_SUPPORTED;
@@ -106,9 +107,6 @@ void HandleFifo(const zx::vmo& compressed_vmo, const fzl::OwnedVmoMapper& decomp
                            request->compressed.size, algorithm, &bytes_decompressed);
       }
       break;
-    // Not supporting ZSTD_SEEKABLE. It is not currently in use, and will be removed.
-    // TODO(fxbug.dev/55540)
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
     case CompressionAlgorithm::UNCOMPRESSED:
       response->status = ZX_ERR_NOT_SUPPORTED;
       break;
