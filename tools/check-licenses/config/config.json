@@ -91,11 +91,13 @@
   "outputLicenseFile": true,
   "outputFilePrefix": "NOTICE",
   "outputFileExtension": "html.gz",
+  "outputTreeStateFilename": "",
   "product": "astro",
   "singleLicenseFiles": [
     "about_os_credits.html",
     "copying",
     "copyright",
+    "licence",
     "license",
     "notice",
     "ofl"
@@ -127,7 +129,7 @@
     },
     {
       "projectRoot": "prebuilt/third_party/jq/linux-x64",
-      "licenseLocation": "linux-x64/share/doc/jq/COPYING "
+      "licenseLocation": "linux-x64/share/doc/jq/COPYING"
     }
   ],
   "licensePatternDir": "tools/check-licenses/golden/patterns",

@@ -46,7 +46,7 @@ func Walk(ctx context.Context, config *Config) error {
 	r := trace.StartRegion(ctx, "singleLicenseFile walk")
 	for tree := range file_tree.getSingleLicenseFileIterator() {
 		tree := tree
-		for singleLicenseFile := range tree.singleLicenseFiles {
+		for singleLicenseFile := range tree.SingleLicenseFiles {
 			singleLicenseFile := singleLicenseFile
 			eg.Go(func() error {
 				if err := processSingleLicenseFile(singleLicenseFile, metrics, licenses, config, tree); err != nil {
@@ -82,6 +82,11 @@ func Walk(ctx context.Context, config *Config) error {
 	r.End()
 
 	defer trace.StartRegion(ctx, "finalization").End()
+
+	if config.OutputTreeStateFilename != "" {
+		file_tree.saveTreeState(config.OutputTreeStateFilename)
+	}
+
 	if config.ExitOnProhibitedLicenseTypes {
 		filesWithProhibitedLicenses := licenses.GetFilesWithProhibitedLicenses()
 		if len(filesWithProhibitedLicenses) > 0 {
@@ -134,7 +139,7 @@ func processFile(path string, metrics *Metrics, licenses *Licenses, unlicensedFi
 			fmt.Printf("File license: missing. Project license: missing. path: %s\n", path)
 		} else {
 			metrics.increment("num_with_project_license")
-			for _, arr_license := range project.singleLicenseFiles {
+			for _, arr_license := range project.SingleLicenseFiles {
 
 				for i, license := range arr_license {
 					license.mu.Lock()

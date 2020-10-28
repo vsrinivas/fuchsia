@@ -100,7 +100,7 @@ func (l *Licenses) MatchSingleLicenseFile(data []byte, base string, metrics *Met
 			path := strings.TrimSpace(file_tree.getPath() + base)
 			license.matchAuthors(string(m), data, path)
 			file_tree.Lock()
-			file_tree.singleLicenseFiles[base] = append(file_tree.singleLicenseFiles[base], license)
+			file_tree.SingleLicenseFiles[base] = append(file_tree.SingleLicenseFiles[base], license)
 			file_tree.Unlock()
 		}
 	}

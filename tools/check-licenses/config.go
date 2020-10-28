@@ -30,6 +30,7 @@ type Config struct {
 	SeparatorWidth               int                    `json:"separatorWidth"`
 	OutputFilePrefix             string                 `json:"outputFilePrefix"`
 	OutputFileExtension          string                 `json:"outputFileExtension"`
+	OutputTreeStateFilename      string                 `json:"outputTreeStateFilename"`
 	Product                      string                 `json:"product"`
 	SingleLicenseFiles           []string               `json:"singleLicenseFiles"`
 	LicensePatternDir            string                 `json:"licensePatternDir"`
