@@ -55,11 +55,13 @@ class VmCowPages final : public VmHierarchyBase,
 
   zx_status_t CreateHidden(fbl::RefPtr<VmCowPages>* hidden_cow);
 
-  zx_status_t CreateClone(uint64_t offset, uint64_t size, fbl::RefPtr<VmCowPages>* child_cow);
+  zx_status_t CreateCloneLocked(uint64_t offset, uint64_t size, fbl::RefPtr<VmCowPages>* child_cow)
+      TA_REQ(lock_);
 
   // Creates a child that looks back to this VmCowPages for all operations. Once a child slice is
   // created this node should not ever be Resized.
-  zx_status_t CreateChildSlice(uint64_t offset, uint64_t size, fbl::RefPtr<VmCowPages>* cow_slice);
+  zx_status_t CreateChildSliceLocked(uint64_t offset, uint64_t size,
+                                     fbl::RefPtr<VmCowPages>* cow_slice) TA_REQ(lock_);
 
   // Returns the size in bytes of this cow pages range. This will always be a multiple of the page
   // size.
@@ -67,10 +69,7 @@ class VmCowPages final : public VmHierarchyBase,
 
   // Returns whether this cow pages node is ultimately backed by a user pager to fulfill initial
   // content, and not zero pages.
-  bool is_pager_backed() const {
-    Guard<Mutex> guard{&lock_};
-    return GetRootPageSourceLocked() != nullptr;
-  }
+  bool is_pager_backed_locked() const TA_REQ(lock_) { return GetRootPageSourceLocked() != nullptr; }
 
   // When attributing pages hidden nodes must be attributed to either their left or right
   // descendants. The attribution IDs of all involved determine where attribution goes. For
@@ -89,15 +88,11 @@ class VmCowPages final : public VmHierarchyBase,
   // Currently it is assumed that all nodes always have backlinks with the 1:1 hierarchy mapping.
   void set_paged_backlink_locked(VmObjectPaged* ref) TA_REQ(lock_) { paged_ref_ = ref; }
 
-  uint64_t HeapAllocationBytes() const {
-    Guard<Mutex> guard{&lock_};
+  uint64_t HeapAllocationBytesLocked() const TA_REQ(lock_) {
     return page_list_.HeapAllocationBytes();
   }
 
-  uint64_t EvictionEventCount() const {
-    Guard<Mutex> guard{&lock_};
-    return eviction_event_count_;
-  }
+  uint64_t EvictionEventCountLocked() const TA_REQ(lock_) { return eviction_event_count_; }
 
   fbl::RefPtr<PageSource> GetRootPageSourceLocked() const TA_REQ(lock_);
 
@@ -122,7 +117,8 @@ class VmCowPages final : public VmHierarchyBase,
       TA_REQ(lock_);
 
   // See VmObject::FailPageRequests
-  zx_status_t FailPageRequests(uint64_t offset, uint64_t len, zx_status_t error_status);
+  zx_status_t FailPageRequestsLocked(uint64_t offset, uint64_t len, zx_status_t error_status)
+      TA_REQ(lock_);
 
   // See VmObject::GetPageLocked
   // The pages returned from this are assumed to be used in the following ways.

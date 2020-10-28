@@ -449,6 +449,7 @@ class VmObject : public VmHierarchyBase,
 
   void AddToGlobalList();
   void RemoveFromGlobalList();
+  bool InGlobalList() const { return fbl::InContainer<internal::GlobalListTag>(*this); }
 
   // magic value
   fbl::Canary<fbl::magic("VMO_")> canary_;
@@ -526,8 +527,6 @@ class VmObject : public VmHierarchyBase,
   };
 
   static fbl::DoublyLinkedList<VmoCursor*> all_vmos_cursors_ TA_GUARDED(AllVmosLock::Get());
-
-  bool InGlobalList() { return fbl::InContainer<internal::GlobalListTag>(*this); }
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_OBJECT_H_

@@ -43,19 +43,9 @@ KCOUNTER(vmo_attribution_cache_misses, "vm.object.attribution.cache_misses")
 
 }  // namespace
 
-VmObjectPaged::VmObjectPaged(uint32_t options, fbl::RefPtr<VmHierarchyState> hierarchy_state,
-                             fbl::RefPtr<VmCowPages> cow_pages)
-    : VmObject(ktl::move(hierarchy_state)), options_(options), cow_pages_(ktl::move(cow_pages)) {
+VmObjectPaged::VmObjectPaged(uint32_t options, fbl::RefPtr<VmHierarchyState> hierarchy_state)
+    : VmObject(ktl::move(hierarchy_state)), options_(options) {
   LTRACEF("%p\n", this);
-
-  {
-    Guard<Mutex> guard{&lock_};
-    cow_pages_locked()->set_paged_backlink_locked(this);
-  }
-
-  // Adding to the global list needs to be done at the end of the ctor, since
-  // calls can be made into this object as soon as it is in that list.
-  AddToGlobalList();
 }
 
 void VmObjectPaged::InitializeOriginalParentLocked(fbl::RefPtr<VmObjectPaged> parent,
@@ -73,6 +63,13 @@ VmObjectPaged::~VmObjectPaged() {
 
   LTRACEF("%p\n", this);
 
+  if (!cow_pages_) {
+    // Initialization didn't finish. This is not in the global list and any complex destruction can
+    // all be skipped.
+    DEBUG_ASSERT(!InGlobalList());
+    return;
+  }
+
   RemoveFromGlobalList();
 
   Guard<Mutex> guard{&lock_};
@@ -85,7 +82,7 @@ VmObjectPaged::~VmObjectPaged() {
     }
   }
 
-  cow_pages_->set_paged_backlink_locked(nullptr);
+  cow_pages_locked()->set_paged_backlink_locked(nullptr);
 
   if (!is_hidden()) {
     // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
@@ -133,7 +130,7 @@ void VmObjectPaged::HarvestAccessedBits() {
 
   Guard<Mutex> guard{lock()};
   // If there is no root page source, then we have nothing worth harvesting bits from.
-  if (cow_pages_locked()->GetRootPageSourceLocked() == nullptr) {
+  if (!cow_pages_locked()->is_pager_backed_locked()) {
     return;
   }
 
@@ -240,11 +237,19 @@ zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t optio
     return status;
   }
 
-  auto vmo = fbl::AdoptRef<VmObjectPaged>(
-      new (&ac) VmObjectPaged(options, ktl::move(state), ktl::move(cow_pages)));
+  auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(options, ktl::move(state)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+
+  // This creation has succeeded. Must wire up the cow pages and *then* place in the globals list.
+  {
+    Guard<Mutex> guard{&vmo->lock_};
+    AssertHeld(cow_pages->lock_ref());
+    cow_pages->set_paged_backlink_locked(vmo.get());
+    vmo->cow_pages_ = ktl::move(cow_pages);
+  }
+  vmo->AddToGlobalList();
 
   *obj = ktl::move(vmo);
 
@@ -391,11 +396,19 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t 
     return status;
   }
 
-  auto vmo = fbl::AdoptRef<VmObjectPaged>(
-      new (&ac) VmObjectPaged(options, ktl::move(state), ktl::move(cow_pages)));
+  auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(options, ktl::move(state)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+
+  // This creation has succeeded. Must wire up the cow pages and *then* place in the globals list.
+  {
+    Guard<Mutex> guard{&vmo->lock_};
+    AssertHeld(cow_pages->lock_ref());
+    cow_pages->set_paged_backlink_locked(vmo.get());
+    vmo->cow_pages_ = ktl::move(cow_pages);
+  }
+  vmo->AddToGlobalList();
 
   *obj = ktl::move(vmo);
 
@@ -454,20 +467,8 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
     options |= kContiguous;
   }
 
-  // There are two reasons for declaring/allocating the clones outside of the vmo's lock. First,
-  // the dtor might require taking the lock, so we need to ensure that it isn't called until
-  // after the lock is released. Second, diagnostics code makes calls into vmos while holding
-  // the global vmo lock. Since the VmObject ctor takes the global lock, we can't construct
-  // any vmos under any vmo lock.
-  fbl::RefPtr<VmCowPages> cow_pages;
-  status = cow_pages_->CreateChildSlice(offset, size, &cow_pages);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   fbl::AllocChecker ac;
-  auto vmo = fbl::AdoptRef<VmObjectPaged>(
-      new (&ac) VmObjectPaged(options, hierarchy_state_ptr_, ktl::move(cow_pages)));
+  auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(options, hierarchy_state_ptr_));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -487,6 +488,17 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
     }
     vmo->cache_policy_ = cache_policy_;
 
+    fbl::RefPtr<VmCowPages> cow_pages;
+    status = cow_pages_locked()->CreateChildSliceLocked(offset, size, &cow_pages);
+    if (status != ZX_OK) {
+      return status;
+    }
+    // Whilst we have the lock and we know failure cannot happen, link up the cow pages. Will place
+    // in global list at the end.
+    AssertHeld(cow_pages->lock_ref());
+    cow_pages->set_paged_backlink_locked(vmo.get());
+    vmo->cow_pages_ = ktl::move(cow_pages);
+
     // Initialize the parents for both parallel hierarchies.
     vmo->InitializeOriginalParentLocked(fbl::RefPtr(this), offset);
     vmo->cow_pages_locked()->InitializeOriginalParentLocked(cow_pages_, offset);
@@ -501,6 +513,9 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
     }
     IncrementHierarchyGenerationCountLocked();
   }
+
+  // Add to the global list now that fully initialized.
+  vmo->AddToGlobalList();
 
   if (notify_one_child) {
     NotifyOneChild();
@@ -535,43 +550,47 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
   }
 
   auto options = resizable == Resizability::Resizable ? kResizable : 0u;
-  // There are two reasons for declaring/allocating the clones outside of the vmo's lock. First,
-  // the dtor might require taking the lock, so we need to ensure that it isn't called until
-  // after the lock is released. Second, diagnostics code makes calls into vmos while holding
-  // the global vmo lock. Since the VmObject ctor takes the global lock, we can't construct
-  // any vmos under any vmo lock.
-  fbl::RefPtr<VmCowPages> cow_pages;
-  status = cow_pages_->CreateClone(offset, size, &cow_pages);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   fbl::AllocChecker ac;
-  auto vmo = fbl::AdoptRef<VmObjectPaged>(
-      new (&ac) VmObjectPaged(options, hierarchy_state_ptr_, ktl::move(cow_pages)));
+  auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(options, hierarchy_state_ptr_));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
+  // Hidden parent needs to be declared before the guard as after it is initialized and added to
+  // the global list we can still fail and need to destruct it, this destruction must happen without
+  // the lock being held.
   fbl::RefPtr<VmObjectPaged> hidden_parent;
   // Optimistically create the hidden parent early as we want to do it outside the lock, but we
   // need to hold the lock to validate invariants.
   if (type == CloneType::Snapshot) {
     // The initial size is 0. It will be initialized as part of the atomic
     // insertion into the child tree.
-    status = cow_pages_->CreateHidden(&cow_pages);
-    if (status != ZX_OK) {
-      return status;
-    }
-    hidden_parent = fbl::AdoptRef<VmObjectPaged>(
-        new (&ac) VmObjectPaged(kHidden, hierarchy_state_ptr_, ktl::move(cow_pages)));
+    hidden_parent =
+        fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(kHidden, hierarchy_state_ptr_));
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
+    // Can immediately link up some cow pages and add to the global list.
+    {
+      fbl::RefPtr<VmCowPages> hidden_cow_pages;
+      Guard<Mutex> guard{&lock_};
+      AssertHeld(hidden_parent->lock_ref());
+      status = cow_pages_locked()->CreateHidden(&hidden_cow_pages);
+      if (status != ZX_OK) {
+        return status;
+      }
+      AssertHeld(hidden_cow_pages->lock_ref());
+      hidden_cow_pages->set_paged_backlink_locked(hidden_parent.get());
+      hidden_parent->cow_pages_ = ktl::move(hidden_cow_pages);
+    }
+    hidden_parent->AddToGlobalList();
   }
 
   bool notify_one_child;
   {
+    // Declare these prior to the guard so that any failure paths destroy these without holding
+    // the lock.
+    fbl::RefPtr<VmCowPages> clone_cow_pages;
     Guard<Mutex> guard{&lock_};
     AssertHeld(vmo->lock_);
     switch (type) {
@@ -593,11 +612,10 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
         if (cow_pages_locked()->pinned_page_count_locked()) {
           return ZX_ERR_BAD_STATE;
         }
-
         break;
       }
       case CloneType::PrivatePagerCopy:
-        if (!cow_pages_locked()->GetRootPageSourceLocked()) {
+        if (!cow_pages_locked()->is_pager_backed_locked()) {
           return ZX_ERR_NOT_SUPPORTED;
         }
         break;
@@ -607,6 +625,17 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
       return ZX_ERR_BAD_STATE;
     }
+
+    status = cow_pages_locked()->CreateCloneLocked(offset, size, &clone_cow_pages);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // Now that everything has succeeded we can wire up cow pages references. VMO will be placed in
+    // the global list later once lock has been dropped.
+    AssertHeld(clone_cow_pages->lock_ref());
+    clone_cow_pages->set_paged_backlink_locked(vmo.get());
+    vmo->cow_pages_ = ktl::move(clone_cow_pages);
 
     VmObjectPaged* clone_parent;
     if (type == CloneType::Snapshot) {
@@ -638,6 +667,9 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     }
     IncrementHierarchyGenerationCountLocked();
   }
+
+  // Add to the global list now that fully initialized.
+  vmo->AddToGlobalList();
 
   if (notify_one_child) {
     NotifyOneChild();
@@ -690,7 +722,9 @@ void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
 
   // Remove the child in our parallel hierarchy, resulting in any necessary merging with the
   // hidden parent to happen.
-  cow_pages_locked()->RemoveChildLocked(static_cast<VmObjectPaged*>(removed)->cow_pages_.get());
+  VmObjectPaged* paged_removed = static_cast<VmObjectPaged*>(removed);
+  AssertHeld(paged_removed->lock_ref());
+  cow_pages_locked()->RemoveChildLocked(paged_removed->cow_pages_.get());
 
   if (!is_hidden()) {
     VmObject::RemoveChild(removed, guard.take());

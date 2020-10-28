@@ -69,7 +69,10 @@ class VmObjectPaged final : public VmObject {
   bool is_paged() const override { return true; }
   bool is_contiguous() const override { return (options_ & kContiguous); }
   bool is_resizable() const override { return (options_ & kResizable); }
-  bool is_pager_backed() const override { return cow_pages_->is_pager_backed(); }
+  bool is_pager_backed() const override {
+    Guard<Mutex> guard{&lock_};
+    return cow_pages_locked()->is_pager_backed_locked();
+  }
   bool is_hidden() const override { return (options_ & kHidden); }
   ChildType child_type() const override {
     if (is_slice()) {
@@ -89,9 +92,16 @@ class VmObjectPaged final : public VmObject {
     cow_pages_locked()->set_page_attribution_user_id_locked(user_id);
   }
 
-  uint64_t HeapAllocationBytes() const override { return cow_pages_->HeapAllocationBytes(); }
+  uint64_t HeapAllocationBytes() const override {
+    Guard<Mutex> guard{&lock_};
+    return cow_pages_locked()->HeapAllocationBytesLocked();
+  }
 
-  uint64_t EvictionEventCount() const override { return cow_pages_->EvictionEventCount(); }
+  uint64_t EvictionEventCount() const override {
+    Guard<Mutex> guard{&lock_};
+
+    return cow_pages_locked()->EvictionEventCountLocked();
+  }
 
   size_t AttributedPagesInRange(uint64_t offset, uint64_t len) const override {
     Guard<Mutex> guard{&lock_};
@@ -126,7 +136,9 @@ class VmObjectPaged final : public VmObject {
   zx_status_t TakePages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) override;
   zx_status_t SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) override;
   zx_status_t FailPageRequests(uint64_t offset, uint64_t len, zx_status_t error_status) override {
-    return cow_pages_->FailPageRequests(offset, len, error_status);
+    Guard<Mutex> guard{&lock_};
+
+    return cow_pages_locked()->FailPageRequestsLocked(offset, len, error_status);
   }
 
   void Dump(uint depth, bool verbose) override {
@@ -157,7 +169,11 @@ class VmObjectPaged final : public VmObject {
   void RemoveChild(VmObject* child, Guard<Mutex>&& guard) override TA_REQ(lock_);
   bool OnChildAddedLocked() override TA_REQ(lock_);
 
-  void DetachSource() override { cow_pages_->DetachSource(); }
+  void DetachSource() override {
+    Guard<Mutex> guard{&lock_};
+
+    cow_pages_locked()->DetachSource();
+  }
 
   zx_status_t CreateChildSlice(uint64_t offset, uint64_t size, bool copy_name,
                                fbl::RefPtr<VmObject>* child_vmo) override;
@@ -200,7 +216,10 @@ class VmObjectPaged final : public VmObject {
   }
 
   // Exposed for testing.
-  fbl::RefPtr<VmCowPages> DebugGetCowPages() const { return cow_pages_; }
+  fbl::RefPtr<VmCowPages> DebugGetCowPages() const {
+    Guard<Mutex> guard{&lock_};
+    return cow_pages_;
+  }
 
   using RangeChangeOp = VmCowPages::RangeChangeOp;
   // Apply the specified operation to all mappings in the given range.
@@ -208,8 +227,7 @@ class VmObjectPaged final : public VmObject {
 
  private:
   // private constructor (use Create())
-  VmObjectPaged(uint32_t options, fbl::RefPtr<VmHierarchyState> root_state,
-                fbl::RefPtr<VmCowPages> cow_pages);
+  VmObjectPaged(uint32_t options, fbl::RefPtr<VmHierarchyState> root_state);
 
   // Initializes the original parent state of the vmo. |offset| is the offset of
   // this vmo in |parent|.
@@ -273,8 +291,10 @@ class VmObjectPaged final : public VmObject {
   // Tracks the last cached page attribution count.
   mutable CachedPageAttribution cached_page_attribution_ TA_GUARDED(lock_) = {};
 
-  // Reference to our pages should never be modified and is only dropped in the destructor.
-  fbl::RefPtr<VmCowPages> const cow_pages_;
+  // Our VmCowPages may be null during object initialization in the internal Create routines. As a
+  // consequence if this is null it implies that the VMO is *not* in the global list. Otherwise it
+  // can generally be assumed that this is non-null.
+  fbl::RefPtr<VmCowPages> cow_pages_ TA_GUARDED(lock_);
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_OBJECT_PAGED_H_

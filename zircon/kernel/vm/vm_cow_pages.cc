@@ -402,8 +402,8 @@ void VmCowPages::InsertHiddenParentLocked(fbl::RefPtr<VmCowPages> hidden_parent)
   hidden_parent->size_ = size_;
 }
 
-zx_status_t VmCowPages::CreateChildSlice(uint64_t offset, uint64_t size,
-                                         fbl::RefPtr<VmCowPages>* cow_slice) {
+zx_status_t VmCowPages::CreateChildSliceLocked(uint64_t offset, uint64_t size,
+                                               fbl::RefPtr<VmCowPages>* cow_slice) {
   LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
 
   canary_.Assert();
@@ -416,8 +416,10 @@ zx_status_t VmCowPages::CreateChildSlice(uint64_t offset, uint64_t size,
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+  // At this point slice must *not* be destructed in this function, as doing so would cause a
+  // deadlock. That means from this point on we *must* succeed and any future error checking needs
+  // to be added prior to creation.
 
-  Guard<Mutex> guard{&lock_};
   AssertHeld(slice->lock_);
 
   slice->parent_offset_ = offset;
@@ -435,38 +437,39 @@ zx_status_t VmCowPages::CreateChildSlice(uint64_t offset, uint64_t size,
   return ZX_OK;
 }
 
-zx_status_t VmCowPages::CreateClone(uint64_t offset, uint64_t size,
-                                    fbl::RefPtr<VmCowPages>* cow_child) {
+zx_status_t VmCowPages::CreateCloneLocked(uint64_t offset, uint64_t size,
+                                          fbl::RefPtr<VmCowPages>* cow_child) {
   LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
 
   canary_.Assert();
 
-  // There are two reasons for declaring/allocating the clones outside of the vmo's lock. First,
-  // the dtor might require taking the lock, so we need to ensure that it isn't called until
-  // after the lock is released. Second, diagnostics code makes calls into vmos while holding
-  // the global vmo lock. Since the VmObject ctor takes the global lock, we can't construct
-  // any vmos under any vmo lock.
+  // All validation *must* be performed here prior to construction the VmCowPages, as the
+  // destructor for VmCowPages may acquire the lock, which we are already holding.
+  uint64_t new_root_parent_offset;
+  bool overflow;
+  overflow = add_overflow(offset, root_parent_offset_, &new_root_parent_offset);
+  if (overflow) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  uint64_t temp;
+  overflow = add_overflow(new_root_parent_offset, size, &temp);
+  if (overflow) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   fbl::AllocChecker ac;
   auto cow_pages = fbl::AdoptRef<VmCowPages>(
       new (&ac) VmCowPages(hierarchy_state_ptr_, 0, pmm_alloc_flags_, size, nullptr));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+  // At this point cow_pages must *not* be destructed in this function, as doing so would cause a
+  // deadlock. That means from this point on we *must* succeed and any future error checking needs
+  // to be added prior to creation.
 
-  Guard<Mutex> guard{&lock_};
   AssertHeld(cow_pages->lock_);
 
-  bool overflow;
-  overflow = add_overflow(offset, root_parent_offset_, &cow_pages->root_parent_offset_);
-  if (overflow) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  uint64_t temp;
-  overflow = add_overflow(cow_pages->root_parent_offset_, size, &temp);
-  if (overflow) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
+  cow_pages->root_parent_offset_ = new_root_parent_offset;
   cow_pages->parent_offset_ = offset;
   if (offset > size_) {
     cow_pages->parent_limit_ = 0;
@@ -2573,7 +2576,8 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
 //
 // TODO(rashaeqbal): If we support a more permanent failure mode in the future, we will need to free
 // populated pages in the specified range, and possibly detach the VMO from the page source.
-zx_status_t VmCowPages::FailPageRequests(uint64_t offset, uint64_t len, zx_status_t error_status) {
+zx_status_t VmCowPages::FailPageRequestsLocked(uint64_t offset, uint64_t len,
+                                               zx_status_t error_status) {
   canary_.Assert();
 
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
@@ -2582,7 +2586,6 @@ zx_status_t VmCowPages::FailPageRequests(uint64_t offset, uint64_t len, zx_statu
   // |error_status| must have already been validated by the PagerDispatcher.
   DEBUG_ASSERT(PageSource::IsValidFailureCode(error_status));
 
-  Guard<Mutex> guard{&lock_};
   ASSERT(page_source_);
 
   if (!InRange(offset, len, size_)) {
