@@ -4,12 +4,11 @@
 
 use crate::configuration::ServerParameters;
 use crate::protocol::{
-    DhcpOption, FidlCompatible, FromFidlExt, IntoFidlExt, Message, MessageType, OpCode, OptionCode,
-    ProtocolError,
+    identifier::ClientIdentifier, DhcpOption, FidlCompatible, FromFidlExt, IntoFidlExt, Message,
+    MessageType, OpCode, OptionCode, ProtocolError,
 };
 use crate::stash::Stash;
 use anyhow::{Context as _, Error};
-use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use fuchsia_zircon::Status;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -76,8 +75,8 @@ pub enum ServerError {
     #[error("requested ip absent from server pool: {}", _0)]
     UnidentifiedRequestedIp(Ipv4Addr),
 
-    #[error("unknown client mac: {}", _0)]
-    UnknownClientMac(MacAddr),
+    #[error("unknown client identifier: {}", _0)]
+    UnknownClientId(ClientIdentifier),
 
     #[error("init reboot request did not include ip")]
     NoRequestedAddrAtInitReboot,
@@ -265,14 +264,18 @@ impl Server {
         let offered_ip = self.get_addr(&disc)?;
         let dest = self.get_destination_addr(&disc);
         let offer = self.build_offer(disc, offered_ip)?;
-        match self.store_client_config(Ipv4Addr::from(offer.yiaddr), offer.chaddr, &offer.options) {
+        match self.store_client_config(
+            Ipv4Addr::from(offer.yiaddr),
+            ClientIdentifier::from(&offer),
+            &offer.options,
+        ) {
             Ok(()) => Ok(ServerAction::SendResponse(offer, dest)),
             Err(e) => Err(ServerError::ServerCacheUpdateFailure(StashError { error: e })),
         }
     }
 
     fn get_addr(&mut self, client: &Message) -> Result<Ipv4Addr, ServerError> {
-        if let Some(config) = self.cache.get(&client.chaddr) {
+        if let Some(config) = self.cache.get(&ClientIdentifier::from(client)) {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_err(|std::time::SystemTimeError { .. }| ServerError::ServerTimeError)?;
@@ -302,7 +305,7 @@ impl Server {
     fn store_client_config(
         &mut self,
         client_addr: Ipv4Addr,
-        client_mac: MacAddr,
+        client_id: ClientIdentifier,
         client_opts: &[DhcpOption],
     ) -> Result<(), Error> {
         let lease_length_seconds = client_opts
@@ -328,9 +331,9 @@ impl Server {
             lease_length_seconds,
         )?;
         self.stash
-            .store_client_config(&client_mac, &config)
+            .store_client_config(&client_id, &config)
             .context("failed to store client in stash")?;
-        self.cache.insert(client_mac, config);
+        self.cache.insert(client_id, config);
         // This should NEVER return an `Err`. If it does it indicates
         // server's state has changed in the middle of request handling.
         // This is non-recoverable and we therefore panic.
@@ -380,7 +383,8 @@ impl Server {
         req: &Message,
         requested_ip: &Ipv4Addr,
     ) -> Result<(), ServerError> {
-        if let Some(client_config) = self.cache.get(&req.chaddr) {
+        let client_id = ClientIdentifier::from(req);
+        if let Some(client_config) = self.cache.get(&client_id) {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_err(|std::time::SystemTimeError { .. }| ServerError::ServerTimeError)?;
@@ -397,7 +401,7 @@ impl Server {
                 Ok(())
             }
         } else {
-            Err(ServerError::UnknownClientMac(req.chaddr))
+            Err(ServerError::UnknownClientId(client_id))
         }
     }
 
@@ -409,8 +413,9 @@ impl Server {
             let (nak, dest) = self.build_nak(req, error_msg)?;
             return Ok(ServerAction::SendResponse(nak, dest));
         }
-        if !is_client_mac_known(req.chaddr, &self.cache) {
-            return Err(ServerError::UnknownClientMac(req.chaddr));
+        let client_id = ClientIdentifier::from(&req);
+        if !self.cache.contains_key(&client_id) {
+            return Err(ServerError::UnknownClientId(client_id));
         }
         if self.validate_requested_addr_with_client(&req, requested_ip).is_err() {
             let error_msg = "requested ip is not assigned to client";
@@ -438,16 +443,17 @@ impl Server {
         {
             let () = self.pool.allocate_addr(*declined_ip)?;
         }
-        self.cache.remove(&dec.chaddr);
+        self.cache.remove(&ClientIdentifier::from(&dec));
         Ok(ServerAction::AddressDecline(*declined_ip))
     }
 
     fn handle_release(&mut self, rel: Message) -> Result<ServerAction, ServerError> {
-        if self.cache.contains_key(&rel.chaddr) {
+        let client_id = ClientIdentifier::from(&rel);
+        if self.cache.contains_key(&client_id) {
             let () = self.pool.release_addr(rel.ciaddr)?;
             Ok(ServerAction::AddressRelease(rel.ciaddr))
         } else {
-            Err(ServerError::UnknownClientMac(rel.chaddr))
+            Err(ServerError::UnknownClientId(client_id))
         }
     }
 
@@ -521,14 +527,15 @@ impl Server {
     }
 
     fn build_ack(&self, req: Message, requested_ip: Ipv4Addr) -> Result<Message, ServerError> {
-        let options = match self.cache.get(&req.chaddr) {
+        let client_id = ClientIdentifier::from(&req);
+        let options = match self.cache.get(&client_id) {
             Some(config) => {
                 let mut options = Vec::with_capacity(config.options.len() + 1);
                 options.push(DhcpOption::DhcpMessageType(MessageType::DHCPACK));
                 options.extend(config.options.iter().cloned());
                 options
             }
-            None => return Err(ServerError::UnknownClientMac(req.chaddr)),
+            None => return Err(ServerError::UnknownClientId(client_id)),
         };
         let ack = Message { op: OpCode::BOOTREPLY, secs: 0, yiaddr: requested_ip, options, ..req };
         Ok(ack)
@@ -612,29 +619,29 @@ impl Server {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|std::time::SystemTimeError { .. }| ServerError::ServerTimeError)?;
-        let expired_clients: Vec<(MacAddr, Ipv4Addr)> = self
+        let expired_clients: Vec<(ClientIdentifier, Ipv4Addr)> = self
             .cache
             .iter()
-            .filter(|(_mac, config)| config.expired(now))
-            .map(|(mac, config)| (*mac, config.client_addr))
+            .filter(|(_id, config)| config.expired(now))
+            .map(|(id, config)| (id.clone(), config.client_addr))
             .collect();
         // Expired client entries must be removed in a separate statement because otherwise we
         // would be attempting to change a cache as we iterate over it.
-        for (mac, ip) in expired_clients.iter() {
+        for (id, ip) in expired_clients.into_iter() {
             //  We ignore the `Result` here since a failed release of the `ip`
             // in this iteration will be reattempted in the next.
-            let _release_result = self.pool.release_addr(*ip);
-            self.cache.remove(mac);
+            let _release_result = self.pool.release_addr(ip);
+            self.cache.remove(&id);
             // The call to delete will immediately be committed to the Stash. Since DHCP lease
             // acquisitions occur on a human timescale, e.g. a cellphone is brought in range of an
             // AP, and at a time resolution of a second, it will be rare for expired_clients to
             // contain sufficient numbers of entries that committing with each deletion will impact
             // performance.
-            if let Err(e) = self.stash.delete(&mac) {
+            if let Err(e) = self.stash.delete(&id) {
                 // We log the failed deletion here because it would be the action taken by the
                 // caller and we do not want to stop the deletion loop on account of a single
                 // failure.
-                log::warn!("stash failed to delete client={}: {}", mac, e)
+                log::warn!("stash failed to delete client={}: {}", id, e)
             }
         }
         Ok(())
@@ -926,14 +933,14 @@ impl ServerDispatcher for Server {
     }
 
     fn dispatch_clear_leases(&mut self) -> Result<(), Status> {
-        for (mac, config) in &self.cache {
+        for (id, config) in &self.cache {
             let () = self.pool.release_addr(config.client_addr).unwrap_or_else(|e| {
                 // Log and panic because server has irrecoverable inconsistent state.
                 log::error!("release_addr({}) failed: {:?}", config.client_addr, e);
                 panic!("server tried to release unallocated addr {}", config.client_addr);
             });
-            let () = self.stash.delete(mac).map_err(|e| {
-                log::warn!("delete({}) failed: {:?}", mac, e);
+            let () = self.stash.delete(&id).map_err(|e| {
+                log::warn!("delete({}) failed: {:?}", id, e);
                 fuchsia_zircon::Status::INTERNAL
             })?;
         }
@@ -947,7 +954,7 @@ impl ServerDispatcher for Server {
 /// to which it has sent a DHCPOFFER message. Entries in the cache
 /// will eventually timeout, although such functionality is currently
 /// unimplemented.
-pub type CachedClients = HashMap<MacAddr, CachedConfig>;
+pub type CachedClients = HashMap<ClientIdentifier, CachedConfig>;
 
 /// A representation of a DHCP client's stored configuration settings.
 ///
@@ -1123,10 +1130,6 @@ fn is_in_subnet(req: &Message, config: &ServerParameters) -> bool {
     })
 }
 
-fn is_client_mac_known(mac: MacAddr, cache: &CachedClients) -> bool {
-    cache.get(&mac).is_some()
-}
-
 fn get_client_state(msg: &Message) -> Result<ClientState, ()> {
     let have_server_id = get_server_id_from(&msg).is_some();
     let have_requested_ip = get_requested_ip_addr(&msg).is_some();
@@ -1174,6 +1177,7 @@ pub mod tests {
     use super::*;
     use crate::configuration::LeaseLength;
     use crate::protocol::{DhcpOption, Message, MessageType, OpCode, OptionCode};
+    use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
     use net_declare::{fidl_ip_v4, std_ip_v4};
     use rand::Rng;
     use std::net::Ipv4Addr;
@@ -1539,7 +1543,7 @@ pub mod tests {
         let disc = new_test_discover();
 
         let offer_ip = random_ipv4_generator();
-        let client_mac = disc.chaddr;
+        let client_id = ClientIdentifier::from(&disc);
 
         server.pool.available_addrs.insert(offer_ip);
 
@@ -1568,7 +1572,7 @@ pub mod tests {
         assert_eq!(server.pool.available_addrs.len(), 0);
         assert_eq!(server.pool.allocated_addrs.len(), 1);
         assert_eq!(server.cache.len(), 1);
-        assert_eq!(server.cache.get(&client_mac), Some(&expected_client_config));
+        assert_eq!(server.cache.get(&client_id), Some(&expected_client_config));
         Ok(())
     }
 
@@ -1578,7 +1582,7 @@ pub mod tests {
         let disc = new_test_discover();
 
         let offer_ip = random_ipv4_generator();
-        let client_mac = disc.chaddr;
+        let client_id = ClientIdentifier::from(&disc);
 
         server.pool.available_addrs.insert(offer_ip);
 
@@ -1586,7 +1590,7 @@ pub mod tests {
 
         let accessor = server.stash.clone_proxy();
         let value = accessor
-            .get_value(&format!("{}-{}", DEFAULT_STASH_PREFIX, client_mac))
+            .get_value(&server.stash.client_key(&client_id))
             .await
             .context("failed to get value from stash")?;
         let value = value.ok_or(anyhow::format_err!("value not contained in stash"))?;
@@ -1611,7 +1615,7 @@ pub mod tests {
         server.pool.allocated_addrs.insert(bound_client_ip);
 
         server.cache.insert(
-            disc.chaddr,
+            ClientIdentifier::from(&disc),
             CachedConfig::new(
                 bound_client_ip,
                 vec![],
@@ -1636,7 +1640,7 @@ pub mod tests {
         let bound_client_ip = random_ipv4_generator();
 
         server.cache.insert(
-            disc.chaddr,
+            ClientIdentifier::from(&disc),
             CachedConfig::new(bound_client_ip, vec![], std::time::SystemTime::now(), std::u32::MAX)
                 .unwrap(),
         );
@@ -1655,7 +1659,7 @@ pub mod tests {
         server.pool.available_addrs.insert(bound_client_ip);
 
         server.cache.insert(
-            disc.chaddr,
+            ClientIdentifier::from(&disc),
             CachedConfig::new(
                 bound_client_ip,
                 vec![],
@@ -1683,7 +1687,7 @@ pub mod tests {
         server.pool.available_addrs.insert(free_ip);
 
         server.cache.insert(
-            disc.chaddr,
+            ClientIdentifier::from(&disc),
             CachedConfig::new(
                 bound_client_ip,
                 vec![],
@@ -1713,7 +1717,7 @@ pub mod tests {
         disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
         server.cache.insert(
-            disc.chaddr,
+            ClientIdentifier::from(&disc),
             CachedConfig::new(
                 bound_client_ip,
                 vec![],
@@ -1745,7 +1749,7 @@ pub mod tests {
         disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
         server.cache.insert(
-            disc.chaddr,
+            ClientIdentifier::from(&disc),
             CachedConfig::new(
                 bound_client_ip,
                 vec![],
@@ -1894,7 +1898,7 @@ pub mod tests {
         let router = get_router(&server)?;
         let dns_server = get_dns_server(&server)?;
         server.cache.insert(
-            req.chaddr,
+            ClientIdentifier::from(&req),
             CachedConfig::new(
                 requested_ip,
                 vec![
@@ -1933,16 +1937,16 @@ pub mod tests {
         let mut req = new_test_request_selecting_state(&server);
 
         let requested_ip = random_ipv4_generator();
-        let client_mac = req.chaddr;
+        let client_id = ClientIdentifier::from(&req);
 
         server.pool.allocated_addrs.insert(requested_ip);
         req.ciaddr = requested_ip;
         server.cache.insert(
-            client_mac,
+            client_id.clone(),
             CachedConfig::new(requested_ip, vec![], std::time::SystemTime::now(), std::u32::MAX)?,
         );
         let _response = server.dispatch(req).unwrap();
-        assert!(server.cache.contains_key(&client_mac));
+        assert!(server.cache.contains_key(&client_id));
         assert!(server.pool.addr_is_allocated(&requested_ip));
         Ok(())
     }
@@ -1973,12 +1977,12 @@ pub mod tests {
         let mut req = new_test_request_selecting_state(&server);
 
         let requested_ip = random_ipv4_generator();
-        let client_mac = req.chaddr;
+        let client_id = ClientIdentifier::from(&req);
 
         req.ciaddr = requested_ip;
 
-        assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientMac(client_mac)));
-        assert!(!server.cache.contains_key(&client_mac));
+        assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientId(client_id.clone())));
+        assert!(!server.cache.contains_key(&client_id));
         assert!(!server.pool.addr_is_allocated(&requested_ip));
         Ok(())
     }
@@ -1996,7 +2000,7 @@ pub mod tests {
         req.ciaddr = client_requested_ip;
 
         server.cache.insert(
-            req.chaddr,
+            ClientIdentifier::from(&req),
             CachedConfig::new(
                 server_offered_ip,
                 vec![],
@@ -2025,7 +2029,7 @@ pub mod tests {
         req.ciaddr = requested_ip;
 
         server.cache.insert(
-            req.chaddr,
+            ClientIdentifier::from(&req),
             CachedConfig::new(requested_ip, vec![], std::time::SystemTime::now(), std::u32::MIN)?,
         );
 
@@ -2044,7 +2048,7 @@ pub mod tests {
         req.ciaddr = requested_ip;
 
         server.cache.insert(
-            req.chaddr,
+            ClientIdentifier::from(&req),
             CachedConfig::new(requested_ip, vec![], std::time::SystemTime::now(), std::u32::MAX)?,
         );
 
@@ -2071,7 +2075,7 @@ pub mod tests {
         let router = get_router(&server)?;
         let dns_server = get_dns_server(&server)?;
         server.cache.insert(
-            req.chaddr,
+            ClientIdentifier::from(&req),
             CachedConfig::new(
                 init_reboot_client_ip,
                 vec![
@@ -2142,13 +2146,13 @@ pub mod tests {
         let mut server = new_test_minimal_server().await?;
         let mut req = new_test_request();
 
-        let client_mac = req.chaddr;
+        let client_id = ClientIdentifier::from(&req);
 
         // Update requested ip and server ip to be on the same subnet.
         req.options.push(DhcpOption::RequestedIpAddress(std_ip_v4!(192.165.30.45)));
         server.params.server_ips = vec![std_ip_v4!(192.165.30.1)];
 
-        assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientMac(client_mac)));
+        assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientId(client_id)));
         Ok(())
     }
 
@@ -2166,7 +2170,7 @@ pub mod tests {
         let server_cached_ip = std_ip_v4!(192.165.25.10);
         server.pool.allocated_addrs.insert(server_cached_ip);
         server.cache.insert(
-            req.chaddr,
+            ClientIdentifier::from(&req),
             CachedConfig::new(
                 server_cached_ip,
                 vec![],
@@ -2197,7 +2201,7 @@ pub mod tests {
         server.pool.allocated_addrs.insert(init_reboot_client_ip);
         // Expire client binding to make it invalid.
         server.cache.insert(
-            req.chaddr,
+            ClientIdentifier::from(&req),
             CachedConfig::new(
                 init_reboot_client_ip,
                 vec![],
@@ -2227,7 +2231,7 @@ pub mod tests {
         server.params.server_ips = vec![std_ip_v4!(192.165.25.1)];
 
         server.cache.insert(
-            req.chaddr,
+            ClientIdentifier::from(&req),
             CachedConfig::new(
                 init_reboot_client_ip,
                 vec![],
@@ -2260,7 +2264,7 @@ pub mod tests {
         let router = get_router(&server)?;
         let dns_server = get_dns_server(&server)?;
         server.cache.insert(
-            req.chaddr,
+            ClientIdentifier::from(&req),
             CachedConfig::new(
                 bound_client_ip,
                 vec![
@@ -2299,11 +2303,11 @@ pub mod tests {
         let mut req = new_test_request();
 
         let bound_client_ip = random_ipv4_generator();
-        let client_mac = req.chaddr;
+        let client_id = ClientIdentifier::from(&req);
 
         req.ciaddr = bound_client_ip;
 
-        assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientMac(client_mac)));
+        assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientId(client_id)));
         Ok(())
     }
 
@@ -2320,7 +2324,7 @@ pub mod tests {
         req.ciaddr = client_renewal_ip;
 
         server.cache.insert(
-            req.chaddr,
+            ClientIdentifier::from(&req),
             CachedConfig::new(
                 bound_client_ip,
                 vec![],
@@ -2348,7 +2352,7 @@ pub mod tests {
         req.ciaddr = bound_client_ip;
 
         server.cache.insert(
-            req.chaddr,
+            ClientIdentifier::from(&req),
             CachedConfig::new(
                 bound_client_ip,
                 vec![],
@@ -2371,7 +2375,7 @@ pub mod tests {
         req.ciaddr = bound_client_ip;
 
         server.cache.insert(
-            req.chaddr,
+            ClientIdentifier::from(&req),
             CachedConfig::new(
                 bound_client_ip,
                 vec![],
@@ -2465,7 +2469,7 @@ pub mod tests {
         server.pool.available_addrs.insert(client_1_ip);
         server.store_client_config(
             client_1_ip,
-            random_mac_generator(),
+            ClientIdentifier::from(random_mac_generator()),
             &[DhcpOption::IpAddressLeaseTime(std::u32::MAX)],
         )?;
 
@@ -2474,7 +2478,7 @@ pub mod tests {
         server.pool.available_addrs.insert(client_2_ip);
         server.store_client_config(
             client_2_ip,
-            random_mac_generator(),
+            ClientIdentifier::from(random_mac_generator()),
             &[DhcpOption::IpAddressLeaseTime(std::u32::MAX)],
         )?;
 
@@ -2483,7 +2487,7 @@ pub mod tests {
         server.pool.available_addrs.insert(client_3_ip);
         server.store_client_config(
             client_3_ip,
-            random_mac_generator(),
+            ClientIdentifier::from(random_mac_generator()),
             &[DhcpOption::IpAddressLeaseTime(std::u32::MAX)],
         )?;
 
@@ -2506,7 +2510,7 @@ pub mod tests {
         server.pool.available_addrs.insert(client_1_ip);
         let () = server.store_client_config(
             client_1_ip,
-            random_mac_generator(),
+            ClientIdentifier::from(random_mac_generator()),
             &[DhcpOption::IpAddressLeaseTime(0)],
         )?;
 
@@ -2514,7 +2518,7 @@ pub mod tests {
         server.pool.available_addrs.insert(client_2_ip);
         let () = server.store_client_config(
             client_2_ip,
-            random_mac_generator(),
+            ClientIdentifier::from(random_mac_generator()),
             &[DhcpOption::IpAddressLeaseTime(0)],
         )?;
 
@@ -2522,7 +2526,7 @@ pub mod tests {
         server.pool.available_addrs.insert(client_3_ip);
         let () = server.store_client_config(
             client_3_ip,
-            random_mac_generator(),
+            ClientIdentifier::from(random_mac_generator()),
             &[DhcpOption::IpAddressLeaseTime(0)],
         )?;
 
@@ -2558,7 +2562,7 @@ pub mod tests {
         server.pool.available_addrs.insert(client_1_ip);
         let () = server.store_client_config(
             client_1_ip,
-            client_1_mac,
+            ClientIdentifier::from(client_1_mac),
             &[DhcpOption::IpAddressLeaseTime(std::u32::MAX)],
         )?;
 
@@ -2567,7 +2571,7 @@ pub mod tests {
         server.pool.available_addrs.insert(client_2_ip);
         let () = server.store_client_config(
             client_2_ip,
-            client_2_mac,
+            ClientIdentifier::from(client_2_mac),
             &[DhcpOption::IpAddressLeaseTime(0)],
         )?;
 
@@ -2576,14 +2580,14 @@ pub mod tests {
         server.pool.available_addrs.insert(client_3_ip);
         let () = server.store_client_config(
             client_3_ip,
-            client_3_mac,
+            ClientIdentifier::from(client_3_mac),
             &[DhcpOption::IpAddressLeaseTime(std::u32::MAX)],
         )?;
 
         let () = server.release_expired_leases()?;
 
         assert_eq!(server.cache.len(), 2);
-        assert!(!server.cache.contains_key(&client_2_mac));
+        assert!(!server.cache.contains_key(&ClientIdentifier::from(client_2_mac)));
         assert_eq!(server.pool.available_addrs.len(), 1);
         assert_eq!(server.pool.allocated_addrs.len(), 2);
         let keys = get_keys(&mut server).await.context("failed to get keys")?;
@@ -2598,7 +2602,7 @@ pub mod tests {
         let mut release = new_test_release();
 
         let release_ip = random_ipv4_generator();
-        let client_mac = release.chaddr;
+        let client_id = ClientIdentifier::from(&release);
 
         server.pool.allocated_addrs.insert(release_ip);
         release.ciaddr = release_ip;
@@ -2608,15 +2612,15 @@ pub mod tests {
                 .unwrap()
         };
 
-        server.cache.insert(client_mac, test_client_config());
+        server.cache.insert(client_id.clone(), test_client_config());
 
         assert_eq!(server.dispatch(release), Ok(ServerAction::AddressRelease(release_ip)));
 
         assert!(!server.pool.addr_is_allocated(&release_ip), "addr marked allocated");
         assert!(server.pool.addr_is_available(&release_ip), "addr not marked available");
-        assert!(server.cache.contains_key(&client_mac), "client config not retained");
+        assert!(server.cache.contains_key(&client_id), "client config not retained");
         assert_eq!(
-            server.cache.get(&client_mac).unwrap(),
+            server.cache.get(&client_id).unwrap(),
             &test_client_config(),
             "retained client config changed"
         );
@@ -2630,12 +2634,12 @@ pub mod tests {
         let mut release = new_test_release();
 
         let release_ip = random_ipv4_generator();
-        let client_mac = release.chaddr;
+        let client_id = ClientIdentifier::from(&release);
 
         server.pool.allocated_addrs.insert(release_ip);
         release.ciaddr = release_ip;
 
-        assert_eq!(server.dispatch(release), Err(ServerError::UnknownClientMac(client_mac,)));
+        assert_eq!(server.dispatch(release), Err(ServerError::UnknownClientId(client_id)));
 
         assert!(server.pool.addr_is_allocated(&release_ip), "addr not marked allocated");
         assert!(!server.pool.addr_is_available(&release_ip), "addr still marked available");
@@ -2670,14 +2674,14 @@ pub mod tests {
         let mut decline = new_test_decline(&server);
 
         let declined_ip = random_ipv4_generator();
-        let client_mac = decline.chaddr;
+        let client_id = ClientIdentifier::from(&decline);
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         server.pool.allocated_addrs.insert(declined_ip);
 
         server.cache.insert(
-            client_mac,
+            client_id.clone(),
             CachedConfig::new(declined_ip, vec![], std::time::SystemTime::now(), std::u32::MAX)?,
         );
 
@@ -2685,7 +2689,7 @@ pub mod tests {
 
         assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
-        assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
+        assert!(!server.cache.contains_key(&client_id), "client config incorrectly retained");
         Ok(())
     }
 
@@ -2696,7 +2700,7 @@ pub mod tests {
         let mut decline = new_test_decline(&server);
 
         let declined_ip = random_ipv4_generator();
-        let client_mac = decline.chaddr;
+        let client_id = ClientIdentifier::from(&decline);
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
@@ -2711,7 +2715,7 @@ pub mod tests {
         // Server contains client bindings which reflect a different address
         // than the one being declined.
         server.cache.insert(
-            client_mac,
+            client_id.clone(),
             CachedConfig::new(
                 client_ip_according_to_server,
                 vec![],
@@ -2724,7 +2728,7 @@ pub mod tests {
 
         assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
-        assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
+        assert!(!server.cache.contains_key(&client_id), "client config incorrectly retained");
         Ok(())
     }
 
@@ -2735,14 +2739,14 @@ pub mod tests {
         let mut decline = new_test_decline(&server);
 
         let declined_ip = random_ipv4_generator();
-        let client_mac = decline.chaddr;
+        let client_id = ClientIdentifier::from(&decline);
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         server.pool.available_addrs.insert(declined_ip);
 
         server.cache.insert(
-            client_mac,
+            client_id.clone(),
             CachedConfig::new(declined_ip, vec![], std::time::SystemTime::now(), std::u32::MIN)?,
         );
 
@@ -2750,7 +2754,7 @@ pub mod tests {
 
         assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
-        assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
+        assert!(!server.cache.contains_key(&client_id), "client config incorrectly retained");
         Ok(())
     }
 
@@ -2761,14 +2765,13 @@ pub mod tests {
         let mut decline = new_test_decline(&server);
 
         let declined_ip = random_ipv4_generator();
-        let client_mac = decline.chaddr;
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         // Server contains client bindings which reflect a different address
         // than the one being declined.
         server.cache.insert(
-            client_mac,
+            ClientIdentifier::from(&decline),
             CachedConfig::new(
                 random_ipv4_generator(),
                 vec![],
@@ -2818,13 +2821,13 @@ pub mod tests {
         decline.options.push(DhcpOption::ServerIdentifier(std_ip_v4!(1.2.3.4)));
 
         let declined_ip = random_ipv4_generator();
-        let client_mac = decline.chaddr;
+        let client_id = ClientIdentifier::from(&decline);
 
         decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         server.pool.allocated_addrs.insert(declined_ip);
         server.cache.insert(
-            client_mac,
+            client_id.clone(),
             CachedConfig::new(declined_ip, vec![], std::time::SystemTime::now(), std::u32::MAX)?,
         );
 
@@ -2832,7 +2835,7 @@ pub mod tests {
 
         assert!(!server.pool.addr_is_available(&declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(&declined_ip), "addr not marked allocated");
-        assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
+        assert!(!server.cache.contains_key(&client_id), "client config incorrectly retained");
         Ok(())
     }
 
@@ -2849,7 +2852,7 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_client_requested_lease_time() -> Result<(), Error> {
         let mut disc = new_test_discover();
-        let client_mac = disc.chaddr;
+        let client_id = ClientIdentifier::from(&disc);
 
         let client_requested_time: u32 = 20;
 
@@ -2876,7 +2879,7 @@ pub mod tests {
         );
 
         assert_eq!(
-            server.cache.get(&client_mac).unwrap().lease_length_seconds,
+            server.cache.get(&client_id).unwrap().lease_length_seconds,
             client_requested_time,
         );
         Ok(())
@@ -2885,7 +2888,7 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_client_requested_lease_time_greater_than_max() -> Result<(), Error> {
         let mut disc = new_test_discover();
-        let client_mac = disc.chaddr;
+        let client_id = ClientIdentifier::from(&disc);
 
         let client_requested_time: u32 = 20;
         let server_max_lease_time: u32 = 10;
@@ -2915,7 +2918,7 @@ pub mod tests {
         );
 
         assert_eq!(
-            server.cache.get(&client_mac).unwrap().lease_length_seconds,
+            server.cache.get(&client_id).unwrap().lease_length_seconds,
             server_max_lease_time,
         );
         Ok(())
@@ -3149,7 +3152,7 @@ pub mod tests {
             .allocate_addr(client)
             .with_context(|| format!("allocate_addr({}) failed", client))?;
         server.cache = [(
-            random_mac_generator(),
+            ClientIdentifier::from(random_mac_generator()),
             CachedConfig {
                 client_addr: client,
                 options: vec![],
@@ -3184,7 +3187,10 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_set_address_pool_fails_if_leases_present() -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
-        server.cache.insert(MacAddr { octets: [1, 2, 3, 4, 5, 6] }, CachedConfig::default());
+        server.cache.insert(
+            ClientIdentifier::from(MacAddr { octets: [1, 2, 3, 4, 5, 6] }),
+            CachedConfig::default(),
+        );
         assert_eq!(
             server.dispatch_set_parameter(fidl_fuchsia_net_dhcp::Parameter::AddressPool(
                 fidl_fuchsia_net_dhcp::AddressPool {

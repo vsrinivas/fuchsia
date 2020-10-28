@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use crate::configuration::ServerParameters;
-use crate::protocol::{DhcpOption, OptionCode};
+use crate::protocol::{identifier::ClientIdentifier, DhcpOption, OptionCode};
 use crate::server::{CachedClients, CachedConfig};
 use anyhow::{Context as _, Error};
-use fidl_fuchsia_hardware_ethernet_ext::MacAddress;
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::string::ToString;
 
 /// A wrapper around a `fuchsia.stash.StoreAccessor` proxy.
 ///
@@ -18,6 +18,7 @@ use std::str::FromStr;
 /// This wrapper stores client configuration as serialized JSON strings. The decision to use JSON
 /// derives from its use in other Stash clients, cf. commit e9c57a0, and the relative immaturity of
 /// more compact serde serialization formats, e.g. https://github.com/pyfisch/cbor/issues.
+#[derive(Debug)]
 pub struct Stash {
     prefix: String,
     proxy: fidl_fuchsia_stash::StoreAccessorProxy,
@@ -31,7 +32,14 @@ impl Stash {
     ///
     /// The newly instantiated value will use `id` to identify itself with the `fuchsia.stash`
     /// service and `prefix` as the prefix for key strings in persistent storage.
+    ///
+    /// `prefix` must not contain either '-' or ':' as these characters are used as field
+    /// delimiters in key strings for persistent storage. If `prefix` contains either character,
+    /// then the function will return `Result::Err`.
     pub fn new(id: &str, prefix: &str) -> Result<Self, Error> {
+        if prefix.contains(&['-', ':'][..]) {
+            return Err(anyhow::anyhow!("prefix contained invalid characters: {}", prefix));
+        }
         let store_client = fuchsia_component::client::connect_to_service::<
             fidl_fuchsia_stash::SecureStoreMarker,
         >()
@@ -47,16 +55,15 @@ impl Stash {
         Ok(Stash { prefix, proxy })
     }
 
-    /// Stores the `client_config` value with the `client_mac` key in `fuchsia.stash`.
+    /// Stores the `client_config` value with the `client_id` key in `fuchsia.stash`.
     ///
     /// This function stores the `client_config` as a serialized JSON string.
     pub fn store_client_config<'a>(
         &'a self,
-        client_mac: &'a fidl_fuchsia_hardware_ethernet_ext::MacAddress,
+        client_id: &ClientIdentifier,
         client_config: &'a CachedConfig,
     ) -> Result<(), Error> {
-        let key = format!("{}-{}", self.prefix, client_mac);
-        self.store(&key, client_config)
+        self.store(&self.client_key(client_id), client_config)
     }
 
     /// Stores `opts` in `fuchsia.stash`.
@@ -102,10 +109,18 @@ impl Stash {
         let mut cache = std::collections::HashMap::new();
         for kv in iter.get_next().await.context("failed to get next iterator item")? {
             let key = match kv.key.split("-").last() {
-                Some(v) => fidl_fuchsia_hardware_ethernet_ext::MacAddress::from_str(v)?,
+                Some(v) => v,
                 None => {
                     // Invalid key-value pair: remove the invalid pair and try the next one.
                     log::warn!("failed to parse key string: {}", kv.key);
+                    let () = self.rm_key(&kv.key)?;
+                    continue;
+                }
+            };
+            let key = match ClientIdentifier::from_str(key) {
+                Ok(v) => v,
+                Err(e) => {
+                    log::warn!("client id from string conversion failed: {}", e);
                     let () = self.rm_key(&kv.key)?;
                     continue;
                 }
@@ -189,9 +204,8 @@ impl Stash {
     ///
     /// This function immediately commits the deletion operation to the Stash, i.e. there is no
     /// batching of delete operations.
-    pub fn delete(&self, client: &MacAddress) -> Result<(), Error> {
-        let key = format!("{}-{}", self.prefix, client);
-        self.rm_key(&key)
+    pub fn delete(&self, client_id: &ClientIdentifier) -> Result<(), Error> {
+        self.rm_key(&self.client_key(client_id))
     }
 
     /// Clears all configuration data from `fuchsia.stash`.
@@ -209,6 +223,10 @@ impl Stash {
     #[cfg(test)]
     pub fn clone_proxy(&self) -> fidl_fuchsia_stash::StoreAccessorProxy {
         self.proxy.clone()
+    }
+
+    pub(crate) fn client_key(&self, client_id: &ClientIdentifier) -> String {
+        format!("{}-{}", self.prefix, client_id)
     }
 }
 
@@ -232,20 +250,27 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn stash_new() {
+        matches::assert_matches!(Stash::new("stash_new", "valid"), Ok(Stash { .. }));
+        matches::assert_matches!(Stash::new("stash_new", "invalid-"), Err(..));
+        matches::assert_matches!(Stash::new("stash_new", "invalid:"), Err(..));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn store_client_succeeds() -> Result<(), Error> {
         let (stash, id) = new_stash("store_client_succeeds")?;
         let accessor_client = stash.proxy.clone();
 
         // Store value in stash.
-        let client_mac = crate::server::tests::random_mac_generator();
+        let client_id = ClientIdentifier::from(crate::server::tests::random_mac_generator());
         let client_config = CachedConfig::default();
         let () = stash
-            .store_client_config(&client_mac, &client_config)
+            .store_client_config(&client_id, &client_config)
             .with_context(|| format!("failed to store client in {}", id))?;
 
         // Verify value actually stored in stash.
         let value = accessor_client
-            .get_value(&format!("{}-{}", stash.prefix, client_mac))
+            .get_value(&stash.client_key(&client_id))
             .await
             .with_context(|| format!("failed to get value from {}", id))?;
         let value = match *value.unwrap() {
@@ -313,13 +338,13 @@ mod tests {
         let (stash, id) = new_stash("load_clients_with_populated_stash_returns_cached_clients")?;
         let accessor = stash.proxy.clone();
 
-        let client_mac = crate::server::tests::random_mac_generator();
+        let client_id = ClientIdentifier::from(crate::server::tests::random_mac_generator());
         let client_config = CachedConfig::default();
         let serialized_client =
             serde_json::to_string(&client_config).expect("serialization failed");
         let () = accessor
             .set_value(
-                &format!("{}-{}", stash.prefix, client_mac),
+                &stash.client_key(&client_id),
                 &mut fidl_fuchsia_stash::Value::Stringval(serialized_client),
             )
             .with_context(|| format!("failed to set value in {}", id))?;
@@ -333,7 +358,7 @@ mod tests {
             .with_context(|| format!("failed to load map from stash in {}", id))?;
 
         let mut cached_clients = HashMap::new();
-        cached_clients.insert(client_mac, client_config);
+        cached_clients.insert(client_id, client_config);
         assert_eq!(loaded_cache, cached_clients);
 
         Ok(())
@@ -418,7 +443,7 @@ mod tests {
             new_stash("load_clients_with_stash_containing_invalid_entries_returns_empty_cache")?;
         let accessor = stash.proxy.clone();
 
-        let client_mac = crate::server::tests::random_mac_generator();
+        let client_id = ClientIdentifier::from(crate::server::tests::random_mac_generator());
         let client_config = CachedConfig::default();
         let serialized_client =
             serde_json::to_string(&client_config).expect("serialization failed");
@@ -426,10 +451,7 @@ mod tests {
             .set_value("invalid key", &mut fidl_fuchsia_stash::Value::Stringval(serialized_client))
             .with_context(|| format!("failed to set value in {}", id))?;
         let () = accessor
-            .set_value(
-                &format!("{}-{}", stash.prefix, client_mac),
-                &mut fidl_fuchsia_stash::Value::Intval(42),
-            )
+            .set_value(&stash.client_key(&client_id), &mut fidl_fuchsia_stash::Value::Intval(42))
             .with_context(|| format!("failed to set value in {}", id))?;
         let () = accessor
             .commit()
@@ -452,25 +474,25 @@ mod tests {
         let accessor = stash.proxy.clone();
 
         // Store value in stash.
-        let client_mac = crate::server::tests::random_mac_generator();
+        let client_id = ClientIdentifier::from(crate::server::tests::random_mac_generator());
         let client_config = CachedConfig::default();
         let () = stash
-            .store_client_config(&client_mac, &client_config)
+            .store_client_config(&client_id, &client_config)
             .with_context(|| format!("failed to store client in {}", id))?;
 
         // Verify value actually stored in stash.
         let value = accessor
-            .get_value(&format!("{}-{}", stash.prefix, client_mac))
+            .get_value(&stash.client_key(&client_id))
             .await
             .with_context(|| format!("failed to get value from {}", id))?;
         assert!(value.is_some());
 
         // Delete value and verify its absence.
         let () = stash
-            .delete(&client_mac)
+            .delete(&client_id)
             .with_context(|| format!("failed to delete client in {}", id))?;
         let value = accessor
-            .get_value(&format!("{}-{}", stash.prefix, client_mac))
+            .get_value(&stash.client_key(&client_id))
             .await
             .with_context(|| format!("failed to get value from {}", id))?;
         assert!(value.is_none());
@@ -484,13 +506,13 @@ mod tests {
         let accessor = stash.proxy.clone();
 
         // Store a value in the stash.
-        let client_mac = crate::server::tests::random_mac_generator();
+        let client_mac = ClientIdentifier::from(crate::server::tests::random_mac_generator());
         let client_config = CachedConfig::default();
         let serialized_client =
             serde_json::to_string(&client_config).expect("serialization failed");
         let () = accessor
             .set_value(
-                &format!("{}-{}", stash.prefix, client_mac),
+                &stash.client_key(&client_mac),
                 &mut fidl_fuchsia_stash::Value::Stringval(serialized_client),
             )
             .with_context(|| format!("failed to set value in {}", id))?;

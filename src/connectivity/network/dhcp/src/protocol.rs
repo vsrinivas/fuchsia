@@ -291,6 +291,108 @@ impl Message {
     }
 }
 
+pub mod identifier {
+    use super::{DhcpOption, Message, CHADDR_LEN};
+    use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
+    use std::convert::TryInto as _;
+
+    const CLIENT_IDENTIFIER_ID: &'static str = "id";
+    const CLIENT_IDENTIFIER_CHADDR: &'static str = "chaddr";
+
+    /// An opaque identifier which uniquely identifies a DHCP client to a DHCP server.
+    #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+    pub struct ClientIdentifier {
+        inner: ClientIdentifierInner,
+    }
+
+    #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+    enum ClientIdentifierInner {
+        /// An identifier derived from a Client-identifier DHCP Option, as defined in
+        /// https://tools.ietf.org/html/rfc2132#section-9.14.
+        Id(Vec<u8>),
+        /// An identifier derived from the chaddr field of a DHCP message, typically only used in the
+        /// absense of the Client-identifier DHCP Option.
+        Chaddr(MacAddr),
+    }
+
+    impl From<MacAddr> for ClientIdentifier {
+        fn from(v: MacAddr) -> Self {
+            Self { inner: ClientIdentifierInner::Chaddr(v) }
+        }
+    }
+
+    impl From<&Message> for ClientIdentifier {
+        /// Returns the opaque client identifier associated with the argument message.
+        ///
+        /// Typically, a message will contain a `DhcpOption::ClientIdentifier` which stores the
+        /// associated opaque client identifier. In the absence of this option, an identifier
+        /// will be constructed from the `chaddr` field of the message.
+        fn from(msg: &Message) -> ClientIdentifier {
+            msg.options
+                .iter()
+                .find_map(|opt| match opt {
+                    DhcpOption::ClientIdentifier(v) => {
+                        Some(ClientIdentifier { inner: ClientIdentifierInner::Id(v.clone()) })
+                    }
+                    _ => None,
+                })
+                .unwrap_or_else(|| ClientIdentifier::from(msg.chaddr.clone()))
+        }
+    }
+
+    impl std::str::FromStr for ClientIdentifier {
+        type Err = anyhow::Error;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            let mut id_parts = s.splitn(2, ":");
+            let id_type = id_parts
+                .next()
+                .ok_or(anyhow::anyhow!("no client id type found in string: {}", s))?;
+            let id =
+                id_parts.next().ok_or(anyhow::anyhow!("no client id found in string: {}", s))?;
+            let () = match id_parts.next() {
+                None => (),
+                Some(v) => {
+                    return Err(anyhow::anyhow!(
+                        "client id string contained unexpected fields: {}",
+                        v
+                    ))
+                }
+            };
+            let id = hex::decode(id)?;
+            match id_type {
+                CLIENT_IDENTIFIER_ID => Ok(Self { inner: ClientIdentifierInner::Id(id) }),
+                CLIENT_IDENTIFIER_CHADDR => Ok(Self {
+                    inner: ClientIdentifierInner::Chaddr(
+                        fidl_fuchsia_hardware_ethernet_ext::MacAddress {
+                            octets: id
+                                .get(..CHADDR_LEN)
+                                .ok_or(anyhow::anyhow!(
+                                    "client id had insufficient length: {:?}",
+                                    id
+                                ))?
+                                .try_into()?,
+                        },
+                    ),
+                }),
+                id_type => Err(anyhow::anyhow!("unrecognized client id type: {}", id_type)),
+            }
+        }
+    }
+
+    impl std::fmt::Display for ClientIdentifier {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let (id_type, id) = match self {
+                Self { inner: ClientIdentifierInner::Id(v) } => (CLIENT_IDENTIFIER_ID, v.as_ref()),
+                Self { inner: ClientIdentifierInner::Chaddr(v) } => {
+                    (CLIENT_IDENTIFIER_CHADDR, &v.octets[..])
+                }
+            };
+            write!(f, "{}:{}", id_type, hex::encode(id))
+        }
+    }
+}
+
 /// A DHCP protocol op-code as defined in RFC 2131.
 ///
 /// Note that this type corresponds to the first field of a DHCP message,
@@ -1907,9 +2009,11 @@ fn trunc_string_to_n_and_push(s: &str, n: usize, buffer: &mut Vec<u8>) {
 #[cfg(test)]
 mod tests {
 
+    use super::identifier::ClientIdentifier;
     use super::*;
     use net_declare::std::ip_v4;
     use std::net::Ipv4Addr;
+    use std::str::FromStr;
 
     const DEFAULT_SUBNET_MASK: Ipv4Addr = ip_v4!(255.255.255.0);
 
@@ -2246,5 +2350,33 @@ mod tests {
         test_option_overload(Overload::SName);
         test_option_overload(Overload::File);
         test_option_overload(Overload::Both);
+    }
+
+    #[test]
+    fn test_client_identifier_from_str() {
+        matches::assert_matches!(
+            ClientIdentifier::from_str("id:1234567890abcd"),
+            Ok(ClientIdentifier { .. })
+        );
+        matches::assert_matches!(
+            ClientIdentifier::from_str("chaddr:1234567890ab"),
+            Ok(ClientIdentifier { .. })
+        );
+        // incorrect type prefix
+        matches::assert_matches!(ClientIdentifier::from_str("option:1234567890"), Err(..));
+        // extra field
+        matches::assert_matches!(ClientIdentifier::from_str("id:1234567890:extra"), Err(..));
+        // no type prefix
+        matches::assert_matches!(ClientIdentifier::from_str("1234567890"), Err(..));
+        // no delimiter
+        matches::assert_matches!(ClientIdentifier::from_str("id1234567890"), Err(..));
+        // incorrect delimiter
+        matches::assert_matches!(ClientIdentifier::from_str("id-1234567890"), Err(..));
+        // invalid hex digits
+        matches::assert_matches!(ClientIdentifier::from_str("id:1234567890abcdefg"), Err(..));
+        // odd number of hex digits
+        matches::assert_matches!(ClientIdentifier::from_str("id:123456789"), Err(..));
+        // insufficient digits for chaddr
+        matches::assert_matches!(ClientIdentifier::from_str("chaddr:1234567890"), Err(..));
     }
 }
