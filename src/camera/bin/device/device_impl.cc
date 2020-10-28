@@ -146,10 +146,14 @@ void DeviceImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Device> r
 void DeviceImpl::Bind(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
   bool first_client = clients_.empty();
   auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
-  clients_.emplace(client_id_next_++, std::move(client));
+  auto [it, emplaced] = clients_.emplace(client_id_next_++, std::move(client));
+  auto& [id, new_client] = *it;
   if (first_client) {
     SetConfiguration(0);
+  } else {
+    new_client->ConfigurationUpdated(current_configuration_index_);
   }
+  new_client->MuteUpdated(mute_state_);
 }
 
 void DeviceImpl::OnControllerDisconnected(zx_status_t status) {
@@ -168,7 +172,6 @@ void DeviceImpl::SetConfiguration(uint32_t index) {
   FX_LOGS(DEBUG) << "Configuration set to " << index << ".";
   for (auto& client : clients_) {
     client.second->ConfigurationUpdated(current_configuration_index_);
-    client.second->MuteUpdated(mute_state_);
   }
 }
 

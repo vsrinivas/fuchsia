@@ -415,6 +415,20 @@ TEST_F(DeviceImplTest, MultipleDeviceClients) {
   SetFailOnError(device2, "Device");
   device_->GetHandler()(device2.NewRequest());
   Sync(device2);
+
+  // Make sure new clients can get configurations and see the current configuration.
+  bool get_configurations_returned = false;
+  device2->GetConfigurations([&](std::vector<fuchsia::camera3::Configuration> configurations) {
+    ASSERT_GE(configurations.size(), 1u);
+    get_configurations_returned = true;
+  });
+  RunLoopUntilFailureOr(get_configurations_returned);
+  bool watch_returned = false;
+  device2->WatchCurrentConfiguration([&](uint32_t index) {
+    EXPECT_EQ(index, 0u);
+    watch_returned = true;
+  });
+  RunLoopUntilFailureOr(watch_returned);
 }
 
 TEST_F(DeviceImplTest, StreamClientDisconnect) {
