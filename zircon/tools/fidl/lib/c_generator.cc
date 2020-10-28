@@ -451,6 +451,7 @@ void EmitMagicNumberCheck(std::ostream* file) {
   *file << kIndent << "status = fidl_validate_txn_header(hdr);\n";
   *file << kIndent << "if (status != ZX_OK) {\n";
   *file << kIndent << kIndent << "zx_handle_close_many(msg->handles, msg->num_handles);\n";
+  *file << kIndent << kIndent << "ZX_DEBUG_ASSERT(status == ZX_ERR_PROTOCOL_NOT_SUPPORTED);";
   *file << kIndent << kIndent << "return status;\n";
   *file << kIndent << "}\n";
 }
