@@ -155,6 +155,7 @@ if (is_kernel) {
       ":scheduler",
       ":standalone",
       ":warnings",
+      ":kcsan",
       "arch/$zircon_cpu:abi",
       "arch/$zircon_cpu:kernel",
 
@@ -304,6 +305,22 @@ if (is_kernel) {
     }
 
     cflags_c = [ "-Wmissing-prototypes" ]
+  }
+
+  config("kcsan") {
+    visibility = [ ":*" ]
+    if (enable_kernel_csan) {
+      cflags = [ "-fsanitize=thread" ]
+      if (!is_gcc) {
+        cflags += [
+          "-mllvm",
+          "-tsan-instrument-func-entry-exit=0",
+
+          #"-mllvm",
+          #"-tsan-distinguish-volatile=1",
+        ]
+      }
+    }
   }
 
   config("lock_dep") {

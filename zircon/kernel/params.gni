@@ -34,6 +34,9 @@ declare_args() {
   # Enable kernel lock dependency tracking.
   enable_lock_dep = false
 
+  # Enable kernel concurrency sanitizer.
+  enable_kernel_csan = false
+
   # The level of detail for scheduler traces when enabled. Values greater than
   # zero add increasing details at the cost of increased trace buffer use.
   #
