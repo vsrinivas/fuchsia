@@ -111,8 +111,6 @@ test("blobfs_unittest") {
     "unit/seekable-compressor-test.cc",
     "unit/utils.cc",
     "unit/vector-extent-iterator-test.cc",
-    "unit/zstd-compressed-block-collection-test.cc",
-    "unit/zstd-seekable-blob-test.cc",
   ]
   deps = [
     ":test-utils",

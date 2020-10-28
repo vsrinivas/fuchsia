@@ -124,8 +124,7 @@ class BlobLoaderTest : public TestWithParam<CompressionAlgorithm> {
     auto* fs_ptr = fs_.get();
 
     zx::status<BlobLoader> loader =
-        BlobLoader::Create(fs_ptr, fs_ptr, fs_->GetNodeFinder(), pager_.get(), fs_->Metrics(),
-                           fs_->zstd_seekable_blob_collection());
+        BlobLoader::Create(fs_ptr, fs_ptr, fs_->GetNodeFinder(), pager_.get(), fs_->Metrics());
     EXPECT_EQ(loader.status_value(), ZX_OK);
     // TODO(jfsulliv): Pessimizing move seems to be necessary, since otherwise fitx::result::value
     // selects the const-ref variant and the (deleted) copy constructor of BlobLoader is invoked

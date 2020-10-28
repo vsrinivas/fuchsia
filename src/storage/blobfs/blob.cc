@@ -37,9 +37,6 @@
 
 #include "blob-verifier.h"
 #include "blobfs.h"
-#include "compression/lz4.h"
-#include "compression/zstd-plain.h"
-#include "compression/zstd-seekable.h"
 #include "iterator/allocated-extent-iterator.h"
 #include "iterator/block-iterator.h"
 #include "iterator/extent-iterator.h"

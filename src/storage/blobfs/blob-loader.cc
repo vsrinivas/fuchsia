@@ -24,7 +24,6 @@
 #include "compression/chunked.h"
 #include "compression/decompressor.h"
 #include "compression/seekable-decompressor.h"
-#include "compression/zstd-seekable-blob-collection.h"
 #include "iterator/block-iterator.h"
 
 namespace blobfs {
@@ -38,20 +37,17 @@ constexpr size_t kScratchBufferSize = 4 * kBlobfsBlockSize;
 
 BlobLoader::BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
                        NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
-                       ZSTDSeekableBlobCollection* zstd_seekable_blob_collection,
                        fzl::OwnedVmoMapper scratch_vmo)
     : txn_manager_(txn_manager),
       block_iter_provider_(block_iter_provider),
       node_finder_(node_finder),
       pager_(pager),
       metrics_(metrics),
-      zstd_seekable_blob_collection_(zstd_seekable_blob_collection),
       scratch_vmo_(std::move(scratch_vmo)) {}
 
 zx::status<BlobLoader> BlobLoader::Create(
     TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
-    NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
-    ZSTDSeekableBlobCollection* zstd_seekable_blob_collection) {
+    NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics) {
   fzl::OwnedVmoMapper scratch_vmo;
   zx_status_t status = scratch_vmo.CreateAndMap(kScratchBufferSize, "blobfs-loader");
   if (status != ZX_OK) {
@@ -59,7 +55,7 @@ zx::status<BlobLoader> BlobLoader::Create(
     return zx::error(status);
   }
   return zx::ok(BlobLoader(txn_manager, block_iter_provider, node_finder, pager, metrics,
-                           zstd_seekable_blob_collection, std::move(scratch_vmo)));
+                           std::move(scratch_vmo)));
 }
 
 void BlobLoader::Reset() { scratch_vmo_.Reset(); }
@@ -159,9 +155,7 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   }
 
   std::unique_ptr<SeekableDecompressor> decompressor;
-  ZSTDSeekableBlobCollection* zstd_seekable_blob_collection = nullptr;
-  if ((status = InitForDecompression(node_index, *inode, *verifier, &decompressor,
-                                     &zstd_seekable_blob_collection)) != ZX_OK) {
+  if ((status = InitForDecompression(node_index, *inode, *verifier, &decompressor)) != ZX_OK) {
     return status;
   }
 
@@ -171,7 +165,6 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   userpager_info.data_length_bytes = inode->blob_size;
   userpager_info.verifier = std::move(verifier);
   userpager_info.decompressor = std::move(decompressor);
-  userpager_info.zstd_seekable_blob_collection = zstd_seekable_blob_collection;
   auto page_watcher = std::make_unique<pager::PageWatcher>(pager_, std::move(userpager_info));
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
@@ -249,8 +242,7 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
 
 zx_status_t BlobLoader::InitForDecompression(
     uint32_t node_index, const Inode& inode, const BlobVerifier& verifier,
-    std::unique_ptr<SeekableDecompressor>* decompressor_out,
-    ZSTDSeekableBlobCollection** zstd_seekable_blob_collection_out) {
+    std::unique_ptr<SeekableDecompressor>* decompressor_out) {
   zx::status<CompressionAlgorithm> algorithm_status = AlgorithmForInode(inode);
   if (algorithm_status.is_error()) {
     FS_TRACE_ERROR("blobfs: Cannot decode blob due to multiple compression flags.\n");
@@ -261,13 +253,11 @@ zx_status_t BlobLoader::InitForDecompression(
   switch (algorithm) {
     case CompressionAlgorithm::UNCOMPRESSED:
       return ZX_OK;
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
-      *zstd_seekable_blob_collection_out = zstd_seekable_blob_collection_;
-      break;
     case CompressionAlgorithm::CHUNKED:
       break;
     case CompressionAlgorithm::LZ4:
     case CompressionAlgorithm::ZSTD:
+    case CompressionAlgorithm::ZSTD_SEEKABLE:
       // Callers should have guarded against calling this code path with an algorithm that
       // does not support paging.
       FS_TRACE_ERROR(

@@ -159,8 +159,6 @@ class UserPager {
 
   PagerErrorStatus TransferChunkedPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
                                              const UserPagerInfo& info);
-  PagerErrorStatus TransferZSTDSeekablePagesToVmo(uint64_t offset, uint64_t length,
-                                                  const zx::vmo& vmo, const UserPagerInfo& info);
   PagerErrorStatus TransferUncompressedPagesToVmo(uint64_t offset, uint64_t length,
                                                   const zx::vmo& vmo, const UserPagerInfo& info);
 

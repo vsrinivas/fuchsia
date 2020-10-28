@@ -19,7 +19,6 @@
 #include <storage/buffer/owned_vmoid.h>
 
 #include "compression/seekable-decompressor.h"
-#include "compression/zstd-seekable-blob-collection.h"
 #include "iterator/block-iterator-provider.h"
 #include "metrics.h"
 #include "pager/page-watcher.h"
@@ -41,8 +40,7 @@ class BlobLoader {
   static zx::status<BlobLoader> Create(TransactionManager* txn_manager,
                                        BlockIteratorProvider* block_iter_provider,
                                        NodeFinder* node_finder, pager::UserPager* pager,
-                                       BlobfsMetrics* metrics,
-                                       ZSTDSeekableBlobCollection* zstd_seekable_blob_collection);
+                                       BlobfsMetrics* metrics);
 
   // Resets the BlobLoader, freeing any owned resources. |LoadBlob*| must not be invoked after
   // |Reset()| is called.
@@ -82,7 +80,6 @@ class BlobLoader {
  private:
   BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
              NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
-             ZSTDSeekableBlobCollection* zstd_seekable_blob_collection,
              fzl::OwnedVmoMapper scratch_vmo);
 
   // Loads the merkle tree from disk and initializes a VMO mapping and BlobVerifier with the
@@ -98,8 +95,7 @@ class BlobLoader {
   // containing the seek table is read and used to initialize the decomprssor).
   zx_status_t InitForDecompression(uint32_t node_index, const Inode& inode,
                                    const BlobVerifier& verifier,
-                                   std::unique_ptr<SeekableDecompressor>* decompressor_out,
-                                   ZSTDSeekableBlobCollection** zstd_seekable_blob_collection_out);
+                                   std::unique_ptr<SeekableDecompressor>* decompressor_out);
   zx_status_t LoadMerkle(uint32_t node_index, const Inode& inode,
                          const fzl::OwnedVmoMapper& vmo) const;
   zx_status_t LoadData(uint32_t node_index, const Inode& inode,
@@ -117,7 +113,6 @@ class BlobLoader {
   NodeFinder* node_finder_ = nullptr;
   pager::UserPager* pager_ = nullptr;
   BlobfsMetrics* metrics_ = nullptr;
-  ZSTDSeekableBlobCollection* zstd_seekable_blob_collection_ = nullptr;
   fzl::OwnedVmoMapper scratch_vmo_;
 };
 

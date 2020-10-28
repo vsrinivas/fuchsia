@@ -13,7 +13,6 @@
 
 #include "../blob-verifier.h"
 #include "../compression/seekable-decompressor.h"
-#include "../compression/zstd-seekable-blob-collection.h"
 
 namespace blobfs {
 namespace pager {
@@ -36,16 +35,6 @@ struct UserPagerInfo {
   // on the raw bytes received from the disk. If unset, blob data is assumed to be managed via some
   // other compression strategy (including the "uncompressed" strategy).
   std::unique_ptr<SeekableDecompressor> decompressor;
-  // An optional blobs management object used by the ZSTD Seekable compression strategy. If unset,
-  // blob data is assumed to be managed via some other compression strategy (including the
-  // "uncompressed" strategy). Note that this object is global to the |Blobfs| instance, and is
-  // copied here to maintain short-term consistency between |UserPager| strategy implementations.
-  //
-  // TODO(fxbug.dev/51072): Decompression strategies should have common abstractions to, among other things,
-  // avoid the need for both |decompressor| and |zstd_seekable_blob_collection|. This change is
-  // somewhat complicated by the fact that ZSTD Seekable decompression manages its own
-  // compressed-space buffer rather than reusing |transfer_buffer_| as chunked decompression does.
-  ZSTDSeekableBlobCollection* zstd_seekable_blob_collection = nullptr;
 };
 
 }  // namespace pager

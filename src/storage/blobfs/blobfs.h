@@ -48,7 +48,6 @@
 #include "allocator/node-reserver.h"
 #include "blob-cache.h"
 #include "blob-loader.h"
-#include "compression/zstd-seekable-blob-collection.h"
 #include "directory.h"
 #include "iterator/allocated-extent-iterator.h"
 #include "iterator/block-iterator-provider.h"
@@ -125,9 +124,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   size_t WritebackCapacity() const final;
   fs::Journal* journal() final;
   Writability writability() const { return writability_; }
-  ZSTDSeekableBlobCollection* zstd_seekable_blob_collection() {
-    return zstd_seekable_blob_collection_.get();
-  }
 
   ////////////////
   // BlockIteratorProvider interface.
@@ -301,8 +297,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   // A unique identifier for this filesystem instance.
   zx::event fs_id_;
-
-  std::unique_ptr<ZSTDSeekableBlobCollection> zstd_seekable_blob_collection_ = nullptr;
 
   // The numerical version of fs_id is used by the old |fuchsia.io/DirectoryAdmin| protocol,
   // which is being deprecated in favor of |fuchsia.fs/Query|. It is derived from |fs_id|
