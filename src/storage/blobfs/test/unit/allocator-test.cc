@@ -572,28 +572,23 @@ TEST(AllocatorTest, FreedBlocksAreReservedUntilTransactionCommits) {
   // Unlink the blob we just created.
   EXPECT_EQ(root->Unlink(info->path + 1, /*must_be_dir=*/false), ZX_OK);
 
-  // Should still see a no-space condition.
+  std::atomic<bool> done(false);
+
+  std::thread thread([&]() {
+    // Creating a new blob should succeed but only after we've unfrozen the device, since it
+    // requires syncing the journal and the blocks will remain reserved until that's done.
+    zx::nanosleep(zx::deadline_after(zx::msec(10)));
+    EXPECT_EQ(done.load(), false);
+    device_ref.Resume();
+  });
+
   ASSERT_EQ(root->Create(info2->path + 1, 0, &file), ZX_OK);
   EXPECT_EQ(file->Truncate(info2->size_data), ZX_OK);
-  EXPECT_EQ(file->Write(info2->data.get(), info2->size_data, 0, &actual), ZX_ERR_NO_SPACE);
+  EXPECT_EQ(file->Write(info2->data.get(), info2->size_data, 0, &actual), ZX_OK);
   EXPECT_EQ(file->Close(), ZX_OK);
+  done.store(true);
 
-  device_ref.Resume();
-  fs->Sync([](zx_status_t) {});
-
-  // There's no easy way of knowing when the space will become available because there's no
-  // trigger we can hook into, so, for now, just keep retrying.
-  for (;;) {
-    ASSERT_EQ(root->Create(info2->path + 1, 0, &file), ZX_OK);
-    EXPECT_EQ(file->Truncate(info2->size_data), ZX_OK);
-    zx_status_t status = file->Write(info2->data.get(), info2->size_data, 0, &actual);
-    EXPECT_EQ(file->Close(), ZX_OK);
-    if (status == ZX_OK) {
-      break;
-    }
-    ASSERT_EQ(status, ZX_ERR_NO_SPACE);
-    zx::nanosleep(zx::deadline_after(zx::msec(50)));
-  }
+  thread.join();
 }
 
 }  // namespace

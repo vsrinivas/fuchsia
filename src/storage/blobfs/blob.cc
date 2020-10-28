@@ -187,7 +187,17 @@ zx_status_t Blob::SpaceAllocate(uint64_t block_count) {
   fbl::Vector<ReservedNode> nodes;
 
   // Reserve space for the blob.
+  const uint64_t reserved_blocks = blobfs_->GetAllocator()->ReservedBlockCount();
   zx_status_t status = blobfs_->GetAllocator()->ReserveBlocks(inode_.block_count, &extents);
+  if (status == ZX_ERR_NO_SPACE && reserved_blocks > 0) {
+    // It's possible that a blob has just been unlinked but has yet to be flushed through the
+    // journal, and the blocks are still reserved, so if that looks likely, force a flush and then
+    // try again.  This might need to be revisited if/when blobfs becomes multi-threaded.
+    sync_completion_t sync;
+    blobfs_->Sync([&](zx_status_t) { sync_completion_signal(&sync); });
+    sync_completion_wait(&sync, ZX_TIME_INFINITE);
+    status = blobfs_->GetAllocator()->ReserveBlocks(inode_.block_count, &extents);
+  }
   if (status != ZX_OK) {
     return status;
   }
