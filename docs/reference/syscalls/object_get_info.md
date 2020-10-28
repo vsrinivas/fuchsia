@@ -673,11 +673,7 @@ the maps of arbitrary processes by koid.
 
 Additional errors:
 
-*   **ZX_ERR_ACCESS_DENIED**: If the appropriate rights are missing, or if a
-    process attempts to call this on a handle to itself. It's not safe to
-    examine yourself: *buffer* will live inside the Aspace being examined, and
-    the kernel can't safely fault in pages of the buffer while walking the
-    Aspace.
+*   **ZX_ERR_ACCESS_DENIED**: If the appropriate rights are missing.
 *   **ZX_ERR_BAD_STATE**: If the target process has terminated, or if its
     address space has been destroyed
 
