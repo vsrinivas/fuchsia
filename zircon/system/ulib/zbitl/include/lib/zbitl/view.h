@@ -99,7 +99,7 @@ class View {
   // explicitly resets the moved-from error state to kUnused so that the
   // moved-from View can be destroyed without checking it.
   View(View&& other)
-      : error_(std::move(other.error_)), storage_(std::move(other.storage_)), limit_(other.limit_) {
+      : storage_(std::move(other.storage_)), error_(std::move(other.error_)), limit_(other.limit_) {
     other.error_ = Unused{};
     other.limit_ = 0;
   }
