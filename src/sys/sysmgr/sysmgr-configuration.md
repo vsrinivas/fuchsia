@@ -253,14 +253,15 @@ no effect. It is only relevant for ephemeral package updates.
 
 ### `critical_components`
 
-Critical components are a list of components which are automatically re-launched
-if they ever exit. A critical component which exits is relaunched, up to 3 times
-within 60 minutes. If a component crashes a 4th time within its 60 minute
-window, `sysmgr` exits, causing the system to reboot. The primary use-case are
-components are critical to the system's functionality and must always be
-running. Note that a component listed under `critical_components` does not
-mean it will necessarily launch when sysmgr starts; the component may
-initially launch through other means, such as via `startup_services`.
+Disclaimer: this feature is not intended for general use. Please consult before
+using.
+
+Critical components are a list of components which cause the system to reboot
+if they ever crash. The primary use-case are components which are critical to
+the system's functionality and must always be running. Note that listing a
+component under `critical_components` does not mean it will necessarily launch
+when sysmgr starts; the component may initially launch through other means,
+such as via `startup_services`.
 
 Here is an example configuration snippet:
 ```json
@@ -279,6 +280,4 @@ Here is an example configuration snippet:
 
 In the example above, `system-update-checker.cmx` is launched when sysmgr starts
 up because it provides a startup service. If system-update-checker.cmx ever
-exits it will be relaunched up to 3 times within a 60 minute window. Note that a
-4th crash does not cause the system to reboot if it is outside the 60 minute
-window.
+exits, the system is rebooted.

@@ -5,6 +5,7 @@
 #ifndef SRC_SYS_SYSMGR_APP_H_
 #define SRC_SYS_SYSMGR_APP_H_
 
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/pkg/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -17,6 +18,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_set>
 
 #include "src/lib/fxl/macros.h"
 #include "src/sys/sysmgr/config.h"
@@ -51,7 +53,7 @@ class App {
   void RegisterLoader();
   void RegisterDefaultServiceConnector();
 
-  void RestartCriticalComponent(const std::string& component_url);
+  void RebootFromCriticalComponent(const std::string& component_url);
 
   void StartDiagnostics(fuchsia::sys::LaunchInfo launch_diagnostics, async::Loop* loop);
 
@@ -75,15 +77,10 @@ class App {
 
   bool auto_updates_enabled_;
 
-  // A record of critical components.
-  //
-  // All critical compnoents have entries in this map, regardless of if they're running.
-  // The associated |ComponentController| may be `nullptr` if it is not running.
-  struct CriticalComponentRuntimeInfo {
-    fuchsia::sys::LaunchInfo latest_launch_info;
-    std::deque<zx::time> crash_history;
-  };
-  std::unordered_map<std::string, CriticalComponentRuntimeInfo> critical_components_;
+  fuchsia::hardware::power::statecontrol::AdminPtr power_admin_;
+
+  // The set of critical components.
+  std::unordered_set<std::string> critical_components_;
   // Contains the ComponentControllers of all component URLs launched by sysmgr.
   // They are removed from this map when the associated component dies.
   std::unordered_map<std::string, fuchsia::sys::ComponentControllerPtr> controllers_;

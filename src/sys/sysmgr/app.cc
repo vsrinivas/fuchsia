@@ -27,17 +27,16 @@ constexpr bool kAutoUpdatePackages = true;
 #else
 constexpr bool kAutoUpdatePackages = false;
 #endif
-constexpr size_t kCrashRecoveryMaxRetries = 3;
-constexpr zx::duration kCrashRecoveryMaxDuration = zx::hour(1);
 }  // namespace
 
 App::App(Config config, std::shared_ptr<sys::ServiceDirectory> incoming_services, async::Loop* loop)
     : loop_(loop),
       incoming_services_(std::move(incoming_services)),
-      auto_updates_enabled_(kAutoUpdatePackages) {
+      auto_updates_enabled_(kAutoUpdatePackages),
+      power_admin_(incoming_services_->Connect<fuchsia::hardware::power::statecontrol::Admin>()) {
   const auto critical_components = config.TakeCriticalComponents();
   for (const auto& url : critical_components) {
-    critical_components_[url] = {};
+    critical_components_.insert(url);
   }
   // The set of excluded services below are services that are the transitive
   // closure of dependencies required for auto-updates that must not be resolved
@@ -197,13 +196,6 @@ void App::LaunchComponent(const fuchsia::sys::LaunchInfo& launch_info,
 
   const auto& critical_it = critical_components_.find(launch_info.url);
   const bool is_critical = critical_it != critical_components_.end();
-  // If it's a critical component, remember the launch info in case we need to restart the it.
-  if (is_critical && critical_it->second.latest_launch_info.url.empty()) {
-    auto& info = critical_it->second;
-    info.latest_launch_info.url = launch_info.url;
-    fidl::Clone(launch_info.arguments, &info.latest_launch_info.arguments);
-  }
-
   fuchsia::sys::ComponentControllerPtr ctrl;
   ctrl.events().OnTerminated = std::move(on_terminate);
   ctrl.set_error_handler([this, on_ctrl_err = std::move(on_ctrl_err), url = launch_info.url,
@@ -216,7 +208,7 @@ void App::LaunchComponent(const fuchsia::sys::LaunchInfo& launch_info,
       on_ctrl_err(status);
     }
     if (is_critical) {
-      RestartCriticalComponent(url);
+      RebootFromCriticalComponent(url);
     } else {
       services_.erase(url);
     }
@@ -232,32 +224,16 @@ void App::LaunchComponent(const fuchsia::sys::LaunchInfo& launch_info,
   controllers_[launch_info.url] = std::move(ctrl);
 }
 
-void App::RestartCriticalComponent(const std::string& component_url) {
-  auto find_it = critical_components_.find(component_url);
-  FX_DCHECK(find_it != critical_components_.end());
-  CriticalComponentRuntimeInfo* runtime_info = &find_it->second;
-  zx::time now = zx::clock::get_monotonic();
-  runtime_info->crash_history.push_back(now);
-  // flush out history older than kCrashRecoveryMaxDuration
-  while (now - runtime_info->crash_history.front() > kCrashRecoveryMaxDuration) {
-    runtime_info->crash_history.pop_front();
-  }
-
-  // if this component's crash history size > kCrashRecoveryMaxRetries, exit sysmgr. This should
-  // cascade into appmgr (and the system) shutting down.
-  if (runtime_info->crash_history.size() > kCrashRecoveryMaxRetries) {
-    FX_LOGS(ERROR) << "Critical component " << component_url << " crashed too many times. Exiting.";
-    loop_->Quit();
-    return;
-  }
-
-  // if our crash history size < kCrashRecoveryMaxRetries, restart the component.
-  fuchsia::sys::LaunchInfo dup_launch_info;
-  dup_launch_info.url = runtime_info->latest_launch_info.url;
-  fidl::Clone(runtime_info->latest_launch_info.arguments, &dup_launch_info.arguments);
-
-  FX_LOGS(INFO) << "Restarting crashed critical component " << dup_launch_info.url;
-  LaunchComponent(std::move(dup_launch_info), nullptr, nullptr);
+void App::RebootFromCriticalComponent(const std::string& component_url) {
+  FX_LOGS(ERROR) << "Critical component " << component_url << " has crashed.  Rebooting system.";
+  power_admin_->Reboot(
+      fuchsia::hardware::power::statecontrol::RebootReason::CRITICAL_COMPONENT_FAILURE,
+      [this](fuchsia::hardware::power::statecontrol::Admin_Reboot_Result status) {
+        if (status.is_err()) {
+          FX_PLOGS(FATAL, status.err()) << "Failed to reboot";
+          loop_->Quit();
+        }
+      });
 }
 
 }  // namespace sysmgr

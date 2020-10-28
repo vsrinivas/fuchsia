@@ -22,7 +22,7 @@ executable("app_test") {
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/sys/sysmgr:lib",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/async-loop:async-loop-default",

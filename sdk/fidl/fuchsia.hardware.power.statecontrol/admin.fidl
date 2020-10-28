@@ -107,4 +107,7 @@ enum RebootReason {
 
     /// Some core system component has failed.
     SYSTEM_FAILURE = 5;
+
+    /// A critical component managed by sysmgr has failed.
+    CRITICAL_COMPONENT_FAILURE = 7;
 };
