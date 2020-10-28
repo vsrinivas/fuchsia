@@ -21,6 +21,7 @@ tests = [
   "inspect",
   "ipv6",
   "management",
+  "neighbor",
   "routes",
   "socket",
 ]

@@ -59,6 +59,8 @@ pub enum KnownServices {
     RoutesState(NetstackVersion),
     InterfaceState(NetstackVersion),
     Log(NetstackVersion),
+    NeighborView(NetstackVersion),
+    NeighborController(NetstackVersion),
     MockCobalt,
     SecureStash,
     DhcpServer,
@@ -86,6 +88,10 @@ impl KnownServices {
                                                  v.get_url()),
             KnownServices::Log(v) => (<fidl_fuchsia_net_stack::LogMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                       v.get_url()),
+            KnownServices::NeighborView(v) => (<fidl_fuchsia_net_neighbor::ViewMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+                                               v.get_url()),
+            KnownServices::NeighborController(v) => (<fidl_fuchsia_net_neighbor::ControllerMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+                                                     v.get_url()),
             KnownServices::SecureStash => (<fidl_fuchsia_stash::SecureStoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                            "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/stash_secure.cmx"),
             KnownServices::DhcpServer => (<fidl_fuchsia_net_dhcp::Server_Marker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
@@ -267,6 +273,8 @@ impl TestSandboxExt for netemul::TestSandbox {
                 KnownServices::SocketProvider(N::VERSION),
                 KnownServices::InterfaceState(N::VERSION),
                 KnownServices::Log(N::VERSION),
+                KnownServices::NeighborView(N::VERSION),
+                KnownServices::NeighborController(N::VERSION),
                 KnownServices::MockCobalt,
             ]
             .iter()
