@@ -41,9 +41,9 @@ source_set("bus_mapper") {
   deps = [
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util/platform:trace",
-    "$zircon_build_root/system/ulib/ddk",
     "..:logger",
     "..:object",
+    "//src/lib/ddk",
   ]
 }
 
@@ -286,7 +286,7 @@ source_set("logger_for_system_drivers") {
 
   sources = [ "zircon_platform_logger_ddk.cc" ]
 
-  deps = [ "$zircon_build_root/system/ulib/ddk" ]
+  deps = [ "//src/lib/ddk" ]
 }
 
 source_set("object") {

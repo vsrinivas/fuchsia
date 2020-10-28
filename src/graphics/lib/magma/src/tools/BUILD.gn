@@ -13,10 +13,10 @@ executable("magma_info") {
 
   deps = [
     "$magma_build_root/include:magma_abi",
-    "$zircon_build_root/system/ulib/ddk",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
     "//src/lib/fxl",
     "//src/zircon/lib/zircon",
   ]

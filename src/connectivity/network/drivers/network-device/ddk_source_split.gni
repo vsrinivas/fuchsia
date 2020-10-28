@@ -28,8 +28,8 @@ template("ddk_source_split") {
     }
     defines += [ "NETDEV_DDK" ]
     public_deps += [
-      "//zircon/system/ulib/ddk",
-      "//zircon/system/ulib/ddktl",
+      "//src/lib/ddk",
+      "//src/lib/ddktl",
     ]
   }
 

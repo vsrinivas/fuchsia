@@ -22,7 +22,7 @@ template("magma_pci_entry") {
       deps = []
     }
 
-    deps += [ "//zircon/system/ulib/ddk" ]
+    deps += [ "//src/lib/ddk" ]
 
     if (test_entry) {
       deps += [
@@ -64,7 +64,7 @@ template("magma_pdev_entry") {
     }
 
     deps += [
-      "//zircon/system/ulib/ddk",
+      "//src/lib/ddk",
 
       # TODO(fxb/38132): Migrate to the new bind rules and delete the below
       "//src/lib/ddk:ddk-deprecated-binding-headers",

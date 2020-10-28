@@ -45,9 +45,9 @@ zx_status_t zxcrypt_shred(int fd, const zxcrypt_key_t* key);
 
 ## Technical Details
 ### DDKTL Driver
-zxcrypt is written as a DDKTL device driver.  [ulib/ddktl](/src/lib/ddktl) is a C++ framework
+zxcrypt is written as a DDKTL device driver.  [src/lib/ddktl](/src/lib/ddktl) is a C++ framework
 for writing drivers in Fuchsia.  It allows authors to automatically supply the
-[ulib/ddk](/src/lib/ddk) function pointers and callbacks by using templatized mix-ins.  In the
+[src/lib/ddk](/src/lib/ddk) function pointers and callbacks by using templatized mix-ins.  In the
 case of zxcrypt, the [device](/src/devices/block/drivers/zxcrypt/device.h) is "Messageable",
 "IotxnQueueable", "GetSizable", "UnbindableDeprecated", and implements the methods listed in DDKTL's
 [BlockProtocol](/sdk/banjo/ddk.protocol.block/block.banjo).

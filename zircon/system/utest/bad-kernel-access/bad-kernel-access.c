@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/syscalls-ddk.h>
 #include <zircon/syscalls.h>
 
 static int val = 5;

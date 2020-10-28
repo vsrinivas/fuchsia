@@ -5,7 +5,6 @@
 zx_test("bad-kernel-access") {
   sources = [ "bad-kernel-access.c" ]
   deps = [
-    "$zx/system/ulib/ddk",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
   ]
