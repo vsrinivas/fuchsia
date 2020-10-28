@@ -495,6 +495,12 @@ impl Into<bridge::TargetAddrInfo> for TargetAddr {
 
 impl From<bridge::TargetAddrInfo> for TargetAddr {
     fn from(t: bridge::TargetAddrInfo) -> Self {
+        (&t).into()
+    }
+}
+
+impl From<&bridge::TargetAddrInfo> for TargetAddr {
+    fn from(t: &bridge::TargetAddrInfo) -> Self {
         let (addr, scope): (IpAddr, u32) = match t {
             bridge::TargetAddrInfo::Ip(ip) => match ip.ip {
                 IpAddress::Ipv6(Ipv6Address { addr }) => (addr.into(), ip.scope_id),

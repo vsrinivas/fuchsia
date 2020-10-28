@@ -3,8 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    chrono::Duration, ffx_daemon::target::TargetAddr, fidl_fuchsia_developer_bridge as bridge,
-    std::cmp::max, std::convert::TryFrom, std::fmt::Write,
+    anyhow::{anyhow, Error, Result},
+    chrono::Duration,
+    ffx_daemon::target::{SshAddrFetcher, TargetAddr},
+    ffx_list_args::Format,
+    fidl_fuchsia_developer_bridge as bridge,
+    std::cmp::max,
+    std::convert::TryFrom,
+    std::fmt::{self, Display, Write},
 };
 
 const NAME: &'static str = "NAME";
@@ -15,6 +21,59 @@ const AGE: &'static str = "AGE";
 const RCS: &'static str = "RCS";
 
 const PADDING_SPACES: usize = 4;
+
+/// Simple trait for a target formatter.
+pub trait TargetFormatter {
+    fn lines(&self, default_nodename: Option<&str>) -> Vec<String>;
+}
+
+impl TryFrom<(Format, Vec<bridge::Target>)> for Box<dyn TargetFormatter> {
+    type Error = Error;
+
+    fn try_from(tup: (Format, Vec<bridge::Target>)) -> Result<Self> {
+        let (format, targets) = tup;
+        Ok(match format {
+            Format::Tabular => Box::new(TabularTargetFormatter::try_from(targets)?),
+            Format::Simple => Box::new(SimpleTargetFormatter::try_from(targets)?),
+        })
+    }
+}
+
+pub struct SimpleTarget(String, TargetAddr);
+
+pub struct SimpleTargetFormatter {
+    targets: Vec<SimpleTarget>,
+}
+
+impl TryFrom<Vec<bridge::Target>> for SimpleTargetFormatter {
+    type Error = Error;
+
+    fn try_from(mut targets: Vec<bridge::Target>) -> Result<Self> {
+        let mut t = Vec::with_capacity(targets.len());
+        for target in targets.drain(..) {
+            t.push(SimpleTarget::try_from(target)?)
+        }
+        Ok(Self { targets: t })
+    }
+}
+
+impl TargetFormatter for SimpleTargetFormatter {
+    fn lines(&self, _default_nodename: Option<&str>) -> Vec<String> {
+        self.targets.iter().map(|t| format!("{} {}", t.1, t.0)).collect()
+    }
+}
+
+impl TryFrom<bridge::Target> for SimpleTarget {
+    type Error = Error;
+
+    fn try_from(t: bridge::Target) -> Result<Self> {
+        let nodename = t.nodename.ok_or(anyhow!("must contain nodename"))?;
+        let addrs = t.addresses.ok_or(anyhow!("must contain an address"))?;
+        let addrs = addrs.iter().map(|a| TargetAddr::from(a)).collect::<Vec<_>>();
+
+        Ok(Self(nodename, (&addrs).to_ssh_addr().ok_or(anyhow!("could not convert to ssh addr"))?))
+    }
+}
 
 // Convenience macro to make potential addition/removal of fields less likely
 // to affect internal logic. Other functions that construct these targets will
@@ -88,6 +147,14 @@ pub enum StringifyError {
     MissingTargetState,
 }
 
+impl Display for StringifyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "stringification error: {:?}", self)
+    }
+}
+
+impl std::error::Error for StringifyError {}
+
 impl StringifiedTarget {
     fn from_target_addr_info(a: bridge::TargetAddrInfo) -> String {
         format!("{}", TargetAddr::from(a))
@@ -151,13 +218,13 @@ impl TryFrom<bridge::Target> for StringifiedTarget {
     }
 }
 
-pub struct TargetFormatter {
+pub struct TabularTargetFormatter {
     targets: Vec<StringifiedTarget>,
     limits: Limits,
 }
 
-impl TargetFormatter {
-    pub fn lines(&self, default_nodename: Option<&str>) -> Vec<String> {
+impl TargetFormatter for TabularTargetFormatter {
+    fn lines(&self, default_nodename: Option<&str>) -> Vec<String> {
         self.targets
             .iter()
             .map(|t| format_fields(t, &self.limits, default_nodename.unwrap_or("")))
@@ -165,7 +232,7 @@ impl TargetFormatter {
     }
 }
 
-impl TryFrom<Vec<bridge::Target>> for TargetFormatter {
+impl TryFrom<Vec<bridge::Target>> for TabularTargetFormatter {
     type Error = StringifyError;
 
     fn try_from(mut targets: Vec<bridge::Target>) -> Result<Self, Self::Error> {
@@ -222,7 +289,7 @@ mod test {
 
     #[test]
     fn test_empty_formatter() {
-        let formatter = TargetFormatter::try_from(Vec::<bridge::Target>::new()).unwrap();
+        let formatter = TabularTargetFormatter::try_from(Vec::<bridge::Target>::new()).unwrap();
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].len(), 47); // Just some manual math.
@@ -231,7 +298,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_formatter_one_target() {
-        let formatter = TargetFormatter::try_from(vec![
+        let formatter = TabularTargetFormatter::try_from(vec![
             make_valid_target(),
             bridge::Target {
                 nodename: Some("lorberding".to_string()),
@@ -311,5 +378,17 @@ mod test {
         let mut t = make_valid_target();
         t.nodename = None;
         assert_eq!(StringifiedTarget::try_from(t), Err(StringifyError::MissingNodename));
+    }
+
+    #[test]
+    fn test_device_finder_format() {
+        let formatter = Box::<dyn TargetFormatter>::try_from((
+            Format::Simple,
+            vec![make_valid_target(), make_valid_target()],
+        ))
+        .unwrap();
+        let lines = formatter.lines(None);
+        assert_eq!(lines[0], "101:101:101:101:101:101:101:101 fooberdoober");
+        assert_eq!(lines[1], "101:101:101:101:101:101:101:101 fooberdoober");
     }
 }
