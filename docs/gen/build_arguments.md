@@ -541,6 +541,15 @@ non-production GN labels. Build will fail if such dependency is found.
 
 From //build/images/args.gni:105
 
+### chromium_build_dir
+This variable specifies a chromium build output directory, such as `~/chromium/src/out/fuchsia`,
+that cast_runner, web_runner, and web_engine will be obtained from. If unset, the prebuilt
+packages from CIPD will be used.
+
+**Current value (from the default):** `""`
+
+From //src/chromium/build_args.gni:9
+
 ### clang_lib_dir
 Path to Clang lib directory.
 
@@ -641,13 +650,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/640b13f3cb8000d361547f4cfa59275df44d1dc8/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/68b10080d20937e9efe3306dd2a8a212cce02c4f/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/640b13f3cb8000d361547f4cfa59275df44d1dc8/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/68b10080d20937e9efe3306dd2a8a212cce02c4f/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -690,7 +699,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/5f0560f5fb88aa8ed68ba829b42a77681d839796/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/a880788f8ebe20dbba414482bcb4631cafa695c5/runtime/dart/dart_component.gni#24)
 
 ### dart_default_build_cfg
 Non-product JIT
@@ -715,14 +724,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/5f0560f5fb88aa8ed68ba829b42a77681d839796/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/a880788f8ebe20dbba414482bcb4631cafa695c5/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/5f0560f5fb88aa8ed68ba829b42a77681d839796/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/a880788f8ebe20dbba414482bcb4631cafa695c5/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -972,7 +981,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/5f0560f5fb88aa8ed68ba829b42a77681d839796/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/a880788f8ebe20dbba414482bcb4631cafa695c5/runtime/dart/dart_component.gni#13)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1012,14 +1021,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/5f0560f5fb88aa8ed68ba829b42a77681d839796/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/a880788f8ebe20dbba414482bcb4631cafa695c5/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/5f0560f5fb88aa8ed68ba829b42a77681d839796/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/a880788f8ebe20dbba414482bcb4631cafa695c5/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -2215,7 +2224,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"0v1jaeyeb9K3EGyl_O56bQ02Nt1CCd3_JeANRsXANBUC"`
+**Current value (from the default):** `"hiBW1PvncaE9p_v8B7jYST7ykB4Nzw_2QdIlnyzoBkgC"`
 
 From //build/rust/config.gni:33
 
@@ -2716,7 +2725,7 @@ otherwise the most recently validated version is used.
 
 **Current value (from the default):** `false`
 
-From //src/cast/BUILD.gn:11
+From //src/cast/BUILD.gn:12
 
 ### use_ccache
 Set to true to enable compiling with ccache
@@ -2731,7 +2740,7 @@ otherwise the most recently validated version is used.
 
 **Current value (from the default):** `false`
 
-From //src/chromium/BUILD.gn:15
+From //src/chromium/BUILD.gn:16
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
@@ -3044,7 +3053,7 @@ silently clobber the default value shown here.
   disable_kernel_pci = false
   goma_dir = "/b/s/w/ir/x/w/prebuilt/third_party/goma/linux-x64"
   output_gsym = false
-  rustc_version_string = "0v1jaeyeb9K3EGyl_O56bQ02Nt1CCd3_JeANRsXANBUC"
+  rustc_version_string = "hiBW1PvncaE9p_v8B7jYST7ykB4Nzw_2QdIlnyzoBkgC"
   use_ccache = false
   use_goma = false
   variants = []
