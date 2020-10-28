@@ -1441,10 +1441,13 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
       p = vm_get_zero_page();
     } else {
       AssertHeld(page_owner->lock_);
-      DEBUG_ASSERT(page_owner->paged_ref_);
-      AssertHeld(page_owner->paged_ref_->lock_ref());
+      uint32_t user_id = 0;
+      if (page_owner->paged_ref_) {
+        AssertHeld(page_owner->paged_ref_->lock_ref());
+        user_id = page_owner->paged_ref_->user_id_locked();
+      }
       VmoDebugInfo vmo_debug_info = {.vmo_ptr = reinterpret_cast<uintptr_t>(page_owner->paged_ref_),
-                                     .vmo_id = page_owner->paged_ref_->user_id_locked()};
+                                     .vmo_id = user_id};
       zx_status_t status = page_owner->page_source_->GetPage(owner_offset, page_request,
                                                              vmo_debug_info, &p, nullptr);
       // Pager page sources will never synchronously return a page.
@@ -1508,10 +1511,20 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
     // always cached). So we check here if we are not fully cached and if so perform a
     // clean/invalidate to flush our zeroes. After doing this we will not touch the page via the
     // physmap and so we can pretend there isn't an aliased mapping.
-    DEBUG_ASSERT(paged_ref_);
-    AssertHeld(paged_ref_->lock_ref());
-    if (paged_ref_->GetMappingCachePolicyLocked() != ARCH_MMU_FLAG_CACHED) {
-      arch_clean_invalidate_cache_range((vaddr_t)paddr_to_physmap(res_page->paddr()), PAGE_SIZE);
+    // There are three potential states that may exist
+    //  * VMO is cached, paged_ref_ might be null, we might have children -> no cache op needed
+    //  * VMO is uncached, paged_ref_ is not null, we have no children -> cache op needed
+    //  * VMO is uncached, paged_ref_ is null, we have no children -> cache op not needed /
+    //                                                                state cannot happen
+    // In the uncached case we know we have no children, since it is by definition not valid to
+    // have copy-on-write children of uncached pages. The third case cannot happen, but even if it
+    // could with no children and no paged_ref_ the pages cannot actually be referenced so any
+    // cache operation is pointless.
+    if (paged_ref_) {
+      AssertHeld(paged_ref_->lock_ref());
+      if (paged_ref_->GetMappingCachePolicyLocked() != ARCH_MMU_FLAG_CACHED) {
+        arch_clean_invalidate_cache_range((vaddr_t)paddr_to_physmap(res_page->paddr()), PAGE_SIZE);
+      }
     }
   } else {
     // We need a writable page; let ::CloneCowPageLocked handle inserting one.
