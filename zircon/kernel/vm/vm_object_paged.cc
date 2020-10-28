@@ -168,10 +168,8 @@ void VmObjectPaged::HarvestAccessedBits() {
   }
 }
 
-bool VmObjectPaged::DedupZeroPage(vm_page_t* page, uint64_t offset) {
+bool VmObjectPaged::CanDedupZeroPagesLocked() {
   canary_.Assert();
-
-  Guard<Mutex> guard{&lock_};
 
   // Skip uncached VMOs as we cannot efficiently scan them.
   if ((cache_policy_ & ZX_CACHE_POLICY_MASK) != ZX_CACHE_POLICY_CACHED) {
@@ -187,12 +185,8 @@ bool VmObjectPaged::DedupZeroPage(vm_page_t* page, uint64_t offset) {
     }
   }
 
-  if (cow_pages_locked()->DedupZeroPageLocked(page, offset)) {
-    eviction_event_count_++;
-    IncrementHierarchyGenerationCountLocked();
-    return true;
-  }
-  return false;
+  // Okay to dedup from this VMO.
+  return true;
 }
 
 uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
@@ -1402,16 +1396,4 @@ void VmObjectPaged::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, Range
       panic("Unknown RangeChangeOp %d\n", static_cast<int>(op));
     }
   }
-}
-
-bool VmObjectPaged::EvictPage(vm_page_t* page, uint64_t offset) {
-  Guard<Mutex> guard{&lock_};
-
-  bool evicted = cow_pages_locked()->EvictPageLocked(page, offset);
-
-  if (evicted) {
-    eviction_event_count_++;
-    IncrementHierarchyGenerationCountLocked();
-  }
-  return evicted;
 }

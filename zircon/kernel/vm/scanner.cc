@@ -266,10 +266,10 @@ uint64_t scanner_do_zero_scan(uint64_t limit) {
   for (considered = 0; considered < limit; considered++) {
     if (ktl::optional<PageQueues::VmoBacklink> backlink =
             pmm_page_queues()->PopUnswappableZeroFork()) {
-      if (!backlink->vmo) {
+      if (!backlink->cow) {
         continue;
       }
-      if (backlink->vmo->DedupZeroPage(backlink->page, backlink->offset)) {
+      if (backlink->cow->DedupZeroPage(backlink->page, backlink->offset)) {
         deduped++;
       }
     } else {
@@ -298,10 +298,10 @@ uint64_t scanner_evict_pager_backed(uint64_t max_pages, scanner::EvictionLevel e
                                           : PageQueues::kNumPagerBacked - 1;
     if (ktl::optional<PageQueues::VmoBacklink> backlink =
             pmm_page_queues()->PeekPagerBacked(lowest_evict_queue)) {
-      if (!backlink->vmo) {
+      if (!backlink->cow) {
         continue;
       }
-      if (backlink->vmo->EvictPage(backlink->page, backlink->offset)) {
+      if (backlink->cow->EvictPage(backlink->page, backlink->offset)) {
         list_add_tail(free_list, &backlink->page->queue_node);
         count++;
       }

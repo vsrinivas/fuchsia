@@ -211,8 +211,17 @@ VmCowPages::~VmCowPages() {
   pmm_free(&list);
 }
 
-bool VmCowPages::DedupZeroPageLocked(vm_page_t* page, uint64_t offset) {
+bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
   canary_.Assert();
+
+  Guard<Mutex> guard{&lock_};
+
+  if (paged_ref_) {
+    AssertHeld(paged_ref_->lock_ref());
+    if (!paged_ref_->CanDedupZeroPagesLocked()) {
+      return false;
+    }
+  }
 
   // Check this page is still a part of this VMO. object.page_offset could be complete garbage,
   // but there's no harm in looking up a random slot as we'll then notice it's the wrong page.
@@ -238,6 +247,11 @@ bool VmCowPages::DedupZeroPageLocked(vm_page_t* page, uint64_t offset) {
     DEBUG_ASSERT(!list_in_list(&page->queue_node));
     pmm_free_page(page);
     *page_or_marker = VmPageOrMarker::Marker();
+    eviction_event_count_++;
+    if (paged_ref_) {
+      AssertHeld(paged_ref_->lock_ref());
+      paged_ref_->IncrementHierarchyGenerationCountLocked();
+    }
     return true;
   }
   return false;
@@ -1340,17 +1354,13 @@ void VmCowPages::UpdateOnAccessLocked(vm_page_t* page, uint64_t offset) {
     return;
   }
 
-  // Currently there is a 1:1 correspondence between the VmObjectPaged hierarchy and us, so we can
-  // assume there is a backlink.
-  DEBUG_ASSERT(paged_ref_);
-
   // These asserts are for sanity, the above checks should have caused us to abort if these aren't
   // true.
-  DEBUG_ASSERT(page->object.get_object() == reinterpret_cast<void*>(paged_ref_));
+  DEBUG_ASSERT(page->object.get_object() == reinterpret_cast<void*>(this));
   DEBUG_ASSERT(page->object.get_page_offset() == offset);
   // Although the page is already in the pager backed queue, this move causes it be moved to the
   // front of the first queue, representing it was recently accessed.
-  pmm_page_queues()->MoveToPagerBacked(page, paged_ref_, offset);
+  pmm_page_queues()->MoveToPagerBacked(page, this, offset);
 }
 
 // Looks up the page at the requested offset, faulting it in if requested and necessary.  If
@@ -1494,8 +1504,7 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
     // consider them for cleaning, this is an optimization.
     // We explicitly must *not* place pages from a page_source_ into the zero scanning queue.
     if (p == vm_get_zero_page() && !page_source_ && !(pf_flags & VMM_PF_FLAG_SW_FAULT)) {
-      DEBUG_ASSERT(paged_ref_);
-      pmm_page_queues()->MoveToUnswappableZeroFork(res_page, paged_ref_, offset);
+      pmm_page_queues()->MoveToUnswappableZeroFork(res_page, this, offset);
     }
 
     // This is the only path where we can allocate a new page without being a clone (clones are
@@ -2036,8 +2045,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
 
 void VmCowPages::MoveToNotWired(vm_page_t* page, uint64_t offset) {
   if (page_source_) {
-    DEBUG_ASSERT(paged_ref_);
-    pmm_page_queues()->MoveToPagerBacked(page, paged_ref_, offset);
+    pmm_page_queues()->MoveToPagerBacked(page, this, offset);
   } else {
     pmm_page_queues()->MoveToUnswappable(page);
   }
@@ -2045,8 +2053,7 @@ void VmCowPages::MoveToNotWired(vm_page_t* page, uint64_t offset) {
 
 void VmCowPages::SetNotWired(vm_page_t* page, uint64_t offset) {
   if (page_source_) {
-    DEBUG_ASSERT(paged_ref_);
-    pmm_page_queues()->SetPagerBacked(page, paged_ref_, offset);
+    pmm_page_queues()->SetPagerBacked(page, this, offset);
   } else {
     pmm_page_queues()->SetUnswappable(page);
   }
@@ -2742,11 +2749,13 @@ void VmCowPages::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeCha
   RangeChangeUpdateListLocked(&list, op);
 }
 
-bool VmCowPages::EvictPageLocked(vm_page_t* page, uint64_t offset) {
+bool VmCowPages::EvictPage(vm_page_t* page, uint64_t offset) {
   // Without a page source to bring the page back in we cannot even think about eviction.
   if (!page_source_) {
     return false;
   }
+
+  Guard<Mutex> guard{&lock_};
 
   // Check this page is still a part of this VMO.
   VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
@@ -2767,6 +2776,11 @@ bool VmCowPages::EvictPageLocked(vm_page_t* page, uint64_t offset) {
   vm_page_t* p = page_list_.RemovePage(offset).ReleasePage();
   DEBUG_ASSERT(p == page);
   pmm_page_queues()->Remove(page);
+
+  eviction_event_count_++;
+  DEBUG_ASSERT(paged_ref_);
+  AssertHeld(paged_ref_->lock_ref());
+  paged_ref_->IncrementHierarchyGenerationCountLocked();
 
   // |page| is now owned by the caller.
   return true;

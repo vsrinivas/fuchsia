@@ -94,6 +94,11 @@ class VmCowPages final : public VmHierarchyBase,
     return page_list_.HeapAllocationBytes();
   }
 
+  uint64_t EvictionEventCount() const {
+    Guard<Mutex> guard{&lock_};
+    return eviction_event_count_;
+  }
+
   fbl::RefPtr<PageSource> GetRootPageSourceLocked() const TA_REQ(lock_);
 
   void DetachSource() {
@@ -171,11 +176,25 @@ class VmCowPages final : public VmHierarchyBase,
   // See VmObject::ScanForZeroPages
   uint32_t ScanForZeroPagesLocked(bool reclaim) TA_REQ(lock_);
 
-  // See VmObject::EvictPage
-  bool EvictPageLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
+  // Asks the VMO to attempt to evict the specified page. This returns true if the page was
+  // actually from this VMO and was successfully evicted, at which point the caller now has
+  // ownership of the page. Otherwise eviction is allowed to fail for any reason, specifically
+  // if the page is considered in use, or the VMO has no way to recreate the page then eviction
+  // will fail. Although eviction may fail for any reason, if it does the caller is able to assume
+  // that either the page was not from this vmo, or that the page is not in any evictable page queue
+  // (such as the pager_backed_ queue).
+  bool EvictPage(vm_page_t* page, uint64_t offset);
 
-  // See VmObjectPaged::DedupZeroPage
-  bool DedupZeroPageLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
+  // Attempts to dedup the given page at the specified offset with the zero page. The only
+  // correctness requirement for this is that `page` must be *some* valid vm_page_t, meaning that
+  // all race conditions are handled internally. This function returns false if
+  //  * page is either not from this VMO, or not found at the specified offset
+  //  * page is pinned
+  //  * vmo is uncached
+  //  * page is not all zeroes
+  // Otherwise 'true' is returned and the page will have been returned to the pmm with a zero page
+  // marker put in its place.
+  bool DedupZeroPage(vm_page_t* page, uint64_t offset);
 
   void DumpLocked(uint depth, bool verbose) const TA_REQ(lock_);
   bool DebugValidatePageSplitsLocked() const TA_REQ(lock_);
@@ -318,14 +337,14 @@ class VmCowPages final : public VmHierarchyBase,
 
   // Unpins a page and potentially moves it into a different page queue should its pin
   // count reach zero.
-  void UnpinPage(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
+  void UnpinPage(vm_page_t* page, uint64_t offset);
 
   // Updates the page queue of an existing page, moving it to whichever non wired queue
   // is appropriate.
-  void MoveToNotWired(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
+  void MoveToNotWired(vm_page_t* page, uint64_t offset);
 
   // Places a newly added page into the appropriate non wired page queue.
-  void SetNotWired(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
+  void SetNotWired(vm_page_t* page, uint64_t offset);
 
   // Updates any meta data for accessing a page. Currently this moves pager backed pages around in
   // the page queue to track which ones were recently accessed for the purposes of eviction. In
@@ -469,6 +488,9 @@ class VmCowPages final : public VmHierarchyBase,
 
   // The page source, if any.
   const fbl::RefPtr<PageSource> page_source_;
+
+  // Count eviction events so that we can report them to the user.
+  uint64_t eviction_event_count_ TA_GUARDED(lock_) = 0;
 
   // a tree of pages
   VmPageList page_list_ TA_GUARDED(lock_);

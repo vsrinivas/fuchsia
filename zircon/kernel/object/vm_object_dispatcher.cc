@@ -157,7 +157,7 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t ha
   }
   entry.metadata_bytes = vmo->HeapAllocationBytes();
   // Only events that change committed pages are evictions at the moment.
-  entry.committed_change_events = vmo->EvictedPagedCount();
+  entry.committed_change_events = vmo->EvictionEventCount();
   return entry;
 }
 

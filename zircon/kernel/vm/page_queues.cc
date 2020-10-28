@@ -6,7 +6,7 @@
 
 #include <fbl/ref_counted_upgradeable.h>
 #include <vm/page_queues.h>
-#include <vm/vm_object_paged.h>
+#include <vm/vm_cow_pages.h>
 
 PageQueues::PageQueues() {
   for (list_node& pager_backed : pager_backed_) {
@@ -81,7 +81,7 @@ void PageQueues::MoveToUnswappable(vm_page_t* page) {
   MoveToUnswappableLocked(page);
 }
 
-void PageQueues::SetPagerBacked(vm_page_t* page, VmObjectPaged* object, uint64_t page_offset) {
+void PageQueues::SetPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(page->object.pin_count == 0);
@@ -93,7 +93,7 @@ void PageQueues::SetPagerBacked(vm_page_t* page, VmObjectPaged* object, uint64_t
   list_add_head(&pager_backed_[0], &page->queue_node);
 }
 
-void PageQueues::MoveToPagerBacked(vm_page_t* page, VmObjectPaged* object, uint64_t page_offset) {
+void PageQueues::MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(page->object.pin_count == 0);
@@ -106,8 +106,7 @@ void PageQueues::MoveToPagerBacked(vm_page_t* page, VmObjectPaged* object, uint6
   list_add_head(&pager_backed_[0], &page->queue_node);
 }
 
-void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmObjectPaged* object,
-                                        uint64_t page_offset) {
+void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(page->object.pin_count == 0);
@@ -118,7 +117,7 @@ void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmObjectPaged* object,
   list_add_head(&unswappable_zero_fork_, &page->queue_node);
 }
 
-void PageQueues::MoveToUnswappableZeroFork(vm_page_t* page, VmObjectPaged* object,
+void PageQueues::MoveToUnswappableZeroFork(vm_page_t* page, VmCowPages* object,
                                            uint64_t page_offset) {
   DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
   DEBUG_ASSERT(!page->is_free());
@@ -218,9 +217,9 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::PopUnswappableZeroFork() {
     return ktl::nullopt;
   }
 
-  VmObjectPaged* vmop = reinterpret_cast<VmObjectPaged*>(page->object.get_object());
+  VmCowPages* cow = reinterpret_cast<VmCowPages*>(page->object.get_object());
   uint64_t page_offset = page->object.get_page_offset();
-  DEBUG_ASSERT(vmop);
+  DEBUG_ASSERT(cow);
 
   page->object.set_object(0);
   page->object.set_page_offset(0);
@@ -229,11 +228,11 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::PopUnswappableZeroFork() {
   list_add_head(&unswappable_, &page->queue_node);
 
   // We may be racing with destruction of VMO. As we currently hold our lock we know that our
-  // back pointer is correct in so far as the VmObjectPaged has not yet had completed running its
+  // back pointer is correct in so far as the VmCowPages has not yet had completed running its
   // destructor, so we know it is safe to attempt to upgrade it to a RefPtr. If upgrading fails
   // we assume the page is about to be removed from the page queue once the VMO destructor gets
   // a chance to run.
-  return VmoBacklink{fbl::MakeRefPtrUpgradeFromRaw(vmop, guard), page, page_offset};
+  return VmoBacklink{fbl::MakeRefPtrUpgradeFromRaw(cow, guard), page, page_offset};
 }
 
 ktl::optional<PageQueues::VmoBacklink> PageQueues::PeekPagerBacked(size_t lowest_queue) const {
@@ -249,14 +248,14 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::PeekPagerBacked(size_t lowest
     return ktl::nullopt;
   }
 
-  VmObjectPaged* vmop = reinterpret_cast<VmObjectPaged*>(page->object.get_object());
+  VmCowPages* cow = reinterpret_cast<VmCowPages*>(page->object.get_object());
   uint64_t page_offset = page->object.get_page_offset();
-  DEBUG_ASSERT(vmop);
+  DEBUG_ASSERT(cow);
 
   // We may be racing with destruction of VMO. As we currently hold our lock we know that our
-  // back pointer is correct in so far as the VmObjectPaged has not yet had completed running its
+  // back pointer is correct in so far as the VmCowPages has not yet had completed running its
   // destructor, so we know it is safe to attempt to upgrade it to a RefPtr. If upgrading fails
   // we assume the page is about to be removed from the page queue once the VMO destructor gets
   // a chance to run.
-  return VmoBacklink{fbl::MakeRefPtrUpgradeFromRaw(vmop, guard), page, page_offset};
+  return VmoBacklink{fbl::MakeRefPtrUpgradeFromRaw(cow, guard), page, page_offset};
 }

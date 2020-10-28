@@ -16,10 +16,10 @@
 #include <ktl/optional.h>
 #include <vm/page.h>
 
-class VmObjectPaged;
+class VmCowPages;
 
-// Allocated pages that are part of a paged VmObject can be placed in a page queue. The page queues
-// provide a way to
+// Allocated pages that are part of the cow pages in a VmObjectPaged can be placed in a page queue.
+// The page queues provide a way to
 //  * Classify and group pages across VMO boundaries
 //  * Retrieve the VMO that a page is contained in (via a back reference stored in the vm_page_t)
 // Once a page has been placed in a page queue its queue_node becomes owned by the page queue and
@@ -55,16 +55,16 @@ class PageQueues {
   // reference information. If the page is removed from the referenced object (especially if it's
   // due to the object being destroyed) then this back reference *must* be updated, either by
   // calling Remove or calling MoveToPagerBacked with the new object information.
-  void SetPagerBacked(vm_page_t* page, VmObjectPaged* object, uint64_t page_offset);
+  void SetPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
   // Moves page from whichever queue it is currently in, to the pager backed queue. Same rules on
   // keeping the back reference up to date as given in SetPagerBacked apply.
-  void MoveToPagerBacked(vm_page_t* page, VmObjectPaged* object, uint64_t page_offset);
+  void MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
   // Place page in the unswappable zero forked queue. Must not already be in a page queue. Same
   // rules for back pointers apply as for SetPagerBacked.
-  void SetUnswappableZeroFork(vm_page_t* page, VmObjectPaged* object, uint64_t page_offset);
+  void SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
   // Moves page from whichever queue it is currently in, to the unswappable zero forked queue. Same
   // rules for back pointers apply as for SetPagerBacked.
-  void MoveToUnswappableZeroFork(vm_page_t* page, VmObjectPaged* object, uint64_t page_offset);
+  void MoveToUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
 
   // Removes the page from any page list and returns ownership of the queue_node.
   void Remove(vm_page_t* page);
@@ -98,7 +98,7 @@ class PageQueues {
   struct VmoBacklink {
     VmoBacklink() = default;
 
-    fbl::RefPtr<VmObjectPaged> vmo;
+    fbl::RefPtr<VmCowPages> cow;
     vm_page_t* page = nullptr;
     uint64_t offset = 0;
   };

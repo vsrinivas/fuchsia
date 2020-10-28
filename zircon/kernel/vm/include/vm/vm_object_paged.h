@@ -91,10 +91,7 @@ class VmObjectPaged final : public VmObject {
 
   uint64_t HeapAllocationBytes() const override { return cow_pages_->HeapAllocationBytes(); }
 
-  uint64_t EvictedPagedCount() const override {
-    Guard<Mutex> guard{&lock_};
-    return eviction_event_count_;
-  }
+  uint64_t EvictionEventCount() const override { return cow_pages_->EvictionEventCount(); }
 
   size_t AttributedPagesInRange(uint64_t offset, uint64_t len) const override {
     Guard<Mutex> guard{&lock_};
@@ -169,19 +166,12 @@ class VmObjectPaged final : public VmObject {
 
   uint32_t ScanForZeroPages(bool reclaim) override;
 
-  bool EvictPage(vm_page_t* page, uint64_t offset) override;
   void HarvestAccessedBits() override;
 
-  // Attempts to dedup the given page at the specified offset with the zero page. The only
-  // correctness requirement for this is that `page` must be *some* valid vm_page_t, meaning that
-  // all race conditions are handled internally. This function returns false if
-  //  * page is either not from this VMO, or not found at the specified offset
-  //  * page is pinned
-  //  * vmo is uncached
-  //  * page is not all zeroes
-  // Otherwise 'true' is returned and the page will have been returned to the pmm with a zero page
-  // marker put in its place.
-  bool DedupZeroPage(vm_page_t* page, uint64_t offset);
+  // Returns whether or not zero pages can be safely deduped from this VMO. Zero pages cannot be
+  // deduped if the VMO is in use for kernel mappings, or if the pages cannot be accessed from the
+  // physmap due to not being cached.
+  bool CanDedupZeroPagesLocked() TA_REQ(lock_);
 
   // This performs a very expensive validation that checks if pages have been split correctly in
   // this VMO and is intended as a debugging aid. A return value of false indicates that the VMO
@@ -210,6 +200,9 @@ class VmObjectPaged final : public VmObject {
     Guard<Mutex> guard{&lock_};
     return GetHierarchyGenerationCountLocked();
   }
+
+  // Exposed for testing.
+  fbl::RefPtr<VmCowPages> DebugGetCowPages() const { return cow_pages_; }
 
   using RangeChangeOp = VmCowPages::RangeChangeOp;
   // Apply the specified operation to all mappings in the given range.
@@ -308,9 +301,6 @@ class VmObjectPaged final : public VmObject {
 
   // Tracks the last cached page attribution count.
   mutable CachedPageAttribution cached_page_attribution_ TA_GUARDED(lock_) = {};
-
-  // Count eviction events so that we can report them to the user.
-  uint64_t eviction_event_count_ TA_GUARDED(lock_) = 0;
 
   // Reference to our pages should never be modified and is only dropped in the destructor.
   fbl::RefPtr<VmCowPages> const cow_pages_;

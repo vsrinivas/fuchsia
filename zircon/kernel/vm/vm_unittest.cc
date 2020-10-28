@@ -2168,20 +2168,20 @@ static bool vmo_eviction_test() {
   ASSERT_EQ(ZX_OK, status);
 
   // Shouldn't be able to evict pages from the wrong VMO.
-  EXPECT_FALSE(vmo->EvictPage(page2, 0));
-  EXPECT_FALSE(vmo2->EvictPage(page, 0));
+  EXPECT_FALSE(vmo->DebugGetCowPages()->EvictPage(page2, 0));
+  EXPECT_FALSE(vmo2->DebugGetCowPages()->EvictPage(page, 0));
 
   // Eviction should actually drop the number of committed pages.
   EXPECT_EQ(1u, vmo2->AttributedPages());
-  EXPECT_TRUE(vmo2->EvictPage(page2, 0));
+  EXPECT_TRUE(vmo2->DebugGetCowPages()->EvictPage(page2, 0));
   EXPECT_EQ(0u, vmo2->AttributedPages());
   pmm_free_page(page2);
-  EXPECT_GT(vmo2->EvictedPagedCount(), 0u);
+  EXPECT_GT(vmo2->EvictionEventCount(), 0u);
 
   // Pinned pages should not be evictable.
   status = vmo->CommitRangePinned(0, PAGE_SIZE);
   EXPECT_EQ(ZX_OK, status);
-  EXPECT_FALSE(vmo->EvictPage(page, 0));
+  EXPECT_FALSE(vmo->DebugGetCowPages()->EvictPage(page, 0));
   vmo->Unpin(0, PAGE_SIZE);
 
   END_TEST;
@@ -2479,7 +2479,7 @@ static bool vmo_attribution_evict_test() {
   EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 1u));
 
   // Evicting the page should increment the generation count.
-  vmo->EvictPage(page, 0);
+  vmo->DebugGetCowPages()->EvictPage(page, 0);
   ++expected_gen_count;
   EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
 
@@ -2511,14 +2511,14 @@ static bool vmo_attribution_dedup_test() {
 
   // Dedupe the first page. This should increment the generation count.
   auto vmop = static_cast<VmObjectPaged*>(vmo.get());
-  ASSERT_TRUE(vmop->DedupZeroPage(page, 0));
+  ASSERT_TRUE(vmop->DebugGetCowPages()->DedupZeroPage(page, 0));
   ++expected_gen_count;
   EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 1u));
 
   // Dedupe the second page. This should increment the generation count.
   status = vmo->GetPage(PAGE_SIZE, 0, nullptr, nullptr, &page, nullptr);
   ASSERT_EQ(ZX_OK, status);
-  ASSERT_TRUE(vmop->DedupZeroPage(page, PAGE_SIZE));
+  ASSERT_TRUE(vmop->DebugGetCowPages()->DedupZeroPage(page, PAGE_SIZE));
   ++expected_gen_count;
   EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
 
@@ -3528,7 +3528,7 @@ static bool pq_add_remove() {
   EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 0}));
 
   // Pretend we have some kind of pointer to a VmObjectPaged (this will never get dereferenced)
-  pq.SetPagerBacked(&test_page, vmo.get(), 0);
+  pq.SetPagerBacked(&test_page, vmo->DebugGetCowPages().get(), 0);
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&test_page));
   EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0, 0}));
 
@@ -3563,7 +3563,7 @@ static bool pq_move_queues() {
   EXPECT_TRUE(pq.DebugPageIsUnswappable(&test_page));
   EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 1, 0, 0}));
 
-  pq.MoveToPagerBacked(&test_page, vmo.get(), 0);
+  pq.MoveToPagerBacked(&test_page, vmo->DebugGetCowPages().get(), 0);
   EXPECT_FALSE(pq.DebugPageIsUnswappable(&test_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&test_page));
   EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0, 0}));
@@ -3621,7 +3621,7 @@ static bool pq_rotate_queue() {
 
   // Put the pages in and validate initial state.
   pq.SetWired(&wired_page);
-  pq.SetPagerBacked(&pager_page, vmo.get(), 0);
+  pq.SetPagerBacked(&pager_page, vmo->DebugGetCowPages().get(), 0);
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   size_t queue;
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page, &queue));
@@ -3647,7 +3647,7 @@ static bool pq_rotate_queue() {
   EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 0, 0, 1}, 0, 1, 0}));
 
   // Moving the page should bring it back to the first queue.
-  pq.MoveToPagerBacked(&pager_page, vmo.get(), 0);
+  pq.MoveToPagerBacked(&pager_page, vmo->DebugGetCowPages().get(), 0);
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page));
   EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 1, 0}));

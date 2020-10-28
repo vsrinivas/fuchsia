@@ -283,9 +283,10 @@ class VmObject : public VmHierarchyBase,
 
   virtual uint64_t HeapAllocationBytes() const { return 0; }
 
-  // Number of pages that have been evicted over the lifetime of this VMO. Evicted counts for any
-  // decommit style event such as user pager eviction or zero page merging.
-  virtual uint64_t EvictedPagedCount() const { return 0; }
+  // Number of times pages have been evicted over the lifetime of this VMO. Evicted counts for any
+  // decommit style event such as user pager eviction or zero page merging. One eviction event
+  // could count for multiple pages being evicted, if those pages were evicted as a group.
+  virtual uint64_t EvictionEventCount() const { return 0; }
 
   // Get a pointer to the page structure and/or physical address at the specified offset.
   // valid flags are VMM_PF_FLAG_*.
@@ -402,15 +403,6 @@ class VmObject : public VmHierarchyBase,
   // page age etc. This is allowed to be a no-op, and doesn't promise to generate any observable
   // results.
   virtual void HarvestAccessedBits() {}
-
-  // Asks the VMO to attempt to evict the specified page. This returns true if the page was
-  // actually from this VMO and was successfully evicted, at which point the caller now has
-  // ownership of the page. Otherwise eviction is allowed to fail for any reason, specifically
-  // if the page is considered in use, or the VMO has no way to recreate the page then eviction
-  // will fail. Although eviction may fail for any reason, if it does the caller is able to assume
-  // that either the page was not from this vmo, or that the page is not in any evictable page queue
-  // (such as the pager_backed_ queue).
-  virtual bool EvictPage(vm_page_t* page, uint64_t offset) { return false; }
 
  protected:
   explicit VmObject(fbl::RefPtr<VmHierarchyState> root_lock);
