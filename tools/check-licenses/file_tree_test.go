@@ -25,7 +25,7 @@ func TestFileTreeNew(t *testing.T) {
 	metrics := Metrics{}
 	metrics.Init()
 	config.BaseDir = folder
-	if NewFileTree(context.Background(), &config, &metrics) == nil {
+	if NewFileTree(context.Background(), config.BaseDir, nil, &config, &metrics) == nil {
 		t.Errorf("%v(): got %v, want %v", t.Name(), nil, "*FileTree")
 	}
 }

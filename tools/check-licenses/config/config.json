@@ -7,6 +7,7 @@
     "CONTRIBUTING.md",
     "LICENSE-APACHE.old",
     "LICENSE-MIT.old",
+    "NOTICE.html",
     "SYNTAX.md",
     "TESTING.md",
     "all_selectors.txt",
@@ -42,6 +43,8 @@
     "tools/check-licenses/golden",
     "zircon/third_party/lz4/programs",
     "zircon/third_party/lz4/tests"
+  ],
+  "stopLicensePropagation": [
   ],
   "textExtensionList": [
     "a",
@@ -105,31 +108,35 @@
   "customProjectLicenses" : [
     {
       "projectRoot": "prebuilt/third_party/rust/linux-x64",
-      "licenseLocation": "linux-x64/share/doc/rust/COPYRIGHT"
+      "licenseLocation": "share/doc/rust/COPYRIGHT"
     },
     {
       "projectRoot": "prebuilt/third_party/rust_tools/linux-x64",
-      "licenseLocation": "linux-x64/share/doc/rust/COPYRIGHT"
+      "licenseLocation": "share/doc/rust/COPYRIGHT"
     },
     {
       "projectRoot": "prebuilt/third_party/cmake/linux-x64",
-      "licenseLocation": "linux-x64/doc/cmake-3.10/Copyright.txt"
+      "licenseLocation": "doc/cmake-3.10/Copyright.txt"
     },
     {
       "projectRoot": "prebuilt/third_party/ffmpeg/pkg",
-      "licenseLocation": "pkg/ffmpeg/docs/LICENSE.md"
+      "licenseLocation": "ffmpeg/docs/LICENSE.md"
     },
     {
       "projectRoot": "prebuilt/third_party/python3/linux-x64",
-      "licenseLocation": "linux-x64/lib/python3.8/LICENSE.txt"
+      "licenseLocation": "lib/python3.8/LICENSE.txt"
     },
     {
       "projectRoot": "prebuilt/third_party/llvm/include",
-      "licenseLocation": "include/llvm/Support/LICENSE.TXT"
+      "licenseLocation": "llvm/Support/LICENSE.TXT"
     },
     {
       "projectRoot": "prebuilt/third_party/jq/linux-x64",
-      "licenseLocation": "linux-x64/share/doc/jq/COPYING"
+      "licenseLocation": "share/doc/jq/COPYING"
+    },
+    {
+      "projectRoot": "third_party/freetype2",
+      "licenseLocation": "docs/LICENSE.TXT"
     }
   ],
   "licensePatternDir": "tools/check-licenses/golden/patterns",

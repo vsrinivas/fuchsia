@@ -15,11 +15,11 @@ import (
 // License contains a searchable regex pattern for finding file matches in
 // tree.
 //
-// The category field is the .lic name
+// The Category field is the .lic name
 type License struct {
 	pattern   *regexp.Regexp
-	category  string
-	validType bool
+	Category  string `json:"category"`
+	ValidType bool   `json:"valid license"`
 
 	mu           sync.Mutex
 	matches      map[string]*Match

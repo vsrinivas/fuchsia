@@ -58,8 +58,8 @@ func NewLicenses(ctx context.Context, root string, prohibitedLicenseTypes []stri
 			l.licenses,
 			&License{
 				pattern:      re,
-				category:     n,
-				validType:    contains(prohibitedLicenseTypes, n),
+				Category:     n,
+				ValidType:    contains(prohibitedLicenseTypes, n),
 				matches:      map[string]*Match{},
 				matchChannel: make(chan *Match, 10),
 			})
@@ -69,8 +69,8 @@ func NewLicenses(ctx context.Context, root string, prohibitedLicenseTypes []stri
 	}
 	// Reorder the files putting fuchsia licenses first, then shortest first.
 	sort.Slice(l.licenses, func(i, j int) bool {
-		a := strings.Contains(l.licenses[i].category, "fuchsia")
-		b := strings.Contains(l.licenses[j].category, "fuchsia")
+		a := strings.Contains(l.licenses[i].Category, "fuchsia")
+		b := strings.Contains(l.licenses[j].Category, "fuchsia")
 		if a != b {
 			return a
 		}
@@ -82,7 +82,7 @@ func NewLicenses(ctx context.Context, root string, prohibitedLicenseTypes []stri
 func (l *Licenses) GetFilesWithProhibitedLicenses() []string {
 	var filesWithProhibitedLicenses []string
 	for _, license := range l.licenses {
-		if license.validType {
+		if license.ValidType {
 			continue
 		}
 		for _, match := range license.matches {
@@ -92,15 +92,14 @@ func (l *Licenses) GetFilesWithProhibitedLicenses() []string {
 	return filesWithProhibitedLicenses
 }
 
-func (l *Licenses) MatchSingleLicenseFile(data []byte, base string, metrics *Metrics, file_tree *FileTree) {
+func (l *Licenses) MatchSingleLicenseFile(data []byte, path string, metrics *Metrics, file_tree *FileTree) {
 	// TODO(solomonokinard) deduplicate Match*File()
 	for _, license := range l.licenses {
 		if m := license.pattern.Find(data); m != nil {
 			metrics.increment("num_single_license_file_match")
-			path := strings.TrimSpace(file_tree.getPath() + base)
 			license.matchAuthors(string(m), data, path)
 			file_tree.Lock()
-			file_tree.SingleLicenseFiles[base] = append(file_tree.SingleLicenseFiles[base], license)
+			file_tree.SingleLicenseFiles[path] = append(file_tree.SingleLicenseFiles[path], license)
 			file_tree.Unlock()
 		}
 	}

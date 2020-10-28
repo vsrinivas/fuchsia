@@ -62,10 +62,10 @@ func TestNewLicenses(t *testing.T) {
 		t.Fatalf("Got %#v", l.licenses)
 	}
 	// bsd comes first because it is shorter.
-	if l.licenses[0].category != "bsd.lic" {
+	if l.licenses[0].Category != "bsd.lic" {
 		t.Fatalf("Got %#v", l.licenses[0])
 	}
-	if l.licenses[1].category != "apache.lic" {
+	if l.licenses[1].Category != "apache.lic" {
 		t.Fatalf("Got %#v", l.licenses[0])
 	}
 }

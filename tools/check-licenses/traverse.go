@@ -28,7 +28,7 @@ func Walk(ctx context.Context, config *Config) error {
 	var wg sync.WaitGroup
 	metrics := new(Metrics)
 	metrics.Init()
-	file_tree := NewFileTree(ctx, config, metrics)
+	file_tree := NewFileTree(ctx, config.BaseDir, nil, config, metrics)
 	licenses, err := NewLicenses(ctx, config.LicensePatternDir, config.ProhibitedLicenseTypes)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func Walk(ctx context.Context, config *Config) error {
 				if err := processSingleLicenseFile(singleLicenseFile, metrics, licenses, config, tree); err != nil {
 					// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
 					// TODO(jcecil): Correctly skip symlink.
-					fmt.Printf("warning: %s. Skipping file: %s.\n", err, tree.getPath())
+					log.Printf("warning: %s. Skipping file: %s.\n", err, singleLicenseFile)
 				}
 				return nil
 			})
@@ -61,13 +61,15 @@ func Walk(ctx context.Context, config *Config) error {
 	eg.Wait()
 	r.End()
 
+	file_tree.propagateProjectLicenses(config)
+
 	r = trace.StartRegion(ctx, "regular file walk")
-	for path := range file_tree.getFileIterator() {
-		path := path
+	for file := range file_tree.getFileIterator() {
+		file := file
 		eg.Go(func() error {
-			if err := processFile(path, metrics, licenses, unlicensedFiles, config, file_tree); err != nil {
+			if err := processFile(file, metrics, licenses, unlicensedFiles, config); err != nil {
 				// TODO(jcecil): Correctly skip symlink and return errors.
-				fmt.Printf("warning: %s. Skipping file: %s.\n", err, path)
+				log.Printf("warning: %s. Skipping file: %s.\n", err, file.Path)
 			}
 			return nil
 		})
@@ -110,18 +112,20 @@ func Walk(ctx context.Context, config *Config) error {
 	return nil
 }
 
-func processSingleLicenseFile(base string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) error {
-	path := strings.TrimSpace(file_tree.getPath() + base)
+func processSingleLicenseFile(path string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) error {
 	// For singe license files, we read the whole file.
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	licenses.MatchSingleLicenseFile(data, base, metrics, file_tree)
+	licenses.MatchSingleLicenseFile(data, path, metrics, file_tree)
 	return nil
 }
 
-func processFile(path string, metrics *Metrics, licenses *Licenses, unlicensedFiles *UnlicensedFiles, config *Config, file_tree *FileTree) error {
+func processFile(file *File, metrics *Metrics, licenses *Licenses, unlicensedFiles *UnlicensedFiles, config *Config) error {
+	file_tree := file.Parent
+
+	path := file.Path
 	log.Printf("visited file or dir: %q", path)
 	// TODO(omerlevran): Reuse the buffer.
 	data := make([]byte, config.MaxReadSize)
@@ -130,31 +134,47 @@ func processFile(path string, metrics *Metrics, licenses *Licenses, unlicensedFi
 		return err
 	}
 	data = data[:n]
+
 	is_matched := licenses.MatchFile(data, path, metrics)
+
 	if !is_matched {
-		project := file_tree.getProjectLicense(path)
-		if project == nil {
+		if len(file_tree.SingleLicenseFiles) == 0 {
 			metrics.increment("num_unlicensed")
 			unlicensedFiles.files = append(unlicensedFiles.files, path)
-			fmt.Printf("File license: missing. Project license: missing. path: %s\n", path)
+			log.Printf("File license: missing. Project license: missing. path: %s\n", path)
 		} else {
-			metrics.increment("num_with_project_license")
-			for _, arr_license := range project.SingleLicenseFiles {
-
-				for i, license := range arr_license {
-					license.mu.Lock()
-					for author := range license.matches {
-						license.matches[author].files = append(license.matches[author].files, path)
-					}
-					license.mu.Unlock()
-					if i == 0 {
-						metrics.increment("num_one_file_matched_to_one_single_license")
-					}
-					log.Printf("project license: %s", license.category)
-					metrics.increment("num_one_file_matched_to_multiple_single_licenses")
+			// If we find a LICENSE file but it doesn't match any of our license patterns,
+			// we should mark it as unlicensed.
+			foundMatchedLicense := false
+			for _, l := range file_tree.SingleLicenseFiles {
+				if len(l) > 0 {
+					foundMatchedLicense = true
+					break
 				}
 			}
-			log.Printf("File license: missing. Project license: exists. path: %s", path)
+			if !foundMatchedLicense {
+				metrics.increment("num_unlicensed")
+				unlicensedFiles.files = append(unlicensedFiles.files, path)
+				log.Printf("File license: missing. Project license: missing. path: %s\n", path)
+			} else {
+				metrics.increment("num_with_project_license")
+				for _, arr_license := range file_tree.SingleLicenseFiles {
+
+					for i, license := range arr_license {
+						license.mu.Lock()
+						for author := range license.matches {
+							license.matches[author].files = append(license.matches[author].files, path)
+						}
+						license.mu.Unlock()
+						if i == 0 {
+							metrics.increment("num_one_file_matched_to_one_single_license")
+						}
+						log.Printf("project license: %s", license.Category)
+						metrics.increment("num_one_file_matched_to_multiple_single_licenses")
+					}
+				}
+				log.Printf("File license: missing. Project license: exists. path: %s", path)
+			}
 		}
 	}
 	return nil

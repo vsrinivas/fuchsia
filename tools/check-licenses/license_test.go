@@ -13,7 +13,7 @@ import (
 func TestLicenseAppend(t *testing.T) {
 	license := License{
 		pattern:      regexp.MustCompile("abcdefghijklmnopqrs\ntuvwxyz"),
-		category:     "alphabet-test",
+		Category:     "alphabet-test",
 		matches:      make(map[string]*Match),
 		matchChannel: make(chan *Match, 10),
 	}

@@ -21,7 +21,7 @@ import (
 // It writes an uncompressed version too if a compressed version is requested.
 func saveToOutputFile(path string, licenses *Licenses) error {
 	// Sort the licenses in alphabetical order for consistency.
-	sort.Slice(licenses.licenses, func(i, j int) bool { return licenses.licenses[i].category < licenses.licenses[j].category })
+	sort.Slice(licenses.licenses, func(i, j int) bool { return licenses.licenses[i].Category < licenses.licenses[j].Category })
 	data := struct {
 		Used   []*License
 		Unused []*License
@@ -98,7 +98,7 @@ var funcMap = template.FuncMap{
 		return strings.Replace(l.matches[author].value, "\"", "\\\"", -1)
 	},
 	"getCategory": func(l *License) string {
-		return strings.TrimSuffix(l.category, ".lic")
+		return strings.TrimSuffix(l.Category, ".lic")
 	},
 	"getFiles": func(l *License, author string) []string {
 		var files []string

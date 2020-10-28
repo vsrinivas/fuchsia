@@ -19,16 +19,26 @@ import (
 
 // NewFileTree returns an instance of FileTree, given the input configuration
 // file.
-func NewFileTree(ctx context.Context, config *Config, metrics *Metrics) *FileTree {
+func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Config, metrics *Metrics) *FileTree {
 	defer trace.StartRegion(ctx, "NewFileTree").End()
 	var ft FileTree
 	ft.Init()
 
-	ft.Name = config.BaseDir
-	abs, _ := filepath.Abs(config.BaseDir)
+	abs, _ := filepath.Abs(root)
+	ft.Name = filepath.Base(abs)
 	ft.Path = abs
+	ft.Parent = parent
 
-	err := filepath.Walk(config.BaseDir, func(path string, info os.FileInfo, err error) error {
+	for _, customProjectLicense := range config.CustomProjectLicenses {
+		if strings.HasSuffix(root, customProjectLicense.ProjectRoot) {
+			metrics.increment("num_single_license_files")
+			licLocation := filepath.Join(root, customProjectLicense.LicenseLocation)
+			ft.SingleLicenseFiles[licLocation] = []*License{}
+			break
+		}
+	}
+
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -39,16 +49,11 @@ func NewFileTree(ctx context.Context, config *Config, metrics *Metrics) *FileTre
 					return filepath.SkipDir
 				}
 			}
-			for _, customProjectLicense := range config.CustomProjectLicenses {
-				if path == customProjectLicense.ProjectRoot {
-					metrics.increment("num_single_license_files")
-					// TODO(omerlevran): Fix the directory and file_root having to repeat
-					// a directory.
-					ft.addSingleLicenseFile(path, customProjectLicense.LicenseLocation)
-					break
-				}
+			if path != root {
+				child := NewFileTree(ctx, path, &ft, config, metrics)
+				ft.Children[path] = child
+				return filepath.SkipDir
 			}
-			return nil
 		}
 
 		if info.Size() == 0 {
@@ -63,12 +68,19 @@ func NewFileTree(ctx context.Context, config *Config, metrics *Metrics) *FileTre
 		}
 		if hasLowerPrefix(info.Name(), config.SingleLicenseFiles) {
 			metrics.increment("num_single_license_files")
-			ft.addSingleLicenseFile(path, filepath.Base(path))
+			abs, err := filepath.Abs(path)
+			if err != nil {
+				abs = path
+			}
+			ft.SingleLicenseFiles[abs] = []*License{}
 			return nil
 		}
 		if hasExt(info.Name(), config.TextExtensionList) {
 			metrics.increment("num_non_single_license_files")
-			ft.addFile(path)
+			newFile, err := NewFile(path, &ft)
+			if err == nil {
+				ft.Files = append(ft.Files, newFile)
+			}
 		} else {
 			log.Printf("ignoring: %s", path)
 			metrics.increment("num_extensions_excluded")
@@ -89,7 +101,7 @@ type FileTree struct {
 	Name               string                `json:"name"`
 	Path               string                `json:"path"`
 	SingleLicenseFiles map[string][]*License `json:"project licenses"`
-	Files              []string              `json:"files"`
+	Files              []*File               `json:"files"`
 	Children           map[string]*FileTree  `json:"children"`
 	Parent             *FileTree             `json:"-"`
 
@@ -101,78 +113,24 @@ func (license_file_tree *FileTree) Init() {
 	license_file_tree.SingleLicenseFiles = make(map[string][]*License)
 }
 
-func (file_tree *FileTree) getSetCurr(path string) *FileTree {
-	children := strings.Split(filepath.Dir(path), "/")
-	curr := file_tree
-	file_tree.Lock()
-	prefix := ""
-	for _, child := range children {
-		prefix = filepath.Join(prefix, child)
-		if _, found := curr.Children[child]; !found {
-			curr.Children[child] = &FileTree{
-				Name:   child,
-				Parent: curr,
-				Path:   prefix,
-			}
-			curr.Children[child].Init()
-		}
-		curr = curr.Children[child]
-	}
-	file_tree.Unlock()
-	return curr
-}
-
-func (file_tree *FileTree) addFile(path string) {
-	curr := file_tree.getSetCurr(path)
-	curr.Files = append(curr.Files, filepath.Base(path))
-}
-
-func (file_tree *FileTree) addSingleLicenseFile(path string, base string) {
-	curr := file_tree.getSetCurr(path)
-	curr.SingleLicenseFiles[base] = []*License{}
-}
-
-func (file_tree *FileTree) getProjectLicense(path string) *FileTree {
-	curr := file_tree
-	var gold *FileTree
-	pieces := strings.Split(filepath.Dir(path), "/")
-	for _, piece := range pieces {
-		if len(curr.SingleLicenseFiles) > 0 {
-			gold = curr
-		}
-		curr.RLock()
-		if _, found := curr.Children[piece]; !found {
-			curr.RUnlock()
+func (file_tree *FileTree) propagateProjectLicenses(config *Config) {
+	propagate := true
+	for _, dirName := range config.StopLicensePropagation {
+		if file_tree.Name == dirName {
+			propagate = false
 			break
 		}
-		currNext := curr.Children[piece]
-		curr.RUnlock()
-		curr = currNext
 	}
-	if len(pieces) > 1 && len(curr.SingleLicenseFiles) > 0 {
-		gold = curr
-	}
-	return gold
-}
 
-func (file_tree *FileTree) getPath() string {
-	var arr []string
-	curr := file_tree
-	for {
-		if curr == nil {
-			break
+	if propagate && file_tree.Parent != nil {
+		for key, val := range file_tree.Parent.SingleLicenseFiles {
+			file_tree.SingleLicenseFiles[key] = val
 		}
-		arr = append(arr, curr.Name)
-		curr = curr.Parent
 	}
-	var sb strings.Builder
-	for i := len(arr) - 1; i >= 0; i-- {
-		if len(arr[i]) == 0 {
-			continue
-		}
-		fmt.Fprintf(&sb, "%s/", arr[i])
+
+	for _, child := range file_tree.Children {
+		child.propagateProjectLicenses(config)
 	}
-	return sb.String()
 }
 
 func (file_tree *FileTree) getSingleLicenseFileIterator() <-chan *FileTree {
@@ -200,8 +158,8 @@ func (file_tree *FileTree) getSingleLicenseFileIterator() <-chan *FileTree {
 	return ch
 }
 
-func (file_tree *FileTree) getFileIterator() <-chan string {
-	ch := make(chan string, 1)
+func (file_tree *FileTree) getFileIterator() <-chan *File {
+	ch := make(chan *File, 1)
 	go func() {
 		var curr *FileTree
 		var q []*FileTree
@@ -211,9 +169,8 @@ func (file_tree *FileTree) getFileIterator() <-chan string {
 			pos = len(q) - 1
 			curr = q[pos]
 			q = q[:pos]
-			base := curr.getPath()
 			for _, file := range curr.Files {
-				ch <- base + file
+				ch <- file
 			}
 			curr.RLock()
 			for _, child := range curr.Children {
@@ -232,14 +189,23 @@ func (file_tree *FileTree) getFileIterator() <-chan string {
 func (file_tree *FileTree) MarshalJSON() ([]byte, error) {
 	type Alias FileTree
 	childrenList := []*FileTree{}
+	fileList := []string{}
+
 	for _, c := range file_tree.Children {
 		childrenList = append(childrenList, c)
 	}
+
+	for _, f := range file_tree.Files {
+		fileList = append(fileList, f.Name)
+	}
+
 	return json.Marshal(&struct {
 		*Alias
+		Files    []string    `json:"files"`
 		Children []*FileTree `json:"children"`
 	}{
 		Alias:    (*Alias)(file_tree),
+		Files:    fileList,
 		Children: childrenList,
 	})
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package v2
+package checklicenses
 
 import (
 	"fmt"
@@ -11,11 +11,13 @@ import (
 )
 
 type File struct {
-	Path    string
-	Symlink string
+	Name    string
+	Path    string    `json:"-"`
+	Symlink string    `json:"-"`
+	Parent  *FileTree `json:"-"`
 }
 
-func NewFile(path string) (*File, error) {
+func NewFile(path string, parent *FileTree) (*File, error) {
 	if f := globalFileMap.retrieveFileIfExists(path); f != nil {
 		return f, nil
 	}
@@ -25,8 +27,10 @@ func NewFile(path string) (*File, error) {
 		return nil, fmt.Errorf("error creating file %v: %v\n", path, err)
 	}
 	file := &File{
-		Symlink: symlink,
+		Name:    filepath.Base(path),
 		Path:    path,
+		Symlink: symlink,
+		Parent:  parent,
 	}
 	return globalFileMap.insertFileIfMissing(file), nil
 }

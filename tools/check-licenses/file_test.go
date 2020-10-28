@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package v2
+package checklicenses
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ func TestCreateNormalFile(t *testing.T) {
 	}
 	defer os.Remove(tmpfile.Name())
 
-	_, err = NewFile(tmpfile.Name())
+	_, err = NewFile(tmpfile.Name(), nil)
 	if err != nil {
 		t.Errorf("%v(): got %v, want %v", t.Name(), err, nil)
 	}
@@ -56,7 +56,7 @@ func TestCreateRelativeSymlinkFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	f, err := NewFile(symlink)
+	f, err := NewFile(symlink, nil)
 	if err != nil {
 		t.Errorf("%v(): got %v, want %v", t.Name(), err, nil)
 	}
@@ -79,7 +79,7 @@ func TestCreateNonExistentFile(t *testing.T) {
 	defer os.RemoveAll(tmpdir) // clean up
 
 	notExist := filepath.Join(tmpdir, "DoesNotExist.txt")
-	f, err := NewFile(notExist)
+	f, err := NewFile(notExist, nil)
 
 	expectedErrorMsg := fmt.Sprintf("lstat %v: no such file or directory", notExist)
 	if err == nil || !strings.Contains(err.Error(), expectedErrorMsg) {
