@@ -129,6 +129,7 @@ source_set("crash_server") {
   ]
 
   public_deps = [
+    ":log_tags",
     ":report",
     ":sized_data_reader",
     "//sdk/fidl/fuchsia.mem",
@@ -138,7 +139,12 @@ source_set("crash_server") {
     "//third_party/crashpad/util",
   ]
 
-  deps = [ "//src/developer/forensics/utils:sized_data" ]
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.net.http",
+    "//sdk/fidl/fuchsia.net.http",
+    "//src/developer/forensics/utils:sized_data",
+    "//src/lib/fsl",
+  ]
 }
 
 source_set("errors") {
