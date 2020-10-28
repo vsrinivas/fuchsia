@@ -5,6 +5,7 @@
 group("tools") {
   testonly = true
   deps = [
+    "nc",
     "network-speed-test",
     "sockscripter",
   ]

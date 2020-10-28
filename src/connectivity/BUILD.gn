@@ -28,6 +28,7 @@ group("tools") {
     "network/net-cli",
     "network/netdump",
     "network/netstack:tools",
+    "network/tools",
     "overnet/overnetstack",
     "overnet/tools",
     "wlan:tools",
