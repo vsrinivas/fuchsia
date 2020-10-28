@@ -27,6 +27,7 @@ group("bind_tests") {
   testonly = true
   deps = [
     "bus:bind_test",
+    "controller:bind_test",
     "hw_accel:bind_test",
     "sensors:bind_test",
     "usb_video:bind_test",

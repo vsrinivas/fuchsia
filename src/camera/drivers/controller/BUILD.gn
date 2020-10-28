@@ -8,7 +8,7 @@ import("//src/camera/debug.gni")
 bind_rules("camera_controller_bind") {
   rules = "camera_controller.bind"
   output = "bind.h"
-  tests = "bind_test.json"
+  tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.composite" ]
 }
 

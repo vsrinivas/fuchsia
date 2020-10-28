@@ -9,7 +9,6 @@ camera_tests = {
     "//src/camera/bin/device:unittests",
     "//src/camera/bin/device_watcher/test",
     "//src/camera/bin/factory/test",
-    "//src/camera/drivers/controller:bind_test",
     "//src/camera/drivers/controller/sherlock/test",
     "//src/camera/drivers/controller/test",
     "//src/camera/drivers/hw_accel/gdc/test",
