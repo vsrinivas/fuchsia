@@ -557,6 +557,14 @@ Path to Clang lib directory.
 
 From //build/images/manifest.gni:12
 
+### clang_ml_inliner
+Controls whether to use the ML inliner in Clang to reduce size. Note that
+the option only takes effect when `optimize` is set to `"size"`.
+
+**Current value (from the default):** `false`
+
+From //build/config/compiler.gni:41
+
 ### clang_prefix
 The default clang toolchain provided by the prebuilt. This variable is
 additionally consumed by the Go toolchain.
@@ -761,7 +769,7 @@ From //src/virtualization/packages/debian_guest/BUILD.gn:9
 
 **Current value (from the default):** `"debug"`
 
-From //build/config/compiler.gni:43
+From //build/config/compiler.gni:53
 
 ### dev_build_only_deps
 List of labels for targets that should be built but not included in any

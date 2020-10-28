@@ -56,6 +56,14 @@ default format is used.
 
 From //public/gn/config/BUILD.zircon.gn:25
 
+### clang_ml_inliner
+Controls whether to use the ML inliner in Clang to reduce size. Note that
+the option only takes effect when `optimize` is set to `"size"`.
+
+**Current value (from the default):** `false`
+
+From //public/gn/config/levels.gni:45
+
 ### clang_tool_dir
 Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
 found.  If this is "", then the behavior depends on $use_prebuilt_clang.
@@ -87,7 +95,7 @@ From //public/gn/config/BUILD.zircon.gn:13
 
 **Current value (from the default):** `"debug"`
 
-From //public/gn/config/levels.gni:47
+From //public/gn/config/levels.gni:57
 
 ### default_deps
 Defines the `//:default` target: what `ninja` with no arguments does.
