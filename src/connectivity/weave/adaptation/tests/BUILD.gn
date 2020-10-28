@@ -49,6 +49,12 @@ test_package("weavestack-adaptation-unittests") {
     {
       name = "weave_platform_manager_unittests"
     },
+    {
+      log_settings = {
+        max_severity = "ERROR"
+      }
+      name = "weave_warm_platform_support_unittests"
+    },
   ]
   deps = [
     ":config",
@@ -60,6 +66,7 @@ test_package("weavestack-adaptation-unittests") {
     ":weave_connectivity_manager_unittests",
     ":weave_platform_manager_unittests",
     ":weave_thread_stack_manager_unittests",
+    ":weave_warm_platform_support_unittests",
   ]
   resources = [
     {
@@ -156,6 +163,13 @@ executable("weave_connectivity_manager_unittests") {
   testonly = true
   output_name = "weave_connectivity_manager_unittests"
   sources = [ "connectivity_manager_unittests.cpp" ]
+  deps = [ ":common_test_deps" ]
+}
+
+executable("weave_warm_platform_support_unittests") {
+  testonly = true
+  output_name = "weave_warm_platform_support_unittests"
+  sources = [ "warm_unittests.cpp" ]
   deps = [ ":common_test_deps" ]
 }
 

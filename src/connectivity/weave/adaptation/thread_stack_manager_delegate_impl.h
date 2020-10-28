@@ -38,6 +38,7 @@ class ThreadStackManagerDelegateImpl : public ThreadStackManagerImpl::Delegate {
   WEAVE_ERROR GetAndLogThreadStatsCounters() override;
   WEAVE_ERROR GetAndLogThreadTopologyMinimal() override;
   WEAVE_ERROR GetAndLogThreadTopologyFull() override;
+  const std::string& GetInterfaceName() const override;
 
  private:
   std::string interface_name_;

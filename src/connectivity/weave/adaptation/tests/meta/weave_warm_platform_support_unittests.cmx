@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/weave_warm_platform_support_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

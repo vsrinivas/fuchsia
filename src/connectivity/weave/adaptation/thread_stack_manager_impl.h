@@ -64,6 +64,8 @@ class ThreadStackManagerImpl final : public ThreadStackManager {
     virtual WEAVE_ERROR GetAndLogThreadTopologyMinimal() = 0;
     // Log a Weave event for a full Thread topology.
     virtual WEAVE_ERROR GetAndLogThreadTopologyFull() = 0;
+    // Get the name of the thread interface.
+    virtual const std::string& GetInterfaceName() const = 0;
   };
 
   // Sets the delegate containing the platform-specific implementation. It is
@@ -128,6 +130,9 @@ class ThreadStackManagerImpl final : public ThreadStackManager {
   WEAVE_ERROR _GetAndLogThreadStatsCounters();
   WEAVE_ERROR _GetAndLogThreadTopologyMinimal();
   WEAVE_ERROR _GetAndLogThreadTopologyFull();
+
+  // ThreadStackManagerImpl-specific functionality.
+  const std::string& GetInterfaceName() const;
 
  private:
   static ThreadStackManagerImpl sInstance;
