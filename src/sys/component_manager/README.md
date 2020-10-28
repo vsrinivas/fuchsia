@@ -33,7 +33,7 @@ Unit tests for component manager are available in the `component_manager_tests`
 package.
 
 ```
-$ fx run-test component_manager_tests
+$ fx test component_manager_tests
 ```
 
 Integration tests are also available in the following packages:
