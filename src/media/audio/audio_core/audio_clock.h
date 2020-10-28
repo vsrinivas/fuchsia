@@ -89,9 +89,6 @@ class AudioClock {
   bool is_adjustable() const { return is_adjustable_; }
   uint32_t domain() const { return domain_; }
 
-  bool controls_device_clock() const { return controls_device_clock_; }
-  void set_controls_device_clock(bool should_control_device_clock);
-
   // Return a transform based on a snapshot of the underlying zx::clock
   TimelineFunction ref_clock_to_clock_mono() const;
   zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time) const;
@@ -100,17 +97,18 @@ class AudioClock {
   zx::clock DuplicateClock() const;
   zx::time Read() const;
 
-  // Audio clocks are synchronized so that their positions (not just rates) align. We reconcile any
-  // differences smoothly, using feedback controls. Inputs are destination frame (as time component)
-  // and source position error in frac frames (as "process variable" which is tuned to zero). This
-  // function automatically adjusts the provided clocks as needed.
+  // We synchronize audio clocks so that positions (not just rates) align, reconciling differences
+  // using feedback controls. Given position error at a monotonic time, we tune src_pos_error to 0.
   //
   // The return value is the PPM value of any micro-SRC that should subsequently be applied.
   static int32_t SynchronizeClocks(AudioClock& source_clock, AudioClock& dest_clock,
-                                   zx::duration src_pos_error, zx::time monotonic_time);
+                                   zx::time monotonic_time, zx::duration src_pos_error);
 
   // Clear internal running state and restart the feedback loop at the given time.
   void ResetRateAdjustment(zx::time reset_time);
+
+  // Directly incorporate a position error when recovering a device clock.
+  int32_t TuneForError(zx::time monotonic_time, zx::duration src_pos_error);
 
  private:
   friend const zx::clock& audio_clock_helper::get_underlying_zx_clock(const AudioClock&);
@@ -121,23 +119,17 @@ class AudioClock {
     // If two clocks are identical or in the same clock domain, no synchronization is needed.
     None,
 
-    // We rate-adjust zx::clocks even if hardware is also adjustable, to minimize disruption.
+    // We rate-adjust client clocks if they permit us to minimize cost.
     AdjustSourceClock,
     AdjustDestClock,
 
-    // If clock hardware is adjustable, AudioCore may adjust it to follow a client clock; if so,
-    // this client clock is considered "hardware-controlling". If an adjustable device clock has no
-    // "controlling" client clock, it is treated as not adjustable.
-    AdjustSourceHardware,
-    AdjustDestHardware,
-
-    // If neither clock is adjustable, we error-correct by slightly adjusting the sample-rate
-    // conversion ratio (referred to as "micro-SRC"). This can occur with an adjustable device
-    // clock, if another stream's client clock is already controlling that device clock hardware.
+    // If the client clock is not adjustable, we error-correct by slightly adjusting the sample-rate
+    // conversion ratio (referred to as "micro-SRC").
     MicroSrc,
   };
   static SyncMode SyncModeForClocks(AudioClock& source_clock, AudioClock& dest_clock);
-  static int32_t ClampPpm(SyncMode sync_mode, int32_t parts_per_million);
+
+  int32_t ClampPpm(int32_t parts_per_million);
 
   static constexpr int32_t kMicroSrcAdjustmentPpmMax = 2500;
 
@@ -150,11 +142,11 @@ class AudioClock {
   Source source_;
   bool is_adjustable_;
   uint32_t domain_;
-  int32_t adjustment_ppm_ = 0;
-  bool controls_device_clock_;
 
-  audio::clock::PidControl microsrc_feedback_control_;
-  std::optional<audio::clock::PidControl> adjustable_feedback_control_;
+  audio::clock::PidControl feedback_control_;
+
+  // For debugging/display purposes only
+  int32_t previous_adjustment_ppm_ = 0;
 };
 
 }  // namespace media::audio

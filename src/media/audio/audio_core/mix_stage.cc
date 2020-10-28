@@ -603,6 +603,8 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // Convert both positions to monotonic time and get the delta
   //
   info.src_pos_error = mono_now_from_src - mono_now_from_dest;
+  FX_LOGS(TRACE) << "mono_now_from_src " << mono_now_from_src.get() << ", mono_now_from_dest "
+                 << mono_now_from_dest.get() << ", src_pos_err " << info.src_pos_error.get();
 
   // For start dest frame, measure [predicted - actual] error (in frac_src) since last mix. Do so
   // even if clocks are same on both sides, as this allows us to perform an initial sync-up between
@@ -625,8 +627,8 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     return;
   }
 
-  auto micro_src_ppm = AudioClock::SynchronizeClocks(source_clock, dest_clock, info.src_pos_error,
-                                                     mono_now_from_dest);
+  auto micro_src_ppm = AudioClock::SynchronizeClocks(source_clock, dest_clock, mono_now_from_dest,
+                                                     info.src_pos_error);
 
   if (micro_src_ppm) {
     TimelineRate micro_src_factor{static_cast<uint64_t>(1'000'000 + micro_src_ppm), 1'000'000};

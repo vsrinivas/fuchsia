@@ -413,11 +413,7 @@ void VirtualAudioStream::PostForNotify() {
   ZX_ASSERT(notifications_per_ring_);
   ZX_ASSERT(target_mono_notification_time_.get() > 0);
 
-  if (target_mono_notification_time_ > zx::clock::get_monotonic()) {
-    notify_timer_.PostForTime(dispatcher(), target_mono_notification_time_);
-  } else if (target_mono_notification_time_ > zx::time(0)) {
-    ProcessRingNotification();
-  }
+  notify_timer_.PostForTime(dispatcher(), target_mono_notification_time_);
 }
 
 void VirtualAudioStream::PostForNotifyAt(zx::time ref_notification_time) {
@@ -428,15 +424,10 @@ void VirtualAudioStream::PostForNotifyAt(zx::time ref_notification_time) {
 }
 
 void VirtualAudioStream::PostForVaClientNotify() {
-  ZX_ASSERT(va_client_notifications_per_ring_.has_value());
   ZX_ASSERT(va_client_notifications_per_ring_.value() > 0);
   ZX_ASSERT(target_va_client_mono_notification_time_.get() > 0);
 
-  if (target_va_client_mono_notification_time_ > zx::clock::get_monotonic()) {
-    va_client_notify_timer_.PostForTime(dispatcher(), target_va_client_mono_notification_time_);
-  } else if (target_va_client_mono_notification_time_ > zx::time(0)) {
-    ProcessVaClientRingNotification();
-  }
+  va_client_notify_timer_.PostForTime(dispatcher(), target_va_client_mono_notification_time_);
 }
 
 void VirtualAudioStream::PostForVaClientNotifyAt(zx::time va_client_ref_notification_time) {

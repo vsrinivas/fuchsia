@@ -288,6 +288,8 @@ void FakeAudioDriverV1::HandleCommandGetBuffer(audio_rb_cmd_get_buffer_req_t& re
   response.hdr.transaction_id = request.hdr.transaction_id;
   response.hdr.cmd = request.hdr.cmd;
 
+  notifications_per_ring_ = request.notifications_per_ring;
+
   // This should be true since it's set as part of creating the channel that's carrying these
   // messages.
   FX_CHECK(selected_format_);
@@ -321,9 +323,11 @@ void FakeAudioDriverV1::HandleCommandStart(audio_rb_cmd_start_req_t& request) {
   response.hdr.transaction_id = request.hdr.transaction_id;
   response.hdr.cmd = request.hdr.cmd;
   if (!is_running_) {
-    response.result = ZX_OK;
-    response.start_time = async::Now(dispatcher_).get();
+    mono_start_time_ = async::Now(dispatcher_);
     is_running_ = true;
+
+    response.result = ZX_OK;
+    response.start_time = mono_start_time_.get();
   } else {
     response.result = ZX_ERR_BAD_STATE;
   }
@@ -336,6 +340,7 @@ void FakeAudioDriverV1::HandleCommandStop(audio_rb_cmd_stop_req_t& request) {
   auto& response = response_message.ResizeBytesAs<audio_rb_cmd_stop_resp_t>();
   response.hdr.transaction_id = request.hdr.transaction_id;
   response.hdr.cmd = request.hdr.cmd;
+
   if (is_running_) {
     response.result = ZX_OK;
     is_running_ = false;
@@ -344,6 +349,24 @@ void FakeAudioDriverV1::HandleCommandStop(audio_rb_cmd_stop_req_t& request) {
   }
   zx_status_t status = ring_buffer_transceiver_.SendMessage(response_message);
   EXPECT_EQ(ZX_OK, status);
+}
+
+void FakeAudioDriverV1::SendPositionNotification(zx::time timestamp, uint32_t position) {
+  position_notify_timestamp_mono_ = timestamp;
+  position_notify_position_bytes_ = position;
+
+  if (is_running_ && (notifications_per_ring_ > 0)) {
+    test::MessageTransceiver::Message response_message;
+    auto& response = response_message.ResizeBytesAs<audio_rb_position_notify_t>();
+    response.hdr.transaction_id = AUDIO_INVALID_TRANSACTION_ID;
+    response.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
+
+    response.monotonic_time = position_notify_timestamp_mono_.get();
+    response.ring_buffer_pos = position_notify_position_bytes_;
+
+    zx_status_t status = ring_buffer_transceiver_.SendMessage(response_message);
+    EXPECT_EQ(ZX_OK, status);
+  }
 }
 
 }  // namespace media::audio::testing

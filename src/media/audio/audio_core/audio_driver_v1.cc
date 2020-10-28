@@ -1,5 +1,7 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #include <lib/async/cpp/time.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/trace/event.h>
@@ -23,16 +25,8 @@ namespace {
 
 static constexpr zx_txid_t TXID = 1;
 
-static constexpr bool kEnablePositionNotifications = false;
-// To what extent should position notification messages be logged? If logging level is TRACE, every
-// notification is logged (specified by Trace const). If DEBUG, log less frequently, specified by
-// Debug const. If INFO, even less frequently per Info const (INFO is default for DEBUG builds).
-// Default for audio_core in NDEBUG builds is WARNING, so by default we do not log any of these
-// messages on Release builds. Set to false to not log at all, even for unsolicited notifications.
-static constexpr bool kLogPositionNotifications = false;
-static constexpr uint16_t kPositionNotificationTraceInterval = 1;
-static constexpr uint16_t kPositionNotificationDebugInterval = 60;
-static constexpr uint16_t kPositionNotificationInfoInterval = 3600;
+// For non-zero value N, log every Nth position notification starting at 0. If 0, don't log any.
+static constexpr uint16_t kPositionNotificationDisplayInterval = 0;
 
 // TODO(fxbug.dev/39092): Log a cobalt metric for this.
 void LogMissedCommandDeadline(zx::duration delay) {
@@ -860,7 +854,7 @@ zx_status_t AudioDriverV1::ProcessGetFifoDepthResponse(
   req.hdr.cmd = AUDIO_RB_CMD_GET_BUFFER;
   req.hdr.transaction_id = TXID;
   req.min_ring_buffer_frames = static_cast<uint32_t>(min_frames_64);
-  req.notifications_per_ring = (kEnablePositionNotifications ? 2 : 0);
+  req.notifications_per_ring = (clock_domain_ != AudioClock::kMonotonicDomain ? 2 : 0);
 
   zx_status_t res = ring_buffer_channel_.write(0, &req, sizeof(req), nullptr, 0);
   if (res != ZX_OK) {
@@ -892,22 +886,24 @@ zx_status_t AudioDriverV1::ProcessGetBufferResponse(const audio_rb_cmd_get_buffe
   FX_CHECK(format) << "ProcessGetBufferResponse without an assigned format";
   {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
-
+    uint64_t ring_buffer_size_frames;
     if (owner_->is_input()) {
       readable_ring_buffer_ = BaseRingBuffer::CreateReadableHardwareBuffer(
           *format, versioned_ref_time_to_frac_presentation_frame_, reference_clock(),
-          std::move(rb_vmo), resp.num_ring_buffer_frames, [this]() {
+          std::move(rb_vmo), resp.num_ring_buffer_frames, [this, &ring_buffer_size_frames]() {
             OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
             auto t = reference_clock().Read();
+            ring_buffer_size_frames = readable_ring_buffer()->frames();
             return Fixed::FromRaw(ref_time_to_frac_safe_read_or_write_frame_.Apply(t.get()))
                 .Floor();
           });
     } else {
       writable_ring_buffer_ = BaseRingBuffer::CreateWritableHardwareBuffer(
           *format, versioned_ref_time_to_frac_presentation_frame_, reference_clock(),
-          std::move(rb_vmo), resp.num_ring_buffer_frames, [this]() {
+          std::move(rb_vmo), resp.num_ring_buffer_frames, [this, &ring_buffer_size_frames]() {
             OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
             auto t = reference_clock().Read();
+            ring_buffer_size_frames = writable_ring_buffer()->frames();
             return Fixed::FromRaw(ref_time_to_frac_safe_read_or_write_frame_.Apply(t.get()))
                 .Floor();
           });
@@ -916,6 +912,7 @@ zx_status_t AudioDriverV1::ProcessGetBufferResponse(const audio_rb_cmd_get_buffe
       ShutdownSelf("Failed to allocate and map driver ring buffer", ZX_ERR_NO_MEMORY);
       return ZX_ERR_NO_MEMORY;
     }
+    ring_buffer_size_bytes_ = ring_buffer_size_frames * format->bytes_per_frame();
     FX_DCHECK(!versioned_ref_time_to_frac_presentation_frame_->get().first.invertible());
   }
 
@@ -944,6 +941,9 @@ zx_status_t AudioDriverV1::ProcessStartResponse(const audio_rb_cmd_start_resp_t&
 
   auto format = GetFormat();
   auto frac_fps = TimelineRate(Fixed(format->frames_per_second()).raw_value(), zx::sec(1).get());
+
+  running_pos_bytes_ = 0;
+  frac_frames_per_byte_ = TimelineRate(Fixed(1).raw_value(), format->bytes_per_frame());
 
   if (owner_->is_output()) {
     // Abstractly, we can think of the hardware buffer as an infinitely
@@ -1033,6 +1033,9 @@ zx_status_t AudioDriverV1::ProcessStopResponse(const audio_rb_cmd_stop_resp_t& r
     return resp.result;
   }
 
+  // Now that we have our clock domain, we can establish our audio device clock
+  SetUpClocks();
+
   // We are now stopped and in Configured state. Let our owner know about this important milestone.
   state_ = State::Configured;
   configuration_deadline_ = zx::time::infinite();
@@ -1044,31 +1047,45 @@ zx_status_t AudioDriverV1::ProcessStopResponse(const audio_rb_cmd_stop_resp_t& r
 // This position notification will be used to synthesize a clock for this audio device.
 zx_status_t AudioDriverV1::ProcessPositionNotify(const audio_rb_position_notify_t& notify) {
   TRACE_DURATION("audio", "AudioDriverV1::ProcessPositionNotify");
-  if constexpr (kLogPositionNotifications) {
-    if ((kPositionNotificationInfoInterval > 0) &&
-        (position_notification_count_ % kPositionNotificationInfoInterval == 0)) {
-      AUDIO_LOG_OBJ(INFO, this) << (kEnablePositionNotifications ? "Notification"
-                                                                 : "Unsolicited notification")
-                                << " (1/" << kPositionNotificationInfoInterval
-                                << ") Time:" << notify.monotonic_time << ", Pos:" << std::setw(6)
-                                << notify.ring_buffer_pos;
-    } else if ((kPositionNotificationDebugInterval > 0) &&
-               (position_notification_count_ % kPositionNotificationDebugInterval == 0)) {
-      AUDIO_LOG_OBJ(DEBUG, this) << (kEnablePositionNotifications ? "Notification"
-                                                                  : "Unsolicited notification")
-                                 << " (1/" << kPositionNotificationDebugInterval
-                                 << ") Time:" << notify.monotonic_time << ",  Pos:" << std::setw(6)
-                                 << notify.ring_buffer_pos;
-    } else if ((kPositionNotificationTraceInterval > 0) &&
-               (position_notification_count_ % kPositionNotificationTraceInterval == 0)) {
-      AUDIO_LOG_OBJ(TRACE, this) << (kEnablePositionNotifications ? "Notification"
-                                                                  : "Unsolicited notification")
-                                 << " (1/" << kPositionNotificationTraceInterval
-                                 << ") Time:" << notify.monotonic_time << ", Pos:" << std::setw(6)
-                                 << notify.ring_buffer_pos;
+
+  if (clock_domain_ == AudioClock::kMonotonicDomain) {
+    return ZX_OK;
+  }
+
+  auto actual_mono_time = zx::time(notify.monotonic_time);
+  FX_CHECK(actual_mono_time >= mono_start_time_) << "Position notification while not started";
+
+  // Based on (wraparound) ring positions, we maintain a long-running byte position
+  auto prev_ring_position = running_pos_bytes_ % ring_buffer_size_bytes_;
+  running_pos_bytes_ -= prev_ring_position;
+  running_pos_bytes_ += notify.ring_buffer_pos;
+  // If previous position >= this new position, we must have wrapped around
+  // The only exception: the first position notification (comparing to default initialized values)
+  if (prev_ring_position >= notify.ring_buffer_pos && position_notification_count_ > 0) {
+    running_pos_bytes_ += ring_buffer_size_bytes_;
+  }
+
+  auto curr_pos_frac_frames = frac_frames_per_byte_.Scale(running_pos_bytes_);
+  auto curr_ref_time = ref_time_to_frac_presentation_frame_.ApplyInverse(curr_pos_frac_frames);
+  auto predicted_mono_time = audio_clock_->MonotonicTimeFromReferenceTime(zx::time(curr_ref_time));
+
+  auto curr_error = predicted_mono_time - actual_mono_time;
+
+  if constexpr (kPositionNotificationDisplayInterval > 0) {
+    if (position_notification_count_ % kPositionNotificationDisplayInterval == 0) {
+      FX_LOGS(INFO) << std::hex << static_cast<void*>(this) << std::dec
+                    << (owner_->is_output() ? " Output" : " Input ") << " notification #"
+                    << position_notification_count_ << " [" << notify.monotonic_time << ", "
+                    << std::setw(6) << notify.ring_buffer_pos << "] run_pos_bytes "
+                    << running_pos_bytes_ << ", run_time "
+                    << (actual_mono_time - mono_start_time_).get() << ", predicted_mono "
+                    << predicted_mono_time.get() << ", curr_err " << curr_error.get();
     }
   }
-  // Even if we don't log them, keep a running count of position notifications since START.
+
+  recovered_clock_->TuneForError(actual_mono_time, curr_error);
+
+  // Maintain a running count of position notifications since START.
   ++position_notification_count_;
 
   return ZX_OK;
@@ -1155,8 +1172,8 @@ zx_status_t AudioDriverV1::OnDriverInfoFetched(uint32_t info) {
 }
 
 void AudioDriverV1::SetUpClocks() {
-  // If we are in the monotonic domain, or if we have problem setting up the mechanism to recover a
-  // clock, then we'll just fall back to using this non-adjustable clone of CLOCK_MONOTONIC.
+  // If we are in the monotonic domain, or if we have problems setting up the mechanism to recover a
+  // clock, just fall back to using this rate-fixed clone of CLOCK_MONOTONIC.
   audio_clock_ =
       AudioClock::DeviceFixed(audio::clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 
@@ -1165,7 +1182,7 @@ void AudioDriverV1::SetUpClocks() {
   }
 
   // This clock begins as a clone of MONOTONIC, but because the hardware is NOT in the monotonic
-  // clock domain, this clock must eventually diverge. We tune this clock based on notifications
+  // clock domain, this clock will eventually diverge. We tune this clock based on notifications
   // provided by the audio driver, which correlate DMA position with CLOCK_MONOTONIC time.
   // TODO(fxbug.dev/60027): Recovered clocks should be per-domain not per-driver.
   auto adjustable_clock = audio::clock::AdjustableCloneOfMonotonic();
@@ -1175,13 +1192,10 @@ void AudioDriverV1::SetUpClocks() {
     return;
   }
 
-  recovered_clock_ = AudioClock::DeviceFixed(std::move(adjustable_clock), clock_domain_);
-
-  // TODO(fxbug.dev/46648): If this clock domain is discovered to be hardware-tunable, this should
-  // be DeviceAdjustable, not DeviceFixed, to articulate that it has hardware controls.
-  auto clone = AudioClock::DeviceFixed(read_only_clock_result.take_value(), clock_domain_);
-
-  audio_clock_ = std::move(clone);
+  // We privately retain this clock, adjusting its rate based on position notifications
+  recovered_clock_ = AudioClock::DeviceAdjustable(std::move(adjustable_clock), clock_domain_);
+  // We provide this read-only clone to the rest of the system, so they can synchronize to us.
+  audio_clock_ = AudioClock::DeviceFixed(read_only_clock_result.take_value(), clock_domain_);
 }
 
 zx_status_t AudioDriverV1::SetGain(const AudioDeviceSettings::GainState& gain_state,

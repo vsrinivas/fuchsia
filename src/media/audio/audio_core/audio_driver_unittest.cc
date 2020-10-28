@@ -5,18 +5,33 @@
 #include "src/media/audio/audio_core/audio_driver.h"
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
-#include "src/media/audio/audio_core/testing/audio_clock_helper.h"
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
-#include "src/media/audio/lib/clock/testing/clock_test.h"
 
 namespace media::audio {
 namespace {
 
+// These tests are templated to run on both driver types
 typedef ::testing::Types<testing::FakeAudioDriverV1, testing::FakeAudioDriverV2> DriverTypes;
-TYPED_TEST_SUITE(AudioDriverTest, DriverTypes);
 
+// Enable gtest to pretty-print the driver type name
+class DriverTypeNames {
+ public:
+  template <typename T>
+  static std::string GetName(int) {
+    if constexpr (std::is_same<T, testing::FakeAudioDriverV1>()) {
+      return "AudioDriverV1";
+    }
+    if constexpr (std::is_same<T, testing::FakeAudioDriverV2>()) {
+      return "AudioDriverV2";
+    }
+  }
+};
+
+TYPED_TEST_SUITE(AudioDriverTest, DriverTypes, DriverTypeNames);
+
+// Test class to verify the driver initialization/configuration sequence.
 template <typename T>
 class AudioDriverTest : public testing::ThreadingModelFixture {
  public:
@@ -26,26 +41,25 @@ class AudioDriverTest : public testing::ThreadingModelFixture {
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
     remote_driver_ = std::make_unique<T>(std::move(c1), dispatcher());
 
-    // Set the fake fifo depth and external delays to something non-zero, just
-    // to keep things interesting.
-    remote_driver_->set_fifo_depth(kTestFifoDepthFrames * kTestChannels * 2);
-    remote_driver_->set_external_delay(kTestExternalDelay);
+    // Set fake non-zero fifo depth and external delay, to keep things interesting.
+    remote_driver_->set_fifo_depth(kFifoDepthFrames * kChannelCount * 2);
+    remote_driver_->set_external_delay(kExternalDelay);
 
     ASSERT_EQ(ZX_OK, driver_->Init(std::move(c2)));
-    mapped_ring_buffer_ =
-        remote_driver_->CreateRingBuffer(kTestRingBufferFrames * kTestChannels * 2);
+    mapped_ring_buffer_ = remote_driver_->CreateRingBuffer(kRingBufferFrames * kChannelCount * 2);
   }
 
  protected:
-  static constexpr auto kTestSampleFormat = fuchsia::media::AudioSampleFormat::SIGNED_16;
-  static constexpr uint32_t kTestChannels = 2;
-  static constexpr uint32_t kTestFramesPerSec = 48000;
-  static constexpr uint32_t kTestFifoDepthFrames = 173;
-  static constexpr zx::duration kTestExternalDelay = zx::usec(47376);
-  static constexpr zx::duration kTestRingBufferMinDuration = zx::msec(200);
-  const size_t kTestRingBufferFrames =
-      static_cast<size_t>(std::ceil((static_cast<double>(kTestFramesPerSec) * zx::sec(1).get()) /
-                                    kTestRingBufferMinDuration.get()));
+  static constexpr auto kSampleFormat = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  static constexpr uint32_t kChannelCount = 2;
+  static constexpr uint32_t kFramesPerSec = 48000;
+  static constexpr uint32_t kFifoDepthFrames = 173;
+  static constexpr zx::duration kExternalDelay = zx::usec(47376);
+  static constexpr auto kRingBufferMinDuration = zx::msec(200);
+  static constexpr size_t kRingBufferFrames =
+      fbl::round_up<uint64_t, uint64_t>(kFramesPerSec * kRingBufferMinDuration.get(),
+                                        zx::sec(1).get()) /
+      zx::sec(1).get();
 
   std::shared_ptr<testing::FakeAudioOutput> device_{testing::FakeAudioOutput::Create(
       &threading_model(), &context().device_manager(), &context().link_matrix())};
@@ -131,13 +145,13 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
   // Now tell it to configure itself using a format we know will be on its fake
   // format list, and a ring buffer size we know it will be able to give us.
   fuchsia::media::AudioStreamType fidl_format;
-  fidl_format.sample_format = this->kTestSampleFormat;
-  fidl_format.channels = this->kTestChannels;
-  fidl_format.frames_per_second = this->kTestFramesPerSec;
+  fidl_format.sample_format = this->kSampleFormat;
+  fidl_format.channels = this->kChannelCount;
+  fidl_format.frames_per_second = this->kFramesPerSec;
 
   auto format = Format::Create(fidl_format);
   ASSERT_TRUE(format.is_ok());
-  res = this->driver_->Configure(format.value(), this->kTestRingBufferMinDuration);
+  res = this->driver_->Configure(format.value(), this->kRingBufferMinDuration);
   ASSERT_EQ(res, ZX_OK);
 
   this->RunLoopUntilIdle();
@@ -164,8 +178,8 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
 
   // The fifo depth and external delay had better match what we told the fake
   // driver to report.
-  ASSERT_EQ(this->kTestFifoDepthFrames, fifo_depth_frames);
-  ASSERT_EQ(this->kTestExternalDelay, external_delay);
+  ASSERT_EQ(this->kFifoDepthFrames, fifo_depth_frames);
+  ASSERT_EQ(this->kExternalDelay, external_delay);
 
   // At startup, the tx/rx position should be 0, and the safe read/write position
   // should be fifo_depth_frames ahead of this.
@@ -199,26 +213,6 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
   int64_t ptscts_pos_frames =
       ref_time_to_frac_presentation_frame.Apply(ref_now.get()) / Fixed(1).raw_value();
   EXPECT_EQ(txrx_pos, ptscts_pos_frames);
-}
-
-// After only GetDriverInfo, the clock should be available and advancing.
-TYPED_TEST(AudioDriverTest, RefClockIsAdvancing) {
-  this->remote_driver_->Start();
-
-  this->driver_->GetDriverInfo();
-  this->RunLoopUntilIdle();
-
-  audio_clock_helper::VerifyAdvances(this->driver_->reference_clock());
-}
-
-// After only GetDriverInfo, the clock should be available. Initially it is a monotonic clone.
-TYPED_TEST(AudioDriverTest, DefaultClockIsClockMono) {
-  this->remote_driver_->Start();
-
-  this->driver_->GetDriverInfo();
-  this->RunLoopUntilIdle();
-
-  audio_clock_helper::VerifyIsSystemMonotonic(this->driver_->reference_clock());
 }
 
 }  // namespace

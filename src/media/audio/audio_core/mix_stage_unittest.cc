@@ -128,11 +128,6 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
       AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic()));
   auto custom_same_rate = std::make_shared<PacketQueue>(
       kSameFrameRate, tl_same, AudioClock::ClientFixed(clock::CloneOfMonotonic()));
-  auto controlling_clock = AudioClock::ClientFixed(clock::CloneOfMonotonic());
-  controlling_clock.set_controls_device_clock(true);
-  ASSERT_TRUE(controlling_clock.controls_device_clock());
-  auto controlling =
-      std::make_shared<PacketQueue>(kSameFrameRate, tl_same, std::move(controlling_clock));
 
   // client adjustable should lead to Point, if same rate
   ValidateIsPointSampler(adjustable_device_mix_stage->AddInput(adjustable_client_same_rate));
@@ -145,8 +140,6 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
   // custom clock should lead to Sinc, even if same rate, regardless of hardware-control
   ValidateIsSincSampler(adjustable_device_mix_stage->AddInput(custom_same_rate));
   ValidateIsSincSampler(fixed_device_mix_stage->AddInput(custom_same_rate));
-  ValidateIsSincSampler(adjustable_device_mix_stage->AddInput(controlling));
-  ValidateIsSincSampler(fixed_device_mix_stage->AddInput(controlling));
 
   // The default heuristic can still be explicitly indicated, and behaves as above.
   ValidateIsPointSampler(adjustable_device_mix_stage->AddInput(
@@ -161,10 +154,6 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
                                                               Mixer::Resampler::Default));
   ValidateIsSincSampler(
       fixed_device_mix_stage->AddInput(custom_same_rate, std::nullopt, Mixer::Resampler::Default));
-  ValidateIsSincSampler(
-      adjustable_device_mix_stage->AddInput(controlling, std::nullopt, Mixer::Resampler::Default));
-  ValidateIsSincSampler(
-      fixed_device_mix_stage->AddInput(controlling, std::nullopt, Mixer::Resampler::Default));
 
   //
   // For all, explicit mixer selection can still countermand our default heuristic
@@ -186,10 +175,6 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
                                                                Mixer::Resampler::SampleAndHold));
   ValidateIsPointSampler(fixed_device_mix_stage->AddInput(custom_same_rate, std::nullopt,
                                                           Mixer::Resampler::SampleAndHold));
-  ValidateIsPointSampler(adjustable_device_mix_stage->AddInput(controlling, std::nullopt,
-                                                               Mixer::Resampler::SampleAndHold));
-  ValidateIsPointSampler(
-      fixed_device_mix_stage->AddInput(controlling, std::nullopt, Mixer::Resampler::SampleAndHold));
 }
 
 // TODO(fxbug.dev/50004): Add tests to verify we can read from other mix stages with unaligned

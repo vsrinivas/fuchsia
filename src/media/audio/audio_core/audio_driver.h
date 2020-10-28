@@ -85,6 +85,7 @@ class AudioDriver {
   virtual zx::duration fifo_depth_duration() const = 0;
   virtual zx_koid_t stream_channel_koid() const = 0;
   virtual const HwGainState& hw_gain_state() const = 0;
+  virtual uint32_t clock_domain() const = 0;
 
   // The following properties are only safe to access after the driver is beyond the
   // MissingDriverInfo state.  After that state, these members must be treated as immutable, and the
@@ -143,6 +144,7 @@ class AudioDriverV1 : public AudioDriver {
   zx::duration fifo_depth_duration() const override { return fifo_depth_duration_; }
   zx_koid_t stream_channel_koid() const override { return stream_channel_koid_; }
   const HwGainState& hw_gain_state() const override { return hw_gain_state_; }
+  uint32_t clock_domain() const override { return clock_domain_; }
 
   const TimelineFunction& ref_time_to_frac_presentation_frame() const override {
     return ref_time_to_frac_presentation_frame_;
@@ -317,13 +319,11 @@ class AudioDriverV1 : public AudioDriver {
   std::shared_ptr<ReadableRingBuffer> readable_ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
   std::shared_ptr<WritableRingBuffer> writable_ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
 
-  // The timeline function which maps from either the capture time (Input) or
-  // presentation time (Output) at the speaker/microphone on the audio device's
-  // reference clock, to the fractional frame position in the stream.
+  // The timeline function which maps from either capture time (Input) or presentation time (Output)
+  // at the microphone/speaker on the audio device's ref clock, to stream's subframe position.
   //
-  // IOW - given a frame number in the stream, the inverse of this function can
-  // be used to map to the time (on the device's reference clock) that the frame
-  // either was captured, or will be presented.
+  // IOW - given a stream's frame number, this function maps to the device ref clock time when that
+  // frame [was captured / will be presented].
   fbl::RefPtr<VersionedTimelineFunction> versioned_ref_time_to_frac_presentation_frame_;
 
   // Useful timeline functions which are computed after streaming starts.  See
@@ -332,6 +332,7 @@ class AudioDriverV1 : public AudioDriver {
       FXL_GUARDED_BY(owner_->mix_domain().token());
   TimelineFunction ref_time_to_frac_safe_read_or_write_frame_
       FXL_GUARDED_BY(owner_->mix_domain().token());
+  TimelineRate frac_frames_per_byte_ FXL_GUARDED_BY(owner_->mix_domain().token());
 
   // Plug detection state.
   bool pd_enabled_ = false;
@@ -343,11 +344,14 @@ class AudioDriverV1 : public AudioDriver {
 
   zx::time driver_last_timeout_ = zx::time::infinite();
 
-  // Counter of received position notifications since START.
-  uint64_t position_notification_count_ = 0;
   uint32_t clock_domain_ = AudioClock::kMonotonicDomain;
   std::optional<AudioClock> audio_clock_;
   std::optional<AudioClock> recovered_clock_;
+
+  // Counter of received position notifications since START.
+  uint64_t position_notification_count_ = 0;
+  uint64_t running_pos_bytes_;
+  uint64_t ring_buffer_size_bytes_;
 };
 
 class AudioDriverV2 : public AudioDriver {
@@ -380,6 +384,7 @@ class AudioDriverV2 : public AudioDriver {
   zx::duration fifo_depth_duration() const override { return fifo_depth_duration_; }
   zx_koid_t stream_channel_koid() const override { return stream_channel_koid_; }
   const HwGainState& hw_gain_state() const override { return hw_gain_state_; }
+  uint32_t clock_domain() const override { return clock_domain_; }
 
   const TimelineFunction& ref_time_to_frac_presentation_frame() const override {
     return ref_time_to_frac_presentation_frame_;
@@ -508,13 +513,11 @@ class AudioDriverV2 : public AudioDriver {
   std::shared_ptr<ReadableRingBuffer> readable_ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
   std::shared_ptr<WritableRingBuffer> writable_ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
 
-  // The timeline function which maps from either the capture time (Input) or
-  // presentation time (Output) at the speaker/microphone on the audio device's
-  // reference clock, to the fractional frame position in the stream.
+  // The timeline function which maps from either capture time (Input) or presentation time
+  // (Output) at speaker/microphone on the audio device's ref clock, to stream's subframe position.
   //
-  // IOW - given a frame number in the stream, the inverse of this function can
-  // be used to map to the time (on the device's reference clock) that the frame
-  // either was captured, or will be presented.
+  // IOW - given a stream's frame number, use the inverse of this function to map to a time on
+  // device ref clock that the frame [was captured / will be presented].
   fbl::RefPtr<VersionedTimelineFunction> versioned_ref_time_to_frac_presentation_frame_;
 
   // Useful timeline functions which are computed after streaming starts.  See
@@ -523,6 +526,7 @@ class AudioDriverV2 : public AudioDriver {
       FXL_GUARDED_BY(owner_->mix_domain().token());
   TimelineFunction ref_time_to_frac_safe_read_or_write_frame_
       FXL_GUARDED_BY(owner_->mix_domain().token());
+  TimelineRate frac_frames_per_byte_ FXL_GUARDED_BY(owner_->mix_domain().token());
 
   mutable std::mutex plugged_lock_;
   bool plugged_ FXL_GUARDED_BY(plugged_lock_) = false;
@@ -539,11 +543,14 @@ class AudioDriverV2 : public AudioDriver {
   fidl::InterfacePtr<fuchsia::hardware::audio::StreamConfig> stream_config_fidl_;
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer> ring_buffer_fidl_;
 
-  // Counter of received position notifications since START.
-  uint64_t position_notification_count_ = 0;
   uint32_t clock_domain_ = AudioClock::kMonotonicDomain;
   std::optional<AudioClock> audio_clock_;
   std::optional<AudioClock> recovered_clock_;
+
+  // Counter of received position notifications since START.
+  uint64_t position_notification_count_ FXL_GUARDED_BY(owner_->mix_domain().token()) = 0;
+  uint64_t ring_buffer_size_bytes_ FXL_GUARDED_BY(owner_->mix_domain().token());
+  uint64_t running_pos_bytes_ FXL_GUARDED_BY(owner_->mix_domain().token());
 };
 
 }  // namespace media::audio

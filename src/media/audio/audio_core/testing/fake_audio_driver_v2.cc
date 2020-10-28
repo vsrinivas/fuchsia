@@ -122,8 +122,44 @@ void FakeAudioDriverV2::GetProperties(
   callback(std::move(props));
 }
 
+void FakeAudioDriverV2::SendPositionNotification(zx::time timestamp, uint32_t position) {
+  position_notify_timestamp_mono_ = timestamp;
+  position_notify_position_bytes_ = position;
+
+  position_notification_values_are_set_ = true;
+  if (position_notify_callback_) {
+    PositionNotification();
+  }
+}
+
 void FakeAudioDriverV2::WatchClockRecoveryPositionInfo(
-    fuchsia::hardware::audio::RingBuffer::WatchClockRecoveryPositionInfoCallback callback) {}
+    fuchsia::hardware::audio::RingBuffer::WatchClockRecoveryPositionInfoCallback callback) {
+  position_notify_callback_ = std::move(callback);
+
+  if (position_notification_values_are_set_) {
+    PositionNotification();
+  }
+}
+
+void FakeAudioDriverV2::PositionNotification() {
+  FX_CHECK(position_notify_callback_);
+  FX_CHECK(position_notification_values_are_set_);
+
+  // Real audio drivers can't emit position notifications until started; we shouldn't either
+  if (is_running_) {
+    // Clear both prerequisites for sending this notification
+    position_notification_values_are_set_ = false;
+    auto callback = *std::move(position_notify_callback_);
+    position_notify_callback_ = std::nullopt;
+
+    fuchsia::hardware::audio::RingBufferPositionInfo info{
+        .timestamp = position_notify_timestamp_mono_.get(),
+        .position = position_notify_position_bytes_,
+    };
+
+    callback(std::move(info));
+  }
+}
 
 void FakeAudioDriverV2::GetVmo(uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring,
                                fuchsia::hardware::audio::RingBuffer::GetVmoCallback callback) {
@@ -155,13 +191,19 @@ void FakeAudioDriverV2::GetVmo(uint32_t min_frames, uint32_t clock_recovery_noti
 
 void FakeAudioDriverV2::Start(fuchsia::hardware::audio::RingBuffer::StartCallback callback) {
   EXPECT_TRUE(!is_running_);
+  mono_start_time_ = async::Now(dispatcher_);
   is_running_ = true;
-  callback(async::Now(dispatcher_).get());
+
+  callback(mono_start_time_.get());
 }
 
 void FakeAudioDriverV2::Stop(fuchsia::hardware::audio::RingBuffer::StopCallback callback) {
   EXPECT_TRUE(is_running_);
   is_running_ = false;
+
+  position_notify_callback_ = std::nullopt;
+  position_notification_values_are_set_ = false;
+
   callback();
 }
 

@@ -73,8 +73,11 @@ class FakeAudioDriverV1 {
   void set_fifo_depth(uint32_t fifo_depth) { fifo_depth_ = fifo_depth; }
   void set_external_delay(zx::duration external_delay) { external_delay_ = external_delay; }
 
+  void SendPositionNotification(zx::time timestamp, uint32_t position);
+
   // |true| after an |audio_rb_cmd_start| is received, until an |audio_rb_cmd_stop| is received.
   bool is_running() const { return is_running_; }
+  zx::time mono_start_time() const { return mono_start_time_; }
 
   // The 'selected format' for the driver, chosen with a |AUDIO_STREAM_CMD_SET_FORMAT| command.
   //
@@ -132,6 +135,7 @@ class FakeAudioDriverV1 {
   std::optional<SelectedFormat> selected_format_;
 
   bool is_running_ = false;
+  zx::time mono_start_time_{0};
 
   async_dispatcher_t* dispatcher_;
   bool is_stopped_ = true;
@@ -140,6 +144,10 @@ class FakeAudioDriverV1 {
 
   audio_cmd_t last_stream_command_ = 0;
   audio_cmd_t last_ring_buffer_command_ = 0;
+
+  uint32_t notifications_per_ring_;
+  zx::time position_notify_timestamp_mono_;
+  uint32_t position_notify_position_bytes_ = 0;
 };
 
 class FakeAudioDriverV2 : public fuchsia::hardware::audio::StreamConfig,
@@ -172,8 +180,11 @@ class FakeAudioDriverV2 : public fuchsia::hardware::audio::StreamConfig,
   void set_fifo_depth(uint32_t fifo_depth) { fifo_depth_ = fifo_depth; }
   void set_external_delay(zx::duration external_delay) { external_delay_ = external_delay; }
 
+  void SendPositionNotification(zx::time timestamp, uint32_t position);
+
   // |true| after an |audio_rb_cmd_start| is received, until an |audio_rb_cmd_stop| is received.
   bool is_running() const { return is_running_; }
+  zx::time mono_start_time() const { return mono_start_time_; }
 
   // The 'selected format' for the driver.
   // The returned optional will be empty if no |CreateRingBuffer| command has been received.
@@ -204,6 +215,8 @@ class FakeAudioDriverV2 : public fuchsia::hardware::audio::StreamConfig,
   void Start(fuchsia::hardware::audio::RingBuffer::StartCallback callback) final;
   void Stop(fuchsia::hardware::audio::RingBuffer::StopCallback callback) final;
 
+  void PositionNotification();
+
   audio_stream_unique_id_t uid_ = {};
   std::string manufacturer_ = "default manufacturer";
   std::string product_ = "default product";
@@ -227,12 +240,20 @@ class FakeAudioDriverV2 : public fuchsia::hardware::audio::StreamConfig,
   std::optional<fuchsia::hardware::audio::PcmFormat> selected_format_;
 
   bool is_running_ = false;
+  zx::time mono_start_time_{0};
 
   async_dispatcher_t* dispatcher_;
   fidl::Binding<fuchsia::hardware::audio::StreamConfig> stream_binding_;
   std::optional<fidl::Binding<fuchsia::hardware::audio::RingBuffer>> ring_buffer_binding_;
   fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_req_;
   fidl::InterfaceRequest<fuchsia::hardware::audio::RingBuffer> ring_buffer_req_;
+
+  bool position_notification_values_are_set_ = false;
+  zx::time position_notify_timestamp_mono_;
+  uint32_t position_notify_position_bytes_ = 0;
+
+  std::optional<fuchsia::hardware::audio::RingBuffer::WatchClockRecoveryPositionInfoCallback>
+      position_notify_callback_;
 };
 
 }  // namespace media::audio::testing

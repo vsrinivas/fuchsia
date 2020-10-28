@@ -17,11 +17,11 @@ namespace media::audio {
 // determine a P factor (without I or D) leading to steady-state non-divergent oscillation, then
 // half it. Set I to ~(2P)/OscillationPeriod, and D to ~(P/8)*OscillationPeriod.
 //
-// Latest coefficient tuning: 2020-Oct-15.
+// Latest coefficient tuning: 2020-Oct-27.
 
 // Micro-SRC synchronization
 //
-constexpr double kMicroSrcOscillationPeriod = ZX_USEC(20000);
+constexpr double kMicroSrcOscillationPeriod = ZX_MSEC(20);
 constexpr double kMicroSrcPFactor = -0.00000007001;
 constexpr clock::PidControl::Coefficients kPidFactorsMicroSrc = {
     .proportional_factor = kMicroSrcPFactor,
@@ -35,10 +35,12 @@ constexpr clock::PidControl::Coefficients kPidFactorsAdjustClientClock = {
     .derivative_factor = 0,
 };
 
-constexpr clock::PidControl::Coefficients kPidFactorsAdjustHardwareClock = {
-    .proportional_factor = 0,
-    .integral_factor = 0,
-    .derivative_factor = 0,
+constexpr double kAdjustDeviceOscillationPeriod = ZX_MSEC(1000);
+constexpr double kAdjustDevicePFactor = 0.000000001001;
+constexpr clock::PidControl::Coefficients kPidFactorsAdjustDeviceClock = {
+    .proportional_factor = kAdjustDevicePFactor,
+    .integral_factor = kAdjustDevicePFactor * 2 / kAdjustDeviceOscillationPeriod,
+    .derivative_factor = kAdjustDevicePFactor * kAdjustDeviceOscillationPeriod / 8,
 };
 
 }  // namespace media::audio
