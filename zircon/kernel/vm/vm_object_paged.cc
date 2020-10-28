@@ -48,16 +48,6 @@ VmObjectPaged::VmObjectPaged(uint32_t options, fbl::RefPtr<VmHierarchyState> hie
   LTRACEF("%p\n", this);
 }
 
-void VmObjectPaged::InitializeOriginalParentLocked(fbl::RefPtr<VmObjectPaged> parent,
-                                                   uint64_t offset) {
-  DEBUG_ASSERT(parent_ == nullptr);
-  DEBUG_ASSERT(original_parent_user_id_ == 0);
-
-  AssertHeld(parent->lock_);
-  original_parent_user_id_ = parent->user_id_locked();
-  parent_ = ktl::move(parent);
-}
-
 VmObjectPaged::~VmObjectPaged() {
   canary_.Assert();
 
@@ -82,46 +72,38 @@ VmObjectPaged::~VmObjectPaged() {
     }
   }
 
+  AssertHeld(hierarchy_state_ptr_->lock_ref());
+  hierarchy_state_ptr_->IncrementHierarchyGenerationCountLocked();
+
   cow_pages_locked()->set_paged_backlink_locked(nullptr);
 
-  if (!is_hidden()) {
-    // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
-    // to be done before emptying the page list so that a hidden parent can't merge into this
-    // vmo and repopulate the page list.
-    //
-    // To prevent races with a hidden parent merging itself into this vmo, it is necessary
-    // to hold the lock over the parent_ check and into the subsequent removal call.
+  // Re-home all our children with any parent that we have.
+  while (!children_list_.is_empty()) {
+    VmObject* c = &children_list_.front();
+    children_list_.pop_front();
+    VmObjectPaged* child = reinterpret_cast<VmObjectPaged*>(c);
+    child->parent_ = parent_;
     if (parent_) {
-      LTRACEF("removing ourself from our parent %p\n", parent_.get());
-      parent_->RemoveChild(this, guard.take());
-      // Avoid recursing destructors when we delete our parent by using the deferred deletion
-      // method. See common in parent else branch for why we can avoid this on a hidden parent.
-      if (!parent_->is_hidden()) {
-        hierarchy_state_ptr_->DoDeferredDelete(ktl::move(parent_));
-      }
+      // Ignore the return since 'this' is a child so we know we are not transitioning from 0->1
+      // children.
+      bool __UNUSED notify = parent_->AddChildLocked(child);
+      DEBUG_ASSERT(!notify);
     }
-  } else {
-    // Most of the hidden vmo's state should have already been cleaned up when it merged
-    // itself into its child in ::RemoveChild.
-    DEBUG_ASSERT(children_list_len_ == 0);
-    // Even though we are hidden we might have a parent. Unlike in the other branch of this if we
-    // do not need to perform any deferred deletion. The reason for this is that the deferred
-    // deletion mechanism is intended to resolve the scenario where there is a chain of 'one ref'
-    // parent pointers that will chain delete. However, with hidden parents we *know* that a hidden
-    // parent has two children (and hence at least one other ref to it) and so we cannot be in a
-    // one ref chain. Even if N threads all tried to remove children from the hierarchy at once,
-    // this would ultimately get serialized through the lock and the hierarchy would go from
-    //
-    //          [..]
-    //           /
-    //          A                             [..]
-    //         / \                             /
-    //        B   E           TO         B    A
-    //       / \                        /    / \.
-    //      C   D                      C    D   E
-    //
-    // And so each serialized deletion breaks of a discrete two VMO chain that can be safely
-    // finalized with one recursive step.
+  }
+
+  if (parent_) {
+    // As parent_ is a raw pointer we must ensure that if we call a method on it that it lives long
+    // enough. To do so we attempt to upgrade it to a refptr, which could fail if it's already
+    // slated for deletion.
+    fbl::RefPtr<VmObjectPaged> parent = fbl::MakeRefPtrUpgradeFromRaw(parent_, guard);
+    if (parent) {
+      // Holding refptr, can safely pass in the guard to RemoveChild.
+      parent->RemoveChild(this, guard.take());
+    } else {
+      // parent is up for deletion and so there's no need to use RemoveChild since there is no
+      // user dispatcher to notify anyway and so just drop ourselves to keep the hierarchy correct.
+      parent_->DropChildLocked(this);
+    }
   }
 }
 
@@ -415,24 +397,6 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t 
   return ZX_OK;
 }
 
-void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden_parent) {
-  AssertHeld(hidden_parent->lock_);
-  // Insert the new VmObject |hidden_parent| between between |this| and |parent_|.
-  cow_pages_locked()->InsertHiddenParentLocked(hidden_parent->cow_pages_);
-  if (parent_) {
-    AssertHeld(parent_->lock_ref());
-    hidden_parent->InitializeOriginalParentLocked(parent_, 0);
-    parent_->ReplaceChildLocked(this, hidden_parent.get());
-  }
-  hidden_parent->AddChildLocked(this);
-  parent_ = hidden_parent;
-
-  // We use the user_id to walk the tree looking for the right child observer. This
-  // is set after adding the hidden parent into the tree since that's not really
-  // a 'real' child.
-  hidden_parent->user_id_ = user_id_;
-}
-
 zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool copy_name,
                                             fbl::RefPtr<VmObject>* child_vmo) {
   LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
@@ -493,20 +457,14 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
     if (status != ZX_OK) {
       return status;
     }
-    // Whilst we have the lock and we know failure cannot happen, link up the cow pages. Will place
-    // in global list at the end.
+    // Now that everything has succeeded, link up the cow pages and our parents/children.
+    // Both child notification and inserting into the globals list has to happen outside the lock.
     AssertHeld(cow_pages->lock_ref());
     cow_pages->set_paged_backlink_locked(vmo.get());
     vmo->cow_pages_ = ktl::move(cow_pages);
 
-    // Initialize the parents for both parallel hierarchies.
-    vmo->InitializeOriginalParentLocked(fbl::RefPtr(this), offset);
-    vmo->cow_pages_locked()->InitializeOriginalParentLocked(cow_pages_, offset);
-
-    // add the new vmo as a child before we do anything, since its
-    // dtor expects to find it in its parent's child list
+    vmo->parent_ = this;
     notify_one_child = AddChildLocked(vmo.get());
-    cow_pages_locked()->AddChildLocked(vmo->cow_pages_.get());
 
     if (copy_name) {
       vmo->name_ = name_;
@@ -556,36 +514,6 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     return ZX_ERR_NO_MEMORY;
   }
 
-  // Hidden parent needs to be declared before the guard as after it is initialized and added to
-  // the global list we can still fail and need to destruct it, this destruction must happen without
-  // the lock being held.
-  fbl::RefPtr<VmObjectPaged> hidden_parent;
-  // Optimistically create the hidden parent early as we want to do it outside the lock, but we
-  // need to hold the lock to validate invariants.
-  if (type == CloneType::Snapshot) {
-    // The initial size is 0. It will be initialized as part of the atomic
-    // insertion into the child tree.
-    hidden_parent =
-        fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(kHidden, hierarchy_state_ptr_));
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    // Can immediately link up some cow pages and add to the global list.
-    {
-      fbl::RefPtr<VmCowPages> hidden_cow_pages;
-      Guard<Mutex> guard{&lock_};
-      AssertHeld(hidden_parent->lock_ref());
-      status = cow_pages_locked()->CreateHidden(&hidden_cow_pages);
-      if (status != ZX_OK) {
-        return status;
-      }
-      AssertHeld(hidden_cow_pages->lock_ref());
-      hidden_cow_pages->set_paged_backlink_locked(hidden_parent.get());
-      hidden_parent->cow_pages_ = ktl::move(hidden_cow_pages);
-    }
-    hidden_parent->AddToGlobalList();
-  }
-
   bool notify_one_child;
   {
     // Declare these prior to the guard so that any failure paths destroy these without holding
@@ -593,40 +521,12 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     fbl::RefPtr<VmCowPages> clone_cow_pages;
     Guard<Mutex> guard{&lock_};
     AssertHeld(vmo->lock_);
-    switch (type) {
-      case CloneType::Snapshot: {
-        // To create an eager copy-on-write clone, the kernel creates an artifical parent vmo
-        // called a 'hidden vmo'. The content of the original vmo is moved into the hidden
-        // vmo, and the original vmo becomes a child of the hidden vmo. Then a second child
-        // is created, which is the userspace visible clone.
-        //
-        // Hidden vmos are an implementation detail that are not exposed to userspace.
-
-        if (!cow_pages_locked()->IsCowClonableLocked()) {
-          return ZX_ERR_NOT_SUPPORTED;
-        }
-
-        // If this is non-zero, that means that there are pages which hardware can
-        // touch, so the vmo can't be safely cloned.
-        // TODO: consider immediately forking these pages.
-        if (cow_pages_locked()->pinned_page_count_locked()) {
-          return ZX_ERR_BAD_STATE;
-        }
-        break;
-      }
-      case CloneType::PrivatePagerCopy:
-        if (!cow_pages_locked()->is_pager_backed_locked()) {
-          return ZX_ERR_NOT_SUPPORTED;
-        }
-        break;
-    }
-
     // check that we're not uncached in some way
     if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
       return ZX_ERR_BAD_STATE;
     }
 
-    status = cow_pages_locked()->CreateCloneLocked(offset, size, &clone_cow_pages);
+    status = cow_pages_locked()->CreateCloneLocked(type, offset, size, &clone_cow_pages);
     if (status != ZX_OK) {
       return status;
     }
@@ -637,30 +537,12 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     clone_cow_pages->set_paged_backlink_locked(vmo.get());
     vmo->cow_pages_ = ktl::move(clone_cow_pages);
 
-    VmObjectPaged* clone_parent;
-    if (type == CloneType::Snapshot) {
-      clone_parent = hidden_parent.get();
-
-      InsertHiddenParentLocked(ktl::move(hidden_parent));
-
-      // Invalidate everything the clone will be able to see. They're COW pages now,
-      // so any existing mappings can no longer directly write to the pages.
-      // This should be being done by VmCowPages, but as we are temporarily responsible for
-      // construction of the hierarchy it's easier for us to do it for the moment.
-      cow_pages_locked()->RangeChangeUpdateLocked(offset, size, RangeChangeOp::RemoveWrite);
-    } else {
-      clone_parent = this;
-    }
-    AssertHeld(clone_parent->lock_);
-
-    // Initialize the parents for both parallel hierarchies.
-    vmo->InitializeOriginalParentLocked(fbl::RefPtr(clone_parent), offset);
-    vmo->cow_pages_locked()->InitializeOriginalParentLocked(clone_parent->cow_pages_, offset);
+    // Install the parent.
+    vmo->parent_ = this;
 
     // add the new vmo as a child before we do anything, since its
     // dtor expects to find it in its parent's child list
-    notify_one_child = clone_parent->AddChildLocked(vmo.get());
-    clone_parent->cow_pages_locked()->AddChildLocked(vmo->cow_pages_.get());
+    notify_one_child = AddChildLocked(vmo.get());
 
     if (copy_name) {
       vmo->name_ = name_;
@@ -680,134 +562,20 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
   return ZX_OK;
 }
 
-bool VmObjectPaged::OnChildAddedLocked() {
-  if (!is_hidden()) {
-    return VmObject::OnChildAddedLocked();
-  }
-
-  if (user_id_ == ZX_KOID_INVALID) {
-    // The original vmo is added as a child of the hidden vmo before setting
-    // the user id to prevent counting as its own child.
-    return false;
-  }
-
-  // After initialization, hidden vmos always have two children - the vmo on which
-  // zx_vmo_create_child was invoked and the vmo which that syscall created.
-  DEBUG_ASSERT(children_list_len_ == 2);
-
-  // Reaching into the children confuses analysis
-  for (auto& c : children_list_) {
-    DEBUG_ASSERT(c.is_paged());
-    VmObjectPaged& child = static_cast<VmObjectPaged&>(c);
-    AssertHeld(child.lock_);
-    if (child.user_id_ == user_id_) {
-      return child.OnChildAddedLocked();
-    }
-  }
-
-  // One of the children should always have a matching user_id.
-  panic("no child with matching user_id: %" PRIx64 "\n", user_id_);
-}
-
-void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
-  DEBUG_ASSERT(adopt.wraps_lock(lock_ref().lock()));
-
-  // This is scoped before guard to ensure the guard is dropped first, see comment where child_ref
-  // is assigned for more details.
-  fbl::RefPtr<VmObject> child_ref;
-
-  Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
-
-  IncrementHierarchyGenerationCountLocked();
-
-  // Remove the child in our parallel hierarchy, resulting in any necessary merging with the
-  // hidden parent to happen.
-  VmObjectPaged* paged_removed = static_cast<VmObjectPaged*>(removed);
-  AssertHeld(paged_removed->lock_ref());
-  cow_pages_locked()->RemoveChildLocked(paged_removed->cow_pages_.get());
-
-  if (!is_hidden()) {
-    VmObject::RemoveChild(removed, guard.take());
-    return;
-  }
-
-  // Hidden vmos always have 0 or 2 children, but we can't be here with 0 children.
-  DEBUG_ASSERT(children_list_len_ == 2);
-  // A hidden vmo must be fully initialized to have 2 children.
-  DEBUG_ASSERT(user_id_ != ZX_KOID_INVALID);
-
-  DropChildLocked(removed);
-
-  VmObject* child = &children_list_.front();
-  DEBUG_ASSERT(child);
-
-  // Attempt to upgrade our raw pointer to a ref ptr. This upgrade can fail in the scenario that
-  // the childs refcount has dropped to zero and is also attempting to delete itself. If this
-  // happens, as we hold the vmo lock we know our child cannot complete its destructor, and so we
-  // can still modify pieces of it until we drop the lock. It is now possible that after we upgrade
-  // we become the sole holder of a refptr, and the refptr *must* be destroyed after we release the
-  // VMO lock to prevent a deadlock.
-  child_ref = fbl::MakeRefPtrUpgradeFromRaw(child, guard);
-
-  // Our children must be paged.
-  DEBUG_ASSERT(child->is_paged());
-  VmObjectPaged* typed_child = static_cast<VmObjectPaged*>(child);
-  AssertHeld(typed_child->lock_);
-
-  // The child which removed itself and led to the invocation should have a reference
-  // to us, in addition to child.parent_ which we are about to clear.
-  DEBUG_ASSERT(ref_count_debug() >= 2);
-
-  // Drop the child from our list, but don't recurse back into this function. Then
-  // remove ourselves from the clone tree.
-  DropChildLocked(typed_child);
-  if (parent_) {
-    AssertHeld(parent_->lock_ref());
-    parent_->ReplaceChildLocked(this, typed_child);
-  }
-  typed_child->parent_ = ktl::move(parent_);
-
-  // To use child here  we need to ensure that it will live long enough. Up until here even if child
-  // was waiting to be destroyed, we knew it would stay alive as long as we held the lock. Since we
-  // give away the guard in the call to OnUserChildRemoved, we can only perform the call if we can
-  // separately guarantee the child stays alive by having a refptr to it.
-  // In the scenario where the refptr does not exist, that means the upgrade failed and there is no
-  // user object to signal anyway.
-  if (child_ref) {
-    // We need to proxy the closure down to the original user-visible vmo. To find
-    // that, we can walk down the clone tree following the user_id_.
-    VmObjectPaged* descendant = typed_child;
-    AssertHeld(descendant->lock_);
-    while (descendant && descendant->user_id_ == user_id_) {
-      if (!descendant->is_hidden()) {
-        descendant->OnUserChildRemoved(guard.take());
-        return;
-      }
-      VmObjectPaged* left = static_cast<VmObjectPaged*>(&descendant->children_list_.front());
-      VmObjectPaged* right = static_cast<VmObjectPaged*>(&descendant->children_list_.back());
-      AssertHeld(left->lock_ref());
-      AssertHeld(right->lock_ref());
-      if (left->user_id_locked() == user_id_) {
-        descendant = left;
-      } else if (right->user_id_locked() == user_id_) {
-        descendant = right;
-      } else {
-        descendant = nullptr;
-      }
-    }
-  }
-}
-
 void VmObjectPaged::DumpLocked(uint depth, bool verbose) const {
   canary_.Assert();
 
-  uint64_t parent_id = original_parent_user_id_;
+  uint64_t parent_id = 0;
+  if (parent_) {
+    AssertHeld(parent_->lock_ref());
+    parent_id = parent_->user_id_locked();
+  }
 
   for (uint i = 0; i < depth; ++i) {
     printf("  ");
   }
   printf("vmo %p/k%" PRIu64 " ref %d parent %p/k%" PRIu64 "\n", this, user_id_, ref_count_debug(),
-         parent_.get(), parent_id);
+         parent_, parent_id);
 
   char name[ZX_MAX_NAME_LEN];
   get_name(name, sizeof(name));
@@ -822,10 +590,6 @@ void VmObjectPaged::DumpLocked(uint depth, bool verbose) const {
 }
 
 size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const {
-  if (is_hidden()) {
-    return 0;
-  }
-
   uint64_t new_len;
   if (!TrimRange(offset, len, size_locked(), &new_len)) {
     return 0;

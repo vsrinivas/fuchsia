@@ -179,17 +179,46 @@ void VmCowPages::InitializeOriginalParentLocked(fbl::RefPtr<VmCowPages> parent, 
 VmCowPages::~VmCowPages() {
   canary_.Assert();
 
-  // The hierarchy of VmCowPages, although it mirrors VmObjectPaged right now, is maintained
-  // slightly differently. The VmObjectPaged destructor will explicitly clean up any hidden
-  // hierarchies before it drops the reference to us. This means we do not need to do any thing
-  // with removing ourselves from our parent etc, and can literally just free the page lists.
-  // All of this will change once VmObjectPaged has its hierarchy simplified, and the logic that
-  // is currently there will be moved into here.
   if (!is_hidden()) {
-    DEBUG_ASSERT(!parent_);
+    // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
+    // to be done before emptying the page list so that a hidden parent can't merge into this
+    // vmo and repopulate the page list.
+    //
+    // To prevent races with a hidden parent merging itself into this vmo, it is necessary
+    // to hold the lock over the parent_ check and into the subsequent removal call.
+    Guard<Mutex> guard{&lock_};
+    if (parent_) {
+      parent_->RemoveChildLocked(this);
+      guard.Release();
+      // Avoid recursing destructors when we delete our parent by using the deferred deletion
+      // method. See common in parent else branch for why we can avoid this on a hidden parent.
+      if (!parent_->is_hidden()) {
+        hierarchy_state_ptr_->DoDeferredDelete(ktl::move(parent_));
+      }
+    }
   } else {
+    // Most of the hidden vmo's state should have already been cleaned up when it merged
+    // itself into its child in ::RemoveChildLocked.
     DEBUG_ASSERT(children_list_len_ == 0);
     DEBUG_ASSERT(page_list_.HasNoPages());
+    // Even though we are hidden we might have a parent. Unlike in the other branch of this if we
+    // do not need to perform any deferred deletion. The reason for this is that the deferred
+    // deletion mechanism is intended to resolve the scenario where there is a chain of 'one ref'
+    // parent pointers that will chain delete. However, with hidden parents we *know* that a hidden
+    // parent has two children (and hence at least one other ref to it) and so we cannot be in a
+    // one ref chain. Even if N threads all tried to remove children from the hierarchy at once,
+    // this would ultimately get serialized through the lock and the hierarchy would go from
+    //
+    //          [..]
+    //           /
+    //          A                             [..]
+    //         / \                             /
+    //        B   E           TO         B    A
+    //       / \                        /    / \.
+    //      C   D                      C    D   E
+    //
+    // And so each serialized deletion breaks of a discrete two VMO chain that can be safely
+    // finalized with one recursive step.
   }
 
   // Cleanup page lists and page sources.
@@ -330,16 +359,16 @@ void VmCowPages::ReplaceChildLocked(VmCowPages* old, VmCowPages* new_child) {
   children_list_.replace(*old, new_child);
 }
 
-void VmCowPages::DropChildLocked(VmCowPages* c) {
+void VmCowPages::DropChildLocked(VmCowPages* child) {
   canary_.Assert();
   DEBUG_ASSERT(children_list_len_ > 0);
-  children_list_.erase(*c);
+  children_list_.erase(*child);
   --children_list_len_;
 }
 
-void VmCowPages::AddChildLocked(VmCowPages* o) {
+void VmCowPages::AddChildLocked(VmCowPages* child) {
   canary_.Assert();
-  children_list_.push_front(o);
+  children_list_.push_front(child);
   children_list_len_++;
 }
 
@@ -429,22 +458,46 @@ zx_status_t VmCowPages::CreateChildSliceLocked(uint64_t offset, uint64_t size,
   slice->root_parent_offset_ = CheckedAdd(offset, slice->root_parent_offset_);
   CheckedAdd(slice->root_parent_offset_, size);
 
-  // Currently rely on VmObjectPaged code to setup the hierarchy and call
-  // InitializeOriginalParentLocked etc. This will be changed once the VmObjectPaged hierarchy is
-  // simplified.
+  AddChildLocked(slice.get());
+  slice->InitializeOriginalParentLocked(fbl::RefPtr(this), offset);
 
   *cow_slice = slice;
   return ZX_OK;
 }
 
-zx_status_t VmCowPages::CreateCloneLocked(uint64_t offset, uint64_t size,
+zx_status_t VmCowPages::CreateCloneLocked(CloneType type, uint64_t offset, uint64_t size,
                                           fbl::RefPtr<VmCowPages>* cow_child) {
   LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
 
   canary_.Assert();
 
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+
   // All validation *must* be performed here prior to construction the VmCowPages, as the
   // destructor for VmCowPages may acquire the lock, which we are already holding.
+
+  switch (type) {
+    case CloneType::Snapshot: {
+      if (!IsCowClonableLocked()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+
+      // If this is non-zero, that means that there are pages which hardware can
+      // touch, so the vmo can't be safely cloned.
+      // TODO: consider immediately forking these pages.
+      if (pinned_page_count_locked()) {
+        return ZX_ERR_BAD_STATE;
+      }
+      break;
+    }
+    case CloneType::PrivatePagerCopy:
+      if (!is_pager_backed_locked()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      break;
+  }
+
   uint64_t new_root_parent_offset;
   bool overflow;
   overflow = add_overflow(offset, root_parent_offset_, &new_root_parent_offset);
@@ -455,6 +508,18 @@ zx_status_t VmCowPages::CreateCloneLocked(uint64_t offset, uint64_t size,
   overflow = add_overflow(new_root_parent_offset, size, &temp);
   if (overflow) {
     return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Create the hidden cow pages first. If we later fail and need to destroy them it is fine, as
+  // hidden destruction does not require taking the lock which we are currently holding.
+  fbl::RefPtr<VmCowPages> hidden_parent;
+  if (type == CloneType::Snapshot) {
+    // The initial size is 0. It will be initialized as part of the atomic
+    // insertion into the child tree.
+    zx_status_t status = CreateHidden(&hidden_parent);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   fbl::AllocChecker ac;
@@ -477,6 +542,23 @@ zx_status_t VmCowPages::CreateCloneLocked(uint64_t offset, uint64_t size,
     cow_pages->parent_limit_ = ktl::min(size, size_ - offset);
   }
 
+  VmCowPages* clone_parent;
+  if (type == CloneType::Snapshot) {
+    clone_parent = hidden_parent.get();
+
+    InsertHiddenParentLocked(ktl::move(hidden_parent));
+
+    // Invalidate everything the clone will be able to see. They're COW pages now,
+    // so any existing mappings can no longer directly write to the pages.
+    RangeChangeUpdateLocked(offset, size, RangeChangeOp::RemoveWrite);
+  } else {
+    clone_parent = this;
+  }
+
+  cow_pages->InitializeOriginalParentLocked(fbl::RefPtr(clone_parent), offset);
+  AssertHeld(clone_parent->lock_ref());
+  clone_parent->AddChildLocked(cow_pages.get());
+
   *cow_child = ktl::move(cow_pages);
   return ZX_OK;
 }
@@ -496,7 +578,6 @@ void VmCowPages::RemoveChildLocked(VmCowPages* removed) {
   canary_.Assert();
 
   AssertHeld(removed->lock_);
-  removed->parent_.reset();
 
   if (!is_hidden()) {
     DropChildLocked(removed);
@@ -2124,7 +2205,7 @@ void VmCowPages::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t end,
     // to use the split bits to release pages in the parent. It also means that ancestor pages in
     // the specified range might end up being released based on their current split bits, instead of
     // through subsequent calls to this function. Therefore parent and all ancestors need to have
-    // the partial_cow_release_ flag set to prevent fast merge issues in ::RemoveChild.
+    // the partial_cow_release_ flag set to prevent fast merge issues in ::RemoveChildLocked.
     auto cur = this;
     AssertHeld(cur->lock_);
     uint64_t cur_start = start;
@@ -2167,7 +2248,7 @@ void VmCowPages::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t end,
         }
         if (skip_split_bits) {
           // If we were able to update this vmo's parent limit, that made the pages
-          // uniaccessible. We clear the split bits to allow ::RemoveChild to efficiently
+          // uniaccessible. We clear the split bits to allow ::RemoveChildLocked to efficiently
           // merge vmos without having to worry about pages above parent_limit_.
           page->object.cow_left_split = 0;
           page->object.cow_right_split = 0;

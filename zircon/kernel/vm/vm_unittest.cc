@@ -2541,6 +2541,70 @@ static bool vmo_attribution_dedup_test() {
   END_TEST;
 }
 
+// Test that a VmObjectPaged that is only referenced by its children gets removed by effectively
+// merging into its parent and re-homing all the children. This should also drop any VmCowPages
+// being held open.
+static bool vmo_parent_merge_test() {
+  BEGIN_TEST;
+
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Set a user ID for testing.
+  vmo->set_user_id(42);
+
+  fbl::RefPtr<VmObject> child;
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, PAGE_SIZE, false,
+                            &child);
+  ASSERT_EQ(ZX_OK, status);
+
+  child->set_user_id(43);
+
+  EXPECT_EQ(0u, vmo->parent_user_id());
+  EXPECT_EQ(42u, vmo->user_id());
+  EXPECT_EQ(43u, child->user_id());
+  EXPECT_EQ(42u, child->parent_user_id());
+
+  // Dropping the parent should re-home the child to an empty parent.
+  vmo.reset();
+  EXPECT_EQ(43u, child->user_id());
+  EXPECT_EQ(0u, child->parent_user_id());
+
+  child.reset();
+
+  // Recreate a more interesting 3 level hierarchy with vmo->child->(child2,child3)
+
+  status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+  vmo->set_user_id(42);
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, PAGE_SIZE, false,
+                            &child);
+  ASSERT_EQ(ZX_OK, status);
+  child->set_user_id(43);
+  fbl::RefPtr<VmObject> child2;
+  status = child->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, PAGE_SIZE, false,
+                              &child2);
+  ASSERT_EQ(ZX_OK, status);
+  child2->set_user_id(44);
+  fbl::RefPtr<VmObject> child3;
+  status = child->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, PAGE_SIZE, false,
+                              &child3);
+  ASSERT_EQ(ZX_OK, status);
+  child3->set_user_id(45);
+  EXPECT_EQ(0u, vmo->parent_user_id());
+  EXPECT_EQ(42u, child->parent_user_id());
+  EXPECT_EQ(43u, child2->parent_user_id());
+  EXPECT_EQ(43u, child3->parent_user_id());
+
+  // Drop the intermediate child, child2+3 should get re-homed to vmo
+  child.reset();
+  EXPECT_EQ(42u, child2->parent_user_id());
+  EXPECT_EQ(42u, child3->parent_user_id());
+
+  END_TEST;
+}
+
 // TODO(fxbug.dev/31326): The ARM code's error codes are always ZX_ERR_INTERNAL, so
 // special case that.
 #if ARCH_ARM64
@@ -3832,6 +3896,7 @@ VM_UNITTEST(vmo_attribution_ops_test)
 VM_UNITTEST(vmo_attribution_pager_test)
 VM_UNITTEST(vmo_attribution_evict_test)
 VM_UNITTEST(vmo_attribution_dedup_test)
+VM_UNITTEST(vmo_parent_merge_test)
 VM_UNITTEST(arch_noncontiguous_map)
 VM_UNITTEST(vm_kernel_region_test)
 VM_UNITTEST(region_list_get_alloc_spot_test)

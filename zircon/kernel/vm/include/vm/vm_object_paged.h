@@ -34,7 +34,6 @@ class VmObjectPaged final : public VmObject {
   // |options_| is a bitmask of:
   static constexpr uint32_t kResizable = (1u << 0);
   static constexpr uint32_t kContiguous = (1u << 1);
-  static constexpr uint32_t kHidden = (1u << 2);
   static constexpr uint32_t kSlice = (1u << 3);
 
   static zx_status_t Create(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
@@ -73,18 +72,21 @@ class VmObjectPaged final : public VmObject {
     Guard<Mutex> guard{&lock_};
     return cow_pages_locked()->is_pager_backed_locked();
   }
-  bool is_hidden() const override { return (options_ & kHidden); }
   ChildType child_type() const override {
     if (is_slice()) {
       return ChildType::kSlice;
     }
     Guard<Mutex> guard{&lock_};
-    return (original_parent_user_id_ != 0) ? ChildType::kCowClone : ChildType::kNotChild;
+    return parent_ ? ChildType::kCowClone : ChildType::kNotChild;
   }
   bool is_slice() const { return options_ & kSlice; }
   uint64_t parent_user_id() const override {
     Guard<Mutex> guard{&lock_};
-    return original_parent_user_id_;
+    if (parent_) {
+      AssertHeld(parent_->lock_ref());
+      return parent_->user_id_locked();
+    }
+    return 0;
   }
   void set_user_id(uint64_t user_id) override {
     VmObject::set_user_id(user_id);
@@ -155,9 +157,6 @@ class VmObjectPaged final : public VmObject {
 
   zx_status_t CreateClone(Resizability resizable, CloneType type, uint64_t offset, uint64_t size,
                           bool copy_name, fbl::RefPtr<VmObject>* child_vmo) override;
-  // Inserts |hidden_parent| as a hidden parent of |this|. This vmo and |hidden_parent|
-  // must have the same lock.
-  void InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden_parent) TA_REQ(lock_);
 
   uint32_t GetMappingCachePolicy() const override {
     Guard<Mutex> guard{&lock_};
@@ -165,9 +164,6 @@ class VmObjectPaged final : public VmObject {
   }
   uint32_t GetMappingCachePolicyLocked() const TA_REQ(lock_) { return cache_policy_; }
   zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
-
-  void RemoveChild(VmObject* child, Guard<Mutex>&& guard) override TA_REQ(lock_);
-  bool OnChildAddedLocked() override TA_REQ(lock_);
 
   void DetachSource() override {
     Guard<Mutex> guard{&lock_};
@@ -229,14 +225,6 @@ class VmObjectPaged final : public VmObject {
   // private constructor (use Create())
   VmObjectPaged(uint32_t options, fbl::RefPtr<VmHierarchyState> root_state);
 
-  // Initializes the original parent state of the vmo. |offset| is the offset of
-  // this vmo in |parent|.
-  //
-  // This function should be called at most once, even if the parent changes
-  // after initialization.
-  void InitializeOriginalParentLocked(fbl::RefPtr<VmObjectPaged> parent, uint64_t offset)
-      TA_REQ(lock_);
-
   static zx_status_t CreateCommon(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
                                   fbl::RefPtr<VmObjectPaged>* vmo);
 
@@ -282,11 +270,9 @@ class VmObjectPaged final : public VmObject {
   const uint32_t options_;
   uint32_t cache_policy_ TA_GUARDED(lock_) = ARCH_MMU_FLAG_CACHED;
 
-  // parent pointer (may be null)
-  fbl::RefPtr<VmObjectPaged> parent_ TA_GUARDED(lock_);
-  // Record the user_id_ of the original parent, in case we make
-  // a bidirectional clone and end up changing parent_.
-  uint64_t original_parent_user_id_ TA_GUARDED(lock_) = 0;
+  // parent pointer (may be null). This is a raw pointer as we have no need to hold our parent alive
+  // once they want to go away.
+  VmObjectPaged* parent_ TA_GUARDED(lock_) = nullptr;
 
   // Tracks the last cached page attribution count.
   mutable CachedPageAttribution cached_page_attribution_ TA_GUARDED(lock_) = {};
