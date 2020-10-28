@@ -481,7 +481,7 @@ impl RemoteClient {
                         panic!("Success should have already been handled");
                     }
                     fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified => {
-                        StatusCode::DENIED_OTHER_REASON
+                        StatusCode::REFUSED
                     }
                     fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated => {
                         StatusCode::REFUSED_UNAUTHENTICATED_ACCESS_NOT_SUPPORTED
@@ -1334,7 +1334,42 @@ mod tests {
     }
 
     #[test]
-    fn handle_mlme_assoc_resp_failure() {
+    fn handle_mlme_assoc_resp_failure_reason_unspecified() {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        r_sta
+            .handle_mlme_assoc_resp(
+                &mut ctx,
+                false,
+                1,
+                CapabilityInfo(0),
+                fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                1, // This AID is ignored in the case of an error.
+                &[][..],
+            )
+            .expect("expected OK");
+        assert_variant!(r_sta.state.as_ref(), State::Authenticated);
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        #[rustfmt::skip]
+        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
+            // Mgmt header
+            0b00010000, 0, // Frame Control
+            0, 0, // Duration
+            1, 1, 1, 1, 1, 1, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            2, 2, 2, 2, 2, 2, // addr3
+            0x10, 0, // Sequence Control
+            // Association response header:
+            0, 0, // Capabilities
+            1, 0, // status code
+            0, 0, // AID
+        ][..]);
+    }
+
+    #[test]
+    fn handle_mlme_assoc_resp_failure_emergency_services_not_supported() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
         let mut fake_scheduler = FakeScheduler::new();
