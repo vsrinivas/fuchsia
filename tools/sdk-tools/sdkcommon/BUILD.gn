@@ -1,0 +1,15 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("sdkcommon") {
+  sources = [ "sdkcommon.go" ]
+}
+
+go_test("lib_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/sdkcommon" ]
+  deps = [ ":sdkcommon" ]
+}
