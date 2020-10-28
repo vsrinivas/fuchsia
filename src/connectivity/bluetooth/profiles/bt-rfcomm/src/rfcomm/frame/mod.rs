@@ -370,8 +370,7 @@ impl Frame {
         let is_two_octet_length = !information_field.ea_bit();
         let mut length = information_field.length() as u16;
         if is_two_octet_length {
-            let second_octet = InformationField(buf[FRAME_INFORMATION_IDX + 1]);
-            length |= (second_octet.length() as u16) << INFORMATION_SECOND_OCTET_SHIFT;
+            length |= (buf[FRAME_INFORMATION_IDX + 1] as u16) << INFORMATION_SECOND_OCTET_SHIFT;
         }
         trace!("Frame InformationLength is {:?}", length);
 
@@ -529,12 +528,10 @@ impl Encodable for Frame {
         first_octet_length.set_length(data_length as u8);
         first_octet_length.set_ea_bit(!is_two_octet_length);
         buf[FRAME_INFORMATION_IDX] = first_octet_length.0;
-        // If the length is two octets, get the upper 7 bits and tag on E/A = 1.
+        // If the length is two octets, get the upper 8 bits and set the second octet.
         if is_two_octet_length {
-            let mut second_octet_length = InformationField(0);
-            second_octet_length.set_length((data_length >> INFORMATION_SECOND_OCTET_SHIFT) as u8);
-            second_octet_length.set_ea_bit(true);
-            buf[FRAME_INFORMATION_IDX + 1] = second_octet_length.0;
+            let second_octet_length = (data_length >> INFORMATION_SECOND_OCTET_SHIFT) as u8;
+            buf[FRAME_INFORMATION_IDX + 1] = second_octet_length;
         }
 
         // Address + Control + Information.
@@ -784,7 +781,7 @@ mod tests {
             0b00001111, // Address Field - EA = 1, C/R = 1, User DLCI = 3.
             0b11101111, // Control Field - UIH command with P/F = 0.
             0b00000010, // Length Field0 - E/A = 0. Length = 1.
-            0b00000011, // Length Field1 - E/A = 1. Length = 128.
+            0b00000001, // Length Field1 - No E/A. Length = 128.
         ];
         // Calculate the FCS for the first two bytes, since UIH frame.
         let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
@@ -977,6 +974,36 @@ mod tests {
             0b00011111, // Data octet #3 - RPN Data, DLCI = 7.
             0b10101010, // FCS - precomputed.
         ];
+        assert_eq!(buf, expected);
+    }
+
+    #[test]
+    fn test_encode_user_data_with_two_octet_length_succeeds() {
+        let length = 130;
+        let mut information = vec![0; length];
+        let frame = Frame {
+            role: Role::Initiator,
+            dlci: DLCI::try_from(5).unwrap(),
+            data: FrameData::UnnumberedInfoHeaderCheck(UIHData::User(UserData {
+                information: information.clone(),
+            })),
+            poll_final: true,
+            command_response: CommandResponse::Command,
+            credits: Some(8),
+        };
+        let mut buf = vec![0; frame.encoded_len()];
+        assert!(frame.encode(&mut buf[..]).is_ok());
+        let mut expected = vec![
+            0b00010111, // Address Field: DLCI = 5, C/R = 1, E/A = 1.
+            0b11111111, // Control Field - UIH command with P/F = 1.
+            0b00000100, // Length Field - E/A = 0. Length = 2.
+            0b00000001, // Length Field2 - 128.
+            0b00001000, // Credit Field - Credits = 8.
+        ];
+        // Add the information.
+        expected.append(&mut information);
+        // Add the precomputed FCS.
+        expected.push(0b0000_1100);
         assert_eq!(buf, expected);
     }
 }
