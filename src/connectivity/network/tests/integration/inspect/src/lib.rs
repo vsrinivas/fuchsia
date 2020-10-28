@@ -140,7 +140,7 @@ async fn inspect_nic() -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
     let env = sandbox
-        .create_netstack_environment::<Netstack2, _>("inspect_objects")
+        .create_netstack_environment::<Netstack2, _>("inspect_nic")
         .context("failed to create environment")?;
 
     const ETH_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:01:02:03:04:05");
@@ -344,6 +344,74 @@ async fn inspect_nic() -> Result {
     let () = loopback_addrs.check().context("loopback addresses match failed")?;
     let () = eth_addrs.check().context("ethernet addresses match failed")?;
     let () = netdev_addrs.check().context("netdev addresses match failed")?;
+
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn inspect_routing_table() -> Result {
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let env = sandbox
+        .create_netstack_environment::<Netstack2, _>("inspect_routing_table")
+        .context("failed to create environment")?;
+
+    let netstack = env
+        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .context("failed to connect to fuchsia.netstack/Netstack")?;
+
+    // Capture the state of the routing table to verify the inspect data, and
+    // confirm that it's not empty.
+    let routing_table = netstack.get_route_table2().await.context("get_route_table2 FIDL error")?;
+    assert!(!routing_table.is_empty());
+    println!("Got routing table: {:#?}", routing_table);
+
+    let subnet_mask_to_prefix_length = |addr: fidl_fuchsia_net::IpAddress| -> u8 {
+        match addr {
+            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr }) => {
+                (!u32::from_be_bytes(addr)).leading_zeros() as u8
+            }
+            fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address { addr }) => {
+                (!u128::from_be_bytes(addr)).leading_zeros() as u8
+            }
+        }
+    };
+
+    use fuchsia_inspect::testing::{AnyProperty, TreeAssertion};
+    let mut routing_table_assertion = TreeAssertion::new("Routes", true);
+    for (i, route) in routing_table.into_iter().enumerate() {
+        let index = &i.to_string();
+        let fidl_fuchsia_netstack::RouteTableEntry2 {
+            destination,
+            netmask,
+            gateway,
+            nicid,
+            metric,
+        } = route;
+        let route_assertion = fuchsia_inspect::tree_assertion!(var index: {
+            "Destination": format!(
+                "{}/{}",
+                fidl_fuchsia_net_ext::IpAddress::from(destination),
+                subnet_mask_to_prefix_length(netmask),
+            ),
+            "Gateway": match gateway {
+                Some(addr) => fidl_fuchsia_net_ext::IpAddress::from(*addr).to_string(),
+                None => "".to_string(),
+            },
+            "NIC": nicid.to_string(),
+            "Metric": metric.to_string(),
+            "MetricTracksInterface": AnyProperty,
+            "Dynamic": AnyProperty,
+            "Enabled": AnyProperty,
+        });
+        routing_table_assertion.add_child_assertion(route_assertion);
+    }
+
+    let data = get_inspect_data(&env, "netstack-debug.cmx", "Routes", "routes")
+        .await
+        .context("get_inspect_data failed")?;
+    if let Err(e) = routing_table_assertion.run(&data) {
+        panic!("tree assertion fails: {}, inspect data is: {:#?}", e, data);
+    }
 
     Ok(())
 }

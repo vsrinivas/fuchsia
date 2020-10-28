@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 
 	"fidl/fuchsia/hardware/ethernet"
 	inspect "fidl/fuchsia/inspect/deprecated"
@@ -22,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
@@ -46,7 +48,7 @@ func TestStatCounterInspectImpl(t *testing.T) {
 	}
 	for _, childName := range children {
 		if child := v.GetChild(childName); child == nil {
-			t.Errorf("got GetChild(%s) = %v, want non-nil", childName, child)
+			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
 		} else if _, ok := child.(*statCounterInspectImpl); !ok {
 			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &statCounterInspectImpl{})
 		}
@@ -54,7 +56,7 @@ func TestStatCounterInspectImpl(t *testing.T) {
 
 	childName := "not a real child"
 	if child := v.GetChild(childName); child != nil {
-		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
+		t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
 	}
 
 	s.UnknownProtocolRcvdPackets.IncrementBy(1)
@@ -108,13 +110,13 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 
 	childName := "not a real child"
 	if child := v.GetChild(childName); child != nil {
-		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
+		t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
 	}
 
 	for _, name := range children {
 		child := v.GetChild(name)
 		if child == nil {
-			t.Fatalf("got GetChild(%s) = %v, want non-nil", name, child)
+			t.Fatalf("got GetChild(%s) = nil, want non-nil", name)
 		}
 
 		val, err := strconv.ParseUint(name, 10, 64)
@@ -222,7 +224,7 @@ func TestNicInfoMapInspectImpl(t *testing.T) {
 	}
 	for _, childName := range children {
 		if child := v.GetChild(childName); child == nil {
-			t.Errorf("got GetChild(%s) = %v, want non-nil", childName, child)
+			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
 		} else if _, ok := child.(*nicInfoInspectImpl); !ok {
 			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &nicInfoInspectImpl{})
 		}
@@ -230,7 +232,7 @@ func TestNicInfoMapInspectImpl(t *testing.T) {
 
 	childName := "not a real child"
 	if child := v.GetChild(childName); child != nil {
-		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
+		t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
 	}
 
 	if diff := cmp.Diff(inspect.Object{
@@ -252,7 +254,7 @@ func TestNicInfoInspectImpl(t *testing.T) {
 	}
 	for _, childName := range children {
 		if child := v.GetChild(childName); child == nil {
-			t.Errorf("got GetChild(%s) = %v, want non-nil", childName, child)
+			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
 		} else if _, ok := child.(*statCounterInspectImpl); !ok {
 			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &statCounterInspectImpl{})
 		}
@@ -260,7 +262,7 @@ func TestNicInfoInspectImpl(t *testing.T) {
 
 	childName := "not a real child"
 	if child := v.GetChild(childName); child != nil {
-		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
+		t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
 	}
 
 	v.value.Flags.Up = true
@@ -301,7 +303,7 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 	}
 	for _, childName := range children {
 		if child := v.GetChild(childName); child == nil {
-			t.Errorf("got GetChild(%s) = %v, want non-nil", childName, child)
+			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
 		} else if _, ok := child.(*statCounterInspectImpl); !ok {
 			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &statCounterInspectImpl{})
 		}
@@ -309,7 +311,7 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 
 	childName := "not a real child"
 	if child := v.GetChild(childName); child != nil {
-		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
+		t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
 	}
 
 	if diff := cmp.Diff(inspect.Object{
@@ -383,7 +385,7 @@ func TestEthInfoInspectImpl(t *testing.T) {
 	}
 	for _, childName := range children {
 		if child := v.GetChild(childName); child == nil {
-			t.Errorf("got GetChild(%s) = %v, want non-nil", childName, child)
+			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
 		} else if _, ok := child.(*fifoStatsInspectImpl); !ok {
 			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &fifoStatsInspectImpl{})
 		}
@@ -391,7 +393,7 @@ func TestEthInfoInspectImpl(t *testing.T) {
 
 	childName := "not a real child"
 	if child := v.GetChild(childName); child != nil {
-		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
+		t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
 	}
 
 	if diff := cmp.Diff(inspect.Object{
@@ -430,7 +432,7 @@ func TestFifoStatsInfoInspectImpl(t *testing.T) {
 
 	childName := "not a real child"
 	if child := v.GetChild(childName); child != nil {
-		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
+		t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
 	}
 
 	if diff := cmp.Diff(inspect.Object{
@@ -466,5 +468,121 @@ func TestInspectGetMissingChild(t *testing.T) {
 	// The request channel must have been closed.
 	if _, err := zxwait.Wait(*proxy.Channel.Handle(), zx.SignalChannelPeerClosed, 0); err != nil {
 		t.Fatalf("zxwait.Wait(_, zx.SignalChannelPeerClosed, 0) = %s", err)
+	}
+}
+
+func TestRoutingTableInspectImpl(t *testing.T) {
+	impl := routingTableInspectImpl{
+		value: []routes.ExtendedRoute{
+			{}, {},
+		},
+	}
+	children := impl.ListChildren()
+	if diff := cmp.Diff([]string{
+		"0", "1",
+	}, children); diff != "" {
+		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+	}
+	for _, childName := range children {
+		if child := impl.GetChild(childName); child == nil {
+			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
+		} else if _, ok := child.(*routeInfoInspectImpl); !ok {
+			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &routeInfoInspectImpl{})
+		}
+	}
+
+	childName := "not a real child"
+	if got := impl.GetChild(childName); got != nil {
+		t.Errorf("got GetChild(%s) = %s, want = nil", childName, got)
+	}
+
+	// Index past the end of the routing table
+	childName = "2"
+	if got := impl.GetChild(childName); got != nil {
+		t.Errorf("got GetChild(%s) = %s, want = nil", childName, got)
+	}
+	if diff := cmp.Diff(inspect.Object{
+		Name: "Routes",
+	}, impl.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{})); diff != "" {
+		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestRouteInfoInspectImpl(t *testing.T) {
+	tests := []struct {
+		name       string
+		route      routes.ExtendedRoute
+		properties []inspect.Property
+	}{
+		{
+			name: "IPv4",
+			route: routes.ExtendedRoute{
+				Route: tcpip.Route{
+					Destination: header.IPv4EmptySubnet,
+					Gateway:     "\x01\x02\x03\x04",
+					NIC:         1,
+				},
+				Metric:                42,
+				MetricTracksInterface: true,
+				Dynamic:               true,
+				Enabled:               true,
+			},
+			properties: []inspect.Property{
+				{Key: "Destination", Value: inspect.PropertyValueWithStr("0.0.0.0/0")},
+				{Key: "Gateway", Value: inspect.PropertyValueWithStr("1.2.3.4")},
+				{Key: "NIC", Value: inspect.PropertyValueWithStr("1")},
+				{Key: "Metric", Value: inspect.PropertyValueWithStr("42")},
+				{Key: "MetricTracksInterface", Value: inspect.PropertyValueWithStr("true")},
+				{Key: "Dynamic", Value: inspect.PropertyValueWithStr("true")},
+				{Key: "Enabled", Value: inspect.PropertyValueWithStr("true")},
+			},
+		},
+		{
+			name: "IPv6",
+			route: routes.ExtendedRoute{
+				Route: tcpip.Route{
+					Destination: header.IPv6EmptySubnet,
+					Gateway:     "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+					NIC:         2,
+				},
+				Metric:                0,
+				MetricTracksInterface: false,
+				Dynamic:               true,
+				Enabled:               true,
+			},
+			properties: []inspect.Property{
+				{Key: "Destination", Value: inspect.PropertyValueWithStr("::/0")},
+				{Key: "Gateway", Value: inspect.PropertyValueWithStr("fe80::1")},
+				{Key: "NIC", Value: inspect.PropertyValueWithStr("2")},
+				{Key: "Metric", Value: inspect.PropertyValueWithStr("0")},
+				{Key: "MetricTracksInterface", Value: inspect.PropertyValueWithStr("false")},
+				{Key: "Dynamic", Value: inspect.PropertyValueWithStr("true")},
+				{Key: "Enabled", Value: inspect.PropertyValueWithStr("true")},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			impl := routeInfoInspectImpl{name: "0", value: test.route}
+
+			children := impl.ListChildren()
+			if diff := cmp.Diff(children, []string(nil)); diff != "" {
+				t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+			}
+
+			childName := "not a real child"
+			if got := impl.GetChild(childName); got != nil {
+				t.Errorf("got GetChild(%s) = %s, want = nil", childName, got)
+			}
+
+			if diff := cmp.Diff(
+				inspect.Object{Name: "0", Properties: test.properties},
+				impl.ReadData(),
+				cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{}),
+			); diff != "" {
+				t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
