@@ -80,6 +80,7 @@ struct x86_percpu bp_percpu = {
 
     .blocking_disallowed = {},
     .monitor = &fake_monitor,
+    .halt_interlock = {},
     .idle_states = &fake_idle_states,
 
     // Start with an invalid ID until we know the local APIC is set up.
@@ -335,8 +336,8 @@ void arch_mp_reschedule(cpu_mask_t mask) {
       cpu_num_t cpu_id = lowest_cpu_set(mask);
       cpu_mask_t cpu_mask = cpu_num_to_mask(cpu_id);
       struct x86_percpu* percpu = cpu_id ? &ap_percpus[cpu_id - 1] : &bp_percpu;
-      int expect_spin = 1;
-      bool did_fast_wakeup = atomic_cmpxchg(&percpu->halt_interlock, &expect_spin, 0);
+      uint32_t expect_spin = 1;
+      bool did_fast_wakeup = percpu->halt_interlock.compare_exchange_strong(expect_spin, 0);
       if (did_fast_wakeup) {
         needs_ipi &= ~cpu_mask;
       }
@@ -394,17 +395,18 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
       // has woken us, avoid the halt instruction.
       LocalTraceDuration trace{"idle"_stringref};
       constexpr int kPauseIterations = 3000;
-      int halt_interlock_spinning = 1;
-      atomic_store_relaxed(&percpu->halt_interlock, halt_interlock_spinning);
+      uint32_t halt_interlock_spinning = 1;
+      percpu->halt_interlock.store(1, ktl::memory_order_relaxed);
       for (int i = 0; i < kPauseIterations; i++) {
         arch::Yield();
-        if (atomic_load_relaxed(&percpu->halt_interlock) != halt_interlock_spinning) {
+        if (percpu->halt_interlock.load(ktl::memory_order_relaxed) != 1) {
           break;
         }
       }
       // If the halt_interlock flag was changed, another CPU must have done it; avoid HLT and
       // switch to a new runnable thread.
-      bool no_fast_wakeup = atomic_cmpxchg(&percpu->halt_interlock, &halt_interlock_spinning, 2);
+      bool no_fast_wakeup = percpu->halt_interlock.compare_exchange_strong(halt_interlock_spinning,
+                                                                           2);
       if (no_fast_wakeup) {
         x86_idle();
       } else {

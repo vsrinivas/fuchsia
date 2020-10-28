@@ -16,9 +16,9 @@
 //      ZX_TLS_STACK_GUARD_OFFSET      0x10
 //      ZX_TLS_UNSAFE_SP_OFFSET        0x18
 #define PERCPU_SAVED_USER_SP_OFFSET 0x20
-#define PERCPU_GPF_RETURN_OFFSET 0x48
-#define PERCPU_CPU_NUM_OFFSET 0x50
-#define PERCPU_DEFAULT_TSS_OFFSET 0x60
+#define PERCPU_GPF_RETURN_OFFSET 0x50
+#define PERCPU_CPU_NUM_OFFSET 0x58
+#define PERCPU_DEFAULT_TSS_OFFSET 0x70
 
 /* offset of default_tss.rsp0 */
 #define PERCPU_KERNEL_SP_OFFSET (PERCPU_DEFAULT_TSS_OFFSET + 4)
@@ -36,6 +36,7 @@
 #include <arch/x86/idt.h>
 #include <kernel/align.h>
 #include <kernel/cpu.h>
+#include <ktl/atomic.h>
 
 __BEGIN_CDECLS
 
@@ -59,13 +60,12 @@ struct x86_percpu {
   /* Whether blocking is disallowed.  See arch_blocking_disallowed(). */
   uint32_t blocking_disallowed;
 
-  union {
-    /* Memory for IPI-free rescheduling of idle CPUs with monitor/mwait. */
-    volatile uint8_t *monitor;
-    /* Interlock to avoid HLT on idle CPUs without monitor/mwait. */
-    /* halt_interlock is never used on CPUs that have enabled monitor/mwait for idle. */
-    volatile int halt_interlock;
-  };
+  /* Memory for IPI-free rescheduling of idle CPUs with monitor/mwait. */
+  volatile uint8_t *monitor;
+
+  /* Interlock to avoid HLT on idle CPUs without monitor/mwait. */
+  /* halt_interlock is never used on CPUs that have enabled monitor/mwait for idle. */
+  ktl::atomic<uint32_t> halt_interlock;
 
   /* Supported mwait C-states for idle CPUs. */
   X86IdleStates *idle_states;
