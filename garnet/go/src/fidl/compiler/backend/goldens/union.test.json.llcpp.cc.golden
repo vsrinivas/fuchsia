@@ -266,11 +266,10 @@ TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated_Sync() {
 
 TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
 TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated_Sync(
-    ::fidl::BytePart _response_buffer) {
+    ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-        _channel->handle(), _response_buffer.data(),
-        _response_buffer.capacity());
+        _channel->handle(), _response_buffer.data, _response_buffer.capacity);
   }
   return TestProtocol::UnownedResultOf::
       StrictXUnionHenceResponseMayBeStackAllocated(
@@ -346,11 +345,10 @@ TestProtocol::ClientImpl::
 
 TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
 TestProtocol::ClientImpl::FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
-    ::fidl::BytePart _response_buffer) {
+    ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        _channel->handle(), _response_buffer.data(),
-        _response_buffer.capacity());
+        _channel->handle(), _response_buffer.data, _response_buffer.capacity);
   }
   return TestProtocol::UnownedResultOf::
       FlexibleXUnionHenceResponseMustBeHeapAllocated(
@@ -494,10 +492,10 @@ namespace entries {
 
 ::fidl::Result TestProtocol::Interface::
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
-        ::fidl::BytePart _buffer,
+        ::fidl::BufferSpan _buffer,
         ::llcpp::fidl::test::union_::StrictBoundedXUnion xu) {
   StrictXUnionHenceResponseMayBeStackAllocatedResponse::UnownedOutgoingMessage
-      _response(_buffer.data(), _buffer.capacity(), xu);
+      _response(_buffer.data, _buffer.capacity, xu);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -511,10 +509,10 @@ namespace entries {
 
 ::fidl::Result TestProtocol::Interface::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
-        ::fidl::BytePart _buffer,
+        ::fidl::BufferSpan _buffer,
         ::llcpp::fidl::test::union_::OlderSimpleUnion xu) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::UnownedOutgoingMessage
-      _response(_buffer.data(), _buffer.capacity(), xu);
+      _response(_buffer.data, _buffer.capacity, xu);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

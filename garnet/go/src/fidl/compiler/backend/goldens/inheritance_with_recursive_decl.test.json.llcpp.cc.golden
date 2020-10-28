@@ -46,12 +46,11 @@ Parent::UnownedResultOf::First::First(zx_handle_t _client,
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-::fidl::Result Parent::ClientImpl::First(::fidl::BytePart _request_buffer,
+::fidl::Result Parent::ClientImpl::First(::fidl::BufferSpan _request_buffer,
                                          ::zx::channel request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res =
-        UnownedResultOf::First(_channel->handle(), _request_buffer.data(),
-                               _request_buffer.capacity(), request);
+    auto _res = UnownedResultOf::First(_channel->handle(), _request_buffer.data,
+                                       _request_buffer.capacity, request);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -178,12 +177,11 @@ Child::UnownedResultOf::Second::Second(zx_handle_t _client,
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-::fidl::Result Child::ClientImpl::First(::fidl::BytePart _request_buffer,
+::fidl::Result Child::ClientImpl::First(::fidl::BufferSpan _request_buffer,
                                         ::zx::channel request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res =
-        UnownedResultOf::First(_channel->handle(), _request_buffer.data(),
-                               _request_buffer.capacity(), request);
+    auto _res = UnownedResultOf::First(_channel->handle(), _request_buffer.data,
+                                       _request_buffer.capacity, request);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -197,12 +195,12 @@ Child::UnownedResultOf::Second::Second(zx_handle_t _client,
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-::fidl::Result Child::ClientImpl::Second(::fidl::BytePart _request_buffer,
+::fidl::Result Child::ClientImpl::Second(::fidl::BufferSpan _request_buffer,
                                          ::zx::channel request) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res =
-        UnownedResultOf::Second(_channel->handle(), _request_buffer.data(),
-                                _request_buffer.capacity(), request);
+        UnownedResultOf::Second(_channel->handle(), _request_buffer.data,
+                                _request_buffer.capacity, request);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);

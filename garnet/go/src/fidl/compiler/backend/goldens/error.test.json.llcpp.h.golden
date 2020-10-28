@@ -677,13 +677,12 @@ class Example final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::foo foo(::zx::unowned_channel _client_end,
-                                    ::fidl::BytePart _request_buffer,
+                                    ::fidl::BufferSpan _request_buffer,
                                     ::fidl::StringView s,
-                                    ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::foo(_client_end->get(), _request_buffer.data(),
-                                  _request_buffer.capacity(), s,
-                                  _response_buffer.data(),
-                                  _response_buffer.capacity());
+                                    ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::foo(
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -707,13 +706,12 @@ class Example final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::foo foo(::fidl::BytePart _request_buffer,
+    UnownedResultOf::foo foo(::fidl::BufferSpan _request_buffer,
                              ::fidl::StringView s,
-                             ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::foo(this->channel().get(), _request_buffer.data(),
-                                  _request_buffer.capacity(), s,
-                                  _response_buffer.data(),
-                                  _response_buffer.capacity());
+                             ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::foo(
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          s, _response_buffer.data, _response_buffer.capacity);
     }
 
    private:
@@ -750,9 +748,9 @@ class Example final {
       ::fidl::Result ReplySuccess(int64_t y);
       ::fidl::Result ReplyError(uint32_t error);
       ::fidl::Result Reply(
-          ::fidl::BytePart _buffer,
+          ::fidl::BufferSpan _buffer,
           ::llcpp::fidl::test::error::Example_foo_Result result);
-      ::fidl::Result ReplySuccess(::fidl::BytePart _buffer, int64_t y);
+      ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int64_t y);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -874,7 +872,7 @@ class Example::ClientImpl final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |Example.foo()|. Caller provides the backing
   // storage for FIDL message via request buffer. Ownership of _context is given
   // unsafely to the binding until OnError() or OnReply() are called on it.
-  ::fidl::Result foo(::fidl::BytePart _request_buffer, ::fidl::StringView s,
+  ::fidl::Result foo(::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
                      fooResponseContext* _context);
   // Synchronous variant of |Example.foo()|. Allocates 48 bytes of response
   // buffer on the stack. Request is heap-allocated.
@@ -882,9 +880,9 @@ class Example::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Synchronous variant of |Example.foo()|. Caller provides the backing storage
   // for FIDL message via request and response buffers.
-  UnownedResultOf::foo foo_Sync(::fidl::BytePart _request_buffer,
+  UnownedResultOf::foo foo_Sync(::fidl::BufferSpan _request_buffer,
                                 ::fidl::StringView s,
-                                ::fidl::BytePart _response_buffer);
+                                ::fidl::BufferSpan _response_buffer);
 
  private:
   friend class ::fidl::Client<Example>;

@@ -54,11 +54,12 @@ class EchoClientApp {
     return client_.HandleEvents(event_handlers).status();
   }
 
-  Echo::UnownedResultOf::EchoArrays EchoArrays(::fidl::BytePart request_buffer, ArraysStruct value,
+  Echo::UnownedResultOf::EchoArrays EchoArrays(::fidl::BufferSpan request_buffer,
+                                               ArraysStruct value,
                                                ::fidl::StringView forward_to_server,
-                                               ::fidl::BytePart response_buffer) {
-    return client_.EchoArrays(std::move(request_buffer), std::move(value),
-                              std::move(forward_to_server), std::move(response_buffer));
+                                               ::fidl::BufferSpan response_buffer) {
+    return client_.EchoArrays(request_buffer, std::move(value), std::move(forward_to_server),
+                              response_buffer);
   }
 
   Echo::ResultOf::EchoArraysWithError EchoArraysWithError(ArraysStruct value, default_enum err,
@@ -80,22 +81,22 @@ class EchoClientApp {
                                         result_variant);
   }
 
-  Echo::UnownedResultOf::EchoTable EchoTable(::fidl::BytePart request_buffer, AllTypesTable value,
+  Echo::UnownedResultOf::EchoTable EchoTable(::fidl::BufferSpan request_buffer, AllTypesTable value,
                                              ::fidl::StringView forward_to_server,
-                                             ::fidl::BytePart response_buffer) {
-    return client_.EchoTable(std::move(request_buffer), std::move(value),
-                             std::move(forward_to_server), std::move(response_buffer));
+                                             ::fidl::BufferSpan response_buffer) {
+    return client_.EchoTable(request_buffer, std::move(value), std::move(forward_to_server),
+                             response_buffer);
   }
 
-  Echo::UnownedResultOf::EchoTableWithError EchoTableWithError(::fidl::BytePart request_buffer,
+  Echo::UnownedResultOf::EchoTableWithError EchoTableWithError(::fidl::BufferSpan request_buffer,
                                                                AllTypesTable value,
                                                                default_enum err,
                                                                ::fidl::StringView forward_to_server,
                                                                RespondWith result_variant,
-                                                               ::fidl::BytePart response_buffer) {
-    return client_.EchoTableWithError(std::move(request_buffer), std::move(value), err,
+                                                               ::fidl::BufferSpan response_buffer) {
+    return client_.EchoTableWithError(request_buffer, std::move(value), err,
                                       std::move(forward_to_server), result_variant,
-                                      std::move(response_buffer));
+                                      response_buffer);
   }
 
   Echo::ResultOf::EchoXunions EchoXunions(::fidl::VectorView<AllTypesXunion> value,
@@ -204,9 +205,9 @@ class EchoConnection final : public Echo::Interface {
       std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       EchoClientApp app(std::move(forward_to_server));
       auto result = app.EchoArrays(
-          ::fidl::BytePart(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
+          ::fidl::BufferSpan(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
           std::move(value), "",
-          ::fidl::BytePart(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
+          ::fidl::BufferSpan(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
       completer.Reply(std::move(result.Unwrap()->value));
     }
@@ -271,9 +272,9 @@ class EchoConnection final : public Echo::Interface {
       std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       EchoClientApp app(std::move(forward_to_server));
       auto result = app.EchoTable(
-          ::fidl::BytePart(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
+          ::fidl::BufferSpan(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
           std::move(value), "",
-          ::fidl::BytePart(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
+          ::fidl::BufferSpan(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.error());
       completer.Reply(std::move(result.Unwrap()->value));
@@ -294,9 +295,9 @@ class EchoConnection final : public Echo::Interface {
       std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       EchoClientApp app(std::move(forward_to_server));
       auto result = app.EchoTableWithError(
-          ::fidl::BytePart(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
+          ::fidl::BufferSpan(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
           std::move(value), err, "", result_variant,
-          ::fidl::BytePart(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
+          ::fidl::BufferSpan(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.error());
       completer.Reply(std::move(result->result));

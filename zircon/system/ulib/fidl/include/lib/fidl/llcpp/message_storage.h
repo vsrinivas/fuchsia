@@ -14,6 +14,16 @@
 #include <memory>
 
 namespace fidl {
+
+// Holds a reference to any storage buffer. This is independent of the allocation.
+struct BufferSpan {
+  BufferSpan() = default;
+  BufferSpan(uint8_t* data, uint32_t capacity) : data(data), capacity(capacity) {}
+
+  uint8_t* data = nullptr;
+  uint32_t capacity = 0;
+};
+
 namespace internal {
 
 // An uninitialized array of |kSize| bytes, guaranteed to follow FIDL alignment.
@@ -21,7 +31,7 @@ template <uint32_t kSize>
 struct AlignedBuffer {
   AlignedBuffer() {}
 
-  fidl::BytePart view() { return fidl::BytePart(data_, kSize); }
+  BufferSpan view() { return BufferSpan(data_, kSize); }
   uint8_t* data() { return data_; }
 
  private:
@@ -57,7 +67,7 @@ struct ByteStorage<kSize, std::enable_if_t<(kSize > kMaxStackAllocSize)>> {
   constexpr static bool kWillCopyBufferDuringMove = false;
   constexpr static uint32_t kBufferSize = kSize;
 
-  fidl::BytePart buffer() { return storage->view(); }
+  BufferSpan buffer() { return storage->view(); }
   uint8_t* data() { return storage->data(); }
 
   ByteStorage() : storage(std::make_unique<AlignedBuffer<kBufferSize>>()) {}
@@ -82,7 +92,7 @@ struct ByteStorage<kSize, std::enable_if_t<(kSize <= kMaxStackAllocSize)>> {
   constexpr static bool kWillCopyBufferDuringMove = true;
   constexpr static uint32_t kBufferSize = kSize;
 
-  fidl::BytePart buffer() { return storage.view(); }
+  BufferSpan buffer() { return storage.view(); }
   uint8_t* data() { return storage.data(); }
 
   ByteStorage() {}

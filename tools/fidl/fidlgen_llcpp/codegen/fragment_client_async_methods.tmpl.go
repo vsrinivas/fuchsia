@@ -78,7 +78,7 @@ void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* r
 ::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }}) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{ if .Request }}
-  {{ .Name }}Request::UnownedOutgoingMessage _request(_request_buffer.data(), _request_buffer.capacity(), _context->Txid()
+  {{ .Name }}Request::UnownedOutgoingMessage _request(_request_buffer.data, _request_buffer.capacity, _context->Txid()
   {{- else }}
   {{ .Name }}Request::OwnedOutgoingMessage _request(_context->Txid()
   {{- end }}

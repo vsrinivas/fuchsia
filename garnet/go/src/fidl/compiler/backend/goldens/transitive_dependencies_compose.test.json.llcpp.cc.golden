@@ -53,10 +53,10 @@ Top::ResultOf::GetFoo Top::ClientImpl::GetFoo_Sync() {
 }
 
 Top::UnownedResultOf::GetFoo Top::ClientImpl::GetFoo_Sync(
-    ::fidl::BytePart _response_buffer) {
+    ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return UnownedResultOf::GetFoo(_channel->handle(), _response_buffer.data(),
-                                   _response_buffer.capacity());
+    return UnownedResultOf::GetFoo(_channel->handle(), _response_buffer.data,
+                                   _response_buffer.capacity);
   }
   return Top::UnownedResultOf::GetFoo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -159,9 +159,9 @@ namespace entries {
 }
 
 ::fidl::Result Top::Interface::GetFooCompleterBase::Reply(
-    ::fidl::BytePart _buffer, ::llcpp::bottom::Foo foo) {
-  GetFooResponse::UnownedOutgoingMessage _response(_buffer.data(),
-                                                   _buffer.capacity(), foo);
+    ::fidl::BufferSpan _buffer, ::llcpp::bottom::Foo foo) {
+  GetFooResponse::UnownedOutgoingMessage _response(_buffer.data,
+                                                   _buffer.capacity, foo);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

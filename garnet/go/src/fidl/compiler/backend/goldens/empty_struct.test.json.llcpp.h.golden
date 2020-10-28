@@ -910,10 +910,10 @@ class EmptyProtocol final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::Send Send(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::emptystruct::Empty e) {
-      return UnownedResultOf::Send(_client_end->get(), _request_buffer.data(),
-                                   _request_buffer.capacity(), e);
+      return UnownedResultOf::Send(_client_end->get(), _request_buffer.data,
+                                   _request_buffer.capacity, e);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -927,13 +927,12 @@ class EmptyProtocol final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::SendAndReceive SendAndReceive(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::emptystruct::Empty e,
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::SendAndReceive(
-          _client_end->get(), _request_buffer.data(),
-          _request_buffer.capacity(), e, _response_buffer.data(),
-          _response_buffer.capacity());
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity, e,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Handle all possible events defined in this protocol.
@@ -965,11 +964,10 @@ class EmptyProtocol final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::Send Send(::fidl::BytePart _request_buffer,
+    UnownedResultOf::Send Send(::fidl::BufferSpan _request_buffer,
                                ::llcpp::fidl::test::emptystruct::Empty e) {
-      return UnownedResultOf::Send(this->channel().get(),
-                                   _request_buffer.data(),
-                                   _request_buffer.capacity(), e);
+      return UnownedResultOf::Send(this->channel().get(), _request_buffer.data,
+                                   _request_buffer.capacity, e);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -982,13 +980,12 @@ class EmptyProtocol final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::SendAndReceive SendAndReceive(
-        ::fidl::BytePart _request_buffer,
+        ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::emptystruct::Empty e,
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::SendAndReceive(
-          this->channel().get(), _request_buffer.data(),
-          _request_buffer.capacity(), e, _response_buffer.data(),
-          _response_buffer.capacity());
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          e, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Handle all possible events defined in this protocol.
@@ -1035,7 +1032,7 @@ class EmptyProtocol final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(::llcpp::fidl::test::emptystruct::Empty e);
-      ::fidl::Result Reply(::fidl::BytePart _buffer,
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer,
                            ::llcpp::fidl::test::emptystruct::Empty e);
 
      protected:
@@ -1081,7 +1078,7 @@ class EmptyProtocol final {
 
   // Caller provides the backing storage for FIDL message via response buffers.
   static zx_status_t SendReceiveEvent(
-      ::zx::unowned_channel _channel, ::fidl::BytePart _buffer,
+      ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer,
       ::llcpp::fidl::test::emptystruct::Empty e);
 
   class EventSender;
@@ -1202,7 +1199,7 @@ class EmptyProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::Result Send(::fidl::BytePart _request_buffer,
+  ::fidl::Result Send(::fidl::BufferSpan _request_buffer,
                       ::llcpp::fidl::test::emptystruct::Empty e);
 
   // Asynchronous variant of |EmptyProtocol.SendAndReceive()|. Allocates 24
@@ -1214,7 +1211,7 @@ class EmptyProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // the backing storage for FIDL message via request buffer. Ownership of
   // _context is given unsafely to the binding until OnError() or OnReply() are
   // called on it.
-  ::fidl::Result SendAndReceive(::fidl::BytePart _request_buffer,
+  ::fidl::Result SendAndReceive(::fidl::BufferSpan _request_buffer,
                                 ::llcpp::fidl::test::emptystruct::Empty e,
                                 SendAndReceiveResponseContext* _context);
   // Synchronous variant of |EmptyProtocol.SendAndReceive()|. Allocates 48 bytes
@@ -1225,9 +1222,9 @@ class EmptyProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // Synchronous variant of |EmptyProtocol.SendAndReceive()|. Caller provides
   // the backing storage for FIDL message via request and response buffers.
   UnownedResultOf::SendAndReceive SendAndReceive_Sync(
-      ::fidl::BytePart _request_buffer,
+      ::fidl::BufferSpan _request_buffer,
       ::llcpp::fidl::test::emptystruct::Empty e,
-      ::fidl::BytePart _response_buffer);
+      ::fidl::BufferSpan _response_buffer);
 
  private:
   friend class ::fidl::Client<EmptyProtocol>;
@@ -1250,7 +1247,7 @@ class EmptyProtocol::EventSender {
     return ZX_ERR_CANCELED;
   }
 
-  zx_status_t Receive(::fidl::BytePart _buffer,
+  zx_status_t Receive(::fidl::BufferSpan _buffer,
                       ::llcpp::fidl::test::emptystruct::Empty e) const {
     if (auto _binding = binding_.lock()) {
       return SendReceiveEvent(_binding->channel(), std::move(_buffer),

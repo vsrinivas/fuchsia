@@ -188,7 +188,7 @@ TEST(MagicNumberTest, ResponseWrite) {
   auto result = test::Frobinator::Call::Grob(zx::unowned_channel(h1), request.view(),
                                              fidl::unowned_str(s), response.view());
   ASSERT_TRUE(result.ok());
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(response.view().data());
+  auto hdr = reinterpret_cast<fidl_message_header_t*>(response.data());
   ASSERT_EQ(hdr->magic_number, kFidlWireFormatMagicNumberInitial);
 }
 

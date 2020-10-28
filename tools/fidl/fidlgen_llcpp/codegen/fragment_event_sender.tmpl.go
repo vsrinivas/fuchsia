@@ -18,7 +18,8 @@ class {{ .Name }}::EventSender {
 
     {{- if .Response }}
 {{ "" }}
-  zx_status_t {{ .Name }}(::fidl::BytePart _buffer, {{ template "Params" .Response }}) const {
+  zx_status_t {{ .Name }}(::fidl::BufferSpan _buffer,
+                          {{ template "Params" .Response }}) const {
     if (auto _binding = binding_.lock()) {
       return Send{{ .Name }}Event(_binding->channel(), std::move(_buffer), {{ template "SyncClientMoveParams" .Response }});
     }

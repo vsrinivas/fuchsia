@@ -3665,10 +3665,12 @@ class TestProtocol final {
     // response buffers.
     static UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
     StrictXUnionHenceResponseMayBeStackAllocated(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+        ::zx::unowned_channel _client_end
+
+        ,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-          _client_end->get(), _response_buffer.data(),
-          _response_buffer.capacity());
+          _client_end->get(), _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is
@@ -3684,10 +3686,12 @@ class TestProtocol final {
     // response buffers.
     static UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+        ::zx::unowned_channel _client_end
+
+        ,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          _client_end->get(), _response_buffer.data(),
-          _response_buffer.capacity());
+          _client_end->get(), _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -3715,10 +3719,10 @@ class TestProtocol final {
     // response buffers.
     UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
     StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-          this->channel().get(), _response_buffer.data(),
-          _response_buffer.capacity());
+          this->channel().get(), _response_buffer.data,
+          _response_buffer.capacity);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is
@@ -3733,10 +3737,10 @@ class TestProtocol final {
     // response buffers.
     UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          this->channel().get(), _response_buffer.data(),
-          _response_buffer.capacity());
+          this->channel().get(), _response_buffer.data,
+          _response_buffer.capacity);
     }
 
    private:
@@ -3771,7 +3775,7 @@ class TestProtocol final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(::llcpp::fidl::test::union_::StrictBoundedXUnion xu);
-      ::fidl::Result Reply(::fidl::BytePart _buffer,
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer,
                            ::llcpp::fidl::test::union_::StrictBoundedXUnion xu);
 
      protected:
@@ -3800,7 +3804,7 @@ class TestProtocol final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(::llcpp::fidl::test::union_::OlderSimpleUnion xu);
-      ::fidl::Result Reply(::fidl::BytePart _buffer,
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer,
                            ::llcpp::fidl::test::union_::OlderSimpleUnion xu);
 
      protected:
@@ -4449,7 +4453,7 @@ class TestProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // buffers.
   UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
   StrictXUnionHenceResponseMayBeStackAllocated_Sync(
-      ::fidl::BytePart _response_buffer);
+      ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of
   // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Allocates
@@ -4477,7 +4481,7 @@ class TestProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // buffers.
   UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
   FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
-      ::fidl::BytePart _response_buffer);
+      ::fidl::BufferSpan _response_buffer);
 
  private:
   friend class ::fidl::Client<TestProtocol>;

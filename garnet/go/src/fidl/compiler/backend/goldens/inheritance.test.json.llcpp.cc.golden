@@ -58,12 +58,12 @@ super::ResultOf::foo super::ClientImpl::foo_Sync(::fidl::StringView s) {
 }
 
 super::UnownedResultOf::foo super::ClientImpl::foo_Sync(
-    ::fidl::BytePart _request_buffer, ::fidl::StringView s,
-    ::fidl::BytePart _response_buffer) {
+    ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+    ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::foo(
-        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
-        s, _response_buffer.data(), _response_buffer.capacity());
+        _channel->handle(), _request_buffer.data, _request_buffer.capacity, s,
+        _response_buffer.data, _response_buffer.capacity);
   }
   return super::UnownedResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -101,13 +101,13 @@ void super::fooResponseContext::OnReply(uint8_t* reply) {
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-::fidl::Result super::ClientImpl::foo(::fidl::BytePart _request_buffer,
+::fidl::Result super::ClientImpl::foo(::fidl::BufferSpan _request_buffer,
                                       ::fidl::StringView s,
                                       fooResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   fooRequest::UnownedOutgoingMessage _request(
-      _request_buffer.data(), _request_buffer.capacity(), _context->Txid(), s);
+      _request_buffer.data, _request_buffer.capacity, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -170,9 +170,9 @@ namespace entries {
 }
 
 ::fidl::Result super::Interface::fooCompleterBase::Reply(
-    ::fidl::BytePart _buffer, int64_t y) {
-  fooResponse::UnownedOutgoingMessage _response(_buffer.data(),
-                                                _buffer.capacity(), y);
+    ::fidl::BufferSpan _buffer, int64_t y) {
+  fooResponse::UnownedOutgoingMessage _response(_buffer.data, _buffer.capacity,
+                                                y);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -232,12 +232,12 @@ sub::ResultOf::foo sub::ClientImpl::foo_Sync(::fidl::StringView s) {
 }
 
 sub::UnownedResultOf::foo sub::ClientImpl::foo_Sync(
-    ::fidl::BytePart _request_buffer, ::fidl::StringView s,
-    ::fidl::BytePart _response_buffer) {
+    ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+    ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::foo(
-        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
-        s, _response_buffer.data(), _response_buffer.capacity());
+        _channel->handle(), _request_buffer.data, _request_buffer.capacity, s,
+        _response_buffer.data, _response_buffer.capacity);
   }
   return sub::UnownedResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -274,13 +274,13 @@ void sub::fooResponseContext::OnReply(uint8_t* reply) {
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-::fidl::Result sub::ClientImpl::foo(::fidl::BytePart _request_buffer,
+::fidl::Result sub::ClientImpl::foo(::fidl::BufferSpan _request_buffer,
                                     ::fidl::StringView s,
                                     fooResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   fooRequest::UnownedOutgoingMessage _request(
-      _request_buffer.data(), _request_buffer.capacity(), _context->Txid(), s);
+      _request_buffer.data, _request_buffer.capacity, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -341,10 +341,10 @@ namespace entries {
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result sub::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
-                                                       int64_t y) {
-  fooResponse::UnownedOutgoingMessage _response(_buffer.data(),
-                                                _buffer.capacity(), y);
+::fidl::Result sub::Interface::fooCompleterBase::Reply(
+    ::fidl::BufferSpan _buffer, int64_t y) {
+  fooResponse::UnownedOutgoingMessage _response(_buffer.data, _buffer.capacity,
+                                                y);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

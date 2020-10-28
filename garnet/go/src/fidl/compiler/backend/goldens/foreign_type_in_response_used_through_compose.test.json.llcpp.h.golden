@@ -431,11 +431,12 @@ class Top final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    static UnownedResultOf::GetFoo GetFoo(::zx::unowned_channel _client_end,
-                                          ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::GetFoo(_client_end->get(),
-                                     _response_buffer.data(),
-                                     _response_buffer.capacity());
+    static UnownedResultOf::GetFoo GetFoo(::zx::unowned_channel _client_end
+
+                                          ,
+                                          ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::GetFoo(_client_end->get(), _response_buffer.data,
+                                     _response_buffer.capacity);
     }
   };
 
@@ -459,10 +460,10 @@ class Top final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::GetFoo GetFoo(::fidl::BytePart _response_buffer) {
+    UnownedResultOf::GetFoo GetFoo(::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::GetFoo(this->channel().get(),
-                                     _response_buffer.data(),
-                                     _response_buffer.capacity());
+                                     _response_buffer.data,
+                                     _response_buffer.capacity);
     }
 
    private:
@@ -495,7 +496,8 @@ class Top final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(::llcpp::bottom::Foo foo);
-      ::fidl::Result Reply(::fidl::BytePart _buffer, ::llcpp::bottom::Foo foo);
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer,
+                           ::llcpp::bottom::Foo foo);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -590,7 +592,7 @@ class Top::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Synchronous variant of |Top.GetFoo()|. Caller provides the backing storage
   // for FIDL message via request and response buffers.
-  UnownedResultOf::GetFoo GetFoo_Sync(::fidl::BytePart _response_buffer);
+  UnownedResultOf::GetFoo GetFoo_Sync(::fidl::BufferSpan _response_buffer);
 
  private:
   friend class ::fidl::Client<Top>;

@@ -1143,13 +1143,12 @@ class Protocol final {
     // response buffers.
     static UnownedResultOf::RequestStrictResponseFlexible
     RequestStrictResponseFlexible(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestStrictResponseFlexible(
-          _client_end->get(), _request_buffer.data(),
-          _request_buffer.capacity(), s, _response_buffer.data(),
-          _response_buffer.capacity());
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated. Response is heap-allocated.
@@ -1164,13 +1163,12 @@ class Protocol final {
     // response buffers.
     static UnownedResultOf::RequestFlexibleResponseStrict
     RequestFlexibleResponseStrict(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestFlexibleResponseStrict(
-          _client_end->get(), _request_buffer.data(),
-          _request_buffer.capacity(), s, _response_buffer.data(),
-          _response_buffer.capacity());
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -1196,13 +1194,12 @@ class Protocol final {
     // response buffers.
     UnownedResultOf::RequestStrictResponseFlexible
     RequestStrictResponseFlexible(
-        ::fidl::BytePart _request_buffer,
+        ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestStrictResponseFlexible(
-          this->channel().get(), _request_buffer.data(),
-          _request_buffer.capacity(), s, _response_buffer.data(),
-          _response_buffer.capacity());
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          s, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated. Response is heap-allocated.
@@ -1215,13 +1212,12 @@ class Protocol final {
     // response buffers.
     UnownedResultOf::RequestFlexibleResponseStrict
     RequestFlexibleResponseStrict(
-        ::fidl::BytePart _request_buffer,
+        ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestFlexibleResponseStrict(
-          this->channel().get(), _request_buffer.data(),
-          _request_buffer.capacity(), s, _response_buffer.data(),
-          _response_buffer.capacity());
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          s, _response_buffer.data, _response_buffer.capacity);
     }
 
    private:
@@ -1258,7 +1254,7 @@ class Protocol final {
       ::fidl::Result Reply(
           ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f);
       ::fidl::Result Reply(
-          ::fidl::BytePart _buffer,
+          ::fidl::BufferSpan _buffer,
           ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f);
 
      protected:
@@ -1288,7 +1284,7 @@ class Protocol final {
       ::fidl::Result Reply(
           ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f);
       ::fidl::Result Reply(
-          ::fidl::BytePart _buffer,
+          ::fidl::BufferSpan _buffer,
           ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f);
 
      protected:
@@ -1469,7 +1465,7 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // of _context is given unsafely to the binding until OnError() or OnReply()
   // are called on it.
   ::fidl::Result RequestStrictResponseFlexible(
-      ::fidl::BytePart _request_buffer,
+      ::fidl::BufferSpan _request_buffer,
       ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
       RequestStrictResponseFlexibleResponseContext* _context);
   // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|. Request
@@ -1482,9 +1478,9 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // buffers.
   UnownedResultOf::RequestStrictResponseFlexible
   RequestStrictResponseFlexible_Sync(
-      ::fidl::BytePart _request_buffer,
+      ::fidl::BufferSpan _request_buffer,
       ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
-      ::fidl::BytePart _response_buffer);
+      ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|. The
   // request and callback are allocated on the heap.
@@ -1498,7 +1494,7 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // of _context is given unsafely to the binding until OnError() or OnReply()
   // are called on it.
   ::fidl::Result RequestFlexibleResponseStrict(
-      ::fidl::BytePart _request_buffer,
+      ::fidl::BufferSpan _request_buffer,
       ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
       RequestFlexibleResponseStrictResponseContext* _context);
   // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|. Request
@@ -1511,9 +1507,9 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // buffers.
   UnownedResultOf::RequestFlexibleResponseStrict
   RequestFlexibleResponseStrict_Sync(
-      ::fidl::BytePart _request_buffer,
+      ::fidl::BufferSpan _request_buffer,
       ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
-      ::fidl::BytePart _response_buffer);
+      ::fidl::BufferSpan _response_buffer);
 
  private:
   friend class ::fidl::Client<Protocol>;

@@ -1410,13 +1410,12 @@ class SimpleProtocol final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::Add Add(::zx::unowned_channel _client_end,
-                                    ::fidl::BytePart _request_buffer, int32_t a,
-                                    int32_t b,
-                                    ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::Add(_client_end->get(), _request_buffer.data(),
-                                  _request_buffer.capacity(), a, b,
-                                  _response_buffer.data(),
-                                  _response_buffer.capacity());
+                                    ::fidl::BufferSpan _request_buffer,
+                                    int32_t a, int32_t b,
+                                    ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::Add(
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity, a,
+          b, _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -1440,12 +1439,11 @@ class SimpleProtocol final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::Add Add(::fidl::BytePart _request_buffer, int32_t a,
-                             int32_t b, ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::Add(this->channel().get(), _request_buffer.data(),
-                                  _request_buffer.capacity(), a, b,
-                                  _response_buffer.data(),
-                                  _response_buffer.capacity());
+    UnownedResultOf::Add Add(::fidl::BufferSpan _request_buffer, int32_t a,
+                             int32_t b, ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::Add(
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          a, b, _response_buffer.data, _response_buffer.capacity);
     }
 
    private:
@@ -1478,7 +1476,7 @@ class SimpleProtocol final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(int32_t sum);
-      ::fidl::Result Reply(::fidl::BytePart _buffer, int32_t sum);
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer, int32_t sum);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -1821,7 +1819,7 @@ class SimpleProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |SimpleProtocol.Add()|. Caller provides the backing
   // storage for FIDL message via request buffer. Ownership of _context is given
   // unsafely to the binding until OnError() or OnReply() are called on it.
-  ::fidl::Result Add(::fidl::BytePart _request_buffer, int32_t a, int32_t b,
+  ::fidl::Result Add(::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
                      AddResponseContext* _context);
   // Synchronous variant of |SimpleProtocol.Add()|. Allocates 48 bytes of
   // message buffer on the stack. No heap allocation necessary.
@@ -1829,8 +1827,8 @@ class SimpleProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Synchronous variant of |SimpleProtocol.Add()|. Caller provides the backing
   // storage for FIDL message via request and response buffers.
-  UnownedResultOf::Add Add_Sync(::fidl::BytePart _request_buffer, int32_t a,
-                                int32_t b, ::fidl::BytePart _response_buffer);
+  UnownedResultOf::Add Add_Sync(::fidl::BufferSpan _request_buffer, int32_t a,
+                                int32_t b, ::fidl::BufferSpan _response_buffer);
 
  private:
   friend class ::fidl::Client<SimpleProtocol>;

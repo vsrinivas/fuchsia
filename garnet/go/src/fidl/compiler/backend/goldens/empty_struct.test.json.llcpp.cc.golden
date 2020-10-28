@@ -100,12 +100,11 @@ EmptyProtocol::UnownedResultOf::SendAndReceive::SendAndReceive(
 }
 
 ::fidl::Result EmptyProtocol::ClientImpl::Send(
-    ::fidl::BytePart _request_buffer,
+    ::fidl::BufferSpan _request_buffer,
     ::llcpp::fidl::test::emptystruct::Empty e) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res =
-        UnownedResultOf::Send(_channel->handle(), _request_buffer.data(),
-                              _request_buffer.capacity(), e);
+    auto _res = UnownedResultOf::Send(_channel->handle(), _request_buffer.data,
+                                      _request_buffer.capacity, e);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -123,12 +122,13 @@ EmptyProtocol::ClientImpl::SendAndReceive_Sync(
 
 EmptyProtocol::UnownedResultOf::SendAndReceive
 EmptyProtocol::ClientImpl::SendAndReceive_Sync(
-    ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::emptystruct::Empty e,
-    ::fidl::BytePart _response_buffer) {
+    ::fidl::BufferSpan _request_buffer,
+    ::llcpp::fidl::test::emptystruct::Empty e,
+    ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::SendAndReceive(
-        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
-        e, _response_buffer.data(), _response_buffer.capacity());
+        _channel->handle(), _request_buffer.data, _request_buffer.capacity, e,
+        _response_buffer.data, _response_buffer.capacity);
   }
   return EmptyProtocol::UnownedResultOf::SendAndReceive(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -171,12 +171,13 @@ void EmptyProtocol::SendAndReceiveResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result EmptyProtocol::ClientImpl::SendAndReceive(
-    ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::emptystruct::Empty e,
+    ::fidl::BufferSpan _request_buffer,
+    ::llcpp::fidl::test::emptystruct::Empty e,
     SendAndReceiveResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   SendAndReceiveRequest::UnownedOutgoingMessage _request(
-      _request_buffer.data(), _request_buffer.capacity(), _context->Txid(), e);
+      _request_buffer.data, _request_buffer.capacity, _context->Txid(), e);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -236,7 +237,7 @@ std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
     return x;
   })();
   ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
-  uint8_t* read_bytes = read_storage.buffer().data();
+  uint8_t* read_bytes = read_storage.data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -345,10 +346,10 @@ zx_status_t EmptyProtocol::SendReceiveEvent(
 }
 
 zx_status_t EmptyProtocol::SendReceiveEvent(
-    ::zx::unowned_channel _channel, ::fidl::BytePart _buffer,
+    ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer,
     ::llcpp::fidl::test::emptystruct::Empty e) {
-  ReceiveResponse::UnownedOutgoingMessage _response(_buffer.data(),
-                                                    _buffer.capacity(), e);
+  ReceiveResponse::UnownedOutgoingMessage _response(_buffer.data,
+                                                    _buffer.capacity, e);
   _response.Write(_channel->get());
   return _response.status();
 }
@@ -360,9 +361,9 @@ zx_status_t EmptyProtocol::SendReceiveEvent(
 }
 
 ::fidl::Result EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
-    ::fidl::BytePart _buffer, ::llcpp::fidl::test::emptystruct::Empty e) {
-  SendAndReceiveResponse::UnownedOutgoingMessage _response(
-      _buffer.data(), _buffer.capacity(), e);
+    ::fidl::BufferSpan _buffer, ::llcpp::fidl::test::emptystruct::Empty e) {
+  SendAndReceiveResponse::UnownedOutgoingMessage _response(_buffer.data,
+                                                           _buffer.capacity, e);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

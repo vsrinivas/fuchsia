@@ -146,11 +146,10 @@ Parent::ResultOf::GetChild Parent::ClientImpl::GetChild_Sync() {
 }
 
 Parent::UnownedResultOf::GetChild Parent::ClientImpl::GetChild_Sync(
-    ::fidl::BytePart _response_buffer) {
+    ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return UnownedResultOf::GetChild(_channel->handle(),
-                                     _response_buffer.data(),
-                                     _response_buffer.capacity());
+    return UnownedResultOf::GetChild(_channel->handle(), _response_buffer.data,
+                                     _response_buffer.capacity);
   }
   return Parent::UnownedResultOf::GetChild(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -207,11 +206,10 @@ Parent::ResultOf::GetChildRequest Parent::ClientImpl::GetChildRequest_Sync() {
 }
 
 Parent::UnownedResultOf::GetChildRequest
-Parent::ClientImpl::GetChildRequest_Sync(::fidl::BytePart _response_buffer) {
+Parent::ClientImpl::GetChildRequest_Sync(::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return UnownedResultOf::GetChildRequest(_channel->handle(),
-                                            _response_buffer.data(),
-                                            _response_buffer.capacity());
+    return UnownedResultOf::GetChildRequest(
+        _channel->handle(), _response_buffer.data, _response_buffer.capacity);
   }
   return Parent::UnownedResultOf::GetChildRequest(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -268,12 +266,11 @@ void Parent::GetChildRequestResponseContext::OnReply(uint8_t* reply) {
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-::fidl::Result Parent::ClientImpl::TakeChild(::fidl::BytePart _request_buffer,
+::fidl::Result Parent::ClientImpl::TakeChild(::fidl::BufferSpan _request_buffer,
                                              ::zx::channel c) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res =
-        UnownedResultOf::TakeChild(_channel->handle(), _request_buffer.data(),
-                                   _request_buffer.capacity(), c);
+    auto _res = UnownedResultOf::TakeChild(
+        _channel->handle(), _request_buffer.data, _request_buffer.capacity, c);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -288,11 +285,10 @@ void Parent::GetChildRequestResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result Parent::ClientImpl::TakeChildRequest(
-    ::fidl::BytePart _request_buffer, ::zx::channel r) {
+    ::fidl::BufferSpan _request_buffer, ::zx::channel r) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::TakeChildRequest(
-        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
-        r);
+        _channel->handle(), _request_buffer.data, _request_buffer.capacity, r);
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -386,9 +382,9 @@ namespace entries {
 }
 
 ::fidl::Result Parent::Interface::GetChildCompleterBase::Reply(
-    ::fidl::BytePart _buffer, ::zx::channel c) {
-  GetChildResponse::UnownedOutgoingMessage _response(_buffer.data(),
-                                                     _buffer.capacity(), c);
+    ::fidl::BufferSpan _buffer, ::zx::channel c) {
+  GetChildResponse::UnownedOutgoingMessage _response(_buffer.data,
+                                                     _buffer.capacity, c);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -399,9 +395,9 @@ namespace entries {
 }
 
 ::fidl::Result Parent::Interface::GetChildRequestCompleterBase::Reply(
-    ::fidl::BytePart _buffer, ::zx::channel r) {
+    ::fidl::BufferSpan _buffer, ::zx::channel r) {
   GetChildRequestResponse::UnownedOutgoingMessage _response(
-      _buffer.data(), _buffer.capacity(), r);
+      _buffer.data, _buffer.capacity, r);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

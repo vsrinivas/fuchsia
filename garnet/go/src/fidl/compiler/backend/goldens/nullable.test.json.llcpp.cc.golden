@@ -75,12 +75,12 @@ SimpleProtocol::ResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(int32_t a,
 }
 
 SimpleProtocol::UnownedResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(
-    ::fidl::BytePart _request_buffer, int32_t a, int32_t b,
-    ::fidl::BytePart _response_buffer) {
+    ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
+    ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::Add(
-        _channel->handle(), _request_buffer.data(), _request_buffer.capacity(),
-        a, b, _response_buffer.data(), _response_buffer.capacity());
+        _channel->handle(), _request_buffer.data, _request_buffer.capacity, a,
+        b, _response_buffer.data, _response_buffer.capacity);
   }
   return SimpleProtocol::UnownedResultOf::Add(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -119,14 +119,13 @@ void SimpleProtocol::AddResponseContext::OnReply(uint8_t* reply) {
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-::fidl::Result SimpleProtocol::ClientImpl::Add(::fidl::BytePart _request_buffer,
-                                               int32_t a, int32_t b,
-                                               AddResponseContext* _context) {
+::fidl::Result SimpleProtocol::ClientImpl::Add(
+    ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
+    AddResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  AddRequest::UnownedOutgoingMessage _request(_request_buffer.data(),
-                                              _request_buffer.capacity(),
-                                              _context->Txid(), a, b);
+  AddRequest::UnownedOutgoingMessage _request(
+      _request_buffer.data, _request_buffer.capacity, _context->Txid(), a, b);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -191,9 +190,9 @@ namespace entries {
 }
 
 ::fidl::Result SimpleProtocol::Interface::AddCompleterBase::Reply(
-    ::fidl::BytePart _buffer, int32_t sum) {
-  AddResponse::UnownedOutgoingMessage _response(_buffer.data(),
-                                                _buffer.capacity(), sum);
+    ::fidl::BufferSpan _buffer, int32_t sum) {
+  AddResponse::UnownedOutgoingMessage _response(_buffer.data, _buffer.capacity,
+                                                sum);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

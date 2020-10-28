@@ -1549,14 +1549,12 @@ class Transitional final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    static UnownedResultOf::Request Request(::zx::unowned_channel _client_end,
-                                            ::fidl::BytePart _request_buffer,
-                                            int64_t x,
-                                            ::fidl::BytePart _response_buffer) {
+    static UnownedResultOf::Request Request(
+        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
+        int64_t x, ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::Request(
-          _client_end->get(), _request_buffer.data(),
-          _request_buffer.capacity(), x, _response_buffer.data(),
-          _response_buffer.capacity());
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity, x,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
@@ -1569,10 +1567,10 @@ class Transitional final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::OneWay OneWay(::zx::unowned_channel _client_end,
-                                          ::fidl::BytePart _request_buffer,
+                                          ::fidl::BufferSpan _request_buffer,
                                           int64_t x) {
-      return UnownedResultOf::OneWay(_client_end->get(), _request_buffer.data(),
-                                     _request_buffer.capacity(), x);
+      return UnownedResultOf::OneWay(_client_end->get(), _request_buffer.data,
+                                     _request_buffer.capacity, x);
     }
 
     // Handle all possible events defined in this protocol.
@@ -1604,13 +1602,12 @@ class Transitional final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::Request Request(::fidl::BytePart _request_buffer,
+    UnownedResultOf::Request Request(::fidl::BufferSpan _request_buffer,
                                      int64_t x,
-                                     ::fidl::BytePart _response_buffer) {
+                                     ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::Request(
-          this->channel().get(), _request_buffer.data(),
-          _request_buffer.capacity(), x, _response_buffer.data(),
-          _response_buffer.capacity());
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          x, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
@@ -1621,11 +1618,11 @@ class Transitional final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::OneWay OneWay(::fidl::BytePart _request_buffer,
+    UnownedResultOf::OneWay OneWay(::fidl::BufferSpan _request_buffer,
                                    int64_t x) {
       return UnownedResultOf::OneWay(this->channel().get(),
-                                     _request_buffer.data(),
-                                     _request_buffer.capacity(), x);
+                                     _request_buffer.data,
+                                     _request_buffer.capacity, x);
     }
 
     // Handle all possible events defined in this protocol.
@@ -1667,7 +1664,7 @@ class Transitional final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(int64_t y);
-      ::fidl::Result Reply(::fidl::BytePart _buffer, int64_t y);
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t y);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -1716,7 +1713,7 @@ class Transitional final {
 
   // Caller provides the backing storage for FIDL message via response buffers.
   static zx_status_t SendEventEvent(::zx::unowned_channel _channel,
-                                    ::fidl::BytePart _buffer, int64_t x);
+                                    ::fidl::BufferSpan _buffer, int64_t x);
 
   class EventSender;
 };
@@ -2857,11 +2854,10 @@ class ChannelProtocol final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::MethodA MethodA(::zx::unowned_channel _client_end,
-                                            ::fidl::BytePart _request_buffer,
+                                            ::fidl::BufferSpan _request_buffer,
                                             int64_t a, int64_t b) {
-      return UnownedResultOf::MethodA(_client_end->get(),
-                                      _request_buffer.data(),
-                                      _request_buffer.capacity(), a, b);
+      return UnownedResultOf::MethodA(_client_end->get(), _request_buffer.data,
+                                      _request_buffer.capacity, a, b);
     }
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation
@@ -2873,14 +2869,12 @@ class ChannelProtocol final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    static UnownedResultOf::MethodB MethodB(::zx::unowned_channel _client_end,
-                                            ::fidl::BytePart _request_buffer,
-                                            int64_t a, int64_t b,
-                                            ::fidl::BytePart _response_buffer) {
+    static UnownedResultOf::MethodB MethodB(
+        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
+        int64_t a, int64_t b, ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::MethodB(
-          _client_end->get(), _request_buffer.data(),
-          _request_buffer.capacity(), a, b, _response_buffer.data(),
-          _response_buffer.capacity());
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity, a,
+          b, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -2893,12 +2887,11 @@ class ChannelProtocol final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::MutateSocket MutateSocket(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-        ::zx::socket a, ::fidl::BytePart _response_buffer) {
+        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
+        ::zx::socket a, ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::MutateSocket(
-          _client_end->get(), _request_buffer.data(),
-          _request_buffer.capacity(), a, _response_buffer.data(),
-          _response_buffer.capacity());
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity, a,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Handle all possible events defined in this protocol.
@@ -2930,11 +2923,11 @@ class ChannelProtocol final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::MethodA MethodA(::fidl::BytePart _request_buffer,
+    UnownedResultOf::MethodA MethodA(::fidl::BufferSpan _request_buffer,
                                      int64_t a, int64_t b) {
       return UnownedResultOf::MethodA(this->channel().get(),
-                                      _request_buffer.data(),
-                                      _request_buffer.capacity(), a, b);
+                                      _request_buffer.data,
+                                      _request_buffer.capacity, a, b);
     }
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation
@@ -2945,13 +2938,12 @@ class ChannelProtocol final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::MethodB MethodB(::fidl::BytePart _request_buffer,
+    UnownedResultOf::MethodB MethodB(::fidl::BufferSpan _request_buffer,
                                      int64_t a, int64_t b,
-                                     ::fidl::BytePart _response_buffer) {
+                                     ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::MethodB(
-          this->channel().get(), _request_buffer.data(),
-          _request_buffer.capacity(), a, b, _response_buffer.data(),
-          _response_buffer.capacity());
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          a, b, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -2963,12 +2955,11 @@ class ChannelProtocol final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::MutateSocket MutateSocket(
-        ::fidl::BytePart _request_buffer, ::zx::socket a,
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _request_buffer, ::zx::socket a,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::MutateSocket(
-          this->channel().get(), _request_buffer.data(),
-          _request_buffer.capacity(), a, _response_buffer.data(),
-          _response_buffer.capacity());
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          a, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Handle all possible events defined in this protocol.
@@ -3016,7 +3007,7 @@ class ChannelProtocol final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(int64_t result);
-      ::fidl::Result Reply(::fidl::BytePart _buffer, int64_t result);
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t result);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -3040,7 +3031,7 @@ class ChannelProtocol final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(::zx::socket b);
-      ::fidl::Result Reply(::fidl::BytePart _buffer, ::zx::socket b);
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::zx::socket b);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -3083,7 +3074,7 @@ class ChannelProtocol final {
 
   // Caller provides the backing storage for FIDL message via response buffers.
   static zx_status_t SendEventAEvent(::zx::unowned_channel _channel,
-                                     ::fidl::BytePart _buffer, int64_t a,
+                                     ::fidl::BufferSpan _buffer, int64_t a,
                                      int64_t b);
 
   class EventSender;
@@ -5354,10 +5345,12 @@ class WithAndWithoutRequestResponse final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+        ::zx::unowned_channel _client_end
+
+        ,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::NoRequestWithResponse(
-          _client_end->get(), _response_buffer.data(),
-          _response_buffer.capacity());
+          _client_end->get(), _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated.
@@ -5369,11 +5362,11 @@ class WithAndWithoutRequestResponse final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
         ::fidl::StringView arg) {
       return UnownedResultOf::WithRequestNoResponse(
-          _client_end->get(), _request_buffer.data(),
-          _request_buffer.capacity(), arg);
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity,
+          arg);
     }
 
     // Allocates 16 bytes of response buffer on the stack. Request is
@@ -5386,12 +5379,11 @@ class WithAndWithoutRequestResponse final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-        ::fidl::StringView arg, ::fidl::BytePart _response_buffer) {
+        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
+        ::fidl::StringView arg, ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::WithRequestEmptyResponse(
-          _client_end->get(), _request_buffer.data(),
-          _request_buffer.capacity(), arg, _response_buffer.data(),
-          _response_buffer.capacity());
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity,
+          arg, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated. Response is heap-allocated.
@@ -5403,12 +5395,11 @@ class WithAndWithoutRequestResponse final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-        ::fidl::StringView arg, ::fidl::BytePart _response_buffer) {
+        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
+        ::fidl::StringView arg, ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::WithRequestWithResponse(
-          _client_end->get(), _request_buffer.data(),
-          _request_buffer.capacity(), arg, _response_buffer.data(),
-          _response_buffer.capacity());
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity,
+          arg, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Handle all possible events defined in this protocol.
@@ -5453,10 +5444,10 @@ class WithAndWithoutRequestResponse final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(
-        ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::NoRequestWithResponse(
-          this->channel().get(), _response_buffer.data(),
-          _response_buffer.capacity());
+        ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::NoRequestWithResponse(this->channel().get(),
+                                                    _response_buffer.data,
+                                                    _response_buffer.capacity);
     }
 
     // Request is heap-allocated.
@@ -5468,10 +5459,10 @@ class WithAndWithoutRequestResponse final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(
-        ::fidl::BytePart _request_buffer, ::fidl::StringView arg) {
+        ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg) {
       return UnownedResultOf::WithRequestNoResponse(
-          this->channel().get(), _request_buffer.data(),
-          _request_buffer.capacity(), arg);
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          arg);
     }
 
     // Allocates 16 bytes of response buffer on the stack. Request is
@@ -5484,12 +5475,11 @@ class WithAndWithoutRequestResponse final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
-        ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::WithRequestEmptyResponse(
-          this->channel().get(), _request_buffer.data(),
-          _request_buffer.capacity(), arg, _response_buffer.data(),
-          _response_buffer.capacity());
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          arg, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated. Response is heap-allocated.
@@ -5501,12 +5491,11 @@ class WithAndWithoutRequestResponse final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(
-        ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::WithRequestWithResponse(
-          this->channel().get(), _request_buffer.data(),
-          _request_buffer.capacity(), arg, _response_buffer.data(),
-          _response_buffer.capacity());
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          arg, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Handle all possible events defined in this protocol.
@@ -5580,7 +5569,7 @@ class WithAndWithoutRequestResponse final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(::fidl::StringView ret);
-      ::fidl::Result Reply(::fidl::BytePart _buffer, ::fidl::StringView ret);
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::fidl::StringView ret);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -5636,7 +5625,7 @@ class WithAndWithoutRequestResponse final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(::fidl::StringView ret);
-      ::fidl::Result Reply(::fidl::BytePart _buffer, ::fidl::StringView ret);
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::fidl::StringView ret);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -5683,7 +5672,7 @@ class WithAndWithoutRequestResponse final {
 
   // Caller provides the backing storage for FIDL message via response buffers.
   static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _channel,
-                                             ::fidl::BytePart _buffer,
+                                             ::fidl::BufferSpan _buffer,
                                              ::fidl::StringView ret);
 
   class EventSender;
@@ -6831,10 +6820,12 @@ class WithErrorSyntax final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::ResponseAsStruct ResponseAsStruct(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::ResponseAsStruct(_client_end->get(),
-                                               _response_buffer.data(),
-                                               _response_buffer.capacity());
+        ::zx::unowned_channel _client_end
+
+        ,
+        ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::ResponseAsStruct(
+          _client_end->get(), _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation
@@ -6847,10 +6838,12 @@ class WithErrorSyntax final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::ErrorAsPrimitive(_client_end->get(),
-                                               _response_buffer.data(),
-                                               _response_buffer.capacity());
+        ::zx::unowned_channel _client_end
+
+        ,
+        ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::ErrorAsPrimitive(
+          _client_end->get(), _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation
@@ -6863,10 +6856,12 @@ class WithErrorSyntax final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::ErrorAsEnum ErrorAsEnum(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::ErrorAsEnum(_client_end->get(),
-                                          _response_buffer.data(),
-                                          _response_buffer.capacity());
+        ::zx::unowned_channel _client_end
+
+        ,
+        ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::ErrorAsEnum(
+          _client_end->get(), _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -6891,10 +6886,10 @@ class WithErrorSyntax final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::ResponseAsStruct ResponseAsStruct(
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::ResponseAsStruct(this->channel().get(),
-                                               _response_buffer.data(),
-                                               _response_buffer.capacity());
+                                               _response_buffer.data,
+                                               _response_buffer.capacity);
     }
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation
@@ -6906,10 +6901,10 @@ class WithErrorSyntax final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::ErrorAsPrimitive(this->channel().get(),
-                                               _response_buffer.data(),
-                                               _response_buffer.capacity());
+                                               _response_buffer.data,
+                                               _response_buffer.capacity);
     }
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation
@@ -6921,10 +6916,10 @@ class WithErrorSyntax final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::ErrorAsEnum ErrorAsEnum(
-        ::fidl::BytePart _response_buffer) {
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::ErrorAsEnum(this->channel().get(),
-                                          _response_buffer.data(),
-                                          _response_buffer.capacity());
+                                          _response_buffer.data,
+                                          _response_buffer.capacity);
     }
 
    private:
@@ -6962,10 +6957,10 @@ class WithErrorSyntax final {
                                WithErrorSyntax_ResponseAsStruct_Result result);
       ::fidl::Result ReplySuccess(int64_t a, int64_t b, int64_t c);
       ::fidl::Result ReplyError(uint32_t error);
-      ::fidl::Result Reply(::fidl::BytePart _buffer,
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer,
                            ::llcpp::fidl::test::protocols::
                                WithErrorSyntax_ResponseAsStruct_Result result);
-      ::fidl::Result ReplySuccess(::fidl::BytePart _buffer, int64_t a,
+      ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int64_t a,
                                   int64_t b, int64_t c);
 
      protected:
@@ -6994,10 +6989,10 @@ class WithErrorSyntax final {
                                WithErrorSyntax_ErrorAsPrimitive_Result result);
       ::fidl::Result ReplySuccess();
       ::fidl::Result ReplyError(uint32_t error);
-      ::fidl::Result Reply(::fidl::BytePart _buffer,
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer,
                            ::llcpp::fidl::test::protocols::
                                WithErrorSyntax_ErrorAsPrimitive_Result result);
-      ::fidl::Result ReplySuccess(::fidl::BytePart _buffer);
+      ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -7027,10 +7022,10 @@ class WithErrorSyntax final {
       ::fidl::Result ReplySuccess();
       ::fidl::Result ReplyError(ErrorEnun error);
       ::fidl::Result Reply(
-          ::fidl::BytePart _buffer,
+          ::fidl::BufferSpan _buffer,
           ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result
               result);
-      ::fidl::Result ReplySuccess(::fidl::BytePart _buffer);
+      ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -7664,7 +7659,7 @@ class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
   // backing storage for FIDL message via request buffer. Ownership of _context
   // is given unsafely to the binding until OnError() or OnReply() are called on
   // it.
-  ::fidl::Result Request(::fidl::BytePart _request_buffer, int64_t x,
+  ::fidl::Result Request(::fidl::BufferSpan _request_buffer, int64_t x,
                          RequestResponseContext* _context);
   // Synchronous variant of |Transitional.Request()|. Allocates 48 bytes of
   // message buffer on the stack. No heap allocation necessary.
@@ -7672,9 +7667,9 @@ class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Synchronous variant of |Transitional.Request()|. Caller provides the
   // backing storage for FIDL message via request and response buffers.
-  UnownedResultOf::Request Request_Sync(::fidl::BytePart _request_buffer,
+  UnownedResultOf::Request Request_Sync(::fidl::BufferSpan _request_buffer,
                                         int64_t x,
-                                        ::fidl::BytePart _response_buffer);
+                                        ::fidl::BufferSpan _response_buffer);
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -7682,7 +7677,7 @@ class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::Result OneWay(::fidl::BytePart _request_buffer, int64_t x);
+  ::fidl::Result OneWay(::fidl::BufferSpan _request_buffer, int64_t x);
 
  private:
   friend class ::fidl::Client<Transitional>;
@@ -7705,7 +7700,7 @@ class Transitional::EventSender {
     return ZX_ERR_CANCELED;
   }
 
-  zx_status_t Event(::fidl::BytePart _buffer, int64_t x) const {
+  zx_status_t Event(::fidl::BufferSpan _buffer, int64_t x) const {
     if (auto _binding = binding_.lock()) {
       return SendEventEvent(_binding->channel(), std::move(_buffer),
                             std::move(x));
@@ -7757,7 +7752,7 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::Result MethodA(::fidl::BytePart _request_buffer, int64_t a,
+  ::fidl::Result MethodA(::fidl::BufferSpan _request_buffer, int64_t a,
                          int64_t b);
 
   // Asynchronous variant of |ChannelProtocol.MethodB()|. Allocates 32 bytes of
@@ -7768,17 +7763,17 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // backing storage for FIDL message via request buffer. Ownership of _context
   // is given unsafely to the binding until OnError() or OnReply() are called on
   // it.
-  ::fidl::Result MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b,
-                         MethodBResponseContext* _context);
+  ::fidl::Result MethodB(::fidl::BufferSpan _request_buffer, int64_t a,
+                         int64_t b, MethodBResponseContext* _context);
   // Synchronous variant of |ChannelProtocol.MethodB()|. Allocates 56 bytes of
   // message buffer on the stack. No heap allocation necessary.
   ResultOf::MethodB MethodB_Sync(int64_t a, int64_t b);
 
   // Synchronous variant of |ChannelProtocol.MethodB()|. Caller provides the
   // backing storage for FIDL message via request and response buffers.
-  UnownedResultOf::MethodB MethodB_Sync(::fidl::BytePart _request_buffer,
+  UnownedResultOf::MethodB MethodB_Sync(::fidl::BufferSpan _request_buffer,
                                         int64_t a, int64_t b,
-                                        ::fidl::BytePart _response_buffer);
+                                        ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of |ChannelProtocol.MutateSocket()|. Allocates 24
   // bytes of request buffer on the stack. The callback is stored on the heap.
@@ -7788,7 +7783,8 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // the backing storage for FIDL message via request buffer. Ownership of
   // _context is given unsafely to the binding until OnError() or OnReply() are
   // called on it.
-  ::fidl::Result MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a,
+  ::fidl::Result MutateSocket(::fidl::BufferSpan _request_buffer,
+                              ::zx::socket a,
                               MutateSocketResponseContext* _context);
   // Synchronous variant of |ChannelProtocol.MutateSocket()|. Allocates 48 bytes
   // of message buffer on the stack. No heap allocation necessary.
@@ -7797,8 +7793,8 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // Synchronous variant of |ChannelProtocol.MutateSocket()|. Caller provides
   // the backing storage for FIDL message via request and response buffers.
   UnownedResultOf::MutateSocket MutateSocket_Sync(
-      ::fidl::BytePart _request_buffer, ::zx::socket a,
-      ::fidl::BytePart _response_buffer);
+      ::fidl::BufferSpan _request_buffer, ::zx::socket a,
+      ::fidl::BufferSpan _response_buffer);
 
  private:
   friend class ::fidl::Client<ChannelProtocol>;
@@ -7821,7 +7817,7 @@ class ChannelProtocol::EventSender {
     return ZX_ERR_CANCELED;
   }
 
-  zx_status_t EventA(::fidl::BytePart _buffer, int64_t a, int64_t b) const {
+  zx_status_t EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const {
     if (auto _binding = binding_.lock()) {
       return SendEventAEvent(_binding->channel(), std::move(_buffer),
                              std::move(a), std::move(b));
@@ -7941,14 +7937,14 @@ class WithAndWithoutRequestResponse::ClientImpl final
   // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Caller provides
   // the backing storage for FIDL message via request and response buffers.
   UnownedResultOf::NoRequestWithResponse NoRequestWithResponse_Sync(
-      ::fidl::BytePart _response_buffer);
+      ::fidl::BufferSpan _response_buffer);
 
   // Request is heap-allocated.
   ::fidl::Result WithRequestNoResponse(::fidl::StringView arg);
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::Result WithRequestNoResponse(::fidl::BytePart _request_buffer,
+  ::fidl::Result WithRequestNoResponse(::fidl::BufferSpan _request_buffer,
                                        ::fidl::StringView arg);
 
   // Asynchronous variant of
@@ -7962,7 +7958,7 @@ class WithAndWithoutRequestResponse::ClientImpl final
   // _context is given unsafely to the binding until OnError() or OnReply() are
   // called on it.
   ::fidl::Result WithRequestEmptyResponse(
-      ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
+      ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
       WithRequestEmptyResponseResponseContext* _context);
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Allocates 16
@@ -7974,8 +7970,8 @@ class WithAndWithoutRequestResponse::ClientImpl final
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Caller provides
   // the backing storage for FIDL message via request and response buffers.
   UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse_Sync(
-      ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
-      ::fidl::BytePart _response_buffer);
+      ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
+      ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. The request and
@@ -7989,7 +7985,7 @@ class WithAndWithoutRequestResponse::ClientImpl final
   // _context is given unsafely to the binding until OnError() or OnReply() are
   // called on it.
   ::fidl::Result WithRequestWithResponse(
-      ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
+      ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
       WithRequestWithResponseResponseContext* _context);
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. Request is
@@ -8001,8 +7997,8 @@ class WithAndWithoutRequestResponse::ClientImpl final
   // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. Caller provides
   // the backing storage for FIDL message via request and response buffers.
   UnownedResultOf::WithRequestWithResponse WithRequestWithResponse_Sync(
-      ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
-      ::fidl::BytePart _response_buffer);
+      ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
+      ::fidl::BufferSpan _response_buffer);
 
  private:
   friend class ::fidl::Client<WithAndWithoutRequestResponse>;
@@ -8032,7 +8028,7 @@ class WithAndWithoutRequestResponse::EventSender {
     return ZX_ERR_CANCELED;
   }
 
-  zx_status_t OnWithResponse(::fidl::BytePart _buffer,
+  zx_status_t OnWithResponse(::fidl::BufferSpan _buffer,
                              ::fidl::StringView ret) const {
     if (auto _binding = binding_.lock()) {
       return SendOnWithResponseEvent(_binding->channel(), std::move(_buffer),
@@ -8107,7 +8103,7 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
   // provides the backing storage for FIDL message via request and response
   // buffers.
   UnownedResultOf::ResponseAsStruct ResponseAsStruct_Sync(
-      ::fidl::BytePart _response_buffer);
+      ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|. Allocates 16
   // bytes of request buffer on the stack. The callback is stored on the heap.
@@ -8128,7 +8124,7 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
   // provides the backing storage for FIDL message via request and response
   // buffers.
   UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive_Sync(
-      ::fidl::BytePart _response_buffer);
+      ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|. Allocates 16 bytes
   // of request buffer on the stack. The callback is stored on the heap.
@@ -8148,7 +8144,7 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
   // Synchronous variant of |WithErrorSyntax.ErrorAsEnum()|. Caller provides the
   // backing storage for FIDL message via request and response buffers.
   UnownedResultOf::ErrorAsEnum ErrorAsEnum_Sync(
-      ::fidl::BytePart _response_buffer);
+      ::fidl::BufferSpan _response_buffer);
 
  private:
   friend class ::fidl::Client<WithErrorSyntax>;

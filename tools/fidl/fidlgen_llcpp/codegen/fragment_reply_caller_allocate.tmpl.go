@@ -6,12 +6,13 @@ package codegen
 
 const fragmentReplyCallerAllocateTmpl = `
 {{- define "ReplyCallerAllocateMethodSignature" -}}
-Reply(::fidl::BytePart _buffer {{- if .Response }}, {{ end }}{{ template "Params" .Response }})
+Reply(::fidl::BufferSpan _buffer {{- if .Response }}, {{ end }}
+      {{ template "Params" .Response }})
 {{- end }}
 
 {{- define "ReplyCallerAllocateMethodDefinition" }}
 ::fidl::Result {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCallerAllocateMethodSignature" . }} {
-  {{ .Name }}Response::UnownedOutgoingMessage _response(_buffer.data(), _buffer.capacity()
+  {{ .Name }}Response::UnownedOutgoingMessage _response(_buffer.data, _buffer.capacity
   {{- template "CommaPassthroughMessageParams" .Response -}}
   );
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -19,7 +20,8 @@ Reply(::fidl::BytePart _buffer {{- if .Response }}, {{ end }}{{ template "Params
 {{- end }}
 
 {{- define "ReplyCallerAllocateResultSuccessMethodSignature" -}}
-ReplySuccess(::fidl::BytePart _buffer {{- if .Result.ValueMembers }}, {{ end }}{{ template "Params" .Result.ValueMembers }})
+ReplySuccess(::fidl::BufferSpan _buffer {{- if .Result.ValueMembers }}, {{ end }}
+             {{ template "Params" .Result.ValueMembers }})
 {{- end }}
 
 {{- define "ReplyCallerAllocateResultSuccessMethodDefinition" }}

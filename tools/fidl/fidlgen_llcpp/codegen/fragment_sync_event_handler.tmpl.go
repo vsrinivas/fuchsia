@@ -35,7 +35,7 @@ const fragmentSyncEventHandlerTmpl = `
     return x;
   })();
   ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
-  uint8_t* read_bytes = read_storage.buffer().data();
+  uint8_t* read_bytes = read_storage.data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;

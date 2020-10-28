@@ -12,10 +12,10 @@ const fragmentClientSyncMethodsTmpl = `
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::{{ .Name }}(_channel->handle()
     {{- if .Request -}}
-      , _request_buffer.data(), _request_buffer.capacity()
+      , _request_buffer.data, _request_buffer.capacity
     {{- end -}}
       {{- template "CommaPassthroughMessageParams" .Request -}},
-      _response_buffer.data(), _response_buffer.capacity());
+      _response_buffer.data, _response_buffer.capacity);
   }
   return {{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}(
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -25,7 +25,7 @@ const fragmentClientSyncMethodsTmpl = `
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::{{ .Name }}(_channel->handle()
     {{- if .Request -}}
-      , _request_buffer.data(), _request_buffer.capacity()
+      , _request_buffer.data, _request_buffer.capacity
     {{- end }}
       {{- template "CommaPassthroughMessageParams" .Request -}});
     return ::fidl::Result(_res.status(), _res.error());

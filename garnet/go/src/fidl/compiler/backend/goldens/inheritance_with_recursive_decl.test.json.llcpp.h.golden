@@ -265,10 +265,10 @@ class Parent final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::First First(::zx::unowned_channel _client_end,
-                                        ::fidl::BytePart _request_buffer,
+                                        ::fidl::BufferSpan _request_buffer,
                                         ::zx::channel request) {
-      return UnownedResultOf::First(_client_end->get(), _request_buffer.data(),
-                                    _request_buffer.capacity(), request);
+      return UnownedResultOf::First(_client_end->get(), _request_buffer.data,
+                                    _request_buffer.capacity, request);
     }
   };
 
@@ -292,11 +292,10 @@ class Parent final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::First First(::fidl::BytePart _request_buffer,
+    UnownedResultOf::First First(::fidl::BufferSpan _request_buffer,
                                  ::zx::channel request) {
-      return UnownedResultOf::First(this->channel().get(),
-                                    _request_buffer.data(),
-                                    _request_buffer.capacity(), request);
+      return UnownedResultOf::First(this->channel().get(), _request_buffer.data,
+                                    _request_buffer.capacity, request);
     }
 
    private:
@@ -760,10 +759,10 @@ class Child final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::First First(::zx::unowned_channel _client_end,
-                                        ::fidl::BytePart _request_buffer,
+                                        ::fidl::BufferSpan _request_buffer,
                                         ::zx::channel request) {
-      return UnownedResultOf::First(_client_end->get(), _request_buffer.data(),
-                                    _request_buffer.capacity(), request);
+      return UnownedResultOf::First(_client_end->get(), _request_buffer.data,
+                                    _request_buffer.capacity, request);
     }
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
@@ -776,10 +775,10 @@ class Child final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::Second Second(::zx::unowned_channel _client_end,
-                                          ::fidl::BytePart _request_buffer,
+                                          ::fidl::BufferSpan _request_buffer,
                                           ::zx::channel request) {
-      return UnownedResultOf::Second(_client_end->get(), _request_buffer.data(),
-                                     _request_buffer.capacity(), request);
+      return UnownedResultOf::Second(_client_end->get(), _request_buffer.data,
+                                     _request_buffer.capacity, request);
     }
   };
 
@@ -803,11 +802,10 @@ class Child final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::First First(::fidl::BytePart _request_buffer,
+    UnownedResultOf::First First(::fidl::BufferSpan _request_buffer,
                                  ::zx::channel request) {
-      return UnownedResultOf::First(this->channel().get(),
-                                    _request_buffer.data(),
-                                    _request_buffer.capacity(), request);
+      return UnownedResultOf::First(this->channel().get(), _request_buffer.data,
+                                    _request_buffer.capacity, request);
     }
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
@@ -818,11 +816,11 @@ class Child final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::Second Second(::fidl::BytePart _request_buffer,
+    UnownedResultOf::Second Second(::fidl::BufferSpan _request_buffer,
                                    ::zx::channel request) {
       return UnownedResultOf::Second(this->channel().get(),
-                                     _request_buffer.data(),
-                                     _request_buffer.capacity(), request);
+                                     _request_buffer.data,
+                                     _request_buffer.capacity, request);
     }
 
    private:
@@ -957,7 +955,8 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::Result First(::fidl::BytePart _request_buffer, ::zx::channel request);
+  ::fidl::Result First(::fidl::BufferSpan _request_buffer,
+                       ::zx::channel request);
 
  private:
   friend class ::fidl::Client<Parent>;
@@ -993,7 +992,8 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::Result First(::fidl::BytePart _request_buffer, ::zx::channel request);
+  ::fidl::Result First(::fidl::BufferSpan _request_buffer,
+                       ::zx::channel request);
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1001,7 +1001,7 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::Result Second(::fidl::BytePart _request_buffer,
+  ::fidl::Result Second(::fidl::BufferSpan _request_buffer,
                         ::zx::channel request);
 
  private:

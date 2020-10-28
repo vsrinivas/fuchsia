@@ -433,7 +433,7 @@ Dereferencing a `fidl::Client` provides access to the following methods:
 
 * `fidl::Result StartGame(bool start_first)`: Managed variant of a fire
   and forget method.
-* `fidl::Result StartGame(::fidl::BytePart _request_buffer, bool
+* `fidl::Result StartGame(::fidl::BufferSpan _request_buffer, bool
   start_first)`: Caller-allocated variant of a fire and forget method.
 * `fidl::Result MakeMove(uint8_t row, uint8_t col,
   fit::callback<void(bool success, fidl::tracking_ptr<GameState> new_state)>
@@ -441,14 +441,14 @@ Dereferencing a `fidl::Client` provides access to the following methods:
   callback to handle responses as the last argument. The callback is executed
   on response in a dispatcher thread. The returned `fidl::StatusAndError` refers
   just to the status of the outgoing call.
-* `fidl::Result MakeMove(fidl::BytePart _request_buffer, uint8_t row,
+* `fidl::Result MakeMove(fidl::BufferSpan _request_buffer, uint8_t row,
   uint8_t col, MakeMoveResponseContext* _context)`: Asynchronous,
   caller-allocated variant of a two way method. The final argument is a response
   context, which is explained below.
 * `ResultOf::MakeMove MakeMove_Sync(uint8_t row, uint8_t col)`: Synchronous,
   managed variant of a two way method. The same method exists on `SyncClient`.
-* `UnownedResultOf::MakeMove_sync(fidl::BytePart _request_bufffer, uint8_t row,
-  uint8_t col, fidl::BytePart _response_buffer)`: Synchronous, caller-allocated
+* `UnownedResultOf::MakeMove_sync(fidl::BufferSpan _request_bufffer, uint8_t row,
+  uint8_t col, fidl::BufferSpan _response_buffer)`: Synchronous, caller-allocated
   variant of a two way method. The same method exists on `SyncClient`.
 
 Note: One-way and synchronous two-way FIDL methods have a similar API to the
@@ -497,15 +497,15 @@ Note: If the client is destroyed with outstanding asynchronous transactions,
   In general, the managed flavor is easier to use, but may result in extra
   allocation. See [ResultOf](#resultof) for details on buffer
   management.
-* `TicTacToe::UnownedResultOf::StartGame StartGame(fidl::BytePart, bool
+* `TicTacToe::UnownedResultOf::StartGame StartGame(fidl::BufferSpan, bool
   start_first)`: Caller-allocated variant of a fire and forget call, which takes
   in backing storage for the request buffer, as well as request parameters, and
   returns an `UnownedResultOf`.
 * `ResultOf::MakeMove MakeMove(uint8_t row, uint8_t col)`: Owned variant of a
   two way method call, which takes the parameters as arguments and returns the
   `ResultOf` class.
-* `UnownedResultOf::MakeMove(fidl::BytePart _request_buffer, uint8_t row,
-  uint8_t col, fidl::BytePart _response_buffer)`: Caller-allocated variant of a
+* `UnownedResultOf::MakeMove(fidl::BufferSpan _request_buffer, uint8_t row,
+  uint8_t col, fidl::BufferSpan _response_buffer)`: Caller-allocated variant of a
   two way method, which takes in backing storage for the request buffer,
   followed by the request parameters, and finally backing storage for the
   response buffer, and returns an `UnownedResultOf`.
@@ -527,11 +527,11 @@ the only difference being that they are all `static` and take an
 * `static ResultOf::StartGame StartGame(zx::unowned_channel _client_end, bool
   start_first)`:
 * `static UnownedResultOf::StartGame StartGame(zx::unowned_channel _client_end,
-  fidl::BytePart _request_buffer, bool start_first)`:
+  fidl::BufferSpan _request_buffer, bool start_first)`:
 * `static ResultOf::MakeMove MakeMove(zx::unowned_channel _client_end, uint8_t
   row, uint8_t col)`:
 * `static UnownedResultOf::MakeMove MakeMove(zx::unowned_channel _client_end,
-  fidl::BytePart _request_buffer, uint8_t row, uint8_t col, fidl::BytePart
+  fidl::BufferSpan _request_buffer, uint8_t row, uint8_t col, fidl::BufferSpan
   _response_buffer);`:
 * `static fidl::Result HandleEvents(zx::unowned_channel client_end, EventHandlers&
   handlers)`:
@@ -669,7 +669,7 @@ both `MakeMoveCompleter::Sync` and `MakeMoveCompleter::Async` provide the
 following `Reply` methods:
 
 * `::fidl::Result Reply(bool success, fidl::tracking_ptr<GameState> new_state)`
-* `::fidl::Result Reply(fidl::BytePart _buffer, bool success,
+* `::fidl::Result Reply(fidl::BufferSpan _buffer, bool success,
   fidl::tracking_ptr<GameState> new_state)`
 
 Because the status returned by Reply is identical to the unbinding status, it can be safely
@@ -715,7 +715,7 @@ A number of the APIs above provide owned and caller-allocated variants of
 generated methods.
 
 The  caller-allocated variant defers all memory allocation responsibilities to
-the caller. The type `fidl::BytePart` references a buffer address and size. It
+the caller. The type `fidl::BufferSpan` references a buffer address and size. It
 will be used by the bindings library to construct the FIDL request, hence it
 must be sufficiently large. The method parameters (e.g. `heading`) are
 *linearized* to appropriate locations within the buffer. There are a number of
@@ -733,8 +733,8 @@ auto result = client.StartGame(request_buffer->view(), true);
 // 3. Some other means, e.g. thread-local storage
 constexpr uint32_t request_size = fidl::MaxSizeInChannel<StartGameRequest>();
 uint8_t* buffer = allocate_buffer_of_size(request_size);
-fidl::BytePart request_buffer(/* data = */buffer, /* capacity = */request_size);
-auto result = client.StartGame(std::move(request_buffer), true);
+fidl::BufferSpan request_buffer(/* data = */buffer, /* capacity = */request_size);
+auto result = client.StartGame(request_buffer, true);
 
 // Check the transport status (encoding error, channel writing error, etc.)
 if (result.status() != ZX_OK) {
@@ -807,7 +807,7 @@ sending each event. As a concrete example, `TicTacToe::EventSender` provides the
 following methods:
 
 * `zx_status_t OnOpponentMove(GameState new_state)`: Managed flavor.
-* `zx_status_t OnOpponentMove(fidl::BytePart _buffer, GameState new_state)`:
+* `zx_status_t OnOpponentMove(fidl::BufferSpan _buffer, GameState new_state)`:
   Caller allocated flavor.
 
 ##### Sending events with a bare-metal channel
@@ -828,7 +828,7 @@ The event sender methods are:
 * `static zx_status_t SendOnOpponentMoveEvent(zx::unowned_channel _chan,
   GameState new_state)`
 * `static zx_status_t SendOnOpponentMoveEvent(zx::unowned_channel _chan,
-  fidl::BytePart _buffer, GameState new_state)`
+  fidl::BufferSpan _buffer, GameState new_state)`
 
 ### Results {#protocols-results}
 
@@ -853,7 +853,7 @@ For the managed flavor, both methods are available:
 Since `ReplyError` doesn't require heap allocation, only `ReplySuccess` exists
 for the caller-allocated flavor:
 
-* `void ReplySuccess(fidl::BytePart _buffer, GameState new_state)`
+* `void ReplySuccess(fidl::BufferSpan _buffer, GameState new_state)`
 
 Note that the passed in buffer is used to hold the *entire* response, not just
 the data corresponding to the success variant.
@@ -861,7 +861,7 @@ the data corresponding to the success variant.
 The regularly generated `Reply` methods are available as well:
 
 * `void Reply(TicTacToe_MakeMove_Result result)`: Owned variant.
-* `void Reply(fidl::BytePart _buffer, TicTacToe_MakeMove_Result result)`:
+* `void Reply(fidl::BufferSpan _buffer, TicTacToe_MakeMove_Result result)`:
   Caller-allocated variant.
 
 The owned and caller-allocated variant use a parameter of

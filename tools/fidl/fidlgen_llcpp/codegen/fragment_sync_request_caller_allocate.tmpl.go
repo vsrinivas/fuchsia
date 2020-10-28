@@ -7,18 +7,21 @@ package codegen
 const fragmentSyncRequestCallerAllocateTmpl = `
 {{- define "CallerBufferParams" -}}
 {{- if . -}}
-::fidl::BytePart _request_buffer, {{ range $index, $param := . -}}
+::fidl::BufferSpan _request_buffer, {{ range $index, $param := . -}}
     {{- if $index }}, {{ end -}}{{ $param.Type.LLDecl }} {{ $param.Name }}
   {{- end -}}
 {{- end -}}
 {{- end }}
 
 {{- define "SyncRequestCallerAllocateMethodArguments" -}}
-{{ template "CallerBufferParams" .Request }}{{ if .HasResponse }}{{ if .Request }}, {{ end }}::fidl::BytePart _response_buffer{{ end }}
+{{ template "CallerBufferParams" .Request }}{{ if .HasResponse }}{{ if .Request }}, {{ end }}
+::fidl::BufferSpan _response_buffer{{ end }}
 {{- end }}
 
 {{- define "StaticCallSyncRequestCallerAllocateMethodArguments" -}}
-::zx::unowned_channel _client_end{{ if .Request }}, {{ end }}{{ template "CallerBufferParams" .Request }}{{ if .HasResponse }}, ::fidl::BytePart _response_buffer{{ end }}
+  ::zx::unowned_channel _client_end{{ if .Request }}, {{ end }}
+  {{ template "CallerBufferParams" .Request }}
+  {{ if .HasResponse }}, ::fidl::BufferSpan _response_buffer{{ end }}
 {{- end }}
 
 {{- define "SyncRequestCallerAllocateMethodDefinition" }}

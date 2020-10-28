@@ -439,13 +439,12 @@ class super final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::foo foo(::zx::unowned_channel _client_end,
-                                    ::fidl::BytePart _request_buffer,
+                                    ::fidl::BufferSpan _request_buffer,
                                     ::fidl::StringView s,
-                                    ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::foo(_client_end->get(), _request_buffer.data(),
-                                  _request_buffer.capacity(), s,
-                                  _response_buffer.data(),
-                                  _response_buffer.capacity());
+                                    ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::foo(
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -469,13 +468,12 @@ class super final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::foo foo(::fidl::BytePart _request_buffer,
+    UnownedResultOf::foo foo(::fidl::BufferSpan _request_buffer,
                              ::fidl::StringView s,
-                             ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::foo(this->channel().get(), _request_buffer.data(),
-                                  _request_buffer.capacity(), s,
-                                  _response_buffer.data(),
-                                  _response_buffer.capacity());
+                             ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::foo(
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          s, _response_buffer.data, _response_buffer.capacity);
     }
 
    private:
@@ -508,7 +506,7 @@ class super final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(int64_t y);
-      ::fidl::Result Reply(::fidl::BytePart _buffer, int64_t y);
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t y);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -945,13 +943,12 @@ class sub final {
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::foo foo(::zx::unowned_channel _client_end,
-                                    ::fidl::BytePart _request_buffer,
+                                    ::fidl::BufferSpan _request_buffer,
                                     ::fidl::StringView s,
-                                    ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::foo(_client_end->get(), _request_buffer.data(),
-                                  _request_buffer.capacity(), s,
-                                  _response_buffer.data(),
-                                  _response_buffer.capacity());
+                                    ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::foo(
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -975,13 +972,12 @@ class sub final {
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::foo foo(::fidl::BytePart _request_buffer,
+    UnownedResultOf::foo foo(::fidl::BufferSpan _request_buffer,
                              ::fidl::StringView s,
-                             ::fidl::BytePart _response_buffer) {
-      return UnownedResultOf::foo(this->channel().get(), _request_buffer.data(),
-                                  _request_buffer.capacity(), s,
-                                  _response_buffer.data(),
-                                  _response_buffer.capacity());
+                             ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::foo(
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          s, _response_buffer.data, _response_buffer.capacity);
     }
 
    private:
@@ -1014,7 +1010,7 @@ class sub final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(int64_t y);
-      ::fidl::Result Reply(::fidl::BytePart _buffer, int64_t y);
+      ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t y);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -1135,7 +1131,7 @@ class super::ClientImpl final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |super.foo()|. Caller provides the backing storage
   // for FIDL message via request buffer. Ownership of _context is given
   // unsafely to the binding until OnError() or OnReply() are called on it.
-  ::fidl::Result foo(::fidl::BytePart _request_buffer, ::fidl::StringView s,
+  ::fidl::Result foo(::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
                      fooResponseContext* _context);
   // Synchronous variant of |super.foo()|. Allocates 24 bytes of response buffer
   // on the stack. Request is heap-allocated.
@@ -1143,9 +1139,9 @@ class super::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Synchronous variant of |super.foo()|. Caller provides the backing storage
   // for FIDL message via request and response buffers.
-  UnownedResultOf::foo foo_Sync(::fidl::BytePart _request_buffer,
+  UnownedResultOf::foo foo_Sync(::fidl::BufferSpan _request_buffer,
                                 ::fidl::StringView s,
-                                ::fidl::BytePart _response_buffer);
+                                ::fidl::BufferSpan _response_buffer);
 
  private:
   friend class ::fidl::Client<super>;
@@ -1192,7 +1188,7 @@ class sub::ClientImpl final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |sub.foo()|. Caller provides the backing storage
   // for FIDL message via request buffer. Ownership of _context is given
   // unsafely to the binding until OnError() or OnReply() are called on it.
-  ::fidl::Result foo(::fidl::BytePart _request_buffer, ::fidl::StringView s,
+  ::fidl::Result foo(::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
                      fooResponseContext* _context);
   // Synchronous variant of |sub.foo()|. Allocates 24 bytes of response buffer
   // on the stack. Request is heap-allocated.
@@ -1200,9 +1196,9 @@ class sub::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Synchronous variant of |sub.foo()|. Caller provides the backing storage for
   // FIDL message via request and response buffers.
-  UnownedResultOf::foo foo_Sync(::fidl::BytePart _request_buffer,
+  UnownedResultOf::foo foo_Sync(::fidl::BufferSpan _request_buffer,
                                 ::fidl::StringView s,
-                                ::fidl::BytePart _response_buffer);
+                                ::fidl::BufferSpan _response_buffer);
 
  private:
   friend class ::fidl::Client<sub>;

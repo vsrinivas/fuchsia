@@ -746,11 +746,11 @@ class {{ .Name }} final {
     static UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
       return UnownedResultOf::{{ .Name }}(_client_end->get()
         {{- if .Request -}}
-          , _request_buffer.data(), _request_buffer.capacity()
+          , _request_buffer.data, _request_buffer.capacity
         {{- end -}}
           {{- template "CommaPassthroughMessageParams" .Request -}}
         {{- if .HasResponse -}}
-          , _response_buffer.data(), _response_buffer.capacity()
+          , _response_buffer.data, _response_buffer.capacity
         {{- end -}});
     }
       {{- end }}
@@ -796,11 +796,11 @@ class {{ .Name }} final {
     UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }}) {
       return UnownedResultOf::{{ .Name }}(this->channel().get()
         {{- if .Request -}}
-          , _request_buffer.data(), _request_buffer.capacity()
+          , _request_buffer.data, _request_buffer.capacity
         {{- end -}}
           {{- template "CommaPassthroughMessageParams" .Request -}}
         {{- if .HasResponse -}}
-          , _response_buffer.data(), _response_buffer.capacity()
+          , _response_buffer.data, _response_buffer.capacity
         {{- end -}});
     }
       {{- end }}
