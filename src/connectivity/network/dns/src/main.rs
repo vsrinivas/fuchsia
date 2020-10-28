@@ -455,7 +455,9 @@ fn add_config_state_inspect(
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let () = fuchsia_syslog::init().context("cannot init logger")?;
+    // NB: We manually set tags to syslog so logs from trust-dns crates also get
+    // the same tags as opposed to only the crate path.
+    let () = fuchsia_syslog::init_with_tags(&["dns"]).context("cannot init logger")?;
     info!("starting");
 
     let mut resolver_opts = ResolverOpts::default();
