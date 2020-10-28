@@ -322,29 +322,14 @@ zx_status_t PowerDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  uint32_t parent_count = composite.GetFragmentCount();
-  zx_device_t* fragments[parent_count];
-  composite.GetFragments(fragments, parent_count, &actual);
-  if (actual != parent_count) {
-    zxlogf(ERROR, "%s could not get composite fragments", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  // POWER_IMPL_PROTOCOL is always the first component
-  ddk::PowerImplProtocolClient power_impl(fragments[0]);
+  ddk::PowerImplProtocolClient power_impl(composite, "power-impl");
   if (!power_impl.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_POWER_IMPL not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::PowerProtocolClient parent_power = {};
-  if (parent_count > 1) {
-    parent_power = ddk::PowerProtocolClient(fragments[1]);
-    if (!parent_power.is_valid()) {
-      zxlogf(ERROR, "%s: Parent power protocol not available", __func__);
-      return ZX_ERR_INTERNAL;
-    }
-  }
+  // This is optional.
+  ddk::PowerProtocolClient parent_power(composite, "power-parent");
 
   uint32_t min_voltage = 0, max_voltage = 0;
   bool fixed = false;

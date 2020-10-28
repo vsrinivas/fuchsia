@@ -67,15 +67,7 @@ zx_status_t Vs680Power::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* pmic_i2c_dev;
-  size_t fragment_count;
-  composite.GetFragments(&pmic_i2c_dev, 1, &fragment_count);
-  if (fragment_count != 1) {
-    zxlogf(ERROR, "%s: Failed to get PMIC I2C device", __FILE__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::I2cProtocolClient pmic_i2c(pmic_i2c_dev);
+  ddk::I2cProtocolClient pmic_i2c(composite, "i2c-pmic");
   if (!pmic_i2c.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get I2C fragment", __FILE__);
     return ZX_ERR_NO_RESOURCES;

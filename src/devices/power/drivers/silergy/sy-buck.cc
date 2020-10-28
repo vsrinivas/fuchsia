@@ -18,13 +18,6 @@
 
 namespace silergy {
 
-namespace {
-
-constexpr uint32_t kFragmentI2c = 0;
-constexpr uint32_t kFragmentCount = 1;
-
-}  // namespace
-
 zx_status_t SyBuck::VregSetVoltageStep(uint32_t step) {
   if (step >= kNumSteps) {
     zxlogf(ERROR, "%s: Requested step out of range step = %u, max = %u", __func__, step, kNumSteps);
@@ -121,21 +114,7 @@ zx_status_t SyBuck::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_INTERNAL;
   }
 
-  const uint32_t fragment_count = composite.GetFragmentCount();
-  if (fragment_count != kFragmentCount) {
-    zxlogf(ERROR, "%s: Expected %u fragments, got %u", __func__, kFragmentCount, fragment_count);
-    return ZX_ERR_INTERNAL;
-  }
-
-  size_t actual_fragment_count = 0;
-  zx_device_t* fragments[kFragmentCount];
-  composite.GetFragments(fragments, kFragmentCount, &actual_fragment_count);
-  if (actual_fragment_count != kFragmentCount) {
-    zxlogf(ERROR, "%s: Expected to fetch %u fragments, actually fetched %lu", __func__,
-           kFragmentCount, actual_fragment_count);
-  }
-
-  ddk::I2cProtocolClient i2c(fragments[kFragmentI2c]);
+  ddk::I2cProtocolClient i2c(composite, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "%s: SyBuck failed to get i2c channel", __func__);
     return ZX_ERR_INTERNAL;

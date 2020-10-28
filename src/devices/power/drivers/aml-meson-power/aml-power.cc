@@ -21,15 +21,6 @@ namespace power {
 
 namespace {
 
-constexpr size_t kFragmentPdev = 0;
-constexpr size_t kFragmentFirstClusterPwm = 1;
-
-// Note: Board driver will either pass a vreg or a pwm depending on which board
-//       is loaded.
-constexpr size_t kFragmentSecondClusterPwm = 2;
-constexpr size_t kFragmentSecondClusterVreg = 2;
-constexpr size_t kFragmentCount = 3;
-
 // Sleep for 200 microseconds inorder to let the voltage change
 // take effect. Source: Amlogic SDK.
 constexpr uint32_t kVoltageSettleTimeUs = 200;
@@ -37,20 +28,14 @@ constexpr uint32_t kVoltageSettleTimeUs = 200;
 // voltage and not directly. Source: Amlogic SDK
 constexpr int kMaxVoltageChangeSteps = 3;
 
-zx_status_t InitPwmProtocolClient(zx_device_t* dev, ddk::PwmProtocolClient* client) {
-  if (dev == nullptr || client == nullptr) {
-    zxlogf(ERROR, "%s: neither dev nor client can be null\n", __func__);
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  *client = ddk::PwmProtocolClient(dev);
-  if (client->is_valid() == false) {
+zx_status_t InitPwmProtocolClient(const ddk::PwmProtocolClient& client) {
+  if (client.is_valid() == false) {
     zxlogf(ERROR, "%s: failed to get PWM fragment\n", __func__);
     return ZX_ERR_INTERNAL;
   }
 
   zx_status_t result;
-  if ((result = client->Enable()) != ZX_OK) {
+  if ((result = client.Enable()) != ZX_OK) {
     zxlogf(ERROR, "%s: Could not enable PWM", __func__);
   }
 
@@ -384,18 +369,7 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_INTERNAL;
   }
 
-  // We may get 2 or 3 fragments depending upon the number of power domains that this
-  // core supports.
-  size_t actual;
-  zx_device_t* fragments[kFragmentCount];
-  composite.GetFragments(fragments, kFragmentCount, &actual);
-
-  if (actual < 1) {
-    zxlogf(ERROR, "%s: failed to get pdev fragment", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
-  ddk::PDev pdev(fragments[kFragmentPdev]);
+  ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: failed to get pdev protocol", __func__);
     return ZX_ERR_INTERNAL;
@@ -422,24 +396,17 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
     return st;
   }
 
-  std::optional<ddk::PwmProtocolClient> first_cluster_pwm;
-  if (actual > kFragmentFirstClusterPwm) {
-    ddk::PwmProtocolClient client;
-    st = InitPwmProtocolClient(fragments[kFragmentFirstClusterPwm], &client);
-    if (st != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to initialize Big Cluster PWM Client, st = %d", __func__, st);
-      return st;
-    }
-    first_cluster_pwm = client;
-  } else {
-    zxlogf(ERROR, "%s: Failed to get big cluster pwm", __func__);
-    return ZX_ERR_INTERNAL;
+  ddk::PwmProtocolClient first_cluster_pwm(composite, "pwm-ao-d");
+  st = InitPwmProtocolClient(first_cluster_pwm);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to initialize Big Cluster PWM Client, st = %d", __func__, st);
+    return st;
   }
 
   std::optional<ddk::PwmProtocolClient> second_cluster_pwm = std::nullopt;
   std::optional<ddk::VregProtocolClient> second_cluster_vreg = std::nullopt;
   if (device_info.pid == PDEV_PID_LUIS) {
-    ddk::VregProtocolClient client(fragments[kFragmentSecondClusterVreg]);
+    ddk::VregProtocolClient client(composite, "vreg-pp1000-cpu-a");
     if (!client.is_valid()) {
       zxlogf(ERROR, "%s: failed to get vreg fragment\n", __func__);
       return ZX_ERR_INTERNAL;
@@ -447,8 +414,8 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
 
     second_cluster_vreg = client;
   } else if (device_info.pid == PDEV_PID_SHERLOCK) {
-    ddk::PwmProtocolClient client;
-    st = InitPwmProtocolClient(fragments[kFragmentSecondClusterPwm], &client);
+    ddk::PwmProtocolClient client(composite, "pwm-a");
+    st = InitPwmProtocolClient(client);
     if (st != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to initialize Little Cluster PWM Client, st = %d", __func__, st);
       return st;
@@ -460,17 +427,17 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
 
   switch (device_info.pid) {
     case PDEV_PID_ASTRO:
-      power_impl_device.reset(new AmlPower(parent, std::move(*first_cluster_pwm),
+      power_impl_device.reset(new AmlPower(parent, std::move(first_cluster_pwm),
                                            std::move(voltage_table), pwm_period));
       break;
     case PDEV_PID_LUIS:
       power_impl_device.reset(new AmlPower(parent, std::move(*second_cluster_vreg),
-                                           std::move(*first_cluster_pwm), std::move(voltage_table),
+                                           std::move(first_cluster_pwm), std::move(voltage_table),
                                            pwm_period));
       break;
     case PDEV_PID_SHERLOCK:
       power_impl_device.reset(new AmlPower(parent, std::move(*second_cluster_pwm),
-                                           std::move(*first_cluster_pwm), std::move(voltage_table),
+                                           std::move(first_cluster_pwm), std::move(voltage_table),
                                            pwm_period));
       break;
     default:
