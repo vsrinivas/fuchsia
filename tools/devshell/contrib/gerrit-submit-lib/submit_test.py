@@ -208,6 +208,18 @@ class TestSubmit(unittest.TestCase):
     ])
 
 
+  def test_submit_cl_error_description(self) -> None:
+    c = submit.Change('abc', {'status': 'NEW', 'submittable': True, 'unresolved_comment_count': 2})
+    print(c.status.submit_error_description())
+    assert c.status.submit_error_description() == "CL has unresolved comments"
+
+    c = submit.Change('42', {'status': 'NEW', 'submittable': False})
+    assert c.status.submit_error_description() == "CL is missing votes"
+
+    c = submit.Change('42', {'status': 'NEW', 'submittable': True})
+    assert c.status.submit_error_description() is None
+
+
 class TestTypes(unittest.TestCase):
   def test_types(self) -> None:
     self_dir = os.path.dirname(os.path.realpath(__file__))

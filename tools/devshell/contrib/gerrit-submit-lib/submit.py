@@ -29,6 +29,7 @@ class ChangeStatus(enum.Enum):
   MERGED = 7
 
   def description(self) -> str:
+    # Return a brief description of a CL's state.
     return {
         ChangeStatus.UNKNOWN: 'unknown',
         ChangeStatus.MISSING_VOTES: 'missing votes',
@@ -50,6 +51,15 @@ class ChangeStatus(enum.Enum):
         ChangeStatus.SUBMITTING: ansi.bright_green,
         ChangeStatus.MERGED: ansi.gray,
     }[self]
+
+  def submit_error_description(self) -> Optional[str]:
+    # Return an explanation of why this CL cannot be submitted.
+    return {
+        ChangeStatus.UNKNOWN: 'unknown error',
+        ChangeStatus.MISSING_VOTES: 'CL is missing votes',
+        ChangeStatus.UNRESOLVED_COMMENTS: 'CL has unresolved comments',
+    }.get(self)
+
 
 
 class Change:
@@ -202,7 +212,8 @@ def ensure_changes_submittable(changes: List[Change]) -> None:
   """Ensure that the given list of changes are submittable."""
   for cl in changes:
     if cl.status != ChangeStatus.MERGED and not should_submit(cl):
-      raise SubmitError("CL %d can not be submitted." % cl.id)
+      raise SubmitError("CL %d can not be submitted: %s" % (
+          cl.id, cl.status.submit_error_description() or "unknown error"))
 
 
 def submit_changes(
