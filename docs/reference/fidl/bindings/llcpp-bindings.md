@@ -920,6 +920,84 @@ A protocol annotated with the
 attribute causes the FIDL toolchain to generate an additional `static const char
 Name[]` field on the protocol class, containing the full protocol name.
 
+## Explicit encoding and decoding {#encoding-decoding}
+
+FIDL messages are automatically encoded when they are sent and decoded when they are received.
+
+However, some use cases like persistence need to explicitly encode or decode a table or struct.
+
+This section describes how to explicitly use the encoding and the decoding.
+
+### Encoding
+
+When an object is allocated and initialized, `fidl::OwnedOutgoingMessage<FidlType>` can be used to
+encode it. For example:
+
+```c++
+void Encode(::llcpp::fuchsia::examples::User& user) {
+  ::fidl::OwnedOutgoingMessage<::llcpp::fuchsia::examples::User> encoded(&user);
+  if (!encoded.ok()) {
+    // Do something about the error.
+    return;
+  }
+  fidl_outgoing_msg_t* message = encoded.GetOutgoingMessage().message();
+  // Do something with the data referenced by message.
+}
+```
+
+At this point, the table `user` is encoded within `encoded`. The following methods are
+available on an encoded FIDL type:
+
+* `bool encoded.ok()`
+* `zx_status_t encoded.status()`
+* `const char* encoded.error()`
+* `::fidl::OutgoingMessage& encoded.GetOutgoingMessage()`
+
+`::fidl::OutgoingMessage` is defined in
+[/zircon/system/ulib/fidl/include/lib/fidl/llcpp/message.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/message.h).
+
+### Decoding
+
+Once an object has been encoded (and eventually stored somewhere),
+`fidl::IncomingMessage<FidlType>` can be used to decode it. For example:
+
+```c++
+void UseEncodedUser(std::vector<uint8_t> buffer) {
+  fidl::IncomingMessage<::llcpp::fuchsia::examples::User> decoded(
+      buffer.data(), static_cast<uint32_t>(buffer.size()));
+  if (!decoded.ok()) {
+    // Display an error.
+    return;
+  }
+  ::llcpp::fuchsia::examples::User* user = decoded.PrimaryObject();
+  // Do something with the table (user).
+}
+```
+
+When an object is decoded, the following methods are available on a decoded FIDL type:
+
+* `bool decoded.ok()`
+* `zx_status_t decoded.status()`
+* `const char* decoded.error()`
+* `FidlType* decoded.PrimaryObject()`
+* `void decoded.ReleasePrimaryObject()`
+
+The FIDL type is the type used by the templated class (in the example above:
+`::llcpp::fuchsia::examples::User`).
+
+The primary object is decoded in place within the provided buffer. This is also the case of all
+the secondary objects. That means that the provided buffer must be kept alive while the decoded
+value is used.
+
+For FIDL types which allow handles, the handles can be specified during construction after the
+bytes (the same way bytes are specified).
+
+### Persistence
+
+Persistence is not officially supported by LLCPP. However, explicit encoding and decoding can be
+used to store FIDL values by encoding a value and then writing it and by reading a value and
+then decoding it. In that case, the values can't use any handle.
+
 <!-- xrefs -->
 [llcpp-allocation]: /docs/development/languages/fidl/guides/llcpp-memory-ownership.md
 [llcpp-async-example]:
