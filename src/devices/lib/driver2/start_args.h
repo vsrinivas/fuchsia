@@ -12,23 +12,6 @@
 
 namespace start_args {
 
-// Stores a DriverStartArgs table, in order to pass it from a driver host to a
-// driver in a language-agnostic way.
-struct Storage {
-  FIDL_ALIGNDECL
-  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[llcpp::fuchsia::driver::framework::DriverStartArgs::MaxNumHandles];
-};
-
-// Encodes |start_args| into |storage|.
-zx::status<fidl_outgoing_msg_t> Encode(
-    Storage* storage, llcpp::fuchsia::driver::framework::DriverStartArgs start_args,
-    const char** error);
-
-// Decodes |msg| and return a DriverStartArgs.
-zx::status<llcpp::fuchsia::driver::framework::DriverStartArgs*> Decode(fidl_incoming_msg_t* msg,
-                                                                       const char** error);
-
 template <typename T>
 zx::status<T> symbol_value(
     const fidl::VectorView<llcpp::fuchsia::driver::framework::DriverSymbol>& symbols,

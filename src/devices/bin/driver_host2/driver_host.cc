@@ -55,8 +55,14 @@ void Driver::set_binding(
   binding_ = std::make_optional(std::move(binding));
 }
 
-zx::status<> Driver::Start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher) {
-  zx_status_t status = record_->start(msg, dispatcher, &opaque_);
+zx::status<> Driver::Start(const fidl::OutgoingMessage& message, async_dispatcher_t* dispatcher) {
+  fidl_incoming_msg_t msg = {
+      .bytes = message.bytes(),
+      .handles = message.handles(),
+      .num_bytes = message.byte_actual(),
+      .num_handles = message.handle_actual(),
+  };
+  zx_status_t status = record_->start(&msg, dispatcher, &opaque_);
   return zx::make_status(status);
 }
 
@@ -117,13 +123,11 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
   }
   // We encode start_args outside of callback in order to access stack-allocated
   // data before it is destroyed.
-  auto storage = std::make_unique<start_args::Storage>();
-  const char* error;
-  auto encode = start_args::Encode(storage.get(), std::move(start_args), &error);
-  if (encode.is_error()) {
+  auto message = std::make_unique<fdf::DriverStartArgs::OwnedOutgoingMessage>(&start_args);
+  if (!message->ok()) {
     LOGF(ERROR, "Failed to start driver '/pkg/%s', could not encode start args: %s", binary->data(),
-         error);
-    completer.Close(encode.error_value());
+         message->error());
+    completer.Close(message->status());
     return;
   }
   // Once we receive the VMO from the call to GetBuffer, we can load the driver
@@ -131,16 +135,8 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
   // this callback to extend its lifetime.
   fidl::Client<fio::File> file(std::move(client_end), loop_->dispatcher());
   auto file_ptr = file.get();
-  fidl_outgoing_msg_t outgoing_msg = encode.value();
-  fidl_incoming_msg_t incoming_msg = {
-      .bytes = outgoing_msg.bytes,
-      .handles = outgoing_msg.handles,
-      .num_bytes = outgoing_msg.num_bytes,
-      .num_handles = outgoing_msg.num_handles,
-  };
   auto callback = [this, request = std::move(request), completer = completer.ToAsync(),
-                   binary = std::move(binary.value()), storage = std::move(storage),
-                   msg = incoming_msg,
+                   binary = std::move(binary.value()), message = std::move(message),
                    file = std::move(file)](zx_status_t status, auto buffer) mutable {
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s', could not get library VMO: %s", binary.data(),
@@ -180,12 +176,15 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
     driver->set_binding(bind.take_value());
     drivers_.push_back(std::move(driver.value()));
 
-    auto start = driver_ptr->Start(&msg, loop_->dispatcher());
+    auto start = driver_ptr->Start(message->GetOutgoingMessage(), loop_->dispatcher());
     if (start.is_error()) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s': %s", binary.data(), start.status_string());
       completer.Close(start.error_value());
       return;
     }
+    // After the driver successfully starts, we assume it has taken ownership of
+    // the handles from |start_args|, and can therefore relinquish ownership.
+    message->GetOutgoingMessage().ReleaseHandles();
     LOGF(INFO, "Started '%s'", binary.data());
   };
   file_ptr->GetBuffer(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC | fio::VMO_FLAG_PRIVATE,

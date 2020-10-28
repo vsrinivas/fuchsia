@@ -58,15 +58,14 @@ class TestDriver {
 
 zx_status_t test_driver_start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher,
                               void** driver) {
-  const char* error;
-  auto decode_result = start_args::Decode(msg, &error);
-  if (decode_result.is_error()) {
-    return decode_result.error_value();
+  fdf::DriverStartArgs::IncomingMessage message(msg);
+  if (!message.ok()) {
+    return message.status();
   }
 
   auto test_driver = new TestDriver(dispatcher);
   *driver = test_driver;
-  return test_driver->Init(decode_result.value()).status_value();
+  return test_driver->Init(message.PrimaryObject()).status_value();
 }
 
 zx_status_t test_driver_stop(void* driver) {

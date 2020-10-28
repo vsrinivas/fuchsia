@@ -26,7 +26,6 @@ source_set("llcpp") {
     "namespace.cc",
     "namespace.h",
     "promise.h",
-    "start_args.cc",
     "start_args.h",
   ]
 
