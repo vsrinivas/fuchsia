@@ -886,13 +886,6 @@ static inline struct iwl_trans_dump_data* iwl_trans_dump_data(struct iwl_trans* 
   return trans->ops->dump_data(trans, dump_mask);
 }
 
-static inline struct iwl_device_cmd* iwl_trans_alloc_tx_cmd() {
-  // Since the transport code will always copy the 'iwl_device_cmd' struct, we can just allocate
-  // usual memory here (no cache-line alignment is required). The transport layer will copy it
-  // into cache-line aligned io_buffer.
-  return (struct iwl_device_cmd*)malloc(sizeof(struct iwl_device_cmd));
-}
-
 // This function returns couple error codes. The ZX_ERR_BAD_STATE is the most special one.
 // It is called ERFKILL originally. We remap it to ZX_ERR_BAD_STATE in Fuchsia.
 zx_status_t iwl_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd);

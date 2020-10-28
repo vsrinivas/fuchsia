@@ -18,6 +18,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock_trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 
 namespace wlan {
@@ -501,7 +502,7 @@ TEST_F(PowerTest, PmHasNoEffect) {
 ///////////////////////////////////////////////////////////////////////////////
 //                               Txq Test
 //
-class TxqTest : public MvmTest {
+class TxqTest : public MvmTest, public MockTrans {
  public:
   TxqTest()
       : sta_{
@@ -509,6 +510,8 @@ class TxqTest : public MvmTest {
             .sta_id = 0,
             .mvmvif = mvmvif_,
         } {
+    BIND_TEST(mvm_->trans);
+
     for (size_t i = 0; i < ARRAY_SIZE(sta_.txq); ++i) {
       sta_.txq[i] = reinterpret_cast<struct iwl_mvm_txq*>(calloc(1, sizeof(struct iwl_mvm_txq)));
       ASSERT_NE(nullptr, sta_.txq[i]);
@@ -521,7 +524,58 @@ class TxqTest : public MvmTest {
     }
   }
 
+  static constexpr uint8_t mac_pkt[] = {
+      0x08, 0x01,                          // frame_ctrl
+      0x00, 0x00,                          // duration
+      0x11, 0x22, 0x33, 0x44, 0x55, 0x66,  // MAC1
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06,  // MAC2
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06,  // MAC3
+      0x00, 0x00,                          // seq_ctrl
+  };
+
+  // Copy an arbitray packet into the member variables:
+  //
+  //  * mac_pkt_
+  //  * pkt_
+  //
+  void SetupTxPacket() {
+    ASSERT_GE(sizeof(mac_pkt_), sizeof(mac_pkt));
+    memcpy(mac_pkt_, mac_pkt, sizeof(mac_pkt));
+
+    wlan_tx_packet_t pkt = {
+        .packet_head =
+            {
+                .data_buffer = mac_pkt_,
+                .data_size = sizeof(mac_pkt),
+            },
+        .info =
+            {
+                .tx_flags = 0,
+                .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+            },
+    };
+    pkt_ = pkt;
+  }
+
+  // Expected fields.
+  mock_function::MockFunction<zx_status_t,  // return value
+                              size_t,       // packet size
+                              uint16_t,     // cmd + group_id
+                              int           // txq_id
+                              >
+      mock_tx_;
+
+  static zx_status_t tx_wrapper(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+                                const struct iwl_device_cmd* dev_cmd, int txq_id) {
+    auto test = GET_TEST(TxqTest, trans);
+    return test->mock_tx_.Call(pkt->packet_head.data_size,
+                               WIDE_ID(dev_cmd->hdr.group_id, dev_cmd->hdr.cmd), txq_id);
+  }
+
+ protected:
   struct iwl_mvm_sta sta_;
+  uint8_t mac_pkt_[2048];
+  wlan_tx_packet_t pkt_;
 };
 
 TEST_F(TxqTest, TestAllocManagement) {
@@ -568,6 +622,74 @@ TEST_F(TxqTest, TestAllocData) {
   // Request once more. Since there is no queue for data packet, expect failure.
   // TODO(fxbug.dev/49530): this should be re-written once shared queue is supported.
   ASSERT_EQ(ZX_ERR_NO_RESOURCES, iwl_mvm_sta_alloc_queue(mvm_, &sta_, IEEE80211_AC_BE, 0));
+}
+
+TEST_F(TxqTest, DataTxCmd) {
+  wlan_tx_packet_t pkt = {
+      .packet_head =
+          {
+              .data_size = 56,  // arbitrary value.
+          },
+  };
+  iwl_tx_cmd tx_cmd = {
+      .tx_flags = TX_CMD_FLG_TSF,  // arbitary value to ensure the function would keep it.
+  };
+  iwl_mvm_set_tx_cmd(mvmvif_->mvm, &pkt, &tx_cmd, sta_.sta_id);
+
+  // Currently the function doesn't consider the QoS so that those values are just fixed value.
+  EXPECT_EQ(TX_CMD_FLG_TSF | TX_CMD_FLG_SEQ_CTL | TX_CMD_FLG_BT_DIS | TX_CMD_FLG_ACK,
+            tx_cmd.tx_flags);
+
+  EXPECT_EQ(IWL_MAX_TID_COUNT, tx_cmd.tid_tspec);
+  EXPECT_EQ(cpu_to_le16(PM_FRAME_MGMT), tx_cmd.pm_frame_timeout);
+  EXPECT_EQ(cpu_to_le16(static_cast<uint16_t>(pkt.packet_head.data_size)), tx_cmd.len);
+  EXPECT_EQ(cpu_to_le32(TX_CMD_LIFE_TIME_INFINITE), tx_cmd.life_time);
+  EXPECT_EQ(0, tx_cmd.sta_id);
+}
+
+TEST_F(TxqTest, DataTxCmdRate) {
+  iwl_tx_cmd tx_cmd = {};
+  iwl_mvm_set_tx_cmd_rate(mvmvif_->mvm, &tx_cmd);
+
+  EXPECT_EQ(IWL_RTS_DFAULT_RETRY_LIMIT, tx_cmd.rts_retry_limit);
+  EXPECT_EQ(IWL_RATE_6M_PLCP | BIT(mvm_->mgmt_last_antenna_idx) << RATE_MCS_ANT_POS,
+            tx_cmd.rate_n_flags);
+  EXPECT_EQ(IWL_DEFAULT_TX_RETRY, tx_cmd.data_retry_limit);
+}
+
+TEST_F(TxqTest, TxpktInvalidInput) {
+  SetupTxPacket();
+
+  // Null STA
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_mvm_tx_skb(mvm_, &pkt_, nullptr));
+
+  // invalid STA id.
+  uint32_t sta_id = sta_.sta_id;
+  sta_.sta_id = IWL_MVM_INVALID_STA;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_mvm_tx_skb(mvm_, &pkt_, &sta_));
+  sta_.sta_id = sta_id;
+
+  // the check in iwl_mvm_tx_pkt_queued() -- after iwl_trans_tx().
+  {
+    bindTx(tx_wrapper);
+    mock_tx_.ExpectCall(ZX_OK, sizeof(mac_pkt), WIDE_ID(0, TX_CMD), 0);
+
+    uint32_t mac_id_n_color = sta_.mac_id_n_color;
+    sta_.mac_id_n_color = NUM_MAC_INDEX_DRIVER;
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_mvm_tx_skb(mvm_, &pkt_, &sta_));
+    sta_.mac_id_n_color = mac_id_n_color;  // Restore the changed value.
+
+    unbindTx();
+  }
+}
+
+TEST_F(TxqTest, TxPkt) {
+  SetupTxPacket();
+
+  bindTx(tx_wrapper);
+  mock_tx_.ExpectCall(ZX_OK, sizeof(mac_pkt), WIDE_ID(0, TX_CMD), 0);
+  EXPECT_EQ(ZX_OK, iwl_mvm_tx_skb(mvmvif_->mvm, &pkt_, &sta_));
+  unbindTx();
 }
 
 }  // namespace
