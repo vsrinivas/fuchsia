@@ -3,49 +3,38 @@
 // found in the LICENSE file.
 
 use {
-    super::{merkle_str, *},
+    super::*,
+    chrono::prelude::*,
     fidl_fuchsia_pkg::PackageUrl,
     fidl_fuchsia_update_installer::{
-        CompleteData, FetchData, InstallationProgress, InstallerMarker, Options, State, UpdateInfo,
-        UpdateResult,
+        CompleteData, FetchData, InstallationProgress, Options, State, UpdateInfo, UpdateResult,
     },
+    matches::assert_matches,
     pretty_assertions::assert_eq,
     serde_json::json,
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn succeeds_without_writable_data() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().mount_data(false).build();
 
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
-    env.run_system_updater_oneshot_args(
-        SystemUpdaterArgs {
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            ..Default::default()
-        },
-        SystemUpdaterEnv { mount_data: false, ..Default::default() },
-    )
-    .await
-    .expect("run system updater");
+    env.run_update().await.expect("run system updater");
 
     assert_eq!(env.read_history(), None);
 
-    let loggers = env.logger_factory.loggers.lock().clone();
-    assert_eq!(loggers.len(), 1);
-    let logger = loggers.into_iter().next().unwrap();
     assert_eq!(
-        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        env.get_ota_metrics().await,
         OtaMetrics {
             initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "m3rk13".into(),
+            target: "".into(),
         }
     );
 
@@ -103,13 +92,31 @@ fn strip_attempt_ids(mut value: serde_json::Value) -> serde_json::Value {
     value
 }
 
+/// Given a parsed update history value, verify each attempt contains a 'start' time that's later
+/// than 01/01/2020, and return the object with those fields removed.
+fn strip_start_time(mut value: serde_json::Value) -> serde_json::Value {
+    let min_start_time = Utc.ymd(2020, 1, 1).and_hms(0, 0, 0).timestamp_nanos() as u64;
+    value
+        .as_object_mut()
+        .expect("top level is object")
+        .get_mut("content")
+        .expect("top level 'content' key")
+        .as_array_mut()
+        .expect("'content' is array")
+        .iter_mut()
+        .map(|attempt| attempt.as_object_mut().expect("attempt is object"))
+        .for_each(|attempt| {
+            assert_matches!(
+                attempt.remove("start"),
+                Some(serde_json::Value::Number(start)) if start.as_u64().expect("start is u64") > min_start_time
+            );
+        });
+    value
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn writes_history() {
-    let env = TestEnv::builder().oneshot(true).build();
-
-    // source/target CLI params are no longer trusted for update history values.
-    let source = merkle_str!("ab");
-    let target = merkle_str!("ba");
+    let env = TestEnv::builder().build();
 
     assert_eq!(env.read_history(), None);
 
@@ -126,18 +133,19 @@ async fn writes_history() {
         "838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67",
     );
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        source: Some(source),
-        target: Some(target),
-        start: Some(1234567890),
-        ..Default::default()
-    })
+    env.run_update_with_options(
+        UPDATE_PKG_URL,
+        fidl_fuchsia_update_installer_ext::Options {
+            initiator: Initiator::Service,
+            allow_attach_to_existing_attempt: false,
+            should_write_recovery: true,
+        },
+    )
     .await
     .unwrap();
 
     assert_eq!(
-        env.read_history().map(strip_attempt_ids),
+        env.read_history().map(strip_attempt_ids).map(strip_start_time),
         Some(json!({
             "version": "1",
             "content": [{
@@ -157,11 +165,10 @@ async fn writes_history() {
                 },
                 "options": {
                     "allow_attach_to_existing_attempt": false,
-                    "initiator": "User",
+                    "initiator": "Service",
                     "should_write_recovery": true,
                 },
-                "url": "fuchsia-pkg://fuchsia.com/update",
-                "start": 1234567890,
+                "url": UPDATE_PKG_URL,
                 "state": {
                     "id": "reboot",
                     "info": {
@@ -179,7 +186,7 @@ async fn writes_history() {
 
 #[fasync::run_singlethreaded(test)]
 async fn replaces_bogus_history() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
     env.write_history(json!({
         "valid": "no",
@@ -190,12 +197,10 @@ async fn replaces_bogus_history() {
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs { start: Some(42), ..Default::default() })
-        .await
-        .unwrap();
+    env.run_update().await.unwrap();
 
     assert_eq!(
-        env.read_history().map(strip_attempt_ids),
+        env.read_history().map(strip_attempt_ids).map(strip_start_time),
         Some(json!({
             "version": "1",
             "content": [{
@@ -214,12 +219,11 @@ async fn replaces_bogus_history() {
                     "build_version": ""
                 },
                 "options": {
-                    "allow_attach_to_existing_attempt": false,
-                    "initiator": "Service",
+                    "allow_attach_to_existing_attempt": true,
+                    "initiator": "User",
                     "should_write_recovery": true,
                 },
-                "url": "fuchsia-pkg://fuchsia.com/update",
-                "start": 42,
+                "url": UPDATE_PKG_URL,
                 "state": {
                     "id": "reboot",
                     "info": {
@@ -237,10 +241,7 @@ async fn replaces_bogus_history() {
 
 #[fasync::run_singlethreaded(test)]
 async fn increments_attempts_counter_on_retry() {
-    let env = TestEnv::builder().oneshot(true).build();
-
-    let source = merkle_str!("ab");
-    let target = merkle_str!("ba");
+    let env = TestEnv::builder().build();
 
     env.resolver.url("fuchsia-pkg://fuchsia.com/not-found").fail(Status::NOT_FOUND);
     env.resolver
@@ -249,27 +250,21 @@ async fn increments_attempts_counter_on_retry() {
         .add_file("zbi", "fake zbi");
 
     let _ = env
-        .run_system_updater_oneshot(SystemUpdaterArgs {
-            update: Some("fuchsia-pkg://fuchsia.com/not-found"),
-            source: Some(source),
-            target: Some(target),
-            start: Some(10),
-            ..Default::default()
-        })
+        .run_update_with_options(
+            "fuchsia-pkg://fuchsia.com/not-found",
+            fidl_fuchsia_update_installer_ext::Options {
+                initiator: Initiator::Service,
+                allow_attach_to_existing_attempt: false,
+                should_write_recovery: true,
+            },
+        )
         .await
         .unwrap_err();
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        source: Some(source),
-        target: Some(target),
-        start: Some(20),
-        ..Default::default()
-    })
-    .await
-    .unwrap();
+    env.run_update().await.unwrap();
 
     assert_eq!(
-        env.read_history().map(strip_attempt_ids),
+        env.read_history().map(strip_attempt_ids).map(strip_start_time),
         Some(json!({
             "version": "1",
             "content": [
@@ -289,12 +284,11 @@ async fn increments_attempts_counter_on_retry() {
                     "build_version": ""
                 },
                 "options": {
-                    "allow_attach_to_existing_attempt": false,
-                    "initiator": "Service",
+                    "allow_attach_to_existing_attempt": true,
+                    "initiator": "User",
                     "should_write_recovery": true,
                 },
                 "url": "fuchsia-pkg://fuchsia.com/update",
-                "start": 20,
                 "state": {
                     "id": "reboot",
                     "info": {
@@ -327,7 +321,6 @@ async fn increments_attempts_counter_on_retry() {
                     "should_write_recovery": true,
                 },
                 "url": "fuchsia-pkg://fuchsia.com/not-found",
-                "start": 10,
                 "state": {
                     "id": "fail_prepare",
                 },
@@ -416,8 +409,7 @@ async fn serves_fidl_with_history_present() {
         }))
         .build();
 
-    let installer_proxy =
-        env.system_updater.as_ref().unwrap().connect_to_service::<InstallerMarker>().unwrap();
+    let installer_proxy = env.installer_proxy();
 
     assert_eq!(
         installer_proxy.get_last_update_result().await.unwrap(),
@@ -483,8 +475,7 @@ async fn serves_fidl_with_history_present() {
 async fn serves_fidl_without_history_present() {
     let env = TestEnv::new();
 
-    let installer_proxy =
-        env.system_updater.as_ref().unwrap().connect_to_service::<InstallerMarker>().unwrap();
+    let installer_proxy = env.installer_proxy();
 
     assert_eq!(
         installer_proxy.get_last_update_result().await.unwrap(),

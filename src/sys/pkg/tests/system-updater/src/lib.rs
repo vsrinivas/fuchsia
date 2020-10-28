@@ -5,12 +5,13 @@
 #![cfg(test)]
 use {
     self::SystemUpdaterInteraction::{BlobfsSync, Gc, PackageResolve, Paver, Reboot},
-    anyhow::Error,
+    anyhow::{anyhow, Context as _, Error},
     cobalt_sw_delivery_registry as metrics, fidl_fuchsia_paver as paver,
     fidl_fuchsia_pkg::PackageResolverRequestStream,
-    fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
     fidl_fuchsia_update_installer::{InstallerMarker, InstallerProxy},
-    fidl_fuchsia_update_installer_ext::Options,
+    fidl_fuchsia_update_installer_ext::{
+        start_update, Initiator, Options, UpdateAttempt, UpdateAttemptError,
+    },
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
@@ -19,6 +20,7 @@ use {
     fuchsia_pkg_testing::make_packages_json,
     fuchsia_zircon::Status,
     futures::prelude::*,
+    matches::assert_matches,
     mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::MockRebootService,
     mock_resolver::MockResolverService,
@@ -42,7 +44,6 @@ mod fetch_packages;
 mod history;
 mod mode_force_recovery;
 mod mode_normal;
-mod options;
 mod progress_reporting;
 mod reboot_controller;
 mod update_package;
@@ -76,7 +77,7 @@ type SystemUpdaterInteractions = Arc<Mutex<Vec<SystemUpdaterInteraction>>>;
 struct TestEnvBuilder {
     paver_service_builder: MockPaverServiceBuilder,
     blocked_protocols: HashSet<Protocol>,
-    oneshot: bool,
+    mount_data: bool,
     history: Option<serde_json::Value>,
 }
 
@@ -85,7 +86,7 @@ impl TestEnvBuilder {
         TestEnvBuilder {
             paver_service_builder: MockPaverServiceBuilder::new(),
             blocked_protocols: HashSet::new(),
-            oneshot: false,
+            mount_data: true,
             history: None,
         }
     }
@@ -103,8 +104,8 @@ impl TestEnvBuilder {
         self
     }
 
-    fn oneshot(mut self, oneshot: bool) -> Self {
-        self.oneshot = oneshot;
+    fn mount_data(mut self, mount_data: bool) -> Self {
+        self.mount_data = mount_data;
         self
     }
 
@@ -114,7 +115,7 @@ impl TestEnvBuilder {
     }
 
     fn build(self) -> TestEnv {
-        let Self { paver_service_builder, blocked_protocols, oneshot, history } = self;
+        let Self { paver_service_builder, blocked_protocols, mount_data, history } = self;
 
         // A buffer to store all the interactions the system-updater has with external services.
         let interactions = Arc::new(Mutex::new(vec![]));
@@ -140,16 +141,8 @@ impl TestEnvBuilder {
         }
 
         // Set up system-updater to run in --oneshot false code path.
-        let mut system_updater_builder = None;
-        if !oneshot {
-            system_updater_builder = Some(system_updater_app_builder(
-                &data_path,
-                &build_info_path,
-                &misc_path,
-                RawSystemUpdaterArgs(&[]),
-                Default::default(),
-            ));
-        }
+        let system_updater_builder =
+            system_updater_app_builder(&data_path, &build_info_path, &misc_path, mount_data);
 
         // Set up the paver service to push events to our interactions buffer by overriding
         // call_hook and firmware_hook.
@@ -262,11 +255,11 @@ impl TestEnvBuilder {
             .expect("nested environment to create successfully");
         fasync::Task::spawn(fs.collect()).detach();
 
-        let system_updater = system_updater_builder
-            .map(|builder| builder.spawn(env.launcher()).expect("system updater to launch"));
+        let system_updater =
+            system_updater_builder.spawn(env.launcher()).expect("system updater to launch");
 
         TestEnv {
-            env,
+            _env: env,
             resolver,
             _paver_service: paver_service,
             _reboot_service: reboot_service,
@@ -284,7 +277,7 @@ impl TestEnvBuilder {
 }
 
 struct TestEnv {
-    env: NestedEnvironment,
+    _env: NestedEnvironment,
     resolver: Arc<MockResolverService>,
     _paver_service: Arc<MockPaverService>,
     _reboot_service: Arc<MockRebootService>,
@@ -296,7 +289,7 @@ struct TestEnv {
     build_info_path: PathBuf,
     misc_path: PathBuf,
     interactions: SystemUpdaterInteractions,
-    system_updater: Option<App>,
+    system_updater: App,
 }
 
 impl TestEnv {
@@ -306,10 +299,6 @@ impl TestEnv {
 
     fn builder() -> TestEnvBuilder {
         TestEnvBuilder::new()
-    }
-
-    fn launcher(&self) -> &LauncherProxy {
-        self.env.launcher()
     }
 
     fn take_interactions(&self) -> Vec<SystemUpdaterInteraction> {
@@ -364,48 +353,55 @@ impl TestEnv {
         .unwrap()
     }
 
-    async fn run_system_updater_oneshot<'a>(
+    async fn start_update(&self) -> Result<UpdateAttempt, UpdateAttemptError> {
+        self.start_update_with_options(&UPDATE_PKG_URL, default_options()).await
+    }
+
+    async fn start_update_with_options(
         &self,
-        args: SystemUpdaterArgs<'a>,
-    ) -> Result<(), fuchsia_component::client::OutputError> {
-        self.run_system_updater_oneshot_args(args, Default::default()).await
+        url: &str,
+        options: Options,
+    ) -> Result<UpdateAttempt, UpdateAttemptError> {
+        start_update(&url.parse().unwrap(), options, &self.installer_proxy(), None).await
     }
 
-    async fn run_system_updater_oneshot_args<'a>(
-        &'a self,
-        args: impl ToSystemUpdaterCliArgs,
-        env: SystemUpdaterEnv,
-    ) -> Result<(), fuchsia_component::client::OutputError> {
-        let launcher = self.launcher();
-
-        let output = system_updater_app_builder(
-            &self.data_path,
-            &self.build_info_path,
-            &self.misc_path,
-            args,
-            env,
-        )
-        .output(launcher)
-        .expect("system updater to launch")
-        .await
-        .expect("no errors while waiting for exit");
-
-        if !output.stdout.is_empty() {
-            eprintln!("TEST: system updater stdout:\n{}", String::from_utf8_lossy(&output.stdout));
-        }
-
-        if !output.stderr.is_empty() {
-            eprintln!("TEST: system updater stderr:\n{}", String::from_utf8_lossy(&output.stderr));
-        }
-
-        assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
-        output.ok()
+    async fn run_update(&self) -> Result<(), Error> {
+        self.run_update_with_options(UPDATE_PKG_URL, default_options()).await
     }
 
-    /// Opens a connection to the installer fidl service, panicking if the system updater was not
-    /// started as a fidl service.
+    async fn run_update_with_options(&self, url: &str, options: Options) -> Result<(), Error> {
+        let mut update_attempt = self.start_update_with_options(url, options).await?;
+
+        while let Some(state) =
+            update_attempt.try_next().await.context("fetching next update state")?
+        {
+            if state.is_success() {
+                // Wait until the stream terminates before returning so that interactions will
+                // include reboot.
+                assert_matches!(update_attempt.try_next().await, Ok(None));
+                return Ok(());
+            } else if state.is_failure() {
+                // Wait until the stream terminates before returning so that any subsequent
+                // attempts won't get already in progress error.
+                assert_matches!(update_attempt.try_next().await, Ok(None));
+                return Err(anyhow!("update attempt failed"));
+            }
+        }
+
+        Err(anyhow!("unexpected end of update attempt"))
+    }
+
+    /// Opens a connection to the installer fidl service.
     fn installer_proxy(&self) -> InstallerProxy {
-        self.system_updater.as_ref().unwrap().connect_to_service::<InstallerMarker>().unwrap()
+        self.system_updater.connect_to_service::<InstallerMarker>().unwrap()
+    }
+
+    async fn get_ota_metrics(&self) -> OtaMetrics {
+        let loggers = self.logger_factory.loggers.lock().clone();
+        assert_eq!(loggers.len(), 1);
+        let logger = loggers.into_iter().next().unwrap();
+        let events = logger.cobalt_events.lock().clone();
+        OtaMetrics::from_events(events)
     }
 }
 
@@ -413,8 +409,7 @@ fn system_updater_app_builder(
     data_path: &PathBuf,
     build_info_path: &PathBuf,
     misc_path: &PathBuf,
-    args: impl ToSystemUpdaterCliArgs,
-    env: SystemUpdaterEnv,
+    mount_data: bool,
 ) -> AppBuilder {
     let data_dir = File::open(data_path).expect("open data dir");
     let build_info_dir = File::open(build_info_path).expect("open config dir");
@@ -426,109 +421,15 @@ fn system_updater_app_builder(
     .add_dir_to_namespace("/config/build-info".to_string(), build_info_dir)
     .expect("/config/build-info to mount")
     .add_dir_to_namespace("/misc".to_string(), misc_dir)
-    .expect("/misc to mount")
-    .args(args.to_args());
+    .expect("/misc to mount");
 
-    if env.mount_data {
+    if mount_data {
         system_updater = system_updater
             .add_dir_to_namespace("/data".to_string(), data_dir)
             .expect("/data to mount");
     }
 
     system_updater
-}
-
-trait ToSystemUpdaterCliArgs {
-    fn to_args(self) -> Vec<String>;
-}
-
-impl ToSystemUpdaterCliArgs for SystemUpdaterArgs<'_> {
-    fn to_args(self) -> Vec<String> {
-        self.build()
-    }
-}
-
-impl ToSystemUpdaterCliArgs for RawSystemUpdaterArgs {
-    fn to_args(self) -> Vec<String> {
-        self.0.into_iter().map(|s| (*s).to_owned()).collect()
-    }
-}
-
-#[derive(Debug)]
-struct SystemUpdaterEnv {
-    mount_data: bool,
-}
-
-impl Default for SystemUpdaterEnv {
-    fn default() -> Self {
-        Self { mount_data: true }
-    }
-}
-
-#[derive(Debug)]
-struct RawSystemUpdaterArgs(&'static [&'static str]);
-
-#[derive(Debug, Default)]
-struct SystemUpdaterArgs<'a> {
-    initiator: Option<Initiator>,
-    source: Option<&'a str>,
-    target: Option<&'a str>,
-    start: Option<i64>,
-    update: Option<&'a str>,
-    reboot: Option<bool>,
-    skip_recovery: Option<bool>,
-}
-
-#[derive(Debug, Clone, Copy)]
-enum Initiator {
-    User,
-    Service,
-}
-
-impl Default for Initiator {
-    fn default() -> Self {
-        Initiator::Service
-    }
-}
-
-impl Initiator {
-    fn to_cli_arg(self) -> String {
-        match self {
-            Initiator::User => "manual".to_string(),
-            Initiator::Service => "automatic".to_string(),
-        }
-    }
-}
-
-impl SystemUpdaterArgs<'_> {
-    fn build(&self) -> Vec<String> {
-        let mut args = vec![];
-
-        if let Some(initiator) = self.initiator {
-            args.extend(vec!["--initiator".to_owned(), initiator.to_cli_arg()]);
-        }
-        if let Some(source) = self.source {
-            args.extend(vec!["--source".to_owned(), source.to_owned()]);
-        }
-        if let Some(target) = self.target {
-            args.extend(vec!["--target".to_owned(), target.to_owned()]);
-        }
-        if let Some(start) = self.start {
-            args.extend(vec!["--start".to_owned(), start.to_string()]);
-        }
-        if let Some(update) = self.update {
-            args.extend(vec!["--update".to_owned(), update.to_owned()]);
-        }
-        if let Some(reboot) = self.reboot {
-            args.extend(vec!["--reboot".to_owned(), reboot.to_string()]);
-        }
-        if let Some(skip_recovery) = self.skip_recovery {
-            args.extend(vec!["--skip-recovery".to_owned(), skip_recovery.to_string()]);
-        }
-        args.extend(vec!["--oneshot".to_owned(), "true".to_owned()]);
-
-        args
-    }
 }
 
 struct MockCacheService {
@@ -707,7 +608,7 @@ impl OtaMetrics {
 
         // OtaStart only has initiator and hour_of_day, so just check initiator.
         assert_eq!(start.event_codes[0], event_codes[0]);
-        assert_eq!(&start.component, &component);
+        assert_eq!(start.component, Some("".to_string()));
 
         let target = component.expect("a target update merkle");
 
@@ -772,7 +673,7 @@ fn resolved_urls(interactions: SystemUpdaterInteractions) -> Vec<String> {
 
 fn default_options() -> Options {
     Options {
-        initiator: fidl_fuchsia_update_installer_ext::Initiator::User,
+        initiator: Initiator::User,
         allow_attach_to_existing_attempt: true,
         should_write_recovery: true,
     }

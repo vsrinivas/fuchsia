@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::args::Initiator,
+    crate::update::config::Initiator,
     cobalt_client::traits::AsEventCode,
     cobalt_sw_delivery_registry as metrics,
     futures::future::Future,

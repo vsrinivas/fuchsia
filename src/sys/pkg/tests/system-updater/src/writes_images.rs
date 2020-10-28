@@ -6,20 +6,14 @@ use {super::*, pretty_assertions::assert_eq};
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_paver_connect_error() {
-    let env = TestEnv::builder().unregister_protocol(Protocol::Paver).oneshot(true).build();
+    let env = TestEnv::builder().unregister_protocol(Protocol::Paver).build();
 
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake_zbi");
 
-    let result = env
-        .run_system_updater_oneshot(SystemUpdaterArgs {
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            ..Default::default()
-        })
-        .await;
+    let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
     // Appmgr will close the paver service channel when it is unable to forward the channel to any
@@ -45,7 +39,6 @@ async fn fails_on_image_write_error() {
                 _ => Status::OK,
             })
         })
-        .oneshot(true)
         .build();
 
     env.resolver
@@ -53,26 +46,17 @@ async fn fails_on_image_write_error() {
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake_zbi");
 
-    let result = env
-        .run_system_updater_oneshot(SystemUpdaterArgs {
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            ..Default::default()
-        })
-        .await;
+    let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
-    let loggers = env.logger_factory.loggers.lock().clone();
-    assert_eq!(loggers.len(), 1);
-    let logger = loggers.into_iter().next().unwrap();
     assert_eq!(
-        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        env.get_ota_metrics().await,
         OtaMetrics {
             initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageWrite as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "m3rk13".into(),
+            target: "".into(),
         }
     );
 
@@ -105,7 +89,7 @@ async fn fails_on_image_write_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -114,12 +98,10 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
         .add_file("zedboot", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        skip_recovery: Some(true),
-        ..Default::default()
-    })
+    env.run_update_with_options(
+        UPDATE_PKG_URL,
+        Options { should_write_recovery: false, ..default_options() },
+    )
     .await
     .expect("success");
 
@@ -158,7 +140,6 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
 async fn writes_to_both_configs_if_abr_not_supported() {
     let env = TestEnv::builder()
         .paver_service(|builder| builder.boot_manager_close_with_epitaph(Status::NOT_SUPPORTED))
-        .oneshot(true)
         .build();
 
     env.resolver
@@ -166,25 +147,16 @@ async fn writes_to_both_configs_if_abr_not_supported() {
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake_zbi");
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
-    })
-    .await
-    .expect("success");
+    env.run_update().await.expect("success");
 
-    let loggers = env.logger_factory.loggers.lock().clone();
-    assert_eq!(loggers.len(), 1);
-    let logger = loggers.into_iter().next().unwrap();
     assert_eq!(
-        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        env.get_ota_metrics().await,
         OtaMetrics {
             initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "m3rk13".into(),
+            target: "".into(),
         }
     );
 
@@ -228,7 +200,6 @@ async fn updates_even_if_cant_set_active_partition_healthy() {
                 .current_config(current_config)
                 .active_config(active_config)
         })
-        .oneshot(true)
         .build();
 
     env.resolver
@@ -236,25 +207,16 @@ async fn updates_even_if_cant_set_active_partition_healthy() {
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake_zbi");
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
-    })
-    .await
-    .expect("success");
+    env.run_update().await.expect("success");
 
-    let loggers = env.logger_factory.loggers.lock().clone();
-    assert_eq!(loggers.len(), 1);
-    let logger = loggers.into_iter().next().unwrap();
     assert_eq!(
-        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        env.get_ota_metrics().await,
         OtaMetrics {
             initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "m3rk13".into(),
+            target: "".into(),
         }
     );
 
@@ -405,7 +367,7 @@ async fn resets_active_with_unhealthy_current_b() {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery_called_legacy_zedboot() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -413,13 +375,7 @@ async fn writes_recovery_called_legacy_zedboot() {
         .add_file("zbi", "fake zbi")
         .add_file("zedboot", "new recovery");
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
-    })
-    .await
-    .expect("success");
+    env.run_update().await.expect("success");
 
     assert_eq!(
         env.take_interactions(),
@@ -460,7 +416,7 @@ async fn writes_recovery_called_legacy_zedboot() {
 // TODO(fxbug.dev/52356): drop this duplicate test when "zedboot" is no longer allowed/used.
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -468,13 +424,7 @@ async fn writes_recovery() {
         .add_file("zbi", "fake zbi")
         .add_file("recovery", "new recovery");
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
-    })
-    .await
-    .expect("success");
+    env.run_update().await.expect("success");
 
     assert_eq!(
         env.take_interactions(),
@@ -514,7 +464,7 @@ async fn writes_recovery() {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery_vbmeta() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -523,13 +473,7 @@ async fn writes_recovery_vbmeta() {
         .add_file("zedboot", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
-    })
-    .await
-    .expect("success");
+    env.run_update().await.expect("success");
 
     assert_eq!(
         env.take_interactions(),
@@ -574,7 +518,7 @@ async fn writes_recovery_vbmeta() {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_fuchsia_vbmeta() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -582,13 +526,7 @@ async fn writes_fuchsia_vbmeta() {
         .add_file("zbi", "fake zbi")
         .add_file("fuchsia.vbmeta", "fake zbi vbmeta");
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
-    })
-    .await
-    .expect("success");
+    env.run_update().await.expect("success");
 
     assert_eq!(
         env.take_interactions(),
@@ -645,7 +583,6 @@ async fn update_with_custom_config_status(
                 builder
             }
         })
-        .oneshot(true)
         .build();
 
     env.resolver
@@ -653,25 +590,16 @@ async fn update_with_custom_config_status(
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake_zbi");
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
-    })
-    .await
-    .expect("success");
+    env.run_update().await.expect("success");
 
-    let loggers = env.logger_factory.loggers.lock().clone();
-    assert_eq!(loggers.len(), 1);
-    let logger = loggers.into_iter().next().unwrap();
     assert_eq!(
-        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        env.get_ota_metrics().await,
         OtaMetrics {
             initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "m3rk13".into(),
+            target: "".into(),
         }
     );
 

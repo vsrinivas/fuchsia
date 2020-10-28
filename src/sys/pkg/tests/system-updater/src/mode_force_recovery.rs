@@ -20,35 +20,25 @@ fn force_recovery_json() -> String {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery_and_force_reboots_into_it() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
-    let package_url = SYSTEM_IMAGE_URL;
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([package_url]))
+        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
         .add_file("update-mode", &force_recovery_json())
         .add_file("recovery", "the recovery image")
         .add_file("recovery.vbmeta", "the recovery vbmeta");
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
-    })
-    .await
-    .expect("run system updater");
+    env.run_update().await.expect("run system updater");
 
-    let loggers = env.logger_factory.loggers.lock().clone();
-    assert_eq!(loggers.len(), 1);
-    let logger = loggers.into_iter().next().unwrap();
     assert_eq!(
-        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        env.get_ota_metrics().await,
         OtaMetrics {
             initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "m3rk13".into(),
+            target: "".into(),
         }
     );
 
@@ -94,21 +84,14 @@ async fn writes_recovery_and_force_reboots_into_it() {
 
 #[fasync::run_singlethreaded(test)]
 async fn reboots_regardless_of_reboot_arg() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages", make_packages_json([]))
         .add_file("update-mode", &force_recovery_json());
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        reboot: Some(false),
-        ..Default::default()
-    })
-    .await
-    .expect("run system updater");
+    env.run_update().await.expect("run system updater");
 
     // Verify we made a reboot call.
     assert_eq!(env.take_interactions().last().unwrap(), &Reboot);
@@ -145,7 +128,7 @@ async fn reboots_regardless_of_reboot_controller() {
 
 #[fasync::run_singlethreaded(test)]
 async fn rejects_zbi() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -154,13 +137,7 @@ async fn rejects_zbi() {
         .add_file("bootloader", "new bootloader")
         .add_file("zbi", "fake zbi");
 
-    let result = env
-        .run_system_updater_oneshot(SystemUpdaterArgs {
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            ..Default::default()
-        })
-        .await;
+    let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
     assert_eq!(
@@ -186,7 +163,7 @@ async fn rejects_zbi() {
 
 #[fasync::run_singlethreaded(test)]
 async fn rejects_skip_recovery_flag() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -194,12 +171,14 @@ async fn rejects_skip_recovery_flag() {
         .add_file("update-mode", &force_recovery_json());
 
     let result = env
-        .run_system_updater_oneshot(SystemUpdaterArgs {
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            skip_recovery: Some(true),
-            ..Default::default()
-        })
+        .run_update_with_options(
+            UPDATE_PKG_URL,
+            Options {
+                initiator: Initiator::User,
+                allow_attach_to_existing_attempt: true,
+                should_write_recovery: false,
+            },
+        )
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 }

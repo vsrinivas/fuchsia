@@ -8,7 +8,6 @@ use {
         monitor_update, start_update, Initiator, Options, Progress, State, StateId,
         UpdateAttemptError, UpdateInfo, UpdateInfoAndProgress,
     },
-    fuchsia_url::pkg_url::PkgUrl,
     matches::assert_matches,
     pretty_assertions::assert_eq,
 };
@@ -38,11 +37,7 @@ async fn progress_reporting_fetch_multiple_packages() {
     let handle_pkg3 = env.resolver.url(pkg3_url).block_once();
 
     // Start the system update.
-    let installer_proxy = env.installer_proxy();
-    let mut attempt =
-        start_update(&UPDATE_PKG_URL.parse().unwrap(), default_options(), &installer_proxy, None)
-            .await
-            .unwrap();
+    let mut attempt = env.start_update().await.unwrap();
 
     assert_eq!(attempt.next().await.unwrap().unwrap(), State::Prepare);
 
@@ -121,15 +116,11 @@ async fn monitor_connects_to_existing_attempt() {
     let handle_update_pkg = env.resolver.url(UPDATE_PKG_URL).block_once();
 
     // Start the system update.
-    let installer_proxy = env.installer_proxy();
-    let attempt0 =
-        start_update(&UPDATE_PKG_URL.parse().unwrap(), default_options(), &installer_proxy, None)
-            .await
-            .unwrap();
+    let attempt0 = env.start_update().await.unwrap();
 
     // Attach monitor.
     let attempt1 =
-        monitor_update(Some(attempt0.attempt_id()), &installer_proxy).await.unwrap().unwrap();
+        monitor_update(Some(attempt0.attempt_id()), &env.installer_proxy()).await.unwrap().unwrap();
 
     // Now that we attached both monitors to the current attempt, we can unblock the
     // resolve and resume the update attempt.
@@ -164,21 +155,18 @@ async fn succeed_additional_start_requests_when_compatible() {
 
     // Start the system update, making 2 start_update requests. The second start_update request
     // is essentially just a monitor_update request in this case.
-    let installer_proxy = env.installer_proxy();
-    let url: PkgUrl = UPDATE_PKG_URL.parse().unwrap();
-    let attempt0 = start_update(&url, default_options(), &installer_proxy, None).await.unwrap();
-    let attempt1 = start_update(
-        &url,
-        Options {
-            initiator: Initiator::User,
-            allow_attach_to_existing_attempt: true,
-            should_write_recovery: true,
-        },
-        &installer_proxy,
-        None,
-    )
-    .await
-    .unwrap();
+    let attempt0 = env.start_update().await.unwrap();
+    let attempt1 = env
+        .start_update_with_options(
+            UPDATE_PKG_URL,
+            Options {
+                initiator: Initiator::User,
+                allow_attach_to_existing_attempt: true,
+                should_write_recovery: true,
+            },
+        )
+        .await
+        .unwrap();
 
     // Now that we attached both monitors to the current attempt, we can unblock the
     // resolve and resume the update attempt.
@@ -212,16 +200,14 @@ async fn fail_additional_start_requests_when_not_compatible() {
 
     // Start the system update.
     let installer_proxy = env.installer_proxy();
-    let compatible_url: PkgUrl = UPDATE_PKG_URL.parse().unwrap();
+    let compatible_url = UPDATE_PKG_URL;
     let compatible_options = Options {
         initiator: Initiator::User,
         allow_attach_to_existing_attempt: true,
         should_write_recovery: true,
     };
     let _attempt =
-        start_update(&compatible_url, compatible_options.clone(), &installer_proxy, None)
-            .await
-            .unwrap();
+        env.start_update_with_options(compatible_url, compatible_options.clone()).await.unwrap();
 
     // Define incompatible options and url.
     let incompatible_options0 = Options {
@@ -234,25 +220,25 @@ async fn fail_additional_start_requests_when_not_compatible() {
         allow_attach_to_existing_attempt: false,
         should_write_recovery: true,
     };
-    let incompatible_url = "fuchsia-pkg://fuchsia.com/different-url".parse().unwrap();
+    let incompatible_url = "fuchsia-pkg://fuchsia.com/different-url";
 
     // Show that start_update requests fail with AlreadyInProgress errors.
     assert_matches!(
-        start_update(&compatible_url, incompatible_options0, &installer_proxy, None)
+        env.start_update_with_options(compatible_url, incompatible_options0)
             .await
             .map(|_| ())
             .unwrap_err(),
         UpdateAttemptError::InstallInProgress
     );
     assert_matches!(
-        start_update(&compatible_url, incompatible_options1, &installer_proxy, None)
+        env.start_update_with_options(compatible_url, incompatible_options1)
             .await
             .map(|_| ())
             .unwrap_err(),
         UpdateAttemptError::InstallInProgress
     );
     assert_matches!(
-        start_update(&incompatible_url, compatible_options.clone(), &installer_proxy, None)
+        env.start_update_with_options(incompatible_url, compatible_options.clone())
             .await
             .map(|_| ())
             .unwrap_err(),
@@ -260,10 +246,15 @@ async fn fail_additional_start_requests_when_not_compatible() {
     );
     let (_, server_end) = fidl::endpoints::create_endpoints().unwrap();
     assert_matches!(
-        start_update(&compatible_url, compatible_options, &installer_proxy, Some(server_end))
-            .await
-            .map(|_| ())
-            .unwrap_err(),
+        start_update(
+            &compatible_url.parse().unwrap(),
+            compatible_options,
+            &installer_proxy,
+            Some(server_end)
+        )
+        .await
+        .map(|_| ())
+        .unwrap_err(),
         UpdateAttemptError::InstallInProgress
     );
 }

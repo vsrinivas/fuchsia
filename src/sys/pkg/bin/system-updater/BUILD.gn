@@ -38,7 +38,6 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/update-package",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
@@ -60,7 +59,6 @@ rustc_binary("bin") {
   ]
 
   sources = [
-    "src/args.rs",
     "src/fidl.rs",
     "src/install_manager.rs",
     "src/main.rs",

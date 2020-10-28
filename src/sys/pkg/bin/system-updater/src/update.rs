@@ -68,7 +68,7 @@ pub trait Updater {
         &mut self,
         config: Config,
         env: Environment,
-        reboot_controller: Option<RebootController>,
+        reboot_controller: RebootController,
     ) -> (String, Self::UpdateStream);
 }
 
@@ -90,7 +90,7 @@ impl Updater for RealUpdater {
         &mut self,
         config: Config,
         env: Environment,
-        reboot_controller: Option<RebootController>,
+        reboot_controller: RebootController,
     ) -> (String, Self::UpdateStream) {
         let (attempt_id, attempt) =
             update(config, env, Arc::clone(&self.history), reboot_controller).await;
@@ -111,7 +111,7 @@ async fn update(
     config: Config,
     env: Environment,
     history: Arc<Mutex<UpdateHistory>>,
-    reboot_controller: Option<RebootController>,
+    reboot_controller: RebootController,
 ) -> (String, impl FusedStream<Item = State>) {
     let attempt_fut = history.lock().start_update_attempt(
         Options {
@@ -143,7 +143,7 @@ async fn update(
         let cobalt_forwarder_task = Task::spawn(cobalt_forwarder_task);
 
         fx_log_info!("starting system update with config: {:?}", config);
-        cobalt.log_ota_start(&config.target_version, config.initiator, config.start_time);
+        cobalt.log_ota_start("", config.initiator, config.start_time);
 
         let mut target_version = history::Version::default();
 
@@ -152,15 +152,16 @@ async fn update(
             .await;
 
         let status_code = metrics::result_to_status_code(attempt_res.as_ref().map(|_| ()));
+        let target_build_version = target_version.build_version.to_string();
         cobalt.log_ota_result_attempt(
-            &config.target_version,
+            &target_build_version,
             config.initiator,
             history.lock().attempts_for(&source_version, &target_version) + 1,
             phase,
             status_code,
         );
         cobalt.log_ota_result_duration(
-            &config.target_version,
+            &target_build_version,
             config.initiator,
             phase,
             status_code,
@@ -184,14 +185,14 @@ async fn update(
         };
 
         // Figure out if we should reboot.
-        match (mode, reboot_controller, config.should_reboot) {
+        match mode {
             // First priority: Always reboot on ForceRecovery success, even if the caller
             // asked to defer the reboot.
-            (UpdateMode::ForceRecovery, _, _) => {
+            UpdateMode::ForceRecovery => {
                 fx_log_info!("system update in ForceRecovery mode complete, rebooting...");
             }
             // Second priority: Use the attached reboot controller.
-            (UpdateMode::Normal, Some(reboot_controller), _) => {
+            UpdateMode::Normal => {
                 fx_log_info!("system update complete, waiting for initiator to signal reboot.");
                 match reboot_controller.wait_to_reboot().await {
                     CommitAction::Reboot => {
@@ -203,15 +204,6 @@ async fn update(
                         return target_version;
                     }
                 }
-            }
-            // Last priority: Reboot depending on the config.
-            (UpdateMode::Normal, None, true) => {
-                fx_log_info!("system update complete, rebooting...");
-            }
-            (UpdateMode::Normal, None, false) => {
-                fx_log_info!("system update complete, reboot to new version deferred to caller.");
-                state.enter_defer_reboot(&mut co).await;
-                return target_version;
             }
         }
 

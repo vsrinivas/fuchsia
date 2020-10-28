@@ -8,7 +8,7 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
     status: Status,
     expected_status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode,
 ) {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
     let pkg_url = "fuchsia-pkg://fuchsia.com/failure/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100";
 
@@ -19,26 +19,17 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
 
     env.resolver.url(pkg_url).fail(status);
 
-    let result = env
-        .run_system_updater_oneshot(SystemUpdaterArgs {
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            ..Default::default()
-        })
-        .await;
+    let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
-    let loggers = env.logger_factory.loggers.lock().clone();
-    assert_eq!(loggers.len(), 1);
-    let logger = loggers.into_iter().next().unwrap();
     assert_eq!(
-        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        env.get_ota_metrics().await,
         OtaMetrics {
             initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
             status_code: expected_status_code as u32,
-            target: "m3rk13".into(),
+            target: "".into(),
         }
     );
 }
@@ -81,20 +72,14 @@ async fn reports_network() {
 
 #[fasync::run_singlethreaded(test)]
 async fn succeeds_even_if_metrics_fail_to_send() {
-    let env = TestEnvBuilder::new().unregister_protocol(Protocol::Cobalt).oneshot(true).build();
+    let env = TestEnvBuilder::new().unregister_protocol(Protocol::Cobalt).build();
 
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
-    env.run_system_updater_oneshot(SystemUpdaterArgs {
-        initiator: Some(Initiator::User),
-        target: Some("m3rk13"),
-        ..Default::default()
-    })
-    .await
-    .expect("run system updater");
+    env.run_update().await.expect("run system updater");
 
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 0);

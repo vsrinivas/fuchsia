@@ -81,8 +81,7 @@ async fn run<N, U, E>(
         // Now we can actually start the task that manages the update attempt.
         let update_url = &config.update_url.clone();
         let should_write_recovery = config.should_write_recovery;
-        let (attempt_id, attempt_stream) =
-            updater.update(config, env, Some(reboot_controller)).await;
+        let (attempt_id, attempt_stream) = updater.update(config, env, reboot_controller).await;
         futures::pin_mut!(attempt_stream);
 
         // Set up inspect nodes.
@@ -392,7 +391,7 @@ mod tests {
             &mut self,
             _config: Config,
             _env: Environment,
-            _reboot_controller: Option<RebootController>,
+            _reboot_controller: RebootController,
         ) -> (String, Self::UpdateStream) {
             self.0.next().await.unwrap()
         }

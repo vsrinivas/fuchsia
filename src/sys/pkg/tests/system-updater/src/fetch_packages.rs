@@ -10,16 +10,9 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_package_resolver_connect_error() {
-    let env =
-        TestEnvBuilder::new().unregister_protocol(Protocol::PackageResolver).oneshot(true).build();
+    let env = TestEnvBuilder::new().unregister_protocol(Protocol::PackageResolver).build();
 
-    let result = env
-        .run_system_updater_oneshot(SystemUpdaterArgs {
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            ..Default::default()
-        })
-        .await;
+    let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
     assert_eq!(
@@ -45,7 +38,7 @@ async fn fails_on_package_resolver_connect_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_update_package_fetch_error() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -54,26 +47,17 @@ async fn fails_on_update_package_fetch_error() {
     let system_image_url = SYSTEM_IMAGE_URL;
     env.resolver.mock_resolve_failure(system_image_url, Status::NOT_FOUND);
 
-    let result = env
-        .run_system_updater_oneshot(SystemUpdaterArgs {
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            ..Default::default()
-        })
-        .await;
+    let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
-    let loggers = env.logger_factory.loggers.lock().clone();
-    assert_eq!(loggers.len(), 1);
-    let logger = loggers.into_iter().next().unwrap();
     assert_eq!(
-        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        env.get_ota_metrics().await,
         OtaMetrics {
             initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "m3rk13".into(),
+            target: "".into(),
         }
     );
 
@@ -101,7 +85,7 @@ async fn fails_on_update_package_fetch_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_content_package_fetch_error() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
 
     let pkg1_url = pinned_pkg_url!("package1/0", "aa");
     let pkg2_url = pinned_pkg_url!("package2/0", "00");
@@ -141,13 +125,7 @@ async fn fails_on_content_package_fetch_error() {
 
     let ((), ()) = future::join(
         async {
-            let result = env
-                .run_system_updater_oneshot(SystemUpdaterArgs {
-                    initiator: Some(Initiator::User),
-                    target: Some("m3rk13"),
-                    ..Default::default()
-                })
-                .await;
+            let result = env.run_update().await;
             assert!(result.is_err(), "system updater succeeded when it should fail");
         },
         async move {
@@ -170,17 +148,14 @@ async fn fails_on_content_package_fetch_error() {
     )
     .await;
 
-    let loggers = env.logger_factory.loggers.lock().clone();
-    assert_eq!(loggers.len(), 1);
-    let logger = loggers.into_iter().next().unwrap();
     assert_eq!(
-        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        env.get_ota_metrics().await,
         OtaMetrics {
             initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "m3rk13".into(),
+            target: "".into(),
         }
     );
 
@@ -214,7 +189,7 @@ async fn fails_on_content_package_fetch_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_when_package_cache_sync_fails() {
-    let env = TestEnv::builder().oneshot(true).build();
+    let env = TestEnv::builder().build();
     env.cache_service.set_sync_response(Err(Status::INTERNAL));
     env.resolver
         .register_package("update", "upd4t3")
@@ -223,13 +198,7 @@ async fn fails_when_package_cache_sync_fails() {
         .url(SYSTEM_IMAGE_URL)
         .resolve(&env.resolver.package("system_image/0", SYSTEM_IMAGE_HASH));
 
-    let result = env
-        .run_system_updater_oneshot(SystemUpdaterArgs {
-            initiator: Some(Initiator::User),
-            target: Some("m3rk13"),
-            ..Default::default()
-        })
-        .await;
+    let result = env.run_update().await;
 
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
