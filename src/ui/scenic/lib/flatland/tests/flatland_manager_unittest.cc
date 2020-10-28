@@ -40,6 +40,7 @@ using fuchsia::ui::scenic::internal::Flatland_Present_Result;
 // should be false if the call to Present() is expected to trigger an error.
 #define PRESENT(flatland, session_id, expect_success)                                    \
   {                                                                                      \
+    const auto num_pending_sessions = GetNumPendingSessionUpdates(session_id);           \
     if (expect_success) {                                                                \
       EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(session_id, _));            \
       EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _));            \
@@ -55,7 +56,10 @@ using fuchsia::ui::scenic::internal::Flatland_Present_Result;
                         processed_callback = true;                                       \
                       });                                                                \
     /* Wait for the worker thread to process the request. */                             \
-    RunLoopUntil([&processed_callback] { return processed_callback; });                  \
+    RunLoopUntil([this, session_id, num_pending_sessions] {                              \
+      return GetNumPendingSessionUpdates(session_id) > num_pending_sessions;             \
+    });                                                                                  \
+    EXPECT_TRUE(processed_callback);                                                     \
   }
 
 namespace {
