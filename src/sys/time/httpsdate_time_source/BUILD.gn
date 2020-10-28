@@ -12,7 +12,9 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
+    "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -21,6 +23,7 @@ rustc_binary("bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/time/lib/httpdate-hyper",
     "//src/sys/time/lib/push-source",
+    "//src/sys/time/lib/time_metrics_registry",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
@@ -31,6 +34,8 @@ rustc_binary("bin") {
 
   sources = [
     "src/datatypes.rs",
+    "src/diagnostics/cobalt.rs",
+    "src/diagnostics/composite.rs",
     "src/diagnostics/fake.rs",
     "src/diagnostics/inspect.rs",
     "src/diagnostics/mod.rs",

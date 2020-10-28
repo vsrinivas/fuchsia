@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod cobalt;
+mod composite;
 #[cfg(test)]
 mod fake;
 mod inspect;
 
+pub use self::cobalt::CobaltDiagnostics;
+pub use self::composite::CompositeDiagnostics;
 #[cfg(test)]
 pub use self::fake::FakeDiagnostics;
 pub use self::inspect::InspectDiagnostics;

@@ -6,14 +6,14 @@ mod datatypes;
 mod diagnostics;
 mod httpsdate;
 
-use crate::diagnostics::InspectDiagnostics;
+use crate::diagnostics::{CobaltDiagnostics, CompositeDiagnostics, InspectDiagnostics};
 use crate::httpsdate::{HttpsDateUpdateAlgorithm, RetryStrategy};
 use anyhow::{Context, Error};
 use fidl_fuchsia_time_external::{PushSourceRequestStream, Status};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
-use futures::{future::join, StreamExt, TryFutureExt};
+use futures::{future::join3, StreamExt, TryFutureExt};
 use log::warn;
 use push_source::PushSource;
 
@@ -38,9 +38,11 @@ async fn main() -> Result<(), Error> {
 
     let inspect = InspectDiagnostics::new(fuchsia_inspect::component::inspector().root());
     fuchsia_inspect::component::inspector().serve(&mut fs)?;
+    let (cobalt, cobalt_sender_fut) = CobaltDiagnostics::new();
+    let diagnostics = CompositeDiagnostics::new(inspect, cobalt);
 
     let update_algorithm =
-        HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, REQUEST_URI.parse()?, inspect);
+        HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, REQUEST_URI.parse()?, diagnostics);
     let push_source = PushSource::new(update_algorithm, Status::Ok)?;
     let update_fut = push_source.poll_updates();
 
@@ -51,6 +53,6 @@ async fn main() -> Result<(), Error> {
             .unwrap_or_else(|e| warn!("Error handling PushSource stream: {:?}", e))
     });
 
-    let (update_res, _service) = join(update_fut, service_fut).await;
+    let (update_res, _, _) = join3(update_fut, service_fut, cobalt_sender_fut).await;
     update_res
 }
