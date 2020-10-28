@@ -302,7 +302,7 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
   }
 
   // We already added the pages, so this will just cause them to be pinned.
-  status = vmo->CommitRangeInternal(0, size, true, ktl::move(guard));
+  status = vmo->cow_pages_locked()->PinRangeLocked(0, size);
   if (status != ZX_OK) {
     // Decommit the range so the destructor doesn't attempt to unpin.
     vmo->DecommitRangeLocked(0, size);
@@ -828,15 +828,11 @@ size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len
   return page_count;
 }
 
-zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bool pin,
-                                               Guard<Mutex>&& adopt) {
+zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bool pin) {
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
-  DEBUG_ASSERT(adopt.wraps_lock(lock_ref().lock()));
-  Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
-  // Convince the static analysis that we now do actually hold lock_.
-  AssertHeld(lock_);
+  Guard<Mutex> guard{&lock_};
 
   // Child slices of VMOs are currently not resizable, nor can they be made
   // from resizable parents.  If this ever changes, the logic surrounding what
@@ -846,7 +842,120 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
   // change if the operation is being executed against a child slice.
   DEBUG_ASSERT(!is_resizable() || !is_slice());
 
-  return cow_pages_locked()->CommitRange(offset, len, pin, ktl::move(guard));
+  // Round offset and len to be page aligned.
+  const uint64_t end = ROUNDUP_PAGE_SIZE(offset + len);
+  DEBUG_ASSERT(end >= offset);
+  offset = ROUNDDOWN(offset, PAGE_SIZE);
+  len = end - offset;
+
+  // If a pin is requested the entire range must exist and be valid,
+  // otherwise we can commit a partial range.
+  if (pin) {
+    // If pinning we explicitly forbid zero length pins as we cannot guarantee consistent semantics.
+    // For example pinning a zero length range outside the range of the VMO is an error, and so
+    // pinning a zero length range inside the vmo and then resizing the VMO smaller than the pin
+    // region should also be an error. To enforce this without having to have new metadata to track
+    // zero length pin regions is to just forbid them. Note that the user entry points for pinning
+    // already forbid zero length ranges.
+    if (len == 0) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    // verify that the range is within the object
+    if (unlikely(!InRange(offset, len, size_locked()))) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+  } else {
+    uint64_t new_len = len;
+    if (!TrimRange(offset, len, size_locked(), &new_len)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    // was in range, just zero length
+    if (new_len == 0) {
+      return ZX_OK;
+    }
+    len = new_len;
+  }
+
+  // Should any errors occur we need to unpin everything.
+  auto pin_cleanup = fbl::MakeAutoCall([this, original_offset = offset, &offset, pin]() {
+    // Regardless of any resizes or other things that may have happened any pinned pages *must*
+    // still be within a valid range, and so we know Unpin should succeed. The edge case is if we
+    // had failed to pin *any* pages and so our original offset may be outside the current range of
+    // the vmo. Additionally, as pinning a zero length range is invalid, so is unpinning, and so we
+    // must avoid.
+    if (pin && offset > original_offset) {
+      AssertHeld(*lock());
+      cow_pages_locked()->UnpinLocked(original_offset, offset - original_offset);
+    }
+  });
+
+  PageRequest page_request(true);
+  // As we may need to wait on arbitrary page requests we just keep running this until the commit
+  // process finishes with success.
+  for (;;) {
+    uint64_t committed_len = 0;
+    zx_status_t status =
+        cow_pages_locked()->CommitRangeLocked(offset, len, &committed_len, &page_request);
+
+    // Regardless of the return state some pages may have been committed and so unmap any pages in
+    // the range we touched.
+    if (committed_len > 0) {
+      RangeChangeUpdateLocked(offset, committed_len, RangeChangeOp::Unmap);
+    }
+
+    // Now we can exit if we received any error states.
+    if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
+      return status;
+    }
+
+    // Pin any committed range if required.
+    if (pin && committed_len > 0) {
+      zx_status_t status = cow_pages_locked()->PinRangeLocked(offset, committed_len);
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+
+    // If commit was success we can stop here.
+    if (status == ZX_OK) {
+      DEBUG_ASSERT(committed_len == len);
+      pin_cleanup.cancel();
+      return ZX_OK;
+    }
+    DEBUG_ASSERT(status == ZX_ERR_SHOULD_WAIT);
+
+    // Need to update how much was committed, and then wait on the page request.
+    offset += committed_len;
+    len -= committed_len;
+
+    guard.CallUnlocked([&page_request, &status]() mutable { status = page_request.Wait(); });
+    if (status != ZX_OK) {
+      if (status == ZX_ERR_TIMED_OUT) {
+        DumpLocked(0, false);
+      }
+      return status;
+    }
+
+    // Re-run the range checks, since size_ could have changed while we were blocked. This
+    // is not a failure, since the arguments were valid when the syscall was made. It's as
+    // if the commit was successful but then the pages were thrown away. Unless we are pinning,
+    // in which case pages being thrown away is explicitly an error.
+    if (pin) {
+      // verify that the range is within the object
+      if (unlikely(!InRange(offset, len, size_locked()))) {
+        return ZX_ERR_OUT_OF_RANGE;
+      }
+    } else {
+      uint64_t new_len = len;
+      if (!TrimRange(offset, len, size_locked(), &new_len)) {
+        return ZX_OK;
+      }
+      if (new_len == 0) {
+        return ZX_OK;
+      }
+      len = new_len;
+    }
+  }
 }
 
 zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len) {

@@ -99,12 +99,10 @@ class VmObjectPaged final : public VmObject {
   }
 
   zx_status_t CommitRange(uint64_t offset, uint64_t len) override {
-    Guard<Mutex> guard{&lock_};
-    return CommitRangeInternal(offset, len, false, guard.take());
+    return CommitRangeInternal(offset, len, false);
   }
   zx_status_t CommitRangePinned(uint64_t offset, uint64_t len) override {
-    Guard<Mutex> guard{&lock_};
-    return CommitRangeInternal(offset, len, true, guard.take());
+    return CommitRangeInternal(offset, len, true);
   }
   zx_status_t DecommitRange(uint64_t offset, uint64_t len) override;
   zx_status_t ZeroRange(uint64_t offset, uint64_t len) override;
@@ -231,7 +229,7 @@ class VmObjectPaged final : public VmObject {
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPaged);
 
   // Unified function that implements both CommitRange and CommitRangePinned
-  zx_status_t CommitRangeInternal(uint64_t offset, uint64_t len, bool pin, Guard<Mutex>&& adopt);
+  zx_status_t CommitRangeInternal(uint64_t offset, uint64_t len, bool pin);
 
   // Internal decommit range helper that expects the lock to be held.
   zx_status_t DecommitRangeLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);

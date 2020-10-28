@@ -157,8 +157,23 @@ class VmCowPages final : public VmHierarchyBase,
   // object.
   zx_status_t ZeroPagesLocked(uint64_t page_start_base, uint64_t page_end_base) TA_REQ(lock_);
 
-  // Unified function that implements both VmObject::CommitRange and VmObject::CommitRangePinned
-  zx_status_t CommitRange(uint64_t offset, uint64_t len, bool pin, Guard<Mutex>&& adopt);
+  // Attempts to commit a range of pages. This has three kinds of return status
+  //  ZX_OK => The whole range was successfully committed and |len| will be written to
+  //           |committed_len|
+  //  ZX_ERR_SHOULD_WAIT => A partial (potentially 0) range was committed (output in |committed_len|
+  //                        and the passed in |page_request| should be waited on before retrying
+  //                        the commit operation. The portion that was successfully committed does
+  //                        not need to retried.
+  //  * => Any other error, the number of pages committed is undefined.
+  // The |offset| and |len| are assumed to be page aligned and within the range of |size_|.
+  zx_status_t CommitRangeLocked(uint64_t offset, uint64_t len, uint64_t* committed_len,
+                                PageRequest* page_request) TA_REQ(lock_);
+
+  // Increases the pin count of the range of pages given by |offset| and |len|. The full range must
+  // already be committed and this either pins all pages in the range, or pins no pages and returns
+  // an error. The caller can assume that on success len / PAGE_SIZE pages were pinned.
+  // The |offset| and |len| are assumed to be page aligned and within the range of |size_|.
+  zx_status_t PinRangeLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
   // See VmObject::Unpin
   void UnpinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
