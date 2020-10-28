@@ -26,10 +26,11 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/rawnand.h>
 #include <fbl/bits.h>
+#include <fbl/mutex.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-rawnand.h>
 
-#include "onfi.h"
+#include "src/devices/nand/drivers/aml-rawnand/onfi.h"
 
 namespace amlrawnand {
 
@@ -75,7 +76,7 @@ static_assert(sizeof(AmlInfoFormat) == 8, "sizeof(AmlInfoFormat) must be exactly
 static_assert(sizeof(AmlInfoFormat[2]) == 16, "AmlInfoFormat has unexpected padding");
 
 class AmlRawNand;
-using DeviceType = ddk::Device<AmlRawNand, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlRawNand, ddk::Unbindable, ddk::Suspendable>;
 
 class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, ddk::base_protocol> {
  public:
@@ -95,6 +96,7 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
 
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
 
   zx_status_t Bind();
   zx_status_t Init();
@@ -126,22 +128,31 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   void CleanUpIrq();
 
   // Tests can fake page read/writes by copying bytes to/from these buffers.
-  const ddk::IoBuffer& data_buffer() { return data_buffer_; }
-  const ddk::IoBuffer& info_buffer() { return info_buffer_; }
+  const ddk::IoBuffer& data_buffer() __TA_NO_THREAD_SAFETY_ANALYSIS {
+    return buffers_->data_buffer;
+  }
+  const ddk::IoBuffer& info_buffer() __TA_NO_THREAD_SAFETY_ANALYSIS {
+    return buffers_->info_buffer;
+  }
+  const zx::bti& bti() const { return bti_; }
 
  private:
   std::unique_ptr<Onfi> onfi_;
-  void *info_buf_, *data_buf_;
-  zx_paddr_t info_buf_paddr_, data_buf_paddr_;
 
+  struct Buffers {
+    void *info_buf, *data_buf;
+    zx_paddr_t info_buf_paddr, data_buf_paddr;
+    ddk::IoBuffer data_buffer;
+    ddk::IoBuffer info_buffer;
+  };
+
+  fbl::Mutex mutex_;
+  std::optional<Buffers> buffers_ __TA_GUARDED(mutex_);
   ddk::MmioBuffer mmio_nandreg_;
   ddk::MmioBuffer mmio_clockreg_;
 
   zx::bti bti_;
   zx::interrupt irq_;
-
-  ddk::IoBuffer data_buffer_;
-  ddk::IoBuffer info_buffer_;
 
   AmlController controller_params_;
   uint32_t chip_select_ = 0;  // Default to 0.
@@ -174,13 +185,15 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   void AmlCmdN2MPage0();
   // Returns the AmlInfoFormat struct corresponding to the i'th
   // ECC page. THIS ASSUMES user_mode == 2 (2 OOB bytes per ECC page).
-  void* AmlInfoPtr(int i);
-  zx_status_t AmlGetOOBByte(uint8_t* oob_buf, size_t* oob_actual);
-  zx_status_t AmlSetOOBByte(const uint8_t* oob_buf, size_t oob_size, uint32_t ecc_pages);
+  void* AmlInfoPtr(int i) __TA_REQUIRES(mutex_);
+  zx_status_t AmlGetOOBByte(uint8_t* oob_buf, size_t* oob_actual) __TA_REQUIRES(mutex_);
+  zx_status_t AmlSetOOBByte(const uint8_t* oob_buf, size_t oob_size, uint32_t ecc_pages)
+      __TA_REQUIRES(mutex_);
   // Returns the maximum bitflips corrected on this NAND page
   // (the maximum bitflips across all of the ECC pages in this page).
-  zx_status_t AmlGetECCCorrections(int ecc_pages, uint32_t nand_page, uint32_t* ecc_corrected);
-  zx_status_t AmlCheckECCPages(int ecc_pages);
+  zx_status_t AmlGetECCCorrections(int ecc_pages, uint32_t nand_page, uint32_t* ecc_corrected)
+      __TA_REQUIRES(mutex_);
+  zx_status_t AmlCheckECCPages(int ecc_pages) __TA_REQUIRES(mutex_);
   void AmlSetClockRate(uint32_t clk_freq);
   void AmlClockInit();
   void AmlAdjustTimings(uint32_t tRC_min, uint32_t tREA_max, uint32_t RHOH_min);
@@ -191,7 +204,7 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   // Reads one of the page0 pages, and use the result to init
   // ECC algorithm and rand-mode.
   zx_status_t AmlNandInitFromPage0();
-  zx_status_t AmlRawNandAllocBufs();
+  zx_status_t AmlRawNandAllocBufs() __TA_REQUIRES(mutex_);
   zx_status_t AmlNandInit();
 };
 

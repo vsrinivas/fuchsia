@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "aml-rawnand.h"
+#include "src/devices/nand/drivers/aml-rawnand/aml-rawnand.h"
 
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -17,8 +17,6 @@
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/aml-common/aml-rawnand.h>
 #include <zxtest/zxtest.h>
-
-#include "onfi.h"
 
 namespace amlrawnand {
 
@@ -160,6 +158,12 @@ class FakeAmlRawNand : public AmlRawNand {
       return nullptr;
     }
 
+    status = nand->Bind();
+    EXPECT_OK(status);
+    if (status != ZX_OK) {
+      return nullptr;
+    }
+
     // Clear any pages we needed to set for proper initialization so we start
     // with a blank slate for tests.
     nand->fake_page_map_.clear();
@@ -228,6 +232,8 @@ class FakeAmlRawNand : public AmlRawNand {
     // Finally we expect the actual read/write command.
     command_register.ExpectWrite(command);
   }
+
+  using AmlRawNand::bti;
 
  protected:
   zx_status_t AmlQueueRB() override { return ZX_OK; }
@@ -676,6 +682,21 @@ TEST(AmlRawnand, ReadCommand) {
   uint32_t ecc_correct = -1;
   ASSERT_OK(nand->RawNandReadPageHwecc(kFirstNonBl2Page, &data[0], kTestNandWriteSize,
                                        &data_bytes_read, nullptr, 0, nullptr, &ecc_correct));
+}
+
+TEST(AmlRawNand, SuspendReleasesAllPins) {
+  fake_ddk::Bind ddk;
+  auto nand = FakeAmlRawNand::Create();
+  zx_info_bti_t bti_info;
+  size_t actual = 0, avail = 0;
+  ASSERT_EQ(nand->bti().get_info(ZX_INFO_BTI, &bti_info, sizeof(bti_info), &actual, &avail), ZX_OK);
+  EXPECT_GT(bti_info.pmo_count, 0);
+  ASSERT_NOT_NULL(nand);
+  ddk::SuspendTxn txn(nand->zxdev(), 0, 0, 0);
+  nand->DdkSuspend(std::move(txn));
+  ddk.WaitUntilSuspend();
+  ASSERT_EQ(nand->bti().get_info(ZX_INFO_BTI, &bti_info, sizeof(bti_info), &actual, &avail), ZX_OK);
+  EXPECT_EQ(bti_info.pmo_count, 0);
 }
 
 }  // namespace

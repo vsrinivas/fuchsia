@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "aml-rawnand.h"
+#include "src/devices/nand/drivers/aml-rawnand/aml-rawnand.h"
 
 #include <assert.h>
 
@@ -10,6 +10,7 @@
 #include <memory>
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
 
 namespace amlrawnand {
 
@@ -263,7 +264,7 @@ zx_status_t AmlRawNand::AmlWaitDmaFinish() {
 }
 
 void* AmlRawNand::AmlInfoPtr(int i) {
-  auto p = reinterpret_cast<struct AmlInfoFormat*>(info_buf_);
+  auto p = reinterpret_cast<struct AmlInfoFormat*>(buffers_->info_buf);
   return &p[i];
 }
 
@@ -523,10 +524,15 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, siz
   // Send the page address into the controller.
   onfi_->OnfiCommand(NAND_CMD_READ0, 0x00, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
                      (controller_params_.options & NAND_BUSWIDTH_16));
-  mmio_nandreg_.Write32(GENCMDDADDRL(AML_CMD_ADL, data_buf_paddr_), P_NAND_CMD);
-  mmio_nandreg_.Write32(GENCMDDADDRH(AML_CMD_ADH, data_buf_paddr_), P_NAND_CMD);
-  mmio_nandreg_.Write32(GENCMDIADDRL(AML_CMD_AIL, info_buf_paddr_), P_NAND_CMD);
-  mmio_nandreg_.Write32(GENCMDIADDRH(AML_CMD_AIH, info_buf_paddr_), P_NAND_CMD);
+
+  fbl::AutoLock lock(&mutex_);
+  if (zx_status_t status = AmlRawNandAllocBufs(); status != ZX_OK)
+    return status;
+
+  mmio_nandreg_.Write32(GENCMDDADDRL(AML_CMD_ADL, buffers_->data_buf_paddr), P_NAND_CMD);
+  mmio_nandreg_.Write32(GENCMDDADDRH(AML_CMD_ADH, buffers_->data_buf_paddr), P_NAND_CMD);
+  mmio_nandreg_.Write32(GENCMDIADDRL(AML_CMD_AIL, buffers_->info_buf_paddr), P_NAND_CMD);
+  mmio_nandreg_.Write32(GENCMDIADDRH(AML_CMD_AIH, buffers_->info_buf_paddr), P_NAND_CMD);
 
   if ((page0 && kPage0RandMode) || controller_params_.rand_mode) {
     // Only need to set the seed if randomizing is enabled.
@@ -559,7 +565,7 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, siz
   if (data != nullptr) {
     // Page0 is always 384 bytes.
     size_t num_bytes = (page0 ? 384 : writesize_);
-    memcpy(data, data_buf_, num_bytes);
+    memcpy(data, buffers_->data_buf, num_bytes);
     if (data_actual) {
       *data_actual = num_bytes;
     }
@@ -590,8 +596,13 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const void* data, size_t data_size
   } else {
     ecc_pages = kPage0NumEccPages;
   }
+
+  fbl::AutoLock lock(&mutex_);
+  if (zx_status_t status = AmlRawNandAllocBufs(); status != ZX_OK)
+    return status;
+
   if (data != nullptr) {
-    memcpy(data_buf_, data, writesize_);
+    memcpy(buffers_->data_buf, data, writesize_);
   }
 
   if (PageRequiresMagicOob(nand_page)) {
@@ -613,10 +624,10 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const void* data, size_t data_size
 
   onfi_->OnfiCommand(NAND_CMD_SEQIN, 0x00, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
                      (controller_params_.options & NAND_BUSWIDTH_16));
-  mmio_nandreg_.Write32(GENCMDDADDRL(AML_CMD_ADL, data_buf_paddr_), P_NAND_CMD);
-  mmio_nandreg_.Write32(GENCMDDADDRH(AML_CMD_ADH, data_buf_paddr_), P_NAND_CMD);
-  mmio_nandreg_.Write32(GENCMDIADDRL(AML_CMD_AIL, info_buf_paddr_), P_NAND_CMD);
-  mmio_nandreg_.Write32(GENCMDIADDRH(AML_CMD_AIH, info_buf_paddr_), P_NAND_CMD);
+  mmio_nandreg_.Write32(GENCMDDADDRL(AML_CMD_ADL, buffers_->data_buf_paddr), P_NAND_CMD);
+  mmio_nandreg_.Write32(GENCMDDADDRH(AML_CMD_ADH, buffers_->data_buf_paddr), P_NAND_CMD);
+  mmio_nandreg_.Write32(GENCMDIADDRL(AML_CMD_AIL, buffers_->info_buf_paddr), P_NAND_CMD);
+  mmio_nandreg_.Write32(GENCMDIADDRH(AML_CMD_AIH, buffers_->info_buf_paddr), P_NAND_CMD);
 
   if ((page0 && kPage0RandMode) || controller_params_.rand_mode) {
     // Only need to set the seed if randomizing is enabled.
@@ -808,27 +819,33 @@ zx_status_t AmlRawNand::AmlNandInitFromPage0() {
 }
 
 zx_status_t AmlRawNand::AmlRawNandAllocBufs() {
+  if (buffers_)
+    return ZX_OK;
+  Buffers& buffers = buffers_.emplace();
+
   // The iobuffers MUST be uncachable. Making these cachable, with
   // cache flush/invalidate at the right places in the code does not
   // work. We see data corruptions caused by speculative cache prefetching
   // done by ARM. Note also that these corruptions are not easily reproducible.
-  zx_status_t status = data_buffer_.Init(bti_.get(), writesize_,
-                                         IO_BUFFER_UNCACHED | IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  zx_status_t status = buffers.data_buffer.Init(
+      bti_.get(), writesize_, IO_BUFFER_UNCACHED | IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "raw_nand_test_allocbufs: io_buffer_init(data_buffer_) failed");
+    zxlogf(ERROR, "io_buffer_init(data_buffer) failed");
+    buffers_.reset();
     return status;
   }
   ZX_DEBUG_ASSERT(writesize_ > 0);
-  status = info_buffer_.Init(bti_.get(), writesize_,
-                             IO_BUFFER_UNCACHED | IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  status = buffers.info_buffer.Init(bti_.get(), writesize_,
+                                    IO_BUFFER_UNCACHED | IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "raw_nand_test_allocbufs: io_buffer_init(info_buffer_) failed");
+    zxlogf(ERROR, "io_buffer_init(info_buffer) failed");
+    buffers_.reset();
     return status;
   }
-  data_buf_ = data_buffer_.virt();
-  info_buf_ = info_buffer_.virt();
-  data_buf_paddr_ = data_buffer_.phys();
-  info_buf_paddr_ = info_buffer_.phys();
+  buffers.data_buf = buffers.data_buffer.virt();
+  buffers.info_buf = buffers.info_buffer.virt();
+  buffers.data_buf_paddr = buffers.data_buffer.phys();
+  buffers.info_buf_paddr = buffers.info_buffer.phys();
   return ZX_OK;
 }
 
@@ -851,9 +868,12 @@ zx_status_t AmlRawNand::AmlNandInit() {
   // settings we use. So nothing to be done for OOB. If we ever need
   // to switch to 16 bytes of OOB per NAND page, we need to set the
   // right bits in the CFG register.
-  status = AmlRawNandAllocBufs();
-  if (status != ZX_OK)
-    return status;
+  {
+    fbl::AutoLock lock(&mutex_);
+    status = AmlRawNandAllocBufs();
+    if (status != ZX_OK)
+      return status;
+  }
 
   // Read one of the copies of page0, and use that to initialize
   // ECC algorithm and rand-mode.
@@ -878,6 +898,14 @@ void AmlRawNand::CleanUpIrq() { irq_.destroy(); }
 void AmlRawNand::DdkUnbind(ddk::UnbindTxn txn) {
   CleanUpIrq();
   txn.Reply();
+}
+
+void AmlRawNand::DdkSuspend(ddk::SuspendTxn txn) {
+  {
+    fbl::AutoLock lock(&mutex_);
+    buffers_.reset();
+  }
+  txn.Reply(ZX_OK, 0);
 }
 
 zx_status_t AmlRawNand::Init() {
