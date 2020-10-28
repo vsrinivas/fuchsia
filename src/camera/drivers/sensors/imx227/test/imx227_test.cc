@@ -47,8 +47,7 @@ std::vector<uint8_t> SplitBytes(uint16_t bytes) {
 
 class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
  public:
-  explicit FakeComposite()
-      : proto_({&composite_protocol_ops_, this}) {}
+  explicit FakeComposite() : proto_({&composite_protocol_ops_, this}) {}
 
   const composite_protocol_t* proto() const { return &proto_; }
 
