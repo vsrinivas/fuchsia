@@ -441,7 +441,7 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
 			panic!("polled {{ $protocol.Name }}RequestStream after completion");
 		}
 		fidl::encoding::with_tls_decode_buf(|bytes, handles| {
-			match this.inner.channel().read(cx, bytes, handles) {
+			match this.inner.channel().read_etc(cx, bytes, handles) {
 				std::task::Poll::Ready(Ok(())) => {},
 				std::task::Poll::Pending => return std::task::Poll::Pending,
 				std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
@@ -531,7 +531,7 @@ pub enum {{ $protocol.Name }}RequestMessage {
 }
 
 impl {{ $protocol.Name }}RequestMessage {
-	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<{{ $protocol.Name }}RequestMessage, fidl::Error> {
+	pub fn decode(bytes: &[u8], _handles: &mut [fidl::HandleInfo]) -> Result<{{ $protocol.Name }}RequestMessage, fidl::Error> {
 		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		match header.ordinal() {

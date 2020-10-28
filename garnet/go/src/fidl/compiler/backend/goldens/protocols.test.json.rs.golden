@@ -520,7 +520,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
             panic!("polled WithAndWithoutRequestResponseRequestStream after completion");
         }
         fidl::encoding::with_tls_decode_buf(|bytes, handles| {
-            match this.inner.channel().read(cx, bytes, handles) {
+            match this.inner.channel().read_etc(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
                 std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
@@ -656,7 +656,7 @@ pub enum WithAndWithoutRequestResponseRequestMessage {
 impl WithAndWithoutRequestResponseRequestMessage {
     pub fn decode(
         bytes: &[u8],
-        _handles: &mut [fidl::Handle],
+        _handles: &mut [fidl::HandleInfo],
     ) -> Result<WithAndWithoutRequestResponseRequestMessage, fidl::Error> {
         let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
@@ -1692,7 +1692,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
             panic!("polled WithErrorSyntaxRequestStream after completion");
         }
         fidl::encoding::with_tls_decode_buf(|bytes, handles| {
-            match this.inner.channel().read(cx, bytes, handles) {
+            match this.inner.channel().read_etc(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
                 std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
@@ -1786,7 +1786,7 @@ pub enum WithErrorSyntaxRequestMessage {
 impl WithErrorSyntaxRequestMessage {
     pub fn decode(
         bytes: &[u8],
-        _handles: &mut [fidl::Handle],
+        _handles: &mut [fidl::HandleInfo],
     ) -> Result<WithErrorSyntaxRequestMessage, fidl::Error> {
         let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
@@ -2564,7 +2564,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
             panic!("polled ChannelProtocolRequestStream after completion");
         }
         fidl::encoding::with_tls_decode_buf(|bytes, handles| {
-            match this.inner.channel().read(cx, bytes, handles) {
+            match this.inner.channel().read_etc(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
                 std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
@@ -2655,7 +2655,7 @@ pub enum ChannelProtocolRequestMessage {
 impl ChannelProtocolRequestMessage {
     pub fn decode(
         bytes: &[u8],
-        _handles: &mut [fidl::Handle],
+        _handles: &mut [fidl::HandleInfo],
     ) -> Result<ChannelProtocolRequestMessage, fidl::Error> {
         let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
@@ -3316,7 +3316,7 @@ impl futures::Stream for TransitionalRequestStream {
             panic!("polled TransitionalRequestStream after completion");
         }
         fidl::encoding::with_tls_decode_buf(|bytes, handles| {
-            match this.inner.channel().read(cx, bytes, handles) {
+            match this.inner.channel().read_etc(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
                 std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
@@ -3388,7 +3388,7 @@ pub enum TransitionalRequestMessage {
 impl TransitionalRequestMessage {
     pub fn decode(
         bytes: &[u8],
-        _handles: &mut [fidl::Handle],
+        _handles: &mut [fidl::HandleInfo],
     ) -> Result<TransitionalRequestMessage, fidl::Error> {
         let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 

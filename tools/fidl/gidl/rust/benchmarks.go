@@ -22,7 +22,8 @@ var benchmarkTmpl = template.Must(template.New("benchmarkTmpls").Parse(`
 use {
 	fidl::{
 		encoding::{Context, Decodable, Decoder, Encoder, with_tls_encode_buf},
-		handle::Handle,
+		handle::Handle, handle::HandleInfo,
+		ObjectType, Rights,
 	},
 	fidl_benchmarkfidl{{ .CrateSuffix }} as benchmarkfidl{{ .CrateSuffix }},
 	fuchsia_criterion::criterion::{BatchSize, Bencher, black_box},
@@ -115,13 +116,20 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 			let mut handles = Vec::<Handle>::new();
 			let original_value = &mut {{ .Value }};
 			Encoder::encode_with_context(_V1_CONTEXT, &mut bytes, &mut handles, original_value).unwrap();
+			let handle_infos : Vec::<HandleInfo> = handles.into_iter().map(|h| {
+				HandleInfo {
+					handle: h,
+					object_type: ObjectType::NONE,
+					rights: Rights::SAME_RIGHTS,
+				}
+			}).collect();
 			{{- /* Wrap handle in an Option to allow low-overhead measurement of drop time */}}
-			(bytes, handles, ManuallyDrop::new({{ .ValueType }}::new_empty()))
+			(bytes, handle_infos, ManuallyDrop::new({{ .ValueType }}::new_empty()))
 		},
-		|(bytes, handles, manually_drop_value)| {
+		|(bytes, handle_infos, manually_drop_value)| {
 			// Cast &mut ManuallyDrop<T> to &mut T.
 			let value : &mut {{ .ValueType }} = unsafe { std::mem::transmute(manually_drop_value as *mut _) };
-			Decoder::decode_with_context(_V1_CONTEXT, bytes, handles, value).unwrap();
+			Decoder::decode_with_context(_V1_CONTEXT, bytes, handle_infos, value).unwrap();
 			// Count the drop time in the benchmark.
 			unsafe { ManuallyDrop::drop(manually_drop_value) };
 		},

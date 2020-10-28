@@ -5,7 +5,7 @@
 //! Encoding contains functions and traits for FIDL2 encoding and decoding.
 
 use {
-    crate::handle::{invoke_for_handle_types, Handle, HandleBased, ObjectType, Rights},
+    crate::handle::{invoke_for_handle_types, Handle, HandleBased, HandleInfo, ObjectType, Rights},
     crate::{Error, Result},
     bitflags::bitflags,
     fuchsia_zircon_status as zx_status,
@@ -16,7 +16,7 @@ use {
 struct TlsBuf {
     bytes: Vec<u8>,
     encode_handles: Vec<Handle>,
-    decode_handles: Vec<Handle>,
+    decode_handles: Vec<HandleInfo>,
 }
 
 impl TlsBuf {
@@ -51,7 +51,7 @@ pub fn with_tls_encode_buf<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) -> 
 ///
 /// This function may not be called recursively.
 #[inline]
-pub fn with_tls_decode_buf<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) -> R) -> R {
+pub fn with_tls_decode_buf<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<HandleInfo>) -> R) -> R {
     TLS_BUF.with(|buf| {
         let (mut bytes, mut handles) =
             RefMut::map_split(buf.borrow_mut(), |b| (&mut b.bytes, &mut b.decode_handles));
@@ -397,7 +397,7 @@ pub struct Decoder<'a> {
     buf: &'a [u8],
 
     /// Buffer from which to read handles.
-    handles: &'a mut [Handle],
+    handles: &'a mut [HandleInfo],
 
     /// Index of the next handle to read from the handle array
     next_handle: usize,
@@ -420,7 +420,7 @@ impl<'a> Decoder<'a> {
     pub fn decode_into<T: Decodable>(
         header: &TransactionHeader,
         buf: &'a [u8],
-        handles: &'a mut [Handle],
+        handles: &'a mut [HandleInfo],
         value: &mut T,
     ) -> Result<()> {
         Self::decode_with_context(&header.decoding_context(), buf, handles, value)
@@ -467,7 +467,7 @@ impl<'a> Decoder<'a> {
     pub fn decode_with_context<T: Decodable>(
         context: &Context,
         buf: &'a [u8],
-        handles: &'a mut [Handle],
+        handles: &'a mut [HandleInfo],
         value: &mut T,
     ) -> Result<()> {
         let inline_size = <T as Layout>::inline_size(context);
@@ -496,7 +496,7 @@ impl<'a> Decoder<'a> {
         if self.next_handle >= self.handles.len() {
             return Err(Error::OutOfRange);
         }
-        let handle = take_handle(&mut self.handles[self.next_handle]);
+        let handle = take_handle(&mut self.handles[self.next_handle].handle);
         self.next_handle += 1;
         Ok(handle)
     }
@@ -3835,13 +3835,25 @@ mod test {
 
     pub const CONTEXTS: &[&Context] = &[&Context {}];
 
+    fn to_handle_info(handles: &mut Vec<Handle>) -> Vec<HandleInfo> {
+        handles
+            .drain(..)
+            .map(|mut h| HandleInfo {
+                handle: std::mem::replace(&mut h, Handle::invalid()),
+                object_type: ObjectType::NONE,
+                rights: Rights::SAME_RIGHTS,
+            })
+            .collect()
+    }
+
     #[track_caller]
     pub fn encode_decode<T: Encodable + Decodable>(ctx: &Context, start: &mut T) -> T {
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
         Encoder::encode_with_context(ctx, buf, handle_buf, start).expect("Encoding failed");
         let mut out = T::new_empty();
-        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+        Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
+            .expect("Decoding failed");
         out
     }
 
@@ -3924,7 +3936,8 @@ mod test {
         let handle_buf = &mut Vec::new();
         Encoder::encode_with_context(ctx, buf, handle_buf, &mut start).expect("Encoding failed");
         let mut out = Vec::<T>::new_empty();
-        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+        Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
+            .expect("Decoding failed");
         assert_eq!(start, &out[..]);
     }
 
@@ -4206,12 +4219,14 @@ mod test {
 
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Okay(42u64))
                 .expect("Encoding failed");
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
+                .expect("Decoding failed");
             assert_eq!(out, Ok(42));
 
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Error(3u32))
                 .expect("Encoding failed");
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
+                .expect("Decoding failed");
             assert_eq!(out, Err(3));
         }
     }
@@ -4248,24 +4263,28 @@ mod test {
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut Ok::<(), i32>(()))
                 .expect("Encoding failed");
             let mut out = OkayOrError::new_empty();
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
+                .expect("Decoding failed");
             assert_eq!(out, OkayOrError::Okay(Empty {}));
 
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut Err::<(), i32>(5))
                 .expect("Encoding failed");
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
+                .expect("Decoding failed");
             assert_eq!(out, OkayOrError::Error(5));
 
             // xunion to result
             let mut out: std::result::Result<(), i32> = Decodable::new_empty();
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Okay(Empty {}))
                 .expect("Encoding failed");
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
+                .expect("Decoding failed");
             assert_eq!(out, Ok(()));
 
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Error(3i32))
                 .expect("Encoding failed");
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
+                .expect("Decoding failed");
             assert_eq!(out, Err(3));
         }
     }
@@ -4381,7 +4400,8 @@ mod test {
 
             buf[1] = 42;
             let out = &mut Foo::new_empty();
-            let result = Decoder::decode_with_context(ctx, buf, handle_buf, out);
+            let result =
+                Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), out);
             assert_matches!(
                 result,
                 Err(Error::NonZeroPadding { padding_start: 1, non_zero_pos: 1 })
@@ -4400,7 +4420,8 @@ mod test {
             let handle_buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut start)
                 .expect("Encoding failed");
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
+                .expect("Decoding failed");
 
             assert_eq!(*start.0, out.0);
             assert_eq!(*start.1, out.1);
@@ -4418,7 +4439,8 @@ mod test {
             let handle_buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut start)
                 .expect("Encoding failed");
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
+                .expect("Decoding failed");
 
             assert_eq!(start.byte, out.0);
             assert_eq!(start.bignum, out.1);
@@ -4436,7 +4458,8 @@ mod test {
             let handle_buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut start)
                 .expect("Encoding failed");
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
+                .expect("Decoding failed");
 
             assert_eq!(*start.0, out.byte);
             assert_eq!(*start.1, out.bignum);
@@ -4453,7 +4476,8 @@ mod test {
             let buf = &mut Vec::new();
             let handle_buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut body_start).unwrap();
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut body_out).unwrap();
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut body_out)
+                .unwrap();
 
             assert_eq!(body_start.0, &mut body_out.0);
             assert_eq!(body_start.1, &mut body_out.1);
@@ -4533,7 +4557,8 @@ mod test {
             let buf = &mut Vec::new();
             let handle_buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut table_prefix_in).unwrap();
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut table_out).unwrap();
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut table_out)
+                .unwrap();
 
             assert_eq!(table_out.num, Some(5));
             assert_eq!(table_out.num_none, None);
@@ -4559,7 +4584,13 @@ mod test {
             let buf = &mut Vec::new();
             let handle_buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut table_in).unwrap();
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut table_prefix_out).unwrap();
+            Decoder::decode_with_context(
+                ctx,
+                buf,
+                &mut to_handle_info(handle_buf),
+                &mut table_prefix_out,
+            )
+            .unwrap();
 
             assert_eq!(table_prefix_out.num, Some(5));
             assert_eq!(table_prefix_out.num_none, None);
@@ -4580,7 +4611,13 @@ mod test {
             let buf = &mut Vec::new();
             let handle_buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut table_in).unwrap();
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut table_prefix_out).unwrap();
+            Decoder::decode_with_context(
+                ctx,
+                buf,
+                &mut to_handle_info(handle_buf),
+                &mut table_prefix_out,
+            )
+            .unwrap();
             assert_eq!(table_prefix_out.num, Some(5));
             assert_eq!(table_prefix_out.num_none, None);
         }
@@ -5009,7 +5046,7 @@ mod test {
             assert_eq!(header, out_header);
 
             let mut body_out = String::new();
-            Decoder::decode_into(&header, out_buf, handles, &mut body_out)
+            Decoder::decode_into(&header, out_buf, &mut to_handle_info(handles), &mut body_out)
                 .expect("Decoding body failed");
             assert_eq!(body, body_out);
         }
@@ -5054,14 +5091,15 @@ mod test {
             assert!(Encoder::encode_with_context(ctx, bytes, handles, &mut input).is_ok());
 
             let mut output = <[[u32; 5]; 2]>::new_empty();
-            Decoder::decode_with_context(ctx, bytes, handles, &mut output).expect(
-                format!(
-                    "Array decoding failed\n\
+            Decoder::decode_with_context(ctx, bytes, &mut to_handle_info(handles), &mut output)
+                .expect(
+                    format!(
+                        "Array decoding failed\n\
                      bytes: {:X?}",
-                    bytes
-                )
-                .as_str(),
-            );
+                        bytes
+                    )
+                    .as_str(),
+                );
 
             assert_eq!(
                 input,
@@ -5127,7 +5165,16 @@ mod test {
                 Err(Error::ExtraBytes)
             );
             assert_matches!(
-                Decoder::decode_with_context(ctx, &[], &mut [Handle::invalid()], &mut output),
+                Decoder::decode_with_context(
+                    ctx,
+                    &[],
+                    &mut [HandleInfo {
+                        handle: Handle::invalid(),
+                        object_type: ObjectType::NONE,
+                        rights: Rights::NONE,
+                    }],
+                    &mut output
+                ),
                 Err(Error::ExtraHandles)
             );
         }
@@ -5149,6 +5196,17 @@ mod zx_test {
     use crate::handle::AsHandleRef;
     use fuchsia_zircon as zx;
 
+    fn to_handle_info(handles: &mut [Handle]) -> Vec<HandleInfo> {
+        handles
+            .iter_mut()
+            .map(|h| HandleInfo {
+                handle: std::mem::replace(h, Handle::invalid()),
+                object_type: ObjectType::NONE,
+                rights: Rights::SAME_RIGHTS,
+            })
+            .collect()
+    }
+
     #[test]
     fn encode_handle() {
         for ctx in CONTEXTS {
@@ -5163,8 +5221,13 @@ mod zx_test {
             assert!(handle.is_invalid());
 
             let mut handle_out = Handle::new_empty();
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut handle_out)
-                .expect("Decoding failed");
+            Decoder::decode_with_context(
+                ctx,
+                buf,
+                &mut to_handle_info(handle_buf),
+                &mut handle_out,
+            )
+            .expect("Decoding failed");
 
             assert_eq!(raw_handle, handle_out.raw_handle());
         }
@@ -5204,8 +5267,13 @@ mod zx_test {
                 .expect("Encoding TestSampleXUnionExpanded failed");
 
             let mut intermediate_missing_variant = TestSampleXUnion::new_empty();
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut intermediate_missing_variant)
-                .expect("Decoding TestSampleXUnion failed");
+            Decoder::decode_with_context(
+                ctx,
+                buf,
+                &mut to_handle_info(handle_buf),
+                &mut intermediate_missing_variant,
+            )
+            .expect("Decoding TestSampleXUnion failed");
 
             // Ensure we've recorded the unknown variant
             if let TestSampleXUnion::__UnknownVariant { .. } = intermediate_missing_variant {
@@ -5220,7 +5288,7 @@ mod zx_test {
                 .expect("encoding unknown variant failed");
 
             let mut out = TestSampleXUnionExpanded::new_empty();
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out)
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
                 .expect("Decoding final output failed");
 
             if let TestSampleXUnionExpanded::SomethinElse(handle_out) = out {
@@ -5245,7 +5313,8 @@ mod zx_test {
             .expect("encoding failed");
             assert_eq!(&**buf, &[0xe4, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00]);
             let mut out: EpitaphBody = EpitaphBody { error: zx::Status::OK };
-            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut out)
+                .expect("Decoding failed");
             assert_eq!(EpitaphBody { error: zx::Status::UNAVAILABLE }, out);
         }
     }

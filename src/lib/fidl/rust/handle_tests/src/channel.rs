@@ -57,14 +57,16 @@ async fn send_message(
         AfterSend::CloseSender => drop(channels.0),
     }
     for ((out_bytes, out_handles), num_handles_in) in out.iter_mut().zip(num_handles_in) {
-        let mut msg = fidl::MessageBuf::new();
+        let mut msg = fidl::MessageBufEtc::new();
         // other channel should eventually receive the message, but we allow that propagation
         // need not be instant
-        channels.1.recv_msg(&mut msg).await.unwrap();
+        channels.1.recv_etc_msg(&mut msg).await.unwrap();
         let (bytes, handles) = msg.split_mut();
         assert_eq!(bytes.as_slice(), *out_bytes);
         assert_eq!(handles.len(), num_handles_in);
-        std::mem::swap(handles, out_handles);
+        for i in 0..handles.len() {
+            std::mem::swap(&mut handles[i].handle, &mut out_handles[i]);
+        }
     }
 }
 

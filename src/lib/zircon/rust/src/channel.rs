@@ -10,7 +10,7 @@ use crate::{
     HandleInfo, HandleOp, HandleRef, ObjectType, Peered, Rights, Status, Time,
 };
 use fuchsia_zircon_sys as sys;
-use std::mem;
+use std::mem::{self, MaybeUninit};
 
 impl HandleDisposition<'_> {
     const fn invalid<'a>() -> HandleDisposition<'a> {
@@ -54,13 +54,19 @@ impl Channel {
     /// [zx_channel_read](https://fuchsia.dev/fuchsia-src/reference/syscalls/channel_read.md)
     /// syscall.
     ///
-    /// If the vectors lack the capacity to hold the pending message,
+    /// If the slice lacks the capacity to hold the pending message,
     /// returns an `Err` with the number of bytes and number of handles needed.
     /// Otherwise returns an `Ok` with the result as usual.
+    /// If both the outer and inner `Result`s are `Ok`, then the caller can
+    /// assume that the `handles` array is initialized.
+    ///
+    /// Note that `read_slice` may call `read_raw` with some uninitialized
+    /// elements because it resizes the input vector to its capacity
+    /// without initializing all of the elements.
     pub fn read_raw(
         &self,
         bytes: &mut [u8],
-        handles: &mut [Handle],
+        handles: &mut [MaybeUninit<Handle>],
     ) -> Result<(Result<(), Status>, usize, usize), (usize, usize)> {
         let opts = 0;
         unsafe {
@@ -106,7 +112,8 @@ impl Channel {
                 bytes.set_len(bytes.capacity());
                 handles.set_len(handles.capacity());
             }
-            match self.read_raw(bytes, handles) {
+            let handle_slice: &mut [Handle] = handles;
+            match self.read_raw(bytes, unsafe { mem::transmute(handle_slice) }) {
                 Ok((result, num_bytes, num_handles)) => {
                     unsafe {
                         bytes.set_len(num_bytes);
@@ -129,20 +136,25 @@ impl Channel {
     /// This differs from `read_raw` in that it returns extended information on
     /// the handles.
     ///
-    /// If the vectors lack the capacity to hold the pending message,
+    /// If the slice lacks the capacity to hold the pending message,
     /// returns an `Err` with the number of bytes and number of handles needed.
     /// Otherwise returns an `Ok` with the result as usual.
+    /// If both the outer and inner `Result`s are `Ok`, then the caller can
+    /// assume that the `handle_infos` array is initialized.
+    ///
+    /// Note that `read_etc_slice` may call `read_etc_raw` with some
+    /// uninitialized elements because it resizes the input vector to its
+    /// capacity without initializing all of the elements.
     pub fn read_etc_raw(
         &self,
         bytes: &mut [u8],
-        handle_infos: &mut [HandleInfo],
+        handle_infos: &mut [MaybeUninit<HandleInfo>],
     ) -> Result<(Result<(), Status>, usize, usize), (usize, usize)> {
         let opts = 0;
         unsafe {
             let raw_handle = self.raw_handle();
-            let mut zx_handle_infos: [std::mem::MaybeUninit<sys::zx_handle_info_t>;
-                sys::ZX_CHANNEL_MAX_MSG_HANDLES as usize] =
-                std::mem::MaybeUninit::uninit().assume_init();
+            let mut zx_handle_infos: [MaybeUninit<sys::zx_handle_info_t>;
+                sys::ZX_CHANNEL_MAX_MSG_HANDLES as usize] = MaybeUninit::uninit().assume_init();
             let mut actual_bytes = 0;
             let mut actual_handle_infos = 0;
             let status = ok(sys::zx_channel_read_etc(
@@ -160,9 +172,13 @@ impl Channel {
             } else {
                 Ok((
                     status.map(|()| {
-                        for i in 0..handle_infos.len() {
-                            handle_infos[i] =
-                                HandleInfo::from_raw(zx_handle_infos[i].assume_init());
+                        for i in 0..actual_handle_infos as usize {
+                            std::mem::swap(
+                                &mut handle_infos[i],
+                                &mut MaybeUninit::new(HandleInfo::from_raw(
+                                    zx_handle_infos[i].assume_init(),
+                                )),
+                            );
                         }
                     }),
                     actual_bytes as usize,
@@ -203,7 +219,8 @@ impl Channel {
                 bytes.set_len(bytes.capacity());
                 handle_infos.set_len(handle_infos.capacity());
             }
-            match self.read_etc_raw(bytes, handle_infos) {
+            let handle_info_slice: &mut [HandleInfo] = handle_infos;
+            match self.read_etc_raw(bytes, unsafe { std::mem::transmute(handle_info_slice) }) {
                 Ok((result, num_bytes, num_handle_infos)) => {
                     unsafe {
                         bytes.set_len(num_bytes);

@@ -21,7 +21,8 @@ var conformanceTmpl = template.Must(template.New("conformanceTmpls").Parse(`
 #![allow(unused_imports)]
 
 use {
-	fidl::{AsHandleRef, Error, Handle, encoding::{Context, Decodable, Decoder, Encoder}},
+	fidl::{AsHandleRef, Error, Handle, HandleInfo, ObjectType, Rights},
+	fidl::encoding::{Context, Decodable, Decoder, Encoder},
 	fidl_conformance as conformance,
 	fuchsia_zircon_status::Status,
 	gidl_util::{HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_handles, get_info_handle_valid},
@@ -62,12 +63,19 @@ fn test_{{ .Name }}_decode() {
 	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
 	let handle_defs = unsafe { disown_handles(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
-	let handles = &mut unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
+	let mut handles = unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
 	{{- else }}
-	let handles = &mut [];
+	let mut handles = Vec::new();
 	{{- end }}
+	let mut handle_infos : Vec::<_> = handles.drain(..).map(|h| {
+		HandleInfo {
+			handle: h,
+			object_type: ObjectType::NONE,
+			rights: Rights::SAME_RIGHTS,
+		}
+	}).collect();
 	let value = &mut {{ .ValueType }}::new_empty();
-	Decoder::decode_with_context({{ .Context }}, bytes, handles, value).unwrap();
+	Decoder::decode_with_context({{ .Context }}, bytes, &mut handle_infos, value).unwrap();
 	assert_eq!(value, &{{ .Value }});
 	{{- if .HandleDefs }}
 	// Re-encode purely for the side effect of linearizing the handles.
@@ -112,12 +120,19 @@ fn test_{{ .Name }}_decode_failure() {
 	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
 	let handle_defs = unsafe { disown_handles(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
-	let handles = &mut unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
+	let mut handles = unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
 	{{- else }}
-	let handles = &mut [];
+	let mut handles = Vec::new();
 	{{- end }}
+	let mut handle_infos : Vec::<_> = handles.drain(..).map(|h| {
+		HandleInfo {
+			handle: h,
+			object_type: ObjectType::NONE,
+			rights: Rights::SAME_RIGHTS,
+		}
+	}).collect();
 	let value = &mut {{ .ValueType }}::new_empty();
-	match Decoder::decode_with_context({{ .Context }}, bytes, handles, value) {
+	match Decoder::decode_with_context({{ .Context }}, bytes, &mut handle_infos, value) {
 		Err(err) => assert_matches!(err, {{ .ErrorCode }} { .. }),
 		Ok(_) => panic!("unexpected successful decoding"),
 	}

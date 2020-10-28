@@ -1423,10 +1423,10 @@ mod tests {
             let c = fidl::AsyncChannel::from_channel(c)?;
             let s = fidl::AsyncChannel::from_channel(s)?;
             c.write(&[1, 2, 3, 4, 5], &mut Vec::new())?;
-            let mut buf = fidl::MessageBuf::new();
+            let mut buf = fidl::MessageBufEtc::new();
             println!("send_datagram_immediately: wait for datagram");
-            s.recv_msg(&mut buf).await?;
-            assert_eq!(buf.n_handles(), 0);
+            s.recv_etc_msg(&mut buf).await?;
+            assert_eq!(buf.n_handle_infos(), 0);
             assert_eq!(buf.bytes(), &[1, 2, 3, 4, 5]);
             Ok(())
         })
@@ -1451,16 +1451,16 @@ mod tests {
             println!("ping_pong: send ping");
             c.write(&[1, 2, 3, 4, 5], &mut Vec::new())?;
             println!("ping_pong: receive ping");
-            let mut buf = fidl::MessageBuf::new();
-            s.recv_msg(&mut buf).await?;
-            assert_eq!(buf.n_handles(), 0);
+            let mut buf = fidl::MessageBufEtc::new();
+            s.recv_etc_msg(&mut buf).await?;
+            assert_eq!(buf.n_handle_infos(), 0);
             assert_eq!(buf.bytes(), &[1, 2, 3, 4, 5]);
             println!("ping_pong: send pong");
             s.write(&[9, 8, 7, 6, 5, 4, 3, 2, 1], &mut Vec::new())?;
             println!("ping_pong: receive pong");
-            let mut buf = fidl::MessageBuf::new();
-            c.recv_msg(&mut buf).await?;
-            assert_eq!(buf.n_handles(), 0);
+            let mut buf = fidl::MessageBufEtc::new();
+            c.recv_etc_msg(&mut buf).await?;
+            assert_eq!(buf.n_handle_infos(), 0);
             assert_eq!(buf.bytes(), &[9, 8, 7, 6, 5, 4, 3, 2, 1]);
             Ok(())
         })

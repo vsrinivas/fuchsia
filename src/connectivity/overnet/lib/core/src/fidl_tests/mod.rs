@@ -155,14 +155,14 @@ impl Fixture {
             Target::C => (&self.dist_a_to_c, &self.dist_c),
         };
         assert!(dist_local.write(&[], &mut vec![h]) == Ok(()));
-        let mut msg = fidl::MessageBuf::new();
-        dist_remote.recv_msg(&mut msg).await.unwrap();
+        let mut msg = fidl::MessageBufEtc::new();
+        dist_remote.recv_etc_msg(&mut msg).await.unwrap();
         let (bytes, handles) = msg.split_mut();
         assert_eq!(bytes.len(), 0);
         assert_eq!(handles.len(), 1);
         let h = std::mem::replace(handles, vec![]).into_iter().next().unwrap();
         log::info!("{} distribute_handle: remote is {:?}", self.test_name, h);
-        return H::from_handle(h);
+        return H::from_handle(h.handle);
     }
 
     pub fn log(&mut self, msg: &str) {

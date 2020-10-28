@@ -28,7 +28,7 @@ pub use self::handle::{
 pub mod emulated_handle {
     pub use super::handle::{
         AsHandleRef, Channel, EmulatedHandleRef, Handle, HandleBased, HandleInfo, HandleRef,
-        MessageBuf, ObjectType, Rights, Socket, SocketOpts,
+        MessageBuf, MessageBufEtc, ObjectType, Rights, Socket, SocketOpts,
     };
 }
 
