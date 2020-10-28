@@ -37,7 +37,16 @@ group("infra_configs") {
   deps = [ ":crash_reports_upload_to_prod_server_config" ]
 }
 
+# TODO(fxbug.dev/62900): remove in favor of userdebug or user.
 group("production_configs") {
+  deps = [ ":crash_reports_production_config" ]
+}
+
+group("userdebug_configs") {
+  deps = [ ":crash_reports_production_config" ]
+}
+
+group("user_configs") {
   deps = [ ":crash_reports_production_config" ]
 }
 
