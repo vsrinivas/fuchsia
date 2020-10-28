@@ -34,7 +34,7 @@ group("core") {
     ":core_config",
     "bin/amber:pkgfs",
     "bin/pkg-cache",
-    "bin/pkg-resolver",
+    "bin/pkg-resolver:pkg-resolver-bin",
     "bin/system-updater",
   ]
 }
@@ -43,7 +43,7 @@ group("core") {
 group("recovery-core") {
   public_deps = [
     "bin/pkg-cache",
-    "bin/pkg-resolver",
+    "bin/pkg-resolver:pkg-resolver-bin",
   ]
 }
 

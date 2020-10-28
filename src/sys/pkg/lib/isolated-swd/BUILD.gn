@@ -108,8 +108,8 @@ test_package("isolated-swd-tests") {
     ":isolated-swd_test",
     "//garnet/go/src/grand_unified_binary",
     "//src/storage/bin/blobfs",
+    "//src/sys/pkg/bin/grand-swd-binary",
     "//src/sys/pkg/bin/pkg-cache:bin",
-    "//src/sys/pkg/bin/pkg-resolver:bin",
     "//src/sys/pkg/bin/system-updater:bin",
   ]
 
@@ -123,7 +123,7 @@ test_package("isolated-swd-tests") {
     },
     {
       name = "pkg-resolver"
-      source = "pkg_resolver"
+      source = "grand_swd_binary"
     },
     {
       name = "pkgsvr"
@@ -177,8 +177,8 @@ test_package("isolated-swd-tests") {
 
 package("isolated-swd-components") {
   deps = [
+    "//src/sys/pkg/bin/grand-swd-binary",
     "//src/sys/pkg/bin/pkg-cache:bin",
-    "//src/sys/pkg/bin/pkg-resolver:bin",
     "//src/sys/pkg/bin/system-updater:bin",
   ]
 
@@ -189,7 +189,7 @@ package("isolated-swd-components") {
     },
     {
       name = "pkg-resolver"
-      source = "pkg_resolver"
+      source = "grand_swd_binary"
     },
     {
       name = "system-updater"

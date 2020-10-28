@@ -3,13 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/sys/pkg/bin/pkg-resolver/pkg_resolver_config.gni")
 import("//src/sys/pkg/sysmgr_config.gni")
 
-rustc_binary("bin") {
+# `pkg-resolver` is conceptually a binary, but it built as a lib here so it can be
+# aggregated into //src/sys/pkg/bin/grand-swd-binary to save disk space.
+rustc_library("lib") {
   name = "pkg_resolver"
   with_unit_tests = true
   edition = "2018"
@@ -76,6 +78,7 @@ rustc_binary("bin") {
   non_rust_deps =
       [ "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client-c" ]
 
+  source_root = "src/main.rs"
   sources = [
     "src/args.rs",
     "src/cache.rs",
@@ -104,14 +107,22 @@ rustc_binary("bin") {
     "src/rewrite_service.rs",
     "src/test_util.rs",
   ]
+
+  visibility = [
+    ":*",
+    "//src/sys/pkg/bin/grand-swd-binary:*",
+  ]
 }
 
 # Ensure the contents of this package stay in sync with //src/sys/pkg/tests/amberctl:amberctl-tests
-package("pkg-resolver") {
-  deps = [ ":bin" ]
+package("pkg-resolver-bin") {
+  package_name = "pkg-resolver"
+  deps = [ "//src/sys/pkg/bin/grand-swd-binary" ]
+
   binaries = [
     {
       name = "pkg_resolver"
+      source = "grand_swd_binary"
       dest = "pkg-resolver"
     },
   ]
@@ -154,15 +165,15 @@ empty_repo_manifest_file = empty_repo_manifest_outputs[0]
 
 test_package("pkg-resolver-unit-tests") {
   deps = [
-    ":bin_test",
     ":empty-repo.manifest",
+    ":lib_test",
   ]
   extra = [ empty_repo_manifest_file ]
 
   tests = [
     {
-      name = "pkg_resolver_bin_test"
-      dest = "pkg-resolver-bin-test"
+      name = "pkg_resolver_lib_test"
+      dest = "pkg-resolver-test"
       environments = basic_envs
 
       # TODO(fxbug.dev/60612): Remove this override.

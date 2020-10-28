@@ -43,7 +43,7 @@ test_package("amberctl-tests") {
   deps = [
     ":driver",
     "//garnet/go/src/grand_unified_binary",
-    "//src/sys/pkg/bin/pkg-resolver:bin",
+    "//src/sys/pkg/bin/grand-swd-binary",
   ]
 
   binaries = [
@@ -53,7 +53,7 @@ test_package("amberctl-tests") {
     },
     {
       name = "pkg-resolver"
-      source = "pkg_resolver"
+      source = "grand_swd_binary"
     },
   ]
 

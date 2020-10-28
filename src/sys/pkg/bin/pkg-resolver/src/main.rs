@@ -89,7 +89,7 @@ const DEFAULT_TUF_METADATA_DEADLINE: Duration = Duration::from_secs(240);
 
 const DEFAULT_BLOB_NETWORK_DEADLINE: Duration = Duration::from_secs(30);
 
-fn main() -> Result<(), Error> {
+pub fn main() -> Result<(), Error> {
     let startup_time = Instant::now();
     fuchsia_syslog::init_with_tags(&["pkg-resolver"]).expect("can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();

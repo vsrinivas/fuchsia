@@ -581,9 +581,9 @@ test_package("pkg-resolver-integration-tests") {
     ":system_cache_fallback",
     "//garnet/go/src/grand_unified_binary",
     "//src/storage/bin/blobfs",
+    "//src/sys/pkg/bin/grand-swd-binary",
     "//src/sys/pkg/bin/pkg-cache:bin",
     "//src/sys/pkg/bin/pkg-local-mirror:bin",
-    "//src/sys/pkg/bin/pkg-resolver:bin",
   ]
 
   extra = [ empty_repo_manifest_file ]
@@ -602,7 +602,7 @@ test_package("pkg-resolver-integration-tests") {
     },
     {
       name = "pkg-resolver"
-      source = "pkg_resolver"
+      source = "grand_swd_binary"
     },
     {
       name = "pkgsvr"
