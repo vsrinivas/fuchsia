@@ -75,7 +75,6 @@ func convert(fname string) ([]ninjalog.Trace, error) {
 		steps = ninjalog.Populate(steps, commands)
 	}
 
-	var path []ninjalog.Step
 	if *criticalPath {
 		dotFile, err := os.Open(*graphPath)
 		if err != nil {
@@ -89,12 +88,12 @@ func convert(fname string) ([]ninjalog.Trace, error) {
 		if err := graph.PopulateEdges(steps); err != nil {
 			return nil, err
 		}
-		path, err = graph.CriticalPath()
+		steps, err = graph.PopulatedSteps()
 		if err != nil {
 			return nil, err
 		}
 	}
-	return ninjalog.ToTraces(ninjalog.Flow(steps), 1, path), nil
+	return ninjalog.ToTraces(ninjalog.Flow(steps), 1), nil
 }
 
 func output(fname string, traces []ninjalog.Trace) (err error) {

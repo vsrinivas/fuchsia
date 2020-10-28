@@ -37,10 +37,11 @@ func TestTrace(t *testing.T) {
 						CmdHash: 0x75430546595be7c2,
 					},
 					{
-						Start:   187 * time.Millisecond,
-						End:     21304 * time.Millisecond,
-						Out:     "obj/third_party/pdfium/core/src/fpdfdoc/fpdfdoc.doc_formfield.o",
-						CmdHash: 0x2ac7111aa1ae86af,
+						Start:      187 * time.Millisecond,
+						End:        21304 * time.Millisecond,
+						Out:        "obj/third_party/pdfium/core/src/fpdfdoc/fpdfdoc.doc_formfield.o",
+						CmdHash:    0x2ac7111aa1ae86af,
+						TotalFloat: 100 * time.Millisecond,
 						Command: &compdb.Command{
 							Command: "prebuilt/third_party/goma/linux-x64/gomacc some args and files",
 						},
@@ -54,10 +55,11 @@ func TestTrace(t *testing.T) {
 						CmdHash: 0x4ede38e2c1617d8c,
 					},
 					{
-						Start:   287 * time.Millisecond,
-						End:     290 * time.Millisecond,
-						Out:     "obj/third_party/angle/src/copy_scripts.actions_rules_copies.stamp",
-						CmdHash: 0xb211d373de72f455,
+						Start:      287 * time.Millisecond,
+						End:        290 * time.Millisecond,
+						Out:        "obj/third_party/angle/src/copy_scripts.actions_rules_copies.stamp",
+						CmdHash:    0xb211d373de72f455,
+						TotalFloat: 420 * time.Millisecond,
 						Command: &compdb.Command{
 							Command: "touch obj/third_party/angle/src/copy_scripts.actions_rules_copies.stamp",
 						},
@@ -105,6 +107,7 @@ func TestTrace(t *testing.T) {
 					DurationMicros:  (187 - 76) * 1000,
 					ProcessID:       1,
 					ThreadID:        0,
+					Args:            map[string]interface{}{"total float": "0s"},
 				},
 				{
 					Name:            "gen/angle/commit_id.py",
@@ -114,6 +117,7 @@ func TestTrace(t *testing.T) {
 					DurationMicros:  (286 - 78) * 1000,
 					ProcessID:       1,
 					ThreadID:        1,
+					Args:            map[string]interface{}{"total float": "0s"},
 				},
 				{
 					Name:            "gen/angle/copy_compiler_dll.bat",
@@ -123,6 +127,7 @@ func TestTrace(t *testing.T) {
 					DurationMicros:  (287 - 79) * 1000,
 					ProcessID:       1,
 					ThreadID:        2,
+					Args:            map[string]interface{}{"total float": "0s"},
 				},
 				{
 					Name:            "gen/autofill_regex_constants.cc",
@@ -132,6 +137,7 @@ func TestTrace(t *testing.T) {
 					DurationMicros:  (284 - 80) * 1000,
 					ProcessID:       1,
 					ThreadID:        3,
+					Args:            map[string]interface{}{"total float": "0s"},
 				},
 				{
 					Name:            "PepperFlash/manifest.json",
@@ -141,6 +147,7 @@ func TestTrace(t *testing.T) {
 					DurationMicros:  (287 - 141) * 1000,
 					ProcessID:       1,
 					ThreadID:        4,
+					Args:            map[string]interface{}{"total float": "0s"},
 				},
 				{
 					Name:            "PepperFlash/libpepflashplayer.so",
@@ -150,6 +157,7 @@ func TestTrace(t *testing.T) {
 					DurationMicros:  (288 - 142) * 1000,
 					ProcessID:       1,
 					ThreadID:        5,
+					Args:            map[string]interface{}{"total float": "0s"},
 				},
 				{
 					Name:            "obj/third_party/pdfium/core/src/fpdfdoc/fpdfdoc.doc_formfield.o",
@@ -160,7 +168,8 @@ func TestTrace(t *testing.T) {
 					ProcessID:       1,
 					ThreadID:        0,
 					Args: map[string]interface{}{
-						"command": "prebuilt/third_party/goma/linux-x64/gomacc some args and files",
+						"command":     "prebuilt/third_party/goma/linux-x64/gomacc some args and files",
+						"total float": "100ms",
 					},
 				},
 				{
@@ -172,7 +181,8 @@ func TestTrace(t *testing.T) {
 					ProcessID:       1,
 					ThreadID:        1,
 					Args: map[string]interface{}{
-						"command": "touch obj/third_party/angle/src/copy_scripts.actions_rules_copies.stamp",
+						"command":     "touch obj/third_party/angle/src/copy_scripts.actions_rules_copies.stamp",
+						"total float": "420ms",
 					},
 				},
 			},
@@ -182,50 +192,41 @@ func TestTrace(t *testing.T) {
 			flow: [][]Step{
 				{
 					{
-						End: 5 * time.Microsecond,
-						Out: "a",
+						End:        5 * time.Microsecond,
+						Out:        "a",
+						TotalFloat: 6789 * time.Microsecond,
 					},
 				},
 				{
 					{
-						Start: 1 * time.Microsecond,
-						End:   2 * time.Microsecond,
-						Out:   "b",
+						Start:      1 * time.Microsecond,
+						End:        2 * time.Microsecond,
+						Out:        "b",
+						TotalFloat: 9876 * time.Microsecond,
 					},
 					{
-						Start: 10 * time.Microsecond,
-						End:   20 * time.Microsecond,
-						Out:   "critical_c",
+						Start:          10 * time.Microsecond,
+						End:            20 * time.Microsecond,
+						Drag:           1234 * time.Microsecond,
+						Out:            "critical_c",
+						OnCriticalPath: true,
 					},
 				},
 				{
 					{
-						Start: 3 * time.Microsecond,
-						End:   5 * time.Microsecond,
-						Out:   "critical_a",
+						Start:          3 * time.Microsecond,
+						End:            5 * time.Microsecond,
+						Out:            "critical_a",
+						OnCriticalPath: true,
+						Drag:           4321 * time.Microsecond,
 					},
 					{
-						Start: 5 * time.Microsecond,
-						End:   10 * time.Microsecond,
-						Out:   "critical_b",
+						Start:          5 * time.Microsecond,
+						End:            10 * time.Microsecond,
+						Out:            "critical_b",
+						OnCriticalPath: true,
+						Drag:           2345 * time.Microsecond,
 					},
-				},
-			},
-			criticalPath: []Step{
-				{
-					Start: 3 * time.Microsecond,
-					End:   5 * time.Microsecond,
-					Out:   "critical_a",
-				},
-				{
-					Start: 5 * time.Microsecond,
-					End:   10 * time.Microsecond,
-					Out:   "critical_b",
-				},
-				{
-					Start: 10 * time.Microsecond,
-					End:   20 * time.Microsecond,
-					Out:   "critical_c",
 				},
 			},
 			want: []Trace{
@@ -237,6 +238,7 @@ func TestTrace(t *testing.T) {
 					DurationMicros:  5,
 					ProcessID:       1,
 					ThreadID:        2,
+					Args:            map[string]interface{}{"total float": "6.789ms"},
 				},
 				{
 					Name:            "b",
@@ -246,6 +248,7 @@ func TestTrace(t *testing.T) {
 					DurationMicros:  1,
 					ProcessID:       1,
 					ThreadID:        0,
+					Args:            map[string]interface{}{"total float": "9.876ms"},
 				},
 
 				{
@@ -256,6 +259,10 @@ func TestTrace(t *testing.T) {
 					DurationMicros:  2,
 					ProcessID:       1,
 					ThreadID:        1,
+					Args: map[string]interface{}{
+						"drag":        "4.321ms",
+						"total float": "0s",
+					},
 				},
 				{
 					// Flow event going out of critical_a.
@@ -276,6 +283,10 @@ func TestTrace(t *testing.T) {
 					DurationMicros:  5,
 					ProcessID:       1,
 					ThreadID:        1,
+					Args: map[string]interface{}{
+						"drag":        "2.345ms",
+						"total float": "0s",
+					},
 				},
 				{
 					// Flow event going out of critical_b.
@@ -307,6 +318,10 @@ func TestTrace(t *testing.T) {
 					DurationMicros:  10,
 					ProcessID:       1,
 					ThreadID:        0,
+					Args: map[string]interface{}{
+						"drag":        "1.234ms",
+						"total float": "0s",
+					},
 				},
 				{
 					// Flow event pointing to critical_c.
@@ -323,7 +338,7 @@ func TestTrace(t *testing.T) {
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			got := ToTraces(tc.flow, 1, tc.criticalPath)
+			got := ToTraces(tc.flow, 1)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("ToTrace()=%#v\nwant=%#v\ndiff (-want +got):\n%s", got, tc.want, diff)
 			}

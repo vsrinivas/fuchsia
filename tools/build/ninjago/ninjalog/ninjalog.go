@@ -37,6 +37,19 @@ type Step struct {
 	Outs []string
 	// compilation database command
 	Command *compdb.Command
+
+	// Whether ths step is on the critical path.
+	OnCriticalPath bool
+	// TotalFloat is the amount of time this step can be delayed without affecting
+	// the completion time of the build.
+	//
+	// https://en.wikipedia.org/wiki/Float_(project_management)
+	TotalFloat time.Duration
+	// Drag is the amount of time this step is adding to the total build time. All
+	// non-critial steps have zero drag.
+	//
+	// https://en.wikipedia.org/wiki/Critical_path_drag
+	Drag time.Duration
 }
 
 // Duration reports step's duration.

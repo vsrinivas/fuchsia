@@ -44,7 +44,7 @@ func (t traceByStart) Len() int           { return len(t) }
 func (t traceByStart) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
 func (t traceByStart) Less(i, j int) bool { return t[i].TimestampMicros < t[j].TimestampMicros }
 
-func toTrace(step Step, pid int, tid int, isOnCriticalPath bool) Trace {
+func toTrace(step Step, pid int, tid int) Trace {
 	tr := Trace{
 		Name:            step.Out,
 		Category:        step.Category(),
@@ -55,21 +55,22 @@ func toTrace(step Step, pid int, tid int, isOnCriticalPath bool) Trace {
 		ThreadID:        tid,
 	}
 
-	// Add "critical_path" to category to allow easy searching and highlighting
-	// in tracer viewer.
-	//
-	// Note: given chrome trace viewer does a full text search, searching
-	// "critical_path" might yield false positives if they happen to have this
-	// string in their output name or command. If we see this happening often we
-	// can make this string more unique.
-	if isOnCriticalPath {
-		tr.Category += ",critical_path"
+	tr.Args = map[string]interface{}{
+		"total float": step.TotalFloat.String(),
 	}
-
 	if step.Command != nil {
-		tr.Args = map[string]interface{}{
-			"command": step.Command.Command,
-		}
+		tr.Args["command"] = step.Command.Command
+	}
+	if step.OnCriticalPath {
+		// Add "critical_path" to category to allow easy searching and highlighting
+		// in tracer viewer.
+		//
+		// Note: given chrome trace viewer does a full text search, searching
+		// "critical_path" might yield false positives if they happen to have this
+		// string in their output name or command. If we see this happening often we
+		// can make this string more unique.
+		tr.Category += ",critical_path"
+		tr.Args["drag"] = step.Drag.String()
 	}
 	return tr
 }
@@ -109,20 +110,13 @@ func toFlowEvents(from, to Step, id int, pid int, tids map[string]int) []Trace {
 // If a non-empty `criticalPath` is provided, steps on the critical path will
 // have "critical_path" in their category to enable quick searching and
 // highlighting.
-func ToTraces(steps [][]Step, pid int, criticalPath []Step) []Trace {
-	onCriticalPath := make(map[string]bool)
-	if len(criticalPath) > 0 {
-		for _, s := range criticalPath {
-			onCriticalPath[s.Out] = true
-		}
-	}
-
+func ToTraces(steps [][]Step, pid int) []Trace {
 	var criticalThreads, nonCriticalThreads [][]Step
 Outer:
 	for _, thread := range steps {
 		// Elevate threads with critical steps to the top of the trace.
 		for _, s := range thread {
-			if onCriticalPath[s.Out] {
+			if s.OnCriticalPath {
 				criticalThreads = append(criticalThreads, thread)
 				continue Outer
 			}
@@ -131,19 +125,21 @@ Outer:
 	}
 	steps = append(criticalThreads, nonCriticalThreads...)
 
+	var criticalPath []Step
 	var traces []Trace
 	// Record `tid`s of all critical steps for generating flow events later.
 	tids := make(map[string]int)
 	for tid, thread := range steps {
 		for _, step := range thread {
-			isOnCriticalPath := onCriticalPath[step.Out]
-			traces = append(traces, toTrace(step, pid, tid, isOnCriticalPath))
-			if isOnCriticalPath {
+			traces = append(traces, toTrace(step, pid, tid))
+			if step.OnCriticalPath {
 				tids[step.Out] = tid
+				criticalPath = append(criticalPath, step)
 			}
 		}
 	}
 
+	sort.Slice(criticalPath, func(i, j int) bool { return criticalPath[i].Start < criticalPath[j].Start })
 	// Draw lines (flow events) between all critical steps.
 	for i := 1; i < len(criticalPath); i++ {
 		traces = append(traces, toFlowEvents(criticalPath[i-1], criticalPath[i], i, pid, tids)...)

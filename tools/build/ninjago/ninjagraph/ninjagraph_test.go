@@ -972,55 +972,55 @@ func TestAddSink(t *testing.T) {
 }
 
 func TestTotalFloat(t *testing.T) {
-	step1 := ninjalog.Step{End: 10}
+	step1 := ninjalog.Step{Out: "1", End: 10}
 	edge1 := &Edge{
 		Outputs: []int64{1},
 		Step:    &step1,
 	}
 
-	step2 := ninjalog.Step{Start: 10, End: 30}
+	step2 := ninjalog.Step{Out: "2", Start: 10, End: 30}
 	edge2 := &Edge{
 		Inputs:  []int64{1},
 		Outputs: []int64{2},
 		Step:    &step2,
 	}
 
-	step3 := ninjalog.Step{Start: 30, End: 35}
+	step3 := ninjalog.Step{Out: "3", Start: 30, End: 35}
 	edge3 := &Edge{
 		Inputs:  []int64{2},
 		Outputs: []int64{3},
 		Step:    &step3,
 	}
 
-	step4 := ninjalog.Step{Start: 35, End: 45}
+	step4 := ninjalog.Step{Out: "4", Start: 35, End: 45}
 	edge4 := &Edge{
 		Inputs:  []int64{3},
 		Outputs: []int64{4},
 		Step:    &step4,
 	}
 
-	step5 := ninjalog.Step{Start: 45, End: 65}
+	step5 := ninjalog.Step{Out: "5", Start: 45, End: 65}
 	edge5 := &Edge{
 		Inputs:  []int64{4, 7, 8},
 		Outputs: []int64{5},
 		Step:    &step5,
 	}
 
-	step6 := ninjalog.Step{Start: 10, End: 25}
+	step6 := ninjalog.Step{Out: "6", Start: 10, End: 25}
 	edge6 := &Edge{
 		Inputs:  []int64{1},
 		Outputs: []int64{6},
 		Step:    &step6,
 	}
 
-	step7 := ninjalog.Step{Start: 35, End: 40}
+	step7 := ninjalog.Step{Out: "7", Start: 35, End: 40}
 	edge7 := &Edge{
 		Inputs:  []int64{3, 6},
 		Outputs: []int64{7},
 		Step:    &step7,
 	}
 
-	step8 := ninjalog.Step{Start: 10, End: 25}
+	step8 := ninjalog.Step{Out: "8", Start: 10, End: 25}
 	edge8 := &Edge{
 		Inputs:  []int64{1},
 		Outputs: []int64{8},
@@ -1203,6 +1203,36 @@ func TestTotalFloat(t *testing.T) {
 			t.Errorf("drag(edge outputting %v) = %s, want: %s", want.input.Outputs, got, want.drag)
 		}
 	}
+
+	wantSteps := []ninjalog.Step{
+		withFloatDrag(step1, floatDrag{float: 0, onCriticalPath: true, drag: 10}),
+		withFloatDrag(step2, floatDrag{float: 0, onCriticalPath: true, drag: 15}),
+		withFloatDrag(step3, floatDrag{float: 0, onCriticalPath: true, drag: 5}),
+		withFloatDrag(step4, floatDrag{float: 0, onCriticalPath: true, drag: 5}),
+		withFloatDrag(step5, floatDrag{float: 0, onCriticalPath: true, drag: 20}),
+		withFloatDrag(step6, floatDrag{float: 15, drag: 0}),
+		withFloatDrag(step7, floatDrag{float: 5, drag: 0}),
+		withFloatDrag(step8, floatDrag{float: 20, drag: 0}),
+	}
+	gotSteps, err := g.PopulatedSteps()
+	if err != nil {
+		t.Fatalf("StepsWithFloatDrag() got error: %v", err)
+	}
+	if diff := cmp.Diff(wantSteps, gotSteps); diff != "" {
+		t.Errorf("StepsWithFloatDrag() got diff (-want, +got):\n%s", diff)
+	}
+}
+
+type floatDrag struct {
+	float, drag    time.Duration
+	onCriticalPath bool
+}
+
+func withFloatDrag(s ninjalog.Step, fd floatDrag) ninjalog.Step {
+	s.TotalFloat = fd.float
+	s.Drag = fd.drag
+	s.OnCriticalPath = fd.onCriticalPath
+	return s
 }
 
 func edgesToStr(edges []*Edge) string {

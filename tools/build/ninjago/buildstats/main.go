@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
@@ -61,6 +62,16 @@ type action struct {
 	Start, End time.Duration
 	Rule       string
 	Category   string
+	// TotalFloat is the amount of time this step can be delayed without affecting
+	// the completion time of the build.
+	//
+	// https://en.wikipedia.org/wiki/Float_(project_management)
+	TotalFloat time.Duration
+	// Drag is the amount of time this step is adding to the total build time. All
+	// non-critial steps have zero drag.
+	//
+	// https://en.wikipedia.org/wiki/Critical_path_drag
+	Drag time.Duration
 }
 
 // All fields are exported so this struct can be serialized by json.
@@ -94,43 +105,46 @@ type buildStats struct {
 //
 // Steps used to populate the graph are also returned so they can be used in
 // later steps.
-func constructGraph(ins inputs) (ninjagraph.Graph, []ninjalog.Step, error) {
+func constructGraph(ins inputs) (ninjagraph.Graph, error) {
 	njl, err := ninjalog.Parse(*ninjalogPath, ins.ninjalog)
 	if err != nil {
-		return ninjagraph.Graph{}, nil, fmt.Errorf("parsing ninjalog: %v", err)
+		return ninjagraph.Graph{}, fmt.Errorf("parsing ninjalog: %v", err)
 	}
 	steps := ninjalog.Dedup(njl.Steps)
 
 	commands, err := compdb.Parse(ins.compdb)
 	if err != nil {
-		return ninjagraph.Graph{}, nil, fmt.Errorf("parsing compdb: %v", err)
+		return ninjagraph.Graph{}, fmt.Errorf("parsing compdb: %v", err)
 	}
 	steps = ninjalog.Populate(steps, commands)
 
 	graph, err := ninjagraph.FromDOT(ins.graph)
 	if err != nil {
-		return ninjagraph.Graph{}, nil, fmt.Errorf("parsing Ninja graph: %v", err)
+		return ninjagraph.Graph{}, fmt.Errorf("parsing Ninja graph: %v", err)
 	}
 	if err := graph.PopulateEdges(steps); err != nil {
-		return ninjagraph.Graph{}, nil, fmt.Errorf("populating graph edges with build steps: %v", err)
+		return ninjagraph.Graph{}, fmt.Errorf("populating graph edges with build steps: %v", err)
 	}
-	return graph, steps, nil
+	return graph, nil
 }
 
 type graph interface {
-	CriticalPath() ([]ninjalog.Step, error)
+	PopulatedSteps() ([]ninjalog.Step, error)
 }
 
-func extractBuildStats(g graph, steps []ninjalog.Step) (buildStats, error) {
-	criticalPath, err := g.CriticalPath()
+func extractBuildStats(g graph) (buildStats, error) {
+	steps, err := g.PopulatedSteps()
 	if err != nil {
-		return buildStats{}, err
+		return buildStats{}, fmt.Errorf("getting steps with float and drag: %w", err)
 	}
 
 	ret := buildStats{}
-	for _, step := range criticalPath {
-		ret.CriticalPath = append(ret.CriticalPath, toAction(step))
+	for _, step := range steps {
+		if step.OnCriticalPath {
+			ret.CriticalPath = append(ret.CriticalPath, toAction(step))
+		}
 	}
+	sort.Slice(ret.CriticalPath, func(i, j int) bool { return ret.CriticalPath[i].Start < ret.CriticalPath[j].Start })
 
 	for _, step := range ninjalog.SlowestSteps(steps, 30) {
 		ret.Slowests = append(ret.Slowests, toAction(step))
@@ -172,10 +186,12 @@ func extractBuildStats(g graph, steps []ninjalog.Step) (buildStats, error) {
 
 func toAction(s ninjalog.Step) action {
 	a := action{
-		Outputs:  append(s.Outs, s.Out),
-		Start:    s.Start,
-		End:      s.End,
-		Category: s.Category(),
+		Outputs:    append(s.Outs, s.Out),
+		Start:      s.Start,
+		End:        s.End,
+		Category:   s.Category(),
+		TotalFloat: s.TotalFloat,
+		Drag:       s.Drag,
 	}
 	if s.Command != nil {
 		a.Command = s.Command.Command
@@ -224,7 +240,7 @@ func main() {
 		log.Fatalf("Failed to read graph %q: %v", *graphPath, err)
 	}
 	defer graphFile.Close()
-	graph, steps, err := constructGraph(inputs{
+	graph, err := constructGraph(inputs{
 		ninjalog: ninjalog,
 		compdb:   compdb,
 		graph:    graphFile,
@@ -234,7 +250,7 @@ func main() {
 	}
 
 	log.Infof("Extracting build stats from graph.")
-	stats, err := extractBuildStats(&graph, steps)
+	stats, err := extractBuildStats(&graph)
 	if err != nil {
 		log.Fatalf("Failed to extract build stats from graph: %v", err)
 	}

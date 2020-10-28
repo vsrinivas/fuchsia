@@ -39,7 +39,7 @@ func readAndUnzip(t *testing.T, path string) *gzip.Reader {
 }
 
 func TestExtractAndSerializeBuildStats(t *testing.T) {
-	graph, steps, err := constructGraph(inputs{
+	graph, err := constructGraph(inputs{
 		ninjalog: readAndUnzip(t, filepath.Join(*testDataDir, "ninja_log.gz")),
 		compdb:   readAndUnzip(t, filepath.Join(*testDataDir, "compdb.json.gz")),
 		graph:    readAndUnzip(t, filepath.Join(*testDataDir, "graph.dot.gz")),
@@ -48,7 +48,7 @@ func TestExtractAndSerializeBuildStats(t *testing.T) {
 		t.Fatalf("Failed to construct graph: %v", err)
 	}
 
-	stats, err := extractBuildStats(&graph, steps)
+	stats, err := extractBuildStats(&graph)
 	if err != nil {
 		t.Fatalf("Failed to extract build stats: %v", err)
 	}
@@ -76,12 +76,12 @@ func TestExtractAndSerializeBuildStats(t *testing.T) {
 }
 
 type stubGraph struct {
-	criticalPath []ninjalog.Step
-	err          error
+	steps []ninjalog.Step
+	err   error
 }
 
-func (g *stubGraph) CriticalPath() ([]ninjalog.Step, error) {
-	return g.criticalPath, g.err
+func (g *stubGraph) PopulatedSteps() ([]ninjalog.Step, error) {
+	return g.steps, g.err
 }
 
 func TestExtractStats(t *testing.T) {
@@ -97,44 +97,33 @@ func TestExtractStats(t *testing.T) {
 		{
 			name: "successfully extract stats",
 			g: stubGraph{
-				criticalPath: []ninjalog.Step{
+				steps: []ninjalog.Step{
 					{
-						CmdHash: 1,
-						Out:     "a.o",
-						Outs:    []string{"aa.o", "aaa.o"},
-						End:     3 * time.Second,
-						Command: &compdb.Command{Command: "gomacc a.cc"},
+						CmdHash:        1,
+						Out:            "a.o",
+						Outs:           []string{"aa.o", "aaa.o"},
+						End:            3 * time.Second,
+						Command:        &compdb.Command{Command: "gomacc a.cc"},
+						OnCriticalPath: true,
+						Drag:           123 * time.Second,
 					},
 					{
-						CmdHash: 2,
-						Out:     "b.o",
-						Start:   3 * time.Second,
-						End:     5 * time.Second,
-						Command: &compdb.Command{Command: "rustc b.rs"},
+						CmdHash:        2,
+						Out:            "b.o",
+						Start:          3 * time.Second,
+						End:            5 * time.Second,
+						Command:        &compdb.Command{Command: "rustc b.rs"},
+						OnCriticalPath: true,
+						Drag:           321 * time.Second,
 					},
-				},
-			},
-			steps: []ninjalog.Step{
-				{
-					CmdHash: 1,
-					Out:     "a.o",
-					Outs:    []string{"aa.o", "aaa.o"},
-					End:     3 * time.Second,
-					Command: &compdb.Command{Command: "gomacc a.cc"},
-				},
-				{
-					CmdHash: 2,
-					Out:     "b.o",
-					Start:   3 * time.Second,
-					End:     5 * time.Second,
-					Command: &compdb.Command{Command: "rustc b.rs"},
-				},
-				{
-					CmdHash: 3,
-					Out:     "c.o",
-					Start:   9 * time.Second,
-					End:     10 * time.Second,
-					Command: &compdb.Command{Command: "gomacc c.cc"},
+					{
+						CmdHash:    3,
+						Out:        "c.o",
+						Start:      9 * time.Second,
+						End:        10 * time.Second,
+						Command:    &compdb.Command{Command: "gomacc c.cc"},
+						TotalFloat: 789 * time.Second,
+					},
 				},
 			},
 			want: buildStats{
@@ -144,6 +133,7 @@ func TestExtractStats(t *testing.T) {
 						Outputs:  []string{"aa.o", "aaa.o", "a.o"},
 						End:      3 * time.Second,
 						Category: "gomacc",
+						Drag:     123 * time.Second,
 					},
 					{
 						Command:  "rustc b.rs",
@@ -151,6 +141,7 @@ func TestExtractStats(t *testing.T) {
 						Start:    3 * time.Second,
 						End:      5 * time.Second,
 						Category: "rustc",
+						Drag:     321 * time.Second,
 					},
 				},
 				Slowests: []action{
@@ -159,6 +150,7 @@ func TestExtractStats(t *testing.T) {
 						Outputs:  []string{"aa.o", "aaa.o", "a.o"},
 						End:      3 * time.Second,
 						Category: "gomacc",
+						Drag:     123 * time.Second,
 					},
 					{
 						Command:  "rustc b.rs",
@@ -166,13 +158,15 @@ func TestExtractStats(t *testing.T) {
 						Start:    3 * time.Second,
 						End:      5 * time.Second,
 						Category: "rustc",
+						Drag:     321 * time.Second,
 					},
 					{
-						Command:  "gomacc c.cc",
-						Outputs:  []string{"c.o"},
-						Start:    9 * time.Second,
-						End:      10 * time.Second,
-						Category: "gomacc",
+						Command:    "gomacc c.cc",
+						Outputs:    []string{"c.o"},
+						Start:      9 * time.Second,
+						End:        10 * time.Second,
+						Category:   "gomacc",
+						TotalFloat: 789 * time.Second,
 					},
 				},
 				CatBuildTimes: []catBuildTime{
@@ -197,7 +191,7 @@ func TestExtractStats(t *testing.T) {
 		},
 	} {
 		t.Run(v.name, func(t *testing.T) {
-			gotStats, err := extractBuildStats(&v.g, v.steps)
+			gotStats, err := extractBuildStats(&v.g)
 			if err != nil {
 				t.Fatalf("extractBuildStats(%#v, %#v) got error: %v", v.g, v.steps, err)
 			}
@@ -210,7 +204,7 @@ func TestExtractStats(t *testing.T) {
 
 func TestExtractStatsError(t *testing.T) {
 	g := stubGraph{err: errors.New("test critical path error")}
-	if _, err := extractBuildStats(&g, nil); err == nil {
+	if _, err := extractBuildStats(&g); err == nil {
 		t.Errorf("extractBuildStats(%#v, nil) got no error, want error", g)
 	}
 }
