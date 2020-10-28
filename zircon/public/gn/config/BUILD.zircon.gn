@@ -437,6 +437,13 @@ config("optimize_size") {
     cflags = [ "-Oz" ]
   }
   ldflags = cflags
+  if (!is_gcc && clang_ml_inliner) {
+    cflags += [
+      # `release` uses AOT model embedded inside the compiler.
+      "-mllvm",
+      "-enable-ml-inliner=release",
+    ]
+  }
   rustflags = [ "-Copt-level=z" ]
   configs = [ ":linker_string_merging" ]
 }
