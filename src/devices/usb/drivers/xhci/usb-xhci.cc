@@ -417,15 +417,7 @@ zx_status_t UsbXhci::Init() {
   } else if (pdev_.is_valid()) {
     return InitPdev();
   } else if (composite_.is_valid()) {
-    zx_device_t* pdev_device;
-    size_t actual;
-
-    // Retrieve platform device protocol from our first fragment.
-    composite_.GetFragments(&pdev_device, 1, &actual);
-    if (actual != 1) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    pdev_ = pdev_device;
+    pdev_ = ddk::PDev(composite_);
     if (!pdev_.is_valid()) {
       zxlogf(ERROR, "UsbXhci::Init: could not get platform device protocol");
       return ZX_ERR_NOT_SUPPORTED;

@@ -835,23 +835,14 @@ zx_status_t Dwc2::Init() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* fragments[2];
-  size_t actual;
-
-  // Retrieve platform device protocol from our first fragment.
-  composite.GetFragments(fragments, std::size(fragments), &actual);
-  if (actual < std::size(fragments)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  pdev_ = fragments[0];
+  pdev_ = ddk::PDev(composite);
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "Dwc2::Create: could not get platform device protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // USB PHY protocol is optional.
-  usb_phy_ = fragments[1];
+  usb_phy_ = ddk::UsbPhyProtocolClient(composite, "dwc2-phy");
   if (!usb_phy_->is_valid()) {
     usb_phy_.reset();
   }
@@ -861,6 +852,7 @@ zx_status_t Dwc2::Init() {
     ep->ep_num = i;
   }
 
+  size_t actual;
   auto status = DdkGetMetadata(DEVICE_METADATA_PRIVATE, &metadata_, sizeof(metadata_), &actual);
   if (status != ZX_OK || actual != sizeof(metadata_)) {
     zxlogf(ERROR, "Dwc2::Init can't get driver metadata");
