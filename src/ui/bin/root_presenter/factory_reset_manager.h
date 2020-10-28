@@ -86,7 +86,7 @@ class FactoryResetManager : public fuchsia::recovery::policy::Device {
 
   fuchsia::recovery::ui::FactoryResetCountdownState State() const;
 
-  FactoryResetState factory_reset_state_ = FactoryResetState::ALLOWED;
+  FactoryResetState factory_reset_state_;
 
   // The time when a factory reset is scheduled to happen. Only valid if coundown_started_ is true
   zx_time_t deadline_ = 0u;

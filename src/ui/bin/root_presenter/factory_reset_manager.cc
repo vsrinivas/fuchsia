@@ -11,6 +11,9 @@
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+
 namespace root_presenter {
 
 using fuchsia::media::AudioRenderUsage;
@@ -18,6 +21,8 @@ using fuchsia::media::sounds::Player_AddSoundFromFile_Result;
 using fuchsia::media::sounds::Player_PlaySound_Result;
 
 constexpr uint32_t FACTORY_RESET_SOUND_ID = 0;
+
+constexpr char kFactoryResetDisallowed[] = "/data/factory_reset_disallowed";
 
 FactoryResetManager::WatchHandler::WatchHandler(
     const fuchsia::recovery::ui::FactoryResetCountdownState& state) {
@@ -63,6 +68,12 @@ FactoryResetManager::FactoryResetManager(sys::ComponentContext& context,
   FX_DCHECK(factory_reset_);
   context.svc()->Connect(sound_player_.NewRequest());
   FX_DCHECK(sound_player_);
+
+  if (files::IsFile(kFactoryResetDisallowed)) {
+    factory_reset_state_ = FactoryResetState::DISALLOWED;
+  } else {
+    factory_reset_state_ = FactoryResetState::ALLOWED;
+  }
 }
 
 bool FactoryResetManager::OnMediaButtonReport(
@@ -219,14 +230,29 @@ void FactoryResetManager::StartFactoryResetCountdown() {
                          kResetCountdownDuration);
 }
 
+void PersistFactoryResetAllowed() {
+  if (!files::DeletePath(kFactoryResetDisallowed, /* recursive= */ false)) {
+    FX_LOGS(ERROR) << "Failed to persist FactoryResetAllowed.";
+  }
+}
+
+void PersistFactoryResetDisallowed() {
+  if (!files::WriteFile(kFactoryResetDisallowed, "")) {
+    FX_LOGS(ERROR) << "Failed to persist FactoryResetDisallowed.";
+  }
+}
+
 void FactoryResetManager::SetIsLocalResetAllowed(bool allowed) {
+  // If Factory reset was disallowed, and if the new policy is allowed, switch to the ALLOWED
+  // state.
   if (factory_reset_state_ == FactoryResetState::DISALLOWED && allowed) {
-    // If Factory reset was disallowed, and if the new policy is allowed, switch to the ALLOWED
-    // state.
     factory_reset_state_ = FactoryResetState::ALLOWED;
+    PersistFactoryResetAllowed();
   }
 
-  if (!allowed) {
+  // If Factory reset was allowed, and if the new policy is disallowed, switch to the DISALLOWED
+  // state.
+  if (factory_reset_state_ != FactoryResetState::DISALLOWED && !allowed) {
     // If the reset button was held, cancel the button countdown and notify the state change.
     if (factory_reset_state_ == FactoryResetState::BUTTON_COUNTDOWN) {
       start_reset_countdown_after_timeout_.Cancel();
@@ -241,6 +267,7 @@ void FactoryResetManager::SetIsLocalResetAllowed(bool allowed) {
 
     // Disable Factory reset.
     factory_reset_state_ = FactoryResetState::DISALLOWED;
+    PersistFactoryResetDisallowed();
   }
 }
 

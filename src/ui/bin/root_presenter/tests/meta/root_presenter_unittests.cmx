@@ -17,7 +17,8 @@
             "class/input"
         ],
         "features": [
-            "config-data"
+            "config-data",
+            "isolated-persistent-storage"
         ],
         "services": [
             "fuchsia.sys.Environment",

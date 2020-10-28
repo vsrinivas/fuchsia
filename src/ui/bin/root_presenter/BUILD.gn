@@ -169,6 +169,7 @@ source_set("factory_reset_manager") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fdio",
+    "//src/lib/files",
   ]
 }
 

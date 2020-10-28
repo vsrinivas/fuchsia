@@ -16,6 +16,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace root_presenter {
@@ -33,6 +35,8 @@ using ::testing::InSequence;
 using ::testing::MockFunction;
 using ::testing::NiceMock;
 using ::testing::Return;
+
+constexpr char kFactoryResetDisallowed[] = "/data/factory_reset_disallowed";
 
 class FakeFactoryReset : public fuchsia::recovery::testing::FactoryReset_TestBase {
  public:
@@ -68,8 +72,13 @@ class FakeFactoryReset : public fuchsia::recovery::testing::FactoryReset_TestBas
 
 class FactoryResetManagerTest : public gtest::TestLoopFixture {
  public:
-  FactoryResetManagerTest()
-      : factory_reset_manager_(*context_provider_.context(), std::make_shared<MediaRetriever>()) {
+  explicit FactoryResetManagerTest(bool is_factory_reset_allowed) {
+    if (!is_factory_reset_allowed) {
+      EXPECT_TRUE(files::WriteFile(kFactoryResetDisallowed, ""));
+    }
+
+    factory_reset_manager_ = std::make_unique<FactoryResetManager>(
+        *context_provider_.context(), std::make_shared<MediaRetriever>());
     context_provider_.service_directory_provider()->AddService(factory_reset_.GetHandler());
 
     context_provider_.ConnectToPublicService<fuchsia::recovery::policy::Device>(
@@ -80,73 +89,83 @@ class FactoryResetManagerTest : public gtest::TestLoopFixture {
     countdown_ptr_.set_error_handler([](auto...) { FAIL(); });
   }
 
+  FactoryResetManagerTest() : FactoryResetManagerTest(true) {}
+
+  ~FactoryResetManagerTest() { files::DeletePath(kFactoryResetDisallowed, /* recursive= */ false); }
+
   bool triggered() const { return factory_reset_.triggered(); }
 
  protected:
   sys::testing::ComponentContextProvider context_provider_;
-  FactoryResetManager factory_reset_manager_;
+  std::unique_ptr<FactoryResetManager> factory_reset_manager_;
   FakeFactoryReset factory_reset_;
 
   fuchsia::recovery::policy::DevicePtr policy_ptr_;
   fuchsia::recovery::ui::FactoryResetCountdownPtr countdown_ptr_;
 };
 
+// Used to test the behavior of FactoryResetManager when the initial policy is "DISALLOWED".
+class FactoryResetManagerTestWithResetInitiallyDisallowed : public FactoryResetManagerTest {
+ public:
+  FactoryResetManagerTestWithResetInitiallyDisallowed() : FactoryResetManagerTest(false) {}
+};
+
 TEST_F(FactoryResetManagerTest, ProcessingMediaButtons) {
   fuchsia::ui::input::MediaButtonsReport report;
   report.volume_up = true;
-  EXPECT_FALSE(factory_reset_manager_.OnMediaButtonReport(report));
+  EXPECT_FALSE(factory_reset_manager_->OnMediaButtonReport(report));
 
   fuchsia::ui::input::MediaButtonsReport report2;
   report2.volume_down = true;
-  EXPECT_FALSE(factory_reset_manager_.OnMediaButtonReport(report2));
+  EXPECT_FALSE(factory_reset_manager_->OnMediaButtonReport(report2));
 
   fuchsia::ui::input::MediaButtonsReport report3;
   report3.volume_up = true;
   report3.volume_down = true;
-  EXPECT_FALSE(factory_reset_manager_.OnMediaButtonReport(report3));
+  EXPECT_FALSE(factory_reset_manager_->OnMediaButtonReport(report3));
 
   fuchsia::ui::input::MediaButtonsReport report4;
   report4.reset = true;
-  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report4));
+  EXPECT_TRUE(factory_reset_manager_->OnMediaButtonReport(report4));
 }
 
 TEST_F(FactoryResetManagerTest, FactoryResetDisallowed) {
-  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 
   policy_ptr_->SetIsLocalResetAllowed(false);
   RunLoopUntilIdle();
 
-  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_->factory_reset_state());
 }
 
 TEST_F(FactoryResetManagerTest, FactoryResetAllowedThenDisallowed) {
-  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 
   policy_ptr_->SetIsLocalResetAllowed(false);
   RunLoopUntilIdle();
 
-  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_->factory_reset_state());
 
   policy_ptr_->SetIsLocalResetAllowed(true);
   RunLoopUntilIdle();
 
-  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 }
 
 TEST_F(FactoryResetManagerTest, FactoryResetDisallowedDuringButtonCountdown) {
-  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
-  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
+  EXPECT_TRUE(factory_reset_manager_->OnMediaButtonReport(report));
 
-  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_->factory_reset_state());
 
   // Factory reset should cancel if the policy is disallowed.
   policy_ptr_->SetIsLocalResetAllowed(false);
   RunLoopUntilIdle();
 
-  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_->factory_reset_state());
 
   RunLoopFor(kResetCountdownDuration);
   RunLoopUntilIdle();
@@ -154,40 +173,40 @@ TEST_F(FactoryResetManagerTest, FactoryResetDisallowedDuringButtonCountdown) {
 }
 
 TEST_F(FactoryResetManagerTest, FactoryResetDisallowedBeforePressing) {
-  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 
   // Factory reset should cancel if the policy is disallowed.
   policy_ptr_->SetIsLocalResetAllowed(false);
   RunLoopUntilIdle();
 
-  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_->factory_reset_state());
 
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
-  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
+  EXPECT_TRUE(factory_reset_manager_->OnMediaButtonReport(report));
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_->factory_reset_state());
 }
 
 TEST_F(FactoryResetManagerTest, FactoryResetButtonDisallowedDuringResetCountdown) {
-  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
-  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
+  EXPECT_TRUE(factory_reset_manager_->OnMediaButtonReport(report));
 
-  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_->factory_reset_state());
 
   RunLoopFor(kButtonCountdownDuration);
-  EXPECT_EQ(FactoryResetState::RESET_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::RESET_COUNTDOWN, factory_reset_manager_->factory_reset_state());
 
   // Factory reset should cancel if the policy is disallowed.
   policy_ptr_->SetIsLocalResetAllowed(false);
   RunLoopUntilIdle();
 
-  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_->factory_reset_state());
 
   RunLoopFor(kResetCountdownDuration);
   RunLoopUntilIdle();
@@ -195,18 +214,18 @@ TEST_F(FactoryResetManagerTest, FactoryResetButtonDisallowedDuringResetCountdown
 }
 
 TEST_F(FactoryResetManagerTest, FactoryResetButtonPressedAndReleasedDuringDelayCountdown) {
-  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
-  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
+  EXPECT_TRUE(factory_reset_manager_->OnMediaButtonReport(report));
 
-  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_->factory_reset_state());
 
   // Factory reset should cancel if the button is released.
   report.reset = false;
-  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
-  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_TRUE(factory_reset_manager_->OnMediaButtonReport(report));
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 
   RunLoopFor(kResetCountdownDuration);
   RunLoopUntilIdle();
@@ -214,21 +233,21 @@ TEST_F(FactoryResetManagerTest, FactoryResetButtonPressedAndReleasedDuringDelayC
 }
 
 TEST_F(FactoryResetManagerTest, FactoryResetButtonPressedAndReleasedDuringResetCountdown) {
-  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
-  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
+  EXPECT_TRUE(factory_reset_manager_->OnMediaButtonReport(report));
 
-  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_->factory_reset_state());
 
   RunLoopFor(kButtonCountdownDuration);
-  EXPECT_EQ(FactoryResetState::RESET_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::RESET_COUNTDOWN, factory_reset_manager_->factory_reset_state());
 
   // Factory reset should cancel if the button is released.
   report.reset = false;
-  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
-  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_TRUE(factory_reset_manager_->OnMediaButtonReport(report));
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 
   RunLoopFor(kResetCountdownDuration);
   RunLoopUntilIdle();
@@ -236,22 +255,22 @@ TEST_F(FactoryResetManagerTest, FactoryResetButtonPressedAndReleasedDuringResetC
 }
 
 TEST_F(FactoryResetManagerTest, FactoryResetButtonHeldAndTrigger) {
-  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
 
-  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
+  EXPECT_TRUE(factory_reset_manager_->OnMediaButtonReport(report));
 
-  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_->factory_reset_state());
 
   RunLoopFor(kButtonCountdownDuration);
-  EXPECT_EQ(FactoryResetState::RESET_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::RESET_COUNTDOWN, factory_reset_manager_->factory_reset_state());
 
   RunLoopFor(kResetCountdownDuration);
   RunLoopUntilIdle();
   EXPECT_TRUE(triggered());
-  EXPECT_EQ(FactoryResetState::TRIGGER_RESET, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::TRIGGER_RESET, factory_reset_manager_->factory_reset_state());
 }
 
 TEST_F(FactoryResetManagerTest, BroadcastCountdown) {
@@ -275,12 +294,12 @@ TEST_F(FactoryResetManagerTest, BroadcastCountdown) {
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
 
-  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
+  EXPECT_TRUE(factory_reset_manager_->OnMediaButtonReport(report));
 
-  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::BUTTON_COUNTDOWN, factory_reset_manager_->factory_reset_state());
 
   RunLoopFor(kButtonCountdownDuration);
-  EXPECT_EQ(FactoryResetState::RESET_COUNTDOWN, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::RESET_COUNTDOWN, factory_reset_manager_->factory_reset_state());
 
   fuchsia::recovery::ui::FactoryResetCountdownState secondState;
   bool secondWatchReturned = false;
@@ -295,7 +314,7 @@ TEST_F(FactoryResetManagerTest, BroadcastCountdown) {
   RunLoopFor(kResetCountdownDuration);
   RunLoopUntilIdle();
   EXPECT_TRUE(triggered());
-  EXPECT_EQ(FactoryResetState::TRIGGER_RESET, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::TRIGGER_RESET, factory_reset_manager_->factory_reset_state());
 
   // Countdown should be sent.
   EXPECT_TRUE(secondWatchReturned);
@@ -303,14 +322,14 @@ TEST_F(FactoryResetManagerTest, BroadcastCountdown) {
 }
 
 TEST_F(FactoryResetManagerTest, DoNotBroadcastCountdownWhenDisallowed) {
-  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 
   fuchsia::recovery::ui::FactoryResetCountdownState state;
 
   policy_ptr_->SetIsLocalResetAllowed(false);
   RunLoopUntilIdle();
 
-  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_->factory_reset_state());
 
   bool watchReturned = false;
 
@@ -338,17 +357,17 @@ TEST_F(FactoryResetManagerTest, DoNotBroadcastCountdownWhenDisallowed) {
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
 
-  EXPECT_TRUE(factory_reset_manager_.OnMediaButtonReport(report));
+  EXPECT_TRUE(factory_reset_manager_->OnMediaButtonReport(report));
 
-  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_->factory_reset_state());
 
   RunLoopFor(kButtonCountdownDuration);
-  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_->factory_reset_state());
 
   RunLoopFor(kResetCountdownDuration);
   RunLoopUntilIdle();
   EXPECT_FALSE(triggered());
-  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_.factory_reset_state());
+  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_->factory_reset_state());
 
   // Countdown should not be be sent if the policy is disallowed.
   EXPECT_FALSE(secondWatchReturned);
@@ -572,6 +591,20 @@ TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerResetsWhenFailsToPlaySou
   TriggerFactoryReset();
   EXPECT_TRUE(triggered());
   EXPECT_EQ(FactoryResetState::TRIGGER_RESET, factory_reset_manager_.factory_reset_state());
+}
+
+TEST_F(FactoryResetManagerTestWithResetInitiallyDisallowed, FactoryResetInitiallyDisallowed) {
+  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_->factory_reset_state());
+}
+
+TEST_F(FactoryResetManagerTestWithResetInitiallyDisallowed,
+       FactoryResetInitiallyDisallowedThenEnabled) {
+  EXPECT_EQ(FactoryResetState::DISALLOWED, factory_reset_manager_->factory_reset_state());
+
+  policy_ptr_->SetIsLocalResetAllowed(true);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_->factory_reset_state());
 }
 
 }  // namespace testing
