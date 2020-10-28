@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"syscall/zx"
 	"syscall/zx/fidl"
-	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
@@ -33,24 +32,24 @@ type nudDispatcher struct {
 var _ stack.NUDDispatcher = (*nudDispatcher)(nil)
 
 // OnNeighborAdded implements stack.NUDDispatcher.
-func (d *nudDispatcher) OnNeighborAdded(nicID tcpip.NICID, addr tcpip.Address, linkAddr tcpip.LinkAddress, state stack.NeighborState, _ time.Time) {
+func (d *nudDispatcher) OnNeighborAdded(nicID tcpip.NICID, entry stack.NeighborEntry) {
 	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
 	// is able to be inspected.
-	_ = syslog.InfoTf(nudTag, "ADD %s NIC=%s LinkAddress=%s %s", addr, d.ns.name(nicID), linkAddr, state)
+	_ = syslog.InfoTf(nudTag, "ADD %s NIC=%s LinkAddress=%s %s", entry.Addr, d.ns.name(nicID), entry.LinkAddr, entry.State)
 }
 
 // OnNeighborChanged implements stack.NUDDispatcher.
-func (d *nudDispatcher) OnNeighborChanged(nicID tcpip.NICID, addr tcpip.Address, linkAddr tcpip.LinkAddress, state stack.NeighborState, _ time.Time) {
+func (d *nudDispatcher) OnNeighborChanged(nicID tcpip.NICID, entry stack.NeighborEntry) {
 	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
 	// is able to be inspected.
-	_ = syslog.InfoTf(nudTag, "MOD %s NIC=%s LinkAddress=%s %s", addr, d.ns.name(nicID), linkAddr, state)
+	_ = syslog.InfoTf(nudTag, "MOD %s NIC=%s LinkAddress=%s %s", entry.Addr, d.ns.name(nicID), entry.LinkAddr, entry.State)
 }
 
 // OnNeighborRemoved implements stack.NUDDispatcher.
-func (d *nudDispatcher) OnNeighborRemoved(nicID tcpip.NICID, addr tcpip.Address, linkAddr tcpip.LinkAddress, state stack.NeighborState, _ time.Time) {
+func (d *nudDispatcher) OnNeighborRemoved(nicID tcpip.NICID, entry stack.NeighborEntry) {
 	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
 	// is able to be inspected.
-	_ = syslog.InfoTf(nudTag, "DEL %s NIC=%s LinkAddress=%s %s", addr, d.ns.name(nicID), linkAddr, state)
+	_ = syslog.InfoTf(nudTag, "DEL %s NIC=%s LinkAddress=%s %s", entry.Addr, d.ns.name(nicID), entry.LinkAddr, entry.State)
 }
 
 type neighborImpl struct {
