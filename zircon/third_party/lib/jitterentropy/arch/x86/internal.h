@@ -6,15 +6,17 @@
 
 #pragma once
 
+#include <cpuid.h>
 #include <lib/arch/intrin.h>
-#include <platform.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include <arch/x86.h>
-#include <arch/x86/feature.h>
-
-static inline bool jent_have_clock(void) { return x86_feature_test(X86_FEATURE_INVAR_TSC); }
+static inline bool jent_have_clock(void) {
+  // Test for Invariant TSC (Fn8000_0007_EDX[8])
+  uint32_t eax, ebx, ecx, edx;
+  __cpuid_count(0x80000007, 0, eax, ebx, ecx, edx);
+  return edx & (1 << 8);
+}
 
 static inline void jent_get_nstime(uint64_t* out) {
   // When running during boot, in particular before the VMM is up, our timers
