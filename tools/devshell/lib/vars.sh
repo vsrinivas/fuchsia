@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-if [[ -n "${ZSH_VERSION}" ]]; then
+if [[ -n "${ZSH_VERSION:-}" ]]; then
   devshell_lib_dir=${${(%):-%x}:a:h}
 else
   devshell_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
@@ -21,7 +21,7 @@ source "${devshell_lib_dir}/platform.sh"
 source "${devshell_lib_dir}/fx-cmd-locator.sh"
 unset devshell_lib_dir
 
-if [[ "${FUCHSIA_DEVSHELL_VERBOSITY}" -eq 1 ]]; then
+if [[ "${FUCHSIA_DEVSHELL_VERBOSITY:-0}" -eq 1 ]]; then
   set -x
 fi
 
@@ -116,7 +116,7 @@ function fx-build-config-load {
 }
 
 function fx-build-dir-if-present {
-  if [[ -n "${_FX_BUILD_DIR}" ]]; then
+  if [[ -n "${_FX_BUILD_DIR:-}" ]]; then
     export FUCHSIA_BUILD_DIR="${_FX_BUILD_DIR}"
   else
     if [[ ! -f "${FUCHSIA_DIR}/.fx-build-dir" ]]; then

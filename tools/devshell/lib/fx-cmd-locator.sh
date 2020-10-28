@@ -148,7 +148,7 @@ function find_host_tools {
 
 
 function commands {
-  local cmd_name=$1
+  local cmd_name=${1:-}
   local dirs
   # handle "vendor VENDOR COMMAND"
   if [[ "${cmd_name}" == "vendor" && $# -eq 3 ]]; then

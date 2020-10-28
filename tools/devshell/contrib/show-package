@@ -1,0 +1,39 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Software delivery
+### lists package contents
+
+## usage: fx show-package [package name]
+##
+## show-package displays the contents of a fuchsia package.
+##
+## Note that you may need to ensure your build is up to date to get correct
+## results (fx build).
+
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/updates.sh
+fx-config-read
+
+function main {
+  if [ -z "${1:-}" ]; then
+    fx-command-help
+    exit 1
+  fi
+  local merkle
+  local amber_repo
+  readonly amber_repo="$FUCHSIA_BUILD_DIR"/amber-files/repository
+  merkle=$(fx-command-run jq -r ".signed.targets.\"$1/0\".custom.merkle" "$amber_repo"/targets.json)
+  if [ "$merkle" = "null" ]; then
+    echo "Failed to find package '$1'"
+    exit 1
+  fi
+  fx-command-run far list --archive="$amber_repo/blobs/$merkle"
+  fx-command-run far cat --archive="$amber_repo/blobs/$merkle" --file=meta/contents
+}
+
+main "$@"
