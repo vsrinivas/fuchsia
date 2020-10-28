@@ -947,7 +947,7 @@ bool VmObjectPaged::OnChildAddedLocked() {
 }
 
 void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
-  DEBUG_ASSERT(adopt.wraps_lock(hierarchy_state_ptr_->lock().lock()));
+  DEBUG_ASSERT(adopt.wraps_lock(lock_ref().lock()));
 
   // This is scoped before guard to ensure the guard is dropped first, see comment where child_ref
   // is assigned for more details.
@@ -2096,7 +2096,7 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
-  DEBUG_ASSERT(adopt.wraps_lock(hierarchy_state_ptr_->lock().lock()));
+  DEBUG_ASSERT(adopt.wraps_lock(lock_ref().lock()));
   Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
   // Convince the static analysis that we now do actually hold lock_.
   AssertHeld(lock_);

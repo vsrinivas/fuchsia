@@ -26,6 +26,7 @@
 #include <fbl/ref_ptr.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
+#include <ktl/move.h>
 #include <vm/page.h>
 #include <vm/vm.h>
 #include <vm/vm_page_list.h>
@@ -35,6 +36,7 @@ class PageRequest;
 class VmObjectPaged;
 class VmAspace;
 class VmObject;
+class VmHierarchyState;
 
 typedef zx_status_t (*vmo_lookup_fn_t)(void* context, size_t offset, size_t index, paddr_t pa);
 
@@ -59,39 +61,73 @@ enum class CloneType {
 namespace internal {
 struct ChildListTag {};
 struct GlobalListTag {};
-struct DeferredDeleteTag {};
 }  // namespace internal
+
+// Base class for any objects that want to be part of the VMO hierarchy and share some state,
+// including a lock. Additionally all objects in the hierarchy can become part of the same
+// deferred deletion mechanism to avoid unbounded chained destructors.
+class VmHierarchyBase : public fbl::RefCountedUpgradeable<VmHierarchyBase> {
+ public:
+  explicit VmHierarchyBase(fbl::RefPtr<VmHierarchyState> state);
+
+  Lock<Mutex>* lock() const TA_RET_CAP(lock_) { return &lock_; }
+  Lock<Mutex>& lock_ref() const TA_RET_CAP(lock_) { return lock_; }
+
+ protected:
+  // private destructor, only called from refptr
+  virtual ~VmHierarchyBase() = default;
+  friend fbl::RefPtr<VmHierarchyBase>;
+
+  // The lock which protects this class. All objects in a clone tree
+  // share the same lock.
+  Lock<Mutex>& lock_;
+  // Pointer to state shared across all objects in a hierarchy.
+  fbl::RefPtr<VmHierarchyState> const hierarchy_state_ptr_;
+
+ private:
+  using DeferredDeleteState = fbl::SinglyLinkedListNodeState<fbl::RefPtr<VmHierarchyBase>>;
+  struct DeferredDeleteTraits {
+    static DeferredDeleteState& node_state(VmHierarchyBase& vm) {
+      return vm.deferred_delete_state_;
+    }
+  };
+  friend struct DeferredDeleteTraits;
+  friend VmHierarchyState;
+  DeferredDeleteState deferred_delete_state_;
+
+  DISALLOW_COPY_ASSIGN_AND_MOVE(VmHierarchyBase);
+};
 
 class VmHierarchyState : public fbl::RefCounted<VmHierarchyState> {
  public:
   VmHierarchyState() = default;
   ~VmHierarchyState() = default;
 
-  Lock<Mutex>& lock() TA_RET_CAP(lock_) { return lock_; }
+  Lock<Mutex>* lock() TA_RET_CAP(lock_) { return &lock_; }
+  Lock<Mutex>& lock_ref() TA_RET_CAP(lock_) { return lock_; }
 
-  // Drops the refptr to the given vmo by either placing it on the deferred delete list for another
-  // thread already running deferred delete to drop, or drops itself.
+  // Drops the refptr to the given object by either placing it on the deferred delete list for
+  // another thread already running deferred delete to drop, or drops itself.
   // This can be used to avoid unbounded recursion when dropping chained refptrs, as found in
   // vmo parent_ refs.
-  void DoDeferredDelete(fbl::RefPtr<VmObject> vmo) TA_EXCL(lock_);
+  void DoDeferredDelete(fbl::RefPtr<VmHierarchyBase> vmo) TA_EXCL(lock_);
 
  private:
   DECLARE_MUTEX(VmHierarchyState) lock_;
   bool running_delete_ TA_GUARDED(lock_) = false;
-  fbl::TaggedSinglyLinkedList<fbl::RefPtr<VmObject>, internal::DeferredDeleteTag> delete_list_
-      TA_GUARDED(lock_);
+  fbl::SinglyLinkedListCustomTraits<fbl::RefPtr<VmHierarchyBase>,
+                                    VmHierarchyBase::DeferredDeleteTraits>
+      delete_list_ TA_GUARDED(lock_);
 };
 
 // The base vm object that holds a range of bytes of data
 //
 // Can be created without mapping and used as a container of data, or mappable
 // into an address space via VmAddressRegion::CreateVmMapping
-class VmObject
-    : public fbl::RefCountedUpgradeable<VmObject>,
-      public fbl::ContainableBaseClasses<
-          fbl::TaggedDoublyLinkedListable<VmObject*, internal::ChildListTag>,
-          fbl::TaggedDoublyLinkedListable<VmObject*, internal::GlobalListTag>,
-          fbl::TaggedSinglyLinkedListable<fbl::RefPtr<VmObject>, internal::DeferredDeleteTag>> {
+class VmObject : public VmHierarchyBase,
+                 public fbl::ContainableBaseClasses<
+                     fbl::TaggedDoublyLinkedListable<VmObject*, internal::ChildListTag>,
+                     fbl::TaggedDoublyLinkedListable<VmObject*, internal::GlobalListTag>> {
  public:
   // public API
   virtual zx_status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }
@@ -280,9 +316,6 @@ class VmObject
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  Lock<Mutex>* lock() const TA_RET_CAP(lock_) { return &lock_; }
-  Lock<Mutex>& lock_ref() const TA_RET_CAP(lock_) { return lock_; }
-
   void AddMappingLocked(VmMapping* r) TA_REQ(lock_);
   void RemoveMappingLocked(VmMapping* r) TA_REQ(lock_);
   uint32_t num_mappings() const;
@@ -393,12 +426,6 @@ class VmObject
 
   // magic value
   fbl::Canary<fbl::magic("VMO_")> canary_;
-
-  // The lock which protects this class. All VmObjects in a clone tree
-  // share the same lock.
-  Lock<Mutex>& lock_;
-  // Pointer to state shared across all VMOs in a hierarchy.
-  fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr_;
 
   // list of every mapping
   fbl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);
