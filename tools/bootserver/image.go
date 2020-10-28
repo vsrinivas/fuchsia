@@ -18,6 +18,7 @@ import (
 	"cloud.google.com/go/storage"
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 var (
@@ -233,8 +234,10 @@ func GetImages(ctx context.Context, imageManifest string, bootMode Mode) ([]Imag
 
 	var imgs []Image
 	if url.Scheme == "gs" {
+		logger.Debugf(ctx, "Fetching images from GCS")
 		imgs, closeFunc, err = ImagesFromGCS(ctx, url, bootMode)
 	} else if url.Scheme == "" && url.Host == "" {
+		logger.Debugf(ctx, "Fetching images from local disk")
 		// Assume that this is a filesystem path.
 		imgs, closeFunc, err = ImagesFromLocalFS(imageManifest, bootMode)
 	} else if url.Scheme != "" && url.Host != "" {
@@ -242,6 +245,11 @@ func GetImages(ctx context.Context, imageManifest string, bootMode Mode) ([]Imag
 		err = fmt.Errorf("unimplemented")
 	} else {
 		err = fmt.Errorf("unknown manifest reference: %q", imageManifest)
+	}
+	if err != nil {
+		logger.Errorf(ctx, "Failed to fetch images: %s", err)
+	} else {
+		logger.Errorf(ctx, "Completed fetching images")
 	}
 	return imgs, closeFunc, err
 }

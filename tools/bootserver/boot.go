@@ -291,10 +291,12 @@ func ValidateBoard(ctx context.Context, t tftp.Client, boardName string) error {
 
 // Boot prepares and boots a device at the given IP address.
 func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string, authorizedKeys []byte) error {
+	logger.Debugf(ctx, "Transferring images to %s", t.RemoteAddr())
 	hasRAMKernel, err := transferImages(ctx, t, imgs, cmdlineArgs, authorizedKeys)
 	if err != nil {
 		return err
 	}
+	logger.Debugf(ctx, "Done transferring images to %s", t.RemoteAddr())
 
 	n := netboot.NewClient(time.Second)
 	if hasRAMKernel {
