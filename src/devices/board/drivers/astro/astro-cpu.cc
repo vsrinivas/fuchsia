@@ -73,10 +73,10 @@ constexpr device_fragment_part_t clock_cpu_scaler_dfp[] = {
 };
 
 constexpr device_fragment_t fragments[] = {
-    {"power", countof(power_dfp), power_dfp},
-    {"clock-pll-div16", countof(clock_pll_div16_dfp), clock_pll_div16_dfp},
-    {"clock-cpu-div16", countof(clock_cpu_div16_dfp), clock_cpu_div16_dfp},
-    {"clock-cpu-scaler", countof(clock_cpu_scaler_dfp), clock_cpu_scaler_dfp},
+    {"power-01", countof(power_dfp), power_dfp},
+    {"clock-pll-div16-01", countof(clock_pll_div16_dfp), clock_pll_div16_dfp},
+    {"clock-cpu-div16-01", countof(clock_cpu_div16_dfp), clock_cpu_div16_dfp},
+    {"clock-cpu-scaler-01", countof(clock_cpu_scaler_dfp), clock_cpu_scaler_dfp},
 };
 
 constexpr amlogic_cpu::operating_point_t operating_points[] = {

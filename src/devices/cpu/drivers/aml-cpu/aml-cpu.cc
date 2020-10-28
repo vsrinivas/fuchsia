@@ -7,6 +7,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
+#include <fbl/string_buffer.h>
 
 #include <memory>
 
@@ -20,22 +21,16 @@
 namespace amlogic_cpu {
 
 namespace {
-constexpr size_t kFragmentPdev = 0;
 // Fragments are provided to this driver in groups of 4. Fragments are provided as follows:
-// 0 - Platform Device
 // [4 fragments for cluster 0]
 // [4 fragments for cluster 1]
 // [...]
 // [4 fragments for cluster n]
-// The following offsets refer to the offset of the fragment inside its group of 4.
-// i.e. power will always be first, followed by plldiv16clk, cpudiv16clk, and finally cpuscaler
-constexpr size_t kPowerFragmentOffset = 1;
-constexpr size_t kPllDiv16ClkFragmentOffset = 2;
-constexpr size_t kCpuDiv16ClkFragmentOffset = 3;
-constexpr size_t kCpuScalerClkFragmentOffset = 4;
+// Each fragment is a combination of the fixed string + id.
 constexpr size_t kFragmentsPerPfDomain = 4;
 
 constexpr zx_off_t kCpuVersionOffset = 0x220;
+
 }  // namespace
 
 zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
@@ -130,17 +125,12 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     return ZX_ERR_INTERNAL;
   }
 
-  std::unique_ptr<zx_device_t*[]> fragments = std::make_unique<zx_device_t*[]>(fragment_count);
-  composite.GetFragments(fragments.get(), fragment_count, &actual);
-  zxlogf(DEBUG, "%s: GetFragments = %lu", __func__, actual);
-  if (actual != fragment_count) {
-    zxlogf(ERROR, "%s: Expected to get %lu fragments, actually got %lu", __func__, fragment_count,
-           actual);
-    return ZX_ERR_INTERNAL;
-  }
-
   // Map AOBUS registers
-  ddk::PDev pdev(fragments[kFragmentPdev]);
+  ddk::PDev pdev(composite);
+  if (!pdev.is_valid()) {
+    zxlogf(ERROR, "Failed to get platform device fragment");
+    return ZX_ERR_NO_RESOURCES;
+  }
   std::optional<ddk::MmioBuffer> mmio_buffer;
   if ((st = pdev.MapMmio(0, &mmio_buffer)) != ZX_OK) {
     zxlogf(ERROR, "aml-cpu: Failed to map mmio, st = %d", st);
@@ -152,38 +142,38 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   for (size_t i = 0; i < num_perf_domains; i++) {
     const perf_domain_t& perf_domain = perf_domains[i];
 
-    const size_t power_fragment_offset = (kFragmentsPerPfDomain * i) + kPowerFragmentOffset;
-    const size_t pll_div16_clk_fragment_offset =
-        (kFragmentsPerPfDomain * i) + kPllDiv16ClkFragmentOffset;
-    const size_t cpu_div16_clk_fragment_offset =
-        (kFragmentsPerPfDomain * i) + kCpuDiv16ClkFragmentOffset;
-    const size_t cpu_scaler_clk_fragment_offset =
-        (kFragmentsPerPfDomain * i) + kCpuScalerClkFragmentOffset;
-
-    ddk::ClockProtocolClient pllDiv16Client;
-    if ((st = ddk::ClockProtocolClient::CreateFromDevice(fragments[pll_div16_clk_fragment_offset],
-                                                         &pllDiv16Client)) != ZX_OK) {
+    fbl::StringBuffer<32> fragment_name;
+    fragment_name.AppendPrintf("clock-pll-div16-%02d", perf_domain.id);
+    ddk::ClockProtocolClient pll_div16_client;
+    if ((st = ddk::ClockProtocolClient::CreateFromComposite(composite, fragment_name.c_str(),
+                                                            &pll_div16_client)) != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to create pll_div_16 clock client, st = %d", __func__, st);
       return st;
     }
 
-    ddk::ClockProtocolClient cpuDiv16Client;
-    if ((st = ddk::ClockProtocolClient::CreateFromDevice(fragments[cpu_div16_clk_fragment_offset],
-                                                         &cpuDiv16Client)) != ZX_OK) {
+    fragment_name.Resize(0);
+    fragment_name.AppendPrintf("clock-cpu-div16-%02d", perf_domain.id);
+    ddk::ClockProtocolClient cpu_div16_client;
+    if ((st = ddk::ClockProtocolClient::CreateFromComposite(composite, fragment_name.c_str(),
+                                                            &cpu_div16_client)) != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to create cpu_div_16 clock client, st = %d", __func__, st);
       return st;
     }
 
-    ddk::ClockProtocolClient cpuScalerClient;
-    if ((st = ddk::ClockProtocolClient::CreateFromDevice(fragments[cpu_scaler_clk_fragment_offset],
-                                                         &cpuScalerClient)) != ZX_OK) {
+    fragment_name.Resize(0);
+    fragment_name.AppendPrintf("clock-cpu-scaler-%02d", perf_domain.id);
+    ddk::ClockProtocolClient cpu_scaler_client;
+    if ((st = ddk::ClockProtocolClient::CreateFromComposite(composite, fragment_name.c_str(),
+                                                            &cpu_scaler_client)) != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to create cpu_scaler clock client, st = %d", __func__, st);
       return st;
     }
 
-    ddk::PowerProtocolClient powerClient;
-    if ((st = ddk::PowerProtocolClient::CreateFromDevice(fragments[power_fragment_offset],
-                                                         &powerClient)) != ZX_OK) {
+    fragment_name.Resize(0);
+    fragment_name.AppendPrintf("power-%02d", perf_domain.id);
+    ddk::PowerProtocolClient power_client;
+    if ((st = ddk::PowerProtocolClient::CreateFromComposite(composite, fragment_name.c_str(),
+                                                            &power_client)) != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to create power client, st = %d", __func__, st);
       return st;
     }
@@ -209,9 +199,9 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
       perf_states[j].restore_latency = 0;
     }
 
-    auto device = std::make_unique<AmlCpu>(parent, std::move(pllDiv16Client),
-                                           std::move(cpuDiv16Client), std::move(cpuScalerClient),
-                                           std::move(powerClient), std::move(pd_op_points));
+    auto device = std::make_unique<AmlCpu>(
+        parent, std::move(pll_div16_client), std::move(cpu_div16_client),
+        std::move(cpu_scaler_client), std::move(power_client), std::move(pd_op_points));
 
     st = device->Init();
     if (st != ZX_OK) {

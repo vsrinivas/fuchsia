@@ -111,15 +111,15 @@ const device_fragment_part_t clock_little_cpu_scaler_fragment[] = {
 
 const device_fragment_t fragments[] = {
     // Clusters are defined in groups of 4
-    {"power-big", countof(big_power_fragment), big_power_fragment},                    // 0
-    {"clock-big-pll-div16", countof(big_pll_div16_fragment), big_pll_div16_fragment},  // 1
-    {"clock-big-cpu-div16", countof(big_cpu_div16_fragment), big_cpu_div16_fragment},  // 2
-    {"clock-big-cpu-scalar", countof(clock_big_cpu_scaler_fragment), clock_big_cpu_scaler_fragment},
+    {"power-01", countof(big_power_fragment), big_power_fragment},                    // 0
+    {"clock-pll-div16-01", countof(big_pll_div16_fragment), big_pll_div16_fragment},  // 1
+    {"clock-cpu-div16-01", countof(big_cpu_div16_fragment), big_cpu_div16_fragment},  // 2
+    {"clock-cpu-scaler-01", countof(clock_big_cpu_scaler_fragment), clock_big_cpu_scaler_fragment},
 
-    {"power-little", countof(little_power_fragment), little_power_fragment},                    // 4
-    {"clock-little-pll-div16", countof(little_pll_div16_fragment), little_pll_div16_fragment},  // 5
-    {"clock-little-cpu-div16", countof(little_cpu_div16_fragment), little_cpu_div16_fragment},
-    {"clock-little-cpu-scalar", countof(clock_little_cpu_scaler_fragment),
+    {"power-02", countof(little_power_fragment), little_power_fragment},                    // 4
+    {"clock-pll-div16-02", countof(little_pll_div16_fragment), little_pll_div16_fragment},  // 5
+    {"clock-cpu-div16-02", countof(little_cpu_div16_fragment), little_cpu_div16_fragment},
+    {"clock-cpu-scaler-02", countof(clock_little_cpu_scaler_fragment),
      clock_little_cpu_scaler_fragment},
 };
 
@@ -156,8 +156,6 @@ constexpr amlogic_cpu::operating_point_t operating_points[] = {
 };
 
 constexpr amlogic_cpu::perf_domain_t performance_domains[] = {
-    // NB: These have to be ordered in the same order that the fragments are
-    // provided. I.e. Big cluster first.
     {.id = kPdArmA73, .relative_performance = 255, .name = "T931 ARM A73"},
     {.id = kPdArmA53, .relative_performance = 128, .name = "T931 ARM A53"},
 };

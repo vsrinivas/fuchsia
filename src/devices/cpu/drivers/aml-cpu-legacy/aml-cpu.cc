@@ -27,9 +27,6 @@ using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
 using llcpp::fuchsia::hardware::thermal::MAX_DVFS_DOMAINS;
 using llcpp::fuchsia::hardware::thermal::PowerDomain;
 
-constexpr size_t kFragmentPdev = 0;
-constexpr size_t kFragmentThermal = 1;
-constexpr size_t kFragmentCount = 2;
 constexpr zx_off_t kCpuVersionOffset = 0x220;
 
 uint16_t PstateToOperatingPoint(const uint32_t pstate, const size_t n_operating_points) {
@@ -74,15 +71,6 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     return ZX_ERR_INTERNAL;
   }
 
-  zx_device_t* devices[kFragmentCount];
-  size_t actual;
-  composite.GetFragments(devices, kFragmentCount, &actual);
-  if (actual != kFragmentCount) {
-    zxlogf(ERROR, "%s: Expected to get %lu fragments, actually got %lu", __func__, kFragmentCount,
-           actual);
-    return ZX_ERR_INTERNAL;
-  }
-
   // Initialize an array with the maximum possible number of PStates since we
   // determine the actual number of PStates at runtime by querying the thermal
   // driver.
@@ -94,9 +82,9 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
   // The Thermal Driver is our parent and it exports an interface with one
   // method (Connect) which allows us to connect to its FIDL interface.
-  zx_device_t* thermal_device = devices[kFragmentThermal];
   ddk::ThermalProtocolClient thermal_protocol_client;
-  status = ddk::ThermalProtocolClient::CreateFromDevice(thermal_device, &thermal_protocol_client);
+  status = ddk::ThermalProtocolClient::CreateFromComposite(composite, "thermal",
+                                                           &thermal_protocol_client);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-cpu: Failed to get thermal protocol client, st = %d", status);
     return status;
@@ -134,8 +122,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   // Look up the CPU version.
   uint32_t cpu_version_packed = 0;
   {
-    zx_device_t* platform_device = devices[kFragmentPdev];
-    ddk::PDev pdev_client(platform_device);
+    ddk::PDev pdev_client(composite);
 
     // Map AOBUS registers
     std::optional<ddk::MmioBuffer> mmio_buffer;
@@ -174,7 +161,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
         return status;
       }
     }
-    auto cpu_device = std::make_unique<AmlCpu>(thermal_device, std::move(*thermal_fidl_client), i);
+    auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(*thermal_fidl_client), i);
     thermal_fidl_client.reset();
 
     cpu_device->SetCpuInfo(cpu_version_packed);
