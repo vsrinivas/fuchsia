@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/cpp/reader.h>
+
 #include <vector>
 
 #include <ddktl/protocol/block.h>
@@ -229,6 +232,18 @@ TEST_F(BlockDeviceTest, QueueTrimDisjointSlices) {
       &op, [](void*, zx_status_t status, block_op_t*) {}, nullptr);
   EXPECT_EQ(2, block_device_.num_trim_calls());
   EXPECT_EQ(kOperationLength, block_device_.last_trim_length());
+}
+
+TEST_F(BlockDeviceTest, InspectVmoPopulatedWithInitialState) {
+  fit::result<inspect::Hierarchy> hierarchy =
+      inspect::ReadFromVmo(device_->diagnostics().DuplicateVmo());
+  ASSERT_TRUE(hierarchy.is_ok());
+  const inspect::Hierarchy* mount_time = hierarchy.value().GetByPath({"fvm", "mount_time"});
+  ASSERT_NE(mount_time, nullptr);
+  EXPECT_EQ(mount_time->node().get_property<inspect::UintPropertyValue>("format_version")->value(),
+            fvm::kCurrentFormatVersion);
+  EXPECT_EQ(mount_time->node().get_property<inspect::UintPropertyValue>("oldest_revision")->value(),
+            fvm::kCurrentRevision);
 }
 
 // Tests that opening a device at a newer "oldest revision" updates the device's oldest revision to

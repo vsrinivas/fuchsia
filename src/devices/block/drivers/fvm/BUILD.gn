@@ -26,6 +26,7 @@ source_set("shared") {
   visibility = [ "./*" ]
   configs += [ "//build/config:all_source" ]
   sources = [
+    "diagnostics.cc",
     "fvm.cc",
     "slice-extent.cc",
     "vpartition.cc",
@@ -54,6 +55,7 @@ source_set("shared") {
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/gpt",
+    "//zircon/system/ulib/inspect",
   ]
 }
 

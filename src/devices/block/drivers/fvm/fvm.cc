@@ -72,7 +72,8 @@ zx_status_t VPartitionManager::Bind(void* /*unused*/, zx_device_t* dev) {
 
   auto vpm = std::make_unique<VPartitionManager>(dev, block_info, block_op_size, &bp);
 
-  zx_status_t status = vpm->DdkAdd("fvm");
+  zx_status_t status =
+      vpm->DdkAdd(ddk::DeviceAddArgs("fvm").set_inspect_vmo(vpm->diagnostics().DuplicateVmo()));
   if (status != ZX_OK) {
     zxlogf(ERROR, "block device '%s': failed to DdkAdd: %s", device_get_name(dev),
            zx_status_get_string(status));
@@ -354,6 +355,7 @@ zx_status_t VPartitionManager::Load() {
   std::unique_ptr<VPartition> vpartitions[fvm::kMaxVPartitions] = {};
   bool has_updated_partitions = false;
 
+  size_t reserved_slices = 0;
   // Iterate through FVM Entry table, allocating the VPartitions which
   // claim to have slices.
   for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
@@ -363,6 +365,7 @@ zx_status_t VPartitionManager::Load() {
     }
     if (entry->IsInternalReservationPartition()) {
       zxlogf(INFO, "Found reserved partition with %u slices", entry->slices);
+      reserved_slices = entry->slices;
     }
 
     // Update instance placeholder GUIDs to a newly generated guid.
@@ -423,6 +426,19 @@ zx_status_t VPartitionManager::Load() {
     device_count++;
   }
 
+  diagnostics().OnMount({
+      .format_version = header->format_version,
+      .oldest_revision = header->oldest_revision,
+      .slice_size = header->slice_size,
+      .num_slices = header->pslice_count,
+      .partition_table_entries = header->GetPartitionTableEntryCount(),
+      // TODO(fxbug.dev/40192): Set to the actual value when partition table size is configurable
+      .partition_table_reserved_entries = header->GetPartitionTableEntryCount(),
+      .allocation_table_entries = header->GetAllocationTableUsedEntryCount(),
+      .allocation_table_reserved_entries = header->GetAllocationTableAllocatedEntryCount(),
+      .num_partitions = device_count,
+      .num_reserved_slices = reserved_slices,
+  });
   zxlogf(INFO, "Loaded %lu partitions, slice size=%zu", device_count, slice_size_);
 
   return ZX_OK;

@@ -32,6 +32,7 @@
 #include <fbl/vector.h>
 #include <fvm/fvm.h>
 
+#include "diagnostics.h"
 #include "slice-extent.h"
 #include "vpartition.h"
 
@@ -100,6 +101,9 @@ class VPartitionManager : public ManagerDeviceType {
       uint64_t slice_count, const fuchsia_hardware_block_partition_GUID* type,
       const fuchsia_hardware_block_partition_GUID* instance, const char* name_data,
       size_t name_size, uint32_t flags);
+
+  // Returns a reference to the Diagnostics that this instance publishes to.
+  Diagnostics& diagnostics() { return diagnostics_; }
 
  private:
   static const fuchsia_hardware_block_volume_VolumeManager_ops* Ops() {
@@ -190,6 +194,8 @@ class VPartitionManager : public ManagerDeviceType {
   bool first_metadata_is_primary_ TA_GUARDED(lock_);
   // Number of currently allocated slices.
   size_t pslice_allocated_count_ TA_GUARDED(lock_);
+
+  Diagnostics diagnostics_;
 
   // Set when the driver is loaded and never changed.
   size_t slice_size_ = 0;
