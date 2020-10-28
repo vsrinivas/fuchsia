@@ -70,6 +70,34 @@ TEST(FakeBti, CreateContiguousVmo) {
   ASSERT_NO_DEATH(([bti]() { zx_handle_close(bti); }));
 }
 
+TEST(FakeBti, PmoCount) {
+  zx_handle_t bti = ZX_HANDLE_INVALID;
+  EXPECT_OK(fake_bti_create(&bti));
+  EXPECT_NE(bti, ZX_HANDLE_INVALID);
+
+  zx_handle_t vmo_handle, pmt_handle;
+  EXPECT_OK(zx_vmo_create_contiguous(bti, kVmoTestSize, 0, &vmo_handle));
+  EXPECT_NE(vmo_handle, ZX_HANDLE_INVALID);
+
+  zx_paddr_t addr;
+  EXPECT_OK(zx_bti_pin(bti, ZX_BTI_CONTIGUOUS, vmo_handle, 0, kVmoTestSize, &addr, 1, &pmt_handle));
+  EXPECT_NE(pmt_handle, ZX_HANDLE_INVALID);
+  EXPECT_EQ(addr, FAKE_BTI_PHYS_ADDR);
+
+  size_t actual = 0, avail = 0;
+  zx_info_bti_t bti_info;
+  EXPECT_OK(zx_object_get_info(bti, ZX_INFO_BTI, &bti_info, sizeof(bti_info), &actual, &avail));
+
+  // After pinning, pmo_count should be 1.
+  EXPECT_EQ(1, bti_info.pmo_count);
+
+  EXPECT_OK(zx_pmt_unpin(pmt_handle));
+
+  // After unpinning, pmo_count should be zero.
+  EXPECT_OK(zx_object_get_info(bti, ZX_INFO_BTI, &bti_info, sizeof(bti_info), &actual, &avail));
+  EXPECT_EQ(0, bti_info.pmo_count);
+}
+
 // TODO(fxbug.dev/32963): when functionality is available, check that pinning a
 // vmo with the ZX_BTI_CONTIGUOUS flag fails if the vmo was not created with
 // zx_vmo_create_contiguous.

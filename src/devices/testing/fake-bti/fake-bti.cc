@@ -39,17 +39,21 @@ class Bti final : public fake_object::Object {
 
   fake_object::HandleType type() const final { return fake_object::HandleType::BTI; }
 
+  uint64_t& pmo_count() { return pmo_count_; }
+
  private:
   Bti() = default;
+
+  uint64_t pmo_count_ = 0;
 };
 
 class Pmt final : public fake_object::Object {
  public:
   virtual ~Pmt() = default;
 
-  static zx_status_t Create(zx::vmo vmo, uint64_t offset, uint64_t size,
+  static zx_status_t Create(zx::vmo vmo, uint64_t offset, uint64_t size, fbl::RefPtr<Bti> bti,
                             fbl::RefPtr<fake_object::Object>* out) {
-    fbl::RefPtr<Pmt> pmt(fbl::AdoptRef(new Pmt(std::move(vmo), offset, size)));
+    fbl::RefPtr<Pmt> pmt(fbl::AdoptRef(new Pmt(std::move(vmo), offset, size, std::move(bti))));
     // These lines exist because currently offset_ and size_ are unused, and
     // GCC and Clang disagree about whether or not marking them as unused is acceptable.
     (void)pmt->offset_;
@@ -59,14 +63,16 @@ class Pmt final : public fake_object::Object {
   }
 
   fake_object::HandleType type() const final { return fake_object::HandleType::PMT; }
+  Bti& bti() { return *bti_; }
 
  private:
-  Pmt(zx::vmo vmo, uint64_t offset, uint64_t size)
-      : vmo_(std::move(vmo)), offset_(offset), size_(size) {}
+  Pmt(zx::vmo vmo, uint64_t offset, uint64_t size, fbl::RefPtr<Bti> bti)
+      : vmo_(std::move(vmo)), offset_(offset), size_(size), bti_(std::move(bti)) {}
 
   zx::vmo vmo_;
   uint64_t offset_;
   uint64_t size_;
+  fbl::RefPtr<Bti> bti_;
 };
 }  // namespace
 // Fake BTI API
@@ -81,6 +87,7 @@ zx_status_t Bti::get_info(zx_handle_t handle, uint32_t topic, void* buffer, size
   }
   fbl::RefPtr<fake_object::Object> obj = std::move(status.value());
   if (obj->type() == fake_object::HandleType::BTI) {
+    auto bti_obj = fbl::RefPtr<Bti>::Downcast(std::move(obj));
     switch (topic) {
       case ZX_INFO_BTI: {
         if (avail_count) {
@@ -95,7 +102,7 @@ zx_status_t Bti::get_info(zx_handle_t handle, uint32_t topic, void* buffer, size
         zx_info_bti_t info = {
             .minimum_contiguity = ZX_PAGE_SIZE,
             .aspace_size = UINT64_MAX,
-            .pmo_count = 0,
+            .pmo_count = bti_obj->pmo_count(),
             .quarantine_count = 0,
         };
         memcpy(buffer, &info, sizeof(info));
@@ -213,7 +220,7 @@ zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo
   }
 
   fbl::RefPtr<fake_object::Object> new_pmt;
-  zx_status_t pmt_status = Pmt::Create(std::move(vmo_clone), offset, size, &new_pmt);
+  zx_status_t pmt_status = Pmt::Create(std::move(vmo_clone), offset, size, bti_obj, &new_pmt);
   if (pmt_status != ZX_OK) {
     return pmt_status;
   }
@@ -221,6 +228,7 @@ zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo
   zx::status add_status = fake_object::FakeHandleTable().Add(std::move(new_pmt));
   if (add_status.is_ok()) {
     *out = add_status.value();
+    ++bti_obj->pmo_count();
   }
 
   return add_status.status_value();
@@ -239,6 +247,8 @@ zx_status_t zx_pmt_unpin(zx_handle_t handle) {
   zx::status get_status = fake_object::FakeHandleTable().Get(handle);
   ZX_ASSERT_MSG(get_status.is_ok() && get_status.value()->type() == fake_object::HandleType::PMT,
                 "fake pmt_unpin: Bad handle %u\n", handle);
+  fbl::RefPtr<Pmt> pmt = fbl::RefPtr<Pmt>::Downcast(std::move(get_status.value()));
+  --pmt->bti().pmo_count();
   zx::status remove_status = fake_object::FakeHandleTable().Remove(handle);
   ZX_ASSERT_MSG(remove_status.is_ok(), "fake pmt_unpin: Failed to remove handle %u: %s\n", handle,
                 zx_status_get_string(remove_status.status_value()));
