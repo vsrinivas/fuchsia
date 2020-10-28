@@ -107,18 +107,25 @@ func (n *neighborImpl) GetUnreachabilityConfig(ctx fidl.Context, interfaceID uin
 
 var _ neighbor.ControllerWithCtx = (*neighborImpl)(nil)
 
-func (n *neighborImpl) AddEntry(ctx fidl.Context, interfaceID uint64, neighborIP net.IpAddress, mac net.MacAddress) (neighbor.ControllerAddEntryResult, error) {
-	// TODO(fxbug.dev/51777): Implement fuchsia.net.neighbor/Controller.AddEntry
-	resp := neighbor.ControllerAddEntryResponse{}
-	result := neighbor.ControllerAddEntryResultWithResponse(resp)
-	return result, &zx.Error{Status: zx.ErrNotSupported}
+func (n *neighborImpl) AddEntry(_ fidl.Context, interfaceID uint64, neighborIP net.IpAddress, mac net.MacAddress) (neighbor.ControllerAddEntryResult, error) {
+	if err := n.stack.AddStaticNeighbor(tcpip.NICID(interfaceID), fidlconv.ToTCPIPAddress(neighborIP), fidlconv.ToTCPIPLinkAddress(mac)); err != nil {
+		return neighbor.ControllerAddEntryResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
+	}
+	return neighbor.ControllerAddEntryResultWithResponse(neighbor.ControllerAddEntryResponse{}), nil
 }
 
-func (n *neighborImpl) RemoveEntry(ctx fidl.Context, interfaceID uint64, neighborIP net.IpAddress) (neighbor.ControllerRemoveEntryResult, error) {
-	// TODO(fxbug.dev/51778): Implement fuchsia.net.neighbor/Controller.RemoveEntry
-	resp := neighbor.ControllerRemoveEntryResponse{}
-	result := neighbor.ControllerRemoveEntryResultWithResponse(resp)
-	return result, &zx.Error{Status: zx.ErrNotSupported}
+func (n *neighborImpl) RemoveEntry(_ fidl.Context, interfaceID uint64, neighborIP net.IpAddress) (neighbor.ControllerRemoveEntryResult, error) {
+	if err := n.stack.RemoveNeighbor(tcpip.NICID(interfaceID), fidlconv.ToTCPIPAddress(neighborIP)); err != nil {
+		var zxErr zx.Status
+		switch err {
+		case tcpip.ErrBadAddress:
+			zxErr = zx.ErrNotFound
+		default:
+			zxErr = WrapTcpIpError(err).ToZxStatus()
+		}
+		return neighbor.ControllerRemoveEntryResultWithErr(int32(zxErr)), nil
+	}
+	return neighbor.ControllerRemoveEntryResultWithResponse(neighbor.ControllerRemoveEntryResponse{}), nil
 }
 
 func (n *neighborImpl) ClearEntries(_ fidl.Context, interfaceID uint64) (neighbor.ControllerClearEntriesResult, error) {

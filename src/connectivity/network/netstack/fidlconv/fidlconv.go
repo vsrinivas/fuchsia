@@ -56,6 +56,10 @@ func ToNetMacAddress(addr tcpip.LinkAddress) net.MacAddress {
 	return mac
 }
 
+func ToTCPIPLinkAddress(mac net.MacAddress) tcpip.LinkAddress {
+	return tcpip.LinkAddress(mac.Octets[:])
+}
+
 func ToNetSocketAddress(addr tcpip.FullAddress) net.SocketAddress {
 	var out net.SocketAddress
 	switch l := len(addr.Addr); l {

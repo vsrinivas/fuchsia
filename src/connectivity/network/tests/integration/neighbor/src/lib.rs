@@ -10,7 +10,7 @@ use std::convert::From as _;
 use fuchsia_async as fasync;
 
 use anyhow::Context as _;
-use futures::{FutureExt as _, TryFutureExt as _, TryStreamExt as _};
+use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac};
 use net_types::SpecifiedAddress;
 use netemul::{
@@ -26,6 +26,14 @@ const BOB_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
 const BOB_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
 const SUBNET_PREFIX: u8 = 24;
 
+/// Helper type holding values pertinent to neighor tests.
+struct NeighborEnvironment<'a> {
+    env: TestEnvironment<'a>,
+    ep: TestInterface<'a>,
+    ipv6: fidl_fuchsia_net::IpAddress,
+    loopback_id: u64,
+}
+
 /// Helper function to create an environment with a static IP address and an
 /// endpoint with a set MAC address.
 ///
@@ -38,7 +46,7 @@ async fn create_environment<'a>(
     variant_name: &'static str,
     static_addr: fidl_fuchsia_net::Subnet,
     mac: fidl_fuchsia_net::MacAddress,
-) -> Result<(TestEnvironment<'a>, TestInterface<'a>, fidl_fuchsia_net::IpAddress, u64)> {
+) -> Result<NeighborEnvironment<'a>> {
     let env = sandbox
         .create_netstack_environment::<Netstack2, _>(format!("{}_{}", test_name, variant_name))
         .context("failed to create environment")?;
@@ -56,7 +64,7 @@ async fn create_environment<'a>(
     let interfaces = env
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to interfaces.State")?;
-    let (addr, loopback_id) =
+    let (ipv6, loopback_id) =
         fidl_fuchsia_net_interfaces_ext::wait_interface(
             fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces)
                 .context("failed to get interfaces stream")?,
@@ -84,7 +92,37 @@ async fn create_environment<'a>(
         .await
         .context("failed to retrieve IPv6 address")?;
 
-    Ok((env, ep, addr, loopback_id))
+    Ok(NeighborEnvironment { env, ep, ipv6, loopback_id })
+}
+
+/// Helper function that creates two environments in the same `network` with
+/// default test parameters. Returns a tuple of environments `(alice, bob)`.
+async fn create_neighbor_environments<'a>(
+    sandbox: &'a TestSandbox,
+    network: &'a TestNetwork<'a>,
+    test_name: &'static str,
+) -> Result<(NeighborEnvironment<'a>, NeighborEnvironment<'a>)> {
+    let alice = create_environment(
+        sandbox,
+        network,
+        test_name,
+        "alice",
+        fidl_fuchsia_net::Subnet { addr: ALICE_IP, prefix_len: SUBNET_PREFIX },
+        ALICE_MAC,
+    )
+    .await
+    .context("failed to setup alice environment")?;
+    let bob = create_environment(
+        sandbox,
+        network,
+        test_name,
+        "bob",
+        fidl_fuchsia_net::Subnet { addr: BOB_IP, prefix_len: SUBNET_PREFIX },
+        BOB_MAC,
+    )
+    .await
+    .context("failed to set up bob environment")?;
+    Ok((alice, bob))
 }
 
 /// Gets a neighbor entry iterator stream with `options` in `env`.
@@ -202,6 +240,23 @@ async fn exchange_dgram(
     Ok(())
 }
 
+/// Helper function to exchange an IPv4 and IPv6 datagram between `alice` and
+/// `bob`.
+async fn exchange_dgrams(
+    alice: &NeighborEnvironment<'_>,
+    bob: &NeighborEnvironment<'_>,
+) -> Result<()> {
+    let () = exchange_dgram(&alice.env, ALICE_IP, &bob.env, BOB_IP)
+        .await
+        .context("IPv4 exchange failed")?;
+
+    let () = exchange_dgram(&alice.env, alice.ipv6, &bob.env, bob.ipv6)
+        .await
+        .context("IPv6 exchange failed")?;
+
+    Ok(())
+}
+
 /// Helper function to assert validity of a reachable entry.
 fn assert_reachable_entry(
     entry: fidl_fuchsia_net_neighbor::Entry,
@@ -258,67 +313,74 @@ fn assert_stale_entry(
     }
 }
 
+/// Helper function to assert validity of a static entry.
+fn assert_static_entry(
+    entry: fidl_fuchsia_net_neighbor::Entry,
+    match_iface: u64,
+    match_neighbor: fidl_fuchsia_net::IpAddress,
+    match_mac: fidl_fuchsia_net::MacAddress,
+) {
+    match entry {
+        fidl_fuchsia_net_neighbor::Entry {
+            interface: Some(iface),
+            neighbor: Some(neighbor),
+            state:
+                Some(fidl_fuchsia_net_neighbor::EntryState::Static_(
+                    fidl_fuchsia_net_neighbor::StaticState {},
+                )),
+            mac: Some(mac),
+            updated_at: Some(updated),
+        } => {
+            assert_eq!(iface, match_iface);
+            assert_eq!(neighbor, match_neighbor);
+            assert_eq!(mac, match_mac);
+            assert!(updated > 0, "expected greater than 0, got: {}", updated);
+        }
+        x => panic!("incomplete or bad state static neighbor entry: {:?}", x),
+    }
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn neigh_list_entries() -> Result {
     // TODO(fxbug.dev/59425): Extend this test with hanging get.
-
-    const TEST_NAME: &'static str = "neigh_list_entries";
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
 
-    let (alice_env, alice_iface, alice_ipv6, _loopback_id) = create_environment(
-        &sandbox,
-        &network,
-        TEST_NAME,
-        "alice",
-        fidl_fuchsia_net::Subnet { addr: ALICE_IP, prefix_len: SUBNET_PREFIX },
-        ALICE_MAC,
-    )
-    .await
-    .context("failed to setup alice environment")?;
-
-    let (bob_env, bob_iface, bob_ipv6, _loopback_id) = create_environment(
-        &sandbox,
-        &network,
-        TEST_NAME,
-        "bob",
-        fidl_fuchsia_net::Subnet { addr: BOB_IP, prefix_len: SUBNET_PREFIX },
-        BOB_MAC,
-    )
-    .await
-    .context("failed to setup bob environment")?;
+    let (alice, bob) = create_neighbor_environments(&sandbox, &network, "neigh_list_entries")
+        .await
+        .context("failed to setup environments")?;
 
     // No Neighbors should exist initially.
     let alice_entries =
-        list_existing_entries(&alice_env).await.context("failed to get entries for alice")?;
+        list_existing_entries(&alice.env).await.context("failed to get entries for alice")?;
     assert!(alice_entries.is_empty(), "expected empty set of entries: {:?}", alice_entries);
     let bob_entries =
-        list_existing_entries(&bob_env).await.context("failed to get entries for bob")?;
+        list_existing_entries(&bob.env).await.context("failed to get entries for bob")?;
     assert!(bob_entries.is_empty(), "expected empty set of entries: {:?}", bob_entries);
 
     // Send a single UDP datagram between alice and bob.
-    let () = exchange_dgram(&alice_env, ALICE_IP, &bob_env, BOB_IP)
+    let () = exchange_dgram(&alice.env, ALICE_IP, &bob.env, BOB_IP)
         .await
         .context("IPv4 exchange failed")?;
-    let () = exchange_dgram(&alice_env, alice_ipv6, &bob_env, bob_ipv6)
+    let () = exchange_dgram(&alice.env, alice.ipv6, &bob.env, bob.ipv6)
         .await
         .context("IPv6 exchange failed")?;
 
     // Check that bob is listed as a neighbor for alice.
     let mut alice_entries =
-        list_existing_entries(&alice_env).await.context("failed to get entries for alice")?;
+        list_existing_entries(&alice.env).await.context("failed to get entries for alice")?;
     // IPv4 entry.
     let () = assert_reachable_entry(
-        alice_entries.remove(&(alice_iface.id(), BOB_IP)).expect("missing neighbor entry"),
-        alice_iface.id(),
+        alice_entries.remove(&(alice.ep.id(), BOB_IP)).context("missing IPv4 neighbor entry")?,
+        alice.ep.id(),
         BOB_IP,
         BOB_MAC,
     );
     // IPv6 entry.
     let () = assert_reachable_entry(
-        alice_entries.remove(&(alice_iface.id(), bob_ipv6)).expect("missing neighbor entry"),
-        alice_iface.id(),
-        bob_ipv6,
+        alice_entries.remove(&(alice.ep.id(), bob.ipv6)).context("missing IPv6 neighbor entry")?,
+        alice.ep.id(),
+        bob.ipv6,
         BOB_MAC,
     );
     assert!(
@@ -331,20 +393,20 @@ async fn neigh_list_entries() -> Result {
     // listed as STALE entries due to having received solicitations as part of
     // the UDP exchange.
     let mut bob_entries =
-        list_existing_entries(&bob_env).await.context("failed to get entries for bob")?;
+        list_existing_entries(&bob.env).await.context("failed to get entries for bob")?;
 
     // IPv4 entry.
     let () = assert_stale_entry(
-        bob_entries.remove(&(bob_iface.id(), ALICE_IP)).expect("missing neighbor entry"),
-        bob_iface.id(),
+        bob_entries.remove(&(bob.ep.id(), ALICE_IP)).context("missing IPv4 neighbor entry")?,
+        bob.ep.id(),
         ALICE_IP,
         ALICE_MAC,
     );
     // IPv6 entry.
     let () = assert_stale_entry(
-        bob_entries.remove(&(bob_iface.id(), alice_ipv6)).expect("missing neighbor entry"),
-        bob_iface.id(),
-        alice_ipv6,
+        bob_entries.remove(&(bob.ep.id(), alice.ipv6)).context("missing IPv6 neighbor entry")?,
+        bob.ep.id(),
+        alice.ipv6,
         ALICE_MAC,
     );
     assert!(bob_entries.is_empty(), "unexpected neighbors remaining in list: {:?}", bob_entries);
@@ -352,19 +414,30 @@ async fn neigh_list_entries() -> Result {
     Ok(())
 }
 
-/// Helper function to extract an ARP request or Neighbor Solicitation target
-/// address from a raw Ethernet frame.
+/// Frame metadata of interest to neighbor tests.
+#[derive(Debug, Eq, PartialEq)]
+enum FrameMetadata {
+    /// An ARP request or NDP Neighbor Solicitation target address.
+    NeighborSolicitation(fidl_fuchsia_net::IpAddress),
+    /// A UDP datagram destined to the address.
+    Udp(fidl_fuchsia_net::IpAddress),
+    /// Any other succesfully parsed frame.
+    Other,
+}
+
+/// Helper function to extract specific frame metadata from a raw Ethernet
+/// frame.
 ///
-/// Returns `Err` if the frame can't be parsed or `Ok(None)` if the frame is not
-/// a neighbor solicitation (either ARP or NDP). Otherwise, returns the
-/// solicited address of the neighbor.
-fn get_neighbor_solicitation_info(data: Vec<u8>) -> Result<Option<fidl_fuchsia_net::IpAddress>> {
+/// Returns `Err` if the frame can't be parsed or `Ok(FrameMetadata)` with any
+/// interesting metadata of interest to neighbor tests.
+fn extract_frame_metadata(data: Vec<u8>) -> Result<FrameMetadata> {
     use packet::ParsablePacket;
     use packet_formats::{
         arp::{ArpOp, ArpPacket},
         ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck},
         icmp::{ndp::NdpPacket, IcmpParseArgs, Icmpv6Packet},
         ip::IpProto,
+        ipv4::{Ipv4Header, Ipv4Packet},
         ipv6::Ipv6Packet,
     };
 
@@ -375,7 +448,15 @@ fn get_neighbor_solicitation_info(data: Vec<u8>) -> Result<Option<fidl_fuchsia_n
         .ethertype()
         .ok_or_else(|| anyhow::anyhow!("missing ethertype in Ethernet frame"))?
     {
-        EtherType::Ipv4 => Ok(None),
+        EtherType::Ipv4 => {
+            let ipv4 = Ipv4Packet::parse(&mut bv, ()).context("failed to parse IPv4 packet")?;
+            if ipv4.proto() != IpProto::Udp {
+                return Ok(FrameMetadata::Other);
+            }
+            Ok(FrameMetadata::Udp(fidl_fuchsia_net::IpAddress::Ipv4(
+                fidl_fuchsia_net::Ipv4Address { addr: ipv4.dst_ip().ipv4_bytes() },
+            )))
+        }
         EtherType::Arp => {
             let arp = ArpPacket::<_, net_types::ethernet::Mac, net_types::ip::Ipv4Addr>::parse(
                 &mut bv,
@@ -383,30 +464,42 @@ fn get_neighbor_solicitation_info(data: Vec<u8>) -> Result<Option<fidl_fuchsia_n
             )
             .context("failed to parse ARP packet")?;
             match arp.operation() {
-                ArpOp::Request => {
-                    Ok(Some(fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                ArpOp::Request => Ok(FrameMetadata::NeighborSolicitation(
+                    fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
                         addr: arp.target_protocol_address().ipv4_bytes(),
-                    })))
-                }
-                ArpOp::Response => Ok(None),
+                    }),
+                )),
+                ArpOp::Response => Ok(FrameMetadata::Other),
                 ArpOp::Other(other) => Err(anyhow::anyhow!("unrecognized ARP operation {}", other)),
             }
         }
         EtherType::Ipv6 => {
             let ipv6 = Ipv6Packet::parse(&mut bv, ()).context("failed to parse IPv6 packet")?;
-            // NB: filtering out packets with an unspecified source address will
-            // filter out DAD-related solicitations.
-            if ipv6.proto() != IpProto::Icmpv6 || !ipv6.src_ip().is_specified() {
-                return Ok(None);
-            }
-            let parse_args = IcmpParseArgs::new(ipv6.src_ip(), ipv6.dst_ip());
-            match Icmpv6Packet::parse(&mut bv, parse_args).context("failed to parse ICMP packet")? {
-                Icmpv6Packet::Ndp(NdpPacket::NeighborSolicitation(solicit)) => {
-                    Ok(Some(fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
-                        addr: solicit.message().target_address().ipv6_bytes(),
-                    })))
+            match ipv6.proto() {
+                IpProto::Icmpv6 => {
+                    // NB: filtering out packets with an unspecified source address will
+                    // filter out DAD-related solicitations.
+                    if !ipv6.src_ip().is_specified() {
+                        return Ok(FrameMetadata::Other);
+                    }
+                    let parse_args = IcmpParseArgs::new(ipv6.src_ip(), ipv6.dst_ip());
+                    match Icmpv6Packet::parse(&mut bv, parse_args)
+                        .context("failed to parse ICMP packet")?
+                    {
+                        Icmpv6Packet::Ndp(NdpPacket::NeighborSolicitation(solicit)) => {
+                            Ok(FrameMetadata::NeighborSolicitation(
+                                fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                                    addr: solicit.message().target_address().ipv6_bytes(),
+                                }),
+                            ))
+                        }
+                        _ => Ok(FrameMetadata::Other),
+                    }
                 }
-                _ => Ok(None),
+                IpProto::Udp => Ok(FrameMetadata::Udp(fidl_fuchsia_net::IpAddress::Ipv6(
+                    fidl_fuchsia_net::Ipv6Address { addr: ipv6.dst_ip().ipv6_bytes() },
+                ))),
+                _ => Ok(FrameMetadata::Other),
             }
         }
         EtherType::Other(other) => {
@@ -415,16 +508,42 @@ fn get_neighbor_solicitation_info(data: Vec<u8>) -> Result<Option<fidl_fuchsia_n
     }
 }
 
+/// Creates a fake endpoint that extracts [`FrameMetadata`] from exchanged
+/// frames in `network`.
+fn create_metadata_stream<'a>(
+    ep: &'a netemul::TestFakeEndpoint<'a>,
+) -> impl futures::Stream<Item = Result<FrameMetadata>> + 'a {
+    ep.frame_stream().map(|r| {
+        let (data, dropped) = r.context("fake_ep FIDL error")?;
+        if dropped != 0 {
+            Err(anyhow::anyhow!("dropped {} frames on fake endpoint", dropped))
+        } else {
+            extract_frame_metadata(data)
+        }
+    })
+}
+
+// Helper function to retrieve the next item from a fake endpoint metadata
+// stream.
+async fn read_metadata_stream<T>(
+    stream: &mut (impl futures::Stream<Item = Result<T>> + std::marker::Unpin),
+) -> Result<T> {
+    stream
+        .try_next()
+        .await
+        .context("failed to read from fake endpoint")?
+        .ok_or_else(|| anyhow::anyhow!("fake endpoint stream ended unexpectedly"))
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn neigh_clear_entries_errors() -> Result {
-    const TEST_NAME: &'static str = "neigh_clear_entries";
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
 
-    let (alice_env, alice_iface, _alice_ipv6, alice_loopback_id) = create_environment(
+    let alice = create_environment(
         &sandbox,
         &network,
-        TEST_NAME,
+        "neigh_clear_entries_errors",
         "alice",
         fidl_fuchsia_net::Subnet { addr: ALICE_IP, prefix_len: SUBNET_PREFIX },
         ALICE_MAC,
@@ -433,20 +552,18 @@ async fn neigh_clear_entries_errors() -> Result {
     .context("failed to setup alice environment")?;
 
     // Connect to the service and check some error cases.
-    let controller = alice_env
+    let controller = alice
+        .env
         .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
     // Clearing neighbors on loopback interface is not supported.
     assert_eq!(
-        controller.clear_entries(alice_loopback_id).await.context("clear_entries FIDL error")?,
+        controller.clear_entries(alice.loopback_id).await.context("clear_entries FIDL error")?,
         Err(fuchsia_zircon::Status::NOT_SUPPORTED.into_raw())
     );
     // Clearing neighbors on non-existing interface returns the proper error.
     assert_eq!(
-        controller
-            .clear_entries(alice_iface.id() + 100)
-            .await
-            .context("clear_entries FIDL error")?,
+        controller.clear_entries(alice.ep.id() + 100).await.context("clear_entries FIDL error")?,
         Err(fuchsia_zircon::Status::NOT_FOUND.into_raw())
     );
     Ok(())
@@ -454,125 +571,233 @@ async fn neigh_clear_entries_errors() -> Result {
 
 #[fasync::run_singlethreaded(test)]
 async fn neigh_clear_entries() -> Result {
-    const TEST_NAME: &'static str = "neigh_clear_entries";
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
 
     // Attach a fake endpoint that will capture all the ARP and NDP neighbor
     // solicitations.
     let fake_ep = network.create_fake_endpoint().context("failed to create fake endpoint")?;
-    let mut solicit_stream =
-        fake_ep.frame_stream().map_err(anyhow::Error::from).try_filter_map(|(data, dropped)| {
-            if dropped != 0 {
-                futures::future::err(anyhow::anyhow!("dropped {} frames on fake endpoint", dropped))
-            } else {
-                futures::future::ready(get_neighbor_solicitation_info(data))
-            }
-        });
+    let mut solicit_stream = create_metadata_stream(&fake_ep).try_filter_map(|m| {
+        futures::future::ok(match m {
+            FrameMetadata::NeighborSolicitation(ip) => Some(ip),
+            FrameMetadata::Udp(_) | FrameMetadata::Other => None,
+        })
+    });
 
-    let (alice_env, alice_iface, alice_ipv6, _alice_loopback_id) = create_environment(
-        &sandbox,
-        &network,
-        TEST_NAME,
-        "alice",
-        fidl_fuchsia_net::Subnet { addr: ALICE_IP, prefix_len: SUBNET_PREFIX },
-        ALICE_MAC,
-    )
-    .await
-    .context("failed to setup alice environment")?;
+    let (alice, bob) = create_neighbor_environments(&sandbox, &network, "neigh_clear_entries")
+        .await
+        .context("failed to setup environments")?;
 
-    let (bob_env, _bob_iface, bob_ipv6, _bob_loopback_id) = create_environment(
-        &sandbox,
-        &network,
-        TEST_NAME,
-        "bob",
-        fidl_fuchsia_net::Subnet { addr: BOB_IP, prefix_len: SUBNET_PREFIX },
-        BOB_MAC,
-    )
-    .await
-    .context("failed to setup bob environment")?;
-
-    let controller = alice_env
+    let controller = alice
+        .env
         .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
 
     let entries =
-        list_existing_entries(&alice_env).await.context("failed to get existing entries")?;
+        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
     assert!(entries.is_empty(), "entries should be empty on startup, got: {:?}", entries);
-
-    // Helper closure to execute an IPv4, then an IPv6 datagram exchange.
-    let exchange_dgrams = || async {
-        let () = exchange_dgram(&alice_env, ALICE_IP, &bob_env, BOB_IP)
-            .await
-            .context("IPv4 exchange failed")?;
-
-        let () = exchange_dgram(&alice_env, alice_ipv6, &bob_env, bob_ipv6)
-            .await
-            .context("IPv6 exchange failed")?;
-
-        Result::Ok(())
-    };
-
-    // Helper function to retrieve the next target address from solicitation
-    // stream.
-    async fn get_target_address(
-        stream: &mut (impl futures::Stream<Item = Result<fidl_fuchsia_net::IpAddress>>
-                  + std::marker::Unpin),
-    ) -> Result<fidl_fuchsia_net::IpAddress> {
-        Ok(stream
-            .try_next()
-            .await
-            .context("failed to read from fake endpoint")?
-            .ok_or_else(|| anyhow::anyhow!("fake endpoint stream ended unexpectedly"))?)
-    }
 
     // Exchange some datagrams to add some entries to the list and check that we
     // observe the neighbor solicitations over the network.
-    let () =
-        exchange_dgrams().await.context("failed to exchange datagrams before clearing cache")?;
+    let () = exchange_dgrams(&alice, &bob)
+        .await
+        .context("failed to exchange datagrams before clearing cache")?;
     assert_eq!(
-        get_target_address(&mut solicit_stream)
+        read_metadata_stream(&mut solicit_stream)
             .await
             .context("failed to observe initial IPv4 solicitation")?,
         BOB_IP
     );
     assert_eq!(
-        get_target_address(&mut solicit_stream)
+        read_metadata_stream(&mut solicit_stream)
             .await
             .context("failed to observe initial IPv6 solicitation")?,
-        bob_ipv6
+        bob.ipv6
     );
 
     let entries =
-        list_existing_entries(&alice_env).await.context("failed to get existing entries")?;
+        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
     assert_eq!(entries.len(), 2, "should have two entries after exchange, got: {:?}", entries);
 
     // Clear entries and verify they go away.
     let () = controller
-        .clear_entries(alice_iface.id())
+        .clear_entries(alice.ep.id())
         .await
         .context("clear_entries FIDL error")?
         .map_err(fuchsia_zircon::Status::from_raw)
         .context("clear_entries failed")?;
     let entries =
-        list_existing_entries(&alice_env).await.context("failed to get existing entries")?;
+        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
     assert!(entries.is_empty(), "entries should have been emptied, got: {:?}", entries);
 
     // Exchange datagrams again and assert that new solicitation requests were
     // sent.
-    let () =
-        exchange_dgrams().await.context("failed to exchange datagrams after clearing cache")?;
+    let () = exchange_dgrams(&alice, &bob)
+        .await
+        .context("failed to exchange datagrams after clearing cache")?;
     assert_eq!(
-        get_target_address(&mut solicit_stream)
+        read_metadata_stream(&mut solicit_stream)
             .await
             .context("failed to observe new IPv4 solicitation")?,
         BOB_IP
     );
     assert_eq!(
-        get_target_address(&mut solicit_stream)
+        read_metadata_stream(&mut solicit_stream)
             .await
             .context("failed to observe new IPv6 solicitation")?,
-        bob_ipv6
+        bob.ipv6
+    );
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn neigh_add_remove_entry() -> Result {
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let network = sandbox.create_network("net").await.context("failed to create network")?;
+
+    // Attach a fake endpoint that will observe neighbor solicitations and UDP
+    // frames.
+    let fake_ep = network.create_fake_endpoint().context("failed to create fake endpoint")?;
+    let mut meta_stream = create_metadata_stream(&fake_ep).try_filter_map(|m| {
+        futures::future::ok(match m {
+            m @ FrameMetadata::NeighborSolicitation(_) | m @ FrameMetadata::Udp(_) => Some(m),
+            FrameMetadata::Other => None,
+        })
+    });
+
+    let (alice, bob) = create_neighbor_environments(&sandbox, &network, "neigh_add_remove_entry")
+        .await
+        .context("failed to setup environments")?;
+
+    let controller = alice
+        .env
+        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .context("failed to connect to Controller")?;
+
+    // Entries start out empty.
+    let entries =
+        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
+    assert!(entries.is_empty(), "entries should be empty on startup, got: {:?}", entries);
+
+    // Check error conditions.
+    // Add and remove entry not supported on loopback.
+    assert_eq!(
+        controller
+            .add_entry(alice.loopback_id, &mut BOB_IP.clone(), &mut BOB_MAC.clone())
+            .await
+            .context("add_entry FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw),
+        Err(fuchsia_zircon::Status::NOT_SUPPORTED)
+    );
+    assert_eq!(
+        controller
+            .remove_entry(alice.loopback_id, &mut BOB_IP.clone())
+            .await
+            .context("add_entry FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw),
+        Err(fuchsia_zircon::Status::NOT_SUPPORTED)
+    );
+    // Add entry and remove entry return not found on non-existing interface.
+    assert_eq!(
+        controller
+            .add_entry(alice.ep.id() + 100, &mut BOB_IP.clone(), &mut BOB_MAC.clone())
+            .await
+            .context("add_entry FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw),
+        Err(fuchsia_zircon::Status::NOT_FOUND)
+    );
+    assert_eq!(
+        controller
+            .remove_entry(alice.ep.id() + 100, &mut BOB_IP.clone())
+            .await
+            .context("add_entry FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw),
+        Err(fuchsia_zircon::Status::NOT_FOUND)
+    );
+    // Remove entry returns not found for non-existing entry.
+    assert_eq!(
+        controller
+            .remove_entry(alice.ep.id(), &mut BOB_IP.clone())
+            .await
+            .context("add_entry FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw),
+        Err(fuchsia_zircon::Status::NOT_FOUND)
+    );
+
+    // Add static entries and verify that they're listable.
+    let () = controller
+        .add_entry(alice.ep.id(), &mut BOB_IP.clone(), &mut BOB_MAC.clone())
+        .await
+        .context("add_entry FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("add_entry failed")?;
+    let () = controller
+        .add_entry(alice.ep.id(), &mut bob.ipv6.clone(), &mut BOB_MAC.clone())
+        .await
+        .context("add_entry FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("add_entry failed")?;
+
+    let mut entries =
+        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
+    let () = assert_static_entry(
+        entries.remove(&(alice.ep.id(), BOB_IP)).expect("static IPv4 entry missing"),
+        alice.ep.id(),
+        BOB_IP,
+        BOB_MAC,
+    );
+    let () = assert_static_entry(
+        entries.remove(&(alice.ep.id(), bob.ipv6)).expect("static IPv6 entry missing"),
+        alice.ep.id(),
+        bob.ipv6,
+        BOB_MAC,
+    );
+    assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
+
+    let () = exchange_dgrams(&alice, &bob).await?;
+    assert_eq!(read_metadata_stream(&mut meta_stream).await?, FrameMetadata::Udp(BOB_IP));
+    assert_eq!(read_metadata_stream(&mut meta_stream).await?, FrameMetadata::Udp(bob.ipv6));
+
+    // Remove both entries and check that the list is empty afterwards.
+    let () = controller
+        .remove_entry(alice.ep.id(), &mut BOB_IP.clone())
+        .await
+        .context("remove_entry FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("remove_entry failed")?;
+    let () = controller
+        .remove_entry(alice.ep.id(), &mut bob.ipv6.clone())
+        .await
+        .context("remove_entry FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("remove_entry failed")?;
+
+    let entries =
+        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
+    assert!(entries.is_empty(), "entries should've been emptied, got: {:?}", entries);
+
+    // Exchange datagrams again and assert that new solicitation requests were
+    // sent (ignoring any UDP metadata this time).
+    let mut meta_stream = meta_stream.try_filter(|meta| {
+        futures::future::ready(match meta {
+            FrameMetadata::Udp(_) | FrameMetadata::Other => false,
+            FrameMetadata::NeighborSolicitation(_) => true,
+        })
+    });
+
+    let () = exchange_dgrams(&alice, &bob).await.context("failed to exchange datagrams")?;
+    assert_eq!(
+        read_metadata_stream(&mut meta_stream)
+            .await
+            .context("failed to observe IPv4 solicitation")?,
+        FrameMetadata::NeighborSolicitation(BOB_IP)
+    );
+    assert_eq!(
+        read_metadata_stream(&mut meta_stream)
+            .await
+            .context("failed to observe IPv6 solicitation")?,
+        FrameMetadata::NeighborSolicitation(bob.ipv6)
     );
 
     Ok(())
