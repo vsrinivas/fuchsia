@@ -353,8 +353,8 @@ zx_time_t GetTimeUTC() {
 }
 
 void DumpInfo(const Superblock& info) {
-  FS_TRACE_DEBUG("minfs: magic0:  %10lu\n", info.magic0);
-  FS_TRACE_DEBUG("minfs: magic1:  %10lu\n", info.magic1);
+  FS_TRACE_DEBUG("minfs: magic0:  %10" PRIu64 "\n", info.magic0);
+  FS_TRACE_DEBUG("minfs: magic1:  %10" PRIu64 "\n", info.magic1);
   FS_TRACE_DEBUG("minfs: major version:  %10u\n", info.version_major);
   FS_TRACE_DEBUG("minfs: minor version:  %10u\n", info.version_minor);
   FS_TRACE_DEBUG("minfs: data blocks:  %10u (size %u)\n", info.block_count, info.block_size);

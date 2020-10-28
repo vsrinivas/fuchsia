@@ -31,7 +31,7 @@ void DumpSuperblock(const Superblock& info) {
   FS_TRACE_DEBUG("factoryfs: data blocks:  %10u\n", info.data_blocks);
   FS_TRACE_DEBUG("factoryfs: directory size:  %10u\n", info.directory_size);
   FS_TRACE_DEBUG("factoryfs: directory entries:  %10u\n", info.directory_entries);
-  FS_TRACE_DEBUG("factoryfs: block size  @ %10u\n", info.info.block_size);
+  FS_TRACE_DEBUG("factoryfs: block size  @ %10u\n", info.block_size);
   FS_TRACE_DEBUG("factoryfs: num directory entry blocks  %10u\n", info.directory_ent_blocks);
   FS_TRACE_DEBUG("factoryfs: directory entry start block @ %10u\n", info.directory_ent_start_block);
 }

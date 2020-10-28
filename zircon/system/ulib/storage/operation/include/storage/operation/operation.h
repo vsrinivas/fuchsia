@@ -9,6 +9,8 @@
 
 #include <cstdint>
 
+#include <fbl/span.h>
+
 namespace storage {
 
 enum class OperationType {
@@ -40,6 +42,10 @@ struct BufferedOperation {
 #endif
   Operation op;
 };
+
+// Sums the |length| of all requests. It will assert if overflow occurs; the caller is responsible
+// for making sure this does not happen.
+uint64_t BlockCount(fbl::Span<const BufferedOperation> operations);
 
 }  // namespace storage
 

@@ -38,11 +38,7 @@ static zx_status_t IsValidDirectoryEntry(const DirectoryEntry& entry, const Supe
 }
 
 static void DumpDirectoryEntry(const DirectoryEntry* entry) {
-#ifdef FS_TRACE_DEBUG_ENABLED
-  if (true) {
-#else
-  if (false) {
-#endif
+  if (fs::trace_debug_enabled()) {
     std::string_view entry_name(entry->name, entry->name_len);
     std::cerr << "Directory entry: data_len=" << entry->data_len << ", data_off=" << entry->data_off
               << ", name=" << entry_name << std::endl;

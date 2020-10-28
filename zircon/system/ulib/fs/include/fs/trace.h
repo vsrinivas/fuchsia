@@ -22,11 +22,24 @@
 
 // Enable trace printf()s
 
+namespace fs {
+
+constexpr bool trace_debug_enabled() {
 #ifdef FS_TRACE_DEBUG_ENABLED
-#define FS_TRACE_DEBUG(fmt...) fprintf(stderr, fmt)
+  return true;
 #else
-#define FS_TRACE_DEBUG(fmt...)
+  return false;
 #endif
+}
+
+}  // namespace fs
+
+#define FS_TRACE_DEBUG(fmt...)     \
+  do {                             \
+    if (fs::trace_debug_enabled()) \
+      fprintf(stderr, fmt);        \
+  } while (0)
+
 #define FS_TRACE_INFO(fmt...) fprintf(stderr, fmt)
 #define FS_TRACE_WARN(fmt...) fprintf(stderr, fmt)
 #define FS_TRACE_ERROR(fmt...) fprintf(stderr, fmt)

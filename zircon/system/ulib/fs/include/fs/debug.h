@@ -200,11 +200,10 @@ void ConnectionTraceDebug(Args... args) {
 
 }  // namespace fs
 
-#if FS_TRACE_DEBUG_ENABLED
-#define FS_PRETTY_TRACE_DEBUG(args...) fs::debug_internal::ConnectionTraceDebug(args)
-#else
-// Explicitly expand FS_PRETTY_TRACE_DEBUG into nothing when not debugging, to ensure zero overhead.
-#define FS_PRETTY_TRACE_DEBUG(args...)
-#endif
+#define FS_PRETTY_TRACE_DEBUG(args...)                \
+  do {                                                \
+    if (fs::trace_debug_enabled())                    \
+      fs::debug_internal::ConnectionTraceDebug(args); \
+  } while (0)
 
 #endif  // FS_DEBUG_H_

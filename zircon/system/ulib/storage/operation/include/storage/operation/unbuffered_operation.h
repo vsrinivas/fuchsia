@@ -27,7 +27,7 @@ struct UnbufferedOperation {
 
 // Sums the |length| of all requests. It will assert if overflow occurs; the caller is responsible
 // for making sure this does not happen.
-uint64_t BlockCount(fbl::Span<const UnbufferedOperation> requests);
+uint64_t BlockCount(fbl::Span<const UnbufferedOperation> operations);
 
 }  // namespace storage
 
