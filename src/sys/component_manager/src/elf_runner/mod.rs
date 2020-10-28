@@ -273,26 +273,24 @@ impl ElfRunner {
             })
         };
 
-        if cfg!(feature = "propagate_utc_clock") {
-            let clock_rights =
-                zx::Rights::READ | zx::Rights::WAIT | zx::Rights::DUPLICATE | zx::Rights::TRANSFER;
-            let utc_clock = if let Some(utc_clock) = &self.utc_clock {
-                utc_clock.duplicate_handle(clock_rights)
-            } else {
-                duplicate_utc_clock_handle(clock_rights)
-            }
-            .map_err(|s| {
-                RunnerError::component_launch_error(
-                    "failed to duplicate UTC clock",
-                    ElfRunnerError::DuplicateUtcClockError { url: resolved_url.clone(), status: s },
-                )
-            })?;
-
-            handle_infos.push(fproc::HandleInfo {
-                handle: utc_clock.into_handle(),
-                id: HandleInfo::new(HandleType::ClockUtc, 0).as_raw(),
-            });
+        let clock_rights =
+            zx::Rights::READ | zx::Rights::WAIT | zx::Rights::DUPLICATE | zx::Rights::TRANSFER;
+        let utc_clock = if let Some(utc_clock) = &self.utc_clock {
+            utc_clock.duplicate_handle(clock_rights)
+        } else {
+            duplicate_utc_clock_handle(clock_rights)
         }
+        .map_err(|s| {
+            RunnerError::component_launch_error(
+                "failed to duplicate UTC clock",
+                ElfRunnerError::DuplicateUtcClockError { url: resolved_url.clone(), status: s },
+            )
+        })?;
+
+        handle_infos.push(fproc::HandleInfo {
+            handle: utc_clock.into_handle(),
+            id: HandleInfo::new(HandleType::ClockUtc, 0).as_raw(),
+        });
 
         // Load the component
         let launch_info =
