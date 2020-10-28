@@ -17,7 +17,7 @@ group("arc-swap") {
 }
 
 group("argh") {
-  deps = [ ":argh-v0_1_3" ]
+  deps = [ ":argh-v0_1_4" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -987,40 +987,40 @@ rust_library("arc-swap-v0_4_4") {
   ]
 }
 
-rust_library("argh-v0_1_3") {
+rust_library("argh-v0_1_4") {
   crate_name = "argh"
   crate_root = "//third_party/rust_crates/vendor/argh/src/lib.rs"
-  output_name = "argh-e6d3638980bc6cc2"
+  output_name = "argh-bd83e7fcbd154aa3"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":argh_derive-v0_1_1($host_toolchain)" ]
-  deps += [ ":argh_shared-v0_1_1" ]
+  deps += [ ":argh_derive-v0_1_4($host_toolchain)" ]
+  deps += [ ":argh_shared-v0_1_4" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=e6d3638980bc6cc2",
-    "-Cextra-filename=-e6d3638980bc6cc2",
+    "-Cmetadata=bd83e7fcbd154aa3",
+    "-Cextra-filename=-bd83e7fcbd154aa3",
   ]
 }
 
-rust_proc_macro("argh_derive-v0_1_1") {
+rust_proc_macro("argh_derive-v0_1_4") {
   crate_name = "argh_derive"
   crate_root = "//third_party/rust_crates/vendor/argh_derive/src/lib.rs"
-  output_name = "argh_derive-1a52dd25b67cbf93"
+  output_name = "argh_derive-d03e76f8d081cdf5"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":argh_shared-v0_1_1" ]
+  deps += [ ":argh_shared-v0_1_4" ]
   deps += [ ":heck-v0_3_1" ]
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
@@ -1031,15 +1031,15 @@ rust_proc_macro("argh_derive-v0_1_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=1a52dd25b67cbf93",
-    "-Cextra-filename=-1a52dd25b67cbf93",
+    "-Cmetadata=d03e76f8d081cdf5",
+    "-Cextra-filename=-d03e76f8d081cdf5",
   ]
 }
 
-rust_library("argh_shared-v0_1_1") {
+rust_library("argh_shared-v0_1_4") {
   crate_name = "argh_shared"
   crate_root = "//third_party/rust_crates/vendor/argh_shared/src/lib.rs"
-  output_name = "argh_shared-caab17a714e9e1db"
+  output_name = "argh_shared-8b110dad3a849fb"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -1052,8 +1052,8 @@ rust_library("argh_shared-v0_1_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=caab17a714e9e1db",
-    "-Cextra-filename=-caab17a714e9e1db",
+    "-Cmetadata=8b110dad3a849fb",
+    "-Cextra-filename=-8b110dad3a849fb",
   ]
 }
 

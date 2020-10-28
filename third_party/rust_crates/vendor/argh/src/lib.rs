@@ -60,7 +60,36 @@
 //! Options, like `height` and `pilot_nickname`, can be either required,
 //! optional, or repeating, depending on whether they are contained in an
 //! `Option` or a `Vec`. Default values can be provided using the
-//! `#[argh(default = "<your_code_here>")]` attribute.
+//! `#[argh(default = "<your_code_here>")]` attribute, and in this case an
+//! option is treated as optional.
+//!
+//! ```rust
+//! use argh::FromArgs;
+//!
+//! fn default_height() -> usize {
+//!     5
+//! }
+//!
+//! #[derive(FromArgs)]
+//! /// Reach new heights.
+//! struct GoUp {
+//!     /// an optional nickname for the pilot
+//!     #[argh(option)]
+//!     pilot_nickname: Option<String>,
+//!
+//!     /// an optional height
+//!     #[argh(option, default = "default_height()")]
+//!     height: usize,
+//!
+//!     /// an optional direction which is "up" by default
+//!     #[argh(option, default = "String::from(\"only up\")")]
+//!     direction: String,
+//! }
+//!
+//! fn main() {
+//!     let up: GoUp = argh::from_env();
+//! }
+//! ```
 //!
 //! Custom option types can be deserialized so long as they implement the
 //! `FromArgValue` trait (automatically implemented for all `FromStr` types).
@@ -98,7 +127,7 @@
 //! ```
 //!
 //! The last positional argument may include a default, or be wrapped in
-//! `Option` or `Vec` to indicate an optional or repeating positional arugment.
+//! `Option` or `Vec` to indicate an optional or repeating positional argument.
 //!
 //! Subcommands are also supported. To use a subcommand, declare a separate
 //! `FromArgs` type for each subcommand as well as an enum that cases
@@ -201,14 +230,20 @@ impl From<String> for EarlyExit {
     }
 }
 
+/// Extract the base cmd from a path
+fn cmd<'a>(default: &'a String, path: &'a String) -> &'a str {
+    std::path::Path::new(path).file_name().map(|s| s.to_str()).flatten().unwrap_or(default.as_str())
+}
+
 /// Create a `FromArgs` type from the current process's `env::args`.
 ///
 /// This function will exit early from the current process if argument parsing
 /// was unsuccessful or if information like `--help` was requested.
 pub fn from_env<T: TopLevelCommand>() -> T {
     let strings: Vec<String> = std::env::args().collect();
+    let cmd = cmd(&strings[0], &strings[0]);
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
-    T::from_args(&[strs[0]], &strs[1..]).unwrap_or_else(|early_exit| {
+    T::from_args(&[cmd], &strs[1..]).unwrap_or_else(|early_exit| {
         println!("{}", early_exit.output);
         std::process::exit(match early_exit.status {
             Ok(()) => 0,
@@ -226,8 +261,9 @@ pub fn from_env<T: TopLevelCommand>() -> T {
 /// was unsuccessful or if information like `--help` was requested.
 pub fn cargo_from_env<T: TopLevelCommand>() -> T {
     let strings: Vec<String> = std::env::args().collect();
+    let cmd = cmd(&strings[1], &strings[1]);
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
-    T::from_args(&[strs[1]], &strs[2..]).unwrap_or_else(|early_exit| {
+    T::from_args(&[cmd], &strs[2..]).unwrap_or_else(|early_exit| {
         println!("{}", early_exit.output);
         std::process::exit(match early_exit.status {
             Ok(()) => 0,
@@ -307,7 +343,9 @@ impl<T> ParseValueSlot for ParseValueSlotTy<Vec<T>, T> {
 /// A type which can be the receiver of a `Flag`.
 pub trait Flag {
     /// Creates a default instance of the flag value;
-    fn default() -> Self where Self: Sized;
+    fn default() -> Self
+    where
+        Self: Sized;
     /// Sets the flag. This function is called when the flag is provided.
     fn set_flag(&mut self);
 }
@@ -336,10 +374,7 @@ macro_rules! impl_flag_for_integers {
     }
 }
 
-impl_flag_for_integers![
-    u8, u16, u32, u64, u128,
-    i8, i16, i32, i64, i128,
-];
+impl_flag_for_integers![u8, u16, u32, u64, u128, i8, i16, i32, i64, i128,];
 
 // `--` or `-` options, including a mutable reference to their value.
 #[doc(hidden)]
@@ -393,9 +428,9 @@ pub fn parse_option(
     match &mut output_table[pos] {
         CmdOption::Flag(b) => b.set_flag(),
         CmdOption::Value(pvs) => {
-            let value = remaining_args.get(0).ok_or_else(|| {
-                ["No value provided for option '", arg, "'.\n"].concat()
-            })?;
+            let value = remaining_args
+                .get(0)
+                .ok_or_else(|| ["No value provided for option '", arg, "'.\n"].concat())?;
             *remaining_args = &remaining_args[1..];
             pvs.fill_slot(value).map_err(|s| {
                 ["Error parsing option '", arg, "' with value '", value, "': ", &s, "\n"].concat()
@@ -417,7 +452,8 @@ pub fn parse_positional(
 ) -> Result<(), String> {
     let (slot, name) = positional;
     slot.fill_slot(arg).map_err(|s| {
-        ["Error parsing positional argument '", name, "' with value '", arg, ": ", &s].concat()
+        ["Error parsing positional argument '", name, "' with value '", arg, "': ", &s, "\n"]
+            .concat()
     })
 }
 
@@ -481,9 +517,7 @@ impl MissingRequirements {
     // describing the missing args.
     #[doc(hidden)]
     pub fn err_on_any(&self) -> Result<(), String> {
-        if self.options.is_empty()
-            && self.subcommands.is_none()
-            && self.positional_args.is_empty()
+        if self.options.is_empty() && self.subcommands.is_none() && self.positional_args.is_empty()
         {
             return Ok(());
         }
@@ -499,6 +533,9 @@ impl MissingRequirements {
         }
 
         if !self.options.is_empty() {
+            if !self.positional_args.is_empty() {
+                output.push_str("\n");
+            }
             output.push_str("Required options not provided:");
             for option in &self.options {
                 output.push_str(NEWLINE_INDENT);
@@ -522,5 +559,18 @@ impl MissingRequirements {
         output.push('\n');
 
         Err(output)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_cmd_extraction() {
+        let expected = "test_cmd";
+        let path = format!("/tmp/{}", expected);
+        let cmd = cmd(&path, &path);
+        assert_eq!(expected, cmd);
     }
 }

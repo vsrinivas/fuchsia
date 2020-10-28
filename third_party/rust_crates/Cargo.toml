@@ -25,7 +25,7 @@ version = "0.1.0"
 # Keep this sorted alphabetically, please.
 anyhow = "1.0.25"
 arbitrary = { version = "0.4.0", features = ["derive"] }
-argh = "0.1"
+argh = "0.1.4"
 arc-swap = "0.4.4"
 async-trait = "0.1.40"
 base64 = "0.9"

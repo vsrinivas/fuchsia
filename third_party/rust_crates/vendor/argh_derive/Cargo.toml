@@ -13,8 +13,8 @@
 [package]
 edition = "2018"
 name = "argh_derive"
-version = "0.1.1"
-authors = ["Taylor Cramer <cramertj@google.com>", "Benjamin Brittain<bwb@google.com>"]
+version = "0.1.4"
+authors = ["Taylor Cramer <cramertj@google.com>", "Benjamin Brittain <bwb@google.com>", "Erick Tryzelaar <etryzelaar@google.com>"]
 description = "Derive-based argument parsing optimized for code size"
 license = "BSD-3-Clause"
 repository = "https://github.com/google/argh"
@@ -22,7 +22,7 @@ repository = "https://github.com/google/argh"
 [lib]
 proc-macro = true
 [dependencies.argh_shared]
-version = "0.1.1"
+version = "0.1.4"
 
 [dependencies.heck]
 version = "0.3.1"
