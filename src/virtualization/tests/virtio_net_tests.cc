@@ -11,12 +11,12 @@
 
 #include <future>
 
+#include <fbl/unique_fd.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "enclosed_guest.h"
 #include "guest_test.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/inet/ip_address.h"

@@ -8,7 +8,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
+
 #include "src/lib/fsl/io/device_watcher.h"
 
 namespace ui_input {

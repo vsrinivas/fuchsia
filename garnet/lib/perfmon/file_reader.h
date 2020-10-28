@@ -16,8 +16,9 @@
 #include <string>
 #include <vector>
 
+#include <fbl/unique_fd.h>
+
 #include "reader.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/macros.h"
 
 namespace perfmon {

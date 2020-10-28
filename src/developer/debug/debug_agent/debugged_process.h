@@ -9,6 +9,8 @@
 #include <memory>
 #include <vector>
 
+#include <fbl/unique_fd.h>
+
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/module_list.h"
 #include "src/developer/debug/debug_agent/process_handle.h"
@@ -16,7 +18,6 @@
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/buffered_zx_socket.h"
 #include "src/developer/debug/shared/message_loop.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/macros.h"
 
 namespace debug_agent {

@@ -20,11 +20,11 @@
 #include <string>
 #include <unordered_map>
 
+#include <fbl/unique_fd.h>
 #include <fs/synchronous_vfs.h>
 
 #include "garnet/lib/loader/package_loader.h"
 #include "src/lib/cmx/runtime.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -69,21 +69,21 @@ struct RealmArgs {
                         std::string cache_path, std::string temp_path,
                         const std::shared_ptr<sys::ServiceDirectory>& env_services,
                         bool run_virtual_console, fuchsia::sys::EnvironmentOptions options,
-                        fxl::UniqueFD appmgr_config_dir,
+                        fbl::unique_fd appmgr_config_dir,
                         fbl::RefPtr<ComponentIdIndex> component_id_index);
 
   static RealmArgs MakeWithAdditionalServices(
       fxl::WeakPtr<Realm> parent, std::string label, std::string data_path, std::string cache_path,
       std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
       bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-      fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir,
+      fuchsia::sys::EnvironmentOptions options, fbl::unique_fd appmgr_config_dir,
       fbl::RefPtr<ComponentIdIndex> component_id_index);
 
   static RealmArgs MakeWithCustomLoader(
       fxl::WeakPtr<Realm> parent, std::string label, std::string data_path, std::string cache_path,
       std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
       bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-      fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir,
+      fuchsia::sys::EnvironmentOptions options, fbl::unique_fd appmgr_config_dir,
       fbl::RefPtr<ComponentIdIndex> component_id_index, fuchsia::sys::LoaderPtr loader);
 
   fxl::WeakPtr<Realm> parent;
@@ -95,7 +95,7 @@ struct RealmArgs {
   bool run_virtual_console;
   fuchsia::sys::ServiceListPtr additional_services;
   fuchsia::sys::EnvironmentOptions options;
-  fxl::UniqueFD appmgr_config_dir;
+  fbl::unique_fd appmgr_config_dir;
   CpuWatcher* cpu_watcher;
   fbl::RefPtr<ComponentIdIndex> component_id_index;
   std::optional<fuchsia::sys::LoaderPtr> loader;
@@ -315,7 +315,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   const std::shared_ptr<sys::ServiceDirectory> environment_services_;
 
-  fxl::UniqueFD appmgr_config_dir_;
+  fbl::unique_fd appmgr_config_dir_;
 
   bool use_parent_runners_ = false;
   bool delete_storage_on_death_ = false;

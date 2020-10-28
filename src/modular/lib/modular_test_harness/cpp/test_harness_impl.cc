@@ -14,8 +14,8 @@
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/status.h>
 
+#include <fbl/unique_fd.h>
 #include <src/lib/files/path.h>
-#include <src/lib/files/unique_fd.h>
 #include <src/modular/lib/modular_config/modular_config.h>
 #include <src/modular/lib/modular_config/modular_config_constants.h>
 #include <src/modular/lib/modular_config/modular_config_xdr.h>

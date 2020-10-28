@@ -5,10 +5,11 @@
 #ifndef SRC_DEVELOPER_DEBUG_SHARED_BUFFERED_FD_H_
 #define SRC_DEVELOPER_DEBUG_SHARED_BUFFERED_FD_H_
 
+#include <fbl/unique_fd.h>
+
 #include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/stream_buffer.h"
-#include "src/lib/files/unique_fd.h"
 
 namespace debug_ipc {
 

@@ -9,9 +9,9 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/result.h>
 
+#include <fbl/unique_fd.h>
 #include <rapidjson/reader.h>
 
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/json_parser/json_parser.h"
 
 namespace modular {

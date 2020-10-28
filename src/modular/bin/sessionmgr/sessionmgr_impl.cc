@@ -13,8 +13,9 @@
 
 #include <memory>
 
+#include <fbl/unique_fd.h>
+
 #include "src/lib/files/directory.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"

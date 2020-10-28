@@ -12,11 +12,12 @@
 
 #include <iostream>
 
+#include <fbl/unique_fd.h>
+
 #include "src/lib/files/directory.h"
 #include "src/lib/files/eintr_wrapper.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/build_config.h"
 
 namespace files {

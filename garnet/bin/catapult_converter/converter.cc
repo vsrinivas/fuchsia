@@ -27,8 +27,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <src/lib/files/file_descriptor.h>
-#include <src/lib/files/unique_fd.h>
 #endif
 
 namespace {

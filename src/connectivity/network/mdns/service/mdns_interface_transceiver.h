@@ -11,10 +11,11 @@
 #include <memory>
 #include <vector>
 
+#include <fbl/unique_fd.h>
+
 #include "src/connectivity/network/mdns/service/dns_message.h"
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
 #include "src/connectivity/network/mdns/service/reply_address.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/inet/ip_address.h"
 #include "src/lib/inet/socket_address.h"

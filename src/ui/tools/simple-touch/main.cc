@@ -21,8 +21,7 @@
 #include <zircon/types.h>
 
 #include <ddk/device.h>
-
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
 
 namespace simple_touch {
 
@@ -216,7 +215,7 @@ class TouchApp {
 
   // Gets the touch client from a file path. Sets |client_| on success.
   zx_status_t GetClientFromFilePath(const char* path) {
-    fxl::UniqueFD fd(open(path, O_RDWR));
+    fbl::unique_fd fd(open(path, O_RDWR));
     if (!fd.is_valid()) {
       return ZX_ERR_INTERNAL;
     }

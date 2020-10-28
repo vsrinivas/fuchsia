@@ -51,7 +51,7 @@ TEST_F(AllowListTest, Parse) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
   AllowList allowlist(dirfd, filename);
   EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/test_one#meta/test_one.cmx"));
@@ -60,7 +60,7 @@ TEST_F(AllowListTest, Parse) {
 }
 
 TEST_F(AllowListTest, MissingFile) {
-  fxl::UniqueFD dirfd(open(".", O_RDONLY));
+  fbl::unique_fd dirfd(open(".", O_RDONLY));
   AllowList allowlist(dirfd, "/does/not/exist");
   EXPECT_FALSE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/test_one#meta/test_one.cmx"));
   EXPECT_FALSE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/test_two#meta/test_two.cmx"));
@@ -72,7 +72,7 @@ TEST_F(AllowListTest, IgnoreVariantAndHash) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
   AllowList allowlist(dirfd, filename);
   EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/foo/1#meta/foo.cmx"));
@@ -87,7 +87,7 @@ TEST_F(AllowListTest, WildcardAllow) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
   AllowList allowlist(dirfd, filename);
   EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx"));
@@ -104,7 +104,7 @@ TEST_F(AllowListTest, CommentsAreIgnored) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
   AllowList allowlist(dirfd, filename);
   EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/test_one#meta/test_one.cmx"));

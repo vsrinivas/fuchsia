@@ -8,7 +8,8 @@
 #include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
 
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
+
 #include "src/media/playback/mediaplayer/demux/reader.h"
 
 namespace media_player {

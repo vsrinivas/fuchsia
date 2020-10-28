@@ -13,8 +13,9 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/processargs.h>
 
+#include <fbl/unique_fd.h>
+
 #include "src/lib/files/directory.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/modular/lib/fidl/clone.h"
 

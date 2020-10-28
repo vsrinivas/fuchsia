@@ -37,7 +37,7 @@ TEST(NamespaceBuilder, SystemData) {
   json::JSONParser parser;
   EXPECT_TRUE(sandbox.Parse(document, &parser));
 
-  fxl::UniqueFD dir(open(".", O_RDONLY));
+  fbl::unique_fd dir(open(".", O_RDONLY));
   NamespaceBuilder builder = NamespaceBuilder(std::move(dir), "test_namespace");
   zx_status_t status = builder.AddSandbox(sandbox, [] { return zx::channel(); });
   EXPECT_EQ(ZX_OK, status);

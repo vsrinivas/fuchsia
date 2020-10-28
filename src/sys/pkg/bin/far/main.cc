@@ -9,7 +9,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
+
 #include "src/lib/fxl/command_line.h"
 #include "src/sys/pkg/lib/far/archive_reader.h"
 #include "src/sys/pkg/lib/far/archive_writer.h"

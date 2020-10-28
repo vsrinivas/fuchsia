@@ -10,9 +10,9 @@
 
 #include <thread>
 
+#include <fbl/unique_fd.h>
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
-#include <src/lib/files/unique_fd.h>
 #include <src/modular/lib/pseudo_dir/pseudo_dir_server.h>
 #include <src/modular/lib/pseudo_dir/pseudo_dir_utils.h>
 

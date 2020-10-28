@@ -13,6 +13,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <zircon/compiler.h>
+
+#include <sstream>
 
 namespace web_runner_tests {
 

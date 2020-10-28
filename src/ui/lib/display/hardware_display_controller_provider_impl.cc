@@ -43,7 +43,7 @@ void HardwareDisplayControllerProviderImpl::OpenController(
         std::string path = kDisplayDir + "/" + filename;
 
         FX_LOGS(INFO) << "Found display controller at path: " << path << ".";
-        fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
+        fbl::unique_fd fd(open(path.c_str(), O_RDWR));
         if (!fd.is_valid()) {
           FX_LOGS(ERROR) << "Failed to open display_controller at path: " << path
                          << " (errno: " << errno << " " << strerror(errno) << ")";

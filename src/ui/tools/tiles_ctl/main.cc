@@ -16,7 +16,8 @@
 
 #include <string>
 
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
+
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/memory/unique_object.h"
@@ -69,7 +70,7 @@ ControllerPtr FindTiles() {
     sys_realm_entry = "hub";
   }
   std::string tiles_name = sys_realm_entry + "/c/tiles.cmx/";
-  fxl::UniqueFD tile_component(
+  fbl::unique_fd tile_component(
       openat(dirfd(sys.get()), tiles_name.c_str(), O_DIRECTORY | O_RDONLY));
   if (!tile_component.is_valid()) {
     fprintf(stderr,
@@ -85,7 +86,7 @@ ControllerPtr FindTiles() {
     return {};
   }
   std::string svc_name = tile_realm_entry + "/out/svc";
-  fxl::UniqueFD tile_svc(
+  fbl::unique_fd tile_svc(
       openat(dirfd(tile_component_dir.get()), svc_name.c_str(), O_DIRECTORY | O_RDONLY));
   if (!tile_svc.is_valid()) {
     fprintf(stderr, "Couldn't open tile service directory\n");

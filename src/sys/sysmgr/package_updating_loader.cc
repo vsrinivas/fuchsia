@@ -16,10 +16,11 @@
 #include <string>
 #include <utility>
 
+#include <fbl/unique_fd.h>
+
 #include "lib/fdio/fd.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/zx/handle.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/strings/substitute.h"

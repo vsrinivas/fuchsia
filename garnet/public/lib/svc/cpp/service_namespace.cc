@@ -5,16 +5,16 @@
 #include "lib/svc/cpp/service_namespace.h"
 
 #include <fcntl.h>
-#include <fs/service.h>
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>
 
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
+#include <fs/service.h>
 
 namespace component {
 

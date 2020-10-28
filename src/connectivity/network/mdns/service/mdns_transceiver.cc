@@ -9,9 +9,10 @@
 #include <lib/syslog/cpp/macros.h>
 #include <sys/socket.h>
 
+#include <fbl/unique_fd.h>
+
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
 #include "src/connectivity/network/mdns/service/mdns_fidl_util.h"
-#include "src/lib/files/unique_fd.h"
 
 namespace mdns {
 

@@ -8,7 +8,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
+
 #include "src/lib/fxl/macros.h"
 #include "src/lib/json_parser/json_parser.h"
 
@@ -26,7 +27,7 @@ class SchemeMap {
 
   // Like |ParseFromDirectory|, but with a path relative to an open directory,
   // rather than relative to an implicit working directory.
-  bool ParseFromDirectoryAt(fxl::UniqueFD& dir, const std::string& path);
+  bool ParseFromDirectoryAt(fbl::unique_fd& dir, const std::string& path);
 
   bool HasError() const { return json_parser_.HasError(); }
   std::string error_str() const { return json_parser_.error_str(); }

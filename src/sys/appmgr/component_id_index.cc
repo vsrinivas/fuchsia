@@ -133,7 +133,7 @@ ComponentIdIndex::ComponentIdIndex(ComponentIdIndex::MonikerToInstanceId moniker
 
 // static
 fit::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error>
-ComponentIdIndex::CreateFromAppmgrConfigDir(const fxl::UniqueFD& appmgr_config_dir) {
+ComponentIdIndex::CreateFromAppmgrConfigDir(const fbl::unique_fd& appmgr_config_dir) {
   if (!files::IsFileAt(appmgr_config_dir.get(), kIndexFilePath)) {
     return fit::ok(fbl::AdoptRef(new ComponentIdIndex({}, false)));
   }

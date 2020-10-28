@@ -4,6 +4,7 @@
 
 #include "src/lib/icu_data/cpp/icu_data.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmar.h>
 #include <zircon/errors.h>
 

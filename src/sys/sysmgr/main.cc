@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
 #include <sys/types.h>
 

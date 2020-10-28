@@ -18,8 +18,9 @@
 #include <string>
 #include <vector>
 
+#include <fbl/unique_fd.h>
+
 #include "src/lib/files/file_descriptor.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/sys/pkg/lib/far/alignment.h"
 #include "src/sys/pkg/lib/far/file_operations.h"
 #include "src/sys/pkg/lib/far/format.h"

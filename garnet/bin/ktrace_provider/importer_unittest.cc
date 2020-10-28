@@ -4,6 +4,7 @@
 
 #include "garnet/bin/ktrace_provider/importer.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-engine/instrumentation.h>
 
 #include <iterator>

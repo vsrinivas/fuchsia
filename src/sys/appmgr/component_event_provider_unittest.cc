@@ -48,7 +48,7 @@ class ComponentEventProviderTest : public ::gtest::TestLoopFixture {
   }
 
   // Borrowed from realm_unittest.cc, consider deduping if things get overly copied around.
-  std::unique_ptr<Realm> CreateTestRealm(fxl::UniqueFD dirfd) {
+  std::unique_ptr<Realm> CreateTestRealm(fbl::unique_fd dirfd) {
     files::CreateDirectoryAt(dirfd.get(), "scheme_map");
     auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
     fuchsia::sys::ServiceListPtr root_realm_services(new fuchsia::sys::ServiceList);
@@ -67,7 +67,7 @@ class ComponentEventProviderTest : public ::gtest::TestLoopFixture {
 TEST_F(ComponentEventProviderTest, NotificationAfterShutdownDoesNotCrash) {
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
   std::unique_ptr<Realm> realm = CreateTestRealm(std::move(dirfd));
 
   fuchsia::sys::internal::ComponentEventListenerPtr client;

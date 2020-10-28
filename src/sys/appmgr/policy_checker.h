@@ -8,9 +8,10 @@
 #include <optional>
 #include <string>
 
+#include <fbl/unique_fd.h>
+
 #include "gtest/gtest_prod.h"
 #include "src/lib/cmx/sandbox.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace component {
@@ -29,14 +30,14 @@ struct SecurityPolicy {
 // catch it.
 class PolicyChecker final {
  public:
-  explicit PolicyChecker(fxl::UniqueFD config);
+  explicit PolicyChecker(fbl::unique_fd config);
   // Returns a Policy object if the check was successful else no policy could
   // be set due to a policy being violated. If nullopt is returned the
   // component should not be launched.
   std::optional<SecurityPolicy> Check(const SandboxMetadata& sandbox, const FuchsiaPkgUrl& pkg_url);
 
  private:
-  fxl::UniqueFD config_;
+  fbl::unique_fd config_;
 
   bool CheckDeprecatedShell(const FuchsiaPkgUrl& pkg_url);
   bool CheckDeprecatedAmbientReplaceAsExecutable(const FuchsiaPkgUrl& pkg_url);

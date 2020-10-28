@@ -10,9 +10,10 @@
 #include <iostream>
 #include <string>
 
+#include <fbl/unique_fd.h>
+
 #include "rapidjson/document.h"
 #include "src/lib/files/file.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

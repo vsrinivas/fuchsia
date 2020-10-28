@@ -16,6 +16,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include <fbl/unique_fd.h>
+
 #include "lib/fostr/hex_dump.h"
 #include "src/connectivity/network/mdns/service/dns_formatting.h"
 #include "src/connectivity/network/mdns/service/dns_reading.h"
@@ -23,7 +25,6 @@
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver_v4.h"
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver_v6.h"
-#include "src/lib/files/unique_fd.h"
 
 namespace mdns {
 

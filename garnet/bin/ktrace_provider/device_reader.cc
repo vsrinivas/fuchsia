@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -14,6 +15,8 @@
 #include <algorithm>
 
 #include <src/lib/files/eintr_wrapper.h>
+
+#include "src/lib/fxl/macros.h"
 
 namespace ktrace_provider {
 

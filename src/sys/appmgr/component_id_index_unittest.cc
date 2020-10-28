@@ -7,11 +7,11 @@
 #include <fcntl.h>
 #include <zircon/assert.h>
 
+#include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/sys/appmgr/moniker.h"
 
 namespace component {
@@ -21,13 +21,13 @@ constexpr char kIndexFilePath[] = "component_id_index";
 
 class ComponentIdIndexTest : public ::testing::Test {
  protected:
-  fxl::UniqueFD MakeAppmgrConfigDir() {
-    fxl::UniqueFD ufd(open(tmp_dir_.path().c_str(), O_RDONLY));
+  fbl::unique_fd MakeAppmgrConfigDir() {
+    fbl::unique_fd ufd(open(tmp_dir_.path().c_str(), O_RDONLY));
     ZX_ASSERT(ufd.is_valid());
     return ufd;
   }
 
-  fxl::UniqueFD MakeAppmgrConfigDirWithIndex(std::string json_index) {
+  fbl::unique_fd MakeAppmgrConfigDirWithIndex(std::string json_index) {
     auto dirfd = MakeAppmgrConfigDir();
     ZX_ASSERT(
         files::WriteFileAt(dirfd.get(), kIndexFilePath, json_index.data(), json_index.size()));

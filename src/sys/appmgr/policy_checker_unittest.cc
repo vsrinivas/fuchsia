@@ -45,7 +45,7 @@ TEST_F(PolicyCheckerTest, ReplaceAsExecPolicyPresent) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
@@ -71,7 +71,7 @@ TEST_F(PolicyCheckerTest, ReplaceAsExecPolicyAbsent) {
   // No allowlist present in this test.  This means that all packages should be
   // disallowed ambient replace-as-exec.
 
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
   PolicyChecker policy_checker(std::move(dirfd));
 
   FuchsiaPkgUrl fp;
@@ -96,7 +96,7 @@ fuchsia-pkg://fuchsia.com/indubitably-durable#meta/indubitably_durable.cmx
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
@@ -133,7 +133,7 @@ fuchsia-pkg://fuchsia.com/fastidious-factory#meta/fastidious_factory.cmx
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
@@ -167,7 +167,7 @@ TEST_F(PolicyCheckerTest, HubPolicy) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
@@ -198,7 +198,7 @@ TEST_F(PolicyCheckerTest, IrqResourcePolicy) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
@@ -229,7 +229,7 @@ TEST_F(PolicyCheckerTest, MmioResourcePolicy) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
@@ -263,7 +263,7 @@ TEST_F(PolicyCheckerTest, PackageResolverPolicy) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
@@ -297,7 +297,7 @@ TEST_F(PolicyCheckerTest, PackageCachePolicy) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
@@ -331,7 +331,7 @@ TEST_F(PolicyCheckerTest, PkgFsVersionsPolicy) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
@@ -362,7 +362,7 @@ TEST_F(PolicyCheckerTest, RootJobPolicy) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
@@ -393,7 +393,7 @@ TEST_F(PolicyCheckerTest, RootResourcePolicy) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
@@ -427,7 +427,7 @@ TEST_F(PolicyCheckerTest, SystemUpdaterPolicy) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
@@ -459,7 +459,7 @@ TEST_F(PolicyCheckerTest, VmexResourcePolicy) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
 
   // Add the allowlist.
   ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));

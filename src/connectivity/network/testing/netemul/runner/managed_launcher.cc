@@ -8,11 +8,11 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include <fbl/unique_fd.h>
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
 
 #include "managed_environment.h"
 #include "src/lib/cmx/cmx.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/join_strings.h"

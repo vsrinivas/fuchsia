@@ -23,7 +23,6 @@
 #include "src/connectivity/bluetooth/core/bt-host/hci/hci.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/transport.h"
 #include "src/connectivity/bluetooth/tools/lib/command_dispatcher.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
 
 namespace {

@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -15,6 +16,7 @@
 #include <vector>
 
 #include "src/lib/files/file_descriptor.h"
+#include "src/lib/fxl/macros.h"
 
 namespace fsl {
 namespace {

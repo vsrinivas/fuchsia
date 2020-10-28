@@ -8,7 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
+
 #include "src/lib/fxl/macros.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
@@ -25,7 +26,7 @@ class AllowList {
   // Wildcards are supported for matching the resource path (at most one).
   //
   // No validation is done on the format of the file.
-  explicit AllowList(const fxl::UniqueFD& dir, const std::string& file_path);
+  explicit AllowList(const fbl::unique_fd& dir, const std::string& file_path);
   // Returns true if |url| is allowed according to the allowlist. If |url| contains a variant or
   // hash, they are ignored for the purposes of matching.
   bool IsAllowed(const FuchsiaPkgUrl& url) const;

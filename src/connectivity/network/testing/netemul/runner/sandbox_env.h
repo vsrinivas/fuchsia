@@ -11,11 +11,11 @@
 #include <memory>
 #include <string>
 
+#include <fbl/unique_fd.h>
 #include <sdk/lib/sys/cpp/component_context.h>
 #include <src/connectivity/network/testing/netemul/lib/network/network_context.h>
 #include <src/connectivity/network/testing/netemul/lib/sync/sync_manager.h>
 
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/macros.h"
 
 namespace netemul {

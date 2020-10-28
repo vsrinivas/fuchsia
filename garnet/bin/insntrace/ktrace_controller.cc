@@ -13,9 +13,10 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
+#include <fbl/unique_fd.h>
+
 #include "garnet/bin/insntrace/utils.h"
 #include "garnet/lib/debugger_utils/util.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace insntrace {
@@ -74,7 +75,7 @@ void DumpKtraceBuffer(const char* output_path_prefix, const char* output_path_su
       fxl::StringPrintf("%s.%s", output_path_prefix, output_path_suffix);
   const char* ktrace_c_path = ktrace_output_path.c_str();
 
-  fxl::UniqueFD dest_fd(open(ktrace_c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
+  fbl::unique_fd dest_fd(open(ktrace_c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
   if (dest_fd.is_valid()) {
     std::vector<uint8_t> buf;
     size_t read_size = 1024;

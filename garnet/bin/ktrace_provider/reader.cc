@@ -4,6 +4,7 @@
 
 #include "garnet/bin/ktrace_provider/reader.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/ktrace.h>
 
 namespace ktrace_provider {

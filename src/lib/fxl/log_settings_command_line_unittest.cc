@@ -8,11 +8,11 @@
 #include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
 
 namespace fxl {

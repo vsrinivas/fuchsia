@@ -23,13 +23,14 @@
 #include <cinttypes>
 #include <iostream>
 
+#include <fbl/unique_fd.h>
+
 #include "garnet/bin/insntrace/config.h"
 #include "garnet/bin/insntrace/ktrace_controller.h"
 #include "garnet/bin/insntrace/utils.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "garnet/lib/debugger_utils/x86_cpuid.h"
 #include "garnet/lib/debugger_utils/x86_pt.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace insntrace {
@@ -263,7 +264,7 @@ static zx_status_t WriteBufferData(const IptConfig& config, const ControllerSync
     return ZX_ERR_INTERNAL;
   }
 
-  fxl::UniqueFD fd(open(c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
+  fbl::unique_fd fd(open(c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
   if (!fd.is_valid()) {
     FX_LOGS(ERROR) << fxl::StringPrintf("Failed writing file: %s", c_path) << ", "
                    << debugger_utils::ErrnoString(errno);

@@ -5,10 +5,11 @@
 #ifndef GARNET_BIN_KTRACE_PROVIDER_READER_H_
 #define GARNET_BIN_KTRACE_PROVIDER_READER_H_
 
+#include <lib/zircon-internal/ktrace.h>
+
 #include <iterator>
 
-#include <lib/zircon-internal/ktrace.h>
-#include <src/lib/files/unique_fd.h>
+#include <fbl/unique_fd.h>
 
 namespace ktrace_provider {
 

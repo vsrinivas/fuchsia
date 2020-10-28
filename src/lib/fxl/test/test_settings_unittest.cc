@@ -8,11 +8,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "sdk/lib/syslog/cpp/log_level.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
 
 namespace fxl {

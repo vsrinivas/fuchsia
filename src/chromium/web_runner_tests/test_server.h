@@ -12,7 +12,7 @@
 #include <thread>
 #include <vector>
 
-#include <src/lib/files/unique_fd.h>
+#include <fbl/unique_fd.h>
 
 namespace web_runner_tests {
 
@@ -59,9 +59,9 @@ class TestServer {
   }
 
  private:
-  fxl::UniqueFD conn_;
-  fxl::UniqueFD socket_;
-  std::array<fxl::UniqueFD, 2> close_;
+  fbl::unique_fd conn_;
+  fbl::unique_fd socket_;
+  std::array<fbl::unique_fd, 2> close_;
   int port_ = -1;
 };
 

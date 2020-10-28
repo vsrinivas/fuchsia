@@ -24,7 +24,7 @@ bool SchemeMap::ParseFromDirectory(const std::string& path) {
   return !json_parser_.HasError();
 }
 
-bool SchemeMap::ParseFromDirectoryAt(fxl::UniqueFD& dir, const std::string& path) {
+bool SchemeMap::ParseFromDirectoryAt(fbl::unique_fd& dir, const std::string& path) {
   internal_map_.clear();
   auto cb = [this](rapidjson::Document document) { ParseDocument(std::move(document)); };
   json_parser_.ParseFromDirectoryAt(dir.get(), path, cb);

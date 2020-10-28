@@ -7,9 +7,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <perftest/perftest.h>
-
-#include "src/lib/files/unique_fd.h"
 
 namespace {
 

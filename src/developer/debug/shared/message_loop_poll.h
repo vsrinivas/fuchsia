@@ -8,9 +8,10 @@
 #include <map>
 #include <vector>
 
+#include <fbl/unique_fd.h>
+
 #include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/message_loop.h"
-#include "src/lib/files/unique_fd.h"
 
 struct pollfd;
 

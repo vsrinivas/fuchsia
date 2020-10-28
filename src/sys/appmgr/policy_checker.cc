@@ -4,6 +4,8 @@
 
 #include "src/sys/appmgr/policy_checker.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/sys/appmgr/allow_list.h"
 
 namespace component {
@@ -28,7 +30,7 @@ constexpr char kVmexResourceAllowList[] = "allowlist/vmex_resource.txt";
 
 }  // end of namespace.
 
-PolicyChecker::PolicyChecker(fxl::UniqueFD config) : config_(std::move(config)) {}
+PolicyChecker::PolicyChecker(fbl::unique_fd config) : config_(std::move(config)) {}
 
 std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbox,
                                                    const FuchsiaPkgUrl& pkg_url) {

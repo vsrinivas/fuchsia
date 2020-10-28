@@ -226,7 +226,7 @@ RealmArgs RealmArgs::Make(fxl::WeakPtr<Realm> parent, std::string label, std::st
                           std::string cache_path, std::string temp_path,
                           const std::shared_ptr<sys::ServiceDirectory>& env_services,
                           bool run_virtual_console, fuchsia::sys::EnvironmentOptions options,
-                          fxl::UniqueFD appmgr_config_dir,
+                          fbl::unique_fd appmgr_config_dir,
                           fbl::RefPtr<ComponentIdIndex> component_id_index) {
   return {.parent = parent,
           .label = label,
@@ -246,7 +246,7 @@ RealmArgs RealmArgs::MakeWithAdditionalServices(
     fxl::WeakPtr<Realm> parent, std::string label, std::string data_path, std::string cache_path,
     std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-    fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir,
+    fuchsia::sys::EnvironmentOptions options, fbl::unique_fd appmgr_config_dir,
     fbl::RefPtr<ComponentIdIndex> component_id_index) {
   return {.parent = parent,
           .label = label,
@@ -266,7 +266,7 @@ RealmArgs RealmArgs::MakeWithCustomLoader(
     fxl::WeakPtr<Realm> parent, std::string label, std::string data_path, std::string cache_path,
     std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-    fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir,
+    fuchsia::sys::EnvironmentOptions options, fbl::unique_fd appmgr_config_dir,
     fbl::RefPtr<ComponentIdIndex> component_id_index, fuchsia::sys::LoaderPtr loader) {
   return {.parent = parent,
           .label = label,

@@ -4,6 +4,8 @@
 
 #include "src/sys/appmgr/allow_list.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 
 #include "src/lib/files/file.h"
@@ -11,7 +13,7 @@
 
 namespace component {
 
-AllowList::AllowList(const fxl::UniqueFD& dir, const std::string& path) : allow_all_(false) {
+AllowList::AllowList(const fbl::unique_fd& dir, const std::string& path) : allow_all_(false) {
   std::string result;
   if (!files::ReadFileToStringAt(dir.get(), path, &result)) {
     FX_LOGS(ERROR) << "Failed to read allowlist at " << path << ", will deny all usage attempts";

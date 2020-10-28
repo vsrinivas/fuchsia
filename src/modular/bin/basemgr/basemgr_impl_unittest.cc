@@ -12,6 +12,7 @@
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/file_descriptor.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 

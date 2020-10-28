@@ -12,6 +12,6 @@ source_set("rfb_server") {
     "rfb_server.cc",
     "rfb_server.h",
   ]
-
+  deps = [ "//zircon/public/lib/fbl" ]
   public_deps = [ "//src/lib/fxl" ]
 }

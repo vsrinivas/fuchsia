@@ -5,9 +5,9 @@
 #ifndef GARNET_THIRD_PARTY_LIBUNWINDSTACK_FUCHSIA_ANDROID_BASE_UNIQUE_FD_H_
 #define GARNET_THIRD_PARTY_LIBUNWINDSTACK_FUCHSIA_ANDROID_BASE_UNIQUE_FD_H_
 
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
 
-// This just forwards android::base::UniqueFD to the FXL implementation.
+// This just forwards android::base::unique_fd to the FBL implementation.
 
 namespace android {
 namespace base {

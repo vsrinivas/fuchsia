@@ -11,10 +11,11 @@
 
 #include <cstdio>
 
+#include <fbl/unique_fd.h>
+
 #include "src/lib/files/file.h"
 #include "src/lib/files/file_descriptor.h"
 #include "src/lib/files/path.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/socket/files.h"
 
 namespace examples {

@@ -9,7 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/memfs/memfs.h>
 
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
 
 namespace scoped_tmpfs {
 

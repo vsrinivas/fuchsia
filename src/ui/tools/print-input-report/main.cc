@@ -15,7 +15,8 @@
 
 #include <optional>
 
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
+
 #include "src/lib/fxl/command_line.h"
 #include "src/ui/tools/print-input-report/devices.h"
 #include "src/ui/tools/print-input-report/printer.h"
@@ -48,7 +49,7 @@ zx_status_t ParseUintArg(const char* arg, uint32_t min, uint32_t max, uint32_t* 
 
 std::optional<fuchsia_input_report::InputDevice::SyncClient> GetClientFromPath(
     Printer* printer, const std::string& path) {
-  fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
+  fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
     printer->Print("could not open %s\n", path.c_str());
     return std::nullopt;

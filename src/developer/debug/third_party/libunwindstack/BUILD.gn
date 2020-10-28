@@ -72,7 +72,10 @@ static_library("libunwindstack") {
     ]
   }
 
-  deps = [ "//src/lib/fxl" ]
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fbl",
+  ]
   if (is_mac) {
     deps += [ ":copy_elf_h" ]
   }

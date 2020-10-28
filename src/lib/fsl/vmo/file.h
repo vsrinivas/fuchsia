@@ -9,7 +9,8 @@
 
 #include <string>
 
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
+
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/fxl_export.h"
 

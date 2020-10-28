@@ -14,8 +14,8 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/unique_fd.h>
 
-#include "src/lib/files/unique_fd.h"
 #include "src/sys/appmgr/moniker.h"
 
 namespace component {
@@ -41,7 +41,7 @@ class ComponentIdIndex : public fbl::RefCounted<ComponentIdIndex> {
   //  - ComponentIdIndex::Error::DUPLICATE_INSTANCE_ID
   //  - ComponentIdIndex::Error::DUPLICATE_MONIKER
   static fit::result<fbl::RefPtr<ComponentIdIndex>, Error> CreateFromAppmgrConfigDir(
-      const fxl::UniqueFD& appmgr_config_dir);
+      const fbl::unique_fd& appmgr_config_dir);
 
   // Parses the component id index from the given |index_contents|.
   //

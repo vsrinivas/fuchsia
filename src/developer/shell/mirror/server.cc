@@ -8,6 +8,8 @@
 #include <mutex>
 #include <thread>
 
+#include <sdk/lib/syslog/cpp/macros.h>
+
 #include "src/developer/shell/mirror/common.h"
 
 namespace shell::mirror {

@@ -8,11 +8,11 @@
 
 #include <vector>
 
+#include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/files/unique_fd.h"
 
 namespace files {
 namespace {

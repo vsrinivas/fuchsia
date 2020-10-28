@@ -8,7 +8,8 @@
 #include <string_view>
 #include <vector>
 
-#include "src/lib/files/unique_fd.h"
+#include <fbl/unique_fd.h>
+
 #include "src/sys/pkg/lib/far/format.h"
 
 namespace archive {
