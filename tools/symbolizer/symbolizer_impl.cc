@@ -174,9 +174,11 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
     }
 
     // Print the absolute address first.
-    out += fxl::StringPrintf("0x%016" PRIx64 " in", address);
+    out += fxl::StringPrintf("0x%016" PRIx64, address);
 
     if (module) {
+      out += " in";
+
       // Function name.
       const zxdb::Location location = stack[i]->GetLocation();
       if (location.symbol().is_valid()) {
@@ -197,7 +199,7 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
       // Module offset.
       out += fxl::StringPrintf(" <%s>+0x%" PRIx64, module->name.c_str(), address - module->base);
     } else {
-      out += " <\?\?\?>";
+      out += " is not covered by any module";
     }
 
     // Extra message.

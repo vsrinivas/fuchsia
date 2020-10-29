@@ -58,7 +58,7 @@ TEST_F(SymbolizerImplTest, Backtrace) {
 
   ss_.str("");
   symbolizer_.Backtrace(1, 0x5000, Symbolizer::AddressType::kUnknown, "");
-  ASSERT_EQ(ss_.str(), "   #1    0x0000000000005000 in <\?\?\?>\n");
+  ASSERT_EQ(ss_.str(), "   #1    0x0000000000005000 is not covered by any module\n");
 }
 
 }  // namespace
