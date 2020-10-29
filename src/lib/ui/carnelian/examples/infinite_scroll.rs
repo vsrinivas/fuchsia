@@ -7,7 +7,7 @@ use {
     argh::FromArgs,
     carnelian::{
         color::Color,
-        drawing::{FontFace, GlyphMap, Text},
+        drawing::{load_font, FontFace, GlyphMap, Text},
         geometry::Corners,
         input::{self},
         input_ext::TouchEventResampler,
@@ -26,6 +26,7 @@ use {
     std::{
         collections::{BTreeMap, VecDeque},
         f32,
+        path::PathBuf,
     },
 };
 
@@ -60,14 +61,10 @@ impl std::str::FromStr for ScrollMethod {
     }
 }
 
-// This font creation method isn't ideal. The correct method would be to ask the Fuchsia
-// font service for the font data.
-static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
-
 lazy_static! {
-    pub static ref FONT_FACE: FontFace<'static> =
-        FontFace::new(&FONT_DATA).expect("Failed to create font");
+    pub static ref FONT_FACE: FontFace =
+        load_font(PathBuf::from("/pkg/data/fonts/RobotoSlab-Regular.ttf"))
+            .expect("Failed to create font");
 }
 
 /// Infinite scroll.

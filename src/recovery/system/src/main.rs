@@ -6,7 +6,7 @@ use anyhow::Error;
 use argh::FromArgs;
 use carnelian::{
     color::Color,
-    drawing::{path_for_circle, DisplayRotation, FontFace, GlyphMap, Text},
+    drawing::{load_font, path_for_circle, DisplayRotation, FontFace, GlyphMap, Text},
     geometry::IntVector,
     input, make_message,
     render::{
@@ -26,7 +26,7 @@ use fuchsia_async::{self as fasync, Task};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon::{AsHandleRef, Duration, Event, Signals};
 use futures::StreamExt;
-use std::fs::File;
+use std::{fs::File, path::PathBuf};
 
 const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 10;
 const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.png";
@@ -49,9 +49,6 @@ mod storage;
 
 mod fdr;
 use fdr::{FactoryResetState, ResetEvent};
-
-static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../../prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf");
 
 fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, String> {
     match s {
@@ -161,7 +158,7 @@ impl SizedText {
         label: &str,
         size: f32,
         wrap: usize,
-        face: &FontFace<'_>,
+        face: &FontFace,
     ) -> Self {
         let mut glyphs = GlyphMap::new();
         let text = Text::new(context, label, size, wrap, face, &mut glyphs);
@@ -183,7 +180,7 @@ impl RenderResources {
         heading: &str,
         body: &str,
         countdown_ticks: u8,
-        face: &FontFace<'_>,
+        face: &FontFace,
     ) -> Self {
         let text_size = min_dimension / 10.0;
         let heading_label = SizedText::new(context, heading, text_size, 100, face);
@@ -206,8 +203,8 @@ impl RenderResources {
     }
 }
 
-struct RecoveryViewAssistant<'a> {
-    face: FontFace<'a>,
+struct RecoveryViewAssistant {
+    face: FontFace,
     heading: String,
     body: String,
     reset_state_machine: fdr::FactoryResetStateMachine,
@@ -220,17 +217,17 @@ struct RecoveryViewAssistant<'a> {
     logo_image: PngImage,
 }
 
-impl<'a> RecoveryViewAssistant<'a> {
+impl RecoveryViewAssistant {
     fn new(
         app_context: &AppContext,
         view_key: ViewKey,
         heading: &str,
         body: &str,
-    ) -> Result<RecoveryViewAssistant<'a>, Error> {
+    ) -> Result<RecoveryViewAssistant, Error> {
         RecoveryViewAssistant::setup(app_context, view_key)?;
 
         let composition = Composition::new(BG_COLOR);
-        let face = FontFace::new(FONT_DATA)?;
+        let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
         let logo_image = PngImage { file: LOGO_IMAGE_PATH.to_string(), loaded_info: None };
 
         Ok(RecoveryViewAssistant {
@@ -304,7 +301,7 @@ impl<'a> RecoveryViewAssistant<'a> {
     }
 }
 
-impl ViewAssistant for RecoveryViewAssistant<'_> {
+impl ViewAssistant for RecoveryViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
         self.view_key = context.key;
         Ok(())

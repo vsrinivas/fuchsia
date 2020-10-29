@@ -37,6 +37,7 @@ rustc_library("carnelian") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/mapped-vmo",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace",
@@ -60,6 +61,7 @@ rustc_library("carnelian") {
     "//third_party/rust_crates:rusttype",
     "//third_party/rust_crates:smallvec",
     "//third_party/rust_crates:textwrap",
+    "//third_party/rust_crates:ttf-parser",
     "//third_party/rust_crates:vk-sys",
   ]
   non_rust_deps = [
@@ -115,7 +117,6 @@ rustc_binary("button_example") {
   edition = "2018"
   source_root = "examples/button.rs"
   sources = [ "examples/button.rs" ]
-  inputs = [ "//prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf" ]
   deps = [
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fuchsia-async",
@@ -142,6 +143,14 @@ package("button-rs") {
     {
       name = "carnelian_example"
       source = "button_example"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf")
+      dest = "fonts/RobotoSlab-Regular.ttf"
     },
   ]
 
@@ -205,7 +214,6 @@ rustc_binary("infinite_scroll") {
   edition = "2018"
   source_root = "examples/infinite_scroll.rs"
   sources = [ "examples/infinite_scroll.rs" ]
-  inputs = [ "//prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf" ]
   deps = [
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
@@ -253,6 +261,14 @@ package("infinite-scroll-rs") {
   public_deps = vulkan_validation_layers.public_deps
   loadable_modules = vulkan_validation_layers.loadable_modules
   resources = vulkan_validation_layers.resources
+
+  resources += [
+    {
+      path = rebase_path(
+              "//prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf")
+      dest = "fonts/RobotoSlab-Regular.ttf"
+    },
+  ]
 
   shaders = [
     "copy.comp.spv",

@@ -12,14 +12,17 @@ use crate::{
     geometry::{Coord, Corners, Point, Rect},
     render::{Context as RenderContext, Path, Raster},
 };
-use anyhow::Error;
+use anyhow::{Context, Error};
 use euclid::{
     default::{Box2D, Size2D, Transform2D, Vector2D},
     vec2, Angle,
 };
+use fuchsia_zircon::{self as zx};
 use rusttype::{Font, FontCollection, GlyphId, Scale, Segment};
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fs::File, path::PathBuf, slice};
 use textwrap::wrap_iter;
+use ttf_parser::Face;
+
 /// Some Fuchsia device displays are mounted rotated. This value represents
 /// The supported rotations and can be used by views to rotate their content
 /// to display appropriately when running on the frame buffer.
@@ -279,26 +282,48 @@ impl Paint {
     }
 }
 
+pub fn load_font(path: PathBuf) -> Result<FontFace, Error> {
+    let file = File::open(path).context("File::open")?;
+    let vmo = fdio::get_vmo_copy_from_file(&file).context("fdio::get_vmo_copy_from_file")?;
+    let size = file.metadata()?.len() as usize;
+    let root_vmar = fuchsia_runtime::vmar_root_self();
+    let address = root_vmar.map(
+        0,
+        &vmo,
+        0,
+        size,
+        zx::VmarFlags::PERM_READ | zx::VmarFlags::MAP_RANGE | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
+    )?;
+
+    let mapped_font_data = unsafe { slice::from_raw_parts(address as *mut u8, size) };
+    Ok(FontFace::new(&*mapped_font_data)?)
+}
+
 /// Struct containing a font and a cache of rendered glyphs.
-pub struct FontFace<'a> {
+#[derive(Clone)]
+pub struct FontFace {
     /// Font.
-    pub font: Font<'a>,
+    pub font: Font<'static>,
+    pub face: Face<'static>,
 }
 
-/// Struct containing font, size and baseline.
-#[allow(missing_docs)]
-pub struct FontDescription<'a, 'b> {
-    pub face: &'a FontFace<'b>,
-    pub size: u32,
-    pub baseline: i32,
+impl FontFace {
+    pub fn capital_height(&self, size: f32) -> Option<f32> {
+        self.face.capital_height().and_then(|capital_height| {
+            self.face
+                .units_per_em()
+                .and_then(|units_per_em| Some((capital_height as f32 / units_per_em as f32) * size))
+        })
+    }
 }
 
 #[allow(missing_docs)]
-impl<'a> FontFace<'a> {
-    pub fn new(data: &'a [u8]) -> Result<FontFace<'a>, Error> {
+impl FontFace {
+    pub fn new(data: &'static [u8]) -> Result<FontFace, Error> {
         let collection = FontCollection::from_bytes(data as &[u8])?;
         let font = collection.into_font()?;
-        Ok(FontFace { font: font })
+        let face = Face::from_slice(data, 0)?;
+        Ok(FontFace { font, face })
     }
 }
 
@@ -309,7 +334,7 @@ pub struct Glyph {
 }
 
 impl Glyph {
-    pub fn new(context: &mut RenderContext, face: &FontFace<'_>, size: f32, id: GlyphId) -> Self {
+    pub fn new(context: &mut RenderContext, face: &FontFace, size: f32, id: GlyphId) -> Self {
         let mut path_builder = context.path_builder().expect("path_builder");
         let mut bounding_box = Box2D::zero();
         let scale = Scale::uniform(size);
@@ -384,7 +409,7 @@ impl Text {
         text: &str,
         size: f32,
         wrap: usize,
-        face: &FontFace<'_>,
+        face: &FontFace,
         glyph_map: &mut GlyphMap,
     ) -> Self {
         let glyphs = &mut glyph_map.glyphs;
@@ -464,7 +489,7 @@ mod tests {
     );
 
     lazy_static! {
-        pub static ref FONT_FACE: FontFace<'static> =
+        pub static ref FONT_FACE: FontFace =
             FontFace::new(&FONT_DATA).expect("Failed to create font");
     }
 

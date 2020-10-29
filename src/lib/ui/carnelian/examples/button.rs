@@ -7,8 +7,8 @@ use argh::FromArgs;
 use carnelian::{
     color::Color,
     drawing::{
-        path_for_corner_knockouts, path_for_rectangle, DisplayRotation, FontFace, GlyphMap, Paint,
-        Text,
+        load_font, path_for_corner_knockouts, path_for_rectangle, DisplayRotation, FontFace,
+        GlyphMap, Paint, Text,
     },
     input::{self},
     make_app_assistant, make_message,
@@ -19,10 +19,9 @@ use carnelian::{
     App, AppAssistant, Coord, Message, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
     ViewAssistantPtr, ViewKey,
 };
-
 use euclid::default::Vector2D;
 use fuchsia_zircon::{AsHandleRef, Event, Signals, Time};
-use lazy_static::lazy_static;
+use std::path::PathBuf;
 
 fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, String> {
     match s {
@@ -41,16 +40,6 @@ struct Args {
     /// rotate
     #[argh(option, from_str_fn(display_rotation_from_str))]
     rotation: Option<DisplayRotation>,
-}
-
-// This font creation method isn't ideal. The correct method would be to ask the Fuchsia
-// font service for the font data.
-static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
-
-lazy_static! {
-    pub static ref FONT_FACE: FontFace<'static> =
-        FontFace::new(&FONT_DATA).expect("Failed to create font");
 }
 
 /// enum that defines all messages sent with `App::queue_message` that
@@ -117,11 +106,13 @@ struct Button {
     focused: bool,
     glyphs: GlyphMap,
     label_text: String,
+    face: FontFace,
     label: Option<Text>,
 }
 
 impl Button {
     pub fn new(text: &str) -> Result<Button, Error> {
+        let face = load_font(PathBuf::from("/pkg/data/fonts/RobotoSlab-Regular.ttf"))?;
         let button = Button {
             font_size: 20,
             padding: 5.0,
@@ -136,6 +127,7 @@ impl Button {
             focused: false,
             glyphs: GlyphMap::new(),
             label_text: text.to_string(),
+            face,
             label: None,
         };
 
@@ -171,7 +163,7 @@ impl Button {
             &self.label_text,
             self.font_size as f32,
             100,
-            &FONT_FACE,
+            &self.face,
             &mut self.glyphs,
         ));
 

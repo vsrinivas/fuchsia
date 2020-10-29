@@ -89,8 +89,6 @@ rustc_binary("bin") {
     "src/setup.rs",
     "src/storage.rs",
   ]
-
-  inputs = [ "//prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf" ]
 }
 
 rustc_binary("bin_fdr") {
@@ -125,8 +123,6 @@ rustc_binary("bin_fdr") {
     "src/fdr.rs",
     "src/main.rs",
   ]
-
-  inputs = [ "//prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf" ]
 }
 
 config_data("config") {
@@ -178,6 +174,11 @@ package("system_recovery") {
       path = rebase_path(recovery_logo_path)
       dest = "logo.png"
     },
+    {
+      path =
+          rebase_path("//prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf")
+      dest = "fonts/Roboto-Regular.ttf"
+    },
   ]
 }
 
@@ -212,6 +213,11 @@ package("system-recovery-fdr") {
     {
       path = rebase_path(recovery_logo_path)
       dest = "logo.png"
+    },
+    {
+      path =
+          rebase_path("//prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf")
+      dest = "fonts/Roboto-Regular.ttf"
     },
   ]
 }
@@ -276,6 +282,11 @@ test_package("system_recovery_tests") {
     {
       path = rebase_path(recovery_logo_path)
       dest = "logo.png"
+    },
+    {
+      path =
+          rebase_path("//prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf")
+      dest = "fonts/Roboto-Regular.ttf"
     },
   ]
 

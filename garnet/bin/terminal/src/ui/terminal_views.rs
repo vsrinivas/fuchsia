@@ -41,7 +41,7 @@ fn raster_for_rectangle(bounds: &Rect, render_context: &mut RenderContext) -> Ra
 }
 
 pub struct GridView {
-    font: FontFace<'static>,
+    font: FontFace,
     background_color: Color,
     pub frame: Rect,
     pub cell_size: Size,
