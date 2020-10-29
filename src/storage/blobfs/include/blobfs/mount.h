@@ -51,7 +51,6 @@ struct MountOptions {
   Writability writability = Writability::Writable;
   bool verbose = false;
   bool metrics = false;
-  bool pager = false;
   // Default cache policy.
   CachePolicy cache_policy = CachePolicy::EvictImmediately;
   // Optional overriden cache policy for pager-backed blobs.
@@ -72,8 +71,9 @@ struct MountOptions {
 // The inspect tree is served in this directory. This directory will be visible to Archivist.
 //
 // This function blocks until the filesystem terminates.
-zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options, zx::channel root,
-                  ServeLayout layout, zx::resource vmex_resource, zx::channel diagnostics_dir);
+zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& options,
+                  zx::channel root, ServeLayout layout, zx::resource vmex_resource,
+                  zx::channel diagnostics_dir);
 
 }  // namespace blobfs
 

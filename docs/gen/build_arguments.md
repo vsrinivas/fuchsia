@@ -1453,7 +1453,7 @@ List of kernel command line arguments to bake into the boot image.
 See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
-**Current value for `target_cpu = "arm64"`:** `["blobfs.userpager=true", "blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "arm64"`:** `["blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
 From //products/core.gni:13
 
@@ -1461,7 +1461,7 @@ From //products/core.gni:13
 
 From //build/images/args.gni:26
 
-**Current value for `target_cpu = "x64"`:** `["blobfs.userpager=true", "blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "x64"`:** `["blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
 From //products/core.gni:13
 

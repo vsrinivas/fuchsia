@@ -59,7 +59,6 @@ struct FixtureOptions {
     options.fs_type = format;
     options.seed = static_cast<unsigned int>(zx::ticks::now().get());
     options.isolated_devmgr = false;
-    options.use_pager = false;
     options.write_compression_algorithm = nullptr;
     return options;
   }
@@ -102,9 +101,6 @@ struct FixtureOptions {
 
   // Whether to use an isolated devmgr for each test.
   bool isolated_devmgr = false;
-
-  // Whether to use the user pager (if supported by the |fs_format|).
-  bool use_pager = false;
 
   // An optional compression algorithm specifier for the filesystem to use when storing files (if
   // the filesystem supports it).

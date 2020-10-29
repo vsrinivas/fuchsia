@@ -541,10 +541,10 @@ TEST(AllocatorTest, FreedBlocksAreReservedUntilTransactionCommits) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread();
   std::unique_ptr<Blobfs> fs;
-  MountOptions options;
   block_client::FakeBlockDevice& device_ref = *device;
-  ASSERT_EQ(Blobfs::Create(loop.dispatcher(), std::move(device), &options, zx::resource(), &fs),
-            ZX_OK);
+  ASSERT_EQ(
+      Blobfs::Create(loop.dispatcher(), std::move(device), MountOptions(), zx::resource(), &fs),
+      ZX_OK);
 
   // Create a blob that takes up more than half of the volume.
   fbl::RefPtr<fs::Vnode> root;

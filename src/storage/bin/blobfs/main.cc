@@ -10,6 +10,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
+#include <lib/zx/status.h>
 #include <libgen.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -60,7 +61,7 @@ zx::resource AttemptToGetVmexResource() {
   return std::move(result.Unwrap()->vmex);
 }
 
-zx_status_t Mount(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
+zx_status_t Mount(std::unique_ptr<BlockDevice> device, const blobfs::MountOptions& options) {
   zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   // TODO(fxbug.dev/34531): this currently supports both the old (data root only) and the new
   // (outgoing directory) behaviors. once all clients are moved over to using the new behavior,
@@ -101,17 +102,17 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* opt
                        std::move(diagnostics_dir));
 }
 
-zx_status_t Mkfs(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
+zx_status_t Mkfs(std::unique_ptr<BlockDevice> device, const blobfs::MountOptions& options) {
   // TODO(fxbug.dev/36663): Add support for setting the blob layout format.
   return blobfs::FormatFilesystem(device.get(), blobfs::FilesystemOptions{});
 }
 
-zx_status_t Fsck(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
+zx_status_t Fsck(std::unique_ptr<BlockDevice> device, const blobfs::MountOptions& options) {
   return blobfs::Fsck(std::move(device), options);
 }
 
 typedef zx_status_t (*CommandFunction)(std::unique_ptr<BlockDevice> device,
-                                       blobfs::MountOptions* options);
+                                       const blobfs::MountOptions& options);
 
 const struct {
   const char* name;
@@ -164,7 +165,6 @@ int usage() {
       "options: -v|--verbose   Additional debug logging\n"
       "         -r|--readonly              Mount filesystem read-only\n"
       "         -m|--metrics               Collect filesystem metrics\n"
-      "         -p|--pager                 Enable user pager\n"
       "         -c|--compression [alg]     compression algorithm to apply to newly stored blobs.\n"
       "                                    Does not affect any blobs already stored on-disk.\n"
       "                                    'alg' can be one of ZSTD, ZSTD_SEEKABLE, ZSTD_CHUNKED,\n"
@@ -189,8 +189,8 @@ int usage() {
   return ZX_ERR_INVALID_ARGS;
 }
 
-zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
-                        blobfs::MountOptions* options) {
+zx::status<blobfs::MountOptions> ProcessArgs(int argc, char** argv, CommandFunction* func) {
+  blobfs::MountOptions options;
   while (1) {
     static struct option opts[] = {
 
@@ -205,67 +205,64 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "vrmpc:l:e:h", opts, &opt_index);
+    int c = getopt_long(argc, argv, "vrmc:l:e:h", opts, &opt_index);
 
     if (c < 0) {
       break;
     }
     switch (c) {
       case 'r':
-        options->writability = blobfs::Writability::ReadOnlyFilesystem;
+        options.writability = blobfs::Writability::ReadOnlyFilesystem;
         break;
       case 'm':
-        options->metrics = true;
-        break;
-      case 'p':
-        options->pager = true;
+        options.metrics = true;
         break;
       case 'c': {
         std::optional<blobfs::CompressionAlgorithm> algorithm = ParseAlgorithm(optarg);
         if (!algorithm) {
           fprintf(stderr, "Invalid compression algorithm: %s\n", optarg);
-          return usage();
+          return zx::error(usage());
         }
-        options->compression_settings.compression_algorithm = *algorithm;
+        options.compression_settings.compression_algorithm = *algorithm;
         break;
       }
       case 'l': {
         std::optional<int> level = ParseInt(optarg);
         if (!level || level < 0) {
           fprintf(stderr, "Invalid argument for --compression_level: %s\n", optarg);
-          return usage();
+          return zx::error(usage());
         }
-        options->compression_settings.compression_level = level;
+        options.compression_settings.compression_level = level;
         break;
       }
       case 'e': {
         std::optional<blobfs::CachePolicy> policy = ParseEvictionPolicy(optarg);
         if (!policy) {
           fprintf(stderr, "Invalid eviction policy: %s\n", optarg);
-          return usage();
+          return zx::error(usage());
         }
-        options->pager_backed_cache_policy = policy;
+        options.pager_backed_cache_policy = policy;
         break;
       }
       case 'v':
-        options->verbose = true;
+        options.verbose = true;
         break;
       case 'h':
       default:
-        return usage();
+        return zx::error(usage());
     }
   }
 
-  if (!options->compression_settings.IsValid()) {
+  if (!options.compression_settings.IsValid()) {
     fprintf(stderr, "Invalid compression settings.\n");
-    return usage();
+    return zx::error(usage());
   }
 
   argc -= optind;
   argv += optind;
 
   if (argc < 1) {
-    return usage();
+    return zx::error(usage());
   }
   const char* command = argv[0];
 
@@ -278,42 +275,42 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
 
   if (*func == nullptr) {
     fprintf(stderr, "Unknown command: %s\n", command);
-    return usage();
+    return zx::error(usage());
   }
 
-  return ZX_OK;
+  return zx::ok(options);
 }
 }  // namespace
 
 int main(int argc, char** argv) {
   CommandFunction func = nullptr;
-  blobfs::MountOptions options;
-  zx_status_t status = ProcessArgs(argc, argv, &func, &options);
-  if (status != ZX_OK) {
-    return -1;
+  auto options_or = ProcessArgs(argc, argv, &func);
+  if (options_or.is_error()) {
+    return EXIT_FAILURE;
   }
+  blobfs::MountOptions options = std::move(options_or).value();
 
   zx::channel block_connection = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
   if (!block_connection.is_valid()) {
     FS_TRACE_ERROR("blobfs: Could not access startup handle to block device\n");
-    return -1;
+    return EXIT_FAILURE;
   }
 
   fbl::unique_fd svc_fd(open("/svc", O_RDONLY));
   if (!svc_fd.is_valid()) {
     FS_TRACE_ERROR("blobfs: Failed to open svc from incoming namespace\n");
-    return -1;
+    return EXIT_FAILURE;
   }
 
   std::unique_ptr<RemoteBlockDevice> device;
-  status = RemoteBlockDevice::Create(std::move(block_connection), &device);
+  zx_status_t status = RemoteBlockDevice::Create(std::move(block_connection), &device);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Could not initialize block device\n");
-    return -1;
+    return EXIT_FAILURE;
   }
-  status = func(std::move(device), &options);
+  status = func(std::move(device), options);
   if (status != ZX_OK) {
-    return -1;
+    return EXIT_FAILURE;
   }
-  return 0;
+  return EXIT_SUCCESS;
 }

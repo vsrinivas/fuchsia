@@ -25,8 +25,6 @@ typedef struct init_options {
   bool collect_metrics;
   // Ensures that requests to the mountpoint will be propagated to the underlying FS
   bool wait_until_ready;
-  // Enable paging on the file system (if supported).
-  bool enable_pager;
   // An optional compression algorithm specifier for the filesystem to use when storing files (if
   // the filesystem supports it).
   const char* write_compression_algorithm;

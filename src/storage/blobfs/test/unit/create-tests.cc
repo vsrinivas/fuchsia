@@ -35,8 +35,8 @@ TEST(CreateTest, ValidSuperblock) {
   CreateAndFormatDevice(&device);
 
   std::unique_ptr<blobfs::Blobfs> blobfs;
-  blobfs::MountOptions options;
-  EXPECT_EQ(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs), ZX_OK);
+  EXPECT_EQ(Blobfs::Create(nullptr, std::move(device), MountOptions(), zx::resource(), &blobfs),
+            ZX_OK);
   EXPECT_NE(blobfs.get(), nullptr);
 }
 
@@ -51,9 +51,8 @@ TEST(CreateTest, AllocNodeCountGreaterThanAllocated) {
   DeviceBlockWrite(device.get(), block, sizeof(block), kSuperblockOffset);
 
   std::unique_ptr<blobfs::Blobfs> blobfs;
-  blobfs::MountOptions options;
 
-  EXPECT_EQ(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs),
+  EXPECT_EQ(Blobfs::Create(nullptr, std::move(device), MountOptions(), zx::resource(), &blobfs),
             ZX_ERR_IO_OVERRUN);
   EXPECT_EQ(blobfs.get(), nullptr);
 }

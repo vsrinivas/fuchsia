@@ -94,7 +94,6 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
       .verbose_mount = options->verbose_mount,
       .collect_metrics = options->collect_metrics,
       .wait_until_ready = options->wait_until_ready,
-      .enable_pager = options->enable_pager,
       .write_compression_algorithm = options->write_compression_algorithm,
       // TODO(jfsulliv): This is currently only used in tests. Plumb through mount options if
       // needed.
@@ -139,7 +138,6 @@ const mount_options_t default_mount_options = {
     .collect_metrics = false,
     .wait_until_ready = true,
     .create_mountpoint = false,
-    .enable_pager = false,
     .write_compression_algorithm = nullptr,
     .cache_eviction_policy = nullptr,
     .register_fs = true,

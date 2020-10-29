@@ -310,7 +310,6 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
       {"print_statistics", no_argument, nullptr, 0},
       {"runs", required_argument, nullptr, 0},
       {"seed", required_argument, nullptr, 0},
-      {"pager", no_argument, nullptr, 0},
       {"compression", required_argument, nullptr, 'c'},
       {0, 0, 0, 0},
   };
@@ -377,9 +376,6 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
             break;
           case 12:
             fixture_options->seed = static_cast<unsigned int>(strtoul(optarg, NULL, 0));
-            break;
-          case 13:
-            fixture_options->use_pager = true;
             break;
           default:
             break;

@@ -61,10 +61,6 @@ The following values are supported:
 *   `ZSTD_CHUNKED`
 *   `UNCOMPRESSED`
 
-## blobfs.userpager=\<bool\>
-
-Controls whether the blobfs user pager is enabled. Disabled by default.
-
 ## bootsvc.next=\<bootfs path\>
 
 Controls what program is executed by bootsvc to continue the boot process.

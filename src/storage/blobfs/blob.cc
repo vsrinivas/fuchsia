@@ -232,7 +232,7 @@ void* Blob::GetDataBuffer() const { return data_mapping_.start(); }
 void* Blob::GetMerkleTreeBuffer() const { return merkle_mapping_.start(); }
 
 bool Blob::IsPagerBacked() const {
-  return blobfs_->PagingEnabled() && SupportsPaging(inode_) && state() == BlobState::kReadable;
+  return SupportsPaging(inode_) && state() == BlobState::kReadable;
 }
 
 Digest Blob::MerkleRoot() const { return GetKeyAsDigest(); }
@@ -780,7 +780,12 @@ zx_status_t Blob::QueueUnlink() {
 }
 
 zx_status_t Blob::CommitDataBuffer() {
-  return data_mapping_.vmo().op_range(ZX_VMO_OP_COMMIT, 0, inode_.blob_size, nullptr, 0);
+  if (inode_.blob_size == 0) {
+    // It's the null blob, so just verify.
+    return Verify();
+  } else {
+    return data_mapping_.vmo().op_range(ZX_VMO_OP_COMMIT, 0, inode_.blob_size, nullptr, 0);
+  }
 }
 
 zx_status_t Blob::LoadAndVerifyBlob(Blobfs* bs, uint32_t node_index) {

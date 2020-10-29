@@ -20,20 +20,20 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
   options.writability = Writability::ReadOnlyFilesystem;
   options.metrics = false;
   std::unique_ptr<Blobfs> blobfs = nullptr;
-  return Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs);
+  return Blobfs::Create(nullptr, std::move(device), options, zx::resource(), &blobfs);
 }
 
 void CheckDefaultInodeCount(std::unique_ptr<BlockDevice> device) {
-  MountOptions options = {};
   std::unique_ptr<Blobfs> blobfs;
-  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs), ZX_OK);
+  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), MountOptions(), zx::resource(), &blobfs),
+            ZX_OK);
   ASSERT_GE(blobfs->Info().inode_count, kBlobfsDefaultInodeCount);
 }
 
 void CheckDefaultJournalBlocks(std::unique_ptr<BlockDevice> device) {
-  MountOptions options = {};
   std::unique_ptr<Blobfs> blobfs;
-  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs), ZX_OK);
+  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), MountOptions(), zx::resource(), &blobfs),
+            ZX_OK);
   ASSERT_GE(blobfs->Info().journal_block_count, kDefaultJournalBlocks);
 }
 
@@ -232,7 +232,7 @@ TEST(FormatFilesystemTest, DeviceNotWritableAutoConvertReadonly) {
   mount_options.writability = Writability::Writable;
   mount_options.metrics = false;
   std::unique_ptr<Blobfs> fs = nullptr;
-  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), &mount_options, zx::resource(), &fs),
+  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), mount_options, zx::resource(), &fs),
             ZX_ERR_ACCESS_DENIED);
 }
 
@@ -251,7 +251,7 @@ TEST(FormatFilesystemTest, FormatDeviceWithJournalCannotAutoConvertReadonly) {
   options.metrics = false;
   std::unique_ptr<Blobfs> blobfs = nullptr;
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
-            Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs));
+            Blobfs::Create(nullptr, std::move(device), options, zx::resource(), &blobfs));
 }
 
 // After formatting a filesystem with block size valid block size N, mounting on

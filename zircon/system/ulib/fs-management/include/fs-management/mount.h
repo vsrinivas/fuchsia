@@ -19,8 +19,6 @@ typedef struct mount_options {
   // Create the mountpoint directory if it doesn't already exist.
   // Must be false if passed to "fmount".
   bool create_mountpoint;
-  // Enable paging on the filesystem (if supported).
-  bool enable_pager;
   // An optional compression algorithm specifier for the filesystem to use when storing files (if
   // the filesystem supports it).
   const char* write_compression_algorithm;

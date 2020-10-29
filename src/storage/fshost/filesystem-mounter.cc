@@ -52,9 +52,6 @@ zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const cha
   if (options.collect_metrics) {
     argv.push_back("--metrics");
   }
-  if (options.enable_pager) {
-    argv.push_back("--pager");
-  }
   if (options.write_compression_algorithm != nullptr) {
     argv.push_back("--compression");
     argv.push_back(options.write_compression_algorithm);

@@ -40,10 +40,9 @@ class BlobfsCheckerTest : public testing::Test {
     ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
     loop_.StartThread();
 
-    MountOptions options;
-    options.pager = enable_paging;
-    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
-              ZX_OK);
+    ASSERT_EQ(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), MountOptions(), zx::resource(), &fs_),
+        ZX_OK);
     srand(testing::UnitTest::GetInstance()->random_seed());
   }
 
@@ -120,11 +119,10 @@ class BlobfsCheckerTest : public testing::Test {
     request.opcode = BLOCKIO_WRITE;
     ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
-    MountOptions options;
-    options.pager = enable_paging;
     // Remount.
-    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
-              ZX_OK);
+    ASSERT_EQ(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), MountOptions(), zx::resource(), &fs_),
+        ZX_OK);
   }
 
   std::unique_ptr<Blobfs> get_fs_unique() { return std::move(fs_); }

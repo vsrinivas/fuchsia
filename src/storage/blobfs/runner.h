@@ -35,7 +35,7 @@ class Runner : public fs::ManagedVfs {
   virtual ~Runner();
 
   static zx_status_t Create(async::Loop* loop, std::unique_ptr<BlockDevice> device,
-                            MountOptions* options, zx::resource vmex_resource,
+                            const MountOptions& options, zx::resource vmex_resource,
                             zx::channel diagnostics_dir_server, std::unique_ptr<Runner>* out);
 
   // fs::ManagedVfs interface.

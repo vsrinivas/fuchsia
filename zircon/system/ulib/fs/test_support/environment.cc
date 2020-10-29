@@ -68,7 +68,7 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "d:pc:hf::l::s::i:r:b::", options, &opt_index);
+    int c = getopt_long(argc, argv, "d:c:hf::l::s::i:r:b::", options, &opt_index);
     if (c < 0) {
       break;
     }
@@ -78,9 +78,6 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
         break;
       case 'j':
         config->use_journal = false;
-        break;
-      case 'p':
-        config->use_pager = true;
         break;
       case 'c':
         config->write_compression_algorithm = optarg;

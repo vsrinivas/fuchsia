@@ -113,7 +113,7 @@ const char* CachePolicyToString(CachePolicy policy) {
 
 // static.
 zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
-                           MountOptions* options, zx::resource vmex_resource,
+                           const MountOptions& options, zx::resource vmex_resource,
                            std::unique_ptr<Blobfs>* out) {
   TRACE_DURATION("blobfs", "Blobfs::Create");
   char block[kBlobfsBlockSize];
@@ -131,9 +131,11 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     return status;
   }
   uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
+
+  Writability writability = options.writability;
   if (block_info.flags & BLOCK_FLAG_READONLY) {
     FS_TRACE_WARN("blobfs: Mounting as read-only. WARNING: Journal will not be applied\n");
-    options->writability = blobfs::Writability::ReadOnlyDisk;
+    writability = blobfs::Writability::ReadOnlyDisk;
   }
   if (kBlobfsBlockSize % block_info.block_size != 0) {
     FS_TRACE_ERROR("blobfs: Blobfs block size (%u) not divisible by device block size (%u)\n",
@@ -157,35 +159,31 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // Construct the Blobfs object, without intensive validation, since it
   // may require upgrades / journal replays to become valid.
   auto fs = std::unique_ptr<Blobfs>(new Blobfs(
-      dispatcher, std::move(device), superblock, options->writability,
-      options->compression_settings, std::move(vmex_resource), options->pager_backed_cache_policy));
+      dispatcher, std::move(device), superblock, writability, options.compression_settings,
+      std::move(vmex_resource), options.pager_backed_cache_policy));
   fs->block_info_ = block_info;
 
-  if (options->pager) {
-    auto fs_ptr = fs.get();
-    auto status_or_buffer = pager::StorageBackedTransferBuffer::Create(
-        pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->Metrics());
-    if (!status_or_buffer.is_ok()) {
-      FS_TRACE_ERROR("blobfs: Could not initialize pager transfer buffer\n");
-      return status_or_buffer.status_value();
-    }
-    auto status_or_pager =
-        pager::UserPager::Create(std::move(status_or_buffer).value(), fs_ptr->Metrics());
-    if (!status_or_pager.is_ok()) {
-      FS_TRACE_ERROR("blobfs: Could not initialize user pager\n");
-      return status_or_pager.status_value();
-    }
-    fs->pager_ = std::move(status_or_pager).value();
-    FS_TRACE_INFO("blobfs: Initialized user pager\n");
-  } else if (options->pager_backed_cache_policy) {
-    FS_TRACE_WARN("blobfs: Pager is not enabled; pager-backed cache policy will not take effect\n");
+  auto fs_ptr = fs.get();
+  auto status_or_buffer = pager::StorageBackedTransferBuffer::Create(
+      pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->Metrics());
+  if (!status_or_buffer.is_ok()) {
+    FS_TRACE_ERROR("blobfs: Could not initialize pager transfer buffer\n");
+    return status_or_buffer.status_value();
   }
+  auto status_or_pager =
+      pager::UserPager::Create(std::move(status_or_buffer).value(), fs_ptr->Metrics());
+  if (!status_or_pager.is_ok()) {
+    FS_TRACE_ERROR("blobfs: Could not initialize user pager\n");
+    return status_or_pager.status_value();
+  }
+  fs->pager_ = std::move(status_or_pager).value();
+  FS_TRACE_INFO("blobfs: Initialized user pager\n");
 
-  if (options->metrics) {
+  if (options.metrics) {
     fs->metrics_->Collect();
   }
 
-  if (options->writability == blobfs::Writability::ReadOnlyDisk) {
+  if (writability == blobfs::Writability::ReadOnlyDisk) {
     FS_TRACE_ERROR("blobfs: Replaying the journal requires a writable disk\n");
     return ZX_ERR_ACCESS_DENIED;
   }
@@ -199,7 +197,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   JournalSuperblock journal_superblock = std::move(journal_superblock_or.value());
   FS_TRACE_DEBUG("blobfs: Journal replayed\n");
 
-  switch (options->writability) {
+  switch (writability) {
     case blobfs::Writability::Writable: {
       FS_TRACE_DEBUG("blobfs: Initializing journal for writeback\n");
       auto journal_or =
@@ -234,20 +232,19 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   }
 
   // Validate the FVM after replaying the journal.
-  status =
-      CheckFvmConsistency(&fs->info_, fs->Device(),
-                          /*repair=*/options->writability != blobfs::Writability::ReadOnlyDisk);
+  status = CheckFvmConsistency(&fs->info_, fs->Device(),
+                               /*repair=*/writability != blobfs::Writability::ReadOnlyDisk);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: FVM info check failed\n");
     return status;
   }
 
-  FS_TRACE_INFO("blobfs: Using eviction policy %s\n", CachePolicyToString(options->cache_policy));
-  if (options->pager_backed_cache_policy) {
+  FS_TRACE_INFO("blobfs: Using eviction policy %s\n", CachePolicyToString(options.cache_policy));
+  if (options.pager_backed_cache_policy) {
     FS_TRACE_INFO("blobfs: Using overridden pager eviction policy %s\n",
-                  CachePolicyToString(*options->pager_backed_cache_policy));
+                  CachePolicyToString(*options.pager_backed_cache_policy));
   }
-  fs->Cache().SetCachePolicy(options->cache_policy);
+  fs->Cache().SetCachePolicy(options.cache_policy);
 
   RawBitmap block_map;
   // Keep the block_map aligned to a block multiple
@@ -279,7 +276,6 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     FS_TRACE_ERROR("blobfs: Failed to load bitmaps: %d\n", status);
     return status;
   }
-
   if ((status = fs->info_mapping_.CreateAndMap(kBlobfsBlockSize, "blobfs-superblock")) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to create info vmo: %d\n", status);
     return status;
@@ -301,7 +297,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // since we can now serve writes on the filesystem, we need to unset the kBlobFlagClean flag
   // to indicate that the filesystem may not be in a "clean" state anymore. This helps to make
   // sure we are unmounted cleanly i.e the kBlobFlagClean flag is set back on clean unmount.
-  if (options->writability == blobfs::Writability::Writable) {
+  if (writability == blobfs::Writability::Writable) {
     BlobTransaction transaction;
     fs->UpdateFlags(transaction, kBlobFlagClean, false);
     transaction.Commit(*fs->journal());
@@ -315,7 +311,6 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
                   *(fs->write_compression_settings_.compression_level));
   }
 
-  auto* fs_ptr = fs.get();
   zx::status<BlobLoader> loader =
       BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->pager_.get(), fs->Metrics());
   if (!loader.is_ok()) {
@@ -873,7 +868,7 @@ void Blobfs::FsckAtEndOfTransaction(zx_status_t status) {
         std::make_unique<block_client::PassThroughReadOnlyBlockDevice>(block_device_.get());
     MountOptions options;
     options.writability = Writability::ReadOnlyDisk;
-    ZX_ASSERT(Fsck(std::move(device), &options) == ZX_OK);
+    ZX_ASSERT(Fsck(std::move(device), options) == ZX_OK);
   }
 }
 

@@ -243,9 +243,6 @@ zx_status_t Fixture::Mount() {
   mount_options.create_mountpoint = true;
   mount_options.wait_until_ready = true;
   mount_options.register_fs = false;
-  if (options_.use_pager) {
-    mount_options.enable_pager = true;
-  }
   if (options_.write_compression_algorithm) {
     mount_options.write_compression_algorithm = options_.write_compression_algorithm;
   }

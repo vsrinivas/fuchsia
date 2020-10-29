@@ -456,7 +456,6 @@ zx_status_t BlockDevice::MountFilesystem() {
       std::optional<std::string> algorithm = std::nullopt;
       std::optional<std::string> eviction_policy = std::nullopt;
       if (mounter_->boot_args()) {
-        options.enable_pager = mounter_->boot_args()->blobfs_enable_userpager();
         algorithm = mounter_->boot_args()->blobfs_write_compression_algorithm();
         eviction_policy = mounter_->boot_args()->blobfs_eviction_policy();
       }

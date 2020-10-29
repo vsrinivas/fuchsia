@@ -12,7 +12,7 @@
 
 namespace blobfs {
 
-zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, MountOptions* options);
+zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, const MountOptions& options);
 
 }  // namespace blobfs
 

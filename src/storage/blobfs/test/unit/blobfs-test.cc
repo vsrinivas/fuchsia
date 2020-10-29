@@ -64,13 +64,13 @@ std::unique_ptr<MockBlockDevice> CreateAndFormatDevice() {
 class BlobfsTest : public testing::Test {
  public:
   void SetUp() final {
-    MountOptions options;
     std::unique_ptr<MockBlockDevice> device = CreateAndFormatDevice();
     ASSERT_TRUE(device);
     device_ = device.get();
     loop_.StartThread();
-    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
-              ZX_OK);
+    ASSERT_EQ(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), MountOptions(), zx::resource(), &fs_),
+        ZX_OK);
     srand(testing::UnitTest::GetInstance()->random_seed());
   }
 

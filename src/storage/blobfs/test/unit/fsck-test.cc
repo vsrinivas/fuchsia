@@ -24,16 +24,14 @@ TEST(FsckTest, TestEmpty) {
   ASSERT_TRUE(device);
   ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
 
-  MountOptions options;
-  ASSERT_EQ(Fsck(std::move(device), &options), ZX_OK);
+  ASSERT_EQ(Fsck(std::move(device), MountOptions()), ZX_OK);
 }
 
 TEST(FsckTest, TestUnmountable) {
   auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
   ASSERT_TRUE(device);
 
-  MountOptions options;
-  ASSERT_EQ(Fsck(std::move(device), &options), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(Fsck(std::move(device), MountOptions()), ZX_ERR_INVALID_ARGS);
 }
 
 TEST(FsckTest, TestCorrupted) {
@@ -47,8 +45,7 @@ TEST(FsckTest, TestCorrupted) {
   info->alloc_inode_count++;
   DeviceBlockWrite(device.get(), block, sizeof(block), kSuperblockOffset);
 
-  MountOptions options;
-  ASSERT_EQ(Fsck(std::move(device), &options), ZX_ERR_IO_OVERRUN);
+  ASSERT_EQ(Fsck(std::move(device), MountOptions()), ZX_ERR_IO_OVERRUN);
 }
 
 TEST(FsckTest, TestOverflow) {
@@ -62,8 +59,7 @@ TEST(FsckTest, TestOverflow) {
   info->inode_count = std::numeric_limits<uint64_t>::max();
   DeviceBlockWrite(device.get(), block, sizeof(block), kSuperblockOffset);
 
-  MountOptions options;
-  ASSERT_EQ(Fsck(std::move(device), &options), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(Fsck(std::move(device), MountOptions()), ZX_ERR_OUT_OF_RANGE);
 }
 
 }  // namespace

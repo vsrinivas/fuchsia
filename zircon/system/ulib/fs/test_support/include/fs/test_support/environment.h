@@ -62,7 +62,6 @@ class Environment : public zxtest::Environment {
     disk_format_type format_type;
     bool show_help;
     bool use_journal = true;
-    bool use_pager = false;
     const char* write_compression_algorithm = nullptr;
     std::optional<int> write_compression_level = std::nullopt;
 
@@ -87,8 +86,6 @@ class Environment : public zxtest::Environment {
   void TearDown() override;
 
   bool use_journal() const { return config_.use_journal; }
-
-  bool use_pager() const { return config_.use_pager; }
 
   std::optional<const char*> write_compression_algorithm() const {
     if (config_.write_compression_algorithm == nullptr) {

@@ -53,7 +53,6 @@ TEST_F(FshostBootArgsTest, GetDefaultBools) {
   EXPECT_EQ(false, boot_args().netboot());
   EXPECT_EQ(false, boot_args().check_filesystems());
   EXPECT_EQ(true, boot_args().wait_for_data());
-  EXPECT_EQ(false, boot_args().blobfs_enable_userpager());
 }
 
 TEST_F(FshostBootArgsTest, GetNonDefaultBools) {
@@ -62,14 +61,12 @@ TEST_F(FshostBootArgsTest, GetNonDefaultBools) {
       {"zircon.system.disable-automount", ""},
       {"zircon.system.filesystem-check", ""},
       {"zircon.system.wait-for-data", "false"},
-      {"blobfs.userpager", ""},
   };
   ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
 
   EXPECT_EQ(true, boot_args().netboot());
   EXPECT_EQ(true, boot_args().check_filesystems());
   EXPECT_EQ(false, boot_args().wait_for_data());
-  EXPECT_EQ(true, boot_args().blobfs_enable_userpager());
 }
 
 TEST_F(FshostBootArgsTest, GetPkgfsFile) {

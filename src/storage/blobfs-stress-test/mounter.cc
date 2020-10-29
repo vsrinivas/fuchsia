@@ -30,7 +30,6 @@ zx_status_t StartFilesystem(zx_handle_t device_handle, zx::channel* out_data_roo
       .verbose_mount = false,
       .collect_metrics = false,
       .wait_until_ready = true,
-      .enable_pager = true,
       .write_compression_algorithm = nullptr,
       .write_compression_level = -1,
       .fsck_after_every_transaction = false,

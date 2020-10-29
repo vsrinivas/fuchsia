@@ -28,10 +28,8 @@ void FdioTest::SetUp() {
   zx::channel diagnostics_dir_server;
   ASSERT_OK(zx::channel::create(0, &diagnostics_dir_client_, &diagnostics_dir_server));
 
-  blobfs::MountOptions options;
-  options.pager = true;
   std::unique_ptr<blobfs::Runner> runner;
-  ASSERT_OK(blobfs::Runner::Create(loop_.get(), std::move(device), &options,
+  ASSERT_OK(blobfs::Runner::Create(loop_.get(), std::move(device), blobfs::MountOptions(),
                                    std::move(vmex_resource_), std::move(diagnostics_dir_server),
                                    &runner));
   ASSERT_OK(runner->ServeRoot(std::move(root_server), layout_));

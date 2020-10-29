@@ -33,9 +33,9 @@ class BlobTest : public testing::Test {
     device_ = device.get();
     ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
 
-    MountOptions options;
-    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
-              ZX_OK);
+    ASSERT_EQ(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), MountOptions(), zx::resource(), &fs_),
+        ZX_OK);
   }
 
   void TearDown() override { device_ = nullptr; }
@@ -118,7 +118,7 @@ TEST_F(BlobTest, ReadingBlobVerifiesTail) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
                           }};
-  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
+  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
                            zx::resource(), &fs_),
             ZX_OK);
 
@@ -154,15 +154,15 @@ TEST_F(BlobTest, ReadingBlobVerifiesTail) {
   };
   ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
-  // Corrupt the end of the block.
-  static_cast<uint8_t*>(buffer.Data(0))[kBlobfsBlockSize - 1] = 1;
+  // Corrupt the end of the page.
+  static_cast<uint8_t*>(buffer.Data(0))[PAGE_SIZE - 1] = 1;
 
   // Write the block back.
   request.opcode = BLOCKIO_WRITE;
   ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
   // Remount and try and read the blob.
-  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
+  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), options, zx::resource(), &fs_),
             ZX_OK);
 
   auto root = OpenRoot();
@@ -188,7 +188,7 @@ TEST_F(BlobTest, ReadWriteAllCompressionFormats) {
                             }};
 
     // Remount with new compression algorithm
-    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
+    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
                              zx::resource(), &fs_),
               ZX_OK);
 
@@ -208,7 +208,7 @@ TEST_F(BlobTest, ReadWriteAllCompressionFormats) {
 
     // Remount with same compression algorithm.
     // This prevents us from relying on caching when we read back the blob.
-    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
+    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
                              zx::resource(), &fs_),
               ZX_OK);
     root = OpenRoot();

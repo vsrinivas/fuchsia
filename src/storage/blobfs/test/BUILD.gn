@@ -244,32 +244,6 @@ isolated_devmgr_unittest_component("blobfs-integration-component") {
   ]
 }
 
-test("blobfs-integration-paged-test") {
-  sources = [
-    "integration/blobfs_integration_paged_main.cc",
-    "integration/launch.cc",
-  ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
-  ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-
-  public_deps = [ ":test-utils-zxtest" ]
-}
-
-isolated_devmgr_unittest_component("blobfs-integration-paged-component") {
-  executable_path = "test/blobfs-integration-paged-test"
-  component_name = "blobfs-integration-paged"
-  services = [ "fuchsia.security.resource.Vmex" ]
-  deps = [ ":blobfs-integration-paged-test" ]
-}
-
-# Creates two components, one regular one that runs the test named with the name
-# "<target_name>", and on paged one named "<target_name>-paged". The target names will have
-# "-component" appended to them.
 template("blobfs_large_integration_test") {
   test_name = target_name
   component_name = "${target_name}-component"
@@ -303,24 +277,6 @@ template("blobfs_large_integration_test") {
     }
   }
 
-  paged_test_name = "${target_name}-paged"
-  paged_component_name = "${paged_test_name}-component"
-
-  test(paged_test_name) {
-    sources = [
-      "integration/large/paged_main.cc",
-      "integration/launch.cc",
-    ]
-
-    defines = [ "BLOBFS_LARGE_INTEGRATION_TEST_EXECUTABLE=\"$test_name\"" ]
-    include_dirs = [ "integration" ]
-
-    deps = [
-      "//sdk/lib/fdio",
-      "//zircon/public/lib/zx",
-    ]
-  }
-
   isolated_devmgr_unittest_component(component_name) {
     executable_path = "test/$test_name"
     component_name = test_name
@@ -330,38 +286,20 @@ template("blobfs_large_integration_test") {
     services = [ "fuchsia.sysinfo.SysInfo" ]
     deps = [ ":$test_name" ]
   }
-
-  isolated_devmgr_unittest_component(paged_component_name) {
-    executable_path = "test/$paged_test_name"
-    component_name = paged_test_name
-
-    # TODO(bug 59859) "SysInfo" service should no longer be needed when the board querying code is
-    # removed and this line can be deleted.
-    services = [ "fuchsia.sysinfo.SysInfo" ]
-    deps = [ ":$paged_test_name" ]
-  }
 }
 
-# :blobfs-fragmentation-component       -> blobfs-fragmentation.cmx
-# :blobfs-fragmentation-paged-component -> blobfs-fragmentation-paged.cmx
 blobfs_large_integration_test("blobfs-fragmentation") {
   sources = [ "integration/large/fragmentation.cc" ]
 }
 
-# :blobfs-max-reservation-component       -> blobfs-max-reservation.cmx
-# :blobfs-max-reservation-paged-component -> blobfs-max-reservation-paged.cmx
 blobfs_large_integration_test("blobfs-max-reservation") {
   sources = [ "integration/large/max-reservation.cc" ]
 }
 
-# :blobfs-no-space-component       -> blobfs-no-space.cmx
-# :blobfs-no-space-paged-component -> blobfs-no-space-paged.cmx
 blobfs_large_integration_test("blobfs-no-space") {
   sources = [ "integration/large/no-space.cc" ]
 }
 
-# :blobfs-use-second-bitmap-component       -> blobfs-use-second-bitmap.cmx
-# :blobfs-use-second-bitmap-paged-component -> blobfs-use-second-bitmap-paged.cmx
 blobfs_large_integration_test("blobfs-use-second-bitmap") {
   sources = [ "integration/large/use-second-bitmap.cc" ]
 }
@@ -370,15 +308,10 @@ fuchsia_test_package("blobfs-integration-package") {
   package_name = "blobs-integration"
   test_components = [
     ":blobfs-fragmentation-component",
-    ":blobfs-fragmentation-paged-component",
     ":blobfs-integration-component",
-    ":blobfs-integration-paged-component",
     ":blobfs-max-reservation-component",
-    ":blobfs-max-reservation-paged-component",
     ":blobfs-no-space-component",
-    ":blobfs-no-space-paged-component",
     ":blobfs-use-second-bitmap-component",
-    ":blobfs-use-second-bitmap-paged-component",
   ]
 }
 

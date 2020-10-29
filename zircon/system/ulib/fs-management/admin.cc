@@ -54,9 +54,6 @@ zx::status<> InitNativeFs(const char* binary, zx::channel device, const init_opt
   if (options.collect_metrics) {
     argv.push_back("--metrics");
   }
-  if (options.enable_pager) {
-    argv.push_back("--pager");
-  }
   if (options.write_compression_algorithm) {
     argv.push_back("--compression");
     argv.push_back(options.write_compression_algorithm);
@@ -150,7 +147,6 @@ const init_options_t default_init_options = {
     .verbose_mount = false,
     .collect_metrics = false,
     .wait_until_ready = true,
-    .enable_pager = false,
     .write_compression_algorithm = nullptr,
     .write_compression_level = -1,
     .cache_eviction_policy = nullptr,

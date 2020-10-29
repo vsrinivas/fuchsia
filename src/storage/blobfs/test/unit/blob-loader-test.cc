@@ -102,7 +102,7 @@ class BlobLoaderTest : public TestWithParam<CompressionAlgorithm> {
     MountOptions options = {.compression_settings = {
                                 .compression_algorithm = GetParam(),
                             }};
-    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
+    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), options, zx::resource(), &fs_),
               ZX_OK);
 
     // Pre-seed with some random blobs.

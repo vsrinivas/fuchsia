@@ -48,7 +48,6 @@ FshostBootArgs::FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::Sy
       {fidl::StringView{"zircon.system.disable-automount"}, zircon_system_disable_automount_},
       {fidl::StringView{"zircon.system.filesystem-check"}, zircon_system_filesystem_check_},
       {fidl::StringView{"zircon.system.wait-for-data"}, zircon_system_wait_for_data_},
-      {fidl::StringView{"blobfs.userpager"}, blobfs_userpager_},
   };
   auto ret = boot_args_->GetBools(fidl::unowned_vec(defaults));
   if (!ret.ok()) {
@@ -58,7 +57,6 @@ FshostBootArgs::FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::Sy
     zircon_system_disable_automount_ = ret->values[1];
     zircon_system_filesystem_check_ = ret->values[2];
     zircon_system_wait_for_data_ = ret->values[3];
-    blobfs_userpager_ = ret->values[4];
   }
 
   auto algorithm = GetStringArgument("blobfs.write-compression-algorithm");

@@ -73,7 +73,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   //
   // The dispatcher should be for the current thread that blobfs is running on.
   static zx_status_t Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
-                            MountOptions* options, zx::resource vmex_resource,
+                            const MountOptions& options, zx::resource vmex_resource,
                             std::unique_ptr<Blobfs>* out);
 
   static std::unique_ptr<BlockDevice> Destroy(std::unique_ptr<Blobfs> blobfs);
@@ -183,8 +183,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
   void PersistBlocks(const ReservedExtent& reserved_extent, BlobTransaction& transaction);
-
-  bool PagingEnabled() const { return pager_ != nullptr; }
 
   bool ShouldCompress() const {
     return write_compression_settings_.compression_algorithm != CompressionAlgorithm::UNCOMPRESSED;
@@ -305,8 +303,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   std::shared_ptr<BlobfsMetrics> metrics_ = Blobfs::CreateMetrics();
 
-  std::unique_ptr<pager::UserPager> pager_ = nullptr;
-  std::optional<CachePolicy> pager_backed_cache_policy_ = std::nullopt;
+  std::unique_ptr<pager::UserPager> pager_;
+  std::optional<CachePolicy> pager_backed_cache_policy_;
 
   BlobLoader loader_;
   std::shared_mutex fsck_at_end_of_transaction_mutex_;

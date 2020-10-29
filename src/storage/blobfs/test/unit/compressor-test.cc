@@ -411,8 +411,8 @@ class BlobfsTestFixture : public testing::Test {
     constexpr uint64_t kBlockCount = 1024;
     auto device = std::make_unique<block_client::FakeBlockDevice>(kBlockCount, kBlobfsBlockSize);
     EXPECT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
-    blobfs::MountOptions options;
-    EXPECT_EQ(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs_),
+    EXPECT_EQ(Blobfs::Create(nullptr, std::move(device), blobfs::MountOptions(), zx::resource(),
+                             &blobfs_),
               ZX_OK);
     fbl::RefPtr<fs::Vnode> root;
     EXPECT_EQ(blobfs_->OpenRootNode(&root), ZX_OK);

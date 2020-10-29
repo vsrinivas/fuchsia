@@ -16,7 +16,7 @@
 
 namespace blobfs {
 
-zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, MountOptions* options) {
+zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, const MountOptions& options) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx_status_t status = loop.StartThread();
   if (status != ZX_OK) {
@@ -31,7 +31,7 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, MountOptions
     return status;
   }
   BlobfsChecker::Options checker_options;
-  if (options->writability == Writability::ReadOnlyDisk) {
+  if (blobfs->writability() == Writability::ReadOnlyDisk) {
     checker_options.repair = false;
   }
   BlobfsChecker checker(std::move(blobfs), checker_options);
