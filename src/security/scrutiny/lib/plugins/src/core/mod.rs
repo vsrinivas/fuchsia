@@ -13,14 +13,7 @@ use {
         controller::{blob::*, component::*, package::*, route::*, zbi::*},
         package::collector::*,
     },
-    scrutiny::{
-        collectors, controllers,
-        engine::hook::PluginHooks,
-        engine::plugin::{Plugin, PluginDescriptor},
-        model::collector::DataCollector,
-        model::controller::DataController,
-        plugin,
-    },
+    scrutiny::prelude::*,
     std::sync::Arc,
 };
 

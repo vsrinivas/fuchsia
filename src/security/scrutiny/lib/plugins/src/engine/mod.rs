@@ -12,17 +12,11 @@ use {
         model::ModelStatsController,
         plugin::PluginListController,
     },
-    scrutiny::{
-        collectors, controllers,
-        engine::{
-            dispatcher::ControllerDispatcher,
-            hook::PluginHooks,
-            manager::PluginManager,
-            plugin::{Plugin, PluginDescriptor},
-            scheduler::CollectorScheduler,
-        },
-        model::collector::DataCollector,
-        model::controller::DataController,
+    scrutiny::prelude::*,
+    scrutiny::engine::{
+        dispatcher::ControllerDispatcher,
+        manager::PluginManager,
+        scheduler::CollectorScheduler,
     },
     std::sync::{Arc, Mutex, RwLock},
 };

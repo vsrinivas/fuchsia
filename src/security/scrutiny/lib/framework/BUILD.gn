@@ -37,6 +37,7 @@ if (is_host) {
       "src/model/error.rs",
       "src/model/mod.rs",
       "src/model/model.rs",
+      "src/prelude.rs",
       "src/store/embedded.rs",
       "src/store/error.rs",
       "src/store/mod.rs",

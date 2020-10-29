@@ -9,14 +9,7 @@ use {
         blobfs::BlobFsExtractController, fvm::FvmExtractController,
         package::PackageExtractController, zbi::ZbiExtractController,
     },
-    scrutiny::{
-        collectors, controllers,
-        engine::hook::PluginHooks,
-        engine::plugin::{Plugin, PluginDescriptor},
-        model::collector::DataCollector,
-        model::controller::DataController,
-        plugin,
-    },
+    scrutiny::prelude::*,
     std::sync::Arc,
 };
 
@@ -41,7 +34,6 @@ mod tests {
         crate::toolkit::controller::{
             fvm::FvmExtractRequest, package::PackageExtractRequest, zbi::ZbiExtractRequest,
         },
-        scrutiny::model::model::*,
         tempfile::tempdir,
     };
 

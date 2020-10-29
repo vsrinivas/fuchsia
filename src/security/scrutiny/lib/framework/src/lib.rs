@@ -4,4 +4,5 @@
 
 pub mod engine;
 pub mod model;
+pub mod prelude;
 pub mod store;
