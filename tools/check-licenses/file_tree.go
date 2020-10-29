@@ -68,11 +68,7 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 		}
 		if hasLowerPrefix(info.Name(), config.SingleLicenseFiles) {
 			metrics.increment("num_single_license_files")
-			abs, err := filepath.Abs(path)
-			if err != nil {
-				abs = path
-			}
-			ft.SingleLicenseFiles[abs] = []*License{}
+			ft.SingleLicenseFiles[path] = []*License{}
 			return nil
 		}
 		if hasExt(info.Name(), config.TextExtensionList) {
