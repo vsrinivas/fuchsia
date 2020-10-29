@@ -55,6 +55,9 @@ if (current_toolchain == default_toolchain) {
         strip = "--strip-sections"
         environment = "user.vdso"
 
+        with_shared = false
+        is_pic_default = true
+
         toolchain_variant_args = {
           configs = [ "//zircon/system/ulib/zircon:user.vdso.config" ]
         }

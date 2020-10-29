@@ -468,11 +468,7 @@ if (zx == "/") {
 }
 
 # The C runtime startup object file (a.k.a. 'crt1', or 'Scrt1.o').
-if (zx == "/") {
-  sysroot_crt1_toolchain = current_toolchain
-} else {
-  sysroot_crt1_toolchain = target_toolchain
-}
+sysroot_crt1_toolchain = sysroot_libc_toolchain
 sysroot_crt1_target = "$zx/system/ulib/c:crt1($sysroot_crt1_toolchain)"
 
 sysroot_crt1_obj =

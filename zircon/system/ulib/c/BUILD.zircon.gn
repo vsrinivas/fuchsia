@@ -92,6 +92,15 @@ if (zx != "/" && zircon_toolchain == false) {
       # (only) place it needs to be installed at runtime is where the
       # PT_INTERP strings embedded in executables point, which is ld.so.1.
       install_path = "lib/${toolchain.libprefix}ld.so.1"
+    } else {
+      # TODO(60613): Enable this once the sysroot moves entirely to the Fuchsia build.
+      # install_name = "ld.so.1"
+
+      metadata = {
+        runtime_deps_manifest_lines =
+            [ "lib/${toolchain.libprefix}ld.so.1=" +
+              rebase_path("$root_out_dir/libc.so", root_build_dir) ]
+      }
     }
 
     public_configs = [ "$zx/third_party/ulib/musl:headers" ]
@@ -151,23 +160,33 @@ source_set("exit") {
   deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
 }
 
-source_set("crt1") {
-  sources = [ "Scrt1.cc" ]
+if (zx != "/" && zircon_toolchain == false) {
+  # Don't build the C runtime startup object in the Fuchsia user
+  # toolchain, because this adds many unwanted dependencies to fdio,
+  # trace-engine and whatnot that are completely un-needed and also
+  # interfere with sysroot generation.
+  group("crt1") {
+    public_deps = [ ":crt1(//zircon/system/ulib/c:user.libc_$current_cpu)" ]
+  }
+} else {
+  source_set("crt1") {
+    sources = [ "Scrt1.cc" ]
 
-  # This runs before all runtime setup.
-  configs += [ "$zx_build_config:no_sanitizers" ]
+    # This runs before all runtime setup.
+    configs += [ "$zx_build_config:no_sanitizers" ]
 
-  # Minimize the code.  Even if there were lazy PLT resolution, it's never
-  # worthwhile to have PLT entries for main or __libc_start_main, since
-  # they are always used eagerly anyway.
-  cflags = [ "-fno-plt" ]
+    # Minimize the code.  Even if there were lazy PLT resolution, it's never
+    # worthwhile to have PLT entries for main or __libc_start_main, since
+    # they are always used eagerly anyway.
+    cflags = [ "-fno-plt" ]
 
-  if (zx == "/") {
-    metadata = {
-      # TODO(fxbug.dev/3156): temporary kludges
-      if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] ==
-          toolchain.tags) {
-        legacy_sysroot = sysroot_crt1_entries
+    if (zx == "/") {
+      metadata = {
+        # TODO(fxbug.dev/3156): temporary kludges
+        if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] ==
+            toolchain.tags) {
+          legacy_sysroot = sysroot_crt1_entries
+        }
       }
     }
   }
