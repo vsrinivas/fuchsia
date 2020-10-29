@@ -2,205 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod controller;
+
 use {
-    anyhow::Result,
-    regex::Regex,
+    crate::search::controller::{
+        components::ComponentSearchController, manifests::ManifestSearchController,
+        packages::PackageSearchController, routes::RouteSearchController,
+    },
     scrutiny::{
         collectors, controllers,
         engine::hook::PluginHooks,
         engine::plugin::{Plugin, PluginDescriptor},
         model::collector::DataCollector,
-        model::controller::{DataController, HintDataType},
-        model::model::*,
+        model::controller::DataController,
         plugin,
     },
-    scrutiny_utils::usage::UsageBuilder,
-    serde::{Deserialize, Serialize},
-    serde_json::{json, value::Value},
     std::sync::Arc,
 };
-
-#[derive(Deserialize, Serialize)]
-struct ComponentSearchRequest {
-    url: String,
-}
-
-#[derive(Default)]
-pub struct ComponentSearchController {}
-
-impl DataController for ComponentSearchController {
-    fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
-        let request: ComponentSearchRequest = serde_json::from_value(query)?;
-        let mut response = Vec::<Component>::new();
-        let url_re = Regex::new(&request.url)?;
-        let components = model.components().read().unwrap();
-        for component in components.iter() {
-            if url_re.is_match(&component.url) {
-                response.push(component.clone());
-            }
-        }
-        Ok(json!(response))
-    }
-
-    fn description(&self) -> String {
-        "Searches for matching component urls across all components.".to_string()
-    }
-
-    fn usage(&self) -> String {
-        UsageBuilder::new()
-            .name("search.components - Search for components with a given url pattern.")
-            .summary("search.components --url fuchsia-pkg://some_url_pattern")
-            .description(
-                "Searches all the component urls and returns the components\
-            that match the selected url pattern.
-            ",
-            )
-            .arg("--url", "Searches for matching url components.")
-            .build()
-    }
-
-    fn hints(&self) -> Vec<(String, HintDataType)> {
-        vec![("--url".to_string(), HintDataType::NoType)]
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-struct ManifestSearchRequest {
-    manifest: String,
-}
-
-#[derive(Default)]
-pub struct ManifestSearchController {}
-
-impl DataController for ManifestSearchController {
-    fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
-        let request: ManifestSearchRequest = serde_json::from_value(query)?;
-        let mut response = Vec::<Manifest>::new();
-        let manifest_re = Regex::new(&request.manifest)?;
-        let manifests = model.manifests().read().unwrap();
-        for manifest in manifests.iter() {
-            if let ManifestData::Version1(data) = &manifest.manifest {
-                if manifest_re.is_match(&data) {
-                    response.push(manifest.clone());
-                }
-            }
-        }
-        Ok(json!(response))
-    }
-
-    fn description(&self) -> String {
-        "Searches for matching manifest file names in all packages.".to_string()
-    }
-
-    fn usage(&self) -> String {
-        UsageBuilder::new()
-            .name("search.manifests - Search matching manifest patterns.")
-            .summary("search.manifests --manifest deprecated_feature")
-            .description(
-                "Searches for a specific pattern or protocol used in \
-            CMX files. This is useful if you want to search for all the manifests \
-            that contain a certain feature, protocol or pattern.",
-            )
-            .arg("--manifest", "The manifest pattern to search for.")
-            .build()
-    }
-
-    fn hints(&self) -> Vec<(String, HintDataType)> {
-        vec![("--manifest".to_string(), HintDataType::NoType)]
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-struct PackageSearchRequest {
-    files: String,
-}
-
-#[derive(Default)]
-pub struct PackageSearchController {}
-
-impl DataController for PackageSearchController {
-    fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
-        let request: PackageSearchRequest = serde_json::from_value(query)?;
-        let mut response = Vec::<Package>::new();
-        let file_re = Regex::new(&request.files)?;
-        let packages = model.packages().read().unwrap();
-        for package in packages.iter() {
-            for (file_name, _blob) in package.contents.iter() {
-                if file_re.is_match(&file_name) {
-                    response.push(package.clone());
-                    break;
-                }
-            }
-        }
-        Ok(json!(response))
-    }
-
-    fn description(&self) -> String {
-        "Searches for matching file names in all packages.".to_string()
-    }
-
-    fn usage(&self) -> String {
-        UsageBuilder::new()
-            .name("search.packages - Search for files in packages.")
-            .summary("search.packages --files some_file_name ")
-            .description(
-                "Searches for specific file names within all the \
-            indexed packages. This is useful if you want to track down which
-            packages are using a certain shared library or which package a
-            certain configuration file is in.",
-            )
-            .arg("--files", "The file to search for.")
-            .build()
-    }
-
-    fn hints(&self) -> Vec<(String, HintDataType)> {
-        vec![("--files".to_string(), HintDataType::NoType)]
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-struct RouteSearchRequest {
-    service_name: String,
-}
-
-#[derive(Default)]
-pub struct RouteSearchController {}
-
-impl DataController for RouteSearchController {
-    fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
-        let request: RouteSearchRequest = serde_json::from_value(query)?;
-        let mut response = Vec::<Route>::new();
-        let service_re = Regex::new(&request.service_name)?;
-        let routes = model.routes().read().unwrap();
-        for route in routes.iter() {
-            if service_re.is_match(&route.service_name) {
-                response.push(route.clone());
-            }
-        }
-        Ok(json!(response))
-    }
-
-    fn description(&self) -> String {
-        "Searches for matching service names across all routes.".to_string()
-    }
-
-    fn usage(&self) -> String {
-        UsageBuilder::new()
-            .name("search.routes - Searchs all the routes for a particular service.")
-            .summary("search.routes --service_name Some.Service.Name")
-            .description(
-                "Searches all of the routes indexed for a particular service \
-            name usage.
-            ",
-            )
-            .arg("--service_name", "Searches all the routes for usage of the service name")
-            .build()
-    }
-
-    fn hints(&self) -> Vec<(String, HintDataType)> {
-        vec![("--service_name".to_string(), HintDataType::NoType)]
-    }
-}
 
 plugin!(
     SearchPlugin,
@@ -218,7 +36,17 @@ plugin!(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::collections::HashMap, tempfile::tempdir};
+    use {
+        super::*,
+        crate::search::controller::{
+            components::ComponentSearchRequest, manifests::ManifestSearchRequest,
+            packages::PackageSearchRequest, routes::RouteSearchRequest,
+        },
+        scrutiny::model::model::*,
+        serde_json::json,
+        std::collections::HashMap,
+        tempfile::tempdir,
+    };
 
     fn data_model() -> Arc<DataModel> {
         let store_dir = tempdir().unwrap();
