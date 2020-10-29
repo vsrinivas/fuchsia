@@ -35,7 +35,7 @@ and debugging Fuchsia and programs running on Fuchsia.
 ## API
 
  - [README](/docs/concepts/api/README.md) - Developing APIs for Fuchsia
- - [Council](/docs/concepts/api/council.md) - Definition of the API council
+ - [API Council](/docs/contribute/governance/api_council.md) - Definition of the API council
  - [System](/docs/concepts/api/system.md) - Rubric for designing the Zircon System Interface
  - [FIDL API][fidl-api] - Rubric for designing FIDL protocols
  - [FIDL style][fidl-style] - FIDL style rubric

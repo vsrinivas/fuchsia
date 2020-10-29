@@ -159,5 +159,5 @@ The FIDL protocols included in the Fuchsia System Interface resides in the top-l
 Fuchsia IDK. Clients of the Fuchsia IDK should not declare names in the top-level
 `fuchsia` namespace.
 
-[Fuchsia API Council]: /docs/concepts/api/council.md
+[Fuchsia API Council]: /docs/contribute/governance/api_council.md
 [FIDL API style rubric]: /docs/development/languages/fidl/guides/style.md

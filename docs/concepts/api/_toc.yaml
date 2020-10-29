@@ -12,8 +12,6 @@ toc:
   path: /docs/concepts/api/c.md
 - title: "Dart API readability rubric"
   path: /docs/concepts/api/dart.md
-- title: "Fuchsia API council charter"
-  path: /docs/concepts/api/council.md
 - title: "Fuchsia device interface rubric"
   path: /docs/concepts/api/device_interfaces.md
 - title: "API documentation readability rubric"

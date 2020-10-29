@@ -5,7 +5,8 @@
 This document contains guidance on writing API documentation for Fuchsia. It
 applies both to public-facing APIs (those surfaced via an SDK) and
 Fuchsia-internal ones. Public facing API documentation will be reviewed by the
-[API Council](council.md) for adherence to this rubric.
+[API Council](/docs/contribute/governance/api_council.md) for adherence to this
+rubric.
 
 ## Overall commenting rules
 

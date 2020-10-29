@@ -10,8 +10,6 @@ Submitted | YYYY-MM-DD
 Reviewed  | *leave blank until reviewed*
 Issue     | *link to bugs.fuchsia.dev issue*
 
-[TOC]
-
 ## Summary
 
 A one paragraph description of the rest of the proposal.

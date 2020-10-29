@@ -87,6 +87,9 @@ applies when reviewing code contributions and design documents. For example,
 the standards describe the level of testing expected for code contributions and
 the balance between short- and long-term considerations in designs.
 
+The council may delegate part of this responsibility. For example, it oversees
+the [API Council][api-council] which is responsible for Fuchsia’s API surface.
+
 ### Engineering review
 
 The council facilitates engineering design reviews. The council establishes the
@@ -177,6 +180,7 @@ The current members of the Fuchsia Eng Council are listed in
 
 <!-- Reference links -->
 
+[api-council]: /docs/contribute/governance/api_council.md
 [rfc-process]: /docs/contribute/governance/rfcs/README.md
 [rough-consensus]: https://en.wikipedia.org/wiki/Rough_consensus
 [rfc-owners]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/contribute/governance/rfcs/OWNERS

@@ -8,7 +8,7 @@ APIs for Fuchsia.
 Although the documentation in this directory applies to all Fuchsia APIs, it
 will be enforced for the _public facing surface area_ of Fuchsia: the Fuchsia
 APIs that are surfaced to developers via IDK releases.  All public facing API
-changes will be reviewed by the [API Council](council.md) for consistency with
+changes will be reviewed by the [API Council][api-council] for consistency with
 these guidelines.
 
 ## Rubrics
@@ -29,5 +29,6 @@ below is not complete: as Fuchsia evolves, more rubrics will be added.
    * [Fuchsia Device Interface](device_interfaces.md)
 
 <!-- xrefs -->
+[api-council]: /docs/contribute/governance/api_council.md
 [fidl-style]: /docs/development/languages/fidl/guides/style.md
 [fidl-api]: /docs/concepts/api/fidl.md

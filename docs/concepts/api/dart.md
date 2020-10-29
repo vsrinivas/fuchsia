@@ -38,7 +38,7 @@ When organizing the structure of a Dart package it is important to follow the re
 All comments should adhere to [Effective Dart: Documentation](https://www.dartlang.org/guides/language/effective-dart/documentation) as well as the [Fuchsia Documentation](documentation.md) guide.
 
 ## Dependencies
-Packages written for the Dart Fuchsia SDK should not take on third party dependencies that are not themselves also in the Fuchsia SDK. Exceptions will be made for the following, well established, dependencies which are likely to be present in all environments. Any packages which should be added to this list must be approved by the [API Council](council.md).
+Packages written for the Dart Fuchsia SDK should not take on third party dependencies that are not themselves also in the Fuchsia SDK. Exceptions will be made for the following, well established, dependencies which are likely to be present in all environments. Any packages which should be added to this list must be approved by the [API Council](/docs/contribute/governance/api_council.md).
 
 - [logger](https://pub.dev/packages/logging)
 - [meta](https://pub.dev/packages/meta)

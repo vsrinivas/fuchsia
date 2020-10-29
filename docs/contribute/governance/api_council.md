@@ -159,11 +159,15 @@ As the project evolves, the list of functional areas (and therefore the makeup
 of the council) will evolve as well. The list of functional areas is maintained
 by Fuchsia leadership.
 
-The council also has a *chair*, whose job is to facilitate the operations of the
-council. For example, the chair (a) schedules meetings, (b) sets the agenda for
-those meetings, and (c) assesses whether the council has reached
-[rough consensus](https://en.wikipedia.org/wiki/Rough_consensus). The chair is
-appointed by Fuchsia leadership.
+The council is overseen by the [Fuchsia Eng Council][eng-council].
+
+The council has a *chair*, who is appointed by Fuchsia leadership and
+facilitates the operations of the Fuchsia Eng council. The chair has the
+following responsibilities:
+
+* Schedules meetings.
+* Sets the agenda for each meeting.
+* Assesses if the council has reached [rough consensus][rough-consensus].
 
 ## Decision process
 
@@ -192,24 +196,21 @@ council member responsible for that area, but any council member can approve the
 change if the responsible council member is unavailable.
 
 Before being merged, every CL that modifies the Fuchsia API Surface must receive
-an API-Review+1 from a member of
-[api-council@fuchsia.com](https://groups.google.com/a/fuchsia.com/forum/#!forum/api-council)
-in addition to the usual Code-Review+2. The same person can provide both
+an API-Review+1 from a member of [api-council@fuchsia.com][api-council-group] in
+addition to the usual Code-Review+2. The same person can provide both
 API-Review+1 and Code-Review+2 for a given change, but someone cannot give their
-own CLs API-Review+1. See
-[Review Labels](https://gerrit-review.googlesource.com/Documentation/config-labels.html)
-for documentation about this Gerrit feature.
+own CLs API-Review+1. See [Review Labels][review-labels] for documentation about
+this Gerrit feature.
 
 For small API changes, especially incremental refinements to existing APIs, a
 code review is usually sufficient for an API reviewer to give the change
 API-Review+1. However, for larger changes, especially those that expand the API
 surface significantly, the API designer should write an *API Design Document*
-(see [Fuchsia API Design Template](http://go.corp.google.com/fuchsia-api-design-template)),
-which explains the design of the API, including use cases and examples, as well
-as security and privacy considerations. An API reviewer can always request the
-API designer to write an API Design Document, even for small changes if the API
-reviewer does not feel comfortable approving the change purely through code
-review.
+(see [Fuchsia API Design Template][api-design-template]), which explains the
+design of the API, including use cases and examples, as well as security and
+privacy considerations. An API reviewer can always request the API designer to
+write an API Design Document, even for small changes if the API reviewer does
+not feel comfortable approving the change purely through code review.
 
 API designers are also encouraged to seek early feedback from council members.
 For example, API designers should consider sharing work-in-progress API Design
@@ -312,3 +313,12 @@ API Council, the Web API OWNERS, the W3C, and the IETF. Special thanks to Jeff
 Brown, Dimitri Glazkov, Jeremy Manson, Rebecca Silberstein, and Greg Simon for
 sharing their experience with API governance and for their thoughtful feedback
 on early drafts of this document.
+
+<!-- Reference links -->
+
+[api-council-group]: https://groups.google.com/a/fuchsia.com/forum/#!forum/api-council
+<!-- TODO(fxb/62922): Publish the Fuchsia API Design Template -->
+[api-design-template]: http://go.corp.google.com/fuchsia-api-design-template
+[eng-council]: /docs/contribute/governance/eng_council.md
+[review-labels]: https://gerrit-review.googlesource.com/Documentation/config-labels.html
+[rough-consensus]: https://en.wikipedia.org/wiki/Rough_consensus

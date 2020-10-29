@@ -2,7 +2,7 @@
 
 This directory contains the source code for the core of the [Fuchsia
 Fuchsia Integrator Development Kit (IDK)](../docs/glossary.md#fuchsia-idk),
-formerlly called the Fuchsia SDK. The IDK is produced as an output
+formerly called the Fuchsia SDK. The IDK is produced as an output
 of the build by processing the contents of this directory. For example, this
 directory might contain the source code for a library that is included in the
 IDK as a prebuilt shared library.
@@ -25,6 +25,6 @@ projects. See [sdk_atom.gni](../build/sdk/sdk_atom.gni) for more details.
 
 ## Governance
 
-The API surface described by the IDK is governed by the
-[Fuchsia API Council](../docs/concepts/api/council.md) and should conform to
-the appropriate [API rubrics](../docs/concepts/api/README.md).
+The API surface described by the IDK is governed by the [Fuchsia API
+Council](/docs/contribute/governance/api_council.md) and should conform to the
+appropriate [API rubrics](/docs/concepts/api/README.md).

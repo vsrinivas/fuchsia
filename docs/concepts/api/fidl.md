@@ -1378,8 +1378,8 @@ interact with a potentially large set of logical objects through a single
 protocol.
 
 <!-- xrefs -->
-[api-council]: /docs/concepts/api/council.md
-[api-council-membership]: /docs/concepts/api/council.md#membership
+[api-council]: /docs/contribute/governance/api_council.md
+[api-council-membership]: /docs/contribute/governance/api_council.md#membership
 [ftp-025]: /docs/contribute/governance/fidl/ftp/ftp-025.md
 [locale-passing-example]: /garnet/examples/intl/wisdom/
 [rust-hanging-get]: /docs/development/languages/fidl/guides/rust-hanging-get.md
