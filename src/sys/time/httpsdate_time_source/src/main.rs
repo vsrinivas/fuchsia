@@ -6,7 +6,10 @@ mod datatypes;
 mod diagnostics;
 mod httpsdate;
 
-use crate::diagnostics::{CobaltDiagnostics, CompositeDiagnostics, InspectDiagnostics};
+use crate::datatypes::Phase;
+use crate::diagnostics::{
+    CobaltDiagnostics, CompositeDiagnostics, Diagnostics, InspectDiagnostics,
+};
 use crate::httpsdate::{HttpsDateUpdateAlgorithm, RetryStrategy};
 use anyhow::{Context, Error};
 use fidl_fuchsia_time_external::{PushSourceRequestStream, Status};
@@ -37,9 +40,12 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(|stream: PushSourceRequestStream| stream);
 
     let inspect = InspectDiagnostics::new(fuchsia_inspect::component::inspector().root());
-    fuchsia_inspect::component::inspector().serve(&mut fs)?;
     let (cobalt, cobalt_sender_fut) = CobaltDiagnostics::new();
     let diagnostics = CompositeDiagnostics::new(inspect, cobalt);
+    // TODO(satsukiu): remove once the algorithm starts in initial.
+    diagnostics.phase_update(&Phase::Maintain);
+
+    fuchsia_inspect::component::inspector().serve(&mut fs)?;
 
     let update_algorithm =
         HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, REQUEST_URI.parse()?, diagnostics);

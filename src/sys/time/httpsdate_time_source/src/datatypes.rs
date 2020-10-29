@@ -5,6 +5,7 @@
 use fidl_fuchsia_time_external::TimeSample;
 use fuchsia_zircon as zx;
 use push_source::Update;
+use time_metrics_registry::HttpsdateBoundSizeMetricDimensionPhase as CobaltPhase;
 
 /// An internal representation of a `fuchsia.time.external.TimeSample` that contains
 /// additional metrics.
@@ -30,6 +31,31 @@ impl Into<Update> for HttpsSample {
             standard_deviation: Some(self.standard_deviation.into_nanos()),
         }
         .into()
+    }
+}
+
+/// A phase in the HTTPS algorithm.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Phase {
+    /// A phase comprised of the first sample only.
+    #[allow(unused)]
+    Initial,
+    /// A phase during which samples are produced relatively frequently to converge on an accurate
+    /// time.
+    #[allow(unused)]
+    Converge,
+    /// A phase during which samples are produced relatively infrequently to maintain an accurate
+    /// time.
+    Maintain,
+}
+
+impl Into<CobaltPhase> for Phase {
+    fn into(self) -> CobaltPhase {
+        match self {
+            Phase::Initial => CobaltPhase::Initial,
+            Phase::Converge => CobaltPhase::Converge,
+            Phase::Maintain => CobaltPhase::Maintain,
+        }
     }
 }
 

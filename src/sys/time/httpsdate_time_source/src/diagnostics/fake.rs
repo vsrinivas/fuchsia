@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::datatypes::HttpsSample;
+use crate::datatypes::{HttpsSample, Phase};
 use crate::diagnostics::Diagnostics;
 use httpdate_hyper::HttpsDateError;
 use parking_lot::Mutex;
@@ -13,12 +13,18 @@ pub struct FakeDiagnostics {
     successes: Mutex<Vec<HttpsSample>>,
     /// An ordered list of the failures received since the last reset.
     failures: Mutex<Vec<HttpsDateError>>,
+    /// An ordered list of phase updates received since the last reset.
+    phases: Mutex<Vec<Phase>>,
 }
 
 impl FakeDiagnostics {
     /// Constructs a new `FakeDiagnostics`.
     pub fn new() -> Self {
-        FakeDiagnostics { successes: Mutex::new(Vec::new()), failures: Mutex::new(Vec::new()) }
+        FakeDiagnostics {
+            successes: Mutex::new(Vec::new()),
+            failures: Mutex::new(Vec::new()),
+            phases: Mutex::new(Vec::new()),
+        }
     }
 
     /// Returns a copy of the successes received since the last reset.
@@ -31,10 +37,16 @@ impl FakeDiagnostics {
         self.failures.lock().clone()
     }
 
+    /// Returns a copy of the phase updates received since the last reset.
+    pub fn phase_updates(&self) -> Vec<Phase> {
+        self.phases.lock().clone()
+    }
+
     /// Clears all recorded interactions.
     pub fn reset(&self) {
         self.successes.lock().clear();
         self.failures.lock().clear();
+        self.phases.lock().clear();
     }
 }
 
@@ -46,6 +58,10 @@ impl Diagnostics for FakeDiagnostics {
     fn failure(&self, error: &HttpsDateError) {
         self.failures.lock().push(*error);
     }
+
+    fn phase_update(&self, phase: &Phase) {
+        self.phases.lock().push(*phase);
+    }
 }
 
 impl<T: AsRef<FakeDiagnostics> + Send + Sync> Diagnostics for T {
@@ -55,6 +71,10 @@ impl<T: AsRef<FakeDiagnostics> + Send + Sync> Diagnostics for T {
 
     fn failure(&self, error: &HttpsDateError) {
         self.as_ref().failure(error);
+    }
+
+    fn phase_update(&self, phase: &Phase) {
+        self.as_ref().phase_update(phase);
     }
 }
 
@@ -82,6 +102,8 @@ mod test {
     }
     const ERROR_1: HttpsDateError = HttpsDateError::NetworkError;
     const ERROR_2: HttpsDateError = HttpsDateError::InvalidHostname;
+    const PHASE_1: Phase = Phase::Initial;
+    const PHASE_2: Phase = Phase::Maintain;
 
     #[test]
     fn log_and_reset_successes() {
@@ -111,5 +133,20 @@ mod test {
 
         diagnostics.reset();
         assert_eq!(diagnostics.failures(), vec![]);
+    }
+
+    #[test]
+    fn log_and_reset_phases() {
+        let diagnostics = FakeDiagnostics::new();
+        assert_eq!(diagnostics.phase_updates(), vec![]);
+
+        diagnostics.phase_update(&PHASE_1);
+        assert_eq!(diagnostics.phase_updates(), vec![PHASE_1]);
+
+        diagnostics.phase_update(&PHASE_2);
+        assert_eq!(diagnostics.phase_updates(), vec![PHASE_1, PHASE_2]);
+
+        diagnostics.reset();
+        assert_eq!(diagnostics.phase_updates(), vec![]);
     }
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::datatypes::HttpsSample;
+use crate::datatypes::{HttpsSample, Phase};
 use crate::diagnostics::Diagnostics;
 use httpdate_hyper::HttpsDateError;
 
@@ -33,6 +33,11 @@ impl<L: Diagnostics, R: Diagnostics> Diagnostics for CompositeDiagnostics<L, R> 
         self.left.failure(error);
         self.right.failure(error);
     }
+
+    fn phase_update(&self, phase: &Phase) {
+        self.left.phase_update(phase);
+        self.right.phase_update(phase);
+    }
 }
 
 #[cfg(test)]
@@ -53,6 +58,7 @@ mod test {
         };
     }
     const TEST_ERROR: HttpsDateError = HttpsDateError::NetworkError;
+    const TEST_PHASE: Phase = Phase::Converge;
 
     #[test]
     fn log_successes() {
@@ -78,5 +84,18 @@ mod test {
         composite.failure(&TEST_ERROR);
         assert_eq!(left.failures(), vec![TEST_ERROR]);
         assert_eq!(right.failures(), vec![TEST_ERROR]);
+    }
+
+    #[test]
+    fn log_phase_updates() {
+        let left = Arc::new(FakeDiagnostics::new());
+        let right = Arc::new(FakeDiagnostics::new());
+        let composite = CompositeDiagnostics::new(Arc::clone(&left), Arc::clone(&right));
+        assert!(left.phase_updates().is_empty());
+        assert!(right.phase_updates().is_empty());
+
+        composite.phase_update(&TEST_PHASE);
+        assert_eq!(left.phase_updates(), vec![TEST_PHASE]);
+        assert_eq!(right.phase_updates(), vec![TEST_PHASE]);
     }
 }

@@ -14,7 +14,7 @@ pub use self::composite::CompositeDiagnostics;
 pub use self::fake::FakeDiagnostics;
 pub use self::inspect::InspectDiagnostics;
 
-use crate::datatypes::HttpsSample;
+use crate::datatypes::{HttpsSample, Phase};
 use httpdate_hyper::HttpsDateError;
 
 /// A standard interface for recording sample production attempts for diagnostic purposes.
@@ -23,4 +23,6 @@ pub trait Diagnostics: Send + Sync {
     fn success(&self, sample: &HttpsSample);
     /// Records a failed attempt to produce a sample.
     fn failure(&self, error: &HttpsDateError);
+    /// Records a change in the phase.
+    fn phase_update(&self, phase: &Phase);
 }

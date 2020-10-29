@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::datatypes::HttpsSample;
+use crate::datatypes::{HttpsSample, Phase};
 use crate::diagnostics::Diagnostics;
 use fuchsia_inspect::{
-    ArrayProperty, IntArrayProperty, IntProperty, Node, NumericProperty, Property, UintProperty,
+    ArrayProperty, IntArrayProperty, IntProperty, Node, NumericProperty, Property, StringProperty,
+    UintProperty,
 };
+use fuchsia_zircon as zx;
 use httpdate_hyper::HttpsDateError;
 use log::warn;
 use parking_lot::Mutex;
@@ -28,6 +30,10 @@ pub struct InspectDiagnostics {
     failure_counts: Mutex<HashMap<HttpsDateError, UintProperty>>,
     /// Diagnostic data for the last successful sample.
     last_successful: Mutex<Option<SampleMetric>>,
+    /// The current phase the algorithm is in.
+    phase: StringProperty,
+    /// Monotonic time at which the phase was last updated.
+    phase_update_time: IntProperty,
 }
 
 impl InspectDiagnostics {
@@ -39,6 +45,9 @@ impl InspectDiagnostics {
             failure_node: root_node.create_child("failure_counts"),
             failure_counts: Mutex::new(HashMap::new()),
             last_successful: Mutex::new(None),
+            phase: root_node.create_string("phase", &format!("{:?}", Phase::Initial)),
+            phase_update_time: root_node
+                .create_int("phase_update_time", zx::Time::get_monotonic().into_nanos()),
         }
     }
 }
@@ -67,6 +76,11 @@ impl Diagnostics for InspectDiagnostics {
                     .insert(*error, self.failure_node.create_uint(format!("{:?}", error), 1));
             }
         }
+    }
+
+    fn phase_update(&self, phase: &Phase) {
+        self.phase.set(&format!("{:?}", phase));
+        self.phase_update_time.set(zx::Time::get_monotonic().into_nanos());
     }
 }
 
@@ -129,7 +143,7 @@ impl SampleMetric {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector};
     use fuchsia_zircon as zx;
     use lazy_static::lazy_static;
 
@@ -162,7 +176,7 @@ mod test {
         let inspect = InspectDiagnostics::new(inspector.root());
         assert_inspect_tree!(
             inspector,
-            root: {
+            root: contains {
                 success_count: 0u64,
                 failure_counts: {}
             }
@@ -199,7 +213,7 @@ mod test {
         let inspect = InspectDiagnostics::new(inspector.root());
         assert_inspect_tree!(
             inspector,
-            root: {
+            root: contains {
                 success_count: 0u64,
                 failure_counts: {}
             }
@@ -237,7 +251,7 @@ mod test {
         let inspect = InspectDiagnostics::new(inspector.root());
         assert_inspect_tree!(
             inspector,
-            root: {
+            root: contains {
                 success_count: 0u64,
                 failure_counts: {}
             }
@@ -262,6 +276,27 @@ mod test {
                     NoCertificatesPresented: 2u64,
                     NetworkError: 1u64,
                 },
+            }
+        );
+    }
+
+    #[test]
+    fn test_phase() {
+        let inspector = Inspector::new();
+        let inspect = InspectDiagnostics::new(inspector.root());
+        assert_inspect_tree!(
+            inspector,
+            root: contains {
+                phase: "Initial",
+                phase_update_time: AnyProperty,
+            }
+        );
+        inspect.phase_update(&Phase::Maintain);
+        assert_inspect_tree!(
+            inspector,
+            root: contains {
+                phase: "Maintain",
+                phase_update_time: AnyProperty,
             }
         );
     }

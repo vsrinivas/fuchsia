@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::datatypes::HttpsSample;
+use crate::datatypes::{HttpsSample, Phase};
 use crate::diagnostics::Diagnostics;
 use fidl_fuchsia_cobalt::HistogramBucket;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
@@ -11,7 +11,7 @@ use futures::Future;
 use httpdate_hyper::HttpsDateError;
 use parking_lot::Mutex;
 use time_metrics_registry::{
-    HttpsdateBoundSizeMetricDimensionPhase as HttpsAlgorithmPhase, HTTPSDATE_BOUND_SIZE_METRIC_ID,
+    HttpsdateBoundSizeMetricDimensionPhase as CobaltPhase, HTTPSDATE_BOUND_SIZE_METRIC_ID,
     HTTPSDATE_POLL_LATENCY_INT_BUCKETS_FLOOR, HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS,
     HTTPSDATE_POLL_LATENCY_INT_BUCKETS_STEP_SIZE, HTTPSDATE_POLL_LATENCY_METRIC_ID, PROJECT_ID,
 };
@@ -20,6 +20,8 @@ use time_metrics_registry::{
 pub struct CobaltDiagnostics {
     /// Client connection to Cobalt.
     sender: Mutex<CobaltSender>,
+    /// Last known phase of the algorithm.
+    phase: Mutex<Phase>,
 }
 
 impl CobaltDiagnostics {
@@ -27,7 +29,7 @@ impl CobaltDiagnostics {
     pub fn new() -> (Self, impl Future<Output = ()>) {
         let (sender, fut) =
             CobaltConnector::default().serve(ConnectionType::project_id(PROJECT_ID));
-        (Self { sender: Mutex::new(sender) }, fut)
+        (Self { sender: Mutex::new(sender), phase: Mutex::new(Phase::Initial) }, fut)
     }
 
     /// Calculate the bucket number in the latency metric for a given duration.
@@ -54,7 +56,7 @@ impl Diagnostics for CobaltDiagnostics {
         let mut sender = self.sender.lock();
         sender.log_event_count(
             HTTPSDATE_BOUND_SIZE_METRIC_ID,
-            [HttpsAlgorithmPhase::Maintain],
+            [<Phase as Into<CobaltPhase>>::into(*self.phase.lock())],
             0i64, // period_duration, not used
             sample.final_bound_size.into_micros(),
         );
@@ -75,6 +77,10 @@ impl Diagnostics for CobaltDiagnostics {
     fn failure(&self, _error: &HttpsDateError) {
         // Currently, no failure events are registered with cobalt.
     }
+
+    fn phase_update(&self, phase: &Phase) {
+        *self.phase.lock() = *phase;
+    }
 }
 
 #[cfg(test)]
@@ -86,6 +92,7 @@ mod test {
     use lazy_static::lazy_static;
     use std::{collections::HashSet, iter::FromIterator};
 
+    const TEST_INITIAL_PHASE: Phase = Phase::Initial;
     const TEST_BOUND_SIZE: zx::Duration = zx::Duration::from_millis(101);
     const TEST_STANDARD_DEVIATION: zx::Duration = zx::Duration::from_millis(20);
     const BUCKET_SIZE: zx::Duration =
@@ -104,12 +111,19 @@ mod test {
             + BUCKET_SIZE * (HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS - 1)
             - ONE_MICROS;
         static ref UNDERFLOW_RTT: zx::Duration = BUCKET_FLOOR - ONE_MICROS;
+        static ref TEST_INITIAL_PHASE_COBALT: CobaltPhase = TEST_INITIAL_PHASE.into();
     }
 
     /// Create a `CobaltDiagnostics` and a receiver to inspect events it produces.
     fn diagnostics_for_test() -> (CobaltDiagnostics, mpsc::Receiver<CobaltEvent>) {
         let (send, recv) = mpsc::channel(10);
-        (CobaltDiagnostics { sender: Mutex::new(CobaltSender::new(send)) }, recv)
+        (
+            CobaltDiagnostics {
+                sender: Mutex::new(CobaltSender::new(send)),
+                phase: Mutex::new(TEST_INITIAL_PHASE),
+            },
+            recv,
+        )
     }
 
     #[test]
@@ -142,7 +156,7 @@ mod test {
             vec![
                 CobaltEvent {
                     metric_id: HTTPSDATE_BOUND_SIZE_METRIC_ID,
-                    event_codes: vec![HttpsAlgorithmPhase::Maintain as u32],
+                    event_codes: vec![*TEST_INITIAL_PHASE_COBALT as u32],
                     component: None,
                     payload: EventPayload::EventCount(CountEvent {
                         period_duration_micros: 0,
@@ -163,6 +177,31 @@ mod test {
     }
 
     #[fasync::run_until_stalled(test)]
+    async fn test_success_after_phase_update() {
+        let (cobalt, mut event_recv) = diagnostics_for_test();
+        cobalt.success(&HttpsSample {
+            utc: *TEST_TIME,
+            monotonic: *TEST_TIME,
+            standard_deviation: TEST_STANDARD_DEVIATION,
+            final_bound_size: TEST_BOUND_SIZE,
+            round_trip_times: vec![*BUCKET_1_RTT],
+        });
+        let events = event_recv.by_ref().take(2).collect::<Vec<_>>().await;
+        assert_eq!(events[0].event_codes, vec![*TEST_INITIAL_PHASE_COBALT as u32]);
+
+        cobalt.phase_update(&Phase::Converge);
+        cobalt.success(&HttpsSample {
+            utc: *TEST_TIME,
+            monotonic: *TEST_TIME,
+            standard_deviation: TEST_STANDARD_DEVIATION,
+            final_bound_size: TEST_BOUND_SIZE,
+            round_trip_times: vec![*BUCKET_1_RTT],
+        });
+        let events = event_recv.take(2).collect::<Vec<_>>().await;
+        assert_eq!(events[0].event_codes, vec![CobaltPhase::Converge as u32]);
+    }
+
+    #[fasync::run_until_stalled(test)]
     async fn test_success_multiple_rtt() {
         let (cobalt, event_recv) = diagnostics_for_test();
         cobalt.success(&HttpsSample {
@@ -177,7 +216,7 @@ mod test {
             events[0],
             CobaltEvent {
                 metric_id: HTTPSDATE_BOUND_SIZE_METRIC_ID,
-                event_codes: vec![HttpsAlgorithmPhase::Maintain as u32],
+                event_codes: vec![*TEST_INITIAL_PHASE_COBALT as u32],
                 component: None,
                 payload: EventPayload::EventCount(CountEvent {
                     period_duration_micros: 0,
