@@ -261,14 +261,11 @@ impl Server {
     }
 
     fn handle_discover(&mut self, disc: Message) -> Result<ServerAction, ServerError> {
+        let client_id = ClientIdentifier::from(&disc);
         let offered_ip = self.get_addr(&disc)?;
         let dest = self.get_destination_addr(&disc);
         let offer = self.build_offer(disc, offered_ip)?;
-        match self.store_client_config(
-            Ipv4Addr::from(offer.yiaddr),
-            ClientIdentifier::from(&offer),
-            &offer.options,
-        ) {
+        match self.store_client_config(Ipv4Addr::from(offer.yiaddr), client_id, &offer.options) {
             Ok(()) => Ok(ServerAction::SendResponse(offer, dest)),
             Err(e) => Err(ServerError::ServerCacheUpdateFailure(StashError { error: e })),
         }
@@ -1243,6 +1240,13 @@ pub mod tests {
     }
 
     fn new_client_message(message_type: MessageType) -> Message {
+        new_client_message_with_options(message_type, std::iter::empty())
+    }
+
+    fn new_client_message_with_options(
+        message_type: MessageType,
+        options: impl Iterator<Item = DhcpOption>,
+    ) -> Message {
         Message {
             op: OpCode::BOOTREQUEST,
             xid: rand::thread_rng().gen(),
@@ -1255,19 +1259,23 @@ pub mod tests {
             chaddr: random_mac_generator(),
             sname: String::new(),
             file: String::new(),
-            options: vec![
-                DhcpOption::DhcpMessageType(message_type),
-                DhcpOption::ParameterRequestList(vec![
+            options: std::iter::once(DhcpOption::DhcpMessageType(message_type))
+                .chain(std::iter::once(DhcpOption::ParameterRequestList(vec![
                     OptionCode::SubnetMask,
                     OptionCode::Router,
                     OptionCode::DomainNameServer,
-                ]),
-            ],
+                ])))
+                .chain(options)
+                .collect(),
         }
     }
 
     fn new_test_discover() -> Message {
-        new_client_message(MessageType::DHCPDISCOVER)
+        new_test_discover_with_options(std::iter::empty())
+    }
+
+    fn new_test_discover_with_options(options: impl Iterator<Item = DhcpOption>) -> Message {
+        new_client_message_with_options(MessageType::DHCPDISCOVER, options)
     }
 
     fn new_server_message(
@@ -1576,10 +1584,11 @@ pub mod tests {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_updates_stash() -> Result<(), Error> {
+    async fn dispatch_with_discover_updates_stash_helper(
+        additional_options: impl Iterator<Item = DhcpOption>,
+    ) -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
-        let disc = new_test_discover();
+        let disc = new_test_discover_with_options(additional_options);
 
         let offer_ip = random_ipv4_generator();
         let client_id = ClientIdentifier::from(&disc);
@@ -1603,6 +1612,19 @@ pub mod tests {
 
         assert_eq!(deserialized_config.client_addr, offer.yiaddr);
         Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_updates_stash() -> Result<(), Error> {
+        dispatch_with_discover_updates_stash_helper(std::iter::empty()).await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_with_client_id_updates_stash() -> Result<(), Error> {
+        dispatch_with_discover_updates_stash_helper(std::iter::once(DhcpOption::ClientIdentifier(
+            vec![1, 2, 3, 4, 5],
+        )))
+        .await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
