@@ -2147,38 +2147,45 @@ set_defaults("component") {
   configs = default_common_binary_configs
 }
 
-# This wraps the built-in action template to enforce best practices.
-# In particular:
-# * If the script is python, use the in-tree interpreter.
-#   This prevents the script from relying on the python that happens to
-#   be in the PATH, making the build more hermetic.
-template("action") {
-  action(target_name) {
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "args",
-                             "script",
-                             "testonly",
-                             "visibility",
-                           ])
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    if (get_path_info(invoker.script, "extension") == "py") {
-      args = [ rebase_path(invoker.script, root_build_dir) ]
-      if (defined(invoker.args)) {
-        args += invoker.args
-      }
-      script = python_exe_src
-    } else {
+foreach(_target_type,
+        [
+          "action",
+          "action_foreach",
+        ]) {
+  template(_target_type) {
+    target(_target_type, target_name) {
       forward_variables_from(invoker,
+                             "*",
                              [
                                "args",
                                "script",
+                               "testonly",
+                               "visibility",
                              ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      # This wraps the built-in action template to enforce best practices.
+      # In particular:
+      # * If the script is Python, use the in-tree interpreter.
+      #   This prevents the script from relying on the Python that happens to
+      #   be in the PATH, making the build more hermetic.
+      if (get_path_info(invoker.script, "extension") == "py") {
+        script = python_exe_src
+        args = [ rebase_path(invoker.script, root_build_dir) ]
+        if (defined(invoker.args)) {
+          args += invoker.args
+        }
+      } else {
+        forward_variables_from(invoker,
+                               [
+                                 "args",
+                                 "script",
+                               ])
+      }
     }
   }
 }
