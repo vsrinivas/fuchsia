@@ -71,6 +71,10 @@ source_set("memory-snapshot-test") {
   if (current_cpu == "arm64") {
     cflags = [ "-ffixed-x28" ]
   }
+
+  # This test needs to verify how stack allocations come out, which is
+  # incompatible with ASan fake-stack allocations.
+  deps += [ "//build/config/sanitizers:suppress-asan-stack-use-after-return" ]
 }
 
 # These should be just shared_library(), but must be zx_library() for

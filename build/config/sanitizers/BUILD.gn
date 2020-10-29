@@ -90,6 +90,9 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
 # ```
 sanitizer_extra_options("suppress-asan-stack-use-after-return") {
   visibility = [
+    # These tests need to check actual stack behavior, not fake stack.
+    "//zircon/system/ulib/c/test/sanitizer:*",
+
     # TODO(fxbug.dev/59214): allow only necessary third-party or TODO(bug-filed) cases
 
     # TODO(fxbug.dev/59214): These are constrained indirectly via the target of the same
