@@ -854,4 +854,78 @@ TEST(HidButtonsTest, CamMute) {
   ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
 }
 
+TEST(HidButtonsTest, MicAndCamMute) {
+  static const buttons_button_config_t buttons_config[] = {
+      {BUTTONS_TYPE_DIRECT, BUTTONS_ID_MIC_AND_CAM_MUTE, 0, 0, 0},
+  };
+  static const buttons_gpio_config_t gpios_config[] = {
+      {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
+  };
+  HidButtonsDeviceTest device;
+  EXPECT_OK(device.BindTest(gpios_config, countof(gpios_config), buttons_config,
+                            countof(buttons_config)));
+
+  // Setup the check for the HID report.
+  hidbus_ifc_protocol_ops_t ops = {};
+  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
+    buttons_input_rpt_t expected_report = {};
+    expected_report.rpt_id = BUTTONS_RPT_ID_INPUT;
+    expected_report.mute = 1;
+    expected_report.camera_access_disabled = 1;
+    ASSERT_EQ(size, sizeof(expected_report));
+    ASSERT_BYTES_EQ(buffer, &expected_report, size);
+  };
+  hidbus_ifc_protocol_t protocol = {};
+  protocol.ops = &ops;
+  EXPECT_OK(device.HidbusStart(&protocol));
+
+  // Setup the CAM_MUTE and MIC_MUTE FIDL waiters.
+  zx::channel client_end, server_end;
+  EXPECT_OK(zx::channel::create(0, &client_end, &server_end));
+  device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end));
+  Buttons::SyncClient client(std::move(client_end));
+  {
+    uint8_t types = (1 << static_cast<uint8_t>(ButtonType::MUTE)) |
+                    (1 << static_cast<uint8_t>(ButtonType::CAM_MUTE));
+    auto result = client.RegisterNotify(types);
+    EXPECT_OK(result.status());
+  }
+
+  // "Press" the button.
+  device.GetGpio(0)
+      .ExpectRead(ZX_OK, 1)                         // On.
+      .ExpectSetPolarity(ZX_OK, GPIO_POLARITY_LOW)  // Turn the polarity.
+      .ExpectRead(ZX_OK, 1);                        // Still on, ok to continue.
+  device.GetGpio(0).ExpectRead(ZX_OK, 1);           // Read value to prepare report.
+  device.FakeInterrupt(ButtonType::CAM_MUTE);
+  device.DebounceWait();
+
+  // Check that we get notified of both camera and mic presses.
+  bool camera_pressed = false;
+  bool mic_pressed = false;
+  Buttons::EventHandlers event_handlers{
+      .on_notify =
+          [&camera_pressed, &mic_pressed](Buttons::OnNotifyResponse* message) {
+            if (message->type == ButtonType::MUTE && message->pressed == true) {
+              mic_pressed = true;
+              return ZX_OK;
+            }
+            if (message->type == ButtonType::CAM_MUTE && message->pressed == true) {
+              camera_pressed = true;
+              return ZX_OK;
+            }
+            return ZX_ERR_INTERNAL;
+          },
+      .unknown = [] { return ZX_ERR_INVALID_ARGS; },
+  };
+  EXPECT_TRUE(client.HandleEvents(event_handlers).ok());
+  EXPECT_TRUE(client.HandleEvents(event_handlers).ok());
+  EXPECT_TRUE(camera_pressed);
+  EXPECT_TRUE(mic_pressed);
+
+  device.HidbusStop();
+  device.ShutDownTest();
+  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+}
+
 }  // namespace buttons

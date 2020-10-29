@@ -71,5 +71,9 @@ void fill_button_in_report(uint8_t id, bool value, buttons_input_rpt_t* rpt) {
     case BUTTONS_ID_CAM_MUTE:
       rpt->camera_access_disabled = value;
       break;
+    case BUTTONS_ID_MIC_AND_CAM_MUTE:
+      rpt->camera_access_disabled = value;
+      rpt->mute = value;
+      break;
   }
 }

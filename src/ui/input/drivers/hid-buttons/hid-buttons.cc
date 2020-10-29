@@ -55,6 +55,8 @@ uint32_t ButtonIdToButtonTypeBitMask(uint8_t button_id) {
       return to_bit_mask(ButtonType::KEY_M);
     case BUTTONS_ID_CAM_MUTE:
       return to_bit_mask(ButtonType::CAM_MUTE);
+    case BUTTONS_ID_MIC_AND_CAM_MUTE:
+      return to_bit_mask(ButtonType::CAM_MUTE) | to_bit_mask(ButtonType::MUTE);
     default:
       return 0;
   }

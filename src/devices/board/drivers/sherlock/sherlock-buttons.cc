@@ -67,13 +67,26 @@ zx_status_t Sherlock::ButtonsInit() {
       {"mic-privacy", countof(mic_privacy_fragment), mic_privacy_fragment},
       {"cam-mute", countof(cam_mute_fragment), cam_mute_fragment},
   };
-  static constexpr buttons_button_config_t buttons[] = {
+
+  static constexpr buttons_button_config_t sherlock_buttons[] = {
+      {BUTTONS_TYPE_DIRECT, BUTTONS_ID_VOLUME_UP, 0, 0, 0},
+      {BUTTONS_TYPE_DIRECT, BUTTONS_ID_VOLUME_DOWN, 1, 0, 0},
+      {BUTTONS_TYPE_DIRECT, BUTTONS_ID_FDR, 2, 0, 0},
+      {BUTTONS_TYPE_DIRECT, BUTTONS_ID_MIC_AND_CAM_MUTE, 3, 0, 0},
+  };
+  constexpr size_t kSherlockButtonCount = 4;
+
+  static constexpr buttons_button_config_t luis_buttons[] = {
       {BUTTONS_TYPE_DIRECT, BUTTONS_ID_VOLUME_UP, 0, 0, 0},
       {BUTTONS_TYPE_DIRECT, BUTTONS_ID_VOLUME_DOWN, 1, 0, 0},
       {BUTTONS_TYPE_DIRECT, BUTTONS_ID_FDR, 2, 0, 0},
       {BUTTONS_TYPE_DIRECT, BUTTONS_ID_MIC_MUTE, 3, 0, 0},
       {BUTTONS_TYPE_DIRECT, BUTTONS_ID_CAM_MUTE, 4, 0, 0},
   };
+  // TODO(fxbug.dev/58662): Re-enable camera mute switch.
+  // constexpr size_t kLuisButtonCount = 5;
+  constexpr size_t kLuisButtonCount = 4;
+
   // No need for internal pull, external pull-ups used.
   static constexpr buttons_gpio_config_t gpios[] = {
       {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
@@ -84,18 +97,18 @@ zx_status_t Sherlock::ButtonsInit() {
       {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
   };
 
-  constexpr size_t kSherlockButtonCount = 4;
-  // TODO(fxbug.dev/58662): Re-enable camera mute switch.
-  // constexpr size_t kLuisButtonCount = 5;
-  constexpr size_t kLuisButtonCount = 4;
-
-  const size_t button_count = pid_ == PDEV_PID_LUIS ? kLuisButtonCount : kSherlockButtonCount;
+  const void* buttons = &sherlock_buttons;
+  size_t button_count = kSherlockButtonCount;
+  if (pid_ == PDEV_PID_LUIS) {
+    buttons = &luis_buttons;
+    button_count = kLuisButtonCount;
+  }
 
   const device_metadata_t available_buttons_metadata[] = {
       {
           .type = DEVICE_METADATA_BUTTONS_BUTTONS,
-          .data = &buttons,
-          .length = button_count * sizeof(buttons[0]),
+          .data = buttons,
+          .length = button_count * sizeof(buttons_button_config_t),
       },
       {
           .type = DEVICE_METADATA_BUTTONS_GPIOS,
