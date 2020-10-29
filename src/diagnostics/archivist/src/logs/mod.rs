@@ -28,6 +28,7 @@ mod error;
 mod interest;
 mod listener;
 pub mod message;
+pub mod redact;
 mod socket;
 pub mod stats;
 #[cfg(test)]

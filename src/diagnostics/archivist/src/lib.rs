@@ -11,7 +11,6 @@ pub mod container;
 pub mod data_stats;
 pub mod diagnostics;
 pub mod events;
-pub mod filter;
 pub mod formatter;
 pub mod inspect;
 pub mod lifecycle;
