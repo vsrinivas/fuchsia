@@ -290,18 +290,6 @@ where
     })
 }
 
-const fn empty_properties() -> fidl_interfaces::Properties {
-    fidl_interfaces::Properties {
-        id: None,
-        name: None,
-        device_class: None,
-        online: None,
-        has_default_ipv4_route: None,
-        has_default_ipv6_route: None,
-        addresses: None,
-    }
-}
-
 /// An interface's properties if known, or its ID if not yet known.
 #[derive(PartialEq, Debug)]
 pub enum InterfaceState {
@@ -328,8 +316,10 @@ where
 {
     match init {
         InterfaceState::Unknown(id) => {
-            let mut properties =
-                fidl_interfaces::Properties { id: Some(*id), ..empty_properties() };
+            let mut properties = fidl_interfaces::Properties {
+                id: Some(*id),
+                ..fidl_interfaces::Properties::empty()
+            };
             let rtn = wait_interface(stream, &mut properties, predicate).await?;
             *init = InterfaceState::Known(properties);
             Ok(rtn)
@@ -386,7 +376,8 @@ mod tests {
     #[test]
     fn test_invalid_state_error() {
         assert_eq!(
-            empty_properties().update(fidl_interfaces::Event::Existing(test_properties(ID))),
+            fidl_interfaces::Properties::empty()
+                .update(fidl_interfaces::Event::Existing(test_properties(ID))),
             Err(UpdateError::InvalidState)
         );
     }
@@ -419,11 +410,14 @@ mod tests {
 
     #[test]
     fn test_unknown_changed_error() {
-        let unknown_changed =
-            fidl_interfaces::Properties { id: Some(ID), online: Some(true), ..empty_properties() };
+        let unknown_changed = fidl_interfaces::Properties {
+            id: Some(ID),
+            online: Some(true),
+            ..fidl_interfaces::Properties::empty()
+        };
         let event = fidl_interfaces::Event::Changed(unknown_changed.clone());
         assert_eq!(
-            fidl_interfaces::Properties { id: Some(ID), ..empty_properties() }
+            fidl_interfaces::Properties { id: Some(ID), ..fidl_interfaces::Properties::empty() }
                 .update(event.clone()),
             Err(UpdateError::UnknownChanged(unknown_changed.clone()))
         );
@@ -433,7 +427,7 @@ mod tests {
     #[test]
     fn test_unknown_removed_error() {
         assert_eq!(
-            fidl_interfaces::Properties { id: Some(ID), ..empty_properties() }
+            fidl_interfaces::Properties { id: Some(ID), ..fidl_interfaces::Properties::empty() }
                 .update(fidl_interfaces::Event::Removed(ID)),
             Err(UpdateError::UnknownRemoved(ID))
         );
@@ -448,7 +442,7 @@ mod tests {
         let missing_property = fidl_interfaces::Properties { name: None, ..test_properties(ID) };
         let event = fidl_interfaces::Event::Existing(missing_property.clone());
         assert_eq!(
-            fidl_interfaces::Properties { id: Some(ID), ..empty_properties() }
+            fidl_interfaces::Properties { id: Some(ID), ..fidl_interfaces::Properties::empty() }
                 .update(event.clone()),
             Err(UpdateError::MissingProperty(missing_property.clone()))
         );
@@ -460,7 +454,10 @@ mod tests {
 
     #[test]
     fn test_missing_id_error() {
-        let missing_id = fidl_interfaces::Properties { online: Some(true), ..empty_properties() };
+        let missing_id = fidl_interfaces::Properties {
+            online: Some(true),
+            ..fidl_interfaces::Properties::empty()
+        };
         assert_eq!(
             HashMap::new().update(fidl_interfaces::Event::Changed(missing_id.clone())),
             Err(UpdateError::MissingId(missing_id))
@@ -487,7 +484,7 @@ mod tests {
                 fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
                     id: Some(ID),
                     online: Some(true),
-                    ..empty_properties()
+                    ..fidl_interfaces::Properties::empty()
                 }),
                 fidl_interfaces::Properties { online: Some(true), ..test_properties(ID) },
             ),
@@ -495,7 +492,7 @@ mod tests {
                 fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
                     id: Some(ID),
                     addresses: Some(vec![addr.clone()]),
-                    ..empty_properties()
+                    ..fidl_interfaces::Properties::empty()
                 }),
                 fidl_interfaces::Properties {
                     online: Some(true),
@@ -535,7 +532,7 @@ mod tests {
                 fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
                     id: Some(ID),
                     online: Some(true),
-                    ..empty_properties()
+                    ..fidl_interfaces::Properties::empty()
                 }),
                 vec![
                     (ID, fidl_interfaces::Properties { online: Some(true), ..test_properties(ID) }),

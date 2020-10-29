@@ -2737,8 +2737,8 @@ macro_rules! fidl_table {
     ) => {
         impl $name {
             /// Generates an empty table, with every field set to `None`.
-#[inline]
-            pub fn empty() -> Self {
+            #[inline]
+            pub const fn empty() -> Self {
                 Self {$(
                         $member_name: None,
                 )*}
