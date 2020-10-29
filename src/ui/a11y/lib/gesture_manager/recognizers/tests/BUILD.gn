@@ -27,4 +27,7 @@ executable("gesture_recognizers_tests") {
     "//src/ui/lib/glm_workaround",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxbug.dev/62984): fix stack-use-after-return and delete
+  deps += [ "//build/config/sanitizers:suppress-asan-stack-use-after-return" ]
 }

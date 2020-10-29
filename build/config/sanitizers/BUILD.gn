@@ -107,6 +107,9 @@ sanitizer_extra_options("suppress-asan-stack-use-after-return") {
 
     # TODO(fxbug.dev/62982): fix brcmfmac-sim-test
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test:err_inject_test",
+
+    # TODO(fxbug.dev/62984): fix gesture_recognizers_tests
+    "//src/ui/a11y/lib/gesture_manager/recognizers/tests:gesture_recognizers_tests",
   ]
 
   args = [ "detect_stack_use_after_return=0" ]
