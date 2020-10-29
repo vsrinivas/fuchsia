@@ -13,7 +13,7 @@ declare_args() {
   # their own `__asan_default_options` C function.  Instead, they can use a
   # sanitizer_extra_options() target in their `deps` and then any options
   # injected that way can override that option's setting in this list.
-  asan_default_options = []
+  asan_default_options = [ "detect_stack_use_after_return=1" ]
 
   # Default [LeakSanitizer](https://clang.llvm.org/docs/LeakSanitizer.html)
   # options (before the `LSAN_OPTIONS` environment variable is read at
