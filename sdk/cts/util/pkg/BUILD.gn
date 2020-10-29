@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//sdk/cts/build/cts_dart_library.gni")
+import("//sdk/cts/build/cts.gni")
 
 cts_dart_library("pkg") {
   package_name = "pkg"

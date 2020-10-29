@@ -22,7 +22,7 @@ template("cts_element") {
     forward_variables_from(invoker, "*")
     testonly = true
 
-    script = "//sdk/cts/build/verify_cts_deps.py"
+    script = "//sdk/cts/build/scripts/verify_cts_deps.py"
 
     # GN requires an action to output a file. This file is written, but not used.
     outputs = [ "${target_gen_dir}/${target_name}_DEPFILE" ]

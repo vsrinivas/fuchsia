@@ -42,7 +42,7 @@ if (is_host) {
 
     testonly = true
 
-    script = "//sdk/cts/build/gather_package_deps.py"
+    script = "//sdk/cts/build/scripts/gather_package_deps.py"
 
     outputs = [ "$target_gen_dir/pm_deps/package.tar" ]
 
