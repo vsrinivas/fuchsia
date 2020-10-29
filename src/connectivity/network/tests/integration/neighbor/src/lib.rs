@@ -275,8 +275,8 @@ fn assert_reachable_entry(
                 fidl_fuchsia_net_neighbor::ReachableState { expires_at: None },
             )),
             mac: Some(mac),
-            updated_at: None, /* Some(updated_at) */
-        } if interface == match_interface && neighbor == match_neighbor && mac == match_mac /* && updated_at != 0 */
+            updated_at: Some(updated_at),
+        } if interface == match_interface && neighbor == match_neighbor && mac == match_mac && updated_at != 0
     );
 }
 
@@ -296,8 +296,8 @@ fn assert_stale_entry(
                 fidl_fuchsia_net_neighbor::StaleState {},
             )),
             mac: Some(mac),
-            updated_at: None, /* Some(updated_at) */
-        } if interface == match_interface && neighbor == match_neighbor && mac == match_mac /* && updated_at != 0 */
+            updated_at: Some(updated_at)
+        } if interface == match_interface && neighbor == match_neighbor && mac == match_mac && updated_at != 0
     );
 }
 
@@ -317,8 +317,8 @@ fn assert_static_entry(
                 fidl_fuchsia_net_neighbor::StaticState {},
             )),
             mac: Some(mac),
-            updated_at: None, /* Some(updated_at) */
-        } if interface == match_interface && neighbor == match_neighbor && mac == match_mac /* && updated_at != 0 */
+            updated_at: Some(updated_at),
+        } if interface == match_interface && neighbor == match_neighbor && mac == match_mac && updated_at != 0
     );
 }
 
