@@ -67,6 +67,11 @@ if (is_host) {
       "src/search/controller/packages.rs",
       "src/search/controller/routes.rs",
       "src/search/mod.rs",
+      "src/toolkit/controller/blobfs.rs",
+      "src/toolkit/controller/fvm.rs",
+      "src/toolkit/controller/mod.rs",
+      "src/toolkit/controller/package.rs",
+      "src/toolkit/controller/zbi.rs",
       "src/toolkit/mod.rs",
     ]
 
