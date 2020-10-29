@@ -7,7 +7,6 @@
 #include <gtest/gtest.h>
 
 #include "magma_util/dlog.h"
-#include "magma_util/retry_allocator.h"
 #include "magma_util/simple_allocator.h"
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
@@ -130,81 +129,6 @@ static void stress_test_allocator(magma::AddressSpaceAllocator* allocator, uint8
   }
 }
 
-static void test_retry_allocator(magma::RetryAllocator* allocator, uint8_t align_pow2) {
-  DLOG("test_retry_allocator align_pow2 0x%x\n", align_pow2);
-
-  uint64_t expected_addr = allocator->base();
-  uint64_t addr;
-  bool ret;
-
-  std::list<Region> allocs;
-
-  // size zero invalid
-  ret = allocator->Alloc(
-      0, align_pow2, [](uint64_t addr) { return true; }, &addr);
-  EXPECT_FALSE(ret);
-
-  // the maximum size
-  ret = allocator->Alloc(
-      allocator->size(), align_pow2, [](uint64_t addr) { return true; }, &addr);
-  EXPECT_TRUE(ret);
-  if (ret) {
-    EXPECT_EQ(addr, expected_addr);
-    EXPECT_TRUE(addr % (1 << align_pow2) == 0);
-
-    ret = allocator->Alloc(
-        1, align_pow2, [](uint64_t addr) { return true; }, &addr);
-    EXPECT_EQ(ret, false);
-
-    allocator->Free(addr, allocator->size());
-  }
-
-  ret = allocator->Alloc(
-      PAGE_SIZE, align_pow2, [](uint64_t addr) { return true; }, &addr);
-  EXPECT_EQ(ret, allocator->size() >= expected_addr + PAGE_SIZE);
-  if (ret) {
-    EXPECT_EQ(addr, expected_addr);
-    EXPECT_TRUE(addr % (1 << align_pow2) == 0);
-    expected_addr = ALIGN(expected_addr + PAGE_SIZE, 1 << align_pow2);
-  }
-
-  ret = allocator->Alloc(
-      PAGE_SIZE - 1, align_pow2, [](uint64_t addr) { return true; }, &addr);
-  EXPECT_EQ(ret, allocator->size() >= expected_addr + PAGE_SIZE);
-  if (ret) {
-    EXPECT_EQ(addr, expected_addr);
-    EXPECT_TRUE(addr % (1 << align_pow2) == 0);
-    expected_addr = ALIGN(expected_addr + PAGE_SIZE, 1 << align_pow2);
-  }
-
-  ret = allocator->Alloc(
-      PAGE_SIZE + 1, align_pow2, [](uint64_t addr) { return true; }, &addr);
-  EXPECT_EQ(ret, allocator->size() >= expected_addr + 2 * PAGE_SIZE);
-  if (ret) {
-    EXPECT_EQ(addr, expected_addr);
-    EXPECT_TRUE(addr % (1 << align_pow2) == 0);
-    expected_addr = ALIGN(expected_addr + 2 * PAGE_SIZE, 1 << align_pow2);
-  }
-
-  ret = allocator->Alloc(
-      PAGE_SIZE * 20, align_pow2, [](uint64_t addr) { return true; }, &addr);
-  EXPECT_EQ(ret, allocator->size() >= expected_addr + 20 * PAGE_SIZE);
-  if (ret) {
-    EXPECT_EQ(addr, expected_addr);
-    EXPECT_TRUE(addr % (1 << align_pow2) == 0);
-  }
-
-  for (uint32_t i = 0; i < 10; i++) {
-    ret = allocator->Alloc(
-        PAGE_SIZE, align_pow2, [](uint64_t addr) { return addr % (PAGE_SIZE * 2) == 0; }, &addr);
-    EXPECT_EQ(ret, allocator->size() >= expected_addr + PAGE_SIZE);
-    if (ret) {
-      EXPECT_EQ(0u, addr % (2 * PAGE_SIZE));
-      EXPECT_TRUE(addr % (1 << align_pow2) == 0);
-    }
-  }
-}
-
 TEST(AddressSpaceAllocator, SimpleAllocator) {
   test_simple_allocator(magma::SimpleAllocator::Create(0, 4 * PAGE_SIZE).get(), 0);
 
@@ -216,14 +140,4 @@ TEST(AddressSpaceAllocator, SimpleAllocator) {
 
   stress_test_allocator(magma::SimpleAllocator::Create(0, _4g).get(), 0, 100000,
                         16ULL * 1024 * 1024);
-}
-
-TEST(AddressSpaceAllocator, RetryAllocator) {
-  test_retry_allocator(magma::RetryAllocator::Create(0, 4 * PAGE_SIZE).get(), 0);
-
-  const size_t _4g = 4ULL * 1024 * 1024 * 1024;
-  test_retry_allocator(magma::RetryAllocator::Create(0, _4g).get(), 0);
-  test_retry_allocator(magma::RetryAllocator::Create(0, _4g).get(), 1);
-  test_retry_allocator(magma::RetryAllocator::Create(0, _4g).get(), 12);
-  test_retry_allocator(magma::RetryAllocator::Create(0, _4g).get(), 13);
 }
