@@ -137,6 +137,7 @@ Members are appointed by each functional area of the project:
 | Drivers           | ravoorir@google.com      |
 | Experiences       | chaselatta@google.com    |
 | FIDL              | ianloic@google.com       |
+| Firmware          | dpursell@google.com      |
 | Graphics          | adamgousetis@google.com  |
 | HCI (a11y, i18n)  | neelsa@google.com        |
 | Kernel            | cpu@google.com           |
