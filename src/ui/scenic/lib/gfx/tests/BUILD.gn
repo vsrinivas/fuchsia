@@ -14,7 +14,7 @@ group("tests") {
     ":swapchain_tests",
     ":unittests",
     ":viewstate_apptests",
-    "//garnet/packages/examples:vkcube-on-scenic",
+    "//src/graphics/examples:vkcube-on-scenic",
     "//src/ui/bin/hardware_display_controller_provider",
     "//src/ui/examples:bouncing_ball",
   ]

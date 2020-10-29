@@ -80,8 +80,8 @@ group("l1") {
   deps = [
     ":l0",
     "//garnet/packages/prod:scenic",
-    "//src/graphics/examples/vkcube:vkcube-on-fb",
-    "//src/graphics/examples/vkcube:vkcube-on-scenic",
+    "//src/graphics/examples:vkcube-on-fb",
+    "//src/graphics/examples:vkcube-on-scenic",
     "//src/graphics/lib/magma/src/tools",
     "//src/lib/vulkan/tests:image-pipe-swapchain-tests",
   ]

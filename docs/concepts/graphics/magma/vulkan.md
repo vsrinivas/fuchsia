@@ -26,7 +26,7 @@ There are two options for displaying your rendered output:
 You can use a custom version of the [WSI swapchain](https://www.khronos.org/registry/vulkan/specs/1.0-extensions/html/vkspec.html#_wsi_swapchain){: .external}.
 
 For details on the magma customization, refer to the
-[vkcube](/src/graphics/examples/vkcube/third_party/vkcube/cube.cc) example.
+[vkcube](/src/graphics/examples/vkcube) example.
 
 ## Interaction with the graphics console
 

@@ -1,0 +1,39 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("examples") {
+  testonly = true
+  public_deps = [
+    ":vkcube-on-fb",
+    ":vkcube-on-scenic",
+    ":vkcube-skip-present",
+    ":vkprimer",
+    ":vulkaninfo",
+  ]
+}
+
+group("vkcube-on-fb") {
+  testonly = true
+  public_deps = [ "//third_party/Vulkan-Tools/cube:vkcube-on-fb" ]
+}
+
+group("vkcube-on-scenic") {
+  testonly = true
+  public_deps = [ "//third_party/Vulkan-Tools/cube:vkcube-on-scenic" ]
+}
+
+group("vkcube-skip-present") {
+  testonly = true
+  public_deps = [ "//third_party/Vulkan-Tools/cube:vkcube-skip-present" ]
+}
+
+group("vkprimer") {
+  testonly = true
+  public_deps = [ "vkprimer" ]
+}
+
+group("vulkaninfo") {
+  testonly = true
+  public_deps = [ "vulkaninfo" ]
+}

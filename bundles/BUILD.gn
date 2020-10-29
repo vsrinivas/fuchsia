@@ -102,6 +102,7 @@ group("kitchen_sink") {
     "//src/connectivity/telephony",
     "//src/media/audio/bundles:virtual_audio_driver",
     "//src/media/bundles:examples",
+    "//src/graphics/examples",
     "//src/media/bundles:services",
     "//src/media/bundles:tools",
     "//topaz",

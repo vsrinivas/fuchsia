@@ -46,11 +46,6 @@ group("all") {
     "//garnet/packages/examples:scenic",
     "//garnet/packages/examples:speech",
     "//garnet/packages/examples:tcp",
-    "//garnet/packages/examples:vkcube-on-fb",
-    "//garnet/packages/examples:vkcube-on-scenic",
-    "//garnet/packages/examples:vkcube-skip-present",
-    "//garnet/packages/examples:vkprimer",
-    "//garnet/packages/examples:vulkaninfo",
   ]
 }
 
@@ -99,19 +94,6 @@ group("speech") {
   public_deps = [ "//examples/speech/tts/speak" ]
 }
 
-group("vkcube-on-scenic") {
-  testonly = true
-  public_deps = [ "//src/graphics/examples/vkcube:vkcube-on-scenic" ]
-}
-
-group("vulkaninfo") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:vulkan",
-    "//src/graphics/examples/vulkaninfo",
-  ]
-}
-
 group("benchmark") {
   testonly = true
   public_deps = [ "//garnet/examples/benchmark" ]
@@ -139,19 +121,4 @@ group("tcp") {
 group("rust") {
   testonly = true
   public_deps = [ "//examples/rust:garnet-rust-examples" ]
-}
-
-group("vkcube-on-fb") {
-  testonly = true
-  public_deps = [ "//src/graphics/examples/vkcube:vkcube-on-fb" ]
-}
-
-group("vkcube-skip-present") {
-  testonly = true
-  public_deps = [ "//src/graphics/examples/vkcube:vkcube-skip-present" ]
-}
-
-group("vkprimer") {
-  testonly = true
-  public_deps = [ "//src/graphics/examples/vkprimer" ]
 }

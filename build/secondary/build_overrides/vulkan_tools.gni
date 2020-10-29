@@ -4,3 +4,4 @@
 
 vulkan_data_subdir = "vulkan_layers_data"
 vulkan_headers_dir = "//third_party/Vulkan-Headers"
+texture_ppm_h = "//src/graphics/examples/vkcube/magma.ppm.h"
