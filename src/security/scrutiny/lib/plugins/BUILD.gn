@@ -53,10 +53,10 @@ if (is_host) {
       "src/core/package_reader.rs",
       "src/core/types.rs",
       "src/core/util.rs",
-      "src/engine.rs",
+      "src/engine/mod.rs",
       "src/lib.rs",
-      "src/search.rs",
-      "src/toolkit.rs",
+      "src/search/mod.rs",
+      "src/toolkit/mod.rs",
     ]
 
     inputs = [ "src/core/builtins.json" ]
