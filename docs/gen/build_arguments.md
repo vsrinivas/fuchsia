@@ -658,13 +658,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/68b10080d20937e9efe3306dd2a8a212cce02c4f/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/1d2fd9464d6abf6dd204db70f54d8bcbde45a634/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/68b10080d20937e9efe3306dd2a8a212cce02c4f/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/1d2fd9464d6abf6dd204db70f54d8bcbde45a634/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -1291,7 +1291,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:46
+From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
@@ -1299,7 +1299,7 @@ From //BUILD.gn:59
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:46
+From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
