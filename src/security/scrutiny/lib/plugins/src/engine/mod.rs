@@ -2,24 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod controller;
+
 use {
-    anyhow::Result,
+    crate::engine::controller::{
+        collector::{CollectorListController, CollectorSchedulerController},
+        controller::ControllerListController,
+        health::HealthController,
+        model::ModelStatsController,
+        plugin::PluginListController,
+    },
     scrutiny::{
         collectors, controllers,
         engine::{
             dispatcher::ControllerDispatcher,
             hook::PluginHooks,
-            manager::{PluginManager, PluginState},
+            manager::PluginManager,
             plugin::{Plugin, PluginDescriptor},
-            scheduler::{CollectorScheduler, CollectorState},
+            scheduler::CollectorScheduler,
         },
         model::collector::DataCollector,
         model::controller::DataController,
-        model::model::DataModel,
     },
-    scrutiny_utils::usage::UsageBuilder,
-    serde::{Deserialize, Serialize},
-    serde_json::{json, value::Value},
     std::sync::{Arc, Mutex, RwLock},
 };
 
@@ -70,238 +74,22 @@ impl Plugin for EnginePlugin {
     }
 }
 
-#[derive(Default)]
-pub struct HealthController {}
-
-/// The `HealthController` simply returns a ping. This is used to determine if
-/// the service is alive and operating.
-impl DataController for HealthController {
-    fn query(&self, _: Arc<DataModel>, _: Value) -> Result<Value> {
-        Ok(json!({"status" : "ok"}))
-    }
-    fn description(&self) -> String {
-        "Health endpoint that always returns ok.".to_string()
-    }
-    fn usage(&self) -> String {
-        UsageBuilder::new()
-            .name("engine.health.status - Health endpoint")
-            .summary("engine.health.status")
-            .description(
-                "Health endpoint that always returns ok. \
-            This is used mostly by remote endpoints to determine if the \
-            connection and the api is available",
-            )
-            .build()
-    }
-}
-
-/// Lists all the registered plugins and their states.
-struct PluginListController {
-    manager: Arc<Mutex<PluginManager>>,
-}
-
-#[derive(Serialize, Deserialize)]
-struct PluginListEntry {
-    name: String,
-    state: PluginState,
-}
-
-impl PluginListController {
-    pub fn new(manager: Arc<Mutex<PluginManager>>) -> Self {
-        Self { manager }
-    }
-}
-
-impl DataController for PluginListController {
-    fn query(&self, _: Arc<DataModel>, _query: Value) -> Result<Value> {
-        let manager = self.manager.lock().unwrap();
-        let plugin_descriptors = manager.plugins();
-        let mut plugins = vec![];
-        for plugin_desc in plugin_descriptors.iter() {
-            let state = manager.state(plugin_desc).unwrap();
-            plugins.push(PluginListEntry { name: format!("{}", plugin_desc), state });
-        }
-        plugins.sort_by(|a, b| a.name.partial_cmp(&b.name).unwrap());
-        return Ok(json!(plugins));
-    }
-    fn description(&self) -> String {
-        "Returns a list of all plugins and their state.".to_string()
-    }
-    fn usage(&self) -> String {
-        UsageBuilder::new()
-            .name("engine.plugin.list - Lists all the plugins")
-            .summary("engine.plugin.list")
-            .description("Lists all of the available plugins and their state")
-            .build()
-    }
-}
-
-/// Displays basic stats from the model controller.
-#[derive(Default)]
-struct ModelStatsController {}
-
-#[derive(Serialize, Deserialize)]
-struct ModelStats {
-    components: usize,
-    packages: usize,
-    manifests: usize,
-    routes: usize,
-    #[serde(rename = "zbi sections")]
-    zbi_sections: usize,
-    #[serde(rename = "bootfs files")]
-    bootfs_files: usize,
-}
-
-impl DataController for ModelStatsController {
-    fn query(&self, model: Arc<DataModel>, _query: Value) -> Result<Value> {
-        let mut zbi_sections = 0;
-        let mut bootfs_files = 0;
-
-        if let Some(zbi) = &*model.zbi().read().unwrap() {
-            zbi_sections = zbi.sections.len();
-            bootfs_files = zbi.bootfs.len();
-        }
-
-        let stats = ModelStats {
-            components: model.components().read().unwrap().len(),
-            packages: model.packages().read().unwrap().len(),
-            manifests: model.manifests().read().unwrap().len(),
-            routes: model.routes().read().unwrap().len(),
-            zbi_sections,
-            bootfs_files,
-        };
-        Ok(json!(stats))
-    }
-    fn description(&self) -> String {
-        "Returns aggregated model statistics.".to_string()
-    }
-    fn usage(&self) -> String {
-        UsageBuilder::new()
-            .name("engine.model.stats - Lists important model statistics")
-            .summary("engine.model.stats")
-            .description(
-                "Lists the number of: components, packages, manifests, \
-            routes, zbi sections and bootfs files currently loaded in the model.",
-            )
-            .build()
-    }
-}
-
-/// Displays a list of all the collectors.
-struct CollectorListController {
-    scheduler: Arc<Mutex<CollectorScheduler>>,
-}
-
-impl CollectorListController {
-    fn new(scheduler: Arc<Mutex<CollectorScheduler>>) -> Self {
-        Self { scheduler }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-struct CollectorListEntry {
-    name: String,
-    state: CollectorState,
-}
-
-impl DataController for CollectorListController {
-    fn query(&self, _model: Arc<DataModel>, _query: Value) -> Result<Value> {
-        let scheduler = self.scheduler.lock().unwrap();
-        let mut collectors = vec![];
-        for (handle, name) in scheduler.collectors_all() {
-            let state = scheduler.state(&handle).unwrap();
-            collectors.push(CollectorListEntry { name, state });
-        }
-        collectors.sort_by(|a, b| a.name.partial_cmp(&b.name).unwrap());
-        Ok(json!(collectors))
-    }
-    fn description(&self) -> String {
-        "Returns a list of all loaded data collectors.".to_string()
-    }
-    fn usage(&self) -> String {
-        UsageBuilder::new()
-            .name("engine.controller.list - Lists all of the data controllers")
-            .summary("engine.controller.list")
-            .description(
-                "Lists all of the controllers that are currently loaded \
-            in Scrutiny. This command provides internal inspection of the Scrutiny \
-            engine and is helpful for debugging plugin issues.",
-            )
-            .build()
-    }
-}
-
-/// Runs all of the collectors when called.
-struct CollectorSchedulerController {
-    scheduler: Arc<Mutex<CollectorScheduler>>,
-}
-
-impl CollectorSchedulerController {
-    fn new(scheduler: Arc<Mutex<CollectorScheduler>>) -> Self {
-        Self { scheduler }
-    }
-}
-
-impl DataController for CollectorSchedulerController {
-    fn query(&self, _model: Arc<DataModel>, _query: Value) -> Result<Value> {
-        if self.scheduler.lock().unwrap().schedule().is_ok() {
-            Ok(json!({"status": "ok"}))
-        } else {
-            Ok(json!({"status": "failed"}))
-        }
-    }
-    fn description(&self) -> String {
-        "Schedules all data collectors to run.".to_string()
-    }
-    fn usage(&self) -> String {
-        UsageBuilder::new()
-            .name("engine.collector.schedule - Runs all of the DataCollectors")
-            .summary("engine.collector.schedule")
-            .description(
-                "Schedules all the loaded data collectors to run. This \
-            repopulates the DataModel with all of the data provided by the collectors. \
-            This is useful if you want to force the model to be refreshed with the \
-            latest system data.",
-            )
-            .build()
-    }
-}
-
-/// Lists all of the controllers.
-struct ControllerListController {
-    dispatcher: Arc<RwLock<ControllerDispatcher>>,
-}
-
-impl ControllerListController {
-    fn new(dispatcher: Arc<RwLock<ControllerDispatcher>>) -> Self {
-        Self { dispatcher }
-    }
-}
-
-impl DataController for ControllerListController {
-    fn query(&self, _model: Arc<DataModel>, _query: Value) -> Result<Value> {
-        Ok(json!(self.dispatcher.read().unwrap().controllers_all()))
-    }
-    fn description(&self) -> String {
-        "Lists all loaded data collectors.".to_string()
-    }
-    fn usage(&self) -> String {
-        UsageBuilder::new()
-            .name("engine.collector.list- List all of the DataCollectors")
-            .summary("engine.collector.list")
-            .description(
-                "Lists all of the loaded Data Collectors. This can be\
-            useful for debugging plugins.",
-            )
-            .build()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
-        super::*, scrutiny::model::collector::DataCollector, scrutiny::model::model::Component,
-        scrutiny::plugin, std::boxed::Box, tempfile::tempdir, uuid::Uuid,
+        super::*,
+        crate::engine::controller::{
+            collector::CollectorListEntry, model::ModelStats, plugin::PluginListEntry,
+        },
+        anyhow::Result,
+        scrutiny::model::collector::DataCollector,
+        scrutiny::model::model::Component,
+        scrutiny::model::model::DataModel,
+        scrutiny::plugin,
+        serde_json::json,
+        std::boxed::Box,
+        tempfile::tempdir,
+        uuid::Uuid,
     };
 
     plugin!(FakePlugin, PluginHooks::new(collectors! {}, controllers! {}), vec![]);
