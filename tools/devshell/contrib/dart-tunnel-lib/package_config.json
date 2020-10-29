@@ -1,0 +1,107 @@
+{
+  "configVersion": 2,
+  "packages": [
+    {
+      "languageVersion": "2.8",
+      "name": "fuchsia_remote_debug_protocol",
+      "packageUri": "lib",
+      "rootUri": "../../../../third_party/dart-pkg/git/flutter/packages/fuchsia_remote_debug_protocol"
+    },
+    {
+      "languageVersion": "2.2",
+      "name": "json_rpc_2",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/json_rpc_2/"
+    },
+    {
+      "languageVersion": "2.0",
+      "name": "web_socket_channel",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/web_socket_channel/"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "process",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/process/"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "meta",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/meta/"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "async",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/async/"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "stream_channel",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/stream_channel/"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "stack_trace",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/stack_trace/"
+    },
+    {
+      "languageVersion": "2.3",
+      "name": "crypto",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/crypto/"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "collection",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/collection/"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "file",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/file/"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "path",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/path/"
+    },
+    {
+      "languageVersion": "1.17",
+      "name": "convert",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/convert/"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "platform",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/platform/"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "typed_data",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/typed_data/"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "charcode",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/charcode/"
+    },
+    {
+      "languageVersion": "2.3",
+      "name": "args",
+      "packageUri": "lib/",
+      "rootUri": "../../../../third_party/dart-pkg/pub/args/"
+    }
+  ]
+}

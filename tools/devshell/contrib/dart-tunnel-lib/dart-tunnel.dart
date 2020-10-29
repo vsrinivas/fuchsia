@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// @dart = 2.8
+
 import 'dart:async';
 import 'dart:core';
 import 'dart:io';
@@ -34,7 +36,7 @@ Future<Null> main(List<String> args) async {
   if (!flagIsValid(results[kIpAddrFlag]) ||
       !flagIsValid(results[kSshConfigFlag]) ||
       !flagIsValid(results[kNetIfaceFlag])) {
-    return 1;
+    exit(1);
   }
   if (results[kVerboseFlag]) {
     Logger.globalLevel = LoggingLevel.all;
@@ -51,8 +53,8 @@ Future<Null> main(List<String> args) async {
   );
   final String isolateName = results[kIsolateNameFlag];
   final Pattern isolatePattern = flagIsValid(isolateName) ? isolateName : r'';
-  final List<IsolateRef> isolates = await connection.getMainIsolatesByPattern(
-      isolatePattern);
+  final List<IsolateRef> isolates =
+      await connection.getMainIsolatesByPattern(isolatePattern);
   final String plural =
       isolates.length == 0 || isolates.length > 1 ? 'isolates' : 'isolate';
   final String isolateResultString = 'Found ${isolates.length} $plural';

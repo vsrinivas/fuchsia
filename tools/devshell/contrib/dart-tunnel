@@ -58,7 +58,7 @@ SSH_CONFIG="${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config"
 # Just compress the rest of the args to an array here.
 ARGS="$(echo "$@")"
 DART_TUNNEL_LIB_DIR="${FUCHSIA_DIR}/tools/devshell/contrib/dart-tunnel-lib"
-DART_TUNNEL_PACKAGES="${DART_TUNNEL_LIB_DIR}/dart-tunnel.packages"
+DART_TUNNEL_PACKAGES="${DART_TUNNEL_LIB_DIR}/package_config.json"
 DART_BIN="${DART_TUNNEL_LIB_DIR}/dart-tunnel.dart"
 
 # Conditionally prints the --verbose flag.
@@ -68,7 +68,10 @@ function _verbose_flag() {
   fi
 }
 
-"${PREBUILT_DART}" --packages="${DART_TUNNEL_PACKAGES}" \
+"${PREBUILT_DART}" \
+  --packages="${DART_TUNNEL_PACKAGES}" \
+  --enable-experiment=non-nullable \
+  --no-sound-null-safety \
   "${DART_BIN}" \
   --ssh-config="${SSH_CONFIG}" \
   --ip-address="${IP_ADDR}" \
