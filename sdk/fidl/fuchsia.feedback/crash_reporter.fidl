@@ -81,6 +81,9 @@ table GenericCrashReport {
     /// Unlike the event ID, crash reports sharing the same signature correspond to the same crash,
     /// but happening over multiple events, e.g., a null pointer exception in a server whenever
     /// asked the same request.
+    ///
+    /// Must match [a-z\-]+, i.e. only lowercase letters and hyphens or this will result in a
+    /// ZX_ERR_INVALID_ARGS epitaph.
     1: string:MAX_CRASH_SIGNATURE_LENGTH crash_signature;
 };
 
