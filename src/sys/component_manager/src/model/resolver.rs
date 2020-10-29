@@ -193,9 +193,9 @@ pub enum ResolverError {
     },
     #[error("url missing resource \"{}\"", url)]
     UrlMissingResourceError { url: String },
-    #[error("failed to route resolver capability: {}", 0)]
+    #[error("failed to route resolver capability: {}", .0)]
     RoutingError(#[source] Box<ModelError>),
-    #[error("an unknown error ocurred with the resolver: {}", 0)]
+    #[error("an unknown error ocurred with the resolver: {}", .0)]
     UnknownResolverError(#[source] ClonableError),
 }
 
@@ -234,7 +234,7 @@ impl ResolverError {
 }
 
 #[derive(Error, Clone, Debug)]
-#[error("remote resolver returned status {}", 0)]
+#[error("remote resolver returned status {}", .0)]
 struct RemoteError(Status);
 
 #[cfg(test)]
