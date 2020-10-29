@@ -15,6 +15,10 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 set -e
 
+# Fills $FX_DEVICE_NAME, $FX_DEVICE_ADDR, $FX_SSH_ADDR, and $FX_SSH_PORT if
+# there is one device currently attached.
+fx-export-device-address
+
 PREBUILT_DIR="$FUCHSIA_DIR/prebuilt/gui_tools"
 DOWNLOAD_DIR="$FUCHSIA_DIR/prebuilt/gui_tools/download"
 

@@ -14,6 +14,8 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/vars.sh"
 )
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../../lib/vars.sh || exit $?
+
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
   "bin/cipd"
@@ -31,6 +33,10 @@ BT_SET_UP() {
   #FUCHSIA_DIR="${BT_TEMP_DIR}"
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
+  devfinder="$(btf::make_installed_hosttools_mock device-finder)"
+
+  export FUCHSIA_DEVICE_NAME="foo-bar-baz-quux"
+  echo "::3%lo0" > "${devfinder}.mock_stdout"
 
   # Set up mocked replacements for system utils.
   export PATH="${BT_TEMP_DIR}/bin:${PATH}"
@@ -101,4 +107,46 @@ TEST_uses_cipd_for_latest_old_binary() {
   BT_EXPECT btf::does-mock-args-contain "${cipd}.mock_state" "ensure"
 }
 
+# Test that fx-export-device-address fills in environment variables.
+TEST_uses_fx_export_device_address() {
+  if [[ $HOST_PLATFORM == "mac-x64" ]]; then
+    FDT="${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted-temp/Fuchsia DevTools.app"
+    FDT_MOVED="${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
+    btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos/macos.zip"
+    btf::make_mock "${FDT}"
+
+    cat > "${BT_TEMP_DIR}/bin/open.mock_side_effects" <<EOF
+    exec "${FDT_MOVED}"
+EOF
+    cat > "${FDT}.mock_side_effects" <<EOF
+    echo "\${FX_DEVICE_NAME}" >> "${FDT_MOVED}.fx_device_name"
+    echo "\${FX_DEVICE_ADDR}" >> "${FDT_MOVED}.fx_device_addr"
+    echo "\${FX_SSH_ADDR}" >> "${FDT_MOVED}.fx_ssh_addr"
+    echo "\${FX_SSH_PORT}" >> "${FDT_MOVED}.fx_ssh_port"
+EOF
+  else
+    FDT="${BT_TEMP_DIR}/prebuilt/gui_tools/system_monitor/linux/fuchsia_devtools"
+    btf::make_mock "${FDT}"
+
+    cat > "${FDT}.mock_side_effects" <<EOF
+    echo "\${FX_DEVICE_NAME}" >> "${FDT}.fx_device_name"
+    echo "\${FX_DEVICE_ADDR}" >> "${FDT}.fx_device_addr"
+    echo "\${FX_SSH_ADDR}" >> "${FDT}.fx_ssh_addr"
+    echo "\${FX_SSH_PORT}" >> "${FDT}.fx_ssh_port"
+EOF
+  fi
+
+  BT_EXPECT ${fx} fdt
+
+  if [[ $HOST_PLATFORM == "mac-x64" ]]; then
+    FDT="$FDT_MOVED"
+  fi
+
+  BT_EXPECT_FILE_CONTAINS "${FDT}.fx_device_name" "foo-bar-baz-quux"
+  BT_EXPECT_FILE_CONTAINS "${FDT}.fx_device_addr" "::3%lo0"
+  BT_EXPECT_FILE_CONTAINS "${FDT}.fx_ssh_addr" "[::3%lo0]"
+  BT_EXPECT_FILE_CONTAINS "${FDT}.fx_ssh_port" ""
+}
+
 BT_RUN_TESTS "$@"
+
