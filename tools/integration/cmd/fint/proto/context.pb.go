@@ -38,18 +38,18 @@ type Context struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// An absolute path to the root of the Fuchsia checkout.
+	// Absolute path to the root of the Fuchsia checkout.
 	CheckoutDir string `protobuf:"bytes,1,opt,name=checkout_dir,json=checkoutDir,proto3" json:"checkout_dir,omitempty"`
-	// An absolute path to the build output directory.
+	// Absolute path to the build output directory.
 	BuildDir string `protobuf:"bytes,2,opt,name=build_dir,json=buildDir,proto3" json:"build_dir,omitempty"`
-	// An absolute path to a directory where build artifacts intended to be
+	// Absolute path to a directory where build artifacts intended to be
 	// exposed to the caller should be written.
 	ArtifactDir string `protobuf:"bytes,3,opt,name=artifact_dir,json=artifactDir,proto3" json:"artifact_dir,omitempty"`
 	// Files changed in the commit being tested.
 	ChangedFiles []*Context_ChangedFile `protobuf:"bytes,4,rep,name=changed_files,json=changedFiles,proto3" json:"changed_files,omitempty"`
-	// Passed through to the sdk_id gn arg.
+	// Passed through to the `sdk_id` gn arg.
 	SdkId string `protobuf:"bytes,5,opt,name=sdk_id,json=sdkId,proto3" json:"sdk_id,omitempty"`
-	// A cache directory that's persisted between builds.
+	// Cache directory that's persisted between builds.
 	CacheDir string `protobuf:"bytes,6,opt,name=cache_dir,json=cacheDir,proto3" json:"cache_dir,omitempty"`
 	// Passed through to the `build_info_version` gn arg.
 	ReleaseVersion string `protobuf:"bytes,7,opt,name=release_version,json=releaseVersion,proto3" json:"release_version,omitempty"`

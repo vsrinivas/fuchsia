@@ -13,13 +13,13 @@ option go_package = "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint/proto";
 // history and local filesystem layout, so they can only be known at runtime and
 // cannot come from data checked into version control.
 message Context {
-  // An absolute path to the root of the Fuchsia checkout.
+  // Absolute path to the root of the Fuchsia checkout.
   string checkout_dir = 1;
 
-  // An absolute path to the build output directory.
+  // Absolute path to the build output directory.
   string build_dir = 2;
 
-  // An absolute path to a directory where build artifacts intended to be
+  // Absolute path to a directory where build artifacts intended to be
   // exposed to the caller should be written.
   string artifact_dir = 3;
 
@@ -31,10 +31,10 @@ message Context {
   // Files changed in the commit being tested.
   repeated ChangedFile changed_files = 4;
 
-  // Passed through to the sdk_id gn arg.
+  // Passed through to the `sdk_id` gn arg.
   string sdk_id = 5;
 
-  // A cache directory that's persisted between builds.
+  // Cache directory that's persisted between builds.
   string cache_dir = 6;
 
   // Passed through to the `build_info_version` gn arg.
