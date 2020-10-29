@@ -47,6 +47,12 @@ source_set("base64") {
   public_deps = [ "//third_party/modp_b64" ]
 }
 
+source_set("status_utils") {
+  sources = [ "status_utils.h" ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.cobalt" ]
+}
+
 executable("cobalt_utils_unittests") {
   testonly = true
 

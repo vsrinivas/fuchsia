@@ -25,6 +25,7 @@ source_set("cobalt") {
     ":metrics_registry",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/lib/sys/cpp",
+    "//src/cobalt/bin/utils:status_utils",
     "//src/lib/backoff:backoff",
     "//src/lib/timekeeper",
     "//src/lib/timekeeper:system",

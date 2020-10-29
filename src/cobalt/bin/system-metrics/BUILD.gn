@@ -58,6 +58,7 @@ source_set("system_metrics_daemon_lib") {
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/cobalt/bin/utils:clock",
+    "//src/cobalt/bin/utils:status_utils",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fsl",
     "//src/lib/fxl",

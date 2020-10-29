@@ -51,6 +51,7 @@ executable("cobalt_testapp") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/cobalt/bin/utils:base64",
+    "//src/cobalt/bin/utils:status_utils",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fsl",
     "//src/lib/fxl",
