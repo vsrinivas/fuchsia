@@ -1,16 +1,13 @@
 {
     program: {
-        binary: "bin/sample_rust_tests",
+        binary: "bin/gtest_runner_test_with_custom_args",
         args: [ "--my_custom_arg" ],
     },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
     ],
     use: [
-        { runner: "rust_test_runner" },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
-        },
+        { runner: "gtest_runner" },
     ],
     expose: [
         {

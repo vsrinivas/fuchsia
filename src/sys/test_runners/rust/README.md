@@ -28,6 +28,17 @@ fx run-test rust-test-runner-example
 Test cases are executed concurrently (max 10 test cases at a time by default).
 [Instruction to override][override-parallel].
 
+## Arguments
+
+Test authors can specify command line arguments to their tests in their
+component manifest file. These will be passed to the test when it is run.
+
+The following flags are restricted and the test fails if any are passed as
+fuchsia.test.Suite provides equivalent functionality that replaces them
+
+- `nocapture`
+- `list`
+
 ## Limitations
 
 No known current limitations.

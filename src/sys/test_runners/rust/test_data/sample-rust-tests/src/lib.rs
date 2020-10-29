@@ -4,6 +4,7 @@
 
 #[cfg(test)]
 mod my_tests {
+    use std::env;
     #[test]
     fn sample_test_one() {
         println!("My only job is not to panic!()");
@@ -34,5 +35,12 @@ mod my_tests {
     #[test]
     fn ignored_failing_test() {
         panic!("There's a REASON everyone ignores me.");
+    }
+
+    #[test]
+    fn test_custom_arguments() {
+        let args = env::args().skip(1).collect::<Vec<_>>();
+        assert!(args.contains(&"--my_custom_arg".to_owned()), "args: {:#?}", args);
+        assert!(args.contains(&"--my_custom_arg2".to_owned()), "args: {:#?}", args);
     }
 }

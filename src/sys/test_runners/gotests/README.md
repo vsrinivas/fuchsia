@@ -40,14 +40,12 @@ Note the following known behavior change:
 `-test.failfast`: As each test case is executed in a different process, this
 flag will only influence sub-tests.
 
-Following flags are restricted and the test fails if they are passed.
+The following flags are restricted and the test fails if any are passed as
+fuchsia.test.Suite provides equivalent functionality that replaces them
 
 - `test.run`
 - `test.v`
 - `test.parallel`
-
-Other go test standard flags might be supported by test runner
-(fuchsia.test.Suite) protocol.
 
 ## Limitations
 

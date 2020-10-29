@@ -20,6 +20,7 @@ use {
         prelude::*,
         TryStreamExt,
     },
+    lazy_static::lazy_static,
     log::{debug, error, info},
     serde::{Deserialize, Serialize},
     std::{
@@ -246,6 +247,15 @@ impl SuiteServer for TestServer {
     }
 }
 
+lazy_static! {
+    static ref RESTRICTED_FLAGS: Vec<&'static str> = vec![
+        "--gtest_filter",
+        "--gtest_output",
+        "--gtest_also_run_disabled_tests",
+        "--gtest_list_tests"
+    ];
+}
+
 impl TestServer {
     /// Creates new test server.
     pub fn new(
@@ -350,13 +360,6 @@ impl TestServer {
             args.push("--gtest_also_run_disabled_tests".to_owned());
         }
 
-        args.extend(component.args.clone());
-
-        // run test.
-        // Load bearing to hold job guard.
-        let (process, _job, mut stdlogger) =
-            launch_component_process::<RunTestError>(&component, names, args).await?;
-
         let (test_logger, log_client) =
             zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
 
@@ -371,6 +374,22 @@ impl TestServer {
         let test_logger =
             fasync::Socket::from_socket(test_logger).map_err(KernelError::SocketToAsync).unwrap();
         let mut test_logger = LogWriter::new(test_logger);
+
+        args.extend(component.args.clone());
+        if let Some(user_args) = &run_options.arguments {
+            if let Err(e) = TestServer::validate_args(user_args) {
+                test_logger.write_str(&format!("{}", e)).await?;
+                case_listener_proxy
+                    .finished(TestResult { status: Some(Status::Failed) })
+                    .map_err(RunTestError::SendFinish)?;
+                return Ok(());
+            }
+            args.extend(user_args.clone());
+        }
+        // run test.
+        // Load bearing to hold job guard.
+        let (process, _job, mut stdlogger) =
+            launch_component_process::<RunTestError>(&component, names, args).await?;
 
         const NEWLINE: u8 = b'\n';
         const PREFIXES_TO_EXCLUDE: [&[u8]; 10] = [
@@ -494,6 +513,26 @@ impl TestServer {
         debug!("test finish {}", test);
         Ok(())
     }
+
+    pub fn validate_args(args: &Vec<String>) -> Result<(), ArgumentError> {
+        let restricted_flags = args
+            .iter()
+            .filter(|arg| {
+                for r_flag in RESTRICTED_FLAGS.iter() {
+                    if arg.starts_with(r_flag) {
+                        return true;
+                    }
+                }
+                return false;
+            })
+            .map(|s| s.clone())
+            .collect::<Vec<_>>()
+            .join(", ");
+        if restricted_flags.len() > 0 {
+            return Err(ArgumentError::RestrictedArg(restricted_flags));
+        }
+        Ok(())
+    }
 }
 
 /// Internal, uncached implementation of `enumerate_tests`.
@@ -507,11 +546,10 @@ async fn get_tests(
     let test_list_file = Path::new("test_list.json");
     let test_list_path = Path::new("/test_data").join(test_list_file);
 
-    let mut args = vec![
+    let args = vec![
         "--gtest_list_tests".to_owned(),
         format!("--gtest_output=json:{}", test_list_path.display()),
     ];
-    args.extend(component.args.clone());
 
     // Load bearing to hold job guard.
     let (process, _job, stdlogger) =
@@ -639,6 +677,33 @@ mod tests {
         }
     }
 
+    #[test]
+    fn validate_args_test() {
+        let restricted_flags = vec![
+            "--gtest_filter",
+            "--gtest_filter=mytest",
+            "--gtest_output",
+            "--gtest_output=json",
+        ];
+
+        for flag in restricted_flags {
+            let args = vec![flag.to_string()];
+            let err = TestServer::validate_args(&args)
+                .expect_err(&format!("should error out for flag: {}", flag));
+            match err {
+                ArgumentError::RestrictedArg(f) => assert_eq!(f, flag),
+            }
+        }
+
+        let allowed_flags = vec!["--gtest_anyotherflag", "--anyflag", "--mycustomflag"];
+
+        for flag in allowed_flags {
+            let args = vec![flag.to_string()];
+            TestServer::validate_args(&args)
+                .expect(&format!("should not error out for flag: {}", flag));
+        }
+    }
+
     fn create_ns_from_current_ns(
         dir_paths: Vec<(&str, u32)>,
     ) -> Result<ComponentNamespace, ComponentNamespaceError> {
@@ -673,7 +738,7 @@ mod tests {
             name: "test.cm".to_owned(),
             binary: "bin/gtest_runner_sample_tests".to_owned(),
             args: vec![],
-            ns: ns,
+            ns,
             job: current_job!(),
         }))
     }
@@ -729,6 +794,32 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn can_enumerate_test_with_custom_args() -> Result<(), Error> {
+        let test_data = TestDataDir::new()?;
+
+        let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
+
+        let component = Arc::new(Component {
+            url: "fuchsia-pkg://fuchsia.com/test_with_custom_args#test.cm".to_owned(),
+            name: "test.cm".to_owned(),
+            binary: "bin/gtest_runner_test_with_custom_args".to_owned(),
+            args: vec!["--my_custom_arg".to_owned()],
+            ns,
+            job: current_job!(),
+        });
+
+        let server =
+            TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
+
+        assert_eq!(
+            *server.enumerate_tests(component.clone()).await?,
+            vec![TestCaseInfo { name: "TestArg.TestArg".to_owned(), enabled: true },]
+        );
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn can_enumerate_empty_test_file() -> Result<(), Error> {
         let test_data = TestDataDir::new()?;
 
@@ -739,7 +830,7 @@ mod tests {
             name: "test.cm".to_owned(),
             binary: "bin/gtest_runner_no_tests".to_owned(),
             args: vec![],
-            ns: ns,
+            ns,
             job: current_job!(),
         });
         let server =
@@ -761,7 +852,7 @@ mod tests {
             name: "test.cm".to_owned(),
             binary: "bin/huge_gtest_runner_example".to_owned(),
             args: vec![],
-            ns: ns,
+            ns,
             job: current_job!(),
         });
         let server =
@@ -780,9 +871,11 @@ mod tests {
     async fn run_tests(
         invocations: Vec<Invocation>,
         run_options: RunOptions,
+        component: Option<Arc<Component>>,
     ) -> Result<Vec<ListenerEvent>, anyhow::Error> {
         let test_data = TestDataDir::new().context("Cannot create test data")?;
-        let component = sample_test_component().context("Cannot create test component")?;
+        let component =
+            component.unwrap_or(sample_test_component().context("Cannot create test component")?);
         let weak_component = Arc::downgrade(&component);
         let server = TestServer::new(
             test_data.proxy().context("Cannot create test server")?,
@@ -825,6 +918,7 @@ mod tests {
                 "Tests/SampleParameterizedTestFixture.Test/2",
             ]),
             RunOptions { include_disabled_tests: Some(false), parallel: None, arguments: None },
+            None,
         )
         .await
         .unwrap();
@@ -858,6 +952,44 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_test_with_custom_arg() -> Result<(), Error> {
+        fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
+        let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
+
+        let component = Arc::new(Component {
+            url: "fuchsia-pkg://fuchsia.com/test_with_arg#test.cm".to_owned(),
+            name: "test.cm".to_owned(),
+            binary: "bin/gtest_runner_test_with_custom_args".to_owned(),
+            args: vec!["--my_custom_arg".to_owned()],
+            ns,
+            job: current_job!(),
+        });
+        let events = run_tests(
+            names_to_invocation(vec!["TestArg.TestArg"]),
+            RunOptions {
+                include_disabled_tests: Some(false),
+                parallel: None,
+                arguments: Some(vec!["--my_custom_arg2".to_owned()]),
+            },
+            Some(component),
+        )
+        .await
+        .unwrap();
+
+        let expected_events = vec![
+            ListenerEvent::start_test("TestArg.TestArg"),
+            ListenerEvent::finish_test(
+                "TestArg.TestArg",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::finish_all_test(),
+        ];
+
+        assert_eq!(expected_events, events);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn run_multiple_tests_parallel() -> Result<(), Error> {
         fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
         let mut events = run_tests(
@@ -870,6 +1002,7 @@ mod tests {
                 "Tests/SampleParameterizedTestFixture.Test/2",
             ]),
             RunOptions { include_disabled_tests: Some(false), parallel: Some(4), arguments: None },
+            None,
         )
         .await
         .unwrap();
@@ -924,6 +1057,7 @@ mod tests {
                 "SampleDisabled.DISABLED_TestFail",
             ]),
             RunOptions { include_disabled_tests: Some(false), parallel: None, arguments: None },
+            None,
         )
         .await
         .unwrap();
@@ -951,6 +1085,7 @@ mod tests {
         let events = run_tests(
             vec![],
             RunOptions { include_disabled_tests: Some(false), parallel: None, arguments: None },
+            None,
         )
         .await
         .unwrap();
@@ -966,6 +1101,7 @@ mod tests {
         let events = run_tests(
             names_to_invocation(vec!["SampleTest2.SimplePass"]),
             RunOptions { include_disabled_tests: Some(false), parallel: None, arguments: None },
+            None,
         )
         .await
         .unwrap();

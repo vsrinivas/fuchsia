@@ -30,6 +30,25 @@ fx run-test gtest-runner-example-tests
 Test cases are executed sequentially by default.
 [Instruction to override][override-parallel].
 
+## Arguments
+
+Test authors can specify command line arguments to their tests in their
+component manifest file. These will be passed to the test when it is run.
+
+Note the following known behavior change:
+
+`gtest_break_on_failure`: As each test case is executed in a different process, this
+flag will not work.
+
+The following flags are restricted and the test fails if any are passed as
+fuchsia.test.Suite provides equivalent functionality that replaces them
+
+
+- `gtest_filter`
+- `gtest_output`
+- `gtest_also_run_disabled_tests`
+- `gtest_list_tests`
+
 ## Limitations
 
 -   If a test calls `GTEST_SKIP()`, it will be recorded as `Passed` rather than

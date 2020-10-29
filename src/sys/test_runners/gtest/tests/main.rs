@@ -110,6 +110,30 @@ async fn launch_and_run_sample_test() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_run_test_with_custom_args() {
+    let test_url =
+        "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/test_with_custom_args.cm";
+
+    let events = run_test(
+        test_url,
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Exclude,
+            parallel: Some(10),
+            arguments: Some(vec!["--my_custom_arg2".to_owned()]),
+        },
+    )
+    .await
+    .unwrap();
+
+    let expected_events = vec![
+        TestEvent::test_case_started("TestArg.TestArg"),
+        TestEvent::test_case_finished("TestArg.TestArg", TestResult::Passed),
+        TestEvent::test_finished(),
+    ];
+    assert_eq!(expected_events, events);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_sample_test_no_concurrent() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
 

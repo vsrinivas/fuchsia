@@ -12,6 +12,7 @@ use {
         lock::Mutex,
         prelude::*,
     },
+    lazy_static::lazy_static,
     log::{debug, error},
     regex::Regex,
     std::{
@@ -144,6 +145,11 @@ impl SuiteServer for TestServer {
         .detach();
         test_suite_abortable_handle
     }
+}
+
+lazy_static! {
+    static ref RESTRICTED_FLAGS: HashSet<&'static str> =
+        vec!["--nocapture", "--list"].into_iter().collect();
 }
 
 impl TestServer {
@@ -315,6 +321,13 @@ impl TestServer {
 
         let mut args = vec!["--nocapture".to_owned()];
         args.extend(test_component.args.clone());
+        if let Some(user_args) = &run_options.arguments {
+            if let Err(e) = Self::validate_args(&user_args) {
+                test_logger.write_str(&format!("{}", e)).await?;
+                return Ok(ftest::Result_ { status: Some(ftest::Status::Failed) });
+            }
+            args.extend(user_args.clone());
+        }
 
         // run test.
         // Load bearing to hold job guard.
@@ -366,6 +379,21 @@ impl TestServer {
             other => Err(RunTestError::UnexpectedReturnCode(other)),
         }
     }
+
+    pub fn validate_args(args: &Vec<String>) -> Result<(), ArgumentError> {
+        let restricted_flags = args
+            .iter()
+            .filter(|arg| {
+                return RESTRICTED_FLAGS.contains(arg.as_str());
+            })
+            .map(|s| s.clone())
+            .collect::<Vec<_>>()
+            .join(", ");
+        if restricted_flags.len() > 0 {
+            return Err(ArgumentError::RestrictedArg(restricted_flags));
+        }
+        Ok(())
+    }
 }
 
 /// Filter for use in `get_tests`.
@@ -387,8 +415,6 @@ async fn get_tests(
     if let TestFilter::DisabledTests = filter {
         args.push("--ignored".to_owned());
     }
-
-    args.extend(test_component.args.clone());
 
     // Load bearing to hold job guard.
     let (process, _job, stdlogger) =
@@ -473,6 +499,28 @@ mod tests {
         },
     };
 
+    #[test]
+    fn validate_args_test() {
+        let restricted_flags = vec!["--nocapture", "--list"];
+
+        for flag in restricted_flags {
+            let args = vec![flag.to_string()];
+            let err = TestServer::validate_args(&args)
+                .expect_err(&format!("should error out for flag: {}", flag));
+            match err {
+                ArgumentError::RestrictedArg(f) => assert_eq!(f, flag),
+            }
+        }
+
+        let allowed_flags = vec!["--bench", "--anyflag", "--test", "--mycustomflag"];
+
+        for flag in allowed_flags {
+            let args = vec![flag.to_string()];
+            TestServer::validate_args(&args)
+                .expect(&format!("should not error out for flag: {}", flag));
+        }
+    }
+
     fn create_ns_from_current_ns(
         dir_paths: Vec<(&str, u32)>,
     ) -> Result<ComponentNamespace, ComponentNamespaceError> {
@@ -506,7 +554,7 @@ mod tests {
             url: "fuchsia-pkg://fuchsia.com/simple_test#test.cm".to_owned(),
             name: "bin/sample_rust_tests".to_owned(),
             binary: "bin/sample_rust_tests".to_owned(),
-            args: vec![],
+            args: vec!["--my_custom_arg".to_string()],
             ns: ns,
             job: current_job!(),
         }))
@@ -523,6 +571,7 @@ mod tests {
             TestCaseInfo { name: "my_tests::passing_test".to_string(), enabled: true },
             TestCaseInfo { name: "my_tests::failing_test".to_string(), enabled: true },
             TestCaseInfo { name: "my_tests::sample_test_two".to_string(), enabled: true },
+            TestCaseInfo { name: "my_tests::test_custom_arguments".to_string(), enabled: true },
         ]
         .into_iter()
         .sorted()
@@ -688,8 +737,13 @@ mod tests {
                 "my_tests::sample_test_two",
                 "my_tests::ignored_passing_test",
                 "my_tests::ignored_failing_test",
+                "my_tests::test_custom_arguments",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: Some(1), arguments: None },
+            RunOptions {
+                include_disabled_tests: Some(false),
+                parallel: Some(1),
+                arguments: Some(vec!["--my_custom_arg2".to_owned()]),
+            },
         )
         .await
         .unwrap();
@@ -724,6 +778,11 @@ mod tests {
             ListenerEvent::finish_test(
                 "my_tests::ignored_failing_test",
                 TestResult { status: Some(Status::Skipped) },
+            ),
+            ListenerEvent::start_test("my_tests::test_custom_arguments"),
+            ListenerEvent::finish_test(
+                "my_tests::test_custom_arguments",
+                TestResult { status: Some(Status::Passed) },
             ),
             ListenerEvent::finish_all_test(),
         ];
