@@ -176,7 +176,7 @@ Microarchitecture CpuidVersionInfo::microarchitecture(Vendor vendor) const {
     case Vendor::kUnknown:
       return Microarchitecture::kUnknown;
   }
-  __UNREACHABLE;  
+  __UNREACHABLE;
 }
 
 }  // namespace arch

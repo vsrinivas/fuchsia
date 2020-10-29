@@ -49,6 +49,17 @@ enum class X86Msr : uint32_t {
   IA32_FS_BASE = 0xc000'0100,         // Current %fs.base value.
   IA32_GS_BASE = 0xc000'0101,         // Current %gs.base value.
   IA32_KERNEL_GS_BASE = 0xc000'0102,  // %gs.base value after `swapgs`.
+
+  IA32_DEBUGCTL = 0x0000'01d9,  // Debug control.
+
+  IA32_PERF_CAPABILITIES = 0x0000'0345,  // Performance monitoring features available.
+
+  // Related to Last Branch Records.
+  MSR_LBR_SELECT = 0x0000'01c8,            // Control register for the LBR feature
+  MSR_LASTBRANCH_TOS = 0x0000'01c9,        // Current top of stack of LBRs.
+  MSR_LASTBRANCH_0_FROM_IP = 0x0000'0680,  // Source information of 0th LBR.
+  MSR_LASTBRANCH_0_TO_IP = 0x0000'06c0,    // Destination information of 0th LBR.
+  MSR_LBR_INFO_0 = 0x0000'0dc0,            // Additional information of 0th LBR.
 };
 
 // TODO: add more MSRs, add hwreg types for C++ access
