@@ -16,15 +16,30 @@ In order to generate the cargo files based on the build graph of GN, add `--carg
 the `fx set` and `fx args` commands. This adds a few seconds at `gn gen` time. For example:
 
 ```sh
-fx set --cargo-toml-gen <normal fx args>
+fx set PRODUCT.BOARD --cargo-toml-gen <other fx args>
+fx build
 ```
 
-Most editors require the `Cargo.toml` file to be in a location that is adjacent to the `src/` directory.
-Symlinks to these files can be generated using the following commands, where
-`//garnet/foo/path/to/target:label` is the GN target that you want to work on:
+**Note:** If a `Cargo.toml` is required to complete an `fx build`, such as in the
+case `cbindgen` needs to be run to generate new C bindings for a Rust crate, you may
+use the `//build/rust:cargo_toml_gen` build target instead. This target will only
+build the `Cargo.toml` files.
+
+Most editors require the `Cargo.toml` file to be in a location that is adjacent to
+the `src/` directory. Symlinks to these files can be generated using the following
+commands, where `//garnet/foo/path/to/target:label` is the GN target that you want
+to work on:
 
 ```sh
 fx gen-cargo garnet/foo/path/to/target:some_label
+```
+
+**Note:** The above will not work for `rustc_staticlib` targets, e.g. Rust
+crates used to generate C bindings generally use the `rustc_staticlib` target
+template. For `rustc_staticlib` targets, you should use the following command instead.
+
+```sh
+fx gen-cargo garnet/foo/path/to/target:_some_label_rustc_static
 ```
 
 Note that this label must point to a [`rustc_...` GN template](README.md#build)
