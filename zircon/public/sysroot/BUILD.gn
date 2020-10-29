@@ -7,7 +7,7 @@ import("//build/config/fuchsia/zircon_legacy_vars.gni")
 import("//build/sdk/sdk_atom.gni")
 
 sysroot_toolchain = "//build/zircon:sysroot_toolchain"
-sysroot_dir = get_label_info(":sysroot($sysroot_toolchain)", "target_out_dir")
+sysroot_dir = get_label_info(":sysroot($sysroot_toolchain)", "root_out_dir")
 sysroot_dir += "/sysroot"
 
 # Collect the metadata for the SDK.
@@ -71,7 +71,12 @@ version_content = {
 #     this should correspond to the GN target that built the `source`
 #     file, once the sysroot generation is moved to the Fuchsia build.
 #
+# IMPORTANT: The populate_sysroot_headers.py script in this directory relies
+# on this exact schema definition. Keep it in sync if the schema changes!
+#
 sysroot_deps = []
+sysroot_headers = []
+sysroot_headers_deps = []
 i = 0
 foreach(entry, zircon_legacy_sysroot) {
   if (defined(entry.sdk)) {
@@ -82,14 +87,14 @@ foreach(entry, zircon_legacy_sysroot) {
       # This has to generate a separate copy() target for each file.
       dir = rebase_path(sdk.include_dir, "", zircon_root_build_dir)
       foreach(file, sdk.headers) {
-        i = i + 1
         if (current_toolchain == sysroot_toolchain) {
-          copy_target = "copy_$i"
-          sysroot_deps += [ ":$copy_target" ]
-          copy(copy_target) {
-            visibility = [ ":sysroot" ]
-            sources = [ "$dir/$file" ]
-            outputs = [ "$sysroot_dir/include/$file" ]
+          sysroot_headers += [ "$sysroot_dir/include/$file" ]
+          if (defined(sdk.deps)) {
+            # Some dependencies are necessary for auto-generated headers.
+            # NOTE: This branch will never be taken when parsing zircon_legacy_sysroot
+            # but it will be once we switch to parsing the sysroot_entries directly.
+            # For now, hack the missing dependency in sysroot_headers below.
+            sysroot_headers_deps += sdk.deps
           }
         }
         no_export = defined(sdk.no_export) && sdk.no_export
@@ -147,21 +152,54 @@ foreach(entry, zircon_legacy_sysroot) {
 if (current_toolchain == sysroot_toolchain) {
   import("//zircon/system/ulib/c/sysroot_entries.gni")
   import("//zircon/system/ulib/zircon/sysroot_entries.gni")
+  sysroot_entries_json_file = "$root_out_dir/sysroot-entries.json"
 
   generated_file("sysroot-entries-json") {
-    outputs = [ "$root_out_dir/sysroot-entries.json" ]
+    visibility = [ ":*" ]
+    outputs = [ sysroot_entries_json_file ]
     contents = sysroot_uninstrumented_libc_entries +
                sysroot_instrumented_libc_entries + sysroot_crt1_entries +
                sysroot_vdso_entries
     output_conversion = "json"
   }
 
+  action("sysroot_headers") {
+    inputs = [ sysroot_entries_json_file ]
+    outputs = sysroot_headers
+    depfile = "$root_out_dir/sysroot_headers.d"
+    script = "populate_sysroot_headers.py"
+    args = [
+      "--src-dir",
+      rebase_path("//", root_build_dir),
+      "--sysroot-json",
+      rebase_path(inputs[0], root_build_dir),
+      "--sysroot-dir",
+      rebase_path(sysroot_dir, root_build_dir),
+      "--dep-file",
+      rebase_path(depfile, root_build_dir),
+
+      # The --debug flag can be used to print the script's operations for debugging.
+      #"--debug",
+    ]
+    deps = [ ":sysroot-entries-json" ] + sysroot_headers_deps
+
+    # NOTE: This extra dependency is because the zircon_legacy_entries don't have
+    # the right dependencies on the Fuchsia build target that generates some
+    # Zircon headers. This can go away once we switch to parsing the sysroot_entries
+    # directly. See the comment about sdk.deps for headers above too.
+    deps += [ "//zircon/vdso:public($default_toolchain)" ]
+
+    visibility = [ ":*" ]
+  }
+
   group("sysroot") {
-    deps = sysroot_deps + [ ":sysroot-entries-json" ]
+    deps = sysroot_deps + [ ":sysroot_headers" ]
   }
 } else {
   group("sysroot") {
     assert(sysroot_deps == [])
+    assert(sysroot_headers == [])
+    assert(sysroot_headers_deps == [])
     public_deps = [ ":sysroot($sysroot_toolchain)" ]
   }
 }

@@ -45,7 +45,10 @@ assert(current_toolchain == default_toolchain)
 # This provides the public headers that go with the vDSO API, which are
 # seen as <zircon/...>.
 group("public") {
-  visibility = [ "$zx/system/ulib/zircon/*" ]
+  visibility = [
+    "$zx/public/sysroot/*",
+    "$zx/system/ulib/zircon/*",
+  ]
   public_configs = [ ":public.config" ]
   public_deps = [ ":generate" ]
 }
