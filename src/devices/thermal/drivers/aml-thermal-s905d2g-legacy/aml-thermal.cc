@@ -106,7 +106,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   pdev_device_info_t device_info;
   zx_status_t status = pdev.GetDeviceInfo(&device_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-thermal: failed to get GetDeviceInfo ");
+    zxlogf(ERROR, "aml-thermal: failed to get device info: %d", status);
     return status;
   }
 
@@ -187,7 +187,11 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  status = thermal_device->DdkAdd(ddk::DeviceAddArgs("thermal").set_proto_id(ZX_PROTOCOL_THERMAL));
+  zx_device_prop_t props[] = {
+    {.id = BIND_PLATFORM_DEV_DID, .reserved = 0, .value = device_info.did}
+  };
+  status = thermal_device->DdkAdd(
+      ddk::DeviceAddArgs("thermal").set_props(props).set_proto_id(ZX_PROTOCOL_THERMAL));
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-thermal: Could not create thermal device: %d", status);
     return status;

@@ -26,7 +26,7 @@ namespace {
 
 constexpr uint32_t kPwmDFn = 3;
 
-const pbus_mmio_t thermal_mmios[] = {
+const pbus_mmio_t thermal_mmios_pll[] = {
     {
         .base = T931_TEMP_SENSOR_PLL_BASE,
         .length = T931_TEMP_SENSOR_PLL_LENGTH,
@@ -41,9 +41,31 @@ const pbus_mmio_t thermal_mmios[] = {
     },
 };
 
-const pbus_irq_t thermal_irqs[] = {
+const pbus_mmio_t thermal_mmios_ddr[] = {
+    {
+        .base = T931_TEMP_SENSOR_DDR_BASE,
+        .length = T931_TEMP_SENSOR_DDR_LENGTH,
+    },
+    {
+        .base = T931_TEMP_SENSOR_DDR_TRIM,
+        .length = T931_TEMP_SENSOR_TRIM_LENGTH,
+    },
+    {
+        .base = T931_HIU_BASE,
+        .length = T931_HIU_LENGTH,
+    },
+};
+
+const pbus_irq_t thermal_irqs_pll[] = {
     {
         .irq = T931_TS_PLL_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+const pbus_irq_t thermal_irqs_ddr[] = {
+    {
+        .irq = T931_TS_DDR_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
@@ -102,7 +124,7 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
 
 // NOTE: This is a very trivial policy, no data backing it up
 // As we do more testing this policy can evolve.
-fuchsia_hardware_thermal_ThermalDeviceInfo aml_sherlock_config =
+fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll =
     {
         .active_cooling = false,
         .passive_cooling = true,
@@ -159,6 +181,16 @@ fuchsia_hardware_thermal_ThermalDeviceInfo aml_sherlock_config =
             },
 };
 
+fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_ddr = {
+    .active_cooling = false,
+    .passive_cooling = false,
+    .gpu_throttling = false,
+    .num_trip_points = 0,
+    .big_little = false,
+    .critical_temp_celsius = 110.0,
+    .trip_point_info = {TripPoint(-273.15f, 0, 0, 0)},  // Unused
+    .opps = {}};
+
 // clang-format on
 aml_thermal_info_t aml_thermal_info = {
     .voltage_table =
@@ -181,11 +213,11 @@ aml_thermal_info_t aml_thermal_info = {
     .cluster_id_map = {},
 };
 
-const pbus_metadata_t thermal_metadata[] = {
+const pbus_metadata_t thermal_metadata_pll[] = {
     {
         .type = DEVICE_METADATA_THERMAL_CONFIG,
-        .data_buffer = &aml_sherlock_config,
-        .data_size = sizeof(aml_sherlock_config),
+        .data_buffer = &thermal_config_pll,
+        .data_size = sizeof(thermal_config_pll),
     },
     {
         .type = DEVICE_METADATA_PRIVATE,
@@ -194,18 +226,41 @@ const pbus_metadata_t thermal_metadata[] = {
     },
 };
 
-constexpr pbus_dev_t thermal_dev = []() {
+const pbus_metadata_t thermal_metadata_ddr[] = {
+    {
+        .type = DEVICE_METADATA_THERMAL_CONFIG,
+        .data_buffer = &thermal_config_ddr,
+        .data_size = sizeof(thermal_config_ddr),
+    },
+};
+
+constexpr pbus_dev_t thermal_dev_pll = []() {
   pbus_dev_t dev = {};
   dev.name = "aml-thermal-pll";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_AMLOGIC_T931;
   dev.did = PDEV_DID_AMLOGIC_THERMAL_PLL;
-  dev.mmio_list = thermal_mmios;
-  dev.mmio_count = countof(thermal_mmios);
-  dev.irq_list = thermal_irqs;
-  dev.irq_count = countof(thermal_irqs);
-  dev.metadata_list = thermal_metadata;
-  dev.metadata_count = countof(thermal_metadata);
+  dev.mmio_list = thermal_mmios_pll;
+  dev.mmio_count = countof(thermal_mmios_pll);
+  dev.irq_list = thermal_irqs_pll;
+  dev.irq_count = countof(thermal_irqs_pll);
+  dev.metadata_list = thermal_metadata_pll;
+  dev.metadata_count = countof(thermal_metadata_pll);
+  return dev;
+}();
+
+constexpr pbus_dev_t thermal_dev_ddr = []() {
+  pbus_dev_t dev = {};
+  dev.name = "aml-thermal-ddr";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_AMLOGIC_T931;
+  dev.did = PDEV_DID_AMLOGIC_THERMAL_DDR;
+  dev.mmio_list = thermal_mmios_ddr;
+  dev.mmio_count = countof(thermal_mmios_ddr);
+  dev.irq_list = thermal_irqs_ddr;
+  dev.irq_count = countof(thermal_irqs_ddr);
+  dev.metadata_list = thermal_metadata_ddr;
+  dev.metadata_count = countof(thermal_metadata_ddr);
   return dev;
 }();
 
@@ -293,11 +348,20 @@ zx_status_t Sherlock::SherlockThermalInit() {
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
+  // The PLL sensor is controlled by a legacy thermal device, which performs DVFS.
+  status = pbus_.CompositeDeviceAdd(&thermal_dev_pll, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;
   }
+
+  // The DDR sensor is controlled by a non-legacy thermal device, which only reads temperature.
+  status = pbus_.DeviceAdd(&thermal_dev_ddr);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
+    return status;
+  }
+
   return status;
 }
 

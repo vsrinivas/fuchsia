@@ -500,6 +500,12 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/03:05:6",
       "class/cpu-ctrl/000",
       "class/cpu-ctrl/001",
+
+      // Thermal devices.
+      "sys/platform/05:04:a",
+      "sys/platform/05:04:28",
+      "class/thermal/000",
+      "class/thermal/001",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -514,7 +520,6 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       "ft8201-touch",
 
       // Thermal devices
-      "sys/platform/05:04:a/thermal",
       "sys/platform/05:04:28/thermal",
 
       // Thermistor and ADC devices

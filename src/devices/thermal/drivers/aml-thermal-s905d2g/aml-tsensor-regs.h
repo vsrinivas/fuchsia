@@ -34,7 +34,7 @@
 #define AML_TS_CH_SEL           0x3 /* set 3'b011 for work */
 #define AML_HHI_TS_CLK_ENABLE   0x130U /* u-boot */
 #define AML_TS_VALUE_CONT       0x10
-#define AML_TS_REBOOT_TIME      0xff
+#define AML_TS_REBOOT_TIME      0xff  // TODO(fxbug.dev/62972): Reconsider this setting
 
 //clang-format on
 

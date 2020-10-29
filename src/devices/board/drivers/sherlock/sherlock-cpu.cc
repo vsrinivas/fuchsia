@@ -37,7 +37,11 @@ constexpr zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
 
+// The CPU device must bind to a legacy thermal driver to which DVFS commands are forwarded.
+// We need to specify the PLL sensor to ensure the correct bind, as there is a non-legacy thermal
+// device controlling the DDR sensor.
 constexpr zx_bind_inst_t thermal_match[] = {
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL_PLL),
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_THERMAL),
 };
 
