@@ -753,7 +753,8 @@ int main(int argc, char** argv) {
       msg->magic = NB_MAGIC;
       msg->cmd = NB_GET_ADVERT;
 
-      ssize_t send_result = sendto(sock, buf, sizeof(nbmsg), 0, (struct sockaddr*)&addr, sizeof(addr));
+      ssize_t send_result =
+          sendto(sock, buf, sizeof(nbmsg), 0, (struct sockaddr*)&addr, sizeof(addr));
       if (send_result != sizeof(nbmsg)) {
         if (fail_fast) {
           close(sock);
