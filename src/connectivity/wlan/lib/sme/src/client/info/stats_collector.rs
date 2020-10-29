@@ -373,13 +373,15 @@ mod tests {
     use {
         super::*,
         crate::client::{
-            test_utils::{fake_bss_with_rates, fake_protected_bss_description, fake_scan_request},
-            EstablishRsnaFailure, EstablishRsnaFailureReason, SelectNetworkFailure,
+            test_utils::fake_scan_request, EstablishRsnaFailure, EstablishRsnaFailureReason,
+            SelectNetworkFailure,
         },
         anyhow::format_err,
-        wlan_common::assert_variant,
+        wlan_common::{assert_variant, fake_bss},
         wlan_rsn::auth,
     };
+
+    const SSID: &[u8; 3] = b"foo";
 
     #[test]
     fn test_discovery_scan_stats_lifecycle() {
@@ -388,7 +390,7 @@ mod tests {
         let is_connected = true;
         assert!(stats_collector.report_discovery_scan_started(req, is_connected).is_none());
 
-        let bss_desc = fake_bss_with_rates(b"foo".to_vec(), vec![12]);
+        let bss_desc = fake_bss!(Open, ssid: SSID.to_vec(), rates: vec![12]);
         let stats =
             stats_collector.report_discovery_scan_ended(ScanResult::Success, Some(&vec![bss_desc]));
         assert_variant!(stats, Ok(scan_stats) => {
@@ -418,7 +420,7 @@ mod tests {
             assert!(stats.assoc_time().is_some());
             assert!(stats.rsna_time().is_some());
             assert_eq!(stats.result, ConnectResult::Success);
-            let bss_desc = fake_protected_bss_description(b"foo".to_vec());
+            let bss_desc = fake_bss!(Wpa2, ssid: SSID.to_vec());
             assert_eq!(stats.candidate_network, Some(bss_desc));
         });
     }
@@ -431,7 +433,7 @@ mod tests {
         let scan_req = fake_scan_request();
         assert!(stats_collector.report_join_scan_started(scan_req, false).is_ok());
         assert!(stats_collector.report_join_scan_ended(ScanResult::Success, 1).is_ok());
-        let bss_desc = fake_protected_bss_description(b"foo".to_vec());
+        let bss_desc = fake_bss!(Wpa2, ssid: SSID.to_vec());
         assert!(stats_collector.report_candidate_network(bss_desc).is_ok());
         assert!(stats_collector.report_auth_started().is_ok());
         let result = ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
@@ -605,7 +607,7 @@ mod tests {
     #[test]
     fn test_no_pending_discovery_scan_stats() {
         let mut stats_collector = StatsCollector::default();
-        let bss_desc = fake_protected_bss_description(b"foo".to_vec());
+        let bss_desc = fake_bss!(Wpa2, ssid: SSID.to_vec());
         let stats =
             stats_collector.report_discovery_scan_ended(ScanResult::Success, Some(&vec![bss_desc]));
         assert_variant!(stats, Err(StatsError::NoPendingScan));
@@ -617,7 +619,7 @@ mod tests {
             StatsCollector::default().report_join_scan_ended(ScanResult::Success, 1),
             Err(StatsError::NoPendingConnect)
         );
-        let bss_desc = fake_protected_bss_description(b"foo".to_vec());
+        let bss_desc = fake_bss!(Wpa2, ssid: SSID.to_vec());
         assert_variant!(
             StatsCollector::default().report_candidate_network(bss_desc),
             Err(StatsError::NoPendingConnect)
@@ -651,11 +653,11 @@ mod tests {
     fn simulate_connect_lifecycle(
         stats_collector: &mut StatsCollector,
     ) -> Result<ConnectStats, StatsError> {
-        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        assert!(stats_collector.report_connect_started(SSID.to_vec()).is_none());
         let scan_req = fake_scan_request();
         assert!(stats_collector.report_join_scan_started(scan_req, false).is_ok());
         assert!(stats_collector.report_join_scan_ended(ScanResult::Success, 1).is_ok());
-        let bss_desc = fake_protected_bss_description(b"foo".to_vec());
+        let bss_desc = fake_bss!(Wpa2, ssid: SSID.to_vec());
         assert!(stats_collector.report_candidate_network(bss_desc).is_ok());
         assert!(stats_collector.report_auth_started().is_ok());
         assert!(stats_collector.report_assoc_started().is_ok());

@@ -1065,13 +1065,7 @@ mod tests {
         },
         fidl_fuchsia_wlan_common as fidl_common,
         wlan_common::{
-            assert_variant,
-            ie::{
-                self, fake_wpa_ie, get_rsn_ie_bytes, get_vendor_ie_bytes_for_wpa_ie,
-                rsn::fake_wpa2_a_rsne,
-            },
-            stats::SignalStrengthAverage,
-            test_utils::fake_frames::*,
+            assert_variant, fake_bss, ie, stats::SignalStrengthAverage, test_utils::fake_frames::*,
             TimeUnit,
         },
         wlan_statemachine::*,
@@ -1221,11 +1215,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: wlan_common::test_utils::fake_stas::fake_bss_description(
-                vec![],
-                None,
-                None,
-            ),
+            selected_bss: fake_bss!(Open),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1241,13 +1231,8 @@ mod tests {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
-        let rsne_bytes = get_rsn_ie_bytes(&fake_wpa2_a_rsne());
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: wlan_common::test_utils::fake_stas::fake_bss_description(
-                vec![],
-                Some(rsne_bytes),
-                None,
-            ),
+            selected_bss: fake_bss!(Wpa2),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1260,18 +1245,12 @@ mod tests {
     }
 
     #[test]
-    fn wpa_ie_implies_sta_eapol_required() {
+    fn wpa1_implies_sta_eapol_required() {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
-        let vendor_ies_bytes = get_vendor_ie_bytes_for_wpa_ie(&fake_wpa_ie())
-            .expect("could not write WPA IE to Vendor IE buffer");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: wlan_common::test_utils::fake_stas::fake_bss_description(
-                vec![],
-                None,
-                Some(vendor_ies_bytes),
-            ),
+            selected_bss: fake_bss!(Wpa1),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1289,11 +1268,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: wlan_common::test_utils::fake_stas::fake_bss_description(
-                vec![],
-                None,
-                None,
-            ),
+            selected_bss: fake_bss!(Open),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],

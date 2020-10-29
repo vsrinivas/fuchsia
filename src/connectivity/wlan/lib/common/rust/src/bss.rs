@@ -250,49 +250,32 @@ where
 mod tests {
     use {
         super::*,
-        crate::test_utils::{
-            fake_frames::{
-                fake_unknown_rsne, fake_wpa1_ie, fake_wpa1_ie_body, fake_wpa2_enterprise_rsne,
-                fake_wpa2_legacy_rsne, fake_wpa2_mixed_rsne, fake_wpa2_rsne, fake_wpa2_wpa3_rsne,
-                fake_wpa3_enterprise_192_bit_rsne, fake_wpa3_rsne, invalid_wpa2_wpa3_rsne,
-                invalid_wpa3_enterprise_192_bit_rsne, invalid_wpa3_rsne,
-            },
-            fake_stas::fake_unprotected_bss_description,
+        crate::fake_bss,
+        crate::test_utils::fake_frames::{
+            fake_unknown_rsne, fake_wpa1_ie_body, fake_wpa2_legacy_rsne, invalid_wpa2_wpa3_rsne,
+            invalid_wpa3_enterprise_192_bit_rsne, invalid_wpa3_rsne,
         },
+        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     };
-
-    enum ProtectionCfg {
-        Open,
-        Wep,
-        Wpa1,
-        Wpa1Enhanced,
-        Wpa1Wpa2,
-        Wpa2,
-        Wpa2Mixed,
-        Wpa2Wpa3,
-        Wpa3,
-        Wpa2Enterprise,
-        Wpa3Enterprise,
-    }
 
     #[test]
     fn test_get_known_protection() {
-        assert_eq!(Protection::Open, bss(ProtectionCfg::Open).get_protection());
-        assert_eq!(Protection::Wep, bss(ProtectionCfg::Wep).get_protection());
-        assert_eq!(Protection::Wpa1, bss(ProtectionCfg::Wpa1).get_protection());
-        assert_eq!(Protection::Wpa1, bss(ProtectionCfg::Wpa1Enhanced).get_protection());
-        assert_eq!(Protection::Wpa1Wpa2Personal, bss(ProtectionCfg::Wpa1Wpa2).get_protection());
-        assert_eq!(Protection::Wpa1Wpa2Personal, bss(ProtectionCfg::Wpa2Mixed).get_protection());
-        assert_eq!(Protection::Wpa2Personal, bss(ProtectionCfg::Wpa2).get_protection());
-        assert_eq!(Protection::Wpa2Wpa3Personal, bss(ProtectionCfg::Wpa2Wpa3).get_protection());
-        assert_eq!(Protection::Wpa3Personal, bss(ProtectionCfg::Wpa3).get_protection());
-        assert_eq!(Protection::Wpa2Enterprise, bss(ProtectionCfg::Wpa2Enterprise).get_protection());
-        assert_eq!(Protection::Wpa3Enterprise, bss(ProtectionCfg::Wpa3Enterprise).get_protection());
+        assert_eq!(Protection::Open, fake_bss!(Open).get_protection());
+        assert_eq!(Protection::Wep, fake_bss!(Wep).get_protection());
+        assert_eq!(Protection::Wpa1, fake_bss!(Wpa1).get_protection());
+        assert_eq!(Protection::Wpa1, fake_bss!(Wpa1Enhanced).get_protection());
+        assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss!(Wpa1Wpa2).get_protection());
+        assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss!(Wpa2Mixed).get_protection());
+        assert_eq!(Protection::Wpa2Personal, fake_bss!(Wpa2).get_protection());
+        assert_eq!(Protection::Wpa2Wpa3Personal, fake_bss!(Wpa2Wpa3).get_protection());
+        assert_eq!(Protection::Wpa3Personal, fake_bss!(Wpa3).get_protection());
+        assert_eq!(Protection::Wpa2Enterprise, fake_bss!(Wpa2Enterprise).get_protection());
+        assert_eq!(Protection::Wpa3Enterprise, fake_bss!(Wpa3Enterprise).get_protection());
     }
 
     #[test]
     fn test_get_unknown_protection() {
-        let mut bss = bss(ProtectionCfg::Wpa2);
+        let mut bss = fake_bss!(Wpa2);
         bss.rsne = Some(fake_unknown_rsne());
         assert_eq!(Protection::Unknown, bss.get_protection());
 
@@ -311,90 +294,110 @@ mod tests {
 
     #[test]
     fn test_needs_eapol_exchange() {
-        assert!(bss(ProtectionCfg::Wpa1).needs_eapol_exchange());
-        assert!(bss(ProtectionCfg::Wpa2).needs_eapol_exchange());
+        assert!(fake_bss!(Wpa1).needs_eapol_exchange());
+        assert!(fake_bss!(Wpa2).needs_eapol_exchange());
 
-        assert!(!bss(ProtectionCfg::Open).needs_eapol_exchange());
-        assert!(!bss(ProtectionCfg::Wep).needs_eapol_exchange());
+        assert!(!fake_bss!(Open).needs_eapol_exchange());
+        assert!(!fake_bss!(Wep).needs_eapol_exchange());
     }
 
     #[test]
     fn test_get_wpa_ie() {
         let mut buf = vec![];
-        bss(ProtectionCfg::Wpa1)
+        fake_bss!(Wpa1)
             .get_wpa_ie()
             .expect("failed to find WPA1 IE")
             .write_into(&mut buf)
             .expect("failed to serialize WPA1 IE");
         assert_eq!(fake_wpa1_ie_body(false), buf);
-        bss(ProtectionCfg::Wpa2).get_wpa_ie().expect_err("found unexpected WPA1 IE");
+        fake_bss!(Wpa2).get_wpa_ie().expect_err("found unexpected WPA1 IE");
     }
 
     #[test]
     fn test_get_latest_standard_ac() {
-        let mut bss = bss(ProtectionCfg::Open);
-        bss.vht_cap = Some(Box::new(fidl_mlme::VhtCapabilities { bytes: Default::default() }));
-        bss.vht_op = Some(Box::new(fidl_mlme::VhtOperation { bytes: Default::default() }));
+        let bss = fake_bss!(Open,
+                            vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities { bytes: Default::default() })),
+                            vht_op: Some(Box::new(fidl_mlme::VhtOperation { bytes: Default::default() }))
+        );
         assert_eq!(Standard::Dot11Ac, bss.get_latest_standard());
     }
 
     #[test]
     fn test_get_latest_standard_n() {
-        let mut bss = bss(ProtectionCfg::Open);
-        bss.ht_cap = Some(Box::new(fidl_mlme::HtCapabilities { bytes: Default::default() }));
-        bss.ht_op = Some(Box::new(fidl_mlme::HtOperation { bytes: Default::default() }));
+        let bss = fake_bss!(Open,
+                            vht_cap: None,
+                            vht_op: None,
+                            ht_cap: Some(Box::new(fidl_mlme::HtCapabilities { bytes: Default::default() })),
+                            ht_op: Some(Box::new(fidl_mlme::HtOperation { bytes: Default::default() })),
+        );
         assert_eq!(Standard::Dot11N, bss.get_latest_standard());
     }
 
     #[test]
     fn test_get_latest_standard_g() {
-        let mut bss = bss(ProtectionCfg::Open);
-        bss.chan.primary = 1;
-        bss.rates = vec![12];
+        let bss = fake_bss!(Open,
+                            vht_cap: None,
+                            vht_op: None,
+                            ht_cap: None,
+                            ht_op: None,
+                            chan: fidl_common::WlanChan {
+                                primary: 1,
+                                secondary80: 0,
+                                cbw: fidl_common::Cbw::Cbw20,
+                            },
+                            rates: vec![12],
+        );
         assert_eq!(Standard::Dot11G, bss.get_latest_standard());
     }
 
     #[test]
     fn test_get_latest_standard_b() {
-        let mut bss = bss(ProtectionCfg::Open);
-        bss.chan.primary = 1;
-        bss.rates = vec![2];
+        let bss = fake_bss!(Open,
+                            vht_cap: None,
+                            vht_op: None,
+                            ht_cap: None,
+                            ht_op: None,
+                            chan: fidl_common::WlanChan {
+                                primary: 1,
+                                secondary80: 0,
+                                cbw: fidl_common::Cbw::Cbw20,
+                            },
+                            rates: vec![2],
+        );
         assert_eq!(Standard::Dot11B, bss.get_latest_standard());
-        bss.rates = vec![ie::SupportedRate(2).with_basic(true).0];
+    }
+
+    #[test]
+    fn test_get_latest_standard_b_with_basic() {
+        let bss = fake_bss!(Open,
+                            vht_cap: None,
+                            vht_op: None,
+                            ht_cap: None,
+                            ht_op: None,
+                            chan: fidl_common::WlanChan {
+                                primary: 1,
+                                secondary80: 0,
+                                cbw: fidl_common::Cbw::Cbw20,
+                            },
+                            rates: vec![ie::SupportedRate(2).with_basic(true).0],
+        );
         assert_eq!(Standard::Dot11B, bss.get_latest_standard());
     }
 
     #[test]
     fn test_get_latest_standard_a() {
-        let mut bss = bss(ProtectionCfg::Open);
-        bss.chan.primary = 36;
+        let bss = fake_bss!(Open,
+                            vht_cap: None,
+                            vht_op: None,
+                            ht_cap: None,
+                            ht_op: None,
+                            chan: fidl_common::WlanChan {
+                                primary: 36,
+                                secondary80: 0,
+                                cbw: fidl_common::Cbw::Cbw20,
+                            },
+                            rates: vec![48],
+        );
         assert_eq!(Standard::Dot11A, bss.get_latest_standard());
-    }
-
-    fn bss(protection: ProtectionCfg) -> fidl_mlme::BssDescription {
-        let bss = fake_unprotected_bss_description(b"foo".to_vec());
-        fidl_mlme::BssDescription {
-            cap: CapabilityInfo(0)
-                .with_privacy(match protection {
-                    ProtectionCfg::Open => false,
-                    _ => true,
-                })
-                .0,
-            rsne: match protection {
-                ProtectionCfg::Wpa3Enterprise => Some(fake_wpa3_enterprise_192_bit_rsne()),
-                ProtectionCfg::Wpa2Enterprise => Some(fake_wpa2_enterprise_rsne()),
-                ProtectionCfg::Wpa3 => Some(fake_wpa3_rsne()),
-                ProtectionCfg::Wpa2Wpa3 => Some(fake_wpa2_wpa3_rsne()),
-                ProtectionCfg::Wpa2 | ProtectionCfg::Wpa1Wpa2 => Some(fake_wpa2_rsne()),
-                ProtectionCfg::Wpa2Mixed => Some(fake_wpa2_mixed_rsne()),
-                _ => None,
-            },
-            vendor_ies: match protection {
-                ProtectionCfg::Wpa1 | ProtectionCfg::Wpa1Wpa2 => Some(fake_wpa1_ie(false)),
-                ProtectionCfg::Wpa1Enhanced => Some(fake_wpa1_ie(true)),
-                _ => None,
-            },
-            ..bss
-        }
     }
 }

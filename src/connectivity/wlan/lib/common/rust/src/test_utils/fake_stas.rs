@@ -3,42 +3,93 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_mlme as fidl_mlme;
+pub use fidl_fuchsia_wlan_mlme as fidl_mlme;
 
-type Ssid = Vec<u8>;
+use crate::{
+    ie::fake_ies::{fake_ht_cap_bytes, fake_ht_op_bytes, fake_vht_cap_bytes, fake_vht_op_bytes},
+    mac,
+    test_utils::fake_frames::{
+        fake_eap_rsne, fake_wpa1_ie, fake_wpa2_enterprise_rsne, fake_wpa2_legacy_rsne,
+        fake_wpa2_mixed_rsne, fake_wpa2_rsne, fake_wpa2_wpa3_rsne,
+        fake_wpa3_enterprise_192_bit_rsne, fake_wpa3_rsne,
+    },
+};
 
-pub fn fake_bss_description(
-    ssid: Ssid,
-    rsne_bytes: Option<Vec<u8>>,
-    vendor_ies_bytes: Option<Vec<u8>>,
-) -> fidl_mlme::BssDescription {
+pub enum FakeProtectionCfg__ {
+    Open,
+    Wep,
+    Wpa1,
+    Wpa1Enhanced,
+    Wpa2Legacy,
+    Wpa1Wpa2,
+    Wpa2Mixed,
+    Wpa2Enterprise,
+    Wpa2,
+    Wpa2Wpa3,
+    Wpa3,
+    Wpa3Enterprise,
+    Wpa2NoPrivacy,
+    Eap,
+}
+
+pub fn build_fake_bss__(protection_cfg: FakeProtectionCfg__) -> fidl_mlme::BssDescription {
     fidl_mlme::BssDescription {
         bssid: [7, 1, 2, 77, 53, 8],
-        ssid,
+        ssid: b"fake-ssid".to_vec(),
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         beacon_period: 100,
         dtim_period: 100,
         timestamp: 0,
         local_time: 0,
-        cap: crate::mac::CapabilityInfo(0).with_privacy(rsne_bytes.is_some()).0,
-        rates: vec![],
+        rates: vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
         country: None,
-        rsne: rsne_bytes,
-        vendor_ies: vendor_ies_bytes,
 
         rcpi_dbmh: 0,
         rsni_dbh: 0,
 
-        ht_cap: None,
-        ht_op: None,
-        vht_cap: None,
-        vht_op: None,
-        chan: fidl_common::WlanChan { primary: 1, secondary80: 0, cbw: fidl_common::Cbw::Cbw20 },
+        ht_cap: Some(Box::new(fidl_mlme::HtCapabilities { bytes: fake_ht_cap_bytes() })),
+        ht_op: Some(Box::new(fidl_mlme::HtOperation { bytes: fake_ht_op_bytes() })),
+        vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() })),
+        vht_op: Some(Box::new(fidl_mlme::VhtOperation { bytes: fake_vht_op_bytes() })),
+        chan: fidl_common::WlanChan { primary: 3, secondary80: 0, cbw: fidl_common::Cbw::Cbw40 },
         rssi_dbm: 0,
         snr_db: 0,
+
+        cap: mac::CapabilityInfo(0)
+            .with_privacy(match protection_cfg {
+                FakeProtectionCfg__::Open | FakeProtectionCfg__::Wpa2NoPrivacy => false,
+                _ => true,
+            })
+            .0,
+        rsne: match protection_cfg {
+            FakeProtectionCfg__::Wpa3Enterprise => Some(fake_wpa3_enterprise_192_bit_rsne()),
+            FakeProtectionCfg__::Wpa2Enterprise => Some(fake_wpa2_enterprise_rsne()),
+            FakeProtectionCfg__::Wpa3 => Some(fake_wpa3_rsne()),
+            FakeProtectionCfg__::Wpa2Wpa3 => Some(fake_wpa2_wpa3_rsne()),
+            FakeProtectionCfg__::Wpa2Mixed => Some(fake_wpa2_mixed_rsne()),
+            FakeProtectionCfg__::Wpa2Legacy => Some(fake_wpa2_legacy_rsne()),
+            FakeProtectionCfg__::Wpa1Wpa2
+            | FakeProtectionCfg__::Wpa2
+            | FakeProtectionCfg__::Wpa2NoPrivacy => Some(fake_wpa2_rsne()),
+            FakeProtectionCfg__::Eap => Some(fake_eap_rsne()),
+            _ => None,
+        },
+        vendor_ies: match protection_cfg {
+            FakeProtectionCfg__::Wpa1 | FakeProtectionCfg__::Wpa1Wpa2 => Some(fake_wpa1_ie(false)),
+            FakeProtectionCfg__::Wpa1Enhanced => Some(fake_wpa1_ie(true)),
+            _ => None,
+        },
     }
 }
 
-pub fn fake_unprotected_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
-    fake_bss_description(ssid, None, None)
+#[macro_export]
+macro_rules! fake_bss {
+    ($protection_type:ident$(, $bss_key:ident: $bss_value:expr)* $(,)?) => {
+        $crate::test_utils::fake_stas::fidl_mlme::BssDescription {
+            $(
+                $bss_key: $bss_value,
+            )*
+                ..$crate::test_utils::fake_stas::build_fake_bss__($crate::test_utils::fake_stas::FakeProtectionCfg__::$protection_type)
+        }
+    }
 }

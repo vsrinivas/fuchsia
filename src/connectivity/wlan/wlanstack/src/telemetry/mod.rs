@@ -692,7 +692,6 @@ mod tests {
         },
         fidl::endpoints::create_proxy,
         fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
-        fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker},
         fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter},
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
@@ -705,6 +704,7 @@ mod tests {
             assert_variant,
             bss::Protection as BssProtection,
             channel::{Cbw, Channel},
+            fake_bss,
         },
         wlan_sme::client::{
             info::{
@@ -1175,46 +1175,14 @@ mod tests {
             }),
             num_rsna_key_frame_exchange_timeout: 0,
             result: ConnectResult::Success,
-            candidate_network: Some(fake_bss_description()),
+            candidate_network: Some(fake_bss!(Open)),
             attempts: 1,
             last_ten_failures: vec![],
             previous_disconnect_info: Some(PreviousDisconnectInfo {
-                ssid: fake_bss_description().ssid,
+                ssid: fake_bss!(Open).ssid,
                 disconnect_source: DisconnectSource::User,
                 disconnect_at: now - DURATION_SINCE_LAST_DISCONNECT,
             }),
-        }
-    }
-
-    fn fake_bss_description() -> fidl_mlme::BssDescription {
-        fidl_mlme::BssDescription {
-            bssid: [7, 1, 2, 77, 53, 8],
-            ssid: b"foo".to_vec(),
-            bss_type: fidl_mlme::BssTypes::Infrastructure,
-            beacon_period: 100,
-            dtim_period: 100,
-            timestamp: 0,
-            local_time: 0,
-            cap: wlan_common::mac::CapabilityInfo(0).0,
-            rates: vec![],
-            country: None,
-            rsne: None,
-            vendor_ies: None,
-
-            rcpi_dbmh: 0,
-            rsni_dbh: 0,
-
-            ht_cap: None,
-            ht_op: None,
-            vht_cap: None,
-            vht_op: None,
-            chan: fidl_common::WlanChan {
-                primary: 1,
-                secondary80: 0,
-                cbw: fidl_common::Cbw::Cbw20,
-            },
-            rssi_dbm: 0,
-            snr_db: 0,
         }
     }
 

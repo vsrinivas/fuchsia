@@ -82,13 +82,8 @@ fn construct_s_wpa(a_wpa: &WpaIe) -> WpaIe {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        client::test_utils::{
-            fake_protected_bss_description, fake_unprotected_bss_description,
-            fake_wpa1_bss_description,
-        },
-        test_utils::{fake_device_info, make_wpa1_ie},
-    };
+    use crate::test_utils::{fake_device_info, make_wpa1_ie};
+    use wlan_common::fake_bss;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
@@ -156,7 +151,7 @@ mod tests {
 
     #[test]
     fn test_get_wpa_password_for_unprotected_network() {
-        let bss = fake_unprotected_bss_description(b"foo_bss".to_vec());
+        let bss = fake_bss!(Open);
         let credential = fidl_sme::Credential::Password("somepass".as_bytes().to_vec());
         get_legacy_wpa_association(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect_err("expect error when password is supplied for unprotected network");
@@ -164,7 +159,7 @@ mod tests {
 
     #[test]
     fn test_get_wpa_no_password_for_protected_network() {
-        let bss = fake_wpa1_bss_description(b"foo_bss".to_vec());
+        let bss = fake_bss!(Wpa1);
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         get_legacy_wpa_association(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect_err("expect error when no password is supplied for protected network");
@@ -172,7 +167,7 @@ mod tests {
 
     #[test]
     fn test_get_wpa_for_rsna_protected_network() {
-        let bss = fake_protected_bss_description(b"foo_bss".to_vec());
+        let bss = fake_bss!(Wpa1);
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         get_legacy_wpa_association(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect_err("expect error when treating RSNA as WPA association");
@@ -180,7 +175,7 @@ mod tests {
 
     #[test]
     fn test_get_wpa_psk() {
-        let bss = fake_wpa1_bss_description(b"foo_bss".to_vec());
+        let bss = fake_bss!(Wpa1);
         let credential = fidl_sme::Credential::Psk(vec![0xAA; 32]);
         get_legacy_wpa_association(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect("expected successful RSNA with valid PSK");
@@ -188,7 +183,7 @@ mod tests {
 
     #[test]
     fn test_get_wpa_invalid_psk() {
-        let bss = fake_wpa1_bss_description(b"foo_bss".to_vec());
+        let bss = fake_bss!(Wpa1);
         // PSK too short
         let credential = fidl_sme::Credential::Psk(vec![0xAA; 31]);
         get_legacy_wpa_association(&fake_device_info(CLIENT_ADDR), &credential, &bss)

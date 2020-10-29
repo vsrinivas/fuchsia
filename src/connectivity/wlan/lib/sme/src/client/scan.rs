@@ -425,12 +425,9 @@ const SUPPORTED_CHANNELS: &[u8] = &[
 mod tests {
     use super::*;
 
-    use crate::client::test_utils::{
-        fake_bss_with_bssid, fake_bss_with_vendor_ies, fake_unprotected_bss_description,
-    };
     use crate::clone_utils::clone_bss_desc;
     use crate::test_utils;
-    use wlan_common::assert_variant;
+    use wlan_common::{assert_variant, fake_bss};
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
@@ -447,15 +444,15 @@ mod tests {
         let txn_id = req.txn_id;
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_unprotected_bss_description(b"foo".to_vec()),
+            bss: fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [1; 6]),
         });
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id: txn_id + 100, // mismatching transaction id
-            bss: fake_unprotected_bss_description(b"bar".to_vec()),
+            bss: fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [2; 6]),
         });
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss_with_bssid(b"qux".to_vec(), [3; 6]),
+            bss: fake_bss!(Open, ssid: b"qux".to_vec(), bssid: [3; 6]),
         });
         let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
             txn_id,
@@ -485,12 +482,12 @@ mod tests {
         let txn_id = req.txn_id;
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_unprotected_bss_description(b"bar".to_vec()),
+            bss: fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [1; 6]),
         });
         // A new scan result with the same BSSID replaces the previous result.
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_unprotected_bss_description(b"baz".to_vec()),
+            bss: fake_bss!(Open, ssid: b"baz".to_vec(), bssid: [1; 6]),
         });
         let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
             txn_id,
@@ -575,7 +572,7 @@ mod tests {
         // Report a scan result
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_unprotected_bss_description(b"foo".to_vec()),
+            bss: fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [1; 6]),
         });
 
         // Post another command. It should not issue another request to the MLME since
@@ -585,7 +582,7 @@ mod tests {
         // Report another scan result and the end of the scan transaction
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss_with_bssid(b"bar".to_vec(), [3; 6]),
+            bss: fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [2; 6]),
         });
         let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
             txn_id,
@@ -637,7 +634,7 @@ mod tests {
         // Report scan result and scan end
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_unprotected_bss_description(b"foo".to_vec()),
+            bss: fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [1; 6]),
         });
         let (result, mlme_req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
             txn_id,
@@ -656,7 +653,7 @@ mod tests {
         // Report scan result and scan end
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_unprotected_bss_description(b"bar".to_vec()),
+            bss: fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [2; 6]),
         });
         let (result, mlme_req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
             txn_id,
@@ -698,19 +695,19 @@ mod tests {
         let txn_id = req.expect("expected a ScanRequest").txn_id;
 
         // Matching BSS
-        let bss1 = fake_bss_with_bssid(b"foo".to_vec(), [1, 1, 1, 1, 1, 1]);
+        let bss1 = fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [1; 6]);
         sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: clone_bss_desc(&bss1) });
 
         // Mismatching transaction ID
-        let bss2 = fake_bss_with_bssid(b"foo".to_vec(), [2, 2, 2, 2, 2, 2]);
+        let bss2 = fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [2; 6]);
         sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id: txn_id + 100, bss: bss2 });
 
         // Mismatching SSID
-        let bss3 = fake_bss_with_bssid(b"bar".to_vec(), [3, 3, 3, 3, 3, 3]);
+        let bss3 = fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [3; 6]);
         sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: bss3 });
 
         // Matching BSS
-        let bss4 = fake_bss_with_bssid(b"foo".to_vec(), [4, 4, 4, 4, 4, 4]);
+        let bss4 = fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [4; 6]);
         sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: clone_bss_desc(&bss4) });
 
         let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
@@ -897,15 +894,15 @@ mod tests {
         let txn_id = req.txn_id;
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_unprotected_bss_description(b"foo".to_vec()),
+            bss: fake_bss!(Open, ssid: b"foo".to_vec()),
         });
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss_with_vendor_ies(b"foo".to_vec(), probe_resp_wsc_ie()),
+            bss: fake_bss!(Open, ssid: b"foo".to_vec(), vendor_ies: Some(probe_resp_wsc_ie())),
         });
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_unprotected_bss_description(b"foo".to_vec()),
+            bss: fake_bss!(Open, ssid: b"foo".to_vec()),
         });
         let (result, _req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
             txn_id,

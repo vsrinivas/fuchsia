@@ -593,13 +593,10 @@ mod tests {
     use crate::Config as SmeConfig;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_inspect as finspect;
-    use wlan_common::{assert_variant, ie::rsn::akm, RadioConfig};
+    use wlan_common::{assert_variant, fake_bss, ie::rsn::akm, RadioConfig};
 
     use super::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, expect_stream_empty,
-        fake_bss_with_bssid, fake_bss_with_rates, fake_protected_bss_description,
-        fake_unprotected_bss_description, fake_wep_bss_description, fake_wpa3_bss_description,
-        fake_wpa3_mixed_bss_description,
     };
 
     use crate::test_utils;
@@ -624,31 +621,31 @@ mod tests {
 
         // Open network without credentials:
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss = fake_unprotected_bss_description(b"unprotected".to_vec());
+        let bss = fake_bss!(Open);
         let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Open));
 
         // Open network with credentials:
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss = fake_unprotected_bss_description(b"unprotected".to_vec());
+        let bss = fake_bss!(Open);
         get_protection(&dev_info, &client_config, &credential, &bss)
             .expect_err("unprotected network cannot use password");
 
         // RSN with user entered password:
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss = fake_protected_bss_description(b"rsn".to_vec());
+        let bss = fake_bss!(Wpa2);
         let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Rsna(_)));
 
         // RSN with user entered PSK:
         let credential = fidl_sme::Credential::Psk(vec![0xAC; 32]);
-        let bss = fake_protected_bss_description(b"rsn".to_vec());
+        let bss = fake_bss!(Wpa2);
         let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Rsna(_)));
 
         // RSN without credentials:
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss = fake_protected_bss_description(b"rsn".to_vec());
+        let bss = fake_bss!(Wpa2);
         get_protection(&dev_info, &client_config, &credential, &bss)
             .expect_err("protected network requires password");
     }
@@ -660,25 +657,25 @@ mod tests {
 
         // WEP-40 with credentials:
         let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
-        let bss = fake_wep_bss_description(b"wep40".to_vec());
+        let bss = fake_bss!(Wep);
         let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Wep(_)));
 
         // WEP-104 with credentials:
         let credential = fidl_sme::Credential::Password(b"superinsecure".to_vec());
-        let bss = fake_wep_bss_description(b"wep104".to_vec());
+        let bss = fake_bss!(Wep);
         let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Wep(_)));
 
         // WEP without credentials:
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss = fake_wep_bss_description(b"wep".to_vec());
+        let bss = fake_bss!(Wep);
         get_protection(&dev_info, &client_config, &credential, &bss)
             .expect_err("WEP network not supported");
 
         // WEP with invalid credentials:
         let credential = fidl_sme::Credential::Password(b"wep".to_vec());
-        let bss = fake_wep_bss_description(b"wep".to_vec());
+        let bss = fake_bss!(Wep);
         get_protection(&dev_info, &client_config, &credential, &bss)
             .expect_err("expected error for invalid WEP credentials");
     }
@@ -690,7 +687,7 @@ mod tests {
 
         // WPA3, supported
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss = fake_wpa3_bss_description(b"rsn".to_vec());
+        let bss = fake_bss!(Wpa3);
         let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
             assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::SAE)
@@ -698,7 +695,7 @@ mod tests {
 
         // WPA2/3, supported
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss = fake_wpa3_mixed_bss_description(b"rsn".to_vec());
+        let bss = fake_bss!(Wpa2Wpa3);
         let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
             assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::SAE)
@@ -708,13 +705,13 @@ mod tests {
 
         // WPA3, unsupported
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss = fake_wpa3_bss_description(b"rsn".to_vec());
+        let bss = fake_bss!(Wpa3);
         let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Err(_));
 
         // WPA2/3, WPA3 unsupported, downgrade to WPA2
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss = fake_wpa3_mixed_bss_description(b"rsn".to_vec());
+        let bss = fake_bss!(Wpa2Wpa3);
         let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
             assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::PSK)
@@ -739,7 +736,7 @@ mod tests {
 
         // Push a fake scan result into SME. We should still be connecting to "foo",
         // but the status should now come from the state machine and not from the scanner.
-        report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
+        report_fake_scan_result(&mut sme, fake_bss!(Open, ssid: b"foo".to_vec()));
         assert_eq!(Some(b"foo".to_vec()), sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(
             Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
@@ -783,7 +780,7 @@ mod tests {
 
         // Simulate scan end and verify that underlying state machine's status is changed,
         // and a join request is sent to MLME.
-        report_fake_scan_result(&mut sme, fake_wep_bss_description(b"foo".to_vec()));
+        report_fake_scan_result(&mut sme, fake_bss!(Wep, ssid: b"foo".to_vec()));
         assert_eq!(Some(b"foo".to_vec()), sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(
             Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
@@ -812,7 +809,7 @@ mod tests {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
 
         // Simulate scan end and verify that underlying state machine's status is not changed,
-        report_fake_scan_result(&mut sme, fake_wep_bss_description(b"foo".to_vec()));
+        report_fake_scan_result(&mut sme, fake_bss!(Wep, ssid: b"foo".to_vec()));
         assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
         assert_connect_result_failed(&mut connect_fut);
     }
@@ -837,7 +834,7 @@ mod tests {
 
         // Simulate scan end and verify that underlying state machine's status is changed,
         // and a join request is sent to MLME.
-        report_fake_scan_result(&mut sme, fake_protected_bss_description(b"foo".to_vec()));
+        report_fake_scan_result(&mut sme, fake_bss!(Wpa2, ssid: b"foo".to_vec()));
         assert_eq!(Some(b"foo".to_vec()), sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(
             Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
@@ -877,7 +874,7 @@ mod tests {
 
         // Simulate scan end and verify that underlying state machine's status is changed,
         // and a join request is sent to MLME.
-        report_fake_scan_result(&mut sme, fake_protected_bss_description(b"IEEE".to_vec()));
+        report_fake_scan_result(&mut sme, fake_bss!(Wpa2, ssid: b"IEEE".to_vec()));
         assert_eq!(Some(b"IEEE".to_vec()), sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(
             Status { connected_to: None, connecting_to: Some(b"IEEE".to_vec()) },
@@ -905,7 +902,7 @@ mod tests {
         // because a password was supplied for unprotected network. So both the
         // SME client and underlying state machine should report not connecting
         // anymore.
-        report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
+        report_fake_scan_result(&mut sme, fake_bss!(Open, ssid: b"foo".to_vec()));
         assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
@@ -957,7 +954,7 @@ mod tests {
         // because a password was supplied for unprotected network. So both the
         // SME client and underlying state machine should report not connecting
         // anymore.
-        report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
+        report_fake_scan_result(&mut sme, fake_bss!(Open, ssid: b"foo".to_vec()));
         assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
@@ -1007,7 +1004,7 @@ mod tests {
 
         // Push a fake scan result into SME. We should not attempt to connect
         // because no password was supplied for a protected network.
-        report_fake_scan_result(&mut sme, fake_protected_bss_description(b"foo".to_vec()));
+        report_fake_scan_result(&mut sme, fake_bss!(Wpa2, ssid: b"foo".to_vec()));
         assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
@@ -1047,7 +1044,7 @@ mod tests {
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let mut connect_fut = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        let bss_desc = fake_unprotected_bss_description(b"bar".to_vec());
+        let bss_desc = fake_bss!(Open, ssid: b"bar".to_vec());
         report_fake_scan_result(&mut sme, bss_desc);
 
         assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
@@ -1061,9 +1058,11 @@ mod tests {
 
         let credential = fidl_sme::Credential::Password(b"password".to_vec());
         let mut connect_fut = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        let mut bss_desc = fake_protected_bss_description(b"foo".to_vec());
+        let bss_desc = fidl_mlme::BssDescription {
+            cap: wlan_common::mac::CapabilityInfo(0).with_privacy(false).0,
+            ..fake_bss!(Wpa2, ssid: b"foo".to_vec())
+        };
         // Make our check flag this BSS as incompatible
-        bss_desc.cap = wlan_common::mac::CapabilityInfo(bss_desc.cap).with_privacy(false).0;
         report_fake_scan_result(&mut sme, bss_desc);
 
         assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
@@ -1098,7 +1097,7 @@ mod tests {
         assert_connect_result(&mut connect_fut1, ConnectResult::Canceled);
         // Report scan result to transition second connection attempt past scan. This is to verify
         // that connection attempt will be canceled even in the middle of joining the network
-        report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
+        report_fake_scan_result(&mut sme, fake_bss!(Open, ssid: b"foo".to_vec()));
 
         let req3 = connect_req(b"foo".to_vec(), fidl_sme::Credential::None(fidl_sme::Empty));
         let mut _connect_fut3 = sme.on_connect_command(req3);
@@ -1114,7 +1113,7 @@ mod tests {
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
 
-        let bss_desc = fake_unprotected_bss_description(b"foo".to_vec());
+        let bss_desc = fake_bss!(Open, ssid: b"foo".to_vec());
         let bssid = bss_desc.bssid;
         report_fake_scan_result(&mut sme, bss_desc);
 
@@ -1146,7 +1145,7 @@ mod tests {
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
 
-        let bss_desc = fake_unprotected_bss_description(b"foo".to_vec());
+        let bss_desc = fake_bss!(Open, ssid: b"foo".to_vec());
         let bssid = bss_desc.bssid;
         report_fake_scan_result(&mut sme, bss_desc);
 
@@ -1191,7 +1190,7 @@ mod tests {
         });
 
         // Old scan finishes. However, no join scan stats is sent
-        report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
+        report_fake_scan_result(&mut sme, fake_bss!(Open, ssid: b"foo".to_vec()));
         assert_variant!(info_stream.try_next(), Err(_));
     }
 
@@ -1202,7 +1201,7 @@ mod tests {
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
 
-        report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
+        report_fake_scan_result(&mut sme, fake_bss!(Open, ssid: b"foo".to_vec()));
 
         // Send another connect request, which should cancel first one
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
@@ -1222,16 +1221,16 @@ mod tests {
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
 
-        let bss = fake_unprotected_bss_description(b"foo".to_vec());
+        let bss = fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [1; 6]);
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, bss },
         });
-        let bss = fake_bss_with_bssid(b"foo".to_vec(), [3; 6]);
+        let bss = fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [3; 6]);
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, bss },
         });
         // This scan result should not be counted since it's not the SSID we request
-        let bss = fake_unprotected_bss_description(b"bar".to_vec());
+        let bss = fake_bss!(Open, ssid: b"bar".to_vec());
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, bss },
         });
@@ -1254,11 +1253,11 @@ mod tests {
         let mut recv =
             sme.on_scan_command(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
 
-        let bss = fake_bss_with_bssid(b"foo".to_vec(), [3; 6]);
+        let bss = fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [3; 6]);
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, bss },
         });
-        let bss = fake_bss_with_bssid(b"foo".to_vec(), [4; 6]);
+        let bss = fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [4; 6]);
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, bss },
         });
@@ -1284,7 +1283,7 @@ mod tests {
                 channels: vec![],
             }));
 
-        report_fake_scan_result(&mut sme, fake_bss_with_rates(b"foo".to_vec(), vec![12]));
+        report_fake_scan_result(&mut sme, fake_bss!(Open, rates: vec![12]));
 
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::DiscoveryScanStats(scan_stats))) => {
             assert!(!scan_stats.scan_start_while_connected);

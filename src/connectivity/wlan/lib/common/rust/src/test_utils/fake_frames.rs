@@ -364,6 +364,16 @@ pub fn invalid_wpa3_enterprise_192_bit_rsne() -> Vec<u8> {
     ]
 }
 
+pub fn fake_eap_rsne() -> Vec<u8> {
+    vec![
+        48, 18, // Element header
+        1, 0, // Version
+        0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
+        1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+        1, 0, 0x00, 0x0F, 0xAC, 1, // 1 AKM:  802.1X
+    ]
+}
+
 // RSNE with AKM that we can't classify into a protection type
 pub fn fake_unknown_rsne() -> Vec<u8> {
     vec![

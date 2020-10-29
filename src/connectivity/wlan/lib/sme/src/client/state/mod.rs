@@ -1201,11 +1201,12 @@ fn now() -> zx::Time {
 mod tests {
     use super::*;
     use anyhow::format_err;
+    use fidl_fuchsia_wlan_common as fidl_common;
     use fuchsia_inspect::Inspector;
     use futures::channel::{mpsc, oneshot};
     use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
-    use wlan_common::{assert_variant, ie::rsn::rsne::Rsne, RadioConfig};
+    use wlan_common::{assert_variant, fake_bss, ie::rsn::rsne::Rsne, RadioConfig};
     use wlan_rsn::{key::exchange::Key, rsna::SecAssocStatus};
     use wlan_rsn::{
         rsna::{SecAssocUpdate, UpdateSink},
@@ -1214,14 +1215,13 @@ mod tests {
 
     use crate::client::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, expect_stream_empty,
-        fake_negotiated_channel_and_capabilities, fake_protected_bss_description,
-        fake_unprotected_bss_description, fake_wep_bss_description, fake_wmm_param,
-        fake_wpa1_bss_description, mock_psk_supplicant, MockSupplicant, MockSupplicantController,
+        fake_negotiated_channel_and_capabilities, fake_wmm_param, mock_psk_supplicant,
+        MockSupplicant, MockSupplicantController,
     };
     use crate::client::{info::InfoReporter, inspect, rsn::Rsna, InfoEvent, InfoSink, TimeStream};
     use crate::test_utils::make_wpa1_ie;
 
-    use crate::{test_utils, timer, InfoStream, MlmeStream, Ssid};
+    use crate::{test_utils, timer, InfoStream, MlmeStream};
 
     #[test]
     fn associate_happy_path_unprotected() {
@@ -1928,7 +1928,7 @@ mod tests {
     #[test]
     fn increment_att_id_on_disassociate_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
+        let state = link_up_state(Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6])));
         assert_eq!(h.context.att_id, 0);
 
         let disassociate_ind = MlmeEvent::DisassociateInd {
@@ -1940,7 +1940,7 @@ mod tests {
         };
 
         let state = state.on_mlme_event(disassociate_ind, &mut h.context);
-        assert_associating(state, &unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8]));
+        assert_associating(state, &fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]));
         assert_eq!(h.context.att_id, 1);
     }
 
@@ -1991,7 +1991,7 @@ mod tests {
     #[test]
     fn disconnect_reported_on_deauth_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
+        let state = link_up_state(Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6])));
 
         let deauth_ind = MlmeEvent::DeauthenticateInd {
             ind: fidl_mlme::DeauthenticateIndication {
@@ -2015,7 +2015,7 @@ mod tests {
     #[test]
     fn disconnect_reported_on_disassoc_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
+        let state = link_up_state(Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6])));
 
         let deauth_ind = MlmeEvent::DisassociateInd {
             ind: fidl_mlme::DisassociateIndication {
@@ -2039,7 +2039,7 @@ mod tests {
     #[test]
     fn disconnect_reported_on_manual_disconnect() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
+        let state = link_up_state(Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6])));
 
         let _state = state.disconnect(&mut h.context);
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
@@ -2055,7 +2055,15 @@ mod tests {
     #[test]
     fn bss_channel_switch_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
+        let state = link_up_state(Box::new(fake_bss!(Open,
+                                                     ssid: b"bar".to_vec(),
+                                                     bssid: [8; 6],
+                                                     chan: fidl_common::WlanChan {
+                                                         primary: 1,
+                                                         secondary80: 0,
+                                                         cbw: fidl_common::Cbw::Cbw20
+                                                     }
+        )));
 
         let switch_ind =
             MlmeEvent::OnChannelSwitched { info: fidl_mlme::ChannelSwitchInfo { new_channel: 36 } };
@@ -2186,7 +2194,8 @@ mod tests {
     fn status_returns_last_rssi_snr() {
         let mut h = TestHelper::new();
 
-        let state = link_up_state(Box::new(unprotected_bss(b"RSSI".to_vec(), [42; 6])));
+        let state =
+            link_up_state(Box::new(fake_bss!(Open, ssid: b"RSSI".to_vec(), bssid: [42; 6])));
         let state = state.on_mlme_event(signal_report_with_rssi_snr(-42, 20), &mut h.context);
         assert_eq!(state.status().connected_to.unwrap().rx_dbm, -42);
         assert_eq!(state.status().connected_to.unwrap().snr_db, 20);
@@ -2311,9 +2320,9 @@ mod tests {
         mlme_stream: &mut MlmeStream,
         chan_and_cap: (Channel, ClientCapabilities),
     ) {
-        let (chan, join_cap) = chan_and_cap;
+        let (chan, client_cap) = chan_and_cap;
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::FinalizeAssociation(cap))) => {
-            assert_eq!(cap, join_cap.0.to_fidl_negotiated_capabilities(&chan));
+            assert_eq!(cap, client_cap.0.to_fidl_negotiated_capabilities(&chan));
         });
     }
 
@@ -2405,7 +2414,7 @@ mod tests {
     fn connect_command_one() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
         let cmd = ConnectCommand {
-            bss: Box::new(unprotected_bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7])),
+            bss: Box::new(fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [7, 7, 7, 7, 7, 7])),
             responder: Some(responder),
             protection: Protection::Open,
             radio_cfg: RadioConfig::default(),
@@ -2416,7 +2425,7 @@ mod tests {
     fn connect_command_two() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
         let cmd = ConnectCommand {
-            bss: Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
+            bss: Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8, 8, 8, 8, 8, 8])),
             responder: Some(responder),
             protection: Protection::Open,
             radio_cfg: RadioConfig::default(),
@@ -2427,7 +2436,7 @@ mod tests {
     fn connect_command_wep() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
         let cmd = ConnectCommand {
-            bss: Box::new(fake_wep_bss_description(b"wep".to_vec())),
+            bss: Box::new(fake_bss!(Wep, ssid: b"wep".to_vec())),
             responder: Some(responder),
             protection: Protection::Wep(wep_deprecated::Key::Bits40([3; 5])),
             radio_cfg: RadioConfig::default(),
@@ -2441,7 +2450,7 @@ mod tests {
         let (responder, receiver) = Responder::new();
         let wpa_ie = make_wpa1_ie();
         let cmd = ConnectCommand {
-            bss: Box::new(fake_wpa1_bss_description(b"wpa1".to_vec())),
+            bss: Box::new(fake_bss!(Wpa1, ssid: b"wpa1".to_vec())),
             responder: Some(responder),
             protection: Protection::LegacyWpa(Rsna {
                 negotiated_protection: NegotiatedProtection::from_legacy_wpa(&wpa_ie)
@@ -2457,7 +2466,7 @@ mod tests {
         supplicant: MockSupplicant,
     ) -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
-        let bss = protected_bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7]);
+        let bss = fake_bss!(Wpa2, ssid: b"wpa2".to_vec());
         let rsne = Rsne::wpa2_psk_ccmp_rsne();
         let cmd = ConnectCommand {
             bss: Box::new(bss),
@@ -2575,7 +2584,7 @@ mod tests {
     }
 
     fn link_up_state_protected(supplicant: MockSupplicant, bssid: [u8; 6]) -> ClientState {
-        let bss = protected_bss(b"foo".to_vec(), bssid);
+        let bss = fidl_mlme::BssDescription { ssid: b"foo".to_vec(), bssid, ..fake_bss!(Wpa2) };
         let rsne = Rsne::wpa2_psk_ccmp_rsne();
         let rsna = Rsna {
             negotiated_protection: NegotiatedProtection::from_rsne(&rsne)
@@ -2602,14 +2611,6 @@ mod tests {
             last_channel_switch_time: None,
         })
         .into()
-    }
-
-    fn protected_bss(ssid: Ssid, bssid: [u8; 6]) -> fidl_mlme::BssDescription {
-        fidl_mlme::BssDescription { bssid, ..fake_protected_bss_description(ssid) }
-    }
-
-    fn unprotected_bss(ssid: Ssid, bssid: [u8; 6]) -> fidl_mlme::BssDescription {
-        fidl_mlme::BssDescription { bssid, ..fake_unprotected_bss_description(ssid) }
     }
 
     fn fake_device_info() -> fidl_mlme::DeviceInfo {

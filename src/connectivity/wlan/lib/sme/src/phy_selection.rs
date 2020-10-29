@@ -214,10 +214,10 @@ pub fn derive_phy_cbw_for_ap(
 mod tests {
     use {
         super::*,
-        crate::{client::test_utils::fake_vht_bss_description, test_utils::*},
+        crate::test_utils::*,
         wlan_common::{
             channel::{Cbw, Channel, Phy},
-            RadioConfig,
+            fake_bss, RadioConfig,
         },
     };
 
@@ -343,7 +343,11 @@ mod tests {
         {
             let want = (fidl_common::Phy::Vht, fidl_common::Cbw::Cbw80);
             let got = derive_phy_cbw(
-                &fake_vht_bss_description(),
+                &fake_bss!(Open, chan: fidl_common::WlanChan {
+                    primary: 123,
+                    cbw: fidl_common::Cbw::Cbw80P80,
+                    secondary80: 42,
+                }),
                 &fake_device_info_vht(ChanWidthSet::TWENTY_FORTY),
                 &RadioConfig::default(),
             );
@@ -352,7 +356,11 @@ mod tests {
         {
             let want = (fidl_common::Phy::Ht, fidl_common::Cbw::Cbw40);
             let got = derive_phy_cbw(
-                &fake_vht_bss_description(),
+                &fake_bss!(Open, chan: fidl_common::WlanChan {
+                    primary: 123,
+                    cbw: fidl_common::Cbw::Cbw80P80,
+                    secondary80: 42,
+                }),
                 &fake_device_info_vht(ChanWidthSet::TWENTY_FORTY),
                 &fake_overrider(fidl_common::Phy::Ht, fidl_common::Cbw::Cbw80),
             );
@@ -361,7 +369,11 @@ mod tests {
         {
             let want = (fidl_common::Phy::Ht, fidl_common::Cbw::Cbw20);
             let got = derive_phy_cbw(
-                &fake_vht_bss_description(),
+                &fake_bss!(Open, chan: fidl_common::WlanChan {
+                    primary: 123,
+                    cbw: fidl_common::Cbw::Cbw80P80,
+                    secondary80: 42,
+                }),
                 &fake_device_info_ht(ChanWidthSet::TWENTY_ONLY),
                 &fake_overrider(fidl_common::Phy::Vht, fidl_common::Cbw::Cbw80),
             );
