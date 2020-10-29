@@ -2,11 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Result, ffx_target_status_args::TargetStatus, std::io::Write};
+use {anyhow::Result, ffx_target_status_args::TargetStatus, serde::Serialize, std::io::Write};
+
+/// Store, organize, and display hierarchical status information. Output may be
+/// formatted for a human reader or structured as JSON for machine consumption.
 
 const INDENT: usize = 4;
 
-#[derive(Debug, PartialEq)]
+/// Status entry values.
+#[derive(Debug, PartialEq, Serialize)]
+#[serde(untagged)]
 pub enum StatusValue {
     BoolValue(bool),
     StringValue(String),
@@ -23,12 +28,15 @@ impl std::fmt::Display for StatusValue {
     }
 }
 
-#[derive(Debug, PartialEq)]
+/// A node in a hierarchy of status information or groupings.
+#[derive(Debug, PartialEq, Serialize)]
 pub struct StatusEntry {
     pub title: String,
     pub label: String,
     pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<StatusValue>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub child: Vec<StatusEntry>,
 }
 
@@ -89,7 +97,7 @@ fn output_list<W: Write>(
 ) -> Result<()> {
     for status in statuses {
         let mut label = "".to_string();
-        if args.label && !status.description.is_empty() {
+        if args.label && !status.label.is_empty() {
             label = format!(" ({})", status.label);
         }
         let mut desc = "".to_string();
@@ -120,36 +128,102 @@ pub fn output_for_human<W: Write>(
     output_list(0, &statuses, args, writer)
 }
 
+/// Write output in JSON for easy parsing by other tools.
+pub fn output_for_machine<W: Write>(
+    statuses: &Vec<StatusEntry>,
+    _args: &TargetStatus,
+    writer: &mut W,
+) -> Result<()> {
+    Ok(write!(writer, "{}", serde_json::to_string(&statuses)?)?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    fn test_display_output() {
+        assert_eq!(format!("{}", StatusValue::BoolValue(false)), "false");
+        assert_eq!(format!("{}", StatusValue::BoolValue(true)), "true");
+        assert_eq!(format!("{}", StatusValue::StringValue("abc".to_string())), "\"abc\"");
+        assert_eq!(format!("{}", StatusValue::StringValue("ab\"c".to_string())), "\"ab\\\"c\"");
+        assert_eq!(
+            format!("{}", StatusValue::StringListValue(vec!["abc".to_string(), "def".to_string()])),
+            "[\"abc\", \"def\"]"
+        );
+    }
+
+    #[test]
     fn test_output_list() {
-        let mut input = Vec::new();
-        input.push(StatusEntry::new("Test", "the_test", "A test."));
+        let input = vec![StatusEntry::new("Test", "the_test", "A test.")];
         let mut result = Vec::new();
-        output_list(7, &input, &TargetStatus { desc: false, label: false }, &mut result).unwrap();
+        output_list(
+            7,
+            &input,
+            &TargetStatus { desc: false, label: false, json: false },
+            &mut result,
+        )
+        .unwrap();
         assert_eq!(result, b"       Test: \n");
     }
 
     #[test]
     fn test_output_list_with_child() {
-        let mut input = Vec::new();
-        input.push(StatusEntry::new("Test", "the_test", "A test."));
-        input[0].child.push(StatusEntry::new("Prop", "a_prop", "Some data."));
+        let input = vec![StatusEntry::group(
+            "Test",
+            "the_test",
+            "A test.",
+            vec![StatusEntry::new("Prop", "a_prop", "Some data.")],
+        )];
         let mut result = Vec::new();
-        output_list(0, &input, &TargetStatus { desc: false, label: false }, &mut result).unwrap();
+        output_list(
+            0,
+            &input,
+            &TargetStatus { desc: false, label: false, json: false },
+            &mut result,
+        )
+        .unwrap();
         assert_eq!(result, b"Test: \n    Prop: \n");
     }
 
     #[test]
     fn test_output_for_human() {
-        let mut input = Vec::new();
-        input.push(StatusEntry::new("Test", "the_test", "A test."));
-        input[0].child.push(StatusEntry::new("Prop", "a_prop", "Some data."));
+        let input = vec![StatusEntry::group(
+            "Test",
+            "the_test",
+            "A test.",
+            vec![StatusEntry::bool_value("Prop", "a_prop", "Some data.", &Some(false))],
+        )];
         let mut result = Vec::new();
-        output_for_human(&input, &TargetStatus { desc: false, label: false }, &mut result).unwrap();
-        assert_eq!(result, b"Test: \n    Prop: \n");
+        output_for_human(
+            &input,
+            &TargetStatus { desc: false, label: false, json: false },
+            &mut result,
+        )
+        .unwrap();
+        assert_eq!(result, b"Test: \n    Prop: false\n");
+    }
+
+    #[test]
+    fn test_output_for_machine() {
+        let input = vec![StatusEntry::group(
+            "Test",
+            "the_test",
+            "A test.",
+            vec![StatusEntry::bool_value("Prop", "a_prop", "Some data.", &Some(false))],
+        )];
+        let mut result = Vec::new();
+        output_for_machine(
+            &input,
+            &TargetStatus { desc: false, label: false, json: true },
+            &mut result,
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            b"[{\"title\":\"Test\",\"label\":\"the_test\",\"description\"\
+                             :\"A test.\",\"child\":[{\"title\":\"Prop\",\"label\":\"a_prop\",\
+                             \"description\":\"Some data.\",\"value\":false}]}]"
+        );
     }
 }

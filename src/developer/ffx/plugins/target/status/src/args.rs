@@ -6,13 +6,17 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "status", description = "Status of the target device")]
+#[argh(subcommand, name = "status", description = "Status of the target device.")]
 pub struct TargetStatus {
     /// display descriptions of entries.
     #[argh(switch)]
     pub desc: bool,
 
-    /// display label of entries.
+    /// display label of entries (default for json).
     #[argh(switch)]
     pub label: bool,
+
+    /// generate machine readable output (JSON).
+    #[argh(switch)]
+    pub json: bool,
 }

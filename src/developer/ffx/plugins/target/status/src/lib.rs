@@ -61,7 +61,11 @@ async fn status_cmd_impl<W: Write>(
         Ok((board, device, product, update)) => vec![board, device, product, update],
         Err(e) => bail!(e),
     };
-    status::output_for_human(&status, &target_status_args, &mut writer)?;
+    if target_status_args.json {
+        status::output_for_machine(&status, &target_status_args, &mut writer)?;
+    } else {
+        status::output_for_human(&status, &target_status_args, &mut writer)?;
+    }
     Ok(())
 }
 
@@ -143,7 +147,7 @@ async fn gather_product_status(product: ProductProxy) -> Result<StatusEntry> {
                 "When product was built.",
                 &info.build_date,
             ),
-            StatusEntry::str_value("Build name", "build_name", ".", &info.build_name),
+            StatusEntry::str_value("Build name", "build_name", "Reference name.", &info.build_name),
             StatusEntry::str_value("Colorway", "colorway", "Colorway.", &info.colorway),
             StatusEntry::str_value("Display", "display", "Info about display.", &info.display),
             StatusEntry::str_value(
@@ -213,6 +217,37 @@ mod tests {
         BoardInfo, BoardRequest, DeviceInfo, DeviceRequest, ProductInfo, ProductRequest,
     };
     use fidl_fuchsia_update_channelcontrol::ChannelControlRequest;
+    use serde_json::Value;
+
+    const TEST_OUTPUT_HUMAN: &'static [u8] = b"\
+        Board: \
+        \n    Name: \"fake_name\"\
+        \n    Revision: \"fake_revision\"\
+        \nDevice: \
+        \n    Serial number: \"fake_serial\"\
+        \n    Retail SKU: \"fake_sku\"\
+        \n    Is retail demo: false\
+        \nProduct: \
+        \n    Audio amplifier: \"fake_audio_amplifier\"\
+        \n    Build date: \"fake_build_date\"\
+        \n    Build name: \"fake_build_name\"\
+        \n    Colorway: \"fake_colorway\"\
+        \n    Display: \"fake_display\"\
+        \n    EMMC storage: \"fake_emmc_storage\"\
+        \n    Language: \"fake_language\"\
+        \n    Regulatory domain: \"fake_regulatory_domain\"\
+        \n    Locale list: []\
+        \n    Manufacturer: \"fake_manufacturer\"\
+        \n    Microphone: \"fake_microphone\"\
+        \n    Model: \"fake_model\"\
+        \n    Name: \"fake_name\"\
+        \n    NAND storage: \"fake_nand_storage\"\
+        \n    Memory: \"fake_memory\"\
+        \n    SKU: \"fake_sku\"\
+        \nUpdate: \
+        \n    Current channel: \"fake_channel\"\
+        \n    Next channel: \"fake_target\"\
+        \n";
 
     fn setup_fake_board_server() -> BoardProxy {
         setup_fake_board_proxy(move |req| match req {
@@ -225,6 +260,51 @@ mod tests {
                     .unwrap();
             }
         })
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_status_cmd_impl() {
+        let mut output = Vec::new();
+        status_cmd_impl(
+            setup_fake_channel_control_server(),
+            setup_fake_board_server(),
+            setup_fake_device_server(),
+            setup_fake_product_server(),
+            args::TargetStatus { desc: false, label: false, json: false },
+            &mut output,
+        )
+        .await
+        .expect("status_cmd_impl");
+        assert_eq!(output, TEST_OUTPUT_HUMAN);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_status_cmd_impl_json() {
+        let mut output = Vec::new();
+        status_cmd_impl(
+            setup_fake_channel_control_server(),
+            setup_fake_board_server(),
+            setup_fake_device_server(),
+            setup_fake_product_server(),
+            args::TargetStatus { desc: false, label: false, json: true },
+            &mut output,
+        )
+        .await
+        .expect("status_cmd_impl");
+        let v: Value =
+            serde_json::from_str(std::str::from_utf8(&output).unwrap()).expect("Valid JSON");
+        assert!(v.is_array());
+        assert_eq!(v.as_array().unwrap().len(), 4);
+
+        assert_eq!(v[0]["label"], Value::String("board".to_string()));
+        assert_eq!(v[1]["label"], Value::String("device".to_string()));
+        assert_eq!(v[2]["label"], Value::String("product".to_string()));
+        assert_eq!(v[3]["label"], Value::String("update".to_string()));
+
+        assert_eq!(v[0]["child"].as_array().unwrap().len(), 2);
+        assert_eq!(v[1]["child"].as_array().unwrap().len(), 3);
+        assert_eq!(v[2]["child"].as_array().unwrap().len(), 16);
+        assert_eq!(v[3]["child"].as_array().unwrap().len(), 2);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
