@@ -67,6 +67,8 @@ pub struct V2Component {
     id: String,
     component_type: String,
     children: Vec<Self>,
+    job_id: Option<u32>,
+    process_id: Option<u32>,
     in_services: Vec<String>,
     out_services: Vec<String>,
     exposed_capabilities: Vec<String>,
@@ -90,7 +92,35 @@ impl V2Component {
                 .await
                 .expect("Could not read component_type from hub");
 
+            let hub_dir =
+                io_util::open_directory_in_namespace(&hub_path, io_util::OPEN_RIGHT_READABLE)
+                    .expect("Opening hub-v2 directory");
             let exec_path = format!("{}/exec", hub_path);
+
+            let mut job_id = None;
+            let mut process_id = None;
+            if let Ok(_elf_dir) = directory::open_directory(
+                &hub_dir,
+                "exec/runtime/elf",
+                io_util::OPEN_RIGHT_READABLE,
+            )
+            .await
+            {
+                job_id = if let Ok(file_contents) =
+                    get_file(&format!("{}/runtime/elf/job_id", exec_path)).await
+                {
+                    Some(file_contents.parse::<u32>().unwrap())
+                } else {
+                    None
+                };
+                process_id = if let Ok(file_contents) =
+                    get_file(&format!("{}/runtime/elf/process_id", exec_path)).await
+                {
+                    Some(file_contents.parse::<u32>().unwrap())
+                } else {
+                    None
+                };
+            }
             let in_services = get_services(&format!("{}/in", exec_path)).await;
             let out_services = get_services(&format!("{}/out", exec_path)).await;
             let exposed_capabilities =
@@ -123,6 +153,8 @@ impl V2Component {
                 id,
                 component_type,
                 children,
+                job_id,
+                process_id,
                 in_services,
                 out_services,
                 exposed_capabilities,
@@ -166,6 +198,12 @@ impl V2Component {
             lines.push(moniker.clone());
             lines.push(format!("- URL: {}", self.url));
             lines.push(format!("- Type: v2 {} component", self.component_type));
+            if let Some(job_id) = self.job_id {
+                lines.push(format!("- Job ID: {}", job_id));
+            }
+            if let Some(process_id) = self.process_id {
+                lines.push(format!("- Process ID: {}", process_id));
+            }
             generate_services("Exposed Capabilities", &self.exposed_capabilities, lines);
             generate_services("Incoming Services", &self.in_services, lines);
             generate_services("Outgoing Services", &self.out_services, lines);

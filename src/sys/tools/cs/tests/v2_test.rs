@@ -4,6 +4,7 @@
 
 use {
     cs::v2::V2Component,
+    regex::Regex,
     test_utils_lib::{events::*, matcher::EventMatcher, opaque_test::*},
 };
 
@@ -166,8 +167,12 @@ async fn echo_realm() {
 
     let hub_v2_path = test.get_hub_v2_path().into_os_string().into_string().unwrap();
     let actual = launch_cs(hub_v2_path).await;
+
+    let regex_job_id = Regex::new(r"- Job ID: \d+").unwrap();
+    let regex_process_id = Regex::new(r"- Process ID: \d+").unwrap();
+
     compare_output(
-        actual,
+        actual[0..14].to_vec(),
         vec![
             "<root>",
             "  echo_server",
@@ -183,6 +188,15 @@ async fn echo_realm() {
             "<root>:0/echo_server:0",
             "- URL: fuchsia-pkg://fuchsia.com/cs-tests#meta/echo_server.cm",
             "- Type: v2 static component",
+        ],
+    );
+
+    assert!(regex_job_id.is_match(&actual[14]));
+    assert!(regex_process_id.is_match(&actual[15]));
+
+    compare_output(
+        actual[16..26].to_vec(),
+        vec![
             "- Exposed Capabilities (2)",
             "  - fidl.examples.routing.echo.Echo",
             "  - hub",
@@ -193,6 +207,15 @@ async fn echo_realm() {
             "<root>:0/indef_echo_client:0",
             "- URL: fuchsia-pkg://fuchsia.com/cs-tests#meta/indef_echo_client.cm",
             "- Type: v2 static component",
+        ],
+    );
+
+    assert!(regex_job_id.is_match(&actual[26]));
+    assert!(regex_process_id.is_match(&actual[27]));
+
+    compare_output(
+        actual[28..34].to_vec(),
+        vec![
             "- Exposed Capabilities (0)",
             "- Incoming Services (2)",
             "  - fidl.examples.routing.echo.Echo",
