@@ -919,9 +919,11 @@ declare_args() {
   known_variants = [
     {
       configs = [ "//build/config/lto" ]
+      tags = [ "lto" ]
     },
     {
       configs = [ "//build/config/lto:thinlto" ]
+      tags = [ "lto" ]
     },
 
     {

@@ -208,7 +208,11 @@ config("static_cpp_standard_library") {
 }
 
 config("dynamic_rust_standard_library") {
-  rustflags = [ "-Cprefer-dynamic" ]
+  # -Cprefer-dynamic is incompatible with (Thin)LTO.
+  if (toolchain_variant.tags + [ "lto" ] - [ "lto" ] ==
+      toolchain_variant.tags) {
+    rustflags = [ "-Cprefer-dynamic" ]
+  }
 }
 
 # Configure a larger (2MB) stack size for Rust binaries.
