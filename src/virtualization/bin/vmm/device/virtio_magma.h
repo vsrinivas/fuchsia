@@ -49,9 +49,6 @@ class VirtioMagma : public VirtioMagmaGeneric,
                                          virtio_magma_map_aligned_resp_t* response) override;
   virtual zx_status_t Handle_map_specific(const virtio_magma_map_specific_ctrl_t* request,
                                           virtio_magma_map_specific_resp_t* response) override;
-  virtual zx_status_t Handle_wait_semaphores(
-      const virtio_magma_wait_semaphores_ctrl_t* request,
-      virtio_magma_wait_semaphores_resp_t* response) override;
   virtual zx_status_t Handle_poll(const virtio_magma_poll_ctrl_t* request,
                                   virtio_magma_poll_resp_t* response) override;
   virtual zx_status_t Handle_read_notification_channel(

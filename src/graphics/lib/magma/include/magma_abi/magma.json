@@ -646,34 +646,6 @@
         ]
       },
       {
-        "ordinal": 39,
-        "name": "magma_wait_semaphores",
-        "type": "magma_status_t",
-        "description": "DEPRECATED. Waits for one or all provided semaphores to be signaled. Does not reset any semaphores.",
-        "arguments": [
-          {
-            "name": "semaphores",
-            "type": "const magma_semaphore_t*",
-            "description": "Array of valid semaphores."
-          },
-          {
-            "name": "count",
-            "type": "uint32_t",
-            "description": "Number of semaphores in the array."
-          },
-          {
-            "name": "timeout_ms",
-            "type": "uint64_t",
-            "description": "Time to wait before returning MAGMA_STATUS_TIMED_OUT."
-          },
-          {
-            "name": "wait_all",
-            "type": "magma_bool_t",
-            "description": "If true, wait for all semaphores, otherwise wait for any semaphore."
-          }
-        ]
-      },
-      {
         "ordinal": 40,
         "name": "magma_export_semaphore",
         "type": "magma_status_t",

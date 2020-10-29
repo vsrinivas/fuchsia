@@ -72,37 +72,6 @@ magma_status_t magma_map_specific(magma_connection_t connection, magma_buffer_t 
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-magma_status_t magma_wait_semaphores(const magma_semaphore_t* semaphores, uint32_t count,
-                                     uint64_t timeout_ms, magma_bool_t wait_all) {
-  if (count == 0)
-    return MAGMA_STATUS_OK;
-
-  auto semaphore0_wrapped = virtmagma_semaphore_t::Get(semaphores[0]);
-  auto semaphore0_parent_wrapped = virtmagma_connection_t::Get(semaphore0_wrapped->Parent());
-  int32_t file_descriptor = semaphore0_parent_wrapped->Parent().first;
-
-  virtio_magma_wait_semaphores_ctrl_t request{};
-  virtio_magma_wait_semaphores_resp_t response{};
-  request.hdr.type = VIRTIO_MAGMA_CMD_WAIT_SEMAPHORES;
-  std::vector<magma_semaphore_t> unwrapped_semaphores(count);
-  for (uint32_t i = 0; i < count; ++i) {
-    unwrapped_semaphores[i] = virtmagma_semaphore_t::Get(semaphores[i])->Object();
-  }
-  request.semaphores = reinterpret_cast<decltype(request.semaphores)>(unwrapped_semaphores.data());
-  request.count = count;
-  request.timeout_ms = timeout_ms;
-  request.wait_all = wait_all;
-
-  if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
-                              sizeof(response)))
-    return MAGMA_STATUS_INTERNAL_ERROR;
-  if (response.hdr.type != VIRTIO_MAGMA_RESP_WAIT_SEMAPHORES)
-    return MAGMA_STATUS_INTERNAL_ERROR;
-
-  magma_status_t result_return = static_cast<decltype(result_return)>(response.result_return);
-  return result_return;
-}
-
 magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns) {
   if (count == 0)
     return MAGMA_STATUS_OK;

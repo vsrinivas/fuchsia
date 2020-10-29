@@ -151,7 +151,7 @@ class MagmaExecuteMsdVsi : public testing::Test {
     return command_stream;
   }
 
-  void ExecuteCommand(std::shared_ptr<EtnaCommandStream> command_stream, uint32_t timeout) {
+  void ExecuteCommand(std::shared_ptr<EtnaCommandStream> command_stream, uint32_t timeout_ms) {
     uint32_t length = command_stream->index * sizeof(uint32_t);
     magma_semaphore_t semaphore;
 
@@ -176,12 +176,15 @@ class MagmaExecuteMsdVsi : public testing::Test {
     magma_execute_command_buffer_with_resources(magma_vsi_.GetConnection(),
                                                 magma_vsi_.GetContextId(), &command_buffer,
                                                 resources.data(), &semaphore_id);
-    ASSERT_EQ(magma_wait_semaphores(&semaphore, 1, timeout, true), MAGMA_STATUS_OK);
+    magma_poll_item_t item = {.semaphore = semaphore,
+                              .type = MAGMA_POLL_TYPE_SEMAPHORE,
+                              .condition = MAGMA_POLL_CONDITION_SIGNALED};
+    ASSERT_EQ(magma_poll(&item, 1, 1000000ul * timeout_ms), MAGMA_STATUS_OK);
 
     auto t = std::chrono::duration_cast<std::chrono::milliseconds>(
                  std::chrono::high_resolution_clock::now() - start)
                  .count();
-    EXPECT_LT(t, timeout);
+    EXPECT_LT(t, timeout_ms);
 
     magma_release_semaphore(magma_vsi_.GetConnection(), semaphore);
   }

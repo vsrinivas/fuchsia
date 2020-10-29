@@ -148,14 +148,6 @@ zx_status_t VirtioMagma::Handle_map_specific(const virtio_magma_map_specific_ctr
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioMagma::Handle_wait_semaphores(const virtio_magma_wait_semaphores_ctrl_t* request,
-                                                virtio_magma_wait_semaphores_resp_t* response) {
-  auto request_mod = *request;
-  // The actual semaphores immediately follow the request struct.
-  request_mod.semaphores = reinterpret_cast<uint64_t>(&request[1]);
-  return VirtioMagmaGeneric::Handle_wait_semaphores(&request_mod, response);
-}
-
 zx_status_t VirtioMagma::Handle_poll(const virtio_magma_poll_ctrl_t* request,
                                      virtio_magma_poll_resp_t* response) {
   auto request_mod = *request;

@@ -285,25 +285,45 @@ class TestConnection {
     test2->BufferImport(handle, id);
   }
 
+  static magma_status_t wait_all(std::vector<magma_poll_item_t>& items, int64_t timeout_ns) {
+    int64_t remaining_ns = timeout_ns;
+
+    for (size_t i = 0; i < items.size(); i++) {
+      if (remaining_ns < 0)
+        remaining_ns = 0;
+
+      auto start = std::chrono::steady_clock::now();
+
+      magma_status_t status = magma_poll(&items[i], 1, remaining_ns);
+      if (status != MAGMA_STATUS_OK)
+        return status;
+
+      remaining_ns -= std::chrono::duration_cast<std::chrono::nanoseconds>(
+                          std::chrono::steady_clock::now() - start)
+                          .count();
+    }
+    return MAGMA_STATUS_OK;
+  }
+
   void Semaphore(uint32_t count) {
     ASSERT_TRUE(connection_);
 
-    std::vector<magma_semaphore_t> semaphore(count);
+    std::vector<magma_poll_item_t> items(count);
 
     for (uint32_t i = 0; i < count; i++) {
-      ASSERT_EQ(MAGMA_STATUS_OK, magma_create_semaphore(connection_, &semaphore[i]));
-      EXPECT_NE(0u, magma_get_semaphore_id(semaphore[i]));
+      items[i] = {.type = MAGMA_POLL_TYPE_SEMAPHORE, .condition = MAGMA_POLL_CONDITION_SIGNALED};
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_create_semaphore(connection_, &items[i].semaphore));
+      EXPECT_NE(0u, magma_get_semaphore_id(items[i].semaphore));
     }
 
-    // Wait for all
-    bool wait_all = true;
-
-    magma_signal_semaphore(semaphore[0]);
+    magma_signal_semaphore(items[0].semaphore);
 
     constexpr uint32_t kTimeoutMs = 100;
+    constexpr uint64_t kNsPerMs = 1000000;
+
     auto start = std::chrono::steady_clock::now();
     EXPECT_EQ(count == 1 ? MAGMA_STATUS_OK : MAGMA_STATUS_TIMED_OUT,
-              magma_wait_semaphores(semaphore.data(), semaphore.size(), kTimeoutMs, wait_all));
+              wait_all(items, kNsPerMs * kTimeoutMs));
     if (count > 1) {
       // Subtract to allow for rounding errors in magma_wait_semaphores time calculations
       EXPECT_LE(kTimeoutMs - count, std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -311,43 +331,38 @@ class TestConnection {
                                         .count());
     }
 
-    for (uint32_t i = 1; i < semaphore.size(); i++) {
-      magma_signal_semaphore(semaphore[i]);
+    for (uint32_t i = 1; i < items.size(); i++) {
+      magma_signal_semaphore(items[i].semaphore);
     }
 
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_wait_semaphores(semaphore.data(), semaphore.size(), 0, wait_all));
+    EXPECT_EQ(MAGMA_STATUS_OK, wait_all(items, 0));
 
-    for (uint32_t i = 0; i < semaphore.size(); i++) {
-      magma_reset_semaphore(semaphore[i]);
+    for (uint32_t i = 0; i < items.size(); i++) {
+      magma_reset_semaphore(items[i].semaphore);
     }
 
-    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT,
-              magma_wait_semaphores(semaphore.data(), semaphore.size(), 0, wait_all));
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, wait_all(items, 0));
 
     // Wait for one
-    wait_all = false;
     start = std::chrono::steady_clock::now();
     EXPECT_EQ(MAGMA_STATUS_TIMED_OUT,
-              magma_wait_semaphores(semaphore.data(), semaphore.size(), kTimeoutMs, wait_all));
+              magma_poll(items.data(), items.size(), kNsPerMs * kTimeoutMs));
 
     // Subtract to allow for rounding errors in magma_wait_semaphores time calculations
     EXPECT_LE(kTimeoutMs - count, std::chrono::duration_cast<std::chrono::milliseconds>(
                                       std::chrono::steady_clock::now() - start)
                                       .count());
 
-    magma_signal_semaphore(semaphore[semaphore.size() - 1]);
+    magma_signal_semaphore(items.back().semaphore);
 
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_wait_semaphores(semaphore.data(), semaphore.size(), 0, wait_all));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
 
-    magma_reset_semaphore(semaphore[semaphore.size() - 1]);
+    magma_reset_semaphore(items.back().semaphore);
 
-    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT,
-              magma_wait_semaphores(semaphore.data(), semaphore.size(), 0, wait_all));
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), items.size(), 0));
 
-    for (uint32_t i = 0; i < semaphore.size(); i++) {
-      magma_release_semaphore(connection_, semaphore[i]);
+    for (auto& item : items) {
+      magma_release_semaphore(connection_, item.semaphore);
     }
   }
 

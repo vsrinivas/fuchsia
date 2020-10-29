@@ -367,41 +367,6 @@ void magma_reset_semaphore(magma_semaphore_t semaphore) {
   reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->Reset();
 }
 
-magma_status_t magma_wait_semaphores(const magma_semaphore_t* semaphores, uint32_t count,
-                                     uint64_t timeout_ms, magma_bool_t wait_all) {
-  if (count == 1) {
-    if (!reinterpret_cast<magma::PlatformSemaphore*>(semaphores[0])->WaitNoReset(timeout_ms))
-      return MAGMA_STATUS_TIMED_OUT;
-    return MAGMA_STATUS_OK;
-  }
-
-  std::unique_ptr<magma::PlatformPort> port = magma::PlatformPort::Create();
-  for (uint32_t i = 0; i < count; i++) {
-    if (!reinterpret_cast<magma::PlatformSemaphore*>(semaphores[i])->WaitAsync(port.get()))
-      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "WaitAsync failed");
-  }
-
-  if (!wait_all) {
-    uint64_t key;
-    return port->Wait(&key, timeout_ms).get();
-  }
-
-  auto end_time = timeout_ms == UINT64_MAX
-                      ? std::chrono::steady_clock::time_point::max()
-                      : std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
-
-  for (uint32_t i = 0; i < count; i++) {
-    uint64_t key;
-    auto time_remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
-        end_time - std::chrono::steady_clock::now());
-    magma::Status status =
-        port->Wait(&key, time_remaining.count() > 0 ? time_remaining.count() : 0);
-    if (!status)
-      return status.get();
-  }
-  return MAGMA_STATUS_OK;
-}
-
 magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns) {
   // Optimize for simple case
   if (count == 1 && items[0].type == MAGMA_POLL_TYPE_SEMAPHORE &&

@@ -347,20 +347,6 @@ void magma_reset_semaphore(
     magma_semaphore_t semaphore);
 
 ///
-/// \brief DEPRECATED. Waits for one or all provided semaphores to be signaled. Does not reset any
-///        semaphores.
-/// \param semaphores Array of valid semaphores.
-/// \param count Number of semaphores in the array.
-/// \param timeout_ms Time to wait before returning MAGMA_STATUS_TIMED_OUT.
-/// \param wait_all If true, wait for all semaphores, otherwise wait for any semaphore.
-///
-magma_status_t magma_wait_semaphores(
-    const magma_semaphore_t* semaphores,
-    uint32_t count,
-    uint64_t timeout_ms,
-    magma_bool_t wait_all);
-
-///
 /// \brief Exports the given semaphore, returning a handle that may be imported into another
 ///        connection
 /// \param connection An open connection.
