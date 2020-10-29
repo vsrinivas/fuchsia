@@ -81,12 +81,18 @@ func NewLicenses(ctx context.Context, root string, prohibitedLicenseTypes []stri
 
 func (l *Licenses) GetFilesWithProhibitedLicenses() []string {
 	var filesWithProhibitedLicenses []string
+	set := map[string]bool{}
 	for _, license := range l.licenses {
 		if license.ValidType {
 			continue
 		}
 		for _, match := range license.matches {
-			filesWithProhibitedLicenses = append(filesWithProhibitedLicenses, match.files...)
+			for _, file_path := range match.files {
+				if _, found := set[file_path]; !found {
+					set[file_path] = true
+					filesWithProhibitedLicenses = append(filesWithProhibitedLicenses, file_path)
+				}
+			}
 		}
 	}
 	return filesWithProhibitedLicenses
