@@ -50,15 +50,10 @@ int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** e
   }
 
   llcpp::fuchsia::boot::Arguments::SyncClient client(std::move(local));
-  fidl::StringView string_keys[]{
-      fidl::StringView{"netsvc.interface"},
-      fidl::StringView{"zircon.nodename"},
-  };
-  auto string_resp = client.GetStrings(fidl::unowned_vec(string_keys));
+  auto string_resp = client.GetString(fidl::StringView{"netsvc.interface"});
   if (string_resp.ok()) {
-    auto& values = string_resp->values;
-    out->interface = std::string{values[0].data(), values[0].size()};
-    out->nodename = values[1].size() > 0;
+    auto& value = string_resp->value;
+    out->interface = std::string{value.data(), value.size()};
   }
 
   llcpp::fuchsia::boot::BoolPair bool_keys[]{
@@ -84,7 +79,7 @@ int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** e
     if (!strncmp(argv[1], "--netboot", 9)) {
       out->netboot = true;
     } else if (!strncmp(argv[1], "--nodename", 10)) {
-      out->nodename = true;
+      out->print_nodename_and_exit = true;
     } else if (!strncmp(argv[1], "--advertise", 11)) {
       out->advertise = true;
     } else if (!strncmp(argv[1], "--all-features", 14)) {

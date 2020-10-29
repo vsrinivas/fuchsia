@@ -243,6 +243,20 @@ func TestNetsvcAllFeatures(t *testing.T) {
 	attemptTftp(t, i, true)
 }
 
+func TestNetsvcAllFeaturesWithNodename(t *testing.T) {
+	i, cleanup := setupQemu(t, fmt.Sprintf("netsvc.all-features=true zircon.nodename=%s", defaultNodename), "full")
+	defer cleanup()
+
+	// Setting all-features to true means netsvc will work normally, and all
+	// features should work.
+	attemptLoglistener(t, i, true)
+	attemptNetaddr(t, i, true)
+	attemptNetcp(t, i, true)
+	attemptNetls(t, i, true)
+	attemptNetruncmd(t, i, true)
+	attemptTftp(t, i, true)
+}
+
 func TestNetsvcLimited(t *testing.T) {
 	i, cleanup := setupQemu(t, "netsvc.all-features=false", "limited")
 	defer cleanup()

@@ -15,9 +15,8 @@ struct NetsvcArgs {
   // This is true if `netsvc.netboot` is on the kernel commandline
   // OR if '--netboot' is on the binary commandline.
   bool netboot = false;
-  // This is true if `zircon.nodename` is on the kernel commandline
-  // OR if `--nodenamde` is on the binary commandline.
-  bool nodename = false;
+  // This is true if `--nodename` is on the binary commandline.
+  bool print_nodename_and_exit = false;
   // This is true if `netsvc.advertise` is on the kernel commandline
   // OR if `--advertise` is on the binary commandline.
   bool advertise = false;

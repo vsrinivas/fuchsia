@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  bool print_nodename_and_exit = args.nodename;
+  bool print_nodename_and_exit = args.print_nodename_and_exit;
   bool should_advertise = args.advertise;
   g_netbootloader = args.netboot;
   g_all_features = args.all_features;

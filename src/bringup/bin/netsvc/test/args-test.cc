@@ -92,7 +92,7 @@ TEST_F(ArgsTest, NetsvcNoneProvided) {
   NetsvcArgs args;
   ASSERT_EQ(ParseArgs(argc, const_cast<char**>(argv), svc_root(), &error, &args), 0, "%s", error);
   ASSERT_FALSE(args.netboot);
-  ASSERT_FALSE(args.nodename);
+  ASSERT_FALSE(args.print_nodename_and_exit);
   ASSERT_TRUE(args.advertise);
   ASSERT_FALSE(args.all_features);
   ASSERT_TRUE(args.interface.empty());
@@ -109,7 +109,7 @@ TEST_F(ArgsTest, NetsvcAllProvided) {
   NetsvcArgs args;
   ASSERT_EQ(ParseArgs(argc, const_cast<char**>(argv), svc_root(), &error, &args), 0, "%s", error);
   ASSERT_TRUE(args.netboot);
-  ASSERT_TRUE(args.nodename);
+  ASSERT_TRUE(args.print_nodename_and_exit);
   ASSERT_TRUE(args.advertise);
   ASSERT_TRUE(args.all_features);
   ASSERT_EQ(args.interface, std::string(kInterface));
