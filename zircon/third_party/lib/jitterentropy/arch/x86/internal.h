@@ -12,7 +12,10 @@
 #include <stdint.h>
 
 static inline bool jent_have_clock(void) {
-  // Test for Invariant TSC (Fn8000_0007_EDX[8])
+  // Jitterentropy will make use of the TSC as a clock source if the clock source is rate-invariant
+  // across all power and core frequency state transitions. This property is enumerated in the
+  // 'Invariant TSC' bit (CPUID Leaf 8000_0007, EDX[8]). See AMD CPUID Specification (doc #25481)
+  // 'TscInvariant' or the Intel SDM Volume 3, section 17.15.1 'Invariant TSC'.
   uint32_t eax, ebx, ecx, edx;
   __cpuid_count(0x80000007, 0, eax, ebx, ecx, edx);
   return edx & (1 << 8);
