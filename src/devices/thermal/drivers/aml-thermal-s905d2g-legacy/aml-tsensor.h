@@ -41,7 +41,7 @@ class AmlTSensor {
   int TripPointIrqHandler();
   uint32_t TempCelsiusToCode(float temp_c, bool trend);
   float CodeToTempCelsius(uint32_t temp_code);
-  void SetRebootTemperatureCelsius(uint32_t temp_c);
+  void SetRebootTemperatureCelsius(float temp_c);
   zx_status_t InitTripPoints();
   zx_status_t NotifyThermalDaemon();
   void UpdateFallThresholdIrq(uint32_t irq);

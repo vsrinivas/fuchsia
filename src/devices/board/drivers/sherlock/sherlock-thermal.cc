@@ -109,7 +109,7 @@ fuchsia_hardware_thermal_ThermalDeviceInfo aml_sherlock_config =
         .gpu_throttling = true,
         .num_trip_points = 6,
         .big_little = true,
-        .critical_temp_celsius = 102.0f,
+        .critical_temp_celsius = 101.0f,
         .trip_point_info =
             {
                 TripPoint(55.0f, 9, 10, 4), TripPoint(75.0f, 8, 9, 4), TripPoint(80.0f, 7, 8, 3),
