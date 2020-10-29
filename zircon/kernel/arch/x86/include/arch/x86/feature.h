@@ -14,15 +14,11 @@
 #include <arch/x86.h>
 #include <arch/x86/idle_states.h>
 
-#ifdef __cplusplus
-
 namespace cpu_id {
 class CpuId;
 }  // namespace cpu_id
 
 class MsrAccess;
-
-#endif  // __cplusplus
 
 __BEGIN_CDECLS
 
@@ -424,7 +420,6 @@ enum Turbostate {
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
 void x86_amd_init_percpu(void);
 void x86_intel_init_percpu(void);
-#ifdef __cplusplus
 bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_mds_taa(const cpu_id::CpuId* cpuid, MsrAccess* msr);
@@ -444,19 +439,14 @@ bool x86_amd_cpu_has_ibrs_always_on(const cpu_id::CpuId* cpuid);
 void x86_intel_cpu_try_disable_tsx(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 // Enable or disable Turbo/CPB on the current CPU
 void x86_cpu_set_turbo(const cpu_id::CpuId* cpuid, MsrAccess* msr, Turbostate state);
-#endif
 uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);
 
 __END_CDECLS
 
-#ifdef __cplusplus
-
 const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid);
 bool x86_intel_idle_state_may_empty_rsb(X86IdleState*);
 bool x86_intel_check_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, zx_iovec_t patch);
 void x86_intel_load_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, zx_iovec_t patch);
-
-#endif  // __cplusplus
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_FEATURE_H_

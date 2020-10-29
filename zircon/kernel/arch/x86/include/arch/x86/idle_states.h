@@ -69,13 +69,7 @@ const x86_idle_states_t* x86_get_idle_states(void);
 // If |states| is invalid (i.e. does not contain X86_CSTATE_C1), returns -1.
 int x86_num_idle_states(const x86_idle_states_t* states);
 
-#ifndef __cplusplus
-typedef struct X86IdleStates X86IdleStates;
-#endif  // __cplusplus
-
 __END_CDECLS
-
-#ifdef __cplusplus
 
 #include <ktl/atomic.h>
 
@@ -155,7 +149,5 @@ class X86IdleStates {
   zx_duration_t last_idle_duration_;
   ktl::atomic<uint32_t> state_mask_;
 };
-
-#endif  // __cplusplus
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_IDLE_STATES_H_

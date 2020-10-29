@@ -11,9 +11,6 @@
 
 // Wrapper header for architecturally specific interrupt enable/disable routines.
 
-// Note: still pulled in from some C code, remove when the last C code is gone.
-#ifdef __cplusplus
-
 // Interrupt enable/disable guard
 class InterruptDisableGuard {
  public:
@@ -38,7 +35,5 @@ class InterruptDisableGuard {
   interrupt_saved_state_t state_;
   bool disabled_;
 };
-
-#endif  // __cplusplus
 
 #endif  // ZIRCON_KERNEL_INCLUDE_ARCH_INTERRUPT_H_

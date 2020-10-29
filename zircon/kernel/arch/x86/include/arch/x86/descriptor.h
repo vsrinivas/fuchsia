@@ -47,13 +47,11 @@
 
 #include <arch/aspace.h>
 
-#ifdef __cplusplus
 #include <arch/x86/ioport.h>
 
 void x86_set_tss_io_bitmap(IoBitmap& bitmap);
 void x86_clear_tss_io_bitmap(IoBitmap& bitmap);
 void x86_reset_tss_io_bitmap(void);
-#endif  // __cplusplus
 
 __BEGIN_CDECLS
 

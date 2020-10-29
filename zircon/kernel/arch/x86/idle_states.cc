@@ -3,7 +3,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#include "arch/x86/idle_states.h"
+#include <arch/x86/idle_states.h>
 
 #include <assert.h>
 #include <bits.h>
@@ -12,7 +12,6 @@
 #include <zircon/time.h>
 
 #include <arch/x86/feature.h>
-#include <arch/x86/idle_states.h>
 
 namespace {
 

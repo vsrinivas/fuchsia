@@ -19,8 +19,6 @@ void x86_processor_trace_init(void);
 
 __END_CDECLS
 
-#ifdef __cplusplus
-
 zx_status_t x86_ipt_alloc_trace(zx_insntrace_trace_mode_t mode, uint32_t num_traces);
 
 zx_status_t x86_ipt_free_trace();
@@ -34,7 +32,5 @@ zx_status_t x86_ipt_stage_trace_data(zx_insntrace_buffer_descriptor_t descriptor
 
 zx_status_t x86_ipt_get_trace_data(zx_insntrace_buffer_descriptor_t descriptor,
                                    zx_x86_pt_regs_t* regs);
-
-#endif  // __cplusplus
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PROC_TRACE_H_
