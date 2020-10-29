@@ -252,6 +252,9 @@ executable("err_inject_test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(fxbug.dev/62982): fix stack-use-after-return and delete
+  deps += [ "//build/config/sanitizers:suppress-asan-stack-use-after-return" ]
 }
 
 executable("escan_params_test") {

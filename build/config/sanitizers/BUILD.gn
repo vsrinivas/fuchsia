@@ -104,6 +104,9 @@ sanitizer_extra_options("suppress-asan-stack-use-after-return") {
 
     # TODO(fxbug.dev/62981): fix async-test-pkg
     "//zircon/system/ulib/async/test:async",
+
+    # TODO(fxbug.dev/62982): fix brcmfmac-sim-test
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test:err_inject_test",
   ]
 
   args = [ "detect_stack_use_after_return=0" ]
