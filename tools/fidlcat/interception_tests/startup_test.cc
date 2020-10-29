@@ -82,6 +82,8 @@ PROCESSARGS_EXTRACT_HANDLES_DISPLAY_TEST(ProcessargsExtractHandles);
 // This is the second intercepted function. Some handles have already been used by
 // processargs_extract_handles and have been reset (null values).
 
+// TODO(fxbug.dev/62955) put back when 62955 will be fixed.
+#if 0
 std::unique_ptr<SystemCallTest> LibcExtensionsInit(uint32_t nhandles, zx_handle_t handles[],
                                                    uint32_t handle_info[], uint32_t name_count,
                                                    const char* names[]) {
@@ -126,5 +128,6 @@ std::unique_ptr<SystemCallTest> LibcExtensionsInit(uint32_t nhandles, zx_handle_
   TEST_F(InterceptionWorkflowTestArm, name) { LIBC_EXTENSIONS_INIT_TEST(); }
 
 LIBC_EXTENSIONS_INIT_DISPLAY_TEST(LibcExtensionsInit);
+#endif
 
 }  // namespace fidlcat
