@@ -437,6 +437,23 @@ zx_status_t VmCowPages::CreateChildSliceLocked(uint64_t offset, uint64_t size,
 
   canary_.Assert();
 
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+  DEBUG_ASSERT(CheckedAdd(offset, size) <= size_);
+
+  // If this is a slice re-home this on our parent. Due to this logic we can guarantee that any
+  // slice parent is, itself, not a slice.
+  // We are able to do this for two reasons:
+  //  * Slices are subsets and so every position in a slice always maps back to the paged parent.
+  //  * Slices are not permitted to be resized and so nothing can be done on the intermediate parent
+  //    that requires us to ever look at it again.
+  if (is_slice()) {
+    DEBUG_ASSERT(parent_);
+    DEBUG_ASSERT(!parent_->is_slice());
+    AssertHeld(parent_->lock_ref());
+    return parent_->CreateChildSliceLocked(offset + parent_offset_, size, cow_slice);
+  }
+
   fbl::AllocChecker ac;
   // Slices just need the slice option and default alloc flags since they will propagate any
   // operation up to a parent and use their options and alloc flags.
@@ -2718,16 +2735,11 @@ bool VmCowPages::IsCowClonableLocked() const {
 
 VmCowPages* VmCowPages::PagedParentOfSliceLocked(uint64_t* offset) {
   DEBUG_ASSERT(is_slice());
-  VmCowPages* cur = this;
-  uint64_t off = 0;
-  while (cur->is_slice()) {
-    AssertHeld(cur->lock_);
-    off += cur->parent_offset_;
-    DEBUG_ASSERT(cur->parent_);
-    cur = cur->parent_.get();
-  }
-  *offset = off;
-  return cur;
+  DEBUG_ASSERT(parent_);
+  // Slices never have a slice parent, as there is no need to nest them.
+  DEBUG_ASSERT(!parent_->is_slice());
+  *offset = parent_offset_;
+  return parent_.get();
 }
 
 void VmCowPages::RangeChangeUpdateFromParentLocked(const uint64_t offset, const uint64_t len,
