@@ -95,6 +95,9 @@ sanitizer_extra_options("suppress-asan-stack-use-after-return") {
     # TODO(fxbug.dev/59214): These are constrained indirectly via the target of the same
     # name in $zx/public/gn/config/instrumentation.
     "//zircon/public/lib/*",
+
+    # TODO(fxbug.dev/62979): fix input_unit_tests
+    "//src/lib/ui/input:gesture_tests",
   ]
 
   args = [ "detect_stack_use_after_return=0" ]

@@ -86,4 +86,7 @@ executable("gesture_tests") {
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  # TODO(fxb/62979): fix stack-use-after-return and delete
+  deps += [ "//build/config/sanitizers:suppress-asan-stack-use-after-return" ]
 }
