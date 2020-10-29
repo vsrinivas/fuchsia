@@ -26,7 +26,7 @@ struct BssInfo {
     vector<uint8>:32 ssid;
     int8 rx_dbm;
     int8 snr_db;
-    uint8 channel;
+    fuchsia.wlan.common.WlanChan channel;
     Protection protection;
     bool compatible;
 };

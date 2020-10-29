@@ -22,7 +22,7 @@ use std::fmt;
 use std::str::FromStr;
 use structopt::StructOpt;
 use wlan_common::{
-    channel::{Cbw, Phy},
+    channel::{Cbw, Channel, Phy},
     ie::SSID_MAX_LEN,
     RadioConfig, StationMode,
 };
@@ -293,7 +293,7 @@ async fn print_iface_status(iface_id: u16, wlan_svc: WlanSvc) -> Result<(), Erro
                         iface_id,
                         String::from_utf8_lossy(&bss.ssid),
                         MacAddr(bss.bssid),
-                        bss.channel,
+                        Channel::from_fidl(bss.channel),
                         bss.rx_dbm,
                         bss.snr_db,
                     );
@@ -553,7 +553,7 @@ fn print_scan_result(bss: &fidl_sme::BssInfo) {
     print_scan_line(
         MacAddr(bss.bssid),
         bss.rx_dbm,
-        bss.channel,
+        Channel::from_fidl(bss.channel),
         match bss.protection {
             fidl_sme::Protection::Unknown => "Unknown",
             fidl_sme::Protection::Open => "Open",

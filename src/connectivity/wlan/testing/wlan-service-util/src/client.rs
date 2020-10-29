@@ -247,6 +247,7 @@ mod tests {
         super::*,
         crate::*,
         fidl::endpoints::RequestStream,
+        fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_device_service::{
             self as wlan_service, DeviceServiceMarker, DeviceServiceProxy, DeviceServiceRequest,
             DeviceServiceRequestStream, IfaceListItem, ListIfacesResponse, ListPhysResponse,
@@ -1008,7 +1009,11 @@ mod tests {
                     ssid: ssid,
                     rx_dbm: -30,
                     snr_db: 10,
-                    channel: 1,
+                    channel: fidl_common::WlanChan {
+                        primary: 1,
+                        cbw: fidl_common::Cbw::Cbw20,
+                        secondary80: 0,
+                    },
                     protection: Protection::Wpa2Personal,
                     compatible: true,
                 };
@@ -1056,21 +1061,21 @@ mod tests {
             b"foo".to_vec(),
             -30,
             20,
-            1,
+            fidl_common::WlanChan { primary: 1, cbw: fidl_common::Cbw::Cbw20, secondary80: 0 },
             Protection::Wpa2Personal,
             true,
         );
-        let entry1_copy = fidl_sme::BssInfo { ssid: entry1.ssid.clone(), ..entry1 };
+        let entry1_copy = clone_bss_info(&entry1);
         let entry2 = create_bss_info(
             [1, 2, 3, 4, 5, 6],
             b"hello".to_vec(),
             -60,
             10,
-            2,
+            fidl_common::WlanChan { primary: 2, cbw: fidl_common::Cbw::Cbw20, secondary80: 0 },
             Protection::Wpa2Personal,
             false,
         );
-        let entry2_copy = fidl_sme::BssInfo { ssid: entry2.ssid.clone(), ..entry2 };
+        let entry2_copy = clone_bss_info(&entry2);
         scan_results_for_response.push(entry1);
         scan_results_for_response.push(entry2);
         let mut expected_response = Vec::new();
@@ -1086,6 +1091,10 @@ mod tests {
     fn scan_error_correctly_handled() {
         // need to expect an error
         assert!(test_scan_error().is_err())
+    }
+
+    fn clone_bss_info(bss_info: &fidl_sme::BssInfo) -> fidl_sme::BssInfo {
+        fidl_sme::BssInfo { ssid: bss_info.ssid.clone(), ..*bss_info }
     }
 
     fn test_scan(mut scan_results: Vec<fidl_sme::BssInfo>) -> Vec<fidl_sme::BssInfo> {
@@ -1174,7 +1183,7 @@ mod tests {
         ssid: Vec<u8>,
         rx_dbm: i8,
         snr_db: i8,
-        channel: u8,
+        channel: fidl_common::WlanChan,
         protection: Protection,
         compatible: bool,
     ) -> fidl_sme::BssInfo {

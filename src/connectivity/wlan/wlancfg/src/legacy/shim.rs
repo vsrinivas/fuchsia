@@ -6,11 +6,12 @@ use {
         client::state_machine as client_fsm,
         config_management::{Credential, NetworkIdentifier, SavedNetworksManager, SecurityType},
         mode_management::iface_manager_api::IfaceManagerApi,
+        util::clone::clone_bss_info,
     },
-    fidl, fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_device_service as wlan_service, fidl_fuchsia_wlan_policy as fidl_policy,
-    fidl_fuchsia_wlan_service as legacy, fidl_fuchsia_wlan_sme as fidl_sme,
-    fidl_fuchsia_wlan_stats as fidl_wlan_stats, fuchsia_async, fuchsia_zircon as zx,
+    fidl, fidl_fuchsia_wlan_device_service as wlan_service,
+    fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_service as legacy,
+    fidl_fuchsia_wlan_sme as fidl_sme, fidl_fuchsia_wlan_stats as fidl_wlan_stats, fuchsia_async,
+    fuchsia_zircon as zx,
     futures::{lock::Mutex as FutureMutex, prelude::*, select},
     itertools::Itertools,
     log::{debug, error, info},
@@ -122,18 +123,6 @@ async fn handle_request(
     }
 }
 
-pub fn clone_bss_info(bss: &fidl_sme::BssInfo) -> fidl_sme::BssInfo {
-    fidl_sme::BssInfo {
-        bssid: bss.bssid.clone(),
-        ssid: bss.ssid.clone(),
-        rx_dbm: bss.rx_dbm,
-        snr_db: bss.snr_db,
-        channel: bss.channel,
-        protection: bss.protection,
-        compatible: bss.compatible,
-    }
-}
-
 /// Compares two BSS based on
 /// (1) their compatibility
 /// (2) their security protocol
@@ -224,11 +213,7 @@ fn convert_bss_info(bss: &fidl_sme::BssInfo) -> legacy::Ap {
         rssi_dbm: bss.rx_dbm,
         is_secure: bss.protection != fidl_sme::Protection::Open,
         is_compatible: bss.compatible,
-        chan: fidl_common::WlanChan {
-            primary: bss.channel,
-            secondary80: 0,
-            cbw: fidl_common::Cbw::Cbw20,
-        },
+        chan: bss.channel,
     }
 }
 
@@ -431,7 +416,7 @@ mod tests {
         crate::{access_point::state_machine as ap_fsm, util::logger::set_logger_for_test},
         async_trait::async_trait,
         fidl::endpoints::create_proxy,
-        fuchsia_async as fasync,
+        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
         futures::{channel::oneshot, lock::Mutex as FutureMutex, stream::StreamFuture, task::Poll},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
@@ -446,7 +431,11 @@ mod tests {
             ssid: b"Foo".to_vec(),
             rx_dbm: 20,
             snr_db: 0,
-            channel: 1,
+            channel: fidl_common::WlanChan {
+                primary: 1,
+                cbw: fidl_common::Cbw::Cbw20,
+                secondary80: 0,
+            },
             protection: fidl_sme::Protection::Wpa2Personal,
             compatible: true,
         };
@@ -509,7 +498,11 @@ mod tests {
             ssid: b"Foo".to_vec(),
             rx_dbm,
             snr_db: 0,
-            channel: 1,
+            channel: fidl_common::WlanChan {
+                primary: 1,
+                cbw: fidl_common::Cbw::Cbw20,
+                secondary80: 0,
+            },
             protection,
             compatible,
         }
@@ -826,7 +819,11 @@ mod tests {
                         ssid: TEST_SSID.as_bytes().to_vec(),
                         rx_dbm: i8::MAX,
                         snr_db: i8::MAX,
-                        channel: u8::MAX,
+                        channel: fidl_common::WlanChan {
+                            primary: 1,
+                            cbw: fidl_common::Cbw::Cbw20,
+                            secondary80: 0,
+                        },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
                     }))
@@ -1007,7 +1004,11 @@ mod tests {
             ssid: TEST_SSID.as_bytes().to_vec(),
             rx_dbm: i8::MAX,
             snr_db: i8::MAX,
-            channel: u8::MAX,
+            channel: fidl_common::WlanChan {
+                primary: 1,
+                cbw: fidl_common::Cbw::Cbw20,
+                secondary80: 0,
+            },
             protection: fidl_sme::Protection::Unknown,
             compatible: true,
         };
@@ -1016,7 +1017,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Scan{ txn, .. }) => {
                 let (_stream, ctrl) = txn
                     .into_stream_and_control_handle().expect("error accessing control handle");
-                let mut result = vec![scan_result.clone()];
+                let mut result = vec![clone_bss_info(&scan_result)];
                 ctrl.send_on_result(&mut result.iter_mut()).expect("could not send scan result");
                 ctrl.send_on_finished()
                     .expect("failed to send scan data");

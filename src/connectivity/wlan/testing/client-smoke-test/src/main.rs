@@ -378,7 +378,7 @@ async fn can_download_data(http_svc: &http::LoaderProxy) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, fidl_fuchsia_wlan_common as fidl_common};
 
     /// Test to verify a connection will be triggered for an SSID that is not already connected.
     /// This is called with stay connected true and a different target SSID.
@@ -451,7 +451,11 @@ mod tests {
                 ssid: s.to_string().as_bytes().to_vec(),
                 rx_dbm: -30,
                 snr_db: 0,
-                channel: 1,
+                channel: fidl_common::WlanChan {
+                    primary: 1,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
                 protection: fidl_sme::Protection::Wpa2Personal,
                 compatible: true,
             };

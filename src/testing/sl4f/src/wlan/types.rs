@@ -115,7 +115,7 @@ impl From<fidl_sme::BssInfo> for BssInfo {
             ssid: bss_info.ssid,
             rx_dbm: bss_info.rx_dbm,
             snr_db: bss_info.snr_db,
-            channel: bss_info.channel,
+            channel: bss_info.channel.primary,
             protection: Protection::from(bss_info.protection),
             compatible: bss_info.compatible,
         }

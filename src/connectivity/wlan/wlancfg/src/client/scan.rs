@@ -301,12 +301,13 @@ mod tests {
     use {
         super::*,
         crate::{
-            access_point::state_machine as ap_fsm, client::state_machine as client_fsm,
-            util::logger::set_logger_for_test,
+            access_point::state_machine as ap_fsm,
+            client::state_machine as client_fsm,
+            util::{clone::clone_bss_info, logger::set_logger_for_test},
         },
         anyhow::Error,
         fidl::endpoints::{create_proxy, Proxy},
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{channel::oneshot, lock::Mutex, task::Poll},
         pin_utils::pin_mut,
         std::sync::Arc,
@@ -432,7 +433,8 @@ mod tests {
                 // Send all the APs
                 let (_stream, ctrl) = txn
                     .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_result(&mut scan_results.to_vec().iter_mut())
+                let mut scan_results = scan_results.iter().map(clone_bss_info).collect::<Vec<_>>();
+                ctrl.send_on_result(&mut scan_results.iter_mut())
                     .expect("failed to send scan data");
 
                 // Send the end of data
@@ -458,7 +460,11 @@ mod tests {
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rx_dbm: 0,
                 snr_db: 1,
-                channel: 0,
+                channel: fidl_common::WlanChan {
+                    primary: 1,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
             },
@@ -467,7 +473,11 @@ mod tests {
                 ssid: "unique ssid".as_bytes().to_vec(),
                 rx_dbm: 7,
                 snr_db: 2,
-                channel: 8,
+                channel: fidl_common::WlanChan {
+                    primary: 8,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
                 protection: fidl_sme::Protection::Wpa2Personal,
                 compatible: true,
             },
@@ -476,7 +486,11 @@ mod tests {
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rx_dbm: 13,
                 snr_db: 3,
-                channel: 14,
+                channel: fidl_common::WlanChan {
+                    primary: 11,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: false,
             },
@@ -571,7 +585,11 @@ mod tests {
                 ssid: "foo active ssid".as_bytes().to_vec(),
                 rx_dbm: 0,
                 snr_db: 8,
-                channel: 0,
+                channel: fidl_common::WlanChan {
+                    primary: 1,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
             },
@@ -580,7 +598,11 @@ mod tests {
                 ssid: "misc ssid".as_bytes().to_vec(),
                 rx_dbm: 7,
                 snr_db: 9,
-                channel: 8,
+                channel: fidl_common::WlanChan {
+                    primary: 8,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
                 protection: fidl_sme::Protection::Wpa2Personal,
                 compatible: true,
             },
@@ -1059,7 +1081,11 @@ mod tests {
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rx_dbm: 0,
                 snr_db: 1,
-                channel: 0,
+                channel: fidl_common::WlanChan {
+                    primary: 1,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
             },
@@ -1068,7 +1094,11 @@ mod tests {
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rx_dbm: 13,
                 snr_db: 3,
-                channel: 14,
+                channel: fidl_common::WlanChan {
+                    primary: 14,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
             },
@@ -1101,7 +1131,11 @@ mod tests {
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rx_dbm: 100,
                 snr_db: 100,
-                channel: 100,
+                channel: fidl_common::WlanChan {
+                    primary: 100,
+                    cbw: fidl_common::Cbw::Cbw40,
+                    secondary80: 0,
+                },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
             },
@@ -1110,7 +1144,11 @@ mod tests {
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rx_dbm: 101,
                 snr_db: 101,
-                channel: 101,
+                channel: fidl_common::WlanChan {
+                    primary: 101,
+                    cbw: fidl_common::Cbw::Cbw40,
+                    secondary80: 0,
+                },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
             },
@@ -1503,7 +1541,7 @@ mod tests {
                     // Send the first AP
                     let (_stream, ctrl) = txn
                         .into_stream_and_control_handle().expect("error accessing control handle");
-                    let mut aps = [passive_input_aps[0].clone()];
+                    let mut aps = [clone_bss_info(&passive_input_aps[0])];
                     ctrl.send_on_result(&mut aps.iter_mut())
                         .expect("failed to send scan data");
                     // Process SME result.
@@ -1534,7 +1572,7 @@ mod tests {
                     });
 
                     // Send the remaining APs for the first iterator
-                    let mut aps = passive_input_aps[1..].to_vec();
+                    let mut aps = passive_input_aps[1..].iter().map(clone_bss_info).collect::<Vec<_>>();
                     ctrl.send_on_result(&mut aps.iter_mut())
                         .expect("failed to send scan data");
                     // Process SME result.

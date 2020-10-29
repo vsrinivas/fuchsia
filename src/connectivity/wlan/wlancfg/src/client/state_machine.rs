@@ -482,7 +482,8 @@ mod tests {
             config_management::network_config::{self, FailureReason},
             util::{cobalt::create_mock_cobalt_sender, listener, logger::set_logger_for_test},
         },
-        fidl_fuchsia_stash as fidl_stash, fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon,
+        fidl_fuchsia_stash as fidl_stash, fidl_fuchsia_wlan_common as fidl_common,
+        fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon,
         futures::{stream::StreamFuture, task::Poll, Future},
         rand::{distributions::Alphanumeric, thread_rng, Rng},
         std::time::SystemTime,
@@ -1219,7 +1220,11 @@ mod tests {
                         ssid: network_ssid.as_bytes().to_vec(),
                         rx_dbm: 0,
                         snr_db: 0,
-                        channel: 0,
+                        channel: fidl_common::WlanChan {
+                            primary: 1,
+                            cbw: fidl_common::Cbw::Cbw20,
+                            secondary80: 0,
+                        },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
                     }))
@@ -1685,7 +1690,11 @@ mod tests {
                         ssid: "no_password".as_bytes().to_vec(),
                         rx_dbm: 0,
                         snr_db: 0,
-                        channel: 0,
+                        channel: fidl_common::WlanChan {
+                            primary: 1,
+                            cbw: fidl_common::Cbw::Cbw20,
+                            secondary80: 0,
+                        },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
                     }))
