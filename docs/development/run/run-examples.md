@@ -1,10 +1,10 @@
 # Run an example component
 
 This guide shows you how to build Fuchsia to include an example package
-from Fuchsia source's `//examples` directory and run its component
-on your Fuchsia device.
+from Fuchsia's source [`//examples`](/examples/)
+directory and run that component on your Fuchsia device.
 
-Note: This guide is specific to components v1 and uses 
+Note: This guide is specific to [components v1](/docs/glossary.md#components-v1) and uses
 [component manifests](/docs/concepts/components/v1/component_manifests.md).
 
 ## Exploring the example Fuchsia package {#exploring-the-example-fuchsia-package}
@@ -67,27 +67,37 @@ To include a package in your Fuchsia image, you have the following options:
 
 ## Include the example package in your Fuchsia image {#include-the-example-package-in-your-fuchsia-image}
 
-To include the example package in Universe (so that it can be fetched on-demand),
-use the `--with` flag when setting your product and board environment:
+Note: If you already built Fuchsia and you're not changing your product or board, these commands
+take less than a few minutes to run. If you are changing your product or board, these changes can
+take up to 90 minutes to run.
+
+To include the example package in Universe so that it can be fetched on-demand,
+use the `--with` flag when setting your product and board environment and building Fuchsia:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx set <var>product</var>.<var>board</var> --with //examples/hello_world</code>
+</pre>
+
+For a Fuchsia emulator with the minimum build configuration, the command is:
 
 ```posix-terminal
-fx set <PRODUCT>.<ARCH> --with //examples/hello_world
-```
-
-For a Fuchsia device, the recommended minimum build configuration is the following: 
-
-```posix-terminal
-fx set core.x64 --with //examples/hello_world
+fx set core.qemu-x64 --with //examples/hello_world
 ```
 
 In this example, `core` is a product with a minimal feature set, which includes
 common network capabilities, and `x64` refers to the x64 architecture.
 
+For a Fuchsia device with the minimum build configuration, the command is:
+
+```posix-terminal
+fx set core.x64 --with //examples/hello_world
+```
+
 See [Configure a build](/docs/development/build/fx.md#configure-a-build) for
 more options.
 
 Once you have set your build configuration, build Fuchsia with the following
-command: 
+command:
 
 ```posix-terminal
 fx build
