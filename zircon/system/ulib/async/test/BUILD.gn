@@ -50,6 +50,9 @@ test("async") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/async-testing",
   ]
+
+  # TODO(fxb/62981): fix stack-use-after-return and delete
+  deps += [ "//build/config/sanitizers:suppress-asan-stack-use-after-return" ]
 }
 
 fuchsia_unittest_package("async-test-pkg") {

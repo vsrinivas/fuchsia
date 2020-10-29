@@ -98,6 +98,9 @@ sanitizer_extra_options("suppress-asan-stack-use-after-return") {
 
     # TODO(fxbug.dev/62979): fix input_unit_tests
     "//src/lib/ui/input:gesture_tests",
+
+    # TODO(fxbug.dev/62981): fix async-test-pkg
+    "//zircon/system/ulib/async/test:async",
   ]
 
   args = [ "detect_stack_use_after_return=0" ]
