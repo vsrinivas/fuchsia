@@ -81,6 +81,15 @@ func mainImpl() error {
 		}
 	}
 
+	additionalSkipDirs := []string{
+		"zircon/third_party/zstd",                                   // TODO(b/171584331): Remove once completed.
+		"third_party/openthread/third_party/openthread-test-driver", // TODO(b/171816602): Remove once completed.
+		"third_party/catapult",                                      // TODO(b/171586646): Remove once completed.
+		"prebuilt/virtualization/packages/termina_guest",            // TODO(b/171975485): Remove once completed.
+	}
+
+	config.SkipDirs = append(config.SkipDirs, additionalSkipDirs...)
+
 	if *skipFiles != "" {
 		split := strings.Split(*skipFiles, ",")
 		for _, s := range split {

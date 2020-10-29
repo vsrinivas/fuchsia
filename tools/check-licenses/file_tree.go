@@ -61,7 +61,7 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 			return nil
 		}
 		for _, skipFile := range config.SkipFiles {
-			if strings.ToLower(info.Name()) == skipFile {
+			if strings.ToLower(info.Name()) == skipFile || strings.ToLower(path) == skipFile {
 				log.Printf("skipping: %s", path)
 				return nil
 			}

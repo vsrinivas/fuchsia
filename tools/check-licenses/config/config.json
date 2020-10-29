@@ -17,7 +17,10 @@
     "getting_started.md",
     "glossary.md",
     "goldens.txt",
-    "navbar.md"
+    "navbar.md",
+    "prebuilt/third_party/rust/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
+    "prebuilt/third_party/rust_tools/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
+    "third_party/crashpad/third_party/glibc/elf/elf.h"
   ],
   "skipDirs": [
     ".cipd",
