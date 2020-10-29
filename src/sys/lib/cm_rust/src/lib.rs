@@ -65,7 +65,7 @@ macro_rules! fidl_translations_identical {
 }
 
 /// Generates a struct with a `FidlIntoNative` implementation that calls `fidl_into_native()` on
-/// each field.
+/// each field. The `from_type` must be a FIDL table, not a FIDL struct.
 /// - `into_type` is the name of the struct and the into type for the conversion.
 /// - `into_ident` must be identical to `into_type`.
 /// - `from_type` is the from type for the conversion.
@@ -90,7 +90,10 @@ macro_rules! fidl_into_struct {
         impl NativeIntoFidl<$from_type> for $into_type {
             fn native_into_fidl(self) -> $from_type {
                 use $from_path as from_ident;
-                from_ident { $( $field: self.$field.native_into_fidl(), )+ }
+                from_ident {
+                    $( $field: self.$field.native_into_fidl(), )+
+                    ..from_ident::empty()
+                }
             }
         }
     }
