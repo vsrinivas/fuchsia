@@ -5,19 +5,47 @@
 use anyhow::{format_err, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_stash::{StoreAccessorProxy, StoreProxy, Value};
+use fuchsia_async::{Task, Timer, WakeupTime};
 use fuchsia_syslog::fx_log_err;
+use futures::channel::mpsc::UnboundedSender;
+use futures::future::OptionFuture;
 use futures::lock::Mutex;
+use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::ops::{Add, Sub};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 const SETTINGS_PREFIX: &str = "settings";
+
+/// Minimum amount of time between Commit calls to Stash, in milliseconds. The Commit call triggers
+/// file I/O which is slow. If we call commit too often, we can overwhelm Stash, which eventually
+/// causes the kernel to crash our service due to filling up the channel.
+const MIN_COMMIT_INTERVAL_MS: u64 = 500;
+
+/// `CommitParams` specifies the behavior for a commit request to the task loop that handles
+/// committing to Stash.
+#[derive(Copy, Clone)]
+struct CommitParams {
+    /// If true, flushes to disk instead of just committing, which waits for the file to be written
+    /// to disk.
+    flush: bool,
+}
 
 /// Stores device level settings in persistent storage.
 /// User level settings should not use this.
 pub struct DeviceStorage<T: DeviceStorageCompatible> {
+    /// If true, reads will be returned from the data in memory rather than reading from storage.
     caching_enabled: bool,
+
+    /// If true, writes to the underlying storage will only occur at most every
+    /// MIN_WRITE_INTERVAL_MS.
+    debounce_writes: bool,
     current_data: Option<T>,
+
+    /// Sender to communicate with task loop that handles commits.
+    commit_sender: UnboundedSender<CommitParams>,
     stash_proxy: StoreAccessorProxy,
 }
 
@@ -53,11 +81,68 @@ pub trait DeviceStorageCompatible: Serialize + DeserializeOwned + Clone + Partia
 
 impl<T: DeviceStorageCompatible> DeviceStorage<T> {
     pub fn new(stash_proxy: StoreAccessorProxy, current_data: Option<T>) -> Self {
-        return DeviceStorage {
+        let (commit_sender, commit_receiver) = futures::channel::mpsc::unbounded::<CommitParams>();
+
+        let storage = DeviceStorage {
             caching_enabled: true,
-            current_data: current_data,
-            stash_proxy: stash_proxy,
+            debounce_writes: true,
+            current_data,
+            commit_sender,
+            stash_proxy: stash_proxy.clone(),
         };
+
+        Task::spawn(async move {
+            const MIN_COMMIT_DURATION: Duration = Duration::from_millis(MIN_COMMIT_INTERVAL_MS);
+            let mut pending_commit: Option<CommitParams> = None;
+
+            // The time of the last commit. Initialized to MIN_COMMIT_INTERVAL_MS before the current
+            // time so that the first commit always goes through, no matter the timing.
+            let mut last_commit: Instant = Instant::now().sub(MIN_COMMIT_DURATION);
+
+            // Timer for commit cooldown. OptionFuture allows us to wait on the future even if
+            // it's None.
+            let mut next_commit_timer: OptionFuture<Timer> = None.into();
+            let mut next_commit_timer_fuse = next_commit_timer.fuse();
+
+            let commit_fuse = commit_receiver.fuse();
+
+            futures::pin_mut!(commit_fuse);
+            loop {
+                futures::select! {
+                    commit_params = commit_fuse.select_next_some() => {
+                        // Received a request to do a commit.
+                        let now = Instant::now();
+                        let next_commit_time = if now - last_commit > MIN_COMMIT_DURATION {
+                            // Last commit happened more than MIN_COMMIT_INTERVAL_MS ago, commit
+                            // immediately in next iteration of loop.
+                            now
+                        } else {
+                            // Last commit was less than MIN_COMMIT_INTERVAL_MS ago, schedule it
+                            // accordingly. It's okay if the time is in the past, Timer will still
+                            // trigger on the next loop iteration.
+                            last_commit.add(MIN_COMMIT_DURATION)
+                        };
+                        pending_commit = Some(commit_params);
+                        next_commit_timer = Some(Timer::new(next_commit_time.into_time())).into();
+                        next_commit_timer_fuse = next_commit_timer.fuse();
+                    }
+
+                    _ = next_commit_timer_fuse => {
+                        // Timer triggered, check for pending commits.
+                        if let Some(params) = pending_commit {
+                            DeviceStorage::<T>::stash_commit(&stash_proxy, params.flush).await;
+                            last_commit = Instant::now();
+                            pending_commit = None;
+                        }
+                    }
+
+                    complete => break,
+                }
+            }
+        })
+        .detach();
+
+        return storage;
     }
 
     #[cfg(test)]
@@ -65,16 +150,31 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
         self.caching_enabled = enabled;
     }
 
+    #[cfg(test)]
+    fn set_debounce_writes(&mut self, debounce: bool) {
+        self.debounce_writes = debounce;
+    }
+
+    /// Triggers a commit on the given stash proxy, or a flush if `flush` is true.
+    async fn stash_commit(stash_proxy: &StoreAccessorProxy, flush: bool) {
+        if flush {
+            if stash_proxy.flush().await.is_err() {
+                fx_log_err!("flush error");
+            }
+        } else {
+            stash_proxy.commit().unwrap_or_else(|_| fx_log_err!("commit failed"));
+        }
+    }
+
     pub async fn write(&mut self, new_value: &T, flush: bool) -> Result<(), Error> {
         if self.current_data.as_ref() != Some(new_value) {
             let mut serialized = Value::Stringval(new_value.serialize_to());
             self.stash_proxy.set_value(&prefixed(T::KEY), &mut serialized)?;
-            if flush {
-                if self.stash_proxy.flush().await.is_err() {
-                    return Err(format_err!("flush error"));
-                }
+            if !self.debounce_writes {
+                // Not debouncing writes for testing, just commit immediately.
+                DeviceStorage::<T>::stash_commit(&self.stash_proxy, flush).await;
             } else {
-                self.stash_proxy.commit()?;
+                self.commit_sender.unbounded_send(CommitParams { flush }).ok();
             }
             self.current_data = Some(new_value.clone());
         }
@@ -225,6 +325,7 @@ pub mod testing {
             if let Some((proxy, _)) = self.proxies.get(&id) {
                 let mut storage = DeviceStorage::new(proxy.clone(), None);
                 storage.set_caching_enabled(false);
+                storage.set_debounce_writes(false);
 
                 Arc::new(Mutex::new(storage))
             } else {
@@ -290,11 +391,17 @@ pub mod testing {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_stash::{StoreAccessorMarker, StoreAccessorRequest};
+    use fidl_fuchsia_stash::{
+        StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream,
+    };
     use fuchsia_async as fasync;
+    use fuchsia_async::{Executor, Time};
     use futures::lock::Mutex;
     use futures::prelude::*;
     use serde::{Deserialize, Serialize};
+    use std::convert::TryInto;
+    use std::marker::Unpin;
+    use std::task::Poll;
     use testing::*;
 
     const CONTEXT_ID: u64 = 0;
@@ -312,6 +419,55 @@ mod tests {
 
         fn default_value() -> Self {
             TestStruct { value: VALUE0 }
+        }
+    }
+
+    /// Advances `future` until `executor` finishes. Panics if the end result was a stall.
+    fn advance_executor<F>(executor: &mut Executor, mut future: &mut F)
+    where
+        F: Future + Unpin,
+    {
+        loop {
+            executor.wake_main_future();
+            match executor.run_one_step(&mut future) {
+                Some(Poll::Ready(_)) => return,
+                None => panic!("Executor stalled!"),
+                Some(Poll::Pending) => {}
+            }
+        }
+    }
+
+    /// Verifies that a SetValue call was sent to stash with the given value.
+    async fn verify_stash_set(stash_stream: &mut StoreAccessorRequestStream, expected_value: i32) {
+        match stash_stream.next().await.unwrap() {
+            Ok(StoreAccessorRequest::SetValue { key, val, control_handle: _ }) => {
+                assert_eq!(key, "settings_testkey");
+                if let Value::Stringval(string_value) = val {
+                    let input_value = TestStruct::deserialize_from(&string_value);
+                    assert_eq!(input_value.value, expected_value);
+                } else {
+                    panic!("Unexpected type for key found in stash");
+                }
+            }
+            request => panic!("Unexpected request: {:?}", request),
+        }
+    }
+
+    /// Verifies that a Commit call was sent to stash.
+    async fn verify_stash_commit(stash_stream: &mut StoreAccessorRequestStream) {
+        match stash_stream.next().await.unwrap() {
+            Ok(StoreAccessorRequest::Commit { .. }) => {} // expected
+            request => panic!("Unexpected request: {:?}", request),
+        }
+    }
+
+    /// Verifies that a Flush call was sent to stash.
+    async fn verify_stash_flush(stash_stream: &mut StoreAccessorRequestStream) {
+        match stash_stream.next().await.unwrap() {
+            Ok(StoreAccessorRequest::Flush { responder }) => {
+                responder.send(&mut Ok(())).ok();
+            } // expected
+            request => panic!("Unexpected request: {:?}", request),
         }
     }
 
@@ -397,63 +553,154 @@ mod tests {
         assert_eq!(result.value, VALUE0);
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn test_write() {
+    // Test that an initial write to DeviceStorage causes a SetValue and Commit to Stash
+    // without any wait.
+    #[test]
+    fn test_first_write_commits_immediately() {
+        let written_value = VALUE2;
+        let mut executor = Executor::new_with_fake_time().expect("Failed to create executor");
+
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
         let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
 
-        storage.write(&TestStruct { value: VALUE2 }, false).await.expect("writing shouldn't fail");
+        // Write to device storage.
+        let value_to_write = TestStruct { value: written_value };
+        let write_future = storage.write(&value_to_write, false);
+        futures::pin_mut!(write_future);
 
-        match stash_stream.next().await.unwrap() {
-            Ok(StoreAccessorRequest::SetValue { key, val, control_handle: _ }) => {
-                assert_eq!(key, "settings_testkey");
-                if let Value::Stringval(string_value) = val {
-                    let input_value = TestStruct::deserialize_from(&string_value);
-                    assert_eq!(input_value.value, VALUE2);
-                } else {
-                    panic!("Unexpected type for key found in stash");
-                }
-            }
-            request => panic!("Unexpected request: {:?}", request),
+        // Write request finishes immediately.
+        matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Result::Ok(_)));
+
+        // Set request is received immediately on write.
+        {
+            let set_value_future = verify_stash_set(&mut stash_stream, written_value);
+            futures::pin_mut!(set_value_future);
+            advance_executor(&mut executor, &mut set_value_future);
         }
 
-        match stash_stream.next().await.unwrap() {
-            Ok(StoreAccessorRequest::Commit { .. }) => {} // expected
-            request => panic!("Unexpected request: {:?}", request),
-        }
+        // Start listening for the commit request.
+        let commit_future = verify_stash_commit(&mut stash_stream);
+        futures::pin_mut!(commit_future);
+
+        // Commit is received without a wait. Due to the way time works with executors, if there was
+        // a delay, the test would stall since time never advances.
+        advance_executor(&mut executor, &mut commit_future);
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn test_write_with_flush() {
+    // Test that multiple writes to DeviceStorage will cause a SetValue each time, but will only
+    // Commit to Stash at an interval.
+    #[test]
+    fn test_multiple_write_debounce() {
+        // Custom executor for this test so that we can advance the clock arbitrarily and verify the
+        // state of the executor at any given point.
+        let mut executor = Executor::new_with_fake_time().expect("Failed to create executor");
+        executor.set_fake_time(Time::from_nanos(0));
+
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
         let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
-        fasync::Task::spawn(async move {
-            match stash_stream.next().await.unwrap() {
-                Ok(StoreAccessorRequest::SetValue { key, val, control_handle: _ }) => {
-                    assert_eq!(key, "settings_testkey");
-                    if let Value::Stringval(string_value) = val {
-                        let input_value = TestStruct::deserialize_from(&string_value);
-                        assert_eq!(input_value.value, VALUE2);
-                    } else {
-                        panic!("Unexpected type for key found in stash");
-                    }
-                }
-                request => panic!("Unexpected request: {:?}", request),
-            }
 
-            match stash_stream.next().await.unwrap() {
-                Ok(StoreAccessorRequest::Flush { responder }) => {
-                    responder.send(&mut Ok(())).ok();
-                } // expected
-                request => panic!("Unexpected request: {:?}", request),
-            }
-        })
-        .detach();
-        storage.write(&TestStruct { value: VALUE2 }, true).await.expect("writing shouldn't fail");
+        let first_value = VALUE1;
+        let second_value = VALUE2;
+
+        // First write finishes immediately.
+        {
+            let value_to_write = TestStruct { value: first_value };
+            let write_future = storage.write(&value_to_write, false);
+            futures::pin_mut!(write_future);
+            matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Result::Ok(_)));
+        }
+
+        // First set request is received immediately on write.
+        {
+            let set_value_future = verify_stash_set(&mut stash_stream, first_value);
+            futures::pin_mut!(set_value_future);
+            advance_executor(&mut executor, &mut set_value_future);
+        }
+
+        // First commit request is received.
+        {
+            let commit_future = verify_stash_commit(&mut stash_stream);
+            futures::pin_mut!(commit_future);
+            advance_executor(&mut executor, &mut commit_future);
+        }
+
+        // Now we repeat the process with a second write request, which will need to advance the
+        // fake time due to the timer.
+
+        // Second write finishes immediately.
+        {
+            let value_to_write = TestStruct { value: second_value };
+            let write_future = storage.write(&value_to_write, false);
+            futures::pin_mut!(write_future);
+            matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Result::Ok(_)));
+        }
+
+        // Second set request finishes immediately on write.
+        {
+            let set_value_future = verify_stash_set(&mut stash_stream, second_value);
+            futures::pin_mut!(set_value_future);
+            advance_executor(&mut executor, &mut set_value_future);
+        }
+
+        // Start waiting for commit request.
+        let commit_future = verify_stash_commit(&mut stash_stream);
+        futures::pin_mut!(commit_future);
+
+        // Executor stalls due to waiting on timer to finish.
+        matches!(executor.run_until_stalled(&mut commit_future), Poll::Pending);
+
+        // Advance time to 1ms before the commit triggers.
+        executor.set_fake_time(Time::from_nanos(
+            ((MIN_COMMIT_INTERVAL_MS - 1) * 10_u64.pow(6)).try_into().unwrap(),
+        ));
+
+        // Executor is still waiting on the time to finish.
+        matches!(executor.run_until_stalled(&mut commit_future), Poll::Pending);
+
+        // Advance time so that the commit will trigger.
+        executor.set_fake_time(Time::from_nanos(
+            (MIN_COMMIT_INTERVAL_MS * 10_u64.pow(6)).try_into().unwrap(),
+        ));
+
+        // Stash receives a commit request after one timer cycle and the future terminates.
+        advance_executor(&mut executor, &mut commit_future);
+    }
+
+    // Tests that a write requesting a flush is sent to Stash as a Flush request.
+    #[test]
+    fn test_write_with_flush() {
+        let written_value = VALUE2;
+        let mut executor = Executor::new_with_fake_time().expect("Failed to create executor");
+
+        let (stash_proxy, mut stash_stream) =
+            fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
+
+        let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+
+        // Write to device storage with flush set to true.
+        let value_to_write = TestStruct { value: written_value };
+        let write_future = storage.write(&value_to_write, true);
+        futures::pin_mut!(write_future);
+        matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Result::Ok(_)));
+
+        // Stash receives a set request.
+        {
+            let set_value_future = verify_stash_set(&mut stash_stream, written_value);
+            futures::pin_mut!(set_value_future);
+            advance_executor(&mut executor, &mut set_value_future);
+        }
+
+        // Start listening for the flush request.
+        let flush_future = verify_stash_flush(&mut stash_stream);
+        futures::pin_mut!(flush_future);
+
+        // Commit is received without a wait. Due to the way time works with executors, if there was
+        // a delay, the test would stall since time never advances.
+        advance_executor(&mut executor, &mut flush_future);
     }
 
     #[fuchsia_async::run_until_stalled(test)]
