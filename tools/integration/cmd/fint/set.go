@@ -25,6 +25,10 @@ import (
 
 const (
 	fuchsiaDirEnvVar = "FUCHSIA_DIR"
+
+	// Locations of GN trace files in the build directory.
+	zirconGNTrace  = "zircon_gn_trace.json"
+	fuchsiaGNTrace = "gn_trace.json"
 )
 
 type subprocessRunner interface {
@@ -114,7 +118,7 @@ func (c *SetCommand) run(ctx context.Context) error {
 	}
 
 	runner := &runner.SubprocessRunner{}
-	return runGen(ctx, runner, contextSpec, platform, genArgs)
+	return runGen(ctx, runner, staticSpec, contextSpec, platform, genArgs)
 }
 
 func defaultContextSpec() (*fintpb.Context, error) {
@@ -128,15 +132,28 @@ func defaultContextSpec() (*fintpb.Context, error) {
 	}, nil
 }
 
-func runGen(ctx context.Context, runner subprocessRunner, contextSpec *fintpb.Context, platform string, args []string) error {
+func runGen(
+	ctx context.Context,
+	runner subprocessRunner,
+	staticSpec *fintpb.Static,
+	contextSpec *fintpb.Context,
+	platform string,
+	args []string,
+) error {
 	gnPath := filepath.Join(contextSpec.CheckoutDir, "prebuilt", "third_party", "gn", platform, "gn")
 	genCmd := []string{
 		gnPath, "gen",
 		contextSpec.BuildDir,
 		"--check=system",
 		"--fail-on-unused-args",
-		fmt.Sprintf("--args=%s", strings.Join(args, " ")),
 	}
+
+	if staticSpec.CollectMetrics {
+		tracelogPath := filepath.Join(contextSpec.BuildDir, fuchsiaGNTrace)
+		genCmd = append(genCmd, fmt.Sprintf("--tracelog=%s", tracelogPath))
+	}
+
+	genCmd = append(genCmd, fmt.Sprintf("--args=%s", strings.Join(args, " ")))
 
 	if err := runner.Run(ctx, genCmd, os.Stdout, os.Stderr); err != nil {
 		return fmt.Errorf("error running gn gen: %w", err)
@@ -266,9 +283,9 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 		}
 	}
 
-	// TODO(fxbug.dev/61977): Set `zircon_tracelog` and the --tracelog gn flag
-	// if staticSpec.CollectMetrics is set, once we have a plan for exposing the
-	// tracelog's location to the recipe for upload.
+	if staticSpec.CollectMetrics {
+		vars["zircon_tracelog"] = filepath.Join(contextSpec.BuildDir, zirconGNTrace)
+	}
 
 	var normalArgs []string
 	var importArgs []string

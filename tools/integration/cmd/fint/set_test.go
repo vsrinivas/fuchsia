@@ -29,43 +29,69 @@ func (r *fakeSubprocessRunner) Run(_ context.Context, cmd []string, _, _ io.Writ
 
 func TestRunGen(t *testing.T) {
 	ctx := context.Background()
-	runner := &fakeSubprocessRunner{}
+
 	contextSpec := fintpb.Context{
 		CheckoutDir: "/path/to/checkout",
 		BuildDir:    "/path/to/out/default",
 	}
-	platform := "mac-x64"
-	args := []string{"arg1", "arg2"}
 
-	if err := runGen(ctx, runner, &contextSpec, platform, args); err != nil {
-		t.Fatalf("Unexpected error from runGen: %v", err)
-	}
-	if len(runner.commandsRun) != 1 {
-		t.Fatalf("Expected runGen to run one command, but it ran %d", len(runner.commandsRun))
+	testCases := []struct {
+		name            string
+		staticSpec      *fintpb.Static
+		expectedOptions []string
+	}{
+		{
+			name: "default",
+		},
+		{
+			name: "metrics collection enabled",
+			staticSpec: &fintpb.Static{
+				CollectMetrics: true,
+			},
+			expectedOptions: []string{
+				fmt.Sprintf("--tracelog=%s", filepath.Join(contextSpec.BuildDir, fuchsiaGNTrace)),
+			},
+		},
 	}
 
-	cmd := runner.commandsRun[0]
-	if len(cmd) < 3 {
-		t.Fatalf("runGen ran wrong command: %v", cmd)
-	}
+	for _, tc := range testCases {
+		if tc.staticSpec == nil {
+			tc.staticSpec = &fintpb.Static{}
+		}
+		runner := &fakeSubprocessRunner{}
+		platform := "mac-x64"
+		if err := runGen(ctx, runner, tc.staticSpec, &contextSpec, platform, []string{"arg1", "arg2"}); err != nil {
+			t.Fatalf("Unexpected error from runGen: %v", err)
+		}
+		if len(runner.commandsRun) != 1 {
+			t.Fatalf("Expected runGen to run one command, but it ran %d", len(runner.commandsRun))
+		}
 
-	exe, subcommand, buildDir := cmd[0], cmd[1], cmd[2]
-	// Intentionally flexible about the path within the checkout to the gn dir
-	// in case it's every intentionally changed.
-	expectedExePattern := regexp.MustCompile(
-		fmt.Sprintf(`^%s(/\w+)+/%s/gn$`, contextSpec.CheckoutDir, platform),
-	)
-	if !expectedExePattern.MatchString(exe) {
-		t.Errorf("runGen ran wrong GN executable: %s, expected a match of %s", exe, expectedExePattern.String())
-	}
-	if subcommand != "gen" {
-		t.Errorf("Expected runGen to run `gn gen`, but got `gn %s`", subcommand)
-	}
-	if buildDir != contextSpec.BuildDir {
-		t.Errorf("Expected runGen to use build dir from context (%s) but got %s", contextSpec.BuildDir, buildDir)
-	}
-	if !strings.HasPrefix(cmd[len(cmd)-1], "--args=") {
-		t.Errorf("Expected runGen to pass --args as last flag")
+		cmd := runner.commandsRun[0]
+		if len(cmd) < 4 {
+			t.Fatalf("runGen ran wrong command: %v", cmd)
+		}
+
+		exe, subcommand, buildDir, argsOption := cmd[0], cmd[1], cmd[2], cmd[len(cmd)-1]
+		otherOptions := cmd[3 : len(cmd)-1]
+		// Intentionally flexible about the path within the checkout to the gn dir
+		// in case it's every intentionally changed.
+		expectedExePattern := regexp.MustCompile(
+			fmt.Sprintf(`^%s(/\w+)+/%s/gn$`, contextSpec.CheckoutDir, platform),
+		)
+		if !expectedExePattern.MatchString(exe) {
+			t.Errorf("runGen ran wrong GN executable: %s, expected a match of %s", exe, expectedExePattern)
+		}
+		if subcommand != "gen" {
+			t.Errorf("Expected runGen to run `gn gen`, but got `gn %s`", subcommand)
+		}
+		if buildDir != contextSpec.BuildDir {
+			t.Errorf("Expected runGen to use build dir from context (%s) but got %s", contextSpec.BuildDir, buildDir)
+		}
+		if !strings.HasPrefix(argsOption, "--args=") {
+			t.Errorf("Expected runGen to pass --args as last flag")
+		}
+		assertSubset(t, tc.expectedOptions, otherOptions, false)
 	}
 }
 
@@ -99,9 +125,10 @@ func TestToGNValue(t *testing.T) {
 
 func TestGenArgs(t *testing.T) {
 	platform := "linux-x64"
-	// A magic string that will be replaced with the actual path to a mock
-	// checkout dir before making any assertions.
+	// Magic strings that will be replaced with the actual paths to mock
+	// checkout and build dirs before making any assertions.
 	checkoutDir := "$CHECKOUT_DIR"
+	buildDir := "$BUILD_DIR"
 
 	testCases := []struct {
 		name        string
@@ -274,6 +301,15 @@ func TestGenArgs(t *testing.T) {
 			expectedArgs: []string{`sdk_id="789"`, `build_sdk_archives=true`},
 		},
 		{
+			name: "metrics collection enabled",
+			staticSpec: &fintpb.Static{
+				CollectMetrics: true,
+			},
+			expectedArgs: []string{
+				fmt.Sprintf(`zircon_tracelog="%s"`, filepath.Join(buildDir, zirconGNTrace)),
+			},
+		},
+		{
 			name: "sorts imports first",
 			staticSpec: &fintpb.Static{
 				GnArgs:  []string{`foo="bar"`, `import("//foo.gni")`},
@@ -301,15 +337,20 @@ func TestGenArgs(t *testing.T) {
 			tc.staticSpec = baseStaticSpec
 
 			baseContextSpec := &fintpb.Context{
-				CheckoutDir: t.TempDir(),
+				CheckoutDir: filepath.Join(t.TempDir(), "checkout"),
+				BuildDir:    filepath.Join(t.TempDir(), "build"),
 			}
 			proto.Merge(baseContextSpec, tc.contextSpec)
 			tc.contextSpec = baseContextSpec
 
-			// Replace all instances of the magic checkoutDir string with the
-			// actual path to the checkout dir, which we only know at runtime.
+			// Replace all instances of the magic checkoutDir and builDir
+			// strings with the actual path to the checkout dir, which we only
+			// know at runtime.
 			for i, arg := range tc.expectedArgs {
-				tc.expectedArgs[i] = strings.ReplaceAll(arg, checkoutDir, tc.contextSpec.CheckoutDir)
+				tc.expectedArgs[i] = strings.NewReplacer(
+					buildDir, tc.contextSpec.BuildDir,
+					checkoutDir, tc.contextSpec.CheckoutDir,
+				).Replace(arg)
 			}
 
 			for _, path := range tc.checkoutFiles {
