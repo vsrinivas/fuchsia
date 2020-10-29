@@ -71,8 +71,9 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
     return status;
   }
 
-  codec_.proto_client_ = fragments[FRAGMENT_CODEC];
-  if (!pdev_.is_valid()) {
+  status = codec_.SetProtocol(fragments[FRAGMENT_CODEC]);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could set codec protocol %d", __FUNCTION__, status);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -123,24 +124,19 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
     return status;
   }
 
-  status = codec_.SetNotBridged();
+  status = codec_.SetBridgedMode(false);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = codec_.CheckExpectedDaiFormat();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  dai_format_t format = {};
+  DaiFormat format = {};
   format.number_of_channels = 2;
-  format.channels_to_use = 3;
-  format.sample_format = wanted_sample_format;
-  format.frame_format = wanted_frame_format;
-  format.frame_rate = wanted_frame_rate;
-  format.bits_per_sample = wanted_bits_per_sample;
-  format.bits_per_slot = wanted_bits_per_slot;
+  format.channels_to_use_bitmask = 3;
+  format.sample_format = SampleFormat::PCM_SIGNED;
+  format.frame_format = FrameFormat::I2S;
+  format.frame_rate = 48'000;
+  format.bits_per_sample = 32;
+  format.bits_per_slot = 32;
   status = codec_.SetDaiFormat(format);
   if (status != ZX_OK) {
     return status;
@@ -163,24 +159,24 @@ zx_status_t Mt8167AudioStreamOut::Init() {
   }
 
   // Get our gain capabilities.
-  gain_state_t state = {};
-  status = codec_.GetGainState(&state);
-  if (status != ZX_OK) {
-    return status;
+  auto state = codec_.GetGainState();
+  if (state.is_error()) {
+    zxlogf(ERROR, "%s failed to get gain state", __FILE__);
+    return state.error_value();
   }
-  cur_gain_state_.cur_gain = state.gain;
-  cur_gain_state_.cur_mute = state.muted;
-  cur_gain_state_.cur_agc = state.agc_enable;
+  cur_gain_state_.cur_gain = state->gain;
+  cur_gain_state_.cur_mute = state->muted;
+  cur_gain_state_.cur_agc = state->agc_enable;
 
-  gain_format_t format = {};
-  status = codec_.GetGainFormat(&format);
-  if (status != ZX_OK) {
-    return status;
+  auto format = codec_.GetGainFormat();
+  if (format.is_error()) {
+    zxlogf(ERROR, "%s failed to get gain format", __FILE__);
+    return format.error_value();
   }
 
-  cur_gain_state_.min_gain = format.min_gain;
-  cur_gain_state_.max_gain = format.max_gain;
-  cur_gain_state_.gain_step = format.gain_step;
+  cur_gain_state_.min_gain = format->min_gain;
+  cur_gain_state_.max_gain = format->max_gain;
+  cur_gain_state_.gain_step = format->gain_step;
   cur_gain_state_.can_mute = false;
   cur_gain_state_.can_agc = false;
 
@@ -223,14 +219,11 @@ zx_status_t Mt8167AudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtRe
 void Mt8167AudioStreamOut::ShutdownHook() { mt_audio_->Shutdown(); }
 
 zx_status_t Mt8167AudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
-  gain_state_t state;
+  GainState state;
   state.gain = req.gain;
   state.muted = cur_gain_state_.cur_mute;
   state.agc_enable = cur_gain_state_.cur_agc;
-  auto status = codec_.SetGainState(&state);
-  if (status != ZX_OK) {
-    return status;
-  }
+  codec_.SetGainState(std::move(state));
   cur_gain_state_.cur_gain = state.gain;
   return ZX_OK;
 }

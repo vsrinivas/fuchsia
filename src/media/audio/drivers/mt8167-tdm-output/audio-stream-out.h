@@ -8,6 +8,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
+#include <lib/simple-codec/simple-codec-client.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
@@ -25,8 +26,6 @@
 #include <fbl/mutex.h>
 #include <soc/mt8167/mt8167-audio-out.h>
 
-#include "codec.h"
-
 namespace audio {
 namespace mt8167 {
 
@@ -41,8 +40,6 @@ class Mt8167AudioStreamOut : public SimpleAudioStream {
   zx_status_t SetGain(const audio_proto::SetGainReq& req) TA_REQ(domain_token()) override;
   void ShutdownHook() TA_REQ(domain_token()) override;
 
-  Codec codec_;  // Protected for unit tests.
-
  private:
   friend class SimpleAudioStream;
   friend class fbl::RefPtr<Mt8167AudioStreamOut>;
@@ -55,6 +52,7 @@ class Mt8167AudioStreamOut : public SimpleAudioStream {
   zx_status_t InitPdev() TA_REQ(domain_token());
   void ProcessRingNotification();
 
+  SimpleCodecClient codec_;
   uint32_t us_per_notification_ = 0;
   async::TaskClosureMethod<Mt8167AudioStreamOut, &Mt8167AudioStreamOut::ProcessRingNotification>
       notify_timer_ TA_GUARDED(domain_token()){this};
