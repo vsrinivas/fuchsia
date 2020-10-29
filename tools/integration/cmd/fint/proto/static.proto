@@ -67,29 +67,26 @@ message Static {
   // Values of select_variant GN argument.
   repeated string variants = 12;
 
-  // Whether to enforce build size limits.
-  bool enforce_size_limits = 13;
-
   // Whether to collect build metrics.
-  bool collect_metrics = 14;
+  bool collect_metrics = 13;
 
   // Whether to include archives in the build.
-  bool include_archives = 15;
+  bool include_archives = 14;
 
   // Whether to skip the ninja build if we're running in CQ and none of the
   // changed files affect the build.
-  bool skip_if_unaffected = 16;
+  bool skip_if_unaffected = 15;
 
   // The path within the checkout of a file containing historical test duration
   // data specific to the current build config.
-  string test_durations_file = 26;
+  string test_durations_file = 16;
 
   // If `test_durations_file` doesn't exist within the checkout, use this file
   // instead. It's not specific to the current build config, but it can be
   // assumed to always exist.
-  string default_test_durations_file = 27;
+  string default_test_durations_file = 17;
 
   // Whether to use goma for running ninja. Will be ignored (and goma will not
   // be used) when building with some experimental toolchain versions.
-  bool use_goma = 28;
+  bool use_goma = 18;
 }

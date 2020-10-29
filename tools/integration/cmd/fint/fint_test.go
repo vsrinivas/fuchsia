@@ -16,7 +16,6 @@ exclude_images: false
 ninja_targets: "default"
 include_host_tests: false
 target_arch: X64
-enforce_size_limits: false
 collect_metrics: false
 include_archives: false
 skip_if_unaffected: true
