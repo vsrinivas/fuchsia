@@ -92,7 +92,7 @@
     "gnu",
     "redhat"
   ],
-  "exitOnProhibitedLicenseTypes": false,
+  "exitOnProhibitedLicenseTypes": true,
   "exitOnUnlicensedFiles": false,
   "outputLicenseFile": true,
   "outputFilePrefix": "NOTICE",

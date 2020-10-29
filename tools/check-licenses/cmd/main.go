@@ -30,7 +30,7 @@ var (
 	target                       = flag.String("target", "", "Analyze the dependency tree of a specific GN build target.")
 	logLevel                     = flag.Int("log_level", 0, "Log level, see https://godoc.org/github.com/golang/glog for more info.")
 	exitOnUnlicensedFiles        = flag.Bool("exit_on_unlicensed_files", false, "If true, exits if it encounters files that are unlicensed.")
-	exitOnProhibitedLicenseTypes = flag.Bool("exit_on_prohibited_license_types", false, "If true, exits if it encounters a prohibited license type.")
+	exitOnProhibitedLicenseTypes = flag.Bool("exit_on_prohibited_license_types", true, "If true, exits if it encounters a prohibited license type.")
 	outputLicenseFile            = flag.Bool("output_license_file", true, "If true, outputs a license file with all the licenses for the project.")
 	outputTreeStateFilename      = flag.String("output_tree_state_filename", "", "Filename for saving the state of the file tree.")
 	prohibitedLicenseTypes       = flag.String("prohibited_license_types", "", "Comma separated list of license types that are prohibited. This arg is added to the list of prohibitedLicenseTypes in the config file.")
