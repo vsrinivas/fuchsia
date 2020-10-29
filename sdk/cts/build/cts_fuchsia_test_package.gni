@@ -13,11 +13,11 @@ import("//src/sys/build/components.gni")
 #
 # Example:
 # ```
-# cts_test_package("my-test-package") {
+# cts_fuchsia_test_package("my-test-package") {
 #   test_components = [ ":my-test-component" ]
 # }
 # ```
-template("cts_test_package") {
+template("cts_fuchsia_test_package") {
   # Ensure that deps and test_components are CTS targets.
   invoker_deps = []
   if (defined(invoker.deps)) {

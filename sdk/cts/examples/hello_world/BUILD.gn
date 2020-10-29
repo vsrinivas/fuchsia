@@ -28,7 +28,7 @@ cts_component("my-cts-component") {
   testonly = true
 }
 
-cts_test_package("my-cts-test-package") {
+cts_fuchsia_test_package("my-cts-test-package") {
   test_components = [ ":my-cts-component" ]
 }
 
