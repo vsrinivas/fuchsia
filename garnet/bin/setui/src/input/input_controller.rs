@@ -9,7 +9,8 @@ use crate::handler::setting_handler::persist::{
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::input::ButtonType;
 use crate::switchboard::base::{
-    ControllerStateResult, InputInfo, InputInfoSources, Microphone, SettingRequest, SettingResponse,
+    Camera, ControllerStateResult, InputInfo, InputInfoSources, Microphone, SettingRequest,
+    SettingResponse,
 };
 use async_trait::async_trait;
 use futures::lock::Mutex;
@@ -22,6 +23,7 @@ impl DeviceStorageCompatible for InputInfoSources {
         InputInfoSources {
             hw_microphone: Microphone { muted: false },
             sw_microphone: Microphone { muted: false },
+            hw_camera: Camera { disabled: false },
         }
     }
 }
@@ -40,13 +42,20 @@ struct InputControllerInner {
 
     /// Local tracking of the software mic state.
     software_mic_muted: bool,
+
+    /// Local tracking of the hardware camera state.
+    hardware_camera_disabled: bool,
 }
 
 impl InputControllerInner {
     /// Gets the input state.
     async fn get_info(&mut self) -> Result<InputInfo, ControllerError> {
-        let muted = self.hardware_mic_muted || self.software_mic_muted;
-        Ok(InputInfo { microphone: Microphone { muted } })
+        let mic_muted = self.hardware_mic_muted || self.software_mic_muted;
+        let camera_disabled = self.hardware_camera_disabled;
+        Ok(InputInfo {
+            microphone: Microphone { muted: mic_muted },
+            camera: Camera { disabled: camera_disabled },
+        })
     }
 
     /// Restores the input state.
@@ -55,6 +64,7 @@ impl InputControllerInner {
         let input_info = self.client.read().await;
         self.hardware_mic_muted = input_info.hw_microphone.muted;
         self.software_mic_muted = input_info.sw_microphone.muted;
+        self.hardware_camera_disabled = input_info.hw_camera.disabled;
     }
 
     /// Sets the software mic state to `muted`.
@@ -78,6 +88,17 @@ impl InputControllerInner {
         // Store the newly set value.
         write(&self.client, input_info, false).await.into_handler_result()
     }
+
+    /// Sets the hardware camera disable to `disabled`.
+    async fn set_hw_camera_disable(&mut self, disabled: bool) -> SettingHandlerResult {
+        let mut input_info = self.client.read().await;
+        input_info.hw_camera.disabled = disabled;
+
+        self.hardware_camera_disabled = disabled;
+
+        // Store the newly set value.
+        write(&self.client, input_info, false).await.into_handler_result()
+    }
 }
 
 pub struct InputController {
@@ -94,6 +115,7 @@ impl data_controller::Create<InputInfoSources> for InputController {
                 client: client.clone(),
                 hardware_mic_muted: false,
                 software_mic_muted: false,
+                hardware_camera_disabled: false,
             })),
         })
     }
@@ -122,6 +144,9 @@ impl controller::Handle for InputController {
             ),
             SettingRequest::OnButton(ButtonType::MicrophoneMute(state)) => {
                 Some(self.inner.lock().await.set_hw_mic_mute(state).await)
+            }
+            SettingRequest::OnButton(ButtonType::CameraDisable(state)) => {
+                Some(self.inner.lock().await.set_hw_camera_disable(state).await)
             }
             _ => None,
         }

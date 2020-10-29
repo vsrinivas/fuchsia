@@ -109,6 +109,10 @@ impl EventHandler {
         if let Some(mic_mute) = event.mic_mute {
             self.send_event(ButtonType::MicrophoneMute(mic_mute));
         }
+
+        if let Some(camera_disable) = event.camera_disable {
+            self.send_event(ButtonType::CameraDisable(camera_disable));
+        }
     }
 
     fn handle_volume(&self, volume_gain: i8) {
@@ -160,11 +164,14 @@ impl EventHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::input::common::MediaButtonsEventBuilder;
     use crate::internal::event;
     use crate::internal::switchboard;
     use crate::message::base::{MessageEvent, MessengerType};
     use crate::service_context::ServiceContext;
     use crate::tests::fakes::service_registry::ServiceRegistry;
+
+    // TODO(fxbug.dev/62860): Refactor tests, could use a common setup helper.
 
     // Tests that the initialization lifespan is not handled.
     #[fuchsia_async::run_until_stalled(test)]
@@ -274,12 +281,13 @@ mod tests {
         };
 
         // Send the events
-        event_handler.handle_event(MediaButtonsEvent {
-            volume: Some(1),
-            mic_mute: Some(true),
-            pause: None,
-            camera_disable: None,
-        });
+        event_handler.handle_event(
+            MediaButtonsEventBuilder::new()
+                .set_volume(1)
+                .set_mic_mute(true)
+                .set_camera_disable(true)
+                .build(),
+        );
 
         // Delete the messengers for the receptors we're selecting below. This
         // will allow the `select!` to eventually hit the `complete` case.
@@ -289,9 +297,11 @@ mod tests {
         let (
             mut agent_received_volume,
             mut agent_received_mic_mute,
+            mut agent_received_camera_disable,
             mut audio_received,
-            mut input_received,
-        ) = (false, false, false, false);
+            mut mic_input_received,
+            mut camera_input_received,
+        ) = (false, false, false, false, false, false);
 
         let fused_event = event_receptor.fuse();
         let fused_switchboard = switchboard_receptor.fuse();
@@ -309,12 +319,20 @@ mod tests {
                     {
                         match event {
                             event::media_buttons::Event::OnButton(
-                                ButtonType::MicrophoneMute(_)
+                                ButtonType::MicrophoneMute(muted)
                             ) => {
+                                assert!(muted);
                                 agent_received_mic_mute = true;
                             }
-                            event::media_buttons::Event::OnVolume(_) => {
-                                agent_received_volume = true
+                            event::media_buttons::Event::OnVolume(state) => {
+                                assert_eq!(state, VolumeGain::Up);
+                                agent_received_volume = true;
+                            }
+                            event::media_buttons::Event::OnButton(
+                                ButtonType::CameraDisable(disabled)
+                            ) => {
+                                assert!(disabled);
+                                agent_received_camera_disable = true;
                             }
                             _ => {}
                         }
@@ -324,14 +342,15 @@ mod tests {
                     if let MessageEvent::Message(
                         switchboard::Payload::Action(switchboard::Action::Request(
                             setting_type,
-                            SettingRequest::OnButton(ButtonType::MicrophoneMute(true)),
+                            SettingRequest::OnButton(button),
                         )),
                         _,
                     ) = message
                     {
-                        match setting_type {
-                            SettingType::Audio => audio_received = true,
-                            SettingType::Input => input_received = true,
+                        match (setting_type, button) {
+                            (SettingType::Audio, _) => audio_received = true,
+                            (SettingType::Input, ButtonType::MicrophoneMute(true)) => mic_input_received = true,
+                            (SettingType::Input, ButtonType::CameraDisable(true)) => camera_input_received = true,
                             _ => {}
                         }
                     }
@@ -342,8 +361,10 @@ mod tests {
 
         assert!(agent_received_volume);
         assert!(agent_received_mic_mute);
+        assert!(agent_received_camera_disable);
         assert!(audio_received);
-        assert!(input_received);
+        assert!(mic_input_received);
+        assert!(camera_input_received);
     }
 
     // Tests that messages are not sent to the audio setting when the audio
@@ -378,37 +399,39 @@ mod tests {
         };
 
         // Send the events
-        event_handler.handle_event(MediaButtonsEvent {
-            volume: None,
-            mic_mute: Some(true),
-            pause: None,
-            camera_disable: None,
-        });
+        event_handler.handle_event(MediaButtonsEventBuilder::new().set_mic_mute(true).build());
 
         // Delete the messenger for the receptor we're iterating below. This
         // will allow the receptor to close.
         switchboard_message_hub.delete(switchboard_signature);
 
-        let (mut audio_received, mut input_received) = (false, false);
+        let (mut audio_received, mut mic_input_received, mut camera_input_received) =
+            (false, false, false);
         while let Some(message) = switchboard_receptor.next().await {
             if let MessageEvent::Message(
                 switchboard::Payload::Action(switchboard::Action::Request(
                     setting_type,
-                    SettingRequest::OnButton(ButtonType::MicrophoneMute(true)),
+                    SettingRequest::OnButton(button),
                 )),
                 _,
             ) = message
             {
-                match setting_type {
-                    SettingType::Audio => audio_received = true,
-                    SettingType::Input => input_received = true,
+                match (setting_type, button) {
+                    (SettingType::Audio, _) => audio_received = true,
+                    (SettingType::Input, ButtonType::MicrophoneMute(true)) => {
+                        mic_input_received = true
+                    }
+                    (SettingType::Input, ButtonType::CameraDisable(true)) => {
+                        camera_input_received = true
+                    }
                     _ => {}
                 }
             }
         }
 
         assert!(!audio_received);
-        assert!(input_received);
+        assert!(mic_input_received);
+        assert!(!camera_input_received);
     }
 
     // Tests that messages are not sent to the input setting when the input
@@ -443,36 +466,40 @@ mod tests {
         };
 
         // Send the events
-        event_handler.handle_event(MediaButtonsEvent {
-            volume: None,
-            mic_mute: Some(true),
-            pause: None,
-            camera_disable: None,
-        });
+        event_handler.handle_event(
+            MediaButtonsEventBuilder::new().set_mic_mute(true).set_camera_disable(true).build(),
+        );
 
         // Delete the messenger for the receptor we're iterating below. This
         // will allow the receptor to close.
         switchboard_message_hub.delete(switchboard_signature);
 
-        let (mut audio_received, mut input_received) = (false, false);
+        let (mut audio_received, mut mic_input_received, mut camera_input_received) =
+            (false, false, false);
         while let Some(message) = switchboard_receptor.next().await {
             if let MessageEvent::Message(
                 switchboard::Payload::Action(switchboard::Action::Request(
                     setting_type,
-                    SettingRequest::OnButton(ButtonType::MicrophoneMute(true)),
+                    SettingRequest::OnButton(button),
                 )),
                 _,
             ) = message
             {
-                match setting_type {
-                    SettingType::Audio => audio_received = true,
-                    SettingType::Input => input_received = true,
+                match (setting_type, button) {
+                    (SettingType::Audio, _) => audio_received = true,
+                    (SettingType::Input, ButtonType::MicrophoneMute(true)) => {
+                        mic_input_received = true
+                    }
+                    (SettingType::Input, ButtonType::CameraDisable(true)) => {
+                        camera_input_received = true
+                    }
                     _ => {}
                 }
             }
         }
 
         assert!(audio_received);
-        assert!(!input_received);
+        assert!(!mic_input_received);
+        assert!(!camera_input_received);
     }
 }

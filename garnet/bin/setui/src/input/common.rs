@@ -67,6 +67,7 @@ impl MediaButtonsEventBuilder {
 /// The possible types of input to monitor.
 #[derive(Eq, PartialEq, Debug, Clone, Copy, Hash, Serialize, Deserialize)]
 pub enum InputType {
+    Camera,
     Microphone,
     VolumeButtons,
 }
@@ -74,7 +75,7 @@ pub enum InputType {
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum ButtonType {
     MicrophoneMute(bool),
-    CameraMute(bool),
+    CameraDisable(bool),
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]

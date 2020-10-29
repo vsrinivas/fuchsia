@@ -302,17 +302,24 @@ pub struct AudioStream {
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct InputInfo {
     pub microphone: Microphone,
+    pub camera: Camera,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct InputInfoSources {
     pub sw_microphone: Microphone,
     pub hw_microphone: Microphone,
+    pub hw_camera: Camera,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Microphone {
     pub muted: bool,
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct Camera {
+    pub disabled: bool,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]

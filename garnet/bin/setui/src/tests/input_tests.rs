@@ -11,7 +11,7 @@ use {
     crate::input::common::MediaButtonsEventBuilder,
     crate::input::monitor_media_buttons,
     crate::service_context::ServiceContext,
-    crate::switchboard::base::{InputInfoSources, Microphone, SettingType},
+    crate::switchboard::base::{Camera, InputInfoSources, Microphone, SettingType},
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::test_failure_utils::create_test_env_with_failures,
@@ -32,6 +32,7 @@ use {
 const DEFAULT_INPUT_INFO: InputInfoSources = InputInfoSources {
     hw_microphone: Microphone { muted: false },
     sw_microphone: Microphone { muted: false },
+    hw_camera: Camera { disabled: false },
 };
 const DEFAULT_MIC_STATE: bool = false;
 const ENV_NAME: &str = "settings_service_input_test_environment";
@@ -131,9 +132,9 @@ async fn test_watch() {
     get_and_check_mic_mute(&input_proxy, false).await;
 }
 
-// Test that a set then watch is executed correctly.
+// Test that a set then watch for the mic is executed correctly.
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_set_watch() {
+async fn test_set_watch_mic_mute() {
     let (service_registry, fake_services) = create_services().await;
     let (env, _) = create_environment(service_registry).await;
     let input_proxy = env.connect_to_service::<InputMarker>().unwrap();
@@ -151,7 +152,7 @@ async fn test_set_watch() {
 
 // Test to ensure mic input change events are received.
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_input() {
+async fn test_mic_input() {
     let (service_registry, fake_services) = create_services().await;
     let (env, _) = create_environment(service_registry).await;
     let input_proxy = env.connect_to_service::<InputMarker>().unwrap();
@@ -244,6 +245,7 @@ async fn test_persisted_values_applied_at_start() {
     let test_input_info = InputInfoSources {
         hw_microphone: Microphone { muted: false },
         sw_microphone: Microphone { muted: true },
+        hw_camera: Camera { disabled: false },
     };
 
     // Write values in the store.
