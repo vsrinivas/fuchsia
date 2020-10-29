@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::core::controllers::utils::DefaultComponentRequest,
+    crate::core::controller::utils::DefaultComponentRequest,
     anyhow::{Error, Result},
     scrutiny::{
         model::controller::{DataController, HintDataType},

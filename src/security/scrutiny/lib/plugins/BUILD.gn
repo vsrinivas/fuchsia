@@ -37,14 +37,13 @@ if (is_host) {
     test_deps = [ "//third_party/rust_crates:tempfile" ]
 
     sources = [
-      "src/core/controllers/blob.rs",
-      "src/core/controllers/component.rs",
-      "src/core/controllers/mod.rs",
-      "src/core/controllers/package.rs",
-      "src/core/controllers/route.rs",
-      "src/core/controllers/utils.rs",
-      "src/core/controllers/zbi.rs",
-      "src/core/core.rs",
+      "src/core/controller/blob.rs",
+      "src/core/controller/component.rs",
+      "src/core/controller/mod.rs",
+      "src/core/controller/package.rs",
+      "src/core/controller/route.rs",
+      "src/core/controller/utils.rs",
+      "src/core/controller/zbi.rs",
       "src/core/jsons.rs",
       "src/core/mod.rs",
       "src/core/package/artifact.rs",

@@ -6,7 +6,7 @@ use {
     crate::scrutiny::Scrutiny,
     anyhow::Result,
     scrutiny_plugins::{
-        core::core::CorePlugin, engine::EnginePlugin, search::SearchPlugin, toolkit::ToolkitPlugin,
+        core::CorePlugin, engine::EnginePlugin, search::SearchPlugin, toolkit::ToolkitPlugin,
     },
 };
 
