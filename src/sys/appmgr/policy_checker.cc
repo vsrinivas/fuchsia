@@ -18,6 +18,7 @@ constexpr char kComponentEventProviderAllowList[] = "allowlist/component_event_p
 constexpr char kDurableDataAllowList[] = "allowlist/durable_data.txt";
 constexpr char kFactoryDataAllowList[] = "allowlist/factory_data.txt";
 constexpr char kHubAllowList[] = "allowlist/hub.txt";
+constexpr char kIoportResourceAllowList[] = "allowlist/ioport_resource.txt";
 constexpr char kIrqResourceAllowList[] = "allowlist/irq_resource.txt";
 constexpr char kMmioResourceAllowList[] = "allowlist/mmio_resource.txt";
 constexpr char kPackageResolverAllowList[] = "allowlist/package_resolver.txt";
@@ -69,6 +70,11 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasFeature("hub") && !CheckHub(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "hub. go/no-hub";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.kernel.IoportResource") && !CheckIoportResource(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.kernel.IoportResource";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.kernel.IrqResource") && !CheckIrqResource(pkg_url)) {
@@ -147,6 +153,11 @@ bool PolicyChecker::CheckFactoryData(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckHub(const FuchsiaPkgUrl& pkg_url) {
   AllowList hub_allowlist(config_, kHubAllowList);
   return hub_allowlist.IsAllowed(pkg_url);
+}
+
+bool PolicyChecker::CheckIoportResource(const FuchsiaPkgUrl& pkg_url) {
+  AllowList ioport_resource_allowlist(config_, kIoportResourceAllowList);
+  return ioport_resource_allowlist.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckIrqResource(const FuchsiaPkgUrl& pkg_url) {

@@ -74,6 +74,14 @@ test_package("policy-integration-tests") {
       dest = "irq_resource_allowed.cmx"
     },
     {
+      path = "meta/ioport_resource.cmx"
+      dest = "ioport_resource_denied.cmx"
+    },
+    {
+      path = "meta/ioport_resource.cmx"
+      dest = "ioport_resource_allowed.cmx"
+    },
+    {
       path = "meta/root_resource.cmx"
       dest = "root_resource_denied.cmx"
     },

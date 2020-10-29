@@ -61,6 +61,14 @@ fn serve_proxy_svc_dir() -> Result<zx::Channel, Error> {
         fs.add_proxy_service::<fkernel::IrqResourceMarker, _>();
     }
 
+    if cfg!(x86_64) {
+        let ioport_resource_path =
+            PathBuf::from(format!("/svc/{}", fkernel::IoportResourceMarker::NAME));
+        if ioport_resource_path.exists() {
+            fs.add_proxy_service::<fkernel::IoportResourceMarker, _>();
+        }
+    }
+
     let (client, server) = zx::Channel::create().expect("Failed to create channel");
     fs.serve_connection(server)?;
     fasync::Task::local(fs.collect()).detach();

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(x86_64)]
+use crate::builtin::ioport_resource::IoportResource;
 use {
     crate::{
         builtin::{
@@ -345,6 +347,8 @@ pub struct BuiltinEnvironment {
 
     // Framework capabilities.
     pub boot_args: Arc<BootArguments>,
+    #[cfg(x86_64)]
+    pub ioport_resource: Option<Arc<IoportResource>>,
     pub irq_resource: Option<Arc<IrqResource>>,
     pub kernel_stats: Option<Arc<KernelStats>>,
     pub process_launcher: Option<Arc<ProcessLauncher>>,
@@ -569,6 +573,8 @@ impl BuiltinEnvironment {
             write_only_log,
             mmio_resource,
             irq_resource,
+            #[cfg(x86_64)]
+            ioport_resource: get_ioport_resource(),
             root_resource,
             system_controller,
             utc_time_maintainer,
@@ -627,6 +633,17 @@ impl BuiltinEnvironment {
         })
         .detach();
         Ok(())
+    }
+
+    #[cfg(x86_64)]
+    async fn get_ioport_resource() {
+        let ioport_resource_handle =
+            take_startup_handle(HandleType::IoportResource.into()).map(zx::Resource::from);
+        let ioport_resource = ioport_resource_handle.map(IoportResource::new);
+        if let Some(ioport_resource) = ioport_resource.as_ref() {
+            model.root_realm.hooks.install(ioport_resource.hooks()).await;
+        }
+        ioport_resource
     }
 
     /// Bind ServiceFs to the outgoing directory of this component, if it exists.

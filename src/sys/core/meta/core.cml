@@ -48,6 +48,7 @@
         {
             protocol: [
                 "fuchsia.boot.RootResource",
+                "fuchsia.kernel.IoportResource",
                 "fuchsia.kernel.IrqResource",
                 "fuchsia.kernel.MmioResource",
             ],
@@ -87,6 +88,7 @@
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.kernel.Counter",
                 "fuchsia.kernel.DebugBroker",
+                "fuchsia.kernel.IoportResource",
                 "fuchsia.kernel.IrqResource",
                 "fuchsia.kernel.MmioResource",
                 "fuchsia.kernel.RootJob",

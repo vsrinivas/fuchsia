@@ -14,6 +14,7 @@ group("appmgr_policy_eng") {
     ":appmgr_durable_data_allowlist_eng",
     ":appmgr_factory_data_allowlist_eng",
     ":appmgr_hub_allowlist_eng",
+    ":appmgr_ioport_resource_allowlist_eng",
     ":appmgr_irq_resource_allowlist_eng",
     ":appmgr_mmio_resource_allowlist_eng",
     ":appmgr_package_cache_allowlist_eng",
@@ -73,6 +74,12 @@ config_data("appmgr_hub_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "hub_allowlist_eng.txt" ]
   outputs = [ "allowlist/hub.txt" ]
+}
+
+config_data("appmgr_ioport_resource_allowlist_eng") {
+  for_pkg = "appmgr"
+  sources = [ "ioport_resource_allowlist_eng.txt" ]
+  outputs = [ "allowlist/ioport_resource.txt" ]
 }
 
 config_data("appmgr_irq_resource_allowlist_eng") {

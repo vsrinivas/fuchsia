@@ -1,0 +1,14 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.kernel;
+
+using zx;
+
+/// Protocol for providing an IO Port resource with access to all valid ranges.
+[Discoverable]
+protocol IoportResource {
+    /// Get the IO Port resource handle.
+    Get() -> (zx.handle:RESOURCE ioport_resource);
+};

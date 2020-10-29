@@ -162,6 +162,11 @@ pub enum HandleType {
     /// Equivalent to PA_IRQ_RESOURCE.
     IrqResource = 0x51,
 
+    /// A Handle to an IO Port resource object.
+    ///
+    /// Equivalent to PA_IOPORT_RESOURCE.
+    IoportResource = 0x52,
+
     /// A handle type with user-defined meaning.
     ///
     /// Equivalent to PA_USER0.

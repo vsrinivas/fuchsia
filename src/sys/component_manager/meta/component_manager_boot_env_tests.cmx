@@ -3,6 +3,7 @@
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.boot.RootResource",
+                "fuchsia.kernel.IoportResource",
                 "fuchsia.kernel.IrqResource",
                 "fuchsia.kernel.MmioResource",
                 "fuchsia.kernel.RootJob"
@@ -27,6 +28,7 @@
             "fidl.examples.echo.Echo",
             "fuchsia.boot.RootResource",
             "fuchsia.io.Directory",
+            "fuchsia.kernel.IoportResource",
             "fuchsia.kernel.IrqResource",
             "fuchsia.kernel.MmioResource",
             "fuchsia.kernel.RootJob",
