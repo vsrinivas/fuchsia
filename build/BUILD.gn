@@ -10,6 +10,7 @@ group("tests") {
     "fidl:tests",
     "sdk:tests",
     "tools:tests",
+    "tracer:tests",
   ]
 }
 

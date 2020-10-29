@@ -2147,6 +2147,13 @@ set_defaults("component") {
   configs = default_common_binary_configs
 }
 
+declare_args() {
+  # If enabled, all filesystem activity by actions will be traced and checked
+  # against their declared inputs and outputs and depfiles (if present).
+  # An action that accesses undeclared inputs or outputs will fail the build.
+  build_should_trace_actions = false
+}
+
 foreach(_target_type,
         [
           "action",
@@ -2174,17 +2181,74 @@ foreach(_target_type,
       #   This prevents the script from relying on the Python that happens to
       #   be in the PATH, making the build more hermetic.
       if (get_path_info(invoker.script, "extension") == "py") {
-        script = python_exe_src
-        args = [ rebase_path(invoker.script, root_build_dir) ]
+        _invoker_script = python_exe_src
+        _invoker_args = [ rebase_path(invoker.script, root_build_dir) ]
         if (defined(invoker.args)) {
-          args += invoker.args
+          _invoker_args += invoker.args
         }
       } else {
-        forward_variables_from(invoker,
-                               [
-                                 "args",
-                                 "script",
-                               ])
+        _invoker_script = invoker.script
+        _invoker_args = []
+        if (defined(invoker.args)) {
+          _invoker_args = invoker.args
+        }
+      }
+
+      if (!build_should_trace_actions ||
+          # TODO(shayba): fix response file issue (see below)
+          defined(response_file_contents)) {
+        script = _invoker_script
+        args = _invoker_args
+      } else {
+        script = python_exe_src
+
+        args = [
+          # This wraps actions with a filesystem activity tracer.
+          rebase_path("//build/tracer/action_tracer.py", root_build_dir),
+          "--label",
+          get_label_info(":$target_name", "label_with_toolchain"),
+          "--script",
+          rebase_path(_invoker_script, root_build_dir),
+          "--trace-output",
+        ]
+        if (_target_type == "action") {
+          args += [ rebase_path("${target_gen_dir}/${target_name}_trace.txt",
+                                root_build_dir) ]
+        } else if (_target_type == "action_foreach") {
+          args += [ rebase_path(
+                  "${target_gen_dir}/${target_name}_{{source_name_part}}_trace.txt",
+                  root_build_dir) ]
+        }
+
+        if (defined(sources)) {
+          args += [ "--sources" ] + rebase_path(sources, root_build_dir)
+        }
+
+        if (defined(inputs)) {
+          args += [ "--inputs" ] + rebase_path(inputs, root_build_dir)
+        }
+
+        if (defined(outputs)) {
+          args += [ "--outputs" ] + rebase_path(outputs, root_build_dir)
+        }
+
+        if (defined(depfile)) {
+          args += [
+            "--depfile",
+            rebase_path(depfile, root_build_dir),
+          ]
+        }
+
+        # TODO(shayba): uncommenting the below causes:
+        # ninja: fatal: cycle in rule variables: rspfile -> rspfile
+        #if (defined(response_file_contents)) {
+        #  args += [
+        #    "--response-file-name",
+        #    "{{response_file_name}}",
+        #  ]
+        #}
+
+        args += [ "--" ] + _invoker_args
       }
     }
   }
