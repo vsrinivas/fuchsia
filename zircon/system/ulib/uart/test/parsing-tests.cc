@@ -284,4 +284,13 @@ TEST(ParsingTests, Pl011QemuDriver) {
   EXPECT_EQ(33, config.irq);
 }
 
+TEST(ParsingTests, AmlogicDriver) {
+  auto driver = uart::amlogic::Driver::MaybeCreate("amlogic,0xa,0xb");
+  ASSERT_TRUE(driver.has_value());
+  EXPECT_STR_EQ("amlogic", driver->config_name());
+  const dcfg_simple_t& config = driver->config();
+  EXPECT_EQ(0xa, config.mmio_phys);
+  EXPECT_EQ(0xb, config.irq);
+}
+
 }  // namespace

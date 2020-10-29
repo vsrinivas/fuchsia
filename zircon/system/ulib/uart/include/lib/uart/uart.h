@@ -157,17 +157,20 @@ class DriverBase {
   }
 
   // Return true if Write can make forward progress right now.
+  // The return value can be anything contextually convertible to bool.
+  // The value will be passed on to Write.
   template <typename IoProvider>
   bool TxReady(IoProvider& io) {
     static_assert(Uninstantiated<IoProvider>, "derived class is missing TxReady");
     return false;
   }
 
-  // This is called only when TxReady() has just returned true.  Advance
-  // the iterator at least one and as many as is convenient but not past
-  // end, outputting each character before advancing.
+  // This is called only when TxReady() has just returned something that
+  // converts to true; that's passed here so it can convey more information
+  // such as a count.  Advance the iterator at least one and as many as is
+  // convenient but not past end, outputting each character before advancing.
   template <typename IoProvider, typename It1, typename It2>
-  auto Write(IoProvider& io, It1 it, const It2& end) {
+  auto Write(IoProvider& io, bool ready, It1 it, const It2& end) {
     static_assert(Uninstantiated<IoProvider>, "derived class is missing Write");
     return end;
   }
@@ -378,13 +381,15 @@ class KernelDriver {
     Guard lock(sync_);
     while (it != chars.end()) {
       // Wait until the UART is ready for Write.
-      while (!uart_.TxReady(io_)) {
-        // Block or just unlock and spin or whatever "wait" means to Sync.  If
-        // that means blocking for interrupt wakeup, enable the tx interrupt.
+      auto ready = uart_.TxReady(io_);
+      while (!ready) {
+        // Block or just unlock and spin or whatever "wait" means to Sync.
+        // If that means blocking for interrupt wakeup, enable tx interrupts.
         lock.Wait([this]() TA_REQ(sync_) { uart_.EnableTxInterrupt(io_); });
+        ready = uart_.TxReady(io_);
       }
       // Advance the iterator by writing some.
-      it = uart_.Write(io_, it, chars.end());
+      it = uart_.Write(io_, std::move(ready), it, chars.end());
     }
     return static_cast<int>(str.size());
   }

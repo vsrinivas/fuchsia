@@ -69,7 +69,7 @@ struct Driver {
   // the iterator at least one and as many as is convenient but not past
   // end, outputting each character before advancing.
   template <typename IoProvider, typename It1, typename It2>
-  auto Write(IoProvider& io, It1 it, const It2& end) {
+  auto Write(IoProvider& io, bool, It1 it, const It2& end) {
     return end;
   }
 

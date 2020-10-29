@@ -154,7 +154,7 @@ struct Driver : public DriverBase<Driver, KDRV_PL011_UART, dcfg_simple_t> {
   }
 
   template <class IoProvider, typename It1, typename It2>
-  auto Write(IoProvider& io, It1 it, const It2& end) {
+  auto Write(IoProvider& io, bool, It1 it, const It2& end) {
     DataRegister::Get().FromValue(0).set_data(*it).WriteTo(io.io());
     return ++it;
   }

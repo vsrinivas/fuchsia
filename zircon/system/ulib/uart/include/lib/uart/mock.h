@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_MOCK_H_
-#define ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_MOCK_H_
+#ifndef LIB_UART_MOCK_H_
+#define LIB_UART_MOCK_H_
 
 // uart::mock::IoProvider supports testing uart::xyz::Driver hardware drivers.
 // uart::mock::Driver supports testing uart::KernelDriver itself.
@@ -129,7 +129,7 @@ class Driver {
   // the iterator at least one and as many as is convenient but not past
   // end, outputting each character before advancing.
   template <typename It1, typename It2>
-  auto Write(IoProvider<config_type>& io, It1 it, const It2& end) {
+  auto Write(IoProvider<config_type>& io, bool, It1 it, const It2& end) {
     for (auto n = std::get<size_t>(mock_.Call(ExpectedWrite{})); n > 0; --n) {
       ZX_ASSERT(it != end);
       mock_.Call(ExpectedChar{*it});
@@ -202,4 +202,4 @@ class TA_CAP("uart") Sync {
 }  // namespace mock
 }  // namespace uart
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_UART_INCLUDE_LIB_UART_MOCK_H_
+#endif  // LIB_UART_MOCK_H_

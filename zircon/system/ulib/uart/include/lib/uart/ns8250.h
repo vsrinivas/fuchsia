@@ -241,7 +241,7 @@ class DriverImpl
   }
 
   template <class IoProvider, typename It1, typename It2>
-  auto Write(IoProvider& io, It1 it, const It2& end) {
+  auto Write(IoProvider& io, bool, It1 it, const It2& end) {
     // The FIFO is empty now, so fill it completely.
     auto tx = TxBufferRegister::Get().FromValue(0);
     auto space = fifo_depth_;

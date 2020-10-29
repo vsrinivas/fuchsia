@@ -13,6 +13,7 @@
 
 #include <hwreg/internal.h>
 
+#include "amlogic.h"
 #include "ns8250.h"
 #include "null.h"
 #include "pl011.h"
@@ -53,6 +54,7 @@ using WithAllDrivers = Template<
     // A default-constructed variant gets the null driver.
     null::Driver,
 #if defined(__aarch64__) || UART_ALL_DRIVERS
+    amlogic::Driver,
     pl011::Driver,  // TODO(fxbug.dev/49423): many more...
 #endif
 #if defined(__x86_64__) || defined(__i386__) || UART_ALL_DRIVERS
