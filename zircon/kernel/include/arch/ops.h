@@ -8,11 +8,6 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_ARCH_OPS_H_
 #define ZIRCON_KERNEL_INCLUDE_ARCH_OPS_H_
 
-/* #defines for the cache routines below */
-#define ICACHE 1
-#define DCACHE 2
-#define UCACHE (ICACHE | DCACHE)
-
 #ifndef __ASSEMBLER__
 
 #include <stdbool.h>
@@ -37,9 +32,6 @@ static uint arch_cpu_features(void);
 
 uint8_t arch_get_hw_breakpoint_count();
 uint8_t arch_get_hw_watchpoint_count();
-
-void arch_disable_cache(uint flags);
-void arch_enable_cache(uint flags);
 
 void arch_clean_cache_range(vaddr_t start, size_t len);
 void arch_clean_invalidate_cache_range(vaddr_t start, size_t len);
