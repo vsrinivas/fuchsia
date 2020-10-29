@@ -102,9 +102,8 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	}
 
 	configs, err := target.LoadDeviceConfigs(cmd.configFile)
-
 	if err != nil {
-		return fmt.Errorf("failed to load target config file %q", cmd.configFile)
+		return fmt.Errorf("failed to load target config file %q: %w", cmd.configFile, err)
 	}
 
 	var bootMode bootserver.Mode
