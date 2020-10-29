@@ -130,3 +130,18 @@ sherlock_driver("sherlock-factory-rndis") {
   use_factory = true
   enable_rndis = true
 }
+
+sherlock_driver("luis") {
+  use_factory = false
+  enable_rndis = false
+}
+
+sherlock_driver("luis-factory") {
+  use_factory = true
+  enable_rndis = false
+}
+
+sherlock_driver("luis-factory-rndis") {
+  use_factory = true
+  enable_rndis = true
+}
