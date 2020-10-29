@@ -3,8 +3,8 @@
 // found in the LICENSE file
 
 use anyhow::Error;
-use regex::Regex;
-use regex::RegexSet;
+use regex::{Regex, RegexSet};
+use std::borrow::Cow;
 
 /// A `Redactor` is responsible for removing text patterns that seem like user data in logs.
 pub struct Redactor {
@@ -45,13 +45,13 @@ impl Redactor {
         Ok(Self { to_redact, replacements })
     }
 
-    pub fn redact(&self, text: &str) -> String {
-        let mut return_value = text.to_owned();
+    pub fn redact<'t>(&self, text: &'t str) -> Cow<'t, str> {
+        let mut redacted = Cow::Borrowed(text);
         for idx in self.to_redact.matches(text) {
-            return_value =
-                self.replacements[idx].replace_all(&return_value, REPLACEMENT).to_string();
+            redacted =
+                Cow::Owned(self.replacements[idx].replace_all(&redacted, REPLACEMENT).to_string());
         }
-        return_value
+        redacted
     }
 }
 
