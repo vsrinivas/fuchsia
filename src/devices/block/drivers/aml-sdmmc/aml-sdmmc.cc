@@ -934,12 +934,12 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   return ZX_OK;
 }
 
-zx_status_t AmlSdmmc::SdmmcRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
-                                       uint64_t size) {
+zx_status_t AmlSdmmc::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo,
+                                       uint64_t offset, uint64_t size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AmlSdmmc::SdmmcUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo) {
+zx_status_t AmlSdmmc::SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo* out_vmo) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

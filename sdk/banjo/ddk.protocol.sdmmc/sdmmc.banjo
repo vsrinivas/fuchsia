@@ -6,6 +6,10 @@ library ddk.protocol.sdmmc;
 
 using zx;
 
+/// The max value of client_id fields below. There is no known need for more than eight clients at
+/// the moment, however if that changes later this value will be increased.
+const uint8 SDMMC_MAX_CLIENT_ID = 7;
+
 enum SdmmcVoltage : uint8 {
     V330 = 0;
     V180 = 1;
@@ -32,10 +36,6 @@ enum SdmmcTiming : uint8 {
     DDR50 = 9;
     MAX = 10;
 };
-
-/// The number of VMOs that may be registered at one time. This is an arbitrary limit set to
-/// simplify VMO management by implementers of the protocol.
-const uint64 MAX_REGISTERED_VMOS = 16;
 
 union SdmmcBuffer {
     /// The ID of a VMO that was previously registered.
@@ -68,6 +68,9 @@ struct SdmmcReqNew {
     uint32 blockcount;
     uint32 blocksize;
 
+    /// The client ID for this request. Only VMOs registered with this client may be present in
+    /// buffers below.
+    uint8 client_id;
     vector<SdmmcBufferRegion> buffers;
 };
 
@@ -164,10 +167,14 @@ protocol Sdmmc {
     /// Registers a VMO and transfers ownership to the protocol implementation. The implementation
     /// may map vmo with ZX_VM_PERM_READ and ZX_VM_PERM_WRITE and/or pin it with ZX_BTI_PERM_READ
     /// and ZX_BTI_PERM_WRITE. The implementation may pin vmo during this call or any time it is
-    /// used in a request, and may keep it pinned until the VMO is unregistered.
-    RegisterVmo(uint32 vmo_id, handle<vmo> vmo, uint64 offset, uint64 size) -> (zx.status status);
+    /// used in a request, and may keep it pinned until the VMO is unregistered. client_id may be
+    /// in [0, SDMMC_MAX_CLIENT_ID] and identifies the ID space for this VMO to be registered in
+    /// (that is, two different VMOs may use the same ID if they are registered for different
+    /// clients).
+    RegisterVmo(uint32 vmo_id, uint8 client_id, handle<vmo> vmo, uint64 offset,
+                uint64 size) -> (zx.status status);
     /// The callee unmaps/unpins the VMO and returns ownership to the caller.
-    UnregisterVmo(uint32 vmo_id) -> (zx.status status, handle<vmo> vmo);
+    UnregisterVmo(uint32 vmo_id, uint8 client_id) -> (zx.status status, handle<vmo> vmo);
 
     /// Perform the request. The protocol implementation chooses whether or not to use DMA depending
     /// on the properties of the request and the capabilities of the controller.

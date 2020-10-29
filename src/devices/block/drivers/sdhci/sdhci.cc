@@ -871,11 +871,12 @@ zx_status_t Sdhci::SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol
   return ZX_OK;
 }
 
-zx_status_t Sdhci::SdmmcRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset, uint64_t size) {
+zx_status_t Sdhci::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo,
+                                    uint64_t offset, uint64_t size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Sdhci::SdmmcUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo) {
+zx_status_t Sdhci::SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo* out_vmo) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

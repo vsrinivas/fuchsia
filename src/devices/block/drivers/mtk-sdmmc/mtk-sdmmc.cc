@@ -786,12 +786,12 @@ zx_status_t MtkSdmmc::SdmmcRegisterInBandInterrupt(
   return ZX_OK;
 }
 
-zx_status_t MtkSdmmc::SdmmcRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
-                                       uint64_t size) {
+zx_status_t MtkSdmmc::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo,
+                                       uint64_t offset, uint64_t size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t MtkSdmmc::SdmmcUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo) {
+zx_status_t MtkSdmmc::SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo* out_vmo) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
