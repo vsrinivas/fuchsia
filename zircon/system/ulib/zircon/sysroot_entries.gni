@@ -1,0 +1,98 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/vdso/vdso.gni")
+
+# This file defines the sysroot entries corresponding to the Zircon VDSO
+# (a.k.a. libzircon.so). More details about how these are used are in
+# //zircon/system/ulib/c/sysroot_entries.gni.
+
+if (zx == "/") {
+  sysroot_vdso_toolchain = current_toolchain
+  sysroot_vdso_out_label = "target_out_dir"
+} else {
+  sysroot_vdso_toolchain = "//zircon/system/ulib/zircon:user.vdso_$target_cpu"
+  sysroot_vdso_out_label = "root_out_dir"
+}
+
+# The target that generates the VDSO and the directory for its binaries.
+sysroot_vdso_target = "$zx/system/ulib/zircon($sysroot_vdso_toolchain)"
+sysroot_vdso_out_dir =
+    get_label_info(sysroot_vdso_target, sysroot_vdso_out_label)
+
+sysroot_vdso_stripped = sysroot_vdso_out_dir + "/libzircon.so"
+sysroot_vdso_unstripped = sysroot_vdso_out_dir + "/libzircon.so.debug"
+
+_rebased_vdso_stripped = rebase_path(sysroot_vdso_stripped, root_build_dir)
+_rebased_vdso_unstripped = rebase_path(sysroot_vdso_unstripped, root_build_dir)
+
+_vdso_generated_headers_dep = "$zx/vdso:public($default_toolchain)"
+_gen_include_dir =
+    get_label_info(_vdso_generated_headers_dep, "root_gen_dir") + "/include"
+
+_rebased_include_dir =
+    rebase_path("$zx/system/ulib/zircon/include", root_build_dir)
+_rebased_gen_include_dir = rebase_path(_gen_include_dir, root_build_dir)
+
+sysroot_vdso_entries = [
+  {
+    vdso = _rebased_vdso_unstripped
+  },
+  {
+    include_dirs = []
+    include_dirs = [
+      _rebased_include_dir,
+      _rebased_gen_include_dir,
+    ]
+  },
+  {
+    sdk = {
+      include_dir = _rebased_gen_include_dir
+      headers = [
+        "zircon/syscalls/internal/cdecls.inc",
+        # Note not included in SDK: "zircon/syscalls/definitions.rs",
+      ]
+      if (zx != "/") {
+        deps = [ _vdso_generated_headers_dep ]
+      }
+    }
+  },
+  {
+    sdk = {
+      include_dir = _rebased_gen_include_dir
+      no_export = true  # Never export these to the SDK.
+      headers = []
+      if (!exclude_testonly_syscalls) {
+        headers += [ "zircon/syscalls/internal/testonly-cdecls.inc" ]
+      }
+    }
+  },
+  {
+    sdk = {
+      include_dir = _rebased_include_dir
+      headers = [ "zircon/status.h" ]
+    }
+  },
+  {
+    sdk = {
+      include_dir = _rebased_include_dir
+      headers = [ "zircon/exception.h" ]
+    }
+  },
+  {
+    sdk = {
+      source = _rebased_vdso_unstripped
+      link = "lib/libzircon.so"
+      if (zx != "/") {
+        deps = [ sysroot_vdso_target ]
+      }
+    }
+  },
+  {
+    sdk = {
+      source = _rebased_vdso_unstripped
+      debug = "debug/libzircon.so"
+    }
+  },
+]

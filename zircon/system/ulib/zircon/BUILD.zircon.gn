@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/vdso/vdso.gni")
 if (zx == "/") {
   import("$zx_build/public/gn/config/globals.gni")
   import("$zx_build/public/gn/config/standard.gni")
@@ -154,6 +153,10 @@ if (_can_redirect_to_zircon) {
     sources = []
   }
 } else if (_can_build_zircon) {
+  if (zx == "/") {
+    import("sysroot_entries.gni")
+  }
+
   zx_library("zircon") {
     shared = true
     static = false
@@ -232,88 +235,28 @@ if (_can_redirect_to_zircon) {
     } else {
       vdso_unstripped = rebase_path("$root_out_dir/libzircon.so.debug")
     }
-    rebased_vdso_unstripped = rebase_path(vdso_unstripped, root_build_dir)
     debug_file = rebase_path(vdso_unstripped, "", root_build_dir)
     write_file(link_file, [ "INPUT($debug_file)" ])
-    gen_include_dir =
-        get_label_info(public_deps[0], "root_gen_dir") + "/include"
-
-    rebased_include_dir = rebase_path("include", root_build_dir)
-    rebased_gen_include_dir = rebase_path(gen_include_dir, root_build_dir)
 
     metadata = {
-      if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] ==
-          toolchain.tags) {
-        legacy_sysroot = [
+      if (zx == "/") {
+        legacy_sysroot = sysroot_vdso_entries
+
+        # TODO(fxbug.dev/3156): This is not actually for the SDK (see above).  This
+        # is special-cased so no //zircon/public/lib/zircon gets made, but
+        # //build/config/fuchsia:compiler_sysroot can look up the metadata to
+        # find the right lib_dirs.
+        legacy_barrier = []
+        legacy_targets = [
           {
-            vdso = rebased_vdso_unstripped
-          },
-          {
-            include_dirs = [
-              rebased_include_dir,
-              rebased_gen_include_dir,
-            ]
-          },
-          {
-            sdk = {
-              include_dir = rebased_gen_include_dir
-              headers = [
-                "zircon/syscalls/internal/cdecls.inc",
-                # Note not included in SDK: "zircon/syscalls/definitions.rs",
-              ]
-            }
-          },
-          {
-            sdk = {
-              include_dir = rebased_gen_include_dir
-              no_export = true
-              headers = []
-              if (!exclude_testonly_syscalls) {
-                headers += [ "zircon/syscalls/internal/testonly-cdecls.inc" ]
-              }
-            }
-          },
-          {
-            sdk = {
-              include_dir = rebased_include_dir
-              headers = [ "zircon/status.h" ]
-            }
-          },
-          {
-            sdk = {
-              include_dir = rebased_include_dir
-              headers = [ "zircon/exception.h" ]
-            }
-          },
-          {
-            sdk = {
-              source = rebased_vdso_unstripped
-              link = "lib/libzircon.so"
-            }
-          },
-          {
-            sdk = {
-              source = rebased_vdso_unstripped
-              debug = "debug/libzircon.so"
-            }
+            _label = get_label_info(":$target_name", "label_with_toolchain")
+            _zircon_public = "lib"
+            target_name = "zircon"
+            libs = []
+            libs = [ rebase_path(link_file, root_build_dir) ]
           },
         ]
       }
-
-      # TODO(fxbug.dev/3156): This is not actually for the SDK (see above).  This
-      # is special-cased so no //zircon/public/lib/zircon gets made, but
-      # //build/config/fuchsia:compiler_sysroot can look up the metadata to
-      # find the right lib_dirs.
-      legacy_barrier = []
-      legacy_targets = [
-        {
-          _label = get_label_info(":$target_name", "label_with_toolchain")
-          _zircon_public = "lib"
-          target_name = "zircon"
-          libs = []
-          libs = [ rebase_path(link_file, root_build_dir) ]
-        },
-      ]
 
       # This library is on the allowlist for driver() shared library deps.
       # It doesn't cause driver-denylist-check.sh to fail, and it prunes the

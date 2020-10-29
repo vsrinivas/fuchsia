@@ -1,0 +1,498 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/vdso/vdso.gni")
+
+# This file is used to describe the sysroot entries contributed by the
+# C library. For historical reasons, it currently includes some Zircon
+# headers as well.
+#
+# To properly expose dependencies, this content must be parsed during the
+# `gn gen` phase of the Fuchsia build, i.e. it is not possible to write
+# it to a generated_file() target and later process it with a build-time
+# script.
+#
+# This implies two very different ways to handle this data in the Zircon
+# and the Fuchsia build:
+#
+# - Before build unification, the Zircon build adds this content to the
+#   C library's metadata, which is later collected into the
+#   legacy_sysroot-$cpu.json file.
+#
+#   The Fuchsia build then uses read_file() to read it, then later
+#   parses it (see //zircon/public/sysroot/BUILD.gn).
+#
+# - After build unification, this file will be imported directly by the
+#   Fuchsia build, and its content parsed from there instead
+#   (it might be written to a generated_file() target though to
+#   populate the sysroot directory properly though).
+#
+
+# The toolchain used to build the C library, without any variant suffix.
+# This is used to locate the built binaries (stripped and unstripped) as
+# well as the corresponding dependency. And the label info for the
+# directory label info that contains the gemerated C library binaries.
+if (zx == "/") {
+  # NOTE: Due to the way variants are implemented in the Zircon build, it
+  # is not possible to compute the location of the C library binaries,
+  # so this assumes this file is only included in the Zircon build
+  # from the toolchain that actually builds the C library.
+  sysroot_libc_toolchain = current_toolchain
+  sysroot_libc_target_out_label = "target_out_dir"
+} else {
+  # For the Fuchsia build, variant-generated binaries are always copied
+  # to the root_out_dir of the base toolchain, so the location is always
+  # known, even from different GN toolchain() contexts, e.g. the ones
+  # used when executing //zircon/public/sysroot/BUILD.gn.
+  sysroot_libc_toolchain = "//zircon/system/ulib/c:user.libc_$target_cpu"
+  sysroot_libc_target_out_label = "root_out_dir"
+}
+
+# The GN label used to build the C library
+sysroot_libc_target = "$zx/system/ulib/c($sysroot_libc_toolchain)"
+
+# The stripped and unstripped paths to the C library binaries.
+sysroot_libc_out_dir =
+    get_label_info(sysroot_libc_target, sysroot_libc_target_out_label)
+sysroot_libc_stripped = sysroot_libc_out_dir + "/libc.so"
+sysroot_libc_unstripped = sysroot_libc_out_dir + "/libc.so.debug"
+
+_rebased_libc_unstripped = rebase_path(sysroot_libc_unstripped, root_build_dir)
+_rebased_libc_stripped = rebase_path(sysroot_libc_stripped, root_build_dir)
+
+sysroot_libc_deps = [ sysroot_libc_target ]
+
+# This describes the sysroot entries contributed by the C library
+# built without any binaries that may be affected by instrumentation.
+# In the Zircon build, this will be added to the metadata of the
+# base (i.e. non-instrumented) version of the C library.
+#
+# All versions then get sysroot_instrumented_libc_entries as well.
+#
+# For historical reason, this includes Zircon headers as well.
+sysroot_uninstrumented_libc_entries = [
+  {
+    libc = _rebased_libc_unstripped
+  },
+  {
+    libc_dist = _rebased_libc_stripped
+  },
+  {
+    include_dirs = [
+      "//zircon/system/public",
+      "//zircon/system/ulib/zircon/include",
+      "//zircon/third_party/ulib/musl/include",
+    ]
+  },
+  {
+    sdk = {
+      include_dir = "//zircon/system/public"
+      headers = [
+        "zircon/assert.h",
+        "zircon/boot/bootfs.h",
+        "zircon/boot/crash-reason.h",
+        "zircon/boot/driver-config.h",
+        "zircon/boot/e820.h",
+        "zircon/boot/image.h",
+        "zircon/boot/multiboot.h",
+        "zircon/boot/netboot.h",
+        "zircon/boot/sysconfig.h",
+        "zircon/compiler.h",
+        "zircon/errors.h",
+        "zircon/features.h",
+        "zircon/fidl.h",
+        "zircon/hw/debug/arm64.h",
+        "zircon/hw/debug/x86.h",
+        "zircon/hw/gpt.h",
+        "zircon/hw/i2c.h",
+        "zircon/hw/pci.h",
+        "zircon/hw/usb.h",
+        "zircon/hw/usb/audio.h",
+        "zircon/hw/usb/cdc.h",
+        "zircon/hw/usb/dfu.h",
+        "zircon/hw/usb/hid.h",
+        "zircon/hw/usb/hub.h",
+        "zircon/hw/usb/ums.h",
+        "zircon/hw/usb/video.h",
+        "zircon/limits.h",
+        "zircon/listnode.h",
+        "zircon/pixelformat.h",
+        "zircon/process.h",
+        "zircon/processargs.h",
+        "zircon/rights.h",
+        "zircon/string_view.h",
+        "zircon/syscalls.h",
+        "zircon/syscalls/clock.h",
+        "zircon/syscalls/debug.h",
+        "zircon/syscalls/exception.h",
+        "zircon/syscalls/hypervisor.h",
+        "zircon/syscalls/iommu.h",
+        "zircon/syscalls/log.h",
+        "zircon/syscalls/object.h",
+        "zircon/syscalls/pci.h",
+        "zircon/syscalls/policy.h",
+        "zircon/syscalls/port.h",
+        "zircon/syscalls/profile.h",
+        "zircon/syscalls/resource.h",
+        "zircon/syscalls/scheduler.h",
+        "zircon/syscalls/smc.h",
+        "zircon/syscalls/system.h",
+        "zircon/syscalls/types.h",
+        "zircon/time.h",
+        "zircon/tls.h",
+        "zircon/types.h",
+
+        # Note: Most of zircon/device is excluded from SDKs.
+        # TODO(fxbug.dev/7610,fxbug.dev/32355): remove this allowlist.
+        "zircon/device/audio.h",
+      ]
+
+      if (!exclude_testonly_syscalls) {
+        headers += [ "zircon/testonly-syscalls.h" ]
+      }
+    }
+  },
+  {
+    sdk = {
+      include_dir = "//zircon/system/public"
+      no_export = true
+      headers = [
+        # "zircon/device/audio.h",  (see above)
+        "zircon/device/block.h",
+        "zircon/device/bt-hci.h",
+        "zircon/device/ethernet.h",
+        "zircon/device/intel-hda.h",
+        "zircon/device/nand.h",
+        "zircon/device/network.h",
+        "zircon/device/sysmem.h",
+        "zircon/device/usb-peripheral.h",
+        "zircon/device/usb-peripheral-test.h",
+        "zircon/device/vfs.h",
+      ]
+    }
+  },
+  {
+    sdk = {
+      include_dir = "//zircon/third_party/ulib/musl/include"
+      headers = [
+        "alloca.h",
+        "ar.h",
+        "arpa/ftp.h",
+        "arpa/inet.h",
+        "arpa/nameser.h",
+        "arpa/nameser_compat.h",
+        "arpa/telnet.h",
+        "arpa/tftp.h",
+        "assert.h",
+        "bits/aarch64/endian.h",
+        "bits/aarch64/fenv.h",
+        "bits/aarch64/io.h",
+        "bits/aarch64/ioctl.h",
+        "bits/aarch64/ipc.h",
+        "bits/aarch64/reg.h",
+        "bits/aarch64/setjmp.h",
+        "bits/aarch64/signal.h",
+        "bits/aarch64/stat.h",
+        "bits/alltypes.h",
+        "bits/endian.h",
+        "bits/errno.h",
+        "bits/fcntl.h",
+        "bits/fenv.h",
+        "bits/io.h",
+        "bits/ioctl.h",
+        "bits/ipc.h",
+        "bits/limits.h",
+        "bits/msg.h",
+        "bits/null.h",
+        "bits/poll.h",
+        "bits/posix.h",
+        "bits/reg.h",
+        "bits/resource.h",
+        "bits/sem.h",
+        "bits/setjmp.h",
+        "bits/shm.h",
+        "bits/signal.h",
+        "bits/socket.h",
+        "bits/stat.h",
+        "bits/statfs.h",
+        "bits/termios.h",
+        "bits/x86_64/endian.h",
+        "bits/x86_64/fenv.h",
+        "bits/x86_64/io.h",
+        "bits/x86_64/ioctl.h",
+        "bits/x86_64/ipc.h",
+        "bits/x86_64/reg.h",
+        "bits/x86_64/setjmp.h",
+        "bits/x86_64/signal.h",
+        "bits/x86_64/stat.h",
+        "byteswap.h",
+        "complex.h",
+        "cpio.h",
+        "ctype.h",
+        "dirent.h",
+        "dlfcn.h",
+        "elf.h",
+        "endian.h",
+        "err.h",
+        "errno.h",
+        "fcntl.h",
+        "features.h",
+        "fenv.h",
+        "fmtmsg.h",
+        "fnmatch.h",
+        "getopt.h",
+        "glob.h",
+        "grp.h",
+        "iconv.h",
+        "ifaddrs.h",
+        "inttypes.h",
+        "iso646.h",
+        "langinfo.h",
+        "libgen.h",
+        "limits.h",
+        "link.h",
+        "locale.h",
+        "malloc.h",
+        "math.h",
+        "memory.h",
+        "monetary.h",
+        "net/ethernet.h",
+        "net/if.h",
+        "net/if_arp.h",
+        "net/route.h",
+        "netdb.h",
+        "netinet/ether.h",
+        "netinet/icmp6.h",
+        "netinet/if_ether.h",
+        "netinet/igmp.h",
+        "netinet/in.h",
+        "netinet/in_systm.h",
+        "netinet/ip.h",
+        "netinet/ip6.h",
+        "netinet/ip_icmp.h",
+        "netinet/tcp.h",
+        "netinet/udp.h",
+        "netpacket/packet.h",
+        "nl_types.h",
+        "paths.h",
+        "poll.h",
+        "pthread.h",
+        "pwd.h",
+        "regex.h",
+        "resolv.h",
+        "sched.h",
+        "search.h",
+        "semaphore.h",
+        "setjmp.h",
+        "signal.h",
+        "spawn.h",
+        "stdio.h",
+        "stdlib.h",
+        "string.h",
+        "strings.h",
+        "stropts.h",
+        "sys/acct.h",
+        "sys/auxv.h",
+        "sys/dir.h",
+        "sys/errno.h",
+        "sys/eventfd.h",
+        "sys/fcntl.h",
+        "sys/file.h",
+        "sys/fsuid.h",
+        "sys/io.h",
+        "sys/ioctl.h",
+        "sys/ipc.h",
+        "sys/klog.h",
+        "sys/mman.h",
+        "sys/mount.h",
+        "sys/msg.h",
+        "sys/mtio.h",
+        "sys/param.h",
+        "sys/personality.h",
+        "sys/poll.h",
+        "sys/quota.h",
+        "sys/random.h",
+        "sys/reboot.h",
+        "sys/reg.h",
+        "sys/select.h",
+        "sys/sem.h",
+        "sys/shm.h",
+        "sys/signal.h",
+        "sys/signalfd.h",
+        "sys/socket.h",
+        "sys/stat.h",
+        "sys/statfs.h",
+        "sys/statvfs.h",
+        "sys/stropts.h",
+        "sys/swap.h",
+        "sys/syslog.h",
+        "sys/termios.h",
+        "sys/time.h",
+        "sys/timeb.h",
+        "sys/timerfd.h",
+        "sys/times.h",
+        "sys/timex.h",
+        "sys/ttydefaults.h",
+        "sys/types.h",
+        "sys/ucontext.h",
+        "sys/uio.h",
+        "sys/un.h",
+        "sys/utsname.h",
+        "sys/vfs.h",
+        "sys/wait.h",
+        "sysexits.h",
+        "syslog.h",
+        "tar.h",
+        "termios.h",
+        "threads.h",
+        "time.h",
+        "uchar.h",
+        "ucontext.h",
+        "unistd.h",
+        "utime.h",
+        "values.h",
+        "wait.h",
+        "wchar.h",
+        "wctype.h",
+        "wordexp.h",
+        "zircon/dlfcn.h",
+        "zircon/lookup.h",
+        "zircon/sanitizer.h",
+        "zircon/threads.h",
+        "zircon/utc.h",
+      ]
+    }
+  },
+  {
+    sdk = {
+      # TODO(TC-446): The stripped binary doesn't even have section
+      # headers, so the linker can't handle it.  Eventually we'll have
+      # linker stubs.  For now, just use the unstripped library to link
+      # against.  This matches what library() gives the SDK via
+      # zircon_library().
+      source = _rebased_libc_unstripped
+      link = "lib/libc.so"
+      if (zx != "/") {
+        deps = [ sysroot_libc_target ]
+      }
+    }
+  },
+]
+
+foreach(lib,
+        [
+          "libdl.so",
+          "libm.so",
+          "libpthread.so",
+          "librt.so",
+        ]) {
+  sysroot_uninstrumented_libc_entries += [
+    {
+      sdk = {
+        source = rebase_path("$zx/third_party/ulib/musl/lib.ld", root_build_dir)
+        link = "lib/$lib"
+      }
+    },
+  ]
+}
+
+# This corresponds to the metadata that will go into each instrumented
+# (and non-instrumented) version of the C library.
+
+if (zx == "/") {
+  # For the Zircon build, the same definition is added repeatedly
+  # to different instances of the zx_library(), under different
+  # toolchains.
+  sysroot_instrumented_libc_entries = [
+    {
+      sdk = {
+        source = _rebased_libc_unstripped
+        debug = "debug/${toolchain.libprefix}libc.so"
+      }
+    },
+    {
+      sdk = {
+        source = _rebased_libc_stripped
+        dist = "dist/lib/${toolchain.libprefix}ld.so.1"
+      }
+    },
+  ]
+} else {
+  # For the Fuchsia build, add all entries at once to the list.
+  sysroot_instrumented_libc_entries = []
+  foreach(variant,
+          [
+            "",
+            "asan",
+            "asan-ubsan",
+          ]) {
+    _libprefix = ""
+    if (variant != "") {
+      _libprefix = "$variant/"
+    }
+    _libc_instrumented_toolchain =
+        "//zircon/system/ulib/c:user.libc_$current_cpu"
+    if (variant != "") {
+      _libc_instrumented_toolchain += "-$variant"
+    }
+    _libc_instrumented_target =
+        "//zircon/system/ulib/c($_libc_instrumented_toolchain)"
+    sysroot_libc_deps += [ _libc_instrumented_target ]
+
+    _libc_instrumented_stripped =
+        get_label_info(_libc_instrumented_target, "root_out_dir") + "/libc.so"
+    _libc_instrumented_unstripped = _libc_instrumented_stripped + ".debug"
+    _rebased_instrumented_libc_unstripped =
+        rebase_path(_libc_instrumented_unstripped, root_build_dir)
+    _rebased_instrumented_libc_stripped =
+        rebase_path(_libc_instrumented_stripped, root_build_dir)
+
+    sysroot_instrumented_libc_entries += [
+      {
+        sdk = {
+          source = _rebased_instrumented_libc_unstripped
+          debug = "debug/${_libprefix}libc.so"
+          deps = [ _libc_instrumented_target ]
+        }
+      },
+      {
+        sdk = {
+          source = _rebased_instrumented_libc_stripped
+          dist = "dist/lib/${_libprefix}ld.so.1"
+          deps = [ _libc_instrumented_target ]
+        }
+      },
+    ]
+  }
+}
+
+# The C runtime startup object file (a.k.a. 'crt1', or 'Scrt1.o').
+if (zx == "/") {
+  sysroot_crt1_toolchain = current_toolchain
+} else {
+  sysroot_crt1_toolchain = target_toolchain
+}
+sysroot_crt1_target = "$zx/system/ulib/c:crt1($sysroot_crt1_toolchain)"
+
+sysroot_crt1_obj =
+    get_label_info(sysroot_crt1_target, "target_out_dir") + "/crt1.Scrt1.cc.o"
+
+if (zx == "/") {
+  _libprefix = toolchain.libprefix
+} else {
+  _libprefix = ""
+}
+
+sysroot_crt1_entries = [
+  {
+    crt1 = rebase_path(sysroot_crt1_obj, root_build_dir)
+    sdk = {
+      source = crt1
+      link = "lib/${_libprefix}Scrt1.o"
+      if (zx != "/") {
+        deps = [ sysroot_crt1_target ]
+      }
+    }
+  },
+]

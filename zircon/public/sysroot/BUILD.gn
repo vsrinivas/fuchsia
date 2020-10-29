@@ -144,10 +144,23 @@ foreach(entry, zircon_legacy_sysroot) {
   }
 }
 
-group("sysroot") {
-  if (current_toolchain == sysroot_toolchain) {
-    deps = sysroot_deps
-  } else {
+if (current_toolchain == sysroot_toolchain) {
+  import("//zircon/system/ulib/c/sysroot_entries.gni")
+  import("//zircon/system/ulib/zircon/sysroot_entries.gni")
+
+  generated_file("sysroot-entries-json") {
+    outputs = [ "$root_out_dir/sysroot-entries.json" ]
+    contents = sysroot_uninstrumented_libc_entries +
+               sysroot_instrumented_libc_entries + sysroot_crt1_entries +
+               sysroot_vdso_entries
+    output_conversion = "json"
+  }
+
+  group("sysroot") {
+    deps = sysroot_deps + [ ":sysroot-entries-json" ]
+  }
+} else {
+  group("sysroot") {
     assert(sysroot_deps == [])
     public_deps = [ ":sysroot($sysroot_toolchain)" ]
   }
