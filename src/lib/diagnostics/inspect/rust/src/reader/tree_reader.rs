@@ -84,7 +84,7 @@ where
     load_snapshot_tree(tree).await?.try_into()
 }
 
-fn load_snapshot_tree<'a, T>(tree: &T) -> BoxFuture<Result<SnapshotTree, anyhow::Error>>
+fn load_snapshot_tree<'a, T>(tree: &T) -> BoxFuture<'_, Result<SnapshotTree, anyhow::Error>>
 where
     T: ReadableTree + Send + Sync,
 {

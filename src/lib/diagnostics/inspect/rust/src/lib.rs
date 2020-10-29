@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO Follow 2018 idioms
-#![allow(elided_lifetimes_in_paths)]
-
 //! The Fuchsia Inspect format for structured metrics trees.
 
 use {
@@ -93,7 +90,7 @@ pub struct Inspector {
 }
 
 impl NodeHierarchyGetter<String> for Inspector {
-    fn get_node_hierarchy(&self) -> Cow<NodeHierarchy> {
+    fn get_node_hierarchy(&self) -> Cow<'_, NodeHierarchy> {
         let hierarchy =
             futures::executor::block_on(async move { reader::read_from_inspector(self).await })
                 .expect("failed to get hierarchy");

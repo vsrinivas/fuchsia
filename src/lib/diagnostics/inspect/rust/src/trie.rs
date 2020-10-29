@@ -41,7 +41,7 @@ where
     ///
     /// The iterator performs a stack based DFS through the trie to
     /// allow reconstruction of the key sequence defining each node.
-    pub fn iter(&self) -> TrieIterableType<K, V, TrieIterator<K, V>> {
+    pub fn iter(&self) -> TrieIterableType<'_, K, V, TrieIterator<'_, K, V>> {
         TrieIterableType {
             iterator: TrieIterator {
                 trie: self,

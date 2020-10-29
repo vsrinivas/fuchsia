@@ -101,7 +101,7 @@ impl Into<NodeHierarchy> for PartialNodeHierarchy {
 }
 
 impl NodeHierarchyGetter<String> for PartialNodeHierarchy {
-    fn get_node_hierarchy(&self) -> Cow<NodeHierarchy> {
+    fn get_node_hierarchy(&self) -> Cow<'_, NodeHierarchy> {
         let hierarchy: NodeHierarchy = self.clone().into();
         if !hierarchy.missing.is_empty() {
             panic!(
@@ -318,7 +318,7 @@ impl<'a> ScanResult<'a> {
         self.snapshot.get_block(index).and_then(|block| block.name_contents().ok())
     }
 
-    fn parse_node(&mut self, block: &ScannedBlock) -> Result<(), Error> {
+    fn parse_node(&mut self, block: &ScannedBlock<'_>) -> Result<(), Error> {
         let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
         let parent_index = block.parent_index()?;
         get_or_create_scanned_node!(self.parsed_nodes, block.index())
@@ -329,7 +329,7 @@ impl<'a> ScanResult<'a> {
         Ok(())
     }
 
-    fn parse_numeric_property(&mut self, block: &ScannedBlock) -> Result<(), Error> {
+    fn parse_numeric_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), Error> {
         let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
         match block.block_type() {
@@ -350,7 +350,7 @@ impl<'a> ScanResult<'a> {
         Ok(())
     }
 
-    fn parse_bool_property(&mut self, block: &ScannedBlock) -> Result<(), Error> {
+    fn parse_bool_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), Error> {
         let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
         match block.block_type() {
@@ -363,7 +363,7 @@ impl<'a> ScanResult<'a> {
         Ok(())
     }
 
-    fn parse_array_property(&mut self, block: &ScannedBlock) -> Result<(), Error> {
+    fn parse_array_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), Error> {
         let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
         let array_slots = block.array_slots()?;
@@ -404,7 +404,7 @@ impl<'a> ScanResult<'a> {
         Ok(())
     }
 
-    fn parse_property(&mut self, block: &ScannedBlock) -> Result<(), Error> {
+    fn parse_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), Error> {
         let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
         let total_length = block.property_total_length()?;
@@ -436,7 +436,7 @@ impl<'a> ScanResult<'a> {
         Ok(())
     }
 
-    fn parse_link(&mut self, block: &ScannedBlock) -> Result<(), Error> {
+    fn parse_link(&mut self, block: &ScannedBlock<'_>) -> Result<(), Error> {
         let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
         let content = self

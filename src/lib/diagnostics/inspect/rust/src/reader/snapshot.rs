@@ -30,12 +30,12 @@ const SNAPSHOT_TRIES: u64 = 1024;
 
 impl Snapshot {
     /// Returns an iterator that returns all the Blocks in the buffer.
-    pub fn scan(&self) -> BlockIterator {
+    pub fn scan(&self) -> BlockIterator<'_> {
         BlockIterator::from(self.buffer.as_ref())
     }
 
     /// Gets the block at the given |index|.
-    pub fn get_block(&self, index: u32) -> Option<ScannedBlock> {
+    pub fn get_block(&self, index: u32) -> Option<ScannedBlock<'_>> {
         if utils::offset_for_index(index) < self.buffer.len() {
             Some(Block::new(&self.buffer, index))
         } else {
@@ -219,7 +219,7 @@ mod tests {
         let snapshot = Snapshot::try_from(&vmo)?;
 
         // Scan blocks
-        let blocks = snapshot.scan().collect::<Vec<ScannedBlock>>();
+        let blocks = snapshot.scan().collect::<Vec<ScannedBlock<'_>>>();
 
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[0].index(), 0);
