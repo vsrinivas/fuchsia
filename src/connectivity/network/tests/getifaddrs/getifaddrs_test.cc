@@ -64,8 +64,9 @@ TEST(GetIfAddrsTest, GetIfAddrsTest) {
   ASSERT_EQ(getifaddrs(&ifaddr), 0) << strerror(errno);
 
   std::vector<InterfaceAddress> got_ifaddrs;
-  // Expect 2 auto-generated link-local address per non-loopback interface.
-  const size_t want_unknown_link_local_addrs = (want_ifaddrs.size() - lo_addrs_count) * 2;
+  constexpr size_t link_local_addrs_per_external_interface = 1;
+  const size_t want_unknown_link_local_addrs =
+      link_local_addrs_per_external_interface * (want_ifaddrs.size() - lo_addrs_count);
   size_t got_unknown_link_local_addrs = 0;
 
   for (auto it = ifaddr; it != nullptr; it = it->ifa_next) {

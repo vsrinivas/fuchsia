@@ -1084,7 +1084,7 @@ async fn test_interfaces_watcher() -> Result {
             )),
         }
     };
-    const LL_ADDR_COUNT: usize = 2;
+    const LL_ADDR_COUNT: usize = 1;
     let ll_addrs = async_utils::fold::try_fold_while(
         blocking_stream,
         (false, None),
@@ -1191,7 +1191,7 @@ async fn test_interfaces_watcher() -> Result {
     // Set the link to down.
     let () = assert_blocked(&mut blocking_stream).await?;
     let () = dev.set_link_up(false).await.context("failed to bring device up")?;
-    const LL_ADDR_COUNT_AFTER_LINK_DOWN: usize = 1;
+    const LL_ADDR_COUNT_AFTER_LINK_DOWN: usize = 0;
     let addresses = async_utils::fold::try_fold_while(
         blocking_stream,
         (false, None),

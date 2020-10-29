@@ -505,62 +505,6 @@ func (*testNDPDispatcher) OnDNSSearchListOption(tcpip.NICID, []string, time.Dura
 func (*testNDPDispatcher) OnDHCPv6Configuration(tcpip.NICID, ipv6.DHCPv6ConfigurationFromNDPRA) {
 }
 
-// Test that NICs get an IPv6 link-local address using the same algorithm that
-// netsvc uses. It does not matter whether the address is generated
-// automatically by the netstack or manually by the bindings (Netstack).
-func TestIpv6LinkLocalAddr(t *testing.T) {
-	t.Parallel()
-
-	ndpDisp := testNDPDispatcher{
-		dadC: make(chan ndpDADEvent, 1),
-	}
-	ns := newNetstackWithStackNDPDispatcher(t, &ndpDisp)
-
-	ep := noopEndpoint{
-		linkAddress: tcpip.LinkAddress([]byte{2, 3, 4, 5, 6, 7}),
-	}
-	ifs, err := ns.addEndpoint(
-		func(tcpip.NICID) string { return t.Name() },
-		&ep,
-		&noopController{},
-		nil,  /* observer */
-		true, /* doFilter */
-		0,    /* metric */
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := ifs.Up(); err != nil {
-		t.Fatal("ifs.Up(): ", err)
-	}
-
-	want := tcpip.ProtocolAddress{
-		Protocol: header.IPv6ProtocolNumber,
-		AddressWithPrefix: tcpip.AddressWithPrefix{
-			Address: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x03\x04\xff\xfe\x05\x06\x07",
-		},
-	}
-
-	select {
-	case d := <-ndpDisp.dadC:
-		if diff := cmp.Diff(ndpDADEvent{nicID: ifs.nicid, addr: want.AddressWithPrefix.Address, resolved: true, err: nil}, d, cmp.AllowUnexported(d)); diff != "" {
-			t.Fatalf("ndp DAD event mismatch (-want +got):\n%s", diff)
-		}
-	case <-time.After(dadResolutionTimeout):
-		t.Fatal("timed out waiting for DAD event")
-	}
-
-	nicInfos := ns.stack.NICInfo()
-	nicInfo, ok := nicInfos[ifs.nicid]
-	if !ok {
-		t.Fatalf("stack.NICInfo()[%d]: %s", ifs.nicid, tcpip.ErrUnknownNICID)
-	}
-
-	if _, found := findAddress(nicInfo.ProtocolAddresses, want); !found {
-		t.Fatalf("got NIC addrs = %+v, want = %+v", nicInfo.ProtocolAddresses, want)
-	}
-}
-
 func TestIpv6LinkLocalOnLinkRoute(t *testing.T) {
 	if got, want := ipv6LinkLocalOnLinkRoute(6), (tcpip.Route{Destination: header.IPv6LinkLocalPrefix.Subnet(), NIC: 6}); got != want {
 		t.Fatalf("got ipv6LinkLocalOnLinkRoute(6) = %s, want = %s", got, want)
@@ -947,23 +891,17 @@ func TestListInterfaceAddresses(t *testing.T) {
 		t.Fatal("ifState.Up(): ", err)
 	}
 
-	waitForDAD := func(addr tcpip.Address) {
-		t.Helper()
-
+	// Wait for and account for any addresses added automatically.
+	for ch := time.After(dadResolutionTimeout); ; {
 		select {
 		case d := <-ndpDisp.dadC:
-			if diff := cmp.Diff(ndpDADEvent{nicID: ifState.nicid, addr: addr, resolved: true, err: nil}, d, cmp.AllowUnexported(d)); diff != "" {
-				t.Fatalf("ndp DAD event mismatch (-want +got):\n%s", diff)
-			}
-		case <-time.After(dadResolutionTimeout):
-			t.Fatal("timed out waiting for DAD event")
+			t.Logf("startup DAD event: %#v", d)
+			continue
+		case <-ch:
 		}
+		break
 	}
 
-	waitForDAD("\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x03\x04\xff\xfe\x05\x06\x07")
-
-	// The call to ns.addEndpoint() added addresses to the stack. Make sure we include
-	// those in our want list.
 	wantAddrs := getInterfaceAddresses(t, ni, ifState.nicid)
 
 	testAddresses := []tcpip.AddressWithPrefix{
@@ -990,8 +928,19 @@ func TestListInterfaceAddresses(t *testing.T) {
 				if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
 					t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 				}
-				if addr := addr.Address; header.IsV6UnicastAddress(addr) {
-					waitForDAD(addr)
+				expectDad := header.IsV6UnicastAddress(addr.Address)
+				select {
+				case d := <-ndpDisp.dadC:
+					if !expectDad {
+						t.Fatalf("unexpected DAD event: %#v", d)
+					}
+					if diff := cmp.Diff(ndpDADEvent{nicID: ifState.nicid, addr: addr.Address, resolved: true, err: nil}, d, cmp.AllowUnexported(d)); diff != "" {
+						t.Fatalf("ndp DAD event mismatch (-want +got):\n%s", diff)
+					}
+				case <-time.After(dadResolutionTimeout):
+					if expectDad {
+						t.Fatal("timed out waiting for DAD event")
+					}
 				}
 				wantAddrs = append(wantAddrs, addr)
 				gotAddrs := getInterfaceAddresses(t, ni, ifState.nicid)

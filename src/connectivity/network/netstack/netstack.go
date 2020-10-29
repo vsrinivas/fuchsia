@@ -1118,49 +1118,11 @@ func (ns *Netstack) addEndpoint(
 		}
 	}
 
-	if err := func() error {
-		if linkAddr := ep.LinkAddress(); len(linkAddr) > 0 {
-			ifs.mu.Lock()
-			defer ifs.mu.Unlock()
-			ifs.mu.dhcp.Client = dhcp.NewClient(ns.stack, ifs.nicid, linkAddr, dhcpAcquisition, dhcpBackoff, dhcpRetransmission, ifs.dhcpAcquired)
-
-			// TODO(fxbug.dev/37636): remove this. netstack automatically generates a link-local
-			// ipv6 address via a configuration option. However, the algorithm used to
-			// generate that address may differ from the algorithm used by netsvc. This
-			// matters because netsvc implements the host side of the netboot protocol
-			// which provides device discovery.
-			//
-			// This code can be removed when:
-			//
-			// device discovery moves to another mechanism which is implemented by
-			// something running on top of netstack (not netsvc)
-			//
-			// OR
-			//
-			// netsvc ceases to implement its own network stack and uses netstack
-			// directly.
-			lladdr := tcpip.Address([]byte{
-				0:  0xFE,
-				1:  0x80,
-				8:  linkAddr[0] ^ 2,
-				9:  linkAddr[1],
-				10: linkAddr[2],
-				11: 0xFF,
-				12: 0xFE,
-				13: linkAddr[3],
-				14: linkAddr[4],
-				15: linkAddr[5],
-			})
-
-			if err := ns.stack.AddAddress(ifs.nicid, ipv6.ProtocolNumber, lladdr); err != nil && err != tcpip.ErrDuplicateAddress {
-				return fmt.Errorf("NIC %s: adding link-local IPv6 %s failed: %w", name, lladdr, WrapTcpIpError(err))
-			}
-
-			syslog.Infof("NIC %s: link-local IPv6: %s", name, lladdr)
-		}
-		return nil
-	}(); err != nil {
-		return nil, err
+	if linkAddr := ep.LinkAddress(); len(linkAddr) > 0 {
+		dhcpClient := dhcp.NewClient(ns.stack, ifs.nicid, linkAddr, dhcpAcquisition, dhcpBackoff, dhcpRetransmission, ifs.dhcpAcquired)
+		ifs.mu.Lock()
+		ifs.mu.dhcp.Client = dhcpClient
+		ifs.mu.Unlock()
 	}
 
 	ns.onInterfacesChanged()

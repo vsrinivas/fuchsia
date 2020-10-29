@@ -132,10 +132,7 @@ async fn get_inspect_data<'a>(
 #[fuchsia_async::run_singlethreaded(test)]
 async fn inspect_nic() -> Result {
     // The number of IPv6 addresses that the stack will assign to an interface.
-    //
-    // When an interface comes up, the stack will assign two link-local IPv6
-    // addresses to it.
-    const EXPECTED_NUM_IPV6_ADDRESSES: usize = 2;
+    const EXPECTED_NUM_IPV6_ADDRESSES: usize = 1;
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
@@ -267,12 +264,12 @@ async fn inspect_nic() -> Result {
             Running: "true",
             "DHCP enabled": "false",
             LinkAddress: fidl_fuchsia_net_ext::MacAddress::from(ETH_MAC).to_string(),
-            // NB: The interface has 4 addresses: IPv4, 2x link-local IPv6, and
-            // the ARP protocol address that is always reported.
+            // ARP.
             ProtocolAddress0: eth_addrs.clone(),
+            // IPv4.
             ProtocolAddress1: eth_addrs.clone(),
+            // Link-local IPv6.
             ProtocolAddress2: eth_addrs.clone(),
-            ProtocolAddress3: eth_addrs.clone(),
             Stats: {
                 DisabledRx: {
                     Bytes: AnyProperty,
@@ -310,12 +307,12 @@ async fn inspect_nic() -> Result {
             Running: "true",
             "DHCP enabled": "false",
             LinkAddress: fidl_fuchsia_net_ext::MacAddress::from(NETDEV_MAC).to_string(),
-            // NB: The interface has 4 addresses: IPv4, 2x link-local IPv6, and
-            // the ARP protocol address that is always reported.
+            // ARP.
             ProtocolAddress0: netdev_addrs.clone(),
+            // IPv4.
             ProtocolAddress1: netdev_addrs.clone(),
+            // Link-local IPv6.
             ProtocolAddress2: netdev_addrs.clone(),
-            ProtocolAddress3: netdev_addrs.clone(),
             Stats: {
                 DisabledRx: {
                     Bytes: AnyProperty,
