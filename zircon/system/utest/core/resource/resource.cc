@@ -227,20 +227,20 @@ TEST(Resource, VmoReplaceAsExecutable) {
   ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_VMEX, 0, 0, NULL, 0, &vmex));
   ASSERT_EQ(ZX_OK, zx_handle_duplicate(vmo.get(), ZX_RIGHT_READ, vmo2.reset_and_get_address()));
   ASSERT_EQ(ZX_OK,
-            zx_vmo_replace_as_executable(vmo2.get(), vmex.get(), vmo3.reset_and_get_address()));
+            zx_vmo_replace_as_executable(vmo2.release(), vmex.get(), vmo3.reset_and_get_address()));
   EXPECT_EQ(ZX_RIGHT_READ | ZX_RIGHT_EXECUTE, get_vmo_rights(vmo3));
 
   // set-exec with ZX_HANDLE_INVALID
   // TODO(mdempsky): Disallow.
   ASSERT_EQ(ZX_OK, zx_handle_duplicate(vmo.get(), ZX_RIGHT_READ, vmo2.reset_and_get_address()));
-  ASSERT_EQ(ZX_OK, zx_vmo_replace_as_executable(vmo2.get(), ZX_HANDLE_INVALID,
+  ASSERT_EQ(ZX_OK, zx_vmo_replace_as_executable(vmo2.release(), ZX_HANDLE_INVALID,
                                                 vmo3.reset_and_get_address()));
   EXPECT_EQ(ZX_RIGHT_READ | ZX_RIGHT_EXECUTE, get_vmo_rights(vmo3));
 
   // verify invalid handle fails
   ASSERT_EQ(ZX_OK, zx_handle_duplicate(vmo.get(), ZX_RIGHT_READ, vmo2.reset_and_get_address()));
   EXPECT_EQ(ZX_ERR_WRONG_TYPE,
-            zx_vmo_replace_as_executable(vmo2.get(), vmo.get(), vmo3.reset_and_get_address()));
+            zx_vmo_replace_as_executable(vmo2.release(), vmo.get(), vmo3.reset_and_get_address()));
 }
 
 TEST(Resource, CreateResourceSlice) {
