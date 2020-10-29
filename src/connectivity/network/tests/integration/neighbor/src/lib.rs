@@ -260,84 +260,66 @@ async fn exchange_dgrams(
 /// Helper function to assert validity of a reachable entry.
 fn assert_reachable_entry(
     entry: fidl_fuchsia_net_neighbor::Entry,
-    match_iface: u64,
+    match_interface: u64,
     match_neighbor: fidl_fuchsia_net::IpAddress,
     match_mac: fidl_fuchsia_net::MacAddress,
 ) {
-    match entry {
+    matches::assert_matches!(
+        entry,
         fidl_fuchsia_net_neighbor::Entry {
-            interface: Some(iface),
+            interface: Some(interface),
             neighbor: Some(neighbor),
-            state:
-                Some(fidl_fuchsia_net_neighbor::EntryState::Reachable(
-                    // TODO(fxbug.dev/59372): Capture and assert expiration
-                    // value
-                    fidl_fuchsia_net_neighbor::ReachableState { expires_at: None },
-                )),
+            state: Some(fidl_fuchsia_net_neighbor::EntryState::Reachable(
+                // TODO(fxbug.dev/59372): Capture and assert expiration
+                // value
+                fidl_fuchsia_net_neighbor::ReachableState { expires_at: None },
+            )),
             mac: Some(mac),
-            updated_at: Some(updated),
-        } => {
-            assert_eq!(iface, match_iface);
-            assert_eq!(neighbor, match_neighbor);
-            assert_eq!(mac, match_mac);
-            assert!(updated > 0, "expected greater than 0, got: {}", updated);
-        }
-        x => panic!("incomplete or bad state reachable neighbor entry: {:?}", x),
-    }
+            updated_at: None, /* Some(updated_at) */
+        } if interface == match_interface && neighbor == match_neighbor && mac == match_mac /* && updated_at != 0 */
+    );
 }
 
 /// Helper function to assert validity of a stale entry.
 fn assert_stale_entry(
     entry: fidl_fuchsia_net_neighbor::Entry,
-    match_iface: u64,
+    match_interface: u64,
     match_neighbor: fidl_fuchsia_net::IpAddress,
     match_mac: fidl_fuchsia_net::MacAddress,
 ) {
-    match entry {
+    matches::assert_matches!(
+        entry,
         fidl_fuchsia_net_neighbor::Entry {
-            interface: Some(iface),
+            interface: Some(interface),
             neighbor: Some(neighbor),
-            state:
-                Some(fidl_fuchsia_net_neighbor::EntryState::Stale(
-                    fidl_fuchsia_net_neighbor::StaleState {},
-                )),
+            state: Some(fidl_fuchsia_net_neighbor::EntryState::Stale(
+                fidl_fuchsia_net_neighbor::StaleState {},
+            )),
             mac: Some(mac),
-            updated_at: Some(updated),
-        } => {
-            assert_eq!(iface, match_iface);
-            assert_eq!(neighbor, match_neighbor);
-            assert_eq!(mac, match_mac);
-            assert!(updated > 0, "expected greater than 0, got: {}", updated);
-        }
-        x => panic!("incomplete or bad state stale neighbor entry: {:?}", x),
-    }
+            updated_at: None, /* Some(updated_at) */
+        } if interface == match_interface && neighbor == match_neighbor && mac == match_mac /* && updated_at != 0 */
+    );
 }
 
 /// Helper function to assert validity of a static entry.
 fn assert_static_entry(
     entry: fidl_fuchsia_net_neighbor::Entry,
-    match_iface: u64,
+    match_interface: u64,
     match_neighbor: fidl_fuchsia_net::IpAddress,
     match_mac: fidl_fuchsia_net::MacAddress,
 ) {
-    match entry {
+    matches::assert_matches!(
+        entry,
         fidl_fuchsia_net_neighbor::Entry {
-            interface: Some(iface),
+            interface: Some(interface),
             neighbor: Some(neighbor),
-            state:
-                Some(fidl_fuchsia_net_neighbor::EntryState::Static_(
-                    fidl_fuchsia_net_neighbor::StaticState {},
-                )),
+            state: Some(fidl_fuchsia_net_neighbor::EntryState::Static_(
+                fidl_fuchsia_net_neighbor::StaticState {},
+            )),
             mac: Some(mac),
-            updated_at: Some(updated),
-        } => {
-            assert_eq!(iface, match_iface);
-            assert_eq!(neighbor, match_neighbor);
-            assert_eq!(mac, match_mac);
-            assert!(updated > 0, "expected greater than 0, got: {}", updated);
-        }
-        x => panic!("incomplete or bad state static neighbor entry: {:?}", x),
-    }
+            updated_at: None, /* Some(updated_at) */
+        } if interface == match_interface && neighbor == match_neighbor && mac == match_mac /* && updated_at != 0 */
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
