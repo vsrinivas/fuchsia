@@ -350,7 +350,20 @@ FUNCTION_LABEL(x86_syscall)
     // suspened.
     movq    %rax, (%rsp)
 
-    cmp     $0, %rdx
+    // Move the thread-signaled indicator to a callee-saved register to ensure it's not trashed by
+    // upcoming function calls.
+    movq    %rdx, %r12
+
+    // Spectre V1: If the syscall is going to return certain errors, flush the L1D$
+    // TODO(fxbug.dev/33667): Can this be folded together w/ MD_CLEAR below?
+    test    %rax, %rax
+    jz      1f
+    movq    %rax, %rdi
+    call    x86_cpu_maybe_l1d_flush
+1:
+
+    // Was the thread signaled?
+    test    %r12, %r12
     jnz     .Lthread_signaled
 
 .Lreturn_from_syscall:
@@ -366,13 +379,6 @@ bad:
     popq    %rax
 #endif
 
-    // Spectre V1: If the syscall is going to return certain errors, flush the L1D$
-    // TODO(fxbug.dev/33667): Can this be folded together w/ MD_CLEAR below?
-    test    %rax, %rax
-    jz      1f
-    movq    %rax, %rdi
-    call    x86_cpu_maybe_l1d_flush
-1:
     // If we are affected by the MDS speculative execution vulnerability, flush microarchitectural
     // buffers via mds_buff_overwrite(). x86_mds_flush_select() will NOP out the flush where it is
     // not required.
