@@ -32,7 +32,8 @@ class TruncateTest : public JournalIntegrationFixture {
 };
 
 TEST_F(TruncateTest, EnsureOldDataWhenTransactionFails) {
-  auto bcache = CutOffDevice(write_count() - 8 * kDiskBlocksPerFsBlock);
+  // See the note in journal_test.cc regarding tuning these numbers.
+  auto bcache = CutOffDevice(write_count() - 12 * kDiskBlocksPerFsBlock);
 
   // Since we cut off the transaction, we should see the old length with the old contents.
   std::unique_ptr<Minfs> fs;

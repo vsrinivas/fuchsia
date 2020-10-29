@@ -18,6 +18,7 @@
 #include <fuchsia/minfs/llcpp/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 
 #include <fs/journal/journal.h>
@@ -70,6 +71,10 @@ namespace minfs {
 
 #ifdef __Fuchsia__
 using MountState = llcpp::fuchsia::minfs::MountState;
+
+// How frequently we synchoronize the journal. Without this, the journal will only get flushed when
+// there is no room for a new transaction, or it is explicitly asked to by some other mechanism.
+constexpr zx::duration kJournalBackgroundSyncTime = zx::sec(30);
 #endif  // __Fuchsia__
 
 // SyncVnode flags
@@ -285,10 +290,8 @@ class Minfs :
   // Returns a unique identifier for this instance.
   uint64_t GetFsId() const { return fs_id_; }
 
-  // Signals the completion object as soon as...
-  // (1) A sync probe has entered and exited the writeback queue, and
-  // (2) The block cache has sync'd with the underlying block device.
-  void Sync(SyncCallback closure);
+  // Signals the completion object as soon as the journal has finished synchronizing.
+  void Sync(SyncCallback closure = {});
 #endif
 
   // The following methods are used to read one block from the specified extent,
@@ -461,6 +464,7 @@ class Minfs :
   uint64_t fs_id_ = 0;
   // TODO(fxbug.dev/51057): Git rid of MountState.
   MountState mount_state_ = {};
+  async::TaskClosure journal_sync_task_;
 #else
   // Store start block + length for all extents. These may differ from info block for
   // sparse files.

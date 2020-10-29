@@ -29,7 +29,9 @@ class JournalIntegrationTest : public JournalIntegrationFixture {
   }
 };
 
-// WARNING: The numbers here may change if the filesystem issues different write patterns.
+// WARNING: The numbers here may change if the filesystem issues different write patterns.  Sadly,
+// if write patterns do change, careful debugging needs to be done to find the new correct values.
+//
 // The important properties to preserve are:
 // - Fsck (without journal replay) should fail.
 // - Fsck (with journal replay) should succeed.
@@ -85,11 +87,12 @@ class JournalUnlinkTest : public JournalIntegrationFixture {
   }
 };
 
-// Cuts the "unlink" operation off. Unlink typically needs to update
-// the parent inode, the parent directory, and the inode allocation bitmap.
-// By cutting the operation in two (without replay), the consistency checker
-// should be able to identify inconsistent link counts between the multiple
+// Cuts the "unlink" operation off. Unlink typically needs to update the parent inode, the parent
+// directory, and the inode allocation bitmap.  By cutting the operation in two (without replay),
+// the consistency checker should be able to identify inconsistent link counts between the multiple
 // data structures.
+//
+// See note at beginning regarding tuning these numbers.
 constexpr uint64_t kUnlinkCutoff = 3 * JournalUnlinkTest::kDiskBlocksPerFsBlock;
 
 TEST_F(JournalUnlinkTest, FsckWithRepairDoesReplayJournal) {
@@ -127,7 +130,8 @@ class JournalGrowFvmTest : public JournalIntegrationFixture {
   }
 };
 
-constexpr uint64_t kGrowFvmCutoff = 6 * JournalGrowFvmTest::kDiskBlocksPerFsBlock;
+// See note at beginning regarding tuning these numbers.
+constexpr uint64_t kGrowFvmCutoff = 32 * JournalGrowFvmTest::kDiskBlocksPerFsBlock;
 
 TEST_F(JournalGrowFvmTest, GrowingWithJournalReplaySucceeds) {
   auto bcache = CutOffDevice(write_count() - kGrowFvmCutoff);

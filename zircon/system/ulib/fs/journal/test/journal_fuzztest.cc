@@ -33,13 +33,13 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   Journal journal(fuzz_utils.handler(), std::move(info), std::move(journal_buffer),
                   std::move(writeback_buffer), journal_start_block, Journal::Options());
   while (fuzz_utils.data_provider()->remaining_bytes() != 0) {
-    auto writeback_promise =
-        journal.WriteData(fuzz_utils.FuzzOperation(ReservedVmoid::kWritebackVmoid))
-            .and_then(journal.WriteData(fuzz_utils.FuzzOperation(ReservedVmoid::kWritebackVmoid)))
-            .and_then(journal.WriteMetadata(fuzz_utils.FuzzOperation(ReservedVmoid::kJournalVmoid)))
-            .and_then(journal.Sync());
+    [[maybe_unused]] zx_status_t status = journal.CommitTransaction(
+        {.metadata_operations = fuzz_utils.FuzzOperation(ReservedVmoid::kJournalVmoid),
+         .data_promise = journal.WriteData(fuzz_utils.FuzzOperation(ReservedVmoid::kWritebackVmoid))
+                             .and_then(journal.WriteData(
+                                 fuzz_utils.FuzzOperation(ReservedVmoid::kWritebackVmoid)))});
     sync_completion_t sync_completion;
-    journal.schedule_task(writeback_promise.then(
+    journal.schedule_task(journal.Sync().then(
         [&sync_completion](
             fit::result<void, zx_status_t>& result) mutable -> fit::result<void, zx_status_t> {
           sync_completion_signal(&sync_completion);

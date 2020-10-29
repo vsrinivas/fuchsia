@@ -524,16 +524,20 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
 
 #ifdef __Fuchsia__
 void Minfs::EnqueueCallback(SyncCallback callback) {
-  journal_->schedule_task(journal_->Sync().then(
-      [closure = std::move(callback)](
-          fit::result<void, zx_status_t>& result) mutable -> fit::result<void, zx_status_t> {
-        if (result.is_ok()) {
-          closure(ZX_OK);
-        } else {
-          closure(result.error());
-        }
-        return fit::ok();
-      }));
+  if (callback) {
+    journal_->schedule_task(journal_->Sync().then(
+        [closure = std::move(callback)](
+            fit::result<void, zx_status_t>& result) mutable -> fit::result<void, zx_status_t> {
+          if (result.is_ok()) {
+            closure(ZX_OK);
+          } else {
+            closure(result.error());
+          }
+          return fit::ok();
+        }));
+  } else {
+    journal_->schedule_task(journal_->Sync());
+  }
 }
 #endif
 
@@ -565,7 +569,6 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
 
   auto data_operations = transaction->RemoveDataOperations();
   auto metadata_operations = transaction->RemoveMetadataOperations();
-
   ZX_DEBUG_ASSERT(BlockCount(metadata_operations) <= limits_.GetMaximumEntryDataBlocks());
 
   // We take the pending block deallocations here and hold on to them until the transaction has
@@ -576,31 +579,35 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
   //
   // There are some potential optimisations that probably aren't worth doing:
   //
-  //   * We could release the objects after we've written metadata to the journal, but before we
-  //     have finished writing the metadata changes to their final locations.
+  //  * We only need to keep the blocks reserved for data writes. We could allow the blocks to be
+  //    used for metadata (e.g. indirect blocks).
   //
-  //   * We only need to keep the blocks reserved for data writes. We could allow the blocks to be
-  //     used for metadata (e.g. indirect blocks).
-  //
-  //   * The allocator will currently reserve inodes that are freed in the same transaction i.e. it
-  //     won't be possible to use free inodes until the next transaction. This probably can't happen
-  //     anyway.
-  if (!data_operations.empty() && !metadata_operations.empty()) {
-    journal_->schedule_task(
-        journal_->WriteData(std::move(data_operations))
-            .and_then(journal_->WriteMetadata(std::move(metadata_operations)))
-            .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
-            .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
-  } else if (!metadata_operations.empty()) {
-    journal_->schedule_task(
-        journal_->WriteMetadata(std::move(metadata_operations))
-            .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
-            .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
-  } else if (!data_operations.empty()) {
-    journal_->schedule_task(
-        journal_->WriteData(std::move(data_operations))
-            .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
-            .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
+  //  * The allocator will currently reserve inodes that are freed in the same transaction i.e. it
+  //    won't be possible to use free inodes until the next transaction. This probably can't happen
+  //    anyway.
+  zx_status_t status = journal_->CommitTransaction(
+      {.metadata_operations = metadata_operations,
+       .data_promise = data_operations.empty() ? fs::Journal::Promise()
+                                               : journal_->WriteData(std::move(data_operations)),
+       // Keep blocks reserved until committed.
+       .commit_callback = [pending_deallocations =
+                               transaction->block_reservation().TakePendingDeallocations()] {},
+       // Keep vnodes alive until complete because we cache data and it's not safe to read new
+       // data until the transaction is complete (and we could end up doing that if the vnode
+       // gets destroyed and then quickly recreated).
+       .complete_callback = [pinned_vnodes = transaction->RemovePinnedVnodes()] {}});
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("minfs: CommitTransaction failed: %s\n", zx_status_get_string(status));
+  }
+
+  if (!journal_sync_task_.is_pending()) {
+    // During mount, there isn't a dispatcher, so we won't queue a flush, but that won't matter
+    // since the only changes will be things like whether the volume is clean and it doesn't matter
+    // if they're not persisted.
+    async_dispatcher_t* d = dispatcher();
+    if (d) {
+      journal_sync_task_.PostDelayed(d, kJournalBackgroundSyncTime);
+    }
   }
 #else
   bc_->RunRequests(transaction->TakeOperations());
@@ -624,7 +631,8 @@ void Minfs::FsckAtEndOfTransaction(zx_status_t status) {
 #ifdef __Fuchsia__
 void Minfs::Sync(SyncCallback closure) {
   if (journal_ == nullptr) {
-    closure(ZX_OK);
+    if (closure)
+      closure(ZX_OK);
     return;
   }
   EnqueueCallback(std::move(closure));
@@ -640,6 +648,7 @@ Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
       block_allocator_(std::move(block_allocator)),
       inodes_(std::move(inodes)),
       fs_id_(fs_id),
+      journal_sync_task_([this]() { Sync(); }),
       limits_(sb_->Info()),
       mount_options_(mount_options) {}
 #else

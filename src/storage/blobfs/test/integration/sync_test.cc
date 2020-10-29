@@ -54,12 +54,15 @@ TEST_F(SyncFdioTest, Sync) {
   // Sync the file. This will block until woken up by the file_wake_thread.
   EXPECT_EQ(0, fsync(file));
 
-  // fsync on a file will flush the writes to the block device but not actually flush the block
-  // device itself.
+  // fsync on a file will flush the journal but won't trigger a flush to the device above and beyond
+  // those required to flush the journal.  This might change, but presently, flushing the journal
+  // will trigger a flush after writing data, but before writing to the journal, another one after
+  // between writing to the journal and writing to the final metadata location, and then another one
+  // prior to writing a new info-block, so we should see 3 flush calls.
   fuchsia_hardware_block_BlockStats stats;
   block_device()->GetStats(true, &stats);
   EXPECT_LE(1u, stats.write.success.total_calls);
-  EXPECT_EQ(0u, stats.flush.success.total_calls);
+  EXPECT_EQ(3u, stats.flush.success.total_calls);
 
   // Sync the root directory. Syncing a directory will force the block device to flush.
   EXPECT_EQ(0, fsync(root_fd()));
@@ -76,16 +79,16 @@ TEST_F(SyncNandTest, Sync) {
 
   // NAND VMOs must be prepopulated with 0xff.
   zx_vaddr_t vmar_address = 0;
-  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, initial_vmo, 0, vmo_size,
-                                       &vmar_address));
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, initial_vmo, 0,
+                                       vmo_size, &vmar_address));
   char* initial_vmo_data = reinterpret_cast<char*>(vmar_address);
   std::fill(initial_vmo_data, &initial_vmo_data[vmo_size], 0xff);
 
   // Create a second VMO for later use.
   zx::vmo second_vmo;
   ASSERT_OK(zx::vmo::create(vmo_size, 0, &second_vmo));
-  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, second_vmo, 0, vmo_size,
-                                       &vmar_address));
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, second_vmo, 0,
+                                       vmo_size, &vmar_address));
   char* second_vmo_data = reinterpret_cast<char*>(vmar_address);
 
   std::unique_ptr<BlobInfo> info;

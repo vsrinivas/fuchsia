@@ -43,8 +43,9 @@ namespace fs {
 //
 //      Journal journal(...);
 //      auto data_promise = journal.WriteData(vnode_data);
-//      auto metadata_promise = journal.WriteMetadata(vnode_metadata);
-//      journal.schedule_task(data_promise.and_then(metadata_promise));
+//      journal.CommitTransaction({
+//        .metadata_operations = ...
+//      });
 //
 //      // A few moments later...
 //
@@ -62,6 +63,29 @@ class Journal final : public fit::executor {
     // The reference to MetricsTrait is dropped when Journal object is destroyed.
     // A nullptr implies that the user doesn't use/want journal metrics.
     std::shared_ptr<MetricsTrait> metrics;
+  };
+
+  struct Transaction {
+    // Mandatory; for now, there is no support for data/trim-only transactions.
+    std::vector<storage::UnbufferedOperation> metadata_operations;
+
+    // Optional promise responsible for writing the data.
+    Promise data_promise;
+
+    // Optional trim operations.
+    std::vector<storage::BufferedOperation> trim;
+
+    // Called when metadata has been written and *flushed* to the journal.  At that point, any
+    // subsequent writes (which may or may not involve the journal) are guaranteed to be visible
+    // *after* this transaction.  The primary use case for this is to keep blocks that are freed in
+    // a transaction as reserved until the transaction is guaranteed to be visible, since prior to
+    // that, the old data needs to be preserved.  Optional.
+    fit::callback<void()> commit_callback;
+
+    // Called when metadata has been written to its final location (but not necessarily flushed), so
+    // this is after |commit_callback|.  Reads to the device after this callback will then return
+    // metadata from this transaction.  Optional.
+    fit::callback<void()> complete_callback;
   };
 
   // Constructs a Journal with journaling enabled. This is the traditional constructor
@@ -87,31 +111,12 @@ class Journal final : public fit::executor {
   // along an object which is ordered.
   Promise WriteData(std::vector<storage::UnbufferedOperation> operations);
 
-  // Transmits operations contains metadata, which must be updated atomically with respect
-  // to power failures if journaling is enabled.
-  //
-  // Multiple requests to WriteMetadata are ordered. They are ordered by the invocation of the
-  // |WriteMetadata| method, not by the completion of the returned promise. If provided, |callback|
-  // will be invoked when the metadata has been submitted to the underlying device.
-  Promise WriteMetadata(std::vector<storage::UnbufferedOperation> operations);
+  // Commits a transaction.
+  [[nodiscard]] zx_status_t CommitTransaction(Transaction transaction);
 
-  // Transmits operations containing trim requests, which must be ordered with respect
-  // to metadata writes.
-  //
-  // Requests to TrimData are ordered with respect to WriteMetadata by the invocation
-  // of the respective method, not by the completion of the returned promise.
-  Promise TrimData(std::vector<storage::BufferedOperation> operations);
-
-  // Returns a promise which identifies that all previous promises returned from the journal
-  // have completed (succeeded, failed, or abandoned).
-  // Additionally, prompt the internal journal writer to update the info block, if it
-  // isn't already up-to-date.
-  //
-  // This promise completes when the promises from all prior invocations of:
-  // - WriteData
-  // - WriteMetadata
-  // - Sync
-  // Have completed (either successfully or with an error).
+  // Returns a promise which identifies that all previous committed transcations have completed
+  // (regardless of success).  Additionally, prompt the internal journal writer to update the info
+  // block, if it isn't already up-to-date.
   Promise Sync();
 
   // Schedules a promise to the journals background thread executor.
@@ -132,8 +137,18 @@ class Journal final : public fit::executor {
  private:
   JournalMetrics* metrics() { return metrics_.get(); }
 
+  // Flushes blocks that have been delayed until we can flush.  See related |pending_ below.
+  void FlushPending();
+
   std::unique_ptr<storage::BlockingRingBuffer> journal_buffer_;
   std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer_;
+
+  // The number of blocks stuck in the journal buffer that are blocked until we decide to flush.
+  // This does not include blocks that are in the buffer but currently, or soon will be, in-flight
+  // i.e.  there can be blocks reserved in the journal buffers that are not tracked by this counter,
+  // but the process to flush them has been initiated and it is just a matter of time before they
+  // become available.
+  size_t pending_ = 0;
 
   // To implement |Sync()|, the journal must track all pending work, with the ability
   // to react once all prior work (up to a point) has finished execution.
@@ -141,10 +156,16 @@ class Journal final : public fit::executor {
   // tasks transmitted to |executor_| have completed.
   fit::barrier barrier_;
 
+  // Barrier for all outstanding data writes.
+  fit::barrier data_barrier_;
+
   // The journal must enforce the requirement that metadata operations are completed in
   // the order they are enqueued. To fulfill this requirement, a sequencer guarantees
   // ordering of internal promise structures before they are handed to |executor_|.
-  fit::sequencer metadata_sequencer_;
+  fit::sequencer journal_sequencer_;
+
+  // A promise that we use to block writes to the journal until data writes have been flushed.
+  fit::promise<> journal_data_barrier_;
 
   // Journal metrics. This metrics is shared with JournalWriter and potentially other threads.
   // The reference to MetricsTrait is dropped when Journal object is destroyed.

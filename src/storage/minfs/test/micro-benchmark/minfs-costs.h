@@ -14,6 +14,12 @@ namespace minfs_micro_benchmanrk {
 
 class MinfsProperties {
  public:
+  enum class SyncKind {
+    kNoTransaction,
+    kTransactionWithNoData,
+    kTransactionWithData,
+  };
+
   MinfsProperties(BlockDeviceSizes block_device_sizes, disk_format_t format,
                   mkfs_options_t mkfs_options, minfs::Superblock superblock, const char* mount_path)
       : block_device_sizes_(block_device_sizes),
@@ -29,7 +35,7 @@ class MinfsProperties {
   void AddUnmountCost(BlockFidlMetrics* out) const;
 
   // Adds to |out| the cost to sync a filesystem.
-  void AddSyncCost(BlockFidlMetrics* out, bool update_journal_start = false) const;
+  void AddSyncCost(BlockFidlMetrics* out, SyncKind kind) const;
 
   // Adds to |out| the cost to lookup an entry in an empty root directory.
   void AddLookUpCost(BlockFidlMetrics* out) const;

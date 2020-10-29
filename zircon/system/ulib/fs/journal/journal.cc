@@ -46,6 +46,14 @@ fit::result<void, zx_status_t> SignalSyncComplete(sync_completion_t* completion)
   return fit::ok();
 }
 
+fit::result<> ToVoidError(fit::result<void, zx_status_t> result) {
+  if (result.is_ok()) {
+    return fit::ok();
+  } else {
+    return fit::error();
+  }
+}
+
 }  // namespace
 
 Journal::Journal(TransactionHandler* transaction_handler, JournalSuperblock journal_superblock,
@@ -70,6 +78,26 @@ Journal::~Journal() {
     return SignalSyncComplete(&completion);
   }));
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
+}
+
+void Journal::FlushPending() {
+  if (pending_ == 0)
+    return;
+
+  // Writes to the journal can only proceed once all data writes have been flushed.
+  if (journal_data_barrier_) {
+    schedule_task(data_barrier_.sync()
+                      .and_then([this]() { return ToVoidError(writer_.Flush()); })
+                      .and_then(std::move(journal_data_barrier_)));
+  }
+
+  // Once all the journal writes are done, we need to flush again to flush the writes to their final
+  // locations.
+  schedule_task(barrier_.wrap(journal_sequencer_.wrap(
+      fit::make_promise([this]() { return ToVoidError(writer_.Flush()); }))));
+
+  // Blocks will still be reserved, but they'll shortly be in-flight and later released.
+  pending_ = 0;
 }
 
 Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> operations) {
@@ -107,22 +135,32 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
   internal::JournalWorkItem work(std::move(reservation), std::move(buffered_operations));
 
   // Return the deferred action to write the data operations to the device.
-  auto promise =
-      fit::make_promise([this, work = std::move(work)]() mutable -> fit::result<void, zx_status_t> {
-        return writer_.WriteData(std::move(work));
-      });
-
-  return barrier_.wrap(std::move(promise));
+  return fit::make_promise(
+      [this, work = std::move(work)]() mutable { return writer_.WriteData(std::move(work)); });
 }
 
-Journal::Promise Journal::WriteMetadata(std::vector<storage::UnbufferedOperation> operations) {
+zx_status_t Journal::CommitTransaction(Transaction transaction) {
+  if (transaction.metadata_operations.empty()) {
+    ZX_ASSERT(!transaction.data_promise);  // Data must always be written with metadata.
+    ZX_ASSERT(transaction.trim.empty());   // For now, trim must come with metadata.
+    if (transaction.commit_callback)
+      transaction.commit_callback();
+    if (transaction.complete_callback)
+      transaction.complete_callback();
+    return ZX_OK;
+  }
+
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriteMetadata);
 
-  auto block_count_or =
-      CheckOperationsAndGetTotalBlockCount<storage::OperationType::kWrite>(operations);
+  if (!writer_.IsWritebackEnabled()) {
+    return ZX_ERR_IO_REFUSED;
+  }
+
+  auto block_count_or = CheckOperationsAndGetTotalBlockCount<storage::OperationType::kWrite>(
+      transaction.metadata_operations);
   if (block_count_or.is_error()) {
     event.set_success(false);
-    return fit::make_error_promise(block_count_or.status_value());
+    return block_count_or.status_value();
   }
 
   // Ensure there is enough space in the journal buffer.
@@ -131,77 +169,80 @@ Journal::Promise Journal::WriteMetadata(std::vector<storage::UnbufferedOperation
   event.set_block_count(block_count_or.value());
   uint64_t block_count = block_count_or.value() + kEntryMetadataBlocks;
   storage::BlockingRingBufferReservation reservation;
+  if (pending_ + block_count > journal_buffer_->capacity()) {
+    // Unblock writes to the journal.
+    FlushPending();
+  }
   zx_status_t status = journal_buffer_->Reserve(block_count, &reservation);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Failed to reserve space in journal buffer: %s\n",
                    zx_status_get_string(status));
     event.set_success(false);
-    return fit::make_error_promise(status);
+    return status;
   }
 
   // Once we have that space, copy the operations into the journal buffer.
   std::vector<storage::BufferedOperation> buffered_operations;
-  auto result =
-      reservation.CopyRequests(operations, kJournalEntryHeaderBlocks, &buffered_operations);
+  auto result = reservation.CopyRequests(transaction.metadata_operations, kJournalEntryHeaderBlocks,
+                                         &buffered_operations);
   if (result.is_error()) {
     FS_TRACE_ERROR("journal: Failed to copy operations into journal buffer: %s\n",
                    result.status_string());
     event.set_success(false);
-    return fit::make_error_promise(result.error_value());
+    return result.error_value();
   }
   internal::JournalWorkItem work(std::move(reservation), std::move(buffered_operations));
+  work.commit_callback = std::move(transaction.commit_callback);
+  work.complete_callback = std::move(transaction.complete_callback);
 
-  // Return the deferred action to write the metadata operations to the device.
-  auto promise =
-      fit::make_promise([this, work = std::move(work)]() mutable -> fit::result<void, zx_status_t> {
-        fit::result<void, zx_status_t> result = writer_.WriteMetadata(std::move(work));
+  std::optional<internal::JournalWorkItem> trim_work;
+  if (!transaction.trim.empty()) {
+    trim_work = internal::JournalWorkItem({}, std::move(transaction.trim));
+  }
+
+  auto promise = fit::make_promise(
+      [this, work = std::move(work),
+       trim_work = std::move(trim_work)]() mutable -> fit::result<void, zx_status_t> {
+        fit::result<void, zx_status_t> result =
+            writer_.WriteMetadata(std::move(work), std::move(trim_work));
         if (write_metadata_callback_) {
           write_metadata_callback_(result.is_ok() ? ZX_OK : result.error());
         }
         return result;
       });
 
-  // Ensure all metadata operations are completed in order.
-  auto ordered_promise = metadata_sequencer_.wrap(std::move(promise));
-
-  // Track write ops to ensure that invocations of |sync| can flush all prior work.
-  return barrier_.wrap(std::move(ordered_promise));
-}
-
-Journal::Promise Journal::TrimData(std::vector<storage::BufferedOperation> operations) {
-  if (operations.empty()) {
-    return fit::make_result_promise<void, zx_status_t>(fit::ok());
+  // journal_sequencer_ is used to keep all metadata operations in order.
+  if (!journal_data_barrier_ && transaction.data_promise) {
+    // If this transaction has data, we need to block writes to the journal until the data has been
+    // flushed, so to do that, we add a blocking promise that we'll post later after the data has
+    // been flushed.
+    journal_data_barrier_ = journal_sequencer_.wrap(fit::make_ok_promise()).take_continuation();
   }
-  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalTrimData);
-  zx_status_t status =
-      CheckOperationsAndGetTotalBlockCount<storage::OperationType::kTrim>(operations)
-          .status_value();
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("Not all operations to TrimData are trims\n");
-    event.set_success(false);
-    return fit::make_error_promise(status);
+  pending_ += block_count;
+  auto ordered_promise = journal_sequencer_.wrap(std::move(promise));
+
+  fit::pending_task task;
+  if (transaction.data_promise) {
+    task = barrier_.wrap(data_barrier_.wrap(std::move(transaction.data_promise))
+                             .and_then(std::move(ordered_promise)));
+  } else {
+    task = barrier_.wrap(std::move(ordered_promise));
   }
 
-  // Return the deferred action to write the metadata operations to the device.
-  auto promise = fit::make_promise(
-      [this, operations = std::move(operations)]() mutable -> fit::result<void, zx_status_t> {
-        return writer_.TrimData(std::move(operations));
-      });
-
-  // Ensure all metadata operations are completed in order.
-  auto ordered_promise = metadata_sequencer_.wrap(std::move(promise));
-
-  // Track write ops to ensure that invocations of |sync| can flush all prior work.
-  return barrier_.wrap(std::move(ordered_promise));
+  schedule_task(std::move(task));
+  return ZX_OK;
 }
 
 Journal::Promise Journal::Sync() {
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalSync);
-  auto update = fit::make_promise(
-      [this]() mutable -> fit::result<void, zx_status_t> { return writer_.Sync(); });
+  FlushPending();
   return barrier_.sync().then(
-      [update = std::move(update)](fit::context& context, fit::result<void, void>& result) mutable {
-        return update(context);
+      [this](const fit::result<>& result) -> fit::result<void, zx_status_t> {
+        if (result.is_error()) {
+          return fit::error(ZX_ERR_IO_REFUSED);
+        } else {
+          return writer_.Sync();
+        }
       });
 }
 

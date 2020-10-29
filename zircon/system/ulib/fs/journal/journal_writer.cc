@@ -78,7 +78,8 @@ fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
   return fit::ok();
 }
 
-fit::result<void, zx_status_t> JournalWriter::WriteMetadata(JournalWorkItem work) {
+fit::result<void, zx_status_t> JournalWriter::WriteMetadata(
+    JournalWorkItem work, std::optional<JournalWorkItem> trim_work) {
   const uint64_t block_count = work.reservation.length();
   FS_TRACE_DEBUG("WriteMetadata: Writing %zu blocks (includes header, commit)\n", block_count);
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteMetadata);
@@ -106,29 +107,14 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(JournalWorkItem work
                    zx_status_get_string(status));
     return fit::error(status);
   }
-
-  // Write metadata to the final on-disk, non-journal location.
-  status = WriteOperations(work.operations);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("WriteMetadata: Failed to write metadata to final location: %s\n",
-                   zx_status_get_string(status));
-    return fit::error(status);
-  }
   event.set_success(true);
-  return fit::ok();
-}
-
-fit::result<void, zx_status_t> JournalWriter::TrimData(
-    std::vector<storage::BufferedOperation> operations) {
-  FS_TRACE_DEBUG("TrimData: trimming %zu blocks\n", BlockCount(operations));
-  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterTrimData);
-
-  zx_status_t status = transaction_handler_->RunRequests(operations);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("TrimData: Failed to trim requests: %s\n", zx_status_get_string(status));
-    event.set_success(false);
-    return fit::error(status);
+  // We rely on trim going first because the callbacks need to be after the trim operations have
+  // been submitted (e.g. it's not safe to send new data operations until after trim operations have
+  // been submitted).
+  if (trim_work) {
+    pending_work_items_.push_back(*std::move(trim_work));
   }
+  pending_work_items_.push_back(std::move(work));
   return fit::ok();
 }
 
@@ -267,6 +253,13 @@ zx_status_t JournalWriter::WriteInfoBlockIfIntersect(uint64_t block_count) {
 }
 
 zx_status_t JournalWriter::WriteInfoBlock() {
+  // Before writing the info block, we must make sure any previous metadata writes have been
+  // flushed because the journal can't replay those writes after writing the info block.
+  while (!pending_work_items_.empty() || pending_flush_) {
+    if (auto result = Flush(); result.is_error()) {
+      return result.take_error();
+    }
+  }
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteInfoBlock);
   event.set_block_count(InfoLength());
   ZX_DEBUG_ASSERT(next_sequence_number_ > journal_superblock_.sequence_number());
@@ -310,6 +303,42 @@ zx_status_t JournalWriter::WriteOperations(
     return status;
   }
   return ZX_OK;
+}
+
+fit::result<void, zx_status_t> JournalWriter::Flush() {
+  if (!IsWritebackEnabled()) {
+    FS_TRACE_ERROR("JournalWriter::Flush: Not issuing writeback because writeback is disabled\n");
+    return fit::error(ZX_ERR_BAD_STATE);
+  }
+  if (zx_status_t status = transaction_handler_->Flush(); status != ZX_OK) {
+    FS_TRACE_ERROR("JournalWriter::Flush: %s\n", zx_status_get_string(status));
+    return fit::error(status);
+  }
+  pending_flush_ = false;
+  for (JournalWorkItem& w : pending_work_items_) {
+    // Move, so that we release resources when this goes out of scope.
+    JournalWorkItem work = std::move(w);
+    if (work.commit_callback) {
+      work.commit_callback();
+    }
+    zx_status_t status = WriteOperations(work.operations);
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("Flush: Failed to write metadata to final location: %s\n",
+                     zx_status_get_string(status));
+      // WriteOperations will mark things so that all subsequent writes will fail.
+      pending_work_items_.clear();
+      return fit::error(status);
+    }
+    // Before we can write the info block, we need another flush to ensure the writes to final
+    // locations will persist.
+    pending_flush_ = true;
+    // We've written the metadata so reads will work now and we can call complete_callback.
+    if (work.complete_callback) {
+      work.complete_callback();
+    }
+  }
+  pending_work_items_.clear();
+  return fit::ok();
 }
 
 }  // namespace internal

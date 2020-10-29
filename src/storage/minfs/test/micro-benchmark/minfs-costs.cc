@@ -136,8 +136,11 @@ void MinfsProperties::AddMountCost(BlockFidlMetrics* out) const {
   // At the end of the mount, we update dirty bit of superblock and of backup superblock.
   AddJournalCosts(kMinfsSuperblockCopies, out);
 
-  // We read superblock first
+  // A write to the super-block.
   AddIoStats(1, 1, &out->write);
+
+  // Updating the clean bit and oldest revision requires two flushes.
+  AddIoStats(2, 0, &out->flush);
 }
 
 void MinfsProperties::AddUnmountCost(BlockFidlMetrics* out) const {
@@ -147,17 +150,26 @@ void MinfsProperties::AddUnmountCost(BlockFidlMetrics* out) const {
   // During unmount we write updated journal info.
   AddIoStats(1, 1, &out->write);
 
-  // A flush to top it off
-  AddIoStats(1, 0, &out->flush);
+  // Two flushes to clear the dirty bit and one final flush to top it off
+  AddIoStats(3, 0, &out->flush);
 }
 
-void MinfsProperties::AddSyncCost(BlockFidlMetrics* out, bool update_journal_start) const {
-  // A flush is issued to sync.
-  AddIoStats(1, 0, &out->flush);
-
-  if (update_journal_start) {
-    AddUpdateJournalStartCost(out);
+void MinfsProperties::AddSyncCost(BlockFidlMetrics* out, SyncKind kind) const {
+  int flush_calls = 0;
+  switch (kind) {
+    case SyncKind::kNoTransaction:
+      flush_calls = 1;
+      break;
+    case SyncKind::kTransactionWithNoData:
+      flush_calls = 3;
+      AddUpdateJournalStartCost(out);
+      break;
+    case SyncKind::kTransactionWithData:
+      flush_calls = 4;
+      AddUpdateJournalStartCost(out);
+      break;
   }
+  AddIoStats(flush_calls, 0, &out->flush);
 }
 
 void MinfsProperties::AddLookUpCost(BlockFidlMetrics* out) const {

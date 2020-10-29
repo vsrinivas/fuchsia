@@ -95,6 +95,11 @@ void JournalIntegrationFixture::PerformOperationWithTransactionLimit(
   // Perform the caller-requested operation.
   PerformOperation(fs.get());
 
+  // Always do a sync (to match what happens in CountWritesToPerformOperation).
+  sync_completion_t completion;
+  fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+  ASSERT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
+
   TakeDeviceFromMinfs(std::move(fs), &device);
   device->ResetWriteBlockLimit();
   *in_out_device = std::move(device);

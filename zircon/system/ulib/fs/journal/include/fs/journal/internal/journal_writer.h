@@ -5,6 +5,7 @@
 #ifndef FS_JOURNAL_INTERNAL_JOURNAL_WRITER_H_
 #define FS_JOURNAL_INTERNAL_JOURNAL_WRITER_H_
 
+#include <lib/fit/function.h>
 #include <lib/fit/result.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -35,6 +36,8 @@ struct JournalWorkItem {
 
   storage::BlockingRingBufferReservation reservation;
   std::vector<storage::BufferedOperation> operations;
+  fit::callback<void()> commit_callback;
+  fit::callback<void()> complete_callback;
 };
 
 // The back-end of the journal. This class implements all the blocking operations which transmit
@@ -67,7 +70,8 @@ class JournalWriter {
   //
   // This method currently blocks, completing all three phases before returning, but in the future,
   // could be more fine grained, returning a promise that represents the completion of all phases.
-  fit::result<void, zx_status_t> WriteMetadata(JournalWorkItem work);
+  fit::result<void, zx_status_t> WriteMetadata(JournalWorkItem work,
+                                               std::optional<JournalWorkItem> trim_work);
 
   // Trims |operations| immediately.
   fit::result<void, zx_status_t> TrimData(std::vector<storage::BufferedOperation> operations);
@@ -82,6 +86,8 @@ class JournalWriter {
   // Returns true if all writeback is "off", and no further data will be written to the
   // device.
   [[nodiscard]] bool IsWritebackEnabled() const { return transaction_handler_; }
+
+  fit::result<void, zx_status_t> Flush();
 
  private:
   // Deactivates all writeback, calling all subsequent write operations to fail.
@@ -134,6 +140,7 @@ class JournalWriter {
 
   fs::TransactionHandler* transaction_handler_ = nullptr;
   JournalSuperblock journal_superblock_;
+
   // Tracks all in-flight metadata operations.
   // These operations are tracked from the moment they are written to the journal,
   // and are dropped once the journal would avoid replaying them on reboot.
@@ -141,14 +148,25 @@ class JournalWriter {
 
   // Journal metrics are shared with other journal threads.
   std::shared_ptr<JournalMetrics> metrics_;
+
   // Relative to the start of the filesystem. Points to the journal info block.
   uint64_t journal_start_block_ = 0;
+
   // The value of the sequence_number to be used in the next entry which is written to the
   // journal.
   uint64_t next_sequence_number_ = 0;
+
   // Relative to |kJournalMetadataBlocks| (the start of entries).
   uint64_t next_entry_start_block_ = 0;
   const uint64_t entries_length_ = 0;
+
+  // After writing to the journal, we need to wait for a flush before we write metadata and issue
+  // trims, so we keep track of those in pending_work_items_.
+  std::vector<JournalWorkItem> pending_work_items_;
+
+  // If true, a flush (due to metadata being written to final locations) is required before we can
+  // write an info block.
+  bool pending_flush_ = false;
 };
 
 }  // namespace internal

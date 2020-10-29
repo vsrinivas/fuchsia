@@ -59,6 +59,7 @@ test("journal-unit") {
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fs/journal",

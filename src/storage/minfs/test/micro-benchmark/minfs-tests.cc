@@ -81,10 +81,10 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
     auto result = storage_metrics::BlockStatEqual(fidl_device, fidl_computed);
 
     if (!result) {
-      fprintf(stderr, "Performance changed. Found\n");
-      device_metrics.Dump(stderr, true);
-      fprintf(stderr, "Expected\n");
-      computed_metrics.Dump(stderr, true);
+      fprintf(stdout, "Performance changed. Found\n");
+      device_metrics.Dump(stdout, true);
+      fprintf(stdout, "Expected\n");
+      computed_metrics.Dump(stdout, true);
     }
     ASSERT_TRUE(result);
   }
@@ -95,7 +95,7 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
     }
 
     BlockFidlMetrics computed = {}, unused_;
-    SyncAndCompute(&unused_);
+    Sync();
     // Clear block metrics
     GetBlockMetrics(Reset::kReset, &unused_);
 
@@ -105,24 +105,14 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
     CompareAndDump(computed);
   }
 
-  void SyncAndCompute(BlockFidlMetrics* out, bool update_journal_start = false) {
+  void SyncAndCompute(BlockFidlMetrics* out, MinfsProperties::SyncKind kind) {
     Sync();
-    FsProperties().AddSyncCost(out, update_journal_start);
-  }
-
-  void SyncAndCompare() {
-    BlockFidlMetrics computed = {}, unused_;
-    SyncAndCompute(&unused_);
-    // Clear block metrics
-    GetBlockMetrics(Reset::kReset, &unused_);
-
-    SyncAndCompute(&computed);
-    CompareAndDump(computed);
+    FsProperties().AddSyncCost(out, kind);
   }
 
   void LookUpAndCompare(const char* filename, bool failed_lookup) {
     BlockFidlMetrics computed = {}, unused_;
-    SyncAndCompute(&unused_);
+    Sync();
     GetBlockMetrics(Reset::kReset, &unused_);
 
     struct stat s;
@@ -134,21 +124,21 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
     } else {
       EXPECT_EQ(result, 0);
     }
-    SyncAndCompute(&computed);
+    SyncAndCompute(&computed, MinfsProperties::SyncKind::kNoTransaction);
     FsProperties().AddLookUpCost(&computed);
     CompareAndDump(computed);
   }
 
   void CreateAndCompare(const char* filename, fbl::unique_fd* out) {
     BlockFidlMetrics computed = {}, unused_;
-    SyncAndCompute(&unused_);
+    Sync();
 
     // Clear block metrics
     GetBlockMetrics(Reset::kReset, &unused_);
 
     fbl::unique_fd fd(open(filename, O_CREAT | O_RDWR));
     EXPECT_GT(fd.get(), 0);
-    SyncAndCompute(&computed, true);
+    SyncAndCompute(&computed, MinfsProperties::SyncKind::kTransactionWithNoData);
     FsProperties().AddCreateCost(&computed);
     CompareAndDump(computed);
     *out = std::move(fd);
@@ -156,13 +146,13 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
 
   void WriteAndCompare(int fd) {
     BlockFidlMetrics computed = {}, unused_;
-    SyncAndCompute(&unused_);
+    Sync();
     // Clear block metrics
     GetBlockMetrics(Reset::kReset, &unused_);
 
     char ch;
     EXPECT_EQ(write(fd, &ch, sizeof(ch)), 1);
-    SyncAndCompute(&computed, true);
+    SyncAndCompute(&computed, MinfsProperties::SyncKind::kTransactionWithData);
 
     FsProperties().AddWriteCost(0, 1, &computed);
     CompareAndDump(computed);
@@ -170,6 +160,8 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
 
   static void SetUpTestCase() {}
   static void TearDownTestCase() {}
+
+  void Sync() { EXPECT_EQ(fsync(root_fd_.get()), 0); }
 
  protected:
   void SetUp() override {
@@ -236,8 +228,6 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
 
   bool Mounted() const { return mounted_; }
 
-  void Sync() { EXPECT_EQ(fsync(root_fd_.get()), 0); }
-
   void TearDownFs() {
     if (Mounted()) {
       EXPECT_OK(umount(properties_.MountPath()));
@@ -278,7 +268,14 @@ TEST_F(MinfsMicroBenchmark, MountCosts) {
 
 TEST_F(MinfsMicroBenchmark, UnmountCosts) { UnmountAndCompareBlockMetrics(); }
 
-TEST_F(MinfsMicroBenchmark, SyncCosts) { SyncAndCompare(); }
+TEST_F(MinfsMicroBenchmark, SyncCosts) {
+  BlockFidlMetrics computed = {}, unused_;
+  Sync();
+  // Clear block metrics
+  GetBlockMetrics(Reset::kReset, &unused_);
+  SyncAndCompute(&computed, MinfsProperties::SyncKind::kNoTransaction);
+  CompareAndDump(computed);
+}
 
 TEST_F(MinfsMicroBenchmark, LookUpCosts) {
   std::string filename = FsProperties().MountPath();
