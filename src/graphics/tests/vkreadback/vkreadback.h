@@ -15,54 +15,79 @@
 #include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
 
+#include "src/graphics/tests/common/vulkan_context.h"
+
 // Supports Fuchsia external memory extension.
 class VkReadbackTest {
  public:
   static constexpr uint32_t kWidth = 64;
   static constexpr uint32_t kHeight = 64;
 
+  // One command buffer to transition the host visible |image_|.
+  // One command buffer, post transition of |image_|.
+  static constexpr size_t kNumCommandBuffers = 2;
+
   enum Extension { NONE, VK_FUCHSIA_EXTERNAL_MEMORY };
 
-  explicit VkReadbackTest(Extension ext = NONE) : ext_(ext) {}
+  // Depending on how the test is initialized, it may be a self contained
+  // instance, an instance that imports external memory or an instance that
+  // exports external memory.
+  enum ImportExport { SELF, IMPORT_EXTERNAL_MEMORY, EXPORT_EXTERNAL_MEMORY };
+
+  // Constructor for a self contained instance or an instance that exports
+  // its external memory handle.
+  explicit VkReadbackTest(Extension ext = NONE);
+
+  // Constructor for an instance that imports an external memory handle.
+  explicit VkReadbackTest(uint32_t exported_memory_handle);
+
   virtual ~VkReadbackTest();
 
   bool Initialize();
-  bool Exec(VkFence fence = VK_NULL_HANDLE);
-  bool Submit(VkFence fence);
+  bool Exec(vk::Fence fence = {});
+  bool Submit(vk::Fence fence = {}, bool transition_image = true);
   bool Wait();
   bool Readback();
+  vk::Device vulkan_device() const { return ctx_->device().get(); }
 
-  uint32_t get_device_memory_handle() const { return device_memory_handle_; }
-  void set_device_memory_handle(uint32_t handle) { device_memory_handle_ = handle; }
-
-  const VkDevice& vulkan_device() { return vk_device_; }
+  uint32_t get_exported_memory_handle() const { return exported_memory_handle_; }
 
  private:
   bool InitVulkan();
   bool InitImage();
+  bool InitCommandBuffers();
+
+  bool FillCommandBuffer(vk::CommandBuffer &command_buffer, bool transition_image = true);
+
+#ifdef __Fuchsia__
+  bool AllocateFuchsiaImportedMemory(uint32_t device_memory_handle);
+  bool AssignExportedMemoryHandle();
+  void VerifyExpectedImageFormats() const;
+#endif
 
   Extension ext_;
   bool is_initialized_ = false;
+  bool vulkan_initialized_ = false;
   bool image_initialized_ = false;
-  VkInstance vk_instance_;
-  VkPhysicalDevice vk_physical_device_;
-  VkDevice vk_device_;
-  VkQueue vk_queue_;
-  VkImage vk_image_;
-  VkDeviceMemory vk_device_memory_ = VK_NULL_HANDLE;
+  bool command_buffers_initialized_ = false;
+  std::unique_ptr<VulkanContext> ctx_;
+  vk::UniqueImage image_;
+  vk::DeviceMemory device_memory_;
 
   // Import/export
-  VkDeviceMemory vk_imported_device_memory_ = VK_NULL_HANDLE;
-  uint32_t device_memory_handle_ = 0;
+  vk::DeviceMemory imported_device_memory_;
+  uint32_t exported_memory_handle_ = 0;
+  ImportExport import_export_;
+
+  vk::UniqueCommandPool command_pool_;
+  std::vector<vk::UniqueCommandBuffer> command_buffers_;
+
+  uint64_t bind_offset_ = 0;
 
 #ifdef __Fuchsia__
   PFN_vkGetMemoryZirconHandleFUCHSIA vkGetMemoryZirconHandleFUCHSIA_{};
   PFN_vkGetMemoryZirconHandlePropertiesFUCHSIA vkGetMemoryZirconHandlePropertiesFUCHSIA_{};
 #endif
-
-  VkCommandPool vk_command_pool_;
-  VkCommandBuffer vk_command_buffer_;
-  uint64_t bind_offset_;
 };
 
 #endif  // SRC_GRAPHICS_TESTS_VKREADBACK_VKREADBACK_H_

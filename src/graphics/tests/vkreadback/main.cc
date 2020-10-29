@@ -51,15 +51,16 @@ TEST(Vulkan, ReadbackLoopWithFenceWait) {
 
   std::mutex mutex;
   std::condition_variable cond_var;
-  std::queue<VkFence> fences;
+  std::queue<vk::Fence> fences;
 
   constexpr uint32_t kCounter = 500;
+  const vk::Device device = test.vulkan_device();
 
   std::thread thread([&] {
     for (uint32_t i = 0; i < kCounter; i++) {
-      VkFence fence = VK_NULL_HANDLE;
+      vk::Fence fence = {};
 
-      while (fence == VK_NULL_HANDLE) {
+      while (!fence) {
         std::unique_lock<std::mutex> lock(mutex);
         if (fences.empty()) {
           cond_var.wait(lock);
@@ -69,23 +70,22 @@ TEST(Vulkan, ReadbackLoopWithFenceWait) {
         fences.pop();
       }
 
-      EXPECT_EQ(VK_SUCCESS, vkWaitForFences(test.vulkan_device(), 1, &fence, true, ms_to_ns(1000)));
-
-      vkDestroyFence(test.vulkan_device(), fence, nullptr /*allocator*/);
+      EXPECT_EQ(vk::Result::eSuccess,
+                device.waitForFences(1, &fence, true /* waitAll */, ms_to_ns(1000)));
+      device.destroyFence(fence, nullptr /* allocator */);
     }
   });
 
+  const vk::FenceCreateInfo fence_info{};
   for (uint32_t i = 0; i < kCounter; i++) {
-    VkFence fence;
-    VkFenceCreateInfo create_info = {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .pNext = nullptr, .flags = 0};
-    ASSERT_EQ(VK_SUCCESS,
-              vkCreateFence(test.vulkan_device(), &create_info, nullptr /*allocator*/, &fence));
-
+    vk::Fence fence{};
+    auto rv_fence = device.createFence(&fence_info, nullptr /* allocator */, &fence);
+    ASSERT_EQ(rv_fence, vk::Result::eSuccess);
     {
       std::unique_lock<std::mutex> lock(mutex);
       fences.push(fence);
-      EXPECT_TRUE(test.Submit(fence));
+      const bool transition_image = (i == 0);
+      EXPECT_TRUE(test.Submit(fence, transition_image));
       cond_var.notify_one();
     }
 

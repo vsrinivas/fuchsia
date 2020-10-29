@@ -4,11 +4,17 @@
 
 #include "vkreadback.h"
 
+#include <array>
+
 #include "src/graphics/tests/common/utils.h"
+#include "vulkan/vulkan.h"
+#include "vulkan/vulkan_core.h"
+
+#include "vulkan/vulkan.hpp"
 
 namespace {
 
-constexpr size_t kNumCommandBuffers = 1;
+constexpr size_t kPageSize = 4096;
 
 }  // namespace
 
@@ -22,22 +28,25 @@ static inline T round_up(T val, uint32_t alignment) {
   return ((val - 1) | (alignment - 1)) + 1;
 }
 
+VkReadbackTest::VkReadbackTest(Extension ext)
+    : ext_(ext),
+      import_export_((ext == VK_FUCHSIA_EXTERNAL_MEMORY) ? EXPORT_EXTERNAL_MEMORY : SELF),
+      command_buffers_(kNumCommandBuffers) {}
+
+VkReadbackTest::VkReadbackTest(uint32_t exported_memory_handle)
+    : ext_(VK_FUCHSIA_EXTERNAL_MEMORY),
+      exported_memory_handle_(exported_memory_handle),
+      import_export_(IMPORT_EXTERNAL_MEMORY),
+      command_buffers_(kNumCommandBuffers) {}
+
 VkReadbackTest::~VkReadbackTest() {
   if (image_initialized_) {
-    vkFreeCommandBuffers(vk_device_, vk_command_pool_, kNumCommandBuffers, &vk_command_buffer_);
-    vkDestroyCommandPool(vk_device_, vk_command_pool_, nullptr /* pAllocator */);
-    if (VK_NULL_HANDLE != vk_device_memory_) {
-      vkFreeMemory(vk_device_, vk_device_memory_, nullptr /* allocator */);
+    if (VK_NULL_HANDLE != device_memory_) {
+      ctx_->device()->freeMemory(device_memory_, nullptr /* allocator */);
     }
-    if (VK_NULL_HANDLE != vk_imported_device_memory_) {
-      vkFreeMemory(vk_device_, vk_imported_device_memory_, nullptr /* allocator */);
+    if (VK_NULL_HANDLE != imported_device_memory_) {
+      ctx_->device()->freeMemory(imported_device_memory_, nullptr /* allocator */);
     }
-    vkDestroyImage(vk_device_, vk_image_, nullptr /* pAllocator */);
-  }
-  if (is_initialized_) {
-    vkDeviceWaitIdle(vk_device_);
-    vkDestroyDevice(vk_device_, nullptr /* pAllocator */);
-    vkDestroyInstance(vk_instance_, nullptr /* pAllocator */);
   }
 }
 
@@ -54,471 +63,425 @@ bool VkReadbackTest::Initialize() {
     RTN_MSG(false, "InitImage failed\n");
   }
 
-  is_initialized_ = true;
+  if (!InitCommandBuffers()) {
+    RTN_MSG(false, "InitCommandBuffers failed\n");
+  }
+
+  is_initialized_ = command_buffers_initialized_ && image_initialized_ && vulkan_initialized_;
 
   return true;
 }
 
-bool VkReadbackTest::InitVulkan() {
-  VkApplicationInfo app_info = {
-      .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-      .pNext = nullptr,
-      .pApplicationName = "vkreadback",
-      .applicationVersion = 0,
-      .pEngineName = nullptr,
-      .engineVersion = 0,
-      .apiVersion = VK_API_VERSION_1_1,
-  };
-
-  VkInstanceCreateInfo create_info{
-      VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,  // VkStructureType             sType;
-      nullptr,                                 // const void*                 pNext;
-      0,                                       // VkInstanceCreateFlags       flags;
-      &app_info,                               // const VkApplicationInfo*    pApplicationInfo;
-      0,                                       // uint32_t                    enabledLayerCount;
-      nullptr,                                 // const char* const*          ppEnabledLayerNames;
-      0,                                       // instance extensions count
-      nullptr,                                 // instance extensions,
-  };
-  VkAllocationCallbacks* allocation_callbacks = nullptr;
-  VkResult result;
-
-  if ((result = vkCreateInstance(&create_info, allocation_callbacks, &vk_instance_)) !=
-      VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateInstance failed %d\n", result);
+#ifdef __Fuchsia__
+void VkReadbackTest::VerifyExpectedImageFormats() const {
+  const auto& instance = ctx_->instance();
+  auto [rv_physical_devices, physical_devices] = instance->enumeratePhysicalDevices();
+  if (vk::Result::eSuccess != rv_physical_devices || physical_devices.empty()) {
+    RTN_MSG(/* void */, "No physical device found: 0x%0x", rv_physical_devices);
   }
 
-  uint32_t physical_device_count;
-  if ((result = vkEnumeratePhysicalDevices(vk_instance_, &physical_device_count, nullptr)) !=
-      VK_SUCCESS) {
-    RTN_MSG(false, "vkEnumeratePhysicalDevices failed %d\n", result);
-  }
-
-  if (physical_device_count < 1) {
-    RTN_MSG(false, "Unexpected physical_device_count %d\n", physical_device_count);
-  }
-
-  std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
-  if ((result = vkEnumeratePhysicalDevices(vk_instance_, &physical_device_count,
-                                           physical_devices.data())) != VK_SUCCESS) {
-    RTN_MSG(false, "vkEnumeratePhysicalDevices failed %d\n", result);
-  }
-
-  for (const auto& device : physical_devices) {
-    VkPhysicalDeviceProperties properties;
-    vkGetPhysicalDeviceProperties(device, &properties);
-
-    if (ext_ == NONE) {
-      continue;
-    }
+  for (const auto& phys_device : physical_devices) {
+    vk::PhysicalDeviceProperties properties;
+    phys_device.getProperties(&properties);
 
     if (VK_VERSION_MAJOR(properties.apiVersion) == 1 &&
         VK_VERSION_MINOR(properties.apiVersion) == 0) {
-      printf("Skipping 1.1 checks");
+      printf("Skipping phys device that doesn't support Vulkan 1.1.\n");
       continue;
     }
 
     // Test external buffer/image capabilities
-    VkPhysicalDeviceExternalBufferInfo buffer_info = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_BUFFER_INFO,
-        .flags = 0,
-        .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
-    };
-    VkExternalBufferProperties buffer_props = {
-        .sType = VK_STRUCTURE_TYPE_EXTERNAL_BUFFER_PROPERTIES,
-        .pNext = nullptr,
-    };
-    vkGetPhysicalDeviceExternalBufferProperties(device, &buffer_info, &buffer_props);
-    EXPECT_EQ(
-        buffer_props.externalMemoryProperties.externalMemoryFeatures,
-        0u | VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT | VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT);
+    vk::PhysicalDeviceExternalBufferInfo buffer_info;
+    buffer_info.usage = vk::BufferUsageFlagBits::eStorageBuffer;
+    buffer_info.handleType = vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+    vk::ExternalBufferProperties buffer_props;
+    phys_device.getExternalBufferProperties(&buffer_info, &buffer_props);
+    EXPECT_EQ(buffer_props.externalMemoryProperties.externalMemoryFeatures,
+              vk::ExternalMemoryFeatureFlagBits::eExportable |
+                  vk::ExternalMemoryFeatureFlagBits::eImportable);
     EXPECT_EQ(buffer_props.externalMemoryProperties.exportFromImportedHandleTypes,
-              VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA);
+              vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
     EXPECT_EQ(buffer_props.externalMemoryProperties.compatibleHandleTypes,
-              VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA);
+              vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
 
-    VkPhysicalDeviceExternalImageFormatInfo ext_format_info = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO,
-        .pNext = nullptr,
-        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
-    };
-    VkPhysicalDeviceImageFormatInfo2 image_format_info = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2,
-        .pNext = &ext_format_info,
-        .format = VK_FORMAT_R8G8B8A8_UNORM,
-        .type = VK_IMAGE_TYPE_2D,
-        .tiling = VK_IMAGE_TILING_LINEAR,
-        .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        .flags = 0u,
-    };
-    VkExternalImageFormatProperties ext_format_props = {
-        .sType = VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES,
-        .pNext = nullptr,
-    };
-    VkImageFormatProperties2 image_format_props = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2,
-        .pNext = &ext_format_props,
-    };
-    vkGetPhysicalDeviceImageFormatProperties2(device, &image_format_info, &image_format_props);
-    EXPECT_EQ(
-        ext_format_props.externalMemoryProperties.externalMemoryFeatures,
-        0u | VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT | VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT);
+    vk::PhysicalDeviceExternalImageFormatInfo ext_image_format_info;
+    ext_image_format_info.handleType = vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+    vk::PhysicalDeviceImageFormatInfo2 image_format_info;
+    image_format_info.pNext = &ext_image_format_info;
+    image_format_info.format = vk::Format::eR8G8B8A8Unorm;
+    image_format_info.type = vk::ImageType::e2D;
+    image_format_info.tiling = vk::ImageTiling::eLinear;
+    image_format_info.usage = vk::ImageUsageFlagBits::eTransferDst;
+
+    vk::ExternalImageFormatProperties ext_format_props;
+
+    vk::ImageFormatProperties2 image_format_props2;
+    image_format_props2.pNext = &ext_format_props;
+
+    auto rv_image_format_props =
+        phys_device.getImageFormatProperties2(&image_format_info, &image_format_props2);
+    EXPECT_EQ(rv_image_format_props, vk::Result::eSuccess);
+    EXPECT_EQ(ext_format_props.externalMemoryProperties.externalMemoryFeatures,
+              vk::ExternalMemoryFeatureFlagBits::eExportable |
+                  vk::ExternalMemoryFeatureFlagBits::eImportable);
     EXPECT_EQ(ext_format_props.externalMemoryProperties.exportFromImportedHandleTypes,
-              VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA);
+              vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
     EXPECT_EQ(ext_format_props.externalMemoryProperties.compatibleHandleTypes,
-              VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA);
+              vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
   }
+}
+#endif  // __Fuchsia__
 
-  uint32_t queue_family_count;
-  vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, nullptr);
-
-  if (queue_family_count < 1) {
-    RTN_MSG(false, "Invalid queue_family_count %d\n", queue_family_count);
+bool VkReadbackTest::InitVulkan() {
+  if (vulkan_initialized_) {
+    RTN_MSG(false, "InitVulkan failed.  Already initialized.\n")
   }
-
-  std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
-  vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count,
-                                           queue_family_properties.data());
-
-  int32_t queue_family_index = -1;
-  for (uint32_t i = 0; i < queue_family_count; i++) {
-    if (queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-      queue_family_index = i;
-      break;
-    }
-  }
-
-  if (queue_family_index < 0) {
-    RTN_MSG(false, "Couldn't find an appropriate queue\n");
-  }
-
-  constexpr float kQueuePriority = 0.0;
-
-  VkDeviceQueueCreateInfo queue_create_info = {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                                               .pNext = nullptr,
-                                               .flags = 0,
-                                               .queueFamilyIndex = 0,
-                                               .queueCount = 1,
-                                               .pQueuePriorities = &kQueuePriority};
-
   std::vector<const char*> enabled_extension_names;
-  switch (ext_) {
 #ifdef __Fuchsia__
-    case VK_FUCHSIA_EXTERNAL_MEMORY:
-      enabled_extension_names.push_back(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
-      break;
-#endif
-    default:
-      break;
+  if (import_export_ == IMPORT_EXTERNAL_MEMORY || import_export_ == EXPORT_EXTERNAL_MEMORY) {
+    enabled_extension_names.push_back(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
   }
-
-  VkDeviceCreateInfo createInfo = {
-      .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .queueCreateInfoCount = 1,
-      .pQueueCreateInfos = &queue_create_info,
-      .enabledLayerCount = 0,
-      .ppEnabledLayerNames = nullptr,
-      .enabledExtensionCount = static_cast<uint32_t>(enabled_extension_names.size()),
-      .ppEnabledExtensionNames = enabled_extension_names.data(),
-      .pEnabledFeatures = nullptr};
-  VkDevice vkdevice;
-
-  if ((result = vkCreateDevice(physical_devices[0], &createInfo, nullptr /* allocationcallbacks */,
-                               &vkdevice)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateDevice failed: %d\n", result);
-  }
-
-  switch (ext_) {
-#ifdef __Fuchsia__
-    case VK_FUCHSIA_EXTERNAL_MEMORY:
-      vkGetMemoryZirconHandleFUCHSIA_ = reinterpret_cast<PFN_vkGetMemoryZirconHandleFUCHSIA>(
-          vkGetInstanceProcAddr(vk_instance_, "vkGetMemoryZirconHandleFUCHSIA"));
-      if (!vkGetMemoryZirconHandleFUCHSIA_) {
-        RTN_MSG(false, "Couldn't find vkGetMemoryZirconHandleFUCHSIA\n");
-      }
-
-      vkGetMemoryZirconHandlePropertiesFUCHSIA_ =
-          reinterpret_cast<PFN_vkGetMemoryZirconHandlePropertiesFUCHSIA>(
-              vkGetInstanceProcAddr(vk_instance_, "vkGetMemoryZirconHandlePropertiesFUCHSIA"));
-      if (!vkGetMemoryZirconHandlePropertiesFUCHSIA_) {
-        RTN_MSG(false, "Couldn't find vkGetMemoryZirconHandlePropertiesFUCHSIA\n");
-      }
-      break;
 #endif
 
-    default:
-      break;
+  vk::ApplicationInfo app_info;
+  app_info.pApplicationName = "vkreadback";
+  app_info.apiVersion = VK_API_VERSION_1_1;
+
+  vk::InstanceCreateInfo instance_info;
+  instance_info.pApplicationInfo = &app_info;
+
+  // Copy the builder's default device info, which has its queue info
+  // properly configured and modify the desired extension fields only.
+  // Send the amended |device_info| back into the builder's
+  // set_device_info() during unique context construction.
+  VulkanContext::Builder builder;
+  vk::DeviceCreateInfo device_info = builder.DeviceInfo();
+  device_info.enabledExtensionCount = enabled_extension_names.size();
+  device_info.ppEnabledExtensionNames = enabled_extension_names.data();
+
+  ctx_ = builder.set_instance_info(instance_info).set_device_info(device_info).Unique();
+
+#ifdef __Fuchsia__
+  // Initialize Fuchsia external memory procs.
+  if (import_export_ != SELF) {
+    vkGetMemoryZirconHandleFUCHSIA_ = reinterpret_cast<PFN_vkGetMemoryZirconHandleFUCHSIA>(
+        ctx_->instance()->getProcAddr("vkGetMemoryZirconHandleFUCHSIA"));
+    if (!vkGetMemoryZirconHandleFUCHSIA_) {
+      RTN_MSG(false, "Couldn't find vkGetMemoryZirconHandleFUCHSIA\n");
+    }
+
+    vkGetMemoryZirconHandlePropertiesFUCHSIA_ =
+        reinterpret_cast<PFN_vkGetMemoryZirconHandlePropertiesFUCHSIA>(
+            ctx_->instance()->getProcAddr("vkGetMemoryZirconHandlePropertiesFUCHSIA"));
+    if (!vkGetMemoryZirconHandlePropertiesFUCHSIA_) {
+      RTN_MSG(false, "Couldn't find vkGetMemoryZirconHandlePropertiesFUCHSIA\n");
+    }
+    VerifyExpectedImageFormats();
   }
+#endif
 
-  vk_physical_device_ = physical_devices[0];
-  vk_device_ = vkdevice;
-
-  vkGetDeviceQueue(vkdevice, queue_family_index, 0, &vk_queue_);
+  vulkan_initialized_ = true;
 
   return true;
 }
 
 bool VkReadbackTest::InitImage() {
-  VkImageCreateInfo image_create_info = {
-      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
-      .imageType = VK_IMAGE_TYPE_2D,
-      .format = VK_FORMAT_R8G8B8A8_UNORM,
-      .extent = VkExtent3D{kWidth, kHeight, 1},
-      .mipLevels = 1,
-      .arrayLayers = 1,
-      .samples = VK_SAMPLE_COUNT_1_BIT,
-      .tiling = VK_IMAGE_TILING_LINEAR,
-      .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-      .queueFamilyIndexCount = 0,      // not used since not sharing
-      .pQueueFamilyIndices = nullptr,  // not used since not sharing
-      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-  };
-
-  VkResult result;
-
-  if ((result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateImage failed: %d\n", result);
+  if (image_initialized_) {
+    RTN_MSG(false, "Image already initialized.\n");
   }
 
-  VkMemoryRequirements memory_reqs;
-  vkGetImageMemoryRequirements(vk_device_, vk_image_, &memory_reqs);
+  vk::ImageCreateInfo image_create_info;
+  image_create_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+  image_create_info.imageType = vk::ImageType::e2D;
+  image_create_info.format = vk::Format::eR8G8B8A8Unorm;
+  image_create_info.extent = vk::Extent3D(kWidth, kHeight, 1);
+  image_create_info.mipLevels = 1;
+  image_create_info.arrayLayers = 1;
+  image_create_info.samples = vk::SampleCountFlagBits::e1;
+  image_create_info.tiling = vk::ImageTiling::eLinear;
+  image_create_info.usage = vk::ImageUsageFlagBits::eTransferDst;
+  image_create_info.sharingMode = vk::SharingMode::eExclusive;
+  image_create_info.queueFamilyIndexCount = 0;
+  image_create_info.initialLayout = vk::ImageLayout::ePreinitialized;
+
+#ifdef __Fuchsia__
+  vk::ExternalMemoryImageCreateInfo external_memory_create_info;
+  if (import_export_ != SELF) {
+    external_memory_create_info.handleTypes =
+        vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+    image_create_info.pNext = &external_memory_create_info;
+  }
+#endif
+
+  vk::PhysicalDeviceImageFormatInfo2 image_format_info;
+  image_format_info.format = vk::Format::eR8G8B8A8Unorm;
+  image_format_info.type = vk::ImageType::e2D;
+  image_format_info.tiling = vk::ImageTiling::eLinear;
+  image_format_info.usage = vk::ImageUsageFlagBits::eTransferDst;
+
+  const auto& phys_device = ctx_->physical_device();
+
+  vk::ImageFormatProperties2 image_format_properties2;
+  auto rv_get_image_props =
+      phys_device.getImageFormatProperties2(&image_format_info, &image_format_properties2);
+  RTN_IF_VKH_ERR(false, rv_get_image_props, "vk::PhysicalDevice::getImageFormatProperties2()\n");
+
+  const auto& device = ctx_->device();
+  auto [rv_image, image] = device->createImageUnique(image_create_info);
+  RTN_IF_VKH_ERR(false, rv_image, "vk::Device::createImageUnique()\n");
+  image_ = std::move(image);
+
+  vk::MemoryRequirements memory_reqs;
+  device->getImageMemoryRequirements(image_.get(), &memory_reqs);
+
   // Add an offset to all operations that's correctly aligned and at least a
   // page in size, to ensure rounding the VMO down to a page offset will
   // cause it to point to a separate page.
   constexpr uint32_t kOffset = 128;
-  bind_offset_ = getpagesize() + kOffset;
+  bind_offset_ = kPageSize + kOffset;
   if (memory_reqs.alignment) {
     bind_offset_ = round_up(bind_offset_, memory_reqs.alignment);
   }
 
-  VkPhysicalDeviceMemoryProperties memory_props;
-  vkGetPhysicalDeviceMemoryProperties(vk_physical_device_, &memory_props);
+  vk::PhysicalDeviceMemoryProperties memory_props;
+  ctx_->physical_device().getMemoryProperties(&memory_props);
 
   uint32_t memory_type = 0;
   for (; memory_type < VK_MAX_MEMORY_TYPES; memory_type++) {
     if ((memory_reqs.memoryTypeBits & (1 << memory_type)) &&
         (memory_props.memoryTypes[memory_type].propertyFlags &
-         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
+         vk::MemoryPropertyFlagBits::eHostVisible)) {
       break;
     }
   }
   if (memory_type >= VK_MAX_MEMORY_TYPES) {
-    RTN_MSG(false, "Can't find compatible mappable memory for image\n");
+    RTN_MSG(false, "Can't find host mappable memory type for image.\n");
   }
 
-  VkExportMemoryAllocateInfoKHR export_info = {
-      .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
-      .pNext = nullptr,
-      .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
-  };
+  vk::ExportMemoryAllocateInfoKHR export_info;
+  export_info.handleTypes = vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
 
-  VkMemoryAllocateInfo alloc_info = {
-      .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-      .pNext =
-          (ext_ == VK_FUCHSIA_EXTERNAL_MEMORY && !device_memory_handle_) ? &export_info : nullptr,
-      .allocationSize = memory_reqs.size + bind_offset_,
-      .memoryTypeIndex = memory_type,
-  };
+  vk::MemoryAllocateInfo mem_alloc_info;
+  mem_alloc_info.pNext = (import_export_ == IMPORT_EXTERNAL_MEMORY) ? &export_info : nullptr;
+  mem_alloc_info.allocationSize = memory_reqs.size + bind_offset_;
+  mem_alloc_info.memoryTypeIndex = memory_type;
 
-  if ((result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &vk_device_memory_)) !=
-      VK_SUCCESS) {
-    RTN_MSG(false, "vkAllocateMemory failed\n");
-  }
+  auto rv_device_memory =
+      device->allocateMemory(&mem_alloc_info, nullptr /* allocator */, &device_memory_);
+  RTN_IF_VKH_ERR(false, rv_device_memory, "vk::Device::allocateMemory()\n");
 
 #ifdef __Fuchsia__
-  if (ext_ == VK_FUCHSIA_EXTERNAL_MEMORY && device_memory_handle_) {
-    size_t vmo_size;
-    zx_vmo_get_size(device_memory_handle_, &vmo_size);
-
-    VkMemoryZirconHandlePropertiesFUCHSIA properties{
-        .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA,
-        .pNext = nullptr,
-    };
-    result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(
-        vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
-        device_memory_handle_, &properties);
-    if (result != VK_SUCCESS) {
-      RTN_MSG(false, "vkGetMemoryZirconHandlePropertiesFUCHSIA returned %d\n", result);
+  if (import_export_ == IMPORT_EXTERNAL_MEMORY) {
+    if (!AllocateFuchsiaImportedMemory(exported_memory_handle_)) {
+      RTN_MSG(false, "AllocateFuchsiaImportedMemory failed.\n");
     }
-    // Find index of lowest set bit.
-    memory_type = __builtin_ctz(properties.memoryTypeBits);
-
-    VkImportMemoryZirconHandleInfoFUCHSIA handle_info = {
-        .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
-        .pNext = nullptr,
-        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
-        .handle = device_memory_handle_};
-
-    VkMemoryAllocateInfo info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-                                 .pNext = &handle_info,
-                                 .allocationSize = vmo_size,
-                                 .memoryTypeIndex = memory_type};
-
-    if ((result = vkAllocateMemory(vk_device_, &info, nullptr, &vk_imported_device_memory_)) !=
-        VK_SUCCESS) {
-      RTN_MSG(false, "vkAllocateMemory failed\n");
+  } else if (import_export_ == EXPORT_EXTERNAL_MEMORY) {
+    if (!AssignExportedMemoryHandle()) {
+      RTN_MSG(false, "AssignExportedMemoryHandle failed.\n");
     }
-
-  } else if (ext_ == VK_FUCHSIA_EXTERNAL_MEMORY) {
-    uint32_t handle;
-    VkMemoryGetZirconHandleInfoFUCHSIA get_handle_info = {
-        .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA,
-        .pNext = nullptr,
-        .memory = vk_device_memory_,
-        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
-    if ((result = vkGetMemoryZirconHandleFUCHSIA_(vk_device_, &get_handle_info, &handle)) !=
-        VK_SUCCESS) {
-      RTN_MSG(false, "vkGetMemoryZirconHandleFUCHSIA failed\n");
-    }
-
-    VkMemoryZirconHandlePropertiesFUCHSIA properties{
-        .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA,
-        .pNext = nullptr,
-    };
-    result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(
-        vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, handle,
-        &properties);
-    if (result != VK_SUCCESS) {
-      RTN_MSG(false, "vkGetMemoryZirconHandlePropertiesFUCHSIA returned %d\n", result);
-    }
-
-    device_memory_handle_ = handle;
   }
-#endif
+#endif  // __Fuchsia__
 
   void* addr;
-  if ((result = vkMapMemory(vk_device_, vk_device_memory_, 0, VK_WHOLE_SIZE, 0, &addr)) !=
-      VK_SUCCESS) {
-    RTN_MSG(false, "vkMapMemory failed: %d\n", result);
-  }
+  auto rv_map_mem =
+      device->mapMemory(device_memory_, 0 /* offset */, VK_WHOLE_SIZE, vk::MemoryMapFlags{}, &addr);
+  RTN_IF_VKH_ERR(false, rv_map_mem, "vk::Device::mapMemory()\n");
 
   constexpr int kFill = 0xab;
   memset(addr, kFill, memory_reqs.size + bind_offset_);
 
-  vkUnmapMemory(vk_device_, vk_device_memory_);
+  device->unmapMemory(device_memory_);
 
-  if ((result = vkBindImageMemory(vk_device_, vk_image_, vk_device_memory_, bind_offset_)) !=
-      VK_SUCCESS) {
-    RTN_MSG(false, "vkBindImageMemory failed\n");
-  }
-
-  VkCommandPoolCreateInfo command_pool_create_info = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .queueFamilyIndex = 0,
-  };
-  if ((result = vkCreateCommandPool(vk_device_, &command_pool_create_info, nullptr,
-                                    &vk_command_pool_)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateCommandPool failed: %d\n", result);
-  }
-
-  VkCommandBufferAllocateInfo command_buffer_create_info = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-      .pNext = nullptr,
-      .commandPool = vk_command_pool_,
-      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-      .commandBufferCount = kNumCommandBuffers};
-  if ((result = vkAllocateCommandBuffers(vk_device_, &command_buffer_create_info,
-                                         &vk_command_buffer_)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkAllocateCommandBuffers failed: %d\n", result);
-  }
-
-  VkCommandBufferBeginInfo begin_info = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .pInheritanceInfo = nullptr,  // ignored for primary buffers
-  };
-  if ((result = vkBeginCommandBuffer(vk_command_buffer_, &begin_info)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkBeginCommandBuffer failed: %d\n", result);
-  }
-
-  VkClearColorValue color_value = {.float32 = {1.0f, 0.0f, 0.5f, 0.75f}};
-
-  VkImageSubresourceRange image_subres_range = {
-      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-      .baseMipLevel = 0,
-      .levelCount = 1,
-      .baseArrayLayer = 0,
-      .layerCount = 1,
-  };
-
-  vkCmdClearColorImage(vk_command_buffer_, vk_image_, VK_IMAGE_LAYOUT_GENERAL, &color_value, 1,
-                       &image_subres_range);
-
-  if ((result = vkEndCommandBuffer(vk_command_buffer_)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkEndCommandBuffer failed: %d\n", result);
-  }
+  auto rv_bind = device->bindImageMemory(image_.get(), device_memory_, bind_offset_);
+  RTN_IF_VKH_ERR(false, rv_bind, "vk::Device::bindImageMemory()\n");
 
   image_initialized_ = true;
 
   return true;
 }
 
-bool VkReadbackTest::Exec(VkFence fence) {
-  if (!Submit(fence)) {
+#ifdef __Fuchsia__
+bool VkReadbackTest::AllocateFuchsiaImportedMemory(uint32_t exported_memory_handle) {
+  const auto& device = ctx_->device();
+
+  if (exported_memory_handle == 0u) {
+    RTN_MSG(false, "|exported_memory_handle| must be initialized.\n");
+  }
+
+  size_t vmo_size;
+  zx_vmo_get_size(exported_memory_handle, &vmo_size);
+
+  VkMemoryZirconHandlePropertiesFUCHSIA zircon_handle_props{
+      .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA,
+      .pNext = nullptr,
+  };
+  VkResult result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(
+      *device, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, exported_memory_handle,
+      &zircon_handle_props);
+  RTN_IF_VK_ERR(false, result, "vkGetMemoryZirconHandlePropertiesFUCHSIA failed.\n");
+
+  // Find index of lowest set bit.
+  uint32_t memory_type = __builtin_ctz(zircon_handle_props.memoryTypeBits);
+
+  vk::ImportMemoryZirconHandleInfoFUCHSIA import_memory_handle_info;
+  import_memory_handle_info.pNext = nullptr;
+  import_memory_handle_info.handleType =
+      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+  import_memory_handle_info.handle = exported_memory_handle;
+
+  vk::MemoryAllocateInfo imported_mem_alloc_info;
+  imported_mem_alloc_info.pNext = &import_memory_handle_info;
+  imported_mem_alloc_info.allocationSize = vmo_size;
+  imported_mem_alloc_info.memoryTypeIndex = memory_type;
+
+  auto rv_imported_device_memory = device->allocateMemory(
+      &imported_mem_alloc_info, nullptr /* allocator */, &imported_device_memory_);
+  RTN_IF_VKH_ERR(false, rv_imported_device_memory,
+                 "vk::Device::allocateMemory() failed for import memory\n");
+
+  return true;
+}
+
+bool VkReadbackTest::AssignExportedMemoryHandle() {
+  const auto& device = ctx_->device();
+  VkMemoryGetZirconHandleInfoFUCHSIA get_handle_info = {
+      .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA,
+      .pNext = nullptr,
+      .memory = device_memory_,
+      .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
+  VkResult result =
+      vkGetMemoryZirconHandleFUCHSIA_(*device, &get_handle_info, &exported_memory_handle_);
+  RTN_IF_VK_ERR(false, result, "vkGetMemoryZirconHandleFUCHSIA.\n");
+
+  VkMemoryZirconHandlePropertiesFUCHSIA zircon_handle_props{
+      .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA,
+      .pNext = nullptr,
+  };
+  result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(
+      *device, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, exported_memory_handle_,
+      &zircon_handle_props);
+  RTN_IF_VK_ERR(false, result, "vkGetMemoryZirconHandlePropertiesFUCHSIA\n");
+
+  return true;
+}
+#endif  // __Fuchsia__
+
+bool VkReadbackTest::FillCommandBuffer(vk::CommandBuffer& command_buffer, bool transition_image) {
+  auto rv_begin = command_buffer.begin(vk::CommandBufferBeginInfo{});
+  RTN_IF_VKH_ERR(false, rv_begin, "vk::CommandBuffer::begin()\n");
+
+  if (transition_image) {
+    // Transition image for clear operation.
+    vk::ImageMemoryBarrier image_barrier;
+    image_barrier.image = image_.get();
+    image_barrier.oldLayout = vk::ImageLayout::ePreinitialized;
+    image_barrier.newLayout = vk::ImageLayout::eGeneral;
+    image_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+    image_barrier.subresourceRange.levelCount = 1;
+    image_barrier.subresourceRange.layerCount = 1;
+    command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, /* srcStageMask */
+                                   vk::PipelineStageFlagBits::eTransfer,  /* dstStageMask */
+                                   vk::DependencyFlags{}, 0 /* memoryBarrierCount */,
+                                   nullptr /* pMemoryBarriers */, 0 /* bufferMemoryBarrierCount */,
+                                   nullptr /* pBufferMemoryBarriers */,
+                                   1 /* imageMemoryBarrierCount */, &image_barrier);
+  }
+
+  // RGBA
+  vk::ClearColorValue clear_color(std::array<float, 4>{1.0f, 0.0f, 0.5f, 0.75f});
+
+  vk::ImageSubresourceRange image_subres_range;
+  image_subres_range.aspectMask = vk::ImageAspectFlagBits::eColor;
+  image_subres_range.baseMipLevel = 0;
+  image_subres_range.levelCount = 1;
+  image_subres_range.baseArrayLayer = 0;
+  image_subres_range.layerCount = 1;
+
+  command_buffer.clearColorImage(image_.get(), vk::ImageLayout::eGeneral, &clear_color,
+                                 1 /* rangeCount */, &image_subres_range);
+  auto rv_command_buf_end = command_buffer.end();
+  RTN_IF_VKH_ERR(false, rv_command_buf_end, "vk::UniqueCommandBuffer::end()\n");
+
+  return true;
+}
+
+bool VkReadbackTest::InitCommandBuffers() {
+  if (command_buffers_initialized_) {
+    RTN_MSG(false, "ERROR: Command buffers are already initialized.\n");
+  }
+
+  const auto& device = ctx_->device();
+  vk::CommandPoolCreateInfo command_pool_create_info;
+  command_pool_create_info.queueFamilyIndex = ctx_->queue_family_index();
+  auto [rv_command_pool, command_pool] = device->createCommandPoolUnique(command_pool_create_info);
+  RTN_IF_VKH_ERR(false, rv_command_pool, "vk::Device::createCommandPoolUnique()\n");
+  command_pool_ = std::move(command_pool);
+
+  vk::CommandBufferAllocateInfo command_buffer_alloc_info;
+  command_buffer_alloc_info.commandPool = command_pool_.get();
+  command_buffer_alloc_info.level = vk::CommandBufferLevel::ePrimary;
+  command_buffer_alloc_info.commandBufferCount = kNumCommandBuffers;
+  auto [rv_alloc_cmd_bufs, command_buffers] =
+      device->allocateCommandBuffersUnique(command_buffer_alloc_info);
+  RTN_IF_VKH_ERR(false, rv_alloc_cmd_bufs, "vk::Device::allocateCommandBuffersUnique()\n");
+  command_buffers_ = std::move(command_buffers);
+  if (!FillCommandBuffer(command_buffers_[0].get(), true /* transition_image */))
+    return false;
+  if (!FillCommandBuffer(command_buffers_[1].get(), false /* transition_image */))
+    return false;
+
+  command_buffers_initialized_ = true;
+
+  return true;
+}
+
+bool VkReadbackTest::Exec(vk::Fence fence) {
+  if (!Submit(fence, true /* transition_image */)) {
     return false;
   }
   return Wait();
 }
 
-bool VkReadbackTest::Submit(VkFence fence) {
-  VkSubmitInfo submit_info = {
-      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-      .pNext = nullptr,
-      .waitSemaphoreCount = 0,
-      .pWaitSemaphores = nullptr,
-      .pWaitDstStageMask = nullptr,
-      .commandBufferCount = 1,
-      .pCommandBuffers = &vk_command_buffer_,
-      .signalSemaphoreCount = 0,
-      .pSignalSemaphores = nullptr,
-  };
+bool VkReadbackTest::Submit(vk::Fence fence, bool transition_image) {
+  vk::SubmitInfo submit_info;
+  submit_info.commandBufferCount = 1;
+  const vk::CommandBuffer& command_buffer =
+      (transition_image ? command_buffers_[0].get() : command_buffers_[1].get());
+  submit_info.pCommandBuffers = &command_buffer;
+  auto rv_submit = ctx_->queue().submit(1, &submit_info, fence);
+  RTN_IF_VKH_ERR(false, rv_submit, "vk::Queue::submit()\n");
 
-  VkResult result;
-  if ((result = vkQueueSubmit(vk_queue_, 1, &submit_info, fence)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkQueueSubmit failed\n");
-  }
   return true;
 }
 
 bool VkReadbackTest::Wait() {
-  VkResult result = vkQueueWaitIdle(vk_queue_);
-  if (result != VK_SUCCESS) {
-    RTN_MSG(false, "vkQueueWaitIdle failed: %d\n", result);
-  }
+  auto rv_idle = ctx_->queue().waitIdle();
+  RTN_IF_VKH_ERR(false, rv_idle, "vk::Queue::waitIdle()\n");
+
   return true;
 }
 
 bool VkReadbackTest::Readback() {
-  VkResult result;
   void* addr;
+  const vk::DeviceMemory& device_memory =
+      ext_ == VkReadbackTest::NONE ? device_memory_ : imported_device_memory_;
 
-  VkDeviceMemory vk_device_memory =
-      ext_ == VkReadbackTest::NONE ? vk_device_memory_ : vk_imported_device_memory_;
-
-  if ((result = vkMapMemory(vk_device_, vk_device_memory, 0, VK_WHOLE_SIZE, 0, &addr)) !=
-      VK_SUCCESS) {
-    RTN_MSG(false, "vkMapMemory failed: %d\n", result);
-  }
+  auto rv_map = ctx_->device()->mapMemory(device_memory, vk::DeviceSize{} /* offset */,
+                                          VK_WHOLE_SIZE, vk::MemoryMapFlags{}, &addr);
+  RTN_IF_VKH_ERR(false, rv_map, "vk::Device::mapMemory()\n");
 
   auto* data = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(addr) + bind_offset_);
 
-  const uint32_t kExpectedValue = 0xBF8000FF;
+  // ABGR ordering of clear color value.
+  const uint32_t kExpectedClearColorValue = 0xBF8000FF;
+
   uint32_t mismatches = 0;
   for (uint32_t i = 0; i < kWidth * kHeight; i++) {
-    if (data[i] != kExpectedValue) {
+    if (data[i] != kExpectedClearColorValue) {
       constexpr int kMaxMismatches = 10;
       if (mismatches++ < kMaxMismatches) {
-        fprintf(stderr, "Value Mismatch at index %d - expected 0x%04x, got 0x%08x\n", i,
-                kExpectedValue, data[i]);
+        fprintf(stderr, "Clear Color Value Mismatch at index %d - expected 0x%08x, got 0x%08x\n", i,
+                kExpectedClearColorValue, data[i]);
       }
     }
   }
@@ -526,7 +489,7 @@ bool VkReadbackTest::Readback() {
     fprintf(stdout, "****** Test Failed! %d mismatches\n", mismatches);
   }
 
-  vkUnmapMemory(vk_device_, vk_device_memory);
+  ctx_->device()->unmapMemory(device_memory);
 
   return mismatches == 0;
 }

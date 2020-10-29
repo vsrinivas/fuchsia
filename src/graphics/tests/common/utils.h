@@ -20,7 +20,8 @@
     return err;                                    \
   }
 
-#define RTN_MSG_VK(err, r, ...)                                         \
+// Log and return based on VkResult |r|.
+#define RTN_IF_VK_ERR(err, r, ...)                                      \
   if (r != VK_SUCCESS) {                                                \
     fprintf(stderr, "%s:%d:\n\t(vk::Result::e%s) ", __FILE__, __LINE__, \
             vk::to_string(vk::Result(r)).c_str());                      \
@@ -30,7 +31,8 @@
     return err;                                                         \
   }
 
-#define RTN_MSG_VKH(err, r, ...)                                                                   \
+// Log and return based on vk::Result |r|.
+#define RTN_IF_VKH_ERR(err, r, ...)                                                                \
   if (r != vk::Result::eSuccess) {                                                                 \
     fprintf(stderr, "%s:%d:\n\t(vk::Result::e%s) ", __FILE__, __LINE__, vk::to_string(r).c_str()); \
     fprintf(stderr, __VA_ARGS__);                                                                  \

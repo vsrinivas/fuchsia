@@ -49,6 +49,7 @@ class VulkanContext {
   class Builder;
   class ContextWithUserData;
   static constexpr int kInvalidQueueFamily = -1;
+  static constexpr vk::QueueFlagBits kDefaultQueueFlagBits = vk::QueueFlagBits::eGraphics;
   static vk::DebugUtilsMessengerCreateInfoEXT default_debug_info_s_;
   static ContextWithUserData default_debug_callback_user_data_s_;
 
@@ -160,8 +161,16 @@ class VulkanContext {
 class VulkanContext::Builder {
  public:
   Builder();
+  Builder(const Builder &) = delete;
 
   std::unique_ptr<VulkanContext> Unique() const;
+
+  // Convenience methods for retrieving default device and queue info
+  // structs for read/modify/write amendments to these info structs during
+  // construction.  The device info struct |device_info_| captures the address
+  // of the queue info ivar |queue_info_| as part of its definition.
+  vk::DeviceCreateInfo DeviceInfo() const;
+  vk::DeviceQueueCreateInfo QueueInfo() const;
 
   Builder &set_allocator(vk::Optional<const vk::AllocationCallbacks> allocator);
 

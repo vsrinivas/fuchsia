@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <utility>
 
 #include "src/graphics/tests/common/utils.h"
@@ -262,9 +263,13 @@ VulkanContext::Builder::Builder()
       queue_info_(vk::DeviceQueueCreateFlags(), physical_device_index_, 1 /* queueCount */,
                   &queue_priority_),
       device_info_(vk::DeviceCreateFlags(), 1 /* queueCreateInfoCount */, &queue_info_),
-      queue_flag_bits_(vk::QueueFlagBits::eGraphics),
+      queue_flag_bits_(kDefaultQueueFlagBits),
       allocator_(nullptr),
       debug_info_(VulkanContext::default_debug_info_s_) {}
+
+vk::DeviceCreateInfo VulkanContext::Builder::DeviceInfo() const { return device_info_; }
+
+vk::DeviceQueueCreateInfo VulkanContext::Builder::QueueInfo() const { return queue_info_; }
 
 VulkanContext::Builder &VulkanContext::Builder::set_allocator(
     vk::Optional<const vk::AllocationCallbacks> v) {

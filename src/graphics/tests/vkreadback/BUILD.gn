@@ -9,6 +9,9 @@ source_set("vkreadback_src") {
     "vkreadback.cc",
     "vkreadback.h",
   ]
+
+  deps = [ "//src/graphics/tests/common" ]
+
   public_deps = [
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
