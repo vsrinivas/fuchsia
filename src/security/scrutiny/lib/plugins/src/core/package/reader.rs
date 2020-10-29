@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::core::{jsons::*, package_getter::*, types::*, util},
+    crate::core::{jsons::*, package::getter::*, types::*, util},
     anyhow::Result,
     fuchsia_archive::Reader as FarReader,
     std::collections::HashMap,

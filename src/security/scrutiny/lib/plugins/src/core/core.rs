@@ -5,7 +5,7 @@
 use {
     crate::core::{
         controllers::{blob::*, component::*, package::*, route::*, zbi::*},
-        package_collector::*,
+        package::collector::*,
     },
     scrutiny::{
         collectors, controllers,

@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod controllers;
-pub mod core;
-mod jsons;
-mod package;
-mod types;
-mod util;
+pub mod artifact;
+pub mod collector;
+pub mod getter;
+pub mod reader;

@@ -37,7 +37,6 @@ if (is_host) {
     test_deps = [ "//third_party/rust_crates:tempfile" ]
 
     sources = [
-      "src/core/artifact.rs",
       "src/core/controllers/blob.rs",
       "src/core/controllers/component.rs",
       "src/core/controllers/mod.rs",
@@ -48,9 +47,11 @@ if (is_host) {
       "src/core/core.rs",
       "src/core/jsons.rs",
       "src/core/mod.rs",
-      "src/core/package_collector.rs",
-      "src/core/package_getter.rs",
-      "src/core/package_reader.rs",
+      "src/core/package/artifact.rs",
+      "src/core/package/collector.rs",
+      "src/core/package/getter.rs",
+      "src/core/package/mod.rs",
+      "src/core/package/reader.rs",
       "src/core/types.rs",
       "src/core/util.rs",
       "src/engine/mod.rs",
@@ -59,7 +60,7 @@ if (is_host) {
       "src/toolkit/mod.rs",
     ]
 
-    inputs = [ "src/core/builtins.json" ]
+    inputs = [ "src/core/package/builtins.json" ]
   }
 }
 

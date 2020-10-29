@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::core::package_getter::PackageGetter,
+    crate::core::package::getter::PackageGetter,
     std::fs,
     std::io::{Error, ErrorKind, Result},
     std::path::{Path, PathBuf},

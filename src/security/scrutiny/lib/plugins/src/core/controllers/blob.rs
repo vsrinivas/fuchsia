@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::core::{artifact::ArtifactGetter, package_getter::PackageGetter},
+    crate::core::{package::artifact::ArtifactGetter, package::getter::PackageGetter},
     anyhow::{anyhow, Result},
     scrutiny::{
         model::controller::{DataController, HintDataType},

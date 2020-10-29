@@ -4,7 +4,9 @@
 
 use {
     crate::core::{
-        artifact::ArtifactGetter, package_getter::PackageGetter, package_reader::*, types::*, util,
+        package::{artifact::ArtifactGetter, getter::PackageGetter, reader::*},
+        types::*,
+        util,
     },
     anyhow::{anyhow, Result},
     cm_fidl_validator,
