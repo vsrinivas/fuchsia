@@ -20,7 +20,6 @@ driver_module("fragment") {
     "//sdk/banjo/ddk.protocol.amlogiccanvas",
     "//sdk/banjo/ddk.protocol.buttons",
     "//sdk/banjo/ddk.protocol.camera.sensor",
-    "//sdk/banjo/ddk.protocol.camerasensor",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.codec",
     "//sdk/banjo/ddk.protocol.dsi",

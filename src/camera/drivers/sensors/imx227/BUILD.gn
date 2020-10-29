@@ -32,7 +32,6 @@ source_set("source") {
     ":imx227_bind",
     "//sdk/banjo/ddk.protocol.camera",
     "//sdk/banjo/ddk.protocol.camera.sensor",
-    "//sdk/banjo/ddk.protocol.camerasensor",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",

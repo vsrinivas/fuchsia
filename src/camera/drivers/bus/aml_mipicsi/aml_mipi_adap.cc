@@ -7,6 +7,7 @@
 #include <zircon/types.h>
 
 #include <ddk/debug.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/camera/drivers/bus/aml_mipicsi/aml_mipi.h"
 #include "src/camera/drivers/bus/aml_mipicsi/aml_mipi_regs.h"
@@ -132,7 +133,7 @@ zx_status_t AmlMipiDevice::AdapFrontendInit(const mipi_adap_info_t* info) {
 }
 
 void AmlMipiDevice::AdapFrontEndStart(const mipi_adap_info_t* info) {
-  uint32_t width = info->resolution.width;
+  auto width = safemath::checked_cast<uint32_t>(info->resolution.x);
   uint32_t depth, val;
   depth = AdapGetDepth(info);
   if (!depth) {
@@ -176,8 +177,8 @@ zx_status_t AmlMipiDevice::AdapReaderInit(const mipi_adap_info_t* info) {
 }
 
 void AmlMipiDevice::AdapReaderStart(const mipi_adap_info_t* info) {
-  uint32_t height = info->resolution.height;
-  uint32_t width = info->resolution.width;
+  auto height = safemath::checked_cast<uint32_t>(info->resolution.y);
+  auto width = safemath::checked_cast<uint32_t>(info->resolution.x);
   uint32_t val, depth;
   depth = AdapGetDepth(info);
   if (!depth) {
@@ -223,7 +224,8 @@ void AmlMipiDevice::AdapPixelStart(const mipi_adap_info_t* info) {
   auto pixel_reg = mipi_adap_mmio_->View(PIXEL_BASE, kPixelSize);
 
   pixel_reg.ModifyBits32(info->format, 13, 3, MIPI_ADAPT_PIXEL0_CNTL0);
-  pixel_reg.ModifyBits32(info->resolution.width, 0, 13, MIPI_ADAPT_PIXEL0_CNTL0);
+  pixel_reg.ModifyBits32(safemath::checked_cast<uint32_t>(info->resolution.x), 0, 13,
+                         MIPI_ADAPT_PIXEL0_CNTL0);
 
   // TODO(braval):    Add support for DOL_MODE
   pixel_reg.SetBits32(1 << 31, MIPI_ADAPT_PIXEL0_CNTL1);
@@ -268,12 +270,12 @@ zx_status_t AmlMipiDevice::AdapAlignInit(const mipi_adap_info_t* info) {
 void AmlMipiDevice::AdapAlignStart(const mipi_adap_info_t* info) {
   auto align_reg = mipi_adap_mmio_->View(ALIGN_BASE, kAlignSize);
 
-  uint32_t width, height, alig_width, alig_height, val;
-  width = info->resolution.width;
-  height = info->resolution.height;
-  alig_width = width + 40;    // hblank > 32 cycles
-  alig_height = height + 60;  // vblank > 48 lines
-  val = width + 35;           // width < val < alig_width
+  auto width = safemath::checked_cast<uint32_t>(info->resolution.x);
+  auto height = safemath::checked_cast<uint32_t>(info->resolution.y);
+  uint32_t alig_width = width + 40;    // hblank > 32 cycles
+  uint32_t alig_height = height + 60;  // vblank > 48 lines
+  uint32_t val = width + 35;           // width < val < alig_width
+
   align_reg.ModifyBits32(alig_width, 0, 13, MIPI_ADAPT_ALIG_CNTL0);
   align_reg.ModifyBits32(alig_height, 16, 13, MIPI_ADAPT_ALIG_CNTL0);
   align_reg.ModifyBits32(width, 16, 13, MIPI_ADAPT_ALIG_CNTL1);

@@ -15,7 +15,6 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/camera/sensor.h>
-#include <ddktl/protocol/camerasensor.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/empty-protocol.h>

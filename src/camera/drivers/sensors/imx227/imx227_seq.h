@@ -7,8 +7,6 @@
 
 #include <array>
 
-#include "ddk/protocol/camerasensor.h"
-
 namespace camera {
 
 struct InitSeqFmt {
@@ -235,10 +233,6 @@ constexpr std::array<InitSeqFmt, kArraySize> setting_2400_2720_2lane_996mbps_28f
     {0x020E, 0x01, 0xFF, 1}, {0x020F, 0x00, 0xFF, 1}, {0x0000, 0x0000, 0x0000, 0x0000},
 }};
 
-//-------------------------//
-//     SUPPORTED MODES     //
-//-------------------------//
-
 const std::array<const InitSeqFmt*, 6> kSEQUENCE_TABLE = {
     setting_2200_2720_2lane_996mbps_30fps.data(),
     setting_2200_2720_2lane_996mbps_30fps_test_pattern.data(),
@@ -247,81 +241,6 @@ const std::array<const InitSeqFmt*, 6> kSEQUENCE_TABLE = {
     setting_1920_1080_2lane_996mbps_30fps.data(),
     setting_2400_2720_2lane_996mbps_28fps.data(),
 };
-
-constexpr std::array<camera_sensor_mode_t, 4> supported_modes = {{
-    {
-        // NOTE: SW reference consumes this as (30fps * 256)
-        //       We are representing this as fpms.
-        //       Take account of the multiplier when needed.
-        .fpms = 30000,
-        .resolution =
-            {
-                .width = 2200,
-                .height = 2720,
-            },
-        .exposures = 1,
-        .wdr_mode = CAMERASENSOR_WDR_MODE_LINEAR,
-        .bits = 10,
-        .lanes = 2,
-        .mbps = 1000,
-        .idx = kSENSOR_IMX227_SEQUENCE_DEFAULT_PREVIEW,
-        .bayer = BAYER_RGGB,
-    },
-    {
-        // NOTE: SW reference consumes this as (30fps * 256)
-        //       We are representing this as fpms.
-        //       Take account of the multiplier when needed.
-        .fpms = 30000,
-        .resolution =
-            {
-                .width = 1920,
-                .height = 1080,
-            },
-        .exposures = 1,
-        .wdr_mode = CAMERASENSOR_WDR_MODE_LINEAR,
-        .bits = 10,
-        .lanes = 2,
-        .mbps = 1000,
-        .idx = kSENSOR_IMX227_SEQUENCE_1080P_PREVIEW,
-        .bayer = BAYER_RGGB,
-    },
-    {
-        // NOTE: SW reference consumes this as (28fps * 256)
-        //       We are representing this as fpms.
-        //       Take account of the multiplier when needed.
-        .fpms = 28000,
-        .resolution =
-            {
-                .width = 2400,
-                .height = 2720,
-            },
-        .exposures = 1,
-        .wdr_mode = CAMERASENSOR_WDR_MODE_LINEAR,
-        .bits = 10,
-        .lanes = 2,
-        .mbps = 1000,
-        .idx = kSENSOR_IMX227_SEQUENCE_DEFAULT_FULLSENSOR_PREVIEW,
-        .bayer = BAYER_RGGB,
-    },
-    {
-        // NOTE: SW reference consumes this as (30fps * 256)
-        //       We are representing this as fpms.
-        //       Take account of the multiplier when needed.
-        .fpms = 30000,
-        .resolution =
-            {
-                .width = 2200,
-                .height = 2720,
-            },
-        .exposures = 1,
-        .wdr_mode = CAMERASENSOR_WDR_MODE_LINEAR,
-        .bits = 10,
-        .lanes = 2,
-        .mbps = 1000,
-        .idx = kSENSOR_IMX227_SEQUENCE_TESTPATTERN,
-        .bayer = BAYER_RGGB,
-    },
-}};
 
 }  // namespace camera
 

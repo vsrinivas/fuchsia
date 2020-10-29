@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 library ddk.protocol.mipicsi;
-using ddk.protocol.camerasensor;
+using ddk.protocol.camera;
 using zx;
 
 struct MipiInfo {
@@ -43,7 +43,7 @@ enum MipiPath : uint32 {
 };
 
 struct MipiAdapInfo {
-    ddk.protocol.camerasensor.Resolution resolution;
+    ddk.protocol.camera.Dimensions resolution;
     MipiImageFormat format;
     MipiModes mode;
     MipiPath path;

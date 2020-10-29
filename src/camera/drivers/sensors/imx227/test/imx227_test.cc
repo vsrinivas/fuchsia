@@ -21,8 +21,8 @@
 
 bool operator==(const i2c_op_t& lhs, const i2c_op_t& rhs) { return true; }
 
-bool operator==(const resolution_t& lhs, const resolution_t& rhs) {
-  return lhs.width == rhs.width && lhs.height == rhs.height;
+bool operator==(const dimensions_t& lhs, const dimensions_t& rhs) {
+  return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
 bool operator==(const mipi_adap_info_t& lhs, const mipi_adap_info_t& rhs) {

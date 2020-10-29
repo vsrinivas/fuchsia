@@ -252,8 +252,8 @@ zx_status_t Imx227Device::InitMipiCsi(uint8_t mode) {
   }
 
   adap_info.format = MIPI_IMAGE_FORMAT_AM_RAW10;
-  adap_info.resolution.width = available_modes[mode].resolution_in.x;
-  adap_info.resolution.height = available_modes[mode].resolution_in.y;
+  adap_info.resolution.x = available_modes[mode].resolution_in.x;
+  adap_info.resolution.y = available_modes[mode].resolution_in.y;
   adap_info.path = MIPI_PATH_PATH0;
   adap_info.mode = MIPI_MODES_DIR_MODE;
   auto status = mipi_.Init(&mipi_info, &adap_info);

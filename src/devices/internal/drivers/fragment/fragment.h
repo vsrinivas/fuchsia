@@ -15,7 +15,6 @@
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/buttons.h>
 #include <ddktl/protocol/camera/sensor.h>
-#include <ddktl/protocol/camerasensor.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/dsi.h>
@@ -98,7 +97,6 @@ class Fragment : public FragmentBase {
         shared_dma_client_(parent, ZX_PROTOCOL_SHARED_DMA),
         usb_phy_client_(parent, ZX_PROTOCOL_USB_PHY),
         mipi_csi_client_(parent, ZX_PROTOCOL_MIPI_CSI),
-        camera_sensor_client_(parent, ZX_PROTOCOL_CAMERA_SENSOR),
         camera_sensor2_client_(parent, ZX_PROTOCOL_CAMERA_SENSOR2),
         gdc_client_(parent, ZX_PROTOCOL_GDC),
         ge2d_client_(parent, ZX_PROTOCOL_GE2D),
@@ -222,7 +220,6 @@ class Fragment : public FragmentBase {
   ProtocolClient<ddk::SharedDmaProtocolClient, shared_dma_protocol_t> shared_dma_client_;
   ProtocolClient<ddk::UsbPhyProtocolClient, usb_phy_protocol_t> usb_phy_client_;
   ProtocolClient<ddk::MipiCsiProtocolClient, mipi_csi_protocol_t> mipi_csi_client_;
-  ProtocolClient<ddk::CameraSensorProtocolClient, camera_sensor_protocol_t> camera_sensor_client_;
   ProtocolClient<ddk::CameraSensor2ProtocolClient, camera_sensor2_protocol_t>
       camera_sensor2_client_;
   ProtocolClient<ddk::GdcProtocolClient, gdc_protocol_t> gdc_client_;
