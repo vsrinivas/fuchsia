@@ -132,8 +132,22 @@ fn extract_compatibility(compatibility: Option<wlan_policy::Compatibility>) -> S
 }
 
 /// Translates command line input into a network configuration.
-fn construct_network_config(config: PolicyNetworkConfig) -> wlan_policy::NetworkConfig {
+fn construct_network_config(
+    config: PolicyNetworkConfig,
+) -> Result<wlan_policy::NetworkConfig, Error> {
     let security_type = wlan_policy::SecurityType::from(config.security_type);
+    if (config.credential_type == CredentialTypeArg::r#None
+        && security_type != wlan_policy::SecurityType::None)
+        || (config.credential_type != CredentialTypeArg::r#None
+            && security_type == wlan_policy::SecurityType::None)
+    {
+        return Err(format_err!(
+            "Invalid credential type {:?} for security type {:?}",
+            config.credential_type,
+            security_type
+        ));
+    }
+
     let credential = match config.credential_type {
         CredentialTypeArg::r#None => wlan_policy::Credential::None(wlan_policy::Empty),
         CredentialTypeArg::Psk => {
@@ -155,7 +169,7 @@ fn construct_network_config(config: PolicyNetworkConfig) -> wlan_policy::Network
         ssid: config.ssid.as_bytes().to_vec(),
         type_: security_type,
     };
-    wlan_policy::NetworkConfig { id: Some(network_id), credential: Some(credential) }
+    Ok(wlan_policy::NetworkConfig { id: Some(network_id), credential: Some(credential) })
 }
 
 /// Iterates through a vector of network configurations and prints their contents.
@@ -376,7 +390,7 @@ pub async fn handle_remove_network(
     client_controller: wlan_policy::ClientControllerProxy,
     config: PolicyNetworkConfig,
 ) -> Result<(), Error> {
-    let network_config = construct_network_config(config);
+    let network_config = construct_network_config(config)?;
     match client_controller.remove_network(network_config).await? {
         Ok(()) => Ok(()),
         Err(e) => Err(format_err!("failed to remove network with {:?}", e)),
@@ -388,7 +402,7 @@ pub async fn handle_save_network(
     client_controller: wlan_policy::ClientControllerProxy,
     config: PolicyNetworkConfig,
 ) -> Result<(), Error> {
-    let network_config = construct_network_config(config);
+    let network_config = construct_network_config(config)?;
     match client_controller.save_network(network_config).await? {
         Ok(()) => Ok(()),
         Err(e) => Err(format_err!("failed to save network with {:?}", e)),
@@ -441,7 +455,7 @@ pub async fn handle_start_ap(
     mut server_stream: wlan_policy::AccessPointStateUpdatesRequestStream,
     config: PolicyNetworkConfig,
 ) -> Result<(), Error> {
-    let network_config = construct_network_config(config);
+    let network_config = construct_network_config(config)?;
     let connectivity_mode = wlan_policy::ConnectivityMode::Unrestricted;
     let operating_band = wlan_policy::OperatingBand::Any;
     let result =
@@ -481,7 +495,7 @@ pub async fn handle_stop_ap(
     ap_controller: wlan_policy::AccessPointControllerProxy,
     config: PolicyNetworkConfig,
 ) -> Result<(), Error> {
-    let network_config = construct_network_config(config);
+    let network_config = construct_network_config(config)?;
     let result = ap_controller.stop_access_point(network_config).await?;
     handle_request_status(result)
 }
@@ -1099,8 +1113,35 @@ mod tests {
             }),
             credential: Some(wlan_policy::Credential::None(wlan_policy::Empty {})),
         };
-        let result_cfg = construct_network_config(open_config);
+        let result_cfg =
+            construct_network_config(open_config).expect("unable to construct network config");
         assert_eq!(expected_cfg, result_cfg);
+    }
+
+    /// Tests that a config for an open network with a password will fail gracefully.
+    #[test]
+    fn test_construct_config_open_with_password() {
+        let malformed_open_config = PolicyNetworkConfig {
+            ssid: "some_ssid".to_string(),
+            security_type: SecurityTypeArg::None,
+            credential_type: CredentialTypeArg::Password,
+            credential: Some("".to_string()),
+        };
+        construct_network_config(malformed_open_config)
+            .expect_err("network config constructed for malformed PolicyNetworkConfig");
+    }
+
+    /// Tests that a config for a protected network without a password will fail gracefully.
+    #[test]
+    fn test_construct_config_protected_without_password() {
+        let malformed_wpa2_config = PolicyNetworkConfig {
+            ssid: "some_ssid".to_string(),
+            security_type: SecurityTypeArg::Wpa2,
+            credential_type: CredentialTypeArg::None,
+            credential: Some("".to_string()),
+        };
+        construct_network_config(malformed_wpa2_config)
+            .expect_err("network config constructed for malformed PolicyNetworkConfig");
     }
 
     /// Test that a config with a PSK will be translated correctly, including a transfer from a
@@ -1124,7 +1165,8 @@ mod tests {
             }),
             credential: Some(wlan_policy::Credential::Psk([17; 32].to_vec())),
         };
-        let result_cfg = construct_network_config(wpa_config);
+        let result_cfg =
+            construct_network_config(wpa_config).expect("unable to construct network config");
         assert_eq!(expected_cfg, result_cfg);
     }
 
@@ -1149,7 +1191,8 @@ mod tests {
                 "some_password_here".as_bytes().to_vec(),
             )),
         };
-        let result_cfg = construct_network_config(wpa_config);
+        let result_cfg =
+            construct_network_config(wpa_config).expect("unable to construct network config");
         assert_eq!(expected_cfg, result_cfg);
     }
 
