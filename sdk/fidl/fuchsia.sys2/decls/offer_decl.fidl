@@ -63,16 +63,14 @@ table OfferProtocolDecl {
     /// `parent`, `self`, or `child`.
     1: Ref source;
 
-    /// Path identifying the legacy service being offered.
-    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+    /// Name identifying the protocol being offered.
+    2: fuchsia.component.name source_name;
 
     /// Reference to the target. Must be `child` or `collection`.
     3: Ref target;
 
-    /// The path under which the capability is being offered.
-    ///
-    /// Must be an absolute path starting with /.
-    4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+    /// The name by which the capability is being offered.
+    4: fuchsia.component.name target_name;
 
     /// The dependency type this offer represents. A component which recieves a
     /// weak offer must support the offered capability being unavailable at any
@@ -88,17 +86,15 @@ table OfferDirectoryDecl {
     /// `parent`, `self`, or `child`.
     1: Ref source;
 
-    /// Path identifying the directory being offered.
-    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+    /// Name identifying the directory being offered.
+    2: fuchsia.component.name source_name;
 
     /// Reference to the target of the capability. Must be `child` or
     /// `collection`.
     3: Ref target;
 
-    /// The path under which the capability is being offered.
-    ///
-    /// Must be an absolute path starting with /.
-    4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+    /// The name by which the capability is being offered.
+    4: fuchsia.component.name target_name;
 
     /// The maximum rights that can be set by a component using this directory,
     /// required iff `source == self`.

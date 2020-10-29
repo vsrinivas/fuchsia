@@ -78,8 +78,8 @@ fn build_decl() -> fsys::ComponentDecl {
     component_decl.exposes = Some(vec![fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
         target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-        source_path: Some("fidl.test.components.Trigger".to_string()),
-        target_path: Some("fidl.test.components.Trigger".to_string()),
+        source_name: Some("fidl.test.components.Trigger".to_string()),
+        target_name: Some("fidl.test.components.Trigger".to_string()),
     })]);
     component_decl
 }

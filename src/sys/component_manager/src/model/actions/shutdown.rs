@@ -583,8 +583,8 @@ mod tests {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferServiceSource::Self_,
-                source_path: CapabilityNameOrPath::try_from("/svc/serviceParent").unwrap(),
-                target_path: CapabilityNameOrPath::try_from("/svc/serviceParent").unwrap(),
+                source_name: CapabilityNameOrPath::try_from("serviceParent").unwrap(),
+                target_name: CapabilityNameOrPath::try_from("serviceParent").unwrap(),
                 target: OfferTarget::Child("childA".to_string()),
                 dependency_type: DependencyType::Strong,
             })],
@@ -608,8 +608,8 @@ mod tests {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferServiceSource::Self_,
-                source_path: CapabilityNameOrPath::try_from("/svc/serviceParent").unwrap(),
-                target_path: CapabilityNameOrPath::try_from("/svc/serviceParent").unwrap(),
+                source_name: CapabilityNameOrPath::try_from("serviceParent").unwrap(),
+                target_name: CapabilityNameOrPath::try_from("serviceParent").unwrap(),
                 target: OfferTarget::Child("childA".to_string()),
                 dependency_type: DependencyType::WeakForMigration,
             })],
@@ -633,8 +633,8 @@ mod tests {
         let decl = ComponentDecl {
             exposes: vec![ExposeDecl::Protocol(ExposeProtocolDecl {
                 target: ExposeTarget::Parent,
-                source_path: CapabilityNameOrPath::try_from("/svc/serviceFromChild").unwrap(),
-                target_path: CapabilityNameOrPath::try_from("/svc/serviceFromChild").unwrap(),
+                source_name: CapabilityNameOrPath::try_from("serviceFromChild").unwrap(),
+                target_name: CapabilityNameOrPath::try_from("serviceFromChild").unwrap(),
                 source: ExposeSource::Child("childA".to_string()),
             })],
             children: vec![ChildDecl {
@@ -670,15 +670,15 @@ mod tests {
             offers: vec![
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/serviceParent").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceParent").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("serviceParent").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceParent").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childBOffer").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childBOffer").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
@@ -824,8 +824,8 @@ mod tests {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferServiceSource::Child("childB".to_string()),
-                source_path: CapabilityNameOrPath::try_from("/svc/childBOffer").unwrap(),
-                target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                source_name: CapabilityNameOrPath::try_from("childBOffer").unwrap(),
+                target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                 target: OfferTarget::Child("childC".to_string()),
                 dependency_type: DependencyType::Strong,
             })],
@@ -877,15 +877,15 @@ mod tests {
             offers: vec![
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/serviceParent").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceParent").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("serviceParent").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceParent").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                     dependency_type: DependencyType::WeakForMigration,
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childBOffer").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childBOffer").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                     dependency_type: DependencyType::WeakForMigration,
                 }),
@@ -921,23 +921,22 @@ mod tests {
             offers: vec![
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/serviceParent").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceParent").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("serviceParent").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceParent").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childBOffer").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childBOffer").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childBOtherOffer").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceOtherSibling")
-                        .unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childBOtherOffer").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceOtherSibling").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
@@ -981,15 +980,15 @@ mod tests {
             offers: vec![
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childBOffer").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childBOffer").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childBToC").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childBToC").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                     target: OfferTarget::Child("childC".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
@@ -1037,22 +1036,22 @@ mod tests {
             offers: vec![
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childA".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childBOffer").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childBOffer").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                     target: OfferTarget::Child("childC".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childBToC").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childBToC").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                     target: OfferTarget::Child("childC".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childC".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childCToA").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childCToA").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                     dependency_type: DependencyType::WeakForMigration,
                 }),
@@ -1101,15 +1100,15 @@ mod tests {
             offers: vec![
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childA".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childBOffer").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childBOffer").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                     target: OfferTarget::Child("childB".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childBToC").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childBToC").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                     target: OfferTarget::Child("childC".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
@@ -1179,36 +1178,36 @@ mod tests {
             offers: vec![
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childA".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childAService").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/childAService").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childAService").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("childAService").unwrap(),
                     target: OfferTarget::Child("childB".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childA".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childAService").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/childAService").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childAService").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("childAService").unwrap(),
                     target: OfferTarget::Child("childC".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childBService").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/childBService").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childBService").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("childBService").unwrap(),
                     target: OfferTarget::Child("childD".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childC".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childAService").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/childAService").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childAService").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("childAService").unwrap(),
                     target: OfferTarget::Child("childD".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("childC".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/childAService").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/childAService").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("childAService").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("childAService").unwrap(),
                     target: OfferTarget::Child("childE".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
@@ -1262,8 +1261,8 @@ mod tests {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferServiceSource::Child("childA".to_string()),
-                source_path: CapabilityNameOrPath::try_from("/svc/childBOffer").unwrap(),
-                target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                source_name: CapabilityNameOrPath::try_from("childBOffer").unwrap(),
+                target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                 target: OfferTarget::Child("childB".to_string()),
                 dependency_type: DependencyType::Strong,
             })],
@@ -1287,8 +1286,8 @@ mod tests {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferServiceSource::Child("childB".to_string()),
-                source_path: CapabilityNameOrPath::try_from("/svc/childBOffer").unwrap(),
-                target_path: CapabilityNameOrPath::try_from("/svc/serviceSibling").unwrap(),
+                source_name: CapabilityNameOrPath::try_from("childBOffer").unwrap(),
+                target_name: CapabilityNameOrPath::try_from("serviceSibling").unwrap(),
                 target: OfferTarget::Child("childA".to_string()),
                 dependency_type: DependencyType::Strong,
             })],

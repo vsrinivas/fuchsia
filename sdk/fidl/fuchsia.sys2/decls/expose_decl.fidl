@@ -49,18 +49,16 @@ table ExposeProtocolDecl {
     /// be `self` or `child`.
     1: Ref source;
 
-    /// Path identifying the protocol, by which it was presented to this
+    /// Name identifying the protocol, by which it was presented to this
     /// component.
-    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+    2: fuchsia.component.name source_name;
 
     /// The destination to which the protocol is exposed: either the component's
     /// realm or the framework.
     3: Ref target;
 
-    /// The path by which the capability is being exposed.
-    ///
-    /// Must be an absolute path starting with /.
-    4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+    /// The name by which the capability is being exposed.
+    4: fuchsia.component.name target_name;
 };
 
 /// Declares a directory exposed to a component's containing realm, such as a
@@ -70,18 +68,16 @@ table ExposeDirectoryDecl {
     /// be `self` or `child`.
     1: Ref source;
 
-    /// Path identifying the directory, by which it was presented to this
+    /// Name identifying the directory, by which it was presented to this
     /// component.
-    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+    2: fuchsia.component.name source_name;
 
     /// The destination to which the directory is exposed: either the component's realm or the
     /// framework.
     3: Ref target;
 
-    /// The path by which the capability is being exposed.
-    ///
-    /// Must be an absolute path starting with /.
-    4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+    /// The name by which the capability is being exposed.
+    4: fuchsia.component.name target_name;
 
     /// The maximum rights that can be set by a component using this directory,
     /// required iff `source == self`.

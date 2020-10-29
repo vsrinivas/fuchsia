@@ -186,20 +186,20 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                 source_name: Some(n.clone().into()),
                 target_path: Some(target_path.into()),
             }));
-        } else if let Some(p) = use_.protocol() {
+        } else if let Some(n) = use_.protocol() {
             let source = extract_use_source(use_)?;
             let target_ids = all_target_capability_ids(use_, use_, cml::RoutingClauseType::Use)
                 .ok_or_else(|| Error::internal("no capability"))?;
-            let source_ids = p.to_vec();
+            let source_ids = n.to_vec();
             for (source_id, target_id) in source_ids.into_iter().zip(target_ids.into_iter()) {
                 let target_path = target_id.extract_path()?;
                 out_uses.push(fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                     source: Some(clone_fsys_ref(&source)?),
-                    source_path: Some(source_id.clone().into()),
+                    source_name: Some(source_id.clone().into()),
                     target_path: Some(target_path.into()),
                 }));
             }
-        } else if let Some(p) = use_.directory() {
+        } else if let Some(n) = use_.directory() {
             let source = extract_use_source(use_)?;
             let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
                 .extract_path()?;
@@ -207,7 +207,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
             let subdir = extract_use_subdir(use_);
             out_uses.push(fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
                 source: Some(source),
-                source_path: Some(p.clone().into()),
+                source_name: Some(n.clone().into()),
                 target_path: Some(target_path.into()),
                 rights: Some(rights),
                 subdir: subdir.map(|s| s.into()),
@@ -281,21 +281,21 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<fsys::ExposeDecl
                     target: Some(clone_fsys_ref(&target)?),
                 }))
             }
-        } else if let Some(p) = expose.protocol() {
+        } else if let Some(n) = expose.protocol() {
             let source = extract_single_expose_source(expose)?;
-            let source_ids: Vec<_> = p.to_vec();
+            let source_ids: Vec<_> = n.to_vec();
             let target_ids =
                 all_target_capability_ids(expose, expose, cml::RoutingClauseType::Expose)
                     .ok_or_else(|| Error::internal("no capability"))?;
             for (source_id, target_id) in source_ids.into_iter().zip(target_ids.into_iter()) {
                 out_exposes.push(fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
                     source: Some(clone_fsys_ref(&source)?),
-                    source_path: Some(source_id.clone().into()),
-                    target_path: Some(target_id.clone().into()),
+                    source_name: Some(source_id.clone().into()),
+                    target_name: Some(target_id.into()),
                     target: Some(clone_fsys_ref(&target)?),
                 }))
             }
-        } else if let Some(p) = expose.directory() {
+        } else if let Some(n) = expose.directory() {
             let source = extract_single_expose_source(expose)?;
             let target_id =
                 one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?;
@@ -303,8 +303,8 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<fsys::ExposeDecl
             let subdir = extract_expose_subdir(expose);
             out_exposes.push(fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                 source: Some(clone_fsys_ref(&source)?),
-                source_path: Some(p.clone().into()),
-                target_path: Some(target_id.clone().into()),
+                source_name: Some(n.clone().into()),
+                target_name: Some(target_id.into()),
                 target: Some(clone_fsys_ref(&target)?),
                 rights: rights,
                 subdir: subdir.map(|s| s.into()),
@@ -360,15 +360,15 @@ fn translate_offer(
                     }));
                 }
             }
-        } else if let Some(p) = offer.protocol() {
+        } else if let Some(n) = offer.protocol() {
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            let source_ids = p.to_vec();
+            let source_ids = n.to_vec();
             for (target, target_id) in targets {
-                // When multiple source paths are provided, there is no way to alias each one, so
-                // source_path == target_path.
-                // When one source path is provided, source_path may be aliased to a different
-                // target_path, so we source_ids[0] to derive the source_path.
+                // When multiple source names are provided, there is no way to alias each one, so
+                // source_name == target_name.
+                // When one source name is provided, source_name may be aliased to a different
+                // target_name, so we source_ids[0] to derive the source_name.
                 //
                 // TODO: This logic could be simplified to use iter::zip() if
                 // extract_all_targets_for_each_child returned separate vectors for targets and
@@ -380,23 +380,23 @@ fn translate_offer(
                 };
                 out_offers.push(fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
                     source: Some(clone_fsys_ref(&source)?),
-                    source_path: Some(source_id.clone().into()),
+                    source_name: Some(source_id.clone().into()),
                     target: Some(clone_fsys_ref(&target)?),
-                    target_path: Some(target_id.clone().into()),
+                    target_name: Some(target_id.into()),
                     dependency_type: Some(
                         offer.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
                     ),
                 }));
             }
-        } else if let Some(p) = offer.directory() {
+        } else if let Some(n) = offer.directory() {
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
                 out_offers.push(fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
-                    source_path: Some(p.clone().into()),
+                    source_name: Some(n.clone().into()),
                     source: Some(clone_fsys_ref(&source)?),
                     target: Some(clone_fsys_ref(&target)?),
-                    target_path: Some(target_id.into()),
+                    target_name: Some(target_id.into()),
                     rights: extract_offer_rights(offer)?,
                     subdir: extract_offer_subdir(offer).map(|s| s.into()),
                     dependency_type: Some(
@@ -1055,21 +1055,21 @@ mod tests {
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("LegacyCoolFonts".to_string()),
+                            source_name: Some("LegacyCoolFonts".to_string()),
                             target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
                         }
                     ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                            source_path: Some("fuchsia.sys2.LegacyRealm".to_string()),
+                            source_name: Some("fuchsia.sys2.LegacyRealm".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.LegacyRealm".to_string()),
                         }
                     ),
                     fsys::UseDecl::Directory (
                         fsys::UseDirectoryDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("assets".to_string()),
+                            source_name: Some("assets".to_string()),
                             target_path: Some("/data/assets".to_string()),
                             rights: Some(fio2::Operations::ReadBytes),
                             subdir: None,
@@ -1078,7 +1078,7 @@ mod tests {
                     fsys::UseDecl::Directory (
                         fsys::UseDirectoryDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("config".to_string()),
+                            source_name: Some("config".to_string()),
                             target_path: Some("/data/config".to_string()),
                             rights: Some(fio2::Operations::ReadBytes),
                             subdir: Some("fonts".to_string()),
@@ -1244,33 +1244,33 @@ mod tests {
                                 name: "logger".to_string(),
                                 collection: None,
                             })),
-                            source_path: Some("fuchsia.logger.Log".to_string()),
+                            source_name: Some("fuchsia.logger.Log".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            target_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                         }
                     ),
                     fsys::ExposeDecl::Protocol (
                         fsys::ExposeProtocolDecl {
                             source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                            source_path: Some("A".to_string()),
+                            source_name: Some("A".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            target_path: Some("A".to_string()),
+                            target_name: Some("A".to_string()),
                         }
                     ),
                     fsys::ExposeDecl::Protocol (
                         fsys::ExposeProtocolDecl {
                             source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                            source_path: Some("B".to_string()),
+                            source_name: Some("B".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            target_path: Some("B".to_string()),
+                            target_name: Some("B".to_string()),
                         }
                     ),
                     fsys::ExposeDecl::Directory (
                         fsys::ExposeDirectoryDecl {
                             source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                            source_path: Some("blob".to_string()),
+                            source_name: Some("blob".to_string()),
                             target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                            target_path: Some("blob".to_string()),
+                            target_name: Some("blob".to_string()),
                             rights: Some(
                                 fio2::Operations::Connect | fio2::Operations::Enumerate |
                                 fio2::Operations::Traverse | fio2::Operations::ReadBytes |
@@ -1282,9 +1282,9 @@ mod tests {
                     fsys::ExposeDecl::Directory (
                         fsys::ExposeDirectoryDecl {
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                            source_path: Some("hub".to_string()),
+                            source_name: Some("hub".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            target_path: Some("hub".to_string()),
+                            target_name: Some("hub".to_string()),
                             rights: None,
                             subdir: None,
                         }
@@ -1564,12 +1564,12 @@ mod tests {
                                 name: "logger".to_string(),
                                 collection: None,
                             })),
-                            source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            source_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             target: Some(fsys::Ref::Child(fsys::ChildRef {
                                 name: "netstack".to_string(),
                                 collection: None,
                             })),
-                            target_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             dependency_type: Some(fsys::DependencyType::WeakForMigration),
                         }
                     ),
@@ -1579,45 +1579,45 @@ mod tests {
                                 name: "logger".to_string(),
                                 collection: None,
                             })),
-                            source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            source_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             target: Some(fsys::Ref::Collection(fsys::CollectionRef {
                                 name: "modular".to_string(),
                             })),
-                            target_path: Some("fuchsia.logger.LegacySysLog".to_string()),
+                            target_name: Some("fuchsia.logger.LegacySysLog".to_string()),
                             dependency_type: Some(fsys::DependencyType::Strong),
                         }
                     ),
                     fsys::OfferDecl::Protocol (
                         fsys::OfferProtocolDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("fuchsia.setui.SetUiService".to_string()),
+                            source_name: Some("fuchsia.setui.SetUiService".to_string()),
                             target: Some(fsys::Ref::Collection(fsys::CollectionRef {
                                 name: "modular".to_string(),
                             })),
-                            target_path: Some("fuchsia.setui.SetUiService".to_string()),
+                            target_name: Some("fuchsia.setui.SetUiService".to_string()),
                             dependency_type: Some(fsys::DependencyType::Strong),
                         }
                     ),
                     fsys::OfferDecl::Protocol (
                         fsys::OfferProtocolDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("fuchsia.wlan.service.Wlan".to_string()),
+                            source_name: Some("fuchsia.wlan.service.Wlan".to_string()),
                             target: Some(fsys::Ref::Collection(fsys::CollectionRef {
                                 name: "modular".to_string(),
                             })),
-                            target_path: Some("fuchsia.wlan.service.Wlan".to_string()),
+                            target_name: Some("fuchsia.wlan.service.Wlan".to_string()),
                             dependency_type: Some(fsys::DependencyType::Strong),
                         }
                     ),
                     fsys::OfferDecl::Directory (
                         fsys::OfferDirectoryDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("assets".to_string()),
+                            source_name: Some("assets".to_string()),
                             target: Some(fsys::Ref::Child(fsys::ChildRef {
                                 name: "netstack".to_string(),
                                 collection: None,
                             })),
-                            target_path: Some("assets".to_string()),
+                            target_name: Some("assets".to_string()),
                             rights: None,
                             subdir: None,
                             dependency_type: Some(fsys::DependencyType::WeakForMigration),
@@ -1626,11 +1626,11 @@ mod tests {
                     fsys::OfferDecl::Directory (
                         fsys::OfferDirectoryDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("data".to_string()),
+                            source_name: Some("data".to_string()),
                             target: Some(fsys::Ref::Collection(fsys::CollectionRef {
                                 name: "modular".to_string(),
                             })),
-                            target_path: Some("assets".to_string()),
+                            target_name: Some("assets".to_string()),
                             rights: None,
                             subdir: Some("index/file".to_string()),
                             dependency_type: Some(fsys::DependencyType::Strong),
@@ -1639,11 +1639,11 @@ mod tests {
                     fsys::OfferDecl::Directory (
                         fsys::OfferDirectoryDecl {
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                            source_path: Some("hub".to_string()),
+                            source_name: Some("hub".to_string()),
                             target: Some(fsys::Ref::Collection(fsys::CollectionRef {
                                 name: "modular".to_string(),
                             })),
-                            target_path: Some("hub".to_string()),
+                            target_name: Some("hub".to_string()),
                             rights: None,
                             subdir: None,
                             dependency_type: Some(fsys::DependencyType::Strong),
@@ -1770,7 +1770,7 @@ mod tests {
                                 name: "logger".to_string(),
                                 collection: None,
                             })),
-                            source_path: Some("minfs".to_string()),
+                            backing_dir: Some("minfs".to_string()),
                             subdir: None,
                         }
                     )
@@ -2010,7 +2010,7 @@ mod tests {
                                 name: "minfs".to_string(),
                                 collection: None,
                             })),
-                            source_path: Some("storage".to_string()),
+                            backing_dir: Some("storage".to_string()),
                             subdir: None,
                         }
                     ),
@@ -2021,7 +2021,7 @@ mod tests {
                                 name: "minfs".to_string(),
                                 collection: None,
                             })),
-                            source_path: Some("storage2".to_string()),
+                            backing_dir: Some("storage2".to_string()),
                             subdir: None,
                         }
                     ),
@@ -2307,21 +2307,21 @@ mod tests {
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("LegacyCoolFonts".to_string()),
+                            source_name: Some("LegacyCoolFonts".to_string()),
                             target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
                         }
                     ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("ReallyGoodFonts".to_string()),
+                            source_name: Some("ReallyGoodFonts".to_string()),
                             target_path: Some("/svc/ReallyGoodFonts".to_string()),
                         }
                     ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_path: Some("IWouldNeverUseTheseFonts".to_string()),
+                            source_name: Some("IWouldNeverUseTheseFonts".to_string()),
                             target_path: Some("/svc/IWouldNeverUseTheseFonts".to_string()),
                         }
                     ),
@@ -2335,9 +2335,9 @@ mod tests {
                     fsys::ExposeDecl::Directory (
                         fsys::ExposeDirectoryDecl {
                             source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                            source_path: Some("blobfs".to_string()),
+                            source_name: Some("blobfs".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            target_path: Some("blobfs".to_string()),
+                            target_name: Some("blobfs".to_string()),
                             rights: Some(
                                 fio2::Operations::Connect | fio2::Operations::Enumerate |
                                 fio2::Operations::Traverse | fio2::Operations::ReadBytes |
@@ -2381,12 +2381,12 @@ mod tests {
                                 name: "logger".to_string(),
                                 collection: None,
                             })),
-                            source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            source_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             target: Some(fsys::Ref::Child(fsys::ChildRef {
                                 name: "netstack".to_string(),
                                 collection: None,
                             })),
-                            target_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             dependency_type: Some(fsys::DependencyType::WeakForMigration),
                         }
                     ),
@@ -2396,11 +2396,11 @@ mod tests {
                                 name: "logger".to_string(),
                                 collection: None,
                             })),
-                            source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            source_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             target: Some(fsys::Ref::Collection(fsys::CollectionRef {
                                 name: "modular".to_string(),
                             })),
-                            target_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             dependency_type: Some(fsys::DependencyType::WeakForMigration),
                         }
                     ),

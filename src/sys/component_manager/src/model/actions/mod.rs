@@ -409,7 +409,7 @@ pub mod tests {
         cm_rust::{
             CapabilityNameOrPath, CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl,
             ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl, OfferServiceSource,
-            OfferTarget, UseDecl, UseProtocolDecl, UseSource,
+            OfferTarget, ProtocolDecl, UseDecl, UseProtocolDecl, UseSource,
         },
         futures::{channel::mpsc, SinkExt, StreamExt},
         std::{convert::TryFrom, sync::Weak, task::Context},
@@ -918,15 +918,15 @@ pub mod tests {
                     .add_eager_child("e")
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target: OfferTarget::Child("e".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
@@ -937,7 +937,7 @@ pub mod tests {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
                     .build(),
@@ -945,10 +945,14 @@ pub mod tests {
             (
                 "d",
                 ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceD".into(),
+                        source_path: "/svc/serviceD".parse().unwrap(),
+                    })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target: ExposeTarget::Parent,
                     }))
                     .build(),
@@ -958,7 +962,7 @@ pub mod tests {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
                     .build(),
@@ -1056,22 +1060,22 @@ pub mod tests {
                     .add_eager_child("f")
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target: OfferTarget::Child("e".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("e".to_string()),
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceE").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceE").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceE").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceE").unwrap(),
                         target: OfferTarget::Child("f".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
@@ -1082,7 +1086,7 @@ pub mod tests {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
                     .build(),
@@ -1090,10 +1094,14 @@ pub mod tests {
             (
                 "d",
                 ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceD".into(),
+                        source_path: "/svc/serviceD".parse().unwrap(),
+                    })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target: ExposeTarget::Parent,
                     }))
                     .build(),
@@ -1101,15 +1109,19 @@ pub mod tests {
             (
                 "e",
                 ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceE".into(),
+                        source_path: "/svc/serviceE".parse().unwrap(),
+                    })
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceE").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceE").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceE").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceE").unwrap(),
                         target: ExposeTarget::Parent,
                     }))
                     .build(),
@@ -1119,7 +1131,7 @@ pub mod tests {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceE").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                     }))
                     .build(),
@@ -1246,29 +1258,29 @@ pub mod tests {
                     .add_eager_child("f")
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target: OfferTarget::Child("e".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target: OfferTarget::Child("f".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("e".to_string()),
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceE").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceE").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceE").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceE").unwrap(),
                         target: OfferTarget::Child("f".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
@@ -1279,7 +1291,7 @@ pub mod tests {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
                     .build(),
@@ -1287,10 +1299,14 @@ pub mod tests {
             (
                 "d",
                 ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceD".into(),
+                        source_path: "/svc/serviceD".parse().unwrap(),
+                    })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target: ExposeTarget::Parent,
                     }))
                     .build(),
@@ -1298,15 +1314,19 @@ pub mod tests {
             (
                 "e",
                 ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceE".into(),
+                        source_path: "/svc/serviceE".parse().unwrap(),
+                    })
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
-                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceE").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                     }))
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceE").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceE").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceE").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceE").unwrap(),
                         target: ExposeTarget::Parent,
                     }))
                     .build(),
@@ -1316,12 +1336,12 @@ pub mod tests {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceE").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceD").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
                     .build(),
@@ -1439,8 +1459,8 @@ pub mod tests {
                     .add_eager_child("d")
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("c".to_string()),
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceC").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceC").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceC").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceC").unwrap(),
                         target: OfferTarget::Child("d".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
@@ -1449,10 +1469,14 @@ pub mod tests {
             (
                 "c",
                 ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceC".into(),
+                        source_path: "/svc/serviceC".parse().unwrap(),
+                    })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceC").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/serviceC").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceC").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("serviceC").unwrap(),
                         target: ExposeTarget::Parent,
                     }))
                     .build(),
@@ -1462,7 +1486,7 @@ pub mod tests {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
-                        source_path: CapabilityNameOrPath::try_from("/svc/serviceC").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("serviceC").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                     }))
                     .build(),

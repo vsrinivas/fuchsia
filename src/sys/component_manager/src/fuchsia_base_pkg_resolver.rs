@@ -307,9 +307,9 @@ mod tests {
                     rights: *rights::READ_RIGHTS,
                 })
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source_path: "pkgfs".try_into().unwrap(),
+                    source_name: "pkgfs".try_into().unwrap(),
                     source: ExposeSource::Self_,
-                    target_path: "pkgfs".try_into().unwrap(),
+                    target_name: "pkgfs".try_into().unwrap(),
                     target: ExposeTarget::Parent,
                     rights: None,
                     subdir: None,
@@ -375,7 +375,7 @@ mod tests {
                 fsys::UseDecl::Runner(fsys::UseRunnerDecl { source_name: Some("elf".to_string()) }),
                 fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                     source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                    source_path: Some("fuchsia.logger.LogSink".to_string()),
+                    source_name: Some("fuchsia.logger.LogSink".to_string()),
                     target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
                 }),
             ]),

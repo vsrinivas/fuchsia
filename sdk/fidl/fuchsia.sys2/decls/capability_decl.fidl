@@ -23,7 +23,7 @@ flexible union CapabilityDecl {
 /// https://fuchsia.dev/fuchsia-src/glossary#service
 table ServiceDecl {
     /// The name of this service.
-    1: string:fuchsia.component.MAX_NAME_LENGTH name;
+    1: fuchsia.component.name name;
 
     /// The path to the service in the component's outgoing directory.
     2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
@@ -35,7 +35,7 @@ table ServiceDecl {
 /// https://fuchsia.dev/fuchsia-src/glossary#protocol
 table ProtocolDecl {
     /// The name of this protocol.
-    1: string:fuchsia.component.MAX_NAME_LENGTH name;
+    1: fuchsia.component.name name;
 
     /// The path to the protocol in the component's outgoing directory.
     2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
@@ -47,7 +47,7 @@ table ProtocolDecl {
 /// https://fuchsia.dev/fuchsia-src/glossary#directory
 table DirectoryDecl {
     /// The name of this directory.
-    1: string:fuchsia.component.MAX_NAME_LENGTH name;
+    1: fuchsia.component.name name;
 
     /// The path to the directory in the component's outgoing directory.
     2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
@@ -62,14 +62,13 @@ table StorageDecl {
     /// The name of this storage
     1: fuchsia.component.name name;
 
-    /// The provider of the underlying directory capability relative to the
+    /// The provider of the backing directory capability relative to the
     /// component itself. Must be `parent`, `self`, or `child`.
     2: Ref source;
 
-    /// The incoming path to the directory capability. If "source == SELF", this
-    /// is a path in the component's outgoing directory. Otherwise, it is the
-    /// path by which the capability was presented to the component.
-    3: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+    /// The name of the directory capability from `source` that backs the
+    /// storage.
+    3: fuchsia.component.name backing_dir;
 
     /// The subdirectory of the source directory that will back the storage
     4: string:fuchsia.component.MAX_PATH_LENGTH subdir;

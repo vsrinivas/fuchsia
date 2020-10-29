@@ -173,10 +173,10 @@ impl InternalCapability {
                 Ok(InternalCapability::Service(s.source_name.clone()))
             }
             UseDecl::Protocol(s) if s.source == UseSource::Parent => {
-                Ok(InternalCapability::Protocol(s.source_path.clone()))
+                Ok(InternalCapability::Protocol(s.source_name.clone()))
             }
             UseDecl::Directory(d) if d.source == UseSource::Parent => {
-                Ok(InternalCapability::Directory(d.source_path.clone()))
+                Ok(InternalCapability::Directory(d.source_name.clone()))
             }
             UseDecl::Event(e) if e.source == UseSource::Parent => {
                 Ok(InternalCapability::Event(e.source_name.clone()))
@@ -189,10 +189,10 @@ impl InternalCapability {
     pub fn builtin_from_offer_decl(decl: &OfferDecl) -> Result<Self, Error> {
         match decl {
             OfferDecl::Protocol(s) if s.source == OfferServiceSource::Parent => {
-                Ok(InternalCapability::Protocol(s.source_path.clone()))
+                Ok(InternalCapability::Protocol(s.source_name.clone()))
             }
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Parent => {
-                Ok(InternalCapability::Directory(d.source_path.clone()))
+                Ok(InternalCapability::Directory(d.source_name.clone()))
             }
             OfferDecl::Runner(s) if s.source == OfferRunnerSource::Parent => {
                 Ok(InternalCapability::Runner(s.source_name.clone()))
@@ -211,7 +211,7 @@ impl InternalCapability {
 
     pub fn builtin_from_storage_decl(decl: &StorageDecl) -> Result<Self, Error> {
         if decl.source == StorageDirectorySource::Parent {
-            Ok(InternalCapability::Directory(decl.source_path.clone()))
+            Ok(InternalCapability::Directory(decl.backing_dir.clone()))
         } else {
             Err(Error::InvalidBuiltinCapability {})
         }
@@ -223,10 +223,10 @@ impl InternalCapability {
                 Ok(InternalCapability::Service(s.source_name.clone()))
             }
             UseDecl::Protocol(s) if s.source == UseSource::Framework => {
-                Ok(InternalCapability::Protocol(s.source_path.clone()))
+                Ok(InternalCapability::Protocol(s.source_name.clone()))
             }
             UseDecl::Directory(d) if d.source == UseSource::Framework => {
-                Ok(InternalCapability::Directory(d.source_path.clone()))
+                Ok(InternalCapability::Directory(d.source_name.clone()))
             }
             UseDecl::Event(e) if e.source == UseSource::Framework => {
                 Ok(InternalCapability::Event(e.source_name.clone()))
@@ -240,10 +240,10 @@ impl InternalCapability {
     pub fn framework_from_offer_decl(decl: &OfferDecl) -> Result<Self, Error> {
         match decl {
             OfferDecl::Protocol(s) if s.source == OfferServiceSource::Parent => {
-                Ok(InternalCapability::Protocol(s.source_path.clone()))
+                Ok(InternalCapability::Protocol(s.source_name.clone()))
             }
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Framework => {
-                Ok(InternalCapability::Directory(d.source_path.clone()))
+                Ok(InternalCapability::Directory(d.source_name.clone()))
             }
             OfferDecl::Event(e) if e.source == OfferEventSource::Framework => {
                 Ok(InternalCapability::Event(e.source_name.clone()))
@@ -257,10 +257,10 @@ impl InternalCapability {
     pub fn framework_from_expose_decl(decl: &ExposeDecl) -> Result<Self, Error> {
         match decl {
             ExposeDecl::Protocol(s) if s.source == ExposeSource::Framework => {
-                Ok(InternalCapability::Protocol(s.source_path.clone()))
+                Ok(InternalCapability::Protocol(s.source_name.clone()))
             }
             ExposeDecl::Directory(d) if d.source == ExposeSource::Framework => {
-                Ok(InternalCapability::Directory(d.source_path.clone()))
+                Ok(InternalCapability::Directory(d.source_name.clone()))
             }
             _ => {
                 return Err(Error::InvalidFrameworkCapability {});
@@ -399,8 +399,8 @@ impl ComponentCapability {
     pub fn source_name_or_path(&self) -> Option<&CapabilityNameOrPath> {
         match self {
             ComponentCapability::Use(use_) => match use_ {
-                UseDecl::Protocol(UseProtocolDecl { source_path, .. }) => Some(source_path),
-                UseDecl::Directory(UseDirectoryDecl { source_path, .. }) => Some(source_path),
+                UseDecl::Protocol(UseProtocolDecl { source_name, .. }) => Some(source_name),
+                UseDecl::Directory(UseDirectoryDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
             ComponentCapability::Environment(env_cap) => match env_cap {
@@ -408,8 +408,8 @@ impl ComponentCapability {
                 EnvironmentCapability::Resolver { .. } => None,
             },
             ComponentCapability::Expose(expose) => match expose {
-                ExposeDecl::Protocol(ExposeProtocolDecl { source_path, .. }) => Some(source_path),
-                ExposeDecl::Directory(ExposeDirectoryDecl { source_path, .. }) => Some(source_path),
+                ExposeDecl::Protocol(ExposeProtocolDecl { source_name, .. }) => Some(source_name),
+                ExposeDecl::Directory(ExposeDirectoryDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
             ComponentCapability::UsedExpose(expose) => {
@@ -418,21 +418,21 @@ impl ComponentCapability {
                 // Effectively, it's as if the UsedExposed were a UseDecl with both the source and
                 // target path equal to `target_path`.
                 match expose {
-                    ExposeDecl::Protocol(ExposeProtocolDecl { target_path, .. }) => {
-                        Some(target_path)
+                    ExposeDecl::Protocol(ExposeProtocolDecl { target_name, .. }) => {
+                        Some(target_name)
                     }
-                    ExposeDecl::Directory(ExposeDirectoryDecl { target_path, .. }) => {
-                        Some(target_path)
+                    ExposeDecl::Directory(ExposeDirectoryDecl { target_name, .. }) => {
+                        Some(target_name)
                     }
                     _ => None,
                 }
             }
             ComponentCapability::Offer(offer) => match offer {
-                OfferDecl::Protocol(OfferProtocolDecl { source_path, .. }) => Some(source_path),
-                OfferDecl::Directory(OfferDirectoryDecl { source_path, .. }) => Some(source_path),
+                OfferDecl::Protocol(OfferProtocolDecl { source_name, .. }) => Some(source_name),
+                OfferDecl::Directory(OfferDirectoryDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
-            ComponentCapability::Storage(storage) => Some(&storage.source_path),
+            ComponentCapability::Storage(storage) => Some(&storage.backing_dir),
             ComponentCapability::Protocol(_) => None,
             ComponentCapability::Directory(_) => None,
             ComponentCapability::Runner(_) => None,
@@ -511,56 +511,56 @@ impl ComponentCapability {
                 ComponentCapability::Offer(OfferDecl::Protocol(parent_offer)),
                 ExposeDecl::Protocol(expose),
             ) => {
-                if let CapabilityNameOrPath::Path(_) = parent_offer.source_path {
+                if let CapabilityNameOrPath::Path(_) = parent_offer.source_name {
                     return false;
                 }
-                parent_offer.source_path == expose.target_path
+                parent_offer.source_name == expose.target_name
             }
             (
                 ComponentCapability::Expose(ExposeDecl::Protocol(parent_expose)),
                 ExposeDecl::Protocol(expose),
             ) => {
-                if let CapabilityNameOrPath::Path(_) = parent_expose.source_path {
+                if let CapabilityNameOrPath::Path(_) = parent_expose.source_name {
                     return false;
                 }
-                parent_expose.source_path == expose.target_path
+                parent_expose.source_name == expose.target_name
             }
             (
                 ComponentCapability::UsedExpose(ExposeDecl::Protocol(used_expose)),
                 ExposeDecl::Protocol(expose),
             ) => {
-                if let CapabilityNameOrPath::Path(_) = used_expose.source_path {
+                if let CapabilityNameOrPath::Path(_) = used_expose.source_name {
                     return false;
                 }
-                used_expose.target_path == expose.target_path
+                used_expose.target_name == expose.target_name
             }
             // Directory exposed to me that matches a directory `expose` or `offer`.
             (
                 ComponentCapability::Offer(OfferDecl::Directory(parent_offer)),
                 ExposeDecl::Directory(expose),
             ) => {
-                if let CapabilityNameOrPath::Path(_) = parent_offer.source_path {
+                if let CapabilityNameOrPath::Path(_) = parent_offer.source_name {
                     return false;
                 }
-                parent_offer.source_path == expose.target_path
+                parent_offer.source_name == expose.target_name
             }
             (
                 ComponentCapability::Expose(ExposeDecl::Directory(parent_expose)),
                 ExposeDecl::Directory(expose),
             ) => {
-                if let CapabilityNameOrPath::Path(_) = parent_expose.source_path {
+                if let CapabilityNameOrPath::Path(_) = parent_expose.source_name {
                     return false;
                 }
-                parent_expose.source_path == expose.target_path
+                parent_expose.source_name == expose.target_name
             }
             (
                 ComponentCapability::UsedExpose(ExposeDecl::Directory(used_expose)),
                 ExposeDecl::Directory(expose),
             ) => {
-                if let CapabilityNameOrPath::Path(_) = used_expose.source_path {
+                if let CapabilityNameOrPath::Path(_) = used_expose.source_name {
                     return false;
                 }
-                used_expose.target_path == expose.target_path
+                used_expose.target_name == expose.target_name
             }
             // Runner exposed to me that has a matching `expose` or `offer`.
             (
@@ -595,10 +595,10 @@ impl ComponentCapability {
             ) => source_name == &expose.target_name,
             // Directory exposed to me that matches a `storage` declaration which consumes it.
             (ComponentCapability::Storage(parent_storage), ExposeDecl::Directory(expose)) => {
-                if let CapabilityNameOrPath::Path(_) = parent_storage.source_path {
+                if let CapabilityNameOrPath::Path(_) = parent_storage.backing_dir {
                     return false;
                 }
-                parent_storage.source_path == expose.target_path
+                parent_storage.backing_dir == expose.target_name
             }
             _ => false,
         })
@@ -643,18 +643,18 @@ impl ComponentCapability {
                     OfferDecl::Protocol(offer),
                 ) => Self::is_offer_protocol_or_directory_match(
                     child_moniker,
-                    &child_use.source_path,
+                    &child_use.source_name,
                     &offer.target,
-                    &offer.target_path,
+                    &offer.target_name,
                 ),
                 (
                     ComponentCapability::Offer(OfferDecl::Protocol(child_offer)),
                     OfferDecl::Protocol(offer),
                 ) => Self::is_offer_protocol_or_directory_match(
                     child_moniker,
-                    &child_offer.source_path,
+                    &child_offer.source_name,
                     &offer.target,
-                    &offer.target_path,
+                    &offer.target_name,
                 ),
                 // Directory offered to me that matches a directory `use` or `offer` declaration.
                 (
@@ -662,26 +662,26 @@ impl ComponentCapability {
                     OfferDecl::Directory(offer),
                 ) => Self::is_offer_protocol_or_directory_match(
                     child_moniker,
-                    &child_use.source_path,
+                    &child_use.source_name,
                     &offer.target,
-                    &offer.target_path,
+                    &offer.target_name,
                 ),
                 (
                     ComponentCapability::Offer(OfferDecl::Directory(child_offer)),
                     OfferDecl::Directory(offer),
                 ) => Self::is_offer_protocol_or_directory_match(
                     child_moniker,
-                    &child_offer.source_path,
+                    &child_offer.source_name,
                     &offer.target,
-                    &offer.target_path,
+                    &offer.target_name,
                 ),
                 // Directory offered to me that matches a `storage` declaration which consumes it.
                 (ComponentCapability::Storage(child_storage), OfferDecl::Directory(offer)) => {
                     Self::is_offer_protocol_or_directory_match(
                         child_moniker,
-                        &child_storage.source_path,
+                        &child_storage.backing_dir,
                         &offer.target,
-                        &offer.target_path,
+                        &offer.target_name,
                     )
                 }
                 // Storage offered to me.
@@ -788,33 +788,33 @@ impl ComponentCapability {
             (
                 ComponentCapability::Use(UseDecl::Protocol(child_use)),
                 CapabilityDecl::Protocol(p),
-            ) => match &child_use.source_path {
+            ) => match &child_use.source_name {
                 CapabilityNameOrPath::Name(n) => n == &p.name,
                 _ => false,
             },
             (
                 ComponentCapability::Offer(OfferDecl::Protocol(child_offer)),
                 CapabilityDecl::Protocol(p),
-            ) => match &child_offer.source_path {
+            ) => match &child_offer.source_name {
                 CapabilityNameOrPath::Name(n) => n == &p.name,
                 _ => false,
             },
             (
                 ComponentCapability::Use(UseDecl::Directory(child_use)),
                 CapabilityDecl::Directory(d),
-            ) => match &child_use.source_path {
+            ) => match &child_use.source_name {
                 CapabilityNameOrPath::Name(n) => n == &d.name,
                 _ => false,
             },
             (
                 ComponentCapability::Offer(OfferDecl::Directory(child_offer)),
                 CapabilityDecl::Directory(d),
-            ) => match &child_offer.source_path {
+            ) => match &child_offer.source_name {
                 CapabilityNameOrPath::Name(n) => n == &d.name,
                 _ => false,
             },
             (ComponentCapability::Storage(child_storage), CapabilityDecl::Directory(d)) => {
-                match &child_storage.source_path {
+                match &child_storage.backing_dir {
                     CapabilityNameOrPath::Name(n) => n == &d.name,
                     _ => false,
                 }
@@ -1015,7 +1015,7 @@ mod tests {
         let capability = ComponentCapability::Storage(StorageDecl {
             name: "".to_string(),
             source: StorageDirectorySource::Parent,
-            source_path: CapabilityNameOrPath::Path(CapabilityPath {
+            backing_dir: CapabilityNameOrPath::Path(CapabilityPath {
                 dirname: "".to_string(),
                 basename: "".to_string(),
             }),
@@ -1186,7 +1186,7 @@ mod tests {
         let capability = ComponentCapability::Storage(StorageDecl {
             name: "".to_string(),
             source: StorageDirectorySource::Parent,
-            source_path: CapabilityNameOrPath::Path(CapabilityPath {
+            backing_dir: CapabilityNameOrPath::Path(CapabilityPath {
                 dirname: "".to_string(),
                 basename: "".to_string(),
             }),

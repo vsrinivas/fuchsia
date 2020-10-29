@@ -145,12 +145,12 @@ impl CapabilityReadyNotifier {
         for expose_decl in matching_exposes {
             let event = match expose_decl {
                 ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source_path,
-                    target_path,
+                    source_name,
+                    target_name,
                     rights,
                     ..
                 }) => {
-                    let (source_path, rights) = match source_path {
+                    let (source_path, rights) = match source_name {
                         CapabilityNameOrPath::Path(source_path) => (source_path, *rights),
                         CapabilityNameOrPath::Name(source_name) => {
                             if let Some(directory_decl) = decl.find_directory_source(source_name) {
@@ -166,12 +166,12 @@ impl CapabilityReadyNotifier {
                         fio::MODE_TYPE_DIRECTORY,
                         Rights::from(rights.unwrap_or(*READ_RIGHTS)),
                         source_path,
-                        target_path,
+                        target_name,
                     )
                     .await
                 }
-                ExposeDecl::Protocol(ExposeProtocolDecl { source_path, target_path, .. }) => {
-                    let source_path = match source_path {
+                ExposeDecl::Protocol(ExposeProtocolDecl { source_name, target_name, .. }) => {
+                    let source_path = match source_name {
                         CapabilityNameOrPath::Path(source_path) => &source_path,
                         CapabilityNameOrPath::Name(source_name) => {
                             if let Some(protocol_decl) = decl.find_protocol_source(source_name) {
@@ -187,7 +187,7 @@ impl CapabilityReadyNotifier {
                         fio::MODE_TYPE_SERVICE,
                         Rights::from(*WRITE_RIGHTS),
                         source_path,
-                        target_path,
+                        target_name,
                     )
                     .await
                 }
@@ -266,13 +266,13 @@ fn filter_matching_exposes<'a>(
         .filter(|expose_decl| {
             match expose_decl {
                 ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source, target, target_path, ..
+                    source, target, target_name, ..
                 })
                 | ExposeDecl::Protocol(ExposeProtocolDecl {
-                    source, target, target_path, ..
+                    source, target, target_name, ..
                 }) => {
                     if let Some(filter) = filter {
-                        if !filter.contains("path", vec![target_path.to_string()]) {
+                        if !filter.contains("path", vec![target_name.to_string()]) {
                             return false;
                         }
                     }

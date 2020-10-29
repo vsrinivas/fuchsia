@@ -103,13 +103,13 @@ impl DirTree {
             cm_rust::ExposeDecl::Service(d) => {
                 format!("/{}", d.target_name).parse().expect("couldn't parse name as path")
             }
-            cm_rust::ExposeDecl::Protocol(d) => match &d.target_path {
+            cm_rust::ExposeDecl::Protocol(d) => match &d.target_name {
                 CapabilityNameOrPath::Path(target_path) => target_path.clone(),
                 CapabilityNameOrPath::Name(target_name) => {
                     format!("/{}", target_name).parse().expect("couldn't parse name as path")
                 }
             },
-            cm_rust::ExposeDecl::Directory(d) => match &d.target_path {
+            cm_rust::ExposeDecl::Directory(d) => match &d.target_name {
                 CapabilityNameOrPath::Path(target_path) => target_path.clone(),
                 CapabilityNameOrPath::Name(target_name) => {
                     format!("/{}", target_name).parse().expect("couldn't parse name as path")
@@ -173,14 +173,14 @@ mod tests {
             uses: vec![
                 UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("baz-dir").unwrap(),
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
                     rights: fio2::Operations::Connect,
                     subdir: None,
                 }),
                 UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("baz-svc").unwrap(),
                     target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
                 }),
                 UseDecl::Storage(UseStorageDecl {
@@ -244,24 +244,24 @@ mod tests {
             exposes: vec![
                 ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/in/data/hippo").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("baz-dir").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("hippo-dir").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
                 }),
                 ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/in/data/bar").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("foo-dir").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("bar-dir").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
                 }),
                 ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/in/svc/hippo").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("baz-svc").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("hippo-svc").unwrap(),
                     target: ExposeTarget::Parent,
                 }),
                 ExposeDecl::Runner(ExposeRunnerDecl {
@@ -296,19 +296,16 @@ mod tests {
             .into_proxy()
             .expect("failed to create directory proxy");
         assert_eq!(
-            vec!["in/data/bar", "in/data/hippo", "in/svc/hippo"],
+            vec!["bar-dir", "hippo-dir", "hippo-svc"],
             test_helpers::list_directory_recursive(&expose_dir_proxy).await
         );
 
         // Expect that calls on the directory nodes reach the mock directory/service.
-        assert_eq!("friend", test_helpers::read_file(&expose_dir_proxy, "in/data/bar/hello").await);
-        assert_eq!(
-            "friend",
-            test_helpers::read_file(&expose_dir_proxy, "in/data/hippo/hello").await
-        );
+        assert_eq!("friend", test_helpers::read_file(&expose_dir_proxy, "bar-dir/hello").await);
+        assert_eq!("friend", test_helpers::read_file(&expose_dir_proxy, "hippo-dir/hello").await);
         assert_eq!(
             "hippos".to_string(),
-            test_helpers::call_echo(&expose_dir_proxy, "in/svc/hippo").await
+            test_helpers::call_echo(&expose_dir_proxy, "hippo-svc").await
         );
     }
 }

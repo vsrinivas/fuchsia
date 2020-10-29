@@ -1159,7 +1159,7 @@ pub mod tests {
             binding::Binder,
             events::{event::SyncMode, stream::EventStream},
             hooks::{EventErrorPayload, EventType},
-            rights::READ_RIGHTS,
+            rights,
             testing::{
                 mocks::{ControlMessage, ControllerActionResponse, MockController},
                 routing_test_helpers::RoutingTest,
@@ -1626,11 +1626,15 @@ pub mod tests {
             vec![(
                 "root",
                 ComponentDeclBuilder::new()
+                    .protocol(cm_rust::ProtocolDecl {
+                        name: "foo".into(),
+                        source_path: "/svc/foo".try_into().unwrap(),
+                    })
                     .expose(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
                         source: cm_rust::ExposeSource::Self_,
-                        source_path: "/svc/foo".try_into().expect("bad cap path"),
+                        source_name: "foo".try_into().expect("bad cap path"),
                         target: cm_rust::ExposeTarget::Parent,
-                        target_path: "/svc/foo".try_into().expect("bad cap path"),
+                        target_name: "foo".try_into().expect("bad cap path"),
                     }))
                     .build(),
             )],
@@ -1645,7 +1649,7 @@ pub mod tests {
 
         // Ensure that the directory is open to begin with.
         let proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());
-        assert!(test_helpers::dir_contains(&proxy, "svc", "foo").await);
+        assert!(test_helpers::dir_contains(&proxy, ".", "foo").await);
 
         realm.stop_instance(false).await.expect("failed to stop instance");
 
@@ -1660,12 +1664,17 @@ pub mod tests {
             vec![(
                 "root",
                 ComponentDeclBuilder::new()
+                    .directory(cm_rust::DirectoryDecl {
+                        name: "diagnostics".into(),
+                        source_path: "/diagnostics".try_into().unwrap(),
+                        rights: *rights::READ_RIGHTS,
+                    })
                     .expose(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
                         source: cm_rust::ExposeSource::Self_,
-                        source_path: "/diagnostics".try_into().expect("bad cap path"),
+                        source_name: "diagnostics".try_into().expect("bad cap path"),
                         target: cm_rust::ExposeTarget::Framework,
-                        target_path: "/diagnostics".try_into().expect("bad cap path"),
-                        rights: Some(*READ_RIGHTS),
+                        target_name: "diagnostics".try_into().expect("bad cap path"),
+                        rights: None,
                         subdir: None,
                     }))
                     .build(),
@@ -1694,7 +1703,7 @@ pub mod tests {
         assert_matches!(event.result,
                         Err(EventError {
                             event_error_payload:
-                                EventErrorPayload::CapabilityReady { path, .. }, .. }) if path == "/diagnostics");
+                                EventErrorPayload::CapabilityReady { path, .. }, .. }) if path == "diagnostics");
     }
 
     #[fasync::run_singlethreaded(test)]

@@ -593,16 +593,16 @@ mod tests {
             },
         },
         cm_rust::{
-            self, CapabilityNameOrPath, CapabilityPath, ComponentDecl, ExposeDecl,
-            ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, UseDecl,
-            UseDirectoryDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseSource,
+            self, CapabilityNameOrPath, CapabilityPath, ComponentDecl, DirectoryDecl, ExposeDecl,
+            ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, ProtocolDecl,
+            UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl,
+            UseSource,
         },
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
             DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
             OPEN_RIGHT_WRITABLE,
         },
-        fidl_fuchsia_io2 as fio2,
         std::{convert::TryFrom, path::Path},
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -783,7 +783,7 @@ mod tests {
                     .add_lazy_child("a")
                     .use_(UseDecl::Directory(UseDirectoryDecl {
                         source: UseSource::Framework,
-                        source_path: CapabilityNameOrPath::try_from("hub").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("hub").unwrap(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *rights::READ_RIGHTS,
                         subdir: None,
@@ -836,19 +836,19 @@ mod tests {
                     .add_lazy_child("a")
                     .use_(UseDecl::Directory(UseDirectoryDecl {
                         source: UseSource::Framework,
-                        source_path: CapabilityNameOrPath::try_from("hub").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("hub").unwrap(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *rights::READ_RIGHTS,
                         subdir: Some("exec".into()),
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
-                        source_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("baz-svc").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }))
                     .use_(UseDecl::Directory(UseDirectoryDecl {
                         source: UseSource::Parent,
-                        source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("foo-dir").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                         subdir: None,
@@ -925,18 +925,27 @@ mod tests {
                 name: "root",
                 decl: ComponentDeclBuilder::new()
                     .add_lazy_child("a")
+                    .protocol(ProtocolDecl {
+                        name: "foo".into(),
+                        source_path: "/svc/foo".parse().unwrap(),
+                    })
+                    .directory(DirectoryDecl {
+                        name: "baz".into(),
+                        source_path: "/data".parse().unwrap(),
+                        rights: *rights::READ_RIGHTS,
+                    })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
-                        source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("foo").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("bar").unwrap(),
                         target: ExposeTarget::Parent,
                     }))
                     .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: ExposeSource::Self_,
-                        source_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
-                        target_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                        source_name: CapabilityNameOrPath::try_from("baz").unwrap(),
+                        target_name: CapabilityNameOrPath::try_from("hippo").unwrap(),
                         target: ExposeTarget::Parent,
-                        rights: Some(fio2::Operations::Connect),
+                        rights: None,
                         subdir: None,
                     }))
                     .build(),
@@ -952,6 +961,6 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(vec!["data/hippo", "svc/bar"], list_directory_recursive(&expose_dir).await);
+        assert_eq!(vec!["bar", "hippo"], list_directory_recursive(&expose_dir).await);
     }
 }

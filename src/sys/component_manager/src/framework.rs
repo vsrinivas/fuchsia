@@ -772,8 +772,8 @@ mod tests {
                         .protocol(ProtocolDeclBuilder::new("foo").path("/svc/foo").build())
                         .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                             source: ExposeSource::Self_,
-                            source_path: CapabilityNameOrPath::try_from("foo").unwrap(),
-                            target_path: CapabilityNameOrPath::try_from("hippo").unwrap(),
+                            source_name: CapabilityNameOrPath::try_from("foo").unwrap(),
+                            target_name: CapabilityNameOrPath::try_from("hippo").unwrap(),
                             target: ExposeTarget::Parent,
                         }))
                         .add_eager_child("eager")
@@ -830,8 +830,8 @@ mod tests {
                         .protocol(ProtocolDeclBuilder::new("foo").path("/svc/foo").build())
                         .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                             source: ExposeSource::Self_,
-                            source_path: CapabilityNameOrPath::try_from("foo").unwrap(),
-                            target_path: CapabilityNameOrPath::try_from("hippo").unwrap(),
+                            source_name: CapabilityNameOrPath::try_from("foo").unwrap(),
+                            target_name: CapabilityNameOrPath::try_from("hippo").unwrap(),
                             target: ExposeTarget::Parent,
                         }))
                         .build(),

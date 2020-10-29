@@ -321,6 +321,7 @@ mod tests {
     use {
         crate::model::{
             realm::BindReason,
+            rights,
             routing::RoutingError,
             testing::routing_test_helpers::{RoutingTest, RoutingTestBuilder},
             testing::test_helpers::{self, component_decl_with_test_runner, ComponentDeclBuilder},
@@ -337,10 +338,15 @@ mod tests {
             (
                 "b",
                 ComponentDeclBuilder::new()
-                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    .directory(DirectoryDecl {
+                        name: "data".into(),
                         source_path: "/data".try_into().unwrap(),
+                        rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                    })
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source_name: "data".try_into().unwrap(),
                         source: ExposeSource::Self_,
-                        target_path: "/data".try_into().unwrap(),
+                        target_name: "data".try_into().unwrap(),
                         target: ExposeTarget::Parent,
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
@@ -455,10 +461,15 @@ mod tests {
             (
                 "b",
                 ComponentDeclBuilder::new()
-                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    .directory(DirectoryDecl {
+                        name: "data".into(),
                         source_path: "/data".try_into().unwrap(),
+                        rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                    })
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source_name: "data".try_into().unwrap(),
                         source: ExposeSource::Self_,
-                        target_path: "/data".try_into().unwrap(),
+                        target_name: "data".try_into().unwrap(),
                         target: ExposeTarget::Parent,
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,

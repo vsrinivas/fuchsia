@@ -491,10 +491,21 @@ mod tests {
                     .build(),
             ),
             ("f", ComponentDeclBuilder::new().add_lazy_child("i").build()),
-            // Expose some diagnostics as a path so legacy path-based capabilities are still tested.
-            ("g", ComponentDeclBuilder::new().expose(expose_diagnostics_decl_with_path()).build()),
+            (
+                "g",
+                ComponentDeclBuilder::new()
+                    .directory(diagnostics_decl())
+                    .expose(expose_diagnostics_decl())
+                    .build(),
+            ),
             ("h", ComponentDeclBuilder::new().build()),
-            ("i", ComponentDeclBuilder::new().expose(expose_diagnostics_decl_with_path()).build()),
+            (
+                "i",
+                ComponentDeclBuilder::new()
+                    .directory(diagnostics_decl())
+                    .expose(expose_diagnostics_decl())
+                    .build(),
+            ),
         ];
         RoutingTest::new("a", components).await
     }
@@ -524,19 +535,8 @@ mod tests {
     fn expose_diagnostics_decl() -> ExposeDecl {
         ExposeDecl::Directory(ExposeDirectoryDecl {
             source: ExposeSource::Self_,
-            source_path: CapabilityNameOrPath::try_from("diagnostics").unwrap(),
-            target_path: CapabilityNameOrPath::try_from("diagnostics").unwrap(),
-            target: ExposeTarget::Framework,
-            rights: Some(fio::Operations::Connect),
-            subdir: None,
-        })
-    }
-
-    fn expose_diagnostics_decl_with_path() -> ExposeDecl {
-        ExposeDecl::Directory(ExposeDirectoryDecl {
-            source: ExposeSource::Self_,
-            source_path: CapabilityNameOrPath::try_from("/diagnostics").unwrap(),
-            target_path: CapabilityNameOrPath::try_from("/diagnostics").unwrap(),
+            source_name: CapabilityNameOrPath::try_from("diagnostics").unwrap(),
+            target_name: CapabilityNameOrPath::try_from("diagnostics").unwrap(),
             target: ExposeTarget::Framework,
             rights: Some(fio::Operations::Connect),
             subdir: None,

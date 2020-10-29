@@ -215,7 +215,7 @@ mod tests {
         let decl = ComponentDeclBuilder::new()
             .use_(UseDecl::Protocol(UseProtocolDecl {
                 source: UseSource::Framework,
-                source_path: CapabilityNameOrPath::Name(EVENT_SOURCE_SYNC_SERVICE_NAME.clone()),
+                source_name: CapabilityNameOrPath::Name(EVENT_SOURCE_SYNC_SERVICE_NAME.clone()),
                 target_path: format!("/svc/{}", *EVENT_SOURCE_SYNC_SERVICE_NAME).parse().unwrap(),
             }))
             .use_(UseDecl::Event(UseEventDecl {

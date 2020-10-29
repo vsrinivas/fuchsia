@@ -41,19 +41,19 @@ table UseServiceDecl {
     3: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 };
 
-/// Declares a legacy service used by a component, which was offered to the
+/// Declares a protocol used by a component, which was offered to the
 /// component's environment.
 ///
-/// A legacy service is a service with a single instance, provided by a single
-/// FIDL protocol.
+/// A protocol is a service with a single instance, provided by a single FIDL
+/// protocol.
 table UseProtocolDecl {
-    /// The provider of the legacy service relative to the component itself.
+    /// The provider of the protocol relative to the component itself.
     /// Must be `parent` or `framework`.
     1: Ref source;
 
-    /// Path identifying the legacy service, by which it was presented to this
+    /// Name identifying the protocol, by which it was presented to this
     /// component.
-    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+    2: fuchsia.component.name source_name;
 
     /// The path where the capability should be installed in the component's
     /// namespace.
@@ -69,9 +69,9 @@ table UseDirectoryDecl {
     /// be `parent` or `framework`.
     1: Ref source;
 
-    /// Path identifying the directory, by which it was presented to this
+    /// Name identifying the directory, by which it was presented to this
     /// component.
-    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+    2: fuchsia.component.name source_name;
 
     /// The path where the capability should be installed in the component's
     /// namespace.

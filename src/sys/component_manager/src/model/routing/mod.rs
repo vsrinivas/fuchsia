@@ -434,7 +434,7 @@ async fn route_storage_capability<'a>(
     let storage_subdir = storage_decl.subdir.clone();
     let (dir_source_path, mut dir_subdir, dir_source_realm) = match storage_decl.source {
         StorageDirectorySource::Self_ => {
-            let source_path = if let CapabilityNameOrPath::Path(_) = storage_decl.source_path {
+            let source_path = if let CapabilityNameOrPath::Path(_) = storage_decl.backing_dir {
                 return Err(ModelError::unsupported(
                     "Path-based capabilities are no longer supported, use name-based instead",
                 ));
@@ -904,7 +904,7 @@ pub async fn find_exposed_root_directory_capability(
             .exposes
             .iter()
             .find_map(|e| match e {
-                ExposeDecl::Directory(dir_decl) => match &dir_decl.target_path {
+                ExposeDecl::Directory(dir_decl) => match &dir_decl.target_name {
                     CapabilityNameOrPath::Name(target_name) if target_name == &name => {
                         Some(dir_decl)
                     }

@@ -33,8 +33,8 @@ async fn offer_increasing_rights() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
@@ -54,8 +54,8 @@ async fn offer_increasing_rights() {
                 )
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
@@ -67,7 +67,7 @@ async fn offer_increasing_rights() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
@@ -87,8 +87,8 @@ async fn offer_incompatible_rights() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::WRITE_RIGHTS),
                     subdir: None,
@@ -108,8 +108,8 @@ async fn offer_incompatible_rights() {
                 )
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
@@ -121,7 +121,7 @@ async fn offer_incompatible_rights() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
@@ -145,8 +145,8 @@ async fn expose_increasing_rights() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -166,8 +166,8 @@ async fn expose_increasing_rights() {
                 )
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
@@ -179,7 +179,7 @@ async fn expose_increasing_rights() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
@@ -199,8 +199,8 @@ async fn expose_incompatible_rights() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
@@ -220,8 +220,8 @@ async fn expose_incompatible_rights() {
                 )
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::WRITE_RIGHTS),
                     subdir: None,
@@ -233,7 +233,7 @@ async fn expose_incompatible_rights() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
@@ -257,8 +257,8 @@ async fn capability_increasing_rights() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -278,8 +278,8 @@ async fn capability_increasing_rights() {
                 )
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -291,7 +291,7 @@ async fn capability_increasing_rights() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
@@ -311,8 +311,8 @@ async fn capability_incompatible_rights() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
@@ -330,8 +330,8 @@ async fn capability_incompatible_rights() {
                 )
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
@@ -343,7 +343,7 @@ async fn capability_incompatible_rights() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
@@ -425,8 +425,8 @@ async fn framework_directory_rights() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Framework,
-                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: None,
                     subdir: Some("foo".into()),
@@ -440,7 +440,7 @@ async fn framework_directory_rights() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
@@ -473,8 +473,8 @@ async fn framework_directory_incompatible_rights() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Framework,
-                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: None,
                     subdir: Some("foo".into()),
@@ -488,7 +488,7 @@ async fn framework_directory_incompatible_rights() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                     subdir: None,
@@ -533,8 +533,8 @@ async fn offer_from_component_manager_namespace_directory_incompatible_rights() 
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: None,
                     subdir: None,
@@ -548,7 +548,7 @@ async fn offer_from_component_manager_namespace_directory_incompatible_rights() 
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    source_name: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,

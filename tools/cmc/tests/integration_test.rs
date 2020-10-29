@@ -38,7 +38,7 @@ fn main() {
             }),
             UseDecl::Protocol(UseProtocolDecl {
                 source: Some(Ref::Parent(ParentRef {})),
-                source_path: Some("fuchsia.fonts.LegacyProvider".to_string()),
+                source_name: Some("fuchsia.fonts.LegacyProvider".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.OldProvider".to_string()),
             }),
             UseDecl::Event(UseEventDecl {
@@ -90,14 +90,14 @@ fn main() {
             }),
             ExposeDecl::Protocol(ExposeProtocolDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
-                source_path: Some("fuchsia.logger.LegacyLog".to_string()),
-                target_path: Some("fuchsia.logger.OldLog".to_string()),
+                source_name: Some("fuchsia.logger.LegacyLog".to_string()),
+                target_name: Some("fuchsia.logger.OldLog".to_string()),
                 target: Some(Ref::Parent(ParentRef {})),
             }),
             ExposeDecl::Directory(ExposeDirectoryDecl {
                 source: Some(Ref::Self_(SelfRef {})),
-                source_path: Some("blobfs".to_string()),
-                target_path: Some("blobfs".to_string()),
+                source_name: Some("blobfs".to_string()),
+                target_name: Some("blobfs".to_string()),
                 target: Some(Ref::Parent(ParentRef {})),
                 rights: None,
                 subdir: Some("blob".to_string()),
@@ -112,9 +112,9 @@ fn main() {
             }),
             OfferDecl::Protocol(OfferProtocolDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
-                source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                source_name: Some("fuchsia.logger.LegacyLog".to_string()),
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
-                target_path: Some("fuchsia.logger.OldLog".to_string()),
+                target_name: Some("fuchsia.logger.OldLog".to_string()),
                 dependency_type: Some(DependencyType::Strong),
             }),
             OfferDecl::Event(OfferEventDecl {
@@ -151,7 +151,7 @@ fn main() {
             CapabilityDecl::Storage(StorageDecl {
                 name: Some("minfs".to_string()),
                 source: Some(Ref::Parent(ParentRef {})),
-                source_path: Some("data".to_string()),
+                backing_dir: Some("data".to_string()),
                 subdir: None,
             }),
             CapabilityDecl::Runner(RunnerDecl {

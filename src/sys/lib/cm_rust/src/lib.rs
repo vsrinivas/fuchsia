@@ -439,7 +439,7 @@ impl ComponentDecl {
         self.exposes.iter().any(|expose| match expose {
             ExposeDecl::Protocol(ExposeProtocolDecl {
                 target,
-                target_path: target_name_or_path,
+                target_name: target_name_or_path,
                 ..
             }) if target == &ExposeTarget::Framework => {
                 match target_name_or_path {
@@ -463,7 +463,7 @@ impl ComponentDecl {
     /// Indicates whether the capability specified by `source_name` is requested.
     pub fn uses_protocol(&self, source_name: &CapabilityName) -> bool {
         self.uses.iter().any(|use_decl| match use_decl {
-            UseDecl::Protocol(ls) => match &ls.source_path {
+            UseDecl::Protocol(ls) => match &ls.source_name {
                 CapabilityNameOrPath::Path(p) => {
                     let source_path: CapabilityPath =
                         format!("/svc/{}", source_name).parse().expect("bad path");
@@ -529,14 +529,14 @@ fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::Us
 fidl_into_struct!(UseProtocolDecl, UseProtocolDecl, fsys::UseProtocolDecl, fsys::UseProtocolDecl,
 {
     source: UseSource,
-    source_path: CapabilityNameOrPath,
+    source_name: CapabilityNameOrPath,
     target_path: CapabilityPath,
 });
 fidl_into_struct!(UseDirectoryDecl, UseDirectoryDecl, fsys::UseDirectoryDecl,
 fsys::UseDirectoryDecl,
 {
     source: UseSource,
-    source_path: CapabilityNameOrPath,
+    source_name: CapabilityNameOrPath,
     target_path: CapabilityPath,
     rights: fio2::Operations,
     subdir: Option<PathBuf>,
@@ -570,17 +570,17 @@ fidl_into_struct!(ExposeProtocolDecl, ExposeProtocolDecl, fsys::ExposeProtocolDe
 fsys::ExposeProtocolDecl,
 {
     source: ExposeSource,
-    source_path: CapabilityNameOrPath,
+    source_name: CapabilityNameOrPath,
     target: ExposeTarget,
-    target_path: CapabilityNameOrPath,
+    target_name: CapabilityNameOrPath,
 });
 fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirectoryDecl,
 fsys::ExposeDirectoryDecl,
 {
     source: ExposeSource,
-    source_path: CapabilityNameOrPath,
+    source_name: CapabilityNameOrPath,
     target: ExposeTarget,
-    target_path: CapabilityNameOrPath,
+    target_name: CapabilityNameOrPath,
     rights: Option<fio2::Operations>,
     subdir: Option<PathBuf>,
 });
@@ -604,18 +604,18 @@ fidl_into_struct!(OfferProtocolDecl, OfferProtocolDecl, fsys::OfferProtocolDecl,
 fsys::OfferProtocolDecl,
 {
     source: OfferServiceSource,
-    source_path: CapabilityNameOrPath,
+    source_name: CapabilityNameOrPath,
     target: OfferTarget,
-    target_path: CapabilityNameOrPath,
+    target_name: CapabilityNameOrPath,
     dependency_type: DependencyType,
 });
 fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDecl,
 fsys::OfferDirectoryDecl,
 {
     source: OfferDirectorySource,
-    source_path: CapabilityNameOrPath,
+    source_name: CapabilityNameOrPath,
     target: OfferTarget,
-    target_path: CapabilityNameOrPath,
+    target_name: CapabilityNameOrPath,
     rights: Option<fio2::Operations>,
     subdir: Option<PathBuf>,
     dependency_type: DependencyType,
@@ -683,7 +683,7 @@ fsys::StorageDecl,
 {
     name: String,
     source: StorageDirectorySource,
-    source_path: CapabilityNameOrPath,
+    backing_dir: CapabilityNameOrPath,
     subdir: Option<PathBuf>,
 });
 fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
@@ -1705,12 +1705,12 @@ mod tests {
                    }),
                    fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_path: Some("/svc/legacy_netstack".to_string()),
+                       source_name: Some("legacy_netstack".to_string()),
                        target_path: Some("/svc/legacy_mynetstack".to_string()),
                    }),
                    fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                       source_path: Some("/data/dir".to_string()),
+                       source_name: Some("dir".to_string()),
                        target_path: Some("/data".to_string()),
                        rights: Some(fio2::Operations::Connect),
                        subdir: Some("foo/bar".to_string()),
@@ -1746,8 +1746,8 @@ mod tests {
                            name: "netstack".to_string(),
                            collection: None,
                        })),
-                       source_path: Some("/svc/legacy_netstack".to_string()),
-                       target_path: Some("/svc/legacy_mynetstack".to_string()),
+                       source_name: Some("legacy_netstack".to_string()),
+                       target_name: Some("legacy_mynetstack".to_string()),
                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                    }),
                    fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
@@ -1755,8 +1755,8 @@ mod tests {
                            name: "netstack".to_string(),
                            collection: None,
                        })),
-                       source_path: Some("/data/dir".to_string()),
-                       target_path: Some("/data".to_string()),
+                       source_name: Some("dir".to_string()),
+                       target_name: Some("data".to_string()),
                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        rights: Some(fio2::Operations::Connect),
                        subdir: Some("foo/bar".to_string()),
@@ -1801,23 +1801,23 @@ mod tests {
                offers: Some(vec![
                    fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_path: Some("/svc/legacy_netstack".to_string()),
+                       source_name: Some("legacy_netstack".to_string()),
                        target: Some(fsys::Ref::Child(
                           fsys::ChildRef {
                               name: "echo".to_string(),
                               collection: None,
                           }
                        )),
-                       target_path: Some("/svc/legacy_mynetstack".to_string()),
+                       target_name: Some("legacy_mynetstack".to_string()),
                        dependency_type: Some(fsys::DependencyType::WeakForMigration),
                    }),
                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_path: Some("/data/dir".to_string()),
+                       source_name: Some("dir".to_string()),
                        target: Some(fsys::Ref::Collection(
                            fsys::CollectionRef { name: "modular".to_string() }
                        )),
-                       target_path: Some("/data".to_string()),
+                       target_name: Some("data".to_string()),
                        rights: Some(fio2::Operations::Connect),
                        subdir: None,
                        dependency_type: Some(fsys::DependencyType::Strong),
@@ -1910,15 +1910,9 @@ mod tests {
                    }),
                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                        name: Some("cache".to_string()),
-                       source_path: Some("data".to_string()),
+                       backing_dir: Some("data".to_string()),
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        subdir: Some("cache".to_string()),
-                   }),
-                   fsys::CapabilityDecl::Storage(fsys::StorageDecl {
-                       name: Some("memfs".to_string()),
-                       source_path: Some("/data".to_string()),
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       subdir: None,
                    }),
                    fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
                        name: Some("elf".to_string()),
@@ -2015,12 +2009,12 @@ mod tests {
                         }),
                         UseDecl::Protocol(UseProtocolDecl {
                             source: UseSource::Parent,
-                            source_path: "/svc/legacy_netstack".try_into().unwrap(),
+                            source_name: "legacy_netstack".try_into().unwrap(),
                             target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
                         }),
                         UseDecl::Directory(UseDirectoryDecl {
                             source: UseSource::Framework,
-                            source_path: "/data/dir".try_into().unwrap(),
+                            source_name: "dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
                             rights: fio2::Operations::Connect,
                             subdir: Some("foo/bar".into()),
@@ -2046,14 +2040,14 @@ mod tests {
                     exposes: vec![
                         ExposeDecl::Protocol(ExposeProtocolDecl {
                             source: ExposeSource::Child("netstack".to_string()),
-                            source_path: "/svc/legacy_netstack".try_into().unwrap(),
-                            target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
+                            source_name: "legacy_netstack".try_into().unwrap(),
+                            target_name: "legacy_mynetstack".try_into().unwrap(),
                             target: ExposeTarget::Parent,
                         }),
                         ExposeDecl::Directory(ExposeDirectoryDecl {
                             source: ExposeSource::Child("netstack".to_string()),
-                            source_path: "/data/dir".try_into().unwrap(),
-                            target_path: "/data".try_into().unwrap(),
+                            source_name: "dir".try_into().unwrap(),
+                            target_name: "data".try_into().unwrap(),
                             target: ExposeTarget::Parent,
                             rights: Some(fio2::Operations::Connect),
                             subdir: Some("foo/bar".into()),
@@ -2088,16 +2082,16 @@ mod tests {
                     offers: vec![
                         OfferDecl::Protocol(OfferProtocolDecl {
                             source: OfferServiceSource::Parent,
-                            source_path: "/svc/legacy_netstack".try_into().unwrap(),
+                            source_name: "legacy_netstack".try_into().unwrap(),
                             target: OfferTarget::Child("echo".to_string()),
-                            target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
+                            target_name: "legacy_mynetstack".try_into().unwrap(),
                             dependency_type: DependencyType::WeakForMigration,
                         }),
                         OfferDecl::Directory(OfferDirectoryDecl {
                             source: OfferDirectorySource::Parent,
-                            source_path: "/data/dir".try_into().unwrap(),
+                            source_name: "dir".try_into().unwrap(),
                             target: OfferTarget::Collection("modular".to_string()),
-                            target_path: "/data".try_into().unwrap(),
+                            target_name: "data".try_into().unwrap(),
                             rights: Some(fio2::Operations::Connect),
                             subdir: None,
                             dependency_type: DependencyType::Strong,
@@ -2158,15 +2152,9 @@ mod tests {
                         }),
                         CapabilityDecl::Storage(StorageDecl {
                             name: "cache".to_string(),
-                            source_path: "data".try_into().unwrap(),
+                            backing_dir: "data".try_into().unwrap(),
                             source: StorageDirectorySource::Parent,
                             subdir: Some("cache".try_into().unwrap()),
-                        }),
-                        CapabilityDecl::Storage(StorageDecl {
-                            name: "memfs".to_string(),
-                            source_path: "/data".try_into().unwrap(),
-                            source: StorageDirectorySource::Parent,
-                            subdir: None,
                         }),
                         CapabilityDecl::Runner(RunnerDecl {
                             name: "elf".into(),
@@ -2356,13 +2344,7 @@ mod tests {
             input = vec![
                 fsys::StorageDecl {
                     name: Some("minfs".to_string()),
-                    source_path: Some("/minfs".to_string()),
-                    source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                    subdir: None,
-                },
-                fsys::StorageDecl {
-                    name: Some("minfs".to_string()),
-                    source_path: Some("minfs".to_string()),
+                    backing_dir: Some("minfs".to_string()),
                     source: Some(fsys::Ref::Child(fsys::ChildRef {
                         name: "foo".to_string(),
                         collection: None,
@@ -2374,13 +2356,7 @@ mod tests {
             result = vec![
                 StorageDecl {
                     name: "minfs".to_string(),
-                    source_path: CapabilityNameOrPath::try_from("/minfs").unwrap(),
-                    source: StorageDirectorySource::Parent,
-                    subdir: None,
-                },
-                StorageDecl {
-                    name: "minfs".to_string(),
-                    source_path: CapabilityNameOrPath::try_from("minfs").unwrap(),
+                    backing_dir: CapabilityNameOrPath::try_from("minfs").unwrap(),
                     source: StorageDirectorySource::Child("foo".to_string()),
                     subdir: None,
                 },

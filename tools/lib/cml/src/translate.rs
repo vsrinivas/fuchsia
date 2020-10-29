@@ -43,19 +43,15 @@ pub fn translate_capabilities(
                 rights: Some(rights),
             }));
         } else if let Some(n) = &capability.storage {
-            let source_path = if let Some(source_path) = capability.path.as_ref() {
-                source_path.clone().into()
-            } else {
-                capability
-                    .backing_dir
-                    .as_ref()
-                    .expect("storage has no path or backing_dir")
-                    .clone()
-                    .into()
-            };
+            let backing_dir = capability
+                .backing_dir
+                .as_ref()
+                .expect("storage has no path or backing_dir")
+                .clone()
+                .into();
             out_capabilities.push(fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                 name: Some(n.clone().into()),
-                source_path: Some(source_path),
+                backing_dir: Some(backing_dir),
                 source: Some(offer_source_from_ref(capability.from.as_ref().unwrap().into())?),
                 subdir: capability.subdir.clone().map(Into::into),
             }));
