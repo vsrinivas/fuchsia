@@ -255,12 +255,10 @@ func onStruct(value gidlir.Record, decl *gidlmixer.StructDecl) string {
 
 func onTable(value gidlir.Record, decl *gidlmixer.TableDecl) string {
 	var tableFields []string
-	providedKeys := make(map[string]struct{}, len(value.Fields))
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
-		providedKeys[field.Key.Name] = struct{}{}
 		fieldName := fidlcommon.ToSnakeCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
@@ -269,13 +267,9 @@ func onTable(value gidlir.Record, decl *gidlmixer.TableDecl) string {
 		fieldValueStr := visit(field.Value, fieldDecl)
 		tableFields = append(tableFields, fmt.Sprintf("%s: Some(%s)", fieldName, fieldValueStr))
 	}
-	for _, key := range decl.FieldNames() {
-		if _, ok := providedKeys[key]; !ok {
-			fieldName := fidlcommon.ToSnakeCase(key)
-			tableFields = append(tableFields, fmt.Sprintf("%s: None", fieldName))
-		}
-	}
-	valueStr := fmt.Sprintf("%s { %s }", declName(decl), strings.Join(tableFields, ", "))
+	tableName := declName(decl)
+	tableFields = append(tableFields, fmt.Sprintf("..%s::empty()", tableName))
+	valueStr := fmt.Sprintf("%s { %s }", tableName, strings.Join(tableFields, ", "))
 	return wrapNullable(decl, valueStr)
 }
 
