@@ -115,16 +115,11 @@ class VulkanExtensionTest : public testing::Test {
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   vk::UniqueImage vk_image_;
-  VkDeviceMemory vk_device_memory_ = VK_NULL_HANDLE;
+  vk::UniqueDeviceMemory vk_device_memory_;
   vk::DispatchLoaderDynamic loader_;
 };
 
-VulkanExtensionTest::~VulkanExtensionTest() {
-  if (vk_device_memory_) {
-    vkFreeMemory(*ctx_->device(), vk_device_memory_, nullptr);
-    vk_device_memory_ = VK_NULL_HANDLE;
-  }
-}
+VulkanExtensionTest::~VulkanExtensionTest() {}
 
 bool VulkanExtensionTest::Initialize() {
   if (is_initialized_) {
@@ -376,21 +371,17 @@ void VulkanExtensionTest::InitializeDirectImageMemory(vk::BufferCollectionFUCHSI
   uint32_t memory_type;
   ValidateBufferProperties(requirements, collection, expected_count, &memory_type);
 
-  VkImportMemoryBufferCollectionFUCHSIA import_info = {
-      .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA};
+  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA> alloc_info(
+      vk::MemoryAllocateInfo().setAllocationSize(requirements.size).setMemoryTypeIndex(memory_type),
+      vk::ImportMemoryBufferCollectionFUCHSIA().setCollection(collection).setIndex(0));
 
-  import_info.collection = collection;
-  import_info.index = 0;
-  VkMemoryAllocateInfo alloc_info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-  alloc_info.pNext = &import_info;
-  alloc_info.allocationSize = requirements.size;
-  alloc_info.memoryTypeIndex = memory_type;
+  auto [result, vk_device_memory] =
+      ctx_->device()->allocateMemoryUnique(alloc_info.get<vk::MemoryAllocateInfo>());
+  EXPECT_EQ(result, vk::Result::eSuccess);
+  vk_device_memory_ = std::move(vk_device_memory);
 
-  VkResult result = vkAllocateMemory(device, &alloc_info, nullptr, &vk_device_memory_);
-  EXPECT_EQ(VK_SUCCESS, result);
-
-  result = vkBindImageMemory(device, *vk_image_, vk_device_memory_, 0u);
-  EXPECT_EQ(VK_SUCCESS, result);
+  EXPECT_EQ(vk::Result::eSuccess,
+            ctx_->device()->bindImageMemory(*vk_image_, *vk_device_memory_, 0u));
 }
 
 VulkanExtensionTest::UniqueBufferCollection VulkanExtensionTest::CreateVkBufferCollectionForImage(
@@ -550,22 +541,16 @@ bool VulkanExtensionTest::ExecBuffer(uint32_t size) {
   EXPECT_EQ(vk::Result::eSuccess, ctx_->device()->getBufferCollectionProperties2FUCHSIA(
                                       collection, &properties, loader_));
 
-  VkImportMemoryBufferCollectionFUCHSIA memory_import_info = {
-      .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
-      .collection = collection,
-      .index = 1};
+  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA> alloc_info(
+      vk::MemoryAllocateInfo().setAllocationSize(requirements.size).setMemoryTypeIndex(memory_type),
+      vk::ImportMemoryBufferCollectionFUCHSIA().setCollection(collection).setIndex(1));
 
-  VkMemoryAllocateInfo alloc_info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-  alloc_info.pNext = &memory_import_info;
-  alloc_info.allocationSize = requirements.size;
-  alloc_info.memoryTypeIndex = memory_type;
+  auto [vk_result, vk_device_memory] =
+      ctx_->device()->allocateMemoryUnique(alloc_info.get<vk::MemoryAllocateInfo>());
+  EXPECT_EQ(vk_result, vk::Result::eSuccess);
+  vk_device_memory_ = std::move(vk_device_memory);
 
-  result = vkAllocateMemory(device, &alloc_info, nullptr, &vk_device_memory_);
-  if (result != VK_SUCCESS) {
-    RTN_MSG(false, "vkBindBufferMemory failed: %d\n", result);
-  }
-
-  result = vkBindBufferMemory(device, buffer, vk_device_memory_, 0u);
+  result = vkBindBufferMemory(device, buffer, *vk_device_memory_, 0u);
   if (result != VK_SUCCESS) {
     RTN_MSG(false, "vkBindBufferMemory failed: %d\n", result);
   }
@@ -646,10 +631,7 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionMultipleFormats) {
       nv12_image_constraints, bgra_image_constraints, bgra_tiled_image_constraints};
 
   ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, GetParam(), false, all_constraints));
-  if (vk_device_memory_) {
-    vkFreeMemory(*ctx_->device(), vk_device_memory_, nullptr);
-    vk_device_memory_ = VK_NULL_HANDLE;
-  }
+  vk_device_memory_ = {};
   ASSERT_TRUE(Exec(VK_FORMAT_B8G8R8A8_UNORM, 64, 64, GetParam(), false, all_constraints));
 }
 
@@ -821,7 +803,7 @@ TEST_P(VulkanImageExtensionTest, ImageCpuAccessible) {
   }
   void *data;
   EXPECT_EQ(vk::Result::eSuccess,
-            ctx_->device()->mapMemory(vk_device_memory_, 0, VK_WHOLE_SIZE, {}, &data));
+            ctx_->device()->mapMemory(*vk_device_memory_, 0, VK_WHOLE_SIZE, {}, &data));
   auto volatile_data = static_cast<volatile uint8_t *>(data);
   *volatile_data = 1;
 
@@ -1386,10 +1368,7 @@ TEST_F(VulkanExtensionTest, LinearOptimalCompatible) {
 
     InitializeDirectImageMemory(*collections[i], 1);
 
-    if (vk_device_memory_) {
-      vkFreeMemory(*ctx_->device(), vk_device_memory_, nullptr);
-      vk_device_memory_ = VK_NULL_HANDLE;
-    }
+    vk_device_memory_ = {};
   }
 }
 
