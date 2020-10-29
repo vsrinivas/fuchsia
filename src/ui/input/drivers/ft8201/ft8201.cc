@@ -18,13 +18,6 @@
 
 namespace {
 
-enum {
-  kFragmentI2c,
-  kFragmentInterruptGpio,
-  kFragmentResetGpio,
-  kFragmentCount,
-};
-
 // TODO(bradenkell): Double-check these values.
 constexpr int64_t kMaxContactX = 1279;
 constexpr int64_t kMaxContactY = 799;
@@ -128,28 +121,19 @@ zx::status<Ft8201Device*> Ft8201Device::CreateAndGetDevice(void* ctx, zx_device_
     return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
-  zx_device_t* fragments[kFragmentCount] = {};
-  size_t fragment_count = 0;
-  composite.GetFragments(fragments, std::size(fragments), &fragment_count);
-  if (fragment_count != std::size(fragments)) {
-    zxlogf(ERROR, "Ft8201: Received %zu fragments, expected %zu", fragment_count,
-           std::size(fragments));
-    return zx::error(ZX_ERR_NO_RESOURCES);
-  }
-
-  ddk::I2cChannel i2c(fragments[kFragmentI2c]);
+  ddk::I2cChannel i2c(composite, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "Ft8201: Failed to get I2C fragment");
     return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
-  ddk::GpioProtocolClient interrupt_gpio(fragments[kFragmentInterruptGpio]);
+  ddk::GpioProtocolClient interrupt_gpio(composite, "gpio-int");
   if (!interrupt_gpio.is_valid()) {
     zxlogf(ERROR, "Ft8201: Failed to get interrupt GPIO fragment");
     return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
-  ddk::GpioProtocolClient reset_gpio(fragments[kFragmentResetGpio]);
+  ddk::GpioProtocolClient reset_gpio(composite, "gpio-reset");
   if (!reset_gpio.is_valid()) {
     zxlogf(ERROR, "Ft8201: Failed to get reset GPIO fragment");
     return zx::error(ZX_ERR_NO_RESOURCES);
@@ -186,16 +170,7 @@ bool Ft8201Device::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t chan
     return false;
   }
 
-  zx_device_t* fragments[kFragmentCount] = {};
-  size_t fragment_count = 0;
-  composite.GetFragments(fragments, std::size(fragments), &fragment_count);
-  if (fragment_count != std::size(fragments)) {
-    zxlogf(ERROR, "Ft8201: Received %zu fragments, expected %zu", fragment_count,
-           std::size(fragments));
-    return false;
-  }
-
-  ddk::I2cChannel i2c(fragments[kFragmentI2c]);
+  ddk::I2cChannel i2c(composite, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "Ft8201: Failed to get I2C fragment");
     return false;

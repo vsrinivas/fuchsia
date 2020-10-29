@@ -72,8 +72,7 @@ class Ft8201Test : public zxtest::Test {
  public:
   void SetUp() override {
     composite_protocol_ops_t composite_protocol = {
-        .get_fragment_count = GetFragmentCount,
-        .get_fragments = GetFragments,
+        .get_fragment = GetFragment,
     };
 
     fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[3], 3);
@@ -119,16 +118,10 @@ class Ft8201Test : public zxtest::Test {
   Ft8201Device* device_ = nullptr;
 
  private:
-  static uint32_t GetFragmentCount(__UNUSED void* ctx) { return 2; }
-
-  static void GetFragments(__UNUSED void* ctx, zx_device_t** out_fragment_list,
-                           size_t fragment_count, size_t* out_fragment_actual) {
-    *out_fragment_actual = 0;
-    for (size_t i = 0; i < std::max<size_t>(2, fragment_count); i++) {
-      // Set each device to kFakeParent so fake_ddk will supply protocols for each fragment.
-      out_fragment_list[i] = fake_ddk::kFakeParent;
-      (*out_fragment_actual)++;
-    }
+  static bool GetFragment(void*, const char* name, zx_device_t** out) {
+    // Set each device to kFakeParent so fake_ddk will supply protocols for each fragment.
+    *out = fake_ddk::kFakeParent;
+    return true;
   }
 
   ddk::MockGpio mock_gpio_;
