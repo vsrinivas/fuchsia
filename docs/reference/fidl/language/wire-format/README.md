@@ -685,32 +685,53 @@ an error if not).
 
 #### Maximum Recursion Depth
 
-FIDL arrays, vectors, structures, tables, and unions enable the
-construction of recursive messages.
-Left unchecked, processing excessively deep messages could
-lead to resource exhaustion of the consumer.
+FIDL vectors, nullable structures, tables, and unions enable the construction of
+recursive messages. Left unchecked, processing excessively deep messages could
+lead to resource exhaustion, or undetected infinite looping.
 
 For safety, the maximum recursion depth for all FIDL messages is limited to
-**32** levels of nested complex objects. The FIDL validator **must** enforce
-this by keeping track of the current nesting level during message validation.
+**32** levels of indirection. A FIDL encoder, decoder, or validator **MUST**
+enforce this limit by keeping track of the current recursion depth during
+message validation.
 
-Complex objects are arrays, vectors, structures, tables, or unions
-which contain pointers or handles which require fix-up.
-These are precisely the kinds of
-objects for which **encoding tables** must be generated. See [C
-Language Bindings][c-tutorial]
-for information about encoding
-tables. Therefore, limiting the nesting depth of complex objects has the effect
-of limiting the recursion depth for traversal of encoding tables.
+Formal definition of recursion depth:
 
-Formal definition:
+*   The inline object of a FIDL message is defined to be at recursion depth
+    **0**.
+*   Each traversal of an indirection, through a pointer or an envelope,
+    increments the recursion depth by **1**.
 
-*   The message body is defined to be at nesting level **0**.
-*   Each time the validator encounters a complex object, it increments the
-    nesting level, recursively validates the object, then decrements the nesting
-    level.
-*   If at any time the nesting level exceeds **31**, a validation error is
-    raised and validation terminates.
+If at any time the recursion depth exceeds **32**, the operation must be
+terminated and an error raised.
+
+Consider for instance:
+
+```fidl
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="maximum-recursion-depth" %}
+```
+
+When encoding an instance of an `InlineObject`, we have the respective recursion depths:
+
+* The bytes of `content_a` are at a recursion depth of 1, i.e. the `content_a`
+  string header is inline within the `InlineObject` struct, and the bytes are in
+  an out-of-line object accessible through a pointer indirection.
+* The bytes of `content_b` are at a recursion depth of 2, i.e. the `vector`
+  header is inline within the `InlineObject` struct, the
+  `OutOfLineStructAtLevel1` structs are therefore at recursive depth 1, the
+  `content_b` string header is inline within `OutOfLineStructAtLevel1`, and the
+  bytes are in an out-of-line object accessible through a pointer indirection
+  from depth 1, making them at depth 2.
+* The bytes of `content_c` are at a recursion depth of 3, i.e. the `table`
+  header is inline within the `InlineObject` struct, the table envelope is at a
+  depth of 1, pointing to the `content_c` string header at a depth of 2, and the
+  bytes are in an out-of-line object accessible through a pointer indirection,
+  making them at depth 3.
+
+Note: By defining a maximum recursion depth of 32, we allow one inline object
+followed by 32 out-of-line objects, such that a total of 33 levels are allowed
+(but 32 indirections). See
+[`//src/tests/fidl/conformance_suite/recursive_depth.gidl`](/src/tests/fidl/conformance_suite/recursive_depth.gidl)
+for further details.
 
 #### Validation
 

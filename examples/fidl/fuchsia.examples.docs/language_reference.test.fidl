@@ -285,3 +285,19 @@ protocol Calculator {
     -> OnError(uint32 status_code);
 };
 // [END calculator]
+
+// [START maximum-recursion-depth]
+struct InlineObject {
+    string content_a;
+    vector<OutOfLineStructAtLevel1> vector;
+    TableInlineAtLevel0 table;
+};
+
+struct OutOfLineStructAtLevel1 {
+    string content_b;
+};
+
+table TableInlineAtLevel0 {
+    1: string content_c;
+};
+// [END maximum-recursion-depth]
