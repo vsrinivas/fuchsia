@@ -5,6 +5,7 @@
 #include "src/devices/block/drivers/zxcrypt/worker.h"
 
 #include <inttypes.h>
+#include <lib/zircon-internal/align.h>
 #include <lib/zx/port.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -153,6 +154,7 @@ zx_status_t Worker::DecryptRead(block_op_t* block) {
   // Convert blocks to bytes
   uint32_t length;
   uint64_t offset_dev, offset_vmo;
+  uint64_t mapping_offset = 0;
   if (mul_overflow(block->rw.length, device_->block_size(), &length) ||
       mul_overflow(block->rw.offset_dev, device_->block_size(), &offset_dev) ||
       mul_overflow(block->rw.offset_vmo, device_->block_size(), &offset_vmo)) {
@@ -160,20 +162,30 @@ zx_status_t Worker::DecryptRead(block_op_t* block) {
            block->rw.length, block->rw.offset_dev, block->rw.offset_vmo);
     return ZX_ERR_OUT_OF_RANGE;
   }
+  uint32_t aligned_length = length;
+
+  if (ZX_ROUNDDOWN(offset_vmo, ZX_PAGE_SIZE) != offset_vmo) {
+    // Ensure the range inside the VMO we map is page aligned so that requests smaller than a page
+    // still work.
+    mapping_offset = offset_vmo - ZX_ROUNDDOWN(offset_vmo, ZX_PAGE_SIZE);
+    offset_vmo = ZX_ROUNDDOWN(offset_vmo, ZX_PAGE_SIZE);
+    aligned_length += mapping_offset;
+  }
 
   // Map the ciphertext
   zx_handle_t root = zx_vmar_root_self();
   uintptr_t address;
   constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-  if ((rc = zx_vmar_map(root, flags, 0, block->rw.vmo, offset_vmo, length, &address)) != ZX_OK) {
+  if ((rc = zx_vmar_map(root, flags, 0, block->rw.vmo, offset_vmo, aligned_length, &address)) !=
+      ZX_OK) {
     zxlogf(ERROR, "zx::vmar::root_self()->map() failed: %s", zx_status_get_string(rc));
     return rc;
   }
-  auto cleanup =
-      fbl::MakeAutoCall([root, address, length]() { zx_vmar_unmap(root, address, length); });
+  auto cleanup = fbl::MakeAutoCall(
+      [root, address, aligned_length]() { zx_vmar_unmap(root, address, aligned_length); });
 
   // Decrypt in place
-  uint8_t* data = reinterpret_cast<uint8_t*>(address);
+  uint8_t* data = reinterpret_cast<uint8_t*>(address + mapping_offset);
   if ((rc = decrypt_.Decrypt(data, offset_dev, length, data)) != ZX_OK) {
     zxlogf(ERROR, "failed to decrypt: %s", zx_status_get_string(rc));
     return rc;

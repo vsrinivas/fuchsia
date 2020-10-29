@@ -505,6 +505,22 @@ void TestWriteAfterFvmExtend(Volume::Version version) {
 }
 DEFINE_EACH(ZxcryptTest, TestWriteAfterFvmExtend)
 
+void TestUnalignedVmoOffset(Volume::Version version, bool fvm) {
+  TestDevice device;
+  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURES(device.Bind(version, fvm));
+
+  block_fifo_request_t request{
+      .opcode = BLOCKIO_READ,
+      .length = 2,
+      .vmo_offset = 1,
+      .dev_offset = 0,
+  };
+
+  ASSERT_OK(device.block_fifo_txn(&request, 1));
+}
+DEFINE_EACH_DEVICE(ZxcryptTest, TestUnalignedVmoOffset)
+
 // TODO(aarongreen): Currently, we're using XTS, which provides no data integrity.  When possible,
 // we should switch to an AEAD, which would allow us to detect data corruption when doing I/O.
 // void TestBadData(void) {
