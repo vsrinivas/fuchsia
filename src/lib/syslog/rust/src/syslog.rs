@@ -56,4 +56,5 @@ extern "C" {
     ) -> zx_status_t;
 
     pub fn fx_logger_destroy(logger: *const fx_logger_t);
+    pub fn fx_logger_get_connection_status(logger: *const fx_logger_t) -> zx_status_t;
 }

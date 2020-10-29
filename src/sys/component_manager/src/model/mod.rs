@@ -17,6 +17,7 @@ pub mod testing;
 
 pub(crate) mod environment;
 pub(crate) mod events;
+pub(crate) mod logging;
 pub(crate) mod resolver;
 pub(crate) mod rights;
 pub(crate) mod routing;

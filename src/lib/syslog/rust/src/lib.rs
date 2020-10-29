@@ -69,6 +69,17 @@ fn get_fx_logger_severity(level: Level) -> syslog::fx_log_severity_t {
     }
 }
 
+/// Maps log crate log levels to syslog severity levels.
+pub fn get_fx_logger_level(level: Level) -> levels::LogLevel {
+    match level {
+        Level::Trace => levels::TRACE,
+        Level::Debug => levels::DEBUG,
+        Level::Info => levels::INFO,
+        Level::Warn => levels::WARN,
+        Level::Error => levels::ERROR,
+    }
+}
+
 /// Maps syslog severity levels to  log crate log filters.
 fn get_log_filter(level: levels::LogLevel) -> LevelFilter {
     match level {
@@ -239,6 +250,11 @@ impl Logger {
     /// Returns whether or not the underlying logger is valid
     pub fn is_valid(&self) -> bool {
         !self.logger.is_null()
+    }
+
+    /// Whether the log socket is valid
+    pub fn is_connected(&self) -> bool {
+        unsafe { syslog::fx_logger_get_connection_status(self.logger) == zx::Status::OK.into_raw() }
     }
 
     /// Wrapper around C API `fx_logger_log`. Consider using `fx_log_*` macros

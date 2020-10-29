@@ -16,6 +16,7 @@ use {
             error::ModelError,
             events::filter::EventFilter,
             hooks::{Event, EventPayload},
+            logging::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
             moniker::{
                 AbsoluteMoniker, ChildMoniker, ExtendedMoniker, PartialMoniker, RelativeMoniker,
             },
@@ -1593,19 +1594,25 @@ pub(super) fn report_routing_failure(
     cap: &ComponentCapability,
     err: &ModelError,
     server_end: zx::Channel,
+    logger: Option<&dyn FmtArgsLogger>,
 ) {
     let _ = server_end.close_with_epitaph(routing_epitaph(err));
     let err_str = match err {
         ModelError::RoutingError { err } => format!("{}", err),
         _ => format!("{}", err),
     };
-    error!(
+    let log_msg = format!(
         "Failed to route {} `{}` with target component `{}`: {}",
         cap.type_name(),
         cap.source_id(),
         target_moniker,
-        err_str,
+        err_str
     );
+    if let Some(l) = logger {
+        l.log(Level::Error, format_args!("{}", log_msg));
+    } else {
+        MODEL_LOGGER.log(Level::Error, format_args!("{}", log_msg))
+    }
 }
 
 /// Converts `err` to a `zx::Status` to use as an epitaph on a routed channel.

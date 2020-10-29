@@ -6,7 +6,7 @@ use {
     crate::{
         capability::ComponentCapability,
         model::{
-            realm::WeakRealm,
+            realm::{Runtime, WeakRealm},
             routing::{self, route_expose_capability, route_use_capability},
         },
     },
@@ -48,7 +48,18 @@ pub fn route_use_fn(realm: WeakRealm, use_: UseDecl) -> RoutingFn {
                 .await;
                 if let Err(e) = res {
                     let cap = ComponentCapability::Use(use_);
-                    routing::report_routing_failure(&realm.abs_moniker, &cap, &e, server_end);
+                    let execution = realm.lock_execution().await;
+                    let logger = match &execution.runtime {
+                        Some(Runtime { namespace: Some(ns), .. }) => Some(ns.get_logger()),
+                        _ => None,
+                    };
+                    routing::report_routing_failure(
+                        &realm.abs_moniker,
+                        &cap,
+                        &e,
+                        server_end,
+                        logger,
+                    );
                 }
             })
             .detach();
@@ -86,7 +97,18 @@ pub fn route_expose_fn(realm: WeakRealm, expose: ExposeDecl) -> RoutingFn {
                 .await;
                 if let Err(e) = res {
                     let cap = ComponentCapability::UsedExpose(expose);
-                    routing::report_routing_failure(&realm.abs_moniker, &cap, &e, server_end);
+                    let execution = realm.lock_execution().await;
+                    let logger = match &execution.runtime {
+                        Some(Runtime { namespace: Some(ns), .. }) => Some(ns.get_logger()),
+                        _ => None,
+                    };
+                    routing::report_routing_failure(
+                        &realm.abs_moniker,
+                        &cap,
+                        &e,
+                        server_end,
+                        logger,
+                    );
                 }
             })
             .detach();
