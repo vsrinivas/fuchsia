@@ -13,6 +13,7 @@ use futures::future::ready;
 
 impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     /// Returns a snapshot of the current connectivity state.
+    #[allow(dead_code)]
     pub(super) fn get_init_state(&self) -> InitState {
         self.driver_state.lock().init_state
     }

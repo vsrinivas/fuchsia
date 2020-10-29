@@ -44,24 +44,21 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
                 // `Prop::LastStatus` update with a status code in the reset range.
                 // Solicited responses (TID 1-15) are not considered resets.
                 if prop_value.prop == Prop::LastStatus && frame.header.tid().is_none() {
-                    match Status::try_unpack_from_slice(prop_value.value)? {
-                        Status::Reset(x) => {
-                            fx_log_info!("on_inbound_frame: Reset: {:?}", x);
-                            self.frame_handler.clear();
-                            {
-                                let mut driver_state = self.driver_state.lock();
-                                if driver_state.init_state != InitState::WaitingForReset {
-                                    driver_state.prepare_for_init();
+                    if let Status::Reset(x) = Status::try_unpack_from_slice(prop_value.value)? {
+                        fx_log_info!("on_inbound_frame: Reset: {:?}", x);
+                        self.frame_handler.clear();
+                        {
+                            let mut driver_state = self.driver_state.lock();
+                            if driver_state.init_state != InitState::WaitingForReset {
+                                driver_state.prepare_for_init();
 
-                                    // Avoid holding the mutex for longer than we need to.
-                                    std::mem::drop(driver_state);
+                                // Avoid holding the mutex for longer than we need to.
+                                std::mem::drop(driver_state);
 
-                                    self.driver_state_change.trigger();
-                                }
+                                self.driver_state_change.trigger();
                             }
-                            self.ncp_did_reset.trigger();
                         }
-                        _ => {}
+                        self.ncp_did_reset.trigger();
                     }
                 }
             }

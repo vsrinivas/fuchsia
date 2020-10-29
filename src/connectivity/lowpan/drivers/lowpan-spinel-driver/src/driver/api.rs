@@ -240,21 +240,12 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
 
         let ret = self.apply_standard_combinators(task.boxed()).await;
 
-        // Finally, issue a software reset command to make sure that
-        // we have a clean slate.
-        let ret = self
-            .frame_handler
-            .send_request(CmdReset)
-            .or_else(|_| futures::future::ready(ret))
-            .boxed()
-            .on_timeout(Time::after(DEFAULT_TIMEOUT), ncp_cmd_timeout!(self))
-            .await?;
+        // Clear the frame handler prepare for (re)initialization.
+        self.frame_handler.clear();
+        self.driver_state.lock().prepare_for_init();
+        self.driver_state_change.trigger();
 
-        self.wait_for_state(DriverState::is_initialized)
-            .boxed()
-            .map(|_| Ok(ret))
-            .on_timeout(Time::after(DEFAULT_TIMEOUT), ncp_cmd_timeout!(self))
-            .await
+        ret
     }
 
     async fn set_active(&self, enabled: bool) -> ZxResult<()> {
@@ -262,6 +253,9 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
 
         // Wait for our turn.
         let _lock = self.wait_for_api_task_lock().await;
+
+        // Wait until we are initialized, if we aren't already.
+        self.wait_for_state(DriverState::is_initialized).await;
 
         let mut driver_state = self.driver_state.lock();
 
@@ -670,31 +664,19 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
         // Wait for our turn.
         let _lock = self.wait_for_api_task_lock().await;
 
-        let task = async {
-            if self.get_init_state().is_initialized() {
-                fx_log_info!("reset: Sending reset command");
-                self.frame_handler
-                    .send_request(CmdReset)
-                    .boxed()
-                    .map(|result| match result {
-                        Ok(()) => Ok(()),
-                        Err(e) if e.downcast_ref::<Canceled>().is_some() => Ok(()),
-                        Err(e) => Err(ZxStatus::from(ErrorAdapter(e))),
-                    })
-                    .cancel_upon(self.ncp_did_reset.wait(), Ok(()))
-                    .await?;
-                fx_log_info!("reset: Waiting for driver to start initializing");
-                self.wait_for_state(DriverState::is_initializing).await;
-            }
+        // Clear the frame handler one more time and prepare for (re)initialization.
+        self.frame_handler.clear();
+        self.driver_state.lock().prepare_for_init();
+        self.driver_state_change.trigger();
 
-            fx_log_info!("reset: Waiting for driver to finish initializing");
-            self.wait_for_state(DriverState::is_initialized).await;
-            Ok(())
-        };
-
-        task.on_timeout(Time::after(DEFAULT_TIMEOUT), ncp_cmd_timeout!(self)).await?;
-
-        Ok(())
+        // Wait for initialization to complete.
+        // The reset will happen during initialization.
+        fx_log_info!("reset: Waiting for driver to finish initializing");
+        self.wait_for_state(DriverState::is_initialized)
+            .boxed()
+            .map(|_| Ok(()))
+            .on_timeout(Time::after(DEFAULT_TIMEOUT), ncp_cmd_timeout!(self))
+            .await
     }
 
     async fn get_factory_mac_address(&self) -> ZxResult<Vec<u8>> {
