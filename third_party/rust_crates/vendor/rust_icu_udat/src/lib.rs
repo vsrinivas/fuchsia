@@ -329,8 +329,19 @@ mod tests {
                 expected: "woensdag 22 Sjawal 1389 AH om 16:03:20 Pacific-standaardtijd",
                 calendar: None,
             },
+            // In ICU64 the "at" word has been added to Arabic output.
+            #[cfg(feature = "icu_version_68_plus")]
             Test {
-                name: "Arabic",
+                name: "Arabic >=v68",
+                locale: "ar-SA-u-ca-islamic",
+                timezone: "America/Los_Angeles",
+                date: 200000.0,
+                expected: "الأربعاء، ٢٢ شوال ١٣٨٩ هـ في ٤:٠٣:٢٠ م توقيت المحيط الهادي الرسمي",
+                calendar: None,
+            },
+            #[cfg(not(feature = "icu_version_68_plus"))]
+            Test {
+                name: "Arabic <v68",
                 locale: "ar-SA-u-ca-islamic",
                 timezone: "America/Los_Angeles",
                 date: 200000.0,
@@ -354,7 +365,7 @@ mod tests {
 
             let fmt = fmt;
             let actual = fmt.format(t.date)?;
-            assert_eq!(actual, t.expected, "test: {:?}", t);
+            assert_eq!(actual, t.expected, "(left==actual; right==expected)\n\ttest: {:?}", t);
         }
         Ok(())
     }

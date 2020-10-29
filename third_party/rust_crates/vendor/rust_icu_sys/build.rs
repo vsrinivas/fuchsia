@@ -38,6 +38,7 @@ mod inner {
         // should be topologicaly sorted based on the inclusion relationship between the respective
         // headers.  Any of these will fail if the required binaries are not present in $PATH.
         static ref BINDGEN_SOURCE_MODULES: Vec<&'static str> = vec![
+            "ubrk",
             "ucal",
             "uclean",
             "ucol",
@@ -62,6 +63,7 @@ mod inner {
         // bring in more types.
         static ref BINDGEN_ALLOWLIST_FUNCTIONS: Vec<&'static str> = vec![
             "u_.*",
+            "ubrk_.*",
             "ucal_.*",
             "ucol_.*",
             "udat_.*",
@@ -84,6 +86,8 @@ mod inner {
         static ref BINDGEN_ALLOWLIST_TYPES: Vec<&'static str> = vec![
             "UAcceptResult",
             "UBool",
+            "UBreakIterator",
+            "UBreakIteratorType",
             "UCalendar.*",
             "UChar.*",
             "UCol.*",
@@ -98,6 +102,7 @@ mod inner {
             "UField.*",
             "UFormat.*",
             "UFormattedList.*",
+            "ULineBreakTag",
             "UListFormatter.*",
             "ULoc.*",
             "ULOC.*",
@@ -106,11 +111,13 @@ mod inner {
             "UNumber.*",
             "UParseError",
             "UPlural.*",
+            "USentenceBreakTag",
             "USet",
             "UText",
             "UTransDirection",
             "UTransPosition",
             "UTransliterator",
+            "UWordBreak",
         ];
     }
 
@@ -397,11 +404,16 @@ macro_rules! versioned_function {{
         if let Some(_) = env::var_os("CARGO_FEATURE_ICU_VERSION_IN_ENV") {
             println!("cargo:rustc-cfg=feature=\"icu_version_in_env\"");
         }
-        if ICUConfig::version_major_int()? >= 67 {
+        let version_major = ICUConfig::version_major_int()?;
+        println!("icu-version-major: {}", version_major);
+        if version_major >= 64 {
+            println!("cargo:rustc-cfg=feature=\"icu_version_64_plus\"");
+        }
+        if version_major >= 67 {
             println!("cargo:rustc-cfg=feature=\"icu_version_67_plus\"");
         }
-        if ICUConfig::version_major_int()? >= 67 {
-            println!("cargo:rustc-cfg=feature=\"icu_version_67_plus\"");
+        if version_major >= 68 {
+            println!("cargo:rustc-cfg=feature=\"icu_version_68_plus\"");
         }
         Ok(())
     }

@@ -33,6 +33,7 @@ OUTPUT_DIR=${OUTPUT_DIR:-.}
 # intended to be kept in sync with the static variable by the same name in the
 # build.rs file.
 readonly BINDGEN_SOURCE_MODULES=(
+        "ubrk"
         "ucal"
         "uclean"
         "ucol"
@@ -59,6 +60,8 @@ readonly BINDGEN_SOURCE_MODULES=(
 readonly BINDGEN_ALLOWLIST_TYPES=(
         "UAcceptResult"
         "UBool"
+        "UBreakIterator"
+        "UBreakIteratorType"
         "UCalendar.*"
         "UChar.*"
         "UCol.*"
@@ -74,6 +77,7 @@ readonly BINDGEN_ALLOWLIST_TYPES=(
         "UFormat.*"
         "UFormattedList.*"
         "ULOC.*"
+        "ULineBreakTag"
         "UListFormatter.*"
         "ULoc.*"
         "UMessageFormat"
@@ -81,11 +85,13 @@ readonly BINDGEN_ALLOWLIST_TYPES=(
         "UNumber.*",
         "UParseError"
         "UPlural.*"
+        "USentenceBreakTag"
         "USet"
         "UText"
         "UTransDirection"
         "UTransPosition"
         "UTransliterator"
+        "UWordBreak"
 )
 
 # Functions for which to generate the bindings.  Expand this list if you need
@@ -93,6 +99,7 @@ readonly BINDGEN_ALLOWLIST_TYPES=(
 # the same name in the build.rs file.
 readonly BINDGEN_ALLOWLIST_FUNCTIONS=(
         "u_.*"
+        "ubrk_.*"
         "ucal_.*"
         "ucol_.*"
         "udat_.*"

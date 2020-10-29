@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "rust_icu_sys"
-version = "0.3.2"
+version = "0.4.1"
 authors = ["Google Inc."]
 build = "build.rs"
 links = "icuuc"
@@ -45,6 +45,7 @@ default = ["use-bindgen", "renaming", "icu_config"]
 icu_config = []
 icu_version_64_plus = []
 icu_version_67_plus = []
+icu_version_68_plus = []
 icu_version_in_env = []
 renaming = []
 use-bindgen = ["bindgen"]

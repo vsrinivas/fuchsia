@@ -26,8 +26,6 @@ use {
         os::raw,
         fmt,
     },
-
-    ecma402_traits,
 };
 
 /// Maximum length of locale supported by uloc.h.
@@ -54,8 +52,6 @@ impl fmt::Display for ULoc {
         write!(f, "{}", self.repr)
     }
 }
-/// Marker implementation for ULoc.
-impl ecma402_traits::Locale for ULoc {}
 
 impl TryFrom<&str> for ULoc {
     type Error = common::Error;
