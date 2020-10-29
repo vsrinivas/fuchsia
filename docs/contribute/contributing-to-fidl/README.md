@@ -544,21 +544,6 @@ valgrind -v -- out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc.debu
 
 ## Workflows
 
-### Language evolutions
-
-One common task is to evolve the language, or introduce stricter checks in `fidlc`.
-These changes typically follow a three phase approach:
-
-1. Write the new compiler code in `fidlc`;
-2. Use this updated `fidlc` to compile all layers,
-   including vendor/google, make changes as needed;
-3. When all is said and done, the `fidlc` changes can finally be merged.
-
-All of this assumes that (a) code which wouldn't pass the new checks, or (b) code
-that has new features, is *not* introduced concurrently between step 2 and step 3.
-That typically is the case, however, it is ok to deal with breaking rollers
-once in a while.
-
 ### Go fuchsia.io and fuchsia.net
 
 To update all the saved `fidlgen` files, run the following command,
