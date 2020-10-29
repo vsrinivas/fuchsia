@@ -8,6 +8,8 @@ import("//build/testing/host_test_data.gni")
 
 go_library("ninjagraph") {
   sources = [
+    "criticalpath.go",
+    "criticalpath_test.go",
     "ninjagraph.go",
     "ninjagraph_test.go",
   ]
