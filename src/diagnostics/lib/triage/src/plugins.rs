@@ -5,7 +5,9 @@
 use crate::{act::ActionResults, metrics::FileDataFetcher};
 
 mod crashes;
+mod helpers;
 mod memory;
+mod routing;
 mod sandbox_errors;
 
 pub trait Plugin {
@@ -28,6 +30,7 @@ pub fn register_plugins() -> Vec<Box<dyn Plugin>> {
     vec![
         Box::new(crashes::CrashesPlugin {}),
         Box::new(sandbox_errors::SandboxErrorsPlugin {}),
+        Box::new(routing::RoutingErrorsPlugin {}),
         Box::new(memory::MemoryPlugin {}),
     ]
 }

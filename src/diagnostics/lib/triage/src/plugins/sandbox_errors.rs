@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::Plugin,
+    super::{helpers::analyze_logs, Plugin},
     crate::{act::ActionResults, metrics::FileDataFetcher},
     regex::Regex,
     std::collections::BTreeSet,
@@ -23,21 +23,17 @@ impl Plugin for SandboxErrorsPlugin {
     fn run(&self, inputs: &FileDataFetcher<'_>) -> ActionResults {
         let mut results = ActionResults::new();
 
-        let mut error_tuples = BTreeSet::new();
+        let mut error_tuples: BTreeSet<(String, String)> = BTreeSet::new();
+        let err_ref = &mut error_tuples;
 
         let re = Regex::new(r"`([^`]+)` is not allowed to connect to `([^`]+)` because this service is not present in the component's sandbox")
             .expect("regex compilation");
-        for line in inputs.klog.lines.iter().chain(inputs.syslog.lines.iter()) {
-            match re.captures(line) {
-                Some(captures) => {
-                    error_tuples.insert((
-                        captures.get(1).unwrap().as_str().to_owned(),
-                        captures.get(2).unwrap().as_str().to_owned(),
-                    ));
-                }
-                _ => {}
-            };
-        }
+        analyze_logs(inputs, re, |mut pattern_match| {
+            err_ref.insert((
+                <&str>::from(pattern_match.remove(1)).to_string(),
+                <&str>::from(pattern_match.remove(1)).to_string(),
+            ));
+        });
 
         for (name, service) in error_tuples.iter() {
             results.add_warning(format!(
