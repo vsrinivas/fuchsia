@@ -2191,7 +2191,7 @@ void SimFirmware::RxMgmtFrame(std::shared_ptr<const simulation::SimManagementFra
   switch (mgmt_frame->MgmtFrameType()) {
     case simulation::SimManagementFrame::FRAME_TYPE_BEACON: {
       auto beacon = std::static_pointer_cast<const simulation::SimBeaconFrame>(mgmt_frame);
-      RxBeacon(info->channel, beacon);
+      RxBeacon(info->channel, beacon, info->signal_strength);
       break;
     }
 
@@ -2341,10 +2341,24 @@ void SimFirmware::ConductChannelSwitch(const wlan_channel_t& dst_channel, uint8_
   channel_switch_state_.state = ChannelSwitchState::HOME;
 }
 
+// static
+int8_t SimFirmware::RssiDbmFromSignalStrength(double signal_strength) {
+  // truncate signal strength to rssi unit
+  if (signal_strength > INT8_MAX) {
+    return INT8_MAX;
+  } else if (signal_strength < INT8_MIN) {
+    return INT8_MIN;
+  }
+  return signal_strength;
+}
+
 void SimFirmware::RxBeacon(const wlan_channel_t& channel,
-                           std::shared_ptr<const simulation::SimBeaconFrame> frame) {
+                           std::shared_ptr<const simulation::SimBeaconFrame> frame,
+                           double signal_strength) {
   if (scan_state_.state == ScanState::SCANNING && !scan_state_.opts->is_active) {
-    ScanResult scan_result = {.channel = channel, .bssid = frame->bssid_, .ies = frame->IEs_};
+    int8_t rssi_dbm = RssiDbmFromSignalStrength(signal_strength);
+    ScanResult scan_result = {
+        .channel = channel, .bssid = frame->bssid_, .rssi_dbm = rssi_dbm, .ies = frame->IEs_};
 
     scan_result.bss_capability.set_val(frame->capability_info_.val());
     scan_state_.opts->on_result_fn(scan_result);
@@ -2410,16 +2424,7 @@ void SimFirmware::RxProbeResp(const wlan_channel_t& channel,
     return;
   }
 
-  // truncate signal strength to rssi unit
-  int8_t rssi_dbm;
-  if (signal_strength > INT8_MAX) {
-    rssi_dbm = INT8_MAX;
-  } else if (signal_strength < INT8_MIN) {
-    rssi_dbm = INT8_MIN;
-  } else {
-    rssi_dbm = signal_strength;
-  }
-
+  int8_t rssi_dbm = SimFirmware::RssiDbmFromSignalStrength(signal_strength);
   ScanResult scan_result = {
       .channel = channel, .bssid = frame->src_addr_, .rssi_dbm = rssi_dbm, .ies = frame->IEs_};
 

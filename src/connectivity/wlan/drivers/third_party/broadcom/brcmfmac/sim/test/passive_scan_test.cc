@@ -168,6 +168,9 @@ TEST_F(PassiveScanTest, BasicFunctionality) {
     EXPECT_EQ(result.bss.chan.primary, kDefaultChannel.primary);
     EXPECT_EQ(result.bss.chan.cbw, kDefaultChannel.cbw);
     EXPECT_EQ(result.bss.chan.secondary80, kDefaultChannel.secondary80);
+
+    // Verify has RSSI value
+    ASSERT_LT(result.bss.rssi_dbm, 0);
   });
 
   env_->Run(kDefaultTestDuration);
@@ -208,6 +211,9 @@ TEST_F(PassiveScanTest, ScanWithMalformedBeaconMissingSsidInformationElement) {
     EXPECT_EQ(result.bss.chan.primary, kDefaultChannel.primary);
     EXPECT_EQ(result.bss.chan.cbw, kDefaultChannel.cbw);
     EXPECT_EQ(result.bss.chan.secondary80, kDefaultChannel.secondary80);
+
+    // Verify has RSSI value
+    ASSERT_LT(result.bss.rssi_dbm, 0);
   });
 
   env_->Run(kDefaultTestDuration);

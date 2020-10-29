@@ -363,8 +363,9 @@ class SimFirmware {
                    std::shared_ptr<const simulation::WlanRxInfo> info);
   void RxDataFrame(std::shared_ptr<const simulation::SimDataFrame> data_frame,
                    std::shared_ptr<const simulation::WlanRxInfo> info);
+  static int8_t RssiDbmFromSignalStrength(double signal_strength);
   void RxBeacon(const wlan_channel_t& channel,
-                std::shared_ptr<const simulation::SimBeaconFrame> frame);
+                std::shared_ptr<const simulation::SimBeaconFrame> frame, double signal_strength);
   void RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFrame> frame);
   void RxDisassocReq(std::shared_ptr<const simulation::SimDisassocReqFrame> frame);
   void RxAssocReq(std::shared_ptr<const simulation::SimAssocReqFrame> frame);
