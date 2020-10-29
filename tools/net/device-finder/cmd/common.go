@@ -43,7 +43,7 @@ type mdnsInterface interface {
 type newMDNSFunc func(address string) mdnsInterface
 
 type netbootClientInterface interface {
-	StartDiscover(chan<- *netboot.Target, string) (func() error, error)
+	StartDiscover(context.Context, chan<- *netboot.Target, string) (func() error, error)
 }
 
 type newNetbootFunc func(timeout time.Duration) netbootClientInterface

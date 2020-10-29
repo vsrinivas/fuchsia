@@ -291,7 +291,7 @@ func (n *Client) Discover(ctx context.Context, nodename string) (*net.UDPAddr, e
 	ctx, cancel := context.WithTimeout(ctx, n.Timeout)
 	defer cancel()
 	t := make(chan *Target)
-	cleanup, err := n.StartDiscover(t, nodename)
+	cleanup, err := n.StartDiscover(ctx, t, nodename)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +309,7 @@ func (n *Client) Discover(ctx context.Context, nodename string) (*net.UDPAddr, e
 				ifaceName = target.Interface.Name
 			}
 			if nodename == NodenameWildcard {
-				logger.Infof(ctx, "found nodename %s", target.Nodename)
+				logger.Debugf(ctx, "found nodename %s", target.Nodename)
 			}
 			return &net.UDPAddr{IP: target.TargetAddress, Zone: ifaceName}, nil
 			continue
@@ -324,7 +324,7 @@ func (n *Client) DiscoverAll(ctx context.Context) ([]*Target, error) {
 	ctx, cancel := context.WithTimeout(ctx, n.Timeout)
 	defer cancel()
 	t := make(chan *Target)
-	cleanup, err := n.StartDiscover(t, NodenameWildcard)
+	cleanup, err := n.StartDiscover(ctx, t, NodenameWildcard)
 	if err != nil {
 		return nil, err
 	}
@@ -363,7 +363,7 @@ func (n *Client) DiscoverAll(ctx context.Context) ([]*Target, error) {
 // Example:
 //	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 //	defer cancel()
-//	cleanup, err := c.StartDiscover(t, true)
+//	cleanup, err := c.StartDiscover(ctx, t, true)
 //	if err != nil {
 //		return err
 //	}
@@ -377,7 +377,7 @@ func (n *Client) DiscoverAll(ctx context.Context) ([]*Target, error) {
 //				// completed.
 //		}
 //	}
-func (n *Client) StartDiscover(t chan<- *Target, nodename string) (func() error, error) {
+func (n *Client) StartDiscover(ctx context.Context, t chan<- *Target, nodename string) (func() error, error) {
 	n.Cookie++
 	q, err := newNetbootQuery(nodename, n.Cookie, n.ServerPort)
 	if err != nil {
@@ -385,14 +385,11 @@ func (n *Client) StartDiscover(t chan<- *Target, nodename string) (func() error,
 	}
 	go func() {
 		defer q.close()
-		if err := q.write(); err != nil {
-			t <- &Target{Error: err}
-			return
-		}
 
 		for {
-			// Simple cleanup to avoid extra cycles.
-			if !q.isOpen {
+			logger.Debugf(ctx, "discovering nodename=%s", nodename)
+			if err := q.write(); err != nil {
+				t <- &Target{Error: err}
 				return
 			}
 			target, err := q.read()
@@ -403,9 +400,14 @@ func (n *Client) StartDiscover(t chan<- *Target, nodename string) (func() error,
 			if target != nil {
 				// Only skip if there's a name mismatch.
 				if nodename != NodenameWildcard && !strings.Contains(target.Nodename, nodename) {
+					logger.Debugf(ctx, "discarding response from %s, want=%s", target.Nodename, nodename)
 					continue
 				}
 				t <- target
+			}
+			// Simple cleanup to avoid extra cycles.
+			if !q.isOpen {
+				return
 			}
 		}
 	}()
@@ -482,11 +484,11 @@ func (n *Client) beaconForNodename(ctx context.Context, conn *net.UDPConn, noden
 			return nil, nil, err
 		}
 		if nodename == NodenameWildcard {
-			logger.Infof(ctx, "found nodename %s", msg.Nodename)
+			logger.Debugf(ctx, "found nodename %s", msg.Nodename)
 			return addr, msg, err
 		}
 		if msg.Nodename != nodename {
-			logger.Infof(ctx, "ignoring nodename %s (expecting %s)", msg.Nodename, nodename)
+			logger.Debugf(ctx, "ignoring nodename %s (expecting %s)", msg.Nodename, nodename)
 			continue
 		}
 		return addr, msg, err

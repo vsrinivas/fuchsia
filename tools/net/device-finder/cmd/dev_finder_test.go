@@ -56,7 +56,7 @@ func nilNBDiscoverFunc(chan<- *netboot.Target, string) (func() error, error) {
 	return func() error { return nil }, nil
 }
 
-func (m *fakeNetbootClient) StartDiscover(t chan<- *netboot.Target, nodename string) (func() error, error) {
+func (m *fakeNetbootClient) StartDiscover(_ context.Context, t chan<- *netboot.Target, nodename string) (func() error, error) {
 	return m.discover(t, nodename)
 }
 
