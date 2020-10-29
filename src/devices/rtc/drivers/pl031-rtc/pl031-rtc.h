@@ -8,8 +8,8 @@
 #include <fuchsia/hardware/rtc/llcpp/fidl.h>
 
 #include <ddk/device.h>
-#include <ddk/mmio-buffer.h>
 #include <ddktl/device.h>
+#include <lib/mmio/mmio.h>
 
 namespace rtc {
 
@@ -32,7 +32,7 @@ class Pl031 : public FidlRtc::Device::Interface, public RtcDeviceType {
  public:
   static zx_status_t Bind(void*, zx_device_t* dev);
 
-  explicit Pl031(zx_device_t* parent);
+  Pl031(zx_device_t* parent, ddk::MmioBuffer mmio);
   ~Pl031() = default;
 
   // FidlRtc::Device::Interface:
@@ -46,7 +46,7 @@ class Pl031 : public FidlRtc::Device::Interface, public RtcDeviceType {
  private:
   zx_status_t SetRtc(FidlRtc::Time rtc);
 
-  mmio_buffer_t mmio_;
+  ddk::MmioBuffer mmio_;
   MMIO_PTR Pl031Regs* regs_;
 };
 
