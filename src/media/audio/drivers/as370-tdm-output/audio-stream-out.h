@@ -9,6 +9,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
+#include <lib/simple-codec/simple-codec-client.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
@@ -21,12 +22,9 @@
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/platform/device.h>
 #include <fbl/mutex.h>
 #include <soc/as370/syn-audio-out.h>
-
-#include "codec.h"
 
 namespace audio {
 namespace as370 {
@@ -67,7 +65,7 @@ class As370AudioStreamOut : public SimpleAudioStream {
   zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_token());
   std::unique_ptr<SynAudioOutDevice> lib_;
   ddk::ClockProtocolClient clks_[kClockCount] TA_GUARDED(domain_token());
-  Codec codec_ TA_GUARDED(domain_token());
+  SimpleCodecClient codec_ TA_GUARDED(domain_token());
 };
 
 }  // namespace as370

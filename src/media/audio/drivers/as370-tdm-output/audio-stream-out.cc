@@ -33,6 +33,8 @@ enum {
   FRAGMENT_COUNT,
 };
 
+constexpr uint32_t kWantedFrameRate = 48'000;
+
 }  // namespace
 
 namespace audio {
@@ -112,14 +114,10 @@ zx_status_t As370AudioStreamOut::InitPdev() {
     return status;
   }
 
-  codec_.proto_client_ = fragments[FRAGMENT_CODEC];
-  if (!codec_.proto_client_.is_valid()) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  status = codec_.GetInfo();
+  status = codec_.SetProtocol(fragments[FRAGMENT_CODEC]);
   if (status != ZX_OK) {
-    return status;
+    zxlogf(ERROR, "%s could set codec protocol %d", __FUNCTION__, status);
+    return ZX_ERR_NO_RESOURCES;
   }
 
   // Reset and initialize codec after we have configured I2S.
@@ -128,24 +126,19 @@ zx_status_t As370AudioStreamOut::InitPdev() {
     return status;
   }
 
-  status = codec_.SetNotBridged();
+  status = codec_.SetBridgedMode(false);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = codec_.CheckExpectedDaiFormat();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  dai_format_t format = {};
+  DaiFormat format = {};
   format.number_of_channels = 2;
   format.channels_to_use_bitmask = 3;
-  format.sample_format = kWantedSampleFormat;
-  format.frame_format = kWantedFrameFormat;
+  format.sample_format = SampleFormat::PCM_SIGNED;
+  format.frame_format = FrameFormat::I2S;
   format.frame_rate = kWantedFrameRate;
-  format.bits_per_sample = kWantedBitsPerSample;
-  format.bits_per_slot = kWantedBitsPerSlot;
+  format.bits_per_sample = 32;
+  format.bits_per_slot = 32;
   status = codec_.SetDaiFormat(format);
   if (status == ZX_OK) {
     zxlogf(INFO, "audio: as370 audio output initialized");
@@ -166,28 +159,26 @@ zx_status_t As370AudioStreamOut::Init() {
   }
 
   // Get our gain capabilities.
-  gain_state_t state = {};
-  status = codec_.GetGainState(&state);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get gain state", __FILE__);
-    return status;
+  auto state = codec_.GetGainState();
+  if (state.is_error()) {
+    zxlogf(ERROR, "%s failed to get gain state", __FILE__);
+    return state.error_value();
   }
-  cur_gain_state_.cur_gain = state.gain;
-  cur_gain_state_.cur_mute = state.muted;
-  cur_gain_state_.cur_agc = state.agc_enable;
+  cur_gain_state_.cur_gain = state->gain;
+  cur_gain_state_.cur_mute = state->muted;
+  cur_gain_state_.cur_agc = state->agc_enable;
 
-  gain_format_t format = {};
-  status = codec_.GetGainFormat(&format);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get gain format", __FILE__);
-    return status;
+  auto format = codec_.GetGainFormat();
+  if (format.is_error()) {
+    zxlogf(ERROR, "%s failed to get gain format", __FILE__);
+    return format.error_value();
   }
 
-  cur_gain_state_.min_gain = format.min_gain;
-  cur_gain_state_.max_gain = format.max_gain;
-  cur_gain_state_.gain_step = format.gain_step;
-  cur_gain_state_.can_mute = format.can_mute;
-  cur_gain_state_.can_agc = format.can_agc;
+  cur_gain_state_.min_gain = format->min_gain;
+  cur_gain_state_.max_gain = format->max_gain;
+  cur_gain_state_.gain_step = format->gain_step;
+  cur_gain_state_.can_mute = format->can_mute;
+  cur_gain_state_.can_agc = format->can_agc;
 
   snprintf(device_name_, sizeof(device_name_), "as370-audio-out");
   snprintf(mfr_name_, sizeof(mfr_name_), "unknown");
@@ -228,14 +219,11 @@ zx_status_t As370AudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq
 void As370AudioStreamOut::ShutdownHook() { lib_->Shutdown(); }
 
 zx_status_t As370AudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
-  gain_state_t state;
+  GainState state;
   state.gain = req.gain;
   state.muted = cur_gain_state_.cur_mute;
   state.agc_enable = cur_gain_state_.cur_agc;
-  auto status = codec_.SetGainState(&state);
-  if (status != ZX_OK) {
-    return status;
-  }
+  codec_.SetGainState(std::move(state));
   cur_gain_state_.cur_gain = state.gain;
   return ZX_OK;
 }
