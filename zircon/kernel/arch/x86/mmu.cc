@@ -210,7 +210,7 @@ static void TlbInvalidatePage_task(void* raw_context) {
  * @param pending The planned invalidation
  */
 static void x86_tlb_invalidate_page(const X86PageTableBase* pt, PendingTlbInvalidation* pending) {
-  if (pending->count == 0) {
+  if (pending->count == 0 && !pending->full_shootdown) {
     return;
   }
 
