@@ -52,7 +52,8 @@ sanitizer_default_options_args = [
 ]
 
 # Adapt to being used in the Fuchsia GN build or in the Zircon build.
-if ("$zx" == "/") {
+if ("$zx/" == "//") {
+  _sanitizer_config_dir = "$zx/public/gn/config/instrumentation"
   _hidden_config = "$zx/public/gn/config:visibility_hidden"
   _no_sanitizers_config = "$zx/public/gn/config:no_sanitizers"
   _is_kernel = is_kernel
@@ -60,9 +61,11 @@ if ("$zx" == "/") {
   _tags = toolchain.tags
 } else {
   if (zircon_toolchain == false) {
+    _sanitizer_config_dir = "//build/config/sanitizers"
     _hidden_config = "//build/config:symbol_visibility_hidden"
     _no_sanitizers_config = "//build/config:no_sanitizers"
   } else {
+    _sanitizer_config_dir = "//build/config/zircon/instrumentation"
     _hidden_config = "//build/config/zircon:visibility_hidden"
     _no_sanitizers_config = "//build/config/zircon:no_sanitizers"
   }
@@ -80,16 +83,18 @@ if ("$zx" == "/") {
 template("_sanitizer_default_options_target") {
   string = string_join(":", invoker.args)
   nonempty = (string != "" || invoker.default) && !_is_kernel
-  if (invoker.default) {
-    # This is directly in the deps of each executable() target, so it will
-    # always be linked in directly.
-    type = "source_set"
-  } else if (nonempty) {
+  if (nonempty) {
     # This might only be in the executable() target's deps transitively via a
     # static_library() or rust_library() target.  In that case, a source_set()
     # would not have its object files propagated to the final executable()
     # link.  So we play some shenanigans below to make sure the object file
     # here never goes into a library but always goes into the final link.
+    #
+    # In the invoker.default case, the target is directly in the deps of each
+    # executable() target, so it will always be linked in directly and so a
+    # source_set() could work.  However, the source_set() would contribute its
+    # object file to to {{objs}} while the shenanigans below contribute to
+    # {{libs}}, so the dependency ordering between the two would be lost.
     type = "static_library"
   } else {
     type = "group"
@@ -102,6 +107,13 @@ template("_sanitizer_default_options_target") {
                              "visibility",
                              "testonly",
                            ])
+
+    if (!invoker.default) {
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ "${_sanitizer_config_dir}:${invoker.output_name}" ]
+    }
 
     if (nonempty) {
       # On Fuchsia, the ASan runtime is dynamically linked and needs to have
@@ -127,16 +139,14 @@ template("_sanitizer_default_options_target") {
       this_dir = "$zx/public/gn/config/instrumentation"
       sources = [ "$this_dir/sanitizer_default_options.c" ]
 
-      if (type == "static_library") {
-        # The library archive is in the link, but there's no symbol reference
-        # that would bring the object into the link from that archive.  So we
-        # hijack the dependency on the library just to ensure that the object
-        # gets built, and then stuff it directly into the link with `libs`.
-        output_prefix_override = true
-        libs = process_file_template(
-                sources,
-                [ "{{source_out_dir}}/$target_name.{{source_file_part}}.o" ])
-      }
+      # The library archive is in the link, but there's no symbol reference
+      # that would bring the object into the link from that archive.  So we
+      # hijack the dependency on the library just to ensure that the object
+      # gets built, and then stuff it directly into the link with `libs`.
+      output_prefix_override = true
+      libs = process_file_template(
+              sources,
+              [ "{{source_out_dir}}/$target_name.{{source_file_part}}.o" ])
     } else {
       not_needed(invoker, [ "output_name" ])
     }
