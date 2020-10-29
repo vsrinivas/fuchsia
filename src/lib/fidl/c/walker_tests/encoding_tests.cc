@@ -32,6 +32,7 @@ namespace {
 // TODO(kulakowski) Change the tests to check for more specific error
 // values, once those are settled.
 
+#ifdef __Fuchsia__
 constexpr zx_handle_t dummy_handle_0 = static_cast<zx_handle_t>(23);
 constexpr zx_handle_t dummy_handle_1 = static_cast<zx_handle_t>(24);
 constexpr zx_handle_t dummy_handle_2 = static_cast<zx_handle_t>(25);
@@ -62,6 +63,7 @@ constexpr zx_handle_t dummy_handle_26 = static_cast<zx_handle_t>(49);
 constexpr zx_handle_t dummy_handle_27 = static_cast<zx_handle_t>(50);
 constexpr zx_handle_t dummy_handle_28 = static_cast<zx_handle_t>(51);
 constexpr zx_handle_t dummy_handle_29 = static_cast<zx_handle_t>(52);
+#endif
 
 // All sizes in fidl encoding tables are 32 bits. The fidl compiler
 // normally enforces this. Check manually in manual tests.
@@ -132,7 +134,8 @@ zx_status_t encode_helper<Mode::LinearizeAndEncode>(const fidl_type_t* type, voi
 
 template <Mode mode>
 void encode_null_encode_parameters() {
-  // Null message type.
+// Null message type.
+#ifdef __Fuchsia__
   {
     nonnullable_handle_message_layout message;
     uint8_t buf[sizeof(nonnullable_handle_message_layout)];
@@ -159,6 +162,7 @@ void encode_null_encode_parameters() {
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NOT_NULL(error);
   }
+#endif
 
   // Null handles, for a message that has a handle.
   {
@@ -188,7 +192,8 @@ void encode_null_encode_parameters() {
     EXPECT_NOT_NULL(error);
   }
 
-  // A null actual byte count pointer.
+// A null actual byte count pointer.
+#ifdef __Fuchsia__
   if (mode == Mode::LinearizeAndEncode) {
     nonnullable_handle_message_layout message;
     uint8_t buf[sizeof(nonnullable_handle_message_layout)];
@@ -215,6 +220,7 @@ void encode_null_encode_parameters() {
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NOT_NULL(error);
   }
+#endif
 
   // A null error string pointer is ok, though.
   {
@@ -225,7 +231,8 @@ void encode_null_encode_parameters() {
     EXPECT_NE(status, ZX_OK);
   }
 
-  // A null error is also ok in success cases.
+// A null error is also ok in success cases.
+#ifdef __Fuchsia__
   {
     nonnullable_handle_message_layout message = {};
     message.inline_struct.handle = dummy_handle_0;
@@ -246,8 +253,10 @@ void encode_null_encode_parameters() {
     }
     EXPECT_EQ(result.inline_struct.handle, FIDL_HANDLE_PRESENT);
   }
+#endif
 }
 
+#ifdef __Fuchsia__
 TEST(BufferSizes, linearize_and_encode_produces_actual_buffer_sizes) {
   nonnullable_handle_message_layout message;
   message.inline_struct.handle = dummy_handle_0;
@@ -267,8 +276,6 @@ TEST(BufferSizes, linearize_and_encode_produces_actual_buffer_sizes) {
   EXPECT_EQ(actual_handles, 1);
 }
 
-// Disabled on host due to syscall.
-#ifdef __Fuchsia__
 TEST(BufferSizes, encode_too_many_bytes_specified_should_close_handles) {
   zx::eventpair ep0, ep1;
   ASSERT_EQ(zx::eventpair::create(0, &ep0, &ep1), ZX_OK);
@@ -298,7 +305,6 @@ TEST(BufferSizes, encode_too_many_bytes_specified_should_close_handles) {
   zx_handle_t unused = ep0.release();
   (void)unused;
 }
-#endif
 
 template <Mode mode>
 void encode_single_present_handle_unaligned_error() {
@@ -332,6 +338,7 @@ void encode_single_present_handle_unaligned_error() {
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
 }
+#endif
 
 template <Mode mode>
 void encode_present_nonnullable_string_unaligned_error() {
@@ -372,6 +379,7 @@ void encode_present_nonnullable_string_unaligned_error() {
   ASSERT_SUBSTR(error, "must be aligned to FIDL_ALIGNMENT");
 }
 
+#ifdef __Fuchsia__
 template <Mode mode>
 void encode_single_present_handle() {
   nonnullable_handle_message_layout message = {};
@@ -791,6 +799,7 @@ void encode_out_of_line_array_of_nonnullable_handles() {
   EXPECT_EQ(handles[2], dummy_handle_2);
   EXPECT_EQ(handles[3], dummy_handle_3);
 }
+#endif
 
 template <Mode mode>
 void encode_present_nonnullable_string() {
@@ -1110,6 +1119,7 @@ void encode_vector_with_huge_count() {
   EXPECT_EQ(actual_handles, 0u);
 }
 
+#ifdef __Fuchsia__
 template <Mode mode>
 void encode_present_nonnullable_vector_of_handles() {
   unbounded_nonnullable_vector_of_handles_message_layout message = {};
@@ -1404,6 +1414,7 @@ void encode_present_nullable_bounded_vector_of_handles_short_error() {
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
 }
+#endif
 
 template <Mode mode>
 void encode_present_nonnullable_vector_of_uint32() {
@@ -1649,6 +1660,7 @@ void encode_present_nullable_bounded_vector_of_uint32_short_error() {
   EXPECT_NOT_NULL(error);
 }
 
+#if __Fuchsia__
 template <Mode mode>
 void encode_nested_nonnullable_structs() {
   // Note the traversal order! l1 -> l3 -> l2 -> l0
@@ -1940,6 +1952,7 @@ TEST(TrackingPtr, encode_union_tracking_ptr_unowned) {
   // Padding should be zero.
   EXPECT_EQ(*reinterpret_cast<int32_t*>(buffer + sizeof(LLCPPStyleUnionStruct) + 4), 0);
 }
+#endif
 
 // Heap allocated objects are not co-located with the stack object so this tests linearization.
 TEST(TrackingPtr, encode_union_tracking_ptr_heap_allocate) {
@@ -2087,6 +2100,7 @@ TEST(TrackingPtr, encode_string_view_tracking_ptr_heap_allocate) {
 // Most fidl_linearize_and_encode_etc code paths are covered by the fidl_linearize_and_encode tests.
 // These tests cover additional paths.
 
+#ifdef __Fuchsia__
 TEST(FidlLinearizeAndEncodeEtc, linearize_and_encode_single_present_handle_disposition) {
   nonnullable_handle_message_layout message = {};
   message.inline_struct.handle = dummy_handle_0;
@@ -2136,6 +2150,7 @@ TEST(FidlLinearizeAndEncodeEtc, encode_single_present_handle_disposition) {
   EXPECT_EQ(handle_dispositions[0].result, ZX_OK);
   EXPECT_EQ(message.inline_struct.handle, FIDL_HANDLE_PRESENT);
 }
+#endif
 
 TEST(NullParameters, encode_null_encode_parameters_Mode_EncodeOnly) {
   encode_null_encode_parameters<Mode::EncodeOnly>();
@@ -2144,19 +2159,23 @@ TEST(NullParameters, encode_null_encode_parameters_Mode_LinearizeAndEncode) {
   encode_null_encode_parameters<Mode::LinearizeAndEncode>();
 }
 
+#if __Fuchsia__
 TEST(Unaligned, encode_single_present_handle_unaligned_error_Mode_EncodeOnly) {
   encode_single_present_handle_unaligned_error<Mode::EncodeOnly>();
 }
-TEST(Unaligned, encode_present_nonnullable_string_unaligned_error_Mode_EncodeOnly) {
-  encode_present_nonnullable_string_unaligned_error<Mode::EncodeOnly>();
-}
 TEST(Unaligned, encode_single_present_handle_unaligned_error_Mode_LinearizeAndEncode) {
   encode_single_present_handle_unaligned_error<Mode::LinearizeAndEncode>();
+}
+#endif
+
+TEST(Unaligned, encode_present_nonnullable_string_unaligned_error_Mode_EncodeOnly) {
+  encode_present_nonnullable_string_unaligned_error<Mode::EncodeOnly>();
 }
 TEST(Unaligned, encode_present_nonnullable_string_unaligned_error_Mode_LinearizeAndEncode) {
   encode_present_nonnullable_string_unaligned_error<Mode::LinearizeAndEncode>();
 }
 
+#if __Fuchsia__
 TEST(Handles, encode_single_present_handle_Mode_EncodeOnly) {
   encode_single_present_handle<Mode::EncodeOnly>();
 }
@@ -2203,12 +2222,11 @@ TEST(Arrays, encode_array_of_array_of_present_handles_Mode_EncodeOnly) {
 TEST(Arrays, encode_out_of_line_array_of_nonnullable_handles_Mode_EncodeOnly) {
   encode_out_of_line_array_of_nonnullable_handles<Mode::EncodeOnly>();
 }
-#ifdef __Fuchsia__
-// Disabled on host due to syscall.
+
 TEST(Arrays, encode_array_of_present_handles_error_closes_handles_Mode_EncodeOnly) {
   encode_array_of_present_handles_error_closes_handles<Mode::EncodeOnly>();
 }
-#endif
+
 TEST(Arrays, encode_array_of_present_handles_Mode_LinearizeAndEncode) {
   encode_array_of_present_handles<Mode::LinearizeAndEncode>();
 }
@@ -2225,8 +2243,6 @@ TEST(Arrays, encode_array_of_array_of_present_handles_Mode_LinearizeAndEncode) {
 TEST(Arrays, encode_out_of_line_array_of_nonnullable_handles_Mode_LinearizeAndEncode) {
   encode_out_of_line_array_of_nonnullable_handles<Mode::LinearizeAndEncode>();
 }
-#ifdef __Fuchsia__
-// Disabled on host due to syscall.
 TEST(Arrays, encode_array_of_present_handles_error_closes_handles_Mode_LinearizeAndEncode) {
   encode_array_of_present_handles_error_closes_handles<Mode::LinearizeAndEncode>();
 }
@@ -2296,6 +2312,7 @@ TEST(Strings, encode_present_nullable_bounded_string_short_error_Mode_LinearizeA
 TEST(Vectors, encode_vector_with_huge_count_Mode_EncodeOnly) {
   encode_vector_with_huge_count<Mode::EncodeOnly>();
 }
+#if __Fuchsia__
 TEST(Vectors, encode_present_nonnullable_vector_of_handles_Mode_EncodeOnly) {
   encode_present_nonnullable_vector_of_handles<Mode::EncodeOnly>();
 }
@@ -2323,6 +2340,8 @@ TEST(Vectors, encode_present_nonnullable_bounded_vector_of_handles_short_error_M
 TEST(Vectors, encode_present_nullable_bounded_vector_of_handles_short_error_Mode_EncodeOnly) {
   encode_present_nullable_bounded_vector_of_handles_short_error<Mode::EncodeOnly>();
 }
+#endif
+
 TEST(Vectors, encode_present_nonnullable_vector_of_uint32_Mode_EncodeOnly) {
   encode_present_nonnullable_vector_of_uint32<Mode::EncodeOnly>();
 }
@@ -2356,11 +2375,12 @@ TEST(Vectors, encode_present_nonnullable_bounded_vector_of_uint32_short_error_Mo
 TEST(Vectors, encode_present_nullable_bounded_vector_of_uint32_short_error_Mode_EncodeOnly) {
   encode_present_nullable_bounded_vector_of_uint32_short_error<Mode::EncodeOnly>();
 }
-TEST(Vectors, encode_absent_nonnullable_vector_of_handles_error_Mode_EncodeOnly) {
-  encode_absent_nonnullable_vector_of_handles_error<Mode::EncodeOnly>();
-}
 TEST(Vectors, encode_vector_with_huge_count_Mode_LinearizeAndEncode) {
   encode_vector_with_huge_count<Mode::LinearizeAndEncode>();
+}
+#if __Fuchsia__
+TEST(Vectors, encode_absent_nonnullable_vector_of_handles_error_Mode_EncodeOnly) {
+  encode_absent_nonnullable_vector_of_handles_error<Mode::EncodeOnly>();
 }
 TEST(Vectors, encode_present_nonnullable_vector_of_handles_Mode_LinearizeAndEncode) {
   encode_present_nonnullable_vector_of_handles<Mode::LinearizeAndEncode>();
@@ -2391,6 +2411,7 @@ TEST(Vectors,
      encode_present_nullable_bounded_vector_of_handles_short_error_Mode_LinearizeAndEncode) {
   encode_present_nullable_bounded_vector_of_handles_short_error<Mode::LinearizeAndEncode>();
 }
+#endif
 TEST(Vectors, encode_present_nonnullable_vector_of_uint32_Mode_LinearizeAndEncode) {
   encode_present_nonnullable_vector_of_uint32<Mode::LinearizeAndEncode>();
 }
@@ -2427,10 +2448,11 @@ TEST(Vectors,
      encode_present_nullable_bounded_vector_of_uint32_short_error_Mode_LinearizeAndEncode) {
   encode_present_nullable_bounded_vector_of_uint32_short_error<Mode::LinearizeAndEncode>();
 }
+
+#if __Fuchsia__
 TEST(Vectors, encode_absent_nonnullable_vector_of_handles_error_Mode_LinearizeAndEncode) {
   encode_absent_nonnullable_vector_of_handles_error<Mode::LinearizeAndEncode>();
 }
-
 TEST(Structs, encode_nested_nonnullable_structs_Mode_EncodeOnly) {
   encode_nested_nonnullable_structs<Mode::EncodeOnly>();
 }
@@ -2449,6 +2471,7 @@ TEST(Structs, encode_nested_nonnullable_structs_zero_padding_Mode_LinearizeAndEn
 TEST(Structs, encode_nested_nullable_structs_Mode_LinearizeAndEncode) {
   encode_nested_nullable_structs<Mode::LinearizeAndEncode>();
 }
+#endif
 
 }  // namespace
 }  // namespace fidl
