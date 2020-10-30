@@ -37,10 +37,10 @@ must specify (at minimum) the following features and services:
         "hub"
     ],
     "services": [
+        "fuchsia.logger.LogSink",
         "fuchsia.process.Launcher",
-        "fuchsia.sys.Launcher",
         "fuchsia.sys.Environment",
-        "fuchsia.logger.LogSink"
+        "fuchsia.sys.Launcher"
     ]
 }
 ```
