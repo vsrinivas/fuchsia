@@ -5,8 +5,8 @@
 use {
     crate::core::{
         package::{artifact::ArtifactGetter, getter::PackageGetter, reader::*},
-        types::*,
         util,
+        util::types::*,
     },
     anyhow::{anyhow, Result},
     cm_fidl_validator,
@@ -483,7 +483,7 @@ impl DataCollector for PackageDataCollector {
 // building logic.
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::core::jsons::*, std::sync::RwLock, tempfile::tempdir};
+    use {super::*, crate::core::util::jsons::*, std::sync::RwLock, tempfile::tempdir};
 
     struct MockPackageReader {
         targets: RwLock<Vec<TargetsJson>>,

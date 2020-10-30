@@ -12,12 +12,10 @@ use {
         model::ModelStatsController,
         plugin::PluginListController,
     },
-    scrutiny::prelude::*,
     scrutiny::engine::{
-        dispatcher::ControllerDispatcher,
-        manager::PluginManager,
-        scheduler::CollectorScheduler,
+        dispatcher::ControllerDispatcher, manager::PluginManager, scheduler::CollectorScheduler,
     },
+    scrutiny::prelude::*,
     std::sync::{Arc, Mutex, RwLock},
 };
 

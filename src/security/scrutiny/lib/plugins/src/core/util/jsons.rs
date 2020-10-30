@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::core::types::*,
+    crate::core::util::types::*,
     serde::{Deserialize, Serialize},
     serde_json::value::Value,
     std::collections::HashMap,
