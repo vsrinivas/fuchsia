@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.7
 #
-# Copyright 2020 The Fucshia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Prepares a directory and a corresponding package definition which can be
