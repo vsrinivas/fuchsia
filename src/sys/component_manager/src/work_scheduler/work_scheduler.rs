@@ -731,7 +731,6 @@ mod connect_tests {
             },
         },
         anyhow::Error,
-        cm_rust::CapabilityNameOrPath,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_sys2::WorkSchedulerControlMarker,
         fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -750,9 +749,9 @@ mod connect_tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Builtin {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
+            capability: InternalCapability::Protocol(
                 WORK_SCHEDULER_CONTROL_CAPABILITY_NAME.clone(),
-            )),
+            ),
         };
 
         let (client, mut server) = zx::Channel::create()?;

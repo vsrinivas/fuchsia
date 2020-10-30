@@ -12,10 +12,8 @@ use {
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
         },
-        path::PathBufExt,
     },
     async_trait::async_trait,
-    cm_rust::CapabilityNameOrPath,
     directory_broker,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
@@ -304,23 +302,10 @@ impl HubInjectionTestHook {
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         // This Hook is about injecting itself between the Hub and the Model.
         // If the Hub hasn't been installed, then there's nothing to do here.
-        let relative_path = match (&capability_provider, capability) {
-            (Some(_), InternalCapability::Directory(name_or_path)) => {
-                match name_or_path {
-                    CapabilityNameOrPath::Path(source_path) => {
-                        let mut relative_path = source_path.split();
-                        // The source path must begin with "hub"
-                        if relative_path.is_empty() || relative_path.remove(0) != "hub" {
-                            return Ok(capability_provider);
-                        }
-                        relative_path
-                    }
-                    CapabilityNameOrPath::Name(source_name) => {
-                        if source_name.str() != "hub" {
-                            return Ok(capability_provider);
-                        }
-                        vec![]
-                    }
+        match (&capability_provider, capability) {
+            (Some(_), InternalCapability::Directory(source_name)) => {
+                if source_name.str() != "hub" {
+                    return Ok(capability_provider);
                 }
             }
             _ => return Ok(capability_provider),
@@ -328,7 +313,6 @@ impl HubInjectionTestHook {
 
         Ok(Some(Box::new(HubInjectionCapabilityProvider::new(
             scope_moniker,
-            relative_path,
             capability_provider.take().expect("Unable to take original capability."),
         ))))
     }
@@ -357,17 +341,15 @@ impl Hook for HubInjectionTestHook {
 
 struct HubInjectionCapabilityProvider {
     abs_moniker: AbsoluteMoniker,
-    relative_path: Vec<String>,
     intercepted_capability: Box<dyn CapabilityProvider>,
 }
 
 impl HubInjectionCapabilityProvider {
     pub fn new(
         abs_moniker: AbsoluteMoniker,
-        relative_path: Vec<String>,
         intercepted_capability: Box<dyn CapabilityProvider>,
     ) -> Self {
-        HubInjectionCapabilityProvider { abs_moniker, relative_path, intercepted_capability }
+        HubInjectionCapabilityProvider { abs_moniker, intercepted_capability }
     }
 }
 
@@ -377,7 +359,7 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
         self: Box<Self>,
         flags: u32,
         open_mode: u32,
-        in_relative_path: PathBuf,
+        relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         let (client_chan, mut server_chan) = zx::Channel::create().unwrap();
@@ -395,9 +377,7 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
             directory_broker::DirectoryBroker::from_directory_proxy(hub_proxy),
             &self.abs_moniker,
         )?;
-        let relative_path: PathBuf = self.relative_path.iter().collect();
-        let mut relative_path =
-            relative_path.attach(in_relative_path).to_str().expect("path is not utf8").to_string();
+        let mut relative_path = relative_path.to_str().expect("path is not utf8").to_string();
         relative_path.push('/');
         let path =
             pfsPath::validate_and_split(relative_path).expect("failed to split and validate path");

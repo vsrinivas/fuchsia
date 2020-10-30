@@ -204,7 +204,7 @@ mod tests {
             resolver::ResolverRegistry,
             testing::{mocks::MockResolver, test_helpers::ComponentDeclBuilder},
         },
-        cm_rust::{CapabilityNameOrPath, UseDecl, UseEventDecl, UseProtocolDecl, UseSource},
+        cm_rust::{UseDecl, UseEventDecl, UseProtocolDecl, UseSource},
         matches::assert_matches,
     };
 
@@ -215,7 +215,7 @@ mod tests {
         let decl = ComponentDeclBuilder::new()
             .use_(UseDecl::Protocol(UseProtocolDecl {
                 source: UseSource::Framework,
-                source_name: CapabilityNameOrPath::Name(EVENT_SOURCE_SYNC_SERVICE_NAME.clone()),
+                source_name: EVENT_SOURCE_SYNC_SERVICE_NAME.clone(),
                 target_path: format!("/svc/{}", *EVENT_SOURCE_SYNC_SERVICE_NAME).parse().unwrap(),
             }))
             .use_(UseDecl::Event(UseEventDecl {
@@ -322,9 +322,7 @@ mod tests {
                 Ok(EventPayload::CapabilityRouted {
                     capability_provider: capability_provider.clone(),
                     source: CapabilitySource::Framework {
-                        capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
-                            EVENT_SOURCE_SERVICE_NAME.clone(),
-                        )),
+                        capability: InternalCapability::Protocol(EVENT_SOURCE_SERVICE_NAME.clone()),
                         scope_moniker: scope.clone(),
                     },
                 }),

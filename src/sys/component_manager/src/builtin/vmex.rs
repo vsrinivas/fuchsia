@@ -134,7 +134,6 @@ mod tests {
     use {
         super::*,
         crate::model::{hooks::Hooks, moniker::AbsoluteMoniker},
-        cm_rust::CapabilityNameOrPath,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_boot as fboot, fuchsia_async as fasync,
         fuchsia_component::client::connect_to_service,
@@ -228,9 +227,7 @@ mod tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Builtin {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
-                VMEX_CAPABILITY_NAME.clone(),
-            )),
+            capability: InternalCapability::Protocol(VMEX_CAPABILITY_NAME.clone()),
         };
 
         let (client, mut server) = zx::Channel::create()?;

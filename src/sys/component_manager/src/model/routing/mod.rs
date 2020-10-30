@@ -29,11 +29,11 @@ use {
     },
     async_trait::async_trait,
     cm_rust::{
-        self, CapabilityDecl, CapabilityName, CapabilityNameOrPath, CapabilityPath, ComponentDecl,
-        DirectoryDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget, OfferDecl,
-        OfferDirectoryDecl, OfferDirectorySource, OfferEventDecl, OfferEventSource,
-        OfferResolverSource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
-        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseStorageDecl,
+        self, CapabilityDecl, CapabilityName, CapabilityPath, ComponentDecl, DirectoryDecl,
+        ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget, OfferDecl, OfferDirectoryDecl,
+        OfferDirectorySource, OfferEventDecl, OfferEventSource, OfferResolverSource,
+        OfferRunnerSource, OfferServiceSource, OfferStorageSource, StorageDirectorySource, UseDecl,
+        UseDirectoryDecl, UseEventDecl, UseStorageDecl,
     },
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
@@ -307,25 +307,19 @@ pub async fn open_capability_at_source(
                 );
             }
             CapabilitySource::Framework { capability, scope_moniker: m } => {
-                return Err(
-                    RoutingError::capability_from_framework_not_found(&m, capability.id()).into()
-                );
+                return Err(RoutingError::capability_from_framework_not_found(
+                    &m,
+                    capability.name().to_string(),
+                )
+                .into());
             }
-            CapabilitySource::Builtin { capability } => match capability.name_or_path() {
-                // TODO(56604): Path-based namespace capabilities have a `Builtin` source instead
-                // of `Namespace`. This discrepancy will go away when we remove support for
-                // path-based capabilities.
-                Some(CapabilityNameOrPath::Path(_)) => {
-                    return Err(ModelError::unsupported(
-                        "Path-based capabilities are no longer supported, use name-based instead",
-                    ));
-                }
-                _ => {
-                    return Err(ModelError::from(
-                        RoutingError::capability_from_component_manager_not_found(capability.id()),
-                    ));
-                }
-            },
+            CapabilitySource::Builtin { capability } => {
+                return Err(ModelError::from(
+                    RoutingError::capability_from_component_manager_not_found(
+                        capability.name().to_string(),
+                    ),
+                ));
+            }
             CapabilitySource::Namespace { capability } => match capability.source_path() {
                 Some(p) => p.clone(),
                 _ => {
@@ -434,25 +428,14 @@ async fn route_storage_capability<'a>(
     let storage_subdir = storage_decl.subdir.clone();
     let (dir_source_path, mut dir_subdir, dir_source_realm) = match storage_decl.source {
         StorageDirectorySource::Self_ => {
-            let source_path = if let CapabilityNameOrPath::Path(_) = storage_decl.backing_dir {
-                return Err(ModelError::unsupported(
-                    "Path-based capabilities are no longer supported, use name-based instead",
-                ));
-            } else {
-                let realm_state = source_realm.lock_resolved_state().await?;
-                let decl = realm_state.decl();
-                let capability = ComponentCapability::Storage(storage_decl.clone());
-                let capability = pos.cap_state.finalize_directory_from_component(
-                    &capability,
-                    decl,
-                    None,
-                    None,
-                )?;
-                let source_path =
-                    capability.source_path().expect("directory has no source path?").clone();
-                source_path
-            };
-            (source_path, None, Some(source_realm))
+            let realm_state = source_realm.lock_resolved_state().await?;
+            let decl = realm_state.decl();
+            let capability = ComponentCapability::Storage(storage_decl.clone());
+            let capability =
+                pos.cap_state.finalize_directory_from_component(&capability, decl, None, None)?;
+            let source_path =
+                capability.source_path().expect("directory has no source path?").clone();
+            (source_path, None, Some(source_realm.clone()))
         }
         StorageDirectorySource::Parent => {
             let capability = ComponentCapability::Storage(storage_decl);
@@ -904,12 +887,7 @@ pub async fn find_exposed_root_directory_capability(
             .exposes
             .iter()
             .find_map(|e| match e {
-                ExposeDecl::Directory(dir_decl) => match &dir_decl.target_name {
-                    CapabilityNameOrPath::Name(target_name) if target_name == &name => {
-                        Some(dir_decl)
-                    }
-                    _ => None,
-                },
+                ExposeDecl::Directory(dir_decl) => Some(dir_decl),
                 _ => None,
             })
             .ok_or_else(|| {
@@ -1308,7 +1286,7 @@ async fn walk_offer_chain<'a>(
                     ),
                 };
                 let storage = decl
-                    .find_storage_source(storage_name.str())
+                    .find_storage_source(storage_name)
                     .expect("storage offer references nonexistent section");
                 let capability = ComponentCapability::Storage(storage.clone());
                 pos.cap_state = CapabilityState::new(&capability);

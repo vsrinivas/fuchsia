@@ -16,10 +16,9 @@ use {
             realm::Realm,
             routing_fns::{route_expose_fn, route_use_fn},
         },
-        path::PathBufExt,
     },
     async_trait::async_trait,
-    cm_rust::{CapabilityNameOrPath, ComponentDecl},
+    cm_rust::ComponentDecl,
     directory_broker,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
@@ -42,13 +41,12 @@ type Directory = Arc<pfs::Simple>;
 
 struct HubCapabilityProvider {
     abs_moniker: AbsoluteMoniker,
-    relative_path: Vec<String>,
     hub: Arc<Hub>,
 }
 
 impl HubCapabilityProvider {
-    pub fn new(abs_moniker: AbsoluteMoniker, relative_path: Vec<String>, hub: Arc<Hub>) -> Self {
-        HubCapabilityProvider { abs_moniker, relative_path, hub }
+    pub fn new(abs_moniker: AbsoluteMoniker, hub: Arc<Hub>) -> Self {
+        HubCapabilityProvider { abs_moniker, hub }
     }
 }
 
@@ -58,16 +56,12 @@ impl CapabilityProvider for HubCapabilityProvider {
         self: Box<Self>,
         flags: u32,
         open_mode: u32,
-        in_relative_path: PathBuf,
+        relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
-        // Append relative_path to the back of the local relative_path vector, then convert it to a
-        // pfsPath.
-        let base_path: PathBuf = self.relative_path.iter().collect();
-        let mut relative_path = base_path
-            .attach(in_relative_path.clone())
+        let mut relative_path = relative_path
             .to_str()
-            .ok_or_else(|| ModelError::path_is_not_utf8(in_relative_path))?
+            .ok_or_else(|| ModelError::path_is_not_utf8(relative_path.clone()))?
             .to_string();
         relative_path.push('/');
         let dir_path = pfsPath::validate_and_split(relative_path.clone()).map_err(|_| {
@@ -488,37 +482,19 @@ impl Hub {
         trace::duration!("component_manager", "hub:on_capability_routed_async");
         // If this is a scoped framework directory capability, then check the source path
         if let CapabilitySource::Framework {
-            capability: InternalCapability::Directory(name_or_path),
+            capability: InternalCapability::Directory(source_name),
             scope_moniker,
         } = source
         {
-            let relative_path = match name_or_path {
-                CapabilityNameOrPath::Path(source_path) => {
-                    let mut relative_path = source_path.split();
-                    // The source path must begin with "hub"
-                    if relative_path.is_empty() || relative_path.remove(0) != "hub" {
-                        return Ok(());
-                    }
-                    relative_path
-                }
-                CapabilityNameOrPath::Name(source_name) => {
-                    // There's only one "hub" name-based capability, but `subdir` (handled by
-                    // routing logic, not here) can achieve the same effect.
-                    if source_name.str() != "hub" {
-                        return Ok(());
-                    }
-                    vec![]
-                }
-            };
+            if source_name.str() != "hub" {
+                return Ok(());
+            }
 
             // Set the capability provider, if not already set.
             let mut capability_provider = capability_provider.lock().await;
             if capability_provider.is_none() {
-                *capability_provider = Some(Box::new(HubCapabilityProvider::new(
-                    scope_moniker.clone(),
-                    relative_path,
-                    self.clone(),
-                )))
+                *capability_provider =
+                    Some(Box::new(HubCapabilityProvider::new(scope_moniker.clone(), self.clone())))
             }
         }
         Ok(())
@@ -593,10 +569,9 @@ mod tests {
             },
         },
         cm_rust::{
-            self, CapabilityNameOrPath, CapabilityPath, ComponentDecl, DirectoryDecl, ExposeDecl,
-            ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, ProtocolDecl,
-            UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl,
-            UseSource,
+            self, CapabilityPath, ComponentDecl, DirectoryDecl, ExposeDecl, ExposeDirectoryDecl,
+            ExposeProtocolDecl, ExposeSource, ExposeTarget, ProtocolDecl, UseDecl,
+            UseDirectoryDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseSource,
         },
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
@@ -783,7 +758,7 @@ mod tests {
                     .add_lazy_child("a")
                     .use_(UseDecl::Directory(UseDirectoryDecl {
                         source: UseSource::Framework,
-                        source_name: CapabilityNameOrPath::try_from("hub").unwrap(),
+                        source_name: "hub".into(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *rights::READ_RIGHTS,
                         subdir: None,
@@ -836,19 +811,19 @@ mod tests {
                     .add_lazy_child("a")
                     .use_(UseDecl::Directory(UseDirectoryDecl {
                         source: UseSource::Framework,
-                        source_name: CapabilityNameOrPath::try_from("hub").unwrap(),
+                        source_name: "hub".into(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *rights::READ_RIGHTS,
                         subdir: Some("exec".into()),
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
-                        source_name: CapabilityNameOrPath::try_from("baz-svc").unwrap(),
+                        source_name: "baz-svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }))
                     .use_(UseDecl::Directory(UseDirectoryDecl {
                         source: UseSource::Parent,
-                        source_name: CapabilityNameOrPath::try_from("foo-dir").unwrap(),
+                        source_name: "foo-dir".into(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                         subdir: None,
@@ -936,14 +911,14 @@ mod tests {
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
-                        source_name: CapabilityNameOrPath::try_from("foo").unwrap(),
-                        target_name: CapabilityNameOrPath::try_from("bar").unwrap(),
+                        source_name: "foo".into(),
+                        target_name: "bar".into(),
                         target: ExposeTarget::Parent,
                     }))
                     .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: ExposeSource::Self_,
-                        source_name: CapabilityNameOrPath::try_from("baz").unwrap(),
-                        target_name: CapabilityNameOrPath::try_from("hippo").unwrap(),
+                        source_name: "baz".into(),
+                        target_name: "hippo".into(),
                         target: ExposeTarget::Parent,
                         rights: None,
                         subdir: None,

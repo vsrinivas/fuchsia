@@ -54,20 +54,11 @@ impl CapabilitySource {
         }
     }
 
-    pub fn name_or_path(&self) -> Option<&CapabilityNameOrPath> {
-        match self {
-            CapabilitySource::Component { capability, .. } => capability.source_name_or_path(),
-            CapabilitySource::Framework { capability, .. } => capability.name_or_path(),
-            CapabilitySource::Builtin { capability } => capability.name_or_path(),
-            CapabilitySource::Namespace { capability } => capability.source_name_or_path(),
-        }
-    }
-
     pub fn id(&self) -> String {
         match self {
             CapabilitySource::Component { capability, .. } => capability.source_id(),
-            CapabilitySource::Framework { capability, .. } => capability.id(),
-            CapabilitySource::Builtin { capability } => capability.id(),
+            CapabilitySource::Framework { capability, .. } => capability.name().to_string(),
+            CapabilitySource::Builtin { capability } => capability.name().to_string(),
             CapabilitySource::Namespace { capability } => capability.source_id(),
         }
     }
@@ -77,12 +68,8 @@ impl CapabilitySource {
             CapabilitySource::Component { capability, .. } => {
                 capability.source_name().map(|name| name.to_string())
             }
-            CapabilitySource::Framework { capability, .. } => {
-                capability.name().map(|name| name.to_string())
-            }
-            CapabilitySource::Builtin { capability } => {
-                capability.name().map(|name| name.to_string())
-            }
+            CapabilitySource::Framework { capability, .. } => Some(capability.name().to_string()),
+            CapabilitySource::Builtin { capability } => Some(capability.name().to_string()),
             CapabilitySource::Namespace { capability } => {
                 capability.source_name().map(|name| name.to_string())
             }
@@ -113,17 +100,18 @@ impl fmt::Display for CapabilitySource {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InternalCapability {
     Service(CapabilityName),
-    Protocol(CapabilityNameOrPath),
-    Directory(CapabilityNameOrPath),
+    Protocol(CapabilityName),
+    Directory(CapabilityName),
     Runner(CapabilityName),
     Event(CapabilityName),
     Resolver(CapabilityName),
 }
 
 impl InternalCapability {
-    /// Returns whetheh the given InternalCapability can be available in a component's namespace.
+    /// Returns whether the given InternalCapability can be available in a component's namespace.
     pub fn can_be_in_namespace(&self) -> bool {
-        matches!(self, InternalCapability::Protocol(_) |
+        matches!(self, InternalCapability::Service(_) |
+                       InternalCapability::Protocol(_) |
                        InternalCapability::Directory(_))
     }
 
@@ -139,32 +127,15 @@ impl InternalCapability {
         }
     }
 
-    pub fn name_or_path(&self) -> Option<&CapabilityNameOrPath> {
+    pub fn name(&self) -> &CapabilityName {
         match self {
-            InternalCapability::Protocol(source_name_or_path) => Some(&source_name_or_path),
-            InternalCapability::Directory(source_name_or_path) => Some(&source_name_or_path),
-            InternalCapability::Runner(_)
-            | InternalCapability::Resolver(_)
-            | InternalCapability::Event(_)
-            | InternalCapability::Service(_) => None,
+            InternalCapability::Service(name) => &name,
+            InternalCapability::Protocol(name) => &name,
+            InternalCapability::Directory(name) => &name,
+            InternalCapability::Runner(name) => &name,
+            InternalCapability::Event(name) => &name,
+            InternalCapability::Resolver(name) => &name,
         }
-    }
-
-    pub fn name(&self) -> Option<&CapabilityName> {
-        match self {
-            InternalCapability::Service(name) => Some(&name),
-            InternalCapability::Runner(name) => Some(&name),
-            InternalCapability::Event(name) => Some(&name),
-            InternalCapability::Resolver(name) => Some(&name),
-            InternalCapability::Protocol(_) | InternalCapability::Directory(_) => None,
-        }
-    }
-
-    pub fn id(&self) -> String {
-        self.name_or_path()
-            .map(|p| format!("{}", p))
-            .or_else(|| self.name().map(|n| format!("{}", n)))
-            .unwrap_or_default()
     }
 
     pub fn builtin_from_use_decl(decl: &UseDecl) -> Result<Self, Error> {
@@ -268,21 +239,10 @@ impl InternalCapability {
         }
     }
 
-    /// Returns true if this is a protocol with name that matches `name` or a protocol with path
-    /// that matches `/svc/{name}`.
+    /// Returns true if this is a protocol with name that matches `name`.
     pub fn matches_protocol(&self, name: &CapabilityName) -> bool {
         match self {
-            Self::Protocol(name_or_path) => match name_or_path {
-                CapabilityNameOrPath::Name(n) => n == name,
-                CapabilityNameOrPath::Path(p) => {
-                    let res: Result<CapabilityPath, _> = format!("/svc/{}", name).parse();
-                    if res.is_err() {
-                        return false;
-                    }
-                    let path = res.unwrap();
-                    p == &path
-                }
-            },
+            Self::Protocol(source_name) => source_name == name,
             _ => false,
         }
     }
@@ -290,7 +250,7 @@ impl InternalCapability {
 
 impl fmt::Display for InternalCapability {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} '{}' from component manager", self.type_name(), self.id())
+        write!(f, "{} '{}' from component manager", self.type_name(), self.name())
     }
 }
 
@@ -394,29 +354,45 @@ impl ComponentCapability {
         }
     }
 
-    /// Returns the source name or path of the capability, if one exists (for capabilities that
-    /// accept either a name or path).
-    pub fn source_name_or_path(&self) -> Option<&CapabilityNameOrPath> {
+    /// Return the source path of the capability, if one exists.
+    pub fn source_path(&self) -> Option<&CapabilityPath> {
+        match self {
+            ComponentCapability::Storage(_) => None,
+            ComponentCapability::Protocol(protocol) => Some(&protocol.source_path),
+            ComponentCapability::Directory(directory) => Some(&directory.source_path),
+            ComponentCapability::Runner(runner) => Some(&runner.source_path),
+            ComponentCapability::Resolver(resolver) => Some(&resolver.source_path),
+            _ => None,
+        }
+    }
+
+    /// Return the source name of the capability, if one exists.
+    pub fn source_name<'a>(&self) -> Option<&CapabilityName> {
         match self {
             ComponentCapability::Use(use_) => match use_ {
                 UseDecl::Protocol(UseProtocolDecl { source_name, .. }) => Some(source_name),
                 UseDecl::Directory(UseDirectoryDecl { source_name, .. }) => Some(source_name),
+                UseDecl::Runner(UseRunnerDecl { source_name, .. }) => Some(source_name),
+                UseDecl::Event(UseEventDecl { source_name, .. }) => Some(source_name),
+                UseDecl::Storage(UseStorageDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
             ComponentCapability::Environment(env_cap) => match env_cap {
-                EnvironmentCapability::Runner { .. } => None,
-                EnvironmentCapability::Resolver { .. } => None,
+                EnvironmentCapability::Runner { source_name, .. } => Some(source_name),
+                EnvironmentCapability::Resolver { source_name, .. } => Some(source_name),
             },
             ComponentCapability::Expose(expose) => match expose {
                 ExposeDecl::Protocol(ExposeProtocolDecl { source_name, .. }) => Some(source_name),
                 ExposeDecl::Directory(ExposeDirectoryDecl { source_name, .. }) => Some(source_name),
+                ExposeDecl::Runner(ExposeRunnerDecl { source_name, .. }) => Some(source_name),
+                ExposeDecl::Resolver(ExposeResolverDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
             ComponentCapability::UsedExpose(expose) => {
                 // A UsedExpose needs to be matched to the ExposeDecl the UsedExpose wraps at the
                 // same component. This is accomplished by returning the ExposeDecl's target path.
                 // Effectively, it's as if the UsedExposed were a UseDecl with both the source and
-                // target path equal to `target_path`.
+                // target name equal to `target_name`.
                 match expose {
                     ExposeDecl::Protocol(ExposeProtocolDecl { target_name, .. }) => {
                         Some(target_name)
@@ -430,75 +406,21 @@ impl ComponentCapability {
             ComponentCapability::Offer(offer) => match offer {
                 OfferDecl::Protocol(OfferProtocolDecl { source_name, .. }) => Some(source_name),
                 OfferDecl::Directory(OfferDirectoryDecl { source_name, .. }) => Some(source_name),
-                _ => None,
-            },
-            ComponentCapability::Storage(storage) => Some(&storage.backing_dir),
-            ComponentCapability::Protocol(_) => None,
-            ComponentCapability::Directory(_) => None,
-            ComponentCapability::Runner(_) => None,
-            ComponentCapability::Resolver(_) => None,
-        }
-    }
-
-    /// Return the source path of the capability, if one exists.
-    pub fn source_path(&self) -> Option<&CapabilityPath> {
-        // First look in declarations that support name or path.
-        if let Some(CapabilityNameOrPath::Path(path)) = self.source_name_or_path() {
-            return Some(path);
-        }
-        // Now check declarations that exclusively use paths.
-        match self {
-            ComponentCapability::Storage(_) => None,
-            ComponentCapability::Protocol(protocol) => Some(&protocol.source_path),
-            ComponentCapability::Directory(directory) => Some(&directory.source_path),
-            ComponentCapability::Runner(runner) => Some(&runner.source_path),
-            ComponentCapability::Resolver(resolver) => Some(&resolver.source_path),
-            _ => None,
-        }
-    }
-
-    /// Return the source name of the capability, if one exists.
-    pub fn source_name<'a>(&self) -> Option<&CapabilityName> {
-        // First look in declarations that support name or path.
-        match self.source_name_or_path() {
-            Some(CapabilityNameOrPath::Name(name)) => {
-                return Some(name);
-            }
-            _ => {}
-        }
-        // Now check declarations that exclusively use names.
-        match self {
-            ComponentCapability::Use(use_) => match use_ {
-                UseDecl::Runner(UseRunnerDecl { source_name, .. }) => Some(source_name),
-                UseDecl::Event(UseEventDecl { source_name, .. }) => Some(source_name),
-                UseDecl::Storage(UseStorageDecl { source_name, .. }) => Some(source_name),
-                _ => None,
-            },
-            ComponentCapability::Environment(env_cap) => match env_cap {
-                EnvironmentCapability::Runner { source_name, .. } => Some(source_name),
-                EnvironmentCapability::Resolver { source_name, .. } => Some(source_name),
-            },
-            ComponentCapability::Expose(expose) => match expose {
-                ExposeDecl::Runner(ExposeRunnerDecl { source_name, .. }) => Some(source_name),
-                ExposeDecl::Resolver(ExposeResolverDecl { source_name, .. }) => Some(source_name),
-                _ => None,
-            },
-            ComponentCapability::Offer(offer) => match offer {
                 OfferDecl::Runner(OfferRunnerDecl { source_name, .. }) => Some(source_name),
                 OfferDecl::Event(OfferEventDecl { source_name, .. }) => Some(source_name),
                 OfferDecl::Storage(OfferStorageDecl { source_name, .. }) => Some(source_name),
                 OfferDecl::Resolver(OfferResolverDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
+            ComponentCapability::Storage(storage) => Some(&storage.backing_dir),
             _ => None,
         }
     }
 
     /// Returns the source path or name of the capability as a string, useful for debugging.
     pub fn source_id(&self) -> String {
-        self.source_name_or_path()
+        self.source_name()
             .map(|p| format!("{}", p))
-            .or_else(|| self.source_name().map(|n| format!("{}", n)))
             .or_else(|| self.source_path().map(|p| format!("{}", p)))
             .unwrap_or_default()
     }
@@ -510,58 +432,28 @@ impl ComponentCapability {
             (
                 ComponentCapability::Offer(OfferDecl::Protocol(parent_offer)),
                 ExposeDecl::Protocol(expose),
-            ) => {
-                if let CapabilityNameOrPath::Path(_) = parent_offer.source_name {
-                    return false;
-                }
-                parent_offer.source_name == expose.target_name
-            }
+            ) => parent_offer.source_name == expose.target_name,
             (
                 ComponentCapability::Expose(ExposeDecl::Protocol(parent_expose)),
                 ExposeDecl::Protocol(expose),
-            ) => {
-                if let CapabilityNameOrPath::Path(_) = parent_expose.source_name {
-                    return false;
-                }
-                parent_expose.source_name == expose.target_name
-            }
+            ) => parent_expose.source_name == expose.target_name,
             (
                 ComponentCapability::UsedExpose(ExposeDecl::Protocol(used_expose)),
                 ExposeDecl::Protocol(expose),
-            ) => {
-                if let CapabilityNameOrPath::Path(_) = used_expose.source_name {
-                    return false;
-                }
-                used_expose.target_name == expose.target_name
-            }
+            ) => used_expose.target_name == expose.target_name,
             // Directory exposed to me that matches a directory `expose` or `offer`.
             (
                 ComponentCapability::Offer(OfferDecl::Directory(parent_offer)),
                 ExposeDecl::Directory(expose),
-            ) => {
-                if let CapabilityNameOrPath::Path(_) = parent_offer.source_name {
-                    return false;
-                }
-                parent_offer.source_name == expose.target_name
-            }
+            ) => parent_offer.source_name == expose.target_name,
             (
                 ComponentCapability::Expose(ExposeDecl::Directory(parent_expose)),
                 ExposeDecl::Directory(expose),
-            ) => {
-                if let CapabilityNameOrPath::Path(_) = parent_expose.source_name {
-                    return false;
-                }
-                parent_expose.source_name == expose.target_name
-            }
+            ) => parent_expose.source_name == expose.target_name,
             (
                 ComponentCapability::UsedExpose(ExposeDecl::Directory(used_expose)),
                 ExposeDecl::Directory(expose),
-            ) => {
-                if let CapabilityNameOrPath::Path(_) = used_expose.source_name {
-                    return false;
-                }
-                used_expose.target_name == expose.target_name
-            }
+            ) => used_expose.target_name == expose.target_name,
             // Runner exposed to me that has a matching `expose` or `offer`.
             (
                 ComponentCapability::Offer(OfferDecl::Runner(parent_offer)),
@@ -595,9 +487,6 @@ impl ComponentCapability {
             ) => source_name == &expose.target_name,
             // Directory exposed to me that matches a `storage` declaration which consumes it.
             (ComponentCapability::Storage(parent_storage), ExposeDecl::Directory(expose)) => {
-                if let CapabilityNameOrPath::Path(_) = parent_storage.backing_dir {
-                    return false;
-                }
                 parent_storage.backing_dir == expose.target_name
             }
             _ => false,
@@ -788,36 +677,21 @@ impl ComponentCapability {
             (
                 ComponentCapability::Use(UseDecl::Protocol(child_use)),
                 CapabilityDecl::Protocol(p),
-            ) => match &child_use.source_name {
-                CapabilityNameOrPath::Name(n) => n == &p.name,
-                _ => false,
-            },
+            ) => child_use.source_name == p.name,
             (
                 ComponentCapability::Offer(OfferDecl::Protocol(child_offer)),
                 CapabilityDecl::Protocol(p),
-            ) => match &child_offer.source_name {
-                CapabilityNameOrPath::Name(n) => n == &p.name,
-                _ => false,
-            },
+            ) => child_offer.source_name == p.name,
             (
                 ComponentCapability::Use(UseDecl::Directory(child_use)),
                 CapabilityDecl::Directory(d),
-            ) => match &child_use.source_name {
-                CapabilityNameOrPath::Name(n) => n == &d.name,
-                _ => false,
-            },
+            ) => child_use.source_name == d.name,
             (
                 ComponentCapability::Offer(OfferDecl::Directory(child_offer)),
                 CapabilityDecl::Directory(d),
-            ) => match &child_offer.source_name {
-                CapabilityNameOrPath::Name(n) => n == &d.name,
-                _ => false,
-            },
+            ) => child_offer.source_name == d.name,
             (ComponentCapability::Storage(child_storage), CapabilityDecl::Directory(d)) => {
-                match &child_storage.backing_dir {
-                    CapabilityNameOrPath::Name(n) => n == &d.name,
-                    _ => false,
-                }
+                child_storage.backing_dir == d.name
             }
             _ => false,
         })
@@ -892,14 +766,11 @@ impl ComponentCapability {
 
     fn is_offer_protocol_or_directory_match(
         child_moniker: &ChildMoniker,
-        path: &CapabilityNameOrPath,
+        name: &CapabilityName,
         target: &OfferTarget,
-        target_path: &CapabilityNameOrPath,
+        target_name: &CapabilityName,
     ) -> bool {
-        if let CapabilityNameOrPath::Path(_) = path {
-            return false;
-        }
-        path == target_path && target_matches_moniker(target, child_moniker)
+        name == target_name && target_matches_moniker(target, child_moniker)
     }
 
     fn is_offer_storage_match(
@@ -1013,12 +884,9 @@ mod tests {
     #[ignore] // fxbug.dev/40189
     fn find_expose_service_sources_with_unexpected_capability() {
         let capability = ComponentCapability::Storage(StorageDecl {
-            name: "".to_string(),
+            name: "".into(),
             source: StorageDirectorySource::Parent,
-            backing_dir: CapabilityNameOrPath::Path(CapabilityPath {
-                dirname: "".to_string(),
-                basename: "".to_string(),
-            }),
+            backing_dir: "".into(),
             subdir: None,
         });
         capability.find_expose_service_sources(&default_component_decl());
@@ -1184,12 +1052,9 @@ mod tests {
     #[ignore] // fxbug.dev/40189
     fn find_offer_service_sources_with_unexpected_capability() {
         let capability = ComponentCapability::Storage(StorageDecl {
-            name: "".to_string(),
+            name: "".into(),
             source: StorageDirectorySource::Parent,
-            backing_dir: CapabilityNameOrPath::Path(CapabilityPath {
-                dirname: "".to_string(),
-                basename: "".to_string(),
-            }),
+            backing_dir: "".into(),
             subdir: None,
         });
         let moniker = ChildMoniker::new("".to_string(), None, 0);

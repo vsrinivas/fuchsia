@@ -100,7 +100,6 @@ mod tests {
             hooks::{Event, EventPayload, Hooks},
             moniker::AbsoluteMoniker,
         },
-        cm_rust::CapabilityNameOrPath,
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
         fuchsia_zircon::AsHandleRef,
@@ -139,9 +138,7 @@ mod tests {
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Builtin {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
-                READ_ONLY_LOG_CAPABILITY_NAME.clone(),
-            )),
+            capability: InternalCapability::Protocol(READ_ONLY_LOG_CAPABILITY_NAME.clone()),
         };
 
         let event = Event::new_for_test(
@@ -205,9 +202,7 @@ mod tests {
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Builtin {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
-                WRITE_ONLY_LOG_CAPABILITY_NAME.clone(),
-            )),
+            capability: InternalCapability::Protocol(WRITE_ONLY_LOG_CAPABILITY_NAME.clone()),
         };
 
         let event = Event::new_for_test(

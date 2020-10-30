@@ -324,7 +324,6 @@ mod tests {
         super::*,
         crate::model::{hooks::Hooks, moniker::AbsoluteMoniker},
         anyhow::{format_err, Context},
-        cm_rust::CapabilityNameOrPath,
         fidl::endpoints::{ClientEnd, Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
@@ -374,9 +373,7 @@ mod tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Builtin {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
-                PROCESS_LAUNCHER_CAPABILITY_NAME.clone(),
-            )),
+            capability: InternalCapability::Protocol(PROCESS_LAUNCHER_CAPABILITY_NAME.clone()),
         };
 
         let (client, mut server) = zx::Channel::create()?;

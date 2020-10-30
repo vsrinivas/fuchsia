@@ -566,32 +566,12 @@ impl RoutingTest {
         for expose in decl.exposes.iter() {
             match expose {
                 ExposeDecl::Service(_) => panic!("service capability unsupported"),
-                ExposeDecl::Protocol(s) if s.source == ExposeSource::Self_ => {
-                    if let CapabilityNameOrPath::Path(_) = s.source_name {
-                        Self::install_default_out_files(&mut out_dir);
-                    }
-                }
-                ExposeDecl::Directory(d) if d.source == ExposeSource::Self_ => {
-                    if let CapabilityNameOrPath::Path(_) = d.source_name {
-                        out_dir.add_directory_proxy(test_dir_proxy)
-                    }
-                }
                 _ => (),
             }
         }
         for offer in decl.offers.iter() {
             match offer {
                 OfferDecl::Service(_) => panic!("service capability unsupported"),
-                OfferDecl::Protocol(s) if s.source == OfferServiceSource::Self_ => {
-                    if let CapabilityNameOrPath::Path(_) = s.source_name {
-                        Self::install_default_out_files(&mut out_dir);
-                    }
-                }
-                OfferDecl::Directory(d) if d.source == OfferDirectorySource::Self_ => {
-                    if let CapabilityNameOrPath::Path(_) = d.source_name {
-                        out_dir.add_directory_proxy(test_dir_proxy)
-                    }
-                }
                 _ => (),
             }
         }

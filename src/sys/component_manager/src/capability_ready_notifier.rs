@@ -12,11 +12,11 @@ use {
         model::Model,
         moniker::AbsoluteMoniker,
         realm::Realm,
-        rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
+        rights::{Rights, WRITE_RIGHTS},
     },
     async_trait::async_trait,
     cm_rust::{
-        CapabilityNameOrPath, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
+        CapabilityName, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
         ExposeProtocolDecl, ExposeSource, ExposeTarget,
     },
     fidl::endpoints::{Proxy, ServerEnd},
@@ -144,41 +144,30 @@ impl CapabilityReadyNotifier {
         let mut events = Vec::new();
         for expose_decl in matching_exposes {
             let event = match expose_decl {
-                ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source_name,
-                    target_name,
-                    rights,
-                    ..
-                }) => {
-                    let (source_path, rights) = match source_name {
-                        CapabilityNameOrPath::Path(source_path) => (source_path, *rights),
-                        CapabilityNameOrPath::Name(source_name) => {
-                            if let Some(directory_decl) = decl.find_directory_source(source_name) {
-                                (&directory_decl.source_path, Some(directory_decl.rights))
-                            } else {
-                                panic!("Missing directory declaration for expose: {:?}", decl);
-                            }
+                ExposeDecl::Directory(ExposeDirectoryDecl { source_name, target_name, .. }) => {
+                    let (source_path, rights) = {
+                        if let Some(directory_decl) = decl.find_directory_source(source_name) {
+                            (&directory_decl.source_path, directory_decl.rights)
+                        } else {
+                            panic!("Missing directory declaration for expose: {:?}", decl);
                         }
                     };
                     self.create_event(
                         &target_realm,
                         outgoing_dir_result.as_ref(),
                         fio::MODE_TYPE_DIRECTORY,
-                        Rights::from(rights.unwrap_or(*READ_RIGHTS)),
+                        Rights::from(rights),
                         source_path,
                         target_name,
                     )
                     .await
                 }
                 ExposeDecl::Protocol(ExposeProtocolDecl { source_name, target_name, .. }) => {
-                    let source_path = match source_name {
-                        CapabilityNameOrPath::Path(source_path) => &source_path,
-                        CapabilityNameOrPath::Name(source_name) => {
-                            if let Some(protocol_decl) = decl.find_protocol_source(source_name) {
-                                &protocol_decl.source_path
-                            } else {
-                                panic!("Missing protocol declaration for expose: {:?}", decl);
-                            }
+                    let source_path = {
+                        if let Some(protocol_decl) = decl.find_protocol_source(source_name) {
+                            &protocol_decl.source_path
+                        } else {
+                            panic!("Missing protocol declaration for expose: {:?}", decl);
                         }
                     };
                     self.create_event(
@@ -210,9 +199,9 @@ impl CapabilityReadyNotifier {
         mode: u32,
         rights: Rights,
         source_path: &CapabilityPath,
-        target_name_or_path: &CapabilityNameOrPath,
+        target_name: &CapabilityName,
     ) -> Event {
-        let target_name_or_path = target_name_or_path.to_string();
+        let target_name = target_name.to_string();
 
         let node_result = async move {
             // DirProxy.open fails on absolute paths.
@@ -244,14 +233,11 @@ impl CapabilityReadyNotifier {
         match node_result {
             Ok(node) => Event::new(
                 &target_realm,
-                Ok(EventPayload::CapabilityReady { path: target_name_or_path, node }),
+                Ok(EventPayload::CapabilityReady { path: target_name, node }),
             ),
             Err(e) => Event::new(
                 &target_realm,
-                Err(EventError::new(
-                    &e,
-                    EventErrorPayload::CapabilityReady { path: target_name_or_path },
-                )),
+                Err(EventError::new(&e, EventErrorPayload::CapabilityReady { path: target_name })),
             ),
         }
     }

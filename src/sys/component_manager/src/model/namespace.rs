@@ -145,19 +145,12 @@ impl IncomingNamespace {
                 }
                 cm_rust::UseDecl::Protocol(s) => {
                     Self::add_service_use(&mut svc_dirs, s, realm.clone())?;
-                    match &s.source_name {
-                        cm_rust::CapabilityNameOrPath::Name(name) => {
-                            if name.0 == LogSinkMarker::NAME {
-                                log_sink_decl = Some(s.clone());
-                            }
-                        }
-                        cm_rust::CapabilityNameOrPath::Path(_) => {
-                            continue;
-                        }
+                    if s.source_name.0 == LogSinkMarker::NAME {
+                        log_sink_decl = Some(s.clone());
                     }
                 }
                 cm_rust::UseDecl::Service(_) => {
-                    return Err(ModelError::unsupported("Service capability"))
+                    return Err(ModelError::unsupported("Service capability"));
                 }
                 cm_rust::UseDecl::Storage(_) => {
                     Self::add_storage_use(&mut ns, &mut directory_waiters, use_, realm.clone())?;
@@ -559,7 +552,7 @@ pub mod test {
 
     use {
         super::IncomingNamespace,
-        cm_rust::{CapabilityNameOrPath, CapabilityPath, UseProtocolDecl, UseSource},
+        cm_rust::{CapabilityPath, UseProtocolDecl, UseSource},
         fidl::endpoints::{self, ServiceMarker},
         fidl_fuchsia_component_runner as fcrunner,
         fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequest, LogSinkRequestStream},
@@ -609,7 +602,7 @@ pub mod test {
         let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
         let log_decl = UseProtocolDecl {
             source: UseSource::Parent,
-            source_name: CapabilityNameOrPath::try_from("logsink").unwrap(),
+            source_name: "logsink".into(),
             target_path: CapabilityPath::try_from("/fuchsia.logger.LogSink").unwrap(),
         };
 
@@ -645,7 +638,7 @@ pub mod test {
         let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
         let log_decl = UseProtocolDecl {
             source: UseSource::Parent,
-            source_name: CapabilityNameOrPath::try_from("logsink").unwrap(),
+            source_name: "logsink".into(),
             target_path: CapabilityPath::try_from("/arbitrary-dir/fuchsia.logger.LogSink").unwrap(),
         };
 
@@ -680,7 +673,7 @@ pub mod test {
         let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
         let log_decl = UseProtocolDecl {
             source: UseSource::Parent,
-            source_name: CapabilityNameOrPath::try_from("logsink").unwrap(),
+            source_name: "logsink".into(),
             target_path: CapabilityPath::try_from("/svc/fuchsia.logger.LogSink").unwrap(),
         };
 
@@ -731,7 +724,7 @@ pub mod test {
         let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
         let log_decl = UseProtocolDecl {
             source: UseSource::Parent,
-            source_name: CapabilityNameOrPath::try_from("logsink").unwrap(),
+            source_name: "logsink".into(),
             target_path: CapabilityPath::try_from("/svc/fuchsia.logger.LogSink").unwrap(),
         };
 
@@ -752,7 +745,7 @@ pub mod test {
         let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
         let log_decl = UseProtocolDecl {
             source: UseSource::Parent,
-            source_name: CapabilityNameOrPath::try_from("logsink").unwrap(),
+            source_name: "logsink".into(),
             target_path: CapabilityPath::try_from("/svc/fuchsia.logger.LogSink").unwrap(),
         };
 

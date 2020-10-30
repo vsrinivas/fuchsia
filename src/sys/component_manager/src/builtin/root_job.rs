@@ -62,7 +62,6 @@ mod tests {
             hooks::{Event, EventPayload, Hooks},
             moniker::AbsoluteMoniker,
         },
-        cm_rust::CapabilityNameOrPath,
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
         fuchsia_zircon::AsHandleRef,
@@ -94,9 +93,7 @@ mod tests {
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Builtin {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
-                ROOT_JOB_CAPABILITY_NAME.clone(),
-            )),
+            capability: InternalCapability::Protocol(ROOT_JOB_CAPABILITY_NAME.clone()),
         };
 
         let event = Event::new_for_test(

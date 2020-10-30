@@ -67,7 +67,6 @@ mod tests {
                 moniker::AbsoluteMoniker,
             },
         },
-        cm_rust::CapabilityNameOrPath,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
         fuchsia_component::client::connect_to_service,
@@ -147,9 +146,7 @@ mod tests {
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Builtin {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
-                MMIO_RESOURCE_CAPABILITY_NAME.clone(),
-            )),
+            capability: InternalCapability::Protocol(MMIO_RESOURCE_CAPABILITY_NAME.clone()),
         };
 
         let event = Event::new_for_test(

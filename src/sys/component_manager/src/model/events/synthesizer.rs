@@ -208,12 +208,9 @@ mod tests {
             moniker::AbsoluteMoniker,
             testing::{routing_test_helpers::*, test_helpers::*},
         },
-        cm_rust::{
-            CapabilityNameOrPath, DirectoryDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource,
-            ExposeTarget,
-        },
+        cm_rust::{DirectoryDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget},
         fidl_fuchsia_io2 as fio, fuchsia_async as fasync,
-        std::{collections::HashSet, convert::TryFrom, iter::FromIterator},
+        std::{collections::HashSet, iter::FromIterator},
     };
 
     // Shows that we see Running only for realms that are bound at the moment of subscription.
@@ -535,8 +532,8 @@ mod tests {
     fn expose_diagnostics_decl() -> ExposeDecl {
         ExposeDecl::Directory(ExposeDirectoryDecl {
             source: ExposeSource::Self_,
-            source_name: CapabilityNameOrPath::try_from("diagnostics").unwrap(),
-            target_name: CapabilityNameOrPath::try_from("diagnostics").unwrap(),
+            source_name: "diagnostics".into(),
+            target_name: "diagnostics".into(),
             target: ExposeTarget::Framework,
             rights: Some(fio::Operations::Connect),
             subdir: None,

@@ -373,7 +373,10 @@ impl ComponentDecl {
     }
 
     /// Returns the `StorageDecl` corresponding to `storage_name`.
-    pub fn find_storage_source<'a>(&'a self, storage_name: &str) -> Option<&'a StorageDecl> {
+    pub fn find_storage_source<'a>(
+        &'a self,
+        storage_name: &CapabilityName,
+    ) -> Option<&'a StorageDecl> {
         self.capabilities.iter().find_map(|c| {
             match c {
                 CapabilityDecl::Storage(s) if &s.name == storage_name => {
@@ -437,24 +440,10 @@ impl ComponentDecl {
     /// Indicates whether the capability specified by `target_name` is exposed to the framework.
     pub fn is_protocol_exposed_to_framework(&self, in_target_name: &CapabilityName) -> bool {
         self.exposes.iter().any(|expose| match expose {
-            ExposeDecl::Protocol(ExposeProtocolDecl {
-                target,
-                target_name: target_name_or_path,
-                ..
-            }) if target == &ExposeTarget::Framework => {
-                match target_name_or_path {
-                    CapabilityNameOrPath::Name(name) => name == in_target_name,
-                    CapabilityNameOrPath::Path(path) => {
-                        // TODO(fxbug.dev/56604): Remove this legacy compatibility path
-                        let res: Result<CapabilityPath, _> =
-                            format!("/svc/{}", in_target_name).parse();
-                        if res.is_err() {
-                            return false;
-                        }
-                        let in_target_path = res.unwrap();
-                        path == &in_target_path
-                    }
-                }
+            ExposeDecl::Protocol(ExposeProtocolDecl { target, target_name, .. })
+                if target == &ExposeTarget::Framework =>
+            {
+                target_name == in_target_name
             }
             _ => false,
         })
@@ -463,14 +452,7 @@ impl ComponentDecl {
     /// Indicates whether the capability specified by `source_name` is requested.
     pub fn uses_protocol(&self, source_name: &CapabilityName) -> bool {
         self.uses.iter().any(|use_decl| match use_decl {
-            UseDecl::Protocol(ls) => match &ls.source_name {
-                CapabilityNameOrPath::Path(p) => {
-                    let source_path: CapabilityPath =
-                        format!("/svc/{}", source_name).parse().expect("bad path");
-                    p == &source_path
-                }
-                CapabilityNameOrPath::Name(n) => n == source_name,
-            },
+            UseDecl::Protocol(ls) => &ls.source_name == source_name,
             _ => false,
         })
     }
@@ -529,14 +511,14 @@ fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::Us
 fidl_into_struct!(UseProtocolDecl, UseProtocolDecl, fsys::UseProtocolDecl, fsys::UseProtocolDecl,
 {
     source: UseSource,
-    source_name: CapabilityNameOrPath,
+    source_name: CapabilityName,
     target_path: CapabilityPath,
 });
 fidl_into_struct!(UseDirectoryDecl, UseDirectoryDecl, fsys::UseDirectoryDecl,
 fsys::UseDirectoryDecl,
 {
     source: UseSource,
-    source_name: CapabilityNameOrPath,
+    source_name: CapabilityName,
     target_path: CapabilityPath,
     rights: fio2::Operations,
     subdir: Option<PathBuf>,
@@ -570,17 +552,17 @@ fidl_into_struct!(ExposeProtocolDecl, ExposeProtocolDecl, fsys::ExposeProtocolDe
 fsys::ExposeProtocolDecl,
 {
     source: ExposeSource,
-    source_name: CapabilityNameOrPath,
+    source_name: CapabilityName,
     target: ExposeTarget,
-    target_name: CapabilityNameOrPath,
+    target_name: CapabilityName,
 });
 fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirectoryDecl,
 fsys::ExposeDirectoryDecl,
 {
     source: ExposeSource,
-    source_name: CapabilityNameOrPath,
+    source_name: CapabilityName,
     target: ExposeTarget,
-    target_name: CapabilityNameOrPath,
+    target_name: CapabilityName,
     rights: Option<fio2::Operations>,
     subdir: Option<PathBuf>,
 });
@@ -604,18 +586,18 @@ fidl_into_struct!(OfferProtocolDecl, OfferProtocolDecl, fsys::OfferProtocolDecl,
 fsys::OfferProtocolDecl,
 {
     source: OfferServiceSource,
-    source_name: CapabilityNameOrPath,
+    source_name: CapabilityName,
     target: OfferTarget,
-    target_name: CapabilityNameOrPath,
+    target_name: CapabilityName,
     dependency_type: DependencyType,
 });
 fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDecl,
 fsys::OfferDirectoryDecl,
 {
     source: OfferDirectorySource,
-    source_name: CapabilityNameOrPath,
+    source_name: CapabilityName,
     target: OfferTarget,
-    target_name: CapabilityNameOrPath,
+    target_name: CapabilityName,
     rights: Option<fio2::Operations>,
     subdir: Option<PathBuf>,
     dependency_type: DependencyType,
@@ -681,9 +663,9 @@ fidl_into_struct!(DirectoryDecl, DirectoryDecl, fsys::DirectoryDecl, fsys::Direc
 fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
 fsys::StorageDecl,
 {
-    name: String,
+    name: CapabilityName,
     source: StorageDirectorySource,
-    backing_dir: CapabilityNameOrPath,
+    backing_dir: CapabilityName,
     subdir: Option<PathBuf>,
 });
 fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
@@ -862,42 +844,6 @@ impl fmt::Display for CapabilityName {
     }
 }
 
-/// A capability identifier that can be either a name or path.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum CapabilityNameOrPath {
-    Name(CapabilityName),
-    Path(CapabilityPath),
-}
-
-impl FromStr for CapabilityNameOrPath {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<CapabilityNameOrPath, Error> {
-        if s.starts_with('/') {
-            Ok(Self::Path(s.parse()?))
-        } else {
-            Ok(Self::Name(s.into()))
-        }
-    }
-}
-
-impl TryFrom<&str> for CapabilityNameOrPath {
-    type Error = Error;
-
-    fn try_from(s: &str) -> Result<CapabilityNameOrPath, Error> {
-        Self::from_str(s)
-    }
-}
-
-impl fmt::Display for CapabilityNameOrPath {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Name(n) => n.fmt(f),
-            Self::Path(p) => p.fmt(f),
-        }
-    }
-}
-
 // TODO: Runners and third parties can use this to parse `facets`.
 impl FidlIntoNative<Option<HashMap<String, Value>>> for Option<fsys::Object> {
     fn fidl_into_native(self) -> Option<HashMap<String, Value>> {
@@ -952,19 +898,6 @@ impl FidlIntoNative<CapabilityName> for Option<String> {
 }
 
 impl NativeIntoFidl<Option<String>> for CapabilityName {
-    fn native_into_fidl(self) -> Option<String> {
-        Some(self.to_string())
-    }
-}
-
-impl FidlIntoNative<CapabilityNameOrPath> for Option<String> {
-    fn fidl_into_native(self) -> CapabilityNameOrPath {
-        let s: &str = &self.unwrap();
-        s.try_into().expect("invalid name or path")
-    }
-}
-
-impl NativeIntoFidl<Option<String>> for CapabilityNameOrPath {
     fn native_into_fidl(self) -> Option<String> {
         Some(self.to_string())
     }
@@ -2151,7 +2084,7 @@ mod tests {
                             rights: fio2::Operations::Connect,
                         }),
                         CapabilityDecl::Storage(StorageDecl {
-                            name: "cache".to_string(),
+                            name: "cache".into(),
                             backing_dir: "data".try_into().unwrap(),
                             source: StorageDirectorySource::Parent,
                             subdir: Some("cache".try_into().unwrap()),
@@ -2344,7 +2277,7 @@ mod tests {
             input = vec![
                 fsys::StorageDecl {
                     name: Some("minfs".to_string()),
-                    backing_dir: Some("minfs".to_string()),
+                    backing_dir: Some("minfs".into()),
                     source: Some(fsys::Ref::Child(fsys::ChildRef {
                         name: "foo".to_string(),
                         collection: None,
@@ -2355,8 +2288,8 @@ mod tests {
             input_type = fsys::StorageDecl,
             result = vec![
                 StorageDecl {
-                    name: "minfs".to_string(),
-                    backing_dir: CapabilityNameOrPath::try_from("minfs").unwrap(),
+                    name: "minfs".into(),
+                    backing_dir: "minfs".into(),
                     source: StorageDirectorySource::Child("foo".to_string()),
                     subdir: None,
                 },
