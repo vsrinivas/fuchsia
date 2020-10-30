@@ -44,11 +44,7 @@ class LightDevice {
   bool GetCurrentSimpleValue() const { return (value_ != 0); }
   zx_status_t SetSimpleValue(bool value);
   double GetCurrentBrightnessValue() const { return value_; }
-  // TODO (rdzhuang): redundant function. remove after migration.
-  uint8_t GetCurrentBrightnessValue2() const { return value2_; }
   zx_status_t SetBrightnessValue(double value);
-  // TODO (rdzhuang): redundant function. remove after migration.
-  zx_status_t SetBrightnessValue2(uint8_t value);
 
  private:
   std::string name_;
@@ -56,8 +52,6 @@ class LightDevice {
   std::optional<ddk::PwmProtocolClient> pwm_;
 
   double value_ = 0;
-  // TODO (rdzhuang): redundant variable. remove after migration.
-  uint8_t value2_ = 0;
 };
 
 class AmlLight : public AmlLightType,
@@ -80,12 +74,8 @@ class AmlLight : public AmlLightType,
   void SetSimpleValue(uint32_t index, bool value, SetSimpleValueCompleter::Sync& completer);
   void GetCurrentBrightnessValue(uint32_t index,
                                  GetCurrentBrightnessValueCompleter::Sync& completer);
-  void GetCurrentBrightnessValue2(uint32_t index,
-                                  GetCurrentBrightnessValue2Completer::Sync& completer);
   void SetBrightnessValue(uint32_t index, double value,
                           SetBrightnessValueCompleter::Sync& completer);
-  void SetBrightnessValue2(uint32_t index, uint8_t value,
-                           SetBrightnessValue2Completer::Sync& completer);
   void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer);
   void SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync& completer);
 
@@ -104,16 +94,8 @@ class AmlLight : public AmlLightType,
                                       GetGroupCurrentBrightnessValueCompleter::Sync& completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
-  void GetGroupCurrentBrightnessValue2(uint32_t group_id,
-                                       GetGroupCurrentBrightnessValue2Completer::Sync& completer) {
-    completer.ReplyError(LightError::NOT_SUPPORTED);
-  }
   void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
                                SetGroupBrightnessValueCompleter::Sync& completer) {
-    completer.ReplyError(LightError::NOT_SUPPORTED);
-  }
-  void SetGroupBrightnessValue2(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
-                                SetGroupBrightnessValue2Completer::Sync& completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void GetGroupCurrentRgbValue(uint32_t group_id,
