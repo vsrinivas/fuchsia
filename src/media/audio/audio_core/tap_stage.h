@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "src/media/audio/audio_core/audio_clock.h"
+#include "src/media/audio/audio_core/mixer/output_producer.h"
 #include "src/media/audio/audio_core/stream.h"
 
 namespace media::audio {
@@ -30,10 +31,16 @@ class TapStage : public ReadableStream {
   void SetPresentationDelay(zx::duration external_delay) override;
 
  private:
+  std::optional<WritableStream::Buffer> WriteSilenceToTap(int64_t frame, int64_t frame_count);
+  void CopyFrames(std::optional<WritableStream::Buffer> write_buffer,
+                  const ReadableStream::Buffer& source,
+                  const TimelineFunction& source_frac_frame_to_tap_frac_frame);
+
   const TimelineFunction& SourceFracFrameToTapFracFrame();
 
   std::shared_ptr<ReadableStream> source_;
   std::shared_ptr<WritableStream> tap_;
+  std::unique_ptr<OutputProducer> output_producer_;
 
   // Track the mapping of source frames to tap frames.
   TimelineFunction source_frac_frame_to_tap_frac_frame_;

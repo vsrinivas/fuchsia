@@ -140,9 +140,9 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(Fixed dest_frame, size_
   ForEachSource(TaskType::Mix, dest_frame);
 
   // Cache the buffer in case it is not fully read by the caller.
-  cached_buffer_.Set(ReadableStream::Buffer(dest_frame, Fixed(cur_mix_job_.buf_frames),
-                                            cur_mix_job_.buf, true, cur_mix_job_.usages_mixed,
-                                            cur_mix_job_.applied_gain_db));
+  cached_buffer_.Set(ReadableStream::Buffer(
+      Fixed(dest_frame.Floor()), Fixed(cur_mix_job_.buf_frames), cur_mix_job_.buf, true,
+      cur_mix_job_.usages_mixed, cur_mix_job_.applied_gain_db));
   return cached_buffer_.Get();
 }
 

@@ -117,7 +117,7 @@ class WritableRingBuffer : public WritableStream, public BaseRingBuffer {
   // |media::audio::WritableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return audio_clock_; }
-  std::optional<WritableStream::Buffer> WriteLock(Fixed frame, size_t frame_count) override;
+  std::optional<WritableStream::Buffer> WriteLock(int64_t frame, size_t frame_count) override;
 
  private:
   friend class BaseRingBuffer;

@@ -285,10 +285,10 @@ std::optional<ReadableStream::Buffer> ReadableRingBuffer::ReadLock(Fixed frame,
                                         frame_count, true, is_hardware_buffer_);
 }
 
-std::optional<WritableStream::Buffer> WritableRingBuffer::WriteLock(Fixed frame,
+std::optional<WritableStream::Buffer> WritableRingBuffer::WriteLock(int64_t frame,
                                                                     size_t frame_count) {
-  return LockBuffer<WritableRingBuffer>(this, nullptr, &safe_write_frame_, frame.Floor(),
-                                        frame_count, false, is_hardware_buffer_);
+  return LockBuffer<WritableRingBuffer>(this, nullptr, &safe_write_frame_, frame, frame_count,
+                                        false, is_hardware_buffer_);
 }
 
 BaseStream::TimelineFunctionSnapshot BaseRingBuffer::ReferenceClockToFixedImpl() const {

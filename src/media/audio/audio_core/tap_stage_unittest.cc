@@ -19,16 +19,18 @@ using testing::FloatEq;
 namespace media::audio {
 namespace {
 
+constexpr uint32_t kChannels = 2;
 const Format kDefaultFormat =
     Format::Create(fuchsia::media::AudioStreamType{
                        .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-                       .channels = 2,
+                       .channels = kChannels,
                        .frames_per_second = 48000,
                    })
         .take_value();
 
 constexpr uint32_t kRingBufferFrameCount = 1024;
-constexpr uint32_t kDefaultPacketFrames = 480;
+constexpr uint32_t kPacketFrames = 480;
+constexpr zx::duration kPacketDuration = zx::msec(10);
 
 class TapStageTest : public testing::ThreadingModelFixture {
  protected:
@@ -69,8 +71,10 @@ class TapStageTest : public testing::ThreadingModelFixture {
     return reinterpret_cast<std::array<T, N>&>(static_cast<T*>(ptr)[offset]);
   }
 
-  void ClearRingBuffer(uint8_t value = 0) {
-    memset(ring_buffer().virt(), value, ring_buffer().size());
+  void ClearRingBuffer(float value = 0.0) {
+    for (size_t i = 0; i < ring_buffer().size() / sizeof(float); ++i) {
+      reinterpret_cast<float*>(ring_buffer().virt())[i] = value;
+    }
   }
 
   void AdvanceTo(zx::duration d) {
@@ -84,6 +88,14 @@ class TapStageTest : public testing::ThreadingModelFixture {
   testing::PacketFactory& packet_factory() { return packet_factory_; }
   ReadableRingBuffer& ring_buffer() { return *ring_buffer_; }
 
+  template <size_t frame_count>
+  void CheckBuffer(const ReadableStream::Buffer& buffer, int64_t frame, float expected_sample) {
+    EXPECT_EQ(buffer.start(), Fixed(frame));
+    EXPECT_EQ(buffer.length(), Fixed(frame_count));
+    auto& arr = as_array<float, frame_count * kChannels>(buffer.payload());
+    EXPECT_THAT(arr, Each(FloatEq(expected_sample)));
+  }
+
   // Assert that |stream| contains a buffer that is exactly |frame_count| frames starting at |frame|
   // with data that matches only |expected_sample| (that is all the samples in the buffer match
   // |expected_sample|).
@@ -92,10 +104,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
                    bool release = true) {
     auto buffer = stream->ReadLock(Fixed(frame), frame_count);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(buffer->start(), Fixed(frame));
-    EXPECT_EQ(buffer->length(), Fixed(frame_count));
-    auto& arr = as_array<float, frame_count>(buffer->payload());
-    EXPECT_THAT(arr, Each(FloatEq(expected_sample)));
+    CheckBuffer<frame_count>(*buffer, frame, expected_sample);
     buffer->set_is_fully_consumed(release);
   }
 
@@ -108,21 +117,21 @@ class TapStageTest : public testing::ThreadingModelFixture {
 };
 
 TEST_F(TapStageTest, CopySinglePacket) {
-  packet_queue().PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
+  packet_queue().PushPacket(packet_factory().CreatePacket(1.0, kPacketDuration));
 
   // We expect the tap and ring buffer to both be in sync for the first 480.
-  constexpr size_t frame_count = kDefaultPacketFrames;
+  constexpr size_t frame_count = kPacketFrames;
   CheckStream<frame_count>(&tap(), 0, 1.0, true);
-  AdvanceTo(zx::msec(10));
+  AdvanceTo(kPacketDuration);
   CheckStream<frame_count>(&ring_buffer(), 0, 1.0, true);
 }
 
 // Test that ReadLock returns a buffer correctly sized for whatever buffer was returned by
 // the source streams |ReadLock|.
 TEST_F(TapStageTest, TruncateToInputBuffer) {
-  packet_queue().PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
+  packet_queue().PushPacket(packet_factory().CreatePacket(1.0, kPacketDuration));
 
-  constexpr uint32_t frame_count = kDefaultPacketFrames;
+  constexpr uint32_t frame_count = kPacketFrames;
   {  // Read from the tap, expect to get the same bytes from the packet.
     auto buffer = tap().ReadLock(Fixed(0), frame_count * 2);
     ASSERT_TRUE(buffer);
@@ -141,21 +150,21 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
   // 480 -  959 = 2.0 samples
   // 960 - 1023 = 3.0 samples
   //   0 -  415 = 3.0 samples (3rd packet wrapped around.
-  packet_queue().PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
-  packet_queue().PushPacket(packet_factory().CreatePacket(2.0, zx::msec(10)));
-  packet_queue().PushPacket(packet_factory().CreatePacket(3.0, zx::msec(10)));
+  packet_queue().PushPacket(packet_factory().CreatePacket(1.0, kPacketDuration));
+  packet_queue().PushPacket(packet_factory().CreatePacket(2.0, kPacketDuration));
+  packet_queue().PushPacket(packet_factory().CreatePacket(3.0, kPacketDuration));
 
   {  // With the first packet, we'll be fully in sync between the tap and the ring buffer.
-    constexpr size_t frame_count = kDefaultPacketFrames;
+    constexpr size_t frame_count = kPacketFrames;
     SCOPED_TRACE("first packet in tap");
     CheckStream<frame_count>(&tap(), 0, 1.0, true);
     SCOPED_TRACE("first packet in ring buffer");
-    AdvanceTo(zx::msec(10));
+    AdvanceTo(kPacketDuration);
     CheckStream<frame_count>(&ring_buffer(), 0, 1.0, true);
   }
 
   {  // The second packet is still fully in sync between the tap and the ring buffer.
-    constexpr size_t frame_count = kDefaultPacketFrames;
+    constexpr size_t frame_count = kPacketFrames;
     SCOPED_TRACE("second packet in tap");
     CheckStream<frame_count>(&tap(), frame_count, 2.0, true);
     SCOPED_TRACE("second packet in ring buffer");
@@ -165,7 +174,7 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
 
   {  // For the final packet, we expect the Tap to return one buffer with the entire contents (this
     // is the packet buffer.
-    constexpr size_t frame_count = kDefaultPacketFrames;
+    constexpr size_t frame_count = kPacketFrames;
     SCOPED_TRACE("final packet in tap");
     CheckStream<frame_count>(&tap(), 2 * frame_count, 3.0, true);
   }
@@ -178,12 +187,12 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
   // The ring buffer should return the first 64 frames for the first ReadLock (the only
   // remaining space before the buffer wraps around). A subsequent ReadLock should return the
   // remaining frames.
-  constexpr uint32_t expected_frames_region_1 = kRingBufferFrameCount - (2 * kDefaultPacketFrames);
-  constexpr uint32_t expected_frames_region_2 = kDefaultPacketFrames - expected_frames_region_1;
+  constexpr uint32_t expected_frames_region_1 = kRingBufferFrameCount - (2 * kPacketFrames);
+  constexpr uint32_t expected_frames_region_2 = kPacketFrames - expected_frames_region_1;
   {
-    uint32_t requested_frames = kDefaultPacketFrames;
+    uint32_t requested_frames = kPacketFrames;
     constexpr uint32_t expected_frames = expected_frames_region_1;
-    int64_t frame = 2 * kDefaultPacketFrames;
+    int64_t frame = 2 * kPacketFrames;
     auto buffer = ring_buffer().ReadLock(Fixed(frame), requested_frames);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), Fixed(frame));
@@ -193,7 +202,7 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
   }
 
   {
-    constexpr uint32_t requested_frames = kDefaultPacketFrames;
+    constexpr uint32_t requested_frames = kPacketFrames;
     constexpr uint32_t expected_frames = expected_frames_region_2;
     int64_t frame = kRingBufferFrameCount;
     auto buffer = ring_buffer().ReadLock(Fixed(frame), requested_frames);
@@ -213,6 +222,150 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
   }
 }
 
+TEST_F(TapStageTest, PartialTapBuffer) {
+  constexpr float kInitialRingBufferColor = 5.0;
+  ClearRingBuffer(kInitialRingBufferColor);
+
+  // Test the case where part of a tap buffer is unavailable because of the safe write pointer has
+  // moved beyond that frame.
+  //
+  // Seek the tap buffer so that the first half packet is not available in the ring buffer. We
+  // expect these frames to be untouched in the underlying buffer.
+  AdvanceTo(kPacketDuration / 2);
+
+  // Pull a full packet through the the tap stage.
+  packet_queue().PushPacket(packet_factory().CreatePacket(1.0, kPacketDuration));
+
+  // Expect the full packet to be read out of the tap stage.
+  SCOPED_TRACE("first packet in tap");
+  CheckStream<kPacketFrames>(&tap(), 0, 1.0, true);
+
+  // Expect the first half of the packet to be untouched in the ring buffer.
+  SCOPED_TRACE("unmodified ring buffer region");
+  CheckStream<kPacketFrames / 2>(&ring_buffer(), 0, kInitialRingBufferColor, true);
+
+  // But the second half should match the input.
+  SCOPED_TRACE("modified ring buffer region");
+  AdvanceTo(kPacketDuration);
+  CheckStream<kPacketFrames / 2>(&ring_buffer(), kPacketFrames / 2, 1.0, true);
+
+  // And anything after that should also be unmodified.
+  SCOPED_TRACE("silence after tap");
+  AdvanceTo(kPacketDuration * 2);
+  CheckStream<kPacketFrames>(&ring_buffer(), kPacketFrames, kInitialRingBufferColor, true);
+}
+
+TEST_F(TapStageTest, ShortSourceBuffer) {
+  constexpr float kSourceBufferColor = 3.0;
+  constexpr float kInitialRingBufferColor = 5.0;
+
+  // Clear the buffer with a defined bit-pattern. This is so that we may detect if any frames have
+  // or have not been modified by the TapStage.
+  ClearRingBuffer(kInitialRingBufferColor);
+
+  // Enqueue a single buffer that is half as long as the packet we will read out of the TapStage,
+  // and also offset by a quarter packet of implicit silence:
+  //
+  //   ---------------------------
+  //  |              1            |
+  //  |---------------------------|
+  //  |  2   |~~~~~~~~~~~~~~~~~~~~|
+  //  |---------------------------|
+  //  |~~~~~~|      3      |~~~~~~|
+  //  |---------------------------|
+  //  |~~~~~~~~~~~~~~~~~~~~|  4   |
+  //   ---------------------------
+  //  ^                           ^
+  //  0                      kPacketFrames
+  //
+  // Where
+  //   Region 1 -- The requested frames from the TapStage, which spans frames 0 to kPacketFrames.
+  //   Region 2 -- The region before the first frame in source. This should be replicated into the
+  //               tap stage as silence.
+  //   Region 3 -- Frames available in source that need to be copied into the tap stream.
+  //   Region 4 -- Frames that are beyond the end of the source stream packet. We expect the buffer
+  //               returned from TapStage to end before this region, and we expect the corresponding
+  //               frames in the ring buffer to be unmodified.
+
+  // Create region '2' in the source stream by seeking past these frames. The next 'CreatePacket'
+  // will occur after this.
+  packet_factory().SeekToFrame(kPacketFrames / 4);
+  // Create region '3' in the source stream.
+  packet_queue().PushPacket(packet_factory().CreatePacket(kSourceBufferColor, kPacketDuration / 2));
+
+  // Request 'region 1'
+  auto buffer = tap().ReadLock(Fixed(0), kPacketFrames);
+  // But expect 'region 3', which corresponds to what is available in source.
+  ASSERT_TRUE(buffer);
+  CheckBuffer<kPacketFrames / 2>(*buffer, kPacketFrames / 4, 3.0);
+
+  AdvanceTo(kPacketDuration);
+
+  // Verify the silence from 'region 2' is available in the tap stream.
+  SCOPED_TRACE("silence in ring buffer");
+  CheckStream<kPacketFrames / 4>(&ring_buffer(), 0, 0.0, true);
+
+  // Followed by 'region 3'
+  SCOPED_TRACE("frames from source in ring buffer");
+  CheckStream<kPacketFrames / 2>(&ring_buffer(), kPacketFrames / 4, kSourceBufferColor, true);
+
+  // Ensure that frames in 'region 4' were not modified in the ring buffer.
+  SCOPED_TRACE("unmodified frames");
+  CheckStream<kPacketFrames / 4>(&ring_buffer(), 3 * kPacketFrames / 4, kInitialRingBufferColor,
+                                 true);
+}
+
+TEST_F(TapStageTest, SilentSourceStream) {
+  // Initialize the buffer to something that is not silence.
+  ClearRingBuffer(5.0);
+
+  // Read from the ring buffer.
+  auto buffer = tap().ReadLock(Fixed(0), kPacketFrames);
+
+  // Our packet queue source is empty so we expect no data here.
+  EXPECT_FALSE(buffer);
+
+  // But we do expect the frames in our tap to have been written silence.
+  AdvanceTo(kPacketDuration);
+  CheckStream<kPacketFrames>(&ring_buffer(), 0, 0.0, true);
+}
+
+TEST_F(TapStageTest, ShortTapBuffer) {
+  constexpr float kSourceBufferColor = 3.0;
+  constexpr float kInitialRingBufferColor = 5.0;
+
+  // Clear the buffer with a defined bit-pattern. This is so that we may detect if any frames have
+  // or have not been modified by the TapStage.
+  ClearRingBuffer(kInitialRingBufferColor);
+
+  // Create region '2' in the source stream by seeking past these frames. The next 'CreatePacket'
+  // will occur after this.
+  packet_factory().SeekToFrame(kPacketFrames / 4);
+  // Create region '3' in the source stream.
+  packet_queue().PushPacket(packet_factory().CreatePacket(kSourceBufferColor, kPacketDuration / 2));
+
+  // Request 'region 1'
+  auto buffer = tap().ReadLock(Fixed(0), kPacketFrames);
+  // But expect 'region 3', which corresponds to what is available in source.
+  ASSERT_TRUE(buffer);
+  CheckBuffer<kPacketFrames / 2>(*buffer, kPacketFrames / 4, 3.0);
+
+  AdvanceTo(kPacketDuration);
+
+  // Verify the silence from 'region 2' is available in the tap stream.
+  SCOPED_TRACE("silence in ring buffer");
+  CheckStream<kPacketFrames / 4>(&ring_buffer(), 0, 0.0, true);
+
+  // Followed by 'region 3'
+  SCOPED_TRACE("frames from source in ring buffer");
+  CheckStream<kPacketFrames / 2>(&ring_buffer(), kPacketFrames / 4, kSourceBufferColor, true);
+
+  // Ensure that frames in 'region 4' were not modified in the ring buffer.
+  SCOPED_TRACE("unmodified frames");
+  CheckStream<kPacketFrames / 4>(&ring_buffer(), 3 * kPacketFrames / 4, kInitialRingBufferColor,
+                                 true);
+}
+
 class TapStageFrameConversionTest : public TapStageTest {
  protected:
   TapStageFrameConversionTest() : TapStageTest(12345) {}
@@ -221,12 +374,12 @@ class TapStageFrameConversionTest : public TapStageTest {
 // Test that we can properly copy a packet when the source and tap streams are using different
 // TimelineFunctions.
 TEST_F(TapStageFrameConversionTest, CopySinglePacket) {
-  packet_queue().PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
+  packet_queue().PushPacket(packet_factory().CreatePacket(1.0, kPacketDuration));
 
   // We expect the tap and ring buffer to both be in sync for the first 480.
-  constexpr size_t frame_count = kDefaultPacketFrames;
+  constexpr size_t frame_count = kPacketFrames;
   CheckStream<frame_count>(&tap(), 0, 1.0, true);
-  AdvanceTo(zx::msec(10));
+  AdvanceTo(kPacketDuration);
   CheckStream<frame_count>(&ring_buffer(), 0, 1.0, true);
 }
 

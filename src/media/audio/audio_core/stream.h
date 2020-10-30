@@ -150,6 +150,16 @@ class ReadableStream : public BaseStream {
   //
   // If no data is available for that frame range, ReadLock returns std::nullopt.
   // Otherwise, ReadLock returns a buffer representing all or part of the requested range.
+  // If |start()| on the returned buffer is greater than |dest_frame|, then the stream
+  // has no data for those frames and it may be treated as silence. Conversely, if |end()|
+  // on the returned buffer is less than |dest_frame + frame_count|, this does not indicate
+  // silence for those frames. Instead it indicates the full frame range is not available
+  // on a single contiguous buffer. Clients should call |ReadLock| again and provide the
+  // |end()| of the previous buffer as |dest_frame| to query if the stream has more frames.
+  //
+  // The returned buffer must not refer to frames outside of the range [floor(dest_frame),
+  // ceiling(dest_frame) + frame_count).
+  //
   // The buffer will remain locked until it is destructed. It is illegal to call ReadLock
   // again until the lock has been released.
   //
@@ -216,18 +226,19 @@ class WritableStream : public BaseStream {
   // stream's frame timeline.
   //
   // If data cannot be written to that frame range, WriteLock returns std::nullopt.
-  // Otherwise, WriteLock returns a buffer representing the subset of the requested range
-  // that is currently writable. Callers can write directly to the payload. The buffer will
-  // remain locked until it is destructed. It is illegal to call WriteLock again until the
-  // lock has been released.
+  // Otherwise, WriteLock returns a buffer representing all or part of the requested range.
+  // If |start()| on the returned buffer is greater than |dest_frame|, then no frames before
+  // |start()| must be written. Conversely, if |end()| on the returned buffer is less than
+  // |dest_frame + frame_count|, this does not indicate those frames can be omitted. Instead
+  // it indicates the full frame range is not available on a single contiguous buffer. Clients
+  // should call |WriteLock| again and provide the |end()| of the previous buffer as |dest_frame|
+  // to query if the stream has more frames.
   //
-  // The |frame| parameter is passed as a fixed point number to preserve precision.
-  // When this call gets down to a level that must deal with integer frames, such as an
-  // output buffer, the target integer frame should be computed with frame.Floor().
+  // The returned buffer must not refer to frames outside of the range [frame, frame + frame_count).
   //
-  // TODO(fxbug.dev/50669): Need to validate that all callers are prepared to receive a
-  // partial range.
-  virtual std::optional<Buffer> WriteLock(Fixed frame, size_t frame_count) = 0;
+  // Callers can write directly to the payload. The buffer will remain locked until it is
+  // destructed. It is illegal to call WriteLock again until the lock has been released.
+  virtual std::optional<Buffer> WriteLock(int64_t frame, size_t frame_count) = 0;
 };
 
 }  // namespace media::audio
