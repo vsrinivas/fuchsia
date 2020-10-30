@@ -13,10 +13,6 @@
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 
-namespace ftl {
-extern thread_local int g_nand_op_count;
-}
-
 namespace {
 
 constexpr uint32_t kRealPageSize = 1024;
@@ -294,18 +290,27 @@ TEST_F(NandDriverTest, IsBadBlock) {
 }
 
 TEST_F(NandDriverTest, OperationCounter) {
-  auto driver = ftl::NandDriver::Create(nand_proto(), bad_block_proto());
+  ftl::OperationCounters counters;
+  auto driver = ftl::NandDriver::CreateWithCounters(nand_proto(), bad_block_proto(), &counters);
   ASSERT_EQ(nullptr, driver->Init());
-  ftl::g_nand_op_count = 0;
 
   EXPECT_EQ(ftl::kNdmOk, driver->NandErase(5 * kBlockSize));
-  EXPECT_EQ(1, ftl::g_nand_op_count);
+  EXPECT_EQ(1, counters.block_erase);
+  EXPECT_EQ(0, counters.page_read);
+  EXPECT_EQ(0, counters.page_write);
+  EXPECT_EQ(1, counters.GetSum());
 
   EXPECT_EQ(ftl::kNdmError, driver->NandWrite(5, 0, nullptr, nullptr));
-  EXPECT_EQ(2, ftl::g_nand_op_count);
+  EXPECT_EQ(1, counters.block_erase);
+  EXPECT_EQ(0, counters.page_read);
+  EXPECT_EQ(1, counters.page_write);
+  EXPECT_EQ(2, counters.GetSum());
 
   EXPECT_EQ(ftl::kNdmFatalError, driver->NandRead(5, 0, nullptr, nullptr));
-  EXPECT_EQ(3, ftl::g_nand_op_count);
+  EXPECT_EQ(1, counters.block_erase);
+  EXPECT_EQ(1, counters.page_read);
+  EXPECT_EQ(1, counters.page_write);
+  EXPECT_EQ(3, counters.GetSum());
 }
 
 TEST_F(NandDriverTest, TryEraseRangeWithFailuresIsOk) {

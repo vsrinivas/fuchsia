@@ -22,6 +22,26 @@ namespace {
 namespace block_fidl = ::llcpp::fuchsia::hardware::block;
 
 TEST(FtlFidlTest, GetVmoReturnsVmoWithCounters) {
+  std::vector<std::string> property_list = {
+      "counter.max_wear",
+      "counter.read",
+      "counter.read_issued_page_reads",
+      "counter.read_issued_page_writes",
+      "counter.read_issued_block_erase",
+      "counter.write",
+      "counter.write_issued_page_reads",
+      "counter.write_issued_page_writes",
+      "counter.write_issued_block_erase",
+      "counter.trim",
+      "counter.trim_issued_page_reads",
+      "counter.trim_issued_page_writes",
+      "counter.trim_issued_block_erase",
+      "counter.flush",
+      "counter.flush_issued_page_reads",
+      "counter.flush_issued_page_writes",
+      "counter.flush_issued_block_erase",
+  };
+
   std::string path_to_device(kTestDevice);
   size_t length = path_to_device.rfind("/block");
   ASSERT_GT(length, 0);
@@ -35,17 +55,10 @@ TEST(FtlFidlTest, GetVmoReturnsVmoWithCounters) {
   zx::vmo inspect_vmo(std::move(r->result.mutable_response().vmo));
   ASSERT_TRUE(inspect_vmo.is_valid());
   auto hierarchy = inspect::ReadFromVmo(inspect_vmo).take_value();
-
-  auto* wear_count_prop = hierarchy.node().get_property<inspect::UintPropertyValue>("wear_count");
-  ASSERT_NOT_NULL(wear_count_prop);
-
-  auto* block_operation_count_prop =
-      hierarchy.node().get_property<inspect::UintPropertyValue>("block_operation_count");
-  ASSERT_NOT_NULL(block_operation_count_prop);
-
-  auto* nand_operation_count_prop =
-      hierarchy.node().get_property<inspect::UintPropertyValue>("nand_operation_count");
-  ASSERT_NOT_NULL(nand_operation_count_prop);
+  for (const auto& property_name : property_list) {
+    auto* property = hierarchy.node().get_property<inspect::UintPropertyValue>(property_name);
+    EXPECT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
+  }
 }
 
 }  // namespace

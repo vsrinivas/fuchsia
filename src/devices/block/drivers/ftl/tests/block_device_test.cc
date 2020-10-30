@@ -5,18 +5,22 @@
 #include "block_device.h"
 
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fit/function.h>
 #include <lib/ftl/volume.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/cpp/vmo/types.h>
 
 #include <atomic>
 #include <memory>
 #include <utility>
 
+#include <ddk/protocol/block.h>
 #include <ddktl/protocol/nand.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 
+#include "metrics.h"
 namespace {
 
 constexpr uint32_t kPageSize = 1024;
@@ -80,12 +84,14 @@ class FakeVolume final : public ftl::Volume {
   }
   const char* ReAttach() final { return nullptr; }
   zx_status_t Read(uint32_t first_page, int num_pages, void* buffer) final {
+    OnOperation();
     first_page_ = first_page;
     num_pages_ = num_pages;
     memset(buffer, kMagic, num_pages * kPageSize);
     return ZX_OK;
   }
   zx_status_t Write(uint32_t first_page, int num_pages, const void* buffer) final {
+    OnOperation();
     first_page_ = first_page;
     num_pages_ = num_pages;
     written_ = true;
@@ -105,10 +111,12 @@ class FakeVolume final : public ftl::Volume {
   zx_status_t Mount() final { return ZX_OK; }
   zx_status_t Unmount() final { return ZX_OK; }
   zx_status_t Flush() final {
+    OnOperation();
     flushed_ = true;
     return ZX_OK;
   }
   zx_status_t Trim(uint32_t first_page, uint32_t num_pages) final {
+    OnOperation();
     trimmed_ = true;
     first_page_ = first_page;
     num_pages_ = num_pages;
@@ -119,19 +127,31 @@ class FakeVolume final : public ftl::Volume {
 
   zx_status_t GetStats(Stats* stats) final {
     *stats = {};
-    stats->wear_count = kWearCount;
+    stats->wear_count = wear_count_;
     return ZX_OK;
   }
 
   zx_status_t GetCounters(Counters* counters) final {
-    counters->wear_count = kWearCount;
+    counters->wear_count = wear_count_;
     return ZX_OK;
   }
 
+  void UpdateWearCount(uint32_t wear_count) { wear_count_ = wear_count; }
+
+  void SetOnOperation(fit::function<void()> callback) { on_operation_ = std::move(callback); }
+
  private:
+  void OnOperation() {
+    if (on_operation_) {
+      on_operation_();
+    }
+  }
+
   ftl::BlockDevice* device_;
   uint32_t first_page_ = 0;
   int num_pages_ = 0;
+  uint32_t wear_count_ = kWearCount;
+  fit::function<void()> on_operation_;
   bool written_ = false;
   bool flushed_ = false;
   bool formatted_ = false;
@@ -320,6 +340,57 @@ class BlockDeviceTest : public zxtest::Test {
     return true;
   }
 
+  void Read() {
+    Operation operation(op_size(), this);
+    ASSERT_TRUE(operation.SetVmo());
+    auto* op = operation.GetOperation();
+    op->rw.command = BLOCK_OP_READ;
+    op->rw.length = 1;
+    op->rw.offset_dev = 0;
+    device_->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
+  }
+
+  void Write() {
+    Operation operation(op_size(), this);
+    ASSERT_TRUE(operation.SetVmo());
+    auto* op = operation.GetOperation();
+    op->rw.command = BLOCK_OP_WRITE;
+    op->rw.length = 1;
+    op->rw.offset_dev = 0;
+    memset(operation.buffer(), kMagic, kPageSize);
+    device_->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
+  }
+
+  void Flush() {
+    Operation operation(op_size(), this);
+    ASSERT_TRUE(operation.SetVmo());
+    auto* op = operation.GetOperation();
+    op->rw.command = BLOCK_OP_FLUSH;
+    device_->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
+  }
+
+  void Trim() {
+    Operation operation(op_size(), this);
+    ASSERT_TRUE(operation.SetVmo());
+    auto* op = operation.GetOperation();
+    op->trim.command = BLOCK_OP_TRIM;
+    op->trim.length = 1;
+    op->trim.offset_dev = kNumPages - 1;
+    device_->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
+  }
+
   DISALLOW_COPY_ASSIGN_AND_MOVE(BlockDeviceTest);
 
  private:
@@ -506,18 +577,145 @@ TEST_F(BlockDeviceTest, GetInspectVmoContainsCountersAndWearCount) {
   ftl::BlockDevice* device = GetDevice();
   ASSERT_TRUE(device);
 
-  zx::vmo vmo = device->GetInspectVmo();
+  zx::vmo vmo = device->DuplicateInspectVmo();
   auto hierarchy = inspect::ReadFromVmo(vmo).take_value();
-  auto* wear_count = hierarchy.node().get_property<inspect::UintPropertyValue>("wear_count");
-  EXPECT_EQ(kWearCount, wear_count->value());
+  for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::UintProperty>()) {
+    auto* property = hierarchy.node().get_property<inspect::UintPropertyValue>(property_name);
+    EXPECT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
+  }
 
-  auto* block_operation_count_prop =
-      hierarchy.node().get_property<inspect::UintPropertyValue>("block_operation_count");
-  ASSERT_NOT_NULL(block_operation_count_prop);
+  for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::DoubleProperty>()) {
+    auto* property = hierarchy.node().get_property<inspect::DoublePropertyValue>(property_name);
+    EXPECT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
+  }
+}
 
-  auto* nand_operation_count_prop =
-      hierarchy.node().get_property<inspect::UintPropertyValue>("nand_operation_count");
-  ASSERT_NOT_NULL(nand_operation_count_prop);
+void ReadProperties(ftl::BlockDevice* device, std::map<std::string, uint64_t>& counters,
+                    std::map<std::string, double>& rates) {
+  zx::vmo vmo = device->DuplicateInspectVmo();
+  auto hierarchy = inspect::ReadFromVmo(vmo).take_value();
+  // counters are still 0.
+  for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::UintProperty>()) {
+    auto* property = hierarchy.node().get_property<inspect::UintPropertyValue>(property_name);
+    ASSERT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
+    counters[property_name] = property->value();
+  }
+
+  for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::DoubleProperty>()) {
+    auto* property = hierarchy.node().get_property<inspect::DoublePropertyValue>(property_name);
+    ASSERT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
+    rates[property_name] = property->value();
+  }
+}
+
+void VerifyInspectMetrics(BlockDeviceTest* fixture, const std::string& block_metric_prefix,
+                          fit::function<std::string()> clear_op,
+                          fit::function<void()> trigger_metric_update_op) {
+  ftl::BlockDevice* device = fixture->GetDevice();
+  ASSERT_TRUE(device);
+  auto* volume = fixture->GetVolume();
+
+  std::map<std::string, uint64_t> counters;
+  std::map<std::string, double> rates;
+  std::map<std::string, uint64_t> expected_counters;
+  std::map<std::string, double> expected_rates;
+
+  volume->UpdateWearCount(0);
+  // Random operation to trigger a metric update.
+  expected_counters[clear_op()]++;
+
+  ReadProperties(device, counters, rates);
+  for (const auto& counter : counters) {
+    EXPECT_EQ(counter.second, expected_counters[counter.first],
+              "Property %s had initial non zero counter.", counter.first.c_str());
+  }
+
+  // The counters are cleared before any operation.
+  volume->SetOnOperation([&]() {
+    auto& counters = device->nand_counters();
+    counters.page_read = 1;
+    counters.page_write = 2;
+    counters.block_erase = 3;
+  });
+
+  volume->UpdateWearCount(24);
+  trigger_metric_update_op();
+
+  volume->SetOnOperation([&]() {
+    auto& counters = device->nand_counters();
+    counters.page_read = 2;
+    counters.page_write = 4;
+    counters.block_erase = 5;
+  });
+  volume->UpdateWearCount(12345678);
+  trigger_metric_update_op();
+
+  expected_counters[ftl::Metrics::GetMaxWearPropertyName()] = 12345678;
+  expected_counters["nand.erase_block.max_wear"] = 12345678;
+
+  // Counters
+  expected_counters[block_metric_prefix + ".count"] = 2;
+  expected_counters[block_metric_prefix + ".issued_nand_operation.count"] = 17;
+  expected_counters[block_metric_prefix + ".issued_page_read.count"] = 3;
+  expected_counters[block_metric_prefix + ".issued_page_write.count"] = 6;
+  expected_counters[block_metric_prefix + ".issued_block_erase.count"] = 8;
+
+  // Rates
+  expected_rates[block_metric_prefix + ".issued_nand_operation.average_rate"] = 8.5;
+  expected_rates[block_metric_prefix + ".issued_page_read.average_rate"] = 1.5;
+  expected_rates[block_metric_prefix + ".issued_page_write.average_rate"] = 3;
+  expected_rates[block_metric_prefix + ".issued_block_erase.average_rate"] = 4;
+
+  ReadProperties(device, counters, rates);
+
+  for (const auto& counter : counters) {
+    EXPECT_EQ(counter.second, expected_counters[counter.first], "Property %s mismatch.",
+              counter.first.c_str());
+  }
+
+  for (const auto& rate : rates) {
+    EXPECT_EQ(rate.second, expected_rates[rate.first], "Property %s mismatch.", rate.first.c_str());
+  }
+}
+
+TEST_F(BlockDeviceTest, InspectReadMetricsUpdatedCorrectly) {
+  VerifyInspectMetrics(
+      this, "block.read",
+      [&]() {
+        Flush();
+        return "block.flush.count";
+      },
+      [&]() { Read(); });
+}
+
+TEST_F(BlockDeviceTest, InspectWriteMetricsUpdatedCorrectly) {
+  VerifyInspectMetrics(
+      this, "block.write",
+      [&]() {
+        Flush();
+        return "block.flush.count";
+      },
+      [&]() { Write(); });
+}
+
+TEST_F(BlockDeviceTest, InspectTrimMetricsUpdatedCorrectly) {
+  VerifyInspectMetrics(
+      this, "block.trim",
+      [&]() {
+        Flush();
+        return "block.flush.count";
+      },
+      [&]() { Trim(); });
+}
+
+TEST_F(BlockDeviceTest, InspectFlushMetricsUpdatedCorrectly) {
+  VerifyInspectMetrics(
+      this, "block.flush",
+      [&]() {
+        Trim();
+        return "block.trim.count";
+      },
+      [&]() { Flush(); });
 }
 
 TEST_F(BlockDeviceTest, Suspend) {

@@ -18,12 +18,26 @@
 
 namespace ftl {
 
+struct OperationCounters {
+  void Reset() { *this = OperationCounters(); }
+
+  constexpr unsigned int GetSum() const { return page_read + page_write + block_erase; }
+
+  unsigned int page_read = 0;
+  unsigned int page_write = 0;
+  unsigned int block_erase = 0;
+};
+
 // Implementation of the FTL library's driver interface in terms of a device implementing Fuchsia's
 // NAND protocol.
 class NandDriver : public ftl::NdmBaseDriver {
  public:
   static std::unique_ptr<NandDriver> Create(const nand_protocol_t* parent,
                                             const bad_block_protocol_t* bad_block);
+
+  static std::unique_ptr<NandDriver> CreateWithCounters(const nand_protocol_t* parent,
+                                                        const bad_block_protocol_t* bad_block,
+                                                        OperationCounters* counters);
 
   virtual const fuchsia_hardware_nand_Info& info() const = 0;
 

@@ -6,7 +6,6 @@
 #define SRC_DEVICES_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
 
 #include <lib/ftl/volume.h>
-#include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -26,6 +25,9 @@
 #include <ddktl/protocol/block/partition.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
+
+#include "src/devices/block/drivers//ftl/metrics.h"
+#include "src/devices/block/drivers/ftl/nand_driver.h"
 
 namespace ftl {
 
@@ -90,7 +92,9 @@ class BlockDevice : public DeviceType,
   zx_status_t Format();
 
   // Returns a read_only handle to the underlying Inspect VMO.
-  zx::vmo GetInspectVmo() const { return inspector_.DuplicateVmo(); }
+  zx::vmo DuplicateInspectVmo() const { return metrics_.DuplicateInspectVmo(); }
+
+  OperationCounters& nand_counters() { return nand_counters_; }
 
   void SetVolumeForTest(std::unique_ptr<ftl::Volume> volume) { volume_ = std::move(volume); }
 
@@ -130,11 +134,10 @@ class BlockDevice : public DeviceType,
 
   uint8_t guid_[ZBI_PARTITION_GUID_LEN] = {};
 
-  // Diagnostics.
-  inspect::Inspector inspector_;
-  inspect::UintProperty wear_count_;
-  inspect::UintProperty operation_count_;
-  inspect::UintProperty nand_operation_count_;
+  Metrics metrics_;
+
+  // Keeps track of the nand operations being issued for each incoming block operation.
+  OperationCounters nand_counters_;
 };
 
 }  // namespace ftl

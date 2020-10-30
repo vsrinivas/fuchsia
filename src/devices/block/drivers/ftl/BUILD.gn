@@ -38,6 +38,7 @@ source_set("common") {
   configs += [ "//build/config:all_source" ]
   sources = [
     "block_device.cc",
+    "metrics.cc",
     "nand_driver.cc",
     "nand_operation.cc",
     "oob_doubler.cc",

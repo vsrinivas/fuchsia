@@ -199,7 +199,6 @@ test("blobfs-integration") {
     "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/inspect/cpp",
-    "//src/devices/block/bin/ftl_proxy:ftl-util",
     "//src/storage/blobfs",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

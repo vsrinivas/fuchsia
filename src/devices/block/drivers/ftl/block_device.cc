@@ -12,6 +12,8 @@
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
+#include <iostream>
+
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
 #include <ddktl/device.h>
@@ -19,7 +21,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 
+#include "lib/inspect/cpp/vmo/types.h"
 #include "nand_driver.h"
+#include "src/devices/block/drivers/ftl/metrics.h"
 
 namespace {
 
@@ -36,7 +40,7 @@ class FidlService final : public block_fidl::Ftl::Interface {
   void Format(FormatCompleter::Sync& completer) final { completer.Reply(device_->Format()); }
 
   void GetVmo(GetVmoCompleter::Sync& completer) final {
-    completer.ReplySuccess(device_->GetInspectVmo());
+    completer.ReplySuccess(device_->DuplicateInspectVmo());
   }
 
  private:
@@ -90,7 +94,7 @@ BlockDevice::~BlockDevice() {
   bool volume_created = (DdkGetSize() != 0);
   if (volume_created) {
     if (volume_->Unmount() != ZX_OK) {
-      zxlogf(ERROR, "FTL: FtlUmmount() failed");
+      zxlogf(ERROR, "FTL: FtlUmount() failed");
     }
   }
 }
@@ -113,7 +117,7 @@ zx_status_t BlockDevice::Bind() {
   if (status != ZX_OK) {
     return status;
   }
-  return DdkAdd(ddk::DeviceAddArgs(kDeviceName).set_inspect_vmo(inspector_.DuplicateVmo()));
+  return DdkAdd(ddk::DeviceAddArgs(kDeviceName).set_inspect_vmo(metrics_.DuplicateInspectVmo()));
 }
 
 void BlockDevice::DdkUnbind(ddk::UnbindTxn txn) {
@@ -278,7 +282,8 @@ zx_status_t BlockDevice::Format() {
 }
 
 bool BlockDevice::InitFtl() {
-  std::unique_ptr<NandDriver> driver = NandDriver::Create(&parent_, &bad_block_);
+  std::unique_ptr<NandDriver> driver =
+      NandDriver::CreateWithCounters(&parent_, &bad_block_, &nand_counters_);
   const char* error = driver->Init();
   if (error) {
     zxlogf(ERROR, "FTL: %s", error);
@@ -299,9 +304,7 @@ bool BlockDevice::InitFtl() {
   Volume::Stats stats;
   if (volume_->GetStats(&stats) == ZX_OK) {
     zxlogf(INFO, "FTL: Wear count: %u, Garbage level: %d%%", stats.wear_count, stats.garbage_level);
-    wear_count_ = inspector_.GetRoot().CreateUint("wear_count", stats.wear_count);
-    operation_count_ = inspector_.GetRoot().CreateUint("block_operation_count", 0);
-    nand_operation_count_ = inspector_.GetRoot().CreateUint("nand_operation_count", 0);
+    metrics_.max_wear().Set(stats.wear_count);
   }
 
   zxlogf(INFO, "FTL: InitFtl ok");
@@ -326,10 +329,6 @@ bool BlockDevice::RemoveFromList(FtlOp** operation) {
   *operation = list_remove_head_type(&txn_list_, FtlOp, node);
   return !dead_;
 }
-
-// Number of operations issued to the nand driver by each block device operation.
-__EXPORT
-thread_local int g_nand_op_count = 0;
 
 int BlockDevice::WorkerThread() {
   for (;;) {
@@ -360,38 +359,66 @@ int BlockDevice::WorkerThread() {
 
     zx_status_t status = ZX_OK;
 
+    // These counters are updated by the NdmDriver implementation, which will keep track of the
+    // number of operation issued, during the context of this block operation, to the nand driver.
+    //
+    // The counters are reset before each block operation, so the numbers reflect the number of nand
+    // operations issued as a result of this operation alone.
+    //
+    // These operations are then aggregated into the respective |BlockOperationProperties| of the
+    // given block operation type.
+    nand_counters_.Reset();
+    ftl::BlockOperationProperties* op_stats = nullptr;
     {
       TRACE_DURATION_BEGIN("block:ftl", "Operation", "opcode", operation->op.command, "offset_dev",
                            operation->op.rw.offset_dev, "length", operation->op.rw.length);
-      operation_count_.Add(1);
-      g_nand_op_count = 0;
       switch (operation->op.command) {
         case BLOCK_OP_WRITE:
+          pending_flush_ = true;
+          status = ReadWriteData(&operation->op);
+          op_stats = &metrics_.write();
+          break;
+
         case BLOCK_OP_READ:
           pending_flush_ = true;
           status = ReadWriteData(&operation->op);
+          op_stats = &metrics_.read();
           break;
 
         case BLOCK_OP_TRIM:
           pending_flush_ = true;
           status = TrimData(&operation->op);
+          op_stats = &metrics_.trim();
           break;
 
         case BLOCK_OP_FLUSH: {
           status = Flush();
           pending_flush_ = false;
+          op_stats = &metrics_.flush();
           break;
         }
         default:
           ZX_DEBUG_ASSERT(false);  // Unexpected.
       }
-      nand_operation_count_.Add(g_nand_op_count);
-      TRACE_DURATION_END("block:ftl", "Operation", "nand_ops", g_nand_op_count);
+      TRACE_DURATION_END("block:ftl", "Operation", "nand_ops", nand_counters_.GetSum());
     }
 
     Volume::Counters counters;
     if (volume_->GetCounters(&counters) == ZX_OK) {
-      wear_count_.Set(counters.wear_count);
+      metrics_.max_wear().Set(counters.wear_count);
+    }
+
+    // Update all counters and rates for the supported operation type.
+    if (op_stats != nullptr) {
+      op_stats->count.Add(1);
+      op_stats->all.count.Add(nand_counters_.GetSum());
+      op_stats->all.rate.Add(nand_counters_.GetSum());
+      op_stats->block_erase.count.Add(nand_counters_.block_erase);
+      op_stats->block_erase.rate.Add(nand_counters_.block_erase);
+      op_stats->page_write.count.Add(nand_counters_.page_write);
+      op_stats->page_write.rate.Add(nand_counters_.page_write);
+      op_stats->page_read.count.Add(nand_counters_.page_read);
+      op_stats->page_read.rate.Add(nand_counters_.page_read);
     }
     operation->completion_cb(operation->cookie, status, &operation->op);
   }

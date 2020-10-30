@@ -4,16 +4,20 @@
 
 #include "nand_test.h"
 
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/vmar.h>
+#include <zircon/rights.h>
+
+#include <optional>
+#include <string>
 
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/remote-block-device.h>
-
-#include "src/devices/block/bin/ftl_proxy/ftl_util.h"
 
 namespace blobfs {
 
@@ -36,6 +40,20 @@ fuchsia_hardware_nand_RamNandInfo GetRamNandConfig() {
   return config;
 }
 
+// Returns the topological path of a device represented by a file descriptor.
+std::optional<std::string> GetTopologicalPath(int fd) {
+  fdio_cpp::UnownedFdioCaller device(fd);
+
+  auto resp = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(device.channel());
+  if (resp.status() != ZX_OK || resp->result.is_err()) {
+    return std::nullopt;
+  }
+
+  auto& r = resp->result.response();
+  size_t dev_prefix_length = strlen("/dev");
+  return std::string(r.path.data() + dev_prefix_length, r.path.size() - dev_prefix_length);
+}
+
 }  // namespace
 
 NandTest::Connection::Connection(const char* dev_root, zx::vmo vmo, bool create_filesystem) {
@@ -50,14 +68,16 @@ NandTest::Connection::Connection(const char* dev_root, zx::vmo vmo, bool create_
   ASSERT_EQ(ZX_OK, fdio_ns_get_installed(&name_space));
   ASSERT_EQ(ZX_OK, fdio_ns_bind_fd(name_space, dev_root, ram_nand_ctl_->devfs_root().get()));
 
-  if (vmo)
+  if (vmo) {
     zx_handle_duplicate(vmo.get(), ZX_RIGHT_SAME_RIGHTS, &ram_nand_config.vmo);
+  }
 
   ASSERT_EQ(ZX_OK, ramdevice_client::RamNand::Create(ram_nand_ctl_, &ram_nand_config, &ram_nand_));
-
-  // Get the FTL device path. The block device is under it.
-  std::string block_class = std::string(dev_root) + "/class/block";
-  std::string ftl = ftl_proxy::GetFtlTopologicalPath(block_class.c_str());
+  ASSERT_TRUE(ram_nand_.has_value());
+  auto ram_nand_topo_path = GetTopologicalPath(ram_nand_->fd().get());
+  ASSERT_TRUE(ram_nand_topo_path.has_value() && !ram_nand_topo_path->empty());
+  // Get the FTL device path which is bound under the nand device.
+  std::string ftl = std::string(dev_root) + *ram_nand_topo_path + "/ftl";
   std::string block_device_path = ftl + "/block";
   int block_fd = open(block_device_path.c_str(), O_RDWR);
   ASSERT_LE(0, block_fd);

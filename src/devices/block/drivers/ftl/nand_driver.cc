@@ -21,13 +21,7 @@
 #include "nand_operation.h"
 #include "oob_doubler.h"
 
-namespace ftl {
-extern thread_local int g_nand_op_count;
-}
-
 namespace {
-
-void CountNestedOperation() { ftl::g_nand_op_count++; }
 
 uint32_t GetParameter(const char* key) {
   const char* value = getenv(key);
@@ -74,8 +68,9 @@ __PRINTFLIKE(1, 2) void LogError(const char* format, ...) {
 
 class NandDriverImpl final : public ftl::NandDriver {
  public:
-  NandDriverImpl(const nand_protocol_t* parent, const bad_block_protocol_t* bad_block)
-      : parent_(parent), bad_block_protocol_(bad_block) {}
+  NandDriverImpl(const nand_protocol_t* parent, const bad_block_protocol_t* bad_block,
+                 ftl::OperationCounters* counters)
+      : parent_(parent), bad_block_protocol_(bad_block), counters_(counters) {}
   ~NandDriverImpl() final {}
 
   // NdmDriver interface:
@@ -103,6 +98,7 @@ class NandDriverImpl final : public ftl::NandDriver {
   fuchsia_hardware_nand_Info info_ = {};
   const bad_block_protocol_t* bad_block_protocol_;
   fbl::Array<uint32_t> bad_blocks_;
+  ftl::OperationCounters* counters_ = nullptr;
 };
 
 const char* NandDriverImpl::Init() {
@@ -170,7 +166,9 @@ bool NandDriverImpl::Detach() { return RemoveNdmVolume(); }
 // Returns kNdmOk, kNdmUncorrectableEcc, kNdmFatalError or kNdmUnsafeEcc.
 int NandDriverImpl::NandRead(uint32_t start_page, uint32_t page_count, void* page_buffer,
                              void* oob_buffer) {
-  CountNestedOperation();
+  if (counters_ != nullptr) {
+    counters_->page_read++;
+  }
   ftl::NandOperation operation(op_size_);
   uint32_t data_pages = page_buffer ? page_count : 0;
   size_t data_size = data_pages * info_.page_size;
@@ -234,7 +232,9 @@ int NandDriverImpl::NandRead(uint32_t start_page, uint32_t page_count, void* pag
 // Returns kNdmOk, kNdmError or kNdmFatalError. kNdmError triggers marking the block as bad.
 int NandDriverImpl::NandWrite(uint32_t start_page, uint32_t page_count, const void* page_buffer,
                               const void* oob_buffer) {
-  CountNestedOperation();
+  if (counters_ != nullptr) {
+    counters_->page_write++;
+  }
   ftl::NandOperation operation(op_size_);
   uint32_t data_pages = page_buffer ? page_count : 0;
   size_t data_size = data_pages * info_.page_size;
@@ -277,7 +277,9 @@ int NandDriverImpl::NandWrite(uint32_t start_page, uint32_t page_count, const vo
 
 // Returns kNdmOk or kNdmError. kNdmError triggers marking the block as bad.
 int NandDriverImpl::NandErase(uint32_t page_num) {
-  CountNestedOperation();
+  if (counters_ != nullptr) {
+    counters_->block_erase++;
+  }
   uint32_t block_num = page_num / info_.pages_per_block;
   ftl::NandOperation operation(op_size_);
 
@@ -433,7 +435,13 @@ namespace ftl {
 // Static.
 std::unique_ptr<NandDriver> NandDriver::Create(const nand_protocol_t* parent,
                                                const bad_block_protocol_t* bad_block) {
-  return std::unique_ptr<NandDriver>(new NandDriverImpl(parent, bad_block));
+  return std::unique_ptr<NandDriver>(new NandDriverImpl(parent, bad_block, nullptr));
+}
+
+std::unique_ptr<NandDriver> NandDriver::CreateWithCounters(const nand_protocol_t* parent,
+                                                           const bad_block_protocol_t* bad_block,
+                                                           OperationCounters* counters) {
+  return std::unique_ptr<NandDriver>(new NandDriverImpl(parent, bad_block, counters));
 }
 
 }  // namespace ftl.

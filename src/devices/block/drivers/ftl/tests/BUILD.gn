@@ -45,6 +45,7 @@ test("ftl") {
     "block_device_test.cc",
     "driver-test.cc",
     "ftl-test.cc",
+    "metrics_test.cc",
     "nand_driver_test.cc",
     "nand_operation_test.cc",
     "oob_doubler_test.cc",
