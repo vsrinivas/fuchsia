@@ -4,12 +4,11 @@
 
 # Individual dependencies that are approved for use in CTS.
 ALLOWED_CTS_DEPS = [
+  "//sdk/cts/tools/package_manager:pm_test_package_gather_deps",
+  "//sdk/testing/sl4f/client:client",
   "//src/sys/pkg/bin/pm:host",
   "//zircon/public/lib/zxtest:zxtest",
 ]
 
 # All targets in these directories and their subdirectories are approved for use in CTS.
-ALLOWED_CTS_DIRS = [
-  "//sdk/*",
-  "//third_party/dart-pkg/pub/*",
-]
+ALLOWED_CTS_DIRS = [ "//third_party/dart-pkg/pub/*" ]
