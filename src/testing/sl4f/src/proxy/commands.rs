@@ -20,11 +20,11 @@ impl Facade for ProxyFacade {
             }
             "DropProxy" => {
                 let target_port: u16 = serde_json::from_value(args)?;
-                self.drop_proxy(target_port);
+                self.drop_proxy(target_port).await;
                 Ok(to_value(())?)
             }
             "StopAllProxies" => {
-                self.stop_all_proxies();
+                self.stop_all_proxies().await;
                 Ok(to_value(())?)
             }
             _ => return Err(format_err!("Invalid proxy facade method: {:?}", method)),

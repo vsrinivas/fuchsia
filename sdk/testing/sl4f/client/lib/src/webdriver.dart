@@ -233,18 +233,25 @@ class WebDriverConnector {
     final ports = Set.from(remotePortsResult['ports']);
 
     // Remove port forwarding for any ports that aren't open or shown.
+    final removedSessions = [];
     _webDriverSessions.removeWhere((port, session) {
       if (!ports.contains(port) || !_isSessionDisplayed(session)) {
-        _portForwarder.stopPortForwarding(session.accessPoint, port);
+        removedSessions.add(MapEntry(port, session));
         return true;
       }
       return false;
     });
+    for (final removedSession in removedSessions) {
+      await _portForwarder.stopPortForwarding(
+          removedSession.value.accessPoint, removedSession.key);
+    }
 
     // Add new sessions for new ports.
     for (final remotePort in ports) {
-      final webDriverSession = await _createWebDriverSession(remotePort);
-      _webDriverSessions.putIfAbsent(remotePort, () => webDriverSession);
+      if (!_webDriverSessions.containsKey(remotePort)) {
+        final webDriverSession = await _createWebDriverSession(remotePort);
+        _webDriverSessions[remotePort] = webDriverSession;
+      }
     }
   }
 

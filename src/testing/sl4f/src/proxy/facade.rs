@@ -6,7 +6,7 @@ use anyhow::Error;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_testing_proxy::{TcpProxyControlMarker, TcpProxyControlProxy, TcpProxy_Marker};
 use fuchsia_component::client::{launch, launcher, App};
-use parking_lot::Mutex;
+use futures::lock::Mutex;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
 
@@ -26,7 +26,7 @@ impl ProxyFacade {
     /// port with which to access the proxy. In case a proxy to |target_port|
     /// is already open, the proxy is reused.
     pub async fn open_proxy(&self, target_port: u16) -> Result<u16, Error> {
-        let mut internal_lock = self.internal.lock();
+        let mut internal_lock = self.internal.lock().await;
         match *internal_lock {
             None => {
                 let mut internal = ProxyFacadeInternal::new()?;
@@ -41,16 +41,16 @@ impl ProxyFacade {
     /// Indicate that the proxy to |target_port| is no longer needed. The proxy is
     /// stopped once all clients that requested the proxy call `drop_proxy`. Note
     /// that this means the proxy may still be running after a call to `drop_proxy`.
-    pub fn drop_proxy(&self, target_port: u16) {
-        if let Some(ref mut internal) = *self.internal.lock() {
+    pub async fn drop_proxy(&self, target_port: u16) {
+        if let Some(ref mut internal) = *self.internal.lock().await {
             internal.drop_proxy(target_port);
         }
     }
 
     /// Forcibly stop all proxies, regardless of whether or not any clients are still
     /// using them. This method is intended for cleanup after a test.
-    pub fn stop_all_proxies(&self) {
-        if let Some(ref mut internal) = *self.internal.lock() {
+    pub async fn stop_all_proxies(&self) {
+        if let Some(ref mut internal) = *self.internal.lock().await {
             internal.stop_all_proxies();
         }
     }
