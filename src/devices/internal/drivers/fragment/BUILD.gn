@@ -18,10 +18,10 @@ driver_module("fragment") {
   data_deps = [ ":fragment.proxy" ]
   deps = [
     "//sdk/banjo/ddk.protocol.amlogiccanvas",
+    "//sdk/banjo/ddk.protocol.audio",
     "//sdk/banjo/ddk.protocol.buttons",
     "//sdk/banjo/ddk.protocol.camera.sensor",
     "//sdk/banjo/ddk.protocol.clock",
-    "//sdk/banjo/ddk.protocol.codec",
     "//sdk/banjo/ddk.protocol.dsi",
     "//sdk/banjo/ddk.protocol.dsiimpl",
     "//sdk/banjo/ddk.protocol.ethernet.board",
@@ -77,9 +77,9 @@ driver_module("fragment.proxy") {
   sources = [ "fragment-proxy.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.amlogiccanvas",
+    "//sdk/banjo/ddk.protocol.audio",
     "//sdk/banjo/ddk.protocol.buttons",
     "//sdk/banjo/ddk.protocol.clock",
-    "//sdk/banjo/ddk.protocol.codec",
     "//sdk/banjo/ddk.protocol.dsi",
     "//sdk/banjo/ddk.protocol.ethernet.board",
     "//sdk/banjo/ddk.protocol.gpio",

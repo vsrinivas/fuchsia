@@ -21,7 +21,6 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/platform/device.h>
 #include <fbl/mutex.h>
 #include <soc/mt8167/mt8167-audio-out.h>

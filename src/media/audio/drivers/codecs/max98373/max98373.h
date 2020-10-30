@@ -15,7 +15,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/gpio.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

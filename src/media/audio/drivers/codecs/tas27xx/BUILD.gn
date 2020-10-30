@@ -30,7 +30,6 @@ driver_module("tas27xx") {
   sources = [ "tas27xx.cc" ]
   deps = [
     ":ti_tas27xx-bind",
-    "//sdk/banjo/ddk.protocol.codec",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.i2c",
@@ -56,7 +55,6 @@ test("tas27xx-test-bin") {
   deps = [
     ":tas27xx",
     ":ti_tas27xx-bind",
-    "//sdk/banjo/ddk.protocol.codec",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",

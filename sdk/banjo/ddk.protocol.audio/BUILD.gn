@@ -4,6 +4,6 @@
 
 import("//build/banjo/banjo.gni")
 
-banjo("ddk.protocol.codec") {
-  sources = [ "codec.banjo" ]
+banjo("ddk.protocol.audio") {
+  sources = [ "audio.banjo" ]
 }

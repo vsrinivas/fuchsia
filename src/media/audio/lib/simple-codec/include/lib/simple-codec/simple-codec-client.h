@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include <ddktl/protocol/codec.h>
+#include <ddktl/protocol/audio.h>
 
 namespace audio {
 
@@ -30,8 +30,7 @@ class SimpleCodecClient {
   void SetTimeout(int64_t nsecs);
 
   // Sync C++ methods to communicate with codecs, for descriptions see
-  // //docs/concepts/drivers/driver_interfaces/audio_codec.md and
-  // //sdk/banjo/ddk.protocol.codec/codec.banjo.
+  // //docs/concepts/drivers/driver_interfaces/audio_codec.md.
   zx_status_t Reset();
   zx::status<Info> GetInfo();
   zx_status_t Stop();

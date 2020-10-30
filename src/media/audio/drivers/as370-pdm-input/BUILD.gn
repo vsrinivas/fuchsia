@@ -18,7 +18,6 @@ driver_module("as370-pdm-input") {
 
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
-    "//sdk/banjo/ddk.protocol.codec",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.shareddma",

@@ -12,9 +12,9 @@
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/amlogiccanvas.h>
+#include <ddktl/protocol/audio.h>
 #include <ddktl/protocol/buttons.h>
 #include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/dsi.h>
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/goldfish/addressspace.h>

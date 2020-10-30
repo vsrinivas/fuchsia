@@ -18,7 +18,7 @@
 
 #include <ddk/debug.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/codec.h>
+#include <ddktl/protocol/audio.h>
 #include <sdk/lib/fidl/cpp/binding.h>
 
 namespace audio {
