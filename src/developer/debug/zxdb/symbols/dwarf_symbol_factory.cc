@@ -100,7 +100,7 @@ DwarfSymbolFactory::DwarfSymbolFactory(fxl::WeakPtr<ModuleSymbolsImpl> symbols)
     : symbols_(std::move(symbols)) {}
 DwarfSymbolFactory::~DwarfSymbolFactory() = default;
 
-fxl::RefPtr<Symbol> DwarfSymbolFactory::CreateSymbol(uint32_t factory_data) {
+fxl::RefPtr<Symbol> DwarfSymbolFactory::CreateSymbol(uint64_t factory_data) {
   if (!symbols_)
     return fxl::MakeRefCounted<Symbol>();
 
@@ -202,7 +202,7 @@ LazySymbol DwarfSymbolFactory::MakeLazy(const llvm::DWARFDie& die) {
   return LazySymbol(fxl::RefPtr<SymbolFactory>(this), die.getOffset());
 }
 
-LazySymbol DwarfSymbolFactory::MakeLazy(uint32_t die_offset) {
+LazySymbol DwarfSymbolFactory::MakeLazy(uint64_t die_offset) {
   return LazySymbol(fxl::RefPtr<SymbolFactory>(this), die_offset);
 }
 
@@ -210,7 +210,7 @@ UncachedLazySymbol DwarfSymbolFactory::MakeUncachedLazy(const llvm::DWARFDie& di
   return UncachedLazySymbol(fxl::RefPtr<SymbolFactory>(this), die.getOffset());
 }
 
-UncachedLazySymbol DwarfSymbolFactory::MakeUncachedLazy(uint32_t die_offset) {
+UncachedLazySymbol DwarfSymbolFactory::MakeUncachedLazy(uint64_t die_offset) {
   return UncachedLazySymbol(fxl::RefPtr<SymbolFactory>(this), die_offset);
 }
 

@@ -28,7 +28,7 @@ class LazySymbolBase {
   LazySymbolBase(const LazySymbolBase& other) = default;
   LazySymbolBase(LazySymbolBase&& other) = default;
 
-  LazySymbolBase(fxl::RefPtr<SymbolFactory> factory, uint32_t factory_data)
+  LazySymbolBase(fxl::RefPtr<SymbolFactory> factory, uint64_t factory_data)
       : factory_(std::move(factory)), factory_data_(factory_data) {}
 
   ~LazySymbolBase() = default;
@@ -52,7 +52,7 @@ class LazySymbolBase {
 
   // Opaque data passed to the factory to construct a type Symbol for this. In the DWARF factory,
   // this is a DIE offset.
-  uint32_t factory_data_ = 0;
+  uint64_t factory_data_ = 0;
 };
 
 // Use for references from a parent symbol object to its children.
@@ -62,7 +62,7 @@ class LazySymbol : public LazySymbolBase {
   LazySymbol(const LazySymbol& other) = default;
   LazySymbol(LazySymbol&& other) = default;
 
-  LazySymbol(fxl::RefPtr<SymbolFactory> factory, uint32_t factory_data);
+  LazySymbol(fxl::RefPtr<SymbolFactory> factory, uint64_t factory_data);
 
   // Implicitly creates a non-lazy one with a pre-cooked object, mostly for tests.
   template <class SymbolType>
@@ -90,7 +90,7 @@ class UncachedLazySymbol : public LazySymbolBase {
   UncachedLazySymbol(const UncachedLazySymbol& other) = default;
   UncachedLazySymbol(UncachedLazySymbol&& other) = default;
 
-  UncachedLazySymbol(fxl::RefPtr<SymbolFactory> factory, uint32_t factory_data);
+  UncachedLazySymbol(fxl::RefPtr<SymbolFactory> factory, uint64_t factory_data);
 
   ~UncachedLazySymbol();
 

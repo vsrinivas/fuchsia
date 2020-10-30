@@ -110,7 +110,7 @@ std::vector<LineMatch> GetBestLineMatches(const std::vector<LineMatch>& matches)
   //
   // By indexing by the [inlined] subroutine DIE offset, we can ensure there
   // is only one match per subroutine, and resolve collisions by address.
-  std::map<uint32_t, size_t> die_to_match_index;
+  std::map<uint64_t, size_t> die_to_match_index;
   for (size_t i = 0; i < matches.size(); i++) {
     const LineMatch& match = matches[i];
     if (match.line != min_elt_iter->line)

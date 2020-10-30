@@ -34,7 +34,7 @@ fxl::RefPtr<Symbol> LazySymbolBase::GetNullSymbol() {
   return null_symbol;
 }
 
-LazySymbol::LazySymbol(fxl::RefPtr<SymbolFactory> factory, uint32_t factory_data)
+LazySymbol::LazySymbol(fxl::RefPtr<SymbolFactory> factory, uint64_t factory_data)
     : LazySymbolBase(std::move(factory), factory_data) {}
 
 LazySymbol& LazySymbol::operator=(const LazySymbol& other) = default;
@@ -53,7 +53,7 @@ const Symbol* LazySymbol::Get() const {
   return symbol_.get();
 }
 
-UncachedLazySymbol::UncachedLazySymbol(fxl::RefPtr<SymbolFactory> factory, uint32_t factory_data)
+UncachedLazySymbol::UncachedLazySymbol(fxl::RefPtr<SymbolFactory> factory, uint64_t factory_data)
     : LazySymbolBase(std::move(factory), factory_data) {}
 
 UncachedLazySymbol::UncachedLazySymbol(fxl::RefPtr<Symbol> symbol)

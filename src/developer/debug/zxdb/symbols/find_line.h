@@ -24,7 +24,7 @@ class SymbolContext;
 
 struct LineMatch {
   LineMatch() = default;
-  LineMatch(uint64_t addr, int ln, uint32_t func)
+  LineMatch(uint64_t addr, int ln, uint64_t func)
       : address(addr), line(ln), function_die_offset(func) {}
 
   bool operator==(const LineMatch& other) const {
@@ -38,7 +38,7 @@ struct LineMatch {
   // Absolute offset of the DIE containing the most specified inlined subroutine for this address or
   // 0 if there is no function for it. This is used so we don't accidentally treat duplicate line
   // entries in different functions as the same.
-  uint32_t function_die_offset = 0;
+  uint64_t function_die_offset = 0;
 };
 
 // Searches the given line table for the given file/line. Finds the smallest line greater than or

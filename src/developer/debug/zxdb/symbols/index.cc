@@ -27,8 +27,8 @@ class NamedSymbolRef : public IndexNode::SymbolRef {
   NamedSymbolRef() = default;
 
   // Creates a SymbolRef we should index. The pointed-to string must outlive this class.
-  NamedSymbolRef(SymbolRef::Kind kind, uint32_t offset, IndexNode::Kind k, const char* name,
-                 uint32_t decl_offset, bool has_abstract_origin)
+  NamedSymbolRef(SymbolRef::Kind kind, uint64_t offset, IndexNode::Kind k, const char* name,
+                 uint64_t decl_offset, bool has_abstract_origin)
       : SymbolRef(kind, offset),
         kind_(k),
         name_(name),
@@ -51,7 +51,7 @@ class NamedSymbolRef : public IndexNode::SymbolRef {
   // If this DIE has a declaration associated with it (a DW_AT_declaration tag), this indicates the
   // absolute offset of the declaration DIE. Will be 0 if none. It may or may not be inside the
   // current unit (it normally will be though).
-  uint32_t decl_offset() const { return decl_offset_; }
+  uint64_t decl_offset() const { return decl_offset_; }
 
   // The indexing layer uses this to cache the node found for a given thing. This allows us to
   // bypass lookup for the common case of things that are all in the same scope.
@@ -95,7 +95,7 @@ class NamedSymbolRef : public IndexNode::SymbolRef {
  private:
   IndexNode::Kind kind_ = IndexNode::Kind::kNone;
   const char* name_ = nullptr;
-  uint32_t decl_offset_ = 0;
+  uint64_t decl_offset_ = 0;
   IndexNode* index_node_ = nullptr;
   bool has_abstract_origin_ = false;
 };
@@ -268,7 +268,7 @@ void UnitIndexer::Scan(std::vector<IndexNode::SymbolRef>* main_functions) {
       continue;
 
     // Compute the offset of a separate declaration if this DIE has one.
-    uint32_t decl_offset = 0;
+    uint64_t decl_offset = 0;
     if (decl_die)
       decl_offset = decl_die.getOffset();
 

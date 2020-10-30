@@ -53,15 +53,15 @@ class IndexNode {
     };
 
     SymbolRef() = default;
-    SymbolRef(Kind kind, uint32_t offset) : kind_(kind), offset_(offset) {}
+    SymbolRef(Kind kind, uint64_t offset) : kind_(kind), offset_(offset) {}
 
     Kind kind() const { return kind_; }
     bool is_declaration() const { return kind_ == kDwarfDeclaration; }
-    uint32_t offset() const { return offset_; }
+    uint64_t offset() const { return offset_; }
 
    private:
     Kind kind_ = kNull;
-    uint32_t offset_ = 0;
+    uint64_t offset_ = 0;
   };
 
   explicit IndexNode(Kind kind) : kind_(kind) {}

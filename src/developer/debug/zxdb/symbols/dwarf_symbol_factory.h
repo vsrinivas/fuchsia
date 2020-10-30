@@ -26,13 +26,13 @@ class UncachedLazySymbol;
 class DwarfSymbolFactory : public SymbolFactory {
  public:
   // SymbolFactory implementation.
-  fxl::RefPtr<Symbol> CreateSymbol(uint32_t factory_data) override;
+  fxl::RefPtr<Symbol> CreateSymbol(uint64_t factory_data) override;
 
   // Returns a LazySymbol referencing the given DIE or DIE offset.
   LazySymbol MakeLazy(const llvm::DWARFDie& die);
-  LazySymbol MakeLazy(uint32_t die_offset);
+  LazySymbol MakeLazy(uint64_t die_offset);
   UncachedLazySymbol MakeUncachedLazy(const llvm::DWARFDie& die);
-  UncachedLazySymbol MakeUncachedLazy(uint32_t die_offset);
+  UncachedLazySymbol MakeUncachedLazy(uint64_t die_offset);
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(DwarfSymbolFactory);
