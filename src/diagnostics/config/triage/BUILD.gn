@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//src/diagnostics/triage/build/triage_config_test.gni")
 
 # The list of triage configuration files in the current directory that
@@ -27,6 +28,15 @@ triage_files = [
   "stash_secure.triage",
   "timezone.triage",
 ]
+
+detect_files = [ "detect/wlan-detect.triage" ]
+
+triage_files += detect_files
+
+config_data("triage-detect") {
+  for_pkg = "triage-detect"
+  sources = detect_files
+}
 
 group("triage") {
   testonly = true

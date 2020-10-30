@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/triage_detect_bin_test"
+    },
+    "sandbox": {
+        "features": [
+            "build-info"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

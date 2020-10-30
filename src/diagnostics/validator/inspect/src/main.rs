@@ -13,14 +13,12 @@ use {
     anyhow::{format_err, Error},
     argh::FromArgs,
     fidl_test_inspect_validate as validate, fuchsia_async as fasync, fuchsia_syslog as syslog,
-    log::*,
     serde::Serialize,
     std::str::FromStr,
 };
 
 fn init_syslog() {
     syslog::init_with_tags(&[]).expect("should not fail");
-    debug!("Driver did init logger");
 }
 
 /// Validate Inspect VMO formats written by 'puppet' programs controlled by

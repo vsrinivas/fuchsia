@@ -113,23 +113,26 @@ fn check_failure(
                 println!("Action {} not found in trial {}", action_name, trial_name);
                 return true;
             }
-            Some(action) => match action {
-                Action::Warning(properties) => {
-                    match metric_state.eval_action_metric(namespace, &properties.trigger) {
-                        MetricValue::Bool(actual) if actual == expected => return false,
-                        other => {
-                            println!(
-                        "Test {} failed: trigger '{}' of action {} returned {:?}, expected {}",
-                        trial_name, properties.trigger, action_name, other, expected
-                    );
-                            return true;
-                        }
+            Some(action) => {
+                let trigger = match action {
+                    Action::Warning(properties) => &properties.trigger,
+                    Action::Snapshot(properties) => &properties.trigger,
+                    _ => {
+                        println!("Action {:?} cannot be tested", action);
+                        return true;
+                    }
+                };
+                match metric_state.eval_action_metric(namespace, trigger) {
+                    MetricValue::Bool(actual) if actual == expected => return false,
+                    other => {
+                        println!(
+                            "Test {} failed: trigger '{}' of action {} returned {:?}, expected {}",
+                            trial_name, trigger, action_name, other, expected
+                        );
+                        return true;
                     }
                 }
-                _ => {
-                    return false;
-                }
-            },
+            }
         },
     }
 }

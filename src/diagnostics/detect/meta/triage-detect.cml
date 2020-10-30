@@ -1,0 +1,29 @@
+{
+    program: {
+        binary: "bin/triage_detect",
+        args: [
+            "--check-every",
+            "Minutes(2)",
+        ],
+    },
+    use: [
+        { runner: "elf" },
+        {
+            protocol: "fuchsia.feedback.CrashReporter",
+            from: "parent",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+        },
+        {
+            protocol: "fuchsia.diagnostics.FeedbackArchiveAccessor",
+            from: "parent",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+    ],
+}

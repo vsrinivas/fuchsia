@@ -9,16 +9,13 @@ use {
     super::config::{self, DataFetcher, DiagnosticData, Source},
     fetch::{InspectFetcher, KeyValueFetcher, SelectorString, SelectorType, TextFetcher},
     fuchsia_inspect_node_hierarchy::{ArrayContent, Property as DiagnosticProperty},
-    injectable_time::TimeSource,
+    injectable_time::{FakeTime, TimeSource},
     lazy_static::lazy_static,
     serde::{Deserialize, Deserializer},
     serde_json::Value as JsonValue,
     std::{clone::Clone, cmp::min, collections::HashMap, convert::TryFrom},
     variable::VariableName,
 };
-
-#[cfg(test)]
-use injectable_time::FakeTime;
 
 /// The contents of a single Metric. Metrics produce a value for use in Actions or other Metrics.
 #[derive(Clone, Debug)]
@@ -60,6 +57,10 @@ pub type Metrics = HashMap<String, HashMap<String, Metric>>;
 
 /// Contains all the information needed to look up and evaluate a Metric - other
 /// [Metric]s that may be referred to, and a source of input values to calculate on.
+///
+/// Note: MetricState uses a single Now() value for all evaluations. If a MetricState is
+/// retained and used for multiple evaluations at different times, provide a way to update
+/// the `now` field.
 pub struct MetricState<'a> {
     pub metrics: &'a Metrics,
     pub fetcher: Fetcher<'a>,
@@ -651,7 +652,6 @@ impl<'a> MetricState<'a> {
     }
 
     /// Evaluate an Expression which contains only base values, not referring to other Metrics.
-    #[cfg(test)]
     pub fn evaluate_math(e: &Expression) -> MetricValue {
         let values = HashMap::new();
         let fetcher = Fetcher::TrialData(TrialDataFetcher::new(&values));
@@ -896,7 +896,7 @@ impl<'a> MetricState<'a> {
         }
     }
 
-    fn safe_float_to_int(float: f64) -> Option<i64> {
+    pub fn safe_float_to_int(float: f64) -> Option<i64> {
         if !float.is_finite() {
             return None;
         }

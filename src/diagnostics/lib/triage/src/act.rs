@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(target_os = "fuchsia")]
+use log::error;
+
 use {
     super::{
         config::DiagnosticData,
@@ -53,6 +56,7 @@ pub struct ActionResults {
     results: HashMap<String, bool>,
     warnings: Vec<String>,
     gauges: Vec<String>,
+    snapshots: Vec<SnapshotTrigger>,
     sort_gauges: bool,
     sub_results: Vec<(String, Box<ActionResults>)>,
 }
@@ -63,6 +67,7 @@ impl ActionResults {
             results: HashMap::new(),
             warnings: Vec::new(),
             gauges: Vec::new(),
+            snapshots: Vec::new(),
             sort_gauges: true,
             sub_results: Vec::new(),
         }
@@ -78,6 +83,10 @@ impl ActionResults {
 
     pub fn add_gauge(&mut self, gauge: String) {
         self.gauges.push(gauge);
+    }
+
+    pub fn add_snapshot(&mut self, snapshot: SnapshotTrigger) {
+        self.snapshots.push(snapshot);
     }
 
     pub fn set_sort_gauges(&mut self, v: bool) {
@@ -105,6 +114,14 @@ impl ActionResults {
     }
 }
 
+/// [SnapshotTrigger] is the information needed to generate a request for a crash report.
+/// It can be returned from the library as part of ActionResults.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SnapshotTrigger {
+    pub interval: i64, // zx::Duration but this library has to run on host.
+    pub signature: String,
+}
+
 /// [Actions] are stored as a map of maps, both with string keys. The outer key
 /// is the namespace for the inner key, which is the name of the [Action].
 pub type Actions = HashMap<String, ActionsSchema>;
@@ -121,6 +138,7 @@ pub type ActionsSchema = HashMap<String, Action>;
 pub enum Action {
     Warning(Warning),
     Gauge(Gauge),
+    Snapshot(Snapshot),
 }
 
 /// Action that is triggered if a predicate is met.
@@ -137,6 +155,15 @@ pub struct Gauge {
     pub value: Metric,          // Value to surface
     pub format: Option<String>, // Opaque type that determines how value should be formatted (e.g. percentage)
     pub tag: Option<String>,    // An optional tag to associate with this Action
+}
+
+/// Action that displays percentage of value.
+#[derive(Clone, Debug, Deserialize)]
+pub struct Snapshot {
+    pub trigger: Metric, // Take snapshot when this is true
+    pub repeat: Metric,  // Expression evaluating to time delay before repeated triggers
+    pub signature: String, // Sent in the crash report
+                         // There's no tag option because snapshot conditions are always news worth seeing.
 }
 
 impl Gauge {
@@ -162,6 +189,7 @@ impl Action {
         match self {
             Action::Warning(action) => action.tag.clone(),
             Action::Gauge(action) => action.tag.clone(),
+            Action::Snapshot(_) => None,
         }
     }
 }
@@ -182,11 +210,24 @@ impl ActionContext<'_> {
                 match action {
                     Action::Warning(warning) => self.update_warnings(warning, namespace, name),
                     Action::Gauge(gauge) => self.update_gauges(gauge, namespace, name),
+                    Action::Snapshot(snapshot) => self.update_snapshots(snapshot, namespace, name),
                 };
             }
         }
 
         &self.action_results
+    }
+
+    /// Evaluate and return snapshots. Consume self.
+    pub fn into_snapshots(mut self) -> Vec<SnapshotTrigger> {
+        for (namespace, actions) in self.actions.iter() {
+            for (name, action) in actions.iter() {
+                if let Action::Snapshot(snapshot) = action {
+                    self.update_snapshots(snapshot, namespace, name)
+                }
+            }
+        }
+        self.action_results.snapshots
     }
 
     /// Update warnings if condition is met.
@@ -213,6 +254,53 @@ impl ActionContext<'_> {
         self.action_results.set_result(&format!("{}::{}", namespace, name), was_triggered);
     }
 
+    /// Update snapshots if condition is met.
+    fn update_snapshots(&mut self, action: &Snapshot, namespace: &str, name: &str) {
+        let was_triggered = match self.metric_state.eval_action_metric(namespace, &action.trigger) {
+            MetricValue::Bool(true) => {
+                let interval = self.metric_state.eval_action_metric(namespace, &action.repeat);
+                match interval {
+                    MetricValue::Int(interval) => {
+                        let signature = action.signature.clone();
+                        let output = SnapshotTrigger { interval, signature };
+                        self.action_results.add_snapshot(output);
+                        true
+                    }
+                    _ => {
+                        self.action_results.add_warning(format!(
+                            "Bad interval in config '{}': {:?}",
+                            namespace, interval
+                        ));
+                        #[cfg(target_os = "fuchsia")]
+                        error!("Bad interval in config '{}': {:?}", namespace, interval);
+                        false
+                    }
+                }
+            }
+            MetricValue::Bool(false) => false,
+            MetricValue::Missing(reason) => {
+                #[cfg(target_os = "fuchsia")]
+                error!("Snapshot trigger was missing: {}", reason);
+                self.action_results
+                    .add_warning(format!("[MISSING] In config '{}': {}", namespace, reason));
+                false
+            }
+            other => {
+                #[cfg(target_os = "fuchsia")]
+                error!(
+                    "[ERROR] Unexpected value type in config '{}' (need boolean): {}",
+                    namespace, other
+                );
+                self.action_results.add_warning(format!(
+                    "[ERROR] Unexpected value type in config '{}' (need boolean): {}",
+                    namespace, other
+                ));
+                false
+            }
+        };
+        self.action_results.set_result(&format!("{}::{}", namespace, name), was_triggered);
+    }
+
     /// Update gauges.
     fn update_gauges(&mut self, action: &Gauge, namespace: &String, name: &String) {
         let value = self.metric_state.eval_action_metric(namespace, &action.value);
@@ -225,7 +313,9 @@ mod test {
     use {
         super::*,
         crate::config::Source,
-        crate::metrics::{Metric, Metrics},
+        crate::metrics::{fetch::SelectorString, Metric, Metrics},
+        anyhow::Error,
+        std::convert::TryFrom,
     };
 
     /// Tells whether any of the stored values include a substring.
@@ -384,5 +474,52 @@ mod test {
                 .to_string()],
             action_context.action_results.get_warnings()
         );
+    }
+
+    #[test]
+    fn snapshots_update_correctly() -> Result<(), Error> {
+        let metrics = Metrics::new();
+        let actions = Actions::new();
+        let data = vec![];
+        let mut action_context = ActionContext::new(&metrics, &actions, &data);
+        let selector =
+            Metric::Selector(SelectorString::try_from("INSPECT:foo:bar:baz".to_string())?);
+        let true_value = Metric::Eval("1==1".to_string());
+        let false_value = Metric::Eval("1==2".to_string());
+        let five_value = Metric::Eval("5".to_string());
+        let foo_value = Metric::Eval("'foo'".to_string());
+        let missing_value = Metric::Eval("foo".to_string());
+        let snapshot_5_sig = SnapshotTrigger { interval: 5, signature: "signature".to_string() };
+        // Tester re-uses the same action_context, so results will accumulate.
+        macro_rules! tester {
+            ($trigger:expr, $repeat:expr, $func:expr) => {
+                let selector_interval_action = Snapshot {
+                    trigger: $trigger.clone(),
+                    repeat: $repeat.clone(),
+                    signature: "signature".to_string(),
+                };
+                action_context.update_snapshots(&selector_interval_action, "", "");
+                assert!($func(&action_context.action_results.snapshots));
+            };
+        }
+        type VT = Vec<SnapshotTrigger>;
+
+        // Verify it doesn't crash on bad inputs
+        tester!(true_value, selector, |s: &VT| s.is_empty());
+        tester!(true_value, foo_value, |s: &VT| s.is_empty());
+        tester!(true_value, missing_value, |s: &VT| s.is_empty());
+        tester!(selector, five_value, |s: &VT| s.is_empty());
+        tester!(foo_value, five_value, |s: &VT| s.is_empty());
+        tester!(five_value, five_value, |s: &VT| s.is_empty());
+        tester!(missing_value, five_value, |s: &VT| s.is_empty());
+        assert_eq!(action_context.action_results.warnings.len(), 7);
+        // False trigger shouldn't add a result
+        tester!(false_value, five_value, |s: &VT| s.is_empty());
+        tester!(true_value, five_value, |s| s == &vec![snapshot_5_sig.clone()]);
+        // We can have more than one of the same trigger in the results.
+        tester!(true_value, five_value, |s| s
+            == &vec![snapshot_5_sig.clone(), snapshot_5_sig.clone()]);
+        assert_eq!(action_context.action_results.warnings.len(), 7);
+        Ok(())
     }
 }

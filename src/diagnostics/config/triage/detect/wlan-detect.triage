@@ -1,0 +1,17 @@
+{
+    select: {
+        disconnects: "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:@time",
+    },
+    eval: {
+        last_24_hours: "Fn([time], time > Now() - Hours(24))",
+        n_disconnects_today: "Count(Filter(last_24_hours, disconnects))",
+    },
+    act: {
+        too_many_disconnects: {
+            type: "Snapshot",
+            trigger: "n_disconnects_today >= 5",
+            repeat: "Hours(24)",
+            signature: "five-disconnects-today",
+        },
+    },
+}

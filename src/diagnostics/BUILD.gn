@@ -18,6 +18,7 @@ group("tests") {
   deps = [
     "archivist:tests",
     "config:tests",
+    "detect:tests",
     "iquery:tests",
     "lib:tests",
     "log-stats:tests",
