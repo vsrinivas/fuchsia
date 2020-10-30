@@ -7,9 +7,9 @@ the devices' logs. We use
 [Crashpad](https://chromium.googlesource.com/crashpad/crashpad/+/HEAD/README.md)
 as the third-party client library to talk to the remote crash server.
 
-We control via JSON configuration files whether we upload the Crashpad reports
-to a crash server and if so, to which crash server. By default, we create a
-Crashpad report, but we do not upload it.
+We control via JSON configuration files whether we upload the reports to a crash
+server and if so, to which crash server. By default, we create a report, but we
+do not upload it.
 
 ## Testing
 
@@ -17,25 +17,25 @@ To test your changes, on a real device, we have some unit tests and some helper
 programs to simulate various crashes.
 
 For the helper programs, you first need to add the package wrapping the config
-telling Crashpad to upload to a crash server and which server to upload to.
+telling to upload to a crash server and which server to upload to.
 
 ```sh
-(host)$ fx set core.x64 --with-base //src/developer/forensics/crash_reports:upload_to_prod_server_config
+(host)$ fx set core.x64 --with-base //src/developer/forensics:crash_reports_upload_to_prod_server_config
 ```
 
 Then, after running each one of the helper programs (see commands in sections
 below), you should then look each time for the following line in the syslog:
 
 ```sh
-(host)$ fx syslog --tag feedback
+(host)$ fx syslog --tag crash
 ...
 successfully uploaded report at $URL...
 ...
 ```
 
-Click on the URL (contact frousseau if you don't have access and think you
-should) and check that the report matches your expectations, e.g., the new
-annotation is set to the expected value.
+Click on the URL (contact OWNERS if you don't have access and think you should)
+and check that the report matches your expectations, e.g., the new annotation is
+set to the expected value.
 
 ### Unit tests
 
@@ -63,16 +63,6 @@ The following command will cause a write to address 0x0:
 
 ```sh
 (target)$ crasher
-```
-
-You can immediately look at the syslog.
-
-### Dart crash
-
-The following command will cause an uncaught Dart exception:
-
-```sh
-(target)$ run fuchsia-pkg://fuchsia.com/crasher_dart#meta/crasher_dart.cmx
 ```
 
 You can immediately look at the syslog.
