@@ -773,7 +773,8 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
   constraints->set_packet_count_for_server_max(max_buffer_count_[kOutputPort]);
 
   constraints->set_packet_count_for_client_min(0);
-  constraints->set_packet_count_for_client_max(max_buffer_count_[kOutputPort]);
+  constraints->set_packet_count_for_client_max(
+      (max_buffer_count_[kOutputPort] - min_buffer_count_[kOutputPort]) / 2);
 
   // False because it's not required and not encouraged for a video decoder
   // output to allow single buffer mode.
