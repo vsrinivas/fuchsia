@@ -163,7 +163,7 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
       ASSERT(!mp_is_cpu_active(cpu));
 
       // Make sure the CPU is not marked online
-      atomic_and((volatile int*)&mp.online_cpus, ~mask);
+      mp.online_cpus.fetch_and(~mask);
 
       // Free the failed AP's thread, it was cancelled before it could use it.
       free_thread(bootstrap_data->per_cpu[i].thread);

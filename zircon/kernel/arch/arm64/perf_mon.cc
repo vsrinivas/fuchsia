@@ -32,6 +32,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/align.h>
+#include <kernel/atomic.h>
 #include <kernel/cpu.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>

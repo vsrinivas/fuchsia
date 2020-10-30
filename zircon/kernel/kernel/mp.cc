@@ -61,7 +61,7 @@ void mp_reschedule(cpu_mask_t mask, uint flags) {
   LTRACEF("local %u, mask %#x\n", local_cpu, mask);
 
   // mask out cpus that are not active and the local cpu
-  mask &= mp.active_cpus;
+  mask &= mp.active_cpus.load();
   mask &= ~cpu_num_to_mask(local_cpu);
 
   // mask out cpus that are currently running realtime code
@@ -427,7 +427,7 @@ interrupt_eoi mp_mbx_reschedule_irq(void*) {
 
   CPU_STATS_INC(reschedule_ipis);
 
-  if (mp.active_cpus & cpu_num_to_mask(cpu)) {
+  if (mp.active_cpus.load() & cpu_num_to_mask(cpu)) {
     Thread::Current::preemption_state().PreemptSetPending();
   }
 

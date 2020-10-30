@@ -15,10 +15,10 @@
 #include <zircon/types.h>
 
 #include <fbl/intrusive_double_list.h>
-#include <kernel/atomic.h>
 #include <kernel/cpu.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
+#include <ktl/atomic.h>
 
 // NOTE(abdulla): This is located here to break a circular dependency.
 enum interrupt_eoi {
@@ -92,9 +92,9 @@ struct mp_ipi_task
 // global mp state to track what the cpus are up to
 struct mp_state {
   // cpus that are currently online
-  volatile cpu_mask_t online_cpus;
+  ktl::atomic<cpu_mask_t> online_cpus;
   // cpus that are currently schedulable
-  volatile cpu_mask_t active_cpus;
+  ktl::atomic<cpu_mask_t> active_cpus;
 
   // both are only safely accessible with thread lock held
   cpu_mask_t idle_cpus TA_GUARDED(thread_lock);
@@ -144,14 +144,14 @@ static inline cpu_mask_t mp_get_realtime_mask(void) TA_REQ(thread_lock) { return
 // tracks if a cpu is online and initialized
 static inline void mp_set_curr_cpu_online(bool online) {
   if (online) {
-    atomic_or((volatile int*)&mp.online_cpus, cpu_num_to_mask(arch_curr_cpu_num()));
+    mp.online_cpus.fetch_or(cpu_num_to_mask(arch_curr_cpu_num()));
   } else {
-    atomic_and((volatile int*)&mp.online_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
+    mp.online_cpus.fetch_and(~cpu_num_to_mask(arch_curr_cpu_num()));
   }
 }
 
 static inline cpu_mask_t mp_get_online_mask(void) {
-  return atomic_load((volatile int*)&mp.online_cpus);
+  return mp.online_cpus.load();
 }
 
 static inline int mp_is_cpu_online(cpu_num_t cpu) {
@@ -161,15 +161,15 @@ static inline int mp_is_cpu_online(cpu_num_t cpu) {
 // tracks if a cpu is active and schedulable
 static inline void mp_set_curr_cpu_active(bool active) {
   if (active) {
-    atomic_or((volatile int*)&mp.active_cpus, cpu_num_to_mask(arch_curr_cpu_num()));
+    mp.active_cpus.fetch_or(cpu_num_to_mask(arch_curr_cpu_num()));
   } else {
-    atomic_and((volatile int*)&mp.active_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
+    mp.active_cpus.fetch_and(~cpu_num_to_mask(arch_curr_cpu_num()));
   }
   arch_set_blocking_disallowed(!active);
 }
 
 static inline cpu_mask_t mp_get_active_mask(void) {
-  return atomic_load((volatile int*)&mp.active_cpus);
+  return mp.active_cpus.load();
 }
 
 static inline int mp_is_cpu_active(cpu_num_t cpu) {

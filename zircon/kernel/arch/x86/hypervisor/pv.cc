@@ -12,6 +12,7 @@
 #include <arch/hypervisor.h>
 #include <arch/x86/pv.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <kernel/atomic.h>
 #include <ktl/atomic.h>
 #include <vm/physmap.h>
 
