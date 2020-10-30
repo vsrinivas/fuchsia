@@ -92,30 +92,39 @@ class RegistersDeviceTest : public zxtest::Test {
 
   std::map<uint64_t, std::unique_ptr<::llcpp::fuchsia::hardware::registers::Device::SyncClient>>
       clients_;
+
+  fidl::BufferThenHeapAllocator<2048> allocator_;
 };
 
 TEST_F(RegistersDeviceTest, EncodeDecodeTest) {
-  auto mmio = std::make_unique<MmioMetadataEntry[]>(3);
-  mmio[0] = registers::BuildMetadata(0x1234123412341234);
-  mmio[1] = registers::BuildMetadata(0x4321432143214321);
-  mmio[2] = registers::BuildMetadata(0xABCDABCDABCDABCD);
+  auto mmio_alloc = allocator_.make<MmioMetadataEntry[]>(3);
+  fidl::VectorView<MmioMetadataEntry> mmio(std::move(mmio_alloc), 3);
+  mmio[0] = registers::BuildMetadata(allocator_, 0x1234123412341234);
+  mmio[1] = registers::BuildMetadata(allocator_, 0x4321432143214321);
+  mmio[2] = registers::BuildMetadata(allocator_, 0xABCDABCDABCDABCD);
 
-  auto registers = std::make_unique<RegistersMetadataEntry[]>(2);
+  auto registers_alloc = allocator_.make<RegistersMetadataEntry[]>(2);
+  fidl::VectorView<RegistersMetadataEntry> registers(std::move(registers_alloc), 2);
   registers[0] = registers::BuildMetadata(
-      0, 0x1111111111111111, std::vector<std::pair<uint32_t, uint32_t>>{{0xFFFF, 3}, {0x8888, 2}});
+      allocator_, 0, 0x1111111111111111,
+      std::vector<std::pair<uint32_t, uint32_t>>{{0xFFFF, 3}, {0x8888, 2}});
   registers[1] = registers::BuildMetadata(
-      1, 0x2222222222222222,
+      allocator_, 1, 0x2222222222222222,
       std::vector<std::pair<uint32_t, uint32_t>>{{0x5555, 1}, {0x77777777, 2}, {0x1234, 4}});
 
-  auto metadata_original = registers::BuildMetadata(std::move(mmio), 3, std::move(registers), 2);
+  auto metadata_original =
+      registers::BuildMetadata(allocator_, std::move(mmio), std::move(registers));
   fidl::OwnedOutgoingMessage<Metadata> msg(&metadata_original);
   EXPECT_EQ(msg.GetOutgoingMessage().handle_actual(), 0);
   EXPECT_EQ(msg.GetOutgoingMessage().handles(), nullptr);
 
   auto metadata = Metadata::IncomingMessage::FromOutgoingWithRawHandleCopy(&msg);
+  ASSERT_TRUE(metadata.ok(), "%s", metadata.error());
+  ASSERT_EQ(metadata.PrimaryObject()->mmio().count(), 3);
   EXPECT_EQ(metadata.PrimaryObject()->mmio()[0].base_address(), 0x1234123412341234);
   EXPECT_EQ(metadata.PrimaryObject()->mmio()[1].base_address(), 0x4321432143214321);
   EXPECT_EQ(metadata.PrimaryObject()->mmio()[2].base_address(), 0xABCDABCDABCDABCD);
+  ASSERT_EQ(metadata.PrimaryObject()->registers().count(), 2);
   EXPECT_EQ(metadata.PrimaryObject()->registers()[0].id(), 0);
   EXPECT_EQ(metadata.PrimaryObject()->registers()[0].base_address(), 0x1111111111111111);
   EXPECT_EQ(metadata.PrimaryObject()->registers()[0].masks()[0].mask().r32(), 0xFFFF);
@@ -145,18 +154,19 @@ TEST_F(RegistersDeviceTest, Read32Test) {
   device->AddRegister(
       /* mmio_index: */ 0,
       /* config: */
-      BuildMetadata(0, 0x0, std::vector<std::pair<uint32_t, uint32_t>>{{0xFFFFFFFF, 1}}));
+      BuildMetadata(allocator_, 0, 0x0,
+                    std::vector<std::pair<uint32_t, uint32_t>>{{0xFFFFFFFF, 1}}));
   device->AddRegister(
       /* mmio_index: */ 2,
       /* config: */
-      BuildMetadata(1, 0x0,
+      BuildMetadata(allocator_, 1, 0x0,
                     std::vector<std::pair<uint32_t, uint32_t>>{{0xFFFFFFFF, 2}, {0xFFFF0000, 1}}));
 
   // Invalid Call
   auto invalid_call_result = device->GetClient(0)->ReadRegister8(/* address: */
                                                                  0x0000000000000000,
                                                                  /* mask: */ 0xFF);
-  EXPECT_TRUE(invalid_call_result.ok());
+  ASSERT_TRUE(invalid_call_result.ok());
   EXPECT_FALSE(invalid_call_result->result.is_response());
 
   // Address not aligned
@@ -169,7 +179,7 @@ TEST_F(RegistersDeviceTest, Read32Test) {
   auto out_of_range_result = device->GetClient(1)->ReadRegister32(/* address: */
                                                                   0x000000000000000C,
                                                                   /* mask: */ 0xFFFFFFFF);
-  EXPECT_TRUE(out_of_range_result.ok());
+  ASSERT_TRUE(out_of_range_result.ok());
   EXPECT_FALSE(out_of_range_result->result.is_response());
 
   // Invalid mask
@@ -183,8 +193,8 @@ TEST_F(RegistersDeviceTest, Read32Test) {
   (*(mock_mmio_[0]))[0x0].ExpectRead(0x12341234);
   auto read_result1 =
       device->GetClient(0)->ReadRegister32(/* address: */ 0x00000000, /* mask: */ 0xFFFFFFFF);
-  EXPECT_TRUE(read_result1.ok());
-  EXPECT_TRUE(read_result1->result.is_response());
+  ASSERT_TRUE(read_result1.ok());
+  ASSERT_TRUE(read_result1->result.is_response());
   EXPECT_EQ(read_result1->result.response().value, 0x12341234);
 
   (*(mock_mmio_[2]))[0x4].ExpectRead(0x12341234);
@@ -202,11 +212,12 @@ TEST_F(RegistersDeviceTest, Write32Test) {
   device->AddRegister(
       /* mmio_index: */ 0,
       /* config: */
-      BuildMetadata(0, 0x0, std::vector<std::pair<uint32_t, uint32_t>>{{0xFFFFFFFF, 1}}));
+      BuildMetadata(allocator_, 0, 0x0,
+                    std::vector<std::pair<uint32_t, uint32_t>>{{0xFFFFFFFF, 1}}));
   device->AddRegister(
       /* mmio_index: */ 1,
       /* config: */
-      BuildMetadata(1, 0x0,
+      BuildMetadata(allocator_, 1, 0x0,
                     std::vector<std::pair<uint32_t, uint32_t>>{{0xFFFFFFFF, 2}, {0xFFFF0000, 1}}));
 
   // Invalid Call
@@ -214,7 +225,7 @@ TEST_F(RegistersDeviceTest, Write32Test) {
                                                                   0x0000000000000000,
                                                                   /* mask: */ 0xFF,
                                                                   /* value:  */ 0x12);
-  EXPECT_TRUE(invalid_call_result.ok());
+  ASSERT_TRUE(invalid_call_result.ok());
   EXPECT_FALSE(invalid_call_result->result.is_response());
 
   // Address not aligned
@@ -222,7 +233,7 @@ TEST_F(RegistersDeviceTest, Write32Test) {
                                                                 0x0000000000000001,
                                                                 /* mask: */ 0xFFFFFFFF,
                                                                 /* value: */ 0x43214321);
-  EXPECT_TRUE(unaligned_result.ok());
+  ASSERT_TRUE(unaligned_result.ok());
   EXPECT_FALSE(unaligned_result->result.is_response());
 
   // Address out of range
@@ -262,12 +273,13 @@ TEST_F(RegistersDeviceTest, Read64Test) {
   device->AddRegister(
       /* mmio_index: */ 0,
       /* config: */
-      BuildMetadata(0, 0x0, std::vector<std::pair<uint64_t, uint32_t>>{{0xFFFFFFFFFFFFFFFF, 1}}));
+      BuildMetadata(allocator_, 0, 0x0,
+                    std::vector<std::pair<uint64_t, uint32_t>>{{0xFFFFFFFFFFFFFFFF, 1}}));
   device->AddRegister(
       /* mmio_index: */ 2,
       /* config: */
       BuildMetadata(
-          1, 0x0,
+          allocator_, 1, 0x0,
           std::vector<std::pair<uint64_t, uint32_t>>{
               {0xFFFFFFFFFFFFFFFF, 1}, {0x00000000FFFFFFFF, 1}, {0x0000FFFFFFFF0000, 1}}));
 
@@ -275,13 +287,13 @@ TEST_F(RegistersDeviceTest, Read64Test) {
   auto invalid_call_result = device->GetClient(0)->ReadRegister8(/* address: */
                                                                  0x0000000000000000,
                                                                  /* mask: */ 0xFF);
-  EXPECT_TRUE(invalid_call_result.ok());
+  ASSERT_TRUE(invalid_call_result.ok());
   EXPECT_FALSE(invalid_call_result->result.is_response());
 
   // Address not aligned
   auto unaligned_result = device->GetClient(0)->ReadRegister64(/* address: */ 0x0000000000000001,
                                                                /* mask: */ 0xFFFFFFFFFFFFFFFF);
-  EXPECT_TRUE(unaligned_result.ok());
+  ASSERT_TRUE(unaligned_result.ok());
   EXPECT_FALSE(unaligned_result->result.is_response());
 
   // Address out of range
@@ -289,7 +301,7 @@ TEST_F(RegistersDeviceTest, Read64Test) {
                                                                   0x0000000000000020,
                                                                   /* mask: */
                                                                   0xFFFFFFFFFFFFFFFF);
-  EXPECT_TRUE(out_of_range_result.ok());
+  ASSERT_TRUE(out_of_range_result.ok());
   EXPECT_FALSE(out_of_range_result->result.is_response());
 
   // Invalid mask
@@ -297,22 +309,22 @@ TEST_F(RegistersDeviceTest, Read64Test) {
                                                                   0x0000000000000008,
                                                                   /* mask: */
                                                                   0xFFFFFFFFFFFFFFFF);
-  EXPECT_TRUE(invalid_mask_result.ok());
+  ASSERT_TRUE(invalid_mask_result.ok());
   EXPECT_FALSE(invalid_mask_result->result.is_response());
 
   // Successful
   (*(mock_mmio_[0]))[0x0].ExpectRead(0x1234123412341234);
   auto read_result1 = device->GetClient(0)->ReadRegister64(/* address: */ 0x00000000,
                                                            /* mask: */ 0xFFFFFFFFFFFFFFFF);
-  EXPECT_TRUE(read_result1.ok());
-  EXPECT_TRUE(read_result1->result.is_response());
+  ASSERT_TRUE(read_result1.ok());
+  ASSERT_TRUE(read_result1->result.is_response());
   EXPECT_EQ(read_result1->result.response().value, 0x1234123412341234);
 
   (*(mock_mmio_[2]))[0x8].ExpectRead(0x1234123412341234);
   auto read_result2 = device->GetClient(1)->ReadRegister64(/* address: */ 0x00000008,
                                                            /* mask: */ 0x00000000FFFF0000);
-  EXPECT_TRUE(read_result2.ok());
-  EXPECT_TRUE(read_result2->result.is_response());
+  ASSERT_TRUE(read_result2.ok());
+  ASSERT_TRUE(read_result2->result.is_response());
   EXPECT_EQ(read_result2->result.response().value, 0x0000000012340000);
 }
 
@@ -323,12 +335,13 @@ TEST_F(RegistersDeviceTest, Write64Test) {
   device->AddRegister(
       /* mmio_index: */ 0,
       /* config: */
-      BuildMetadata(0, 0x0, std::vector<std::pair<uint64_t, uint32_t>>{{0xFFFFFFFFFFFFFFFF, 1}}));
+      BuildMetadata(allocator_, 0, 0x0,
+                    std::vector<std::pair<uint64_t, uint32_t>>{{0xFFFFFFFFFFFFFFFF, 1}}));
   device->AddRegister(
       /* mmio_index: */ 1,
       /* config: */
       BuildMetadata(
-          1, 0x0,
+          allocator_, 1, 0x0,
           std::vector<std::pair<uint64_t, uint32_t>>{
               {0xFFFFFFFFFFFFFFFF, 1}, {0x00000000FFFFFFFF, 1}, {0x0000FFFFFFFF0000, 1}}));
 
@@ -337,7 +350,7 @@ TEST_F(RegistersDeviceTest, Write64Test) {
                                                                   0x0000000000000000,
                                                                   /* mask: */ 0xFF,
                                                                   /* value:  */ 0x12);
-  EXPECT_TRUE(invalid_call_result.ok());
+  ASSERT_TRUE(invalid_call_result.ok());
   EXPECT_FALSE(invalid_call_result->result.is_response());
 
   // Address not aligned
@@ -345,7 +358,7 @@ TEST_F(RegistersDeviceTest, Write64Test) {
                                                                 0x0000000000000001,
                                                                 /* mask: */ 0xFFFFFFFFFFFFFFFF,
                                                                 /* value: */ 0x4321432143214321);
-  EXPECT_TRUE(unaligned_result.ok());
+  ASSERT_TRUE(unaligned_result.ok());
   EXPECT_FALSE(unaligned_result->result.is_response());
 
   // Address out of range
@@ -353,7 +366,7 @@ TEST_F(RegistersDeviceTest, Write64Test) {
       device->GetClient(1)->WriteRegister64(/* address: */ 0x0000000000000020,
                                             /* mask: */ 0xFFFFFFFFFFFFFFFF,
                                             /* value: */ 0x4321432143214321);
-  EXPECT_TRUE(out_of_range_result.ok());
+  ASSERT_TRUE(out_of_range_result.ok());
   EXPECT_FALSE(out_of_range_result->result.is_response());
 
   // Invalid mask
@@ -361,7 +374,7 @@ TEST_F(RegistersDeviceTest, Write64Test) {
       device->GetClient(1)->WriteRegister64(/* address: */ 0x0000000000000008,
                                             /* mask: */ 0xFFFFFFFFFFFFFFFF,
                                             /* value: */ 0x4321432143214321);
-  EXPECT_TRUE(invalid_mask_result.ok());
+  ASSERT_TRUE(invalid_mask_result.ok());
   EXPECT_FALSE(invalid_mask_result->result.is_response());
 
   // Successful
@@ -369,14 +382,14 @@ TEST_F(RegistersDeviceTest, Write64Test) {
   auto read_result1 = device->GetClient(0)->WriteRegister64(
       /* address: */ 0x00000000, /* mask: */ 0xFFFFFFFFFFFFFFFF, /* value: */
       0x4321432143214321);
-  EXPECT_TRUE(read_result1.ok());
+  ASSERT_TRUE(read_result1.ok());
   EXPECT_TRUE(read_result1->result.is_response());
 
   (*(mock_mmio_[1]))[0x8].ExpectRead(0x0000000000000000).ExpectWrite(0x0000000043210000);
   auto read_result2 = device->GetClient(1)->WriteRegister64(
       /* address: */ 0x00000008, /* mask: */ 0x00000000FFFF0000, /* value: */
       0x0000000043210000);
-  EXPECT_TRUE(read_result2.ok());
+  ASSERT_TRUE(read_result2.ok());
   EXPECT_TRUE(read_result2->result.is_response());
 }
 

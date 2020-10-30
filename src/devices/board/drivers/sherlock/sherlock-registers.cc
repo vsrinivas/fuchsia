@@ -36,21 +36,26 @@ zx_status_t Sherlock::RegistersInit() {
 #endif  // FACTORY_BUILD
   };
 
-  auto mmio_entries = std::make_unique<registers::MmioMetadataEntry[]>(MMIO_COUNT);
-  auto register_entries =
-      std::make_unique<registers::RegistersMetadataEntry[]>(registers::REGISTER_ID_COUNT);
+  fidl::BufferThenHeapAllocator<2048> allocator;
+  fidl::VectorView<registers::MmioMetadataEntry> mmio_entries;
+  mmio_entries.set_data(allocator.make<registers::MmioMetadataEntry[]>(MMIO_COUNT));
+  mmio_entries.set_count(MMIO_COUNT);
+
+  fidl::VectorView<registers::RegistersMetadataEntry> register_entries;
+  register_entries.set_data(
+      allocator.make<registers::RegistersMetadataEntry[]>(registers::REGISTER_ID_COUNT));
+  register_entries.set_count(registers::REGISTER_ID_COUNT);
 
 #ifdef FACTORY_BUILD
-  mmio_entries[USB_FACTORY_MMIO] = registers::BuildMetadata(T931_USB_BASE);
+  mmio_entries[USB_FACTORY_MMIO] = registers::BuildMetadata(allocator, T931_USB_BASE);
 
   register_entries[registers::REGISTER_USB_PHY_FACTORY] = registers::BuildMetadata(
-      registers::REGISTER_USB_PHY_FACTORY, T931_USB_BASE,
+      allocator, registers::REGISTER_USB_PHY_FACTORY, T931_USB_BASE,
       std::vector<std::pair<uint32_t, uint32_t>>{{0xFFFFFFFF, T931_USB_LENGTH / sizeof(uint32_t)}});
 #endif  // FACTORY_BUILD
 
   auto metadata =
-      registers::BuildMetadata(std::move(mmio_entries), MMIO_COUNT, std::move(register_entries),
-                               registers::REGISTER_ID_COUNT);
+      registers::BuildMetadata(allocator, std::move(mmio_entries), std::move(register_entries));
   fidl::OwnedOutgoingMessage<registers::Metadata> encoded_metadata(&metadata);
   if (!encoded_metadata.ok() || (encoded_metadata.error() != nullptr)) {
     zxlogf(ERROR, "%s: Could not build metadata %s\n", __FILE__, encoded_metadata.error());
