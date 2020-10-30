@@ -15,21 +15,12 @@ __BEGIN_CDECLS
 
 // strongly ordered versions of the atomic routines as implemented
 // by the compiler with arch-dependent memory barriers.
-static inline int atomic_add(volatile int* ptr, int val) {
-  return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
-}
-
 static inline int atomic_and(volatile int* ptr, int val) {
   return __atomic_fetch_and(ptr, val, __ATOMIC_SEQ_CST);
 }
 
 static inline int atomic_or(volatile int* ptr, int val) {
   return __atomic_fetch_or(ptr, val, __ATOMIC_SEQ_CST);
-}
-
-static inline bool atomic_cmpxchg(volatile int* ptr, int* oldval, int newval) {
-  return __atomic_compare_exchange_n(ptr, oldval, newval, false, __ATOMIC_SEQ_CST,
-                                     __ATOMIC_SEQ_CST);
 }
 
 static inline int atomic_load(volatile int* ptr) { return __atomic_load_n(ptr, __ATOMIC_SEQ_CST); }
@@ -72,8 +63,6 @@ static inline uint64_t atomic_or_u64(volatile uint64_t* ptr, uint64_t val) {
 static inline uint64_t atomic_load_u64(volatile uint64_t* ptr) {
   return __atomic_load_n(ptr, __ATOMIC_SEQ_CST);
 }
-
-static inline void atomic_signal_fence(void) { __atomic_signal_fence(__ATOMIC_SEQ_CST); }
 
 static inline int64_t atomic_add_64_relaxed(volatile int64_t* ptr, int64_t val) {
   return __atomic_fetch_add(ptr, val, __ATOMIC_RELAXED);
