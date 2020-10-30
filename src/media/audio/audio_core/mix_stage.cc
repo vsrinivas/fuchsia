@@ -591,11 +591,11 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     info.ResetPositions(dest_frame, bookkeeping);
 
     if (info.running_pos_established) {
-      FX_LOGS(INFO) << "Running dest position is discontinuous (expected "
-                    << prev_running_dest_frame << ", actual " << dest_frame
-                    << ") updating running source position from "
-                    << prev_running_frac_src_frame.raw_value() << " to "
-                    << info.next_frac_source_frame.raw_value();
+      FX_LOGS(DEBUG) << "Running dest position is discontinuous (expected "
+                     << prev_running_dest_frame << ", actual " << dest_frame
+                     << ") updating running source position from "
+                     << prev_running_frac_src_frame.raw_value() << " to "
+                     << info.next_frac_source_frame.raw_value();
     } else {
       info.running_pos_established = true;
     }
