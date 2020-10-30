@@ -2928,6 +2928,8 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
   brcmf_enable_mpc(ifp, 0);
   brcmf_configure_arp_nd_offload(ifp, false);
 
+  // Start timer before starting to issue commands.
+  cfg->ap_start_timer->Start(BRCMF_AP_START_TIMER_DUR_MS);
   // set to open authentication for external supplicant
   status = brcmf_fil_bsscfg_int_set(ifp, "auth", BRCMF_AUTH_MODE_OPEN);
   if (status != ZX_OK) {
@@ -3036,6 +3038,9 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
   return WLAN_START_RESULT_SUCCESS;
 
 fail:
+  // Stop the timer when the function fails to issue any of the commands.
+  cfg->ap_start_timer->Stop();
+
   brcmf_enable_mpc(ifp, 1);
   brcmf_configure_arp_nd_offload(ifp, true);
   return WLAN_START_RESULT_NOT_SUPPORTED;
@@ -3459,11 +3464,6 @@ void brcmf_if_reset_req(net_device* ndev, const wlanif_reset_req_t* req) {
 }
 
 void brcmf_if_start_conf(net_device* ndev, uint8_t result) {
-  struct brcmf_if* ifp = ndev_to_if(ndev);
-  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-
-  // Stop the timer
-  cfg->ap_start_timer->Stop();
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping AP start callback");
@@ -3485,7 +3485,7 @@ void brcmf_if_start_conf(net_device* ndev, uint8_t result) {
 static void brcmf_ap_start_timeout_worker(WorkItem* work) {
   struct brcmf_cfg80211_info* cfg =
       containerof(work, struct brcmf_cfg80211_info, ap_start_timeout_work);
-  struct net_device* ndev = cfg_to_ndev(cfg);
+  struct net_device* ndev = cfg_to_softap_ndev(cfg);
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
   // Indicate status only if AP start pending is set
@@ -3507,10 +3507,7 @@ static void brcmf_ap_start_timeout(struct brcmf_cfg80211_info* cfg) {
 void brcmf_if_start_req(net_device* ndev, const wlanif_start_req_t* req) {
   BRCMF_DBG(WLANIF, "Start AP request from SME. ssid: %.*s, channel: %u, rsne_len: %zu",
             req->ssid.len, req->ssid.data, req->channel, req->rsne_len);
-  struct brcmf_if* ifp = ndev_to_if(ndev);
-  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
-  cfg->ap_start_timer->Start(BRCMF_AP_START_TIMER_DUR_MS);
   uint8_t result_code = brcmf_cfg80211_start_ap(ndev, req);
   if (result_code != WLAN_START_RESULT_SUCCESS) {
     brcmf_if_start_conf(ndev, result_code);
@@ -4916,6 +4913,8 @@ static zx_status_t brcmf_process_link_event(struct brcmf_if* ifp, const struct b
     // a stop request comes in before this event is received).
     if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING,
                                           &ifp->vif->sme_state)) {
+      // Stop the timer when we get a result from firmware.
+      cfg->ap_start_timer->Stop();
       // confirm AP Start
       brcmf_if_start_conf(ndev, WLAN_START_RESULT_SUCCESS);
       // Set AP_CREATED

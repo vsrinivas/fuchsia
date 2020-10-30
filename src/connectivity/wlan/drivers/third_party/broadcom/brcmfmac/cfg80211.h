@@ -50,6 +50,9 @@
 
 #define BRCMF_DISCONNECT_TIMER_DUR_MS     ZX_MSEC(50) /* disconnect timer dur */
 #define BRCMF_SIGNAL_REPORT_TIMER_DUR_MS  ZX_MSEC(1000) /* Signal report dur */
+
+/* AP iface start time usually takes far less than 1 sec, without considering
+ * a simultaneous scan request. */
 #define BRCMF_AP_START_TIMER_DUR_MS       ZX_MSEC(1000) /* AP start timer dur */
 #define BRCMF_CONNECT_TIMER_DUR_MS        ZX_MSEC(1500) /*connect timer dur*/
 
@@ -439,6 +442,17 @@ static inline struct net_device* cfg_to_ndev(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_cfg80211_vif* vif;
   vif = list_peek_head_type(&cfg->vif_list, struct brcmf_cfg80211_vif, list);
   return vif->wdev.netdev;
+}
+
+static inline struct net_device* cfg_to_softap_ndev(struct brcmf_cfg80211_info* cfg) {
+  struct brcmf_cfg80211_vif* vif;
+  list_for_every_entry (&cfg->vif_list, vif, struct brcmf_cfg80211_vif, list) {
+    if (vif->wdev.iftype == WLAN_INFO_MAC_ROLE_AP) {
+      return vif->wdev.netdev;
+    }
+  }
+
+  return nullptr;
 }
 
 static inline struct brcmf_if* ndev_to_if(struct net_device* ndev) {

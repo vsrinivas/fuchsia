@@ -38,8 +38,14 @@ class DynamicIfTest : public SimTest {
   // How many devices have been registered by the fake devhost
   uint32_t DeviceCount();
 
-  // Force fail an attempt to stop the soft AP
+  // Force fail an attempt to stop the softAP
   void InjectStopAPError();
+
+  // Force firmware to ignore the start softAP request.
+  void InjectStartAPIgnore();
+
+  // Cancel the ignore-start-softAP-request error in firmware.
+  void DelInjectedStartAPIgnore();
 
   // Verify SoftAP channel followed client channel
   void ChannelCheck();
@@ -47,6 +53,9 @@ class DynamicIfTest : public SimTest {
   // Generate an association request to send to the soft AP
   void TxAuthAndAssocReq();
   void VerifyAssocWithSoftAP();
+
+  // Verify the start ap timeout timer is triggered.
+  void VerifyStartApTimer();
 
   // Query for wlanphy info
   void PhyQuery(wlanphy_impl_info_t* out_info);
@@ -76,6 +85,16 @@ uint32_t DynamicIfTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
 void DynamicIfTest::InjectStopAPError() {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjIovar("bss", ZX_ERR_IO, softap_ifc_.iface_id_);
+}
+
+void DynamicIfTest::InjectStartAPIgnore() {
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, softap_ifc_.iface_id_);
+}
+
+void DynamicIfTest::DelInjectedStartAPIgnore() {
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.DelErrInjCmd(BRCMF_C_SET_SSID);
 }
 
 void DynamicIfTest::ChannelCheck() {
@@ -110,6 +129,14 @@ void DynamicIfTest::VerifyAssocWithSoftAP() {
   brcmf_simdev* sim = device_->GetSim();
   uint16_t num_clients = sim->sim_fw->GetNumClients(softap_ifc_.iface_id_);
   ASSERT_EQ(num_clients, 1U);
+}
+
+void DynamicIfTest::VerifyStartApTimer() {
+  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.size(), 2U);
+  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.front().result_code,
+            WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED);
+  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.back().result_code,
+            WLAN_START_RESULT_NOT_SUPPORTED);
 }
 
 void DynamicIfTest::SetChanspec(bool is_ap_iface, uint16_t* chanspec, zx_status_t expect_result) {
@@ -581,5 +608,37 @@ TEST_F(DynamicIfTest, CheckSoftAPChannel) {
   env_->Run(kTestDuration);
 
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
+}
+
+// This intricate test name means that, the timeout timer should fire when SME issued an iface start
+// request for softAP iface, but firmware didn't respond anything, at the same time, SME is still
+// keep sending the iface start request.
+TEST_F(DynamicIfTest, StartApIfaceTimeoutWithReqSpamAndFwIgnore) {
+  // Create both ifaces, client iface is not needed in test, but created to keep the consistent
+  // context.
+  Init();
+  StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
+
+  // Make firmware ignore the start AP req.
+  InjectStartAPIgnore();
+  SCHEDULE_CALL(zx::msec(10), &SimInterface::StartSoftAp, &softap_ifc_,
+                SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
+  // Make sure this extra request will not refresh the timer.
+  SCHEDULE_CALL(zx::msec(510), &SimInterface::StartSoftAp, &softap_ifc_,
+                SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
+  // Check the timer is fired, it should fire at 1010 msec.
+  SCHEDULE_CALL(zx::msec(1011), &DynamicIfTest::VerifyStartApTimer, this);
+  // Make firmware back to normal.
+  SCHEDULE_CALL(zx::msec(1011), &DynamicIfTest::DelInjectedStartAPIgnore, this);
+  // Issue start AP request again.
+  SCHEDULE_CALL(zx::msec(1100), &SimInterface::StartSoftAp, &softap_ifc_,
+                SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
+
+  env_->Run(kTestDuration);
+
+  // Make sure the AP iface finally stated successfully.
+  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.size(), 3U);
+  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.back().result_code, WLAN_START_RESULT_SUCCESS);
 }
 }  // namespace wlan::brcmfmac
