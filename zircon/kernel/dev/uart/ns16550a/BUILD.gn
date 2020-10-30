@@ -1,0 +1,17 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+source_set("ns16550a") {
+  sources = [ "uart.cc" ]
+  deps = [
+    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/dev/pdev/uart",
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/cbuf",
+    "//zircon/kernel/lib/debuglog",
+    "//zircon/system/ulib/zxc:zx",
+  ]
+}

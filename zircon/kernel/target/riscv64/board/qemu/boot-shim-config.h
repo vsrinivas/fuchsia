@@ -14,6 +14,11 @@
 #define MAX_CPU_COUNT 16
 static size_t cpu_count = 0;
 
+static const dcfg_simple_t uart_driver = {
+    .mmio_phys = 0x10000000,
+    .irq = 10,
+};
+
 static const zbi_platform_id_t platform_id = {
     .vid = PDEV_VID_QEMU,
     .pid = PDEV_PID_QEMU,
@@ -45,6 +50,10 @@ static void add_cpu_topology(zbi_header_t* zbi) {
 
 static void append_board_boot_item(zbi_header_t* bootdata) {
   add_cpu_topology(bootdata);
+
+  // add kernel drivers
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_NS16550A_UART, &uart_driver,
+                   sizeof(uart_driver));
 
   // add platform ID
   append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
