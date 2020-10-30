@@ -28,7 +28,7 @@ namespace wlan::simulation {
 class FakeAp : public StationIfc {
  public:
   // How to handle an association request
-  enum AssocHandling { ASSOC_ALLOWED, ASSOC_IGNORED, ASSOC_REJECTED };
+  enum AssocHandling { ASSOC_ALLOWED, ASSOC_IGNORED, ASSOC_REFUSED_TEMPORARILY, ASSOC_REFUSED };
 
   struct Security {
     enum SimAuthType auth_handling_mode = AUTH_TYPE_OPEN;

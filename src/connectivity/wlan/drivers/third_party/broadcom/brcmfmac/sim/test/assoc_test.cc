@@ -719,7 +719,7 @@ TEST_F(AssocTest, ApRejectedRequest) {
 
   // Start up fake APs
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.SetAssocHandling(simulation::FakeAp::ASSOC_REJECTED);
+  ap.SetAssocHandling(simulation::FakeAp::ASSOC_REFUSED);
   aps_.push_back(&ap);
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
@@ -1083,7 +1083,7 @@ TEST_F(AssocTest, AssocMaxRetries) {
 
   // Start up fake APs
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.SetAssocHandling(simulation::FakeAp::ASSOC_REJECTED);
+  ap.SetAssocHandling(simulation::FakeAp::ASSOC_REFUSED);
   aps_.push_back(&ap);
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
@@ -1145,7 +1145,7 @@ TEST_F(AssocTest, AssocNoRetries) {
 
   // Start up fake APs
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.SetAssocHandling(simulation::FakeAp::ASSOC_REJECTED);
+  ap.SetAssocHandling(simulation::FakeAp::ASSOC_REFUSED);
   aps_.push_back(&ap);
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);

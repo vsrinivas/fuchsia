@@ -223,20 +223,43 @@ TEST_F(AssocTest, IgnoreAssociations) {
   EXPECT_EQ(assoc_resp_count_, 0U);
 }
 
-/* Verify that association requests are rejected when the association handling state is set to
-   ASSOC_REJECTED.
+/* Verify that association requests are refused with REFUSED_TEMPORARILY when the association
+   handling state is set to ASSOC_REFUSED_TEMPORARILY.
 
    Timeline for this test:
    1s: send assoc request
  */
-TEST_F(AssocTest, RejectAssociations) {
+TEST_F(AssocTest, TemporarilyRefuseAssociations) {
   // Schedule first request
   auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
   *handler = std::bind(&simulation::Environment::Tx, &env_, assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::sec(1));
 
-  ap_.SetAssocHandling(simulation::FakeAp::ASSOC_REJECTED);
+  ap_.SetAssocHandling(simulation::FakeAp::ASSOC_REFUSED_TEMPORARILY);
+
+  env_.Run();
+
+  EXPECT_EQ(assoc_resp_count_, 1U);
+  ASSERT_EQ(assoc_status_list_.size(), (size_t)1);
+  EXPECT_EQ(assoc_status_list_.front(), (uint16_t)WLAN_STATUS_CODE_REFUSED_TEMPORARILY);
+  assoc_status_list_.pop_front();
+}
+
+/* Verify that association requests are refused with REFUSED  when the association handling state is
+   set to ASSOC_REFUSED.
+
+   Timeline for this test:
+   1s: send assoc request
+ */
+TEST_F(AssocTest, RefuseAssociations) {
+  // Schedule first request
+  auto handler = std::make_unique<std::function<void()>>();
+  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, assoc_req_frame, kDefaultTxInfo, this);
+  env_.ScheduleNotification(std::move(handler), zx::sec(1));
+
+  ap_.SetAssocHandling(simulation::FakeAp::ASSOC_REFUSED);
 
   env_.Run();
 
