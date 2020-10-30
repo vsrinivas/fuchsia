@@ -37,16 +37,7 @@ zx_status_t AmlVoltageRegulator::Create(
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // zeroth fragment is pdev
-  size_t actual;
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  composite.GetFragments(fragments, countof(fragments), &actual);
-  if (actual < 1) {
-    zxlogf(ERROR, "%s: failed to get pdev fragment", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
+  ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "aml-voltage: failed to get pdev protocol");
     return ZX_ERR_NOT_SUPPORTED;
@@ -59,7 +50,7 @@ zx_status_t AmlVoltageRegulator::Create(
     return status;
   }
 
-  big_cluster_pwm_ = ddk::PwmProtocolClient(fragments[FRAGMENT_PWM_BIG_CLUSTER]);
+  big_cluster_pwm_ = ddk::PwmProtocolClient(composite, "pwm-a");
   if (!big_cluster_pwm_.is_valid()) {
     zxlogf(ERROR, "%s: failed to get big cluster PWM fragment", __func__);
     return ZX_ERR_NOT_SUPPORTED;
@@ -71,7 +62,7 @@ zx_status_t AmlVoltageRegulator::Create(
 
   big_little_ = thermal_config.big_little;
   if (big_little_) {
-    little_cluster_pwm_ = ddk::PwmProtocolClient(fragments[FRAGMENT_PWM_LITTLE_CLUSTER]);
+    little_cluster_pwm_ = ddk::PwmProtocolClient(composite, "pwm-ao-d");
     if (!little_cluster_pwm_.is_valid()) {
       zxlogf(ERROR, "%s: failed to get little cluster PWM fragment", __func__);
       return ZX_ERR_NOT_SUPPORTED;

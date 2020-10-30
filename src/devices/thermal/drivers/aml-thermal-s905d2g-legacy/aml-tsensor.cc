@@ -4,6 +4,7 @@
 
 #include "aml-tsensor.h"
 
+#include <lib/device-protocol/pdev.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
@@ -14,6 +15,7 @@
 #include <cmath>
 
 #include <ddk/debug.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>
 
@@ -248,10 +250,12 @@ zx_status_t AmlTSensor::InitTripPoints() {
   };
 
   running_.store(true);
-  int rc = thrd_create_with_name(&irq_thread_, start_thread, this, "aml_tsendor_irq_thread");
+  thrd_t irq_thread;
+  int rc = thrd_create_with_name(&irq_thread, start_thread, this, "aml_tsendor_irq_thread");
   if (rc != thrd_success) {
     return ZX_ERR_INTERNAL;
   }
+  irq_thread_ = irq_thread;
 
   return ZX_OK;
 }
@@ -345,37 +349,39 @@ zx_status_t AmlTSensor::GetStateChangePort(zx_handle_t* port) {
 
 zx_status_t AmlTSensor::Create(zx_device_t* parent,
                                fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config) {
-  // InitPdev
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    return status;
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
+    zxlogf(ERROR, "aml-tsensor: failed to get composite protocol");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  ddk::PDev pdev(composite);
+  if (!pdev.is_valid()) {
+    zxlogf(ERROR, "aml-voltage: failed to get pdev protocol");
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Map amlogic temperature sensor peripheral control registers.
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kPllMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev.MapMmio(kPllMmio, &pll_mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d", status);
     return status;
   }
-  pll_mmio_ = ddk::MmioBuffer(mmio);
 
-  status = pdev_map_mmio_buffer(&pdev_, kTrimMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(kTrimMmio, &trim_mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d", status);
     return status;
   }
-  trim_mmio_ = ddk::MmioBuffer(mmio);
 
-  status = pdev_map_mmio_buffer(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(kHiuMmio, &hiu_mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d", status);
     return status;
   }
-  hiu_mmio_ = ddk::MmioBuffer(mmio);
 
   // Map tsensor interrupt.
-  status = pdev_get_interrupt(&pdev_, 0, 0, tsensor_irq_.reset_and_get_address());
+  status = pdev.GetInterrupt(0, 0, &tsensor_irq_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-tsensor: could not map tsensor interrupt");
     return status;
@@ -422,8 +428,10 @@ zx_status_t AmlTSensor::InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo th
 
 AmlTSensor::~AmlTSensor() {
   running_.store(false);
-  thrd_join(irq_thread_, NULL);
   tsensor_irq_.destroy();
+  if (irq_thread_) {
+    thrd_join(*irq_thread_, NULL);
+  }
 }
 
 }  // namespace thermal

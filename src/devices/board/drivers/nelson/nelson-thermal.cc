@@ -275,7 +275,7 @@ static const device_fragment_part_t clk2_fragment[] = {
     {countof(clk2_match), clk2_match},
 };
 static const device_fragment_t fragments[] = {
-    {"pwm", countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
+    {"pwm-a", countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
     {"clock-1", countof(clk1_fragment), clk1_fragment},
     {"clock-2", countof(clk2_fragment), clk2_fragment},
 };

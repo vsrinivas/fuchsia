@@ -127,7 +127,7 @@ TEST_F(AmlThermalTest, GetDvfsInfo) {
       .count = 3};
 
   MockScpi scpi;
-  AmlThermal dut(nullptr, {}, {}, *scpi.GetProto(), 0, zx::port(), fake_ddk::kFakeDevice);
+  AmlThermal dut(nullptr, {}, {}, scpi.GetProto(), 0, zx::port(), fake_ddk::kFakeDevice);
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
@@ -163,7 +163,7 @@ TEST_F(AmlThermalTest, GetDvfsInfo) {
 
 TEST_F(AmlThermalTest, DvfsOperatingPoint) {
   MockScpi scpi;
-  AmlThermal dut(nullptr, {}, {}, *scpi.GetProto(), 0, zx::port(), fake_ddk::kFakeDevice);
+  AmlThermal dut(nullptr, {}, {}, scpi.GetProto(), 0, zx::port(), fake_ddk::kFakeDevice);
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
@@ -241,7 +241,7 @@ TEST_F(AmlThermalTest, DvfsOperatingPoint) {
 
 TEST_F(AmlThermalTest, FanLevel) {
   ddk::MockGpio fan0, fan1;
-  AmlThermal dut(nullptr, *fan0.GetProto(), *fan1.GetProto(), {}, 0, zx::port(),
+  AmlThermal dut(nullptr, fan0.GetProto(), fan1.GetProto(), {}, 0, zx::port(),
                  fake_ddk::kFakeDevice);
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
@@ -309,7 +309,7 @@ TEST_F(AmlThermalTest, TripPointThread) {
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
 
-  AmlThermal dut(fake_ddk::kFakeDevice, *fan0.GetProto(), *fan1.GetProto(), *scpi.GetProto(), 1234,
+  AmlThermal dut(fake_ddk::kFakeDevice, fan0.GetProto(), fan1.GetProto(), scpi.GetProto(), 1234,
                  std::move(port), fake_ddk::kFakeDevice, zx::msec(10));
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
@@ -437,7 +437,7 @@ TEST_F(AmlThermalTest, DdkLifecycle) {
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
 
-  AmlThermal dut(fake_ddk::kFakeParent, *fan0.GetProto(), *fan1.GetProto(), *scpi.GetProto(), 1234,
+  AmlThermal dut(fake_ddk::kFakeParent, fan0.GetProto(), fan1.GetProto(), scpi.GetProto(), 1234,
                  std::move(port), fake_ddk::kFakeDevice, zx::msec(10));
 
   fan0.ExpectConfigOut(ZX_OK, 0);

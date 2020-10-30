@@ -48,7 +48,6 @@ fuchsia_hardware_thermal_OperatingPoint ScpiToThermalOpps(const scpi_opp_t& opps
 
 zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   zxlogf(INFO, "aml_thermal: driver begin...");
-  zx_status_t status;
 
   ddk::CompositeProtocolClient composite(device);
   if (!composite.is_valid()) {
@@ -56,38 +55,32 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite.GetFragments(fragments, FRAGMENT_COUNT, &actual);
-  if (actual != FRAGMENT_COUNT) {
-    THERMAL_ERROR("could not get fragments");
-    return ZX_ERR_NOT_SUPPORTED;
+  zx_device_t* scpi_dev = nullptr;
+  bool found = composite.GetFragment("scpi", &scpi_dev);
+  if (!found) {
+    THERMAL_ERROR("could not get scpi fragment");
+    return ZX_ERR_NO_RESOURCES;
+  }
+  ddk::ScpiProtocolClient scpi(scpi_dev);
+  if (!scpi.is_valid()) {
+    THERMAL_ERROR("could not get scpi protocol");
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  scpi_protocol_t scpi_proto;
-  status = device_get_protocol(fragments[FRAGMENT_SCPI], ZX_PROTOCOL_SCPI, &scpi_proto);
-  if (status != ZX_OK) {
-    THERMAL_ERROR("could not get scpi protocol: %d", status);
-    return status;
+  ddk::GpioProtocolClient fan0_gpio(composite, "gpio-fan0");
+  if (!fan0_gpio.is_valid()) {
+    THERMAL_ERROR("could not get fan0 gpio protocol");
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  gpio_protocol_t fan0_gpio_proto;
-  status = device_get_protocol(fragments[FRAGMENT_GPIO_FAN_0], ZX_PROTOCOL_GPIO, &fan0_gpio_proto);
-  if (status != ZX_OK) {
-    THERMAL_ERROR("could not get fan0 gpio protocol: %d", status);
-    return status;
+  ddk::GpioProtocolClient fan1_gpio(composite, "gpio-fan1");
+  if (!fan1_gpio.is_valid()) {
+    THERMAL_ERROR("could not get fan0 gpio protocol");
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  gpio_protocol_t fan1_gpio_proto;
-  status = device_get_protocol(fragments[FRAGMENT_GPIO_FAN_1], ZX_PROTOCOL_GPIO, &fan1_gpio_proto);
-  if (status != ZX_OK) {
-    THERMAL_ERROR("could not get fan1 gpio protocol: %d", status);
-    return status;
-  }
-
-  ddk::ScpiProtocolClient scpi(&scpi_proto);
   uint32_t sensor_id;
-  status = scpi.GetSensor("aml_thermal", &sensor_id);
+  zx_status_t status = scpi.GetSensor("aml_thermal", &sensor_id);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not thermal get sensor: %d", status);
     return status;
@@ -100,8 +93,8 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  auto thermal = std::make_unique<AmlThermal>(device, fan0_gpio_proto, fan1_gpio_proto, scpi_proto,
-                                              sensor_id, std::move(port), fragments[FRAGMENT_SCPI]);
+  auto thermal = std::make_unique<AmlThermal>(device, fan0_gpio, fan1_gpio, scpi,
+                                              sensor_id, std::move(port), scpi_dev);
 
   status = thermal->DdkAdd("vim-thermal");
   if (status != ZX_OK) {
@@ -408,7 +401,7 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VIM2_THERMAL),
 ZIRCON_DRIVER_END(aml_thermal)

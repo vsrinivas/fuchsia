@@ -6,7 +6,6 @@
 #define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_LEGACY_AML_TSENSOR_H_
 
 #include <fuchsia/hardware/thermal/c/fidl.h>
-#include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
@@ -14,7 +13,6 @@
 #include <atomic>
 #include <optional>
 
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 
 namespace thermal {
@@ -46,13 +44,13 @@ class AmlTSensor {
   zx_status_t NotifyThermalDaemon();
   void UpdateFallThresholdIrq(uint32_t irq);
   void UpdateRiseThresholdIrq(uint32_t irq);
+
   uint32_t trim_info_;
-  pdev_protocol_t pdev_;
   std::optional<ddk::MmioBuffer> pll_mmio_;
   std::optional<ddk::MmioBuffer> trim_mmio_;
   std::optional<ddk::MmioBuffer> hiu_mmio_;
   zx::interrupt tsensor_irq_;
-  thrd_t irq_thread_;
+  std::optional<thrd_t> irq_thread_;
   std::atomic<bool> running_;
   zx_handle_t port_;
   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_;

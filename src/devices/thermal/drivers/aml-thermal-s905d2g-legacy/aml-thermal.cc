@@ -17,6 +17,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -88,16 +89,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // zeroth fragment is pdev
-  zx_device_t* fragment;
-  size_t actual;
-  composite.GetFragments(&fragment, 1, &actual);
-  if (actual != 1) {
-    zxlogf(ERROR, "%s: failed to get pdev fragment", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(fragment);
+  ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "aml-thermal: failed to get pdev protocol");
     return ZX_ERR_NOT_SUPPORTED;
@@ -111,6 +103,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   // Get the voltage-table .
+  size_t actual;
   aml_thermal_info_t thermal_info;
   status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &thermal_info, sizeof(thermal_info),
                                &actual);
@@ -142,7 +135,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   // Initialize Temperature Sensor.
-  status = tsensor->Create(fragment, thermal_config);
+  status = tsensor->Create(device, thermal_config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-thermal: Could not initialize Temperature Sensor: %d", status);
     return status;

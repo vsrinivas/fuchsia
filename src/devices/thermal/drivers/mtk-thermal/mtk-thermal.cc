@@ -66,15 +66,7 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* pdev_fragment;
-  size_t actual;
-  composite.GetFragments(&pdev_fragment, 1, &actual);
-  if (actual != 1) {
-    zxlogf(ERROR, "%s: could not get pdev_fragment", __FILE__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(pdev_fragment);
+  ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
@@ -116,6 +108,7 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
     return status;
   }
 
+  size_t actual;
   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info;
   status = device_get_metadata(parent, DEVICE_METADATA_THERMAL_CONFIG, &thermal_info,
                                sizeof(thermal_info), &actual);
@@ -165,9 +158,9 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
 zx_status_t MtkThermal::Init() {
   auto fragment_count = composite_.GetFragmentCount();
 
-  zx_device_t* fragments[fragment_count];
+  composite_device_fragment_t fragments[fragment_count];
   size_t actual;
-  composite_.GetFragments(fragments, fragment_count, &actual);
+  composite_.GetFragmentsNew(fragments, fragment_count, &actual);
   if (fragment_count != actual) {
     return ZX_ERR_INTERNAL;
   }
@@ -175,7 +168,7 @@ zx_status_t MtkThermal::Init() {
   // zeroth fragment is pdev
   for (uint32_t i = 1; i < fragment_count; i++) {
     clock_protocol_t clock;
-    auto status = device_get_protocol(fragments[i], ZX_PROTOCOL_CLOCK, &clock);
+    auto status = device_get_protocol(fragments[i].device, ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to get clock %u", __FILE__, i);
       return status;

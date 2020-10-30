@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <zircon/types.h>
 
+#include <string>
+#include <vector>
+
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 
@@ -32,9 +35,6 @@ constexpr uint32_t kMaxCPUBFrequency = 1'704'000'000;
 constexpr uint32_t kFixedPll = 0;
 constexpr uint32_t kSysPll = 1;
 
-constexpr uint32_t kPwmsPerCluster = 1;
-constexpr uint32_t kClocksPerCluster = 2;
-
 }  // namespace
 
 namespace thermal {
@@ -55,23 +55,7 @@ zx_status_t AmlCpuFrequency::Create(
       thermal_info.initial_cluster_frequencies
           [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN];
 
-  constexpr size_t kMaxFragments =
-      ((kPwmsPerCluster + kClocksPerCluster) * fuchsia_hardware_thermal_MAX_DVFS_DOMAINS) + 1;
-
-  const size_t num_clocks = kClocksPerCluster * (big_little_ ? 2 : 1);
-  const size_t num_pwms = kPwmsPerCluster * (big_little_ ? 2 : 1);
-
-  // zeroth fragment is pdev
-  zx_device_t* fragments[kMaxFragments];
-  size_t actual = 0;
-  composite.GetFragments(fragments, std::size(fragments), &actual);
-
-  if (actual < (num_clocks + num_pwms + 1)) {
-    zxlogf(ERROR, "aml-cpufreq: not enough fragments");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::PDev pdev(fragments[0]);
+  ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "aml-cpufreq: failed to get pdev protocol");
     return ZX_ERR_NOT_SUPPORTED;
@@ -94,10 +78,17 @@ zx_status_t AmlCpuFrequency::Create(
   // Enable the following clocks so we can measure them
   // and calculate what the actual CPU freq is set to at
   // any given point.
+  std::vector<const char*> fragments;
+  fragments.emplace_back("clock-1");
+  fragments.emplace_back("clock-2");
+  if (big_little_) {
+    fragments.emplace_back("clock-3");
+    fragments.emplace_back("clock-4");
+  }
 
-  for (size_t i = 0; i < num_clocks; i++) {
+  for (const auto& fragment : fragments) {
     ddk::ClockProtocolClient clock;
-    status = ddk::ClockProtocolClient::CreateFromDevice(fragments[num_pwms + i + 1], &clock);
+    status = ddk::ClockProtocolClient::CreateFromComposite(composite, fragment, &clock);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol");
       return status;

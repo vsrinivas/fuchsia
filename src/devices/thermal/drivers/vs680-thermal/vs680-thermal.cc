@@ -24,13 +24,6 @@ namespace {
 using ::llcpp::fuchsia::hardware::thermal::OperatingPoint;
 using ::llcpp::fuchsia::hardware::thermal::OperatingPointEntry;
 
-enum {
-  FRAGMENT_PDEV = 0,
-  FRAGMENT_CPU_CLOCK,
-  FRAGMENT_CPU_POWER,
-  FRAGMENT_COUNT,
-};
-
 constexpr OperatingPoint kOperatingPoints = {
     .opp =
         fidl::Array<OperatingPointEntry, ::llcpp::fuchsia::hardware::thermal::MAX_DVFS_OPPS>{
@@ -53,15 +46,7 @@ zx_status_t Vs680Thermal::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT] = {};
-  size_t fragment_count = 0;
-  composite.GetFragments(fragments, FRAGMENT_COUNT, &fragment_count);
-  if (fragment_count < FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s: Failed to get fragments", __func__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
+  ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get platform device protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
@@ -80,13 +65,13 @@ zx_status_t Vs680Thermal::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  ddk::ClockProtocolClient cpu_clock(fragments[FRAGMENT_CPU_CLOCK]);
+  ddk::ClockProtocolClient cpu_clock(composite, "clock");
   if (!cpu_clock.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get clock protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::PowerProtocolClient cpu_power(fragments[FRAGMENT_CPU_POWER]);
+  ddk::PowerProtocolClient cpu_power(composite, "thermal");
   if (!cpu_power.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get power protocol", __func__);
     return ZX_ERR_NO_RESOURCES;

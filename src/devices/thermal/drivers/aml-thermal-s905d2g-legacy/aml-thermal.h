@@ -16,7 +16,6 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/thermal.h>
 
 #include "aml-cpufreq.h"
