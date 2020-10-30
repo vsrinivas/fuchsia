@@ -10,6 +10,7 @@
             "packages"
         ],
         "services": [
+            "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
