@@ -394,8 +394,9 @@ config("optimize_speed") {
   cflags = [ "-O3" ]
   ldflags = cflags
 
-  # TODO(phosek): this should be the same as for C/C++.
-  rustflags = [ "-Copt-level=z" ]
+  # TODO(http://fxbug.dev/63313): This should be the same as for C/C++. Also,
+  # we don't fully understand why -Os is smaller than -Oz.
+  rustflags = [ "-Copt-level=s" ]
   configs = [ ":linker_string_merging" ]
 }
 
