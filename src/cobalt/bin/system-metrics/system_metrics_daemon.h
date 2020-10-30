@@ -70,12 +70,26 @@ class SystemMetricsDaemon {
   friend class SystemMetricsDaemonTest;
   friend class SystemMetricsDaemonInitializationTest;
 
+  struct MetricSpecs {
+    static const MetricSpecs INVALID;
+
+    uint32_t customer_id;
+    uint32_t project_id;
+    uint32_t metric_id;
+
+    bool is_valid() const { return customer_id > 0 && project_id > 0 && metric_id > 0; }
+  };
+
+  static MetricSpecs LoadGranularErrorStatsSpecs(const char* spec_file_path);
+
   // This private constructor is intended for use in tests. |context| may
   // be null because InitializeLogger() will not be invoked. Instead,
   // pass a non-null |logger| which may be a local mock that does not use FIDL.
   SystemMetricsDaemon(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
+                      const MetricSpecs& granular_error_stats_specs,
                       fuchsia::cobalt::Logger_Sync* logger,
                       fuchsia::cobalt::Logger_Sync* component_diagnostics_logger,
+                      fuchsia::cobalt::Logger_Sync* granular_error_stats_logger,
                       std::unique_ptr<cobalt::SteadyClock> clock,
                       std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
                       std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher,
@@ -85,12 +99,14 @@ class SystemMetricsDaemon {
 
   void InitializeLogger();
   void InitializeDiagnosticsLogger();
+  void InitializeGranularErrorStatsLogger();
 
   void InitializeRootResourceHandle();
 
   // If the peer has closed the FIDL connection, automatically reconnect.
   zx_status_t ReinitializeIfPeerClosed(zx_status_t zx_status);
   zx_status_t ReinitializeDiagnosticsIfPeerClosed(zx_status_t zx_status);
+  zx_status_t ReinitializeGranularErrorStatsIfPeerClosed(zx_status_t zx_status);
 
   // Calls LogUpPingAndLifeTimeEvents,
   // and then uses the |dispatcher| passed to the constructor to
@@ -202,12 +218,15 @@ class SystemMetricsDaemon {
   bool boot_reported_ = false;
   async_dispatcher_t* const dispatcher_;
   sys::ComponentContext* context_;
+  MetricSpecs granular_error_stats_specs_;
   fuchsia::cobalt::LoggerFactorySyncPtr factory_;
   fuchsia::cobalt::LoggerSyncPtr logger_fidl_proxy_;
   fuchsia::cobalt::Logger_Sync* logger_;
   fuchsia::cobalt::LoggerFactorySyncPtr component_diagnostics_factory_;
   fuchsia::cobalt::LoggerSyncPtr component_diagnostics_logger_fidl_proxy_;
   fuchsia::cobalt::Logger_Sync* component_diagnostics_logger_;
+  fuchsia::cobalt::LoggerSyncPtr granular_error_stats_logger_fidl_proxy_;
+  fuchsia::cobalt::Logger_Sync* granular_error_stats_logger_;
   std::chrono::steady_clock::time_point start_time_;
   std::unique_ptr<cobalt::SteadyClock> clock_;
   std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher_;

@@ -52,6 +52,9 @@ test_package("cobalt_tests") {
     },
 
     {
+      log_settings = {
+        max_severity = "ERROR"
+      }
       name = "cobalt_system_metrics_unittests"
       environments = basic_envs
     },
@@ -88,6 +91,20 @@ test_package("cobalt_tests") {
     {
       path = rebase_path("system-metrics/log_stats_component_allowlist.txt")
       dest = "log_stats_component_allowlist.txt"
+    },
+    {
+      path = rebase_path("system-metrics/granular_error_stats_specs.txt")
+      dest = "default_granular_error_stats_specs.txt"
+    },
+    {
+      path = rebase_path(
+              "system-metrics/testing/alternate_granular_error_stats_specs_for_testing.txt")
+      dest = "alternate_granular_error_stats_specs.txt"
+    },
+    {
+      path = rebase_path(
+              "system-metrics/testing/bad_granular_error_stats_specs_for_testing.txt")
+      dest = "bad_granular_error_stats_specs.txt"
     },
   ]
 }

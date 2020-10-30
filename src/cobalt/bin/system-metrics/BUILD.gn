@@ -89,8 +89,13 @@ executable("system-metrics") {
 config_data("config") {
   for_pkg = "cobalt_system_metrics"
 
-  # This is the default allowlist included in core. Other products can define their own allowlist.
-  sources = [ "log_stats_component_allowlist.txt" ]
+  sources = [
+    # The metric specs for granular error stats.
+    "granular_error_stats_specs.txt",
+
+    # The default allowlist included in core. Other products can define their own allowlist.
+    "log_stats_component_allowlist.txt",
+  ]
 }
 
 package("cobalt_system_metrics") {

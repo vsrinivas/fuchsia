@@ -21,6 +21,7 @@
 #include <zircon/status.h>
 
 #include <chrono>
+#include <fstream>
 #include <memory>
 #include <numeric>
 #include <thread>
@@ -51,17 +52,45 @@ using fuchsia_system_metrics::FuchsiaUptimeMetricDimensionUptimeRange;
 using std::chrono::steady_clock;
 
 namespace {
+
 // Given a number of seconds, return the number of seconds before the next
 // multiple of 1 hour.
 std::chrono::seconds SecondsBeforeNextHour(std::chrono::seconds uptime) {
   return std::chrono::seconds(3600 - (uptime.count() % 3600));
 }
+
+constexpr char kDefaultGranularErrorStatsSpecFilePath[] =
+    "/config/data/granular_error_stats_specs.txt";
+
 }  // namespace
+
+const SystemMetricsDaemon::MetricSpecs SystemMetricsDaemon::MetricSpecs::INVALID = {0, 0, 0};
+
+// static
+SystemMetricsDaemon::MetricSpecs SystemMetricsDaemon::LoadGranularErrorStatsSpecs(
+    const char* spec_file_path) {
+  std::ifstream spec_file_stream(spec_file_path);
+  SystemMetricsDaemon::MetricSpecs result;
+  if (!(spec_file_stream >> result.customer_id)) {
+    FX_LOGS(ERROR) << "Unable to read customer ID from granular error stats spec file";
+    return SystemMetricsDaemon::MetricSpecs::INVALID;
+  }
+  if (!(spec_file_stream >> result.project_id)) {
+    FX_LOGS(ERROR) << "Unable to read project ID from granular error stats spec file";
+    return SystemMetricsDaemon::MetricSpecs::INVALID;
+  }
+  if (!(spec_file_stream >> result.metric_id)) {
+    FX_LOGS(ERROR) << "Unable to read metric ID from granular error stats spec file";
+    return SystemMetricsDaemon::MetricSpecs::INVALID;
+  }
+  return result;
+}
 
 SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
                                          sys::ComponentContext* context)
     : SystemMetricsDaemon(
-          dispatcher, context, nullptr, nullptr,
+          dispatcher, context, LoadGranularErrorStatsSpecs(kDefaultGranularErrorStatsSpecFilePath),
+          nullptr, nullptr, nullptr,
           std::unique_ptr<cobalt::SteadyClock>(new cobalt::RealSteadyClock()),
           std::unique_ptr<cobalt::CpuStatsFetcher>(new cobalt::CpuStatsFetcherImpl()),
           std::unique_ptr<cobalt::TemperatureFetcher>(new cobalt::TemperatureFetcherImpl()),
@@ -73,6 +102,7 @@ SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
               new cobalt::ArchivistStatsFetcherImpl(dispatcher, context))) {
   InitializeLogger();
   InitializeDiagnosticsLogger();
+  InitializeGranularErrorStatsLogger();
   // Connect activity listener to service provider.
   activity_provider_ = context->svc()->Connect<fuchsia::ui::activity::Provider>();
   activity_provider_->WatchState(activity_listener_->NewHandle(dispatcher));
@@ -80,8 +110,9 @@ SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
 
 SystemMetricsDaemon::SystemMetricsDaemon(
     async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-    fuchsia::cobalt::Logger_Sync* logger,
+    const MetricSpecs& granular_error_stats_specs, fuchsia::cobalt::Logger_Sync* logger,
     fuchsia::cobalt::Logger_Sync* component_diagnostics_logger,
+    fuchsia::cobalt::Logger_Sync* granular_error_stats_logger,
     std::unique_ptr<cobalt::SteadyClock> clock,
     std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
     std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher,
@@ -90,8 +121,10 @@ SystemMetricsDaemon::SystemMetricsDaemon(
     std::unique_ptr<cobalt::ArchivistStatsFetcher> archivist_stats_fetcher)
     : dispatcher_(dispatcher),
       context_(context),
+      granular_error_stats_specs_(granular_error_stats_specs),
       logger_(logger),
       component_diagnostics_logger_(component_diagnostics_logger),
+      granular_error_stats_logger_(granular_error_stats_logger),
       start_time_(clock->Now()),
       clock_(std::move(clock)),
       cpu_stats_fetcher_(std::move(cpu_stats_fetcher)),
@@ -454,23 +487,33 @@ void SystemMetricsDaemon::LogLogStats() {
               .as_count_event(0, it.second));
     }
 
+    fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+    ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events), &status));
+    if (status != fuchsia::cobalt::Status::OK) {
+      FX_LOGS(ERROR) << "LogCobaltEvents() for error log stats returned status="
+                     << StatusToString(status);
+    }
+
+    std::vector<CobaltEvent> granular_events;
     for (auto& record : metrics.granular_stats) {
       // Component can only be up to 64 bytes, so truncate the beginning of the file path if it
       // doesn't fit.
       std::string component = record.file_path.size() > 64
                                   ? record.file_path.substr(record.file_path.size() - 64)
                                   : record.file_path;
-      events.push_back(CobaltEventBuilder(fuchsia_system_metrics::kGranularErrorLogCountMetricId)
-                           .with_event_code((record.line_no - 1) % 1023)
-                           .with_component(component)
-                           .as_count_event(0, record.count));
+      granular_events.push_back(CobaltEventBuilder(granular_error_stats_specs_.metric_id)
+                                    .with_event_code((record.line_no - 1) % 1023)
+                                    .with_component(component)
+                                    .as_count_event(0, record.count));
     }
-
-    fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-    ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events), &status));
-    if (status != fuchsia::cobalt::Status::OK) {
-      FX_LOGS(ERROR) << "LogCobaltEvents() for error log stats returned status="
-                     << StatusToString(status);
+    if (!granular_events.empty()) {
+      status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+      ReinitializeGranularErrorStatsIfPeerClosed(
+          granular_error_stats_logger_->LogCobaltEvents(std::move(granular_events), &status));
+      if (status != fuchsia::cobalt::Status::OK) {
+        FX_LOGS(ERROR) << "LogCobaltEvents() for granular error log stats returned status="
+                       << StatusToString(status);
+      }
     }
   });
 }
@@ -642,6 +685,14 @@ zx_status_t SystemMetricsDaemon::ReinitializeDiagnosticsIfPeerClosed(zx_status_t
   return zx_status;
 }
 
+zx_status_t SystemMetricsDaemon::ReinitializeGranularErrorStatsIfPeerClosed(zx_status_t zx_status) {
+  if (zx_status == ZX_ERR_PEER_CLOSED) {
+    FX_LOGS(ERROR) << "Granular error stats logger connection closed. Reconnecting...";
+    InitializeGranularErrorStatsLogger();
+  }
+  return zx_status;
+}
+
 void SystemMetricsDaemon::InitializeDiagnosticsLogger() {
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   context_->svc()->Connect(factory_.NewRequest());
@@ -661,6 +712,29 @@ void SystemMetricsDaemon::InitializeDiagnosticsLogger() {
   component_diagnostics_logger_ = component_diagnostics_logger_fidl_proxy_.get();
   if (!component_diagnostics_logger_) {
     FX_LOGS(ERROR) << "Unable to get diagnostics Logger from factory.";
+  }
+}
+
+void SystemMetricsDaemon::InitializeGranularErrorStatsLogger() {
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  context_->svc()->Connect(factory_.NewRequest());
+  if (!factory_) {
+    FX_LOGS(ERROR) << "Unable to get LoggerFactory.";
+    return;
+  }
+
+  factory_->CreateLoggerFromProjectSpec(
+      granular_error_stats_specs_.customer_id, granular_error_stats_specs_.project_id,
+      granular_error_stats_logger_fidl_proxy_.NewRequest(), &status);
+
+  if (status != fuchsia::cobalt::Status::OK) {
+    FX_LOGS(ERROR) << "Unable to get granular error stats Logger from factory. Status="
+                   << StatusToString(status);
+    return;
+  }
+  granular_error_stats_logger_ = granular_error_stats_logger_fidl_proxy_.get();
+  if (!granular_error_stats_logger_) {
+    FX_LOGS(ERROR) << "Unable to get granular error stats Logger from factory.";
   }
 }
 
