@@ -305,7 +305,6 @@ struct LtkDef {
 }
 option_encoding!(OptionLtkDef, sys::Ltk, "LtkDef");
 
-// TODO(fxbug.dev/59274): Do not use Serde remote for FIDL tables.
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "LeData")]
 #[serde(rename_all = "camelCase")]
@@ -325,7 +324,6 @@ struct LeDataDef {
 }
 option_encoding!(OptionLeDataDef, LeData, "LeDataDef");
 
-// TODO(fxbug.dev/59274): Do not use Serde remote for FIDL tables.
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "BredrData")]
 #[serde(rename_all = "camelCase")]
@@ -403,7 +401,6 @@ impl TryInto<BondingData> for BondingDataDef {
     }
 }
 
-// TODO(fxbug.dev/59274): Do not use Serde remote for FIDL tables.
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "HostData")]
 #[serde(rename_all = "camelCase")]
