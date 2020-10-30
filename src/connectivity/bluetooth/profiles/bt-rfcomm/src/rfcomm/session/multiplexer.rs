@@ -55,7 +55,7 @@ impl Default for SessionParameters {
 }
 
 /// The current state of the session parameters.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ParameterNegotiationState {
     /// Parameters have not been negotiated.
     NotNegotiated,
@@ -73,14 +73,6 @@ impl ParameterNegotiationState {
         match self {
             Self::Negotiated(params) => *params,
             Self::Negotiating | Self::NotNegotiated => SessionParameters::default(),
-        }
-    }
-
-    /// Returns true if the parameters have been negotiated.
-    fn is_negotiated(&self) -> bool {
-        match self {
-            Self::Negotiated(_) => true,
-            Self::Negotiating | Self::NotNegotiated => false,
         }
     }
 
@@ -122,6 +114,11 @@ impl SessionMultiplexer {
         }
     }
 
+    /// Resets the multiplexer back to its initial state with no opened channels.
+    pub fn reset(&mut self) {
+        *self = Self::create();
+    }
+
     pub fn role(&self) -> Role {
         self.role
     }
@@ -141,7 +138,12 @@ impl SessionMultiplexer {
 
     /// Returns true if the session parameters have been negotiated.
     pub fn parameters_negotiated(&self) -> bool {
-        self.parameters.is_negotiated()
+        std::matches!(&self.parameters, ParameterNegotiationState::Negotiated(_))
+    }
+
+    /// Returns true if the session parameters are currently negotiating.
+    pub fn negotiating_parameters(&self) -> bool {
+        self.parameters == ParameterNegotiationState::Negotiating
     }
 
     /// Returns the parameters associated with this session.
@@ -151,6 +153,10 @@ impl SessionMultiplexer {
 
     pub fn set_parameters_negotiating(&mut self) {
         self.parameters = ParameterNegotiationState::Negotiating;
+    }
+
+    pub fn reset_parameters(&mut self) {
+        self.parameters = ParameterNegotiationState::NotNegotiated;
     }
 
     /// Negotiates the parameters associated with this session - returns the session parameters

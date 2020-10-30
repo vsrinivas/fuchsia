@@ -204,7 +204,7 @@ fn length_to_ea_format(mut length: usize) -> Vec<u8> {
 /// Some MuxCommands are associated with a DLCI - we uniquely identify such a command by it's
 /// optional DLCI and command type.
 #[derive(Debug, Eq, Hash, PartialEq)]
-pub struct MuxCommandIdentifier(Option<DLCI>, MuxCommandMarker);
+pub struct MuxCommandIdentifier(pub Option<DLCI>, pub MuxCommandMarker);
 
 /// Represents an RFCOMM multiplexer command.
 #[derive(Clone, Debug, PartialEq)]

@@ -25,7 +25,7 @@ use crate::rfcomm::channel::{Credits, FlowControlMode, FlowControlledData};
 use crate::rfcomm::frame::{
     mux_commands::{
         CreditBasedFlowHandshake, ModemStatusParams, MuxCommand, MuxCommandIdentifier,
-        MuxCommandParams, NonSupportedCommandParams, ParameterNegotiationParams,
+        MuxCommandMarker, MuxCommandParams, NonSupportedCommandParams, ParameterNegotiationParams,
         DEFAULT_INITIAL_CREDITS,
     },
     Encodable, Frame, FrameData, FrameParseError, UIHData, UserData,
@@ -493,21 +493,33 @@ impl SessionInner {
     async fn handle_disconnect_command(&mut self, dlci: DLCI) -> bool {
         trace!("Received Disconnect for DLCI {:?}", dlci);
 
-        // The default response for Disconnect is a UA. See RFCOMM 5.2.2 and GSM 7.10 Section 5.3.4.
-        if dlci.is_user() {
+        let terminate_session = if dlci.is_user() {
+            let pn_identifier =
+                MuxCommandIdentifier(Some(dlci), MuxCommandMarker::ParameterNegotiation);
+            // Peer rejected our request to negotiate parameters for the `dlci`.
+            // See RFCOMM 5.5.3. Reset the session parameters and let peer retry if needed.
+            if self.outstanding_frames.remove_mux_command(&pn_identifier).is_some() {
+                if self.multiplexer().negotiating_parameters() {
+                    self.multiplexer().reset_parameters();
+                }
+                self.send_ua_response(dlci).await;
+                return false;
+            }
+
+            // Otherwise, it's a request to close the DLC.
             if !self.multiplexer().close_session_channel(&dlci) {
                 warn!("Received Disc command for unopened DLCI: {:?}", dlci);
                 self.send_dm_response(dlci).await;
-            } else {
-                self.send_ua_response(dlci).await;
+                return false;
             }
             false
         } else {
-            // If we receive a disconnect over the Mux Control DLCI, we should request to
-            // terminate the entire session.
-            self.send_ua_response(dlci).await;
+            // Disconnect over the Mux Control DLCI; we should terminate the session.
             true
-        }
+        };
+        // The default response for Disconnect is a UA. See RFCOMM 5.2.2 and GSM 7.10 Section 5.3.4.
+        self.send_ua_response(dlci).await;
+        terminate_session
     }
 
     /// Handles a received user `user_data` payload with optional `credits` and routes to the RFCOMM
@@ -528,48 +540,72 @@ impl SessionInner {
 
     /// Handles an UnnumberedAcknowledgement response over the provided `dlci`.
     async fn handle_ua_response(&mut self, dlci: DLCI) {
-        match self.outstanding_frames.remove_frame(&dlci) {
-            Some(frame) => {
-                match frame.data {
-                    FrameData::SetAsynchronousBalancedMode if dlci.is_mux_control() => {
-                        // If we are not negotiating anymore, mux startup was either canceled
-                        // or completed. No need to do anything.
-                        if self.role() != Role::Negotiating {
-                            trace!("Received response when mux startup was either canceled or completed: {:?}", self.role());
-                            return;
-                        }
-                        // Otherwise, assume the initiator role and complete startup.
-                        if let Err(e) = self.multiplexer().start(Role::Initiator) {
-                            warn!("Mux startup failed with error: {:?}", e);
-                        }
-                        // Initiate parameter negotiation for session-wide parameters if there are
-                        // any pending open channel requests. Choosing the first channel is OK,
-                        // since we mainly care about setting session-wide (not DLC specific)
-                        // parameters.
-                        if let Some(Ok(dlci)) = self
-                            .pending_channels
-                            .first()
-                            .map(|sc| sc.to_dlci(self.role().opposite_role()))
-                        {
-                            // Error case is irrelevant since we just started the multiplexer.
-                            let _ = self.start_parameter_negotiation(dlci).await;
-                        }
-                    }
-                    FrameData::SetAsynchronousBalancedMode => {
-                        // Positive acknowledgement to open a remote channel on a user DLCI.
-                        if self.establish_session_channel(dlci).await {
-                            // After successfully opening the RFCOMM channel, report our
-                            // current Modem signals to indicate readiness.
-                            self.send_modem_status_command(dlci).await;
-                        }
-                    }
-                    _frame_type => {
-                        // TODO(fxbug.dev/59585): Handle UA response for other frame types.
-                    }
+        // TODO(fxbug.dev/63104): Handle UA response for Disconnect commands when we wire
+        // up the SessionChannel frame sender to SessionInner.
+        match self.outstanding_frames.remove_frame(&dlci).map(|frame| frame.data) {
+            Some(FrameData::SetAsynchronousBalancedMode) if dlci.is_mux_control() => {
+                // If we are not negotiating anymore, mux startup was either canceled
+                // or completed. No need to do anything.
+                if self.role() != Role::Negotiating {
+                    trace!(
+                        "Received response when mux startup was either canceled or completed: {:?}",
+                        self.role()
+                    );
+                    return;
+                }
+                // Otherwise, assume the initiator role and complete startup. Starting should never
+                // fail because we are guaranteed to be in the Negotiating role.
+                self.multiplexer().start(Role::Initiator).unwrap();
+                // Initiate parameter negotiation for session-wide parameters if there are
+                // any pending open channel requests. Choosing the first channel is OK,
+                // since we mainly care about setting session-wide (not DLC specific)
+                // parameters.
+                if let Some(Ok(dlci)) =
+                    self.pending_channels.first().map(|sc| sc.to_dlci(self.role().opposite_role()))
+                {
+                    // Error case is irrelevant since we just started the multiplexer.
+                    let _ = self.start_parameter_negotiation(dlci).await;
                 }
             }
+            Some(FrameData::SetAsynchronousBalancedMode) => {
+                // Positive acknowledgement to open a remote channel on a user DLCI.
+                if self.establish_session_channel(dlci).await {
+                    // After successfully opening the RFCOMM channel, report our
+                    // current Modem signals to indicate readiness.
+                    self.send_modem_status_command(dlci).await;
+                }
+            }
+            Some(_) | None => warn!("Received unexpected UA response over DLCI: {:?}", dlci),
+        }
+    }
+
+    /// Handles a DisconnectedMode response over the provided `dlci`.
+    async fn handle_dm_response(&mut self, dlci: DLCI) {
+        // See GSM 7.10 Section 5.5.3 for the usage of the DM response.
+        // TODO(fxbug.dev/63104): Handle DM response for Disconnect commands when we wire
+        // up the SessionChannel frame sender to SessionInner.
+        match self.outstanding_frames.remove_frame(&dlci).map(|frame| frame.data) {
+            Some(FrameData::SetAsynchronousBalancedMode) if dlci.is_mux_control() => {
+                // Peer rejected our request to start the Session multiplexer - reset and
+                // let the peer retry.
+                self.multiplexer().reset();
+            }
+            Some(FrameData::SetAsynchronousBalancedMode) => {
+                // Peer rejected our request to open a user DLC - close the DLC and let
+                // the peer retry.
+                let _ = self.multiplexer().close_session_channel(&dlci);
+            }
+            Some(frame_data) => warn!("Unexpected DM for {:?}", frame_data),
             None => {
-                warn!("Received unexpected UA response over DLCI: {:?}", dlci);
+                let pn_identifier =
+                    MuxCommandIdentifier(Some(dlci), MuxCommandMarker::ParameterNegotiation);
+                // Special case: Peer rejected our request to negotiate parameters for the `dlci`.
+                // See RFCOMM 5.5.3. Reset the session parameters and let peer retry if needed.
+                if self.outstanding_frames.remove_mux_command(&pn_identifier).is_some() {
+                    if self.multiplexer().negotiating_parameters() {
+                        self.multiplexer().reset_parameters();
+                    }
+                }
             }
         }
     }
@@ -586,9 +622,7 @@ impl SessionInner {
                 self.handle_ua_response(dlci).await;
             }
             FrameData::DisconnectedMode => {
-                // TODO(fxbug.dev/59585): Handle DM response when the initiator role is
-                // supported.
-                return Err(RfcommError::NotImplemented);
+                self.handle_dm_response(dlci).await;
             }
             FrameData::Disconnect => return Ok(self.handle_disconnect_command(dlci).await),
             FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(data)) => {
@@ -1263,7 +1297,7 @@ mod tests {
     fn test_establish_dlci_request_relays_channel_to_channel_open_fn() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        // Crete and start a SessionInner that relays any opened RFCOMM channels.
+        // Create and start a SessionInner that relays any opened RFCOMM channels.
         let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session();
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
@@ -1322,7 +1356,7 @@ mod tests {
     fn test_received_user_data_is_relayed_to_and_from_profile_client() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        // Crete and start a SessionInner that relays any opened RFCOMM channels.
+        // Create and start a SessionInner that relays any opened RFCOMM channels.
         let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session();
         let mut outgoing_frames_stream = Box::pin(outgoing_frames.next());
         assert!(session.multiplexer().start(Role::Responder).is_ok());
@@ -1419,7 +1453,7 @@ mod tests {
     fn test_disconnect_over_user_dlci_closes_session_channel() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        // Crete and start a SessionInner that relays any opened RFCOMM channel.
+        // Create and start a SessionInner that relays any opened RFCOMM channel.
         let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session();
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
@@ -1529,6 +1563,38 @@ mod tests {
     }
 
     #[test]
+    fn test_peer_rejects_multiplexer_startup() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let (mut session, mut outgoing_frames, _rfcomm_channels) = setup_session();
+        assert!(!session.multiplexer().started());
+        // Initiate multiplexer startup - we expect to send a SABM frame.
+        {
+            let mut start_mux_fut = Box::pin(session.start_multiplexer());
+            assert!(exec.run_until_stalled(&mut start_mux_fut).is_pending());
+            expect_frame(
+                &mut exec,
+                &mut outgoing_frames,
+                FrameData::SetAsynchronousBalancedMode,
+                DLCI::MUX_CONTROL_DLCI,
+            );
+            assert_matches!(exec.run_until_stalled(&mut start_mux_fut), Poll::Ready(Ok(_)));
+        }
+        // Simulate peer responding negatively with a DM - this should cancel startup.
+        {
+            let mut handle_fut =
+                Box::pin(session.handle_frame(Frame::make_dm_response(
+                    Role::Unassigned,
+                    DLCI::MUX_CONTROL_DLCI,
+                )));
+            assert!(exec.run_until_stalled(&mut handle_fut).is_ready());
+        }
+        // The multiplexer should not be started and should still be Unassigned.
+        assert!(!session.multiplexer().started());
+        assert_eq!(session.role(), Role::Unassigned);
+    }
+
+    #[test]
     fn test_initiating_parameter_negotiation_expects_response() {
         let mut exec = fasync::Executor::new().unwrap();
 
@@ -1572,10 +1638,91 @@ mod tests {
     }
 
     #[test]
+    fn test_peer_rejects_parameter_negotiation_with_dm() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let (mut session, mut outgoing_frames, _rfcomm_channels) = setup_session();
+        assert!(session.multiplexer().start(Role::Initiator).is_ok());
+
+        // Initiate a PN request - expect an outgoing PN command.
+        let user_dlci = DLCI::try_from(20).unwrap();
+        {
+            let mut pn_fut = Box::pin(session.start_parameter_negotiation(user_dlci));
+            assert!(exec.run_until_stalled(&mut pn_fut).is_pending());
+            expect_mux_command(
+                &mut exec,
+                &mut outgoing_frames,
+                MuxCommandMarker::ParameterNegotiation,
+            );
+            assert_matches!(exec.run_until_stalled(&mut pn_fut), Poll::Ready(Ok(_)));
+        }
+        assert_eq!(
+            session.multiplexer().parameter_negotiation_state(),
+            ParameterNegotiationState::Negotiating
+        );
+        // Simulate peer responding negatively with a DM response.
+        {
+            let mut handle_fut =
+                Box::pin(session.handle_frame(Frame::make_dm_response(Role::Responder, user_dlci)));
+            assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(_)));
+        }
+        // The session-wide parameters should not be negotiated.
+        assert_eq!(
+            session.multiplexer().parameter_negotiation_state(),
+            ParameterNegotiationState::NotNegotiated
+        );
+    }
+
+    #[test]
+    fn test_peer_rejects_parameter_negotiation_with_disc() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let (mut session, mut outgoing_frames, _rfcomm_channels) = setup_session();
+        assert!(session.multiplexer().start(Role::Initiator).is_ok());
+
+        // Initiate a PN request - expect an outgoing PN command.
+        let user_dlci = DLCI::try_from(26).unwrap();
+        {
+            let mut pn_fut = Box::pin(session.start_parameter_negotiation(user_dlci));
+            assert!(exec.run_until_stalled(&mut pn_fut).is_pending());
+            expect_mux_command(
+                &mut exec,
+                &mut outgoing_frames,
+                MuxCommandMarker::ParameterNegotiation,
+            );
+            assert_matches!(exec.run_until_stalled(&mut pn_fut), Poll::Ready(Ok(_)));
+        }
+        assert_eq!(
+            session.multiplexer().parameter_negotiation_state(),
+            ParameterNegotiationState::Negotiating
+        );
+        // Simulate peer responding negatively with a Disconnect command - we expect to positively
+        // reply with a UA.
+        {
+            let mut handle_fut = Box::pin(
+                session.handle_frame(Frame::make_disc_command(Role::Responder, user_dlci)),
+            );
+            assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
+            expect_frame(
+                &mut exec,
+                &mut outgoing_frames,
+                FrameData::UnnumberedAcknowledgement,
+                user_dlci,
+            );
+            assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(_)));
+        }
+        // The session-wide parameters should not be negotiated.
+        assert_eq!(
+            session.multiplexer().parameter_negotiation_state(),
+            ParameterNegotiationState::NotNegotiated
+        );
+    }
+
+    #[test]
     fn test_open_channel_request_establishes_channel_after_mux_startup_and_pn() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        // Crete and start a SessionInner that relays any opened RFCOMM channels.
+        // Create and start a SessionInner that relays any opened RFCOMM channels.
         let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session();
 
         // Initiate an open RFCOMM channel request with a random valid ServerChannel.
@@ -1648,10 +1795,49 @@ mod tests {
     }
 
     #[test]
+    fn test_open_channel_request_rejected_by_peer() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        // Start SessionInner with negotiated parameters - don't expect any relayed channels.
+        let (mut session, mut outgoing_frames, _channel_receiver) = setup_session();
+        session.channel_opened_fn = Box::new(|_server_channel, _channel| {
+            async { panic!("Don't expect channels!") }.boxed()
+        });
+        assert!(session.multiplexer().start(Role::Initiator).is_ok());
+        session.multiplexer().negotiate_parameters(SessionParameters::default());
+
+        // Initiate an open RFCOMM channel request with a random valid ServerChannel. Expect
+        // an outgoing SABM.
+        let server_channel = ServerChannel(5);
+        let expected_dlci = server_channel.to_dlci(Role::Responder).unwrap();
+        {
+            let mut open_fut = Box::pin(session.open_remote_channel(server_channel));
+            assert!(exec.run_until_stalled(&mut open_fut).is_pending());
+            expect_frame(
+                &mut exec,
+                &mut outgoing_frames,
+                FrameData::SetAsynchronousBalancedMode,
+                expected_dlci,
+            );
+            assert_matches!(exec.run_until_stalled(&mut open_fut), Poll::Ready(Ok(_)));
+        }
+        {
+            // Simulate peer responding negatively with a DM.
+            let mut handle_fut = Box::pin(
+                session
+                    .handle_frame(Frame::make_dm_response(Role::Responder, DLCI::MUX_CONTROL_DLCI)),
+            );
+            assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(_)));
+        }
+        // The DLCI should not be established as peer rejected our request.
+        assert!(!session.multiplexer().dlci_established(&expected_dlci));
+    }
+
+    #[test]
     fn test_open_multiple_channels_establishes_channels_after_acknowledgement() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        // Crete and start a SessionInner that relays any opened RFCOMM channels.
+        // Create and start a SessionInner that relays any opened RFCOMM channels.
         let (mut session, mut outgoing_frames, _channel_receiver) = setup_session();
 
         // The session multiplexer has started.
