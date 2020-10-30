@@ -7,19 +7,29 @@ use anyhow::{format_err, Error};
 use serde_json::{from_value, to_value, Value};
 
 use crate::setui::types::{IntlInfo, NetworkType, SetUiResult};
+use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_settings::{
-    AudioMarker, ConfigurationInterfaces, IntlMarker, SetupMarker, SetupSettings,
+    self as fsettings, AudioMarker, AudioStreamSettingSource, AudioStreamSettings,
+    ConfigurationInterfaces, DisplayMarker, DisplaySettings, IntlMarker, SetupMarker,
+    SetupSettings, Volume,
 };
 use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog::macros::fx_log_info;
 
 /// Facade providing access to SetUi interfaces.
 #[derive(Debug)]
-pub struct SetUiFacade {}
+pub struct SetUiFacade {
+    /// Audio proxy that may be optionally provided for testing. The proxy is not cached during
+    /// normal operation.
+    audio_proxy: Option<fsettings::AudioProxy>,
+
+    /// Optional Display proxy for testing, similar to `audio_proxy`.
+    display_proxy: Option<fsettings::DisplayProxy>,
+}
 
 impl SetUiFacade {
     pub fn new() -> SetUiFacade {
-        SetUiFacade {}
+        SetUiFacade { audio_proxy: None, display_proxy: None }
     }
 
     /// Sets network option used by device setup.
@@ -118,12 +128,75 @@ impl SetUiFacade {
             _ => Err(format_err!("Cannot read audio input.")),
         }
     }
+
+    /// Sets the display brightness via `fuchsia.settings.Display.Set`.
+    ///
+    /// # Arguments
+    /// * `args`: JSON value containing the desired brightness level as f32.
+    pub async fn set_brightness(&self, args: Value) -> Result<Value, Error> {
+        let brightness: f32 = from_value(args)?;
+
+        // Use the test proxy if one was provided, otherwise connect to the discoverable Display
+        // service.
+        let display_proxy = match self.display_proxy.as_ref() {
+            Some(proxy) => proxy.clone(),
+            None => match connect_to_service::<DisplayMarker>() {
+                Ok(proxy) => proxy,
+                Err(e) => bail!("Failed to connect to Display service {:?}.", e),
+            },
+        };
+
+        let settings = DisplaySettings {
+            auto_brightness: Some(false),
+            brightness_value: Some(brightness),
+            ..DisplaySettings::empty()
+        };
+        match display_proxy.set(settings).await? {
+            Ok(_) => Ok(to_value(SetUiResult::Success)?),
+            Err(e) => Err(format_err!("SetBrightness failed with err {:?}", e)),
+        }
+    }
+
+    /// Sets the media volume level via `fuchsia.settings.Audio.Set`.
+    ///
+    /// # Arguments
+    /// * `args`: JSON value containing the desired volume level as f32.
+    pub async fn set_media_volume(&self, args: Value) -> Result<Value, Error> {
+        let volume: f32 = from_value(args)?;
+
+        // Use the test proxy if one was provided, otherwise connect to the discoverable Audio
+        // service.
+        let audio_proxy = match self.audio_proxy.as_ref() {
+            Some(proxy) => proxy.clone(),
+            None => match connect_to_service::<AudioMarker>() {
+                Ok(proxy) => proxy,
+                Err(e) => bail!("Failed to connect to Display service {:?}.", e),
+            },
+        };
+
+        let stream_settings = AudioStreamSettings {
+            stream: Some(AudioRenderUsage::Media),
+            source: Some(AudioStreamSettingSource::User),
+            user_volume: Some(Volume { level: Some(volume), muted: Some(false) }),
+        };
+        let settings =
+            fsettings::AudioSettings { streams: Some(vec![stream_settings]), input: None };
+
+        match audio_proxy.set(settings).await? {
+            Ok(_) => Ok(to_value(SetUiResult::Success)?),
+            Err(e) => Err(format_err!("SetVolume failed with err {:?}", e)),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::common_utils::test::assert_value_round_trips_as;
     use crate::setui::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
+    use fidl::endpoints::create_proxy_and_stream;
+    use fuchsia_async as fasync;
+    use futures::TryStreamExt;
     use serde_json::json;
 
     fn make_intl_info() -> IntlInfo {
@@ -148,5 +221,79 @@ mod tests {
                 "hour_cycle": "H12",
             }),
         );
+    }
+
+    // Tests that `set_brightness` correctly sends a request to the Display service.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_brightness() {
+        let brightness = 0.5f32;
+        let (proxy, mut stream) = create_proxy_and_stream::<DisplayMarker>().unwrap();
+
+        // Create a facade future that sends a request to `proxy`.
+        let facade = SetUiFacade { audio_proxy: None, display_proxy: Some(proxy) };
+        let facade_fut = async move {
+            assert_eq!(
+                facade.set_brightness(to_value(brightness).unwrap()).await.unwrap(),
+                to_value(SetUiResult::Success).unwrap()
+            );
+        };
+
+        // Create a future to service the request stream.
+        let stream_fut = async move {
+            match stream.try_next().await {
+                Ok(Some(fsettings::DisplayRequest::Set { settings, responder })) => {
+                    assert_eq!(
+                        settings,
+                        DisplaySettings {
+                            auto_brightness: Some(false),
+                            brightness_value: Some(brightness),
+                            ..DisplaySettings::empty()
+                        }
+                    );
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                other => panic!("Unexpected stream item: {:?}", other),
+            }
+        };
+
+        futures::future::join(facade_fut, stream_fut).await;
+    }
+
+    // Tests that `set_media_volume` correctly sends a request to the Audio service.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_media_volume() {
+        let volume = 0.5f32;
+        let (proxy, mut stream) = create_proxy_and_stream::<AudioMarker>().unwrap();
+
+        // Create a facade future that sends a request to `proxy`.
+        let facade = SetUiFacade { audio_proxy: Some(proxy), display_proxy: None };
+        let facade_fut = async move {
+            assert_eq!(
+                facade.set_media_volume(to_value(volume).unwrap()).await.unwrap(),
+                to_value(SetUiResult::Success).unwrap()
+            );
+        };
+
+        // Create a future to service the request stream.
+        let stream_fut = async move {
+            match stream.try_next().await {
+                Ok(Some(fsettings::AudioRequest::Set { settings, responder })) => {
+                    let mut streams = settings.streams.unwrap();
+                    assert_eq!(1, streams.len());
+                    assert_eq!(
+                        streams.pop().unwrap(),
+                        AudioStreamSettings {
+                            stream: Some(AudioRenderUsage::Media),
+                            source: Some(AudioStreamSettingSource::User),
+                            user_volume: Some(Volume { level: Some(volume), muted: Some(false) }),
+                        }
+                    );
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                other => panic!("Unexpected stream item: {:?}", other),
+            }
+        };
+
+        futures::future::join(facade_fut, stream_fut).await;
     }
 }

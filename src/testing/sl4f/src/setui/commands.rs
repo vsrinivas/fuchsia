@@ -19,6 +19,8 @@ impl Facade for SetUiFacade {
             SetUiMethod::SetIntl => self.set_intl_setting(args).await,
             SetUiMethod::GetIntl => self.get_intl_setting().await,
             SetUiMethod::IsMicMuted => self.is_mic_muted().await,
+            SetUiMethod::SetBrightness => self.set_brightness(args).await,
+            SetUiMethod::SetMediaVolume => self.set_media_volume(args).await,
         }
     }
 }

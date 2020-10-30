@@ -76,6 +76,7 @@
             "fuchsia.process.Launcher",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.settings.Audio",
+            "fuchsia.settings.Display",
             "fuchsia.settings.Intl",
             "fuchsia.settings.Setup",
             "fuchsia.sys.Launcher",

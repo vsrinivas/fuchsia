@@ -13,6 +13,8 @@ pub enum SetUiMethod {
     GetNetwork,
     SetIntl,
     GetIntl,
+    SetBrightness,
+    SetMediaVolume,
 }
 
 impl std::str::FromStr for SetUiMethod {
@@ -25,6 +27,8 @@ impl std::str::FromStr for SetUiMethod {
             "SetIntl" => Ok(SetUiMethod::SetIntl),
             "GetIntl" => Ok(SetUiMethod::GetIntl),
             "IsMicMuted" => Ok(SetUiMethod::IsMicMuted),
+            "SetBrightness" => Ok(SetUiMethod::SetBrightness),
+            "SetMediaVolume" => Ok(SetUiMethod::SetMediaVolume),
             _ => return Err(format_err!("invalid SetUi SL4F method: {}", method)),
         }
     }
