@@ -5,16 +5,18 @@
 package checklicenses
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"sync"
 )
 
 type File struct {
-	Name    string
-	Path    string    `json:"-"`
-	Symlink string    `json:"-"`
-	Parent  *FileTree `json:"-"`
+	Name     string
+	Path     string     `json:"-"`
+	Symlink  string     `json:"-"`
+	Parent   *FileTree  `json:"-"`
+	Licenses []*License `json:"licenses"`
 }
 
 func NewFile(path string, parent *FileTree) (*File, error) {
@@ -33,6 +35,25 @@ func NewFile(path string, parent *FileTree) (*File, error) {
 		Parent:  parent,
 	}
 	return globalFileMap.insertFileIfMissing(file), nil
+}
+
+// Use a custom Marshal function to make Files easier to read in JSON:
+// reduce associated license information down to a string list.
+func (f *File) MarshalJSON() ([]byte, error) {
+	type Alias File
+	licenseList := []string{}
+
+	for _, l := range f.Licenses {
+		licenseList = append(licenseList, l.Category)
+	}
+
+	return json.Marshal(&struct {
+		*Alias
+		Licenses []string `json:"licenses"`
+	}{
+		Alias:    (*Alias)(f),
+		Licenses: licenseList,
+	})
 }
 
 // ============================================================================

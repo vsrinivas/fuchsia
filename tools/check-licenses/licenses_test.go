@@ -40,11 +40,13 @@ func TestLicensesMatchFile(t *testing.T) {
 	metrics := &Metrics{}
 	metrics.Init()
 	data := []byte("This is very Apache licensed\nCopyright Foo\n")
-	if !l.MatchFile(data, "foo.rs", metrics) {
+	ok, _ := l.MatchFile(data, "foo.rs", metrics)
+	if !ok {
 		t.Error("Apache didn't match")
 	}
 	data = []byte("BSD much.\nCopyright Bar Inc\n")
-	if !l.MatchFile(data, "bar.rs", metrics) {
+	ok, _ = l.MatchFile(data, "bar.rs", metrics)
+	if !ok {
 		t.Error("Apache didn't match")
 	}
 	if metrics.values["num_licensed"] != 2 {

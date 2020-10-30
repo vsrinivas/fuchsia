@@ -135,9 +135,10 @@ func processFile(file *File, metrics *Metrics, licenses *Licenses, unlicensedFil
 	}
 	data = data[:n]
 
-	is_matched := licenses.MatchFile(data, path, metrics)
-
-	if !is_matched {
+	isMatched, matchedLic := licenses.MatchFile(data, path, metrics)
+	if isMatched {
+		file.Licenses = append(file.Licenses, matchedLic)
+	} else {
 		if len(file_tree.SingleLicenseFiles) == 0 {
 			metrics.increment("num_unlicensed")
 			unlicensedFiles.files = append(unlicensedFiles.files, path)

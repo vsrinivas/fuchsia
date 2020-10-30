@@ -23,8 +23,10 @@ type Config struct {
 	SkipFiles                    []string               `json:"skipFiles"`
 	ProhibitedLicenseTypes       []string               `json:"prohibitedLicenseTypes"`
 	TextExtensionList            []string               `json:"textExtensionList"`
+	StrictTextExtensionList      []string               `json:"strictTextExtensionList"`
 	ExitOnProhibitedLicenseTypes bool                   `json:"exitOnProhibitedLicenseTypes"`
 	ExitOnUnlicensedFiles        bool                   `json:"exitOnUnlicensedFiles"`
+	StrictAnalysis               bool                   `json:"strictAnalysis"`
 	OutputLicenseFile            bool                   `json:"outputLicenseFile"`
 	MaxReadSize                  int                    `json:"maxReadSize"`
 	SeparatorWidth               int                    `json:"separatorWidth"`

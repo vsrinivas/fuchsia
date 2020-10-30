@@ -111,16 +111,18 @@ func (l *Licenses) MatchSingleLicenseFile(data []byte, path string, metrics *Met
 	}
 }
 
-// MatchFile returns true if any License matches input data.
-func (l *Licenses) MatchFile(data []byte, path string, metrics *Metrics) bool {
+// MatchFile returns true if any License matches input data
+// along with the license that matched. It returns false and nil
+// if there were no matches.
+func (l *Licenses) MatchFile(data []byte, path string, metrics *Metrics) (bool, *License) {
 	for _, license := range l.licenses {
 		if m := license.pattern.Find(data); m != nil {
 			metrics.increment("num_licensed")
 			license.matchAuthors(string(m), data, path)
-			return true
+			return true, license
 		}
 	}
-	return false
+	return false, nil
 }
 
 func contains(matches []string, item string) bool {

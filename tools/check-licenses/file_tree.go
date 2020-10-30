@@ -29,6 +29,23 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 	ft.Path = abs
 	ft.Parent = parent
 
+	// If config.StrictAnalysis is true, we ignore all LICENSE files in the fuchsia directory.
+	if parent == nil {
+		ft.StrictAnalysis = config.StrictAnalysis
+	} else {
+		ft.StrictAnalysis = parent.StrictAnalysis
+	}
+
+	// If we are at a boundary where licenses change (e.g. "third_party" or "prebuilt" dirs),
+	// turn off strict analysis. We don't have enough control over 3p repositories to enforce
+	// having strict LICENSE information in all source files.
+	for _, dirName := range config.StopLicensePropagation {
+		if ft.Name == dirName {
+			ft.StrictAnalysis = false
+			break
+		}
+	}
+
 	for _, customProjectLicense := range config.CustomProjectLicenses {
 		if strings.HasSuffix(root, customProjectLicense.ProjectRoot) {
 			metrics.increment("num_single_license_files")
@@ -66,14 +83,23 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 				return nil
 			}
 		}
-		if hasLowerPrefix(info.Name(), config.SingleLicenseFiles) {
+		newFile, err := NewFile(path, &ft)
+
+		// TODO(jcecil): a file named LICENSE in the fuchsia tree will be
+		// entirely skipped when running in strict analysis mode, since it
+		// doesn't have a valid text extension. We should still analyze
+		// these files, even if we don't add them as SingleLicenseFiles.
+		if hasLowerPrefix(info.Name(), config.SingleLicenseFiles) && !ft.StrictAnalysis {
 			metrics.increment("num_single_license_files")
 			ft.SingleLicenseFiles[path] = []*License{}
 			return nil
 		}
-		if hasExt(info.Name(), config.TextExtensionList) {
+		extensions := config.TextExtensionList
+		if ft.StrictAnalysis {
+			extensions = config.StrictTextExtensionList
+		}
+		if hasExt(info.Name(), extensions) {
 			metrics.increment("num_non_single_license_files")
-			newFile, err := NewFile(path, &ft)
 			if err == nil {
 				ft.Files = append(ft.Files, newFile)
 			}
@@ -100,6 +126,7 @@ type FileTree struct {
 	Files              []*File               `json:"files"`
 	Children           map[string]*FileTree  `json:"children"`
 	Parent             *FileTree             `json:"-"`
+	StrictAnalysis     bool                  `json:"-"`
 
 	sync.RWMutex
 }
@@ -197,11 +224,9 @@ func (file_tree *FileTree) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(&struct {
 		*Alias
-		Files    []string    `json:"files"`
 		Children []*FileTree `json:"children"`
 	}{
 		Alias:    (*Alias)(file_tree),
-		Files:    fileList,
 		Children: childrenList,
 	})
 }
