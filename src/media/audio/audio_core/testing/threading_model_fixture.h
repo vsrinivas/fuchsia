@@ -30,7 +30,7 @@ class TestThreadingModel : public ThreadingModel {
   // |ThreadingModel|
   ExecutionDomain& FidlDomain() override { return fidl_holder_.domain; }
   ExecutionDomain& IoDomain() override { return io_holder_.domain; }
-  OwnedDomainPtr AcquireMixDomain(const std::string& name) override {
+  OwnedDomainPtr AcquireMixDomain() override {
     return OwnedDomainPtr(&mix_holder_.domain, [](ExecutionDomain*) {});
   }
   void Quit() override { loop_->Quit(); }
@@ -42,10 +42,10 @@ class TestThreadingModel : public ThreadingModel {
 
  private:
   struct DomainHolder {
-    DomainHolder(async::TestLoop* test_loop, const std::string& name)
+    DomainHolder(async::TestLoop* test_loop)
         : loop(test_loop->StartNewLoop()),
           executor(loop->dispatcher()),
-          domain{loop->dispatcher(), &executor, name} {}
+          domain{loop->dispatcher(), &executor} {}
 
     std::unique_ptr<async::LoopInterface> loop;
     async::Executor executor;
@@ -53,9 +53,9 @@ class TestThreadingModel : public ThreadingModel {
   };
 
   async::TestLoop* loop_;
-  DomainHolder fidl_holder_{loop_, "fidl"};
-  DomainHolder io_holder_{loop_, "io"};
-  DomainHolder mix_holder_{loop_, "mix"};
+  DomainHolder fidl_holder_{loop_};
+  DomainHolder io_holder_{loop_};
+  DomainHolder mix_holder_{loop_};
 };
 
 // A test fixture that provides a |ThreadingModel| on top of an |async::TestLoop|. We inherit from

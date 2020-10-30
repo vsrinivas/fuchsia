@@ -116,12 +116,10 @@ TEST_F(ReporterTest, AddRemoveDevices) {
   std::vector<Reporter::Container<Reporter::OutputDevice>::Ptr> outputs;
   std::vector<Reporter::Container<Reporter::InputDevice>::Ptr> inputs;
   for (size_t k = 0; k < 5; k++) {
-    outputs.push_back(under_test_.CreateOutputDevice(fxl::StringPrintf("output_device_%lu", k),
-                                                     fxl::StringPrintf("output_thread_%lu", k)));
+    outputs.push_back(under_test_.CreateOutputDevice(fxl::StringPrintf("output_device_%lu", k)));
   }
   for (size_t k = 0; k < 5; k++) {
-    inputs.push_back(under_test_.CreateInputDevice(fxl::StringPrintf("input_device_%lu", k),
-                                                   fxl::StringPrintf("input_thread_%lu", k)));
+    inputs.push_back(under_test_.CreateInputDevice(fxl::StringPrintf("input_device_%lu", k)));
   }
 
   EXPECT_THAT(GetHierarchy(),
@@ -177,8 +175,8 @@ TEST_F(ReporterTest, AddRemoveDevices) {
 
 // Tests methods that change device metrics.
 TEST_F(ReporterTest, DeviceMetrics) {
-  auto output_device = under_test_.CreateOutputDevice("output_device", "output_thread");
-  auto input_device = under_test_.CreateInputDevice("input_device", "input_thread");
+  auto output_device = under_test_.CreateOutputDevice("output_device");
+  auto input_device = under_test_.CreateInputDevice("input_device");
 
   // Note: GetHierachy uses ReadFromVmo, which cannot read lazy values.
   EXPECT_THAT(
@@ -211,15 +209,13 @@ TEST_F(ReporterTest, DeviceMetrics) {
                         NameMatches("output_device"),
                         PropertyList(UnorderedElementsAre(
                             BoolIs("alive", true), DoubleIs("gain db", 0.0), BoolIs("muted", false),
-                            BoolIs("agc supported", false), BoolIs("agc enabled", false),
-                            StringIs("mixer thread name", "output_thread"))))))))),
+                            BoolIs("agc supported", false), BoolIs("agc enabled", false))))))))),
           AllOf(NodeMatches(NameMatches("input devices")),
                 ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                     NameMatches("input_device"),
                     PropertyList(UnorderedElementsAre(
                         BoolIs("alive", true), DoubleIs("gain db", 0.0), BoolIs("muted", false),
-                        BoolIs("agc supported", false), BoolIs("agc enabled", false),
-                        StringIs("mixer thread name", "input_thread")))))))),
+                        BoolIs("agc supported", false), BoolIs("agc enabled", false)))))))),
           AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
           AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())))));
 
@@ -250,7 +246,7 @@ TEST_F(ReporterTest, DeviceMetrics) {
 
 // Tests method Device::SetGainInfo.
 TEST_F(ReporterTest, DeviceSetGainInfo) {
-  auto output_device = under_test_.CreateOutputDevice("output_device", "output_thread");
+  auto output_device = under_test_.CreateOutputDevice("output_device");
 
   // Expect initial device metric values.
   EXPECT_THAT(
@@ -344,7 +340,7 @@ TEST_F(ReporterTest, AddRemoveClientPorts) {
     renderers.push_back(under_test_.CreateRenderer());
   }
   for (size_t k = 0; k < 5; k++) {
-    capturers.push_back(under_test_.CreateCapturer(fxl::StringPrintf("capture_thread_%lu", k)));
+    capturers.push_back(under_test_.CreateCapturer());
   }
 
   EXPECT_THAT(
@@ -478,7 +474,7 @@ TEST_F(ReporterTest, RendererMetrics) {
 
 // Tests methods that change capturer metrics.
 TEST_F(ReporterTest, CapturerMetrics) {
-  auto capturer = under_test_.CreateCapturer("thread");
+  auto capturer = under_test_.CreateCapturer();
 
   EXPECT_THAT(
       GetHierarchy(),
@@ -500,8 +496,7 @@ TEST_F(ReporterTest, CapturerMetrics) {
                         PropertyList(UnorderedElementsAre(
                             BoolIs("alive", true), DoubleIs("gain db", 0.0), BoolIs("muted", false),
                             UintIs("min fence time (ns)", 0), UintIs("calls to SetGainWithRamp", 0),
-                            StringIs("usage", "default"),
-                            StringIs("mixer thread name", "thread"))))))))))));
+                            StringIs("usage", "default"))))))))))));
 
   capturer->SetUsage(CaptureUsage::FOREGROUND);
   capturer->SetFormat(
@@ -550,8 +545,7 @@ TEST_F(ReporterTest, CapturerMetrics) {
                                     BoolIs("alive", true), DoubleIs("gain db", -1.0),
                                     BoolIs("muted", true), UintIs("min fence time (ns)", 2'000'000),
                                     UintIs("calls to SetGainWithRamp", 2),
-                                    StringIs("usage", "CaptureUsage::FOREGROUND"),
-                                    StringIs("mixer thread name", "thread"))))))))))));
+                                    StringIs("usage", "CaptureUsage::FOREGROUND"))))))))))));
 }
 
 }  // namespace

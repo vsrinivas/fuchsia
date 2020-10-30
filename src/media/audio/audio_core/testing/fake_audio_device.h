@@ -19,7 +19,7 @@ class FakeAudioDevice : public AudioDevice {
                   LinkMatrix* link_matrix)
       : AudioDevice(type, "", threading_model, registry, link_matrix,
                     std::make_unique<AudioDriverV1>(this)),
-        mix_domain_(threading_model->AcquireMixDomain("fake-audio-device")) {}
+        mix_domain_(threading_model->AcquireMixDomain()) {}
 
   bool driver_info_fetched() { return driver_info_fetched_; }
   bool driver_config_complete() { return driver_config_complete_; }

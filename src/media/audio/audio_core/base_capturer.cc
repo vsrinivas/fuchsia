@@ -54,11 +54,11 @@ BaseCapturer::BaseCapturer(
     : AudioObject(Type::AudioCapturer),
       binding_(this, std::move(audio_capturer_request)),
       context_(*context),
-      mix_domain_(context_.threading_model().AcquireMixDomain("capturer")),
+      mix_domain_(context_.threading_model().AcquireMixDomain()),
       state_(State::WaitingForVmo),
       // Ideally, initialize this to the native configuration of our initially-bound source.
       format_(kInitialFormat),
-      reporter_(Reporter::Singleton().CreateCapturer(mix_domain_->name())),
+      reporter_(Reporter::Singleton().CreateCapturer()),
       audio_clock_(AudioClock::ClientAdjustable(audio::clock::AdjustableCloneOfMonotonic())) {
   FX_DCHECK(mix_domain_);
 

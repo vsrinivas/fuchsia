@@ -13,7 +13,6 @@
 #include <zircon/compiler.h>
 
 #include <memory>
-#include <string>
 
 namespace media::audio {
 
@@ -38,8 +37,8 @@ class __TA_SCOPED_CAPABILITY ScopedThreadToken {
 
 class ExecutionDomain {
  public:
-  ExecutionDomain(async_dispatcher_t* dispatcher, fit::executor* executor, const std::string& name)
-      : dispatcher_(dispatcher), executor_(executor), name_(name) {}
+  ExecutionDomain(async_dispatcher_t* dispatcher, fit::executor* executor)
+      : dispatcher_(dispatcher), executor_(executor) {}
 
   // The async_dispatcher_t* for the loop running this domain.
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
@@ -47,9 +46,6 @@ class ExecutionDomain {
   // The fit::executor for the loop running this domain. Useful for scheduling fit::promises for
   // this domain.
   fit::executor* executor() const { return executor_; }
-
-  // The name of this domain.
-  const std::string& name() const { return name_; }
 
   // The |ThreadToken| that can be used to use static analysis to assert certain data members
   // are only accessed on this thread.
@@ -102,7 +98,6 @@ class ExecutionDomain {
   async_dispatcher_t* const dispatcher_;
   fit::executor* executor_;
   ThreadToken token_;
-  std::string name_;
 };
 
 enum class MixStrategy {
@@ -163,7 +158,7 @@ class ThreadingModel {
   // response to the |OwnedDomainPtr| being released.
   //
   // This is a single-threaded dispatcher.
-  virtual OwnedDomainPtr AcquireMixDomain(const std::string& name_hint) = 0;
+  virtual OwnedDomainPtr AcquireMixDomain() = 0;
 
   // Runs all the dispatchers. When the message loop backing |FidlDomain()| exits, the remaining
   // domains will all be shutdown.

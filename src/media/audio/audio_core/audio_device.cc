@@ -80,8 +80,7 @@ AudioDevice::AudioDevice(AudioObject::Type type, const std::string& name,
       name_(name),
       device_registry_(*registry),
       threading_model_(*threading_model),
-      mix_domain_(threading_model->AcquireMixDomain(type == Type::Input ? "input-device"
-                                                                        : "output-device")),
+      mix_domain_(threading_model->AcquireMixDomain()),
       driver_(std::move(driver)),
       link_matrix_(*link_matrix) {
   FX_DCHECK(registry);

@@ -186,12 +186,10 @@ class Reporter {
   Reporter() {}
   Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model);
 
-  Container<OutputDevice>::Ptr CreateOutputDevice(const std::string& name,
-                                                  const std::string& thread_name);
-  Container<InputDevice>::Ptr CreateInputDevice(const std::string& name,
-                                                const std::string& thread_name);
+  Container<OutputDevice>::Ptr CreateOutputDevice(const std::string& name);
+  Container<InputDevice>::Ptr CreateInputDevice(const std::string& name);
   Container<Renderer>::Ptr CreateRenderer();
-  Container<Capturer>::Ptr CreateCapturer(const std::string& thread_name);
+  Container<Capturer>::Ptr CreateCapturer();
 
   // Device creation failures.
   void FailedToOpenDevice(const std::string& name, bool is_input, int err);

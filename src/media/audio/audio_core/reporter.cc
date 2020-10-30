@@ -267,10 +267,9 @@ class DeviceGainInfo {
 
 class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
  public:
-  OutputDeviceImpl(Reporter::Impl& impl, const std::string& name, const std::string& thread_name)
+  OutputDeviceImpl(Reporter::Impl& impl, const std::string& name)
       : node_(impl.outputs_node.CreateChild(name)),
         alive_(node_.CreateBool("alive", true)),
-        thread_name_(node_.CreateString("mixer thread name", thread_name)),
         driver_info_(node_),
         gain_info_(node_),
         device_underflows_(
@@ -320,7 +319,6 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
  private:
   inspect::Node node_;
   inspect::BoolProperty alive_;
-  inspect::StringProperty thread_name_;
   DeviceDriverInfo driver_info_;
   DeviceGainInfo gain_info_;
   std::unique_ptr<OverflowUnderflowTracker> device_underflows_;
@@ -329,10 +327,9 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
 
 class Reporter::InputDeviceImpl : public Reporter::InputDevice {
  public:
-  InputDeviceImpl(Reporter::Impl& impl, const std::string& name, const std::string& thread_name)
+  InputDeviceImpl(Reporter::Impl& impl, const std::string& name)
       : node_(impl.inputs_node.CreateChild(name)),
         alive_(node_.CreateBool("alive", true)),
-        thread_name_(node_.CreateString("mixer thread name", thread_name)),
         driver_info_(node_),
         gain_info_(node_) {}
 
@@ -351,7 +348,6 @@ class Reporter::InputDeviceImpl : public Reporter::InputDevice {
  private:
   inspect::Node node_;
   inspect::BoolProperty alive_;
-  inspect::StringProperty thread_name_;
   DeviceDriverInfo driver_info_;
   DeviceGainInfo gain_info_;
 };
@@ -485,13 +481,12 @@ class Reporter::RendererImpl : public Reporter::Renderer {
 
 class Reporter::CapturerImpl : public Reporter::Capturer {
  public:
-  CapturerImpl(Reporter::Impl& impl, const std::string& thread_name)
+  CapturerImpl(Reporter::Impl& impl)
       : node_(impl.capturers_node.CreateChild(impl.NextCapturerName())),
         client_port_(node_),
         alive_(node_.CreateBool("alive", true)),
         min_fence_time_ns_(node_.CreateUint("min fence time (ns)", 0)),
         usage_(node_.CreateString("usage", "default")),
-        thread_name_(node_.CreateString("mixer thread name", thread_name)),
         overflows_(std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
             .event_name = "overflows",
             .parent_node = node_,
@@ -534,7 +529,6 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
   inspect::BoolProperty alive_;
   inspect::UintProperty min_fence_time_ns_;
   inspect::StringProperty usage_;
-  inspect::StringProperty thread_name_;
   std::unique_ptr<OverflowUnderflowTracker> overflows_;
 };
 
@@ -613,19 +607,17 @@ void Reporter::InitCobalt() {
 }
 
 Reporter::Container<Reporter::OutputDevice>::Ptr Reporter::CreateOutputDevice(
-    const std::string& name, const std::string& thread_name) {
+    const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
-  return outputs_.New(
-      impl_ ? static_cast<OutputDevice*>(new OutputDeviceImpl(*impl_, name, thread_name))
-            : static_cast<OutputDevice*>(new OutputDeviceNop));
+  return outputs_.New(impl_ ? static_cast<OutputDevice*>(new OutputDeviceImpl(*impl_, name))
+                            : static_cast<OutputDevice*>(new OutputDeviceNop));
 }
 
 Reporter::Container<Reporter::InputDevice>::Ptr Reporter::CreateInputDevice(
-    const std::string& name, const std::string& thread_name) {
+    const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
-  return inputs_.New(impl_
-                         ? static_cast<InputDevice*>(new InputDeviceImpl(*impl_, name, thread_name))
-                         : static_cast<InputDevice*>(new InputDeviceNop));
+  return inputs_.New(impl_ ? static_cast<InputDevice*>(new InputDeviceImpl(*impl_, name))
+                           : static_cast<InputDevice*>(new InputDeviceNop));
 }
 
 Reporter::Container<Reporter::Renderer>::Ptr Reporter::CreateRenderer() {
@@ -634,10 +626,9 @@ Reporter::Container<Reporter::Renderer>::Ptr Reporter::CreateRenderer() {
                               : static_cast<Renderer*>(new RendererNop));
 }
 
-Reporter::Container<Reporter::Capturer>::Ptr Reporter::CreateCapturer(
-    const std::string& thread_name) {
+Reporter::Container<Reporter::Capturer>::Ptr Reporter::CreateCapturer() {
   std::lock_guard<std::mutex> lock(mutex_);
-  return capturers_.New(impl_ ? static_cast<Capturer*>(new CapturerImpl(*impl_, thread_name))
+  return capturers_.New(impl_ ? static_cast<Capturer*>(new CapturerImpl(*impl_))
                               : static_cast<Capturer*>(new CapturerNop));
 }
 
