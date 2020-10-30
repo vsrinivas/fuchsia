@@ -11,7 +11,6 @@ import 'dart:convert';
 import 'dart:core';
 import 'dart:io';
 
-import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:pedantic/pedantic.dart';
 
@@ -449,14 +448,10 @@ class Sl4f {
 
       try {
         await _doRequest('').timeout(timeout);
-      } on IOException {
-        continue;
-      } on TimeoutException {
-        continue;
-      } on http.ClientException {
-        continue;
+        return true;
+      } on Exception catch (e) {
+        _log.warning('SL4F isRunning request errored: $e.');
       }
-      return true;
     }
     return false;
   }
