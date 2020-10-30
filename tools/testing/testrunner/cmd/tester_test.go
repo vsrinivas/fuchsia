@@ -283,13 +283,21 @@ func TestSSHTester(t *testing.T) {
 				listeningChan:  make(chan bool),
 			}
 			if c.wantConnErr {
-				// This is a hack to ensure the shutdown command gets sent to the serial server.
-				// Rather than introduce a new synchronization mechanism, just use the code under test's
-				// existing mechanism for sending commands.
-
-				// Ensure we don't waste time sleeping in this test.
-				serialDiagnosticCmds = append(serialDiagnosticCmds,
-					serialDiagnosticCmd{[]string{serialServer.shutdownString}, time.Microsecond})
+				serialDiagnosticCmds = []serialDiagnosticCmd{
+					{
+						cmd: []string{"foo"},
+						// Ensure we don't waste time sleeping in this test.
+						sleepDuration: time.Microsecond,
+					},
+					{
+						// This is a hack to ensure the shutdown command gets sent to the serial server.
+						// Rather than introduce a new synchronization mechanism, just use the code under test's
+						// existing mechanism for sending commands.
+						cmd: []string{serialServer.shutdownString},
+						// Ensure we don't waste time sleeping in this test.
+						sleepDuration: time.Microsecond,
+					},
+				}
 				tester.serialSocketPath = serialServer.socketPath
 				defer os.Remove(serialServer.socketPath)
 				eg.Go(serialServer.Serve)
