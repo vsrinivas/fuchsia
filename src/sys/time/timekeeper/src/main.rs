@@ -41,6 +41,7 @@ use {
     },
     log::{info, warn},
     std::sync::Arc,
+    time_metrics_registry::TimeMetricDimensionExperiment,
 };
 
 /// A definition which time sources to install, along with the URL for each.
@@ -62,6 +63,9 @@ const DEV_TEST_SOURCES: TimeSourceUrls = TimeSourceUrls {
     primary: "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/dev_time_source.cmx",
     monitor: None,
 };
+
+/// The experiment to record on Cobalt events.
+const COBALT_EXPERIMENT: TimeMetricDimensionExperiment = TimeMetricDimensionExperiment::A;
 
 /// The information required to maintain UTC for the primary track.
 struct PrimaryTrack<T: TimeSource> {
@@ -122,7 +126,7 @@ async fn main() -> Result<(), Error> {
     info!("initializing diagnostics and serving inspect on servicefs");
     let diagnostics = Arc::new(CompositeDiagnostics::new(
         InspectDiagnostics::new(diagnostics::INSPECTOR.root(), &primary_track, &monitor_track),
-        CobaltDiagnostics::new(),
+        CobaltDiagnostics::new(COBALT_EXPERIMENT),
     ));
     let mut fs = ServiceFs::new();
     diagnostics::INSPECTOR.serve(&mut fs)?;

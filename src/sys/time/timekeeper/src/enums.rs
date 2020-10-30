@@ -7,7 +7,10 @@
 
 use {
     crate::rtc::RtcCreationError,
-    time_metrics_registry::RealTimeClockEventsMetricDimensionEventType as CobaltRtcEventType,
+    time_metrics_registry::{
+        RealTimeClockEventsMetricDimensionEventType as CobaltRtcEvent, TimeMetricDimensionRole,
+        TimekeeperTimeSourceEventsMetricDimensionEventType as CobaltTimeSourceEvent,
+    },
 };
 
 /// The state of the userspace UTC clock when Timekeeper was initialized.
@@ -39,17 +42,17 @@ impl From<RtcCreationError> for InitializeRtcOutcome {
     }
 }
 
-impl Into<CobaltRtcEventType> for InitializeRtcOutcome {
-    fn into(self) -> CobaltRtcEventType {
+impl Into<CobaltRtcEvent> for InitializeRtcOutcome {
+    fn into(self) -> CobaltRtcEvent {
         match self {
-            Self::NoDevices => CobaltRtcEventType::NoDevices,
-            Self::MultipleDevices => CobaltRtcEventType::MultipleDevices,
-            Self::ConnectionFailed => CobaltRtcEventType::ConnectionFailed,
-            Self::ReadFailed => CobaltRtcEventType::ReadFailed,
+            Self::NoDevices => CobaltRtcEvent::NoDevices,
+            Self::MultipleDevices => CobaltRtcEvent::MultipleDevices,
+            Self::ConnectionFailed => CobaltRtcEvent::ConnectionFailed,
+            Self::ReadFailed => CobaltRtcEvent::ReadFailed,
             // TODO(jsankey): Define a better Cobalt enum for this case
-            Self::ReadNotAttempted => CobaltRtcEventType::ReadSucceeded,
-            Self::InvalidBeforeBackstop => CobaltRtcEventType::ReadInvalidBeforeBackstop,
-            Self::Succeeded => CobaltRtcEventType::ReadSucceeded,
+            Self::ReadNotAttempted => CobaltRtcEvent::ReadSucceeded,
+            Self::InvalidBeforeBackstop => CobaltRtcEvent::ReadInvalidBeforeBackstop,
+            Self::Succeeded => CobaltRtcEvent::ReadSucceeded,
         }
     }
 }
@@ -61,11 +64,11 @@ pub enum WriteRtcOutcome {
     Succeeded,
 }
 
-impl Into<CobaltRtcEventType> for WriteRtcOutcome {
-    fn into(self) -> CobaltRtcEventType {
+impl Into<CobaltRtcEvent> for WriteRtcOutcome {
+    fn into(self) -> CobaltRtcEvent {
         match self {
-            Self::Failed => CobaltRtcEventType::WriteFailed,
-            Self::Succeeded => CobaltRtcEventType::WriteSucceeded,
+            Self::Failed => CobaltRtcEvent::WriteFailed,
+            Self::Succeeded => CobaltRtcEvent::WriteSucceeded,
         }
     }
 }
@@ -78,8 +81,17 @@ pub enum Role {
     // TODO(jsankey): Add Gating and Fallback when some product requires them.
 }
 
+impl Into<TimeMetricDimensionRole> for Role {
+    fn into(self) -> TimeMetricDimensionRole {
+        match self {
+            Self::Primary => TimeMetricDimensionRole::Primary,
+            Self::Monitor => TimeMetricDimensionRole::Monitor,
+        }
+    }
+}
+
 /// Which of the independent estimates of time is applicable. Timekeeper maintains a Primary track
-/// that is externally visable and optionally a internal Monitor track that is used to validate
+/// that is externally visible and optionally a internal Monitor track that is used to validate
 /// proposed changes to the time synchronization source or algorithms.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Track {
@@ -112,6 +124,17 @@ pub enum SampleValidationError {
     TooCloseToPrevious,
 }
 
+impl Into<CobaltTimeSourceEvent> for SampleValidationError {
+    fn into(self) -> CobaltTimeSourceEvent {
+        match self {
+            Self::MonotonicInFuture => CobaltTimeSourceEvent::SampleRejectedMonotonicInFuture,
+            Self::MonotonicTooOld => CobaltTimeSourceEvent::SampleRejectedMonotonicTooOld,
+            Self::BeforeBackstop => CobaltTimeSourceEvent::SampleRejectedBeforeBackstop,
+            Self::TooCloseToPrevious => CobaltTimeSourceEvent::SampleRejectedTooCloseToPrevious,
+        }
+    }
+}
+
 /// The reasons a time source may have failed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum TimeSourceError {
@@ -119,4 +142,15 @@ pub enum TimeSourceError {
     StreamFailed,
     CallFailed,
     SampleTimeOut,
+}
+
+impl Into<CobaltTimeSourceEvent> for TimeSourceError {
+    fn into(self) -> CobaltTimeSourceEvent {
+        match self {
+            Self::LaunchFailed => CobaltTimeSourceEvent::LaunchFailed,
+            Self::StreamFailed => CobaltTimeSourceEvent::RestartedStreamFailed,
+            Self::CallFailed => CobaltTimeSourceEvent::RestartedCallFailed,
+            Self::SampleTimeOut => CobaltTimeSourceEvent::RestartedSampleTimeOut,
+        }
+    }
 }
