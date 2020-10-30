@@ -148,7 +148,7 @@ __NO_SAFESTACK void arm64_fpu_context_switch(Thread* oldthread, Thread* newthrea
 }
 
 // Called because of a fpu instruction caused exception.
-void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags) {
+void arm64_fpu_exception(iframe_t* iframe, uint exception_flags) {
   LTRACEF("cpu %u, thread %s, flags 0x%x\n", arch_curr_cpu_num(), Thread::Current::Get()->name(),
           exception_flags);
 

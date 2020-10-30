@@ -589,7 +589,7 @@ class _Amd64KernelExceptionUnwinder(Unwinder):
         self.uintptr_t = gdb.lookup_type("uintptr_t")
         # We assume "unsigned int" is 32 bits.
         self.uint32_t = gdb.lookup_type("unsigned int")
-        self.iframe_ptr_t = gdb.lookup_type("x86_iframe_t").pointer()
+        self.iframe_ptr_t = gdb.lookup_type("iframe_t").pointer()
         # We need to know when the pc is at the point where it has called
         # x86_exception_handler.
         self.at_iframe_setup = self.lookup_minsym(

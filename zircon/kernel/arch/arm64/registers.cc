@@ -10,7 +10,7 @@
 #include <vm/vm.h>
 
 void arm64_set_debug_state_for_thread(Thread* thread, bool active) {
-  arm64_iframe_t* iframe = thread->arch().suspended_general_regs;
+  iframe_t* iframe = thread->arch().suspended_general_regs;
   DEBUG_ASSERT(iframe);
   if (active) {
     iframe->mdscr |= ARM64_MDSCR_EL1_MDE;  // MDE enables hardware exceptions.

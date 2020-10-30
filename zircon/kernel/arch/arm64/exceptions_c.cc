@@ -31,7 +31,7 @@
 
 #define DFSC_ALIGNMENT_FAULT 0b100001
 
-static void dump_iframe(const arm64_iframe_t* iframe) {
+static void dump_iframe(const iframe_t* iframe) {
   printf("iframe %p:\n", iframe);
   printf("x0  %#18" PRIx64 " x1  %#18" PRIx64 " x2  %#18" PRIx64 " x3  %#18" PRIx64 "\n",
          iframe->r[0], iframe->r[1], iframe->r[2], iframe->r[3]);
@@ -104,7 +104,7 @@ KCOUNTER(exceptions_unknown, "exceptions.unknown")
 KCOUNTER(exceptions_access, "exceptions.access_fault")
 
 static zx_status_t try_dispatch_user_data_fault_exception(zx_excp_type_t type,
-                                                          arm64_iframe_t* iframe, uint32_t esr,
+                                                          iframe_t* iframe, uint32_t esr,
                                                           uint64_t far) {
   arch_exception_context_t context = {};
   DEBUG_ASSERT(iframe != nullptr);
@@ -118,13 +118,13 @@ static zx_status_t try_dispatch_user_data_fault_exception(zx_excp_type_t type,
   return status;
 }
 
-static zx_status_t try_dispatch_user_exception(zx_excp_type_t type, arm64_iframe_t* iframe,
+static zx_status_t try_dispatch_user_exception(zx_excp_type_t type, iframe_t* iframe,
                                                uint32_t esr) {
   return try_dispatch_user_data_fault_exception(type, iframe, esr, 0);
 }
 
 // Prints exception details and then panics.
-__NO_RETURN static void exception_die(arm64_iframe_t* iframe, uint32_t esr, uint64_t far,
+__NO_RETURN static void exception_die(iframe_t* iframe, uint32_t esr, uint64_t far,
                                       const char* format, ...) {
   platform_panic_start();
 
@@ -147,7 +147,7 @@ __NO_RETURN static void exception_die(arm64_iframe_t* iframe, uint32_t esr, uint
   platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
 
-static void arm64_unknown_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
+static void arm64_unknown_handler(iframe_t* iframe, uint exception_flags, uint32_t esr) {
   /* this is for a lot of reasons, but most of them are undefined instructions */
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
@@ -157,7 +157,7 @@ static void arm64_unknown_handler(arm64_iframe_t* iframe, uint exception_flags, 
   try_dispatch_user_exception(ZX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr);
 }
 
-static void arm64_brk_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
+static void arm64_brk_handler(iframe_t* iframe, uint exception_flags, uint32_t esr) {
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
     exception_die(iframe, esr, __arm_rsr64("far_el1"), "BRK in kernel: PC at %#" PRIx64 "\n",
@@ -172,7 +172,7 @@ static void arm64_brk_handler(arm64_iframe_t* iframe, uint exception_flags, uint
   try_dispatch_user_exception(ZX_EXCP_SW_BREAKPOINT, iframe, esr);
 }
 
-static void arm64_hw_breakpoint_exception_handler(arm64_iframe_t* iframe, uint exception_flags,
+static void arm64_hw_breakpoint_exception_handler(iframe_t* iframe, uint exception_flags,
                                                   uint32_t esr) {
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
@@ -189,7 +189,7 @@ static void arm64_hw_breakpoint_exception_handler(arm64_iframe_t* iframe, uint e
   try_dispatch_user_exception(ZX_EXCP_HW_BREAKPOINT, iframe, esr);
 }
 
-static void arm64_watchpoint_exception_handler(arm64_iframe_t* iframe, uint exception_flags,
+static void arm64_watchpoint_exception_handler(iframe_t* iframe, uint exception_flags,
                                                uint32_t esr) {
   // Arm64 uses the Fault Address Register to determine which watchpoint triggered the exception.
   uint64_t far = __arm_rsr64("far_el1");
@@ -205,7 +205,7 @@ static void arm64_watchpoint_exception_handler(arm64_iframe_t* iframe, uint exce
   try_dispatch_user_data_fault_exception(ZX_EXCP_HW_BREAKPOINT, iframe, esr, far);
 }
 
-static void arm64_step_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
+static void arm64_step_handler(iframe_t* iframe, uint exception_flags, uint32_t esr) {
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
     exception_die(iframe, esr, __arm_rsr64("far_el1"),
@@ -215,7 +215,7 @@ static void arm64_step_handler(arm64_iframe_t* iframe, uint exception_flags, uin
   try_dispatch_user_exception(ZX_EXCP_HW_BREAKPOINT, iframe, esr);
 }
 
-static void arm64_fpu_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
+static void arm64_fpu_handler(iframe_t* iframe, uint exception_flags, uint32_t esr) {
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* we trapped a floating point instruction inside our own EL, this is bad */
     exception_die(iframe, esr, __arm_rsr64("far_el1"),
@@ -224,7 +224,7 @@ static void arm64_fpu_handler(arm64_iframe_t* iframe, uint exception_flags, uint
   arm64_fpu_exception(iframe, exception_flags);
 }
 
-static void arm64_instruction_abort_handler(arm64_iframe_t* iframe, uint exception_flags,
+static void arm64_instruction_abort_handler(iframe_t* iframe, uint exception_flags,
                                             uint32_t esr) {
   /* read the FAR register */
   uint64_t far = __arm_rsr64("far_el1");
@@ -280,7 +280,7 @@ static void arm64_instruction_abort_handler(arm64_iframe_t* iframe, uint excepti
                 is_user, far);
 }
 
-static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
+static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uint32_t esr) {
   /* read the FAR register */
   uint64_t far = __arm_rsr64("far_el1");
   uint32_t ec = BITS_SHIFT(esr, 31, 26);
@@ -378,7 +378,7 @@ static inline void fix_exception_percpu_pointer(uint32_t exception_flags, uint64
 }
 
 /* called from assembly */
-extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
+extern "C" void arm64_sync_exception(iframe_t* iframe, uint exception_flags, uint32_t esr) {
   uint32_t ec = BITS_SHIFT(esr, 31, 26);
 
   switch (ec) {
@@ -486,7 +486,7 @@ extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
 }
 
 /* called from assembly */
-extern "C" void arm64_invalid_exception(arm64_iframe_t* iframe, unsigned int which) {
+extern "C" void arm64_invalid_exception(iframe_t* iframe, unsigned int which) {
   platform_panic_start();
 
   printf("invalid exception, which %#x\n", which);

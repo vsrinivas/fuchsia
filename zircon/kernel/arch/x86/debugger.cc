@@ -66,14 +66,14 @@ void x86_fill_in_syscall_from_gregs(x86_syscall_general_regs_t* out,
   out->rflags |= in->rflags & X86_FLAGS_USER;
 }
 
-void x86_fill_in_gregs_from_iframe(zx_thread_state_general_regs_t* out, const x86_iframe_t* in) {
+void x86_fill_in_gregs_from_iframe(zx_thread_state_general_regs_t* out, const iframe_t* in) {
   COPY_COMMON_REGS(out, in);
   out->rsp = in->user_sp;
   out->rip = in->ip;
   out->rflags = in->flags;
 }
 
-void x86_fill_in_iframe_from_gregs(x86_iframe_t* out, const zx_thread_state_general_regs_t* in) {
+void x86_fill_in_iframe_from_gregs(iframe_t* out, const zx_thread_state_general_regs_t* in) {
   COPY_COMMON_REGS(out, in);
   out->user_sp = in->rsp;
   out->ip = in->rip;

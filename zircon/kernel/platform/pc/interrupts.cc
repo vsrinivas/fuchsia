@@ -187,7 +187,7 @@ zx_status_t get_interrupt_config(unsigned int vector, enum interrupt_trigger_mod
   return kInterruptManager.GetInterruptConfig(vector, tm, pol);
 }
 
-void platform_irq(x86_iframe_t* frame) {
+void platform_irq(iframe_t* frame) {
   CPU_STATS_INC(interrupts);
   // get the current vector
   uint64_t x86_vector = frame->vector;

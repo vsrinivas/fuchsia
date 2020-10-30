@@ -12,6 +12,6 @@
 
 #include <arch/x86.h>
 
-void apic_pmi_interrupt_handler(x86_iframe_t *frame);
+void apic_pmi_interrupt_handler(iframe_t *frame);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PERF_MON_H_

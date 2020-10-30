@@ -1703,7 +1703,7 @@ static perfmon::RecordHeader* x86_perfmon_write_last_branches(PerfmonState* stat
 // interrupts (our caller).
 // Returns true if success, false if buffer is full.
 
-static bool pmi_interrupt_handler(x86_iframe_t* frame, PerfmonState* state) {
+static bool pmi_interrupt_handler(iframe_t* frame, PerfmonState* state) {
   cpu_num_t cpu = arch_curr_cpu_num();
   auto data = &state->cpu_data[cpu];
 
@@ -1898,7 +1898,7 @@ static bool pmi_interrupt_handler(x86_iframe_t* frame, PerfmonState* state) {
   return true;
 }
 
-void apic_pmi_interrupt_handler(x86_iframe_t* frame) TA_REQ(PerfmonLock::Get()) {
+void apic_pmi_interrupt_handler(iframe_t* frame) TA_REQ(PerfmonLock::Get()) {
   if (!perfmon_active.load()) {
     apic_issue_eoi();
     return;

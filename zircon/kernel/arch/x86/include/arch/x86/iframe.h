@@ -24,8 +24,6 @@ struct iframe_t {
   uint64_t user_sp, user_ss;                      // pushed by interrupt
 };
 
-typedef struct iframe_t x86_iframe_t;
-
 #endif  // !__ASSEMBLER__
 
 #define X86_IFRAME_OFFSET_RDI (0 * 8)

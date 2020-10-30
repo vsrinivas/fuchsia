@@ -76,7 +76,7 @@ arm64_context_switch_frame* arm64_get_context_switch_frame(Thread* thread);
 
 extern void arm64_el1_exception_base(void);
 void arm64_el3_to_el1(void);
-void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr);
+void arm64_sync_exception(iframe_t* iframe, uint exception_flags, uint32_t esr);
 
 void platform_irq(iframe_t* frame);
 void platform_fiq(iframe_t* frame);
@@ -90,7 +90,7 @@ void arm64_local_clean_invalidate_cache_all();
 void arm64_local_clean_cache_all();
 
 /* fpu routines */
-void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags);
+void arm64_fpu_exception(iframe_t* iframe, uint exception_flags);
 void arm64_fpu_context_switch(Thread* oldthread, Thread* newthread);
 void arm64_fpu_save_state(Thread* t);
 void arm64_fpu_restore_state(Thread* t);

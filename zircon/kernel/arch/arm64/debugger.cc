@@ -37,7 +37,7 @@ zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  arm64_iframe_t* in = thread->arch().suspended_general_regs;
+  iframe_t* in = thread->arch().suspended_general_regs;
   DEBUG_ASSERT(in);
 
   static_assert(sizeof(in->r) == sizeof(out->r), "");
@@ -62,7 +62,7 @@ zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  arm64_iframe_t* out = thread->arch().suspended_general_regs;
+  iframe_t* out = thread->arch().suspended_general_regs;
   DEBUG_ASSERT(out);
 
   static_assert(sizeof(out->r) == sizeof(in->r), "");
@@ -86,7 +86,7 @@ zx_status_t arch_get_single_step(Thread* thread, zx_thread_state_single_step_t* 
   if (thread->arch().suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  arm64_iframe_t* regs = thread->arch().suspended_general_regs;
+  iframe_t* regs = thread->arch().suspended_general_regs;
 
   const bool mdscr_ss_enable = !!(regs->mdscr & kMdscrSSMask);
   const bool spsr_ss_enable = !!(regs->spsr & kSSMaskSPSR);
@@ -109,7 +109,7 @@ zx_status_t arch_set_single_step(Thread* thread, const zx_thread_state_single_st
   if (thread->arch().suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  arm64_iframe_t* regs = thread->arch().suspended_general_regs;
+  iframe_t* regs = thread->arch().suspended_general_regs;
   if (*in) {
     regs->mdscr |= kMdscrSSMask;
     regs->spsr |= kSSMaskSPSR;

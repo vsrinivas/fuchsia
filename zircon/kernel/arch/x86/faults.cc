@@ -36,9 +36,9 @@
 
 // Returns whether the register state indicates that the CPU was executing
 // userland code.
-static bool is_from_user(const x86_iframe_t* frame) { return SELECTOR_PL(frame->cs) != 0; }
+static bool is_from_user(const iframe_t* frame) { return SELECTOR_PL(frame->cs) != 0; }
 
-static void dump_fault_frame(x86_iframe_t* frame) {
+static void dump_fault_frame(iframe_t* frame) {
   dprintf(CRITICAL, " CS:  %#18" PRIx64 " RIP: %#18" PRIx64 " EFL: %#18" PRIx64 " CR2: %#18lx\n",
           frame->cs, frame->ip, frame->flags, x86_get_cr2());
   dprintf(CRITICAL,
@@ -79,7 +79,7 @@ KCOUNTER(exceptions_irq, "exceptions.irq")
 KCOUNTER(exceptions_unhandled, "exceptions.unhandled")
 KCOUNTER(exceptions_user, "exceptions.user")
 
-__NO_RETURN static void exception_die(x86_iframe_t* frame, const char* msg) {
+__NO_RETURN static void exception_die(iframe_t* frame, const char* msg) {
   platform_panic_start();
 
   printf("vector %lu\n", (ulong)frame->vector);
@@ -99,7 +99,7 @@ __NO_RETURN static void exception_die(x86_iframe_t* frame, const char* msg) {
   platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
 
-static bool try_dispatch_user_exception(x86_iframe_t* frame, uint exception_type) {
+static bool try_dispatch_user_exception(iframe_t* frame, uint exception_type) {
   if (is_from_user(frame)) {
     struct arch_exception_context context = {false, frame, 0};
     PreemptionState& preemption_state = Thread::Current::preemption_state();
@@ -117,7 +117,7 @@ static bool try_dispatch_user_exception(x86_iframe_t* frame, uint exception_type
   return false;
 }
 
-static void x86_debug_handler(x86_iframe_t* frame) {
+static void x86_debug_handler(iframe_t* frame) {
   // DR6 is the status register that explains what exception happened (single step, hardware
   // breakpoint, etc.).
   //
@@ -148,16 +148,16 @@ static void x86_debug_handler(x86_iframe_t* frame) {
   exception_die(frame, "unhandled hw breakpoint, halting\n");
 }
 
-static void x86_nmi_handler(x86_iframe_t* frame) {}
+static void x86_nmi_handler(iframe_t* frame) {}
 
-static void x86_breakpoint_handler(x86_iframe_t* frame) {
+static void x86_breakpoint_handler(iframe_t* frame) {
   if (try_dispatch_user_exception(frame, ZX_EXCP_SW_BREAKPOINT))
     return;
 
   exception_die(frame, "unhandled sw breakpoint, halting\n");
 }
 
-static void x86_gpf_handler(x86_iframe_t* frame) {
+static void x86_gpf_handler(iframe_t* frame) {
   DEBUG_ASSERT(arch_ints_disabled());
 
   // Check if we were doing a GPF test, e.g. to check if an MSR exists.
@@ -177,14 +177,14 @@ static void x86_gpf_handler(x86_iframe_t* frame) {
   exception_die(frame, "unhandled gpf, halting\n");
 }
 
-static void x86_invop_handler(x86_iframe_t* frame) {
+static void x86_invop_handler(iframe_t* frame) {
   if (try_dispatch_user_exception(frame, ZX_EXCP_UNDEFINED_INSTRUCTION))
     return;
 
   exception_die(frame, "invalid opcode, halting\n");
 }
 
-static void x86_df_handler(x86_iframe_t* frame) {
+static void x86_df_handler(iframe_t* frame) {
   // Do not give the user exception handler the opportunity to handle double
   // faults, since they indicate an unexpected system state and cannot be
   // recovered from.
@@ -192,14 +192,14 @@ static void x86_df_handler(x86_iframe_t* frame) {
   exception_die(frame, "double fault, halting\n");
 }
 
-static void x86_unhandled_exception(x86_iframe_t* frame) {
+static void x86_unhandled_exception(iframe_t* frame) {
   if (try_dispatch_user_exception(frame, ZX_EXCP_GENERAL))
     return;
 
   exception_die(frame, "unhandled exception, halting\n");
 }
 
-static void x86_dump_pfe(x86_iframe_t* frame, ulong cr2) {
+static void x86_dump_pfe(iframe_t* frame, ulong cr2) {
   uint64_t error_code = frame->err_code;
 
   vaddr_t v_addr = cr2;
@@ -218,7 +218,7 @@ static void x86_dump_pfe(x86_iframe_t* frame, ulong cr2) {
           error_code & PFEX_P ? "protection violation" : "page not present");
 }
 
-__NO_RETURN static void x86_fatal_pfe_handler(x86_iframe_t* frame, ulong cr2) {
+__NO_RETURN static void x86_fatal_pfe_handler(iframe_t* frame, ulong cr2) {
   x86_dump_pfe(frame, cr2);
 
   uint64_t error_code = frame->err_code;
@@ -250,7 +250,7 @@ __NO_RETURN static void x86_fatal_pfe_handler(x86_iframe_t* frame, ulong cr2) {
   exception_die(frame, "unhandled page fault, halting\n");
 }
 
-static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
+static zx_status_t x86_pfe_handler(iframe_t* frame) {
   /* Handle a page fault exception */
   uint64_t error_code = frame->err_code;
   vaddr_t va = x86_get_cr2();
@@ -336,7 +336,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static void handle_exception_types(x86_iframe_t* frame) {
+static void handle_exception_types(iframe_t* frame) {
   switch (frame->vector) {
     case X86_INT_DEBUG:
       kcounter_add(exceptions_debug, 1);
@@ -453,7 +453,7 @@ static void handle_exception_types(x86_iframe_t* frame) {
 }
 
 /* top level x86 exception handler for most exceptions and irqs */
-void x86_exception_handler(x86_iframe_t* frame) {
+void x86_exception_handler(iframe_t* frame) {
   // are we recursing?
   if (unlikely(arch_blocking_disallowed()) && frame->vector != X86_INT_NMI) {
     exception_die(frame, "recursion in interrupt handler\n");

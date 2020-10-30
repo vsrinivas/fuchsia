@@ -28,12 +28,12 @@ __BEGIN_CDECLS
 
 #define X86_8BYTE_MASK 0xFFFFFFFF
 
-void x86_exception_handler(x86_iframe_t* frame);
-void platform_irq(x86_iframe_t* frame);
+void x86_exception_handler(struct iframe_t* frame);
+void platform_irq(struct iframe_t* frame);
 
 struct arch_exception_context {
   bool is_page_fault;
-  x86_iframe_t* frame;
+  struct iframe_t* frame;
   uint64_t cr2;
 };
 
@@ -51,7 +51,7 @@ void x86_64_context_switch(vaddr_t* oldsp, vaddr_t newsp
                            vaddr_t* old_unsafe_sp, vaddr_t new_unsafe_sp
 #endif
 );
-void x86_uspace_entry(const x86_iframe_t* iframe) __NO_RETURN;
+void x86_uspace_entry(const struct iframe_t* iframe) __NO_RETURN;
 
 void x86_syscall(void);
 

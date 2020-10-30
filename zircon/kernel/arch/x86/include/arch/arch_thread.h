@@ -48,7 +48,7 @@ struct arch_thread {
   union {
     void *gregs;
     x86_syscall_general_regs_t *syscall;
-    x86_iframe_t *iframe;
+    iframe_t *iframe;
   } suspended_general_regs;
 
   /* Buffer to save fpu and extended register (e.g., PT) state */

@@ -15,8 +15,6 @@
 
 // exception handling
 // This is the main struct used by architecture-independent code.
-// It can be forward declared thus this is the "real" type and
-// arm64_iframe_t is the alias.
 struct iframe_t {
   uint64_t r[30];
   uint64_t lr;
@@ -28,9 +26,6 @@ struct iframe_t {
 };
 
 static_assert(sizeof(iframe_t) % 16u == 0u);
-
-// Lots of the code uses this name.
-using arm64_iframe_t = iframe_t;
 
 #endif  // !__ASSEMBLER__
 
