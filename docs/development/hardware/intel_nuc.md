@@ -13,13 +13,12 @@ You need the following:
 - RAM
 - m.2 SSD
 - Keyboard
-- Mouse
 - Monitor that supports HDMI
 - HDMI cable
-- ethernet cable
-- Magnetic tip phillips head screwdriver.
+- Ethernet cable
+- Magnetic tip phillips head screwdriver
 
-This table shows what I bought from Amazon.
+This table shows some example parts you can get from Amazon.
 
 | Item | Link | Notes: |
 | ---- | ---- | ------ |
@@ -28,10 +27,9 @@ This table shows what I bought from Amazon.
 | SSD | [B01IAGSDJ0](https://www.amazon.com/gp/product/B01IAGSDJ0) | Works fine. You only need one of these SSDs. |
 | SSD | [B00TGIVZTW](https://www.amazon.com/gp/product/B00TGIVZTW) | Works fine. |
 | SSD | [B01M9K0N8I](https://www.amazon.com/gp/product/B01M9K0N8I) | Works fine. |
-| **Optional:** | | |
-| Keyboard and Mouse | [B00B7GV802](https://www.amazon.com/gp/product/B00B7GV802) | Works fine.  Next time I'd get a keyboard with a smaller footprint. |
 | Monitor | [B015WCV70W](https://www.amazon.com/gp/product/B015WCV70W) | Works fine. |
 | HDMI Cable | [B014I8SIJY](https://www.amazon.com/gp/product/B014I8SIJY) | Works fine. |
+| Keyboard | [B00B7GV802](https://www.amazon.com/gp/product/B00B7GV802) | Works fine. It also includes a mouse. |
 | USB 3.0 drive | [B01BGTG41W](https://www.amazon.com/gp/product/B01BGTG41W) | Works fine. |
 
 ## 2. Prepare the NUC {#prepare-the-nuc}
@@ -53,7 +51,8 @@ Follow the instructions to install the RAM and SSD on the NUC:
 
    <img width="50%" src="/docs/images/developing_on_nuc/parts_installed.jpg"/>
 1. Replace bottom and screw feet back in.
-1. Plug power, ethernet, HDMI, keyboard, and mouse into NUC.
+1. Plug power, ethernet cable, HDMI, and keyboard into the NUC.
+1. Plug the other end of the ethernet cable into your build workstation or the router/switch that connects to your build workstation.
 
 ## 3. Enable EFI booting {#enable-efi-booting}
 
@@ -87,7 +86,7 @@ use the board configuration `x64` when running `fx set`. For example `fx set cor
 
 ## 5. Pave Fuchsia {#pave-fuchsia}
 
-1. Plug in your USB key to your build workstation.
+1. Plug your USB key into your build workstation.
 1. Identify the path to your USB key by running `fx list-usb-disks`.
 1. Create a Zedboot USB by running `fx mkzedboot /path/to/usb/disk`.
 1. Plug the Zedboot USB key into the NUC and boot it.
@@ -95,4 +94,5 @@ use the board configuration `x64` when running `fx set`. For example `fx set cor
 1. Run `lsblk` on the device. Take note of the HDD or SSD's device path.
     1. An example path looks like `/dev/sys/pci/00:17.0/ahci/sata0/block`
 1. Run `install-disk-image init-partition-tables --block-device <BLOCK_DEVICE_PATH>` on the device.
-1. Run `fx update` on your workstation.
+1. Run `fx serve` on your workstation.
+1. After paving is completed, disconnect the USB key.
