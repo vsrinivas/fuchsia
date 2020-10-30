@@ -65,11 +65,11 @@ TEST_F(ReporterTest, InitialState) {
   EXPECT_THAT(
       hierarchy,
       NodeMatches(AllOf(NameMatches("root"),
-                        PropertyList(UnorderedElementsAre(
-                            UintIs("count of failures to open device", 0),
-                            UintIs("count of failures to obtain device fdio service channel", 0),
-                            UintIs("count of failures to obtain device stream channel", 0),
-                            UintIs("count of failures to start a device", 0))))));
+                        PropertyList(IsSupersetOf(
+                            {UintIs("count of failures to open device", 0),
+                             UintIs("count of failures to obtain device fdio service channel", 0),
+                             UintIs("count of failures to obtain device stream channel", 0),
+                             UintIs("count of failures to start a device", 0)})))));
 
   // Expect empty child nodes for devices and client ports.
   EXPECT_THAT(hierarchy,
@@ -104,11 +104,11 @@ TEST_F(ReporterTest, RootMetrics) {
   EXPECT_THAT(
       GetHierarchy(),
       NodeMatches(AllOf(NameMatches("root"),
-                        PropertyList(UnorderedElementsAre(
-                            UintIs("count of failures to open device", 1u),
-                            UintIs("count of failures to obtain device fdio service channel", 2u),
-                            UintIs("count of failures to obtain device stream channel", 3u),
-                            UintIs("count of failures to start a device", 4u))))));
+                        PropertyList(IsSupersetOf(
+                            {UintIs("count of failures to open device", 1u),
+                             UintIs("count of failures to obtain device fdio service channel", 2u),
+                             UintIs("count of failures to obtain device stream channel", 3u),
+                             UintIs("count of failures to start a device", 4u)})))));
 }
 
 // Tests methods that add and remove devices.

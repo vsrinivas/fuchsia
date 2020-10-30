@@ -197,6 +197,9 @@ class Reporter {
   void FailedToObtainStreamChannel(const std::string& name, bool is_input, zx_status_t status);
   void FailedToStartDevice(const std::string& name);
 
+  // Mixer events which are not easily tied to a specific device or client.
+  void MixerClockSkewDiscontinuity(zx::duration abs_clock_error);
+
   // Exported for tests.
   const inspect::Inspector& inspector() {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -232,6 +235,7 @@ class Reporter {
     inspect::UintProperty failed_to_obtain_fdio_service_channel_count;
     inspect::UintProperty failed_to_obtain_stream_channel_count;
     inspect::UintProperty failed_to_start_device_count;
+    inspect::LinearIntHistogram mixer_clock_skew_discontinuities;
     inspect::Node outputs_node;
     inspect::Node inputs_node;
     inspect::Node renderers_node;

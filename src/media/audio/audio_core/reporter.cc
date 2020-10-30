@@ -576,6 +576,11 @@ void Reporter::InitInspect() {
       root_node.CreateUint("count of failures to obtain device stream channel", 0);
   impl_->failed_to_start_device_count =
       root_node.CreateUint("count of failures to start a device", 0);
+  impl_->mixer_clock_skew_discontinuities =
+      root_node.CreateLinearIntHistogram("mixer clock skew discontinuities (error in ns)",
+                                         ZX_MSEC(-100),  // floor
+                                         ZX_MSEC(2),     // step size
+                                         100);           // buckets range from -100ms to +100ms
 
   impl_->outputs_node = root_node.CreateChild("output devices");
   impl_->inputs_node = root_node.CreateChild("input devices");
@@ -659,6 +664,14 @@ void Reporter::FailedToStartDevice(const std::string& name) {
     return;
   }
   impl_->failed_to_start_device_count.Add(1);
+}
+
+void Reporter::MixerClockSkewDiscontinuity(zx::duration clock_error) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
+    return;
+  }
+  impl_->mixer_clock_skew_discontinuities.Insert(clock_error.get());
 }
 
 Reporter::Impl::Impl(sys::ComponentContext& cc, ThreadingModel& tm)

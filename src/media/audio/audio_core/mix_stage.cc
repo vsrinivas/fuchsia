@@ -16,6 +16,7 @@
 #include "src/media/audio/audio_core/base_renderer.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
+#include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -611,10 +612,13 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // running position accounting and the initial clock transforms -- even those with offsets.
   auto abs_pos_err = std::abs(info.src_pos_error.get());
   if (abs_pos_err > kMaxErrorThresholdDuration.get()) {
+    Reporter::Singleton().MixerClockSkewDiscontinuity(info.src_pos_error);
+
     // Source error exceeds our threshold; reset rate adjustment altogether; allow a discontinuity
     auto src_frac_pos = Fixed::FromRaw(info.dest_frames_to_frac_source_frames(dest_frame));
     info.next_frac_source_frame = src_frac_pos;
     info.src_pos_error = zx::duration(0);
+
     FX_LOGS(INFO) << "src_pos_err: out of bounds (" << abs_pos_err << " vs. limit +/-"
                   << kMaxErrorThresholdDuration.get() << "), resetting next_frac_src to "
                   << info.next_frac_source_frame.raw_value();
