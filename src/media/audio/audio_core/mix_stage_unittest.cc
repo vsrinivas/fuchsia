@@ -435,17 +435,54 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
 }
 
 TEST_F(MixStageTest, MixNoInputs) {
+  constexpr uint32_t kRequestedFrames = 48;
+  auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
+
+  // With no inputs, we should return nullopt.
+  ASSERT_FALSE(buf);
+}
+
+TEST_F(MixStageTest, MixSilentInput) {
+  // Add a silent input.
+  auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+  stream->set_usage_mask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
+  stream->set_gain_db(fuchsia::media::audio::MUTED_GAIN_DB);
   // Set timeline rate to match our format.
-  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+  stream->timeline_function()->Update(TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
+  mix_stage_->AddInput(stream);
 
   constexpr uint32_t kRequestedFrames = 48;
   auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
 
-  // With no inputs, we should have a muted buffer with no usages.
+  // If an input is silent, we can return silence.
+  ASSERT_FALSE(buf);
+}
+
+TEST_F(MixStageTest, MixSilentInputWithNonSilentInput) {
+  // Add a silent input.
+  auto silent_stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+  silent_stream->set_usage_mask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
+  silent_stream->set_gain_db(fuchsia::media::audio::MUTED_GAIN_DB);
+  // Set timeline rate to match our format.
+  silent_stream->timeline_function()->Update(TimelineFunction(
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
+  mix_stage_->AddInput(silent_stream);
+
+  // Add a non-silent input.
+  auto non_silent_stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+  non_silent_stream->set_usage_mask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
+  non_silent_stream->set_gain_db(0.0);
+  // Set timeline rate to match our format.
+  non_silent_stream->timeline_function()->Update(TimelineFunction(
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
+  mix_stage_->AddInput(non_silent_stream);
+
+  constexpr uint32_t kRequestedFrames = 48;
+  auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
+
+  // If an input is silent, we can return silence.
   ASSERT_TRUE(buf);
-  EXPECT_TRUE(buf->usage_mask().is_empty());
-  EXPECT_FLOAT_EQ(buf->gain_db(), fuchsia::media::audio::MUTED_GAIN_DB);
 }
 
 static constexpr auto kInputStreamUsage = StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION);
@@ -612,10 +649,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
   {
     auto buf = mix_stage->ReadLock(Fixed(0), 480);
     RunLoopUntilIdle();
-    ASSERT_TRUE(buf);
-    EXPECT_EQ(0u, buf->start().Floor());
-    EXPECT_EQ(480u, buf->length().Floor());
-    EXPECT_EQ(0.0, static_cast<float*>(buf->payload())[0]);
+    ASSERT_FALSE(buf);
   }
 }
 

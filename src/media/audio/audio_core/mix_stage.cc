@@ -139,6 +139,12 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(Fixed dest_frame, size_
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
   ForEachSource(TaskType::Mix, dest_frame);
 
+  if (cur_mix_job_.applied_gain_db <= fuchsia::media::audio::MUTED_GAIN_DB) {
+    // Either we mixed no streams, or all the streams mixed were muted. Either way we can just
+    // return nullopt to signify we have no audible frames.
+    return std::nullopt;
+  }
+
   // Cache the buffer in case it is not fully read by the caller.
   cached_buffer_.Set(ReadableStream::Buffer(
       Fixed(dest_frame.Floor()), Fixed(cur_mix_job_.buf_frames), cur_mix_job_.buf, true,
