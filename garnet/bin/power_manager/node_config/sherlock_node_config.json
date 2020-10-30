@@ -86,5 +86,18 @@
       "thermal_shutdown_temperature": 0.0,
       "throttle_end_delay": 60.0
     }
+  },
+  {
+    "type": "ThermalShutdown",
+    "name": "thermal_shutdown_soc_pll",
+    "dependencies": {
+      "system_shutdown_node": "sys_shutdown",
+      "temperature_handler_node": "temperature_soc_pll"
+    },
+    "config": {
+      "thermal_shutdown_temperature_c": 100.0,
+      "poll_interval_s": 1,
+      "filter_time_constant_s": 1
+    }
   }
 ]
