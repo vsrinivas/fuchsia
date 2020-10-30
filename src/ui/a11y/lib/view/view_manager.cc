@@ -147,7 +147,6 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetSemanticNode(
   auto tree_weak_ptr = GetTreeByKoid(koid);
 
   if (!tree_weak_ptr) {
-    FX_LOGS(ERROR) << "ViewManager::GetSemanticNode: No semantic tree found for koid: " << koid;
     return nullptr;
   }
 
