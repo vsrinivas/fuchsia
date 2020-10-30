@@ -68,6 +68,10 @@ struct SdmmcReqNew {
     uint32 blockcount;
     uint32 blocksize;
 
+    /// If true, the SDMMC driver should not print any error messages for this request. This is used
+    /// for initialization and tuning, when some requests are expected to fail.
+    bool probe_tuning_cmd;
+
     /// The client ID for this request. Only VMOs registered with this client may be present in
     /// buffers below.
     uint8 client_id;
