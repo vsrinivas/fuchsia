@@ -93,7 +93,7 @@ func TestMultiplyShards(t *testing.T) {
 	multShard := func(env build.Environment, os string, id int, runs int) *Shard {
 		test := makeTest(id, os)
 		test.Runs = runs
-		test.RunAlgorithm = KeepGoing
+		test.RunAlgorithm = StopOnFailure
 		return &Shard{
 			Name:  multipliedShardPrefix + environmentName(env) + "-" + normalizeTestName(test.Name),
 			Tests: []Test{test},

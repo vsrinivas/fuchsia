@@ -170,7 +170,7 @@ func MultiplyShards(
 				} else {
 					match.test.Runs = 1
 				}
-				match.test.RunAlgorithm = KeepGoing
+				match.test.RunAlgorithm = StopOnFailure
 			}
 		}
 

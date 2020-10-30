@@ -167,10 +167,10 @@ Note: "os" and "run_count" are both optional; see [below](#multiply-examples)
 for more examples.
 
 Then do a CQ dry run (or choose a tryjob that runs your tests).
-These tests show as separate shards for each test, which run that test as
-many times as the specified run count. The timeout for running these tests
-is 40 minutes on most builders. If a test takes too long, the shard may
-time out.
+These tests show as separate shards for each test, which run that test
+repeatedly until it fails, up to the specified run count. The timeout for
+running these tests is 40 minutes on most builders. If a test takes too long,
+the shard may time out.
 
 The test name can be any of the following:
 

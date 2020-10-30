@@ -347,6 +347,21 @@ func TestRunTest(t *testing.T) {
 				Result: runtests.TestSuccess,
 			}},
 		},
+		{
+			name: "returns on first failure even if max attempts > 1",
+			test: build.Test{
+				Name:       "fuchsia-pkg://foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
+			},
+			runs:         5,
+			runAlgorithm: testsharder.StopOnFailure,
+			testErr:      fmt.Errorf("test failed"),
+			expectedResult: []*testrunner.TestResult{{
+				Name:   "fuchsia-pkg://foo/bar",
+				Result: runtests.TestFailure,
+			}},
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -380,7 +395,7 @@ func TestRunTest(t *testing.T) {
 				funcCalls := strings.Join(tester.funcCalls, ",")
 				testCount := strings.Count(funcCalls, testFunc)
 				expectedTries := 1
-				if c.testErr != nil || c.runAlgorithm == testsharder.KeepGoing {
+				if (c.runAlgorithm == testsharder.StopOnSuccess && c.testErr != nil) || c.runAlgorithm == testsharder.KeepGoing {
 					expectedTries = c.runs
 				}
 				if testCount != expectedTries {

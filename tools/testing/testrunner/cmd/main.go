@@ -331,7 +331,8 @@ func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outp
 		}
 		results = append(results, result)
 
-		if test.RunAlgorithm == testsharder.StopOnSuccess && result.Result == runtests.TestSuccess {
+		if (test.RunAlgorithm == testsharder.StopOnSuccess && result.Result == runtests.TestSuccess) ||
+			(test.RunAlgorithm == testsharder.StopOnFailure && result.Result == runtests.TestFailure) {
 			break
 		}
 	}

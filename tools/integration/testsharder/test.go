@@ -10,12 +10,15 @@ import "go.fuchsia.dev/fuchsia/tools/build"
 type RunAlgorithm string
 
 const (
-	// StopOnSuccess means to try the test up to `Runs` times
-	// and to break on the first success.
-	StopOnSuccess RunAlgorithm = "STOP_ON_SUCCESS"
 	// KeepGoing means to run the test for as many times as `Runs`
 	// regardless of the result of each test run.
 	KeepGoing RunAlgorithm = "KEEP_GOING"
+	// StopOnFailure means to try the test up to `Runs` times
+	// and to break on the first failure.
+	StopOnFailure RunAlgorithm = "STOP_ON_FAILURE"
+	// StopOnSuccess means to try the test up to `Runs` times
+	// and to break on the first success.
+	StopOnSuccess RunAlgorithm = "STOP_ON_SUCCESS"
 )
 
 // Test is a struct used to hold information about a build.Test and the number
@@ -27,7 +30,7 @@ type Test struct {
 	Runs int `json:"runs,omitempty"`
 
 	// RunAlgorithm determines how `Runs` will be used to run the test.
-	RunAlgorithm RunAlgorithm `json:"run_algorithm",omitempty"`
+	RunAlgorithm RunAlgorithm `json:"run_algorithm,omitempty"`
 }
 
 func (t *Test) applyModifier(m TestModifier) {
