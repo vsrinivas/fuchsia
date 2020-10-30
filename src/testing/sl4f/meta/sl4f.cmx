@@ -55,6 +55,7 @@
             "fuchsia.hwinfo.Board",
             "fuchsia.hwinfo.Device",
             "fuchsia.hwinfo.Product",
+            "fuchsia.input.injection.InputDeviceRegistry",
             "fuchsia.input.report.InputDevice",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.kernel.Stats",

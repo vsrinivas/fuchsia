@@ -40,24 +40,24 @@ enum Command {
     /// Text is injected by translating a string into keystrokes using a QWERTY keymap. This
     /// facility is intended for end-to-end and input testing purposes only.
     ///
-    /// Only printable ASCII characters are mapped. Tab, newline, and other control haracters are
+    /// Only printable ASCII characters are mapped. Tab, newline, and other control characters are
     /// not supported, and `keyevent` should be used instead.
     ///
     /// The events simulated consist of a series of keyboard reports, ending in a report with no
     /// keys. The number of reports is near the lower bound of reports needed to produce the
     /// requested string, minimizing pauses and shift-state transitions.
     ///
-    /// The `--duration` is divided between the reports. Care should be taken not to provide so
-    /// long a duration that key repeat kicks in.
+    /// The `--key_event_duration` is the time between each report. Care should be taken not to
+    /// provide so long a duration that key repeat kicks in.
     ///
     /// Note: when using through `fx shell` with quotes, you may need to surround the invocation in
     /// strong quotes, e.g.:
     ///
     /// fx shell 'input text "Hello, world!"'
     Text {
-        #[structopt(short = "d", long = "duration", default_value = "0")]
-        /// Duration of the event(s) in milliseconds
-        duration: u32,
+        #[structopt(long = "key_event_duration", default_value = "0")]
+        /// Duration of the each event in milliseconds
+        key_event_duration_msec: u32,
         /// Input text to inject
         input: String,
     },
@@ -65,7 +65,7 @@ enum Command {
     KeyboardEvent {
         #[structopt(short = "d", long = "duration", default_value = "0")]
         /// Duration of the event(s) in milliseconds
-        duration: u32,
+        duration_msec: u32,
         /// HID usage code
         usage: u32,
     },
@@ -90,7 +90,7 @@ enum Command {
         tap_event_count: usize,
         #[structopt(short = "d", long = "duration", default_value = "0")]
         /// Duration of the event(s) in milliseconds
-        duration: u32,
+        duration_msec: u32,
         /// X axis coordinate
         x: u32,
         /// Y axis coordinate
@@ -117,7 +117,7 @@ enum Command {
         move_event_count: usize,
         #[structopt(short = "d", long = "duration", default_value = "0")]
         /// Duration of the event(s) in milliseconds
-        duration: u32,
+        duration_msec: u32,
         /// X axis start coordinate
         x0: u32,
         /// Y axis start coordinate
@@ -170,25 +170,32 @@ async fn main() {
 
     let opt = Opt::from_iter(args.into_iter());
     match opt.command {
-        Command::Text { input, duration } => {
-            input_synthesis::text_command(input, Duration::from_millis(duration as u64)).await
+        Command::Text { input, key_event_duration_msec } => {
+            input_synthesis::text_command(
+                input,
+                Duration::from_millis(key_event_duration_msec as u64),
+            )
+            .await
         }
-        Command::KeyboardEvent { usage, duration } => {
-            input_synthesis::keyboard_event_command(usage, Duration::from_millis(duration as u64))
-                .await
+        Command::KeyboardEvent { usage, duration_msec } => {
+            input_synthesis::keyboard_event_command(
+                usage,
+                Duration::from_millis(duration_msec as u64),
+            )
+            .await
         }
-        Command::Tap { width, height, tap_event_count, duration, x, y } => {
+        Command::Tap { width, height, tap_event_count, duration_msec, x, y } => {
             input_synthesis::tap_event_command(
                 x,
                 y,
                 width,
                 height,
                 tap_event_count,
-                Duration::from_millis(duration as u64),
+                Duration::from_millis(duration_msec as u64),
             )
             .await
         }
-        Command::Swipe { width, height, move_event_count, duration, x0, y0, x1, y1 } => {
+        Command::Swipe { width, height, move_event_count, duration_msec, x0, y0, x1, y1 } => {
             input_synthesis::swipe_command(
                 x0,
                 y0,
@@ -197,7 +204,7 @@ async fn main() {
                 width,
                 height,
                 move_event_count,
-                Duration::from_millis(duration as u64),
+                Duration::from_millis(duration_msec as u64),
             )
             .await
         }

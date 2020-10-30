@@ -13,6 +13,7 @@ void main(List<String> args) {
   MockSl4f sl4f;
 
   Duration duration = const Duration(milliseconds: 300);
+  Duration keyEventDuration = const Duration(milliseconds: 1);
   setUp(() {
     sl4f = MockSl4f();
   });
@@ -134,5 +135,20 @@ void main(List<String> args) {
       'x': 0,
       'y': 1000,
     })).called(1);
+  });
+
+  group('keyboard', () {
+    Input input;
+    setUp(() {
+      input = Input(sl4f);
+    });
+
+    test('hello world', () async {
+      await input.text('hello world');
+      verify(sl4f.request('input_facade.Text', {
+        'text': 'hello world',
+        'key_event_duration': keyEventDuration.inMilliseconds,
+      }));
+    });
   });
 }

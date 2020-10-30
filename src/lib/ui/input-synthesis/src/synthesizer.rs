@@ -104,7 +104,7 @@ pub(crate) fn keyboard_event(
 
 pub(crate) fn text(
     input: String,
-    duration: Duration,
+    key_event_duration: Duration,
     registry: &mut dyn InputDeviceRegistry,
 ) -> Result<(), Error> {
     let input_device = registry.add_keyboard_device()?;
@@ -112,15 +112,11 @@ pub(crate) fn text(
         .derive_key_sequence(&input)
         .ok_or_else(|| anyhow::format_err!("Cannot translate text to key sequence"))?;
 
-    let stroke_duration = duration / (key_sequence.len() - 1) as u32;
     let mut key_iter = key_sequence.into_iter().peekable();
-
     while let Some(keyboard) = key_iter.next() {
-        let result: Result<(), Error> = input_device.key_press(keyboard, monotonic_nanos()?);
-        result?;
-
+        input_device.key_press(keyboard, monotonic_nanos()?)?;
         if key_iter.peek().is_some() {
-            thread::sleep(stroke_duration);
+            thread::sleep(key_event_duration);
         }
     }
 

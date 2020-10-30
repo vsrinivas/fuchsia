@@ -42,13 +42,24 @@ pub async fn keyboard_event_command(usage: u32, duration: Duration) -> Result<()
     keyboard_event(usage, duration, &mut legacy_backend::InputDeviceRegistry::new())
 }
 
-/// Simulates `input` being typed on a [qwerty] keyboard by making use of [`InverseKeymap`].
+/// Simulates `input` being typed on a keyboard, with `key_event_duration` between key events.
 ///
-/// `duration` is divided equally between all keyboard events.
+/// # Requirements
+/// * `input` must be non-empty
+/// * `input` must only contain characters representable using the current keyboard layout
+///    and locale. (At present, it is assumed that the current layout and locale are
+///   `US-QWERTY` and `en-US`, respectively.)
 ///
-/// [qwerty]: keymaps/constant.QWERTY_MAP.html
-pub async fn text_command(input: String, duration: Duration) -> Result<(), Error> {
-    text(input, duration, &mut legacy_backend::InputDeviceRegistry::new())
+/// # Resolves to
+/// * `Ok(())` if the arguments met the requirements above, and the events were successfully
+///   injected.
+/// * `Err(Error)` otherwise.
+///
+/// # Corner case handling
+/// * `key_event_duration` of zero is permitted, and will result in events being generated as
+///    quickly as possible.
+pub async fn text_command(input: String, key_event_duration: Duration) -> Result<(), Error> {
+    text(input, key_event_duration, &mut legacy_backend::InputDeviceRegistry::new())
 }
 
 /// Simulates `tap_event_count` taps at coordinates `(x, y)` for a touchscreen with horizontal

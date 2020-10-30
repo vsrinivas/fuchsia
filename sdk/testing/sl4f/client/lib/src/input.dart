@@ -149,6 +149,28 @@ class Input {
     return result == 'Success';
   }
 
+  /// Enters [text], as if typed on a keyboard, with [keyEventDuration]
+  /// between key events.
+  ///
+  /// [text] must be non-empty, and the characters within [text] must be
+  /// representable using the current keyboard layout and locale.
+  ///
+  /// At present, it is assumed that the current layout and locale are
+  /// "US-QWERTY" and "en-US", respectively.
+  ///
+  /// The number of events generated is [>= 2 * text.length]:
+  /// * To account for both key-down and key-up events for every character.
+  /// * To account for modifier keys (e.g. capital letters require pressing the
+  ///   shift key).
+  Future<bool> text(String text,
+      {Duration keyEventDuration = const Duration(milliseconds: 1)}) async {
+    final result = await _sl4f.request('input_facade.Text', {
+      'text': text,
+      'key_event_duration': keyEventDuration.inMilliseconds,
+    });
+    return result == 'Success';
+  }
+
   /// Compensates for the given [screenRotation].
   ///
   /// If null is provided, the default specified in the constructor is used.

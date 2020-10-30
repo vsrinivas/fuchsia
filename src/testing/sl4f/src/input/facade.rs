@@ -4,14 +4,16 @@
 
 use crate::input::types::{
     ActionResult, MultiFingerSwipeRequest, MultiFingerTapRequest, SwipeRequest, TapRequest,
+    TextRequest,
 };
 use anyhow::{Context, Error};
 use fuchsia_syslog::macros::fx_log_info;
-use input_synthesis as input;
+use input_synthesis::{self as input};
 use serde_json::{from_value, Value};
 use std::{convert::TryFrom, time::Duration};
 const DEFAULT_DIMENSION: u32 = 1000;
 const DEFAULT_DURATION: u64 = 300;
+const DEFAULT_KEY_EVENT_DURATION: u64 = 0;
 
 macro_rules! validate_fingers {
     ( $fingers:expr, $field:ident $comparator:tt $limit:expr ) => {
@@ -286,6 +288,57 @@ impl InputFacade {
             duration,
         )
         .await?;
+        Ok(ActionResult::Success)
+    }
+
+    /// Enters `text`, as if typed on a keyboard, with `key_event_duration` between key events.
+    ///
+    /// # Arguments
+    /// * `value`: will be parsed to `TestRequest`
+    ///   * must include:
+    ///     * `text`: the characters to be input.
+    ///        * Must be non-empty.
+    ///        * All characters within `text` must be representable using the current
+    ///          keyboard layout and locale. (At present, it is assumed that the current
+    ///          layout and locale are `US-QWERTY` and `en-US`, respectively.)
+    ///        * If these constraints are violated, returns an `Err`.
+    ///   * optionally includes:
+    ///     * `key_event_duration`: Duration of each event in milliseconds
+    ///        * Serves as a lower bound on the time between key events (actual time may be
+    ///          higher due to system load).
+    ///        * Defaults to 0 milliseconds (each event is sent as quickly as possible).
+    ///        * The number of events is `>= 2 * text.len()`:
+    ///          * To account for both key-down and key-up events for every character.
+    ///          * To account for modifier keys (e.g. capital letters require pressing the
+    ///            shift key).
+    ///
+    /// # Returns
+    /// * `Ok(ActionResult::Success)` if the arguments were successfully parsed and events
+    ///    successfully injected.
+    /// * `Err(Error)` otherwise.
+    ///
+    /// # Example
+    /// To send "hello world", with 1 millisecond between each key event:
+    ///
+    /// ```
+    /// text(TextRequest {
+    ///   text: "hello world",
+    ///   key_event_duration: 1,
+    /// });
+    /// ```
+    pub async fn text(&self, args: Value) -> Result<ActionResult, Error> {
+        fx_log_info!("Executing Text in Input Facade.");
+        let req: TextRequest = from_value(args)?;
+        let text = match req.text.len() {
+            0 => Err(format_err!("`text` must be non-empty")),
+            _ => Ok(req.text),
+        }?;
+        let key_event_duration = match req.key_event_duration {
+            Some(x) => Duration::from_millis(x),
+            None => Duration::from_millis(DEFAULT_KEY_EVENT_DURATION),
+        };
+
+        input::text_command(text, key_event_duration).await?;
         Ok(ActionResult::Success)
     }
 }
