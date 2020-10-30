@@ -121,34 +121,49 @@ fidl::BufferThenHeapAllocator<kBufferThenHeapAllocatorSize> allocator;
 
 const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = [] {
   std::list<const UsagePixelFormatCostEntry> result;
+  // Split block is slightly worse than non-split-block for GPU<->GPU, but better for GPU->display.
+  constexpr double kSplitCost = 10.0;
+  constexpr double kNonYuvCost = 100.0;
   // Tiled headers enable more optimizations and are more efficient, but alignment requirements make
   // them take up more RAM. They're still worthwhile for our usecases.
-  AddRgbaPixelFormat(allocator,
-                     llcpp::fuchsia::sysmem2::
-                         FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE_TILED_HEADER,
-                     400.0, result);
-  AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_TE, 500.0,
-                     result);
-  // 16X16 is better for the GPU, but 32X8 is better for the display. For simplicity value them the
-  // same.
-  AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8_TE, 500.0,
-                     result);
-  // Split block is slightly worse than non-split-block for GPU<->GPU, but better for GPU->display.
-  AddRgbaPixelFormat(
-      allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE,
-      600.0, result);
-  AddRgbaPixelFormat(
-      allocator,
+  constexpr double kNonTiledHeaderCost = 500.0;
+  // Formats without sparse set are substantially worse for the GPU than sparse formats.
+  constexpr double kNonSparseCost = 1000.0;
+  constexpr double kNonTeCost = 2000.0;
+  // Non-16X16 can have large advantages for the display, but it's much worse for the GPU.
+  constexpr double kNon16X16Cost = 4000.0;
+  uint64_t modifiers[] = {
+      llcpp::fuchsia::sysmem2::
+          FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE_TILED_HEADER,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_TE,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8_TE,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE,
       llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TILED_HEADER,
-      900.0, result);
-  AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16, 1000.0,
-                     result);
-  AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8, 1000.0,
-                     result);
-  AddRgbaPixelFormat(allocator,
-                     llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV,
-                     1100.0, result);
-  AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_LINEAR_TE, 1500.0,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8};
+  for (auto modifier : modifiers) {
+    float cost = 0.0;
+    if (!(modifier & llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_YUV_BIT))
+      cost += kNonYuvCost;
+    if (!(modifier & llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT))
+      cost += kNonTiledHeaderCost;
+    if (modifier & llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT)
+      cost += kSplitCost;
+    if (!(modifier & llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_SPARSE_BIT))
+      cost += kNonSparseCost;
+    if (!(modifier & llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TE_BIT))
+      cost += kNonTeCost;
+
+    constexpr uint64_t kAfbcTypeMask = 0xf;
+    if ((modifier & kAfbcTypeMask) !=
+        (llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16 & kAfbcTypeMask))
+      cost += kNon16X16Cost;
+    AddRgbaPixelFormat(allocator, modifier, cost, result);
+  }
+  // Should be higher cost than all AFBC formats.
+  AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_LINEAR_TE, 30000.0,
                      result);
   return result;
 }();

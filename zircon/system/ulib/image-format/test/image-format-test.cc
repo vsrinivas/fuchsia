@@ -742,3 +742,11 @@ TEST(ImageFormat, R8G8Formats_V1_LLCPP) {
   EXPECT_EQ(18u * 1, optional_format->bytes_per_row);
   EXPECT_EQ(18u * 17u * 1, ImageFormatImageSize(*optional_format));
 }
+
+TEST(ImageFormat, CorrectModifiers) {
+  EXPECT_EQ(sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER,
+            sysmem_v2::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER);
+  EXPECT_EQ(sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER,
+            sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16 | sysmem_v1::FORMAT_MODIFIER_ARM_YUV_BIT |
+                sysmem_v1::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT);
+}
