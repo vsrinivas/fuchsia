@@ -1,0 +1,14 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This exists to allow a soft, coordinated move of FIDL and related Dart
+# packages and tools from topaz to fuchsia.git.
+
+dart_package_label = {
+  fidl = "//topaz/public/dart/fidl"
+  fuchsia = "//topaz/public/dart/fuchsia"
+  zircon = "//topaz/public/dart/zircon"
+}
+
+fidlgen_dart_topaz_output_name = "fidlgen_dart"

@@ -4,6 +4,7 @@
 
 import("//build/dart/dart_component.gni")
 import("//build/dart/dart_library.gni")
+import("//build/dart/fidl_move.gni")
 import("//build/flutter/flutter_build_config.gni")
 import("//build/flutter/flutter_component.gni")
 import("//src/sys/build/components.gni")
@@ -14,9 +15,9 @@ dart_library("lib") {
   deps = [
     "//src/flutter/tests/fidl",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
-    "//topaz/public/dart/fidl",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",
+    dart_package_label.fidl,
   ]
 }
 

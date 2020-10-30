@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/fidl_move.gni")
 import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
 flutter_app("one-flutter") {
@@ -17,6 +18,6 @@ flutter_app("one-flutter") {
     "//src/ui/tests/e2e_input_tests/touch:fuchsia.test.ui",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//topaz/public/dart/fuchsia_services",
-    "//topaz/public/dart/zircon",
+    dart_package_label.zircon,
   ]
 }

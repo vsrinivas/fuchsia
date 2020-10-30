@@ -4,6 +4,7 @@
 
 import("//build/dart/dart_component.gni")
 import("//build/dart/dart_library.gni")
+import("//build/dart/fidl_move.gni")
 import("//src/sys/build/components.gni")
 
 group("tests") {
@@ -14,7 +15,7 @@ group("tests") {
 dart_library("lib") {
   package_name = "build_dart_test"
   sources = [ "main.dart" ]
-  deps = [ "//topaz/public/dart/fuchsia" ]
+  deps = [ dart_package_label.fuchsia ]
 }
 
 resource("text-file") {

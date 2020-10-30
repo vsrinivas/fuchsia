@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/fidl_move.gni")
 import("//src/sys/build/components.gni")
 import("//topaz/runtime/dart_runner/dart_app.gni")
 
@@ -18,10 +19,10 @@ dart_app("log-validator-dart-puppet") {
         "//sdk/fidl/fuchsia.diagnostics.stream",
         "//sdk/fidl/fuchsia.mem",
         "//src/diagnostics/lib/streams/dart:fuchsia_diagnostic_streams",
-        "//topaz/public/dart/fidl",
         "//topaz/public/dart/fuchsia_logger",
         "//topaz/public/dart/fuchsia_services",
-        "//topaz/public/dart/zircon",
+        dart_package_label.zircon,
+        dart_package_label.fidl,
       ]
     },
   ]

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/fidl_move.gni")
 import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
 flutter_app("parent-view") {
@@ -21,6 +22,6 @@ flutter_app("parent-view") {
     "//third_party/dart-pkg/pub/args",
     "//topaz/public/dart/fuchsia_scenic_flutter",
     "//topaz/public/dart/fuchsia_services",
-    "//topaz/public/dart/zircon",
+    dart_package_label.zircon,
   ]
 }

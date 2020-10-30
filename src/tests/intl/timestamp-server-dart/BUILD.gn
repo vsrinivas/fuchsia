@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/fidl_move.gni")
 import("//topaz/runtime/dart_runner/dart_app.gni")
 import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
@@ -19,11 +20,11 @@ dart_app("timestamp-server-dart") {
   deps = [
     "//garnet/examples/fidl/services:echo",
     "//third_party/dart-pkg/pub/intl",
-    "//topaz/public/dart/fidl",
-    "//topaz/public/dart/fuchsia",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",
-    "//topaz/public/dart/zircon",
+    dart_package_label.fuchsia,
+    dart_package_label.zircon,
+    dart_package_label.fidl,
   ]
   resources = [
     {
@@ -50,11 +51,11 @@ flutter_app("timestamp-server-flutter") {
   deps = [
     "//garnet/examples/fidl/services:echo",
     "//third_party/dart-pkg/pub/intl",
-    "//topaz/public/dart/fidl",
-    "//topaz/public/dart/fuchsia",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",
-    "//topaz/public/dart/zircon",
+    dart_package_label.fuchsia,
+    dart_package_label.zircon,
+    dart_package_label.fidl,
   ]
   resources = [
     {

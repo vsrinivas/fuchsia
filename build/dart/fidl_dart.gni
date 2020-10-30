@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/dart/dart_library.gni")
+import("//build/dart/fidl_move.gni")
 import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk_atom_alias.gni")
@@ -108,8 +109,8 @@ template("fidl_dart") {
 
     deps = [
       "//third_party/dart-pkg/pub/meta",
-      "//topaz/public/dart/fidl",
-      "//topaz/public/dart/zircon",
+      dart_package_label.fidl,
+      dart_package_label.zircon,
     ]
 
     if (defined(invoker.deps)) {
