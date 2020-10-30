@@ -17,6 +17,7 @@ RFC                                                     | Submitted  | Reviewed 
 [RFC-0005](0005_blobfs_snapshots.md)                    | 2020-09-07 | 2020-09-19 | Blobfs Snapshots
 [RFC-0006](0006_addendum_to_rfc_process_for_zircon.md)  | 2020-08-17 | 2020-09-24 | Addendum of the RFC Process for Zircon
 [RFC-0007](0007_remove_thread_killing.md)               | 2020-09-25 | 2020-10-06 | Zircon Removal of Thread Killing
+[RFC-0008](0008_remove_zx_clock_get_and_adjust.md)      | 2020-10-21 | 2020-10-29 | Remove zx_clock_get and zx_clock_adjust
 
 
 ## Rejected proposals
