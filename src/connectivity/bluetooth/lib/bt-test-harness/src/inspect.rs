@@ -10,7 +10,9 @@ use {
         constants::HOST_DEVICE_DIR,
         device_watcher::DeviceWatcher,
         expectation::{
-            asynchronous::{ExpectableState, ExpectableStateExt, ExpectationHarness},
+            asynchronous::{
+                expectable, Expectable, ExpectableExt, ExpectableState, ExpectableStateExt,
+            },
             Predicate,
         },
         hci_emulator::Emulator,
@@ -18,27 +20,16 @@ use {
     fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector, Inspect, NodeHierarchy},
     fuchsia_zircon::DurationNum,
     futures::{future::BoxFuture, FutureExt},
-    std::path::PathBuf,
+    std::{
+        ops::{Deref, DerefMut},
+        path::PathBuf,
+    },
+    test_harness::TestHarness,
 };
 
-use crate::{harness::TestHarness, tests::timeout_duration};
+use crate::timeout_duration;
 
 const RETRY_TIMEOUT_SECONDS: i64 = 1;
-
-pub async fn expect_hierarchies(
-    harness: &InspectHarness,
-    min_num: usize,
-) -> Result<InspectState, Error> {
-    harness
-        .when_satisfied(
-            Predicate::<InspectState>::predicate(
-                move |state| state.hierarchies.len() >= min_num,
-                "Expected number of hierarchies received",
-            ),
-            timeout_duration(),
-        )
-        .await
-}
 
 #[derive(Default, Clone)]
 pub struct InspectState {
@@ -46,7 +37,37 @@ pub struct InspectState {
     pub hierarchies: Vec<NodeHierarchy>,
 }
 
-pub type InspectHarness = ExpectationHarness<InspectState, ControlProxy>;
+#[derive(Clone)]
+pub struct InspectHarness(Expectable<InspectState, ControlProxy>);
+
+impl InspectHarness {
+    // Check if there are at least `min_num` hierarchies in our Inspect State. If so, return the
+    // inspect state, otherwise return Error.
+    pub async fn expect_n_hierarchies(&self, min_num: usize) -> Result<InspectState, Error> {
+        self.when_satisfied(
+            Predicate::<InspectState>::predicate(
+                move |state| state.hierarchies.len() >= min_num,
+                "Expected number of hierarchies received",
+            ),
+            timeout_duration(),
+        )
+        .await
+    }
+}
+
+impl Deref for InspectHarness {
+    type Target = Expectable<InspectState, ControlProxy>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for InspectHarness {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 pub async fn handle_inspect_updates(harness: InspectHarness) -> Result<(), Error> {
     loop {
@@ -73,7 +94,7 @@ pub async fn new_inspect_harness() -> Result<(InspectHarness, Emulator, PathBuf)
     let proxy = fuchsia_component::client::connect_to_service::<ControlMarker>()
         .context("Failed to connect to Control service")?;
 
-    let inspect_harness = InspectHarness::new(proxy);
+    let inspect_harness = InspectHarness(expectable(Default::default(), proxy));
     Ok((inspect_harness, emulator, host_path))
 }
 

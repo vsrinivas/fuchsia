@@ -6,14 +6,17 @@ use {
     anyhow::{Context, Error},
     fidl_fuchsia_bluetooth_sys::{HostWatcherMarker, HostWatcherProxy},
     fuchsia_bluetooth::{
-        expectation::asynchronous::{ExpectableState, ExpectationHarness},
+        expectation::asynchronous::{expectable, Expectable, ExpectableExt, ExpectableState},
         types::{HostId, HostInfo},
     },
     futures::future::{self, BoxFuture, FutureExt, TryFutureExt},
-    std::{collections::HashMap, convert::TryFrom},
+    std::{
+        collections::HashMap,
+        convert::TryFrom,
+        ops::{Deref, DerefMut},
+    },
+    test_harness::TestHarness,
 };
-
-use crate::harness::TestHarness;
 
 #[derive(Clone, Default)]
 pub struct HostWatcherState {
@@ -21,7 +24,22 @@ pub struct HostWatcherState {
     pub hosts: HashMap<HostId, HostInfo>,
 }
 
-pub type HostWatcherHarness = ExpectationHarness<HostWatcherState, HostWatcherProxy>;
+#[derive(Clone)]
+pub struct HostWatcherHarness(Expectable<HostWatcherState, HostWatcherProxy>);
+
+impl Deref for HostWatcherHarness {
+    type Target = Expectable<HostWatcherState, HostWatcherProxy>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for HostWatcherHarness {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 async fn watch_hosts(harness: HostWatcherHarness) -> Result<(), Error> {
     let proxy = harness.aux().clone();
@@ -48,7 +66,7 @@ pub async fn new_host_watcher_harness() -> Result<HostWatcherHarness, Error> {
     let proxy = fuchsia_component::client::connect_to_service::<HostWatcherMarker>()
         .context("Failed to connect to host_watcher service")?;
 
-    Ok(HostWatcherHarness::new(proxy))
+    Ok(HostWatcherHarness(expectable(Default::default(), proxy)))
 }
 
 impl TestHarness for HostWatcherHarness {

@@ -4,18 +4,16 @@
 
 use {
     anyhow::Error,
+    bt_test_harness::host_driver::{self, HostDriverHarness},
     fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::{
-        expectation,
+        expectation::{self, asynchronous::ExpectableExt},
         types::{Address, BondingData, LeData, OneOrBoth, PeerId},
     },
+    test_harness::run_suite,
 };
 
-use crate::harness::{
-    emulator::EmulatorHarness,
-    expect::expect_eq,
-    host_driver::{expect_peer, HostDriverHarness},
-};
+use crate::expect::expect_eq;
 
 // TODO(armansito|xow): Add tests for BR/EDR and dual mode bond data.
 
@@ -59,7 +57,7 @@ async fn restore_bonds(
 ) -> Result<Vec<BondingData>, Error> {
     use std::convert::TryFrom;
 
-    let fut = state.aux().proxy().restore_bonds(&mut bonds.into_iter().map(sys::BondingData::from));
+    let fut = state.aux().host.restore_bonds(&mut bonds.into_iter().map(sys::BondingData::from));
     let errors = fut.await?;
     Ok(errors.into_iter().map(BondingData::try_from).collect::<Result<Vec<_>, _>>()?)
 }
@@ -79,7 +77,7 @@ async fn test_restore_no_bonds_succeeds(harness: HostDriverHarness) -> Result<()
 // Tests initializing bonded LE devices.
 async fn test_restore_bonded_devices_success(harness: HostDriverHarness) -> Result<(), Error> {
     // Peers should be initially empty.
-    expect_eq!(0, harness.state().peers().len())?;
+    expect_eq!(0, harness.write_state().peers().len())?;
 
     let bond_data1 = new_le_bond_data(&TEST_ID1, &TEST_ADDR1, TEST_NAME1, true /* has LTK */);
     let bond_data2 = new_le_bond_data(&TEST_ID2, &TEST_ADDR2, TEST_NAME2, true /* has LTK */);
@@ -97,21 +95,21 @@ async fn test_restore_bonded_devices_success(harness: HostDriverHarness) -> Resu
         .and(expectation::peer::name(TEST_NAME2))
         .and(expectation::peer::bonded(true));
 
-    expect_peer(&harness, expected1).await?;
-    expect_peer(&harness, expected2).await?;
+    host_driver::expectation::peer(&harness, expected1).await?;
+    host_driver::expectation::peer(&harness, expected2).await?;
 
     Ok(())
 }
 
 async fn test_restore_bonded_devices_no_ltk_fails(harness: HostDriverHarness) -> Result<(), Error> {
     // Peers should be initially empty.
-    expect_eq!(0, harness.state().peers().len())?;
+    expect_eq!(0, harness.write_state().peers().len())?;
 
     // Inserting a bonded device without a LTK should fail.
     let bond_data = new_le_bond_data(&TEST_ID1, &TEST_ADDR1, TEST_NAME1, false /* no LTK */);
     let errors = restore_bonds(&harness, vec![bond_data.clone()]).await?;
     expect_eq!(vec![bond_data], errors)?;
-    expect_eq!(0, harness.state().peers().len())?;
+    expect_eq!(0, harness.write_state().peers().len())?;
 
     Ok(())
 }
@@ -120,7 +118,7 @@ async fn test_restore_bonded_devices_duplicate_entry(
     harness: HostDriverHarness,
 ) -> Result<(), Error> {
     // Peers should be initially empty.
-    expect_eq!(0, harness.state().peers().len())?;
+    expect_eq!(0, harness.write_state().peers().len())?;
 
     // Initialize one entry.
     let bond_data = new_le_bond_data(&TEST_ID1, &TEST_ADDR1, TEST_NAME1, true /* with LTK */);
@@ -131,7 +129,7 @@ async fn test_restore_bonded_devices_duplicate_entry(
     let expected = expectation::peer::address(TEST_ADDR1)
         .and(expectation::peer::technology(fidl_fuchsia_bluetooth_sys::TechnologyType::LowEnergy))
         .and(expectation::peer::bonded(true));
-    expect_peer(&harness, expected.clone()).await?;
+    host_driver::expectation::peer(&harness, expected.clone()).await?;
 
     // Adding an entry with the existing id should fail.
     let bond_data = new_le_bond_data(&TEST_ID1, &TEST_ADDR2, TEST_NAME2, true /* with LTK */);
@@ -152,7 +150,7 @@ async fn test_restore_bonded_devices_invalid_entry(
     harness: HostDriverHarness,
 ) -> Result<(), Error> {
     // Peers should be initially empty.
-    expect_eq!(0, harness.state().peers().len())?;
+    expect_eq!(0, harness.write_state().peers().len())?;
 
     // Add one entry with no LTK (invalid) and one with (valid). This should create an entry for the
     // valid device but report an error for the invalid entry.
@@ -164,7 +162,7 @@ async fn test_restore_bonded_devices_invalid_entry(
     let expected = expectation::peer::address(TEST_ADDR2)
         .and(expectation::peer::technology(fidl_fuchsia_bluetooth_sys::TechnologyType::LowEnergy))
         .and(expectation::peer::bonded(true));
-    expect_peer(&harness, expected.clone()).await?;
+    host_driver::expectation::peer(&harness, expected.clone()).await?;
 
     Ok(())
 }

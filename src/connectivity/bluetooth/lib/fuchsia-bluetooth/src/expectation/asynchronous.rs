@@ -142,56 +142,50 @@ where
     ) -> BoxFuture<'_, Result<Self::State, Error>> {
         let state = self.clone();
         let exp = expectation.clone();
-            ExpectationFuture::new(self.clone(), expectation)
-                .map(|s| Ok(s))
-                .on_timeout(timeout.after_now(), move || {
-                    let state = state.read();
-                    let result = exp.assert_satisfied(&state);
-                    result
-                        .map(|_| state)
-                        .map_err(|err| format_err!("Timed out waiting for expectation, last result:\n{:?}", err))
-                }).boxed()
+        ExpectationFuture::new(self.clone(), expectation)
+            .map(|s| Ok(s))
+            .on_timeout(timeout.after_now(), move || {
+                let state = state.read();
+                let result = exp.assert_satisfied(&state);
+                result.map(|_| state).map_err(|err| {
+                    format_err!("Timed out waiting for expectation, last result:\n{:?}", err)
+                })
+            })
+            .boxed()
     }
 }
 
-/// Shared Harness for awaiting predicate expectations on type `S`, using
-/// auxilliary data `A`
-///
-/// This type is the easiest way to get an implementation of 'ExpectableState'
-/// to await upon. The Aux type `A` is commonly used to hold a FIDL Proxy to
-/// drive the behavior under test.
-pub struct ExpectationHarness<S, A>(Arc<RwLock<HarnessInner<S, A>>>);
+/// Inner state for the `Expectable` helper type
+pub struct ExpectableInner<S, A> {
+    // Current state
+    pub state: S,
 
-impl<S, A> Clone for ExpectationHarness<S, A> {
-    fn clone(&self) -> ExpectationHarness<S, A> {
-        ExpectationHarness(self.0.clone())
-    }
-}
-
-/// Harness for State `S` and Auxilliary data `A`
-struct HarnessInner<S, A> {
-    /// Snapshot of current state
-    state: S,
-
-    /// All the tasks currently pending on a state change
+    // Pending Tasks
     tasks: Slab<task::Waker>,
-    /// Arbitrary auxilliary data. Commonly used to hold a FIDL proxy, but can
-    /// be used to store any data necessary for driving the behavior that will
-    /// result in state updates.
-    aux: A,
+
+    // Auxillary shared data
+    pub aux: A,
 }
 
-impl<S: Clone + 'static, A> ExpectableState for ExpectationHarness<S, A> {
+/// `Expectable<S,A>` is an easy way to build an implementation of `ExpectableState` to await upon.
+/// The Aux type `A` is commonly used to hold a FIDL Proxy to drive the behavior under test.
+pub type Expectable<S, A> = Arc<RwLock<ExpectableInner<S, A>>>;
+
+pub fn expectable<S, A>(state: S, aux: A) -> Expectable<S, A> {
+    Arc::new(RwLock::new(ExpectableInner { state, tasks: Slab::new(), aux }))
+}
+
+impl<S: Clone + 'static, A> ExpectableState for Expectable<S, A> {
     type State = S;
 
     /// Register a task as needing waking when state changes
     fn store_task(&mut self, cx: &mut task::Context<'_>) -> usize {
-        self.0.write().tasks.insert(cx.waker().clone())
+        self.write().tasks.insert(cx.waker().clone())
     }
 
     /// Remove a task from being tracked
     fn remove_task(&mut self, key: usize) {
-        let mut harness = self.0.write();
+        let mut harness = self.write();
         if harness.tasks.contains(key) {
             harness.tasks.remove(key);
         }
@@ -199,33 +193,34 @@ impl<S: Clone + 'static, A> ExpectableState for ExpectationHarness<S, A> {
 
     /// Notify all pending tasks that state has changed
     fn notify_state_changed(&self) {
-        for task in &self.0.read().tasks {
+        for task in &RwLock::read(self).tasks {
             task.1.wake_by_ref();
         }
-        self.0.write().tasks.clear()
+        self.write().tasks.clear()
     }
 
     fn read(&self) -> Self::State {
-        self.0.read().state.clone()
+        RwLock::read(self).state.clone()
     }
 }
 
-impl<S, A> ExpectationHarness<S, A> {
-    pub fn init(aux: A, state: S) -> ExpectationHarness<S, A> {
-        ExpectationHarness(Arc::new(RwLock::new(HarnessInner { aux, tasks: Slab::new(), state })))
-    }
+/// A trait to provide convenience methods on Expectable types held within wrapping harnesses
+pub trait ExpectableExt<S, A> {
+    /// Mutable access the auxilliary data
+    fn aux(&self) -> MappedRwLockWriteGuard<'_, A>;
 
-    pub fn aux(&self) -> MappedRwLockWriteGuard<'_, A> {
-        RwLockWriteGuard::map(self.0.write(), |harness| &mut harness.aux)
-    }
-
-    pub fn write_state(&self) -> MappedRwLockWriteGuard<'_, S> {
-        RwLockWriteGuard::map(self.0.write(), |harness| &mut harness.state)
-    }
+    /// Mutable access to the state
+    fn write_state(&self) -> MappedRwLockWriteGuard<'_, S>;
 }
 
-impl<S: Default, A> ExpectationHarness<S, A> {
-    pub fn new(aux: A) -> ExpectationHarness<S, A> {
-        ExpectationHarness::<S, A>::init(aux, S::default())
+// All `Expectable<S,A>` provide these methods, and thus so do any types implementing `Deref` whose
+// targets are `Expectable<S,A>`
+impl<S, A> ExpectableExt<S, A> for Expectable<S, A> {
+    fn aux(&self) -> MappedRwLockWriteGuard<'_, A> {
+        RwLockWriteGuard::map(self.write(), |harness| &mut harness.aux)
+    }
+
+    fn write_state(&self) -> MappedRwLockWriteGuard<'_, S> {
+        RwLockWriteGuard::map(self.write(), |harness| &mut harness.state)
     }
 }

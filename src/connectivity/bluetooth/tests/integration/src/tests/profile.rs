@@ -4,6 +4,10 @@
 
 use {
     anyhow::{format_err, Context, Error},
+    bt_test_harness::{
+        access::{expectation, AccessHarness},
+        profile::ProfileHarness,
+    },
     fidl::encoding::Decodable,
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth::{DeviceClass, MAJOR_DEVICE_CLASS_MISCELLANEOUS},
@@ -17,20 +21,14 @@ use {
     fidl_fuchsia_bluetooth_test::{BredrPeerParameters, HciEmulatorProxy, PeerProxy},
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
-        expectation::asynchronous::ExpectableStateExt,
-        types::Address,
-        types::{PeerId, Uuid},
+        expectation::asynchronous::{ExpectableExt, ExpectableStateExt},
+        types::{Address, PeerId, Uuid},
     },
     futures::{FutureExt, StreamExt, TryFutureExt},
+    test_harness::run_suite,
 };
 
-use crate::{
-    harness::{
-        access::{expectation, AccessHarness},
-        profile::ProfileHarness,
-    },
-    tests::timeout_duration,
-};
+use crate::tests::timeout_duration;
 
 /// This makes a custom BR/EDR service definition that runs over L2CAP.
 fn service_definition_for_testing() -> ServiceDefinition {
@@ -71,7 +69,8 @@ fn add_service(profile: &ProfileHarness) -> Result<ConnectionReceiverRequestStre
     let service_defs = vec![service_definition_for_testing()];
     let (connect_client, connect_requests) =
         create_request_stream().context("ConnectionReceiver creation")?;
-    let _ = profile.aux().proxy().advertise(
+
+    let _ = profile.aux().profile.advertise(
         &mut service_defs.into_iter(),
         ChannelParameters::new_empty(),
         connect_client,
@@ -112,7 +111,7 @@ async fn add_search(
 ) -> Result<SearchResultsRequestStream, Error> {
     let (results_client, results_stream) =
         create_request_stream().context("SearchResults creation")?;
-    profile.aux().proxy().search(profileid, &[], results_client)?;
+    profile.aux().profile.search(profileid, &[], results_client)?;
     Ok(results_stream)
 }
 
@@ -158,7 +157,7 @@ async fn test_add_and_remove_profile(profile: ProfileHarness) -> Result<(), Erro
 }
 
 async fn test_connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error> {
-    let fut = profile.aux().proxy().connect(
+    let fut = profile.aux().profile.connect(
         &mut PeerId(0xDEAD).into(),
         &mut ConnectParameters::L2cap(L2capParameters {
             psm: Some(PSM_AVDTP),
@@ -172,7 +171,7 @@ async fn test_connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error>
 }
 
 async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> Result<(), Error> {
-    let emulator = profile.aux().emulator().clone();
+    let emulator = profile.aux().emulator.clone();
     let peer_address = default_address();
     let profile_id = ServiceClassProfileIdentifier::AudioSink;
     let mut search_result = add_search(&profile, profile_id).await?;

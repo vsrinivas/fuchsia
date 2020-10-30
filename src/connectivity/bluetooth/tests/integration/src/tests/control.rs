@@ -4,23 +4,22 @@
 
 use {
     anyhow::{format_err, Error},
+    bt_test_harness::deprecated::control::{
+        activate_fake_host, expectation, ControlHarness, ControlState, FAKE_HCI_ADDRESS,
+    },
     fidl_fuchsia_bluetooth_test::{AdvertisingData, LowEnergyPeerParameters},
     fuchsia_bluetooth::{
         expectation::{
-            asynchronous::{ExpectableState, ExpectableStateExt},
+            asynchronous::{ExpectableExt, ExpectableState, ExpectableStateExt},
             Predicate,
         },
         hci_emulator::Emulator,
         types::Address,
     },
+    test_harness::run_suite,
 };
 
-use crate::{
-    harness::control::{
-        activate_fake_host, expectation, ControlHarness, ControlState, FAKE_HCI_ADDRESS,
-    },
-    tests::timeout_duration,
-};
+use crate::tests::timeout_duration;
 
 async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
     let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
@@ -29,19 +28,20 @@ async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
     let mut fake_hci_0 = Emulator::create_and_publish("bt-hci-integration-control-0").await?;
     let mut fake_hci_1 = Emulator::create_and_publish("bt-hci-integration-control-1").await?;
 
-    let state = control.when_satisfied(
-        Predicate::<ControlState>::predicate(
-            move |control| {
-                let added_fake_hosts = control.hosts.iter().filter(|(id, host)| {
-                    host.address == FAKE_HCI_ADDRESS && !initial_hosts_.contains(id)
-                });
-                added_fake_hosts.count() > 1
-            },
-            "Both Fake Hosts Added"
-        ),
-        timeout_duration()
-    )
-    .await?;
+    let state = control
+        .when_satisfied(
+            Predicate::<ControlState>::predicate(
+                move |control| {
+                    let added_fake_hosts = control.hosts.iter().filter(|(id, host)| {
+                        host.address == FAKE_HCI_ADDRESS && !initial_hosts_.contains(id)
+                    });
+                    added_fake_hosts.count() > 1
+                },
+                "Both Fake Hosts Added",
+            ),
+            timeout_duration(),
+        )
+        .await?;
 
     let fake_hosts: Vec<String> = state
         .hosts

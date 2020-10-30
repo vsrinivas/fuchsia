@@ -6,14 +6,17 @@ use {
     anyhow::{Context, Error},
     fidl_fuchsia_bluetooth_sys::{AccessMarker, AccessProxy},
     fuchsia_bluetooth::{
-        expectation::asynchronous::{ExpectableState, ExpectationHarness},
+        expectation::asynchronous::{expectable, Expectable, ExpectableExt, ExpectableState},
         types::{Peer, PeerId},
     },
     futures::future::{self, BoxFuture, FutureExt},
-    std::{collections::HashMap, convert::TryInto},
+    std::{
+        collections::HashMap,
+        convert::TryInto,
+        ops::{Deref, DerefMut},
+    },
+    test_harness::TestHarness,
 };
-
-use crate::harness::TestHarness;
 
 #[derive(Clone, Default)]
 pub struct AccessState {
@@ -21,7 +24,22 @@ pub struct AccessState {
     pub peers: HashMap<PeerId, Peer>,
 }
 
-pub type AccessHarness = ExpectationHarness<AccessState, AccessProxy>;
+#[derive(Clone)]
+pub struct AccessHarness(Expectable<AccessState, AccessProxy>);
+
+impl Deref for AccessHarness {
+    type Target = Expectable<AccessState, AccessProxy>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for AccessHarness {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 async fn watch_peers(harness: AccessHarness) -> Result<(), Error> {
     let proxy = harness.aux().clone();
@@ -39,20 +57,16 @@ async fn watch_peers(harness: AccessHarness) -> Result<(), Error> {
     }
 }
 
-pub async fn new_access_harness() -> Result<AccessHarness, Error> {
-    let proxy = fuchsia_component::client::connect_to_service::<AccessMarker>()
-        .context("Failed to connect to access service")?;
-
-    Ok(AccessHarness::new(proxy))
-}
-
 impl TestHarness for AccessHarness {
     type Env = ();
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
     fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
-            let harness = new_access_harness().await?;
+            let access = fuchsia_component::client::connect_to_service::<AccessMarker>()
+                .context("Failed to connect to access service")?;
+
+            let harness = AccessHarness(expectable(Default::default(), access));
             let run_access = watch_peers(harness.clone()).boxed();
             Ok((harness, (), run_access))
         }
@@ -64,7 +78,8 @@ impl TestHarness for AccessHarness {
 }
 
 pub mod expectation {
-    use crate::harness::{access::AccessState, host_watcher::HostWatcherState};
+    use super::*;
+    use crate::host_watcher::HostWatcherState;
     use fuchsia_bluetooth::{
         expectation::Predicate,
         types::{Address, HostId, HostInfo, Peer, PeerId, Uuid},

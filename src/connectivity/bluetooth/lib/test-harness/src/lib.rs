@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,21 +10,6 @@ use {
     log::{error, info},
     pin_utils::pin_mut,
 };
-
-#[macro_use]
-pub mod expect;
-
-// Test harnesses
-pub mod access;
-pub mod bootstrap;
-pub mod control;
-pub mod emulator;
-pub mod host_driver;
-pub mod host_watcher;
-pub mod inspect;
-pub mod low_energy_central;
-pub mod low_energy_peripheral;
-pub mod profile;
 
 /// A `TestHarness` is a type that provides an interface to test cases for interacting with
 /// functionality under test. For example, a WidgetHarness might provide controls for interacting
@@ -45,7 +30,12 @@ pub trait TestHarness: Sized {
     /// never returns Poll::Ready
     type Runner: Future<Output = Result<(), Error>> + Unpin + Send + 'static;
 
+    /// Initialize a TestHarness, creating the harness itself, any hidden environment, and a runner
+    /// task to execute background behavior
     fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>>;
+
+    /// Terminate the TestHarness. This should clear up any and all resources that were created by
+    /// init()
     fn terminate(env: Self::Env) -> BoxFuture<'static, Result<(), Error>>;
 }
 
@@ -91,7 +81,7 @@ where
     } else {
         info!("[   \x1b[32mPASSED\x1b[0m ] {}", name);
     }
-    result
+    result.context(format!("Error running test '{}'", name))
 }
 
 /// The Unit type can be used as the empty test-harness - it does no initialization and no
@@ -111,27 +101,48 @@ impl TestHarness for () {
 }
 
 // Prints out the test name and runs the test.
+#[macro_export]
 macro_rules! run_test {
     ($name:ident) => {{
-        crate::harness::run_test($name, stringify!($name))
+        test_harness::run_test($name, stringify!($name))
     }};
 }
 
+#[macro_export]
 macro_rules! run_suite {
     ($name:tt, [$($test:ident),+]) => {{
         log::info!(">>> Running {} tests:", $name);
         {
             use fuchsia_bluetooth::util::CollectExt;
-            vec![$( run_test!($test), )*].into_iter().collect_results()?;
+            let res = vec![$( test_harness::run_test($test, stringify!($test)), )*]
+                .into_iter()
+                .collect_results();
+            anyhow::Context::context(res, format!("Error running suite {}", $name))?;
         }
         Ok(())
     }}
 }
 
-/// If A and B are test harnesses, then so is the pair (A,B). This is recursive, so (A, (B, C)) is
-/// also a valid harness (where C is a harness). Any heterogenous list of Harness types is a valid
-/// harness. We generate Harness impls for commonly used tuple sizes to avoid requiring nested
-/// tuples.
+/// We can implement TestHarness for any tuples of types that are TestHarnesses - this macro can
+/// generate boilerplate implementations for tuples of arities by combining the init() and
+/// terminate() functions of the tuple components.
+///
+/// ----
+///
+/// To elaborate: This implementation is implied by the nature of _applicative functors_, which are
+/// a class of types that support 'tupling' of their type members. In particular, Functions, Tuples,
+/// Futures and Results are all applicative, and compositions of applicatives are _also_ applicative
+/// by definition. So a `Function that returns a Result of a Tuple` is applicative (e.g. `init()`),
+/// as is a `Function that returns a Future of a Result` (such as `terminate()`).
+///
+/// A TestHarness impl itself is really equivalent to a tuple of two functions - init() and
+/// terminate(). Again, by the composition of applicative functors, this itself is applicative, and
+/// therefore a tuple of TestHarness impls can be turned into an TestHarness impl of a tuple. Rustc
+/// isn't able to derive this automatically for us so we write this macro here to do the heavy
+/// lifting.
+///
+/// (Further caveat: The tupling of terminate() is technically slightly more complex as it's a
+/// function indexed by a type parameter (Self::Env), but it still shakes out much the same)
 macro_rules! generate_tuples {
     ($(
         ($($Harness:ident),*),
@@ -183,6 +194,7 @@ macro_rules! generate_tuples {
     )*)
 }
 
+// Generate TestHarness impls for tuples up to arity-6
 generate_tuples! {
   (A, B),
   (A, B, C),

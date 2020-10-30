@@ -4,21 +4,23 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
+    bt_test_harness::{
+        access::{AccessHarness, AccessState},
+        bootstrap::BootstrapHarness,
+    },
     fidl_fuchsia_bluetooth_sys as sys,
-    fuchsia_bluetooth::expectation::{asynchronous::ExpectableStateExt, Predicate as P},
+    fuchsia_bluetooth::expectation::{
+        asynchronous::{ExpectableExt, ExpectableStateExt},
+        Predicate as P,
+    },
     fuchsia_bluetooth::types::{
         Address, BondingData, HostData, Identity, LeData, OneOrBoth, PeerId,
     },
     std::collections::HashSet,
+    test_harness::run_suite,
 };
 
-use crate::{
-    harness::{
-        bootstrap::BootstrapHarness,
-        control::{ControlHarness, ControlState},
-    },
-    tests::timeout_duration,
-};
+use crate::tests::timeout_duration;
 
 /// An example identity for an Hci Emulator backed host
 fn example_emulator_identity() -> Identity {
@@ -56,17 +58,20 @@ fn example_emulator_identity() -> Identity {
 }
 
 async fn test_add_and_commit_identities(
-    harnesses: (BootstrapHarness, ControlHarness),
+    (bootstrap, access): (BootstrapHarness, AccessHarness),
 ) -> Result<(), Error> {
-    let (bootstrap, control) = harnesses;
     let bootstrap = bootstrap.aux().clone();
 
-    let control_proxy = control.aux().clone();
+    let access_proxy = access.aux().clone();
     // We avoid using an assert here because the unwinding causes the ActivatedFakeHost to
-    // panic during the unwindw which then just aborts. This provides a much clearer and more
+    // panic during the unwind which then just aborts. This provides a much clearer and more
     // graceful failure case
-    let initial_devices = control_proxy.get_known_remote_devices().await.ok();
-    if initial_devices != Some(vec![]) {
+    let (initial_devices, _) = access_proxy
+        .watch_peers()
+        .await
+        .ok()
+        .ok_or(format_err!("Missing response to WatchPeers()"))?;
+    if initial_devices != vec![] {
         return Err(format_err!(
             "Failed: Initial devices not empty! Expected empty, found: {:?}",
             initial_devices
@@ -75,18 +80,17 @@ async fn test_add_and_commit_identities(
 
     let identity = example_emulator_identity();
 
-    let expected_devices: HashSet<String> =
-        identity.bonds.iter().map(|b| b.identifier.to_string()).collect();
+    let expected_peers: HashSet<PeerId> = identity.bonds.iter().map(|b| b.identifier).collect();
 
     let identities: Vec<sys::Identity> = vec![identity.into()];
     bootstrap.add_identities(&mut identities.into_iter()).context("Error adding identities")?;
     bootstrap.commit().await?.map_err(|e| format_err!("Error committing bonds: {:?}", e))?;
 
-    let pred = P::<ControlState>::predicate(
-        move |control| expected_devices == control.peers.keys().cloned().collect(),
+    let pred = P::<AccessState>::predicate(
+        move |access| expected_peers == access.peers.keys().cloned().collect(),
         "known device identifiers == expected device identifiers",
     );
-    control.when_satisfied(pred, timeout_duration()).await?;
+    access.when_satisfied(pred, timeout_duration()).await?;
 
     Ok(())
 }

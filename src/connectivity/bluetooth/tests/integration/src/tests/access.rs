@@ -4,24 +4,23 @@
 
 use {
     anyhow::{format_err, Error},
+    bt_test_harness::{
+        access::{expectation, AccessHarness},
+        deprecated::control::{activate_fake_host, ControlHarness},
+        host_watcher::HostWatcherHarness,
+    },
     fidl_fuchsia_bluetooth_sys::ProcedureTokenProxy,
     fidl_fuchsia_bluetooth_test::{AdvertisingData, LowEnergyPeerParameters, PeerProxy},
     fuchsia_bluetooth::{
-        expectation::asynchronous::ExpectableStateExt,
+        expectation::asynchronous::{ExpectableExt, ExpectableStateExt},
         hci_emulator::Emulator,
         types::{Address, HostId},
     },
     std::str::FromStr,
+    test_harness::run_suite,
 };
 
-use crate::{
-    harness::{
-        access::{expectation, AccessHarness},
-        control::{activate_fake_host, ControlHarness},
-        host_watcher::HostWatcherHarness,
-    },
-    tests::timeout_duration,
-};
+use crate::tests::timeout_duration;
 
 async fn create_le_peer(hci: &Emulator, address: Address) -> Result<PeerProxy, Error> {
     let peer_params = LowEnergyPeerParameters {
@@ -156,7 +155,6 @@ async fn test_discovery(
 ) -> Result<(), Error> {
     let (host, mut hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
     let host = HostId::from_str(&host)?;
-
     let discovery_token = start_discovery(&access).await?;
 
     // We should now be discovering
@@ -184,7 +182,6 @@ async fn test_discoverable(
 ) -> Result<(), Error> {
     let (host, mut hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
     let host = HostId::from_str(&host)?;
-
     let discoverable_token = make_discoverable(&access).await?;
 
     // We should now be discoverable

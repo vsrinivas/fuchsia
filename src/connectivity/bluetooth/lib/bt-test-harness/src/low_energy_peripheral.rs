@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,19 +9,21 @@ use {
     },
     fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
     fuchsia_bluetooth::{
-        expectation::asynchronous::{ExpectableState, ExpectationHarness},
+        expectation::asynchronous::{expectable, Expectable, ExpectableExt, ExpectableState},
         types::le::Peer,
     },
     futures::future::{self, BoxFuture},
     futures::{FutureExt, TryFutureExt, TryStreamExt},
-    parking_lot::MappedRwLockWriteGuard,
-    std::convert::TryInto,
+    std::{
+        convert::TryInto,
+        ops::{Deref, DerefMut},
+    },
+    test_harness::TestHarness,
 };
 
-use crate::harness::{
-    control::ActivatedFakeHost,
-    emulator::{watch_advertising_states, EmulatorHarness, EmulatorHarnessAux, EmulatorState},
-    TestHarness,
+use crate::{
+    deprecated::control::ActivatedFakeHost,
+    emulator::{watch_advertising_states, EmulatorState},
 };
 
 /// A snapshot of the current LE peripheral procedure states of the controller.
@@ -41,30 +43,44 @@ impl PeripheralState {
     }
 }
 
-impl std::convert::AsMut<EmulatorState> for PeripheralState {
+impl AsMut<EmulatorState> for PeripheralState {
     fn as_mut(&mut self) -> &mut EmulatorState {
         &mut self.emulator_state
     }
 }
 
-impl std::convert::AsRef<EmulatorState> for PeripheralState {
+impl AsRef<EmulatorState> for PeripheralState {
     fn as_ref(&self) -> &EmulatorState {
         &self.emulator_state
     }
 }
 
-pub type PeripheralHarness = ExpectationHarness<PeripheralState, PeripheralHarnessAux>;
-type PeripheralHarnessAux = EmulatorHarnessAux<PeripheralProxy>;
+#[derive(Clone)]
+pub struct PeripheralHarness(Expectable<PeripheralState, Aux>);
 
-impl EmulatorHarness for PeripheralHarness {
-    type State = PeripheralState;
+impl Deref for PeripheralHarness {
+    type Target = Expectable<PeripheralState, Aux>;
 
-    fn emulator(&self) -> HciEmulatorProxy {
-        self.aux().emulator().clone()
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
+}
 
-    fn state(&self) -> MappedRwLockWriteGuard<'_, PeripheralState> {
-        self.write_state()
+impl DerefMut for PeripheralHarness {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+/// Auxilliary data for the PeripheralHarness
+pub struct Aux {
+    pub peripheral: PeripheralProxy,
+    emulator: HciEmulatorProxy,
+}
+
+impl AsRef<HciEmulatorProxy> for Aux {
+    fn as_ref(&self) -> &HciEmulatorProxy {
+        &self.emulator
     }
 }
 
@@ -74,15 +90,16 @@ impl TestHarness for PeripheralHarness {
 
     fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
-            // Don't drop the ActivatedFakeHost until the end of this function.
             let host = ActivatedFakeHost::new("bt-integration-le-peripheral").await?;
-            let proxy = fuchsia_component::client::connect_to_service::<PeripheralMarker>()
+            let peripheral = fuchsia_component::client::connect_to_service::<PeripheralMarker>()
                 .context("Failed to connect to BLE Peripheral service")?;
-            let harness =
-                PeripheralHarness::new(PeripheralHarnessAux::new(proxy, host.emulator().clone()));
+            let harness = PeripheralHarness(expectable(
+                Default::default(),
+                Aux { peripheral, emulator: host.emulator().clone() },
+            ));
 
             // Create a task to process the state update watcher
-            let watch_adv = watch_advertising_states(harness.clone());
+            let watch_adv = watch_advertising_states(harness.deref().clone());
             let watch_conn = watch_connections(harness.clone());
             let run_peripheral =
                 future::try_join(watch_adv, watch_conn).map_ok(|((), ())| ()).boxed();
@@ -97,7 +114,7 @@ impl TestHarness for PeripheralHarness {
 }
 
 async fn watch_connections(harness: PeripheralHarness) -> Result<(), Error> {
-    let mut events = harness.aux().proxy().take_event_stream();
+    let mut events = harness.aux().peripheral.take_event_stream();
     while let Some(e) = events.try_next().await? {
         match e {
             PeripheralEvent::OnPeerConnected { peer, connection } => {

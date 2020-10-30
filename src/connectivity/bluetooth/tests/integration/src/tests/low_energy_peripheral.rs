@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
+    bt_test_harness::{emulator, low_energy_peripheral::PeripheralHarness},
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_bluetooth::{ConnectionRole, Uuid},
     fidl_fuchsia_bluetooth_le::{
@@ -16,25 +17,22 @@ use {
     },
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
-        expectation::asynchronous::{ExpectableState, ExpectableStateExt},
+        expectation::asynchronous::{ExpectableExt, ExpectableState, ExpectableStateExt},
         types::Address,
     },
     futures::{Future, Stream, TryFutureExt, TryStream, TryStreamExt},
-    std::{iter::repeat, mem::drop},
+    std::{iter::repeat, mem::drop, ops::Deref},
+    test_harness::run_suite,
 };
 
 use crate::{
-    harness::{
-        emulator,
-        expect::{expect_eq, expect_ok},
-        low_energy_peripheral::PeripheralHarness,
-    },
+    expect::{expect_eq, expect_ok},
     tests::timeout_duration,
 };
 
 mod expectation {
     use {
-        crate::harness::low_energy_peripheral::PeripheralState,
+        bt_test_harness::low_energy_peripheral::PeripheralState,
         fuchsia_bluetooth::expectation::Predicate,
     };
 
@@ -65,7 +63,7 @@ async fn start_advertising(
 ) -> Result<AdvertisingResult, Error> {
     let fut = harness
         .aux()
-        .proxy()
+        .peripheral
         .start_advertising(params, handle)
         .map_err(|e| e.into())
         .on_timeout(timeout_duration().after_now(), move || Err(format_err!("timed out")));
@@ -445,7 +443,7 @@ where
 }
 
 async fn test_receive_connection(harness: PeripheralHarness) -> Result<(), Error> {
-    let emulator = harness.aux().emulator().clone();
+    let emulator = harness.aux().as_ref().clone();
     let address = default_address();
     let peer = add_fake_peer(&emulator, &address).await?;
     let (handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
@@ -480,7 +478,7 @@ async fn test_receive_connection(harness: PeripheralHarness) -> Result<(), Error
 async fn test_connection_dropped_when_not_connectable(
     harness: PeripheralHarness,
 ) -> Result<(), Error> {
-    let emulator = harness.aux().emulator().clone();
+    let emulator = harness.aux().as_ref().clone();
     let address = default_address();
     let peer = add_fake_peer(&emulator, &address).await?;
     let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
@@ -498,7 +496,7 @@ async fn test_connection_dropped_when_not_connectable(
     // connectable. We assign our own PeerId here for tracking purposes (this is distinct from the
     // PeerId that the Peripheral proxy would report).
     fasync::Task::spawn(
-        emulator::watch_peer_connection_states(harness.clone(), address, peer.clone())
+        emulator::watch_peer_connection_states(harness.deref().clone(), address, peer.clone())
             .unwrap_or_else(|_| ()),
     )
     .detach();
@@ -521,7 +519,7 @@ async fn test_connection_dropped_when_not_connectable(
 }
 
 async fn test_drop_connection(harness: PeripheralHarness) -> Result<(), Error> {
-    let emulator = harness.aux().emulator().clone();
+    let emulator = harness.aux().as_ref().clone();
     let address = default_address();
     let peer = add_fake_peer(&emulator, &address).await?;
     let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
@@ -534,7 +532,7 @@ async fn test_drop_connection(harness: PeripheralHarness) -> Result<(), Error> {
 
     peer.emulate_le_connection_complete(ConnectionRole::Follower)?;
     fasync::Task::spawn(
-        emulator::watch_peer_connection_states(harness.clone(), address, peer.clone())
+        emulator::watch_peer_connection_states(harness.deref().clone(), address, peer.clone())
             .unwrap_or_else(|_| ()),
     )
     .detach();
@@ -565,7 +563,7 @@ async fn test_drop_connection(harness: PeripheralHarness) -> Result<(), Error> {
 async fn test_connection_handle_closes_on_disconnect(
     harness: PeripheralHarness,
 ) -> Result<(), Error> {
-    let emulator = harness.aux().emulator().clone();
+    let emulator = harness.aux().as_ref().clone();
     let address = default_address();
     let peer = add_fake_peer(&emulator, &address).await?;
     let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
@@ -578,7 +576,7 @@ async fn test_connection_handle_closes_on_disconnect(
 
     peer.emulate_le_connection_complete(ConnectionRole::Follower)?;
     fasync::Task::spawn(
-        emulator::watch_peer_connection_states(harness.clone(), address, peer.clone())
+        emulator::watch_peer_connection_states(harness.deref().clone(), address, peer.clone())
             .unwrap_or_else(|_| ()),
     )
     .detach();

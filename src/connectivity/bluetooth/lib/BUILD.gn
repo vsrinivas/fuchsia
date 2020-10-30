@@ -13,6 +13,7 @@ group("lib") {
     "bt-avdtp:tests",
     "bt-fidl-mocks:tests",
     "bt-profile-test-server",
+    "bt-test-harness",
     "fidl",
     "fidl:tests",
     "fuchsia-audio-codec",
@@ -21,5 +22,6 @@ group("lib") {
     "fuchsia-audio-device-output:fuchsia-audio-device-output-tests",
     "fuchsia-bluetooth",
     "fuchsia-bluetooth:tests",
+    "test-harness",
   ]
 }

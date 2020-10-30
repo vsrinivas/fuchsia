@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -11,7 +11,9 @@ use {
         constants::HOST_DEVICE_DIR,
         device_watcher::DeviceWatcher,
         expectation::{
-            asynchronous::{ExpectableState, ExpectableStateExt, ExpectationHarness},
+            asynchronous::{
+                expectable, Expectable, ExpectableExt, ExpectableState, ExpectableStateExt,
+            },
             Predicate,
         },
         hci_emulator::Emulator,
@@ -22,62 +24,21 @@ use {
         future::{self, BoxFuture},
         FutureExt, TryFutureExt,
     },
-    parking_lot::MappedRwLockWriteGuard,
     std::{
         collections::HashMap,
         convert::{AsMut, AsRef, TryInto},
+        ops::{Deref, DerefMut},
         path::PathBuf,
     },
+    test_harness::TestHarness,
 };
 
 use crate::{
-    harness::{
-        emulator::{
-            watch_controller_parameters, EmulatorHarness, EmulatorHarnessAux, EmulatorState,
-        },
-        TestHarness,
-    },
-    tests::timeout_duration,
+    emulator::{watch_controller_parameters, EmulatorState},
+    timeout_duration,
 };
 
-/// Returns a Future that resolves when the state of any RemoteDevice matches `target`.
-pub async fn expect_peer(
-    host: &HostDriverHarness,
-    target: Predicate<Peer>,
-) -> Result<HostState, Error> {
-    host.when_satisfied(
-        Predicate::any(target).over_value(|host: &HostState| host.peers.values().cloned().collect::<Vec<_>>(), ".peers.values()"),
-        timeout_duration(),
-    ).await
-}
-
-/// Returns a Future that resolves when the HostInfo matches `target`.
-pub async fn expect_host_state(
-    host: &HostDriverHarness,
-    target: Predicate<HostInfo>,
-) -> Result<HostState, Error> {
-    host.when_satisfied(
-        target.over(|host: &HostState| &host.host_info, ".host_info"),
-        timeout_duration(),
-    ).await
-}
-
-// Returns a future that resolves when a peer matching `id` is not present on the host.
-pub async fn expect_no_peer(host: &HostDriverHarness, id: PeerId) -> Result<(), Error> {
-    let fut = host.when_satisfied(
-        Predicate::all(Predicate::not_equal( id ))
-            .over_value(|host: &HostState| {
-                    host.peers.keys().cloned().collect::<Vec<_>>()
-                },
-                ".peers.keys()"
-            ),
-        timeout_duration(),
-    );
-    fut.await?;
-    Ok(())
-}
-
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct HostState {
     emulator_state: EmulatorState,
 
@@ -95,16 +56,8 @@ impl HostState {
     pub fn peers(&self) -> &HashMap<PeerId, Peer> {
         &self.peers
     }
-}
-
-impl Clone for HostState {
-    fn clone(&self) -> HostState {
-        HostState {
-            emulator_state: self.emulator_state.clone(),
-            host_path: self.host_path.clone(),
-            host_info: self.host_info.clone(),
-            peers: self.peers.clone(),
-        }
+    pub fn info(&self) -> &HostInfo {
+        &self.host_info
     }
 }
 
@@ -120,8 +73,34 @@ impl AsRef<EmulatorState> for HostState {
     }
 }
 
-pub type HostDriverHarness = ExpectationHarness<HostState, HostDriverHarnessAux>;
-type HostDriverHarnessAux = EmulatorHarnessAux<HostProxy>;
+/// Auxilliary data for the HostDriverHarness
+pub struct Aux {
+    pub host: HostProxy,
+    pub emulator: HciEmulatorProxy,
+}
+
+impl AsRef<HciEmulatorProxy> for Aux {
+    fn as_ref(&self) -> &HciEmulatorProxy {
+        &self.emulator
+    }
+}
+
+#[derive(Clone)]
+pub struct HostDriverHarness(Expectable<HostState, Aux>);
+
+impl Deref for HostDriverHarness {
+    type Target = Expectable<HostState, Aux>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for HostDriverHarness {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 impl TestHarness for HostDriverHarness {
     type Env = (PathBuf, Emulator);
@@ -136,7 +115,7 @@ impl TestHarness for HostDriverHarness {
             let watch_peers = watch_peers(harness.clone())
                 .map_err(|e| e.context("Error watching peers"))
                 .err_into();
-            let watch_emulator_params = watch_controller_parameters(harness.clone())
+            let watch_emulator_params = watch_controller_parameters(harness.0.clone())
                 .map_err(|e| e.context("Error watching controller parameters"))
                 .err_into();
             let path = harness.read().host_path;
@@ -161,18 +140,6 @@ impl TestHarness for HostDriverHarness {
     }
 }
 
-impl EmulatorHarness for HostDriverHarness {
-    type State = HostState;
-
-    fn emulator(&self) -> HciEmulatorProxy {
-        self.aux().emulator().clone()
-    }
-
-    fn state(&self) -> MappedRwLockWriteGuard<'_, HostState> {
-        self.write_state()
-    }
-}
-
 // Creates a fake bt-hci device and returns the corresponding bt-host device once it gets created.
 async fn new_host_harness() -> Result<(HostDriverHarness, Emulator), Error> {
     let emulator = Emulator::create("bt-integration-test-host")
@@ -186,12 +153,12 @@ async fn new_host_harness() -> Result<(HostDriverHarness, Emulator), Error> {
     // Open a Host FIDL interface channel to the bt-host device.
     let fidl_handle =
         host::open_host_channel(&host_dev.file()).context("Error opening host device file")?;
-    let host_proxy = HostProxy::new(
+    let host = HostProxy::new(
         fasync::Channel::from_channel(fidl_handle.into())
             .context("Error creating async channel from host device")?,
     );
 
-    let host_info = host_proxy
+    let host_info = host
         .watch_state()
         .await
         .context("Error calling WatchState()")?
@@ -200,17 +167,18 @@ async fn new_host_harness() -> Result<(HostDriverHarness, Emulator), Error> {
     let host_path = host_dev.path().to_path_buf();
     let peers = HashMap::new();
 
-    let harness = ExpectationHarness::init(
-        HostDriverHarnessAux::new(host_proxy, emulator.emulator().clone()),
+    let harness = HostDriverHarness(expectable(
         HostState { emulator_state: EmulatorState::default(), host_path, host_info, peers },
-    );
+        Aux { host, emulator: emulator.emulator().clone() },
+    ));
+
     Ok((harness, emulator))
 }
 
 async fn watch_peers(harness: HostDriverHarness) -> Result<(), Error> {
     loop {
         // Clone the proxy so that the aux() lock is not held while waiting.
-        let proxy = harness.aux().proxy().clone();
+        let proxy = harness.aux().host.clone();
         let (updated, removed) = proxy.watch_peers().await?;
         for peer in updated.into_iter() {
             let peer: Peer = peer.try_into()?;
@@ -225,9 +193,50 @@ async fn watch_peers(harness: HostDriverHarness) -> Result<(), Error> {
 
 async fn watch_host_info(harness: HostDriverHarness) -> Result<(), Error> {
     loop {
-        let proxy = harness.aux().proxy().clone();
+        let proxy = harness.aux().host.clone();
         let info = proxy.watch_state().await?;
         harness.write_state().host_info = info.try_into()?;
         harness.notify_state_changed();
+    }
+}
+
+pub mod expectation {
+    use super::*;
+
+    /// Returns a Future that resolves when the state of any RemoteDevice matches `target`.
+    pub async fn peer(host: &HostDriverHarness, p: Predicate<Peer>) -> Result<HostState, Error> {
+        host.when_satisfied(
+            Predicate::any(p).over_value(
+                |host: &HostState| host.peers.values().cloned().collect::<Vec<_>>(),
+                ".peers.values()",
+            ),
+            timeout_duration(),
+        )
+        .await
+    }
+
+    /// Returns a Future that resolves when the HostInfo matches `target`.
+    pub async fn host_state(
+        host: &HostDriverHarness,
+        p: Predicate<HostInfo>,
+    ) -> Result<HostState, Error> {
+        host.when_satisfied(
+            p.over(|host: &HostState| &host.host_info, ".host_info"),
+            timeout_duration(),
+        )
+        .await
+    }
+
+    /// Returns a Future that resolves when a peer matching `id` is not present on the host.
+    pub async fn no_peer(host: &HostDriverHarness, id: PeerId) -> Result<(), Error> {
+        let fut = host.when_satisfied(
+            Predicate::all(Predicate::not_equal(id)).over_value(
+                |host: &HostState| host.peers.keys().cloned().collect::<Vec<_>>(),
+                ".peers.keys()",
+            ),
+            timeout_duration(),
+        );
+        fut.await?;
+        Ok(())
     }
 }

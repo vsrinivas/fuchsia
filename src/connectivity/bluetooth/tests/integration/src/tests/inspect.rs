@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Error, fuchsia_inspect_contrib::reader::NodeHierarchy};
-
-use crate::harness::{
-    control::ControlHarness,
-    expect::expect_eq,
-    inspect::{expect_hierarchies, InspectHarness},
+use {
+    anyhow::Error,
+    bt_test_harness::{access::AccessHarness, inspect::InspectHarness},
+    fuchsia_bluetooth::expectation::asynchronous::ExpectableExt,
+    fuchsia_inspect_contrib::reader::NodeHierarchy,
+    test_harness::run_suite,
 };
+
+use crate::expect::expect_eq;
 
 const GAP_CHILD_NODE: &str = "system";
 
@@ -17,11 +19,11 @@ fn hierarchy_has_child(hierarchy: &NodeHierarchy, name: &str) -> bool {
 }
 
 async fn test_gap_hierarchy_published(
-    (harness, _btgap): (InspectHarness, ControlHarness),
+    (harness, _btgap): (InspectHarness, AccessHarness),
 ) -> Result<(), Error> {
     harness.write_state().moniker = vec!["bt-gap.cmx".to_string()];
     let min_num_hierarchies: usize = 1;
-    let mut state = expect_hierarchies(&harness, min_num_hierarchies).await?;
+    let mut state = harness.expect_n_hierarchies(min_num_hierarchies).await?;
 
     let mut gap_hierarchies_count: usize = 0;
 

@@ -5,7 +5,8 @@
 use {anyhow::Error, fuchsia_bluetooth::util::CollectExt};
 
 #[macro_use]
-mod harness;
+mod expect;
+
 #[macro_use]
 mod tests;
 

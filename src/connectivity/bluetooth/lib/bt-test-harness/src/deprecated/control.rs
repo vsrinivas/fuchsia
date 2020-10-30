@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,7 +10,9 @@ use {
     fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
-        expectation::asynchronous::{ExpectableState, ExpectableStateExt, ExpectationHarness},
+        expectation::asynchronous::{
+            expectable, Expectable, ExpectableExt, ExpectableState, ExpectableStateExt,
+        },
         expectation::Predicate,
         hci_emulator::Emulator,
         util::{clone_host_info, clone_remote_device},
@@ -20,10 +22,14 @@ use {
         FutureExt, TryFutureExt, TryStreamExt,
     },
     log::error,
-    std::collections::HashMap,
+    std::{
+        collections::HashMap,
+        ops::{Deref, DerefMut},
+    },
+    test_harness::TestHarness,
 };
 
-use crate::{harness::TestHarness, tests::timeout_duration};
+use crate::timeout_duration;
 
 #[derive(Debug, Default)]
 pub struct ControlState {
@@ -46,7 +52,22 @@ impl Clone for ControlState {
     }
 }
 
-pub type ControlHarness = ExpectationHarness<ControlState, ControlProxy>;
+#[derive(Clone)]
+pub struct ControlHarness(Expectable<ControlState, ControlProxy>);
+
+impl Deref for ControlHarness {
+    type Target = Expectable<ControlState, ControlProxy>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for ControlHarness {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 pub async fn handle_control_events(harness: ControlHarness) -> Result<(), Error> {
     let mut events = harness.aux().take_event_stream();
@@ -81,7 +102,7 @@ pub async fn new_control_harness() -> Result<ControlHarness, Error> {
     let proxy = fuchsia_component::client::connect_to_service::<ControlMarker>()
         .context("Failed to connect to Control service")?;
 
-    let control_harness = ControlHarness::new(proxy);
+    let control_harness = ControlHarness(expectable(Default::default(), proxy));
 
     // Store existing hosts in our state, as we won't get notified about them
     let fut = control_harness.aux().get_adapters();
@@ -112,7 +133,7 @@ impl TestHarness for ControlHarness {
 }
 
 pub mod expectation {
-    use crate::harness::control::ControlState;
+    use super::*;
     use fidl_fuchsia_bluetooth_control::RemoteDevice;
     use fuchsia_bluetooth::expectation::Predicate;
 
