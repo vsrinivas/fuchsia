@@ -10,7 +10,7 @@
 #include <zircon/compiler.h>
 
 #include <arch/x86.h>
-#include <kernel/atomic.h>
+#include <ktl/atomic.h>
 
 // Note: still pulled in from some C code, remove when the last C code is gone.
 __BEGIN_CDECLS
@@ -29,7 +29,7 @@ static inline interrupt_saved_state_t arch_interrupt_save(void) {
 
   // Prevent the compiler from moving code into or out of the "interrupts
   // disabled" region.
-  atomic_signal_fence();
+  ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
 
   return state;
 }
@@ -37,7 +37,7 @@ static inline interrupt_saved_state_t arch_interrupt_save(void) {
 static inline void arch_interrupt_restore(interrupt_saved_state_t old_state) {
   // Prevent the compiler from moving code into or out of the "interrupts
   // disabled" region.
-  atomic_signal_fence();
+  ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
 
   if ((old_state & X86_FLAGS_IF) != 0) {
     x86_restore_flags(old_state);
