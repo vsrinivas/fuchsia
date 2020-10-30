@@ -223,9 +223,9 @@ class DwarfExprEval {
   // The expression. See also expr_index_.
   Expression expr_;
 
-  // Index into expr_ of the next thing to read. This is a uint32_t to integrate with LLVM
+  // Index into expr_ of the next thing to read. This is a uint64_t to integrate with LLVM
   // DataExtractor.
-  uint32_t expr_index_ = 0;
+  uint64_t expr_index_ = 0;
 
   CompletionCallback completion_callback_;
   bool in_completion_callback_ = false;  // To check for lifetime errors.

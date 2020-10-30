@@ -37,7 +37,7 @@ LineTable::Row MockLineTable::MakeStatementRow(uint64_t address, uint16_t file, 
 // static
 LineTable::Row MockLineTable::MakeNonStatementRow(uint64_t address, uint16_t file, uint32_t line) {
   llvm::DWARFDebugLine::Row result;
-  result.Address = address;
+  result.Address = {address};
   result.Line = line;
   result.Column = 0;
   result.File = file;

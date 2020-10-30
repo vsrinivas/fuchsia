@@ -571,8 +571,7 @@ void RecursiveFindExact(const IndexNode* node, const Identifier& input, size_t i
 }  // namespace
 
 void Index::CreateIndex(llvm::object::ObjectFile* object_file, bool force_slow_path) {
-  std::unique_ptr<llvm::DWARFContext> context =
-      llvm::DWARFContext::create(*object_file, nullptr, llvm::DWARFContext::defaultErrorHandler);
+  std::unique_ptr<llvm::DWARFContext> context = llvm::DWARFContext::create(*object_file);
 
   // Extracts the units to a place where we can destroy them after indexing is complete. This
   // construction order matches that of LLVM's DWARFContext so the indexes into this vector will

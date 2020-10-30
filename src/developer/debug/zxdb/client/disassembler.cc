@@ -116,7 +116,7 @@ size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len, uint64
   llvm::MCInst inst;
   uint64_t consumed = 0;
   auto status = disasm_->getInstruction(inst, consumed, llvm::ArrayRef<uint8_t>(data, data_len),
-                                        address, llvm::nulls(), llvm::nulls());
+                                        address, llvm::nulls());
   if (status == llvm::MCDisassembler::Success) {
     // Print the instruction. Note that LLVM appends to the strings so we need to make sure they're
     // empty before using.
@@ -126,7 +126,7 @@ size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len, uint64
     llvm::raw_string_ostream comment_stream(out->comment);
 
     printer_->setCommentStream(comment_stream);
-    printer_->printInst(&inst, inst_stream, llvm::StringRef(), *arch_->subtarget_info());
+    printer_->printInst(&inst, 0, llvm::StringRef(), *arch_->subtarget_info(), inst_stream);
     printer_->setCommentStream(llvm::nulls());
 
     inst_stream.flush();

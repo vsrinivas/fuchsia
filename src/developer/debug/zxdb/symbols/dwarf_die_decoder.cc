@@ -177,11 +177,11 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDie& die,
 
   llvm::DWARFUnit* unit = die.getDwarfUnit();
   llvm::DWARFDataExtractor extractor = unit->getDebugInfoExtractor();
-  uint32_t offset = die.getOffset();
+  uint64_t offset = die.getOffset();
 
   // Skip over the abbreviationcode. We don't actually need this (the abbrev
   // pointer above is derived from this) but we need to move offset past it.
-  uint32_t abbr_code = extractor.getULEB128(&offset);
+  uint64_t abbr_code = extractor.getULEB128(&offset);
   if (!abbr_code) {
     FX_NOTREACHED();  // Should have gotten a null abbrev for this above.
     return false;

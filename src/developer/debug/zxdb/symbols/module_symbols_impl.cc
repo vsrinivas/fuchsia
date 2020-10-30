@@ -185,9 +185,7 @@ std::time_t ModuleSymbolsImpl::GetModificationTime() const {
 
 std::string ModuleSymbolsImpl::GetBuildDir() const { return build_dir_; }
 
-uint64_t ModuleSymbolsImpl::GetMappedLength() const {
-  return binary_->GetMappedLength();
-}
+uint64_t ModuleSymbolsImpl::GetMappedLength() const { return binary_->GetMappedLength(); }
 
 std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(const SymbolContext& symbol_context,
                                                               const InputLocation& input_location,
@@ -225,7 +223,7 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
     return LineDetails();
 
   const auto& rows = line_table->Rows;
-  uint32_t found_row_index = line_table->lookupAddress(relative_address);
+  uint32_t found_row_index = line_table->lookupAddress({relative_address});
 
   // The row could be not found or it could be in a "nop" range indicated by an "end sequence"
   // marker. For padding between functions, the compiler will insert a row with this marker to
@@ -288,8 +286,8 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
 
     LineDetails::LineEntry entry;
     entry.column = rows[i].Column;
-    entry.range = AddressRange(symbol_context.RelativeToAbsolute(rows[i].Address),
-                               symbol_context.RelativeToAbsolute(rows[i + 1].Address));
+    entry.range = AddressRange(symbol_context.RelativeToAbsolute(rows[i].Address.Address),
+                               symbol_context.RelativeToAbsolute(rows[i + 1].Address.Address));
     result.entries().push_back(entry);
   }
 

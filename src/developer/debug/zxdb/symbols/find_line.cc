@@ -79,7 +79,7 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
           if (row_line == best_line) {
             // Accumulate all matching results.
             auto subroutine = line_table.GetSubroutineForRow(row);
-            result.emplace_back(row.Address, row_line,
+            result.emplace_back(row.Address.Address, row_line,
                                 subroutine.isValid() ? subroutine.getOffset() : 0);
           }
         }
@@ -158,7 +158,7 @@ size_t GetFunctionPrologueSize(const LineTable& line_table, const Function* func
   size_t prologue_end_index = first_row;
   bool found_marked_end = false;
   for (size_t i = 0; i < kMaxSearchCount && first_row + i < found.sequence.size(); i++) {
-    if (!code_ranges.InRange(found.sequence[first_row + i].Address))
+    if (!code_ranges.InRange(found.sequence[first_row + i].Address.Address))
       break;  // Outside the function.
 
     if (found.sequence[first_row + i].PrologueEnd) {
@@ -184,11 +184,11 @@ size_t GetFunctionPrologueSize(const LineTable& line_table, const Function* func
   // Sanity check: None of those previous operations should have left us outside of the function's
   // code or outside of a known instruction (there's an end_sequence marker). If it did, this line
   // table looks different than we expect and we don't report a prologue.
-  if (!code_ranges.InRange(found.sequence[prologue_end_index].Address) ||
+  if (!code_ranges.InRange(found.sequence[prologue_end_index].Address.Address) ||
       found.sequence[prologue_end_index].EndSequence)
     return 0;
 
-  return found.sequence[prologue_end_index].Address - code_range_begin;
+  return found.sequence[prologue_end_index].Address.Address - code_range_begin;
 }
 
 }  // namespace zxdb

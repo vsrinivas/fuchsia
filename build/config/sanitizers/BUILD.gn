@@ -117,6 +117,15 @@ sanitizer_extra_options("suppress-asan-stack-use-after-return") {
   tags = [ "asan" ]
 }
 
+# Disable the container overflow detection, which will create false positives
+# if a part of the application is built with asan and another part is not. See
+# https://github.com/google/sanitizers/wiki/AddressSanitizerContainerOverflow.
+sanitizer_extra_options("suppress-asan-container-overflow") {
+  args = [ "detect_container_overflow=0" ]
+  output_name = "asan_default_options"
+  tags = [ "asan" ]
+}
+
 # rustc flags for AddressSanitizer, primarily used for fuzzing Rust code.
 # TODO(fxbug.dev/45102): This is technically wrong; it will use clang's ASan.
 # rustc is built from a different fork of LLVM and should use a matching ASan.

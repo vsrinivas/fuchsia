@@ -91,13 +91,13 @@ TEST(LineTable, GetRowForAddress) {
   result = table.GetRowForAddress(context, 0x1001);
   ASSERT_FALSE(result.empty());
   EXPECT_EQ(0u, result.index);
-  EXPECT_EQ(0x1u, result.sequence[result.index].Address);
+  EXPECT_EQ(0x1u, result.sequence[result.index].Address.Address);
 
   // Valid query for sequence added later.
   result = table.GetRowForAddress(context, 0x1104);
   ASSERT_FALSE(result.empty());
-  EXPECT_EQ(1u, result.index);                               // Index within newer sequence.
-  EXPECT_EQ(0x103u, result.sequence[result.index].Address);  // Line before queried addr.
+  EXPECT_EQ(1u, result.index);                                       // Index within newer sequence.
+  EXPECT_EQ(0x103u, result.sequence[result.index].Address.Address);  // Line before queried addr.
 
   // Query in between the two valid sequences
   result = table.GetRowForAddress(context, 0x1080);
@@ -127,20 +127,20 @@ TEST(LineTable, GetRowForAddress_Line0) {
   // Exact match query for the "line 0" address should return it.
   auto result = table.GetRowForAddress(context, 0x1003, LineTable::kExactMatch);
   ASSERT_FALSE(result.empty());
-  EXPECT_EQ(0x3u, result.get().Address);
+  EXPECT_EQ(0x3u, result.get().Address.Address);
   EXPECT_EQ(0u, result.get().Line);
 
   // Exact match query for the address immediately following 0x7 should also be covered by that
   // entry.
   result = table.GetRowForAddress(context, 0x1008, LineTable::kExactMatch);
   ASSERT_FALSE(result.empty());
-  EXPECT_EQ(0x7u, result.get().Address);
+  EXPECT_EQ(0x7u, result.get().Address.Address);
   EXPECT_EQ(0u, result.get().Line);
 
   // Querying the first "line 0" entry with skipping should yield the next address.
   result = table.GetRowForAddress(context, 0x1003, LineTable::kSkipCompilerGenerated);
   ASSERT_FALSE(result.empty());
-  EXPECT_EQ(0x5u, result.get().Address);
+  EXPECT_EQ(0x5u, result.get().Address.Address);
   EXPECT_EQ(3u, result.get().Line);
 
   // Query the address immediately following 0x7. Since this is the last real entry in the table
@@ -148,7 +148,7 @@ TEST(LineTable, GetRowForAddress_Line0) {
   // entry should be returned.
   result = table.GetRowForAddress(context, 0x1008, LineTable::kSkipCompilerGenerated);
   ASSERT_FALSE(result.empty());
-  EXPECT_EQ(0x7u, result.get().Address);
+  EXPECT_EQ(0x7u, result.get().Address.Address);
   EXPECT_EQ(0u, result.get().Line);
 }
 
@@ -172,7 +172,7 @@ TEST(LineTable, GetRowForAddress_EndSequence) {
   MockLineTable table(files, rows);
   auto found = table.GetRowForAddress(context, 0x1008, LineTable::kSkipCompilerGenerated);
   ASSERT_FALSE(found.empty());
-  EXPECT_EQ(0x8u, found.get().Address);
+  EXPECT_EQ(0x8u, found.get().Address.Address);
   EXPECT_EQ(3u, found.get().Line);  // This is the non-end-sequence row at this address.
 }
 

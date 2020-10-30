@@ -192,7 +192,7 @@ OutputBuffer DumpLineTable(ProcessSymbols* process_symbols, uint64_t address) {
 
     // Line marker and address.
     Syntax syntax;
-    uint64_t absolute_line_addr = symbol_context.RelativeToAbsolute(row.Address);
+    uint64_t absolute_line_addr = symbol_context.RelativeToAbsolute(row.Address.Address);
     if (!seen_address && absolute_line_addr >= address) {
       // Since the sequence is in order and contains the address, the first row that contains the
       // address is the one in question.

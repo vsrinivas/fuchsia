@@ -368,8 +368,8 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
 }
 
 bool DwarfExprEval::ReadSigned(int byte_size, SignedStackEntry* output) {
-  uint32_t old_expr_index = expr_index_;
-  *output = (SignedStackEntry)(int64_t)data_extractor_->getSigned(&expr_index_, byte_size);
+  uint64_t old_expr_index = expr_index_;
+  *output = data_extractor_->getSigned(&expr_index_, byte_size);
   if (old_expr_index == expr_index_) {
     ReportError("Bad number format in DWARF expression.");
     return false;
@@ -378,7 +378,7 @@ bool DwarfExprEval::ReadSigned(int byte_size, SignedStackEntry* output) {
 }
 
 bool DwarfExprEval::ReadUnsigned(int byte_size, StackEntry* output) {
-  uint32_t old_expr_index = expr_index_;
+  uint64_t old_expr_index = expr_index_;
   *output = data_extractor_->getUnsigned(&expr_index_, byte_size);
   if (old_expr_index == expr_index_) {
     ReportError("Bad number format in DWARF expression.");
@@ -388,7 +388,7 @@ bool DwarfExprEval::ReadUnsigned(int byte_size, StackEntry* output) {
 }
 
 bool DwarfExprEval::ReadLEBSigned(SignedStackEntry* output) {
-  uint32_t old_expr_index = expr_index_;
+  uint64_t old_expr_index = expr_index_;
   *output = data_extractor_->getSLEB128(&expr_index_);
   if (old_expr_index == expr_index_) {
     ReportError("Bad number format in DWARF expression.");
@@ -398,7 +398,7 @@ bool DwarfExprEval::ReadLEBSigned(SignedStackEntry* output) {
 }
 
 bool DwarfExprEval::ReadLEBUnsigned(StackEntry* output) {
-  uint32_t old_expr_index = expr_index_;
+  uint64_t old_expr_index = expr_index_;
   *output = data_extractor_->getULEB128(&expr_index_);
   if (old_expr_index == expr_index_) {
     ReportError("Bad number format in DWARF expression.");

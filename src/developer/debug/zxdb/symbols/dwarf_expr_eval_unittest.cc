@@ -176,12 +176,11 @@ TEST_F(DwarfExprEvalTest, SyncRegisterAsNumber) {
   provider()->AddRegisterValue(kDWARFReg1ID, true, kValue);
 
   // Use "regx" which will read the register number as a ULEB following it.
-  // The byte is the ULEB-encoded version of 1 (high bit set to indicate it's
-  // the last byte).
+  // The byte is the ULEB-encoded version of 1 (high bit set to 0 indicate it's the last byte).
   std::vector<uint8_t> expr_data;
   expr_data.push_back(llvm::dwarf::DW_OP_nop);
   expr_data.push_back(llvm::dwarf::DW_OP_regx);
-  expr_data.push_back(0b10000001);
+  expr_data.push_back(0b00000001);
 
   DoEvalTest(expr_data, true, DwarfExprEval::Completion::kSync, kValue,
              DwarfExprEval::ResultType::kValue);

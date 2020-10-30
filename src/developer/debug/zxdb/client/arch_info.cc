@@ -71,7 +71,7 @@ Err ArchInfo::Init(debug_ipc::Arch arch) {
   instr_info_.reset(target_->createMCInstrInfo());
   register_info_.reset(target_->createMCRegInfo(triple_name_));
   subtarget_info_.reset(target_->createMCSubtargetInfo(triple_name_, processor_name_, ""));
-  asm_info_.reset(target_->createMCAsmInfo(*register_info_, triple_name_));
+  asm_info_.reset(target_->createMCAsmInfo(*register_info_, triple_name_, {}));
 
   if (!instr_info_ || !register_info_ || !subtarget_info_ || !asm_info_)
     return Err("Error initializing LLVM.");

@@ -50,7 +50,7 @@ std::optional<std::string> LineTableImpl::GetFileNameByIndex(uint64_t file_id) c
 llvm::DWARFDie LineTableImpl::GetSubroutineForRow(const llvm::DWARFDebugLine::Row& row) const {
   if (!unit_)
     return llvm::DWARFDie();
-  return unit_->getSubroutineForAddress(row.Address);
+  return unit_->getSubroutineForAddress(row.Address.Address);
 }
 
 }  // namespace zxdb

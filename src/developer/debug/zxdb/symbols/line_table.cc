@@ -56,8 +56,8 @@ LineTable::FoundRow LineTable::GetRowForAddress(const SymbolContext& address_con
   // a sequence of exact matches. That's the behavior we want here.
   auto found = debug_ipc::LargestLessOrEqual(
       seq.begin(), seq.end(), rel_address,
-      [](const Row& row, TargetPointer addr) { return row.Address < addr; },
-      [](const Row& row, TargetPointer addr) { return row.Address == addr; });
+      [](const Row& row, TargetPointer addr) { return row.Address.Address < addr; },
+      [](const Row& row, TargetPointer addr) { return row.Address.Address == addr; });
 
   // The address should not be before the beginning of this sequence (the only end() case for
   // LargestLessOrEqual()). Otherwise GetRowSequenceForAddress() shouldn't have returned it.
@@ -113,9 +113,10 @@ void LineTable::EnsureSequences() const {
       // e618ccbf431f6730edb6d1467a127c3a52fd57f7 in Clang, -1 is used to
       // indicate that a function was removed. Versions of Clang earlier than
       // this do not support this behavior.
-      auto seq_addr = rows[cur_seq_begin_row].Address;
+      auto seq_addr = rows[cur_seq_begin_row].Address.Address;
       if (seq_addr && seq_addr != kMaxAddress)
-        sequences_.emplace_back(AddressRange(seq_addr, rows[i].Address), cur_seq_begin_row, i);
+        sequences_.emplace_back(AddressRange(seq_addr, rows[i].Address.Address), cur_seq_begin_row,
+                                i);
       cur_seq_begin_row = kNoSeq;
     }
   }

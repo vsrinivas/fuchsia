@@ -90,8 +90,7 @@ Err DwarfBinaryImpl::Load() {
   binary_buffer_ = std::move(binary_pair.second);
   binary_ = std::move(binary_pair.first);
 
-  context_ =
-      llvm::DWARFContext::create(*object_file(), nullptr, llvm::DWARFContext::defaultErrorHandler);
+  context_ = llvm::DWARFContext::create(*object_file());
   context_->getDWARFObj().forEachInfoSections([this](const llvm::DWARFSection& s) {
     compile_units_.addUnitsForSection(*context_, s, llvm::DW_SECT_INFO);
   });
