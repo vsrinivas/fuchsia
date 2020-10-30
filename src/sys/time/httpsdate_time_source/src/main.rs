@@ -5,12 +5,14 @@
 mod datatypes;
 mod diagnostics;
 mod httpsdate;
+mod sampler;
 
 use crate::datatypes::Phase;
 use crate::diagnostics::{
     CobaltDiagnostics, CompositeDiagnostics, Diagnostics, InspectDiagnostics,
 };
 use crate::httpsdate::{HttpsDateUpdateAlgorithm, RetryStrategy};
+use crate::sampler::HttpsSamplerImpl;
 use anyhow::{Context, Error};
 use fidl_fuchsia_time_external::{PushSourceRequestStream, Status};
 use fuchsia_async as fasync;
@@ -47,8 +49,9 @@ async fn main() -> Result<(), Error> {
 
     fuchsia_inspect::component::inspector().serve(&mut fs)?;
 
-    let update_algorithm =
-        HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, REQUEST_URI.parse()?, diagnostics);
+    let sampler = HttpsSamplerImpl::new(REQUEST_URI.parse()?);
+
+    let update_algorithm = HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, diagnostics, sampler);
     let push_source = PushSource::new(update_algorithm, Status::Ok)?;
     let update_fut = push_source.poll_updates();
 

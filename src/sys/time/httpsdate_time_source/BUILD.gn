@@ -41,6 +41,7 @@ rustc_binary("bin") {
     "src/diagnostics/mod.rs",
     "src/httpsdate.rs",
     "src/main.rs",
+    "src/sampler.rs",
   ]
 
   test_deps = [

@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::datatypes::HttpsSample;
 use crate::diagnostics::Diagnostics;
+use crate::sampler::HttpsSampler;
 use anyhow::Error;
 use async_trait::async_trait;
 use fidl_fuchsia_time_external::{Properties, Status};
-use fuchsia_async::{self as fasync, TimeoutExt};
+use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{channel::mpsc::Sender, lock::Mutex, SinkExt};
-use httpdate_hyper::{HttpsDateError, NetworkTimeClient};
-use hyper::Uri;
+use futures::{channel::mpsc::Sender, SinkExt};
+use httpdate_hyper::HttpsDateError;
 use log::{error, warn};
 use push_source::{Update, UpdateAlgorithm};
 
@@ -34,48 +33,21 @@ impl RetryStrategy {
     }
 }
 
-const HTTPS_TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
-/// A coarse approximation of the standard deviation of a sample. The error is dominated by the
-/// effect of the time quantization, so we neglect error from network latency entirely and return
-/// a standard deviation of a uniform distribution 1 second wide.
-// TODO(satsukiu): replace with a more accurate estimate
-const STANDARD_DEVIATION: zx::Duration = zx::Duration::from_millis(289);
-
-#[async_trait]
-/// An `HttpsDateClient` can make requests against a given uri to retrieve a UTC time.
-pub trait HttpsDateClient {
-    /// Obtain the current UTC time. The time is quantized to a second due to the format of the
-    /// HTTP date header.
-    async fn request_utc(&mut self, uri: &Uri) -> Result<zx::Time, HttpsDateError>;
-}
-
-#[async_trait]
-impl HttpsDateClient for NetworkTimeClient {
-    async fn request_utc(&mut self, uri: &Uri) -> Result<zx::Time, HttpsDateError> {
-        let utc = self
-            .get_network_time(uri.clone())
-            .on_timeout(fasync::Time::after(HTTPS_TIMEOUT), || Err(HttpsDateError::NetworkError))
-            .await?;
-        Ok(zx::Time::from_nanos(utc.timestamp_nanos()))
-    }
-}
-
-/// An |UpdateAlgorithm| that retrieves UTC time by pulling dates off of HTTP responses.
-pub struct HttpsDateUpdateAlgorithm<C: HttpsDateClient + Send, D: Diagnostics> {
+/// An |UpdateAlgorithm| that uses an `HttpsSampler` to obtain time samples at a schedule
+/// dictated by a specified retry strategy.
+pub struct HttpsDateUpdateAlgorithm<S: HttpsSampler + Send + Sync, D: Diagnostics> {
     /// Strategy defining how long to wait after successes and failures.
     retry_strategy: RetryStrategy,
-    /// Uri requested to obtain time.
-    request_uri: Uri,
-    /// Client used to make requests.
-    client: Mutex<C>,
+    /// Sampler used to produce samples.
+    sampler: S,
     /// Object managing diagnostics output.
     diagnostics: D,
 }
 
 #[async_trait]
-impl<C, D> UpdateAlgorithm for HttpsDateUpdateAlgorithm<C, D>
+impl<S, D> UpdateAlgorithm for HttpsDateUpdateAlgorithm<S, D>
 where
-    C: HttpsDateClient + Send,
+    S: HttpsSampler + Send + Sync,
     D: Diagnostics,
 {
     async fn update_device_properties(&self, _properties: Properties) {
@@ -93,25 +65,13 @@ where
     }
 }
 
-impl<D: Diagnostics> HttpsDateUpdateAlgorithm<NetworkTimeClient, D> {
-    /// Create a new |HttpsDateUpdateAlgorithm|.
-    pub fn new(retry_strategy: RetryStrategy, request_uri: Uri, diagnostics: D) -> Self {
-        Self::with_client(retry_strategy, request_uri, diagnostics, NetworkTimeClient::new())
-    }
-}
-
-impl<C, D> HttpsDateUpdateAlgorithm<C, D>
+impl<S, D> HttpsDateUpdateAlgorithm<S, D>
 where
-    C: HttpsDateClient + Send,
+    S: HttpsSampler + Send + Sync,
     D: Diagnostics,
 {
-    fn with_client(
-        retry_strategy: RetryStrategy,
-        request_uri: Uri,
-        diagnostics: D,
-        client: C,
-    ) -> Self {
-        Self { retry_strategy, request_uri, client: Mutex::new(client), diagnostics }
+    pub fn new(retry_strategy: RetryStrategy, diagnostics: D, sampler: S) -> Self {
+        Self { retry_strategy, sampler, diagnostics }
     }
 
     /// Repeatedly poll for a time until one sample is successfully retrieved. Pushes updates to
@@ -121,7 +81,7 @@ where
         let mut last_error = None;
         loop {
             let attempt = attempt_iter.next().unwrap_or(u32::MAX);
-            match self.poll_time_once().await {
+            match self.sampler.produce_sample().await {
                 Ok(sample) => {
                     self.diagnostics.success(&sample);
                     sink.send(Status::Ok.into()).await?;
@@ -160,46 +120,19 @@ where
                 .await;
         }
     }
-
-    /// Poll for time once without retries.
-    async fn poll_time_once(&self) -> Result<HttpsSample, HttpsDateError> {
-        let mut client_lock = self.client.lock().await;
-
-        let monotonic_before = zx::Time::get_monotonic();
-        // We assume here that the time reported by an HTTP server is truncated down a second. We
-        // provide the median value of the range of possible actual UTC times, which makes the
-        // error distribution symmetric.
-        let utc =
-            client_lock.request_utc(&self.request_uri).await? + zx::Duration::from_millis(500);
-        let monotonic_after = zx::Time::get_monotonic();
-        let monotonic_center = zx::Time::from_nanos(
-            (monotonic_before.into_nanos() + monotonic_after.into_nanos()) / 2,
-        );
-
-        Ok(HttpsSample {
-            utc,
-            monotonic: monotonic_center,
-            standard_deviation: STANDARD_DEVIATION,
-            final_bound_size: monotonic_after - monotonic_before + zx::Duration::from_seconds(1),
-            round_trip_times: vec![monotonic_after - monotonic_before],
-        })
-    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::datatypes::HttpsSample;
     use crate::diagnostics::FakeDiagnostics;
-    use futures::{
-        channel::{mpsc::channel, oneshot},
-        future::pending,
-        stream::StreamExt,
-        task::Poll,
-        Future,
-    };
+    use crate::sampler::FakeSampler;
+    use fidl_fuchsia_time_external::TimeSample;
+    use futures::{channel::mpsc::channel, stream::StreamExt, task::Poll};
     use lazy_static::lazy_static;
     use matches::assert_matches;
-    use std::{collections::VecDeque, iter::FromIterator, sync::Arc};
+    use std::sync::Arc;
 
     /// Test retry strategy with minimal wait periods.
     const TEST_RETRY_STRATEGY: RetryStrategy = RetryStrategy {
@@ -209,48 +142,29 @@ mod test {
         between_successes: zx::Duration::from_nanos(100),
     };
 
-    const HALF_SECOND_NANOS: i64 = 500_000_000;
-    const NANOS_IN_SECONDS: i64 = 1_000_000_000;
-
     lazy_static! {
-        static ref TEST_URI: hyper::Uri = "https://localhost/".parse().unwrap();
+        static ref TEST_SAMPLE_1: HttpsSample = HttpsSample {
+            utc: zx::Time::from_nanos(111_222_333_444_555),
+            monotonic: zx::Time::from_nanos(666_777_888_999_000),
+            standard_deviation: zx::Duration::from_millis(101),
+            final_bound_size: zx::Duration::from_millis(20),
+            round_trip_times: vec![],
+        };
+        static ref TEST_SAMPLE_2: HttpsSample = HttpsSample {
+            utc: zx::Time::from_nanos(999_999_999_999_999),
+            monotonic: zx::Time::from_nanos(777_777_777_777_777),
+            standard_deviation: zx::Duration::from_millis(102),
+            final_bound_size: zx::Duration::from_millis(30),
+            round_trip_times: vec![zx::Duration::from_millis(23)],
+        };
     }
 
-    /// An |HttpsDateClient| which responds with premade responses and signals when the responses
-    /// have been given out.
-    struct TestClient {
-        /// Queue of responses.
-        enqueued_responses: VecDeque<Result<zx::Time, HttpsDateError>>,
-        /// Channel used to signal exhaustion of the enqueued responses.
-        completion_notifier: Option<oneshot::Sender<()>>,
-    }
-
-    #[async_trait]
-    impl HttpsDateClient for TestClient {
-        async fn request_utc(&mut self, _uri: &Uri) -> Result<zx::Time, HttpsDateError> {
-            match self.enqueued_responses.pop_front() {
-                Some(result) => result,
-                None => {
-                    self.completion_notifier.take().unwrap().send(()).unwrap();
-                    pending().await
-                }
-            }
-        }
-    }
-
-    impl TestClient {
-        /// Create a test client and a future that resolves when all the contents
-        /// of |responses| have been consumed.
-        fn with_responses(
-            responses: impl IntoIterator<Item = Result<zx::Time, HttpsDateError>>,
-        ) -> (Self, impl Future) {
-            let (sender, receiver) = oneshot::channel();
-            let client = TestClient {
-                enqueued_responses: VecDeque::from_iter(responses),
-                completion_notifier: Some(sender),
-            };
-            (client, receiver)
-        }
+    fn to_fidl_time_sample(sample: &HttpsSample) -> Arc<TimeSample> {
+        Arc::new(TimeSample {
+            utc: Some(sample.utc.into_nanos()),
+            monotonic: Some(sample.monotonic.into_nanos()),
+            standard_deviation: Some(sample.standard_deviation.into_nanos()),
+        })
     }
 
     #[test]
@@ -282,15 +196,11 @@ mod test {
         // TODO(satsukiu) - use a generator instead and remove this test.
         let mut executor = fasync::Executor::new().unwrap();
 
-        let (client, _response_complete_fut) =
-            TestClient::with_responses(vec![Ok(zx::Time::from_nanos(2030))]);
+        let (sampler, _response_complete_fut) =
+            FakeSampler::with_responses(vec![Ok(TEST_SAMPLE_1.clone()), Ok(TEST_SAMPLE_2.clone())]);
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let update_algorithm = HttpsDateUpdateAlgorithm::with_client(
-            TEST_RETRY_STRATEGY,
-            TEST_URI.clone(),
-            diagnostics,
-            client,
-        );
+        let update_algorithm =
+            HttpsDateUpdateAlgorithm::new(TEST_RETRY_STRATEGY, diagnostics, sampler);
         let (sender, mut receiver) = channel(0);
         let mut update_fut = update_algorithm.generate_updates(sender);
 
@@ -312,36 +222,17 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_successful_updates() {
-        let reported_utc_times = vec![
-            zx::Time::from_nanos(2020 * NANOS_IN_SECONDS),
-            zx::Time::from_nanos(2021 * NANOS_IN_SECONDS),
-            zx::Time::from_nanos(2022 * NANOS_IN_SECONDS),
-            zx::Time::from_nanos(2023 * NANOS_IN_SECONDS),
-        ];
-        let expected_utc_times = vec![
-            zx::Time::from_nanos(2020 * NANOS_IN_SECONDS + HALF_SECOND_NANOS),
-            zx::Time::from_nanos(2021 * NANOS_IN_SECONDS + HALF_SECOND_NANOS),
-            zx::Time::from_nanos(2022 * NANOS_IN_SECONDS + HALF_SECOND_NANOS),
-            zx::Time::from_nanos(2023 * NANOS_IN_SECONDS + HALF_SECOND_NANOS),
-        ];
-        let (client, response_complete_fut) =
-            TestClient::with_responses(reported_utc_times.iter().map(|utc| Ok(*utc)));
+        let expected_samples = vec![TEST_SAMPLE_1.clone(), TEST_SAMPLE_2.clone()];
+        let (sampler, response_complete_fut) =
+            FakeSampler::with_responses(expected_samples.iter().map(|sample| Ok(sample.clone())));
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let update_algorithm = HttpsDateUpdateAlgorithm::with_client(
-            TEST_RETRY_STRATEGY,
-            TEST_URI.clone(),
-            Arc::clone(&diagnostics),
-            client,
-        );
-
-        let monotonic_before = zx::Time::get_monotonic();
+        let update_algorithm =
+            HttpsDateUpdateAlgorithm::new(TEST_RETRY_STRATEGY, Arc::clone(&diagnostics), sampler);
 
         let (sender, receiver) = channel(0);
         let _update_task =
             fasync::Task::spawn(async move { update_algorithm.generate_updates(sender).await });
         let updates = receiver.take_until(response_complete_fut).collect::<Vec<_>>().await;
-
-        let monotonic_after = zx::Time::get_monotonic();
 
         // The first update should indicate status OK, and any subsequent status updates should
         // indicate OK.
@@ -354,56 +245,27 @@ mod test {
         let samples = updates
             .iter()
             .filter_map(|update| match update {
-                Update::Sample(s) => Some(s),
+                Update::Sample(s) => Some(Arc::clone(s)),
                 Update::Status(_) => None,
             })
             .collect::<Vec<_>>();
-        assert_eq!(samples.len(), expected_utc_times.len());
-        for (expected_utc_time, sample) in expected_utc_times.iter().zip(samples) {
-            assert_eq!(expected_utc_time.into_nanos(), sample.utc.unwrap());
-            assert!(sample.monotonic.unwrap() >= monotonic_before.into_nanos());
-            assert!(sample.monotonic.unwrap() <= monotonic_after.into_nanos());
-            assert_eq!(sample.standard_deviation.unwrap(), STANDARD_DEVIATION.into_nanos());
-        }
-
-        assert_eq!(diagnostics.successes().len(), expected_utc_times.len());
-        for (expected_utc_time, sample) in expected_utc_times.iter().zip(diagnostics.successes()) {
-            assert_eq!(expected_utc_time, &sample.utc);
-            assert!(sample.monotonic >= monotonic_before);
-            assert!(sample.monotonic <= monotonic_after);
-            assert_eq!(sample.standard_deviation, STANDARD_DEVIATION);
-            assert!(
-                sample.final_bound_size
-                    <= monotonic_after - monotonic_before + zx::Duration::from_seconds(1)
-            );
-            assert_eq!(sample.round_trip_times.len(), 1);
-            assert!(sample
-                .round_trip_times
-                .iter()
-                .all(|rtt| *rtt <= monotonic_after - monotonic_before));
-        }
-
+        assert_eq!(samples, expected_samples.iter().map(to_fidl_time_sample).collect::<Vec<_>>());
+        assert_eq!(diagnostics.successes(), expected_samples);
         assert!(diagnostics.failures().is_empty());
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_retry_until_successful() {
-        let reported_utc = zx::Time::from_nanos(2125 * NANOS_IN_SECONDS);
-        let expected_utc = zx::Time::from_nanos(2125 * NANOS_IN_SECONDS + HALF_SECOND_NANOS);
         let injected_responses = vec![
             Err(HttpsDateError::NetworkError),
             Err(HttpsDateError::NetworkError),
             Err(HttpsDateError::NoCertificatesPresented),
-            Ok(reported_utc),
+            Ok(TEST_SAMPLE_1.clone()),
         ];
-        let (client, response_complete_fut) = TestClient::with_responses(injected_responses);
+        let (sampler, response_complete_fut) = FakeSampler::with_responses(injected_responses);
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let update_algorithm = HttpsDateUpdateAlgorithm::with_client(
-            TEST_RETRY_STRATEGY,
-            TEST_URI.clone(),
-            Arc::clone(&diagnostics),
-            client,
-        );
+        let update_algorithm =
+            HttpsDateUpdateAlgorithm::new(TEST_RETRY_STRATEGY, Arc::clone(&diagnostics), sampler);
 
         let (sender, receiver) = channel(0);
         let _update_task =
@@ -420,11 +282,11 @@ mod test {
         // Last update should be the new sample.
         let last_update = updates.iter().last().unwrap();
         match last_update {
-            Update::Sample(sample) => assert_eq!(sample.utc.unwrap(), expected_utc.into_nanos()),
+            Update::Sample(sample) => assert_eq!(*sample, to_fidl_time_sample(&*TEST_SAMPLE_1)),
             Update::Status(_) => panic!("Expected a sample but got an update"),
         }
 
-        assert_eq!(diagnostics.successes().len(), 1);
+        assert_eq!(diagnostics.successes(), vec![TEST_SAMPLE_1.clone()]);
         assert_eq!(
             diagnostics.failures(),
             vec![
