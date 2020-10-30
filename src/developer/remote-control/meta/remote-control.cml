@@ -1,6 +1,7 @@
 {
     program: {
         binary: "bin/remote_control_bin",
+        args: [ "remote-control" ],
     },
     capabilities: [
         { protocol: "fuchsia.developer.remotecontrol.RemoteControl" },
@@ -15,6 +16,7 @@
         },
         {
             protocol: [
+                "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
                 "fuchsia.device.NameProvider",
                 "fuchsia.logger.LogSink",
                 "fuchsia.net.stack.Stack",

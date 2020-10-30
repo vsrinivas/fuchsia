@@ -27,6 +27,10 @@
             url: "fuchsia-pkg://fuchsia.com/remote-control#meta/remote-control.cm",
         },
         {
+            name: "remote-diagnostics-bridge",
+            url: "fuchsia-pkg://fuchsia.com/remote-diagnostics-bridge#meta/diagnostics-bridge.cm",
+        },
+        {
             name: "debug_serial",
             url: "fuchsia-pkg://fuchsia.com/debug-serial#meta/debug-serial.cm",
         },
@@ -170,6 +174,14 @@
             to: [ "#remote-control" ],
         },
         {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: [ "#remote-diagnostics-bridge" ],
+        },
+        {
             directory: "config-data",
             from: "parent",
             to: [ "#font_provider" ],
@@ -179,6 +191,11 @@
             directory: "config-data",
             from: "parent",
             to: [ "#test_manager" ],
+        },
+        {
+            protocol: "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
+            from: "#remote-diagnostics-bridge",
+            to: [ "#remote-control" ],
         },
         {
             protocol: "fuchsia.developer.remotecontrol.RemoteControl",

@@ -1,0 +1,24 @@
+{
+    program: {
+        binary: "bin/remote_control_bin",
+        args: [ "diagnostics-bridge" ],
+    },
+    capabilities: [
+        { protocol: "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge" },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.logger.LogSink",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
+            from: "self",
+        },
+    ],
+}

@@ -1,0 +1,53 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.developer.remotecontrol;
+
+using fuchsia.logger as logger;
+using fuchsia.diagnostics as diagnostics;
+
+const int32 MAX_ENTRIES = 1;
+
+enum StreamError : uint32 {
+    // Indicates an error that doesn't fall into any of the below types.
+    GENERIC_ERROR = 1;
+    // Indicates a required parameter is missing
+    MISSING_PARAMETER = 2;
+    // Indicates a parameter has a value that is currently unsupported.
+    UNSUPPORTED_PARAMETER = 3;
+    // Indicates a failure when setting up the subscription to ArchiveAccessor
+    SETUP_SUBSCRIPTION_FAILED = 4;
+};
+
+table BridgeStreamParameters {
+    1: diagnostics.StreamMode stream_mode;
+    2: diagnostics.DataType data_type;
+};
+
+// `resource` prefix added in the event we decide to migrate this to a socket-based API.
+resource table ArchiveIteratorEntry {
+    1: string:logger.MAX_DATAGRAM_LEN_BYTES data;
+    2: uint32 truncated_chars;
+};
+
+enum ArchiveIteratorError : uint32 {
+    GENERIC_ERROR = 1;
+    DATA_READ_FAILED = 2;
+    TRUNCATION_FAILED = 3;
+};
+
+protocol ArchiveIterator {
+    GetNext() -> (vector<ArchiveIteratorEntry>:MAX_ENTRIES entry) error ArchiveIteratorError;
+};
+
+[Discoverable]
+protocol RemoteDiagnosticsBridge {
+    StreamDiagnostics(BridgeStreamParameters parameters, request<ArchiveIterator> iterator)
+        -> () error StreamError;
+
+    // This is a workaround to ensure the bridge is started by the framework
+    // before the frontend attempts to connect to it.
+    // TODO: remove this once fxbug.dev/60910 has been fixed.
+    Hello() -> ();
+};

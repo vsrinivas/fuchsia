@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.developer.remotecontrol") {
   sdk_category = "internal"
   sources = [
+    "diagnostics-bridge.fidl",
     "host-identification.fidl",
     "remote-control.fidl",
     "service-discovery.fidl",
@@ -15,6 +16,7 @@ fidl("fuchsia.developer.remotecontrol") {
     "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.net",
   ]
 }

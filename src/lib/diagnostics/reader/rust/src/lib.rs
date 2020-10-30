@@ -14,7 +14,7 @@ use fidl_fuchsia_diagnostics::{
 use fuchsia_async::{self as fasync, DurationExt, Task, TimeoutExt};
 use fuchsia_component::client;
 use fuchsia_zircon::{Duration, DurationNum};
-use futures::{channel::mpsc, prelude::*, sink::SinkExt};
+use futures::{channel::mpsc, prelude::*, sink::SinkExt, stream::FusedStream};
 use pin_project::pin_project;
 use serde_json::Value as JsonValue;
 use std::{
@@ -344,6 +344,15 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.project();
         this.recv.poll_next(cx)
+    }
+}
+
+impl<M> FusedStream for Subscription<M>
+where
+    M: DiagnosticsData + 'static,
+{
+    fn is_terminated(&self) -> bool {
+        self.recv.is_terminated()
     }
 }
 

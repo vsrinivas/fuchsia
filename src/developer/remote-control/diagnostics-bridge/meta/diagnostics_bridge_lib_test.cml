@@ -1,0 +1,17 @@
+{
+    program: {
+        binary: "test/diagnostics_bridge_lib_test",
+    },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        { runner: "rust_test_runner" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}
