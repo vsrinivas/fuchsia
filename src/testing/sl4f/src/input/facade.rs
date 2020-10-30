@@ -8,12 +8,13 @@ use crate::input::types::{
 };
 use anyhow::{Context, Error};
 use fuchsia_syslog::macros::fx_log_info;
-use input_synthesis::{self as input};
 use serde_json::{from_value, Value};
 use std::{convert::TryFrom, time::Duration};
+
 const DEFAULT_DIMENSION: u32 = 1000;
-const DEFAULT_DURATION: u64 = 300;
-const DEFAULT_KEY_EVENT_DURATION: u64 = 0;
+const DEFAULT_DURATION: Duration = Duration::from_millis(300);
+const DEFAULT_KEY_EVENT_DURATION: Duration = Duration::from_millis(0);
+const DEFAULT_TAP_EVENT_COUNT: usize = 1;
 
 macro_rules! validate_fingers {
     ( $fingers:expr, $field:ident $comparator:tt $limit:expr ) => {
@@ -62,27 +63,13 @@ impl InputFacade {
     pub async fn tap(&self, args: Value) -> Result<ActionResult, Error> {
         fx_log_info!("Executing Tap in Input Facade.");
         let req: TapRequest = from_value(args)?;
-        const DEFAULT_TAP_EVENT_COUNT: usize = 1;
+        let width = req.width.unwrap_or(DEFAULT_DIMENSION);
+        let height = req.height.unwrap_or(DEFAULT_DIMENSION);
+        let tap_event_count = req.tap_event_count.unwrap_or(DEFAULT_TAP_EVENT_COUNT);
+        let duration = req.duration.map_or(DEFAULT_DURATION, Duration::from_millis);
 
-        let width = match req.width {
-            Some(x) => x,
-            None => DEFAULT_DIMENSION,
-        };
-        let height = match req.height {
-            Some(x) => x,
-            None => DEFAULT_DIMENSION,
-        };
-
-        let tap_event_count = match req.tap_event_count {
-            Some(x) => x,
-            None => DEFAULT_TAP_EVENT_COUNT,
-        };
-        let duration = match req.duration {
-            Some(x) => Duration::from_millis(x),
-            None => Duration::from_millis(DEFAULT_DURATION),
-        };
-
-        input::tap_event_command(req.x, req.y, width, height, tap_event_count, duration).await?;
+        input_synthesis::tap_event_command(req.x, req.y, width, height, tap_event_count, duration)
+            .await?;
         Ok(ActionResult::Success)
     }
 
@@ -115,27 +102,12 @@ impl InputFacade {
     pub async fn multi_finger_tap(&self, args: Value) -> Result<ActionResult, Error> {
         fx_log_info!("Executing MultiFingerTap in Input Facade.");
         let req: MultiFingerTapRequest = from_value(args)?;
-        const DEFAULT_TAP_EVENT_COUNT: usize = 1;
+        let width = req.width.unwrap_or(DEFAULT_DIMENSION);
+        let height = req.height.unwrap_or(DEFAULT_DIMENSION);
+        let tap_event_count = req.tap_event_count.unwrap_or(DEFAULT_TAP_EVENT_COUNT);
+        let duration = req.duration.map_or(DEFAULT_DURATION, Duration::from_millis);
 
-        let width = match req.width {
-            Some(x) => x,
-            None => DEFAULT_DIMENSION,
-        };
-        let height = match req.height {
-            Some(x) => x,
-            None => DEFAULT_DIMENSION,
-        };
-
-        let tap_event_count = match req.tap_event_count {
-            Some(x) => x,
-            None => DEFAULT_TAP_EVENT_COUNT,
-        };
-        let duration = match req.duration {
-            Some(x) => Duration::from_millis(x),
-            None => Duration::from_millis(DEFAULT_DURATION),
-        };
-
-        input::multi_finger_tap_event_command(
+        input_synthesis::multi_finger_tap_event_command(
             req.fingers,
             width,
             height,
@@ -165,27 +137,15 @@ impl InputFacade {
     pub async fn swipe(&self, args: Value) -> Result<ActionResult, Error> {
         fx_log_info!("Executing Swipe in Input Facade.");
         let req: SwipeRequest = from_value(args)?;
-
-        let width = match req.width {
-            Some(x) => x,
-            None => DEFAULT_DIMENSION,
-        };
-        let height = match req.height {
-            Some(x) => x,
-            None => DEFAULT_DIMENSION,
-        };
-
-        let duration = match req.duration {
-            Some(x) => Duration::from_millis(x),
-            None => Duration::from_millis(DEFAULT_DURATION),
-        };
-        let tap_event_count = match req.tap_event_count {
-            Some(x) => x,
+        let width = req.width.unwrap_or(DEFAULT_DIMENSION);
+        let height = req.height.unwrap_or(DEFAULT_DIMENSION);
+        let duration = req.duration.map_or(DEFAULT_DURATION, Duration::from_millis);
+        let tap_event_count = req.tap_event_count.unwrap_or_else(|| {
             // 17 msec per move event, to emulate a ~60Hz sensor.
-            None => duration.as_millis() as usize / 17,
-        };
+            duration.as_millis() as usize / 17
+        });
 
-        input::swipe_command(
+        input_synthesis::swipe_command(
             req.x0,
             req.y0,
             req.x1,
@@ -241,25 +201,13 @@ impl InputFacade {
     pub async fn multi_finger_swipe(&self, args: Value) -> Result<ActionResult, Error> {
         fx_log_info!("Executing MultiFingerSwipe in Input Facade.");
         let req: MultiFingerSwipeRequest = from_value(args)?;
-
-        let width = match req.width {
-            Some(x) => x,
-            None => DEFAULT_DIMENSION,
-        };
-        let height = match req.height {
-            Some(x) => x,
-            None => DEFAULT_DIMENSION,
-        };
-
-        let duration = match req.duration {
-            Some(x) => Duration::from_millis(x),
-            None => Duration::from_millis(DEFAULT_DURATION),
-        };
-        let move_event_count = match req.move_event_count {
-            Some(x) => x,
+        let width = req.width.unwrap_or(DEFAULT_DIMENSION);
+        let height = req.height.unwrap_or(DEFAULT_DIMENSION);
+        let duration = req.duration.map_or(DEFAULT_DURATION, Duration::from_millis);
+        let move_event_count = req.move_event_count.unwrap_or_else(|| {
             // 17 msec per move event, to emulate a ~60Hz sensor.
-            None => duration.as_millis() as usize / 17,
-        };
+            duration.as_millis() as usize / 17
+        });
         ensure!(
             duration.as_nanos()
                 >= u128::try_from(move_event_count)
@@ -279,7 +227,7 @@ impl InputFacade {
         let end_fingers =
             req.fingers.iter().map(|finger| (finger.x1, finger.y1)).collect::<Vec<_>>();
 
-        input::multi_finger_swipe_command(
+        input_synthesis::multi_finger_swipe_command(
             start_fingers,
             end_fingers,
             width,
@@ -333,12 +281,10 @@ impl InputFacade {
             0 => Err(format_err!("`text` must be non-empty")),
             _ => Ok(req.text),
         }?;
-        let key_event_duration = match req.key_event_duration {
-            Some(x) => Duration::from_millis(x),
-            None => Duration::from_millis(DEFAULT_KEY_EVENT_DURATION),
-        };
+        let key_event_duration =
+            req.key_event_duration.map_or(DEFAULT_KEY_EVENT_DURATION, Duration::from_millis);
 
-        input::text_command(text, key_event_duration).await?;
+        input_synthesis::text_command(text, key_event_duration).await?;
         Ok(ActionResult::Success)
     }
 }

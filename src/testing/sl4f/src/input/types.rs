@@ -89,7 +89,6 @@ pub struct TextRequest {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ActionResult {
     Success,
-    Fail,
 }
 
 /// This matches the FIDL struct `Touch` defined at
