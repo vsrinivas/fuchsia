@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -294,6 +295,7 @@ func Test_nodeFind(t *testing.T) {
 }
 
 func Test_processInput(t *testing.T) {
+	const singleBlobSize = 4096
 	fooSrcRelPath := "foo.src"
 	input := SizeLimits{
 		AssetLimit: json.Number("1"),
@@ -302,7 +304,7 @@ func Test_processInput(t *testing.T) {
 		Components: []Component{
 			{
 				Component: "foo",
-				Limit:     json.Number("1"),
+				Limit:     json.Number(strconv.Itoa(singleBlobSize)),
 				Src:       []string{"foo-pkg"},
 			},
 		},
@@ -365,7 +367,6 @@ func Test_processInput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create blob size file: %v", err)
 	}
-	const singleBlobSize = 4096
 	if _, err := blobSizeF.Write([]byte(fmt.Sprintf(`[{"source_path":"","merkle":"deadbeef","bytes":0,"size":%d},{"source_path":"","merkle":"abc123","bytes":0,"size":%d}]\n`, singleBlobSize, singleBlobSize))); err != nil {
 		t.Fatalf("Failed to write blob sizes: %v", err)
 	}
@@ -380,13 +381,17 @@ func Test_processInput(t *testing.T) {
 	}
 
 	// Both the budget-only and full report should report going over-budget.
-	budgetOnlyReportOverBudget, _ := generateReport(sizes, true, 0)
-	fullReportOverBudget, _ := generateReport(sizes, false, 0)
+	budgetOnlyReportOverBudget, _ := generateReport(sizes, true, false, singleBlobSize*1024)
+	fullReportOverBudget, _ := generateReport(sizes, false, false, singleBlobSize*1024)
+	ignorePerComponentBudgetOverBudget, _ := generateReport(sizes, false, true, singleBlobSize*1024)
 	if !budgetOnlyReportOverBudget {
 		t.Fatalf("The budget-only report is expected to report going overbudget.")
 	}
 	if !fullReportOverBudget {
 		t.Fatalf("The full report is expected to report going overbudget.")
+	}
+	if ignorePerComponentBudgetOverBudget {
+		t.Fatalf("Ignoring per-component budget should not cause use to go overbudget.")
 	}
 }
 

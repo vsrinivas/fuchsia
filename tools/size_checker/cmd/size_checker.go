@@ -494,7 +494,7 @@ func writeOutputSizes(sizes map[string]*ComponentSize, outPath string) error {
 	return nil
 }
 
-func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, blobFsBudget int64) (bool, string) {
+func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, ignorePerComponentBudget bool, blobFsBudget int64) (bool, string) {
 	var overBudget = false
 	var totalSize int64 = 0
 	var totalBudget int64 = 0
@@ -515,7 +515,7 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 		var endColorCharacter string
 
 		// If any component is overbudget, then size_checker will fail.
-		if componentSize.Size > componentSize.Budget {
+		if componentSize.Size > componentSize.Budget && !ignorePerComponentBudget {
 			overBudget = true
 		}
 
@@ -548,7 +548,13 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 	report.WriteString(fmt.Sprintf("%-40s | %10s | %10s | %10s\n", "Total", formatSize(totalSize), formatSize(totalBudget), formatSize(totalRemaining)))
 	report.WriteString(fmt.Sprintf("%-40s | %10s | %10s | %10s\n", "Allocated System Data Budget", formatSize(totalBudget), formatSize(blobFsBudget), formatSize(blobFsBudget-totalBudget)))
 
-	if totalBudget > blobFsBudget {
+	if totalSize > blobFsBudget {
+		report.WriteString(
+			fmt.Sprintf("ERROR: Total data size [%s] exceeds total system data budget [%s]\n", formatSize(totalSize), formatSize(blobFsBudget)))
+		overBudget = true
+	}
+
+	if totalBudget > blobFsBudget && !ignorePerComponentBudget {
 		report.WriteString(
 			fmt.Sprintf("WARNING: Total per-component data budget [%s] exceeds total system data budget [%s]\n", formatSize(totalBudget), formatSize(blobFsBudget)))
 		overBudget = true
@@ -559,7 +565,7 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, `Usage: size_checker [--budget-only] --build-dir BUILD_DIR [--sizes-json-out SIZES_JSON]
+		fmt.Fprintln(os.Stderr, `Usage: size_checker [--budget-only] [--ignore-per-component-budget] --build-dir BUILD_DIR [--sizes-json-out SIZES_JSON]
 
 A executable that checks if any component from a build has exceeded its allocated space limit.
 
@@ -572,6 +578,9 @@ See //tools/size_checker for more details.`)
 	flag.StringVar(&fileSizeOutPath, "sizes-json-out", "", "If set, will write a json object to this path with schema { <name (str)>: <file size (int)> }.")
 	var showBudgetOnly bool
 	flag.BoolVar(&showBudgetOnly, "budget-only", false, "If set, only budgets and total sizes of components will be shown.")
+	var ignorePerComponentBudget bool
+	flag.BoolVar(&ignorePerComponentBudget, "ignore-per-component-budget", false,
+		"If set, output will go to stderr only if the total size of components exceeds the total blobFs budget.")
 
 	flag.Parse()
 
@@ -602,7 +611,7 @@ See //tools/size_checker for more details.`)
 	}
 
 	blobFsBudget := parseBlobfsBudget(buildDir, FileSystemSizesJSON)
-	overBudget, report := generateReport(outputSizes, showBudgetOnly, blobFsBudget)
+	overBudget, report := generateReport(outputSizes, showBudgetOnly, ignorePerComponentBudget, blobFsBudget)
 
 	if overBudget {
 		log.Fatal(report)
