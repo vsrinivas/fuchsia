@@ -314,17 +314,17 @@ AudioBuffer<SampleFormat> MultiplyByTukeyWindow(AudioBufferSlice<SampleFormat> s
   FX_CHECK(alpha <= 1);
 
   auto out = slice.Clone();
-  size_t ramp_length_frames = static_cast<size_t>(alpha / 2 * slice.NumFrames());
+  size_t ramp_length_frames = static_cast<size_t>(alpha * slice.NumFrames() / 2);
 
   for (size_t frame = 0; frame < ramp_length_frames; ++frame) {
     double x = static_cast<double>(frame) / static_cast<double>(ramp_length_frames);
     double w = 0.5 * (1.0 - std::cos(M_PI * x));
-    for (size_t chan = 0; chan < slice.format().channels(); ++chan) {
-      size_t a = slice.SampleIndex(frame, chan);
-      size_t b = slice.NumSamples() - 1 - a;
+    for (size_t chan = 0; chan < out.format().channels(); ++chan) {
+      size_t a = out.SampleIndex(frame, chan);
+      size_t b = out.NumSamples() - 1 - a;
 
-      double a_val = w * internal::SampleToDouble(slice.buf()->samples()[a]);
-      double b_val = w * internal::SampleToDouble(slice.buf()->samples()[b]);
+      double a_val = w * internal::SampleToDouble(out.samples()[a]);
+      double b_val = w * internal::SampleToDouble(out.samples()[b]);
 
       out.samples()[a] = static_cast<typename AudioBuffer<SampleFormat>::SampleT>(a_val);
       out.samples()[b] = static_cast<typename AudioBuffer<SampleFormat>::SampleT>(b_val);
