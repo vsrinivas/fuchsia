@@ -12,7 +12,10 @@ enum CompressionAlgorithm {
     LZ4 = 2;
     ZSTD = 3;
     ZSTD_SEEKABLE = 4;
+    /// For decompressing an entire chunked archive from start to finish.
     CHUNKED = 5;
+    /// Used for decompressing only part of a chunked archive.
+    CHUNKED_PARTIAL = 6;
 };
 
 /// A range of bytes.
@@ -24,7 +27,7 @@ struct Range {
 };
 
 /// A request sent to the decompressor.
-struct DecompressRangeRequest {
+struct DecompressRequest {
     /// The bytes where the decompressed result will be placed.
     Range decompressed;
     /// The bytes from the compressed input to extract from.
@@ -35,7 +38,7 @@ struct DecompressRangeRequest {
 };
 
 /// A response from the decompressor after handling a `DecompressRangeRequest`.
-struct DecompressRangeResponse {
+struct DecompressResponse {
     /// Decompressed size in bytes.
     uint64 size;
     /// Operation status.

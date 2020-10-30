@@ -13,10 +13,10 @@
 namespace blobfs {
 
 // ensure inline request/response are the same sizes to fit in a FIFO
-static_assert(llcpp::fuchsia::blobfs::internal::DecompressRangeRequest::PrimarySize ==
-              llcpp::fuchsia::blobfs::internal::DecompressRangeResponse::PrimarySize);
-static_assert(llcpp::fuchsia::blobfs::internal::DecompressRangeRequest::MaxOutOfLine == 0);
-static_assert(llcpp::fuchsia::blobfs::internal::DecompressRangeResponse::MaxOutOfLine == 0);
+static_assert(llcpp::fuchsia::blobfs::internal::DecompressRequest::PrimarySize ==
+              llcpp::fuchsia::blobfs::internal::DecompressResponse::PrimarySize);
+static_assert(llcpp::fuchsia::blobfs::internal::DecompressRequest::MaxOutOfLine == 0);
+static_assert(llcpp::fuchsia::blobfs::internal::DecompressResponse::MaxOutOfLine == 0);
 
 class DecompressorImpl : public fuchsia::blobfs::internal::DecompressorCreator {
  public:

@@ -19,6 +19,7 @@ CompressionAlgorithm CompressionAlgorithmFidlToLocal(
     case Fidl::ZSTD_SEEKABLE:
       return CompressionAlgorithm::ZSTD_SEEKABLE;
     case Fidl::CHUNKED:
+    case Fidl::CHUNKED_PARTIAL:
       return CompressionAlgorithm::CHUNKED;
   }
 }
