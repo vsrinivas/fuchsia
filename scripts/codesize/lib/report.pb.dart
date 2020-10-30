@@ -26,6 +26,8 @@ class SizeInfo extends $pb.GeneratedMessage {
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromJson(i, r);
   SizeInfo clone() => SizeInfo()..mergeFromMessage(this);
+  // TODO(fxb/63090): Get rid of deprecated call and update to new API. 
+  // ignore: deprecated_member_use
   SizeInfo copyWith(void Function(SizeInfo) updates) =>
       super.copyWith((message) => updates(message as SizeInfo));
   $pb.BuilderInfo get info_ => _i;
@@ -81,6 +83,8 @@ class Symbol extends $pb.GeneratedMessage {
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromJson(i, r);
   Symbol clone() => Symbol()..mergeFromMessage(this);
+  // TODO(fxb/63090): Get rid of deprecated call and update to new API. 
+  // ignore: deprecated_member_use
   Symbol copyWith(void Function(Symbol) updates) =>
       super.copyWith((message) => updates(message as Symbol));
   $pb.BuilderInfo get info_ => _i;
@@ -150,6 +154,8 @@ class CompileUnit extends $pb.GeneratedMessage {
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromJson(i, r);
   CompileUnit clone() => CompileUnit()..mergeFromMessage(this);
+  // TODO(fxb/63090): Get rid of deprecated call and update to new API. 
+  // ignore: deprecated_member_use
   CompileUnit copyWith(void Function(CompileUnit) updates) =>
       super.copyWith((message) => updates(message as CompileUnit));
   $pb.BuilderInfo get info_ => _i;
@@ -211,6 +217,8 @@ class Report extends $pb.GeneratedMessage {
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromJson(i, r);
   Report clone() => Report()..mergeFromMessage(this);
+  // TODO(fxb/63090): Get rid of deprecated call and update to new API. 
+  // ignore: deprecated_member_use
   Report copyWith(void Function(Report) updates) =>
       super.copyWith((message) => updates(message as Report));
   $pb.BuilderInfo get info_ => _i;
