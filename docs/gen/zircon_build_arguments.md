@@ -14,11 +14,11 @@ their own `__asan_default_options` C function.  Instead, they can use a
 sanitizer_extra_options() target in their `deps` and then any options
 injected that way can override that option's setting in this list.
 
-**Current value for `target_cpu = `:** `[]`
+**Current value for `target_cpu = `:** `["detect_stack_use_after_return=1"]`
 
 From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:4
 
-**Overridden from the default:** `[]`
+**Overridden from the default:** `["detect_stack_use_after_return=1"]`
 
 From //public/gn/config/instrumentation/sanitizer_default_options.gni:16
 
