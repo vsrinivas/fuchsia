@@ -39,7 +39,7 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
 }  // namespace
 
 // If position error is greater than this, we incur a discontinuity and 'snap' to the expected pos.
-constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(2);
+constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(5);
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& audio_clock)
