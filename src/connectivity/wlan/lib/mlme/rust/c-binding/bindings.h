@@ -35,14 +35,6 @@ typedef struct wlan_client_mlme_t wlan_client_mlme_t;
 typedef struct mlme_sequence_manager_t mlme_sequence_manager_t;
 
 /**
- * A convenient C-wrapper for read-only memory that is neither owned or managed by Rust
- */
-typedef struct {
-  const uint8_t *data;
-  uintptr_t size;
-} wlan_span_t;
-
-/**
  * An output buffer requires its owner to manage the underlying buffer's memory themselves.
  * An output buffer is used for every buffer handed from Rust to C++.
  */
@@ -184,6 +176,14 @@ typedef struct {
 } wlan_scheduler_ops_t;
 
 /**
+ * A convenient C-wrapper for read-only memory that is neither owned or managed by Rust
+ */
+typedef struct {
+  const uint8_t *data;
+  uintptr_t size;
+} wlan_span_t;
+
+/**
  * ClientConfig affects time duration used for different timeouts.
  * Originally added to more easily control behavior in tests.
  */
@@ -200,38 +200,29 @@ typedef struct {
   bool _0;
 } wlan_power_state_t;
 
-extern "C" void ap_sta_delete(wlan_ap_sta_t *sta);
-
-extern "C" int32_t ap_sta_handle_eth_frame(wlan_ap_sta_t *sta, wlan_span_t frame);
-
-extern "C" int32_t ap_sta_handle_hw_indication(wlan_ap_sta_t *sta, wlan_indication_t ind);
-
-extern "C" int32_t ap_sta_handle_mac_frame(wlan_ap_sta_t *sta, wlan_span_t frame,
-                                           const wlan_rx_info_t *rx_info);
-
-extern "C" int32_t ap_sta_handle_mlme_msg(wlan_ap_sta_t *sta, wlan_span_t bytes);
-
 extern "C" wlan_ap_sta_t *ap_sta_new(mlme_device_ops_t device,
                                      mlme_buffer_provider_ops_t buf_provider,
                                      wlan_scheduler_ops_t scheduler, const uint8_t (*bssid)[6]);
 
+extern "C" void ap_sta_delete(wlan_ap_sta_t *sta);
+
 extern "C" void ap_sta_timeout_fired(wlan_ap_sta_t *sta, wlan_scheduler_event_id_t event_id);
 
-extern "C" void client_mlme_delete(wlan_client_mlme_t *mlme);
+extern "C" int32_t ap_sta_handle_mlme_msg(wlan_ap_sta_t *sta, wlan_span_t bytes);
 
-extern "C" int32_t client_mlme_handle_mlme_msg(wlan_client_mlme_t *mlme, wlan_span_t bytes);
+extern "C" int32_t ap_sta_handle_mac_frame(wlan_ap_sta_t *sta, wlan_span_t frame,
+                                           const wlan_rx_info_t *rx_info);
 
-extern "C" void client_mlme_hw_scan_complete(wlan_client_mlme_t *mlme, uint8_t status);
+extern "C" int32_t ap_sta_handle_eth_frame(wlan_ap_sta_t *sta, wlan_span_t frame);
+
+extern "C" int32_t ap_sta_handle_hw_indication(wlan_ap_sta_t *sta, wlan_indication_t ind);
 
 extern "C" wlan_client_mlme_t *client_mlme_new(wlan_client_mlme_config_t config,
                                                mlme_device_ops_t device,
                                                mlme_buffer_provider_ops_t buf_provider,
                                                wlan_scheduler_ops_t scheduler);
 
-extern "C" bool client_mlme_on_channel(wlan_client_mlme_t *mlme);
-
-extern "C" void client_mlme_on_mac_frame(wlan_client_mlme_t *mlme, wlan_span_t bytes,
-                                         const wlan_rx_info_t *rx_info);
+extern "C" void client_mlme_delete(wlan_client_mlme_t *mlme);
 
 /**
  * Return true if auto-deauth triggers. Return false otherwise
@@ -239,11 +230,20 @@ extern "C" void client_mlme_on_mac_frame(wlan_client_mlme_t *mlme, wlan_span_t b
 extern "C" void client_mlme_timeout_fired(wlan_client_mlme_t *mlme,
                                           wlan_scheduler_event_id_t event_id);
 
+extern "C" int32_t client_mlme_handle_mlme_msg(wlan_client_mlme_t *mlme, wlan_span_t bytes);
+
+extern "C" bool client_mlme_on_channel(wlan_client_mlme_t *mlme);
+
+extern "C" void client_mlme_on_mac_frame(wlan_client_mlme_t *mlme, wlan_span_t bytes,
+                                         const wlan_rx_info_t *rx_info);
+
+extern "C" void client_mlme_hw_scan_complete(wlan_client_mlme_t *mlme, uint8_t status);
+
 extern "C" int32_t client_mlme_handle_eth_frame(wlan_client_mlme_t *mlme, wlan_span_t frame);
 
-extern "C" void mlme_sequence_manager_delete(mlme_sequence_manager_t *mgr);
-
 extern "C" mlme_sequence_manager_t *mlme_sequence_manager_new(void);
+
+extern "C" void mlme_sequence_manager_delete(mlme_sequence_manager_t *mgr);
 
 extern "C" uint32_t mlme_sequence_manager_next_sns1(mlme_sequence_manager_t *mgr,
                                                     const uint8_t (*sta_addr)[6]);
