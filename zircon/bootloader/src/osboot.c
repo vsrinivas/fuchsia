@@ -385,7 +385,7 @@ static inline void swap_to_head(const char c, char* s, const size_t n) {
 size_t kernel_zone_size;
 efi_physical_addr kernel_zone_base;
 
-EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
+efi_status efi_main(efi_handle img, efi_system_table* sys) {
   xefi_init(img, sys);
   gConOut->ClearScreen(gConOut);
 

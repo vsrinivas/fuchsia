@@ -27,11 +27,11 @@ typedef struct efi_block_io_protocol efi_block_io_protocol;
 struct efi_block_io_protocol {
   uint64_t Revision;
   efi_block_io_media* Media;
-  efi_status (*Reset)(efi_block_io_protocol* self, bool ExtendedVerification) EFIAPI;
+  efi_status (*Reset)(efi_block_io_protocol* self, bool ExtendedVerification);
   efi_status (*ReadBlocks)(efi_block_io_protocol* self, uint32_t MediaId, uint64_t LBA,
-                           uint64_t BufferSize, void* Buffer) EFIAPI;
+                           uint64_t BufferSize, void* Buffer);
   efi_status (*WriteBlocks)(efi_block_io_protocol* self, uint32_t MediaId, uint64_t LBA,
-                            uint64_t BufferSize, const void* Buffer) EFIAPI;
+                            uint64_t BufferSize, const void* Buffer);
   efi_status (*FlushBlocks)(efi_block_io_protocol* self);
 };
 

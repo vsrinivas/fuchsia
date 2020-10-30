@@ -69,16 +69,14 @@ typedef struct serial_io_mode {
 typedef struct efi_serial_io_protocol {
   uint32_t Revision;
 
-  efi_status (*Reset)(struct efi_serial_io_protocol* self) EFIAPI;
+  efi_status (*Reset)(struct efi_serial_io_protocol* self);
   efi_status (*SetAttributes)(struct efi_serial_io_protocol* self, uint64_t BaudRate,
                               uint32_t ReceiveFifoDepth, uint32_t Timeout, efi_parity_type Parity,
-                              uint8_t DataBits, efi_stop_bits_type StopBits) EFIAPI;
-  efi_status (*SetControl)(struct efi_serial_io_protocol* self, uint32_t Control) EFIAPI;
-  efi_status (*GetControl)(struct efi_serial_io_protocol* self, uint32_t* Control) EFIAPI;
-  efi_status (*Write)(struct efi_serial_io_protocol* self, uint64_t* BufferSize,
-                      void* Buffer) EFIAPI;
-  efi_status (*Read)(struct efi_serial_io_protocol* self, uint64_t* BufferSize,
-                     void* Buffer) EFIAPI;
+                              uint8_t DataBits, efi_stop_bits_type StopBits);
+  efi_status (*SetControl)(struct efi_serial_io_protocol* self, uint32_t Control);
+  efi_status (*GetControl)(struct efi_serial_io_protocol* self, uint32_t* Control);
+  efi_status (*Write)(struct efi_serial_io_protocol* self, uint64_t* BufferSize, void* Buffer);
+  efi_status (*Read)(struct efi_serial_io_protocol* self, uint64_t* BufferSize, void* Buffer);
 
   serial_io_mode* Mode;
   const struct elf_guid* DeviceTypeGuid;  // Revision 1.1

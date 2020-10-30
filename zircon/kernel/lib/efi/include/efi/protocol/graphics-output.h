@@ -65,14 +65,14 @@ typedef enum {
 
 typedef struct efi_graphics_output_protocol {
   efi_status (*QueryMode)(struct efi_graphics_output_protocol* self, uint32_t mode_num,
-                          size_t* info_len, efi_graphics_output_mode_information** info) EFIAPI;
+                          size_t* info_len, efi_graphics_output_mode_information** info);
 
-  efi_status (*SetMode)(struct efi_graphics_output_protocol* self, uint32_t mode_num) EFIAPI;
+  efi_status (*SetMode)(struct efi_graphics_output_protocol* self, uint32_t mode_num);
 
   efi_status (*Blt)(struct efi_graphics_output_protocol* self,
                     efi_graphics_output_blt_pixel* blt_buf,
                     efi_graphics_output_blt_operation blt_operation, size_t src_x, size_t src_y,
-                    size_t dest_x, size_t dest_y, size_t width, size_t height, size_t delta) EFIAPI;
+                    size_t dest_x, size_t dest_y, size_t width, size_t height, size_t delta);
 
   efi_graphics_output_mode* Mode;
 } efi_graphics_output_protocol;

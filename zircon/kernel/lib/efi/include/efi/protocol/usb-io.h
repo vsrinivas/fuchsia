@@ -37,7 +37,7 @@ typedef struct {
 } efi_usb_device_request;
 
 typedef efi_status (*efi_async_usb_transfer_callback)(void* Data, size_t DataLength, void* Context,
-                                                      uint32_t Status) EFIAPI;
+                                                      uint32_t Status);
 
 typedef struct {
   uint8_t Length;
@@ -92,48 +92,47 @@ typedef struct efi_usb_io_protocol {
   efi_status (*UsbControlTransfer)(struct efi_usb_io_protocol* self,
                                    efi_usb_device_request* request,
                                    efi_usb_data_direction direction, uint32_t timeout, void* data,
-                                   size_t data_len, uint32_t* status) EFIAPI;
+                                   size_t data_len, uint32_t* status);
 
   efi_status (*UsbBulkTransfer)(struct efi_usb_io_protocol* self, uint8_t endpoint, void* data,
-                                size_t data_len, size_t timeout, uint32_t* status) EFIAPI;
+                                size_t data_len, size_t timeout, uint32_t* status);
 
   efi_status (*UsbAsyncInterruptTransfer)(struct efi_usb_io_protocol* self, uint8_t endpoint,
                                           bool is_new_transfer, size_t polling_interval,
                                           size_t data_len,
                                           efi_async_usb_transfer_callback interrupt_cb,
-                                          void* context) EFIAPI;
+                                          void* context);
 
   efi_status (*UsbSyncInterruptTransfer)(struct efi_usb_io_protocol* self, uint8_t endpoint,
                                          void* data, size_t* data_len, size_t timeout,
-                                         uint32_t* status) EFIAPI;
+                                         uint32_t* status);
 
   efi_status (*UsbIsochronousTransfer)(struct efi_usb_io_protocol* self, uint8_t endpoint,
-                                       void* data, size_t data_len, uint32_t* status) EFIAPI;
+                                       void* data, size_t data_len, uint32_t* status);
 
   efi_status (*UsbAsyncIsochronousTransfer)(struct efi_usb_io_protocol* self, uint8_t endpoint,
                                             void* data, size_t data_len,
-                                            efi_async_usb_transfer_callback isoc_cb,
-                                            void* context) EFIAPI;
+                                            efi_async_usb_transfer_callback isoc_cb, void* context);
 
   efi_status (*UsbGetDeviceDescriptor)(struct efi_usb_io_protocol* self,
-                                       efi_usb_device_descriptor* descriptor) EFIAPI;
+                                       efi_usb_device_descriptor* descriptor);
 
   efi_status (*UsbGetConfigDescriptor)(struct efi_usb_io_protocol* self,
-                                       efi_usb_config_descriptor* descriptor) EFIAPI;
+                                       efi_usb_config_descriptor* descriptor);
 
   efi_status (*UsbGetInterfaceDescriptor)(struct efi_usb_io_protocol* self,
-                                          efi_usb_interface_descriptor* descriptor) EFIAPI;
+                                          efi_usb_interface_descriptor* descriptor);
 
   efi_status (*UsbGetEndpointDescriptor)(struct efi_usb_io_protocol* self, uint8_t endpt_index,
-                                         efi_usb_endpoint_descriptor* descriptor) EFIAPI;
+                                         efi_usb_endpoint_descriptor* descriptor);
 
   efi_status (*UsbGetStringDescriptor)(struct efi_usb_io_protocol* self, uint16_t langid,
-                                       uint8_t stringid, char16_t** str) EFIAPI;
+                                       uint8_t stringid, char16_t** str);
 
   efi_status (*UsbGetSupportedLanguages)(struct efi_usb_io_protocol* self, uint16_t** langid_table,
-                                         uint16_t* table_size) EFIAPI;
+                                         uint16_t* table_size);
 
-  efi_status (*UsbPortReset)(struct efi_usb_io_protocol* self) EFIAPI;
+  efi_status (*UsbPortReset)(struct efi_usb_io_protocol* self);
 } efi_usb_io_protocol;
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_USB_IO_H_

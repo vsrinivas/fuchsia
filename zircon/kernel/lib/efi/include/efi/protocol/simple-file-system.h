@@ -21,8 +21,7 @@ extern efi_guid SimpleFileSystemProtocol;
 typedef struct efi_simple_file_system_protocol {
   uint64_t Revision;
 
-  efi_status (*OpenVolume)(struct efi_simple_file_system_protocol* self,
-                           efi_file_protocol** root) EFIAPI;
+  efi_status (*OpenVolume)(struct efi_simple_file_system_protocol* self, efi_file_protocol** root);
 } efi_simple_file_system_protocol;
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_FILE_SYSTEM_H_

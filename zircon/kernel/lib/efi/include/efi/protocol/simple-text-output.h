@@ -118,26 +118,25 @@ typedef struct {
 #define EFI_BACKGROUND_LIGHTGRAY 0x70
 
 typedef struct efi_simple_text_output_protocol {
-  efi_status (*Reset)(struct efi_simple_text_output_protocol* self,
-                      bool extended_verification) EFIAPI;
+  efi_status (*Reset)(struct efi_simple_text_output_protocol* self, bool extended_verification);
 
-  efi_status (*OutputString)(struct efi_simple_text_output_protocol* self, char16_t* string) EFIAPI;
+  efi_status (*OutputString)(struct efi_simple_text_output_protocol* self, char16_t* string);
 
-  efi_status (*TestString)(struct efi_simple_text_output_protocol* self, char16_t* string) EFIAPI;
+  efi_status (*TestString)(struct efi_simple_text_output_protocol* self, char16_t* string);
 
   efi_status (*QueryMode)(struct efi_simple_text_output_protocol* self, size_t mode_num,
-                          size_t* cols, size_t* rows) EFIAPI;
+                          size_t* cols, size_t* rows);
 
-  efi_status (*SetMode)(struct efi_simple_text_output_protocol* self, size_t mode_num) EFIAPI;
+  efi_status (*SetMode)(struct efi_simple_text_output_protocol* self, size_t mode_num);
 
-  efi_status (*SetAttribute)(struct efi_simple_text_output_protocol* self, size_t attribute) EFIAPI;
+  efi_status (*SetAttribute)(struct efi_simple_text_output_protocol* self, size_t attribute);
 
-  efi_status (*ClearScreen)(struct efi_simple_text_output_protocol* self) EFIAPI;
+  efi_status (*ClearScreen)(struct efi_simple_text_output_protocol* self);
 
   efi_status (*SetCursorPosition)(struct efi_simple_text_output_protocol* self, size_t col,
-                                  size_t row) EFIAPI;
+                                  size_t row);
 
-  efi_status (*EnableCursor)(struct efi_simple_text_output_protocol* self, bool visible) EFIAPI;
+  efi_status (*EnableCursor)(struct efi_simple_text_output_protocol* self, bool visible);
 
   simple_text_output_mode* Mode;
 } efi_simple_text_output_protocol;

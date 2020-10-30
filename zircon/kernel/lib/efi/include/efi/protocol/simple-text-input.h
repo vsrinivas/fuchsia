@@ -21,11 +21,9 @@ typedef struct {
 } efi_input_key;
 
 typedef struct efi_simple_text_input_protocol {
-  efi_status (*Reset)(struct efi_simple_text_input_protocol* self,
-                      bool extendend_verification) EFIAPI;
+  efi_status (*Reset)(struct efi_simple_text_input_protocol* self, bool extendend_verification);
 
-  efi_status (*ReadKeyStroke)(struct efi_simple_text_input_protocol* self,
-                              efi_input_key* key) EFIAPI;
+  efi_status (*ReadKeyStroke)(struct efi_simple_text_input_protocol* self, efi_input_key* key);
 
   efi_event WaitForKey;
 } efi_simple_text_input_protocol;

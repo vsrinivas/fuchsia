@@ -33,7 +33,7 @@ typedef struct {
   efi_memory_type ImageCodeType;
   efi_memory_type ImageDataType;
 
-  efi_status (*Unload)(efi_handle img) EFIAPI;
+  efi_status (*Unload)(efi_handle img);
 } efi_loaded_image_protocol;
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_LOADED_IMAGE_H_

@@ -36,11 +36,10 @@ struct efi_pci_root_bridge_io_protocol;
 
 typedef struct {
   efi_status (*Read)(struct efi_pci_root_bridge_io_protocol* self,
-                     efi_pci_root_bridge_io_width width, uint64_t addr, size_t count,
-                     void* buffer) EFIAPI;
+                     efi_pci_root_bridge_io_width width, uint64_t addr, size_t count, void* buffer);
   efi_status (*Write)(struct efi_pci_root_bridge_io_protocol* self,
                       efi_pci_root_bridge_io_width width, uint64_t addr, size_t count,
-                      void* buffer) EFIAPI;
+                      void* buffer);
 } efi_pci_root_bridge_io_access;
 
 #define EFI_PCI_ATTRIBUTE_ISA_MOTHERBOARD_IO 0x0001
@@ -73,11 +72,11 @@ typedef struct efi_pci_root_bridge_io_protocol {
 
   efi_status (*PollMem)(struct efi_pci_root_bridge_io_protocol* self,
                         efi_pci_root_bridge_io_width width, uint64_t addr, uint64_t mask,
-                        uint64_t value, uint64_t delay, uint64_t* result) EFIAPI;
+                        uint64_t value, uint64_t delay, uint64_t* result);
 
   efi_status (*PollIo)(struct efi_pci_root_bridge_io_protocol* self,
                        efi_pci_root_bridge_io_width width, uint64_t addr, uint64_t mask,
-                       uint64_t value, uint64_t delay, uint64_t* result) EFIAPI;
+                       uint64_t value, uint64_t delay, uint64_t* result);
 
   efi_pci_root_bridge_io_access Mem;
   efi_pci_root_bridge_io_access Io;
@@ -85,31 +84,30 @@ typedef struct efi_pci_root_bridge_io_protocol {
 
   efi_status (*CopyMem)(struct efi_pci_root_bridge_io_protocol* self,
                         efi_pci_root_bridge_io_width width, uint64_t dest_addr, uint64_t src_addr,
-                        size_t count) EFIAPI;
+                        size_t count);
 
   efi_status (*Map)(struct efi_pci_root_bridge_io_protocol* self,
                     efi_pci_root_bridge_io_operation operation, void* host_addr, size_t* num_bytes,
-                    efi_physical_addr* device_addr, void** mapping) EFIAPI;
+                    efi_physical_addr* device_addr, void** mapping);
 
-  efi_status (*Unmap)(struct efi_pci_root_bridge_io_protocol* self, void* mapping) EFIAPI;
+  efi_status (*Unmap)(struct efi_pci_root_bridge_io_protocol* self, void* mapping);
 
   efi_status (*AllocateBuffer)(struct efi_pci_root_bridge_io_protocol* self, efi_allocate_type type,
                                efi_memory_type memory_type, size_t pages, void** host_addr,
-                               uint64_t attributes) EFIAPI;
+                               uint64_t attributes);
 
   efi_status (*FreeBuffer)(struct efi_pci_root_bridge_io_protocol* self, size_t pages,
-                           void* host_addr) EFIAPI;
+                           void* host_addr);
 
-  efi_status (*Flush)(struct efi_pci_root_bridge_io_protocol* self) EFIAPI;
+  efi_status (*Flush)(struct efi_pci_root_bridge_io_protocol* self);
 
   efi_status (*GetAttributes)(struct efi_pci_root_bridge_io_protocol* self, uint64_t* supports,
-                              uint64_t* attributes) EFIAPI;
+                              uint64_t* attributes);
 
   efi_status (*SetAttributes)(struct efi_pci_root_bridge_io_protocol* self, uint64_t attributes,
-                              uint64_t* resource_base, uint64_t* resource_len) EFIAPI;
+                              uint64_t* resource_base, uint64_t* resource_len);
 
-  efi_status (*Configuration)(struct efi_pci_root_bridge_io_protocol* self,
-                              void** resources) EFIAPI;
+  efi_status (*Configuration)(struct efi_pci_root_bridge_io_protocol* self, void** resources);
 
   uint32_t SegmentNumber;
 } efi_pci_root_bridge_io_protocol;

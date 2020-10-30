@@ -18,13 +18,13 @@ extern efi_guid DriverBindingProtocol;
 
 typedef struct efi_driver_binding_protocol {
   efi_status (*Supported)(struct efi_driver_binding_protocol* self, efi_handle controller_handle,
-                          efi_device_path_protocol* remaining_path) EFIAPI;
+                          efi_device_path_protocol* remaining_path);
 
   efi_status (*Start)(struct efi_driver_binding_protocol* self, efi_handle controller_handle,
-                      efi_device_path_protocol* remaining_path) EFIAPI;
+                      efi_device_path_protocol* remaining_path);
 
   efi_status (*Stop)(struct efi_driver_binding_protocol* self, efi_handle controller_handle,
-                     size_t num_children, efi_handle* child_handle_buf) EFIAPI;
+                     size_t num_children, efi_handle* child_handle_buf);
 
   uint32_t Version;
   efi_handle ImageHandle;

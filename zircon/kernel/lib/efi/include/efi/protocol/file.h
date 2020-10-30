@@ -70,37 +70,37 @@ typedef struct efi_file_protocol {
   uint64_t Revision;
 
   efi_status (*Open)(struct efi_file_protocol* self, struct efi_file_protocol** new_handle,
-                     const char16_t* filename, uint64_t open_mode, uint64_t attributes) EFIAPI;
+                     const char16_t* filename, uint64_t open_mode, uint64_t attributes);
 
-  efi_status (*Close)(struct efi_file_protocol* self) EFIAPI;
+  efi_status (*Close)(struct efi_file_protocol* self);
 
-  efi_status (*Delete)(struct efi_file_protocol* self) EFIAPI;
+  efi_status (*Delete)(struct efi_file_protocol* self);
 
-  efi_status (*Read)(struct efi_file_protocol* self, size_t* len, void* buf) EFIAPI;
+  efi_status (*Read)(struct efi_file_protocol* self, size_t* len, void* buf);
 
-  efi_status (*Write)(struct efi_file_protocol* self, size_t* len, void* buf) EFIAPI;
+  efi_status (*Write)(struct efi_file_protocol* self, size_t* len, void* buf);
 
-  efi_status (*GetPosition)(struct efi_file_protocol* self, uint64_t* position) EFIAPI;
+  efi_status (*GetPosition)(struct efi_file_protocol* self, uint64_t* position);
 
-  efi_status (*SetPosition)(struct efi_file_protocol* self, uint64_t position) EFIAPI;
+  efi_status (*SetPosition)(struct efi_file_protocol* self, uint64_t position);
 
   efi_status (*GetInfo)(struct efi_file_protocol* self, efi_guid* info_type, size_t* buf_size,
-                        void* buf) EFIAPI;
+                        void* buf);
 
   efi_status (*SetInfo)(struct efi_file_protocol* self, efi_guid* info_type, size_t buf_size,
-                        void* buf) EFIAPI;
+                        void* buf);
 
-  efi_status (*Flush)(struct efi_file_protocol* self) EFIAPI;
+  efi_status (*Flush)(struct efi_file_protocol* self);
 
   efi_status (*OpenEx)(struct efi_file_protocol* self, struct efi_file_protocol* new_handle,
                        char16_t* filename, uint64_t open_mode, uint64_t attributes,
-                       efi_file_io_token* token) EFIAPI;
+                       efi_file_io_token* token);
 
-  efi_status (*ReadEx)(struct efi_file_protocol* self, efi_file_io_token* token) EFIAPI;
+  efi_status (*ReadEx)(struct efi_file_protocol* self, efi_file_io_token* token);
 
-  efi_status (*WriteEx)(struct efi_file_protocol* self, efi_file_io_token* token) EFIAPI;
+  efi_status (*WriteEx)(struct efi_file_protocol* self, efi_file_io_token* token);
 
-  efi_status (*FlushEx)(struct efi_file_protocol* self, efi_file_io_token* token) EFIAPI;
+  efi_status (*FlushEx)(struct efi_file_protocol* self, efi_file_io_token* token);
 } efi_file_protocol;
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_FILE_H_

@@ -73,27 +73,27 @@ typedef struct {
 typedef struct efi_managed_network_protocol {
   efi_status (*GetModeData)(struct efi_managed_network_protocol* self,
                             efi_managed_network_config_data* mnp_config_data,
-                            efi_simple_network_mode* snp_mode_data) EFIAPI;
+                            efi_simple_network_mode* snp_mode_data);
 
   efi_status (*Configure)(struct efi_managed_network_protocol* self,
-                          efi_managed_network_config_data* mnp_config_data) EFIAPI;
+                          efi_managed_network_config_data* mnp_config_data);
 
   efi_status (*McastIpToMac)(struct efi_managed_network_protocol* self, bool ipv6_flag,
-                             efi_ip_addr* ip_addr, efi_mac_addr* mac_addr) EFIAPI;
+                             efi_ip_addr* ip_addr, efi_mac_addr* mac_addr);
 
   efi_status (*Groups)(struct efi_managed_network_protocol* self, bool join_flag,
-                       efi_mac_addr* mac_addr) EFIAPI;
+                       efi_mac_addr* mac_addr);
 
   efi_status (*Transmit)(struct efi_managed_network_protocol* self,
-                         efi_managed_network_sync_completion_token* token) EFIAPI;
+                         efi_managed_network_sync_completion_token* token);
 
   efi_status (*Receive)(struct efi_managed_network_protocol* self,
-                        efi_managed_network_sync_completion_token* token) EFIAPI;
+                        efi_managed_network_sync_completion_token* token);
 
   efi_status (*Cancel)(struct efi_managed_network_protocol* self,
-                       efi_managed_network_sync_completion_token* token) EFIAPI;
+                       efi_managed_network_sync_completion_token* token);
 
-  efi_status (*Poll)(struct efi_managed_network_protocol* self) EFIAPI;
+  efi_status (*Poll)(struct efi_managed_network_protocol* self);
 } efi_managed_network_protocol;
 
 #endif  // ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_MANAGED_NETWORK_H_

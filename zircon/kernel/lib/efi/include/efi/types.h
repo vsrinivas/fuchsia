@@ -10,8 +10,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define EFIAPI __attribute__((ms_abi))
-
 #define EFI_ERROR_MASK 0x8000000000000000
 #define EFI_ERR(x) (EFI_ERROR_MASK | x)
 #define EFI_ERROR(x) (((int64_t)x) < 0)
@@ -156,7 +154,7 @@ typedef void* efi_event;
     0x7ce88fb3, 0x4bd7, 0x4679, { 0x87, 0xa8, 0xa8, 0xd8, 0xde, 0xe5, 0x0d, 0x2b } \
   }
 
-typedef void (*efi_event_notify)(efi_event event, void* ctx) EFIAPI;
+typedef void (*efi_event_notify)(efi_event event, void* ctx);
 
 typedef enum { TimerCancel, TimerPeriodic, TimerRelative } efi_timer_delay;
 
