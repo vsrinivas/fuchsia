@@ -186,6 +186,9 @@ void DumpVisitor::VisitNode(Node* r) {
   if (r->hit_test_behavior() != ::fuchsia::ui::gfx::HitTestBehavior::kDefault) {
     WriteProperty("hit_test_behavior") << static_cast<int>(r->hit_test_behavior());
   }
+  if (!r->semantically_visible()) {
+    WriteProperty("semantically_visible") << "false";
+  }
   if (r->clip_to_self()) {
     WriteProperty("clip_to_self") << r->clip_to_self();
   }
@@ -427,7 +430,14 @@ void DumpVisitor::EndSection() { EndLine(); }
 
 void DumpVisitor::BeginLine() {
   EndLine();
-  context_.output << std::string(indentation_, ' ');
+  bool toggle = false;
+  for (uint32_t i = 0; i < indentation_; ++i) {
+    if ((toggle = !toggle)) {
+      context_.output << " |";
+    } else {
+      context_.output << " !";
+    }
+  }
   partial_line_ = true;
 }
 
