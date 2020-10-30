@@ -619,7 +619,8 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 
 // static
 std::unique_ptr<PlatformSysmemConnection> PlatformSysmemConnection::Import(uint32_t handle) {
-  llcpp::fuchsia::sysmem::Allocator::SyncClient sysmem_allocator((zx::channel(handle)));
+  zx::channel channel = zx::channel(handle);
+  llcpp::fuchsia::sysmem::Allocator::SyncClient sysmem_allocator(std::move(channel));
   return std::make_unique<ZirconPlatformSysmemConnection>(std::move(sysmem_allocator));
 }
 
