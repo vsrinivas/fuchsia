@@ -15,13 +15,6 @@ __BEGIN_CDECLS
 
 // strongly ordered versions of the atomic routines as implemented
 // by the compiler with arch-dependent memory barriers.
-static inline int atomic_and(volatile int* ptr, int val) {
-  return __atomic_fetch_and(ptr, val, __ATOMIC_SEQ_CST);
-}
-
-static inline int atomic_or(volatile int* ptr, int val) {
-  return __atomic_fetch_or(ptr, val, __ATOMIC_SEQ_CST);
-}
 
 static inline int atomic_load(volatile int* ptr) { return __atomic_load_n(ptr, __ATOMIC_SEQ_CST); }
 
@@ -50,10 +43,6 @@ static inline void atomic_store_relaxed_u32(volatile uint32_t* ptr, uint32_t new
 
 static inline void atomic_store_64_relaxed(volatile int64_t* ptr, int64_t newval) {
   __atomic_store_n(ptr, newval, __ATOMIC_RELAXED);
-}
-
-static inline uint64_t atomic_add_u64(volatile uint64_t* ptr, uint64_t val) {
-  return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
 }
 
 static inline uint64_t atomic_or_u64(volatile uint64_t* ptr, uint64_t val) {
