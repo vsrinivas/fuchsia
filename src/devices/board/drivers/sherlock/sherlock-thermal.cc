@@ -129,13 +129,13 @@ fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll =
         .active_cooling = false,
         .passive_cooling = true,
         .gpu_throttling = true,
-        .num_trip_points = 6,
+        .num_trip_points = 4,
         .big_little = true,
         .critical_temp_celsius = 101.0f,
         .trip_point_info =
             {
-                TripPoint(55.0f, 9, 10, 4), TripPoint(75.0f, 8, 9, 4), TripPoint(80.0f, 7, 8, 3),
-                TripPoint(90.0f, 6, 7, 3), TripPoint(95.0f, 5, 6, 3), TripPoint(100.0f, 4, 5, 2),
+                TripPoint(82.5f, 9, 10, 4), TripPoint(85.0f, 8, 9, 4), TripPoint(87.5f, 6, 6, 4),
+                TripPoint(90.0f, 4, 4, 4),
                 TripPoint(-273.15f, 0, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
             },
         .opps =
