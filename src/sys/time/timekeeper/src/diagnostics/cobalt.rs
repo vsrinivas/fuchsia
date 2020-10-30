@@ -11,10 +11,11 @@ use {
     time_metrics_registry::{
         RealTimeClockEventsMetricDimensionEventType as RtcEvent,
         TimeMetricDimensionExperiment as Experiment, TimeMetricDimensionRole as CobaltRole,
+        TimeMetricDimensionTrack as CobaltTrack,
         TimekeeperLifecycleEventsMetricDimensionEventType as LifecycleEvent,
         TimekeeperTimeSourceEventsMetricDimensionEventType as TimeSourceEvent,
         REAL_TIME_CLOCK_EVENTS_METRIC_ID, TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
-        TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
+        TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID, TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
     },
 };
 
@@ -83,8 +84,14 @@ impl Diagnostics for CobaltDiagnostics {
                     1,
                 );
             }
-            Event::EstimateUpdated { .. } => {
-                // TODO(jsankey): Define and use Cobalt metrics for estimate quality.
+            Event::EstimateUpdated { track, sqrt_covariance, .. } => {
+                self.sender.lock().log_event_count(
+                    TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
+                    (Into::<CobaltTrack>::into(track), self.experiment),
+                    PERIOD_DURATION,
+                    // Unfortunately Cobalt does not follow the standard of nanoseconds everywhere.
+                    sqrt_covariance.into_micros(),
+                );
             }
             Event::WriteRtc { outcome } => {
                 self.sender
@@ -113,6 +120,7 @@ mod test {
             InitializeRtcOutcome, Role, SampleValidationError, TimeSourceError, WriteRtcOutcome,
         },
         fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, Event as EmptyEvent, EventPayload},
+        fuchsia_zircon as zx,
         futures::{channel::mpsc, StreamExt},
     };
 
@@ -237,6 +245,26 @@ mod test {
                 ],
                 component: None,
                 payload: event_count_payload(1),
+            })
+        );
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn record_time_track_events() {
+        let (diagnostics, mut mpsc_receiver) = create_test_object();
+
+        diagnostics.record(Event::EstimateUpdated {
+            track: Track::Primary,
+            offset: zx::Duration::from_seconds(333),
+            sqrt_covariance: zx::Duration::from_micros(55555),
+        });
+        assert_eq!(
+            mpsc_receiver.next().await,
+            Some(CobaltEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
+                event_codes: vec![CobaltTrack::Primary as u32, TEST_EXPERIMENT as u32],
+                component: None,
+                payload: event_count_payload(55555),
             })
         );
     }

@@ -34,8 +34,10 @@ use std::sync::Arc;
 use test_util::{assert_geq, assert_leq};
 use time_metrics_registry::{
     RealTimeClockEventsMetricDimensionEventType as RtcEventType,
+    TimeMetricDimensionExperiment as Experiment, TimeMetricDimensionTrack as Track,
     TimekeeperLifecycleEventsMetricDimensionEventType as LifecycleEventType, PROJECT_ID,
     REAL_TIME_CLOCK_EVENTS_METRIC_ID, TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
+    TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
 };
 use vfs::{directory::entry::DirectoryEntry, pseudo_directory};
 
@@ -415,16 +417,19 @@ fn test_no_rtc_start_clock_from_time_source() {
         let cobalt_event_stream =
             create_cobalt_event_stream(Arc::new(cobalt), LogMethod::LogCobaltEvent);
         assert_eq!(
-            cobalt_event_stream.take(3).collect::<Vec<_>>().await,
+            cobalt_event_stream.take(4).collect::<Vec<_>>().await,
             vec![
                 CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
-                    .with_event_codes(vec![RtcEventType::NoDevices])
+                    .with_event_codes(RtcEventType::NoDevices)
                     .as_event(),
                 CobaltEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID)
-                    .with_event_codes(vec![LifecycleEventType::InitializedBeforeUtcStart])
+                    .with_event_codes(LifecycleEventType::InitializedBeforeUtcStart)
                     .as_event(),
+                CobaltEvent::builder(TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID)
+                    .with_event_codes((Track::Primary, Experiment::A))
+                    .as_count_event(0, STD_DEV.into_micros()),
                 CobaltEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID)
-                    .with_event_codes(vec![LifecycleEventType::StartedUtcFromTimeSource])
+                    .with_event_codes(LifecycleEventType::StartedUtcFromTimeSource)
                     .as_event(),
             ]
         );
@@ -445,10 +450,10 @@ fn test_invalid_rtc_start_clock_from_time_source() {
                 cobalt_event_stream.by_ref().take(2).collect::<Vec<CobaltEvent>>().await,
                 vec![
                     CobaltEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID)
-                        .with_event_codes(vec![LifecycleEventType::InitializedBeforeUtcStart])
+                        .with_event_codes(LifecycleEventType::InitializedBeforeUtcStart)
                         .as_event(),
                     CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
-                        .with_event_codes(vec![RtcEventType::ReadInvalidBeforeBackstop])
+                        .with_event_codes(RtcEventType::ReadInvalidBeforeBackstop)
                         .as_event()
                 ]
             );
@@ -481,13 +486,16 @@ fn test_invalid_rtc_start_clock_from_time_source() {
                 *VALID_TIME + (monotonic_after_rtc_set - sample_monotonic)
             );
             assert_eq!(
-                cobalt_event_stream.take(2).collect::<Vec<_>>().await,
+                cobalt_event_stream.take(3).collect::<Vec<_>>().await,
                 vec![
+                    CobaltEvent::builder(TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID)
+                        .with_event_codes((Track::Primary, Experiment::A))
+                        .as_count_event(0, STD_DEV.into_micros()),
                     CobaltEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID)
-                        .with_event_codes(vec![LifecycleEventType::StartedUtcFromTimeSource])
+                        .with_event_codes(LifecycleEventType::StartedUtcFromTimeSource)
                         .as_event(),
                     CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
-                        .with_event_codes(vec![RtcEventType::WriteSucceeded])
+                        .with_event_codes(RtcEventType::WriteSucceeded)
                         .as_event()
                 ]
             );
@@ -520,13 +528,13 @@ fn test_start_clock_from_rtc() {
                 cobalt_event_stream.by_ref().take(3).collect::<Vec<CobaltEvent>>().await,
                 vec![
                     CobaltEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID)
-                        .with_event_codes(vec![LifecycleEventType::InitializedBeforeUtcStart])
+                        .with_event_codes(LifecycleEventType::InitializedBeforeUtcStart)
                         .as_event(),
                     CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
-                        .with_event_codes(vec![RtcEventType::ReadSucceeded])
+                        .with_event_codes(RtcEventType::ReadSucceeded)
                         .as_event(),
                     CobaltEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID)
-                        .with_event_codes(vec![LifecycleEventType::StartedUtcFromRtc])
+                        .with_event_codes(LifecycleEventType::StartedUtcFromRtc)
                         .as_event(),
                 ]
             );
@@ -560,10 +568,15 @@ fn test_start_clock_from_rtc() {
             );
 
             assert_eq!(
-                cobalt_event_stream.by_ref().take(1).collect::<Vec<CobaltEvent>>().await,
-                vec![CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
-                    .with_event_codes(vec![RtcEventType::WriteSucceeded])
-                    .as_event(),]
+                cobalt_event_stream.by_ref().take(2).collect::<Vec<CobaltEvent>>().await,
+                vec![
+                    CobaltEvent::builder(TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID)
+                        .with_event_codes((Track::Primary, Experiment::A))
+                        .as_count_event(0, STD_DEV.into_micros()),
+                    CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
+                        .with_event_codes(RtcEventType::WriteSucceeded)
+                        .as_event(),
+                ]
             );
         },
     );

@@ -9,6 +9,7 @@ use {
     crate::rtc::RtcCreationError,
     time_metrics_registry::{
         RealTimeClockEventsMetricDimensionEventType as CobaltRtcEvent, TimeMetricDimensionRole,
+        TimeMetricDimensionTrack,
         TimekeeperTimeSourceEventsMetricDimensionEventType as CobaltTimeSourceEvent,
     },
 };
@@ -104,6 +105,15 @@ impl From<Role> for Track {
         match role {
             Role::Primary => Track::Primary,
             Role::Monitor => Track::Monitor,
+        }
+    }
+}
+
+impl Into<TimeMetricDimensionTrack> for Track {
+    fn into(self) -> TimeMetricDimensionTrack {
+        match self {
+            Self::Primary => TimeMetricDimensionTrack::Primary,
+            Self::Monitor => TimeMetricDimensionTrack::Monitor,
         }
     }
 }
