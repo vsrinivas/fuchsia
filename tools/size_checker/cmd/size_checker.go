@@ -546,7 +546,7 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 	report.WriteString(strings.Repeat("-", 79) + "\n")
 
 	report.WriteString(fmt.Sprintf("%-40s | %10s | %10s | %10s\n", "Total", formatSize(totalSize), formatSize(totalBudget), formatSize(totalRemaining)))
-	report.WriteString(fmt.Sprintf("%-40s | %10s | %10s | %10s", "Allocated System Data Budget", formatSize(totalBudget), formatSize(blobFsBudget), formatSize(blobFsBudget-totalBudget)))
+	report.WriteString(fmt.Sprintf("%-40s | %10s | %10s | %10s\n", "Allocated System Data Budget", formatSize(totalBudget), formatSize(blobFsBudget), formatSize(blobFsBudget-totalBudget)))
 
 	if totalBudget > blobFsBudget {
 		report.WriteString(
