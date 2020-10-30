@@ -96,6 +96,7 @@ class ZSTDSeekableDecompressor : public Decompressor, public SeekableDecompresso
     ZX_ASSERT(false);
     return zx::error(ZX_ERR_INTERNAL);
   }
+  CompressionAlgorithm algorithm() const final { return CompressionAlgorithm::ZSTD_SEEKABLE; };
 
   // Reads up to `kZSTDSeekableHeaderSize` bytes from the beginning of `buf` into `header`.
   // @param buf Pointer to buffer that is to contain <header><zstd seekable archive>.

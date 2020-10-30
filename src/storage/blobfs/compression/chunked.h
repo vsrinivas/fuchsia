@@ -90,6 +90,7 @@ class SeekableChunkedDecompressor : public SeekableDecompressor {
                               const void* compressed_buf, size_t max_compressed_size,
                               size_t offset) final;
   zx::status<CompressionMapping> MappingForDecompressedRange(size_t offset, size_t len) final;
+  CompressionAlgorithm algorithm() const final { return CompressionAlgorithm::CHUNKED; };
 
  private:
   chunked_compression::SeekTable seek_table_;

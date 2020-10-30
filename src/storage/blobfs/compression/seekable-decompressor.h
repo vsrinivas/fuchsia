@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_COMPRESSION_SEEKABLE_DECOMPRESSOR_H_
 #define SRC_STORAGE_BLOBFS_COMPRESSION_SEEKABLE_DECOMPRESSOR_H_
 
+#include <blobfs/compression-settings.h>
 #include <lib/zx/status.h>
 #include <stddef.h>
 #include <zircon/types.h>
@@ -49,6 +50,9 @@ class SeekableDecompressor {
   // The concrete implementation is free to return an arbitrarily large range of bytes, but
   // [offset, offset+len) will always be contained in the mapping.
   virtual zx::status<CompressionMapping> MappingForDecompressedRange(size_t offset, size_t len) = 0;
+
+  // Returns the CompressionAlgorithm that this SeekableDecompressor supports.
+  virtual CompressionAlgorithm algorithm() const = 0;
 };
 
 }  // namespace blobfs
