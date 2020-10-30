@@ -4,18 +4,12 @@
 
 #include "src/developer/forensics/crash_reports/crash_server.h"
 
-#include <fuchsia/net/http/cpp/fidl.h>
-#include <lib/fostr/fidl/fuchsia/net/http/formatting.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/time.h>
 
 #include <memory>
 
 #include "src/developer/forensics/crash_reports/sized_data_reader.h"
 #include "src/developer/forensics/utils/sized_data.h"
-#include "src/lib/fsl/socket/blocking_drain.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fsl/vmo/vector.h"
 #include "third_party/crashpad/util/net/http_body.h"
 #include "third_party/crashpad/util/net/http_headers.h"
 #include "third_party/crashpad/util/net/http_multipart_builder.h"
@@ -24,123 +18,9 @@
 
 namespace forensics {
 namespace crash_reports {
-namespace {
 
-// Handles executing a HTTP request with fuchsia.net.http.Loader. crashpad::HTTPTransport is used as
-// the base class so standard HTTP request building functionality doesn't need to be reimplemented.
-//
-// |fuchsia.net.http.Loader| is expected to be in |services|.
-class HTTPTransportService : public crashpad::HTTPTransport {
- public:
-  HTTPTransportService(std::shared_ptr<sys::ServiceDirectory> services, const char* tags)
-      : services_(std::move(services)), tags_(tags) {}
-  ~HTTPTransportService() override = default;
-
-  bool ExecuteSynchronously(std::string* response_body) override;
-
- private:
-  std::shared_ptr<sys::ServiceDirectory> services_;
-  const char* tags_;
-};
-
-bool HTTPTransportService::ExecuteSynchronously(std::string* response_body) {
-  using namespace fuchsia::net::http;
-
-  // Create the headers for the request.
-  std::vector<Header> http_headers;
-  for (const auto& [name, value] : headers()) {
-    http_headers.push_back(Header{
-        .name = std::vector<uint8_t>(name.begin(), name.end()),
-        .value = std::vector<uint8_t>(value.begin(), value.end()),
-    });
-  }
-
-  // Create the request body as a single VMO.
-  // TODO(fxbug.dev/59191): Consider using a zx::socket to transmit the HTTP request body to the
-  // server piecewise.
-  std::vector<uint8_t> body;
-
-  // Reserve 256 kb for the request body.
-  body.reserve(256 * 1024);
-  while (true) {
-    // Copy the body in 32 kb chunks.
-    std::array<uint8_t, 32 * 1024> buf;
-    const auto result = body_stream()->GetBytesBuffer(buf.data(), buf.max_size());
-
-    FX_CHECK(result >= 0);
-    if (result == 0) {
-      break;
-    }
-
-    body.insert(body.end(), buf.data(), buf.data() + result);
-  }
-
-  fsl::SizedVmo body_vmo;
-  if (!fsl::VmoFromVector(body, &body_vmo)) {
-    FX_LOGST(ERROR, tags_) << "Failed to create VMO";
-    return false;
-  }
-
-  // Create the request.
-  Request request;
-  request.set_method(method())
-      .set_url(url())
-      .set_deadline(zx::deadline_after(zx::sec((uint64_t)timeout())).get())
-      .set_headers(std::move(http_headers))
-      .set_body(Body::WithBuffer(std::move(body_vmo).ToTransport()));
-
-  // Connect to the Loader service.
-  LoaderSyncPtr loader;
-  FX_CHECK(services_->Connect(loader.NewRequest()) == ZX_OK);
-
-  // Execute the request.
-  Response response;
-  if (const auto status = loader->Fetch(std::move(request), &response); status != ZX_OK) {
-    FX_PLOGST(WARNING, tags_, status) << "Lost connection with fuchsia.net.http.Loader";
-    return false;
-  }
-
-  if (response.has_error()) {
-    FX_LOGST(WARNING, tags_) << "Experienced network error: " << response.error();
-    return false;
-  }
-
-  if (!response.has_status_code()) {
-    FX_LOGST(ERROR, tags_) << "No status code received";
-    return false;
-  }
-
-  if (response.status_code() < 200 || response.status_code() >= 204) {
-    FX_LOGST(WARNING, tags_) << "Error uploading report with status code "
-                             << response.status_code();
-    return false;
-  }
-
-  // Read the response into |response_body|.
-  if (!response.has_body()) {
-    FX_LOGST(WARNING, tags_) << "Http response is missing body";
-    return false;
-  }
-
-  response_body->clear();
-  if (!fsl::BlockingDrainFrom(std::move(*response.mutable_body()),
-                              [&response_body](const void* data, uint32_t len) {
-                                const char* begin = static_cast<const char*>(data);
-                                response_body->insert(response_body->end(), begin, begin + len);
-                                return len;
-                              })) {
-    FX_LOGST(WARNING, tags_) << "Failed to read http body";
-    return false;
-  }
-
-  return true;
-}
-
-}  // namespace
-
-CrashServer::CrashServer(std::shared_ptr<sys::ServiceDirectory> services, const std::string& url,
-                         SnapshotManager* snapshot_manager, LogTags* tags)
-    : services_(services), url_(url), snapshot_manager_(snapshot_manager), tags_(tags) {}
+CrashServer::CrashServer(const std::string& url, SnapshotManager* snapshot_manager)
+    : url_(url), snapshot_manager_(snapshot_manager) {}
 
 bool CrashServer::MakeRequest(const Report& report, std::string* server_report_id) {
   std::vector<SizedDataReader> attachment_readers;
@@ -189,8 +69,7 @@ bool CrashServer::MakeRequest(const Report& report, std::string* server_report_i
   crashpad::HTTPHeaders headers;
   http_multipart_builder.PopulateContentHeaders(&headers);
 
-  auto http_transport = std::make_unique<HTTPTransportService>(services_, tags_->Get(report.Id()));
-
+  std::unique_ptr<crashpad::HTTPTransport> http_transport(crashpad::HTTPTransport::Create());
   for (const auto& header : headers) {
     http_transport->SetHeader(header.first, header.second);
   }

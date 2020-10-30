@@ -163,10 +163,10 @@ class CrashReporterTest : public UnitTestFixture {
       crash_server_->AddSnapshotManager(snapshot_manager.get());
     }
 
-    crash_reporter_ = std::make_unique<CrashReporter>(
-        dispatcher(), services(), &clock_, info_context_, &config_,
-        ErrorOr<std::string>(kBuildVersion), crash_register_.get(), std::make_unique<LogTags>(),
-        std::move(snapshot_manager), std::move(crash_server));
+    crash_reporter_ =
+        std::make_unique<CrashReporter>(dispatcher(), services(), &clock_, info_context_, &config_,
+                                        ErrorOr<std::string>(kBuildVersion), crash_register_.get(),
+                                        std::move(snapshot_manager), std::move(crash_server));
     FX_CHECK(crash_reporter_);
   }
 

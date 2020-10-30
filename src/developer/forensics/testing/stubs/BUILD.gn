@@ -180,26 +180,6 @@ source_set("last_reboot_info_provider") {
   deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
-source_set("loader") {
-  testonly = true
-
-  sources = [
-    "loader.cc",
-    "loader.h",
-  ]
-
-  public_deps = [
-    ":fidl_server",
-    "//sdk/fidl/fuchsia.net.http",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-  ]
-}
-
 source_set("logger") {
   testonly = true
 

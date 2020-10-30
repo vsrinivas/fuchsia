@@ -47,8 +47,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashReporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                 timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context,
                 const Config* config, const ErrorOr<std::string>& build_version,
-                CrashRegister* crash_register, std::unique_ptr<LogTags> tags,
-                std::unique_ptr<SnapshotManager> snapshot_manager,
+                CrashRegister* crash_register, std::unique_ptr<SnapshotManager> snapshot_manager,
                 std::unique_ptr<CrashServer> crash_server);
 
   // |fuchsia::feedback::CrashReporter|
@@ -59,7 +58,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const Config* config_;
-  std::unique_ptr<LogTags> tags_;
+  LogTags tags_;
   const ErrorOr<std::string> build_version_;
   CrashRegister* crash_register_;
   const UtcTimeProvider utc_provider_;

@@ -19,6 +19,7 @@ namespace crash_reports {
 
 using async::PostDelayedTask;
 using async::PostTask;
+using crashpad::FileReader;
 using UploadPolicy = Settings::UploadPolicy;
 
 void Queue::WatchSettings(Settings* settings) {

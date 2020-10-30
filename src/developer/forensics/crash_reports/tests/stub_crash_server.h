@@ -20,7 +20,7 @@ extern const char kStubServerReportId[];
 class StubCrashServer : public CrashServer {
  public:
   StubCrashServer(const std::vector<bool>& request_return_values)
-      : CrashServer(nullptr, kStubCrashServerUrl, nullptr, nullptr),
+      : CrashServer(kStubCrashServerUrl, nullptr),
         request_return_values_(request_return_values),
         snapshot_manager_() {
     next_return_value_ = request_return_values_.cbegin();

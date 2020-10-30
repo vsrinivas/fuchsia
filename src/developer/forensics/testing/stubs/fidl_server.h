@@ -12,7 +12,6 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
-#include <optional>
 
 namespace forensics {
 namespace stubs {
@@ -21,17 +20,9 @@ namespace stubs {
 template <typename Interface, typename TestBase>
 class SingleBindingFidlServer : public TestBase {
  public:
-  SingleBindingFidlServer() = default;
-  explicit SingleBindingFidlServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
-
   virtual ::fidl::InterfaceRequestHandler<Interface> GetHandler() {
     return [this](::fidl::InterfaceRequest<Interface> request) {
-      if (dispatcher_.has_value()) {
-        binding_ = std::make_unique<::fidl::Binding<Interface>>(this, std::move(request),
-                                                                dispatcher_.value());
-      } else {
-        binding_ = std::make_unique<::fidl::Binding<Interface>>(this, std::move(request));
-      }
+      binding_ = std::make_unique<::fidl::Binding<Interface>>(this, std::move(request));
     };
   }
 
@@ -52,7 +43,6 @@ class SingleBindingFidlServer : public TestBase {
   std::unique_ptr<::fidl::Binding<Interface>>& binding() { return binding_; }
 
  private:
-  std::optional<async_dispatcher_t*> dispatcher_;
   std::unique_ptr<::fidl::Binding<Interface>> binding_;
 };
 

@@ -5,26 +5,28 @@
 #ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_CRASH_SERVER_H_
 #define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_CRASH_SERVER_H_
 
-#include <lib/sys/cpp/service_directory.h>
+#include <fuchsia/mem/cpp/fidl.h>
 
 #include <map>
 #include <string>
 
-#include "src/developer/forensics/crash_reports/log_tags.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/lib/fxl/macros.h"
+#include "third_party/crashpad/util/file/file_reader.h"
+#include "third_party/crashpad/util/net/http_body.h"
+#include "third_party/crashpad/util/net/http_headers.h"
+#include "third_party/crashpad/util/net/http_multipart_builder.h"
+#include "third_party/crashpad/util/net/http_transport.h"
+#include "third_party/crashpad/util/net/url.h"
 
 namespace forensics {
 namespace crash_reports {
 
 // Represents the HTTP crash server to which the agent uploads crash reports to.
-//
-// |fuchsia.net.http.Loader| is expected to be in |services|.
 class CrashServer {
  public:
-  CrashServer(std::shared_ptr<sys::ServiceDirectory> services, const std::string& url,
-              SnapshotManager* snapshot_manager, LogTags* tags);
+  CrashServer(const std::string& url, SnapshotManager* snapshot_manager);
 
   virtual ~CrashServer() {}
 
@@ -36,10 +38,8 @@ class CrashServer {
   virtual bool MakeRequest(const Report& report, std::string* server_report_id);
 
  private:
-  std::shared_ptr<sys::ServiceDirectory> services_;
   const std::string url_;
   SnapshotManager* snapshot_manager_;
-  LogTags* tags_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashServer);
 };

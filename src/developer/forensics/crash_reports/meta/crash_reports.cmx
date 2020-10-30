@@ -15,7 +15,6 @@
             "fuchsia.feedback.DeviceIdProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
-            "fuchsia.net.http.Loader",
             "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",
             "fuchsia.settings.Privacy",

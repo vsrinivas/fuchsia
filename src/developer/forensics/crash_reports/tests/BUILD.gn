@@ -104,26 +104,6 @@ executable("crash_reports_integration_test_exe") {
   ]
 }
 
-executable("crash_server_unittest_exe") {
-  testonly = true
-
-  # "crash_server_unittest" is rather generic for the default_output_dir that
-  # is set to root_out_dir so instead we write the binary to target_out_dir.
-  output_dir = target_out_dir
-
-  sources = [ "crash_server_unittest.cc" ]
-
-  deps = [
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/developer/forensics/crash_reports:crash_server",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing/stubs:loader",
-    "//src/lib/testing/loop_fixture",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("main_service_unittest_exe") {
   testonly = true
 
@@ -413,14 +393,6 @@ fuchsia_component("crash_reports_integration_test_valid_override_config") {
   ]
 }
 
-fuchsia_component("crash_server_unittest") {
-  testonly = true
-
-  manifest = "meta/crash_server_unittest.cmx"
-
-  deps = [ ":crash_server_unittest_exe" ]
-}
-
 fuchsia_component("inspect_manager_unittest") {
   testonly = true
 
@@ -504,7 +476,6 @@ fuchsia_test_package("crash-reports-tests") {
     ":crash_reports_integration_test",
     ":crash_reports_integration_test_invalid_override_config",
     ":crash_reports_integration_test_valid_override_config",
-    ":crash_server_unittest",
     ":snapshot_manager_unittest",
     ":inspect_manager_unittest",
     ":main_service_unittest",
