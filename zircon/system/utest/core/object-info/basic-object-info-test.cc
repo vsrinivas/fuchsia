@@ -29,6 +29,9 @@ TEST(ObjectGetInfoTest, OpenValidHandleSuceeds) {
   EXPECT_OK(zx::process::self()->get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 }
 
+// Disable this for analyzer since this contains use-after-free and double-free
+// error.
+#ifndef __clang_analyzer__
 TEST(ObjectGetInfoTest, ClosedValidHandleFails) {
   zx::event event;
 
@@ -38,8 +41,10 @@ TEST(ObjectGetInfoTest, ClosedValidHandleFails) {
 
   // Close and verify is no longer ok.
   event.reset(event.get());
+
   ASSERT_NOT_OK(event.get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 }
+#endif
 
 // We create an event and check that ZX_INFO_HANDLE_COUNT stats at 1 and
 // goes up for each new handle minted from it and goes down for each handle
