@@ -18,6 +18,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -208,7 +209,7 @@ type nicInfoMapInspectImpl struct {
 	value map[tcpip.NICID]ifStateInfo
 }
 
-func (impl *nicInfoMapInspectImpl) ReadData() inspect.Object {
+func (*nicInfoMapInspectImpl) ReadData() inspect.Object {
 	return inspect.Object{
 		Name: "NICs",
 	}
@@ -226,7 +227,7 @@ func (impl *nicInfoMapInspectImpl) ListChildren() []string {
 func (impl *nicInfoMapInspectImpl) GetChild(childName string) inspectInner {
 	id, err := strconv.ParseInt(childName, 10, 32)
 	if err != nil {
-		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "OpenChild: %s", err)
+		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild: %s", err)
 		return nil
 	}
 	if child, ok := impl.value[tcpip.NICID(id)]; ok {
@@ -373,7 +374,7 @@ func (impl *dhcpInfoInspectImpl) ReadData() inspect.Object {
 	}
 }
 
-func (impl *dhcpInfoInspectImpl) ListChildren() []string {
+func (*dhcpInfoInspectImpl) ListChildren() []string {
 	return []string{
 		statsLabel,
 	}
@@ -452,7 +453,7 @@ func getFifoStatsImpl(childName string, rx *fifo.RxStats, tx *fifo.TxStats) insp
 	}
 }
 
-func (impl *ethInfoInspectImpl) ListChildren() []string {
+func (*ethInfoInspectImpl) ListChildren() []string {
 	return getFifoStatsChildren()
 }
 
@@ -479,7 +480,7 @@ func (impl *netdevInspectImpl) ReadData() inspect.Object {
 	}
 }
 
-func (impl *netdevInspectImpl) ListChildren() []string {
+func (*netdevInspectImpl) ListChildren() []string {
 	return getFifoStatsChildren()
 }
 
@@ -512,11 +513,11 @@ func (impl *fifoStatsInspectImpl) ReadData() inspect.Object {
 	}
 }
 
-func (impl *fifoStatsInspectImpl) ListChildren() []string {
+func (*fifoStatsInspectImpl) ListChildren() []string {
 	return nil
 }
 
-func (impl *fifoStatsInspectImpl) GetChild(string) inspectInner {
+func (*fifoStatsInspectImpl) GetChild(string) inspectInner {
 	return nil
 }
 
@@ -526,7 +527,7 @@ type socketInfoMapInspectImpl struct {
 	value *endpointsMap
 }
 
-func (impl *socketInfoMapInspectImpl) ReadData() inspect.Object {
+func (*socketInfoMapInspectImpl) ReadData() inspect.Object {
 	return inspect.Object{
 		Name: socketInfo,
 	}
@@ -644,7 +645,7 @@ func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 	}
 }
 
-func (impl *socketInfoInspectImpl) ListChildren() []string {
+func (*socketInfoInspectImpl) ListChildren() []string {
 	return []string{
 		statsLabel,
 	}
@@ -667,5 +668,77 @@ func (impl *socketInfoInspectImpl) GetChild(childName string) inspectInner {
 			value: value,
 		}
 	}
+	return nil
+}
+
+var _ inspectInner = (*routingTableInspectImpl)(nil)
+
+type routingTableInspectImpl struct {
+	value []routes.ExtendedRoute
+}
+
+func (*routingTableInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: "Routes",
+	}
+}
+
+func (impl *routingTableInspectImpl) ListChildren() []string {
+	children := make([]string, len(impl.value))
+	for i := range impl.value {
+		children[i] = strconv.FormatUint(uint64(i), 10)
+	}
+	return children
+}
+
+func (impl *routingTableInspectImpl) GetChild(childName string) inspectInner {
+	routeIndex, err := strconv.ParseUint(childName, 10, 64)
+	if err != nil {
+		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild: %s", err)
+		return nil
+	}
+	if routeIndex >= uint64(len(impl.value)) {
+		syslog.VLogTf(
+			syslog.DebugVerbosity,
+			inspect.InspectName,
+			"GetChild: index %d out of bounds; there are %d entries in the routing table",
+			routeIndex,
+			len(impl.value),
+		)
+		return nil
+	}
+	return &routeInfoInspectImpl{
+		name:  childName,
+		value: impl.value[routeIndex],
+	}
+}
+
+var _ inspectInner = (*routeInfoInspectImpl)(nil)
+
+type routeInfoInspectImpl struct {
+	name  string
+	value routes.ExtendedRoute
+}
+
+func (impl *routeInfoInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: impl.name,
+		Properties: []inspect.Property{
+			{Key: "Destination", Value: inspect.PropertyValueWithStr(impl.value.Route.Destination.String())},
+			{Key: "Gateway", Value: inspect.PropertyValueWithStr(impl.value.Route.Gateway.String())},
+			{Key: "NIC", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.Route.NIC), 10))},
+			{Key: "Metric", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.Metric), 10))},
+			{Key: "MetricTracksInterface", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.MetricTracksInterface))},
+			{Key: "Dynamic", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Dynamic))},
+			{Key: "Enabled", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Enabled))},
+		},
+	}
+}
+
+func (*routeInfoInspectImpl) ListChildren() []string {
+	return nil
+}
+
+func (*routeInfoInspectImpl) GetChild(string) inspectInner {
 	return nil
 }

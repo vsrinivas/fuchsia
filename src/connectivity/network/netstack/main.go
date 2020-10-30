@@ -352,7 +352,6 @@ func Main() {
 			},
 		},
 	})
-
 	appCtx.OutgoingService.AddDiagnostics("sockets", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
@@ -360,6 +359,16 @@ func Main() {
 					value: &ns.endpoints,
 				},
 			}).asService,
+		},
+	})
+	appCtx.OutgoingService.AddDiagnostics("routes", &component.DirectoryWrapper{
+		Directory: &inspectDirectory{
+			// asService is late-bound so that each call retrieves fresh routing table info.
+			asService: func() *component.Service {
+				return (&inspectImpl{
+					inner: &routingTableInspectImpl{value: ns.GetExtendedRouteTable()},
+				}).asService()
+			},
 		},
 	})
 
