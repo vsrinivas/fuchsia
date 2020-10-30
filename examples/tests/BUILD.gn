@@ -145,6 +145,7 @@ executable("run-closes-channel-example") {
 }
 
 group("all_bins") {
+  testonly = true
   public_deps = [
     ":disabled-test-example",
     ":failing-test-example",
@@ -289,5 +290,8 @@ package("example-tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":example-tests" ]
+  deps = [
+    ":example-tests",
+    "rust:tests",
+  ]
 }

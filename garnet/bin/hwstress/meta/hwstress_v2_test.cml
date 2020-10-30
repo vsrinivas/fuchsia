@@ -28,7 +28,7 @@
             from: "framework",
         },
         {
-            directory: "tmp",
+            directory: "deprecated-tmp",
             rights: [
                 "admin",
                 "rw*",

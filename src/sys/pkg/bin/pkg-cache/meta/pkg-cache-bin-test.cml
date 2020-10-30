@@ -8,8 +8,7 @@
     use: [
         { runner: "rust_test_runner" },
         {
-            directory: "tmp",
-            rights: [ "rw*" ],
+            storage: "temp",
             path: "/tmp",
         },
     ],

@@ -1,6 +1,6 @@
 {
     program: {
-        binary: "test/remote_control_lib_test",
+        binary: "bin/temp_user_bin_test",
     },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
@@ -10,13 +10,6 @@
         {
             storage: "temp",
             path: "/tmp",
-        },
-        {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.sys.Launcher",
-            ],
-            from: "parent",
         },
     ],
     expose: [

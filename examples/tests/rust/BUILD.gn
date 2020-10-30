@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
 
 rustc_binary("echo_test_client") {
   edition = "2018"
@@ -36,4 +39,29 @@ group("all_bins") {
     ":echo_test_client",
     ":echo_test_realm",
   ]
+}
+
+rustc_test("temp_user_bin") {
+  name = "temp_user_bin_test"
+  edition = "2018"
+  source_root = "temp_user.rs"
+
+  deps = [ "//third_party/rust_crates:anyhow" ]
+
+  sources = [ "temp_user.rs" ]
+}
+
+fuchsia_component("temp_user_cmp") {
+  testonly = true
+  manifest = "meta/temp_user.cml"
+  deps = [ ":temp_user_bin" ]
+}
+
+fuchsia_test_package("temp-user") {
+  test_components = [ ":temp_user_cmp" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":temp-user" ]
 }

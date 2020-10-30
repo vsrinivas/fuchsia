@@ -17,7 +17,7 @@
             path: "/dev/class/block",
         },
         {
-            directory: "tmp",
+            directory: "deprecated-tmp",
             rights: [
                 "admin",
                 "rw*",

@@ -37,6 +37,11 @@
             from: "#runner_memfs",
             backing_dir: "memfs",
         },
+        {
+            storage: "temp",
+            from: "#test_tmpfs",
+            backing_dir: "memfs",
+        },
         { protocol: "fuchsia.test.manager.Harness" },
     ],
     use: [
@@ -94,12 +99,18 @@
             from: "parent",
             to: [ "#tests" ],
         },
-
-        // temporary solution to provide /tmp. All tests will share same /tmp.
+        {
+            storage: "temp",
+            from: "self",
+            to: [ "#tests" ],
+        },
+        // temporary solution for tests that depend on having admin rights on
+        // /tmp. Will be removed once these tests either remove this requirement
+        // or begin hosting their own memfs.
         {
             directory: "memfs",
             from: "#test_tmpfs",
-            as: "tmp",
+            as: "deprecated-tmp",
             to: [ "#tests" ],
         },
 
