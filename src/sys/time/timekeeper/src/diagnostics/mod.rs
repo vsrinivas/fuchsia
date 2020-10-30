@@ -44,8 +44,8 @@ pub enum Event {
         track: Track,
         /// Estimated UTC at reference minus monotonic time at reference.
         offset: zx::Duration,
-        /// Element [0,0] of the covariance matrix in nanoseconds squared.
-        covariance: u64,
+        /// Square root of element [0,0] of the covariance matrix.
+        sqrt_covariance: zx::Duration,
     },
     /// An attempt was made to write to the real time clock.
     WriteRtc { outcome: WriteRtcOutcome },

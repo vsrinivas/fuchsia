@@ -243,9 +243,8 @@ pub struct Estimate {
     monotonic: i64,
     /// Estimated UTC at reference minus monotonic time at reference, in nanoseconds.
     offset: i64,
-    /// Element [0,0] of the covariance matrix, in nanoseconds squared.
-    /// The generation counter as documented in the zx::Clock.
-    covariance: u64,
+    /// The square root of element [0,0] of the covariance matrix, in nanoseconds.
+    sqrt_covariance: u64,
 }
 
 /// An inspect `Node` and properties used to describe the state and history of a time track.
@@ -266,9 +265,12 @@ impl TrackNode {
     }
 
     /// Records a new estimate of time for the track.
-    pub fn update_estimate(&mut self, offset: zx::Duration, covariance: u64) {
-        let estimate =
-            Estimate { monotonic: monotonic_time(), offset: offset.into_nanos(), covariance };
+    pub fn update_estimate(&mut self, offset: zx::Duration, sqrt_covariance: zx::Duration) {
+        let estimate = Estimate {
+            monotonic: monotonic_time(),
+            offset: offset.into_nanos(),
+            sqrt_covariance: sqrt_covariance.into_nanos() as u64,
+        };
         self.estimates.update(&estimate);
     }
 }
@@ -406,11 +408,11 @@ impl Diagnostics for InspectDiagnostics {
                     .get_mut(&role)
                     .map(|source| source.sample_rejection(error));
             }
-            Event::EstimateUpdated { track, offset, covariance } => {
+            Event::EstimateUpdated { track, offset, sqrt_covariance } => {
                 self.tracks
                     .lock()
                     .get_mut(&track)
-                    .map(|track| track.update_estimate(offset, covariance));
+                    .map(|track| track.update_estimate(offset, sqrt_covariance));
             }
             Event::WriteRtc { outcome } => {
                 if let Some(ref mut rtc_node) = *self.rtc.lock() {
@@ -443,7 +445,7 @@ mod tests {
     const ERROR_BOUNDS: u64 = 4444444444;
     const GENERATION_COUNTER: u32 = 7777;
     const OFFSET: zx::Duration = zx::Duration::from_seconds(311);
-    const COVARIANCE: u64 = 545454545454;
+    const SQRT_COVARIANCE: i64 = 5454545454;
 
     const VALID_DETAILS: zx::sys::zx_clock_details_v1_t = zx::sys::zx_clock_details_v1_t {
         options: 0,
@@ -548,7 +550,7 @@ mod tests {
                         counter: 0u64,
                         monotonic: 0i64,
                         offset: 0i64,
-                        covariance: 0u64,
+                        sqrt_covariance: 0u64,
                     }
                     // For brevity we omit the other empty estimates we expect in the circular
                     // buffer.
@@ -712,31 +714,31 @@ mod tests {
                         counter: 0u64,
                         monotonic: 0i64,
                         offset: 0i64,
-                        covariance: 0u64,
+                        sqrt_covariance: 0u64,
                     },
                     estimate_1: contains {
                         counter: 0u64,
                         monotonic: 0i64,
                         offset: 0i64,
-                        covariance: 0u64,
+                        sqrt_covariance: 0u64,
                     },
                     estimate_2: contains {
                         counter: 0u64,
                         monotonic: 0i64,
                         offset: 0i64,
-                        covariance: 0u64,
+                        sqrt_covariance: 0u64,
                     },
                     estimate_3: contains {
                         counter: 0u64,
                         monotonic: 0i64,
                         offset: 0i64,
-                        covariance: 0u64,
+                        sqrt_covariance: 0u64,
                     },
                     estimate_4: contains {
                         counter: 0u64,
                         monotonic: 0i64,
                         offset: 0i64,
-                        covariance: 0u64,
+                        sqrt_covariance: 0u64,
                     },
                 },
                 monitor_track: contains {
@@ -754,7 +756,7 @@ mod tests {
             test.record(Event::EstimateUpdated {
                 track: Track::Primary,
                 offset: OFFSET * i,
-                covariance: COVARIANCE * (i as u64),
+                sqrt_covariance: zx::Duration::from_nanos(SQRT_COVARIANCE) * i,
             });
         }
 
@@ -766,31 +768,31 @@ mod tests {
                         counter: 6u64,
                         monotonic: AnyProperty,
                         offset: 6 * OFFSET.into_nanos(),
-                        covariance: 6 * COVARIANCE,
+                        sqrt_covariance: 6 * SQRT_COVARIANCE as u64,
                     },
                     estimate_1: contains {
                         counter: 7u64,
                         monotonic: AnyProperty,
                         offset: 7 * OFFSET.into_nanos(),
-                        covariance: 7 * COVARIANCE,
+                        sqrt_covariance: 7 * SQRT_COVARIANCE as u64,
                     },
                     estimate_2: contains {
                         counter: 3u64,
                         monotonic: AnyProperty,
                         offset: 3 * OFFSET.into_nanos(),
-                        covariance: 3 * COVARIANCE,
+                        sqrt_covariance: 3 * SQRT_COVARIANCE as u64,
                     },
                     estimate_3: contains {
                         counter: 4u64,
                         monotonic: AnyProperty,
                         offset: 4 * OFFSET.into_nanos(),
-                        covariance: 4 * COVARIANCE,
+                        sqrt_covariance: 4 * SQRT_COVARIANCE as u64,
                     },
                     estimate_4: contains {
                         counter: 5u64,
                         monotonic: AnyProperty,
                         offset: 5 * OFFSET.into_nanos(),
-                        covariance: 5 * COVARIANCE,
+                        sqrt_covariance: 5 * SQRT_COVARIANCE as u64,
                     },
                 },
                 monitor_track: contains {

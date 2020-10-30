@@ -69,14 +69,14 @@ pub struct Estimator<D: Diagnostics> {
 }
 
 impl<D: Diagnostics> Estimator<D> {
-    /// Construct a new estimator inititalized to the supplied sample.
+    /// Construct a new estimator initialized to the supplied sample.
     pub fn new(track: Track, sample: Sample, diagnostics: Arc<D>) -> Self {
         let Sample { utc, monotonic, std_dev } = sample;
         let covariance_00 = duration_to_f64(std_dev).powf(2.0).max(MIN_COVARIANCE);
         diagnostics.record(Event::EstimateUpdated {
             track,
             offset: utc - monotonic,
-            covariance: covariance_00 as u64,
+            sqrt_covariance: f64_to_duration(covariance_00.sqrt()),
         });
         Estimator {
             reference_utc: utc,
@@ -134,7 +134,7 @@ impl<D: Diagnostics> Estimator<D> {
         self.diagnostics.record(Event::EstimateUpdated {
             track: self.track,
             offset: estimated_utc - self.monotonic,
-            covariance: self.covariance_00 as u64,
+            sqrt_covariance: f64_to_duration(self.covariance_00.sqrt()),
         });
         info!(
             "received {:?} update to {}. Estimated UTC offset={}, covariance={:e}",
@@ -147,7 +147,7 @@ impl<D: Diagnostics> Estimator<D> {
 
     /// Returns the estimated utc at the supplied monotonic time.
     pub fn estimate(&self, monotonic: zx::Time) -> zx::Time {
-        // TODO(jsankey): Accomodate a oscillator frequency error when implementing the frequency
+        // TODO(jsankey): Accommodate a oscillator frequency error when implementing the frequency
         // correction algorithm.
         let utc_at_last_update = self.reference_utc + f64_to_duration(self.estimate_0);
         utc_at_last_update + (monotonic - self.monotonic)
@@ -166,16 +166,20 @@ mod test {
     const STD_DEV_1: zx::Duration = zx::Duration::from_millis(22);
     const ZERO_DURATION: zx::Duration = zx::Duration::from_nanos(0);
     const TEST_TRACK: Track = Track::Primary;
+    const SQRT_COV_1: i64 = STD_DEV_1.into_nanos();
 
     lazy_static! {
         static ref TIME_1: zx::Time = zx::Time::from_nanos(10000);
         static ref TIME_2: zx::Time = zx::Time::from_nanos(20000);
         static ref TIME_3: zx::Time = zx::Time::from_nanos(30000);
-        static ref COV_1: u64 = STD_DEV_1.into_nanos().pow(2u32) as u64;
     }
 
-    fn create_estimate_event(offset: zx::Duration, covariance: u64) -> Event {
-        Event::EstimateUpdated { track: TEST_TRACK, offset, covariance }
+    fn create_estimate_event(offset: zx::Duration, sqrt_covariance: i64) -> Event {
+        Event::EstimateUpdated {
+            track: TEST_TRACK,
+            offset,
+            sqrt_covariance: zx::Duration::from_nanos(sqrt_covariance),
+        }
     }
 
     #[test]
@@ -188,7 +192,7 @@ mod test {
         );
         assert_eq!(estimator.estimate(*TIME_1), *TIME_1 + OFFSET_1);
         assert_eq!(estimator.estimate(*TIME_2), *TIME_2 + OFFSET_1);
-        diagnostics.assert_events(&[create_estimate_event(OFFSET_1, *COV_1)]);
+        diagnostics.assert_events(&[create_estimate_event(OFFSET_1, SQRT_COV_1)]);
     }
 
     #[test]
@@ -205,8 +209,8 @@ mod test {
         assert_eq!(estimator.estimate(*TIME_3), *TIME_3 + expected_offset);
 
         diagnostics.assert_events(&[
-            create_estimate_event(OFFSET_1, *COV_1),
-            create_estimate_event(expected_offset, 242000000000000),
+            create_estimate_event(OFFSET_1, SQRT_COV_1),
+            create_estimate_event(expected_offset, 15556349),
         ]);
     }
 
@@ -244,9 +248,9 @@ mod test {
         assert_near!(estimator.estimate_0, 299_985642106.0, 1.0);
         assert_near!(estimator.covariance_00, 1.9119595120463945e15, 1.0);
         diagnostics.assert_events(&[
-            create_estimate_event(zx::Duration::from_nanos(10000000000000), 2500000000000000),
-            create_estimate_event(zx::Duration::from_nanos(10000005887335), 2354934150544971),
-            create_estimate_event(zx::Duration::from_nanos(9999985642105), 1911959512046394),
+            create_estimate_event(zx::Duration::from_nanos(10000000000000), 50000000),
+            create_estimate_event(zx::Duration::from_nanos(10000005887335), 48527663),
+            create_estimate_event(zx::Duration::from_nanos(9999985642105), 43725959),
         ]);
     }
 
@@ -262,8 +266,8 @@ mod test {
         estimator.update(Sample::new(*TIME_2 + OFFSET_2, *TIME_2, ZERO_DURATION));
         assert_eq!(estimator.covariance_00, MIN_COVARIANCE);
         diagnostics.assert_events(&[
-            create_estimate_event(OFFSET_1, MIN_COVARIANCE as u64),
-            create_estimate_event(OFFSET_2, MIN_COVARIANCE as u64),
+            create_estimate_event(OFFSET_1, MIN_COVARIANCE.sqrt() as i64),
+            create_estimate_event(OFFSET_2, MIN_COVARIANCE.sqrt() as i64),
         ]);
     }
 
@@ -279,6 +283,6 @@ mod test {
         estimator.update(Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1));
         assert_near!(estimator.estimate_0, 0.0, 1.0);
         // Ignored event should not be logged.
-        diagnostics.assert_events(&[create_estimate_event(OFFSET_1, *COV_1)]);
+        diagnostics.assert_events(&[create_estimate_event(OFFSET_1, SQRT_COV_1)]);
     }
 }

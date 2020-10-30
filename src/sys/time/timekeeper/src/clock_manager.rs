@@ -220,7 +220,6 @@ mod tests {
         static ref BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(222222 * NANOS_PER_SECOND);
         static ref CLOCK_OPTS: zx::ClockOpts = zx::ClockOpts::empty();
         static ref START_CLOCK_SOURCE: StartClockSource = StartClockSource::External(TEST_ROLE);
-        static ref COV: u64 = STD_DEV.into_nanos().pow(2u32) as u64;
     }
 
     /// Creates and starts a new clock with default options.
@@ -304,7 +303,7 @@ mod tests {
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
-            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, covariance: *COV },
+            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, sqrt_covariance: STD_DEV },
             Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
             Event::WriteRtc { outcome: WriteRtcOutcome::Succeeded },
         ]);
@@ -340,7 +339,7 @@ mod tests {
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
-            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, covariance: *COV },
+            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, sqrt_covariance: STD_DEV },
             Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
         ]);
     }
@@ -387,12 +386,12 @@ mod tests {
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
-            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, covariance: *COV },
+            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, sqrt_covariance: STD_DEV },
             Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
             Event::EstimateUpdated {
                 track: *TEST_TRACK,
                 offset: expected_offset,
-                covariance: 3872000000562500,
+                sqrt_covariance: zx::Duration::from_nanos(62225396),
             },
             Event::UpdateClock { track: *TEST_TRACK },
         ]);

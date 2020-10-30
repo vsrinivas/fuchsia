@@ -361,7 +361,6 @@ mod tests {
         static ref BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(222222 * NANOS_PER_SECOND);
         static ref VALID_RTC_TIME: zx::Time = zx::Time::from_nanos(333333 * NANOS_PER_SECOND);
         static ref CLOCK_OPTS: zx::ClockOpts = zx::ClockOpts::empty();
-        static ref COV: u64 = STD_DEV.into_nanos().pow(2u32) as u64;
     }
 
     /// Creates and starts a new clock with default options, returning a tuple of the clock and its
@@ -439,7 +438,11 @@ mod tests {
             },
             Event::NetworkAvailable,
             Event::TimeSourceStatus { role: Role::Primary, status: ftexternal::Status::Ok },
-            Event::EstimateUpdated { track: Track::Primary, offset: OFFSET, covariance: *COV },
+            Event::EstimateUpdated {
+                track: Track::Primary,
+                offset: OFFSET,
+                sqrt_covariance: STD_DEV,
+            },
             Event::StartClock {
                 track: Track::Primary,
                 source: StartClockSource::External(Role::Primary),
@@ -447,7 +450,11 @@ mod tests {
             Event::WriteRtc { outcome: WriteRtcOutcome::Succeeded },
             Event::TimeSourceStatus { role: Role::Monitor, status: ftexternal::Status::Network },
             Event::TimeSourceStatus { role: Role::Monitor, status: ftexternal::Status::Ok },
-            Event::EstimateUpdated { track: Track::Monitor, offset: OFFSET_2, covariance: *COV },
+            Event::EstimateUpdated {
+                track: Track::Monitor,
+                offset: OFFSET_2,
+                sqrt_covariance: STD_DEV,
+            },
             Event::StartClock {
                 track: Track::Monitor,
                 source: StartClockSource::External(Role::Monitor),

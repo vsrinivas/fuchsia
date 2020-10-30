@@ -27,8 +27,8 @@ pub struct CobaltDiagnostics {
     sender: Mutex<CobaltSender>,
     /// The experiment to record on all experiment-based events.
     experiment: Experiment,
-    // TODO(fxbug.dev/57677): Move back to an owned fasync::Task instead of detaching the spawned Task
-    // once the lifecycle of timekeeper ensures CobaltDiagnostics objects will last long enough
+    // TODO(fxbug.dev/57677): Move back to an owned fasync::Task instead of detaching the spawned
+    // Task once the lifecycle of timekeeper ensures CobaltDiagnostics objects will last long enough
     // to finish their logging.
 }
 
