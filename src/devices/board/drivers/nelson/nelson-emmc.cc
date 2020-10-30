@@ -58,7 +58,7 @@ static const guid_map_t guid_map[] = {
     {"misc", GUID_ABR_META_VALUE},     {"boot_a", GUID_ZIRCON_A_VALUE},
     {"boot_b", GUID_ZIRCON_B_VALUE},   {"cache", GUID_ZIRCON_R_VALUE},
     {"vbmeta_a", GUID_VBMETA_A_VALUE}, {"vbmeta_b", GUID_VBMETA_B_VALUE},
-    {"vbmeta_r", GUID_VBMETA_R_VALUE}, {"data", GUID_FVM_VALUE},
+    {"reserved_c", GUID_VBMETA_R_VALUE}, {"data", GUID_FVM_VALUE},
 };
 
 static_assert(sizeof(guid_map) / sizeof(guid_map[0]) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);
