@@ -25,7 +25,7 @@ AudioOutput::AudioOutput(const std::string& name, ThreadingModel* threading_mode
                          DeviceRegistry* registry, LinkMatrix* link_matrix)
     : AudioDevice(Type::Output, name, threading_model, registry, link_matrix,
                   std::make_unique<AudioDriverV1>(this)),
-      reporter_(Reporter::Singleton().CreateOutputDevice(name)) {
+      reporter_(Reporter::Singleton().CreateOutputDevice(name, mix_domain().name())) {
   SetNextSchedTimeMono(async::Now(mix_domain().dispatcher()));
 }
 
@@ -33,7 +33,7 @@ AudioOutput::AudioOutput(const std::string& name, ThreadingModel* threading_mode
                          DeviceRegistry* registry, LinkMatrix* link_matrix,
                          std::unique_ptr<AudioDriver> driver)
     : AudioDevice(Type::Output, name, threading_model, registry, link_matrix, std::move(driver)),
-      reporter_(Reporter::Singleton().CreateOutputDevice(name)) {
+      reporter_(Reporter::Singleton().CreateOutputDevice(name, mix_domain().name())) {
   SetNextSchedTimeMono(async::Now(mix_domain().dispatcher()));
 }
 

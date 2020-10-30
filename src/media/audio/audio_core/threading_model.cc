@@ -37,12 +37,17 @@ void SetMixDispatcherThreadProfile(async_dispatcher_t* dispatcher) {
 }
 
 struct ExecutionDomainHolder {
-  ExecutionDomainHolder() : ExecutionDomainHolder(&kAsyncLoopConfigNoAttachToCurrentThread) {}
-  ExecutionDomainHolder(const async_loop_config_t* loop_config)
-      : loop{loop_config}, executor{loop.dispatcher()} {}
+  explicit ExecutionDomainHolder(const std::string& domain_name)
+      : ExecutionDomainHolder(&kAsyncLoopConfigNoAttachToCurrentThread, domain_name) {}
+
+  ExecutionDomainHolder(const async_loop_config_t* loop_config, const std::string& domain_name)
+      : loop{loop_config},
+        executor{loop.dispatcher()},
+        domain{loop.dispatcher(), &executor, domain_name} {}
+
   async::Loop loop;
   async::Executor executor;
-  ExecutionDomain domain{loop.dispatcher(), &executor};
+  ExecutionDomain domain;
 };
 
 class ThreadingModelBase : public ThreadingModel {
@@ -53,7 +58,7 @@ class ThreadingModelBase : public ThreadingModel {
   ExecutionDomain& FidlDomain() final { return fidl_domain_.domain; }
   ExecutionDomain& IoDomain() final { return io_domain_.domain; }
   void RunAndJoinAllThreads() override {
-    io_domain_.loop.StartThread("io");
+    io_domain_.loop.StartThread(io_domain_.domain.name().c_str());
     fidl_domain_.loop.Run();
     IoDomain().PostTask([this] { io_domain_.loop.Quit(); });
     io_domain_.loop.JoinThreads();
@@ -63,8 +68,8 @@ class ThreadingModelBase : public ThreadingModel {
   }
 
  private:
-  ExecutionDomainHolder fidl_domain_{&kAsyncLoopConfigAttachToCurrentThread};
-  ExecutionDomainHolder io_domain_;
+  ExecutionDomainHolder fidl_domain_{&kAsyncLoopConfigAttachToCurrentThread, "fidl"};
+  ExecutionDomainHolder io_domain_{"io"};
 };
 
 class ThreadingModelMixOnFidlThread : public ThreadingModelBase {
@@ -72,7 +77,7 @@ class ThreadingModelMixOnFidlThread : public ThreadingModelBase {
   ~ThreadingModelMixOnFidlThread() override = default;
 
   // |ThreadingModel|
-  OwnedDomainPtr AcquireMixDomain() final {
+  OwnedDomainPtr AcquireMixDomain(const std::string& name_hint) final {
     return OwnedDomainPtr(&FidlDomain(), [](auto* p) {});
   }
 };
@@ -82,11 +87,12 @@ class ThreadingModelMixOnSingleThread : public ThreadingModelBase {
   ~ThreadingModelMixOnSingleThread() override = default;
 
   // |ThreadingModel|
-  OwnedDomainPtr AcquireMixDomain() final {
+  OwnedDomainPtr AcquireMixDomain(const std::string& name_hint) final {
     return OwnedDomainPtr(&mix_domain_.domain, [](auto* p) {});
   }
+
   void RunAndJoinAllThreads() final {
-    mix_domain_.loop.StartThread("mixer");
+    mix_domain_.loop.StartThread(mix_domain_.domain.name().c_str());
     SetMixDispatcherThreadProfile(mix_domain_.loop.dispatcher());
     ThreadingModelBase::RunAndJoinAllThreads();
     mix_domain_.domain.PostTask([this] { mix_domain_.loop.Quit(); });
@@ -94,7 +100,7 @@ class ThreadingModelMixOnSingleThread : public ThreadingModelBase {
   }
 
  private:
-  ExecutionDomainHolder mix_domain_;
+  ExecutionDomainHolder mix_domain_{"mixer"};
 };
 
 class ThreadingModelThreadPerMix : public ThreadingModelBase {
@@ -102,19 +108,21 @@ class ThreadingModelThreadPerMix : public ThreadingModelBase {
   ~ThreadingModelThreadPerMix() override = default;
 
   // |ThreadingModel|
-  OwnedDomainPtr AcquireMixDomain() final {
+  OwnedDomainPtr AcquireMixDomain(const std::string& name_hint) final {
     TRACE_DURATION("audio.debug", "ThreadingModelThreadPerMix::AcquireMixDomain");
-    std::string thread_name;
-    auto holder = std::make_unique<ExecutionDomainHolder>();
-    auto dispatcher = holder->loop.dispatcher();
-    auto domain = &holder->domain;
+    std::unique_ptr<ExecutionDomainHolder> holder;
+    async_dispatcher_t* dispatcher;
+    ExecutionDomain* domain;
     {
       std::lock_guard<std::mutex> guard(lock_);
       if (shut_down_) {
         return nullptr;
       }
-      thread_name = "mixer-" + std::to_string(mix_thread_number_++);
+      std::string thread_name = "mixer-" + name_hint + "-" + std::to_string(mix_thread_number_++);
+      holder = std::make_unique<ExecutionDomainHolder>(thread_name);
       holder->loop.StartThread(thread_name.c_str());
+      dispatcher = holder->loop.dispatcher();
+      domain = &holder->domain;
       bool inserted = mix_domains_.insert(std::make_pair(dispatcher, std::move(holder))).second;
       FX_DCHECK(inserted);
     }
@@ -135,6 +143,7 @@ class ThreadingModelThreadPerMix : public ThreadingModelBase {
       });
     });
   }
+
   void RunAndJoinAllThreads() final {
     ThreadingModelBase::RunAndJoinAllThreads();
     {

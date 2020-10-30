@@ -38,7 +38,7 @@ AudioInput::AudioInput(const std::string& name, zx::channel channel,
     : AudioDevice(Type::Input, name, threading_model, registry, link_matrix,
                   std::make_unique<AudioDriverV1>(this)),
       initial_stream_channel_(std::move(channel)),
-      reporter_(Reporter::Singleton().CreateInputDevice(name)) {}
+      reporter_(Reporter::Singleton().CreateInputDevice(name, mix_domain().name())) {}
 
 AudioInput::AudioInput(const std::string& name,
                        fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
@@ -47,7 +47,7 @@ AudioInput::AudioInput(const std::string& name,
     : AudioDevice(Type::Input, name, threading_model, registry, link_matrix,
                   std::make_unique<AudioDriverV2>(this)),
       initial_stream_channel_(stream_config.TakeChannel()),
-      reporter_(Reporter::Singleton().CreateInputDevice(name)) {}
+      reporter_(Reporter::Singleton().CreateInputDevice(name, mix_domain().name())) {}
 
 zx_status_t AudioInput::Init() {
   TRACE_DURATION("audio", "AudioInput::Init");

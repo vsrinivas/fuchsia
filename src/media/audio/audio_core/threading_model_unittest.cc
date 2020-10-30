@@ -22,11 +22,11 @@ void ValidateThreadingModel(ThreadingModel* threading_model) {
   // For threading models that use dynamically allocated loops, we submit a task to one loop we
   // immediately release and another to a loop we retain to validate both modes of operation work.
   bool mix1_task_run = false;
-  auto mix_domain1 = threading_model->AcquireMixDomain();
+  auto mix_domain1 = threading_model->AcquireMixDomain("");
   async::PostTask(mix_domain1->dispatcher(), [&mix1_task_run] { mix1_task_run = true; });
 
   bool mix2_task_run = false;
-  auto mix_domain2 = threading_model->AcquireMixDomain();
+  auto mix_domain2 = threading_model->AcquireMixDomain("");
   async::PostTask(mix_domain2->dispatcher(), [&mix2_task_run] { mix2_task_run = true; });
 
   // We quit first here to cause |RunAndJoinAllThreads| to exit after all currently queued tasks
@@ -45,13 +45,13 @@ TEST(ThreadingModelTest, MixOnFidlThreadModel) {
 
   // Expect |AcquireMixDomain| to be the same dispatcher as |FidlDomain().dispatcher|.
   {
-    auto mix_domain = threading_model->AcquireMixDomain();
+    auto mix_domain = threading_model->AcquireMixDomain("");
     EXPECT_EQ(threading_model->FidlDomain().dispatcher(), mix_domain->dispatcher());
   }
   // Expect |AcquireMixDomain| to return the same dispatcher across multiple calls.
   {
-    auto mix_domain1 = threading_model->AcquireMixDomain();
-    auto mix_domain2 = threading_model->AcquireMixDomain();
+    auto mix_domain1 = threading_model->AcquireMixDomain("");
+    auto mix_domain2 = threading_model->AcquireMixDomain("");
     EXPECT_EQ(mix_domain1->dispatcher(), mix_domain2->dispatcher());
   }
 
@@ -66,19 +66,19 @@ TEST(ThreadingModelTest, MixOnSingleThreadModel) {
 
   // Expect all dispatchers to be unique.
   {
-    auto mix_domain = threading_model->AcquireMixDomain();
+    auto mix_domain = threading_model->AcquireMixDomain("");
     EXPECT_NE(threading_model->FidlDomain().dispatcher(), mix_domain->dispatcher());
   }
   {
-    auto mix_domain = threading_model->AcquireMixDomain();
+    auto mix_domain = threading_model->AcquireMixDomain("");
     EXPECT_NE(threading_model->IoDomain().dispatcher(), mix_domain->dispatcher());
   }
   EXPECT_NE(threading_model->FidlDomain().dispatcher(), threading_model->IoDomain().dispatcher());
 
   // But |AcquireMixDomain| always returns the same dispatcher.
   {
-    auto mix_domain1 = threading_model->AcquireMixDomain();
-    auto mix_domain2 = threading_model->AcquireMixDomain();
+    auto mix_domain1 = threading_model->AcquireMixDomain("");
+    auto mix_domain2 = threading_model->AcquireMixDomain("");
     EXPECT_EQ(mix_domain1->dispatcher(), mix_domain2->dispatcher());
   }
 
@@ -90,19 +90,19 @@ TEST(ThreadingModelTest, ThreadPerMixModel) {
 
   // Expect all dispatchers to be unique.
   {
-    auto mix_domain = threading_model->AcquireMixDomain();
+    auto mix_domain = threading_model->AcquireMixDomain("");
     EXPECT_NE(threading_model->FidlDomain().dispatcher(), mix_domain->dispatcher());
   }
   {
-    auto mix_domain = threading_model->AcquireMixDomain();
+    auto mix_domain = threading_model->AcquireMixDomain("");
     EXPECT_NE(threading_model->IoDomain().dispatcher(), mix_domain->dispatcher());
   }
   EXPECT_NE(threading_model->FidlDomain().dispatcher(), threading_model->IoDomain().dispatcher());
 
   // And |AcquireMixDomain| returns different instances
   {
-    auto mix_domain1 = threading_model->AcquireMixDomain();
-    auto mix_domain2 = threading_model->AcquireMixDomain();
+    auto mix_domain1 = threading_model->AcquireMixDomain("");
+    auto mix_domain2 = threading_model->AcquireMixDomain("");
     EXPECT_NE(mix_domain1->dispatcher(), mix_domain2->dispatcher());
   }
 
