@@ -1,0 +1,64 @@
+#!/usr/bin/env python3.8
+
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import os
+import platform
+import subprocess
+import sys
+
+FUCHSIA_DIR = os.path.normpath(
+    os.path.join(__file__, os.pardir, os.pardir, os.pardir, os.pardir))
+ROLL_AND_BUILD = os.path.join(FUCHSIA_DIR, 'scripts', 'rust', 'roll_and_build_for_bisect.sh')
+
+def main():
+    parser = argparse.ArgumentParser(
+        "fx bisect-rustc",
+        description="Bisecting a Rust toolchain roll failure.",
+    )
+    parser.add_argument('--reset', help='resets bisect state before exiting', action='store_true')
+    parser.add_argument(
+        '--rust', help='root directory of Rust checkout', required=True)
+    parser.add_argument(
+        '--bad', help='the earliest known-bad git ref', required=True)
+    parser.add_argument(
+        '--good', help='the latest known-good git ref', required=True)
+    parser.add_argument(
+        'buildargs', nargs='*', help='arguments to pass to `fx build`')
+    args = parser.parse_args()
+
+    rust = args.rust
+    host_os = {'Linux': 'linux', 'Darwin': 'mac'}[platform.system()]
+    host_cpu = {'x86_64': 'amd64', 'arm64': 'arm64'}[platform.machine()]
+
+    bisect = ['git', 'bisect']
+    start = bisect + ['start', '--no-checkout', '--first-parent', args.bad, args.good]
+    run = bisect + ['run', ROLL_AND_BUILD, FUCHSIA_DIR, f"{host_os}-{host_cpu}"] + args.buildargs
+    reset = bisect + ['reset']
+
+    try:
+        print('Resetting bisect state in Rust root before starting a new one.')
+        subprocess.run(reset, cwd=rust)
+
+        print('Starting bisect.')
+        subprocess.run(start, check=True, cwd=rust)
+
+        print('Running bisect.')
+        subprocess.run(run, check=True, cwd=rust)
+    finally:
+        if args.reset:
+            print('Resetting bisect state in Rust root.')
+            subprocess.run(reset, cwd=rust)
+        else:
+            print('WARNING: Exiting without cleaning bisect state.')
+            print('Run `git bisect reset` in Rust root to finish cleanup.')
+            print('Pass --reset to future invocations of this command to do so automatically.')
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
