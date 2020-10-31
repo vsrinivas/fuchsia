@@ -9,6 +9,7 @@ import("$zx/kernel/phys/qemu.gni")
 import("$zx/kernel/phys/zbi_executable.gni")
 import("$zx/public/gn/resource.gni")
 import("$zx/public/gn/test/zbi_test.gni")
+import("common_tests.gni")
 
 assert(toolchain.environment == "kernel.phys" ||
        toolchain.environment_label == qemu_environment)
@@ -117,14 +118,8 @@ generated_resource("dummy.txt") {
   outputs = [ "$target_gen_dir/dummy.txt" ]
 }
 
-# Build these tests in both phys_qemu_test() and zbi_executable()/zbi_test()
+# Build tests in both phys_qemu_test() and zbi_executable()/zbi_test()
 # incarnations.
-common_tests = [
-  "hello-world-test",
-  "backtrace-test",
-  "phys-unittests",
-]
-
 foreach(test, common_tests) {
   phys_qemu_test("qemu-$test") {
     deps = [ ":$test" ]
