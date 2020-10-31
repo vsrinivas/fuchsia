@@ -6,6 +6,7 @@
 #define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_
 
 #include <lib/zbitl/error_string.h>
+#include <lib/zbitl/image.h>
 #include <lib/zbitl/json.h>
 #include <lib/zbitl/view.h>
 
@@ -91,8 +92,13 @@ constexpr auto Next = [](auto it) { return ++it; };
 // iteration.
 //
 // If the storage type is writable, it must also provide:
-//   *`static payload_type AsPayload(storage_type&)` that returns the payload
+//   * `static payload_type AsPayload(storage_type&)` that returns the payload
 //     value representing the entire storage object.
+//
+// If the storage type is writable and extendable (i.e., supports
+// EnsureCapacity()), it must also provide:
+//   * `void Write(storage_type&, uint32_t offset, Bytes data)` that writes data
+//     to the provided offset.
 //
 // If the storage type supports creation
 // (i.e., zbitl::StorageTraits<storage_type> defines Create()) then the test
@@ -752,5 +758,123 @@ void TestZeroCopying() {
                        SecondItemOnPageBoundaryZbi, TestDataZbiType::kSecondItemOnPageBoundary)    \
   TEST_ZERO_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)                \
   TEST_COPYING_INTO_SMALL_STORAGE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)
+
+template <typename TestTraits>
+void TestAppending() {
+  using Storage = typename TestTraits::storage_type;
+
+  typename TestTraits::Context context;
+  ASSERT_NO_FATAL_FAILURE(TestTraits::Create(0, &context));
+  // Checking::kCrc will help ensure that we are appending items with valid
+  // CRC32s in the append-with-payload API.
+  zbitl::CrcCheckingImage<Storage> image(context.TakeStorage());
+
+  // clear() will turn an empty storage object into an empty ZBI (i.e., of
+  // sufficient size to hold a trivial ZBI container header).
+  {
+    auto clear_result = image.clear();
+    ASSERT_FALSE(clear_result.is_error()) << ViewErrorString(std::move(clear_result).error_value());
+    ASSERT_EQ(image.end(), image.begin());  // Is indeed empty.
+  }
+
+  const Bytes to_append[] = {
+      "",
+      "aligned ",
+      "unaligned",
+  };
+
+  // Append-with-payload.
+  for (const Bytes& bytes : to_append) {
+    auto append_result = image.Append(
+        zbi_header_t{
+            .type = kItemType,
+            .flags = ZBI_FLAG_CRC32,
+        },
+        zbitl::ByteView{reinterpret_cast<const std::byte*>(bytes.data()), bytes.size()});
+    ASSERT_FALSE(append_result.is_error())
+        << "bytes = \"" << bytes
+        << "\": " << ViewErrorString(std::move(append_result).error_value());
+  }
+
+  // Append-with-deferred-write.
+  for (const Bytes& bytes : to_append) {
+    auto append_result = image.Append(zbi_header_t{
+        .type = kItemType,
+        .length = static_cast<uint32_t>(bytes.size()),
+    });
+    ASSERT_FALSE(append_result.is_error())
+        << "bytes = \"" << bytes
+        << "\": " << ViewErrorString(std::move(append_result).error_value());
+
+    auto it = std::move(append_result).value();
+    ASSERT_NE(it, image.end());
+
+    // The recorded header should be sanitized.
+    auto [header, payload] = *it;
+    EXPECT_EQ(kItemType, header->type);
+    EXPECT_EQ(bytes.size(), header->length);
+    EXPECT_EQ(ZBI_ITEM_MAGIC, header->magic);
+    EXPECT_TRUE(ZBI_FLAG_VERSION & header->flags);
+    EXPECT_FALSE(ZBI_FLAG_CRC32 & header->flags);  // We did not bother to set it.
+    EXPECT_EQ(static_cast<uint32_t>(ZBI_ITEM_NO_CRC32), header->crc32);
+
+    if (!bytes.empty()) {
+      uint32_t offset = it.payload_offset();
+      ASSERT_NO_FATAL_FAILURE(TestTraits::Write(image.storage(), offset, bytes));
+    }
+  }
+
+  auto it = image.begin();
+  for (size_t variation = 0; variation < 2; ++variation) {
+    for (size_t i = 0; i < std::size(to_append) && it != image.end(); ++i, ++it) {
+      auto [header, payload] = *it;
+
+      // The recorded header should have add a number of fields set on the
+      // caller's behalf.
+      EXPECT_EQ(kItemType, header->type);
+      EXPECT_EQ(to_append[i].size(), header->length);  // Auto-computed in append-with-payload.
+      EXPECT_EQ(ZBI_ITEM_MAGIC, header->magic);
+      EXPECT_TRUE(ZBI_FLAG_VERSION & header->flags);
+      // That we are using a CRC-checking image guarantees that the right
+      // CRC32 values are computed.
+      switch (variation) {
+        case 0: {  // append-with-payload
+          EXPECT_TRUE(ZBI_FLAG_CRC32 & header->flags);
+          break;
+        }
+        case 1: {  // append-with-deferred-write
+          EXPECT_FALSE(ZBI_FLAG_CRC32 & header->flags);
+          break;
+        }
+      };
+
+      Bytes actual;
+      ASSERT_NO_FATAL_FAILURE(TestTraits::Read(image.storage(), payload, header->length, &actual));
+      const Bytes expected = to_append[i];
+      // `actual[0:expected.size()]` should coincide with `expected`, and its tail
+      // should be a |ZBI_ALIGNMENT|-pad of zeroes.
+      ASSERT_EQ(static_cast<uint32_t>(expected.size()), actual.size());
+      EXPECT_EQ(expected, actual.substr(0, expected.size()));
+      EXPECT_TRUE(std::all_of(actual.begin() + expected.size(), actual.end(),
+                              [](char c) -> bool { return c == 0; }));
+    }
+  }
+  EXPECT_EQ(image.end(), it);
+
+  {
+    auto result = image.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(std::move(result).error_value());
+  }
+
+  // clear() will reset the underlying ZBI as empty.
+  {
+    auto clear_result = image.clear();
+    ASSERT_FALSE(clear_result.is_error()) << ViewErrorString(std::move(clear_result).error_value());
+    ASSERT_EQ(image.end(), image.begin());  // Is indeed empty.
+
+    auto result = image.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(std::move(result).error_value());
+  }
+}
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_

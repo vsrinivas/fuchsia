@@ -18,4 +18,6 @@ TEST_ITERATION(ZbitlViewFdTests, FdTestTraits)
 
 TEST_MUTATION(ZbitlViewFdTests, FdTestTraits)
 
+TEST(ZbitlImageFdTests, Appending) { ASSERT_NO_FATAL_FAILURE(TestAppending<FdTestTraits>()); }
+
 }  // namespace

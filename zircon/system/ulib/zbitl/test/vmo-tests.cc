@@ -209,6 +209,8 @@ TEST_MUTATION(ZbitlViewVmoTests, VmoTestTraits)
 
 TEST_COPY_CREATION(ZbitlViewVmoTests, VmoTestTraits)
 
+TEST(ZbitlImageVmoTests, Appending) { ASSERT_NO_FATAL_FAILURE(TestAppending<VmoTestTraits>()); }
+
 TEST(ZbitlViewUnownedVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<UnownedVmoTestTraits>());
 }
@@ -226,6 +228,10 @@ TEST_ITERATION(ZbitlViewUnownedVmoTests, UnownedVmoTestTraits)
 TEST_MUTATION(ZbitlViewUnownedVmoTests, UnownedVmoTestTraits)
 
 TEST_COPY_CREATION(ZbitlViewUnownedVmoTests, UnownedVmoTestTraits)
+
+TEST(ZbitlImageUnownedVmoTests, Appending) {
+  ASSERT_NO_FATAL_FAILURE(TestAppending<UnownedVmoTestTraits>());
+}
 
 TEST(ZbitlViewMapUnownedVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<MapUnownedVmoTestTraits>());
@@ -248,6 +254,10 @@ TEST_MUTATION(ZbitlViewMapUnownedVmoTests, MapUnownedVmoTestTraits)
 
 TEST_COPY_CREATION(ZbitlViewMapUnownedVmoTests, MapUnownedVmoTestTraits)
 
+TEST(ZbitlImageMapUnownedVmoTests, Appending) {
+  ASSERT_NO_FATAL_FAILURE(TestAppending<MapUnownedVmoTestTraits>());
+}
+
 TEST(ZbitlViewMapOwnedVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<MapOwnedVmoTestTraits>());
 }
@@ -265,5 +275,9 @@ TEST_ITERATION(ZbitlViewMapOwnedVmoTests, MapOwnedVmoTestTraits)
 TEST_MUTATION(ZbitlViewMapOwnedVmoTests, MapOwnedVmoTestTraits)
 
 TEST_COPY_CREATION(ZbitlViewMapOwnedVmoTests, MapOwnedVmoTestTraits)
+
+TEST(ZbitlImageMapOwnedVmoTests, Appending) {
+  ASSERT_NO_FATAL_FAILURE(TestAppending<MapOwnedVmoTestTraits>());
+}
 
 }  // namespace

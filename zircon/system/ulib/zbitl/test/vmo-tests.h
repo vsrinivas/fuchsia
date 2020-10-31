@@ -29,7 +29,7 @@ struct VmoTestTraits {
 
   static void Create(size_t size, Context* context) {
     zx::vmo vmo;
-    ASSERT_EQ(zx::vmo::create(size, 0u, &vmo), ZX_OK);
+    ASSERT_EQ(zx::vmo::create(size, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
     *context = {std::move(vmo)};
   }
 
@@ -45,6 +45,10 @@ struct VmoTestTraits {
                    Bytes* contents) {
     contents->resize(size);
     ASSERT_EQ(ZX_OK, storage.read(contents->data(), payload, size));
+  }
+
+  static void Write(const storage_type& storage, uint32_t offset, const Bytes& data) {
+    ASSERT_EQ(ZX_OK, storage.write(data.data(), offset, data.size()));
   }
 
   static payload_type AsPayload(const storage_type& storage) { return 0; }
@@ -88,6 +92,10 @@ struct UnownedVmoTestTraits {
     ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Read(*storage, payload, size, contents));
   }
 
+  static void Write(const storage_type& storage, uint32_t offset, const Bytes& data) {
+    ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Write(*storage, offset, data));
+  }
+
   static payload_type AsPayload(const storage_type& storage) { return 0; }
 
   static const zx::vmo& GetVmo(const storage_type& storage) { return *storage; }
@@ -124,6 +132,10 @@ struct MapOwnedVmoTestTraits {
   static void Read(const storage_type& storage, payload_type payload, size_t size,
                    Bytes* contents) {
     ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Read(storage.vmo(), payload, size, contents));
+  }
+
+  static void Write(const storage_type& storage, uint32_t offset, const Bytes& data) {
+    ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Write(storage.vmo(), offset, data));
   }
 
   static payload_type AsPayload(const storage_type& storage) { return 0; }
@@ -166,6 +178,10 @@ struct MapUnownedVmoTestTraits {
   static void Read(const storage_type& storage, payload_type payload, size_t size,
                    Bytes* contents) {
     ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Read(storage.vmo(), payload, size, contents));
+  }
+
+  static void Write(const storage_type& storage, uint32_t offset, const Bytes& data) {
+    ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Write(storage.vmo(), offset, data));
   }
 
   static payload_type AsPayload(const storage_type& storage) { return 0; }

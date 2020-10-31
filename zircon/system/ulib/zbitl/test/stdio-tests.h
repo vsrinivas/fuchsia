@@ -36,9 +36,10 @@ struct StdioTestTraits {
     ASSERT_TRUE(context->dir_.NewTempFile(&filename));
     FILE* f = fopen(filename.c_str(), "r+");
     ASSERT_NE(f, nullptr) << "failed to open " << filename << ": " << strerror(errno);
-    ASSERT_GE(size, 1u);
-    fseek(f, static_cast<long int>(size) - 1, SEEK_SET);
-    putc(0, f);
+    if (size > 0) {
+      fseek(f, static_cast<long int>(size) - 1, SEEK_SET);
+      putc(0, f);
+    }
     context->storage_ = f;
     ASSERT_FALSE(ferror(f));
   }
@@ -57,6 +58,14 @@ struct StdioTestTraits {
     size_t n = fread(contents->data(), 1, size, storage);
     ASSERT_EQ(0, ferror(storage)) << "failed to read payload: " << strerror(errno);
     ASSERT_EQ(size, n) << "did not fully read payload";
+  }
+
+  static void Write(storage_type storage, uint32_t offset, const Bytes& data) {
+    ASSERT_EQ(0, fseek(storage, offset, SEEK_SET))
+        << "failed to seek to offset " << offset << ": " << strerror(errno);
+    ssize_t n = fwrite(data.data(), 1, data.size(), storage);
+    ASSERT_GE(n, 0) << "write: " << strerror(errno);
+    ASSERT_EQ(data.size(), static_cast<size_t>(n)) << "did not fully write data";
   }
 
   static payload_type AsPayload(storage_type storage) { return 0; }

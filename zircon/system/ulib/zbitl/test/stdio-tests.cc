@@ -17,4 +17,6 @@ TEST_ITERATION(ZbitlViewStdioTests, StdioTestTraits)
 
 TEST_MUTATION(ZbitlViewStdioTests, StdioTestTraits)
 
+TEST(ZbitlImageStdioTests, Appending) { ASSERT_NO_FATAL_FAILURE(TestAppending<StdioTestTraits>()); }
+
 }  // namespace

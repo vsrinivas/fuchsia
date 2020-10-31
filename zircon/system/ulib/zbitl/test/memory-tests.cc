@@ -22,6 +22,10 @@ TEST_MUTATION(ZbitlViewFblByteArrayTests, FblByteArrayTestTraits)
 
 TEST_COPY_CREATION(ZbitlViewFblByteArrayTests, FblByteArrayTestTraits)
 
+TEST(ZbitlImageFblByteArrayTests, Appending) {
+  ASSERT_NO_FATAL_FAILURE(TestAppending<FblByteArrayTestTraits>());
+}
+
 TEST(ZbitlViewFblUint64ArrayTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<FblUint64ArrayTestTraits>());
 }

@@ -20,6 +20,10 @@
 
 namespace zbitl {
 
+// Forward declaration; defined in image.h.
+template <typename Storage, Checking Check>
+class Image;
+
 /// The zbitl::View class provides functionality for processing ZBI items in various
 /// storage formats.
 ///
@@ -296,10 +300,13 @@ class View {
                   "zbitl::StorageTraits specialization's Header function returns wrong type");
 
     friend View;
+    template <typename ImageStorage, Checking ImageCheck>
+    friend class Image;
+
     using HeaderStorage = std::conditional_t<kCopy, zbi_header_t, const zbi_header_t*>;
     HeaderStorage stored_;
 
-    // This can only be used by begin(), below.
+    // This can only be used by begin(), below - and by Image's Append.
     template <typename T>
     explicit header_type(const T& header)
         : stored_([&header]() {
@@ -466,8 +473,14 @@ class View {
             if (header_->flags & ZBI_FLAG_CRC32) {
               uint32_t item_crc32 = 0;
               auto compute_crc32 = [&item_crc32](ByteView chunk) -> fitx::result<fitx::failed> {
-                item_crc32 =
-                    crc32(item_crc32, reinterpret_cast<const uint8_t*>(chunk.data()), chunk.size());
+                // The cumulative value in principle will not be updated by the
+                // CRC32 of empty data, so do not bother with computation in
+                // this case; doing so, we also sidestep any issues around how
+                // `crc32()` handles the corner case of a nullptr.
+                if (!chunk.empty()) {
+                  item_crc32 = crc32(item_crc32, reinterpret_cast<const uint8_t*>(chunk.data()),
+                                     chunk.size());
+                }
                 return fitx::ok();
               };
 
@@ -515,6 +528,10 @@ class View {
     }
 
    private:
+    // Private fields accessed by Image<Storage, Check>::Append().
+    template <typename ImageStorage, Checking ImageCheck>
+    friend class Image;
+
     // The default-constructed state is almost the same as the end() state:
     // nothing but operator==() should ever be called if view_ is nullptr.
     View* view_ = nullptr;
@@ -659,25 +676,32 @@ class View {
   // This method is not available if zbitl::StorageTraits<storage_type>
   // doesn't support mutation.
   template <typename T = Traits, typename = std::enable_if_t<T::CanWrite()>>
-  fitx::result<typename Traits::error_type> EditHeader(const iterator& item, zbi_header_t header) {
+  fitx::result<typename Traits::error_type> EditHeader(const iterator& item,
+                                                       const zbi_header_t& header) {
     item.Assert(__func__);
-    header = SanitizeHeader(header);
-    header.length = item.header_->length;
-    return Traits::Write(storage(), item.item_offset(), AsBytes(header));
+    if (auto result = WriteHeader(header, item.item_offset(), item.header_->length);
+        result.error_value()) {
+      return result.take_error();
+    }
+    return fitx::ok();
   }
 
   // When the iterator is mutable and not a temporary, make the next
   // operator*() consistent with the new header if it worked.  For kReference
   // storage types, the change is reflected intrinsically.
   template <typename T = Traits, typename = std::enable_if_t<T::CanWrite()>>
-  fitx::result<typename Traits::error_type> EditHeader(iterator& item, zbi_header_t header) {
-    auto result = EditHeader(const_cast<const iterator&>(item), header);
+  fitx::result<typename Traits::error_type> EditHeader(iterator& item, const zbi_header_t& header) {
+    item.Assert(__func__);
+    auto result = WriteHeader(header, item.item_offset(), item.header_->length);
     if constexpr (header_type::kCopy) {
       if (result.is_ok()) {
-        item.header_.stored_ = header;
+        item.header_.stored_ = result.value();
       }
     }
-    return result;
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    return fitx::ok();
   }
 
   // Copy a range of the underlying storage into an existing piece of storage,
@@ -906,6 +930,22 @@ class View {
     using CopyTraits = typename View<std::decay_t<CopyStorage>, Check>::Traits;
     return Traits::CanOneShotRead() ||
            (Traits::CanUnbufferedRead() && CopyTraits::CanUnbufferedWrite());
+  }
+
+ protected:
+  // WriteHeader sanitizes and optionally updates the length of a provided
+  // header, writes it to the provided offset, and returns the modified header
+  // on success.
+  fitx::result<typename Traits::error_type, zbi_header_t> WriteHeader(
+      zbi_header_t header, uint32_t offset, std::optional<uint32_t> new_length = std::nullopt) {
+    header = SanitizeHeader(header);
+    if (new_length.has_value()) {
+      header.length = new_length.value();
+    }
+    if (auto result = Traits::Write(storage(), offset, AsBytes(header)); result.is_error()) {
+      return fitx::error{std::move(result.error_value())};
+    }
+    return fitx::ok(header);
   }
 
  private:

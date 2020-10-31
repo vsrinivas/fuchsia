@@ -31,14 +31,16 @@ struct FdTestTraits {
     ASSERT_TRUE(context->dir_.NewTempFile(&filename));
     fbl::unique_fd fd{open(filename.c_str(), O_RDWR)};
     ASSERT_TRUE(fd) << filename << ": " << strerror(errno);
-    int error = ENOSYS;
+    if (size > 0) {
+      int error = ENOSYS;
 #ifndef __APPLE__
-    error = posix_fallocate(fd.get(), 0, size);
+      error = posix_fallocate(fd.get(), 0, size);
 #endif
-    if (error != ENOSYS) {
-      ASSERT_EQ(0, error) << filename << ": posix_fallocate: " << strerror(error);
-    } else {
-      ASSERT_EQ(0, ftruncate(fd.get(), size)) << filename << ": ftruncate: " << strerror(errno);
+      if (error != ENOSYS) {
+        ASSERT_EQ(0, error) << filename << ": posix_fallocate: " << strerror(error);
+      } else {
+        ASSERT_EQ(0, ftruncate(fd.get(), size)) << filename << ": ftruncate: " << strerror(errno);
+      }
     }
     context->storage_ = std::move(fd);
   }
@@ -54,6 +56,12 @@ struct FdTestTraits {
     ssize_t n = pread(storage.get(), contents->data(), size, payload);
     ASSERT_GE(n, 0) << "pread: " << strerror(errno);
     ASSERT_EQ(size, static_cast<uint32_t>(n)) << "did not fully read payload";
+  }
+
+  static void Write(storage_type& storage, uint32_t offset, const Bytes& data) {
+    ssize_t n = pwrite(storage.get(), data.data(), data.size(), offset);
+    ASSERT_GE(n, 0) << "write: " << strerror(errno);
+    ASSERT_EQ(data.size(), static_cast<size_t>(n)) << "did not fully write data";
   }
 
   static payload_type AsPayload(const storage_type& storage) { return 0; }

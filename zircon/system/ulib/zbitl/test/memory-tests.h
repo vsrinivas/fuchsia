@@ -46,6 +46,12 @@ struct FblArrayTestTraits {
     memcpy(contents->data(), bytes.data(), size);
   }
 
+  static void Write(storage_type& storage, uint32_t offset, const Bytes& data) {
+    ASSERT_LT(offset, storage.size());
+    ASSERT_LE(offset, storage.size() - data.size());
+    memcpy(storage.data() + offset, data.data(), data.size());
+  }
+
   static payload_type AsPayload(const storage_type& storage) {
     return {storage.data(), storage.size()};
   }
