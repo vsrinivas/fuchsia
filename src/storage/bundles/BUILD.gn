@@ -18,6 +18,7 @@ group("debugging") {
     "//src/storage/bin/df",
     "//src/storage/bin/disk-pave:install-disk-image",
     "//src/storage/bin/mount",
+    "//src/storage/bin/storage-metrics",
     "//src/storage/bin/umount",
     "//zircon/third_party/uapp/fsck-msdosfs",
     "//zircon/third_party/uapp/mkfs-msdosfs",
