@@ -229,6 +229,6 @@ zbi_test("bootsvc-root-job-test") {
     "..",
 
     # Include the integration test binary, which bootsvc will launch.
-    "//src/zircon/tests/mexec:zbi-child",
+    "//src/zircon/tests/mexec:smoke-zbi-test",
   ]
 }

@@ -8,6 +8,11 @@ import("//zircon/public/gn/test/zbi_test_success.gni")
 
 # Composes a test zbi out of Zircon artifacts.
 #
+# The $target_name target is a group() that holds the metadata and is what
+# should be used in deps.  The actual zbi() target is defined as
+# "$target_name.zbi" so that e.g. get_target_outputs(":$target_name.zbi")
+# can be used.
+#
 # Parameters
 #
 #   args (optional)
@@ -24,7 +29,7 @@ import("//zircon/public/gn/test/zbi_test_success.gni")
 template("zbi_test") {
   main_target = target_name
   input_target = "${target_name}_input"
-  zbi_target = "${target_name}_zbi"
+  zbi_target = "${target_name}.zbi"
 
   group_deps = []
 
@@ -98,6 +103,8 @@ template("zbi_test") {
     public_deps = group_deps
 
     metadata = {
+      migrated_zbi_barrier = []
+
       zbi_tests = [
         {
           cpu = current_cpu

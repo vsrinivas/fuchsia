@@ -2,99 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dist/resource.gni")
-import("//build/test.gni")
-import("//build/testing/zbi_test.gni")
+import("//build/testing/mexec_zbi_test.gni")
 
 # Pick out the tests.
 group("mexec") {
   testonly = true
-  deps = [
-    ":zbi-child-image",
-    ":zbi-parent-image",
-  ]
+  deps = [ ":mexec-smoke-test" ]
 }
 
-### Defines the child.
-
-# A test binary that returns success unconditionally. This binary running at
-# all indicates that the system booted sufficiently to run a userspace process.
-test("zbi-child") {
-  output_name = "zbi-child-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+executable("no-op-success") {
+  testonly = true
   sources = [ "success.cc" ]
 }
 
-# The parent binary mexecs into this child image. The parent image is booted
-# with kernel.mexec-force-high-ramdisk=true meaning that it will place the child
-# image's ramdisk in high (>4GiB) memory.
-zbi_test("zbi-child-image") {
+zbi_test("smoke-zbi-test") {
   assert(current_cpu != "")
 
-  args = [ "userboot=test/zbi-child-test" ]
+  args = [ "userboot=bin/no-op-success" ]
   deps = [
-    ":zbi-child",
+    ":no-op-success",
     "//build/unification/zbi:kernel",
   ]
 }
 
-### Defines the parent.
+mexec_zbi_test("mexec-smoke-test") {
+  child_zbi = ":smoke-zbi-test.zbi"
 
-zbi_outputs = get_target_outputs(":zbi-child-image_zbi")
-
-resource("zbi-child-image-resource") {
-  testonly = true
-  deps = [ ":zbi-child-image_zbi" ]
-  sources = [ zbi_outputs[0] ]
-  outputs = [ "testdata/zbi-bootfs/zbi-child-image.zbi" ]
-}
-
-# Simple binary that mexecs into the child binary.
-test("zbi-parent") {
-  output_name = "zbi-parent-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  sources = [ "parent.cc" ]
-
-  data_deps = [ ":zbi-child-image-resource" ]
-
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zbi",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
-  ]
-}
-
-zbi_test("zbi-parent-image") {
-  assert(current_cpu != "")
-  args = [
-    "bootsvc.next=test/zbi-parent-test",
-    "kernel.enable-debugging-syscalls=true",  # Enables mexec.
-    "kernel.mexec-force-high-ramdisk=true",  # Force the child to put the RD in
-                                             # high memory
-  ]
-  deps = [
-    ":zbi-parent",
-    "//build/unification/zbi:kernel",
-    "//src/bringup/bin/bootsvc",
-  ]
-
-  assert_no_deps = [ "//zircon/system/dev/*" ]
+  # Force that data ZBI to be put above the 4GiB mark in physical memory; this
+  # covers an edge case that can arise with particularly large ZBIs.
+  args = [ "kernel.mexec-force-high-ramdisk=true" ]
 }

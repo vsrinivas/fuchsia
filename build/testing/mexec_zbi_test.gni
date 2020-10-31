@@ -1,0 +1,76 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/resource.gni")
+import("//build/testing/zbi_test.gni")
+
+# Build a "chain-loading" ZBI test that boots a provided ZBI test via
+# mexec.
+#
+# `mexec_zbi_test()` defines a new ZBI test (see zbi_test.gni) by a
+# simple program, launched by bootsvc, that loads a specified child ZBI
+# and boots it via mexec.
+#
+# The template always provides the kernel command-line arguments of
+# `kernel.enable-debugging-syscalls` (to enable mexec) and `bootsvc.next`
+# (to specify the chain-loading program), along with those automatically
+# provided by zbi_test().
+#
+# Parameters
+#
+#   * child_zbi
+#     - Required: Label of the ZBI target to boot via mexec.
+#     The label must be that of a ZBI-defining target like `zbi_test`
+#     or `zbi` that is defined within the same file that this template
+#     is instantiated. (It is expected that
+#     `get_target_outputs(child_label)` should return the appropriate
+#     outputs, the path to the ZBI being first among them. The success
+#     string is expected to be printed on boot of the child ZBI.
+#     - Type: label
+#
+#   * args
+#     - Optional: List of additonal kernel command line arguments
+#     The documentation above details specific arguments provided by
+#     default by the template; no argument that overrides these should be
+#     provided here.
+#     - Type: list(string)
+#
+# See zbi_test() for other parameters.
+#
+template("mexec_zbi_test") {
+  test_target = target_name
+  resource_target = "_mexec_zbi_test.$target_name.resource"
+
+  assert(defined(invoker.child_zbi), "`child_zbi` not set")
+
+  # The first output for `zbi_test` and `zbi` targets is documented as being
+  # the path to the associated ZBI.
+  child_outputs = get_target_outputs(invoker.child_zbi)
+  assert(child_outputs != [],
+         "get_target_outputs(${invoker.child_zbi}) returned no outputs")
+  resource(resource_target) {
+    testonly = true
+    sources = [ child_outputs[0] ]
+    outputs = [ "testdata/mexec-child.zbi" ]
+    deps = [ invoker.child_zbi ]
+  }
+
+  zbi_test(test_target) {
+    args = []
+    deps = []
+    forward_variables_from(invoker, "*")
+
+    args += [
+      "bootsvc.next=bin/mexec-zbi-test-entry",
+      "kernel.enable-debugging-syscalls=true",
+    ]
+
+    deps += [
+      ":$resource_target",
+      "//build/testing:mexec-zbi-test-entry",
+      "//build/unification/zbi:kernel",
+      "//src/bringup/bin/bootsvc",
+    ]
+  }
+}
