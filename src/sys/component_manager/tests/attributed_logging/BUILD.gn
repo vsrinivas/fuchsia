@@ -1,0 +1,72 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/component/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
+
+rustc_test("test_bin") {
+  source_root = "integration_test.rs"
+  name = "attributed-logging-test"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/sys/component_manager/testing:test_utils_lib",
+    "//third_party/rust_crates:futures",
+  ]
+  sources = [ "integration_test.rs" ]
+}
+
+fuchsia_component("integration_test") {
+  testonly = true
+  manifest = "meta/integration-test.cmx"
+  deps = [ ":test_bin" ]
+}
+
+rustc_binary("empty") {
+  source_root = "empty.rs"
+  name = "empty"
+  sources = [ "empty.rs" ]
+}
+
+fuchsia_component("root_component") {
+  testonly = true
+  manifest = "meta/root.cml"
+  component_name = "root"
+}
+
+fuchsia_component("empty_component") {
+  testonly = true
+  manifest = "meta/empty.cml"
+  component_name = "empty"
+  deps = [ ":empty" ]
+}
+
+component_config("component_manager_debug_config") {
+  sources = [ "//src/sys/component_manager/debug_config.json" ]
+}
+
+resource("cm_config") {
+  sources = [ "$target_gen_dir/component_manager_debug_config" ]
+  outputs = [ "data/cm_config" ]
+  deps = [ ":component_manager_debug_config" ]
+}
+
+fuchsia_component("component-manager") {
+  deps = [
+    ":cm_config",
+    "//src/sys/component_manager:bin",
+  ]
+  manifest =
+      rebase_path("//src/sys/component_manager/meta/component_manager.cmx")
+}
+
+fuchsia_test_package("attributed-logging-test") {
+  test_components = [ ":integration_test" ]
+  deps = [
+    ":component-manager",
+    ":empty_component",
+    ":root_component",
+  ]
+}
