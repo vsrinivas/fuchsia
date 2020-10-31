@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1264
+From //build/config/BUILDCONFIG.gn:1265
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -489,7 +489,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:2156
+From //build/config/BUILDCONFIG.gn:2157
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -956,7 +956,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1027
+From //build/config/BUILDCONFIG.gn:1028
 
 ### fastboot_product
 
@@ -1640,7 +1640,7 @@ Each element of the list is one variant, which is a scope defining:
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
   tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "fuzzer"]
   toolchain_args = {
-  asan_default_options = "alloc_dealloc_mismatch=0:check_malloc_usable_size=0:detect_odr_violation=0:max_uar_stack_size_log=16:print_scariness=1:allocator_may_return_null=1:detect_leaks=0:malloc_context_size=128:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0"
+  asan_default_options = "alloc_dealloc_mismatch=0:check_malloc_usable_size=0:detect_odr_violation=0:max_uar_stack_size_log=16:print_scariness=1:allocator_may_return_null=1:detect_leaks=0:detect_stack_use_after_return=1:malloc_context_size=128:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0"
   use_scudo = false
 }
 }, {
@@ -1655,7 +1655,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:919
+From //build/config/BUILDCONFIG.gn:920
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2385,7 +2385,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1254
+From //build/config/BUILDCONFIG.gn:1255
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2394,7 +2394,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1259
+From //build/config/BUILDCONFIG.gn:1260
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2432,7 +2432,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1073
+From //build/config/BUILDCONFIG.gn:1074
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2692,7 +2692,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1047
+From //build/config/BUILDCONFIG.gn:1048
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
