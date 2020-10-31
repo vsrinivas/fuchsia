@@ -527,6 +527,11 @@ class View {
       return offset_ - ZBI_ALIGN(header_->length);
     }
 
+    View& view() const {
+      ZX_ASSERT_MSG(view_, "%s on default-constructed zbitl::View::iterator", __func__);
+      return *view_;
+    }
+
    private:
     // Private fields accessed by Image<Storage, Check>::Append().
     template <typename ImageStorage, Checking ImageCheck>

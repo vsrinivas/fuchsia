@@ -713,7 +713,7 @@ void TestZeroCopying() {
 
 #define TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits,       \
                                         dest_name, type_name, type, with_header, with_header_name) \
-  TEST(suite_name, type_name##Copy##src_name##to##dest_name##with_header_name) {                   \
+  TEST(suite_name, type_name##Copy##src_name##To##dest_name##with_header_name) {                   \
     auto test = TestCopying<SrcTestTraits, DestTestTraits>;                                        \
     ASSERT_NO_FATAL_FAILURE(test(type, with_header));                                              \
   }
@@ -724,11 +724,11 @@ void TestZeroCopying() {
                                   type_name, type, true, WithHeader)                              \
   TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, \
                                   type_name, type, false, )                                       \
-  TEST(suite_name, type_name##Copy##src_name##to##dest_name##ByByteRange) {                       \
+  TEST(suite_name, type_name##Copy##src_name##To##dest_name##ByByteRange) {                       \
     auto test = TestCopyingByByteRange<SrcTestTraits, DestTestTraits>;                            \
     ASSERT_NO_FATAL_FAILURE(test(type));                                                          \
   }                                                                                               \
-  TEST(suite_name, type_name##Copy##src_name##to##dest_name##ByIteratorRange) {                   \
+  TEST(suite_name, type_name##Copy##src_name##To##dest_name##ByIteratorRange) {                   \
     auto test = TestCopyingByIteratorRange<SrcTestTraits, DestTestTraits>;                        \
     ASSERT_NO_FATAL_FAILURE(test(type));                                                          \
   }
@@ -736,7 +736,7 @@ void TestZeroCopying() {
 // The macro indirection ensures that the relevant expansions in TEST_COPYING
 // and those of its arguments happen as expected.
 #define TEST_ZERO_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name) \
-  TEST(suite_name, ZeroCopying##src_name##to##dest_name) {                                \
+  TEST(suite_name, ZeroCopying##src_name##To##dest_name) {                                \
     auto test = TestZeroCopying<SrcTestTraits, DestTestTraits>;                           \
     ASSERT_NO_FATAL_FAILURE(test());                                                      \
   }
@@ -876,5 +876,89 @@ void TestAppending() {
     EXPECT_FALSE(result.is_error()) << ViewErrorString(std::move(result).error_value());
   }
 }
+
+template <typename SrcTestTraits, typename DestTestTraits>
+void TestExtending() {
+  files::ScopedTempDir dir;
+
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURE(
+      OpenTestDataZbi(TestDataZbiType::kMultipleSmallItems, dir.path(), &fd, &size));
+
+  typename SrcTestTraits::Context src_context;
+  ASSERT_NO_FATAL_FAILURE(SrcTestTraits::Create(std::move(fd), size, &src_context));
+  zbitl::View view(src_context.TakeStorage());
+
+  typename DestTestTraits::Context dest_context;
+  ASSERT_NO_FATAL_FAILURE(DestTestTraits::Create(0, &dest_context));
+  zbitl::Image image(dest_context.TakeStorage());
+
+  // clear() will turn an empty storage object into an empty ZBI (i.e., of
+  // sufficient size to hold a trivial ZBI container header).
+  {
+    auto clear_result = image.clear();
+    ASSERT_FALSE(clear_result.is_error()) << ViewErrorString(std::move(clear_result).error_value());
+    ASSERT_EQ(image.end(), image.begin());  // Is indeed empty.
+  }
+
+  // [begin(), begin() + 1)
+  {
+    auto extend_result = image.Extend(view.begin(), ++view.begin());
+    EXPECT_FALSE(extend_result.is_error())
+        << ViewCopyErrorString(std::move(extend_result).error_value());
+
+    size_t idx = 0;
+    for (auto [header, payload] : image) {
+      Bytes actual;
+      ASSERT_NO_FATAL_FAILURE(
+          DestTestTraits::Read(image.storage(), payload, header->length, &actual));
+      Bytes expected;
+      ASSERT_NO_FATAL_FAILURE(
+          GetExpectedPayload(TestDataZbiType::kMultipleSmallItems, idx++, &expected));
+      EXPECT_EQ(expected, actual);
+    }
+    EXPECT_EQ(1u, idx);
+  }
+
+  // [begin() + 1, end())
+  {
+    auto extend_result = image.Extend(++view.begin(), view.end());
+    EXPECT_FALSE(extend_result.is_error())
+        << ViewCopyErrorString(std::move(extend_result).error_value());
+
+    size_t idx = 0;
+    for (auto [header, payload] : image) {
+      Bytes actual;
+      ASSERT_NO_FATAL_FAILURE(
+          DestTestTraits::Read(image.storage(), payload, header->length, &actual));
+      Bytes expected;
+      ASSERT_NO_FATAL_FAILURE(
+          GetExpectedPayload(TestDataZbiType::kMultipleSmallItems, idx++, &expected));
+      EXPECT_EQ(expected, actual);
+    }
+    EXPECT_EQ(GetExpectedNumberOfItems(TestDataZbiType::kMultipleSmallItems), idx);
+  }
+
+  {
+    auto result = view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(std::move(result).error_value());
+  }
+  {
+    auto result = image.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(std::move(result).error_value());
+  }
+}
+
+// Ensures that the relevant macros expansions of TEST_EXTENDING's arguments
+// happen as expected.
+#define TEST_EXTENDING_1(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name) \
+  TEST(suite_name, Extend##dest_name##With##src_name) {                                  \
+    auto test = TestExtending<SrcTestTraits, DestTestTraits>;                            \
+    ASSERT_NO_FATAL_FAILURE(test());                                                     \
+  }
+
+#define TEST_EXTENDING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name) \
+  TEST_EXTENDING_1(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_

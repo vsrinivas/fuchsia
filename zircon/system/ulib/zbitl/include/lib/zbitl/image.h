@@ -31,18 +31,7 @@ class Image : public View<Storage, Check> {
   // this method even if the underlying storage does not already represent a
   // ZBI or is too small to do so; it will attempt to extend the capacity and
   // write a new container header.
-  fitx::result<Error> clear() {
-    if (auto result = Traits::EnsureCapacity(this->storage(), sizeof(zbi_header_t));
-        result.is_error()) {
-      return fitx::error{
-          Error{"cannot increase capacity", sizeof(zbi_header_t), std::move(result.error_value())}};
-    }
-    if (auto result = this->WriteHeader(ZBI_CONTAINER_HEADER(0), 0); result.is_error()) {
-      return fitx::error{
-          Error{"cannot write container header", 0, std::move(result.error_value())}};
-    }
-    return fitx::ok();
-  }
+  fitx::result<Error> clear() { return ResetContainer(sizeof(zbi_header_t)); }
 
   // This version of Append reserves enough space in the underlying ZBI to
   // append an item corresponding to the provided header. The header is
@@ -75,20 +64,13 @@ class Image : public View<Storage, Check> {
       return fitx::error(Error{"integer overflow; new size is too big", size});
     }
 
-    if (auto result = Traits::EnsureCapacity(this->storage(), new_size); result.is_error()) {
-      return fitx::error{Error{"cannot increase capacity", size, std::move(result.error_value())}};
+    if (auto result = ResetContainer(new_size); result.is_error()) {
+      return result.take_error();
     }
 
     if (auto result = this->WriteHeader(new_header, new_item_offset); result.is_error()) {
       return fitx::error{
           Error{"cannot write item header", new_item_offset, std::move(result.error_value())}};
-    }
-
-    if (auto result =
-            this->WriteHeader(ZBI_CONTAINER_HEADER(new_size - uint32_t{sizeof(zbi_header_t)}), 0);
-        result.is_error()) {
-      return fitx::error{
-          Error{"cannot write container header", 0, std::move(result.error_value())}};
     }
 
     uint32_t padding_size = ZBI_ALIGN(new_header.length) - new_header.length;
@@ -155,6 +137,71 @@ class Image : public View<Storage, Check> {
       if (auto result = Traits::Write(this->storage(), offset, data); result.is_error()) {
         return fitx::error{Error{"cannot write payload", offset, std::move(result.error_value())}};
       }
+    }
+    return fitx::ok();
+  }
+
+  // The following aliases are introduced to improve the readability of Extend's
+  // signature.
+  template <typename ViewIterator>
+  using ViewType = std::decay_t<decltype(std::declval<ViewIterator>().view())>;
+  template <typename ViewIterator>
+  using ExtendError = typename ViewType<ViewIterator>::template CopyError<Storage>;
+
+  // Extends the underlying ZBI by the items corresponding to an iterator range
+  // another View. As this operation is inherently a copy from that view, a
+  // CopyError of the latter is returned.
+  //
+  // The semantics are similar to that of View's Copy(): this is a blind, bulk
+  // copy from [first, last) and the relevant headers are not sanitized or
+  // checked for correctness when written.
+  template <typename ViewIterator>
+  fitx::result<ExtendError<ViewIterator>> Extend(ViewIterator first, ViewIterator last) {
+    using ErrorType = ExtendError<ViewIterator>;
+
+    if (&first.view() != &last.view()) {
+      return fitx::error{ErrorType{"iterators from different views provided"}};
+    }
+
+    auto& view = first.view();
+    if (first == view.end()) {
+      if (last == view.end()) {
+        return fitx::ok();  // By convention, a no-op.
+      }
+      return fitx::error{ErrorType{"cannot extend by iterator range starting at a view's end."}};
+    }
+
+    uint32_t size = this->size_bytes();
+    uint32_t tail_size =
+        (last == view.end() ? view.size_bytes() : last.item_offset()) - first.item_offset();
+    uint32_t new_size = size + tail_size;
+    if (auto result = ResetContainer(new_size); result.is_error()) {
+      auto error = std::move(result).error_value();
+      return fitx::error{ErrorType{
+          .zbi_error = error.zbi_error,
+          .write_offset = error.item_offset,
+          .write_error = std::move(error.storage_error),
+      }};
+    }
+
+    return view.Copy(this->storage(), first.item_offset(), tail_size, size);
+  }
+
+ private:
+  // Resets the container as being of the provided size (which is the total
+  // container size and not the length of the ZBI). The underlying storage
+  // will be extended as needed.
+  fitx::result<Error> ResetContainer(uint32_t new_size) {
+    ZX_DEBUG_ASSERT(new_size % ZBI_ALIGNMENT == 0);
+    if (auto result = Traits::EnsureCapacity(this->storage(), new_size); result.is_error()) {
+      return fitx::error{
+          Error{"cannot increase capacity", new_size, std::move(result.error_value())}};
+    }
+    if (auto result =
+            this->WriteHeader(ZBI_CONTAINER_HEADER(new_size - uint32_t{sizeof(zbi_header_t)}), 0);
+        result.is_error()) {
+      return fitx::error{
+          Error{"cannot write container header", 0, std::move(result.error_value())}};
     }
     return fitx::ok();
   }
