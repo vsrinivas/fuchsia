@@ -432,36 +432,6 @@ LK_INIT_HOOK(riscv64_resource_init, riscv64_resource_dispatcher_init_hook, LK_IN
 void topology_init() {
 }
 
-void platform_stop_timer(void) {
-  riscv64_csr_clear(RISCV64_CSR_SIE, RISCV64_CSR_SIE_TIE);
-}
-
-void platform_shutdown_timer(void) {
-  riscv64_csr_clear(RISCV64_CSR_SIE, RISCV64_CSR_SIE_TIE);
-}
-
-zx_ticks_t platform_current_ticks() {
-  return riscv64_get_time();
-}
-
-zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
-  // enable the timer
-  riscv64_csr_set(RISCV64_CSR_SIE, RISCV64_CSR_SIE_TIE);
-
-  // convert interval to ticks
-  uint64_t ticks = riscv64_get_time() + deadline / 10;
-  sbi_set_timer(ticks);
-
-  return ZX_OK;
-}
-
-void riscv64_timer_exception(void) {
-  riscv64_csr_clear(RISCV64_CSR_SIE, RISCV64_CSR_SIE_TIE);
-  timer_tick(current_time());
-}
-
-bool platform_usermode_can_access_tick_registers(void) { return false; }
-
 zx_status_t platform_mp_prep_cpu_unplug(cpu_num_t cpu_id) {
   return arch_mp_prep_cpu_unplug(cpu_id);
 }

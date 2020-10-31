@@ -24,6 +24,10 @@ static const dcfg_riscv_plic_driver_t plic_driver = {
     .num_irqs = 127,
 };
 
+static const dcfg_riscv_generic_timer_driver_t timer_driver = {
+    .freq_hz = 10000000,
+};
+
 static const zbi_platform_id_t platform_id = {
     .vid = PDEV_VID_QEMU,
     .pid = PDEV_PID_QEMU,
@@ -62,6 +66,9 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
 
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_RISCV_PLIC, &plic_driver,
                    sizeof(plic_driver));
+
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_RISCV_GENERIC_TIMER, &timer_driver,
+                   sizeof(timer_driver));
 
   // add platform ID
   append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
