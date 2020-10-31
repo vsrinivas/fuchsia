@@ -460,56 +460,7 @@ void riscv64_timer_exception(void) {
   timer_tick(current_time());
 }
 
-zx_status_t register_int_handler(unsigned int vector, int_handler handler, void* arg) {
-  return ZX_OK;
-}
-
-bool msi_supports_masking() { return false; }
-
-void msi_mask_unmask(const msi_block_t* block, uint msi_id, bool mask) { PANIC_UNIMPLEMENTED; }
-
-zx_status_t mask_interrupt(unsigned int vector) { return ZX_OK; }
-
 bool platform_usermode_can_access_tick_registers(void) { return false; }
-
-void shutdown_interrupts(void) { }
-
-void shutdown_interrupts_curr_cpu(void) {
-}
-
-zx_status_t unmask_interrupt(unsigned int vector) {
-  PANIC_UNIMPLEMENTED;
-}
-
-zx_status_t configure_interrupt(unsigned int vector, enum interrupt_trigger_mode tm,
-                                enum interrupt_polarity pol) {
-  PANIC_UNIMPLEMENTED;
-}
-
-bool is_valid_interrupt(unsigned int vector, uint32_t flags) {
-  return false;
-}
-
-unsigned int remap_interrupt(unsigned int vector) {
-  return false;
-}
-
-zx_status_t msi_alloc_block(uint requested_irqs, bool can_target_64bit, bool is_msix,
-                            msi_block_t* out_block) {
-  PANIC_UNIMPLEMENTED;
-}
-
-void msi_free_block(msi_block_t* block) {
-  PANIC_UNIMPLEMENTED;
-}
-
-bool msi_is_supported(void) {
-  return false;
-}
-
-void msi_register_handler(const msi_block_t* block, uint msi_id, int_handler handler, void* ctx) {
-  PANIC_UNIMPLEMENTED;
-}
 
 zx_status_t platform_mp_prep_cpu_unplug(cpu_num_t cpu_id) {
   return arch_mp_prep_cpu_unplug(cpu_id);

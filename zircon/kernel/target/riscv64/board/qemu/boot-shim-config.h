@@ -19,6 +19,11 @@ static const dcfg_simple_t uart_driver = {
     .irq = 10,
 };
 
+static const dcfg_riscv_plic_driver_t plic_driver = {
+    .mmio_phys = 0x0C000000,
+    .num_irqs = 127,
+};
+
 static const zbi_platform_id_t platform_id = {
     .vid = PDEV_VID_QEMU,
     .pid = PDEV_PID_QEMU,
@@ -54,6 +59,9 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
   // add kernel drivers
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_NS16550A_UART, &uart_driver,
                    sizeof(uart_driver));
+
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_RISCV_PLIC, &plic_driver,
+                   sizeof(plic_driver));
 
   // add platform ID
   append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));

@@ -85,6 +85,8 @@ struct arch_exception_context {
 
 struct Thread;
 
+void platform_irq(iframe_t* frame);
+
 __END_CDECLS
 
 #define __ASM_STR(x)    #x

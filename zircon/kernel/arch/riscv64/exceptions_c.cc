@@ -186,6 +186,7 @@ extern "C" void riscv64_exception_handler(long cause, struct iframe_t *frame) {
         riscv64_timer_exception();
         break;
       case RISCV64_INTERRUPT_SEXT: // external interrupt
+        platform_irq(frame);
         break;
       default:
         fatal_exception(cause, frame);

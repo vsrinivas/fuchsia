@@ -28,6 +28,7 @@
 #define KDRV_I8250_PIO_UART 0x30353238          // '8250'
 #define KDRV_I8250_MMIO_UART 0x4d353238         // '825M'
 #define KDRV_NS16550A_UART 0x3631534E           // 'NS16'
+#define KDRV_RISCV_PLIC 0x43494C50              // 'PLIC'
 
 // Kernel driver struct that can be used for simple drivers.
 // Used by KDRV_PL011_UART, KDRV_AMLOGIC_UART, KDRV_NXP_IMX_UART,
@@ -115,6 +116,12 @@ typedef struct {
   uint64_t rng_status_phys;
   uint64_t rng_refresh_interval_usec;
 } dcfg_amlogic_rng_driver_t;
+
+// for KDRV_RISCV_PLIC
+typedef struct {
+  uint64_t mmio_phys;
+  uint32_t num_irqs;
+} dcfg_riscv_plic_driver_t;
 
 // Defines a register write action for a generic kernel watchdog driver.  An
 // action consists of the following steps.

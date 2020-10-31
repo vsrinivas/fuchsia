@@ -11,6 +11,7 @@ source_set("generic-riscv64") {
   deps = [
     "$zx/kernel/dev/hw_rng",
     "$zx/kernel/dev/pdev",
+    "$zx/kernel/dev/interrupt/riscv_plic",
     "$zx/kernel/dev/uart/ns16550a",
     "$zx/kernel/lib/cbuf",
     "$zx/kernel/lib/cmdline",

@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("riscv_plic") {
+  kernel = true
+  sources = [
+    "riscv_plic.cc",
+  ]
+  deps = [
+    "//zircon/kernel/dev/interrupt",
+    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/dev/pdev/interrupt",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/ktrace",
+    "//zircon/kernel/lib/root_resource_filter",
+  ]
+}
