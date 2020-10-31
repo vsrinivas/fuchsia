@@ -840,6 +840,7 @@ _asan_fuzzer_toolchain_args = {
             # https://github.com/google/sanitizers/wiki/AddressSanitizerFlags
             "allocator_may_return_null=1",
             "detect_leaks=0",
+            "detect_stack_use_after_return=1",
             "malloc_context_size=128",
             "print_summary=1",
             "print_suppressions=0",

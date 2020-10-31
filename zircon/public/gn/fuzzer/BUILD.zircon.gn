@@ -58,6 +58,7 @@ standard_environments(".fuzzer") {
                                          "check_malloc_usable_size=0",
                                          "detect_leaks=0",
                                          "detect_odr_violation=0",
+                                         "detect_stack_use_after_return=1",
                                          "malloc_context_size=128",
                                          "max_uar_stack_size_log=16",
                                          "print_scariness=1",
