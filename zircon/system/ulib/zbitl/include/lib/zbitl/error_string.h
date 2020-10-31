@@ -16,7 +16,7 @@ namespace zbitl {
 template <typename ViewError>
 std::string ViewErrorString(const ViewError& error) {
   std::string s{error.zbi_error};
-  s += "at offset ";
+  s += " at offset ";
   s += std::to_string(error.item_offset);
   if (error.storage_error) {
     s += ": ";
