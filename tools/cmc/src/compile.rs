@@ -179,8 +179,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
     for use_ in use_in {
         if let Some(n) = use_.service() {
             let source = extract_use_source(use_)?;
-            let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
-                .extract_path()?;
+            let target_path = one_target_use_path(use_, use_)?;
             out_uses.push(fsys::UseDecl::Service(fsys::UseServiceDecl {
                 source: Some(source),
                 source_name: Some(n.clone().into()),
@@ -188,21 +187,20 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
             }));
         } else if let Some(n) = use_.protocol() {
             let source = extract_use_source(use_)?;
-            let target_ids = all_target_capability_ids(use_, use_, cml::RoutingClauseType::Use)
-                .ok_or_else(|| Error::internal("no capability"))?;
-            let source_ids = n.to_vec();
-            for (source_id, target_id) in source_ids.into_iter().zip(target_ids.into_iter()) {
-                let target_path = target_id.extract_path()?;
+            let target_paths =
+                all_target_use_paths(use_, use_).ok_or_else(|| Error::internal("no capability"))?;
+            let source_names = n.to_vec();
+            for (source_name, target_path) in source_names.into_iter().zip(target_paths.into_iter())
+            {
                 out_uses.push(fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                     source: Some(clone_fsys_ref(&source)?),
-                    source_name: Some(source_id.clone().into()),
+                    source_name: Some(source_name.clone().into()),
                     target_path: Some(target_path.into()),
                 }));
             }
         } else if let Some(n) = use_.directory() {
             let source = extract_use_source(use_)?;
-            let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
-                .extract_path()?;
+            let target_path = one_target_use_path(use_, use_)?;
             let rights = translate::extract_required_rights(use_, "use")?;
             let subdir = extract_use_subdir(use_);
             out_uses.push(fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
@@ -213,8 +211,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                 subdir: subdir.map(|s| s.into()),
             }));
         } else if let Some(s) = use_.storage() {
-            let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
-                .extract_path()?;
+            let target_path = one_target_use_path(use_, use_)?;
             out_uses.push(fsys::UseDecl::Storage(fsys::UseStorageDecl {
                 source_name: Some(s.to_string()),
                 target_path: Some(target_path.into()),
@@ -225,17 +222,19 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
             }))
         } else if let Some(n) = use_.event() {
             let source = extract_use_event_source(use_)?;
-            let target_ids = all_target_capability_ids(use_, use_, cml::RoutingClauseType::Use)
+            let target_names = all_target_capability_names(use_, use_)
                 .ok_or_else(|| Error::internal("no capability"))?;
-            let source_ids = n.to_vec();
-            for target_id in target_ids {
-                let target_name = target_id.extract_name()?;
+            let source_names = n.to_vec();
+            for target_name in target_names {
                 // When multiple source names are provided, there is no way to alias each one, so
                 // source_name == target_name,
                 // When one source name is provided, source_name may be aliased to a different
                 // target_name, so we use source_names[0] to derive the source_name.
-                let source_name =
-                    if source_ids.len() == 1 { source_ids[0].clone() } else { target_name.clone() };
+                let source_name = if source_names.len() == 1 {
+                    source_names[0].clone()
+                } else {
+                    target_name.clone()
+                };
                 out_uses.push(fsys::UseDecl::Event(fsys::UseEventDecl {
                     source: Some(clone_fsys_ref(&source)?),
                     source_name: Some(source_name.into()),
@@ -249,8 +248,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                 }));
             }
         } else if let Some(p) = use_.event_stream() {
-            let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
-                .extract_path()?;
+            let target_path = one_target_use_path(use_, use_)?;
             out_uses.push(fsys::UseDecl::EventStream(fsys::UseEventStreamDecl {
                 target_path: Some(target_path.into()),
                 events: Some(p.to_vec().into_iter().map(|name| name.clone().into()).collect()),
@@ -270,9 +268,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<fsys::ExposeDecl
         let target = extract_expose_target(expose)?;
         if let Some(n) = expose.service() {
             let sources = extract_all_expose_sources(expose)?;
-            let target_name =
-                one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?
-                    .extract_name()?;
+            let target_name = one_target_capability_name(expose, expose)?;
             for source in sources {
                 out_exposes.push(fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                     source: Some(clone_fsys_ref(&source)?),
@@ -283,53 +279,48 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<fsys::ExposeDecl
             }
         } else if let Some(n) = expose.protocol() {
             let source = extract_single_expose_source(expose)?;
-            let source_ids: Vec<_> = n.to_vec();
-            let target_ids =
-                all_target_capability_ids(expose, expose, cml::RoutingClauseType::Expose)
-                    .ok_or_else(|| Error::internal("no capability"))?;
-            for (source_id, target_id) in source_ids.into_iter().zip(target_ids.into_iter()) {
+            let source_names: Vec<_> = n.to_vec();
+            let target_names = all_target_capability_names(expose, expose)
+                .ok_or_else(|| Error::internal("no capability"))?;
+            for (source_name, target_name) in source_names.into_iter().zip(target_names.into_iter())
+            {
                 out_exposes.push(fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
                     source: Some(clone_fsys_ref(&source)?),
-                    source_name: Some(source_id.clone().into()),
-                    target_name: Some(target_id.into()),
+                    source_name: Some(source_name.clone().into()),
+                    target_name: Some(target_name.into()),
                     target: Some(clone_fsys_ref(&target)?),
                 }))
             }
         } else if let Some(n) = expose.directory() {
             let source = extract_single_expose_source(expose)?;
-            let target_id =
-                one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?;
+            let target_name = one_target_capability_name(expose, expose)?;
             let rights = extract_expose_rights(expose)?;
             let subdir = extract_expose_subdir(expose);
             out_exposes.push(fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                 source: Some(clone_fsys_ref(&source)?),
                 source_name: Some(n.clone().into()),
-                target_name: Some(target_id.into()),
+                target_name: Some(target_name.into()),
                 target: Some(clone_fsys_ref(&target)?),
-                rights: rights,
+                rights,
                 subdir: subdir.map(|s| s.into()),
             }))
         } else if let Some(n) = expose.runner() {
             let source = extract_single_expose_source(expose)?;
-            let target_name =
-                one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?
-                    .extract_name()?;
+            let target_name = one_target_capability_name(expose, expose)?;
             out_exposes.push(fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
                 source: Some(clone_fsys_ref(&source)?),
                 source_name: Some(n.clone().into()),
                 target: Some(clone_fsys_ref(&target)?),
-                target_name: Some(target_name.clone().into()),
+                target_name: Some(target_name.into()),
             }))
         } else if let Some(n) = expose.resolver() {
             let source = extract_single_expose_source(expose)?;
-            let target_name =
-                one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?
-                    .extract_name()?;
+            let target_name = one_target_capability_name(expose, expose)?;
             out_exposes.push(fsys::ExposeDecl::Resolver(fsys::ExposeResolverDecl {
                 source: Some(clone_fsys_ref(&source)?),
                 source_name: Some(n.clone().into()),
                 target: Some(clone_fsys_ref(&target)?),
-                target_name: Some(target_name.clone().into()),
+                target_name: Some(target_name.into()),
             }))
         } else {
             return Err(Error::internal(format!("expose: must specify a known capability")));
@@ -349,8 +340,7 @@ fn translate_offer(
         if let Some(n) = offer.service() {
             let sources = extract_all_offer_sources(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            for (target, target_id) in targets {
-                let target_name = target_id.extract_name()?;
+            for (target, target_name) in targets {
                 for source in &sources {
                     out_offers.push(fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source_name: Some(n.clone().into()),
@@ -363,26 +353,26 @@ fn translate_offer(
         } else if let Some(n) = offer.protocol() {
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            let source_ids = n.to_vec();
-            for (target, target_id) in targets {
+            let source_names = n.to_vec();
+            for (target, target_name) in targets {
                 // When multiple source names are provided, there is no way to alias each one, so
                 // source_name == target_name.
                 // When one source name is provided, source_name may be aliased to a different
-                // target_name, so we source_ids[0] to derive the source_name.
+                // target_name, so we source_names[0] to derive the source_name.
                 //
                 // TODO: This logic could be simplified to use iter::zip() if
                 // extract_all_targets_for_each_child returned separate vectors for targets and
-                // target_ids instead of the cross product of them.
-                let source_id = if source_ids.len() == 1 {
-                    source_ids[0].clone()
+                // target_names instead of the cross product of them.
+                let source_name = if source_names.len() == 1 {
+                    source_names[0].clone()
                 } else {
-                    target_id.extract_name_borrowed()?.clone()
+                    target_name.clone()
                 };
                 out_offers.push(fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
                     source: Some(clone_fsys_ref(&source)?),
-                    source_name: Some(source_id.clone().into()),
+                    source_name: Some(source_name.into()),
                     target: Some(clone_fsys_ref(&target)?),
-                    target_name: Some(target_id.into()),
+                    target_name: Some(target_name.into()),
                     dependency_type: Some(
                         offer.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
                     ),
@@ -391,12 +381,12 @@ fn translate_offer(
         } else if let Some(n) = offer.directory() {
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            for (target, target_id) in targets {
+            for (target, target_name) in targets {
                 out_offers.push(fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                     source_name: Some(n.clone().into()),
                     source: Some(clone_fsys_ref(&source)?),
                     target: Some(clone_fsys_ref(&target)?),
-                    target_name: Some(target_id.into()),
+                    target_name: Some(target_name.into()),
                     rights: extract_offer_rights(offer)?,
                     subdir: extract_offer_subdir(offer).map(|s| s.into()),
                     dependency_type: Some(
@@ -407,53 +397,53 @@ fn translate_offer(
         } else if let Some(s) = offer.storage() {
             let source = extract_single_offer_storage_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            for (target, target_id) in targets {
+            for (target, target_name) in targets {
                 out_offers.push(fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                     source_name: Some(s.to_string()),
                     source: Some(clone_fsys_ref(&source)?),
                     target: Some(clone_fsys_ref(&target)?),
-                    target_name: Some(target_id.into()),
+                    target_name: Some(target_name.into()),
                 }));
             }
         } else if let Some(n) = offer.runner() {
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            for (target, target_id) in targets {
-                let target_name = target_id.extract_name()?;
+            for (target, target_name) in targets {
                 out_offers.push(fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
                     source: Some(clone_fsys_ref(&source)?),
                     source_name: Some(n.clone().into()),
                     target: Some(clone_fsys_ref(&target)?),
-                    target_name: Some(target_name.clone().into()),
+                    target_name: Some(target_name.into()),
                 }));
             }
         } else if let Some(n) = offer.resolver() {
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            for (target, target_id) in targets {
-                let target_name = target_id.extract_name()?;
+            for (target, target_name) in targets {
                 out_offers.push(fsys::OfferDecl::Resolver(fsys::OfferResolverDecl {
                     source: Some(clone_fsys_ref(&source)?),
                     source_name: Some(n.clone().into()),
                     target: Some(clone_fsys_ref(&target)?),
-                    target_name: Some(target_name.clone().into()),
+                    target_name: Some(target_name.into()),
                 }));
             }
         } else if let Some(p) = offer.event() {
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            let source_ids = p.to_vec();
-            for (target, target_id) in targets {
+            let source_names = p.to_vec();
+            for (target, target_name) in targets {
                 // When multiple source names are provided, there is no way to alias each one, so
                 // source_name == target_name.
                 // When one source name is provided, source_name may be aliased to a different
-                // source_name, so we source_ids[0] to derive the source_name.
-                let target_name = target_id.extract_name()?;
-                let source_name =
-                    if source_ids.len() == 1 { source_ids[0].clone() } else { target_name.clone() };
+                // source_name, so we source_names[0] to derive the source_name.
+                let source_name = if source_names.len() == 1 {
+                    source_names[0].clone()
+                } else {
+                    target_name.clone()
+                };
                 out_offers.push(fsys::OfferDecl::Event(fsys::OfferEventDecl {
                     source: Some(clone_fsys_ref(&source)?),
-                    source_name: Some(source_name.clone().into()),
+                    source_name: Some(source_name.into()),
                     target: Some(clone_fsys_ref(&target)?),
                     target_name: Some(target_name.clone().into()),
                     // We have already validated that none will be present if we were using many
@@ -749,120 +739,116 @@ fn extract_all_targets_for_each_child(
     in_obj: &cml::Offer,
     all_children: &HashSet<&cml::Name>,
     all_collections: &HashSet<&cml::Name>,
-) -> Result<Vec<(fsys::Ref, cml::NameOrPath)>, Error> {
+) -> Result<Vec<(fsys::Ref, cml::Name)>, Error> {
     let mut out_targets = vec![];
 
-    let target_ids = all_target_capability_ids(in_obj, in_obj, cml::RoutingClauseType::Offer)
+    let target_names = all_target_capability_names(in_obj, in_obj)
         .ok_or_else(|| Error::internal("no capability".to_string()))?;
 
     // Validate the "to" references.
     for to in &in_obj.to.0 {
-        for target_id in &target_ids {
+        for target_name in &target_names {
             let target =
                 translate_child_or_collection_ref(to.into(), all_children, all_collections)?;
-            out_targets.push((target, target_id.clone()))
+            out_targets.push((target, target_name.clone()))
         }
     }
     Ok(out_targets)
 }
 
+/// Return the target paths specified in the given use declaration.
+fn all_target_use_paths<T, U>(in_obj: &T, to_obj: &U) -> Option<OneOrMany<cml::Path>>
+where
+    T: cml::CapabilityClause,
+    U: cml::AsClause + cml::PathClause,
+{
+    if let Some(n) = in_obj.service() {
+        if let Some(path) = to_obj.path() {
+            Some(OneOrMany::One(path.clone()))
+        } else {
+            Some(OneOrMany::One(format!("/svc/{}", n).parse().unwrap()))
+        }
+    } else if let Some(p) = in_obj.protocol() {
+        Some(match p {
+            OneOrMany::One(n) => {
+                if let Some(path) = to_obj.path() {
+                    OneOrMany::One(path.clone())
+                } else {
+                    OneOrMany::One(format!("/svc/{}", n).parse().unwrap())
+                }
+            }
+            OneOrMany::Many(v) => {
+                let many = v.iter().map(|n| format!("/svc/{}", n).parse().unwrap()).collect();
+                OneOrMany::Many(many)
+            }
+        })
+    } else if let Some(_) = in_obj.directory() {
+        let path = to_obj.path().expect("no path on use directory");
+        Some(OneOrMany::One(path.clone()))
+    } else if let Some(_) = in_obj.storage() {
+        let path = to_obj.path().expect("no path on use storage");
+        Some(OneOrMany::One(path.clone()))
+    } else if let Some(_) = in_obj.event_stream() {
+        let path = to_obj.path().expect("no path on event stream");
+        Some(OneOrMany::One(path.clone()))
+    } else {
+        None
+    }
+}
+
+/// Return the single target path specified in the given use declaration.
+fn one_target_use_path<T, U>(in_obj: &T, to_obj: &U) -> Result<cml::Path, Error>
+where
+    T: cml::CapabilityClause,
+    U: cml::AsClause + cml::PathClause,
+{
+    match all_target_use_paths(in_obj, to_obj) {
+        Some(OneOrMany::One(target_name)) => Ok(target_name),
+        Some(OneOrMany::Many(_)) => {
+            Err(Error::internal("expecting one capability, but multiple provided"))
+        }
+        _ => Err(Error::internal("expecting one capability, but none provided")),
+    }
+}
+
 /// Return the target names or paths specified in the given capability.
-fn all_target_capability_ids<T, U>(
-    in_obj: &T,
-    to_obj: &U,
-    clause_type: cml::RoutingClauseType,
-) -> Option<OneOrMany<cml::NameOrPath>>
+fn all_target_capability_names<T, U>(in_obj: &T, to_obj: &U) -> Option<OneOrMany<cml::Name>>
 where
     T: cml::CapabilityClause,
     U: cml::AsClause + cml::PathClause,
 {
     if let Some(as_) = to_obj.r#as() {
         // We've already validated that when `as` is specified, only 1 source id exists.
-        Some(OneOrMany::One(cml::NameOrPath::Name(as_.clone())))
+        Some(OneOrMany::One(as_.clone()))
     } else {
         if let Some(n) = in_obj.service() {
-            if let cml::RoutingClauseType::Use = clause_type {
-                if let Some(path) = to_obj.path() {
-                    Some(OneOrMany::One(cml::NameOrPath::Path(path.clone())))
-                } else {
-                    Some(OneOrMany::One(cml::NameOrPath::Path(
-                        format!("/svc/{}", n).parse().unwrap(),
-                    )))
-                }
-            } else {
-                Some(OneOrMany::One(cml::NameOrPath::Name(n.clone())))
-            }
+            Some(OneOrMany::One(n.clone()))
         } else if let Some(p) = in_obj.protocol() {
-            Some(match p {
-                OneOrMany::One(n) if clause_type == cml::RoutingClauseType::Use => {
-                    if let Some(path) = to_obj.path() {
-                        OneOrMany::One(cml::NameOrPath::Path(path.clone()))
-                    } else {
-                        OneOrMany::One(cml::NameOrPath::Path(
-                            format!("/svc/{}", n).parse().unwrap(),
-                        ))
-                    }
-                }
-                OneOrMany::One(n) => OneOrMany::One(cml::NameOrPath::Name(n)),
-                OneOrMany::Many(v) => {
-                    let many = v
-                        .iter()
-                        .map(|n| {
-                            if let cml::RoutingClauseType::Use = clause_type {
-                                cml::NameOrPath::Path(format!("/svc/{}", n).parse().unwrap())
-                            } else {
-                                cml::NameOrPath::Name(n.clone())
-                            }
-                        })
-                        .collect();
-                    OneOrMany::Many(many)
-                }
-            })
+            Some(p.clone())
         } else if let Some(d) = in_obj.directory() {
-            Some(match d {
-                _ if clause_type == cml::RoutingClauseType::Use => {
-                    let path = to_obj.path().expect("no path on use directory");
-                    OneOrMany::One(cml::NameOrPath::Path(path.clone()))
-                }
-                n => OneOrMany::One(cml::NameOrPath::Name(n.clone())),
-            })
+            Some(OneOrMany::One(d.clone()))
         } else if let Some(n) = in_obj.storage() {
-            if clause_type == cml::RoutingClauseType::Use {
-                let path = to_obj.path().expect("no path on use storage");
-                Some(OneOrMany::One(cml::NameOrPath::Path(path.clone())))
-            } else {
-                Some(OneOrMany::One(cml::NameOrPath::Name(n.clone())))
-            }
+            Some(OneOrMany::One(n.clone()))
         } else if let Some(n) = in_obj.runner() {
-            Some(OneOrMany::One(cml::NameOrPath::Name(n.clone())))
+            Some(OneOrMany::One(n.clone()))
         } else if let Some(n) = in_obj.resolver() {
-            Some(OneOrMany::One(cml::NameOrPath::Name(n.clone())))
-        } else if let Some(OneOrMany::One(event)) = in_obj.event() {
-            Some(OneOrMany::One(cml::NameOrPath::Name(event.clone())))
-        } else if let Some(OneOrMany::Many(events)) = in_obj.event() {
-            Some(OneOrMany::Many(events.iter().map(|e| cml::NameOrPath::Name(e.clone())).collect()))
-        } else if let Some(_) = in_obj.event_stream() {
-            Some(OneOrMany::One(cml::NameOrPath::Path(
-                to_obj.path().expect("no path on event stream").clone(),
-            )))
+            Some(OneOrMany::One(n.clone()))
+        } else if let Some(e) = in_obj.event() {
+            Some(e.clone())
         } else {
             None
         }
     }
 }
 
-// Return the single name or path specified in the given capability.
-fn one_target_capability_id<T, U>(
-    in_obj: &T,
-    to_obj: &U,
-    clause_type: cml::RoutingClauseType,
-) -> Result<cml::NameOrPath, Error>
+/// Return the single target name specified in the given routing declaration.
+fn one_target_capability_name<T, U>(in_obj: &T, to_obj: &U) -> Result<cml::Name, Error>
 where
     T: cml::CapabilityClause,
     U: cml::AsClause + cml::PathClause,
 {
-    match all_target_capability_ids(in_obj, to_obj, clause_type) {
-        Some(OneOrMany::One(target_id)) => Ok(target_id),
+    match all_target_capability_names(in_obj, to_obj) {
+        Some(OneOrMany::One(target_name)) => Ok(target_name),
         Some(OneOrMany::Many(_)) => {
             Err(Error::internal("expecting one capability, but multiple provided"))
         }

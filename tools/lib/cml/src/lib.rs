@@ -20,7 +20,7 @@ use {
 };
 
 pub use cm_types::{
-    DependencyType, Durability, Name, NameOrPath, ParseError, Path, RelativePath, StartupMode, Url,
+    DependencyType, Durability, Name, ParseError, Path, RelativePath, StartupMode, Url,
 };
 
 lazy_static! {
@@ -309,16 +309,6 @@ pub struct OneOrManyNames;
     unique_items = true
 )]
 pub struct OneOrManyPaths;
-
-/// Generates deserializer for `OneOrMany<Path>`.
-#[derive(OneOrMany, Debug, Clone)]
-#[one_or_many(
-    expected = "a name or path or nonempty array of names or paths, with unique elements",
-    inner_type = "NameOrPath",
-    min_length = 1,
-    unique_items = true
-)]
-pub struct OneOrManyNameOrPaths;
 
 /// Generates deserializer for `OneOrMany<ExposeFromRef>`.
 #[derive(OneOrMany, Debug, Clone)]
@@ -1258,10 +1248,6 @@ pub fn alias_or_name(alias: Option<&Name>, name: &Name) -> Name {
 
 pub fn alias_or_path(alias: Option<&Path>, path: &Path) -> Path {
     alias.unwrap_or(path).clone()
-}
-
-pub fn alias_or_name_or_path(alias: Option<&NameOrPath>, id: &NameOrPath) -> NameOrPath {
-    alias.map(|a| a).unwrap_or(id).clone()
 }
 
 #[cfg(test)]

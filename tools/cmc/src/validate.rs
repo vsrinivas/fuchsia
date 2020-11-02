@@ -3753,6 +3753,26 @@ mod tests {
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid length 102, expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
         ),
+        test_cml_capability_name(
+            json!({
+                "use": [
+                    {
+                        "protocol": "abcdefghijklmnopqrstuvwxyz0123456789_-.",
+                    },
+                ]
+            }),
+            Ok(())
+        ),
+        test_cml_capability_name_invalid(
+            json!({
+                "use": [
+                    {
+                        "protocol": "/bad",
+                    },
+                ]
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/bad\", expected a name or nonempty array of names, with unique elements"
+        ),
         test_cml_child_name(
             json!({
                 "children": [
@@ -3768,12 +3788,12 @@ mod tests {
             json!({
                 "children": [
                     {
-                        "name": "#bad",
+                        "name": "/bad",
                         "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"#bad\", expected a name containing only alpha-numeric characters or [_-.]"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/bad\", expected a name containing only alpha-numeric characters or [_-.]"
         ),
         test_cml_child_name_too_long(
             json!({
