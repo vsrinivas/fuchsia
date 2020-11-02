@@ -4,7 +4,6 @@
 
 use super::*;
 
-use fidl::encoding::Decodable;
 use fidl_fuchsia_bluetooth_avrcp::{
     self as fidl_avrcp, AbsoluteVolumeHandlerProxy, MediaAttributes, Notification,
     NotificationEvent, PlayStatus, TargetAvcError, TargetHandlerProxy, TargetPassthroughError,
@@ -176,7 +175,7 @@ impl TargetDelegate {
                 .map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)
                 .await?;
 
-            return Ok(Notification { volume: Some(volume), ..Notification::new_empty() });
+            return Ok(Notification { volume: Some(volume), ..Notification::empty() });
         }
         let target_handler =
             self.target_handler().ok_or(TargetAvcError::RejectedNoAvailablePlayers)?;
@@ -207,7 +206,7 @@ impl TargetDelegate {
                 .map_err(|_| TargetAvcError::RejectedAddressedPlayerChanged)
                 .await?;
 
-            return Ok(Notification { volume: Some(volume), ..Notification::new_empty() });
+            return Ok(Notification { volume: Some(volume), ..Notification::empty() });
         }
         let target_handler =
             self.target_handler().ok_or(TargetAvcError::RejectedAddressedPlayerChanged)?;
@@ -290,7 +289,7 @@ impl TargetDelegate {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl::encoding::Decodable as FidlDecodable;
+
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_avrcp::{
         Equalizer, PlayerApplicationSettings, TargetHandlerMarker, TargetHandlerRequest,
@@ -347,14 +346,14 @@ mod tests {
         pin_utils::pin_mut!(select_next_some_fut);
         match exec.run_until_stalled(&mut select_next_some_fut) {
             Poll::Ready(Ok(TargetHandlerRequest::GetMediaAttributes { responder })) => {
-                assert!(responder.send(&mut Ok(MediaAttributes::new_empty())).is_ok());
+                assert!(responder.send(&mut Ok(MediaAttributes::empty())).is_ok());
             }
             _ => assert!(false, "unexpected stream state"),
         };
 
         match exec.run_until_stalled(&mut get_media_attr_fut) {
             Poll::Ready(attributes) => {
-                assert_eq!(attributes, Ok(MediaAttributes::new_empty()));
+                assert_eq!(attributes, Ok(MediaAttributes::empty()));
             }
             _ => assert!(false, "unexpected state"),
         }
@@ -419,7 +418,7 @@ mod tests {
                 assert!(responder
                     .send(&mut Ok(fidl_avrcp::PlayerApplicationSettings {
                         shuffle_mode: Some(fidl_avrcp::ShuffleMode::Off),
-                        ..fidl_avrcp::PlayerApplicationSettings::new_empty()
+                        ..fidl_avrcp::PlayerApplicationSettings::empty()
                     }))
                     .is_ok());
             }
@@ -432,7 +431,7 @@ mod tests {
                     attributes,
                     Ok(fidl_avrcp::PlayerApplicationSettings {
                         shuffle_mode: Some(fidl_avrcp::ShuffleMode::Off),
-                        ..fidl_avrcp::PlayerApplicationSettings::new_empty()
+                        ..fidl_avrcp::PlayerApplicationSettings::empty()
                     })
                 );
             }
@@ -453,7 +452,7 @@ mod tests {
         // Current media doesn't support Equalizer.
         let attributes = PlayerApplicationSettings {
             equalizer: Some(Equalizer::Off),
-            ..PlayerApplicationSettings::new_empty()
+            ..PlayerApplicationSettings::empty()
         };
         let set_pas_fut = target_delegate.send_set_player_application_settings_command(attributes);
         pin_utils::pin_mut!(set_pas_fut);
@@ -467,7 +466,7 @@ mod tests {
                 ..
             })) => {
                 assert!(responder
-                    .send(&mut Ok(fidl_avrcp::PlayerApplicationSettings::new_empty()))
+                    .send(&mut Ok(fidl_avrcp::PlayerApplicationSettings::empty()))
                     .is_ok());
             }
             _ => assert!(false, "unexpected stream state"),
@@ -477,7 +476,7 @@ mod tests {
         // unsupported application setting.
         match exec.run_until_stalled(&mut set_pas_fut) {
             Poll::Ready(attr) => {
-                assert_eq!(attr, Ok(fidl_avrcp::PlayerApplicationSettings::new_empty()));
+                assert_eq!(attr, Ok(fidl_avrcp::PlayerApplicationSettings::empty()));
             }
             _ => assert!(false, "unexpected state"),
         }
@@ -504,7 +503,7 @@ mod tests {
                 assert!(responder
                     .send(&mut Ok(vec![fidl_avrcp::MediaPlayerItem {
                         player_id: Some(1),
-                        ..fidl_avrcp::MediaPlayerItem::new_empty()
+                        ..fidl_avrcp::MediaPlayerItem::empty()
                     }]))
                     .is_ok());
             }

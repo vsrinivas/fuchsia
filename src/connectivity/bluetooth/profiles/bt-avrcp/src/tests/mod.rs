@@ -5,7 +5,6 @@
 use {
     anyhow::Error,
     bt_avctp::{AvcCommand, AvcPeer, AvcResponseType},
-    fidl::encoding::Decodable as FidlDecodable,
     fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream},
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, *},
     fidl_fuchsia_bluetooth_avrcp_test::*,
@@ -306,7 +305,7 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
     pin_mut!(get_all_player_application_settings_fut);
     expected_commands += 1;
 
-    let mut settings = fidl_avrcp::PlayerApplicationSettings::new_empty();
+    let mut settings = fidl_avrcp::PlayerApplicationSettings::empty();
     settings.scan_mode = Some(fidl_avrcp::ScanMode::GroupScan);
     settings.shuffle_mode = Some(fidl_avrcp::ShuffleMode::Off);
     let set_player_application_settings_fut =

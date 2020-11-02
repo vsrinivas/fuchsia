@@ -990,7 +990,7 @@ mod test {
                         responder.send(&mut Ok(MediaAttributes {
                             title: Some("Foo".to_string()),
                             artist_name: Some("Bar".to_string()),
-                            ..MediaAttributes::new_empty()
+                            ..MediaAttributes::empty()
                         }))
                     }
                     TargetHandlerRequest::GetPlayStatus { responder } => {
@@ -1013,14 +1013,12 @@ mod test {
                         responder,
                     } => responder.send(&mut Ok(fidl_avrcp::PlayerApplicationSettings {
                         shuffle_mode: Some(fidl_avrcp::ShuffleMode::Off),
-                        ..fidl_avrcp::PlayerApplicationSettings::new_empty()
+                        ..fidl_avrcp::PlayerApplicationSettings::empty()
                     })),
                     TargetHandlerRequest::SetPlayerApplicationSettings {
                         requested_settings: _,
                         responder,
-                    } => {
-                        responder.send(&mut Ok(fidl_avrcp::PlayerApplicationSettings::new_empty()))
-                    }
+                    } => responder.send(&mut Ok(fidl_avrcp::PlayerApplicationSettings::empty())),
                     TargetHandlerRequest::GetNotification { event_id: _, responder } => responder
                         .send(&mut Ok(Notification {
                             status: Some(fidl_fuchsia_bluetooth_avrcp::PlaybackStatus::Playing),
@@ -1224,7 +1222,7 @@ mod test {
                  Curabitur vehicula mauris nec ex sollicitudin rhoncus. Integer ipsum libero, \
                  porta id velit et, egestas facilisis tellus.",
                             )),
-                            ..MediaAttributes::new_empty()
+                            ..MediaAttributes::empty()
                         }))
                     }
                     _ => {

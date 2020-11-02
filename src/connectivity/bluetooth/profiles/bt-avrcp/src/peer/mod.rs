@@ -8,7 +8,6 @@ use {
         AvcCommand, AvcCommandResponse, AvcCommandType, AvcOpCode, AvcPacketType, AvcPeer,
         AvcResponseType, AvctpPeer, Error as AvctpError,
     },
-    fidl::encoding::Decodable as FidlDecodable,
     fidl_fuchsia_bluetooth_avrcp::{AvcPanelCommand, MediaAttributes, PlayStatus},
     fidl_fuchsia_bluetooth_bredr::{ProfileProxy, PSM_AVCTP},
     fuchsia_async as fasync,

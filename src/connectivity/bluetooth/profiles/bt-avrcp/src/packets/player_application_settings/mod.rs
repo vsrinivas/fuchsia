@@ -5,8 +5,8 @@
 use super::*;
 
 use {
-    fidl::encoding::Decodable as FidlDecodable, fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
-    fuchsia_bluetooth::pub_decodable_enum, std::convert::TryFrom,
+    fidl_fuchsia_bluetooth_avrcp as fidl_avrcp, fuchsia_bluetooth::pub_decodable_enum,
+    std::convert::TryFrom,
 };
 
 pub mod get_attribute_text;
@@ -240,7 +240,7 @@ impl From<&fidl_avrcp::PlayerApplicationSettings> for PlayerApplicationSettings 
 
 impl From<PlayerApplicationSettings> for fidl_avrcp::PlayerApplicationSettings {
     fn from(src: PlayerApplicationSettings) -> fidl_avrcp::PlayerApplicationSettings {
-        let mut setting = fidl_avrcp::PlayerApplicationSettings::new_empty();
+        let mut setting = fidl_avrcp::PlayerApplicationSettings::empty();
         if let Some(eq) = src.equalizer {
             setting.equalizer = Some(eq.into());
         }

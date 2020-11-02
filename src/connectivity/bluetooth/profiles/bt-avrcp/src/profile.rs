@@ -5,7 +5,6 @@
 use {
     anyhow::{Context, Error},
     bitflags::bitflags,
-    fidl::encoding::Decodable,
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_bluetooth::{profile::elem_to_profile_descriptor, types::Uuid},
@@ -93,7 +92,7 @@ fn build_common_service_definition() -> ServiceDefinition {
             major_version: 1,
             minor_version: 6,
         }]),
-        ..ServiceDefinition::new_empty()
+        ..ServiceDefinition::empty()
     }
 }
 
@@ -273,7 +272,7 @@ pub fn connect_and_advertise(
             &mut service_defs.into_iter(),
             ChannelParameters {
                 channel_mode: Some(ChannelMode::EnhancedRetransmission),
-                ..ChannelParameters::new_empty()
+                ..ChannelParameters::empty()
             },
             connection_client,
         )

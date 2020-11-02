@@ -4,10 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl::{
-        encoding::Decodable as FidlDecodable,
-        endpoints::{RequestStream, ServiceMarker},
-    },
+    fidl::endpoints::{RequestStream, ServiceMarker},
     fidl_fuchsia_bluetooth_avrcp::*,
     fidl_fuchsia_bluetooth_avrcp_test::*,
     fuchsia_async as fasync,
@@ -92,7 +89,7 @@ impl AvrcpClientController {
             position_change_interval: 0,
             notification_window_counter: 0,
             notification_queue: VecDeque::new(),
-            notification_state: Notification::new_empty(),
+            notification_state: Notification::empty(),
             notification_state_timestamp: 0,
         }
     }
@@ -220,7 +217,7 @@ impl AvrcpClientController {
     ) -> Result<(), Error> {
         self.notification_window_counter += 1;
         let control_handle: ControllerControlHandle = self.fidl_stream.control_handle();
-        let mut notification = Notification::new_empty();
+        let mut notification = Notification::empty();
         Self::update_notification_from_controller_event(&mut notification, &event);
         control_handle.send_on_notification(timestamp, notification).map_err(Error::from)
     }
@@ -234,7 +231,7 @@ impl AvrcpClientController {
         if self.notification_state_timestamp > 0 {
             let control_handle: ControllerControlHandle = self.fidl_stream.control_handle();
 
-            let mut notification = Notification::new_empty();
+            let mut notification = Notification::empty();
 
             if self.notification_filter.contains(Notifications::PlaybackStatus) {
                 notification.status = self.notification_state.status;

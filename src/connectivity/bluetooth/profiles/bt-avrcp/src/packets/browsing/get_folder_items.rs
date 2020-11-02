@@ -306,8 +306,6 @@ impl Encodable for GetFolderItemsResponse {
 mod tests {
     use super::*;
 
-    use fidl::encoding::Decodable as FidlDecodable;
-
     #[test]
     /// Encoding a GetFolderItemsCommand successfully produces a byte buffer.
     fn test_get_folder_items_command_encode() {
@@ -475,7 +473,7 @@ mod tests {
             player_id: Some(player_id),
             playback_status: Some(fidl_avrcp::PlaybackStatus::Stopped),
             displayable_name: Some("hi".to_string()),
-            ..fidl_avrcp::MediaPlayerItem::new_empty()
+            ..fidl_avrcp::MediaPlayerItem::empty()
         };
         let item: MediaPlayerItem = item_fidl.into();
         assert_eq!(item.player_id, player_id);
