@@ -54,12 +54,12 @@ func getImageArgs(img build.Image, bootMode Mode) []string {
 }
 
 // ConvertFromBuildImages filters and returns Images corresponding to build Images of a given bootMode.
-func ConvertFromBuildImages(buildImages []build.Image, bootMode Mode) ([]Image, func() error, error) {
+func ConvertFromBuildImages(buildImages []build.Image, bootMode Mode, imageDir string) ([]Image, func() error, error) {
 	var imgs []Image
 	closeFunc := noOpClose
 	for _, buildImg := range buildImages {
 		args := getImageArgs(buildImg, bootMode)
-		reader, err := os.Open(buildImg.Path)
+		reader, err := os.Open(filepath.Join(imageDir, buildImg.Path))
 		if err != nil {
 			if os.IsNotExist(err) {
 				// Not all images exist so skip if it doesn't.
@@ -95,7 +95,7 @@ func ImagesFromLocalFS(manifest string, bootMode Mode) ([]Image, func() error, e
 	if err != nil {
 		return nil, noOpClose, err
 	}
-	return ConvertFromBuildImages(buildImages, bootMode)
+	return ConvertFromBuildImages(buildImages, bootMode, filepath.Dir(manifest))
 }
 
 // GCSReader is a wrapper around storage.Reader which implements io.ReaderAt.

@@ -104,9 +104,6 @@ func TestGetImages(t *testing.T) {
 		{"NetbootImgs", ModeNetboot},
 		{"UnknownBootMode", -1},
 	}
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatalf("failed to change the current directory: %v", err)
-	}
 	for _, test := range tests {
 		imgs, closeFunc, err := GetImages(context.Background(), imgManifest, test.bootMode)
 		if err != nil {
