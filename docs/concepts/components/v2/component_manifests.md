@@ -28,8 +28,8 @@ manifest sources, and component declarations.
 
 A *component manifest* is a file that encodes a
 [component declaration](#component-declaration), usually distributed as part of
-a [package][doc-packages]. The binary format is a JSON file mapping one-to-one
-onto the component declaration, typically ending in a `.cm` extension.
+a [package][doc-packages]. The binary format is a persisted FIDL file mapping
+one-to-one onto the component declaration, typically ending in a `.cm` extension.
 
 A [fuchsia-pkg URL][doc-package-url] with a component manifest resource path
 identifies a component in a package.
