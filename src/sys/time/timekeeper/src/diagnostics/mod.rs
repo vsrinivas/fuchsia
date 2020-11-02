@@ -30,7 +30,7 @@ pub enum Event {
     Initialized { clock_state: InitialClockState },
     /// A network with Internet connectivity became available for the first time.
     NetworkAvailable,
-    /// An attempt was made to intitialize and read from the real time clock.
+    /// An attempt was made to initialize and read from the real time clock.
     InitializeRtc { outcome: InitializeRtcOutcome, time: Option<zx::Time> },
     /// A time source failed, relaunch will be attempted.
     TimeSourceFailed { role: Role, error: TimeSourceError },
@@ -55,7 +55,7 @@ pub enum Event {
     UpdateClock { track: Track },
 }
 
-/// A standard interface for systems record events for diagnostic purposes.
+/// A standard interface for systems that record events for diagnostic purposes.
 pub trait Diagnostics: Send + Sync {
     /// Records the supplied event if relevant.
     fn record(&self, event: Event);

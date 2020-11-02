@@ -4,8 +4,18 @@
 
 use {
     crate::diagnostics::{Diagnostics, Event},
+    fuchsia_zircon as zx,
+    lazy_static::lazy_static,
     parking_lot::Mutex,
 };
+
+/// A special `Duration` that will match any value during an `eq_with_any` operation.
+pub const ANY_DURATION: zx::Duration = zx::Duration::from_nanos(i64::MIN);
+
+lazy_static! {
+    /// A special time that will match any value during an `eq_with_any` operation.
+    pub static ref ANY_TIME: zx::Time = zx::Time::from_nanos(i64::MIN);
+}
 
 /// A fake `Diagnostics` implementation useful for verifying unittest.
 pub struct FakeDiagnostics {
@@ -19,9 +29,15 @@ impl FakeDiagnostics {
         FakeDiagnostics { events: Mutex::new(Vec::new()) }
     }
 
-    /// Panics if the supplied slice does not match the received events.
+    /// Panics if the supplied slice does not match the received events. When present in
+    /// expected, the special values ANY_TIME and ANY_DURATION will match any received value.
     pub fn assert_events(&self, expected: &[Event]) {
-        assert_eq!(*self.events.lock(), expected);
+        let events_lock = self.events.lock();
+        if !expected.eq_with_any(&events_lock) {
+            // If we failed to match considering sentinels we are guaranteed to fail without
+            // considering them; use the standard assert_eq to generate a nicely formatted error.
+            assert_eq!(*events_lock, expected);
+        }
     }
 
     /// Clears all recorded interactions.
@@ -42,12 +58,81 @@ impl<T: AsRef<FakeDiagnostics> + Send + Sync> Diagnostics for T {
     }
 }
 
+trait EqWithAny {
+    /// Tests `self` and `other` for equality equal, treating any special "any" sentinel values in
+    /// `self` as matching any value in `other`.
+    fn eq_with_any(&self, other: &Self) -> bool;
+}
+
+impl EqWithAny for zx::Duration {
+    fn eq_with_any(&self, other: &Self) -> bool {
+        *self == ANY_DURATION || self == other
+    }
+}
+
+impl EqWithAny for zx::Time {
+    fn eq_with_any(&self, other: &Self) -> bool {
+        *self == *ANY_TIME || self == other
+    }
+}
+
+impl<T: EqWithAny> EqWithAny for Option<T> {
+    fn eq_with_any(&self, other: &Self) -> bool {
+        match (self, other) {
+            (None, None) => true,
+            (Some(self_t), Some(other_t)) => self_t.eq_with_any(other_t),
+            _ => false,
+        }
+    }
+}
+
+impl<T: EqWithAny> EqWithAny for [T] {
+    fn eq_with_any(&self, other: &[T]) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+        self.iter()
+            .zip(other.iter())
+            .all(|(self_entry, other_entry)| self_entry.eq_with_any(other_entry))
+    }
+}
+
+impl EqWithAny for Event {
+    fn eq_with_any(&self, other: &Event) -> bool {
+        match self {
+            Event::InitializeRtc { outcome, time } => match other {
+                Event::InitializeRtc { outcome: other_outcome, time: other_time } => {
+                    outcome == other_outcome && time.eq_with_any(other_time)
+                }
+                _ => false,
+            },
+            Event::EstimateUpdated { track, offset, sqrt_covariance } => match other {
+                Event::EstimateUpdated {
+                    track: other_track,
+                    offset: other_offset,
+                    sqrt_covariance: other_sqrt_cov,
+                } => {
+                    track == other_track
+                        && offset.eq_with_any(other_offset)
+                        && sqrt_covariance.eq_with_any(other_sqrt_cov)
+                }
+                _ => false,
+            },
+            _ => self.eq(other),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use {super::*, crate::enums::InitialClockState};
+    use {
+        super::*,
+        crate::enums::{InitialClockState, Track},
+    };
 
     const INITIALIZATION_EVENT: Event =
         Event::Initialized { clock_state: InitialClockState::NotSet };
+
     const NETWORK_EVENT: Event = Event::NetworkAvailable;
 
     #[test]
@@ -66,5 +151,36 @@ mod test {
 
         diagnostics.record(NETWORK_EVENT);
         diagnostics.assert_events(&[NETWORK_EVENT]);
+    }
+
+    #[test]
+    fn match_wildcards() {
+        let diagnostics = FakeDiagnostics::new();
+        let test_event = Event::EstimateUpdated {
+            track: Track::Monitor,
+            offset: zx::Duration::from_seconds(1234),
+            sqrt_covariance: zx::Duration::from_millis(321),
+        };
+
+        diagnostics.record(test_event.clone());
+        diagnostics.assert_events(&[test_event]);
+
+        diagnostics.assert_events(&[Event::EstimateUpdated {
+            track: Track::Monitor,
+            offset: ANY_DURATION,
+            sqrt_covariance: zx::Duration::from_millis(321),
+        }]);
+
+        diagnostics.assert_events(&[Event::EstimateUpdated {
+            track: Track::Monitor,
+            offset: zx::Duration::from_seconds(1234),
+            sqrt_covariance: ANY_DURATION,
+        }]);
+
+        diagnostics.assert_events(&[Event::EstimateUpdated {
+            track: Track::Monitor,
+            offset: ANY_DURATION,
+            sqrt_covariance: ANY_DURATION,
+        }]);
     }
 }
