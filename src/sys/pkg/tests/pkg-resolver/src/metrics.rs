@@ -218,13 +218,13 @@ async fn resolve_failure_regular_unreachable() {
     let env = TestEnvBuilder::new().build().await;
     assert_eq!(
         env.resolve_package("fuchsia-pkg://example.com/missing").await.map(|_| ()),
-        Err(Status::ADDRESS_UNREACHABLE),
+        Err(Status::BAD_STATE),
     );
 
     env.assert_count_events(
         metrics::RESOLVE_METRIC_ID,
         vec![(
-            metrics::ResolveMetricDimensionResult::ZxErrAddressUnreachable,
+            metrics::ResolveMetricDimensionResult::ZxErrBadState,
             metrics::ResolveDurationMetricDimensionResolverType::Regular,
         )],
     )
@@ -272,7 +272,7 @@ async fn resolve_duration_failure() {
     let env = TestEnvBuilder::new().build().await;
     assert_eq!(
         env.resolve_package("fuchsia-pkg://example.com/missing").await.map(|_| ()),
-        Err(Status::ADDRESS_UNREACHABLE),
+        Err(Status::BAD_STATE),
     );
 
     assert_elapsed_duration_events(

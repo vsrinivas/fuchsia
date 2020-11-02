@@ -310,7 +310,7 @@ async fn error_codes() {
     // Nonexistant repo
     assert_matches!(
         env.resolve_package("fuchsia-pkg://nonexistent-repo/a").await,
-        Err(Status::ADDRESS_UNREACHABLE)
+        Err(Status::BAD_STATE)
     );
 
     // Nonexistant package
@@ -474,7 +474,7 @@ async fn use_cached_package() {
     // the package can't be resolved before the repository is configured.
     assert_matches!(
         env.resolve_package("fuchsia-pkg://test/resolve-twice").await,
-        Err(Status::ADDRESS_UNREACHABLE)
+        Err(Status::BAD_STATE)
     );
 
     env.register_repo(&served_repository).await;

@@ -782,7 +782,7 @@ impl ToResolveStatus for OpenRepoError {
 
 #[derive(Debug, Error)]
 pub enum GetPackageError {
-    #[error("repo not found: {0}")]
+    #[error("the repository manager does not have a repository config for: {0}")]
     RepoNotFound(RepoUrl),
 
     #[error("while opening the repo")]
@@ -794,7 +794,7 @@ pub enum GetPackageError {
 
 #[derive(Debug, Error)]
 pub enum GetPackageHashError {
-    #[error("repo not found: {0}")]
+    #[error("the repository manager does not have a repository config for: {0}")]
     RepoNotFound(RepoUrl),
 
     #[error("while opening the repo")]
@@ -807,7 +807,9 @@ pub enum GetPackageHashError {
 impl ToResolveStatus for GetPackageError {
     fn to_resolve_status(&self) -> Status {
         match self {
-            GetPackageError::RepoNotFound(_) => Status::ADDRESS_UNREACHABLE,
+            // If we return NOT_FOUND, the shell will interpret that as file not found
+            // and fall back to the next $PATH directory.
+            GetPackageError::RepoNotFound(_) => Status::BAD_STATE,
             GetPackageError::OpenRepo(err) => err.to_resolve_status(),
             GetPackageError::Cache(err) => err.to_resolve_status(),
         }
@@ -817,7 +819,8 @@ impl ToResolveStatus for GetPackageError {
 impl ToResolveStatus for GetPackageHashError {
     fn to_resolve_status(&self) -> Status {
         match self {
-            GetPackageHashError::RepoNotFound(_) => Status::ADDRESS_UNREACHABLE,
+            // Not returning NOT_FOUND to be consistent with GetPackageError.
+            GetPackageHashError::RepoNotFound(_) => Status::BAD_STATE,
             GetPackageHashError::OpenRepo(err) => err.to_resolve_status(),
             GetPackageHashError::MerkleFor(err) => err.to_resolve_status(),
         }
