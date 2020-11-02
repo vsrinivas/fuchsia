@@ -56,7 +56,7 @@ func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType) {
 	i.WaitForLogMessage("initializing platform")
 
 	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("vc: Successfully attached")
+	i.WaitForLogMessage("console.shell: enabled")
 
 	// Trigger a reboot in one of the various ways.
 	i.RunCommand(cmd)

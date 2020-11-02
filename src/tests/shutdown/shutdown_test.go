@@ -49,7 +49,7 @@ func TestShutdown(t *testing.T) {
 	i.WaitForLogMessage("initializing platform")
 
 	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("vc: Successfully attached")
+	i.WaitForLogMessage("console.shell: enabled")
 
 	// Trigger a shutdown.
 	i.RunCommand("dm shutdown")

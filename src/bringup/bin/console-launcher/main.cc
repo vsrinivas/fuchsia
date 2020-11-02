@@ -107,6 +107,8 @@ int main(int argv, char** argc) {
     }
   }
 
+  LOGF(INFO, "console-launcher: running");
+
   if (!args->run_shell) {
     if (!args->autorun_boot.empty()) {
       LOGF(ERROR, "Couldn't launch autorun command '%s'", args->autorun_boot.c_str());
