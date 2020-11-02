@@ -189,8 +189,7 @@ template("esp") {
     }
 
     if (target_cpu == "x64") {
-      gigaboot_target =
-          "//zircon/bootloader:bootloader(//zircon/bootloader:efi_$target_cpu)"
+      gigaboot_target = "//src/firmware/gigaboot:bootloader(//src/firmware/gigaboot:efi_$target_cpu)"
       gigaboot_bin =
           get_label_info(gigaboot_target, "root_out_dir") + "/bootx64.efi"
       args += [

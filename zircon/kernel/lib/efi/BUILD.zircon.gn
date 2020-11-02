@@ -8,8 +8,8 @@ import("$zx_build/public/gn/migrated_targets.gni")
 
 zx_library("efi") {
   visibility = [
-    "$zx/bootloader/*",
     "$zx/kernel/*",
+    "//src/firmware/gigaboot/*",
   ]
   kernel = true
   sources = []

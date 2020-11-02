@@ -11,7 +11,7 @@ if (current_toolchain == default_toolchain) {
   import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 
   # Define a Zircon EFI toolchain. These are required to build the Gigaboot
-  # bootloader (see //zircon/bootloader/README.md)
+  # bootloader (see //src/firmware/gigaboot/README.md)
   #
   # Parameters:
   #    cpu: [required]
@@ -29,7 +29,7 @@ if (current_toolchain == default_toolchain) {
         "gcc",
       ]
       toolchain_variant_args = {
-        configs = [ "//zircon/bootloader:efi_config" ]
+        configs = [ "//src/firmware/gigaboot:efi_config" ]
 
         # TODO: harmless, but just to match build.mk
         remove_common_configs =
@@ -93,6 +93,6 @@ if (zircon_toolchain != false && zircon_toolchain.environment == "efi") {
   }
 } else {
   group("bootloader") {
-    public_deps = [ ":bootloader(//zircon/bootloader:efi_${current_cpu})" ]
+    public_deps = [ ":bootloader(//src/firmware/gigaboot:efi_${current_cpu})" ]
   }
 }

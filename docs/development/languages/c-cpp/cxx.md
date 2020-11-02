@@ -110,7 +110,7 @@ leverage that fancy configuration-parsing library.
 #### No `std` in kernel
 
 The C++ `std` namespace **cannot** be used in [kernel](/zircon/kernel) code, which
-also includes [bootloader](/zircon/bootloader).  The few C++ standard library
+also includes [bootloader](/src/firmware/gigaboot).  The few C++ standard library
 headers that don't involve `std::` APIs can still be used directly.  See the
 next section.
 
