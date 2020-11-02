@@ -23,7 +23,8 @@ impl FakeInputDeviceBinding {
 impl input_device::InputDeviceBinding for FakeInputDeviceBinding {
     fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
         input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-            keys: vec![],
+            keys2: vec![],
+            keys3: vec![],
         })
     }
 

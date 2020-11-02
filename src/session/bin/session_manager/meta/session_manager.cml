@@ -88,6 +88,7 @@
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input2.Keyboard",
+                "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.lifecycle.LifecycleController", // to kill scenic if restarting
                 "fuchsia.ui.scenic.Scenic", // sessions use Scenic to display images
                 "fuchsia.ui.shortcut.Manager",

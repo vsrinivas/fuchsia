@@ -7,9 +7,11 @@ use {
     crate::input_handler::InputHandler,
     anyhow::Error,
     async_trait::async_trait,
+    fidl_fuchsia_input::Key,
     fidl_fuchsia_ui_input2 as fidl_ui_input2,
-    fidl_fuchsia_ui_input2::{Key, KeyEventPhase, Modifiers},
+    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType, Modifiers},
     fidl_fuchsia_ui_shortcut as ui_shortcut,
+    std::convert::TryInto,
 };
 
 pub struct ShortcutHandler {
@@ -28,32 +30,61 @@ impl InputHandler for ShortcutHandler {
                 device_event: input_device::InputDeviceEvent::Keyboard(keyboard_device_event),
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Keyboard(_keyboard_device_descriptor),
-                event_time: _,
+                event_time,
             } => {
-                let pressed_keys: Vec<fidl_ui_input2::KeyEvent> = keyboard_device_event
-                    .get_keys(fidl_ui_input2::KeyEventPhase::Pressed)
+                let pressed_keys: Vec<(KeyEvent, fidl_ui_input2::KeyEvent)> = keyboard_device_event
+                    .get_keys3(KeyEventType::Pressed)
                     .into_iter()
                     .map(|key| {
                         create_key_event(
                             &key,
-                            fidl_ui_input2::KeyEventPhase::Pressed,
-                            keyboard_device_event.modifiers,
+                            KeyEventType::Pressed,
+                            keyboard_device_event.modifiers3,
+                            *event_time,
                         )
                     })
+                    .zip(
+                        keyboard_device_event
+                            .get_keys2(fidl_ui_input2::KeyEventPhase::Pressed)
+                            .into_iter()
+                            .map(|key2| {
+                                create_key2_event(
+                                    &key2,
+                                    fidl_ui_input2::KeyEventPhase::Pressed,
+                                    keyboard_device_event.modifiers2,
+                                )
+                            })
+                            .into_iter(),
+                    )
                     .collect();
                 let mut handled = self.handle_keys(pressed_keys).await;
 
-                let released_keys: Vec<fidl_ui_input2::KeyEvent> = keyboard_device_event
-                    .get_keys(fidl_ui_input2::KeyEventPhase::Released)
-                    .into_iter()
-                    .map(|key| {
-                        create_key_event(
-                            &key,
-                            fidl_ui_input2::KeyEventPhase::Released,
-                            keyboard_device_event.modifiers,
+                let released_keys: Vec<(KeyEvent, fidl_ui_input2::KeyEvent)> =
+                    keyboard_device_event
+                        .get_keys3(KeyEventType::Released)
+                        .into_iter()
+                        .map(|key| {
+                            create_key_event(
+                                &key,
+                                KeyEventType::Released,
+                                keyboard_device_event.modifiers3,
+                                *event_time,
+                            )
+                        })
+                        .zip(
+                            keyboard_device_event
+                                .get_keys2(fidl_ui_input2::KeyEventPhase::Released)
+                                .into_iter()
+                                .map(|key2| {
+                                    create_key2_event(
+                                        &key2,
+                                        fidl_ui_input2::KeyEventPhase::Released,
+                                        keyboard_device_event.modifiers2,
+                                    )
+                                })
+                                .into_iter(),
                         )
-                    })
-                    .collect();
+                        .collect();
                 handled = handled || self.handle_keys(released_keys).await;
 
                 // If either pressed_keys or released_keys
@@ -79,14 +110,12 @@ impl ShortcutHandler {
     ///
     /// # Parameters
     /// `keys`: The KeyEvents to handle.
-    /// `modifiers`: The modifiers associated with the keys to handle.
-    /// `phase`: The phase of the key event to handle.
     ///
     /// # Returns
     /// A bool that's true if any of the `keys` activated a shortcut.
-    async fn handle_keys(&mut self, keys: Vec<fidl_ui_input2::KeyEvent>) -> bool {
-        for key in keys {
-            if handle_key_event(key, &self.manager).await {
+    async fn handle_keys(&mut self, keys: Vec<(KeyEvent, fidl_ui_input2::KeyEvent)>) -> bool {
+        for (key, key2) in keys {
+            if handle_key_event(key, key2, &self.manager).await {
                 return true;
             }
         }
@@ -98,12 +127,33 @@ impl ShortcutHandler {
 ///
 /// # Parameters
 /// `key`: The key associated with the KeyEvent.
-/// `phase`: The phase of key, either pressed or released.
+/// `event_type`: The type of key, either pressed or released.
 /// `modifiers`: The modifiers associated the KeyEvent.
+/// `event_time`: The time in nanoseconds when the event was first recorded.
 fn create_key_event(
     key: &Key,
-    phase: KeyEventPhase,
+    event_type: KeyEventType,
     modifiers: Option<Modifiers>,
+    event_time: input_device::EventTime,
+) -> KeyEvent {
+    KeyEvent {
+        timestamp: Some(event_time.try_into().unwrap_or_default()),
+        type_: Some(event_type),
+        key: Some(*key),
+        modifiers,
+    }
+}
+
+/// Returns an input2 KeyEvent with the given parameters.
+///
+/// # Parameters
+/// `key`: The key associated with the KeyEvent.
+/// `phase`: The phase of key, either pressed or released.
+/// `modifiers`: The modifiers associated the KeyEvent.
+fn create_key2_event(
+    key: &fidl_ui_input2::Key,
+    phase: fidl_ui_input2::KeyEventPhase,
+    modifiers: Option<fidl_ui_input2::Modifiers>,
 ) -> fidl_ui_input2::KeyEvent {
     fidl_ui_input2::KeyEvent {
         key: Some(*key),
@@ -120,24 +170,33 @@ fn create_key_event(
 /// `key_event`: The KeyEvent to handle by the Shortcut Manager.
 /// `shortcut_manager`: The Shortcut Manager
 async fn handle_key_event(
-    key_event: fidl_ui_input2::KeyEvent,
+    key_event: KeyEvent,
+    key2_event: fidl_ui_input2::KeyEvent,
     shortcut_manager: &ui_shortcut::ManagerProxy,
 ) -> bool {
-    match shortcut_manager.handle_key_event(key_event).await {
-        Ok(was_handled) => was_handled,
-        Err(_) => false,
+    match shortcut_manager.handle_key3_event(key_event).await {
+        Ok(true) => return true,
+        Ok(false) | Err(_) => {}
+    };
+    match shortcut_manager.handle_key_event(key2_event).await {
+        Ok(true) => true,
+        Ok(false) | Err(_) => false,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::keyboard, crate::testing_utilities, fuchsia_async as fasync,
-        fuchsia_zircon as zx, futures::StreamExt,
+        super::*, crate::keyboard, crate::testing_utilities,
+        fidl_fuchsia_ui_input2 as fidl_ui_input2, fidl_fuchsia_ui_input3 as fidl_ui_input3,
+        fuchsia_async as fasync, fuchsia_zircon as zx, futures::StreamExt,
     };
 
     /// Creates an [`ShortcutHandler`] for tests.
-    fn create_shortcut_handler(key_event_consumed_response: bool) -> ShortcutHandler {
+    fn create_shortcut_handler(
+        key_event_consumed_response: bool,
+        key2_event_consumed_response: bool,
+    ) -> ShortcutHandler {
         let (shortcut_manager_proxy, mut shortcut_manager_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<ui_shortcut::ManagerMarker>()
                 .expect("Failed to create ShortcutManagerProxy and stream");
@@ -145,13 +204,22 @@ mod tests {
         fuchsia_async::Task::spawn(async move {
             loop {
                 match shortcut_manager_request_stream.next().await {
-                    Some(Ok(ui_shortcut::ManagerRequest::HandleKeyEvent {
+                    Some(Ok(ui_shortcut::ManagerRequest::HandleKey3Event {
                         event: _,
                         responder,
                         ..
                     })) => {
                         responder
                             .send(key_event_consumed_response)
+                            .expect("error responding to HandleKeyEvent");
+                    }
+                    Some(Ok(ui_shortcut::ManagerRequest::HandleKeyEvent {
+                        event: _,
+                        responder,
+                        ..
+                    })) => {
+                        responder
+                            .send(key2_event_consumed_response)
                             .expect("error responding to HandleKeyEvent");
                     }
                     _ => assert!(false),
@@ -163,21 +231,27 @@ mod tests {
         ShortcutHandler::new(shortcut_manager_proxy).expect("Failed to create ShortcutHandler.")
     }
 
-    /// Sends a press key event to the ShortcutHandler.
+    /// Sends a pressed key event to the ShortcutHandler.
     async fn press_key(
-        press_key: Key,
-        modifiers: Option<Modifiers>,
+        pressed_key2: fidl_ui_input2::Key,
+        pressed_key3: fidl_fuchsia_input::Key,
+        modifiers2: Option<fidl_ui_input2::Modifiers>,
+        modifiers3: Option<fidl_ui_input3::Modifiers>,
         event_time: input_device::EventTime,
         mut shortcut_handler: ShortcutHandler,
     ) -> Vec<input_device::InputEvent> {
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys: vec![Key::A],
+                keys2: vec![pressed_key2],
+                keys3: vec![pressed_key3],
             });
         let input_event = testing_utilities::create_keyboard_event(
-            vec![press_key],
+            vec![pressed_key2],
+            vec![pressed_key3],
             vec![],
-            modifiers,
+            vec![],
+            modifiers2,
+            modifiers3,
             event_time,
             &device_descriptor,
         );
@@ -186,19 +260,25 @@ mod tests {
 
     /// Sends a release key event to the ShortcutHandler.
     async fn release_key(
-        release_key: Key,
-        modifiers: Option<Modifiers>,
+        released_key2: fidl_ui_input2::Key,
+        released_key3: fidl_fuchsia_input::Key,
+        modifiers2: Option<fidl_ui_input2::Modifiers>,
+        modifiers3: Option<fidl_ui_input3::Modifiers>,
         event_time: input_device::EventTime,
         mut shortcut_handler: ShortcutHandler,
     ) -> Vec<input_device::InputEvent> {
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys: vec![Key::A],
+                keys2: vec![released_key2],
+                keys3: vec![released_key3],
             });
         let input_event = testing_utilities::create_keyboard_event(
             vec![],
-            vec![release_key],
-            modifiers,
+            vec![],
+            vec![released_key2],
+            vec![released_key3],
+            modifiers2,
+            modifiers3,
             event_time,
             &device_descriptor,
         );
@@ -208,22 +288,29 @@ mod tests {
     /// Tests that a press key event is not consumed if it is not a shortcut.
     #[fasync::run_singlethreaded(test)]
     async fn press_key_no_shortcut() {
-        let shortcut_handler = create_shortcut_handler(false);
-        let modifiers = None;
-        let key = Key::A;
+        let shortcut_handler = create_shortcut_handler(false, false);
+        let modifiers2 = None;
+        let modifiers3 = None;
+        let key2 = fidl_ui_input2::Key::A;
+        let key3 = fidl_fuchsia_input::Key::A;
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
 
-        let was_handled = press_key(key, modifiers, event_time, shortcut_handler).await;
+        let was_handled =
+            press_key(key2, key3, modifiers2, modifiers3, event_time, shortcut_handler).await;
         assert_eq!(was_handled.len(), 1);
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys: vec![key],
+                keys2: vec![key2],
+                keys3: vec![key3],
             });
         let input_event = testing_utilities::create_keyboard_event(
-            vec![key],
+            vec![key2],
+            vec![key3],
             vec![],
-            modifiers,
+            vec![],
+            modifiers2,
+            modifiers3,
             event_time,
             &device_descriptor,
         );
@@ -235,10 +322,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn press_key_activates_shortcut() {
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
-        let shortcut_handler = create_shortcut_handler(true);
+        let shortcut_handler = create_shortcut_handler(true, false);
         let was_handled = press_key(
-            Key::LeftShift,
-            Some(Modifiers::LeftShift | Modifiers::Shift),
+            fidl_ui_input2::Key::CapsLock,
+            fidl_fuchsia_input::Key::CapsLock,
+            Some(fidl_ui_input2::Modifiers::CapsLock),
+            Some(fidl_ui_input3::Modifiers::CapsLock),
             event_time,
             shortcut_handler,
         )
@@ -249,22 +338,29 @@ mod tests {
     /// Tests that a release key event is not consumed if it is not a shortcut.
     #[fasync::run_singlethreaded(test)]
     async fn release_key_no_shortcut() {
-        let shortcut_handler = create_shortcut_handler(false);
-        let key = Key::A;
-        let modifiers = None;
+        let shortcut_handler = create_shortcut_handler(false, false);
+        let key2 = fidl_ui_input2::Key::A;
+        let key3 = fidl_fuchsia_input::Key::A;
+        let modifiers2 = None;
+        let modifiers3 = None;
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
 
-        let was_handled = release_key(key, modifiers, event_time, shortcut_handler).await;
+        let was_handled =
+            release_key(key2, key3, modifiers2, modifiers3, event_time, shortcut_handler).await;
         assert_eq!(was_handled.len(), 1);
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys: vec![key],
+                keys2: vec![key2],
+                keys3: vec![key3],
             });
         let input_event = testing_utilities::create_keyboard_event(
             vec![],
-            vec![key],
-            modifiers,
+            vec![],
+            vec![key2],
+            vec![key3],
+            modifiers2,
+            modifiers3,
             event_time,
             &device_descriptor,
         );
@@ -275,17 +371,36 @@ mod tests {
     /// Tests that a release key event triggers a registered shortcut.
     #[fasync::run_singlethreaded(test)]
     async fn release_key_triggers_shortcut() {
-        let shortcut_handler = create_shortcut_handler(true);
+        let shortcut_handler = create_shortcut_handler(true, false);
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
 
         let was_handled = release_key(
-            Key::LeftShift,
-            Some(Modifiers::LeftShift | Modifiers::Shift),
+            fidl_ui_input2::Key::CapsLock,
+            fidl_fuchsia_input::Key::CapsLock,
+            Some(fidl_ui_input2::Modifiers::CapsLock),
+            Some(fidl_ui_input3::Modifiers::CapsLock),
             event_time,
             shortcut_handler,
         )
         .await;
 
+        assert_eq!(was_handled.len(), 0);
+    }
+
+    /// Tests that a key press is consumed by an input2 shortcut handler.
+    #[fasync::run_singlethreaded(test)]
+    async fn shortcut2_service_handles_events() {
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let shortcut_handler = create_shortcut_handler(false, true);
+        let was_handled = press_key(
+            fidl_ui_input2::Key::CapsLock,
+            fidl_fuchsia_input::Key::CapsLock,
+            Some(fidl_ui_input2::Modifiers::CapsLock),
+            Some(fidl_ui_input3::Modifiers::CapsLock),
+            event_time,
+            shortcut_handler,
+        )
+        .await;
         assert_eq!(was_handled.len(), 0);
     }
 }
