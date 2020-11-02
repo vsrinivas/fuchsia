@@ -201,8 +201,6 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToReceiveFileMsg), Type: swarmingOutputType})
 	// For fxbug.dev/59237.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", sshutilconstants.TimedOutConnectingMsg), Type: swarmingOutputType})
-	// For fxbug.dev/56651.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunSnapshotMsg), Type: swarmingOutputType})
 	// For fxbug.dev/61419.
 	// Error is being logged at https://fuchsia.googlesource.com/fuchsia/+/675c6b9cc2452cd7108f075d91e048218b92ae69/garnet/bin/run_test_component/main.cc#431
 	ret = append(ret, &stringInLogCheck{String: ".cmx canceled due to timeout.", Type: swarmingOutputType, OnlyOnStates: []string{"TIMED_OUT"}})
@@ -220,5 +218,8 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg), Type: swarmingOutputType})
 	ret = append(ret, &stringInLogCheck{String: "failed to resolve fuchsia-pkg://fuchsia.com/run_test_component#bin/run-test-component", Type: swarmingOutputType})
 	ret = append(ret, &stringInLogCheck{String: "Got no package for fuchsia-pkg://", Type: swarmingOutputType})
+	// For fxbug.dev/56651.
+	// This error ususally happens due to an SSH failure, so that error should take precedence.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunSnapshotMsg), Type: swarmingOutputType})
 	return ret
 }
