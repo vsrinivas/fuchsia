@@ -4,10 +4,5 @@
 
 group("tests") {
   testonly = true
-
-  deps = [
-    "fdio:tests",
-    "procfs:tests",
-    "syslog:tests",
-  ]
+  deps = [ "cpp:tests" ]
 }

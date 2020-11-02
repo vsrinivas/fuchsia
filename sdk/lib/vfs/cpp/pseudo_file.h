@@ -48,7 +48,7 @@ class PseudoFile final : public vfs::internal::File {
   //
   // |read_handler| cannot be null. If the |write_handler| is null, then the
   // pseudo-file is considered not writable. The |max_file_size|
-  // determines the maximum number of bytes which can be written to andread from
+  // determines the maximum number of bytes which can be written to and read from
   // the pseudo-file's input buffer when it it opened for writing/reading.
   PseudoFile(size_t max_file_size, ReadHandler read_handler = ReadHandler(),
              WriteHandler write_handler = WriteHandler());
