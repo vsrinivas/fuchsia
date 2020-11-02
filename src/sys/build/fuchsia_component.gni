@@ -94,7 +94,7 @@ template("fuchsia_component") {
   } else {
     assert(
         false,
-        "Unknown manifest format for \"$manifest\" passed to fuchsia_component($target_name)")
+        "Unknown manifest format for \"${invoker.manifest}\" passed to fuchsia_component($target_name)")
   }
 
   manifest_resource_target = "${target_name}_manifest_resource"
