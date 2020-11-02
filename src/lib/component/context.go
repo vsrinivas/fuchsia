@@ -85,6 +85,10 @@ type Context struct {
 		sync.Once
 		*sys.LauncherWithCtxInterface
 	}
+	// OutgoingService is the directory served on the startup directory request.
+	//
+	// OutgoingService is cleared when BindStartupHandle is called to prevent further mutation which
+	// is not supported by this implementation, though it is permitted by fuchsia.io.Directory.
 	OutgoingService OutDirectory
 }
 
@@ -114,21 +118,21 @@ func NewContextFromStartupInfo() *Context {
 
 // BindStartupHandle takes the startup handle if it's not already taken and
 // serves the out directory with all services that have been registered on
-// (*Context).OutgoingService thus far.
+// (*Context).OutgoingService.
 //
-// New services added to OutgoingService after BindStartupHandle is called will
-// likely not be exposed to the parent component, since they weren't enumerated
-// in the response to the initial directory listing call on the directory
-// request.
+// New services must not be added after BindStartupHandle is called.
 //
-// BindStartupHandle never returns.
+// BindStartupHandle blocks until the context is canceled.
 func (c *Context) BindStartupHandle(ctx fidl.Context) {
+	directory := mapDirectory(c.OutgoingService)
+	// Prevent further mutation.
+	c.OutgoingService = nil
 	if directoryRequest := GetStartupHandle(HandleInfo{
 		Type: HandleDirectoryRequest,
 		Arg:  0,
 	}); directoryRequest.IsValid() {
 		if err := (&DirectoryWrapper{
-			Directory: mapDirectory(c.OutgoingService),
+			Directory: directory,
 		}).addConnection(ctx, 0, 0, io.NodeWithCtxInterfaceRequest{
 			Channel: zx.Channel(directoryRequest),
 		}); err != nil {
