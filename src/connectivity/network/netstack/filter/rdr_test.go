@@ -144,9 +144,6 @@ func TestRDRRoundtripWANToLANUDP(t *testing.T) {
 	linkEndpoints(sWANLinkEP, sRouterLinkEP2)
 	linkEndpoints(sRouterLinkEP1, sLANLinkEP)
 
-	linkEndpoints(sLANLinkEP, sRouterLinkEP1)
-	linkEndpoints(sRouterLinkEP2, sWANLinkEP)
-
 	var wqLAN waiter.Queue
 	epLANUDP, err := sLAN.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqLAN)
 	if err != nil {
@@ -235,9 +232,6 @@ func TestRDRWANToLANTCP(t *testing.T) {
 
 	linkEndpoints(sWANLinkEP, sRouterLinkEP2)
 	linkEndpoints(sRouterLinkEP1, sLANLinkEP)
-
-	linkEndpoints(sLANLinkEP, sRouterLinkEP1)
-	linkEndpoints(sRouterLinkEP2, sWANLinkEP)
 
 	var wqLANMaster waiter.Queue
 	epLANTCPMaster, err := sLAN.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &wqLANMaster)

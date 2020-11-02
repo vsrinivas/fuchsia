@@ -285,9 +285,6 @@ func TestNATRoundtripLANToWANUDP(t *testing.T) {
 	linkEndpoints(sLANLinkEP, sRouterLinkEP1)
 	linkEndpoints(sRouterLinkEP2, sWANLinkEP)
 
-	linkEndpoints(sWANLinkEP, sRouterLinkEP2)
-	linkEndpoints(sRouterLinkEP1, sLANLinkEP)
-
 	var wqLAN waiter.Queue
 	epLANUDP, err := sLAN.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqLAN)
 	if err != nil {
@@ -373,9 +370,6 @@ func TestNATLANToWANTCP(t *testing.T) {
 
 	linkEndpoints(sLANLinkEP, sRouterLinkEP1)
 	linkEndpoints(sRouterLinkEP2, sWANLinkEP)
-
-	linkEndpoints(sWANLinkEP, sRouterLinkEP2)
-	linkEndpoints(sRouterLinkEP1, sLANLinkEP)
 
 	var wqLAN waiter.Queue
 	epLANTCP, err := sLAN.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &wqLAN)
