@@ -44,7 +44,7 @@ void DumpSuperblock(const Superblock& info, FILE* out) {
           "\n"
           "info.magic1: %" PRIu64
           "\n"
-          "info.version: %" PRIu32
+          "info.format_version: %" PRIu32
           "\n"
           "info.flags: %" PRIu32
           "\n"
@@ -70,11 +70,13 @@ void DumpSuperblock(const Superblock& info, FILE* out) {
           "\n"
           "info.journal_slices: %" PRIu32
           "\n"
-          "info.blob_layout_format: %" PRIu8 "\n",
-          info.magic0, info.magic1, info.version, info.flags, info.block_size,
+          "info.blob_layout_format: %" PRIu8
+          "\n"
+          "info.oldest_revision: %" PRIu64 "\n",
+          info.magic0, info.magic1, info.format_version, info.flags, info.block_size,
           info.data_block_count, info.journal_block_count, info.inode_count, info.alloc_block_count,
           info.alloc_inode_count, info.slice_size, info.abm_slices, info.ino_slices,
-          info.dat_slices, info.journal_slices, info.blob_layout_format);
+          info.dat_slices, info.journal_slices, info.blob_layout_format, info.oldest_revision);
 }
 
 // Validates that this version of blobfs knows how to handle |format|.
@@ -108,9 +110,9 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     FS_TRACE_ERROR("blobfs: bad magic\n");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (info->version != kBlobfsVersion) {
-    FS_TRACE_ERROR("blobfs: FS Version: %08x. Driver version: %08x\n", info->version,
-                   kBlobfsVersion);
+  if (info->format_version != kBlobfsCurrentFormatVersion) {
+    FS_TRACE_ERROR("blobfs: FS Version: %08x. Driver version: %08x\n", info->format_version,
+                   kBlobfsCurrentFormatVersion);
     DumpSuperblock(*info, stderr);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -234,13 +236,13 @@ uint32_t BlocksRequiredForBits(uint64_t bit_count) {
 
 uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available) { return current + available; }
 
-void InitializeSuperblock(uint64_t block_count, BlobLayoutFormat blob_layout_format,
+void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options,
                           Superblock* info) {
   uint64_t inodes = kBlobfsDefaultInodeCount;
   memset(info, 0x00, sizeof(*info));
   info->magic0 = kBlobfsMagic0;
   info->magic1 = kBlobfsMagic1;
-  info->version = kBlobfsVersion;
+  info->format_version = kBlobfsCurrentFormatVersion;
   info->flags = kBlobFlagClean;
   info->block_size = kBlobfsBlockSize;
   // TODO(planders): Consider modifying the inode count if we are low on space.
@@ -249,7 +251,8 @@ void InitializeSuperblock(uint64_t block_count, BlobLayoutFormat blob_layout_for
   info->alloc_block_count = kStartBlockMinimum;
   info->alloc_inode_count = 0;
   info->blob_layout_format =
-      static_cast<decltype(Superblock::blob_layout_format)>(blob_layout_format);
+      static_cast<decltype(Superblock::blob_layout_format)>(options.blob_layout_format);
+  info->oldest_revision = options.oldest_revision;
 
   // Temporarily set the data_block_count to the total block_count so we can estimate the number
   // of pre-data blocks.

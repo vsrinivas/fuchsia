@@ -49,6 +49,7 @@
 #include "blob-loader.h"
 #include "blob.h"
 #include "blobfs-checker.h"
+#include "blobfs/format.h"
 #include "compression/compressor.h"
 #include "iterator/allocated-node-iterator.h"
 #include "iterator/block-iterator.h"
@@ -292,14 +293,32 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     FS_TRACE_ERROR("blobfs: Failed to initialize Vnodes\n");
     return status;
   }
+  zx::status<BlobLoader> loader =
+      BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->pager_.get(), fs->Metrics());
+  if (!loader.is_ok()) {
+    FS_TRACE_ERROR("blobfs: Failed to initialize loader: %s\n", loader.status_string());
+    return loader.status_value();
+  }
+  fs->loader_ = std::move(loader.value());
 
-  // Filesystem instance is safely created at this point. On a read-write filesystem,
-  // since we can now serve writes on the filesystem, we need to unset the kBlobFlagClean flag
-  // to indicate that the filesystem may not be in a "clean" state anymore. This helps to make
+  // At this point, the filesystem is loaded and validated. No errors should be returned after this
+  // point.
+
+  // On a read-write filesystem, since we can now serve writes, we need to unset the kBlobFlagClean
+  // flag to indicate that the filesystem may not be in a "clean" state anymore. This helps to make
   // sure we are unmounted cleanly i.e the kBlobFlagClean flag is set back on clean unmount.
+  //
+  // Additionally, we can now update the oldest_revision field if it needs to be updated.
+  FS_TRACE_INFO("blobfs: detected oldest_revision %" PRIu64 ", current revision %" PRIu64 "\n",
+                fs->info_.oldest_revision, kBlobfsCurrentRevision);
   if (writability == blobfs::Writability::Writable) {
     BlobTransaction transaction;
-    fs->UpdateFlags(transaction, kBlobFlagClean, false);
+    fs->info_.flags &= ~kBlobFlagClean;
+    if (fs->info_.oldest_revision > kBlobfsCurrentRevision) {
+      FS_TRACE_INFO("Setting oldest_revision to %" PRIu64 "\n", kBlobfsCurrentRevision);
+      fs->info_.oldest_revision = kBlobfsCurrentRevision;
+    }
+    fs->WriteInfo(transaction);
     transaction.Commit(*fs->journal());
   }
 
@@ -311,13 +330,6 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
                   *(fs->write_compression_settings_.compression_level));
   }
 
-  zx::status<BlobLoader> loader =
-      BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->pager_.get(), fs->Metrics());
-  if (!loader.is_ok()) {
-    FS_TRACE_ERROR("blobfs: Failed to initialize loader: %s\n", loader.status_string());
-    return loader.status_value();
-  }
-  fs->loader_ = std::move(loader.value());
   status = BlobCorruptionNotifier::Create(&(fs->blob_corruption_notifier_));
 
   if (status != ZX_OK) {
@@ -437,15 +449,6 @@ void Blobfs::WriteNode(uint32_t map_index, BlobTransaction& transaction) {
                                 .dev_offset = NodeMapStartBlock(info_) + block,
                                 .length = 1,
                             }});
-}
-
-void Blobfs::UpdateFlags(BlobTransaction& transaction, uint32_t flags, bool set) {
-  if (set) {
-    info_.flags |= flags;
-  } else {
-    info_.flags &= (~flags);
-  }
-  WriteInfo(transaction);
 }
 
 void Blobfs::WriteInfo(BlobTransaction& transaction) {
@@ -748,7 +751,8 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
       FS_TRACE_ERROR("blobfs: Cannot write journal clean bit\n");
     } else {
       BlobTransaction transaction;
-      UpdateFlags(transaction, kBlobFlagClean, true);
+      info_.flags |= kBlobFlagClean;
+      WriteInfo(transaction);
       transaction.Commit(*journal_);
     }
   }

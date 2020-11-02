@@ -32,7 +32,20 @@ namespace blobfs {
 // clang-format off
 constexpr uint64_t kBlobfsMagic0  = (0xac2153479e694d21ULL);
 constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
-constexpr uint32_t kBlobfsVersion = 0x00000008;
+
+// Current version of the format and the revision of the software. The format version determines
+// backwards-compatibility. The revision can be freely incremented at any time and does not impact
+// backwards-compatibility; the more often it is updated, the more granularly we can find out what
+// the oldest revision of the driver is that has touched a filesystem instance.
+// Minimally, the revision should be incremented whenever a (backwards-compatible) format change is
+// made, but it can also be incremented when major logic changes are made in case there is chance of
+// bugs being introduced and we would like to be able to detect if the filesystem has been touched
+// by a potentially buggy driver.
+// The revision is used to updated the oldest_revision field in the header.
+//
+// See //src/storage/docs/versioning.md for more.
+constexpr uint32_t kBlobfsCurrentFormatVersion = 0x00000008;
+constexpr uint64_t kBlobfsCurrentRevision = 0x00000001;
 
 constexpr uint32_t kBlobFlagClean          = 1;
 constexpr uint32_t kBlobFlagFVM            = 4;
@@ -93,7 +106,7 @@ inline size_t WriteBufferSize() {
 struct __PACKED Superblock {
   uint64_t magic0;
   uint64_t magic1;
-  uint32_t version;
+  uint32_t format_version;
   uint32_t flags;
   uint32_t block_size;           // 8K typical.
   uint32_t reserved1;            // Unused, reserved (for padding).
@@ -108,14 +121,24 @@ struct __PACKED Superblock {
   uint64_t reserved2;  // Unused.
 
   // The following 6 fields are only valid with (flags & kBlobFlagFVM):
-  uint64_t slice_size;         // Underlying slice size.
-  uint64_t deprecated1;        // Unused but not necessarily 0 (saved total vslices in old vers.).
-  uint32_t abm_slices;         // Slices allocated to block bitmap.
-  uint32_t ino_slices;         // Slices allocated to node map.
-  uint32_t dat_slices;         // Slices allocated to file data section.
-  uint32_t journal_slices;     // Slices allocated to journal section.
+  uint64_t slice_size;      // Underlying slice size.
+  uint64_t deprecated1;     // Unused but not necessarily 0 (saved total vslices in old vers.).
+  uint32_t abm_slices;      // Slices allocated to block bitmap.
+  uint32_t ino_slices;      // Slices allocated to node map.
+  uint32_t dat_slices;      // Slices allocated to file data section.
+  uint32_t journal_slices;  // Slices allocated to journal section.
+  // End FVM-specific fields
+
   uint8_t blob_layout_format;  // The layout format that the blobs are in.
-  uint8_t reserved[8079];
+  uint8_t zeroes[7];           // Padding. Set to zeroes, can be reclaimed.
+  // The oldest revision of the software that has written to this blobfs instance. When opening for
+  // writes, the driver should check this and lower it if the current revision is lower than the one
+  // stored in this header. This does not say anything about backwards-compatibility, that is
+  // determined by format_version above.
+  //
+  // See //src/storage/docs/versioning.md for more.
+  uint64_t oldest_revision;
+  uint8_t reserved[8064];
 };
 
 static_assert(sizeof(Superblock) == kBlobfsBlockSize, "Invalid blobfs superblock size");

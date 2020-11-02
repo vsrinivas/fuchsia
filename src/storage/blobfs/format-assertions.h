@@ -21,7 +21,7 @@ namespace blobfs {
 // Ensure that the members don't change their offsets within the structure
 static_assert(offsetof(Superblock, magic0) ==                           0x0);
 static_assert(offsetof(Superblock, magic1) ==                           0x8);
-static_assert(offsetof(Superblock, version) ==                          0x10);
+static_assert(offsetof(Superblock, format_version) ==                   0x10);
 static_assert(offsetof(Superblock, flags) ==                            0x14);
 static_assert(offsetof(Superblock, block_size) ==                       0x18);
 static_assert(offsetof(Superblock, data_block_count) ==                 0x20);
@@ -37,11 +37,12 @@ static_assert(offsetof(Superblock, ino_slices) ==                       0x64);
 static_assert(offsetof(Superblock, dat_slices) ==                       0x68);
 static_assert(offsetof(Superblock, journal_slices) ==                   0x6c);
 static_assert(offsetof(Superblock, blob_layout_format) ==               0x70);
+static_assert(offsetof(Superblock, oldest_revision) ==                  0x78);
 
 // Ensure that the padding between two members doesn't change
 static_assert(PADDING_LENGTH(Superblock, magic0,                 magic1) ==                 0);
-static_assert(PADDING_LENGTH(Superblock, magic1,                 version) ==                0);
-static_assert(PADDING_LENGTH(Superblock, version,                flags) ==                  0);
+static_assert(PADDING_LENGTH(Superblock, magic1,                 format_version) ==         0);
+static_assert(PADDING_LENGTH(Superblock, format_version,         flags) ==                  0);
 static_assert(PADDING_LENGTH(Superblock, flags,                  block_size) ==             0);
 static_assert(PADDING_LENGTH(Superblock, block_size,             data_block_count) ==       4);
 static_assert(PADDING_LENGTH(Superblock, data_block_count,       journal_block_count) ==    0);
@@ -56,7 +57,8 @@ static_assert(PADDING_LENGTH(Superblock, abm_slices,             ino_slices) == 
 static_assert(PADDING_LENGTH(Superblock, ino_slices,             dat_slices) ==             0);
 static_assert(PADDING_LENGTH(Superblock, dat_slices,             journal_slices) ==         0);
 static_assert(PADDING_LENGTH(Superblock, journal_slices,         blob_layout_format) ==     0);
-static_assert(PADDING_LENGTH(Superblock, blob_layout_format,     reserved) ==               0);
+static_assert(PADDING_LENGTH(Superblock, blob_layout_format,     oldest_revision) ==        7);
+static_assert(PADDING_LENGTH(Superblock, oldest_revision,        reserved) ==               0);
 
 // Ensure that the padding at the end of structure doesn't change
 static_assert(sizeof(Superblock) ==

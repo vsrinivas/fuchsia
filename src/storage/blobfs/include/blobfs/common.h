@@ -25,6 +25,17 @@
 
 namespace blobfs {
 
+// Options for constructing new blobfs images.
+struct FilesystemOptions {
+  // Which layout to use to store blobs.
+  BlobLayoutFormat blob_layout_format = BlobLayoutFormat::kPaddedMerkleTreeAtStart;
+
+  // The oldest revision to mark the filesystem as formatted by.
+  // This should be left unset (to the default value of kBlobfsCurrentRevision); it is exposed for
+  // overriding during tests.
+  uint64_t oldest_revision = kBlobfsCurrentRevision;
+};
+
 // The minimum size of a blob that we will consider for compression. Attempting
 // to compress a blob smaller than this will not result in any size savings, so
 // we can just skip it and save some work.
@@ -57,8 +68,7 @@ uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available);
 // This method should also be invoked to create FVM-based superblocks, but it is the responsibility
 // of the caller to update |info->flags| to include |kBlobFlagFVM|, and fill in all
 // FVM-specific fields.
-void InitializeSuperblock(uint64_t block_count, BlobLayoutFormat blob_layout_format,
-                          Superblock* info);
+void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options, Superblock* info);
 
 // Computes the number of blocks necessary to store the merkle tree for the blob, based on its size.
 // May return 0 for small blobs (for which only the root digest is sufficient to verify the entire

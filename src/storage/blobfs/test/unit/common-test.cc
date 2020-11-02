@@ -32,13 +32,15 @@ TEST(CommonTest, GetBlobLayoutFormatWithInvalidFormatPanics) {
 
 TEST(CommonTest, CheckSuperblockWithValidBlobLayoutFormatIsOk) {
   Superblock info;
-  InitializeSuperblock(kBlockCount, BlobLayoutFormat::kCompactMerkleTreeAtEnd, &info);
+  InitializeSuperblock(kBlockCount,
+                       {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd}, &info);
   EXPECT_EQ(CheckSuperblock(&info, kBlockCount), ZX_OK);
 }
 
 TEST(CommonTest, CheckSuperblockWithInvalidBlobLayoutFormatIsError) {
   Superblock info;
-  InitializeSuperblock(kBlockCount, static_cast<BlobLayoutFormat>(255), &info);
+  InitializeSuperblock(kBlockCount, {.blob_layout_format = static_cast<BlobLayoutFormat>(255)},
+                       &info);
   EXPECT_EQ(CheckSuperblock(&info, kBlockCount), ZX_ERR_INVALID_ARGS);
 }
 

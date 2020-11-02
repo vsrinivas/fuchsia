@@ -351,5 +351,33 @@ TEST(FormatFilesystemTest, FormatNonFVMDeviceDefaultJournalBlocks) {
   CheckDefaultJournalBlocks(std::move(device));
 }
 
+TEST(FormatFilesystemTest, FormattedFilesystemHasSpecifiedOldestRevision) {
+  const FilesystemOptions options{.oldest_revision = 1234u};
+  const uint64_t kBlockCount = 1 << 20;
+  const uint32_t kBlockSize = 512;
+  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  ASSERT_EQ(FormatFilesystem(device.get(), options), ZX_OK);
+
+  uint8_t block[kBlobfsBlockSize] = {};
+  static_assert(sizeof(block) >= sizeof(Superblock));
+  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
+  Superblock* info = reinterpret_cast<Superblock*>(block);
+  EXPECT_EQ(1234u, info->oldest_revision);
+}
+
+TEST(FormatFilesystemTest, FormattedFilesystemHasCurrentRevisionIfUnspecified) {
+  const FilesystemOptions options;
+  const uint64_t kBlockCount = 1 << 20;
+  const uint32_t kBlockSize = 512;
+  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  ASSERT_EQ(FormatFilesystem(device.get(), options), ZX_OK);
+
+  uint8_t block[kBlobfsBlockSize] = {};
+  static_assert(sizeof(block) >= sizeof(Superblock));
+  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
+  Superblock* info = reinterpret_cast<Superblock*>(block);
+  EXPECT_EQ(kBlobfsCurrentRevision, info->oldest_revision);
+}
+
 }  // namespace
 }  // namespace blobfs

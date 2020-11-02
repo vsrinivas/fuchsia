@@ -310,7 +310,8 @@ zx_status_t GetBlockCount(int fd, uint64_t* out) {
 int Mkfs(int fd, uint64_t block_count) {
   Superblock info;
   // TODO(fxbug.dev/36663): Add support for setting the blob layout format.
-  InitializeSuperblock(block_count, BlobLayoutFormat::kPaddedMerkleTreeAtStart, &info);
+  InitializeSuperblock(block_count,
+                       {.blob_layout_format = BlobLayoutFormat::kPaddedMerkleTreeAtStart}, &info);
   zx_status_t status = CheckSuperblock(&info, block_count);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to initialize superblock: %d\n", status);

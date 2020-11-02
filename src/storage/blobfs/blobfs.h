@@ -251,7 +251,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Should only be called by AllocateNode and FreeNode.
   void WriteNode(uint32_t map_index, BlobTransaction& transaction);
 
-  // Enqueues an update for allocated inode/block counts.
+  // Enqueues into |transaction| a write to set the on-disk superblock to the current state in
+  // |info_|.
   void WriteInfo(BlobTransaction& transaction);
 
   // Adds a trim operation to |transaction|.
@@ -264,9 +265,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Loads the blob with inode |node_index| and verifies that the contents of the blob are valid.
   // Discards the blob's data after performing verification.
   [[nodiscard]] zx_status_t LoadAndVerifyBlob(uint32_t node_index);
-
-  // Updates the flags field in superblock.
-  void UpdateFlags(BlobTransaction& transaction, uint32_t flags, bool set);
 
   // Runs fsck at the end of a transaction, just after metadata has been written. Used for testing
   // to be sure that all transactions leave the file system in a good state.

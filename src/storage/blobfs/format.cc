@@ -230,7 +230,7 @@ zx_status_t FormatFilesystem(BlockDevice* device, const FilesystemOptions& optio
 
   uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
   Superblock superblock;
-  InitializeSuperblock(blocks, options.blob_layout_format, &superblock);
+  InitializeSuperblock(blocks, options, &superblock);
 
   status = TryFormattingFVM(device, &superblock);
   if (status != ZX_OK) {
