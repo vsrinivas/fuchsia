@@ -104,7 +104,6 @@ executable("mac_tests") {
     "macaddr_unittest.cc",
     "mcs_unittest.cc",
     "packet_unittest.cc",
-    "parse_beacon_unittest.cc",
     "parse_element_unittest.cc",
     "parse_mac_header_unittest.cc",
     "perr_destination_parser_unittest.cc",
