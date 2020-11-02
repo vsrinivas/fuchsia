@@ -18,6 +18,14 @@ protocol NavigationEventListener {
     OnNavigationStateChanged(NavigationState change) -> ();
 };
 
+protocol NavigationPolicyProvider {
+    /// Called when the [`Frame`] is processing a navigation request in one of the phase(s)
+    /// specified in [`NavigationPolicyProviderParams`]. Navigation is paused until the result is
+    /// received. The returned [`NavigationDecision`] defines how the navigation should proceed.
+    EvaluateRequestedNavigation(RequestedNavigation requested_navigation)
+        -> (NavigationDecision decision);
+};
+
 /// Represents the return status of a [`NavigationController`] method.
 enum NavigationControllerError : int32 {
     /// The provided URL is invalid.
@@ -123,4 +131,75 @@ enum PageType {
 
     /// Error page.
     ERROR = 1;
+};
+
+/// Unique identifier of a navigation. Can be used to correlate different phases for the
+/// same navigation. Guaranteed to be unique for all navigations in the same [`Context`].
+using NavigationId = uint64;
+
+/// Identifies a navigation phase.
+bits NavigationPhase : uint32 {
+    /// Navigation is being started.
+    START = 0x1;
+
+    /// Navigation was redirected.
+    REDIRECT = 0x2;
+
+    /// Navigation response is being processed. At this point navigation hasn't been committed
+    /// yet, so it is not too late to cancel it.
+    PROCESS_RESPONSE = 0x4;
+
+    /// Navigation has failed.
+    FAIL = 0x8;
+};
+
+/// Used to specify which navigation events should be delegated to [`NavigationPolicyProvider`].
+table NavigationPolicyProviderParams {
+    /// Specifies the set of navigation phases in the main frame that should be evaluated.
+    1: NavigationPhase main_frame_phases;
+
+    /// Specifies the set of navigation phases in subframes that should be evaluated.
+    2: NavigationPhase subframe_phases;
+};
+
+table RequestedNavigation {
+    /// Unique ID of the navigation.
+    1: NavigationId id;
+
+    /// Current navigation phase. Exactly one bit will be set.
+    2: NavigationPhase phase;
+
+    /// Whether the navigation is taking place in the main frame versus in a subframe.
+    3: bool is_main_frame;
+
+    /// Whether the navigation happened without changing the document.
+    4: bool is_same_document;
+
+    /// Whether the navigation is a POST request.
+    5: bool is_http_post;
+
+    /// The current target URL of the navigation. This may change for the same navigation after
+    /// encountering a server redirect.
+    6: Url url;
+
+    /// Whether the navigation was initiated by a user gesture.
+    7: bool has_gesture;
+
+    /// Whether the navigation has encountered a server redirect or not.
+    8: bool was_server_redirect;
+};
+
+/// Empty struct used in NavigationDecision for actions that don't hav any arguments.
+// TODO: fxbug.dev/7913
+struct NoArgumentsAction {
+};
+
+/// Navigation action that should be taken in response to a navigation request. Returned from
+/// [`NavigationPolicyProvider.EvaluateRequestedNavigation`].
+resource union NavigationDecision {
+    /// Navigation should proceed normally.
+    1: NoArgumentsAction proceed;
+
+    /// Navigation should be aborted. The frame should stay on the current page.
+    2: NoArgumentsAction abort;
 };

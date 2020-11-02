@@ -305,6 +305,18 @@ protocol Frame {
     /// Returns the amount of private (non-shared) physical memory used by the Frame's main
     /// document. The returned size might not reflect the memory usage of embedded iframes.
     GetPrivateMemorySize() -> (uint64 size_bytes);
+
+    /// Sets the navigation policy provider for the [`Frame`]. When set, the [`Frame`] sends
+    /// [`NavigationPolicyProvider.EvaluateRequestedNavigation`] when processing navigation
+    /// requests. `params` defines when the message is sent. After sending the
+    /// `EvaluateRequestedNavigation` message, the [`Frame`] blocks the corresponding navigation
+    /// until it receives a response.
+    ///
+    /// Should be called before `GetNavigationController` to ensure that it is applied to all
+    /// navigations including the first [`NavigationController.LoadURL`] request.
+    [Transitional]
+    SetNavigationPolicyProvider(NavigationPolicyProviderParams params,
+                                NavigationPolicyProvider provider);
 };
 
 resource table WebMessage {
