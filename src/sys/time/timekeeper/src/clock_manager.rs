@@ -87,8 +87,6 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
     /// Maintain the clock indefinitely. This future will never complete.
     async fn maintain_clock(mut self) {
         let details = self.clock.get_details().expect("failed to get UTC clock details");
-        let mut clock_offset = zx::Time::from_nanos(details.mono_to_synthetic.synthetic_offset)
-            - zx::Time::from_nanos(details.mono_to_synthetic.reference_offset);
         let mut clock_started =
             details.backstop.into_nanos() != details.ticks_to_synthetic.synthetic_offset;
         std::mem::drop(details);
@@ -108,47 +106,21 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
             // Note: Both branches of the match led to a populated estimator so safe to unwrap.
             let estimator: &mut Estimator<D> = &mut self.estimator.as_mut().unwrap();
 
-            // Determine the error in the current clock compared to this updated estimate.
-            // Note: In the initial implementation of `Estimator` updates are discarded hence
-            //       error will be zero for the second and all subsequent samples.
+            // Determine the intended UTC - monotonic offset and start or correct the clock.
             let reference_mono = zx::Time::get_monotonic();
             let estimate_utc = estimator.estimate(reference_mono);
             let estimate_offset = estimate_utc - reference_mono;
-            let clock_error = zx::Duration::from_nanos(
-                (clock_offset.into_nanos() - estimate_offset.into_nanos()).abs(),
-            );
-            if clock_error < CLOCK_UPDATE_THRESHOLD {
-                info!(
-                    "updated {:?} offset of {:?} close to previous offset of {:?}, skipping update",
-                    self.track,
-                    estimate_offset.into_nanos(),
-                    clock_offset.into_nanos()
-                );
-                continue;
-            }
-
-            // For now we implement all time corrections as a simple step to the intended time.
-            let utc_chrono = Utc.timestamp_nanos(estimate_utc.into_nanos());
-            if let Err(status) = self.clock.update(zx::ClockUpdate::new().value(estimate_utc)) {
-                error!("failed to update {:?} clock to {}: {}", self.track, utc_chrono, status);
-                continue;
-            }
-            clock_offset = estimate_offset;
             if !clock_started {
-                self.diagnostics.record(Event::StartClock {
-                    track: self.track,
-                    source: StartClockSource::External(self.time_source_manager.role()),
-                });
-                info!("started {:?} clock from external source at {}", self.track, utc_chrono);
+                self.start_clock(estimate_offset);
                 clock_started = true;
             } else {
-                self.diagnostics.record(Event::UpdateClock { track: self.track });
-                info!("adjusted {:?} clock to {}", self.track, utc_chrono);
+                self.apply_clock_correction(estimate_offset);
             }
 
             // Update the RTC clock if we have one.
             // Note this only applies to primary so we don't include the track in our log messages.
             if let Some(ref rtc) = self.rtc {
+                let utc_chrono = Utc.timestamp_nanos(estimate_utc.into_nanos());
                 let outcome = match rtc.set(estimate_utc).await {
                     Err(err) => {
                         error!("failed to update RTC and ZX_CLOCK_UTC to {}: {}", utc_chrono, err);
@@ -185,6 +157,62 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
             monotonic_before, utc_now, monotonic_after,
         );
     }
+
+    /// Starts the clock at the requested offset between utc and monotonic time, recording
+    /// diagnostic events.
+    fn start_clock(&mut self, new_offset: zx::Duration) {
+        let utc = zx::Time::get_monotonic() + new_offset;
+        let utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
+        if let Err(status) = self.clock.update(zx::ClockUpdate::new().value(utc)) {
+            // Clock update failures should only be caused by an invalid clock object. There
+            // isn't anything Timekeeper could do to effectively handle them.
+            panic!("failed to start {:?} clock at {}: {}", self.track, utc_chrono, status);
+        };
+        self.diagnostics.record(Event::StartClock {
+            track: self.track,
+            source: StartClockSource::External(self.time_source_manager.role()),
+        });
+        info!("started {:?} clock from external source at {}", self.track, utc_chrono);
+    }
+
+    /// Applies a correction to the clock to reach the requested offset between utc and monotonic
+    /// time, selecting and applying the most appropriate strategy and recording diagnostic events.
+    fn apply_clock_correction(&mut self, new_offset: zx::Duration) {
+        let current_offset = get_clock_offset(&self.clock);
+        let correction = new_offset - current_offset;
+
+        // For now we omit very small corrections and implement everything else as a simple step.
+        if within_bound(correction, CLOCK_UPDATE_THRESHOLD) {
+            info!(
+                "{:?} clock correction of {:?} very small, skipping",
+                self.track,
+                correction.into_nanos(),
+            );
+        } else {
+            let utc = zx::Time::get_monotonic() + new_offset;
+            let utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
+            if let Err(status) = self.clock.update(zx::ClockUpdate::new().value(utc)) {
+                // Clock update failures should only be caused by an invalid clock object. There
+                // isn't anything Timekeeper could do to effectively handle them.
+                panic!("failed to update {:?} clock to {}: {}", self.track, utc_chrono, status);
+            };
+            self.diagnostics.record(Event::UpdateClock { track: self.track });
+            info!("adjusted {:?} clock to {}", self.track, utc_chrono);
+        }
+    }
+}
+
+/// Returns the offset between UTC and monotonic times in the supplied clock.
+fn get_clock_offset(clock: &zx::Clock) -> zx::Duration {
+    // Clock read failures should only be caused by an invalid clock object.
+    let details = clock.get_details().expect("failed to get UTC clock details");
+    zx::Time::from_nanos(details.mono_to_synthetic.synthetic_offset)
+        - zx::Time::from_nanos(details.mono_to_synthetic.reference_offset)
+}
+
+/// Returns true iff the absolute value of `value` is less than `bound`.
+fn within_bound(value: zx::Duration, bound: zx::Duration) -> bool {
+    value.into_nanos().abs() < bound.into_nanos().abs()
 }
 
 #[cfg(test)]
@@ -373,7 +401,7 @@ mod tests {
         let updated_utc = clock.read().unwrap();
         let monotonic_after = zx::Time::get_monotonic();
 
-        // Since we used the same covariance for the first two samples the offset in the kalman
+        // Since we used the same covariance for the first two samples the offset in the Kalman
         // filter is roughly midway between the sample offsets, but slight closer to the second
         // because oscillator uncertainty.
         let expected_offset = zx::Duration::from_nanos(1666500000080699);
