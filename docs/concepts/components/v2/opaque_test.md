@@ -184,7 +184,7 @@ file as follows:
     use: [
         {
             protocol: [
-                "/svc/fuchsia.sys2.BlockingEventSource",
+                "fuchsia.sys2.BlockingEventSource",
             ],
             from: "framework"
         },

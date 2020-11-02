@@ -490,8 +490,8 @@ use: [
     },
     {
         protocol: [
-            "/svc/fuchsia.ui.scenic.Scenic",
-            "/svc/fuchsia.accessibility.Manager",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.accessibility.Manager",
         ]
     },
     {
