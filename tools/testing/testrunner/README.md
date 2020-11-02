@@ -48,8 +48,8 @@ testrunner is running on, testrunner will run the test as a subprocess. Since
 testrunner always runs on a Mac or Linux host, this only applies to host-side
 tests.
 
-If the test's `command` field is set, testrunner will execute that exact
-command. Otherwise, it will run the executable specified by the `path` field.
+For these tests, testrunner will run the executable specified by the `path`
+field.
 
 ### SSH
 
