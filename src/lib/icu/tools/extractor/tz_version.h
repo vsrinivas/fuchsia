@@ -1,5 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by app BSD-style license that can be
+// Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef SRC_LIB_ICU_TOOLS_EXTRACTOR_TZ_VERSION_H_
