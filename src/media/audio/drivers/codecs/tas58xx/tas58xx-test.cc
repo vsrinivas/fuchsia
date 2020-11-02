@@ -392,4 +392,57 @@ TEST(Tas58xxTest, StopStart) {
   mock_i2c.VerifyAndClear();
 }
 
+TEST(Tas58xxTest, ExternalConfig) {
+  mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+
+  fake_ddk::Bind ddk;
+
+  metadata::ti::TasConfig metadata = {};
+  metadata.bridged = true;
+  metadata.number_of_writes1 = 2;
+  metadata.init_sequence1[0].address = 0x12;
+  metadata.init_sequence1[0].value = 0x34;
+  metadata.init_sequence1[1].address = 0x56;
+  metadata.init_sequence1[1].value = 0x78;
+  metadata.number_of_writes2 = 3;
+  metadata.init_sequence2[0].address = 0x11;
+  metadata.init_sequence2[0].value = 0x22;
+  metadata.init_sequence2[1].address = 0x33;
+  metadata.init_sequence2[1].value = 0x44;
+  metadata.init_sequence2[2].address = 0x55;
+  metadata.init_sequence2[2].value = 0x66;
+  ddk.SetMetadata(&metadata, sizeof(metadata));
+
+  auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+
+  {
+    // Reset with PBTL mode on.
+    mock_i2c
+        .ExpectWriteStop({0x12, 0x34})  // External config.
+        .ExpectWriteStop({0x56, 0x78})  // External config.
+        .ExpectWriteStop({0x11, 0x22})  // External config.
+        .ExpectWriteStop({0x33, 0x44})  // External config.
+        .ExpectWriteStop({0x55, 0x66})  // External config.
+        .ExpectWriteStop({0x00, 0x00})  // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})  // book 0.
+        .ExpectWriteStop({0x02, 0x05})  // Normal modulation, mono, PBTL (bridged mono).
+        .ExpectWriteStop({0x03, 0x03})  // Play,
+        .ExpectWriteStop({0x00, 0x00})  // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})  // book 0.
+        .ExpectWriteStop({0x78, 0x80})  // Clear analog fault.
+        .ExpectWriteStop({0x4c, 0x6c})  // digital vol -30dB.
+        .ExpectWrite({0x03})
+        .ExpectReadStop({0x00})
+        .ExpectWriteStop({0x03, 0x08});  // Muted = true.
+    ASSERT_OK(client.Reset());
+  }
+
+  mock_i2c.VerifyAndClear();
+}
+
 }  // namespace audio

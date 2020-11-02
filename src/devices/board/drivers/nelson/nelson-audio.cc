@@ -18,6 +18,10 @@
 #include "nelson-gpios.h"
 #include "nelson.h"
 
+#ifdef TAS5805M_CONFIG_PATH
+#include TAS5805M_CONFIG_PATH
+#endif
+
 namespace nelson {
 constexpr zx_bind_inst_t root_match[] = {
     BI_MATCH(),
@@ -255,6 +259,18 @@ zx_status_t Nelson::AudioInit() {
                                           {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx}};
     metadata::ti::TasConfig metadata = {};
     metadata.bridged = true;
+#ifdef TAS5805M_CONFIG_PATH
+    metadata.number_of_writes1 = sizeof(tas5805m_init_sequence1) / sizeof(cfg_reg);
+    for (size_t i = 0; i < metadata.number_of_writes1; ++i) {
+      metadata.init_sequence1[i].address = tas5805m_init_sequence1[i].offset;
+      metadata.init_sequence1[i].value = tas5805m_init_sequence1[i].value;
+    }
+    metadata.number_of_writes2 = sizeof(tas5805m_init_sequence2) / sizeof(cfg_reg);
+    for (size_t i = 0; i < metadata.number_of_writes2; ++i) {
+      metadata.init_sequence2[i].address = tas5805m_init_sequence2[i].offset;
+      metadata.init_sequence2[i].value = tas5805m_init_sequence2[i].value;
+    }
+#endif
     const device_metadata_t codec_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,

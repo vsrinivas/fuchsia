@@ -9,9 +9,20 @@
 
 namespace metadata::ti {
 
+static constexpr uint32_t kMaxNumberOfRegisterWrites = 256;
+
+struct RegisterSetting {
+  uint8_t address;
+  uint8_t value;
+};
+
 struct TasConfig {
   bool bridged;
   uint8_t instance_count;
+  uint8_t number_of_writes1;
+  RegisterSetting init_sequence1[kMaxNumberOfRegisterWrites];
+  uint8_t number_of_writes2;
+  RegisterSetting init_sequence2[kMaxNumberOfRegisterWrites];
 };
 
 }  // namespace metadata::ti

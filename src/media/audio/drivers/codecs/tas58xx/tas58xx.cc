@@ -104,21 +104,45 @@ zx_status_t Tas58xx::Reset() {
     // 6. The device is now in normal operation."
     // Steps 4+ are execute below.
 
-    constexpr uint8_t kDefaultsStart[][2] = {
-        {kRegSelectPage, 0x00},
-        {kRegSelectbook, 0x00},
-        {kRegDeviceCtrl2, kRegDeviceCtrl2BitsHiZ},  // Enables DSP.
-        {kRegReset, kRegResetRegsAndModulesCtrl},
-    };
-    for (auto& i : kDefaultsStart) {
-      auto status = WriteReg(i[0], i[1]);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__, i[0], __func__);
-        return status;
+    // Run the first init sequence from metadata if available otherwise kDefaultsStart.
+    if (metadata_.number_of_writes1) {
+      for (size_t i = 0; i < metadata_.number_of_writes1; ++i) {
+        auto status =
+            WriteReg(metadata_.init_sequence1[i].address, metadata_.init_sequence1[i].value);
+        if (status != ZX_OK) {
+          zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__,
+                 metadata_.init_sequence1[i].address, __func__);
+          return status;
+        }
+      }
+    } else {
+      constexpr uint8_t kDefaultsStart[][2] = {
+          {kRegSelectPage, 0x00},
+          {kRegSelectbook, 0x00},
+          {kRegDeviceCtrl2, kRegDeviceCtrl2BitsHiZ},  // Enables DSP.
+          {kRegReset, kRegResetRegsAndModulesCtrl},
+      };
+      for (auto& i : kDefaultsStart) {
+        auto status = WriteReg(i[0], i[1]);
+        if (status != ZX_OK) {
+          zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__, i[0], __func__);
+          return status;
+        }
       }
     }
 
     zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+
+    // Run the second init sequence from metadata if available, and then kDefaultsEnd.
+    for (size_t i = 0; i < metadata_.number_of_writes2; ++i) {
+      auto status =
+          WriteReg(metadata_.init_sequence2[i].address, metadata_.init_sequence2[i].value);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s", __FILE__,
+               metadata_.init_sequence2[i].address, __func__);
+        return status;
+      }
+    }
 
     const uint8_t kDefaultsEnd[][2] = {
         {kRegSelectPage, 0x00},

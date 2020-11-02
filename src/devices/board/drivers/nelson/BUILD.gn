@@ -2,9 +2,36 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/driver_package.gni")
 
-driver_module("nelson") {
+config_tas5805m = "audio/config/tas5805m_config.h"
+
+driver_package("nelson") {
+  deps = [ ":nelson-module" ]
+
+  libraries = []
+
+  if (internal_access) {
+    deps += [ ":config-tas5805-copy($shlib_toolchain)" ]
+
+    libraries += [
+      {
+        name = "$config_tas5805m"
+      },
+    ]
+  }
+}
+
+if (internal_access) {
+  copy("config-tas5805-copy") {
+    sources = [ "//prebuilt/$config_tas5805m" ]
+    outputs = [ "$root_out_dir/$config_tas5805m" ]
+  }
+}
+
+driver_module("nelson-module") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -75,4 +102,8 @@ driver_module("nelson") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+  if (internal_access) {
+    include_dirs = [ "$root_out_dir" ]
+    defines = [ "TAS5805M_CONFIG_PATH=\"$config_tas5805m\"" ]
+  }
 }
