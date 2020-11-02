@@ -4,7 +4,7 @@
 
 //! This is for Omaha client binaries written in Rust.
 
-#![recursion_limit = "128"]
+#![recursion_limit = "256"]
 
 pub mod clock;
 pub mod common;

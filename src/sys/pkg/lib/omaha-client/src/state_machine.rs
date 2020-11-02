@@ -324,7 +324,7 @@ where
                 }
             }
 
-            let (options, responder) = {
+            let (mut options, responder) = {
                 let check_timing = self.update_next_update_time(&mut co).await;
                 let mut wait_to_next_check = self.make_wait_to_next_check(check_timing).await;
 
@@ -381,7 +381,16 @@ where
                 loop {
                     select! {
                         () = update_check => break,
-                        ControlRequest::StartUpdateCheck{options, responder} = control.select_next_some() => {
+                        ControlRequest::StartUpdateCheck{
+                            options: new_options,
+                            responder
+                        } = control.select_next_some() => {
+                            if new_options.source == InstallSource::OnDemand {
+                                info!("Got on demand update check request, ensuring ongoing check is on demand");
+                                // TODO(63180): merge CheckOptions in Policy, not here.
+                                options.source = InstallSource::OnDemand;
+                            }
+
                             let _ = responder.send(StartUpdateCheckResponse::AlreadyRunning);
                         }
                     }
@@ -391,7 +400,7 @@ where
             // TODO: This is the last place we read self.state, we should see if we can find another
             // way to achieve this so that we can remove self.state entirely.
             if self.state == State::WaitingForReboot {
-                self.wait_for_reboot(&options, &mut control, &mut co).await;
+                self.wait_for_reboot(options, &mut control, &mut co).await;
             }
 
             self.set_state(State::Idle, &mut co).await;
@@ -400,7 +409,7 @@ where
 
     async fn wait_for_reboot(
         &mut self,
-        options: &CheckOptions,
+        mut options: CheckOptions,
         control: &mut mpsc::Receiver<ControlRequest>,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) {
@@ -431,8 +440,20 @@ where
                         let check_timing = self.update_next_update_time(co).await;
                         wait_to_next_ping.set(self.make_wait_to_next_check(check_timing).await);
                     },
-                    ControlRequest::StartUpdateCheck{options, responder} = control.select_next_some() => {
+                    ControlRequest::StartUpdateCheck{
+                        options: new_options,
+                        responder
+                    } = control.select_next_some() => {
                         let _ = responder.send(StartUpdateCheckResponse::AlreadyRunning);
+                        if new_options.source == InstallSource::OnDemand {
+                            info!("Waiting for reboot, but ensuring that InstallSource is OnDemand");
+                            options.source = InstallSource::OnDemand;
+
+                            if self.policy_engine.reboot_allowed(&options).await {
+                                info!("Upgraded update check request to on demand, policy allowed reboot");
+                                break;
+                            }
+                        };
                     }
                 }
             }
@@ -2339,6 +2360,188 @@ mod tests {
         assert!(!*reboot_called.borrow());
     }
 
+    // Verify that if we are in the middle of checking for or applying an update, a new OnDemand
+    // update check request will "upgrade" the inflight check request to behave as if it was
+    // OnDemand. In particular, this should cause an immediate reboot.
+    #[test]
+    fn test_reboots_immediately_if_user_initiated_update_requests_occurs_during_install() {
+        let mut pool = LocalPool::new();
+        let spawner = pool.spawner();
+
+        let response = json!({"response":{
+          "server": "prod",
+          "protocol": "3.0",
+          "app": [{
+            "appid": "{00000000-0000-0000-0000-000000000001}",
+            "status": "ok",
+            "updatecheck": {
+              "status": "ok"
+            }
+          }],
+        }});
+        let response = serde_json::to_vec(&response).unwrap();
+        let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+        let mock_time = MockTimeSource::new_from_now();
+
+        let (send_install, mut recv_install) = mpsc::channel(0);
+        let (send_reboot, mut recv_reboot) = mpsc::channel(0);
+        let reboot_check_options_received = Rc::new(RefCell::new(vec![]));
+        let policy_engine = MockPolicyEngine {
+            reboot_check_options_received: Rc::clone(&reboot_check_options_received),
+            check_timing: Some(CheckTiming::builder().time(mock_time.now()).build()),
+            ..MockPolicyEngine::default()
+        };
+
+        let (mut ctl, state_machine) = pool.run_until(
+            StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(BlockingInstaller {
+                    on_install: send_install,
+                    on_reboot: Some(send_reboot),
+                })
+                .policy_engine(policy_engine)
+                .start(),
+        );
+
+        let observer = TestObserver::default();
+        spawner.spawn_local(observer.observe(state_machine)).unwrap();
+
+        let unblock_install = pool.run_until(recv_install.next()).unwrap();
+        pool.run_until_stalled();
+        assert_eq!(
+            observer.take_states(),
+            vec![State::CheckingForUpdates, State::InstallingUpdate]
+        );
+
+        pool.run_until(async {
+            assert_eq!(
+                ctl.start_update_check(CheckOptions { source: InstallSource::OnDemand }).await,
+                Ok(StartUpdateCheckResponse::AlreadyRunning)
+            );
+        });
+
+        pool.run_until_stalled();
+        assert_eq!(observer.take_states(), vec![]);
+
+        unblock_install.send(Ok(())).unwrap();
+        pool.run_until_stalled();
+        assert_eq!(observer.take_states(), vec![State::WaitingForReboot]);
+
+        let unblock_reboot = pool.run_until(recv_reboot.next()).unwrap();
+        pool.run_until_stalled();
+        unblock_reboot.send(Ok(())).unwrap();
+
+        // Make sure when we checked whether we could reboot, it was from an OnDemand source
+        assert_eq!(
+            *reboot_check_options_received.borrow(),
+            vec![CheckOptions { source: InstallSource::OnDemand }]
+        );
+    }
+
+    // Verifies that if the state machine is done with an install and waiting for a reboot, and a
+    // user-initiated UpdateCheckRequest comes in, we reboot immediately.
+    #[test]
+    fn test_reboots_immediately_when_check_now_comes_in_during_wait() {
+        let mut pool = LocalPool::new();
+        let spawner = pool.spawner();
+
+        let response = json!({"response":{
+          "server": "prod",
+          "protocol": "3.0",
+          "app": [{
+            "appid": "{00000000-0000-0000-0000-000000000001}",
+            "status": "ok",
+            "updatecheck": {
+              "status": "ok"
+            }
+          }],
+        }});
+        let response = serde_json::to_vec(&response).unwrap();
+        let mut http = MockHttpRequest::new(hyper::Response::new(response.clone().into()));
+        // Responses to events.
+        http.add_response(hyper::Response::new(response.clone().into()));
+        http.add_response(hyper::Response::new(response.clone().into()));
+        http.add_response(hyper::Response::new(response.clone().into()));
+        // Response to the ping.
+        http.add_response(hyper::Response::new(response.into()));
+        let mut mock_time = MockTimeSource::new_from_now();
+        mock_time.truncate_submicrosecond_walltime();
+        let next_update_time = mock_time.now() + Duration::from_secs(1000);
+        let (timer, mut timers) = BlockingTimer::new();
+        let reboot_allowed = Rc::new(RefCell::new(false));
+        let reboot_check_options_received = Rc::new(RefCell::new(vec![]));
+        let policy_engine = MockPolicyEngine {
+            time_source: mock_time.clone(),
+            reboot_allowed: Rc::clone(&reboot_allowed),
+            check_timing: Some(CheckTiming::builder().time(next_update_time).build()),
+            reboot_check_options_received: Rc::clone(&reboot_check_options_received),
+            ..MockPolicyEngine::default()
+        };
+        let installer = TestInstaller::builder(mock_time.clone()).build();
+        let reboot_called = Rc::clone(&installer.reboot_called);
+        let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
+        let apps = make_test_app_set();
+
+        let (mut ctl, state_machine) = pool.run_until(
+            StateMachineBuilder::new_stub()
+                .app_set(apps.clone())
+                .http(http)
+                .installer(installer)
+                .policy_engine(policy_engine)
+                .timer(timer)
+                .storage(Rc::clone(&storage_ref))
+                .start(),
+        );
+
+        let observer = TestObserver::default();
+        spawner.spawn_local(observer.observe(state_machine)).unwrap();
+
+        // The first wait before update check.
+        let blocked_timer = pool.run_until(timers.next()).unwrap();
+        assert_eq!(blocked_timer.requested_wait(), RequestedWait::Until(next_update_time.into()));
+        blocked_timer.unblock();
+        pool.run_until_stalled();
+
+        // The timers for reboot and ping, even though the order should be deterministic, but that
+        // is an implementation detail, the test should still pass if that order changes.
+        let blocked_timer1 = pool.run_until(timers.next()).unwrap();
+        let blocked_timer2 = pool.run_until(timers.next()).unwrap();
+        let (wait_for_reboot_timer, _wait_for_next_ping_timer) =
+            match blocked_timer1.requested_wait() {
+                RequestedWait::For(_) => (blocked_timer1, blocked_timer2),
+                RequestedWait::Until(_) => (blocked_timer2, blocked_timer1),
+            };
+        // This is the timer waiting for next reboot_allowed check.
+        assert_eq!(
+            wait_for_reboot_timer.requested_wait(),
+            RequestedWait::For(CHECK_REBOOT_ALLOWED_INTERVAL)
+        );
+
+        // If we send an update check request that's from a user (source == OnDemand), we should
+        // short-circuit the wait for reboot, and update immediately.
+        assert!(!*reboot_called.borrow());
+        *reboot_allowed.borrow_mut() = true;
+        pool.run_until(async {
+            assert_eq!(
+                ctl.start_update_check(CheckOptions { source: InstallSource::OnDemand }).await,
+                Ok(StartUpdateCheckResponse::AlreadyRunning)
+            );
+        });
+        pool.run_until_stalled();
+        assert!(*reboot_called.borrow());
+
+        // Check that we got one check for reboot from a Scheduled Task (the start of the wait),
+        // and then another came in with OnDemand, as we "upgraded it" with our OnDemand check
+        // request
+        assert_eq!(
+            *reboot_check_options_received.borrow(),
+            vec![
+                CheckOptions { source: InstallSource::ScheduledTask },
+                CheckOptions { source: InstallSource::OnDemand },
+            ]
+        );
+    }
+
     // Verifies that if reboot is not allowed, state machine will send pings to Omaha while waiting
     // for reboot, and it will reply AlreadyRunning to any StartUpdateCheck requests, and when it's
     // finally time to reboot, it will trigger reboot.
@@ -2502,6 +2705,7 @@ mod tests {
     #[derive(Debug)]
     struct BlockingInstaller {
         on_install: mpsc::Sender<oneshot::Sender<Result<(), StubInstallErrors>>>,
+        on_reboot: Option<mpsc::Sender<oneshot::Sender<Result<(), anyhow::Error>>>>,
     }
 
     impl Installer for BlockingInstaller {
@@ -2524,7 +2728,19 @@ mod tests {
         }
 
         fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
-            future::ready(Ok(())).boxed()
+            match &mut self.on_reboot {
+                Some(on_reboot) => {
+                    let (send, recv) = oneshot::channel();
+                    let send_fut = on_reboot.send(send);
+
+                    async move {
+                        send_fut.await.unwrap();
+                        recv.await.unwrap()
+                    }
+                    .boxed()
+                }
+                None => future::ready(Ok(())).boxed(),
+            }
         }
     }
 
@@ -2598,7 +2814,7 @@ mod tests {
         let (mut ctl, state_machine) = pool.run_until(
             StateMachineBuilder::new_stub()
                 .http(http)
-                .installer(BlockingInstaller { on_install: send_install })
+                .installer(BlockingInstaller { on_install: send_install, on_reboot: None })
                 .start(),
         );
 
