@@ -333,6 +333,14 @@ magma_status_t magma_sysmem_get_buffer_handle_from_collection(magma_sysmem_conne
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
+magma_status_t magma_get_description_format_index(magma_sysmem_connection_t connection,
+                                                  magma_buffer_format_description_t description,
+                                                  magma_sysmem_buffer_constraints_t constraints,
+                                                  magma_bool_t* format_valid_out,
+                                                  uint32_t format_valid_count) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 magma_status_t magma_get_buffer_count(magma_buffer_format_description_t description,
                                       uint32_t* count_out) {
   return MAGMA_STATUS_UNIMPLEMENTED;
