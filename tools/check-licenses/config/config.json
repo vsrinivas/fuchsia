@@ -21,7 +21,8 @@
     "navbar.md",
     "prebuilt/third_party/rust/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
     "prebuilt/third_party/rust_tools/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
-    "third_party/crashpad/third_party/glibc/elf/elf.h"
+    "third_party/crashpad/third_party/glibc/elf/elf.h",
+    "third_party/dart-pkg/pub/devtools/build/assets/NOTICES"
   ],
   "skipDirs": [
     ".cipd",
@@ -39,12 +40,14 @@
     "prebuilt/third_party/gcc",
     "prebuilt/third_party/qemu",
     "prebuilt/third_party/sysroot/linux",
+    "src/experiences",
     "test",
     "test-apps",
     "testdata",
     "testing",
     "tests",
     "tools/check-licenses/golden",
+    "vendor",
     "zircon/third_party/lz4/programs",
     "zircon/third_party/lz4/tests"
   ],
@@ -71,14 +74,14 @@
     "go",
     "h",
     "hh",
-    "in",
     "inc",
     "java",
     "js",
     "m",
     "py",
     "rs",
-    "sh"
+    "sh",
+    "yaml"
   ],
   "textExtensionList": [
     "a",
@@ -114,7 +117,8 @@
     "rs",
     "sh",
     "snapshot",
-    "txt"
+    "txt",
+    "yaml"
   ],
   "maxReadSize": 6144,
   "separatorWidth": 80,
@@ -172,6 +176,10 @@
     {
       "projectRoot": "third_party/freetype2",
       "licenseLocation": "docs/LICENSE.TXT"
+    },
+    {
+      "projectRoot": "third_party/imgtec-pvr-rgx-km",
+      "licenseLocation": "MIT-COPYING"
     }
   ],
   "licensePatternDir": "tools/check-licenses/golden/patterns",

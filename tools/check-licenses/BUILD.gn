@@ -25,6 +25,7 @@ go_library("main") {
   sources = [
     "main.go",
     "main_test.go",
+    "unlicensed.go",
   ]
 }
 
