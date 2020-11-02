@@ -92,6 +92,21 @@ class FakeNetInterfaces : public fuchsia::net::interfaces::testing::State_TestBa
     SendPendingEvent();
   }
 
+  void AddOnlineChangeEvent(uint64_t id, bool online) {
+    fuchsia::net::interfaces::Properties properties;
+    properties.set_id(id);
+    properties.set_online(online);
+    events_.push_back(fuchsia::net::interfaces::Event::WithChanged(std::move(properties)));
+    SendPendingEvent();
+  }
+
+  void AddEmptyChangeEvent(uint64_t id) {
+    fuchsia::net::interfaces::Properties properties;
+    properties.set_id(id);
+    events_.push_back(fuchsia::net::interfaces::Event::WithChanged(std::move(properties)));
+    SendPendingEvent();
+  }
+
  private:
   async_dispatcher_t* dispatcher_;
   fuchsia::net::interfaces::Watcher::WatchCallback watch_callback_;
@@ -120,6 +135,12 @@ class TestConnectivityManagerDelegateImpl : public ConnectivityManagerDelegateIm
   bool GetServiceTunnelStarted() { return GetFlag(flags_, kFlag_ServiceTunnelStarted); }
 
   bool GetServiceTunnelUp() { return GetFlag(flags_, kFlag_ServiceTunnelUp); }
+
+  bool refreshed_end_points = false;
+  WEAVE_ERROR RefreshEndpoints() override {
+    refreshed_end_points = true;
+    return WEAVE_NO_ERROR;
+  }
 };
 
 class ConnectivityManagerTest : public WeaveTestFixture {
@@ -242,6 +263,25 @@ TEST_F(ConnectivityManagerTest, OnInterfaceEvent) {
 
   EXPECT_FALSE(ConnectivityMgr().HaveIPv4InternetConnectivity());
   EXPECT_TRUE(ConnectivityMgr().HaveIPv6InternetConnectivity());
+}
+
+TEST_F(ConnectivityManagerTest, InterfacePropertiesChange) {
+  constexpr uint64_t kPrimaryIntfId = 1;
+
+  fake_net_interfaces_.AddOnlineChangeEvent(kPrimaryIntfId, true);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(Delegate()->refreshed_end_points);
+  Delegate()->refreshed_end_points = false;
+
+  fake_net_interfaces_.AddOnlineChangeEvent(kPrimaryIntfId, false);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(Delegate()->refreshed_end_points);
+  Delegate()->refreshed_end_points = false;
+
+  fake_net_interfaces_.AddEmptyChangeEvent(kPrimaryIntfId);
+  EXPECT_FALSE(Delegate()->refreshed_end_points);
 }
 
 TEST_F(ConnectivityManagerTest, HandleServiceTunnelNotification) {

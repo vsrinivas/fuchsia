@@ -222,6 +222,10 @@ void ConnectivityManagerDelegateImpl::OnPlatformEvent(const WeaveDeviceEvent* ev
   }
 }
 
+WEAVE_ERROR ConnectivityManagerDelegateImpl::RefreshEndpoints() {
+  return MessageLayer.RefreshEndpoints();
+}
+
 void ConnectivityManagerDelegateImpl::OnInterfaceEvent(fuchsia::net::interfaces::Event event) {
   fuchsia::net::interfaces::Properties properties;
   bool properties_event = true;
@@ -253,6 +257,17 @@ void ConnectivityManagerDelegateImpl::OnInterfaceEvent(fuchsia::net::interfaces:
       } else {
         routable_v6_interfaces.erase(properties.id());
       }
+    }
+    if (event.is_changed() && properties.has_online()) {
+      PlatformMgr().ScheduleWork(
+        [](intptr_t context) {
+          ConnectivityManagerDelegateImpl* delegate = (ConnectivityManagerDelegateImpl*)context;
+          WEAVE_ERROR err = delegate->RefreshEndpoints();
+        if (err != WEAVE_NO_ERROR) {
+          FX_LOGS(ERROR)<< "MessageLayer.RefreshEndpoints() failed: " << nl::ErrorStr(err);
+        }
+      },
+      (intptr_t)this);
     }
   } else if (event.is_removed()) {
     routable_v4_interfaces.erase(event.removed());

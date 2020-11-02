@@ -46,6 +46,9 @@ class ConnectivityManagerDelegateImpl : public ConnectivityManagerImpl::Delegate
   // Drives service tunnel state.
   void DriveServiceTunnelState();
 
+  // Refresh the TCP/UDP Endpoints based on network state.
+  virtual WEAVE_ERROR RefreshEndpoints();
+
   fuchsia::net::interfaces::StatePtr state_;
   fuchsia::net::interfaces::WatcherPtr watcher_;
 
