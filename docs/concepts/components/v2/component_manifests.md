@@ -457,14 +457,6 @@ A definition of a [runner capability][doc-runners].
 The `use` section declares the capabilities that the component can use at
 runtime, as explained in [Routing terminology](#routing-terminology).
 
--   A capability declaration, one of:
-    -   `protocol`: The [name](#capability-names) of a protocol capability, or
-        an array of names of protocol capabilities.
-    -   `directory`: The [name](#capability-names) of a directory capability.
-    -   `storage`: The [name](#capability-names) of a storage capability.
-    -   `runner`: The [name](#capability-names) of a runner capability. A
-        component can use at most one `runner`.
-
 `use` is an array of objects with the following properties:
 
 -   A capability declaration, one of:
