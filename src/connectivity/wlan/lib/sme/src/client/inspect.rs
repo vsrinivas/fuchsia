@@ -15,7 +15,8 @@ use {
         format::MacFmt,
         ie::{self, wsc},
     },
-    wlan_inspect::{IfaceTree, InspectHasher},
+    wlan_hasher::WlanHasher,
+    wlan_inspect::IfaceTree,
 };
 
 /// These limits are set to capture roughly 5 to 10 recent connection attempts. An average
@@ -48,11 +49,11 @@ pub struct SmeTree {
     pub last_pulse: Mutex<PulseNode>,
 
     /// Hasher used to hash sensitive information, preserving user privacy.
-    pub hasher: InspectHasher,
+    pub hasher: WlanHasher,
 }
 
 impl SmeTree {
-    pub fn new(node: &Node, hasher: InspectHasher) -> Self {
+    pub fn new(node: &Node, hasher: WlanHasher) -> Self {
         let state_events =
             BoundedListNode::new(node.create_child("state_events"), STATE_EVENTS_LIMIT);
         let rsn_events = BoundedListNode::new(node.create_child("rsn_events"), RSN_EVENTS_LIMIT);
@@ -101,7 +102,7 @@ impl PulseNode {
         }
     }
 
-    pub fn update(&mut self, new_status: SmeStatus, hasher: &InspectHasher) {
+    pub fn update(&mut self, new_status: SmeStatus, hasher: &WlanHasher) {
         let now = zx::Time::get_monotonic();
         self.last_updated.set_at(now);
 
@@ -141,7 +142,7 @@ pub struct StatusNode {
 }
 
 impl StatusNode {
-    fn new(node: Node, status: &SmeStatus, hasher: &InspectHasher) -> Self {
+    fn new(node: Node, status: &SmeStatus, hasher: &WlanHasher) -> Self {
         let status_str = node.create_string("status_str", IDLE_STR);
         let mut status_node = Self {
             node,
@@ -158,7 +159,7 @@ impl StatusNode {
         &mut self,
         old_status: Option<SmeStatus>,
         new_status: &SmeStatus,
-        hasher: &InspectHasher,
+        hasher: &WlanHasher,
     ) {
         let status_str = if new_status.connected_to.is_some() {
             "connected"
@@ -235,7 +236,7 @@ pub struct BssInfoNode {
 }
 
 impl BssInfoNode {
-    fn new(node: Node, bss_info: &BssInfo, hasher: &InspectHasher) -> Self {
+    fn new(node: Node, bss_info: &BssInfo, hasher: &WlanHasher) -> Self {
         let bssid = node.create_string("bssid", bss_info.bssid.to_mac_str());
         let bssid_hash = node.create_string("bssid_hash", hasher.hash_mac_addr(bss_info.bssid));
         let ssid = node.create_string("ssid", String::from_utf8_lossy(&bss_info.ssid[..]));
@@ -272,7 +273,7 @@ impl BssInfoNode {
         this
     }
 
-    fn update(&mut self, bss_info: &BssInfo, hasher: &InspectHasher) {
+    fn update(&mut self, bss_info: &BssInfo, hasher: &WlanHasher) {
         self.bssid.set(&bss_info.bssid.to_mac_str());
         self.bssid_hash.set(&hasher.hash_mac_addr(bss_info.bssid));
         self.ssid.set(&String::from_utf8_lossy(&bss_info.ssid[..]));
@@ -444,13 +445,13 @@ pub struct ConnectingToNode {
 }
 
 impl ConnectingToNode {
-    fn new(node: Node, ssid: &[u8], hasher: &InspectHasher) -> Self {
+    fn new(node: Node, ssid: &[u8], hasher: &WlanHasher) -> Self {
         let ssid_hash = node.create_string("ssid_hash", hasher.hash(ssid));
         let ssid = node.create_string("ssid", String::from_utf8_lossy(ssid));
         Self { _node: node, ssid, ssid_hash }
     }
 
-    fn update(&mut self, ssid: &[u8], hasher: &InspectHasher) {
+    fn update(&mut self, ssid: &[u8], hasher: &WlanHasher) {
         self.ssid.set(&String::from_utf8_lossy(ssid));
         self.ssid_hash.set(&hasher.hash(ssid));
     }
@@ -466,7 +467,7 @@ mod tests {
 
     #[test]
     fn test_inspect_update_pulse() {
-        let hasher = InspectHasher::new([7; 8]);
+        let hasher = WlanHasher::new([7; 8]);
         let inspector = Inspector::new();
         let root = inspector.root();
         let mut pulse = PulseNode::new(root.create_child("last_pulse"));

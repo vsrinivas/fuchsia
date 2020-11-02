@@ -19,6 +19,7 @@ use {
     pin_utils::pin_mut,
     std::{marker::Unpin, sync::Arc},
     void::Void,
+    wlan_hasher::WlanHasher,
     wlan_inspect,
     wlan_sme::{self, clone_utils},
 };
@@ -196,7 +197,7 @@ fn create_sme<S>(
     cobalt_sender: CobaltSender,
     inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
-    inspect_hasher: wlan_inspect::InspectHasher,
+    hasher: WlanHasher,
     mut shutdown_receiver: mpsc::Receiver<()>,
 ) -> (SmeServer, impl Future<Output = Result<(), Error>>)
 where
@@ -216,7 +217,7 @@ where
                 cobalt_sender,
                 inspect_tree,
                 iface_tree_holder,
-                inspect_hasher,
+                hasher,
             );
             (SmeServer::Client(sender), FutureObj::new(Box::new(fut)))
         }

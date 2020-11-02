@@ -15,6 +15,7 @@ use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_common::bss::Protection as BssProtection;
+use wlan_hasher::WlanHasher;
 use wlan_inspect;
 use wlan_rsn::auth;
 use wlan_sme::client::{
@@ -41,7 +42,7 @@ pub async fn serve<S>(
     cobalt_sender: CobaltSender,
     inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
-    inspect_hasher: wlan_inspect::InspectHasher,
+    hasher: WlanHasher,
 ) -> Result<(), anyhow::Error>
 where
     S: Stream<Item = StatsRequest> + Unpin,
@@ -51,7 +52,7 @@ where
     let cfg = client_sme::ClientConfig::from_config(cfg, wpa3_supported);
     let is_softmac = device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac);
     let (sme, mlme_stream, info_stream, time_stream) =
-        Sme::new(cfg, device_info, iface_tree_holder, inspect_hasher, is_softmac);
+        Sme::new(cfg, device_info, iface_tree_holder, hasher, is_softmac);
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme = super::serve_mlme_sme(
         proxy,

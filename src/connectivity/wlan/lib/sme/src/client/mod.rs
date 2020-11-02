@@ -51,6 +51,7 @@ use {
         mac::MacAddr,
         RadioConfig,
     },
+    wlan_hasher::WlanHasher,
     wlan_inspect::wrappers::InspectWlanChan,
     wlan_rsn::auth,
 };
@@ -87,6 +88,9 @@ mod internal {
 }
 
 use self::internal::*;
+
+const SSID_HASH_LEN: usize = 16;
+const BSSID_HASH_LEN: usize = 16;
 
 pub type TimeStream = timer::TimeStream<Event>;
 
@@ -228,14 +232,14 @@ impl ClientSme {
         cfg: ClientConfig,
         info: DeviceInfo,
         iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
-        inspect_hasher: wlan_inspect::InspectHasher,
+        hasher: WlanHasher,
         is_softmac: bool,
     ) -> (Self, MlmeStream, InfoStream, TimeStream) {
         let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (info_sink, info_stream) = mpsc::unbounded();
         let (mut timer, time_stream) = timer::create_timer();
-        let inspect = Arc::new(inspect::SmeTree::new(&iface_tree_holder.node, inspect_hasher));
+        let inspect = Arc::new(inspect::SmeTree::new(&iface_tree_holder.node, hasher));
         iface_tree_holder.add_iface_subtree(inspect.clone());
         timer.schedule(event::InspectPulseCheck);
 
@@ -352,6 +356,17 @@ impl ClientSme {
     }
 }
 
+fn bss_to_string(bss: &BssDescription, hasher: &WlanHasher) -> String {
+    format!(
+        "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
+        &hasher.hash(&bss.ssid[..])[..SSID_HASH_LEN],
+        &hasher.hash_mac_addr(bss.bssid)[..BSSID_HASH_LEN],
+        bss.get_protection(),
+        bss.chan.primary,
+        bss.rssi_dbm,
+    )
+}
+
 impl super::Station for ClientSme {
     type Event = Event;
 
@@ -370,6 +385,15 @@ impl super::Station for ClientSme {
                 match result {
                     scan::ScanResult::None => (),
                     scan::ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
+                        info!("Scan results:");
+                        if bss_list.is_empty() {
+                            info!("  No Results");
+                        } else {
+                            for bss in &bss_list {
+                                info!("  {}", bss_to_string(bss, &self.context.inspect.hasher));
+                            }
+                        }
+
                         let mut inspect_msg: Option<String> = None;
                         let best_bss = self.cfg.get_best_bss(&bss_list);
                         if let Some(ref best_bss) = best_bss {
@@ -386,6 +410,11 @@ impl super::Station for ClientSme {
                                     &best_bss,
                                 ) {
                                     Ok(protection) => {
+                                        info!("Attempting to connect to:");
+                                        info!(
+                                            "  {}",
+                                            bss_to_string(&best_bss, &self.context.inspect.hasher)
+                                        );
                                         inspect_msg.replace("attempt to connect".to_string());
                                         let cmd = ConnectCommand {
                                             bss: Box::new(clone_bss_desc(&best_bss)),
@@ -760,7 +789,7 @@ mod tests {
             ClientConfig::from_config(SmeConfig::default().with_wep(), false),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
-            wlan_inspect::InspectHasher::new(DUMMY_HASH_KEY),
+            WlanHasher::new(DUMMY_HASH_KEY),
             true, // is_softmac
         );
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
@@ -1364,7 +1393,7 @@ mod tests {
             ClientConfig::default(),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
-            wlan_inspect::InspectHasher::new(DUMMY_HASH_KEY),
+            WlanHasher::new(DUMMY_HASH_KEY),
             true, // is_softmac
         )
     }

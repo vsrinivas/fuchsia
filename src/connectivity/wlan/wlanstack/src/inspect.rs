@@ -14,7 +14,8 @@ use {
     parking_lot::Mutex,
     paste, rand,
     std::{collections::HashMap, sync::Arc},
-    wlan_inspect::{IfaceTreeHolder, IfacesTrees, InspectHasher},
+    wlan_hasher::WlanHasher,
+    wlan_inspect::{IfaceTreeHolder, IfacesTrees},
 };
 
 pub const VMO_SIZE_BYTES: usize = 1000 * 1024;
@@ -34,7 +35,7 @@ pub struct WlanstackTree {
     /// Root of the tree
     pub inspector: Inspector,
     /// Key used to hash privacy-sensitive values in the tree
-    pub hasher: InspectHasher,
+    pub hasher: WlanHasher,
     /// "client_stats" node
     pub client_stats: ClientStatsNode,
     /// "device_events" subtree
@@ -55,7 +56,7 @@ impl WlanstackTree {
             inspector,
             // According to doc, `rand::random` uses ThreadRng, which is cryptographically secure:
             // https://docs.rs/rand/0.5.0/rand/rngs/struct.ThreadRng.html
-            hasher: InspectHasher::new(rand::random::<u64>().to_le_bytes()),
+            hasher: WlanHasher::new(rand::random::<u64>().to_le_bytes()),
             client_stats: ClientStatsNode::new(client_stats),
             device_events: Mutex::new(BoundedListNode::new(device_events, DEVICE_EVENTS_LIMIT)),
             ifaces_trees: Mutex::new(ifaces_trees),

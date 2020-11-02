@@ -1207,6 +1207,7 @@ mod tests {
     use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
     use wlan_common::{assert_variant, fake_bss, ie::rsn::rsne::Rsne, RadioConfig};
+    use wlan_hasher::WlanHasher;
     use wlan_rsn::{key::exchange::Key, rsna::SecAssocStatus};
     use wlan_rsn::{
         rsna::{SecAssocUpdate, UpdateSink},
@@ -2221,13 +2222,13 @@ mod tests {
             let (info_sink, info_stream) = mpsc::unbounded();
             let (timer, time_stream) = timer::create_timer();
             let inspector = Inspector::new();
-            let inspect_hasher = wlan_inspect::InspectHasher::new([88, 77, 66, 55, 44, 33, 22, 11]);
+            let hasher = WlanHasher::new([88, 77, 66, 55, 44, 33, 22, 11]);
             let context = Context {
                 device_info: Arc::new(fake_device_info()),
                 mlme_sink: MlmeSink::new(mlme_sink),
                 timer,
                 att_id: 0,
-                inspect: Arc::new(inspect::SmeTree::new(inspector.root(), inspect_hasher)),
+                inspect: Arc::new(inspect::SmeTree::new(inspector.root(), hasher)),
                 info: InfoReporter::new(InfoSink::new(info_sink)),
                 is_softmac: true,
             };

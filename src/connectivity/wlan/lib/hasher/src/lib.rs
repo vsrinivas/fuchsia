@@ -12,11 +12,11 @@ use {
 
 #[derive(Debug, Clone)]
 /// Hasher used to hash sensitive information, preserving user privacy.
-pub struct InspectHasher {
+pub struct WlanHasher {
     hash_key: [u8; 8],
 }
 
-impl InspectHasher {
+impl WlanHasher {
     pub fn new(hash_key: [u8; 8]) -> Self {
         Self { hash_key }
     }
@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn test_hash_mac_addr() {
-        let hasher = InspectHasher::new(HASH_KEY);
+        let hasher = WlanHasher::new(HASH_KEY);
         let mac_addr = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
         let hashed_str = hasher.hash_mac_addr(mac_addr);
         assert!(hashed_str.starts_with("11:22:33:"));
