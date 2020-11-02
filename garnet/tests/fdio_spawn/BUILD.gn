@@ -20,9 +20,8 @@ executable("fdio-spawn-tests-bin") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
   ]
 }
 

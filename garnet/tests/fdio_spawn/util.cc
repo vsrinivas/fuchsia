@@ -4,7 +4,7 @@
 
 #include "util.h"
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 // This must return void in order to use gtest ASSERTs.
 void wait_for_process_exit(const zx::process& process, int64_t* return_code) {

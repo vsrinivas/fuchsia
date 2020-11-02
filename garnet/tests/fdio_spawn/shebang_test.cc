@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <zircon/errors.h>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "util.h"
 
@@ -25,7 +25,7 @@ static constexpr char kAttemptToUseShellOutsidePackageBin[] =
 static constexpr char kTooLongShebangBin[] = "/pkg/bin/too_long_shebang";
 static constexpr char kUseResolveFromShebangBin[] = "/pkg/bin/use_resolve_from_shebang";
 
-class ShebangTest : public ::testing::Test {
+class ShebangTest : public ::zxtest::Test {
  protected:
   void RunTest(const char* path, const char** argv, const char* expected) {
     int fd;
@@ -56,7 +56,7 @@ class ShebangTest : public ::testing::Test {
     EXPECT_EQ(status, ZX_OK);
     EXPECT_EQ(actual, strlen(expected));
     buf[actual] = '\0';
-    EXPECT_STREQ(buf, expected);
+    ASSERT_STR_EQ(buf, expected);
   }
 };
 

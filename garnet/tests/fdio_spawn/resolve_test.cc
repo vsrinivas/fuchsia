@@ -8,7 +8,7 @@
 #include <lib/zx/process.h>
 #include <zircon/errors.h>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "util.h"
 
