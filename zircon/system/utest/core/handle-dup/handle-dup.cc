@@ -46,8 +46,8 @@ void TestReplace() {
 
   ASSERT_OK(zx::event::create(kEventOption, &event));
 
-  // This should fail and not cause the kernel to panic.
-  ASSERT_STATUS(ZX_ERR_INVALID_ARGS, zx_handle_replace(event.get(), 0, nullptr));
+  // This should fail and not cause the kernel to panic. The event handle is invalidated.
+  ASSERT_STATUS(ZX_ERR_INVALID_ARGS, zx_handle_replace(event.release(), 0, nullptr));
 }
 
 TEST(HandleDup, Replace) {
