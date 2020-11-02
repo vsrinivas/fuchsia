@@ -33,12 +33,6 @@ template("sherlock_driver") {
       configs += [ ":rndis" ]
     }
 
-    # Sherlock board is used for both sherlock and luis. This define helps
-    # tweak necessary parameters.
-    if (board_name == "luis") {
-      defines = [ "IS_LUIS=1" ]
-    }
-
     sources = [
       "luis-cpu.cc",
       "luis-power.cc",
@@ -134,14 +128,17 @@ sherlock_driver("sherlock-factory-rndis") {
 sherlock_driver("luis") {
   use_factory = false
   enable_rndis = false
+  defines = [ "IS_LUIS=1" ]
 }
 
 sherlock_driver("luis-factory") {
   use_factory = true
   enable_rndis = false
+  defines = [ "IS_LUIS=1" ]
 }
 
 sherlock_driver("luis-factory-rndis") {
   use_factory = true
   enable_rndis = true
+  defines = [ "IS_LUIS=1" ]
 }
