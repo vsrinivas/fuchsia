@@ -16,10 +16,11 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <arch/arm64/iframe.h>
 #include <kernel/cpu.h>
 
 __BEGIN_CDECLS
+
+struct iframe_t;
 
 typedef struct {
   uint8_t ctype;

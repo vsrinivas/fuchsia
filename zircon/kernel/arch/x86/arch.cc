@@ -24,6 +24,7 @@
 #include <arch/mmu.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
+#include <arch/regs.h>
 #include <arch/vm.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/descriptor.h>

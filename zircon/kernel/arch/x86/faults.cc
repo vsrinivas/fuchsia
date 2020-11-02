@@ -19,6 +19,7 @@
 #include <zircon/types.h>
 
 #include <arch/exception.h>
+#include <arch/regs.h>
 #include <arch/user_copy.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
@@ -499,7 +500,7 @@ void x86_exception_handler(iframe_t* frame) {
                    frame->vector, frame->ip);
 }
 
-void x86_syscall_process_pending_signals(x86_syscall_general_regs_t* gregs) {
+void x86_syscall_process_pending_signals(syscall_regs_t* gregs) {
   Thread::Current::ProcessPendingSignals(GeneralRegsSource::Syscall, gregs);
 }
 

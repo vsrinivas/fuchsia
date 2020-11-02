@@ -19,6 +19,7 @@
 #include <arch/arm64.h>
 #include <arch/arm64/uarch.h>
 #include <arch/exception.h>
+#include <arch/regs.h>
 #include <arch/thread.h>
 #include <arch/user_copy.h>
 #include <kernel/interrupt.h>

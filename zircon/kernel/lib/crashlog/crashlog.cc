@@ -14,6 +14,7 @@
 #include <string.h>
 #include <zircon/boot/crash-reason.h>
 
+#include <arch/regs.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>

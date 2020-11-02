@@ -10,6 +10,7 @@
 #include <zircon/types.h>
 
 #include <arch/debugger.h>
+#include <arch/regs.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
@@ -48,14 +49,14 @@ namespace {
   } while (0)
 
 void x86_fill_in_gregs_from_syscall(zx_thread_state_general_regs_t* out,
-                                    const x86_syscall_general_regs_t* in) {
+                                    const syscall_regs_t* in) {
   COPY_COMMON_REGS(out, in);
   out->rip = in->rip;
   out->rsp = in->rsp;
   out->rflags = in->rflags;
 }
 
-void x86_fill_in_syscall_from_gregs(x86_syscall_general_regs_t* out,
+void x86_fill_in_syscall_from_gregs(syscall_regs_t* out,
                                     const zx_thread_state_general_regs_t* in) {
   COPY_COMMON_REGS(out, in);
   out->rip = in->rip;

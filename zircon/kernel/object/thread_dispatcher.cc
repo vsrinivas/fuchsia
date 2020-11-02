@@ -19,6 +19,7 @@
 
 #include <arch/debugger.h>
 #include <arch/exception.h>
+#include <arch/regs.h>
 #include <arch/vm.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>

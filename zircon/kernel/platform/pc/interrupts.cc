@@ -12,6 +12,7 @@
 #include <trace.h>
 #include <zircon/types.h>
 
+#include <arch/regs.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/platform_access.h>

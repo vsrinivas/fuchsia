@@ -13,6 +13,7 @@
 #include <arch/arm64.h>
 #include <arch/arm64/registers.h>
 #include <arch/debugger.h>
+#include <arch/regs.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 

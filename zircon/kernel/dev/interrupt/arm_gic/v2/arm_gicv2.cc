@@ -23,6 +23,7 @@
 #include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <arch/arm64/periphmap.h>
 #include <arch/ops.h>
+#include <arch/regs.h>
 #include <dev/interrupt.h>
 #include <dev/interrupt/arm_gic_common.h>
 #include <dev/interrupt/arm_gicv2_regs.h>

@@ -47,7 +47,7 @@ struct arch_thread {
   // them yet.
   union {
     void *gregs;
-    x86_syscall_general_regs_t *syscall;
+    syscall_regs_t *syscall;
     iframe_t *iframe;
   } suspended_general_regs;
 

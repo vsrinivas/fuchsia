@@ -17,14 +17,15 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <arch/x86/general_regs.h>
-#include <arch/x86/iframe.h>
 #include <arch/x86/registers.h>
 #include <kernel/cpu.h>
 
 #include <lib/arch/intrin.h>
 
 __BEGIN_CDECLS
+
+struct iframe_t;
+struct syscall_regs_t;
 
 #define X86_8BYTE_MASK 0xFFFFFFFF
 
@@ -55,7 +56,7 @@ void x86_uspace_entry(const struct iframe_t* iframe) __NO_RETURN;
 
 void x86_syscall(void);
 
-void x86_syscall_process_pending_signals(x86_syscall_general_regs_t* gregs);
+void x86_syscall_process_pending_signals(struct syscall_regs_t* gregs);
 
 /* @brief Register all of the CPUs in the system
  *

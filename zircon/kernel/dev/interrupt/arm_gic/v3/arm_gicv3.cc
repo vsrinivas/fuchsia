@@ -19,6 +19,7 @@
 
 #include <arch/arm64/hypervisor/gic/gicv3.h>
 #include <arch/arm64/periphmap.h>
+#include <arch/regs.h>
 #include <dev/interrupt.h>
 #include <dev/interrupt/arm_gic_common.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>

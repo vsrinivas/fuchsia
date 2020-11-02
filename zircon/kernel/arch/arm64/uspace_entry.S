@@ -4,9 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <asm.h>
-#include <arch/arm64/iframe.h>
 #include <arch/asm_macros.h>
+#include <arch/regs.h>
+#include <asm.h>
 
 // void arm64_uspace_entry(iframe_t* iframe, vaddr_t kstack) __NO_RETURN;
 FUNCTION(arm64_uspace_entry)

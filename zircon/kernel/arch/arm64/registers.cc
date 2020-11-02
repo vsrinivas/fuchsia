@@ -6,6 +6,7 @@
 #include "arch/arm64/registers.h"
 
 #include <arch/arm64.h>
+#include <arch/regs.h>
 #include <kernel/thread.h>
 #include <vm/vm.h>
 

@@ -7,6 +7,7 @@
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 
+#include <arch/regs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/gparena.h>
 

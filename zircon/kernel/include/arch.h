@@ -50,7 +50,7 @@ __END_CDECLS
 
 // On x86, user mode general registers are stored in one of two structures depending on how the
 // thread entered the kernel.  If via interrupt/exception, they are stored in an iframe_t.  If via
-// syscall, they are stored in an x86_syscall_general_regs_t.
+// syscall, they are stored in an syscall_regs_t.
 //
 // On arm64, user mode general registers are stored in an iframe_t regardless of how the thread
 // entered the kernel.

@@ -292,7 +292,7 @@ FUNCTION_LABEL(x86_syscall)
     mov     %gs:PERCPU_KERNEL_SP_OFFSET, %rsp
     .cfi_def_cfa %rsp, 0
 
-    // Save all the general purpose registers in a x86_syscall_general_regs_t
+    // Save all the general purpose registers in a syscall_regs_t
     // struct on the kernel's stack.
     //
     // By saving (and later restoring) all of the registers rather than just
@@ -318,7 +318,7 @@ FUNCTION_LABEL(x86_syscall)
     push_value %rax
 
     // At this point:
-    //   rsp points at a x86_syscall_general_regs_t struct
+    //   rsp points at a syscall_regs_t struct
     //   rsp is 16-byte aligned
     //
     // Any changes to the stack here need to be reflected in
@@ -343,9 +343,9 @@ FUNCTION_LABEL(x86_syscall)
     // At this point:
     //   rax = syscall result
     //   rdx = non-zero if thread was signaled
-    //   rsp = address of x86_syscall_general_regs_t
+    //   rsp = address of syscall_regs_t
 
-    // Save syscall result to the x86_syscall_general_regs_t on the stack to ensure it's not trashed
+    // Save syscall result to the syscall_regs_t on the stack to ensure it's not trashed
     // by upcoming function calls and to ensure debuggers can see and modify it if the thread was
     // suspened.
     movq    %rax, (%rsp)
@@ -429,7 +429,7 @@ syscall_maybe_mds_buff_overwrite:
     /* re-enable interrupts to maintain kernel preemptiveness */
     sti
 
-    // Pass a pointer to the x86_syscall_general_regs_t struct as first arg.
+    // Pass a pointer to the syscall_regs_t struct as first arg.
     movq    %rsp, %rdi
     call    x86_syscall_process_pending_signals
 

@@ -5,10 +5,10 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
+#include <arch/regs.h>
 #include <arch/x86/descriptor.h>
-#include <arch/x86/iframe.h>
 
-// x86_uspace_entry(x86_iframe_t* iframe)
+// x86_uspace_entry(iframe_t* iframe)
 FUNCTION(x86_uspace_entry)
     /* push a fake 64bit interrupt stack frame and iret to it */
     push_value X86_IFRAME_OFFSET_USER_SS(%rdi) // ss

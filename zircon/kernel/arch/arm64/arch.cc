@@ -25,6 +25,7 @@
 #include <arch/arm64/uarch.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
+#include <arch/regs.h>
 #include <arch/vm.h>
 #include <kernel/cpu.h>
 #include <kernel/thread.h>
