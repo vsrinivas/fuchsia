@@ -16,10 +16,10 @@ namespace web_runner_tests {
 void MockHttpGetResponse(web_runner_tests::TestServer* server, const char* resource) {
   const std::string expected_prefix = fxl::StringPrintf("GET /%s HTTP", resource);
   // |Read| requires preallocate (see sys/socket.h: read)
-  std::string buf(expected_prefix.size(), 0);
+  std::string buf(4096, 0);
 
   EXPECT_TRUE(server->Read(&buf));
-  EXPECT_EQ(expected_prefix, buf);
+  EXPECT_EQ(expected_prefix, buf.substr(0, expected_prefix.size()));
   std::string content;
   FX_CHECK(files::ReadFileToString(fxl::StringPrintf("/pkg/data/%s", resource), &content));
   FX_CHECK(server->WriteContent(content));

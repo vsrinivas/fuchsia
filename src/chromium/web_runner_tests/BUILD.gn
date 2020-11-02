@@ -144,6 +144,15 @@ test_package("web_runner_tests") {
       path = rebase_path("data/static.html")
       dest = "static.html"
     },
+    {
+      path = rebase_path("data/video.html")
+      dest = "video.html"
+    },
+    {
+      path = rebase_path(
+              "//garnet/test_data/media/third_party/chromium_media_test_data/blackwhite_yuv420p.webm")
+      dest = "blackwhite_yuv420p.webm"
+    },
   ]
 }
 

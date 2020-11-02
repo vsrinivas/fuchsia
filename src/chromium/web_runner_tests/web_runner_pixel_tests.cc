@@ -252,7 +252,8 @@ TEST_F(WebRunnerPixelTest, Static) {
 class WebPixelTest : public PixelTest {
  protected:
   WebPixelTest()
-      : web_context_(context(), fuchsia::web::ContextFeatureFlags::VULKAN),
+      : web_context_(context(), fuchsia::web::ContextFeatureFlags::VULKAN |
+                                    fuchsia::web::ContextFeatureFlags::HARDWARE_VIDEO_DECODER),
         embedder_view_({
             .session_and_listener_request =
                 scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),
@@ -320,6 +321,39 @@ TEST_F(WebPixelTest, Dynamic) {
   ExpectPrimaryColor(kBeforeColor);
   Input({"tap", "500", "125"});  // centered in top quarter of screen
   ExpectPrimaryColor(kAfterColor);
+}
+
+// Loads a static page with a video.
+TEST_F(WebPixelTest, Video) {
+  web_runner_tests::TestServer server;
+  FX_CHECK(server.FindAndBindPort());
+
+  auto serve = server.ServeAsync([&server] {
+    FX_LOGS(INFO) << "Waiting for HTTP request from Chromium";
+    ASSERT_TRUE(server.Accept()) << "Did not receive HTTP request from Chromium";
+    web_runner_tests::MockHttpGetResponse(&server, "video.html");
+    web_runner_tests::MockHttpGetResponse(&server, "blackwhite_yuv420p.webm");
+  });
+
+  web_context()->Navigate(fxl::StringPrintf("http://localhost:%d/video.html", server.port()));
+
+  static constexpr uint32_t kBlackColor = 0xff010001;
+  static constexpr uint32_t kWhiteColor = 0xfffffeff;
+  static constexpr uint32_t kVideoBackgroundColor = 0xffff00ff;
+  std::map<uint32_t, size_t> histogram;
+  EXPECT_TRUE(
+      ScreenshotUntil([&histogram](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
+        if (!status)
+          return false;
+
+        histogram = Histogram(screenshot);
+        return histogram[kBlackColor] > 0u;
+      }));
+  // We expect 240x240 <video> with black and white quadrants with grey on top. <video> background
+  // color should not be visible at all.
+  EXPECT_GT(histogram[kBlackColor], 10000u) << "Unexpected colors";
+  EXPECT_GT(histogram[kWhiteColor], 10000u) << "Unexpected colors";
+  EXPECT_EQ(histogram[kVideoBackgroundColor], 0u) << "Unexpected colors";
 }
 
 }  // namespace
