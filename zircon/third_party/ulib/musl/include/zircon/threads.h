@@ -39,6 +39,8 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+#if __has_include(<thread>)
+
 #include <thread>
 
 // Get the zx_handle_t corresponding to the std::thread::native_handle() value.
@@ -46,6 +48,8 @@ __END_CDECLS
 // Using this API avoids any assumptions about std::thread::native_handle_type
 // corresponding exactly to thrd_t or any other particular type.
 zx_handle_t native_thread_get_zx_handle(std::thread::native_handle_type);
+
+#endif  // __has_include(<thread>)
 
 #endif  // __cplusplus
 
