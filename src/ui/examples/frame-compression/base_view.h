@@ -30,10 +30,15 @@ class BaseView : public scenic::BaseView {
   static void DestroyPngReadStruct(png_structp png, png_infop info_ptr);
 
  protected:
-  static constexpr uint32_t kAfbcBodyAlignment = 1024u;
+  static constexpr uint32_t kTiledAfbcBodyAlignment = 4096u;
+  static constexpr uint32_t kTiledAfbcWidthAlignment = 128u;
+  static constexpr uint32_t kTiledAfbcHeightAlignment = 128u;
   static constexpr uint32_t kAfbcBytesPerBlockHeader = 16u;
   static constexpr uint32_t kAfbcTilePixelWidth = 16u;
   static constexpr uint32_t kAfbcTilePixelHeight = 16u;
+  static constexpr uint32_t kAfbcHeaderTileWidth = 8u;
+  static constexpr uint32_t kAfbcHeaderTileHeight = 8u;
+  static constexpr uint32_t kAfbcHeaderTileBlocks = kAfbcHeaderTileWidth * kAfbcHeaderTileHeight;
   static constexpr uint32_t kAfbcSubtileSize = 4u;
   static constexpr uint32_t kTileBytesPerPixel = 4u;
   static constexpr uint32_t kTileNumPixels = kAfbcTilePixelWidth * kAfbcTilePixelHeight;

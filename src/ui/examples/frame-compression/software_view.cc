@@ -7,6 +7,10 @@
 #include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/commands.h>
 
+#include <algorithm>
+
+#include <fbl/algorithm.h>
+
 namespace frame_compression {
 namespace {
 
@@ -125,17 +129,18 @@ SoftwareView::SoftwareView(scenic::ViewContext context, uint64_t modifier, uint3
     const zx::vmo& image_vmo = buffer_collection_info.buffers[i].vmo;
     auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
     FX_CHECK(image_vmo_bytes > 0);
-    status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
-                                        0, image_vmo, 0, image_vmo_bytes,
-                                        reinterpret_cast<uintptr_t*>(&vmo_base));
+    status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
+                                        image_vmo_bytes, reinterpret_cast<uintptr_t*>(&vmo_base));
     vmo_base += buffer_collection_info.buffers[i].vmo_usable_start;
 
     image.vmo_ptr = vmo_base;
     image.image_bytes = image_vmo_bytes;
     switch (modifier) {
-      case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
-        uint32_t width_in_tiles = (width_ + kAfbcTilePixelWidth - 1) / kAfbcTilePixelWidth;
-        uint32_t height_in_tiles = (height_ + kAfbcTilePixelHeight - 1) / kAfbcTilePixelHeight;
+      case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER: {
+        uint32_t width_in_tiles =
+            fbl::round_up(width_, kTiledAfbcWidthAlignment) / kAfbcTilePixelWidth;
+        uint32_t height_in_tiles =
+            fbl::round_up(height_, kTiledAfbcHeightAlignment) / kAfbcTilePixelHeight;
         image.width_in_tiles = width_in_tiles;
         image.height_in_tiles = height_in_tiles;
       } break;
@@ -183,7 +188,7 @@ void SoftwareView::OnSceneInvalidated(fuchsia::images::PresentationInfo presenta
 
 void SoftwareView::SetPixelsFromColorOffset(Image& image, uint32_t color_offset) {
   switch (modifier_) {
-    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16:
+    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER:
       SetAfbcPixelsFromColorOffset(image, color_offset);
       break;
     case fuchsia::sysmem::FORMAT_MODIFIER_LINEAR:
@@ -202,91 +207,118 @@ void SoftwareView::SetAfbcPixelsFromColorOffset(Image& image, uint32_t color_off
   uint32_t height_in_tiles = image.height_in_tiles;
   uint32_t tile_count = width_in_tiles * height_in_tiles;
   uint32_t body_offset =
-      ((tile_count * kAfbcBytesPerBlockHeader + kAfbcBodyAlignment - 1) / kAfbcBodyAlignment) *
-      kAfbcBodyAlignment;
+      fbl::round_up(tile_count * kAfbcBytesPerBlockHeader, kTiledAfbcBodyAlignment);
   uint32_t subtile_num_bytes = kTileNumBytes / (kAfbcSubtileSize * kAfbcSubtileSize);
   uint32_t subtile_stride = subtile_num_bytes / kAfbcSubtileSize;
+  uint32_t width_in_superblocks = width_in_tiles / kAfbcHeaderTileWidth;
+  uint32_t height_in_superblocks = height_in_tiles / kAfbcHeaderTileHeight;
 
   uint8_t* header_base = image.vmo_ptr;
   uint8_t* body_base = header_base + body_offset;
 
   uint32_t next_tile_index = 0;
-  for (unsigned j = 0; j < height_in_tiles; j++) {
-    unsigned tile_y = j * kAfbcTilePixelHeight;
-    unsigned tile_y_end = tile_y + kAfbcTilePixelHeight;
+  for (unsigned k = 0; k < height_in_superblocks; k++) {
+    for (unsigned j = 0; j < width_in_superblocks; j++) {
+      for (unsigned i = 0; i < kAfbcHeaderTileBlocks; i++) {
+        // 8x8 superblock layout:
+        //
+        // +--+--+--+--+--+--+--+--
+        // |01|02|05|06|17|18|21|..
+        // +--+--+--+--+--+--+--+
+        // |03|04|07|08|19|20|..
+        // +--+--+--+--+--+--+
+        // |09|10|13|14|25|..
+        // +--+--+--+--+--+
+        // |11|12|15|16|..
+        // +--+--+--+--+
+        // |32|33|36|..
+        // +--+--+--+
+        // |34|35|..
+        // +--+--+
+        // |40|..
+        // +--+
+        // +..
+        //
 
-    // Use solid color tile if possible.
-    if (tile_y >= color_offset || tile_y_end < color_offset) {
-      for (unsigned i = 0; i < width_in_tiles; i++) {
-        unsigned header_offset = kAfbcBytesPerBlockHeader * (j * width_in_tiles + i);
+        // 4x4 offset and index:
+        unsigned block_4x4 = i / 16;
+        unsigned block_4x4_index = i % 16;
+
+        // 2x2 offset and index:
+        unsigned block_2x2 = block_4x4_index / 4;
+        unsigned block_2x2_index = block_4x4_index % 4;
+
+        // y offsets:
+        unsigned block_4x4_y = block_4x4 / 2;
+        unsigned block_2x2_y = block_2x2 / 2;
+        unsigned block_y = block_2x2_index / 2;
+
+        unsigned tile_y =
+            ((k * kAfbcHeaderTileHeight) + block_4x4_y * 4 + block_2x2_y * 2 + block_y) *
+            kAfbcTilePixelHeight;
+        unsigned tile_y_end = tile_y + kAfbcTilePixelHeight;
+
+        unsigned header_offset = (((k * width_in_superblocks + j) * kAfbcHeaderTileBlocks) + i) *
+                                 kAfbcBytesPerBlockHeader;
         uint8_t* header_ptr = header_base + header_offset;
-        uint32_t color = tile_y >= color_offset ? kColor0 : kColor1;
+        // Use solid color tile if possible.
+        if (tile_y >= color_offset || tile_y_end < color_offset) {
+          uint32_t color = tile_y >= color_offset ? kColor0 : kColor1;
+          // Reset header.
+          header_ptr[0] = header_ptr[1] = header_ptr[2] = header_ptr[3] = header_ptr[4] =
+              header_ptr[5] = header_ptr[6] = header_ptr[7] = header_ptr[12] = header_ptr[13] =
+                  header_ptr[14] = header_ptr[15] = 0;
+          // Solid colors are stored at offset 8 in block header.
+          *(reinterpret_cast<uint32_t*>(header_ptr + 8)) = color;
+        } else {
+          uint32_t tile_index = next_tile_index++;
+          uint32_t tile_offset = kTileNumBytes * tile_index;
+          // 16 sub-tiles.
+          constexpr struct {
+            unsigned x;
+            unsigned y;
+          } kSubtileOffset[kAfbcSubtileSize * kAfbcSubtileSize] = {
+              {4, 4}, {0, 4},  {0, 0},   {4, 0},  {8, 0},  {12, 0}, {12, 4}, {8, 4},
+              {8, 8}, {12, 8}, {12, 12}, {8, 12}, {4, 12}, {0, 12}, {0, 8},  {4, 8},
+          };
 
-        // Reset header.
-        header_ptr[0] = header_ptr[1] = header_ptr[2] = header_ptr[3] = header_ptr[4] =
-            header_ptr[5] = header_ptr[6] = header_ptr[7] = header_ptr[12] = header_ptr[13] =
-                header_ptr[14] = header_ptr[15] = 0;
+          for (unsigned l = 0; l < countof(kSubtileOffset); ++l) {
+            unsigned offset = tile_offset + subtile_num_bytes * l;
 
-        // Solid colors are stored at offset 8 in block header.
-        *(reinterpret_cast<uint32_t*>(header_ptr + 8)) = color;
-      }
-    } else {
-      // We only update the first tile in the row and then update all headers
-      // for this row to point to the same tile memory. This demonstrates the
-      // ability to dedupe tiles that are the same.
-      uint32_t tile_index = next_tile_index++;
-      uint32_t tile_offset = kTileNumBytes * tile_index;
+            for (unsigned yy = 0; yy < kAfbcSubtileSize; ++yy) {
+              unsigned y = tile_y + kSubtileOffset[l].y + yy;
+              uint32_t color = y >= color_offset ? kColor0 : kColor1;
+              uint32_t* target =
+                  reinterpret_cast<uint32_t*>(body_base + offset + yy * subtile_stride);
 
-      // 16 sub-tiles.
-      constexpr struct {
-        unsigned x;
-        unsigned y;
-      } kSubtileOffset[kAfbcSubtileSize * kAfbcSubtileSize] = {
-          {4, 4}, {0, 4},  {0, 0},   {4, 0},  {8, 0},  {12, 0}, {12, 4}, {8, 4},
-          {8, 8}, {12, 8}, {12, 12}, {8, 12}, {4, 12}, {0, 12}, {0, 8},  {4, 8},
-      };
-
-      for (unsigned k = 0; k < countof(kSubtileOffset); ++k) {
-        unsigned offset = tile_offset + subtile_num_bytes * k;
-
-        for (unsigned yy = 0; yy < kAfbcSubtileSize; ++yy) {
-          unsigned y = tile_y + kSubtileOffset[k].y + yy;
-          uint32_t color = y >= color_offset ? kColor0 : kColor1;
-          uint32_t* target = reinterpret_cast<uint32_t*>(body_base + offset + yy * subtile_stride);
-
-          for (unsigned xx = 0; xx < kAfbcSubtileSize; ++xx) {
-            target[xx] = color;
+              for (unsigned xx = 0; xx < kAfbcSubtileSize; ++xx) {
+                target[xx] = color;
+              }
+            }
           }
+
+          if (image.needs_flush) {
+            zx_cache_flush(body_base + tile_offset, kTileNumBytes, ZX_CACHE_FLUSH_DATA);
+          }
+
+          // Store offset of uncompressed tile memory in byte 0-3.
+          *(reinterpret_cast<uint32_t*>(header_ptr)) = body_offset + tile_offset;
+
+          // Set byte 4-15 to disable compression for tile memory.
+          header_ptr[4] = header_ptr[7] = header_ptr[10] = header_ptr[13] = 0x41;
+          header_ptr[5] = header_ptr[8] = header_ptr[11] = header_ptr[14] = 0x10;
+          header_ptr[6] = header_ptr[9] = header_ptr[12] = header_ptr[15] = 0x04;
         }
-      }
-
-      if (image.needs_flush) {
-        zx_cache_flush(body_base + tile_offset, kTileNumBytes, ZX_CACHE_FLUSH_DATA);
-      }
-
-      // Update all headers in this row.
-      for (unsigned i = 0; i < width_in_tiles; i++) {
-        unsigned header_offset = kAfbcBytesPerBlockHeader * (j * width_in_tiles + i);
-        uint8_t* header_ptr = header_base + header_offset;
-
-        // Store offset of uncompressed tile memory in byte 0-3.
-        uint32_t body_offset = body_base - header_base;
-        *(reinterpret_cast<uint32_t*>(header_ptr)) = body_offset + tile_offset;
-
-        // Set byte 4-15 to disable compression for tile memory.
-        header_ptr[4] = header_ptr[7] = header_ptr[10] = header_ptr[13] = 0x41;
-        header_ptr[5] = header_ptr[8] = header_ptr[11] = header_ptr[14] = 0x10;
-        header_ptr[6] = header_ptr[9] = header_ptr[12] = header_ptr[15] = 0x04;
       }
     }
   }
 
   if (image.needs_flush) {
-    zx_cache_flush(header_base, tile_count * kAfbcBytesPerBlockHeader, ZX_CACHE_FLUSH_DATA);
+    zx_cache_flush(header_base, body_offset, ZX_CACHE_FLUSH_DATA);
   }
 
-  image.image_bytes_used = tile_count * kAfbcBytesPerBlockHeader + next_tile_index * kTileNumBytes;
-  image.image_bytes_deduped = (next_tile_index * kTileNumBytes) * (width_in_tiles - 1);
+  image.image_bytes_used = body_offset + next_tile_index * kTileNumBytes;
+  image.image_bytes_deduped = 0;
 }
 
 void SoftwareView::SetLinearPixelsFromColorOffset(Image& image, uint32_t color_offset) {
@@ -308,7 +340,7 @@ void SoftwareView::SetLinearPixelsFromColorOffset(Image& image, uint32_t color_o
 
 void SoftwareView::SetPixelsFromPng(Image& image, png_structp png) {
   switch (modifier_) {
-    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16:
+    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER:
       SetAfbcPixelsFromPng(image, png);
       break;
     case fuchsia::sysmem::FORMAT_MODIFIER_LINEAR:
@@ -326,10 +358,11 @@ void SoftwareView::SetAfbcPixelsFromPng(Image& image, png_structp png) {
   uint32_t height_in_tiles = image.height_in_tiles;
   uint32_t tile_count = width_in_tiles * height_in_tiles;
   uint32_t body_offset =
-      ((tile_count * kAfbcBytesPerBlockHeader + kAfbcBodyAlignment - 1) / kAfbcBodyAlignment) *
-      kAfbcBodyAlignment;
+      fbl::round_up(tile_count * kAfbcBytesPerBlockHeader, kTiledAfbcBodyAlignment);
   uint32_t subtile_num_bytes = kTileNumBytes / (kAfbcSubtileSize * kAfbcSubtileSize);
   uint32_t subtile_stride = subtile_num_bytes / kAfbcSubtileSize;
+  uint32_t width_in_superblocks = width_in_tiles / kAfbcHeaderTileWidth;
+  uint32_t stride = width_in_tiles * kAfbcTilePixelWidth;
 
   uint8_t* header_base = image.vmo_ptr;
   uint8_t* body_base = header_base + body_offset;
@@ -338,19 +371,23 @@ void SoftwareView::SetAfbcPixelsFromPng(Image& image, png_structp png) {
   uint32_t solid_tile_count = 0;
 
   // Resize scratch buffer to fit one row of tiles.
-  scratch_.resize(width_ * kAfbcTilePixelHeight);
+  scratch_.resize(stride * kAfbcTilePixelHeight);
   // Reset tile map.
   image.tiles.clear();
 
+  uint32_t rows_left = height_;
   for (unsigned j = 0; j < height_in_tiles; ++j) {
     row_pointers_.clear();
     for (uint32_t y = 0; y < kAfbcTilePixelHeight; ++y) {
-      row_pointers_.push_back(reinterpret_cast<png_bytep>(scratch_.data()) + y * width_ * 4);
+      row_pointers_.push_back(reinterpret_cast<png_bytep>(scratch_.data()) + y * stride * 4);
     }
+    memset(scratch_.data(), 0, scratch_.size() * 4);
 
-    {
+    if (rows_left) {
       TRACE_DURATION("gfx", "SoftwareView::SetAfbcPixelsFromPng::ReadRows");
-      png_read_rows(png, row_pointers_.data(), nullptr, row_pointers_.size());
+      uint32_t rows = std::min(rows_left, static_cast<uint32_t>(row_pointers_.size()));
+      png_read_rows(png, row_pointers_.data(), nullptr, rows);
+      rows_left -= rows;
     }
 
     for (unsigned i = 0; i < width_in_tiles; i++) {
@@ -376,7 +413,7 @@ void SoftwareView::SetAfbcPixelsFromPng(Image& image, png_structp png) {
 
         // Convert to uncompressed tile memory and detect solid colors in the process.
         for (unsigned y = 0; y < kAfbcTilePixelHeight; ++y) {
-          uint32_t* row = scratch_.data() + y * width_ + tile_x;
+          uint32_t* row = scratch_.data() + y * stride + tile_x;
           uint32_t subtile_j = y / kAfbcSubtileSize;
           uint32_t subtile_y = y % kAfbcSubtileSize;
           uint32_t subtile_row_offset = subtile_y * kAfbcSubtileSize;
@@ -393,7 +430,28 @@ void SoftwareView::SetAfbcPixelsFromPng(Image& image, png_structp png) {
         }
       }
 
-      unsigned header_offset = kAfbcBytesPerBlockHeader * (j * width_in_tiles + i);
+      unsigned superblock_i = i / kAfbcHeaderTileWidth;
+      unsigned superblock_x = i % kAfbcHeaderTileWidth;
+      unsigned block_4x4_i = superblock_x / 4;
+      unsigned block_4x4_x = superblock_x % 4;
+      unsigned block_2x2_i = block_4x4_x / 2;
+      unsigned block_2x2_x = block_4x4_x % 2;
+
+      unsigned superblock_j = j / kAfbcHeaderTileHeight;
+      unsigned superblock_y = j % kAfbcHeaderTileHeight;
+      unsigned block_4x4_j = superblock_y / 4;
+      unsigned block_4x4_y = superblock_y % 4;
+      unsigned block_2x2_j = block_4x4_y / 2;
+      unsigned block_2x2_y = block_4x4_y % 2;
+
+      unsigned superblock_idx = superblock_j * width_in_superblocks + superblock_i;
+
+      unsigned tile_idx = superblock_idx * kAfbcHeaderTileBlocks;
+      tile_idx += (block_4x4_j * 2 + block_4x4_i) * 16;
+      tile_idx += (block_2x2_j * 2 + block_2x2_i) * 4;
+      tile_idx += block_2x2_y * 2 + block_2x2_x;
+
+      unsigned header_offset = tile_idx * kAfbcBytesPerBlockHeader;
       uint8_t* header_ptr = header_base + header_offset;
       if (is_solid_color) {
         TRACE_DURATION("gfx", "SoftwareView::SetAfbcPixelsFromPng::SetSolid");
@@ -428,7 +486,6 @@ void SoftwareView::SetAfbcPixelsFromPng(Image& image, png_structp png) {
         }
 
         // Store offset of uncompressed tile memory in byte 0-3.
-        uint32_t body_offset = body_base - header_base;
         *(reinterpret_cast<uint32_t*>(header_ptr)) = body_offset + tile_offset;
 
         // Set byte 4-15 to disable compression for tile memory.
@@ -441,10 +498,10 @@ void SoftwareView::SetAfbcPixelsFromPng(Image& image, png_structp png) {
 
   if (image.needs_flush) {
     TRACE_DURATION("gfx", "SoftwareView::SetAfbcPixelsFromPng::Flush");
-    zx_cache_flush(header_base, tile_count * kAfbcBytesPerBlockHeader, ZX_CACHE_FLUSH_DATA);
+    zx_cache_flush(header_base, body_offset, ZX_CACHE_FLUSH_DATA);
   }
 
-  image.image_bytes_used = tile_count * kAfbcBytesPerBlockHeader + next_tile_index * kTileNumBytes;
+  image.image_bytes_used = body_offset + next_tile_index * kTileNumBytes;
   image.image_bytes_deduped = ((tile_count - solid_tile_count) - next_tile_index) * kTileNumBytes;
 }
 
@@ -485,7 +542,7 @@ fit::promise<inspect::Inspector> SoftwareView::PopulateImageStats(const Image& i
   inspector.GetRoot().CreateUint(kImageBytes, image.image_bytes, &inspector);
   inspector.GetRoot().CreateUint(kImageBytesUsed, image.image_bytes_used, &inspector);
   inspector.GetRoot().CreateUint(kImageBytesDeduped, image.image_bytes_deduped, &inspector);
-  if (modifier_ == fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16) {
+  if (modifier_ == fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER) {
     inspector.GetRoot().CreateUint(kWidthInTiles, image.width_in_tiles, &inspector);
     inspector.GetRoot().CreateUint(kHeightInTiles, image.height_in_tiles, &inspector);
   }

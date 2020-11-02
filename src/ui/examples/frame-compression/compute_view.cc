@@ -8,6 +8,8 @@
 #include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/commands.h>
 
+#include <fbl/algorithm.h>
+
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/impl/command_buffer.h"
@@ -82,16 +84,46 @@ void main()
     // AFBC constants.
     const uint kAfbcTilePixelWidth = 16;
     const uint kAfbcTilePixelHeight = 16;
+    const uint kAfbcHeaderTileWidth = 8;
+    const uint kAfbcHeaderTileHeight = 8;
+    const uint kAfbcHeaderTileBlocks = kAfbcHeaderTileWidth * kAfbcHeaderTileHeight;
     const uint kAfbcUintsPerBlockHeader = 4;
     const uint kAfbcTilePixels = kAfbcTilePixelWidth * kAfbcTilePixelHeight;
 
     uint i = gl_GlobalInvocationID.x;
     uint j = gl_GlobalInvocationID.y;
-    uint tile_idx = j * params.width_in_tiles + i;
-    uint tile_y = j * kAfbcTilePixelWidth;
-    uint tile_y_end = tile_y + kAfbcTilePixelWidth;
-    // Per-tile headers are packed contiguously, separate from the tile data.
-    uint header_offset = kAfbcUintsPerBlockHeader * tile_idx;
+
+    uint tile_y = j * kAfbcTilePixelHeight;
+    uint tile_y_end = tile_y + kAfbcTilePixelHeight;
+
+    uint width_in_superblocks = params.width_in_tiles / kAfbcHeaderTileWidth;
+
+    //
+    // Tiled headers are stored in 8x8 superblocks. Each superblock contains
+    // four 4x4 blocks, each 4x4 block contains four 2x2 smaller blocks.
+    //
+    uint superblock_i = i / kAfbcHeaderTileWidth;
+    uint superblock_x = i % kAfbcHeaderTileWidth;
+    uint block_4x4_i = superblock_x / 4;
+    uint block_4x4_x = superblock_x % 4;
+    uint block_2x2_i = block_4x4_x / 2;
+    uint block_2x2_x = block_4x4_x % 2;
+
+    uint superblock_j = j / kAfbcHeaderTileHeight;
+    uint superblock_y = j % kAfbcHeaderTileHeight;
+    uint block_4x4_j = superblock_y / 4;
+    uint block_4x4_y = superblock_y % 4;
+    uint block_2x2_j = block_4x4_y / 2;
+    uint block_2x2_y = block_4x4_y % 2;
+
+    uint superblock_idx = superblock_j * width_in_superblocks + superblock_i;
+
+    uint tile_idx = superblock_idx * kAfbcHeaderTileBlocks;
+    tile_idx += (block_4x4_j * 2 + block_4x4_i) * 16;
+    tile_idx += (block_2x2_j * 2 + block_2x2_i) * 4;
+    tile_idx += block_2x2_y * 2 + block_2x2_x;
+
+    uint header_offset = tile_idx * kAfbcUintsPerBlockHeader;
 
     // Produce solid color tile if possible.
     if (tile_y >= params.color_offset || tile_y_end < params.color_offset)
@@ -186,7 +218,7 @@ struct AfbcPushConstantBlock {
 
 const char* GetShaderSrc(uint64_t modifier) {
   switch (modifier) {
-    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16:
+    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER:
       return kAfbcShaderSrc;
     case fuchsia::sysmem::FORMAT_MODIFIER_LINEAR:
       return kLinearShaderSrc;
@@ -198,7 +230,7 @@ const char* GetShaderSrc(uint64_t modifier) {
 
 size_t GetPushConstantBlockSize(uint64_t modifier) {
   switch (modifier) {
-    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16:
+    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER:
       return sizeof(AfbcPushConstantBlock);
     case fuchsia::sysmem::FORMAT_MODIFIER_LINEAR:
       return sizeof(LinearPushConstantBlock);
@@ -211,7 +243,7 @@ size_t GetPushConstantBlockSize(uint64_t modifier) {
 const vk::DescriptorSetLayoutCreateInfo& GetDescriptorSetLayoutCreateInfo(uint64_t modifier) {
   static vk::DescriptorSetLayoutCreateInfo* ptr = nullptr;
   switch (modifier) {
-    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER: {
       constexpr uint32_t kNumBindings = 2;
       static vk::DescriptorSetLayoutBinding bindings[kNumBindings];
       static vk::DescriptorSetLayoutCreateInfo info;
@@ -292,6 +324,11 @@ shared uint body_sizes[kWorkGroupTileCount];
 shared uint duplicates[kWorkGroupTileCount];
 shared uint tile_starts[kWorkGroupTileCount];
 
+uint subtileSize(uint subtile)
+{
+    return subtile == 1 ? 64 : subtile;
+}
+
 void calculateChecksumAndBodySize(uint tile_base_idx, uint i)
 {
     uint tile_idx = tile_base_idx + i;
@@ -305,23 +342,36 @@ void calculateChecksumAndBodySize(uint tile_base_idx, uint i)
     // Calculate checksum and determine size of body for non-solid tiles.
     if (scratch_tile_start != 0)
     {
+        uint h1 = scratch.data[tile_idx].y;
+        uint h2 = scratch.data[tile_idx].z;
+        uint h3 = scratch.data[tile_idx].w;
+
+        body_size += subtileSize(h1 & 0x3f);
+        body_size += subtileSize((h1 >> 6) & 0x3f);
+        body_size += subtileSize((h1 >> 12) & 0x3f);
+        body_size += subtileSize((h1 >> 18) & 0x3f);
+        body_size += subtileSize((h1 >> 24) & 0x3f);
+        body_size += subtileSize((h1 >> 30) | (h2 & 0xf) << 2);
+        body_size += subtileSize((h2 >> 4) & 0x3f);
+        body_size += subtileSize((h2 >> 10) & 0x3f);
+        body_size += subtileSize((h2 >> 16) & 0x3f);
+        body_size += subtileSize((h2 >> 22) & 0x3f);
+        body_size += subtileSize((h2 >> 28) | (h3 & 0x3) << 4);
+        body_size += subtileSize((h3 >> 2) & 0x3f);
+        body_size += subtileSize((h3 >> 8) & 0x3f);
+        body_size += subtileSize((h3 >> 14) & 0x3f);
+        body_size += subtileSize((h3 >> 20) & 0x3f);
+        body_size += subtileSize((h3 >> 26) & 0x3f);
+
+        // Roundup to number of uvec4s.
+        body_size = ((body_size + 15) / 16);
+
         uint scratch_tile_offset = scratch_tile_start;
-        uint scratch_tile_end = scratch_tile_start + kAfbcTilePixels / 4;
-        bool prev_is_zero = false;
+        uint scratch_tile_end = scratch_tile_start + body_size;
 
         while (scratch_tile_offset < scratch_tile_end)
         {
             uvec4 data = scratch.data[scratch_tile_offset];
-
-            // 32 bytes of zeros will likely finish past the end for
-            // any reasonable RLE. Uncompressed tiles are avoided by not
-            // allowing PNGs with an alpha channel.
-            bool is_zero = data == uvec4(0);
-            if (prev_is_zero && is_zero)
-            {
-                break;
-            }
-            prev_is_zero = is_zero;
 
             checksum = (checksum * 31) ^ data.x;
             checksum = (checksum * 31) ^ data.y;
@@ -330,8 +380,6 @@ void calculateChecksumAndBodySize(uint tile_base_idx, uint i)
 
             scratch_tile_offset++;
         }
-
-        body_size = scratch_tile_offset - scratch_tile_start;
     }
 
     // Store results in shared memory.
@@ -822,15 +870,16 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
     image_create_info.flags = vk::ImageCreateFlags();
 
     switch (modifier) {
-      case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
-        uint32_t width_in_tiles = (width_ + kAfbcTilePixelWidth - 1) / kAfbcTilePixelWidth;
-        uint32_t height_in_tiles = (height_ + kAfbcTilePixelHeight - 1) / kAfbcTilePixelHeight;
+      case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER: {
+        uint32_t width_in_tiles =
+            fbl::round_up(width_, kTiledAfbcWidthAlignment) / kAfbcTilePixelWidth;
+        uint32_t height_in_tiles =
+            fbl::round_up(height_, kTiledAfbcHeightAlignment) / kAfbcTilePixelHeight;
         uint32_t tile_count = width_in_tiles * height_in_tiles;
         uint32_t tile_num_pixels = kAfbcTilePixelWidth * kAfbcTilePixelHeight;
         uint32_t tile_num_bytes = tile_num_pixels * kTileBytesPerPixel;
-        uint32_t body_offset = ((tile_count * kAfbcBytesPerBlockHeader + kAfbcBodyAlignment - 1) /
-                                kAfbcBodyAlignment) *
-                               kAfbcBodyAlignment;
+        uint32_t body_offset =
+            fbl::round_up(tile_count * kAfbcBytesPerBlockHeader, kTiledAfbcBodyAlignment);
 
         // Create linear image where each tile occupies one row. The block headers are
         // stored on the first rows and must be aligned to the row size.
@@ -901,7 +950,7 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
   buffer_collection->Close();
 
   // Initialize scratch images for conversion of PNG to packed AFBC.
-  if (png_fp_ && modifier_ == fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16) {
+  if (png_fp_ && modifier_ == fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER) {
     fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
     status = sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
     FX_CHECK(status == ZX_OK);
@@ -1119,7 +1168,7 @@ void ComputeView::RenderFrameFromColorOffset(const Image& image, uint32_t color_
   image_info.imageLayout = vk::ImageLayout::eGeneral;
 
   switch (modifier_) {
-    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER: {
       vk::DescriptorBufferInfo buffer_info;
       buffer_info.buffer = image.buffer->vk();
       buffer_info.offset = 0;
@@ -1160,7 +1209,7 @@ void ComputeView::RenderFrameFromColorOffset(const Image& image, uint32_t color_
                                        &descriptor_set, 0, nullptr);
 
   switch (modifier_) {
-    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER: {
       AfbcPushConstantBlock push_constants;
       push_constants.color_offset = color_offset;
       push_constants.base_y = image.base_y;
@@ -1213,7 +1262,7 @@ void ComputeView::RenderFrameFromPng(Image& image, png_structp png, uint32_t fra
   command_buffer->AddWaitSemaphore(image.release_semaphore, vk::PipelineStageFlagBits::eTopOfPipe);
 
   switch (modifier_) {
-    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER: {
       uint32_t tile_count = image.width_in_tiles * image.height_in_tiles;
       auto& scratch_image = scratch_images_[GetNextScratchImageIndex()];
 
@@ -1411,7 +1460,7 @@ fit::promise<inspect::Inspector> ComputeView::PopulateImageStats(const Image& im
     inspector.GetRoot().CreateUint(kImageBytesDeduped, 0, &inspector);
   }
 
-  if (modifier_ == fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16) {
+  if (modifier_ == fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER) {
     inspector.GetRoot().CreateUint(kWidthInTiles, image.width_in_tiles, &inspector);
     inspector.GetRoot().CreateUint(kHeightInTiles, image.height_in_tiles, &inspector);
   }

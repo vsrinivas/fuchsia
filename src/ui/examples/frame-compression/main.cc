@@ -57,7 +57,7 @@ int main(int argc, const char** argv) {
     std::string option;
     uint64_t modifier;
   } table[] = {
-      {"AFBC", fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16},
+      {"AFBC", fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER},
       {"LINEAR", fuchsia::sysmem::FORMAT_MODIFIER_LINEAR},
   };
 

@@ -63,10 +63,19 @@ png_structp BaseView::CreatePngReadStruct(FILE* png_fp, png_infop* info_ptr_ptr)
   png_read_info(png_ptr, info_ptr);
   FX_CHECK(png_get_interlace_type(png_ptr, info_ptr) == PNG_INTERLACE_NONE);
   png_byte color_type = png_get_color_type(png_ptr, info_ptr);
-  FX_CHECK(color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_RGB_ALPHA);
-  if (color_type == PNG_COLOR_TYPE_RGB) {
-    png_set_filler(png_ptr, 0xff, PNG_FILLER_AFTER);
+  FX_CHECK(color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_RGB_ALPHA ||
+           color_type == PNG_COLOR_TYPE_PALETTE || color_type == PNG_COLOR_TYPE_GRAY ||
+           color_type == PNG_COLOR_TYPE_GRAY_ALPHA);
+  if (color_type == PNG_COLOR_TYPE_PALETTE) {
+    png_set_palette_to_rgb(png_ptr);
   }
+  if (color_type == PNG_COLOR_TYPE_GRAY) {
+    png_set_expand_gray_1_2_4_to_8(png_ptr);
+  }
+  if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+    png_set_gray_to_rgb(png_ptr);
+  }
+  png_set_filler(png_ptr, 0xff, PNG_FILLER_AFTER);
   png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
   if (bit_depth < 8) {
     png_set_packing(png_ptr);
