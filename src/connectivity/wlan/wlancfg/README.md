@@ -22,7 +22,7 @@ Implemented in: [`mode_management/iface_manager.rs`](./src/mode_management/iface
 Responsiblities:
 
 - Asks Phy Manager to create interfaces as needed, creates a State Machine for each interface.
-- Examines FIDL requests and forwards them to a specific interface's State Machine.
+- Examines FIDL requests (e.g. Connect()) and forwards them to a specific interface's State Machine.
 - Monitors State Machines, handles exits (e.g. bring up new interface, reconfigure existing networks).
     - When a Client State Machine exits, uses the Network Selection Manager to find a new network to connect to.
     - Periodically checks for idle Client State Machines, if any are present, triggers a reconnect.
@@ -59,7 +59,7 @@ Responsiblities:
     - Periodically notifies the Saved Networks Manager about network statistics.
     - Attempts to reconnect to the configured network for a number of times before abandoning and exiting.
 - On Error, exits while logging debug data.
-- Can be asked to Exit().
+- Can be asked to Disconnect(), which causes a graceful exit.
 - On graceful exiting of the underlying interface, exits gracefully.
 
 ### Network Selection Manager
@@ -99,27 +99,23 @@ The situations below illustrate how the modules cooperate to handle common scena
 - Application sends a "FIDL::Connect(network: foo)" request.
 - Main Loop dispatches it to Interface Manager.
 - Interface Manager asks Phy Manager for an interface.
-- Phy Manager selects a PHY and creates an interface for it, if needed.
-- Interface Manager creates a Client State Machine for the interface, if needed.
-- Interface Manager asks the Client State Machine to connect.
+- Phy Manager selects a PHY and creates an interface for it, if needed, prefering unused interfaces.
+- Interface Manager uses the existing Client State Machine or creates a new Client State Machine to perform the connection, if needed.
 
-### Main Loop is notified of idle Client State Machine
+### Interface Manager is notified of idle Client State Machine
 
-- The Main Loop, on recieving an idle notification from a Client State Machine:
-    - Notifies the Interface Manager that the specific Client State Machine is idle.
-    - Requests a scan via Scan Manager.
-- Upon any scan completion, the Client Main Loop queries the Interface Manager for idle Client State Machine.
-- If there is an idle Client State Machine, the Main Loop queries the Network Selection Manager for a new network.
-- If the Network Selection Manager provides a new network, the Main Loop asks the Interface Manager to connect to this new network.
-- When receiving a connection request, the Interface Manager will prefer idle Client State Machines.
+- The Interface Manager requests a new "best network" from the Network Selection Manager.
+- The Network Selection Manager performs scans as needed to find the best available network.
+- If the Network Selection Manager provides a new network, the Interface Manager connects to this new network.
+    - See separate section for ["Application requests connection to a network"](#application-requests-connection-to-a-network).
 
 ### Client State Machine detects network disonnect
 
 - Client State Machine is connected to a network.
 - Client State Machine detects that the interface is no longer connected to the network.
 - It tries to reconnect a few times (telling the Saved Network Manager on each failure).
-- After failing to reconnect, the Client State Machine moves to the idle state and notifies the main loop.
-    - See separate section for ["Main Loop is notified of idle Client State Machine"](#main-loop-is-notified-of-idle-client-state-machine).
+- After failing to reconnect, the Client State Machine exits.
+    - See separate section for ["Interface Manager is notified of idle Client State Machine"](#interface-manager-is-notified-of-idle-client-state-machine).
 
 ### Application deletes a saved network
 
@@ -127,8 +123,8 @@ The situations below illustrate how the modules cooperate to handle common scena
 - Main Loop requests the Saved Network Manager to delete Network Foo.
 - Main Loop requests the Interface Manager to disconnect from Network Foo.
 - For each Client State Machine connected to Network Foo, Interface Manager sends a "Disconnect()".
-- Client State Machines that got disconnected move to the idle state and notify the main loop.
-    - See separate section for ["Main Loop is notified of idle Client State Machine"](#main-loop-is-notified-of-idle-client-state-machine).
+- Client State Machines that got disconnected exit.
+    - See separate section for ["Interface Manager is notified of idle Client State Machine"](#interface-manager-is-notified-of-idle-client-state-machine).
 
 ### Bootup
 
@@ -148,7 +144,7 @@ The situations below illustrate how the modules cooperate to handle common scena
 - A PHY should be discovered at some point by the device monitoring service.
     - An interface and Client State Machine will be created for it since client connections are enabled.
     - The Client State Machine will move to idle and notify the Main Loop.
-    - See separate section for ["Main Loop is notified of idle Client State Machine"](#main-loop-is-notified-of-idle-client-state-machine).
+    - See separate section for ["Interface Manager is notified of idle Client State Machine"](#interface-manager-is-notified-of-idle-client-state-machine).
 
 ### Application requests to Start Client Connections
 
@@ -157,13 +153,13 @@ The situations below illustrate how the modules cooperate to handle common scena
 - Main Loop tells Interface Manager to StartClientConnections().
 - Interface Managers asks Phy Manager to CreateAllClientInterfaces().
 - Phy Manager creates interface and Client State Machines for each interface, which will each move to idle.
-    - See separate section for ["Main Loop is notified of idle Client State Machine"](#main-loop-is-notified-of-idle-client-state-machine).
+    - See separate section for ["Interface Manager is notified of idle Client State Machine"](#interface-manager-is-notified-of-idle-client-state-machine).
 
 ### Application requests to Stop Client Connections
 
 - FIDL::StopClientConnections call goes into Main Loop.
 - Main Loop passes it to the Interface Manager.
-- Interface Manager asks each Client State Machine to ExitGracefully().
+- Interface Manager asks each Client State Machine to Disconnect().
 - Interface Manager asks Phy Manager to stop all client connections.
 - Phy Manager destroys all client interfaces gracefully by closing the SME connection gracefully.
 

@@ -23,7 +23,7 @@ use {
         select,
         stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
     },
-    log::{debug, error, info},
+    log::{debug, error, info, warn},
     pin_utils::pin_mut,
     std::sync::Arc,
     void::ResultVoidErrExt,
@@ -39,6 +39,11 @@ type State = state_machine::State<ExitReason>;
 type ReqStream = stream::Fuse<mpsc::Receiver<ManualRequest>>;
 
 pub trait ClientApi {
+    fn connect(
+        &mut self,
+        request: ConnectRequest,
+        responder: oneshot::Sender<()>,
+    ) -> Result<(), anyhow::Error>;
     fn disconnect(&mut self, responder: oneshot::Sender<()>) -> Result<(), anyhow::Error>;
 
     /// Queries the liveness of the channel used to control the client state machine.  If the
@@ -57,6 +62,16 @@ impl Client {
 }
 
 impl ClientApi for Client {
+    fn connect(
+        &mut self,
+        request: ConnectRequest,
+        responder: oneshot::Sender<()>,
+    ) -> Result<(), anyhow::Error> {
+        self.req_sender
+            .try_send(ManualRequest::Connect((request, responder)))
+            .map_err(|e| format_err!("failed to send connect request: {:?}", e))
+    }
+
     fn disconnect(&mut self, responder: oneshot::Sender<()>) -> Result<(), anyhow::Error> {
         self.req_sender
             .try_send(ManualRequest::Disconnect(responder))
@@ -69,6 +84,7 @@ impl ClientApi for Client {
 }
 
 pub enum ManualRequest {
+    Connect((ConnectRequest, oneshot::Sender<()>)),
     Disconnect(oneshot::Sender<()>),
 }
 
@@ -124,7 +140,7 @@ pub async fn serve(
     select! {
         state_machine = state_machine.fuse() => {
             match state_machine.void_unwrap_err() {
-                ExitReason(Err(e)) => info!("Client state machine for iface #{} terminated with an error: {:?}",
+                ExitReason(Err(e)) => warn!("Client state machine for iface #{} terminated with an error: {:?}",
                     iface_id, e),
                 ExitReason(Ok(_)) => info!("Client state machine for iface #{} exited gracefully",
                     iface_id,),
@@ -146,7 +162,7 @@ struct CommonStateOptions {
 }
 
 fn handle_none_request() -> Result<State, ExitReason> {
-    return Err(ExitReason(Err(format_err!("The stream of user requests ended unexpectedly"))));
+    return Err(ExitReason(Err(format_err!("The stream of requests ended unexpectedly"))));
 }
 
 // These functions were introduced to resolve the following error:
@@ -181,7 +197,7 @@ struct DisconnectingOptions {
 }
 /// The DISCONNECTING state requests an SME disconnect, then transitions to either:
 /// - the CONNECTING state if options.next_network is present
-/// - the IDLE state otherwise
+/// - exit otherwise
 async fn disconnecting_state(
     common_options: CommonStateOptions,
     options: DisconnectingOptions,
@@ -392,6 +408,35 @@ async fn connecting_state(
                         };
                         return Ok(to_disconnecting_state(common_options, options));
                     }
+                    Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
+                        // Check if it's the same network as we're currently connected to.
+                        // If yes, dedupe the request.
+                        if (new_connect_request.network == options.connect_request.network) {
+                            info!("Received duplicate connection request, deduping");
+                            new_responder.send(()).unwrap_or_else(|_| ());
+                        } else {
+                            info!("Cancelling pending connect due to new connection request");
+                            send_listener_state_update(
+                                &common_options.update_sender,
+                                ClientNetworkState {
+                                    id: options.connect_request.network,
+                                    state: types::ConnectionState::Disconnected,
+                                    status: Some(types::DisconnectStatus::ConnectionStopped)
+                                },
+                            );
+                            let next_connecting_options = ConnectingOptions {
+                                connect_responder: Some(new_responder),
+                                connect_request: new_connect_request,
+                                attempt_counter: 0,
+                            };
+                            let disconnecting_options = DisconnectingOptions {
+                                disconnect_responder: None,
+                                previous_network: None,
+                                next_network: Some(next_connecting_options),
+                            };
+                            return Ok(to_disconnecting_state(common_options, disconnecting_options));
+                        }
+                    }
                     None => return handle_none_request(),
                 };
             },
@@ -446,7 +491,7 @@ async fn connected_state(
                             previous_network: Some((current_network.clone().network, types::DisconnectStatus::ConnectionFailed)),
                             next_network: Some(next_connecting_options)
                         };
-                        info!("Detected disconnection from network");
+                        info!("Detected disconnection from network, will attempt reconnection");
                         return Ok(disconnecting_state(common_options, options).into_state());
                     }
                 }
@@ -466,6 +511,26 @@ async fn connected_state(
                             next_network: None
                         };
                         return Ok(disconnecting_state(common_options, options).into_state());
+                    }
+                    Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
+                        // Check if it's the same network as we're currently connected to. If yes, reply immediately
+                        if (new_connect_request.network == current_network.network) {
+                            info!("Received connection request for current network, deduping");
+                            new_responder.send(()).unwrap_or_else(|_| ());
+                        } else {
+                            let next_connecting_options = ConnectingOptions {
+                                connect_responder: Some(new_responder),
+                                connect_request: new_connect_request,
+                                attempt_counter: 0,
+                            };
+                            let options = DisconnectingOptions {
+                                disconnect_responder: None,
+                                previous_network: Some((current_network.network, types::DisconnectStatus::ConnectionStopped)),
+                                next_network: Some(next_connecting_options)
+                            };
+                            info!("Connection to new network requested, disconnecting from current network");
+                            return Ok(disconnecting_state(common_options,options).into_state())
+                        }
                     }
                     None => return handle_none_request(),
                 };
@@ -1055,6 +1120,282 @@ mod tests {
     }
 
     #[test]
+    fn connecting_state_gets_duplicate_connect_request() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = exec.run_singlethreaded(test_setup());
+
+        let next_network_ssid = "bar";
+        let connect_request = ConnectRequest {
+            network: types::NetworkIdentifier {
+                ssid: next_network_ssid.as_bytes().to_vec(),
+                type_: types::SecurityType::Wpa2,
+            },
+            credential: Credential::None,
+            metadata: Some(types::NetworkSelectionMetadata { observed_in_passive_scan: true }),
+        };
+        let (connect_sender, mut connect_receiver) = oneshot::channel();
+        let connecting_options = ConnectingOptions {
+            connect_responder: Some(connect_sender),
+            connect_request: connect_request.clone(),
+            attempt_counter: 0,
+        };
+        let initial_state = connecting_state(test_values.common_options, connecting_options);
+        let fut = run_state_machine(initial_state);
+        pin_mut!(fut);
+        let sme_fut = test_values.sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Check the responder was acknowledged
+        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
+
+        // Check for a connecting update
+        let client_state_update = ClientStateUpdate {
+            state: None,
+            networks: vec![ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: String::from(next_network_ssid).into_bytes(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                },
+                state: fidl_policy::ConnectionState::Connecting,
+                status: None,
+            }],
+        };
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+
+        // Send a duplicate connect request
+        let mut client = Client::new(test_values.client_req_sender);
+        let (connect_sender2, mut connect_receiver2) = oneshot::channel();
+        client.connect(connect_request.clone(), connect_sender2).expect("failed to make request");
+
+        // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Check the responder was acknowledged
+        assert_variant!(exec.run_until_stalled(&mut connect_receiver2), Poll::Ready(Ok(())));
+
+        // Ensure a connect request is sent to the SME
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
+                assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
+                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.clone().credential));
+                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
+                assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+                 // Send connection response.
+                let (_stream, ctrl) = txn.expect("connect txn unused")
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
+                    .expect("failed to send connection completion");
+            }
+        );
+
+        // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Check for a connect update
+        let client_state_update = ClientStateUpdate {
+            state: None,
+            networks: vec![ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: String::from(next_network_ssid).into_bytes(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                },
+                state: fidl_policy::ConnectionState::Connected,
+                status: None,
+            }],
+        };
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+
+        // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure no further updates were sent to listeners
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
+            Poll::Pending
+        );
+    }
+
+    #[test]
+    fn connecting_state_gets_different_connect_request() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = exec.run_singlethreaded(test_setup());
+
+        let first_network_ssid = "foo";
+        let second_network_ssid = "bar";
+        let connect_request = ConnectRequest {
+            network: types::NetworkIdentifier {
+                ssid: first_network_ssid.as_bytes().to_vec(),
+                type_: types::SecurityType::Wpa2,
+            },
+            credential: Credential::None,
+            metadata: Some(types::NetworkSelectionMetadata { observed_in_passive_scan: true }),
+        };
+        let (connect_sender, mut connect_receiver) = oneshot::channel();
+        let connecting_options = ConnectingOptions {
+            connect_responder: Some(connect_sender),
+            connect_request: connect_request.clone(),
+            attempt_counter: 0,
+        };
+        let initial_state = connecting_state(test_values.common_options, connecting_options);
+        let fut = run_state_machine(initial_state);
+        pin_mut!(fut);
+        let sme_fut = test_values.sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Check the responder was acknowledged
+        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
+
+        // Check for a connecting update
+        let client_state_update = ClientStateUpdate {
+            state: None,
+            networks: vec![ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: String::from(first_network_ssid).into_bytes(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                },
+                state: fidl_policy::ConnectionState::Connecting,
+                status: None,
+            }],
+        };
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+
+        // Send a different connect request
+        let mut client = Client::new(test_values.client_req_sender);
+        let (connect_sender2, mut connect_receiver2) = oneshot::channel();
+        let connect_request2 = ConnectRequest {
+            network: types::NetworkIdentifier {
+                ssid: second_network_ssid.as_bytes().to_vec(),
+                type_: types::SecurityType::Wpa2,
+            },
+            credential: Credential::None,
+            metadata: Some(types::NetworkSelectionMetadata { observed_in_passive_scan: true }),
+        };
+        client.connect(connect_request2.clone(), connect_sender2).expect("failed to make request");
+
+        // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Check for a disconnect update
+        let client_state_update = ClientStateUpdate {
+            state: None,
+            networks: vec![ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: String::from(first_network_ssid).into_bytes(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                },
+                state: fidl_policy::ConnectionState::Disconnected,
+                status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
+            }],
+        };
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+
+        // There should be 3 requests to the SME stacked up
+        // First SME request: connect to the first network
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn: _, control_handle: _ }) => {
+                assert_eq!(req.ssid, first_network_ssid.as_bytes().to_vec());
+                // Don't bother sending response, listener is gone
+            }
+        );
+        // Second SME request: disconnect
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+                responder.send().expect("could not send sme response");
+            }
+        );
+        // Progress the state machine
+        // TODO(fxbug.dev/53505): remove this once the disconnect request is fire-and-forget
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        // Third SME request: connect to the second network
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
+                assert_eq!(req.ssid, second_network_ssid.as_bytes().to_vec());
+                 // Send connection response.
+                let (_stream, ctrl) = txn.expect("connect txn unused")
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
+                    .expect("failed to send connection completion");
+            }
+        );
+
+        // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Check the responder was acknowledged
+        assert_variant!(exec.run_until_stalled(&mut connect_receiver2), Poll::Ready(Ok(())));
+
+        // Check for a connecting update
+        let client_state_update = ClientStateUpdate {
+            state: None,
+            networks: vec![ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: String::from(second_network_ssid).into_bytes(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                },
+                state: fidl_policy::ConnectionState::Connecting,
+                status: None,
+            }],
+        };
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+        // Check for a connected update
+        let client_state_update = ClientStateUpdate {
+            state: None,
+            networks: vec![ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: String::from(second_network_ssid).into_bytes(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                },
+                state: fidl_policy::ConnectionState::Connected,
+                status: None,
+            }],
+        };
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+
+        // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure no further updates were sent to listeners
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
+            Poll::Pending
+        );
+    }
+
+    #[test]
     fn connecting_state_gets_disconnect_request() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -1269,6 +1610,222 @@ mod tests {
             assert_eq!(updates, client_state_update);
         });
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
+    }
+
+    #[test]
+    fn connected_state_gets_duplicate_connect_request() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = exec.run_singlethreaded(test_setup());
+
+        let network_ssid = "test";
+        let connect_request = ConnectRequest {
+            network: types::NetworkIdentifier {
+                ssid: network_ssid.as_bytes().to_vec(),
+                type_: types::SecurityType::Wpa2,
+            },
+            credential: Credential::None,
+            metadata: Some(types::NetworkSelectionMetadata { observed_in_passive_scan: true }),
+        };
+        let initial_state = connected_state(test_values.common_options, connect_request.clone());
+        let fut = run_state_machine(initial_state);
+        pin_mut!(fut);
+        let sme_fut = test_values.sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Clear the SME status request
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
+                responder.send(&mut fidl_sme::ClientStatusResponse{
+                    connecting_to_ssid: vec![],
+                    connected_to: Some(Box::new(fidl_sme::BssInfo{
+                        bssid: [0, 0, 0, 0, 0, 0],
+                        ssid: network_ssid.as_bytes().to_vec(),
+                        rx_dbm: 0,
+                        snr_db: 0,
+                        channel: fidl_common::WlanChan {
+                            primary: 1,
+                            cbw: fidl_common::Cbw::Cbw20,
+                            secondary80: 0,
+                        },
+                        protection: fidl_sme::Protection::Unknown,
+                        compatible: true,
+                    }))
+                }).expect("could not send sme response");
+            }
+        );
+
+        // Send another duplicate request
+        let mut client = Client::new(test_values.client_req_sender);
+        let (sender, mut receiver) = oneshot::channel();
+        client.connect(connect_request.clone(), sender).expect("failed to make request");
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure nothing was sent to the SME
+        assert_variant!(poll_sme_req(&mut exec, &mut sme_fut), Poll::Pending);
+
+        // Check the responder was acknowledged
+        assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
+    }
+
+    #[test]
+    fn connected_state_gets_different_connect_request() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = exec.run_singlethreaded(test_setup());
+
+        let first_network_ssid = "foo";
+        let second_network_ssid = "bar";
+        let connect_request = ConnectRequest {
+            network: types::NetworkIdentifier {
+                ssid: first_network_ssid.as_bytes().to_vec(),
+                type_: types::SecurityType::Wpa2,
+            },
+            credential: Credential::None,
+            metadata: Some(types::NetworkSelectionMetadata { observed_in_passive_scan: true }),
+        };
+        let initial_state = connected_state(test_values.common_options, connect_request.clone());
+        let fut = run_state_machine(initial_state);
+        pin_mut!(fut);
+        let sme_fut = test_values.sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Clear the SME status request
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
+                responder.send(&mut fidl_sme::ClientStatusResponse{
+                    connecting_to_ssid: vec![],
+                    connected_to: Some(Box::new(fidl_sme::BssInfo{
+                        bssid: [0, 0, 0, 0, 0, 0],
+                        ssid: first_network_ssid.as_bytes().to_vec(),
+                        rx_dbm: 0,
+                        snr_db: 0,
+                        channel: fidl_common::WlanChan {
+                            primary: 1,
+                            cbw: fidl_common::Cbw::Cbw20,
+                            secondary80: 0,
+                        },
+                        protection: fidl_sme::Protection::Unknown,
+                        compatible: true,
+                    }))
+                }).expect("could not send sme response");
+            }
+        );
+
+        // Send a different connect request
+        let mut client = Client::new(test_values.client_req_sender);
+        let (connect_sender2, mut connect_receiver2) = oneshot::channel();
+        let connect_request2 = ConnectRequest {
+            network: types::NetworkIdentifier {
+                ssid: second_network_ssid.as_bytes().to_vec(),
+                type_: types::SecurityType::Wpa2,
+            },
+            credential: Credential::None,
+            metadata: Some(types::NetworkSelectionMetadata { observed_in_passive_scan: true }),
+        };
+        client.connect(connect_request2.clone(), connect_sender2).expect("failed to make request");
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // There should be 2 requests to the SME stacked up
+        // First SME request: disconnect
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+                responder.send().expect("could not send sme response");
+            }
+        );
+        // Progress the state machine
+        // TODO(fxbug.dev/53505): remove this once the disconnect request is fire-and-forget
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        // Second SME request: connect to the second network
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
+                assert_eq!(req.ssid, second_network_ssid.as_bytes().to_vec());
+                 // Send connection response.
+                let (_stream, ctrl) = txn.expect("connect txn unused")
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
+                    .expect("failed to send connection completion");
+            }
+        );
+        // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Check for a disconnect update
+        let client_state_update = ClientStateUpdate {
+            state: None,
+            networks: vec![ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: String::from(first_network_ssid).into_bytes(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                },
+                state: fidl_policy::ConnectionState::Disconnected,
+                status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
+            }],
+        };
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+
+        // Check the responder was acknowledged
+        assert_variant!(exec.run_until_stalled(&mut connect_receiver2), Poll::Ready(Ok(())));
+
+        // Check for a connecting update
+        let client_state_update = ClientStateUpdate {
+            state: None,
+            networks: vec![ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: String::from(second_network_ssid).into_bytes(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                },
+                state: fidl_policy::ConnectionState::Connecting,
+                status: None,
+            }],
+        };
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+        // Check for a connected update
+        let client_state_update = ClientStateUpdate {
+            state: None,
+            networks: vec![ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: String::from(second_network_ssid).into_bytes(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                },
+                state: fidl_policy::ConnectionState::Connected,
+                status: None,
+            }],
+        };
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+
+        // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure no further updates were sent to listeners
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
+            Poll::Pending
+        );
     }
 
     #[test]

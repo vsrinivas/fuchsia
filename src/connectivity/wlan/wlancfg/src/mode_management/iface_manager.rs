@@ -331,27 +331,37 @@ impl IfaceManagerService {
         &mut self,
         connect_req: client_fsm::ConnectRequest,
     ) -> Result<oneshot::Receiver<()>, Error> {
-        // Get a ClientIfaceContainer.  Ensure that the Client is populated.
+        // Get a ClientIfaceContainer.
         let mut client_iface = self.get_client(None).await?;
 
-        // Create necessary components to make a connect request.
+        // Set the new config on this client
         client_iface.config = Some(connect_req.network.clone());
 
-        // Create the state machine and controller.
+        // Create the connection request
         let (sender, receiver) = oneshot::channel();
-        let (new_client, fut) = create_client_state_machine(
-            client_iface.iface_id,
-            &mut self.dev_svc_proxy,
-            self.client_update_sender.clone(),
-            self.saved_networks.clone(),
-            Some((connect_req, sender)),
-        )
-        .await?;
 
-        // Begin running and monitoring the client state machine future.
-        self.fsm_futures.push(fut);
+        // Check if there's an existing state machine we can use
+        match client_iface.client_state_machine.as_mut() {
+            Some(existing_csm) => {
+                existing_csm.connect(connect_req, sender)?;
+            }
+            None => {
+                // Create the state machine and controller.
+                let (new_client, fut) = create_client_state_machine(
+                    client_iface.iface_id,
+                    &mut self.dev_svc_proxy,
+                    self.client_update_sender.clone(),
+                    self.saved_networks.clone(),
+                    Some((connect_req, sender)),
+                )
+                .await?;
+                client_iface.client_state_machine = Some(new_client);
 
-        client_iface.client_state_machine = Some(new_client);
+                // Begin running and monitoring the client state machine future.
+                self.fsm_futures.push(fut);
+            }
+        }
+
         self.clients.push(client_iface);
         Ok(receiver)
     }
@@ -1124,16 +1134,26 @@ mod tests {
     struct FakeClient {
         disconnect_ok: bool,
         is_alive: bool,
+        expected_connect_request: Option<client_fsm::ConnectRequest>,
     }
 
     impl FakeClient {
         fn new() -> Self {
-            FakeClient { disconnect_ok: true, is_alive: true }
+            FakeClient { disconnect_ok: true, is_alive: true, expected_connect_request: None }
         }
     }
 
     #[async_trait]
     impl client_fsm::ClientApi for FakeClient {
+        fn connect(
+            &mut self,
+            request: client_fsm::ConnectRequest,
+            responder: oneshot::Sender<()>,
+        ) -> Result<(), Error> {
+            assert_eq!(Some(request), self.expected_connect_request);
+            let _ = responder.send(());
+            Ok(())
+        }
         fn disconnect(&mut self, responder: oneshot::Sender<()>) -> Result<(), Error> {
             if self.disconnect_ok {
                 let _ = responder.send(());
@@ -1197,7 +1217,7 @@ mod tests {
             iface_id: TEST_CLIENT_IFACE_ID,
             sme_proxy,
             config: None,
-            client_state_machine: Some(Box::new(FakeClient::new())),
+            client_state_machine: None,
         };
         let phy_manager = FakePhyManager { create_iface_ok: true, destroy_iface_ok: true };
         let mut iface_manager = IfaceManagerService::new(
@@ -1213,6 +1233,7 @@ mod tests {
                 ssid: TEST_SSID.as_bytes().to_vec(),
                 type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
             });
+            client_container.client_state_machine = Some(Box::new(FakeClient::new()));
         }
         iface_manager.clients.push(client_container);
 
@@ -1436,92 +1457,51 @@ mod tests {
     #[test]
     fn test_connect_with_configured_iface() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+        let other_test_ssid = "other_ssid_connecting";
 
         // Create a configured ClientIfaceContainer.
-        let mut test_values = test_setup(&mut exec);
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
-        let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
-        test_values.saved_networks = Arc::new(saved_networks);
-
-        // Update the saved networks with knowledge of the test SSID and credentials.
-        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
-        let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        let save_network_fut = test_values.saved_networks.store(network_id, credential);
-        pin_mut!(save_network_fut);
-        assert_variant!(exec.run_until_stalled(&mut save_network_fut), Poll::Pending);
-
-        process_stash_write(&mut exec, &mut stash_server);
+        // Configure the mock CSM with the expected connect request
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: false,
+            is_alive: true,
+            expected_connect_request: Some(create_connect_request(other_test_ssid, TEST_PASSWORD)),
+        }));
 
         // Ask the IfaceManager to connect.
-        let (connect_response_fut, mut sme_stream) = {
-            let config = create_connect_request(TEST_SSID, TEST_PASSWORD);
+        let config = create_connect_request(other_test_ssid, TEST_PASSWORD);
+        let connect_response_fut = {
             let connect_fut = iface_manager.connect(config);
-
             pin_mut!(connect_fut);
-            assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Pending);
-
-            // Expect a client SME proxy request.
-            let mut device_service_fut = test_values.device_service_stream.into_future();
-            let sme_server = assert_variant!(
-                poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                    iface_id: TEST_CLIENT_IFACE_ID, sme, responder
-                }) => {
-                    // Send back a positive acknowledgement.
-                    assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
-
-                    sme
-                }
-            );
 
             // Run the connect request to completion.
-            let connect_response_fut = match exec.run_until_stalled(&mut connect_fut) {
+            match exec.run_until_stalled(&mut connect_fut) {
                 Poll::Ready(connect_result) => match connect_result {
                     Ok(receiver) => receiver.into_future(),
                     Err(e) => panic!("failed to connect with {}", e),
                 },
                 Poll::Pending => panic!("expected the connect request to finish"),
-            };
-
-            (connect_response_fut, sme_server.into_stream().unwrap().into_future())
+            }
         };
 
         // Start running the client state machine.
         run_state_machine_futures(&mut exec, &mut iface_manager);
 
-        // Acknowledge the disconnection attempt.
-        assert_variant!(
-            poll_sme_req(&mut exec, &mut sme_stream),
-            Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Disconnect{ responder }) => {
-                responder.send().expect("could not send response")
-            }
-        );
-
-        // Make sure that the connect request has been sent out.
-        run_state_machine_futures(&mut exec, &mut iface_manager);
-        assert_variant!(
-            poll_sme_req(&mut exec, &mut sme_stream),
-            Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
-                assert_eq!(req.ssid, TEST_SSID.as_bytes().to_vec());
-                assert_eq!(req.credential, fidl_fuchsia_wlan_sme::Credential::Password(TEST_PASSWORD.as_bytes().to_vec()));
-                let (_stream, ctrl) = txn.expect("connect txn unused")
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_finished(fidl_fuchsia_wlan_sme::ConnectResultCode::Success)
-                    .expect("failed to send connection completion");
-            }
-        );
-
-        // Run the state machine future again so that it acks the oneshot.
-        run_state_machine_futures(&mut exec, &mut iface_manager);
-
         // Verify that the oneshot has been acked.
         pin_mut!(connect_response_fut);
         assert_variant!(exec.run_until_stalled(&mut connect_response_fut), Poll::Ready(Ok(())));
+
+        // Verify that the ClientIfaceContainer has the correct config.
+        assert_eq!(iface_manager.clients.len(), 1);
+        assert_eq!(
+            iface_manager.clients[0].config,
+            Some(
+                NetworkIdentifier::new(other_test_ssid.as_bytes().to_vec(), SecurityType::Wpa)
+                    .into()
+            )
+        );
     }
 
     /// Tests the case where connect is called while the only available interface is currently
@@ -1544,7 +1524,7 @@ mod tests {
         // Add credentials for the test network to the saved networks.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        let save_network_fut = test_values.saved_networks.store(network_id, credential);
+        let save_network_fut = test_values.saved_networks.store(network_id.clone(), credential);
         pin_mut!(save_network_fut);
         assert_variant!(exec.run_until_stalled(&mut save_network_fut), Poll::Pending);
 
@@ -1618,7 +1598,7 @@ mod tests {
 
         // Verify that the ClientIfaceContainer has been moved from unconfigured to configured.
         assert_eq!(iface_manager.clients.len(), 1);
-        assert!(iface_manager.clients[0].config.is_some());
+        assert_eq!(iface_manager.clients[0].config, Some(network_id.into()));
     }
 
     /// Tests the case where connect is called, but no client ifaces exist.
@@ -1783,9 +1763,12 @@ mod tests {
         let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
-        // Make the client state machine's connect call fail.
-        iface_manager.clients[0].client_state_machine =
-            Some(Box::new(FakeClient { disconnect_ok: false, is_alive: true }));
+        // Make the client state machine's disconnect call fail.
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: false,
+            is_alive: true,
+            expected_connect_request: None,
+        }));
 
         // Call disconnect on the IfaceManager
         let network_id = ap_types::NetworkIdentifier {
@@ -1897,8 +1880,11 @@ mod tests {
         // Create a configured ClientIfaceContainer.
         let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
-        iface_manager.clients[0].client_state_machine =
-            Some(Box::new(FakeClient { disconnect_ok: false, is_alive: true }));
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: false,
+            is_alive: true,
+            expected_connect_request: None,
+        }));
 
         // Create a PhyManager with a single, known client iface.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
@@ -1953,8 +1939,11 @@ mod tests {
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Setup the client state machine so that it looks like it is no longer alive.
-        iface_manager.clients[0].client_state_machine =
-            Some(Box::new(FakeClient { disconnect_ok: true, is_alive: false }));
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: true,
+            is_alive: false,
+            expected_connect_request: None,
+        }));
 
         assert!(iface_manager.clients[0].config.is_some());
         iface_manager.record_idle_client(TEST_CLIENT_IFACE_ID);
@@ -2014,8 +2003,11 @@ mod tests {
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Make the client state machine's liveness check fail.
-        iface_manager.clients[0].client_state_machine =
-            Some(Box::new(FakeClient { disconnect_ok: true, is_alive: false }));
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: true,
+            is_alive: false,
+            expected_connect_request: None,
+        }));
 
         assert!(iface_manager.has_idle_client());
     }
@@ -2862,9 +2854,12 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
     }
 
-    #[test_case(FakeClient {disconnect_ok: true, is_alive:true}, TestType::Pass; "successfully disconnects configured client")]
-    #[test_case(FakeClient {disconnect_ok: false, is_alive:true}, TestType::Fail; "fails to disconnect configured client")]
-    #[test_case(FakeClient {disconnect_ok: true, is_alive:true}, TestType::ClientError; "client drops receiver")]
+    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_request: None},
+        TestType::Pass; "successfully disconnects configured client")]
+    #[test_case(FakeClient {disconnect_ok: false, is_alive:true, expected_connect_request: None},
+        TestType::Fail; "fails to disconnect configured client")]
+    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_request: None},
+        TestType::ClientError; "client drops receiver")]
     fn service_disconnect_test(fake_client: FakeClient, test_type: TestType) {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
@@ -2895,8 +2890,10 @@ mod tests {
         );
     }
 
-    #[test_case(FakeClient {disconnect_ok: true, is_alive:true}, TestType::Pass; "successfully connected a client")]
-    #[test_case(FakeClient {disconnect_ok: true, is_alive:true}, TestType::ClientError; "client drops receiver")]
+    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_request: Some(create_connect_request(TEST_SSID, TEST_PASSWORD))},
+        TestType::Pass; "successfully connected a client")]
+    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_request: Some(create_connect_request(TEST_SSID, TEST_PASSWORD))},
+        TestType::ClientError; "client drops receiver")]
     fn service_connect_test(fake_client: FakeClient, test_type: TestType) {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
@@ -2935,8 +2932,11 @@ mod tests {
         let (mut iface_manager, _stream) = create_iface_manager_with_client(&test_values, true);
 
         // Make the client state machine's liveness check fail.
-        iface_manager.clients[0].client_state_machine =
-            Some(Box::new(FakeClient { disconnect_ok: true, is_alive: false }));
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: true,
+            is_alive: false,
+            expected_connect_request: None,
+        }));
 
         // Create other components to run the service.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
@@ -3494,8 +3494,11 @@ mod tests {
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Make the client state machine report that it is dead.
-        iface_manager.clients[0].client_state_machine =
-            Some(Box::new(FakeClient { disconnect_ok: false, is_alive: false }));
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: false,
+            is_alive: false,
+            expected_connect_request: None,
+        }));
 
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join(rand_string());
@@ -3619,8 +3622,11 @@ mod tests {
         let (mut iface_manager, _sme_stream) = create_iface_manager_with_client(&test_values, true);
 
         // Make the client state machine report that it is alive.
-        iface_manager.clients[0].client_state_machine =
-            Some(Box::new(FakeClient { disconnect_ok: false, is_alive: true }));
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: false,
+            is_alive: true,
+            expected_connect_request: None,
+        }));
 
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join(rand_string());
@@ -3693,8 +3699,11 @@ mod tests {
 
         // Make the client state machine report that it is not alive.
         let (mut iface_manager, _sme_stream) = create_iface_manager_with_client(&test_values, true);
-        iface_manager.clients[0].client_state_machine =
-            Some(Box::new(FakeClient { disconnect_ok: true, is_alive: false }));
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: true,
+            is_alive: false,
+            expected_connect_request: None,
+        }));
 
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
 
@@ -3721,8 +3730,11 @@ mod tests {
             NetworkSelectionMissingAttribute::AllAttributesPresent => {}
             NetworkSelectionMissingAttribute::IdleClient => {
                 // Make the client state machine report that it is alive.
-                iface_manager.clients[0].client_state_machine =
-                    Some(Box::new(FakeClient { disconnect_ok: true, is_alive: true }));
+                iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+                    disconnect_ok: true,
+                    is_alive: true,
+                    expected_connect_request: None,
+                }));
             }
             NetworkSelectionMissingAttribute::SavedNetwork => {
                 // Remove the saved network so that there are no known networks to connect to.
@@ -3870,8 +3882,11 @@ mod tests {
         // Create an interface manager with an unconfigured client interface.
         let (mut iface_manager, _sme_stream) =
             create_iface_manager_with_client(&test_values, false);
-        iface_manager.clients[0].client_state_machine =
-            Some(Box::new(FakeClient { disconnect_ok: true, is_alive: false }));
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: true,
+            is_alive: false,
+            expected_connect_request: None,
+        }));
 
         // Setup for a reconnection attempt.
         let mut disconnected_clients = HashSet::new();
@@ -3955,8 +3970,11 @@ mod tests {
         // Create an interface manager with an unconfigured client interface.
         let (mut iface_manager, _sme_stream) =
             create_iface_manager_with_client(&test_values, false);
-        iface_manager.clients[0].client_state_machine =
-            Some(Box::new(FakeClient { disconnect_ok: true, is_alive: false }));
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: true,
+            is_alive: false,
+            expected_connect_request: None,
+        }));
 
         // Create remaining boilerplate to call handle_terminated_state_machine.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
