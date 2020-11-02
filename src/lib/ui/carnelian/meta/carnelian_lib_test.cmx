@@ -11,6 +11,7 @@
     },
     "sandbox": {
         "features": [
+            "isolated-cache-storage",
             "vulkan"
         ],
         "services": [

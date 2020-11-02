@@ -37,6 +37,8 @@ use crate::{
     ViewAssistantContext,
 };
 
+const PIPELINE_CACHE_FILE: &str = "/cache/pipeline-cache";
+
 // Matches struct in copy.comp. See shader source for field descriptions.
 #[repr(C)]
 #[derive(Debug, Default)]
@@ -617,10 +619,35 @@ impl SpinelContext {
             descriptor_sets
         };
 
+        // TODO(fxb/60656): This pipeline cache is currently only used for spinel's shaders, but
+        // could be used for the pre/post processing shaders in carnelian if we build them early or
+        // keep the cache alive for the lifetime of the context.
+        let bytes = std::fs::read(PIPELINE_CACHE_FILE).unwrap_or(Vec::new());
+        let pipeline_cache = unsafe {
+            init(|ptr| {
+                vk!(vk.CreatePipelineCache(
+                    device,
+                    &vk::PipelineCacheCreateInfo {
+                        sType: vk::STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+                        pNext: ptr::null(),
+                        flags: 0,
+                        initialDataSize: bytes.len(),
+                        pInitialData: if bytes.is_empty() {
+                            ptr::null()
+                        } else {
+                            bytes.as_ptr() as *const c_void
+                        },
+                    },
+                    ptr::null(),
+                    ptr,
+                ))
+            })
+        };
+
         let mut environment = Box::new(SpnVkEnvironment {
             d: device,
             ac: ptr::null(),
-            pc: 0,
+            pc: pipeline_cache,
             pd: physical_device,
             qfi: 0,
             pdmp: physical_device_memory_properties,
@@ -644,6 +671,38 @@ impl SpinelContext {
         let raster_builder = Rc::new(unsafe {
             init(|ptr| spn!(spn_raster_builder_create(inner.borrow().get(), ptr)))
         });
+
+        // First grab the maximum pipeline cache size:
+        let mut pipeline_cache_size: usize = unsafe {
+            init(|ptr| vk!(vk.GetPipelineCacheData(device, pipeline_cache, ptr, ptr::null_mut(),)))
+        };
+
+        if pipeline_cache_size > 0 {
+            // Now we can actually grab and write the pipeline cache out to a file:
+            let mut pipeline_cache_data: Vec<u8> = vec![0; pipeline_cache_size];
+            unsafe {
+                vk!(vk.GetPipelineCacheData(
+                    device,
+                    pipeline_cache,
+                    &mut pipeline_cache_size,
+                    pipeline_cache_data.as_mut_ptr() as *mut c_void,
+                ));
+            }
+            // ... but only if it actually changes anything.
+            let pipeline_cache_data_on_disk = std::fs::read(PIPELINE_CACHE_FILE).unwrap_or(vec![]);
+            if pipeline_cache_data_on_disk != pipeline_cache_data {
+                std::fs::write(PIPELINE_CACHE_FILE, pipeline_cache_data).unwrap_or_else(|err| {
+                    eprintln!(
+                        "Unable to write pipeline cache file {}: {:?}",
+                        PIPELINE_CACHE_FILE, err
+                    );
+                });
+            }
+        }
+
+        unsafe {
+            vk.DestroyPipelineCache(device, pipeline_cache, ptr::null());
+        }
 
         Self {
             inner,

@@ -9,6 +9,7 @@
             "class/input-report"
         ],
         "features": [
+            "isolated-cache-storage",
             "vulkan"
         ],
         "services": [
