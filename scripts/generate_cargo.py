@@ -158,7 +158,7 @@ def write_toml_file(
     if features:
         fout.write("\n[features]\n")
         # Filter 'default' feature out to avoid generating a duplicated entry.
-        features = list(filter(lambda x: x != "default", features))
+        features = [x for x in features if x != "default"]
         fout.write("default = %s\n" % json.dumps(features))
         for feature in features:
             fout.write("%s = []\n" % feature)
