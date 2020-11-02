@@ -12,9 +12,9 @@ use {
     },
     fidl_fuchsia_mem::Buffer,
     fuchsia_async as fasync,
-    fuchsia_syslog::macros::*,
     fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES,
     futures::{TryFutureExt, TryStreamExt},
+    tracing::error,
 };
 
 /// Runs a server for the `fuchsia.inspect.Tree` protocol. This protocol returns the VMO
@@ -54,7 +54,7 @@ pub fn spawn_tree_server(inspector: Inspector, stream: TreeRequestStream) {
     fasync::Task::spawn(async move {
         handle_request_stream(inspector, stream)
             .await
-            .unwrap_or_else(|e: Error| fx_log_err!("error running tree server: {:?}", e));
+            .unwrap_or_else(|e: Error| error!("error running tree server: {:?}", e));
     })
     .detach();
 }
@@ -95,7 +95,7 @@ fn spawn_tree_name_iterator_server(values: Vec<String>, mut stream: TreeNameIter
             }
             Ok(())
         }
-        .unwrap_or_else(|e: Error| fx_log_err!("error running tree name iterator server: {:?}", e)),
+        .unwrap_or_else(|e: Error| error!("error running tree name iterator server: {:?}", e)),
     )
     .detach()
 }

@@ -20,7 +20,6 @@ use {
     fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect_node_hierarchy::testing::NodeHierarchyGetter,
-    fuchsia_syslog::macros::*,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{future::BoxFuture, prelude::*},
     lazy_static::lazy_static,
@@ -37,6 +36,7 @@ use {
             Arc, Weak,
         },
     },
+    tracing::error,
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
         pseudo_directory, service as pseudo_fs_service,
@@ -155,7 +155,7 @@ impl Inspector {
                 Inspector { vmo: Some(Arc::new(vmo)), root_node: Arc::new(root_node) }
             }
             Err(e) => {
-                fx_log_err!("Failed to create root node. Error: {}", e);
+                error!("Failed to create root node. Error: {}", e);
                 Inspector::new_no_op()
             }
         }
@@ -213,7 +213,7 @@ impl Inspector {
                 let inspector_clone_clone = inspector_clone.clone();
                 async move {
                     service::handle_request_stream(inspector_clone_clone, stream).await
-                        .unwrap_or_else(|e| fx_log_err!("failed to run server: {:?}", e));
+                        .unwrap_or_else(|e| error!("failed to run server: {:?}", e));
                 }
                 .boxed()
             }),
@@ -851,7 +851,7 @@ macro_rules! numeric_property_fn {
                 if let Some(ref inner_ref) = self.inner.inner_ref() {
                     inner_ref.state.lock().[<$fn_name _ $name _metric>](inner_ref.block_index, value)
                         .unwrap_or_else(|e| {
-                            fx_log_err!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
+                            error!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
                         });
                 }
             }
@@ -918,7 +918,7 @@ macro_rules! property {
                 fn set(&'t self, value: &'t $type) {
                     if let Some(ref inner_ref) = self.inner.inner_ref() {
                         inner_ref.state.lock().set_property(inner_ref.block_index, value$(.$bytes())?)
-                            .unwrap_or_else(|e| fx_log_err!("Failed to set property. Error: {:?}", e));
+                            .unwrap_or_else(|e| error!("Failed to set property. Error: {:?}", e));
                     }
                 }
 
@@ -942,7 +942,7 @@ impl<'t> Property<'t> for BoolProperty {
     fn set(&self, value: bool) {
         if let Some(ref inner_ref) = self.inner.inner_ref() {
             inner_ref.state.lock().set_bool(inner_ref.block_index, value).unwrap_or_else(|e| {
-                fx_log_err!("Failed to set property. Error: {:?}", e);
+                error!("Failed to set property. Error: {:?}", e);
             });
         }
     }
@@ -977,7 +977,7 @@ macro_rules! array_property_fn {
                 if let Some(ref inner_ref) = self.inner.inner_ref() {
                     inner_ref.state.lock().[<$fn_name _array_ $name _slot>](inner_ref.block_index, index, value)
                         .unwrap_or_else(|e| {
-                            fx_log_err!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
+                            error!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
                         });
                 }
             }
@@ -1011,7 +1011,7 @@ macro_rules! array_property {
                     if let Some(ref inner_ref) = self.inner.inner_ref() {
                         inner_ref.state.lock().clear_array(inner_ref.block_index, 0)
                             .unwrap_or_else(|e| {
-                                fx_log_err!("Failed to clear property. Error: {:?}", e);
+                                error!("Failed to clear property. Error: {:?}", e);
                             });
                     }
                 }
@@ -1058,7 +1058,7 @@ macro_rules! histogram_property {
                         // Ensure we don't delete the array slots that contain histogram metadata.
                         inner_ref.state.lock().clear_array(inner_ref.block_index, $clear_start_index)
                             .unwrap_or_else(|e| {
-                                fx_log_err!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
+                                error!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
                             });
                     }
                 }
