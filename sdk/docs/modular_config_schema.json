@@ -126,7 +126,7 @@
     },
     "uri": {
       "type": "string",
-      "pattern": "^[a-z|-]+://.+"
+      "pattern": "^[a-z|-]+:.+"
     }
   },
   "type": "object",
