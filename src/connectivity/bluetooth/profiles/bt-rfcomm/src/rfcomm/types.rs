@@ -74,6 +74,16 @@ impl ServerChannel {
     }
 }
 
+impl TryFrom<u8> for ServerChannel {
+    type Error = RfcommError;
+    fn try_from(src: u8) -> Result<ServerChannel, Self::Error> {
+        if src < Self::MIN.0 || src > Self::MAX.0 {
+            return Err(RfcommError::Other(format_err!("Out of range: {:?}", src).into()));
+        }
+        Ok(ServerChannel(src))
+    }
+}
+
 /// Identifier for a direct link connection (DLC) between devices.
 /// Users should construct a DLCI from the provided `u8::try_from` implementation.
 ///
@@ -124,6 +134,26 @@ impl DLCI {
             Ok(())
         } else {
             Err(RfcommError::InvalidDLCI(*self))
+        }
+    }
+
+    /// Returns true if the DLCI is initiated by this device.
+    /// Returns an Error if the provided `role` is invalid or if the DLCI is not
+    /// a user DLCI.
+    pub fn initiator(&self, role: Role) -> Result<bool, RfcommError> {
+        if !self.is_user() {
+            return Err(RfcommError::InvalidDLCI(*self));
+        }
+
+        // A DLCI is considered initiated by us if the direction bit is the same as the expected
+        // direction bit associated with the role of the remote peer. See RFCOMM 5.4 for the
+        // expected value of the direction bit for a particular DLCI.
+        match role.opposite_role() {
+            Role::Responder => Ok(self.0 % 2 == 0),
+            Role::Initiator => Ok(self.0 % 2 == 1),
+            role => {
+                return Err(RfcommError::InvalidRole(role));
+            }
         }
     }
 }
@@ -179,9 +209,9 @@ impl Role {
     /// Returns the Role opposite to our Role.
     pub fn opposite_role(&self) -> Self {
         match self {
-            Role::Unassigned => Role::Unassigned,
             Role::Initiator => Role::Responder,
-            Role::Responder | Role::Negotiating => Role::Initiator,
+            Role::Responder => Role::Initiator,
+            role => *role,
         }
     }
 
@@ -255,7 +285,7 @@ mod tests {
         assert_eq!(role.opposite_role(), Role::Unassigned);
 
         let role = Role::Negotiating;
-        assert_eq!(role.opposite_role(), Role::Initiator);
+        assert_eq!(role.opposite_role(), Role::Negotiating);
     }
 
     #[test]
@@ -358,6 +388,32 @@ mod tests {
         let role = Role::Negotiating;
         let dlci = DLCI::try_from(11).unwrap();
         assert_matches!(dlci.validate(role), Err(RfcommError::InvalidRole(_)));
+    }
+
+    #[test]
+    fn test_dlci_is_initiator() {
+        let dlci = DLCI::MUX_CONTROL_DLCI;
+        assert_matches!(dlci.initiator(Role::Initiator), Err(RfcommError::InvalidDLCI(_)));
+        assert_matches!(dlci.initiator(Role::Responder), Err(RfcommError::InvalidDLCI(_)));
+
+        let dlci = DLCI::try_from(20).unwrap();
+        assert_matches!(dlci.initiator(Role::Initiator), Ok(true));
+        assert_matches!(dlci.initiator(Role::Responder), Ok(false));
+
+        let dlci = DLCI::try_from(25).unwrap();
+        assert_matches!(dlci.initiator(Role::Initiator), Ok(false));
+        assert_matches!(dlci.initiator(Role::Responder), Ok(true));
+    }
+
+    #[test]
+    fn test_dlci_is_initiator_invalid_role_returns_error() {
+        let role = Role::Unassigned;
+        let dlci = DLCI::try_from(10).unwrap();
+        assert_matches!(dlci.initiator(role), Err(RfcommError::InvalidRole(_)));
+
+        let role = Role::Negotiating;
+        let dlci = DLCI::try_from(11).unwrap();
+        assert_matches!(dlci.initiator(role), Err(RfcommError::InvalidRole(_)));
     }
 
     #[test]

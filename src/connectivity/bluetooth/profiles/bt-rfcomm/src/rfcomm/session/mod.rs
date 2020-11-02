@@ -4,17 +4,19 @@
 
 use {
     anyhow::{format_err, Error},
+    fidl_fuchsia_bluetooth::ErrorCode,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::{Channel, PeerId},
     futures::{
         channel::mpsc,
         future::BoxFuture,
+        lock::Mutex,
         select,
         task::{noop_waker_ref, Context},
-        Future, FutureExt, SinkExt, StreamExt,
+        FutureExt, SinkExt, StreamExt,
     },
     log::{error, info, trace, warn},
-    std::{collections::hash_map::Entry, collections::HashMap, convert::TryInto},
+    std::{collections::hash_map::Entry, collections::HashMap, convert::TryInto, sync::Arc},
 };
 
 /// The multiplexer that manages RFCOMM channels for this session.
@@ -32,9 +34,16 @@ use crate::rfcomm::frame::{
 };
 use crate::rfcomm::types::{CommandResponse, RfcommError, Role, ServerChannel, DLCI};
 
-/// A function used to relay an opened RFCOMM channel to a client.
+/// A function used to relay an opened inbound RFCOMM channel to a local client.
 type ChannelOpenedFn =
     Box<dyn Fn(ServerChannel, Channel) -> BoxFuture<'static, Result<(), Error>> + Send + Sync>;
+
+/// Convenience type representing a pending open channel request initiated by a local client
+/// of the Session. Each pending channel request contains a ServerChannel and a
+/// ChannelRequestFn serving as the callback for the opened channel.
+type ChannelRequestFn =
+    Box<dyn FnOnce(Result<Channel, ErrorCode>) -> Result<(), Error> + Send + Sync>;
+struct ChannelRequest(ServerChannel, ChannelRequestFn);
 
 /// Maintains the set of outstanding frames that have been sent to the remote peer.
 /// Provides an API for inserting and removing sent Frames that expect a response.
@@ -126,10 +135,11 @@ impl OutstandingFrames {
 /// frames, modifies the state and role of the Session, and multiplexes any opened
 /// RFCOMM channels.
 ///
-/// A `SessionInner` is represented by a processing task `run()` which processes incoming bytes
-/// from the provided `data_receiver`.
-/// An owner of the `SessionInner` should use `SessionInner::create()` to start a new RFCOMM
-/// Session over the provided `data_receiver`.
+/// `SessionInner::process_incoming_frames` is the data path for any incoming packets
+/// received from the remote peer connected to this session. An owner of the `SessionInner`
+/// should use `SessionInner::process_incoming_frames` to start processing the aforementioned
+/// data. Any frames to be sent to the peer will be relayed using the `outgoing_frame_sender`
+/// provided in `SessionInner::create`.
 pub struct SessionInner {
     /// The session multiplexer that manages the current state of the session and any opened
     /// RFCOMM channels.
@@ -138,9 +148,9 @@ pub struct SessionInner {
     /// Outstanding frames that have been sent to the remote peer and are awaiting responses.
     outstanding_frames: OutstandingFrames,
 
-    /// Channels that are waiting to be established after either multiplexer startup or parameter
-    /// negotiation completes.
-    pending_channels: Vec<ServerChannel>,
+    /// Open channel requests that are waiting for either multiplexer startup, parameter
+    /// negotiation, or channel establishment to complete.
+    pending_channels: Vec<ChannelRequest>,
 
     /// Sender used to relay outgoing frames to be sent to the remote peer.
     outgoing_frame_sender: mpsc::Sender<Frame>,
@@ -151,24 +161,22 @@ pub struct SessionInner {
 }
 
 impl SessionInner {
-    /// Creates a new RFCOMM SessionInner and returns a Future that processes data over the
-    /// provided `data_receiver`.
+    /// Creates and returns an RFCOMM SessionInner that represents a Session between this device
+    /// and a remote peer.
     /// `outgoing_frame_sender` is used to relay RFCOMM frames to be sent to the remote peer.
-    /// `channel_opened_fn` is used by the SessionInner to relay opened RFCOMM channels to
+    /// `channel_opened_fn` is used by the `SessionInner` to relay peer-opened RFCOMM channels to
     /// local clients.
-    pub fn create(
-        data_receiver: mpsc::Receiver<Vec<u8>>,
+    fn create(
         outgoing_frame_sender: mpsc::Sender<Frame>,
         channel_opened_fn: ChannelOpenedFn,
-    ) -> impl Future<Output = Result<(), Error>> {
-        let session = Self {
+    ) -> Self {
+        Self {
             multiplexer: SessionMultiplexer::create(),
             outstanding_frames: OutstandingFrames::new(),
             pending_channels: Vec::new(),
             outgoing_frame_sender,
             channel_opened_fn,
-        };
-        session.run(data_receiver)
+        }
     }
 
     fn multiplexer(&mut self) -> &mut SessionMultiplexer {
@@ -196,13 +204,18 @@ impl SessionInner {
 
     /// Establishes the SessionChannel for the provided `dlci`. Returns true if establishment
     /// is successful.
+    /// `initiator` indicates if this session initiated the connection.
     async fn establish_session_channel(&mut self, dlci: DLCI) -> bool {
         let user_data_sender = self.outgoing_frame_sender.clone();
         match self.multiplexer().establish_session_channel(dlci, user_data_sender) {
             Ok(channel) => {
-                if let Err(e) =
-                    self.relay_channel_to_client(dlci.try_into().unwrap(), channel).await
-                {
+                let server_channel = dlci.try_into().unwrap();
+                let result = if dlci.initiator(self.role()).expect("should be valid") {
+                    self.relay_outbound_channel_to_client(server_channel, channel)
+                } else {
+                    self.relay_inbound_channel_to_client(server_channel, channel).await
+                };
+                if let Err(e) = result {
                     warn!("Couldn't relay channel to client: {:?}", e);
                     // Close the local end of the RFCOMM channel.
                     self.multiplexer().close_session_channel(&dlci);
@@ -218,18 +231,21 @@ impl SessionInner {
         }
     }
 
-    /// Processes pending open channel requests that are waiting for multiplexer startup or
-    /// parameter negotiation to complete.
+    /// Processes pending open channel requests that are waiting for multiplexer startup,
+    /// parameter negotiation, or channel establishment to complete.
+    // TODO(fxbug.dev/62457): Update this when we support sending PN for _every_ DLC. For now,
+    // we only send PN once, so combining the different wait cases is OK.
     async fn process_pending_channels(&mut self) -> Result<(), RfcommError> {
         if !self.multiplexer().started() {
             return Err(RfcommError::MultiplexerNotStarted);
         }
 
         let outstanding_channels = std::mem::take(&mut self.pending_channels);
-        for channel in outstanding_channels {
-            trace!("Processing outstanding open channel request: {:?}", channel);
-            if let Err(e) = self.open_remote_channel(channel).await {
-                warn!("Error opening remote channel {:?}: {:?}", channel, e);
+        for channel_request in outstanding_channels {
+            let server_channel = channel_request.0;
+            trace!("Processing outstanding open channel request: {:?}", server_channel);
+            if let Err(e) = self.open_remote_channel(channel_request).await {
+                warn!("Error opening remote channel {:?}: {:?}", server_channel, e);
             }
         }
         Ok(())
@@ -268,9 +284,28 @@ impl SessionInner {
         }
     }
 
-    /// Relays the `channel` opened for the provided `server_channel` to the local clients
-    /// of the session.
-    async fn relay_channel_to_client(
+    /// Relays the outbound `channel` opened for the provided `server_channel` to the local client
+    /// who requested it. Returns an error if delivery fails or if there is no such client.
+    fn relay_outbound_channel_to_client(
+        &mut self,
+        server_channel: ServerChannel,
+        channel: Channel,
+    ) -> Result<(), RfcommError> {
+        if let Some(idx) =
+            self.pending_channels.iter().position(|request| request.0 == server_channel)
+        {
+            let ChannelRequest(_, callback) = self.pending_channels.remove(idx);
+            return callback(Ok(channel))
+                .map_err(|e| RfcommError::Other(format_err!("{:?}", e).into()));
+        }
+        Err(RfcommError::Other(
+            format_err!("No outstanding client for: {:?}", server_channel).into(),
+        ))
+    }
+
+    /// Relays the inbound `channel` opened for the provided `server_channel` to the local clients
+    /// of the session. Returns the status of the delivery.
+    async fn relay_inbound_channel_to_client(
         &self,
         server_channel: ServerChannel,
         channel: Channel,
@@ -313,15 +348,15 @@ impl SessionInner {
         Ok(())
     }
 
-    /// Attempts to open a remote RFCOMM channel for the provided `server_channel`.
+    /// Attempts to open an RFCOMM channel for the provided `channel_request`.
     async fn open_remote_channel(
         &mut self,
-        server_channel: ServerChannel,
+        channel_request: ChannelRequest,
     ) -> Result<(), RfcommError> {
         // If the multiplexer has not started yet, save the open channel request and
         // attempt to start the multiplexer.
         if !self.multiplexer().started() {
-            self.pending_channels.push(server_channel);
+            self.pending_channels.push(channel_request);
 
             // Only attempt to start the multiplexer if we're not already negotiating.
             if self.multiplexer().role() == Role::Unassigned {
@@ -332,15 +367,14 @@ impl SessionInner {
 
         // When opening a remote channel, the DLCI is formed by taking the ServerChannel
         // and the opposite of our role. See RFCOMM 5.4.
-        let dlci = server_channel.to_dlci(self.role().opposite_role())?;
+        let dlci = channel_request.0.to_dlci(self.role().opposite_role())?;
 
         // If the session-wide parameters have not been negotiated yet, save the open channel
         // request and attempt to negotiate the parameters. Per RFCOMM 5.5.3, PN should occur
         // at least once before creation of the first DLC. While it is valid to do a PN before
         // every opened DLC, our implementation will only try to negotiate the parameters once.
         if !self.multiplexer().parameters_negotiated() {
-            self.pending_channels.push(server_channel);
-
+            self.pending_channels.push(channel_request);
             if self.multiplexer().parameter_negotiation_state()
                 == ParameterNegotiationState::NotNegotiated
             {
@@ -349,11 +383,14 @@ impl SessionInner {
             return Ok(());
         }
 
+        // TODO(fxbug.dev/59585): Cancel the request if DLCI already established.
         if self.multiplexer().dlci_established(&dlci) {
             return Err(RfcommError::ChannelAlreadyEstablished(dlci));
         }
 
-        // Send the SABM Command to begin channel establishment.
+        // Otherwise, save the pending channel request and send the SABM Command to begin
+        // channel establishment.
+        self.pending_channels.push(channel_request);
         self.send_sabm_command(dlci).await;
         Ok(())
     }
@@ -560,8 +597,10 @@ impl SessionInner {
                 // any pending open channel requests. Choosing the first channel is OK,
                 // since we mainly care about setting session-wide (not DLC specific)
                 // parameters.
-                if let Some(Ok(dlci)) =
-                    self.pending_channels.first().map(|sc| sc.to_dlci(self.role().opposite_role()))
+                if let Some(Ok(dlci)) = self
+                    .pending_channels
+                    .first()
+                    .map(|request| request.0.to_dlci(self.role().opposite_role()))
                 {
                     // Error case is irrelevant since we just started the multiplexer.
                     let _ = self.start_parameter_negotiation(dlci).await;
@@ -698,39 +737,34 @@ impl SessionInner {
         let _ = self.outgoing_frame_sender.send(frame).await;
     }
 
-    /// Starts the processing task for this RFCOMM Session.
-    /// `data_receiver` is a stream of incoming packets from the remote peer.
+    /// Starts the data processing task for this RFCOMM Session.
+    /// `data_receiver` is a stream of incoming data packets received from the remote peer.
     ///
     /// The lifetime of this task is tied to the `data_receiver`.
-    async fn run(mut self, mut data_receiver: mpsc::Receiver<Vec<u8>>) -> Result<(), Error> {
-        loop {
-            select! {
-                incoming_bytes = data_receiver.next() => {
-                    let bytes = match incoming_bytes {
-                        Some(bytes) => bytes,
-                        None => {
-                            // The `data_receiver` has closed, indicating peer disconnection.
-                            return Ok(());
-                        }
-                    };
-
-                    match Frame::parse(self.role().opposite_role(), self.credit_based_flow(), &bytes) {
-                        Ok(f) => {
-                            trace!("Parsed frame from peer: {:?}", f);
-                            match self.handle_frame(f).await {
-                                Ok(true) => return Ok(()),
-                                Ok(false) => {},
-                                Err(e) => warn!("Error handling RFCOMM frame: {:?}", e),
-                            }
-                        },
-                        Err(e) => {
-                            self.handle_frame_parse_error(e).await;
-                        }
-                    };
+    async fn process_incoming_frames(
+        inner: Arc<Mutex<Self>>,
+        mut data_receiver: mpsc::Receiver<Vec<u8>>,
+    ) -> Result<(), Error> {
+        while let Some(bytes) = data_receiver.next().await {
+            let mut w_inner = inner.lock().await;
+            match Frame::parse(w_inner.role().opposite_role(), w_inner.credit_based_flow(), &bytes)
+            {
+                Ok(f) => {
+                    trace!("Parsed frame from peer: {:?}", f);
+                    match w_inner.handle_frame(f).await {
+                        Ok(true) => break,
+                        Ok(false) => {}
+                        Err(e) => warn!("Error handling RFCOMM frame: {:?}", e),
+                    }
                 }
-                complete => { return Ok(()); }
-            }
+                Err(e) => {
+                    w_inner.handle_frame_parse_error(e).await;
+                }
+            };
         }
+        // The `data_receiver` has closed, indicating peer disconnection.
+        // TODO(fxbug.dev/59585): Cancel pending channels.
+        Ok(())
     }
 }
 
@@ -740,7 +774,8 @@ impl SessionInner {
 /// from the remote peer. Any multiplexed RFCOMM channels will be delivered to the
 /// `clients` of the Session.
 pub struct Session {
-    task: fasync::Task<()>,
+    task: Option<fasync::Task<()>>,
+    inner: Arc<Mutex<SessionInner>>,
 }
 
 impl Session {
@@ -751,48 +786,59 @@ impl Session {
         l2cap_channel: Channel,
         channel_opened_callback: ChannelOpenedFn,
     ) -> Self {
-        let task =
-            fasync::Task::spawn(Session::session_task(id, l2cap_channel, channel_opened_callback));
-        Self { task }
+        // The `session_inner` relays outgoing packets (to be sent to the remote peer) to the
+        // `Session` using this mpsc::channel.
+        let (frames_to_peer_sender, frame_receiver) = mpsc::channel(0);
+        let session_inner = Arc::new(Mutex::new(SessionInner::create(
+            frames_to_peer_sender,
+            channel_opened_callback,
+        )));
+        let task = fasync::Task::spawn(Session::session_task(
+            id,
+            l2cap_channel,
+            session_inner.clone(),
+            frame_receiver,
+        ));
+        Self { task: Some(task), inner: session_inner }
     }
 
     /// Processing task that drives the work for an RFCOMM Session with a peer.
     ///
     /// 1) Drives the RFCOMM SessionInner task - this task is responsible for
     ///    RFCOMM related functionality: parsing & handling frames, modifying internal state, and
-    ///    multiplexing RFCOMM channels.
-    /// 2) Drives the peer processing task which handles incoming packets from the `l2cap_channel`.
-    ///    This task also handles the sending of outgoing frames to the remote peer.
+    ///    multiplexing RFCOMM channels. Any outgoing frames intended for the peer will be sent to
+    ///    the `frame_receiver`.
+    /// 2) Drives the peer processing task which handles incoming packets from the `l2cap` channel.
+    ///    This task will relay these received packets to the `session_inner`. The task also
+    ///    receives packets from the `frame_receiver` and sends them to the remote peer.
     ///
     /// The lifetime of this task is tied to the provided `l2cap` channel. When the remote peer
     /// disconnects, the `l2cap` channel will close, and therefore the task will terminate.
-    async fn session_task(id: PeerId, l2cap: Channel, channel_opened_callback: ChannelOpenedFn) {
-        // The `session_inner_task` communicates with the `peer_processing_task` using two mpsc
-        // channels.
+    async fn session_task(
+        id: PeerId,
+        l2cap: Channel,
+        session_inner: Arc<Mutex<SessionInner>>,
+        frame_receiver: mpsc::Receiver<Frame>,
+    ) {
+        // `Session::peer_processing_task()` uses this mpsc::channel to relay data received from the
+        // peer to the `session_inner`.
+        let (data_sender, data_from_peer_receiver) = mpsc::channel(0);
 
-        // The `peer_processing_task` relays incoming packets from the remote peer to the
-        // `session_inner_task` using this channel.
-        let (data_sender, data_receiver) = mpsc::channel(0);
-
-        // The `session_inner_task` relays outgoing packets (to be sent to the remote peer) to the
-        // `peer_processing_task` using this channel.
-        let (frame_sender, frame_receiver) = mpsc::channel(0);
-
-        // Processes packets of data to/from the remote peer.
-        let peer_processing_task =
-            Session::peer_processing_task(l2cap, frame_receiver, data_sender).boxed().fuse();
         // Business logic of the RFCOMM session - parsing and handling frames, modifying the state
         // of the session, and multiplexing RFCOMM channels.
         let session_inner_task =
-            SessionInner::create(data_receiver, frame_sender, channel_opened_callback)
+            SessionInner::process_incoming_frames(session_inner, data_from_peer_receiver)
                 .boxed()
                 .fuse();
+        // Processes packets of data to/from the remote peer.
+        let peer_processing_task =
+            Session::peer_processing_task(l2cap, frame_receiver, data_sender).boxed().fuse();
 
         let _ = futures::future::select(session_inner_task, peer_processing_task).await;
         info!("Session with peer {:?} ended", id);
     }
 
-    /// Processes incoming data from the `l2cap_channel` with the remote peer and
+    /// Processes incoming data from the `l2cap_channel` connected to the remote peer and
     /// relays it using the `data_sender`.
     /// Processes frames-to-be-sent from the `pending_writes` queue and sends them to the
     /// remote peer.
@@ -836,18 +882,44 @@ impl Session {
         }
     }
 
+    /// Requests to open a new RFCOMM channel for the provided `server_channel`.
+    pub async fn open_rfcomm_channel(
+        &mut self,
+        server_channel: ServerChannel,
+        channel_opened_cb: ChannelRequestFn,
+    ) {
+        let mut w_inner = self.inner.lock().await;
+        if let Err(e) =
+            w_inner.open_remote_channel(ChannelRequest(server_channel, channel_opened_cb)).await
+        {
+            warn!("Couldn't open RFCOMM channel: {:?}", e);
+        }
+    }
+
     /// Returns true if the Session is currently active - namely, it's processing `task` is
     /// still active.
     pub fn is_active(&mut self) -> bool {
         // The usage of `noop_waker_ref` is contingent on the `task` not being polled
         // elsewhere.
-        // Each RFCOMM Session is stored as a spawned fasync::Task which runs independently.
+        // Each RFCOMM Session is stored as a spawned fasync::Task.
         // The `task` itself is never polled directly anywhere else as there is no need to
         // drive it to completion. Thus, `is_active()` is the only location in which
         // the `task` is polled to determine if the RFCOMM Session processing task is ready
-        // or not.
-        let mut ctx = Context::from_waker(noop_waker_ref());
-        return self.task.poll_unpin(&mut ctx).is_pending();
+        // or not. When the task completes, the `poll_unpin()` call will resolve to ready, and the
+        // task will be set to None. This prevents future calls to `is_active()` from
+        // polling an already completed future.
+        self.task = self
+            .task
+            .take()
+            .map(|mut task| {
+                if task.poll_unpin(&mut Context::from_waker(noop_waker_ref())).is_pending() {
+                    Some(task)
+                } else {
+                    None
+                }
+            })
+            .flatten();
+        self.task.is_some()
     }
 }
 
@@ -903,14 +975,17 @@ mod tests {
     fn setup_session_task() -> (impl Future<Output = ()>, Channel) {
         let (local, remote) = Channel::create();
         let channel_opened_fn = Box::new(|_server_channel, _channel| async { Ok(()) }.boxed());
-        let session_fut = Session::session_task(PeerId(1), local, channel_opened_fn);
+        let (frame_sender, frame_receiver) = mpsc::channel(0);
+        let session_inner =
+            Arc::new(Mutex::new(SessionInner::create(frame_sender, channel_opened_fn)));
+        let session_fut = Session::session_task(PeerId(1), local, session_inner, frame_receiver);
+
         (session_fut, remote)
     }
 
-    /// Creates a ChannelOpenedFn that relays the given RFCOMM `channel` to the `channel_sender`.
-    /// Tests should use the returned Receiver to assert on the delivery of opened RFCOMM
-    /// channels.
-    fn create_channel_relay() -> (ChannelOpenedFn, mpsc::Receiver<Channel>) {
+    /// Creates a ChannelOpenedFn that relays inbound RFCOMM channels using the `channel_sender`.
+    /// Tests should use the returned Receiver to assert on the delivery of opened RFCOMM channels.
+    fn create_inbound_relay() -> (ChannelOpenedFn, mpsc::Receiver<Channel>) {
         let (channel_sender, channel_receiver) = mpsc::channel(0);
         let f = Box::new(move |_server_channel, channel| {
             let mut sender = channel_sender.clone();
@@ -923,11 +998,24 @@ mod tests {
         (f, channel_receiver)
     }
 
+    /// Creates a ChannelRequestFn that relays outbound RFCOMM channels using the `channel_sender`.
+    /// Tests should use the returned Receiver to assert on delivery of outbound channels.
+    fn create_outbound_relay() -> (ChannelRequestFn, mpsc::Receiver<Channel>) {
+        let (channel_sender, channel_receiver) = mpsc::channel(0);
+        let f = Box::new(move |channel: Result<Channel, ErrorCode>| {
+            let mut sender = channel_sender.clone();
+            let channel = channel.unwrap();
+            assert!(sender.try_send(channel).is_ok());
+            Ok(())
+        });
+        (f, channel_receiver)
+    }
+
     /// Creates and returns 1) A SessionInner 2) A stream of outgoing frames to be sent to the
     /// remote peer. Use this to validate SessionInner behavior and 3) A stream of opened RFCOMM
     /// channels. Use this to validate channel establishment.
     fn setup_session() -> (SessionInner, mpsc::Receiver<Frame>, mpsc::Receiver<Channel>) {
-        let (channel_opened_fn, channel_receiver) = create_channel_relay();
+        let (channel_opened_fn, channel_receiver) = create_inbound_relay();
         let (outgoing_frame_sender, outgoing_frames) = mpsc::channel(0);
         let session = SessionInner {
             multiplexer: SessionMultiplexer::create(),
@@ -1334,9 +1422,8 @@ mod tests {
         // Create the session - set the channel_send_fn to unanimously reject
         // channels, to simulate failure.
         let (mut session, mut outgoing_frames, _rfcomm_channels) = setup_session();
-        session.channel_opened_fn = Box::new(|_server_channel, _channel| {
-            async { Err(format_err!("Always rejecting")) }.boxed()
-        });
+        session.channel_opened_fn =
+            Box::new(|_, _channel| async { Err(format_err!("Always rejecting")) }.boxed());
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
         // Remote peer sends SABM over a user DLCI - this should be rejected with a
@@ -1723,12 +1810,14 @@ mod tests {
         let mut exec = fasync::Executor::new().unwrap();
 
         // Create and start a SessionInner that relays any opened RFCOMM channels.
-        let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session();
+        let (mut session, mut outgoing_frames, _inbound_channels) = setup_session();
+        let (outbound_fn, mut outbound_channels) = create_outbound_relay();
 
         // Initiate an open RFCOMM channel request with a random valid ServerChannel.
-        let server_channel = ServerChannel(5);
+        let server_channel = ServerChannel::try_from(5).unwrap();
         {
-            let mut open_fut = Box::pin(session.open_remote_channel(server_channel));
+            let mut open_fut =
+                Box::pin(session.open_remote_channel(ChannelRequest(server_channel, outbound_fn)));
             assert!(exec.run_until_stalled(&mut open_fut).is_pending());
             // Since the multiplexer has not started, we first expect to send an SABM over the
             // MUX Control DLCI to the remote peer.
@@ -1782,7 +1871,7 @@ mod tests {
             );
             assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
             // We then expect to open a local RFCOMM channel to be relayed to a profile client.
-            let _channel = expect_channel(&mut exec, &mut channel_receiver);
+            let _channel = expect_channel(&mut exec, &mut outbound_channels);
             assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
             // Upon successful channel delivery, we expect an outgoing ModemStatus frame to
             // be sent.
@@ -1799,10 +1888,10 @@ mod tests {
         let mut exec = fasync::Executor::new().unwrap();
 
         // Start SessionInner with negotiated parameters - don't expect any relayed channels.
-        let (mut session, mut outgoing_frames, _channel_receiver) = setup_session();
-        session.channel_opened_fn = Box::new(|_server_channel, _channel| {
-            async { panic!("Don't expect channels!") }.boxed()
-        });
+        let (mut session, mut outgoing_frames, _inbound_channels) = setup_session();
+        let (outbound_fn, _outbound_channels) = create_outbound_relay();
+        session.channel_opened_fn =
+            Box::new(|_, _channel| async { panic!("Don't expect channels!") }.boxed());
         assert!(session.multiplexer().start(Role::Initiator).is_ok());
         session.multiplexer().negotiate_parameters(SessionParameters::default());
 
@@ -1811,7 +1900,8 @@ mod tests {
         let server_channel = ServerChannel(5);
         let expected_dlci = server_channel.to_dlci(Role::Responder).unwrap();
         {
-            let mut open_fut = Box::pin(session.open_remote_channel(server_channel));
+            let mut open_fut =
+                Box::pin(session.open_remote_channel(ChannelRequest(server_channel, outbound_fn)));
             assert!(exec.run_until_stalled(&mut open_fut).is_pending());
             expect_frame(
                 &mut exec,
@@ -1838,16 +1928,19 @@ mod tests {
         let mut exec = fasync::Executor::new().unwrap();
 
         // Create and start a SessionInner that relays any opened RFCOMM channels.
-        let (mut session, mut outgoing_frames, _channel_receiver) = setup_session();
+        let (mut session, mut outgoing_frames, _inbound_channels) = setup_session();
+        let (outbound_fn, _outbound_channels1) = create_outbound_relay();
+        let (outbound_fn2, _outbound_channels2) = create_outbound_relay();
 
         // The session multiplexer has started.
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
         // Initiate an open RFCOMM channel request with a random valid ServerChannel.
-        let server_channel = ServerChannel(5);
+        let server_channel = ServerChannel::try_from(5).unwrap();
         let expected_dlci = server_channel.to_dlci(Role::Initiator).unwrap();
         {
-            let mut open_fut = Box::pin(session.open_remote_channel(server_channel));
+            let mut open_fut =
+                Box::pin(session.open_remote_channel(ChannelRequest(server_channel, outbound_fn)));
             assert!(exec.run_until_stalled(&mut open_fut).is_pending());
             // We expect the session to initiate a Parameter Negotiation request (UIH Frame),
             // for the DLCI.
@@ -1860,12 +1953,14 @@ mod tests {
         }
 
         // Before the peer responds, we get another request to open a different RFCOMM channel.
-        let server_channel2 = ServerChannel(9);
+        let server_channel2 = ServerChannel::try_from(9).unwrap();
         let expected_dlci2 = server_channel2.to_dlci(Role::Initiator).unwrap();
         {
             // We expect the open_remote_channel call to resolve immediately, since PN is in
             // progress. The call should be saved for later, after PN finishes.
-            let mut open_fut = Box::pin(session.open_remote_channel(server_channel2));
+            let mut open_fut = Box::pin(
+                session.open_remote_channel(ChannelRequest(server_channel2, outbound_fn2)),
+            );
             assert_matches!(exec.run_until_stalled(&mut open_fut), Poll::Ready(Ok(_)));
         }
 
@@ -1895,5 +1990,69 @@ mod tests {
             );
             assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(_)));
         }
+    }
+
+    #[test]
+    fn test_open_rfcomm_channel_relays_channel_to_callback() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let (local, remote) = Channel::create();
+        let (channel_open_fn, _inbound_channels) = create_inbound_relay();
+        let mut session = Session::create(PeerId(321), local, channel_open_fn);
+        let (outbound_fn, mut outbound_channels) = create_outbound_relay();
+
+        // `remote_fut` is a stream of bytes received from the `session`. It is what we'd expect
+        // the remote peer to receive.
+        let mut vec = Vec::new();
+        let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
+        assert!(exec.run_until_stalled(&mut remote_fut).is_pending());
+
+        // 1. Simulate local profile client requesting to open an RFCOMM channel.
+        let server_channel = ServerChannel::try_from(2).unwrap();
+        let expected_dlci = server_channel.to_dlci(Role::Responder).unwrap();
+        {
+            let mut open_fut = Box::pin(session.open_rfcomm_channel(server_channel, outbound_fn));
+            assert!(exec.run_until_stalled(&mut open_fut).is_ready());
+        }
+
+        // 2. Remote should receive an RFCOMM frame to start up the multiplexer.
+        assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
+        // 3. Remote responds positively.
+        let ua = Frame::make_ua_response(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
+        let mut buf = vec![0; ua.encoded_len()];
+        assert!(ua.encode(&mut buf[..]).is_ok());
+        assert!(remote.as_ref().write(&buf).is_ok());
+
+        // 4. Remote should receive an RFCOMM frame to negotiate parameters.
+        let mut vec = Vec::new();
+        let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
+        assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
+        // 5. Remote responds positively.
+        let pn_response = make_dlc_pn_frame(CommandResponse::Response, expected_dlci, true, 100);
+        let mut buf = vec![0; pn_response.encoded_len()];
+        assert!(pn_response.encode(&mut buf[..]).is_ok());
+        assert!(remote.as_ref().write(&buf).is_ok());
+
+        // 6. Remote should receive an RFCOMM frame to establish the `expected_dlci`.
+        let mut vec = Vec::new();
+        let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
+        assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
+        // 7. Remote responds positively.
+        let ua = Frame::make_ua_response(Role::Responder, expected_dlci);
+        let mut buf = vec![0; ua.encoded_len()];
+        assert!(ua.encode(&mut buf[..]).is_ok());
+        assert!(remote.as_ref().write(&buf).is_ok());
+
+        // Mux startup, Parameter negotiation, and channel establishment are complete. The RFCOMM
+        // channel should be ready and relayed to the client.
+        let _channel = expect_channel(&mut exec, &mut outbound_channels);
+
+        // Client trying to connect again on the same channel should fail immediately.
+        let outbound_err_fn = Box::new(move |channel: Result<Channel, ErrorCode>| {
+            assert!(channel.is_err());
+            Ok(())
+        });
+        let mut open_fut = Box::pin(session.open_rfcomm_channel(server_channel, outbound_err_fn));
+        assert!(exec.run_until_stalled(&mut open_fut).is_ready());
     }
 }

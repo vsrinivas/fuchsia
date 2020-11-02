@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
+    fidl_fuchsia_bluetooth::ErrorCode,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::types::{Channel, PeerId},
     futures::{lock::Mutex, FutureExt},
@@ -60,27 +61,28 @@ impl Clients {
         })
     }
 
-    /// Delivers the `channel` to the client that has registered the `server_channel`. Returns true
-    /// if the channel was delivered to the client.
+    /// Delivers the `channel` to the client that has registered the `server_channel`.
+    /// Returns an error if delivery fails or if there is no such client.
     pub async fn deliver_channel(
         &self,
         peer_id: PeerId,
         server_channel: ServerChannel,
         channel: Channel,
     ) -> Result<(), Error> {
-        if let Some(client) = self.channel_receivers.lock().await.get(&server_channel) {
-            // Build the RFCOMM protocol descriptor and relay the channel.
-            let mut protocol: Vec<bredr::ProtocolDescriptor> =
-                build_rfcomm_protocol(server_channel).iter().map(|p| p.into()).collect();
-            return client
-                .connected(
-                    &mut peer_id.into(),
-                    bredr::Channel::try_from(channel).unwrap(),
-                    &mut protocol.iter_mut(),
-                )
-                .map_err(|e| format_err!("{:?}", e));
-        }
-        Err(format_err!("ServerChannel {:?} not registered", server_channel))
+        let clients = self.channel_receivers.lock().await;
+        let client = clients
+            .get(&server_channel)
+            .ok_or(format_err!("ServerChannel {:?} not registered", server_channel))?;
+        // Build the RFCOMM protocol descriptor and relay the channel.
+        let mut protocol: Vec<bredr::ProtocolDescriptor> =
+            build_rfcomm_protocol(server_channel).iter().map(Into::into).collect();
+        client
+            .connected(
+                &mut peer_id.into(),
+                bredr::Channel::try_from(channel).unwrap(),
+                &mut protocol.iter_mut(),
+            )
+            .map_err(|e| format_err!("{:?}", e))
     }
 }
 
@@ -89,7 +91,7 @@ pub struct RfcommServer {
     /// The currently registered profile clients of the RFCOMM server.
     clients: Arc<Clients>,
 
-    /// Sessions between us and a remote device. Each Session will multiplex
+    /// Sessions between us and a remote peer. Each Session will multiplex
     /// RFCOMM connections over a single L2CAP channel.
     /// There can only be one session per remote peer. See RFCOMM Section 5.2.
     sessions: HashMap<PeerId, Session>,
@@ -103,7 +105,7 @@ impl RfcommServer {
     /// Returns true if a session identified by `id` exists and is currently
     /// active.
     /// An RFCOMM Session is active if there is a currently running processing task.
-    fn is_active_session(&mut self, id: &PeerId) -> bool {
+    pub fn is_active_session(&mut self, id: &PeerId) -> bool {
         if let Some(session) = self.sessions.get_mut(id) {
             return session.is_active();
         }
@@ -137,6 +139,33 @@ impl RfcommServer {
         self.clients.new_client(proxy).await
     }
 
+    /// Opens an RFCOMM channel specified by `server_channel` with the remote peer.
+    ///
+    /// Returns an error if there is no session established with the peer.
+    pub async fn open_rfcomm_channel(
+        &mut self,
+        id: PeerId,
+        server_channel: ServerChannel,
+        responder: bredr::ProfileConnectResponder,
+    ) -> Result<(), Error> {
+        trace!("Received request to open RFCOMM channel {:?} with peer {:?}", server_channel, id);
+        match self.sessions.get_mut(&id) {
+            None => {
+                let _ = responder.send(&mut Err(ErrorCode::Failed));
+                Err(format_err!("Invalid peer ID {:?}", id))
+            }
+            Some(session) => {
+                let channel_opened_callback =
+                    Box::new(move |channel: Result<Channel, ErrorCode>| {
+                        let mut channel = channel.map(|c| bredr::Channel::try_from(c).unwrap());
+                        responder.send(&mut channel).map_err(|e| format_err!("{:?}", e))
+                    });
+                session.open_rfcomm_channel(server_channel, channel_opened_callback).await;
+                Ok(())
+            }
+        }
+    }
+
     /// Handles an incoming L2CAP connection from the remote peer.
     ///
     /// If there is already an active session established with this peer, returns an Error
@@ -168,20 +197,39 @@ mod tests {
     use super::*;
 
     use crate::rfcomm::{
-        frame::{Encodable, Frame},
-        types::{Role, DLCI},
+        frame::mux_commands::*,
+        frame::*,
+        types::{CommandResponse, Role, DLCI},
     };
 
-    use fidl::endpoints::{create_proxy, create_proxy_and_stream};
+    use fidl::{
+        encoding::Decodable,
+        endpoints::{create_proxy, create_proxy_and_stream},
+    };
     use fidl_fuchsia_bluetooth_bredr::ConnectionReceiverMarker;
     use fuchsia_async as fasync;
     use fuchsia_bluetooth::types::Channel;
     use futures::{pin_mut, task::Poll, AsyncWriteExt, StreamExt};
+    use matches::assert_matches;
 
     fn setup_rfcomm_manager() -> (fasync::Executor, RfcommServer) {
         let exec = fasync::Executor::new().unwrap();
         let rfcomm = RfcommServer::new();
         (exec, rfcomm)
+    }
+
+    #[track_caller]
+    fn send_peer_frame(remote: &fidl::Socket, frame: Frame) {
+        let mut buf = vec![0; frame.encoded_len()];
+        assert!(frame.encode(&mut buf[..]).is_ok());
+        assert!(remote.write(&buf).is_ok());
+    }
+
+    #[track_caller]
+    fn expect_frame_received_by_peer(exec: &mut fasync::Executor, remote: &mut Channel) {
+        let mut vec = Vec::new();
+        let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
+        assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -244,6 +292,8 @@ mod tests {
 
         // The session should be inactive now.
         assert!(!rfcomm.is_active_session(&id));
+        // Checking again is OK.
+        assert!(!rfcomm.is_active_session(&id));
     }
 
     #[test]
@@ -267,37 +317,22 @@ mod tests {
 
         // Start up a session with remote peer.
         let id = PeerId(1);
-        let (remote, channel) = Channel::create();
-        assert!(rfcomm.new_l2cap_connection(id, channel).is_ok());
+        let (local, mut remote) = Channel::create();
+        assert!(rfcomm.new_l2cap_connection(id, local).is_ok());
         assert!(rfcomm.is_active_session(&id));
 
-        let mut vec = Vec::new();
-        let remote_fut = remote.read_datagram(&mut vec);
-        pin_mut!(remote_fut);
-        assert!(exec.run_until_stalled(&mut remote_fut).is_pending());
-
-        // Remote device requests to start up session multiplexer.
+        // Remote peer requests to start up session multiplexer.
         let sabm = Frame::make_sabm_command(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
-        let mut buf = vec![0; sabm.encoded_len()];
-        assert!(sabm.encode(&mut buf[..]).is_ok());
-        assert!(remote.as_ref().write(&buf).is_ok());
+        send_peer_frame(remote.as_ref(), sabm);
+        // Expect to send a positive response to the peer.
+        expect_frame_received_by_peer(&mut exec, &mut remote);
 
-        // Expect a response to the sent frame.
-        assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
-
-        // Remote device requests to open up an RFCOMM channel. The DLCI is the ServerChannel
-        // tagged with a direction bit = 0 (since we are responder role).
-        let user_dlci = DLCI::try_from(first_channel.0 << 1).unwrap();
+        // Remote peer requests to open an RFCOMM channel.
+        let user_dlci = first_channel.to_dlci(Role::Responder).unwrap();
         let user_sabm = Frame::make_sabm_command(Role::Initiator, user_dlci);
-        let mut buf = vec![0; sabm.encoded_len()];
-        assert!(user_sabm.encode(&mut buf[..]).is_ok());
-        assert!(remote.as_ref().write(&buf).is_ok());
-
-        // Expect a response to the sent frame.
-        let mut vec = Vec::new();
-        let remote_fut = remote.read_datagram(&mut vec);
-        pin_mut!(remote_fut);
-        assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
+        send_peer_frame(remote.as_ref(), user_sabm);
+        // Expect to send a positive response to the peer.
+        expect_frame_received_by_peer(&mut exec, &mut remote);
 
         // The Session should open a new RFCOMM channel for the provided `user_dlci`, and
         // the Channel should be relayed to the profile client.
@@ -308,15 +343,16 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_register_and_deliver_channel_to_clients() {
+    async fn test_register_and_deliver_inbound_channel_to_clients() {
         let clients = Clients::new();
 
         // Initial capacity is the range of all valid Server Channels (1..30).
         let mut expected_space = 30;
         assert_eq!(clients.available_space().await, expected_space);
 
-        // Attempting to deliver a channel for an unregistered ServerChannel should be an error.
-        let random_server_channel = ServerChannel(10);
+        // Attempting to deliver an inbound channel for an unregistered ServerChannel should be
+        // an error.
+        let random_server_channel = ServerChannel::try_from(10).unwrap();
         let (local, _remote) = Channel::create();
         assert!(clients.deliver_channel(PeerId(1), random_server_channel, local).await.is_err());
 
@@ -334,5 +370,98 @@ mod tests {
         drop(s);
         let (local, _remote) = Channel::create();
         assert!(clients.deliver_channel(PeerId(1), server_channel, local).await.is_err());
+    }
+
+    /// Makes a client Profile::Connect() request and returns the responder for the request
+    /// and a Future associated with the request.
+    #[track_caller]
+    fn make_client_connect_request(
+        exec: &mut fasync::Executor,
+        id: PeerId,
+    ) -> (
+        bredr::ProfileConnectResponder,
+        fidl::client::QueryResponseFut<Result<bredr::Channel, ErrorCode>>,
+    ) {
+        let (profile, mut profile_server) =
+            create_proxy_and_stream::<bredr::ProfileMarker>().unwrap();
+        let mut profile_stream = Box::pin(profile_server.next());
+        let connect_request =
+            profile.connect(&mut id.into(), &mut bredr::ConnectParameters::new_empty());
+        let responder = match exec.run_until_stalled(&mut profile_stream) {
+            Poll::Ready(Some(Ok(bredr::ProfileRequest::Connect { responder, .. }))) => responder,
+            x => panic!("Expected ready connect request but got: {:?}", x),
+        };
+        (responder, connect_request)
+    }
+
+    #[test]
+    fn test_request_outbound_connection_succeeds() {
+        let (mut exec, mut rfcomm) = setup_rfcomm_manager();
+
+        // Start up a session with remote peer.
+        let id = PeerId(1);
+        let (local, mut remote) = Channel::create();
+        assert!(rfcomm.new_l2cap_connection(id, local).is_ok());
+
+        // Simulate a client connect request.
+        let (responder, connect_request_fut) = make_client_connect_request(&mut exec, id);
+        pin_mut!(connect_request_fut);
+        assert!(exec.run_until_stalled(&mut connect_request_fut).is_pending());
+        // We expect the open channel request to be OK - still awaiting the channel.
+        let server_channel = ServerChannel::try_from(9).unwrap();
+        let expected_dlci = server_channel.to_dlci(Role::Responder).unwrap();
+        let mut outbound_fut = Box::pin(rfcomm.open_rfcomm_channel(id, server_channel, responder));
+        assert_matches!(exec.run_until_stalled(&mut outbound_fut), Poll::Ready(Ok(_)));
+        assert!(exec.run_until_stalled(&mut connect_request_fut).is_pending());
+
+        // Expect to send a frame to the peer - SABM for mux startup.
+        expect_frame_received_by_peer(&mut exec, &mut remote);
+        // Simulate peer responding positively.
+        let ua = Frame::make_ua_response(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
+        send_peer_frame(remote.as_ref(), ua);
+
+        // Expect to send a frame to peer - parameter negotiation.
+        expect_frame_received_by_peer(&mut exec, &mut remote);
+        // Simulate peer responding positively.
+        let data = MuxCommand {
+            params: MuxCommandParams::ParameterNegotiation(ParameterNegotiationParams {
+                dlci: expected_dlci,
+                credit_based_flow_handshake: CreditBasedFlowHandshake::SupportedResponse,
+                priority: 12,
+                max_frame_size: 100,
+                initial_credits: 1,
+            }),
+            command_response: CommandResponse::Response,
+        };
+        let pn_response = Frame::make_mux_command(Role::Responder, data);
+        send_peer_frame(remote.as_ref(), pn_response);
+
+        // Expect to send a frame to peer - SABM for channel opening.
+        expect_frame_received_by_peer(&mut exec, &mut remote);
+        // Simulate peer responding positively.
+        let ua = Frame::make_ua_response(Role::Responder, expected_dlci);
+        send_peer_frame(remote.as_ref(), ua);
+
+        // The channel should be established and relayed to the client that requested it.
+        assert_matches!(exec.run_until_stalled(&mut connect_request_fut), Poll::Ready(Ok(Ok(_))));
+    }
+
+    #[test]
+    fn test_request_outbound_connection_invalid_peer() {
+        let (mut exec, mut rfcomm) = setup_rfcomm_manager();
+
+        // Simulate a client connect request.
+        let random_id = PeerId(41);
+        let (responder, connect_request_fut) = make_client_connect_request(&mut exec, random_id);
+        pin_mut!(connect_request_fut);
+        assert!(exec.run_until_stalled(&mut connect_request_fut).is_pending());
+
+        // We expect the open channel request to fail.
+        let server_channel = ServerChannel::try_from(8).unwrap();
+        let mut outbound_fut =
+            Box::pin(rfcomm.open_rfcomm_channel(random_id, server_channel, responder));
+        assert_matches!(exec.run_until_stalled(&mut outbound_fut), Poll::Ready(Err(_)));
+        // Responder should be notified of failure.
+        assert_matches!(exec.run_until_stalled(&mut connect_request_fut), Poll::Ready(Ok(Err(_))));
     }
 }

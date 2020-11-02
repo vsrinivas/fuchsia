@@ -30,7 +30,7 @@ use {
 };
 
 use crate::profile::*;
-use crate::rfcomm::RfcommServer;
+use crate::rfcomm::{RfcommServer, ServerChannel};
 use crate::types::{AdvertiseParams, ServiceGroup, ServiceGroupHandle, Services};
 
 /// The returned result of a Profile.Advertise request.
@@ -181,28 +181,73 @@ impl ProfileRegistrar {
         }
     }
 
+    /// Validates that there is an active connection with the peer specified by `peer_id`. If not,
+    /// creates and delivers the L2CAP connection to the RFCOMM server.
+    async fn ensure_service_connection(&mut self, peer_id: PeerId) -> Result<(), ErrorCode> {
+        if self.rfcomm_server.is_active_session(&peer_id) {
+            return Ok(());
+        }
+
+        let mut connect_params = bredr::ConnectParameters::L2cap(bredr::L2capParameters {
+            psm: Some(bredr::PSM_RFCOMM),
+            ..bredr::L2capParameters::empty()
+        });
+        let l2cap_channel =
+            match self.profile_upstream.connect(&mut peer_id.into(), &mut connect_params).await {
+                Ok(Ok(channel)) => channel.try_into().unwrap(),
+                Ok(Err(e)) => {
+                    return Err(e);
+                }
+                Err(e) => {
+                    error!("Couldn't establish L2CAP connection with {:?}: {:?}", peer_id, e);
+                    return Err(ErrorCode::Failed);
+                }
+            };
+        self.rfcomm_server
+            .new_l2cap_connection(peer_id, l2cap_channel)
+            .map_err(|_| ErrorCode::Failed)
+    }
+
     /// Processes an outgoing L2Cap connection initiated by a client of the ProfileRegistrar.
     ///
     /// Returns an error if the connection request fails.
-    async fn handle_outgoing_l2cap_connection(
+    async fn handle_outgoing_connection(
         &mut self,
         peer_id: PeerId,
         mut connection: bredr::ConnectParameters,
-    ) -> Result<bredr::Channel, ErrorCode> {
+        responder: bredr::ProfileConnectResponder,
+    ) -> Result<(), Error> {
         // If the provided `connection` is for a non-RFCOMM PSM, simply forward the outbound
         // connection to the upstream Profile service.
         // Otherwise, route to the RFCOMM server.
         match &connection {
-            bredr::ConnectParameters::L2cap { .. } => self
-                .profile_upstream
-                .connect(&mut peer_id.into(), &mut connection)
-                .await
-                .unwrap_or_else(|_fidl_error| Err(ErrorCode::Failed)),
-            bredr::ConnectParameters::Rfcomm { .. } => {
-                // TODO(fxbug.dev/49073): Route to RfcommServer and implement RFCOMM functionality.
-                Err(ErrorCode::NotSupported)
+            bredr::ConnectParameters::L2cap { .. } => {
+                let mut result = self
+                    .profile_upstream
+                    .connect(&mut peer_id.into(), &mut connection)
+                    .await
+                    .unwrap_or_else(|_fidl_error| Err(ErrorCode::Failed));
+                let _ = responder.send(&mut result);
+            }
+            bredr::ConnectParameters::Rfcomm(bredr::RfcommParameters { channel }) => {
+                let server_channel = match channel.map(ServerChannel::try_from) {
+                    Some(Ok(sc)) => sc,
+                    _ => {
+                        let _ = responder.send(&mut Err(ErrorCode::InvalidArguments));
+                        return Ok(());
+                    }
+                };
+
+                // Ensure there is an RFCOMM Session between us and the peer.
+                if let Err(e) = self.ensure_service_connection(peer_id).await {
+                    let _ = responder.send(&mut Err(e));
+                    return Ok(());
+                }
+                // Open the RFCOMM channel.
+                self.rfcomm_server.open_rfcomm_channel(peer_id, server_channel, responder).await?;
             }
         }
+        Ok(())
     }
 
     /// Advertises `params` to the provided `profile_upstream`.
@@ -391,9 +436,11 @@ impl ProfileRegistrar {
                 }
             }
             bredr::ProfileRequest::Connect { peer_id, connection, responder, .. } => {
-                let mut result =
-                    self.handle_outgoing_l2cap_connection(peer_id.into(), connection).await;
-                let _ = responder.send(&mut result);
+                if let Err(e) =
+                    self.handle_outgoing_connection(peer_id.into(), connection, responder).await
+                {
+                    error!("Error establishing outgoing connection {:?}", e);
+                }
             }
             bredr::ProfileRequest::Search { service_uuid, attr_ids, results, .. } => {
                 // Simply forward over the search to the Profile server.
