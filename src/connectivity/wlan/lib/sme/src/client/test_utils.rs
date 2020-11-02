@@ -23,7 +23,7 @@ use {
             *,
         },
     },
-    wlan_rsn::{auth, format_rsn_err, rsna::UpdateSink, Error},
+    wlan_rsn::{auth, format_rsn_err, psk, rsna::UpdateSink, Error},
 };
 
 pub fn fake_bss_info() -> BssInfo {
@@ -132,7 +132,7 @@ pub fn expect_stream_empty<T>(stream: &mut mpsc::UnboundedReceiver<T>, error_msg
     );
 }
 
-fn mock_supplicant(auth_method: auth::MethodName) -> (MockSupplicant, MockSupplicantController) {
+fn mock_supplicant(auth_cfg: auth::Config) -> (MockSupplicant, MockSupplicantController) {
     let started = Arc::new(AtomicBool::new(false));
     let start_failure = Arc::new(Mutex::new(None));
     let sink = Arc::new(Mutex::new(Ok(UpdateSink::default())));
@@ -142,7 +142,7 @@ fn mock_supplicant(auth_method: auth::MethodName) -> (MockSupplicant, MockSuppli
         start_failure: start_failure.clone(),
         on_eapol_frame: sink.clone(),
         on_eapol_frame_cb: on_eapol_frame_cb.clone(),
-        auth_method,
+        auth_cfg,
     };
     let mock = MockSupplicantController {
         started,
@@ -153,12 +153,24 @@ fn mock_supplicant(auth_method: auth::MethodName) -> (MockSupplicant, MockSuppli
     (supplicant, mock)
 }
 
+const MOCK_PASS: &str = "dummy_password";
+const MOCK_SSID: &str = "network_ssid";
+
 pub fn mock_psk_supplicant() -> (MockSupplicant, MockSupplicantController) {
-    mock_supplicant(auth::MethodName::Psk)
+    let config = auth::Config::ComputedPsk(
+        psk::compute(MOCK_PASS.as_bytes(), MOCK_SSID.as_bytes())
+            .expect("Failed to create mock psk"),
+    );
+    mock_supplicant(config)
 }
 
 pub fn mock_sae_supplicant() -> (MockSupplicant, MockSupplicantController) {
-    mock_supplicant(auth::MethodName::Sae)
+    let config = auth::Config::Sae {
+        password: MOCK_PASS.as_bytes().to_vec(),
+        mac: [0xaa; 6],
+        peer_mac: [0xbb; 6],
+    };
+    mock_supplicant(config)
 }
 
 type Cb = dyn Fn() + Send + 'static;
@@ -168,7 +180,7 @@ pub struct MockSupplicant {
     start_failure: Arc<Mutex<Option<anyhow::Error>>>,
     on_eapol_frame: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
     on_eapol_frame_cb: Arc<Mutex<Option<Box<Cb>>>>,
-    auth_method: auth::MethodName,
+    auth_cfg: auth::Config,
 }
 
 impl Supplicant for MockSupplicant {
@@ -204,6 +216,15 @@ impl Supplicant for MockSupplicant {
             .map_err(|e| format_rsn_err!("{:?}", e))
     }
 
+    fn on_pmk_available(
+        &mut self,
+        _update_sink: &mut UpdateSink,
+        _pmk: &[u8],
+        _pmkid: &[u8],
+    ) -> Result<(), anyhow::Error> {
+        unimplemented!()
+    }
+
     fn on_sae_handshake_ind(&mut self, _update_sink: &mut UpdateSink) -> Result<(), anyhow::Error> {
         unimplemented!()
     }
@@ -222,10 +243,10 @@ impl Supplicant for MockSupplicant {
         unimplemented!()
     }
     fn get_auth_cfg(&self) -> &auth::Config {
-        unimplemented!()
+        &self.auth_cfg
     }
     fn get_auth_method(&self) -> auth::MethodName {
-        self.auth_method
+        self.auth_cfg.method_name()
     }
 }
 

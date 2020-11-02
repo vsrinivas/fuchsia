@@ -38,13 +38,14 @@ pub struct SaeData {
 pub enum Config {
     ComputedPsk(psk::Psk),
     Sae { password: Vec<u8>, mac: MacAddr, peer_mac: MacAddr },
+    DriverSae { password: Vec<u8> },
 }
 
 impl Config {
     pub fn method_name(&self) -> MethodName {
         match self {
             Config::ComputedPsk(_) => MethodName::Psk,
-            Config::Sae { .. } => MethodName::Sae,
+            Config::Sae { .. } | Config::DriverSae { .. } => MethodName::Sae,
         }
     }
 }
@@ -52,6 +53,8 @@ impl Config {
 pub enum Method {
     Psk(psk::Psk),
     Sae(SaeData),
+    /// SAE handled in the driver/firmware, so the PMK will just eventually arrive.
+    DriverSae(Option<sae::Key>),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -73,6 +76,7 @@ impl std::fmt::Debug for Method {
                     None => "None",
                 }
             ),
+            Self::DriverSae(key) => write!(f, "Method::DriverSae({:?})", key),
         }
     }
 }
@@ -97,6 +101,7 @@ impl Method {
                     retransmit_timeout_id: 0,
                 }))
             }
+            Config::DriverSae { .. } => Ok(Method::DriverSae(None)),
         }
     }
 
@@ -107,6 +112,24 @@ impl Method {
         _frame: Dot11VerifiedKeyFrame<B>,
     ) -> Result<(), AuthError> {
         Ok(())
+    }
+
+    /// Currently only used so that an SAE handshake managed in firmware can send
+    /// the PMK upward.
+    pub fn on_pmk_available(
+        &mut self,
+        pmk: &[u8],
+        pmkid: &[u8],
+        assoc_update_sink: &mut UpdateSink,
+    ) -> Result<(), AuthError> {
+        match self {
+            Method::DriverSae(key) => {
+                key.replace(sae::Key { pmk: pmk.to_vec(), pmkid: pmkid.to_vec() });
+                assoc_update_sink.push(SecAssocUpdate::Key(Key::Pmk(pmk.to_vec())));
+                Ok(())
+            }
+            _ => Err(AuthError::UnexpectedSaeEvent),
+        }
     }
 
     pub fn on_sae_handshake_ind(
@@ -406,5 +429,34 @@ mod test {
             ],
         );
         assert!(sink.is_empty(), "KeyExpiration should not produce updates.");
+    }
+
+    #[test]
+    fn driver_sae_handles_pmk() {
+        let mut auth = Method::from_config(Config::DriverSae { password: vec![0xbb; 8] })
+            .expect("Failed to construct PSK auth method");
+        let mut sink = UpdateSink::default();
+        auth.on_pmk_available(&[0xcc; 8][..], &[0xdd; 8][..], &mut sink)
+            .expect("Driver SAE should handle on_pmk_available");
+        assert_eq!(sink.len(), 1);
+        let pmk = assert_variant!(sink.get(0), Some(SecAssocUpdate::Key(Key::Pmk(pmk))) => pmk);
+        assert_eq!(*pmk, vec![0xcc; 8]);
+    }
+
+    #[test]
+    fn driver_sae_rejects_sme_sae_calls() {
+        let mut auth = Method::from_config(Config::DriverSae { password: vec![0xbb; 8] })
+            .expect("Failed to construct PSK auth method");
+        let mut sink = UpdateSink::default();
+        auth.on_sae_handshake_ind(&mut sink).expect_err("Driver SAE shouldn't handle SAE ind");
+        let frame = SaeFrame {
+            peer_sta_address: [0xaa; 6],
+            result_code: fidl_fuchsia_wlan_mlme::AuthenticateResultCodes::Success,
+            seq_num: 1,
+            sae_fields: COMMIT.to_vec(),
+        };
+        auth.on_sae_frame_rx(&mut sink, frame).expect_err("Driver SAE shouldn't handle frames");
+        auth.on_sae_timeout(&mut sink, 0).expect_err("Driver SAE shouldn't handle SAE timeouts");
+        assert!(sink.is_empty());
     }
 }

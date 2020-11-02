@@ -208,14 +208,16 @@ impl EssSa {
                     self.on_key_confirmed(update_sink, Key::Pmk(psk))
                 }
                 // SAE defers deriving the PMK until after the handshake.
-                auth::Method::Sae(sae_data) => match &sae_data.pmk {
-                    Some(key) => {
-                        let pmk = key.pmk.to_vec();
-                        self.on_key_confirmed(update_sink, Key::Pmk(pmk))
+                auth::Method::Sae(auth::SaeData { pmk, .. }) | auth::Method::DriverSae(pmk) => {
+                    match pmk {
+                        Some(key) => {
+                            let pmk = key.pmk.to_vec();
+                            self.on_key_confirmed(update_sink, Key::Pmk(pmk))
+                        }
+                        // Defer key to SAE.
+                        None => Ok(()),
                     }
-                    // Defer key to SAE.
-                    None => Ok(()),
-                },
+                }
             },
             _ => Err(format_rsn_err!("cannot initiate PMK more than once")),
         }
@@ -339,14 +341,35 @@ impl EssSa {
         Ok(())
     }
 
+    fn auth_method(&mut self) -> &mut auth::Method {
+        match &mut *self.pmksa {
+            Pmksa::Initialized { method } | Pmksa::Established { method, .. } => method,
+        }
+    }
+
+    pub fn on_pmk_available(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        pmk: &[u8],
+        pmkid: &[u8],
+    ) -> Result<(), Error> {
+        let mut updates = UpdateSink::new();
+        self.auth_method().on_pmk_available(pmk, pmkid, &mut updates)?;
+        for update in updates {
+            match update {
+                SecAssocUpdate::Key(key) => self.on_key_confirmed(update_sink, key)?,
+
+                update => update_sink.push(update),
+            }
+        }
+        Ok(())
+    }
+
     pub fn on_sae_handshake_ind(
         &mut self,
         update_sink: &mut UpdateSink,
     ) -> Result<(), auth::AuthError> {
-        let auth_method = match &mut *self.pmksa {
-            Pmksa::Initialized { method } | Pmksa::Established { method, .. } => method,
-        };
-        auth_method.on_sae_handshake_ind(update_sink)
+        self.auth_method().on_sae_handshake_ind(update_sink)
     }
 
     pub fn on_sae_frame_rx(
@@ -354,10 +377,7 @@ impl EssSa {
         update_sink: &mut UpdateSink,
         frame: SaeFrame,
     ) -> Result<(), auth::AuthError> {
-        let auth_method = match &mut *self.pmksa {
-            Pmksa::Initialized { method } | Pmksa::Established { method, .. } => method,
-        };
-        auth_method.on_sae_frame_rx(update_sink, frame)
+        self.auth_method().on_sae_frame_rx(update_sink, frame)
     }
 
     pub fn on_sae_timeout(
@@ -365,10 +385,7 @@ impl EssSa {
         update_sink: &mut UpdateSink,
         event_id: u64,
     ) -> Result<(), auth::AuthError> {
-        let auth_method = match &mut *self.pmksa {
-            Pmksa::Initialized { method } | Pmksa::Established { method, .. } => method,
-        };
-        auth_method.on_sae_timeout(update_sink, event_id)
+        self.auth_method().on_sae_timeout(update_sink, event_id)
     }
 
     pub fn on_eapol_frame<B: ByteSlice>(

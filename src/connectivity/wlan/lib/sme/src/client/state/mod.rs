@@ -37,10 +37,7 @@ use {
         bss::BssDescriptionExt,
         channel::Channel,
         format::MacFmt,
-        ie::{
-            self,
-            rsn::{akm, cipher},
-        },
+        ie::{self, rsn::cipher},
         mac::Bssid,
         RadioConfig,
     },
@@ -170,31 +167,30 @@ impl Joining {
         match conf.result_code {
             fidl_mlme::JoinResultCodes::Success => {
                 context.info.report_auth_started();
-                if let Protection::Wep(ref key) = self.cmd.protection {
-                    install_wep_key(context, self.cmd.bss.bssid.clone(), key);
-                    context.mlme_sink.send(MlmeRequest::Authenticate(
-                        wep_deprecated::make_mlme_authenticate_request(
-                            self.cmd.bss.bssid.clone(),
-                            DEFAULT_AUTH_FAILURE_TIMEOUT,
-                        ),
-                    ));
-                } else {
-                    let auth_type = match &self.cmd.protection {
-                        Protection::Rsna(rsna) => match rsna.negotiated_protection.akm.suite_type {
-                            akm::SAE => fidl_mlme::AuthenticationTypes::Sae,
-                            _ => fidl_mlme::AuthenticationTypes::OpenSystem,
-                        },
-                        _ => fidl_mlme::AuthenticationTypes::OpenSystem,
-                    };
-                    context.mlme_sink.send(MlmeRequest::Authenticate(
-                        fidl_mlme::AuthenticateRequest {
-                            peer_sta_address: self.cmd.bss.bssid.clone(),
-                            auth_type,
-                            auth_failure_timeout: DEFAULT_AUTH_FAILURE_TIMEOUT,
-                            sae_password: None,
-                        },
-                    ));
-                }
+                let (auth_type, sae_password) = match &self.cmd.protection {
+                    Protection::Rsna(rsna) => match rsna.supplicant.get_auth_cfg() {
+                        auth::Config::Sae { .. } => (fidl_mlme::AuthenticationTypes::Sae, None),
+                        auth::Config::DriverSae { password } => {
+                            (fidl_mlme::AuthenticationTypes::Sae, Some(password.clone()))
+                        }
+                        auth::Config::ComputedPsk(_) => {
+                            (fidl_mlme::AuthenticationTypes::OpenSystem, None)
+                        }
+                    },
+                    Protection::Wep(ref key) => {
+                        install_wep_key(context, self.cmd.bss.bssid.clone(), key);
+                        (fidl_mlme::AuthenticationTypes::SharedKey, None)
+                    }
+                    _ => (fidl_mlme::AuthenticationTypes::OpenSystem, None),
+                };
+
+                context.mlme_sink.send(MlmeRequest::Authenticate(fidl_mlme::AuthenticateRequest {
+                    peer_sta_address: self.cmd.bss.bssid.clone(),
+                    auth_type,
+                    auth_failure_timeout: DEFAULT_AUTH_FAILURE_TIMEOUT,
+                    sae_password,
+                }));
+
                 state_change_ctx.set_msg("successful join".to_string());
                 Ok(Authenticating {
                     cfg: self.cfg,
@@ -286,6 +282,18 @@ impl Authenticating {
     }
 
     // Sae management functions
+
+    fn on_pmk_available(&mut self, pmk: fidl_mlme::PmkInfo) -> Result<(), anyhow::Error> {
+        let supplicant = match &mut self.cmd.protection {
+            Protection::Rsna(rsna) => &mut rsna.supplicant,
+            _ => bail!("Unexpected SAE handshake indication"),
+        };
+
+        let mut updates = UpdateSink::default();
+        supplicant.on_pmk_available(&mut updates, &pmk.pmk[..], &pmk.pmkid[..])?;
+        // We don't do anything with these updates right now.
+        Ok(())
+    }
 
     fn on_sae_handshake_ind(
         &mut self,
@@ -746,6 +754,13 @@ impl ClientState {
                         Ok(associating) => transition.to(associating).into(),
                         Err(idle) => transition.to(idle).into(),
                     }
+                }
+                MlmeEvent::OnPmkAvailable { info } => {
+                    let (transition, mut authenticating) = state.release_data();
+                    if let Err(e) = authenticating.on_pmk_available(info) {
+                        error!("Failed to process OnPmkAvailable: {:?}", e);
+                    }
+                    transition.to(authenticating).into()
                 }
                 MlmeEvent::OnSaeHandshakeInd { ind } => {
                     let (transition, mut authenticating) = state.release_data();

@@ -6,6 +6,7 @@ use {
     crate::client::protection::Protection,
     anyhow::{bail, ensure, format_err},
     eapol,
+    fidl_fuchsia_wlan_common::DriverFeature,
     fidl_fuchsia_wlan_mlme::{BssDescription, DeviceInfo, SaeFrame},
     fidl_fuchsia_wlan_sme as fidl_sme,
     std::boxed::Box,
@@ -36,6 +37,12 @@ pub trait Supplicant: std::fmt::Debug + std::marker::Send {
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<&[u8]>,
     ) -> Result<(), Error>;
+    fn on_pmk_available(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        pmk: &[u8],
+        pmkid: &[u8],
+    ) -> Result<(), anyhow::Error>;
     fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error>;
     fn on_sae_frame_rx(
         &mut self,
@@ -66,6 +73,15 @@ impl Supplicant for wlan_rsn::Supplicant {
         frame: eapol::Frame<&[u8]>,
     ) -> Result<(), Error> {
         wlan_rsn::Supplicant::on_eapol_frame(self, update_sink, frame)
+    }
+
+    fn on_pmk_available(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        pmk: &[u8],
+        pmkid: &[u8],
+    ) -> Result<(), anyhow::Error> {
+        wlan_rsn::Supplicant::on_pmk_available(self, update_sink, pmk, pmkid)
     }
 
     fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error> {
@@ -145,6 +161,36 @@ pub fn compute_psk(
     }
 }
 
+fn get_wpa3_auth_config(
+    device_info: &DeviceInfo,
+    password: Vec<u8>,
+    bss: &BssDescription,
+) -> Result<auth::Config, anyhow::Error> {
+    // Prefer to perform SAE in SME if possible.
+    let mut selected_feature = None;
+    for feature in &device_info.driver_features {
+        match feature {
+            DriverFeature::SaeSmeAuth => {
+                selected_feature.replace(feature);
+                break;
+            }
+            DriverFeature::SaeDriverAuth => {
+                selected_feature.replace(feature);
+            }
+            _ => (),
+        }
+    }
+    match selected_feature {
+        Some(DriverFeature::SaeSmeAuth) => Ok(auth::Config::Sae {
+            password,
+            mac: device_info.mac_addr.clone(),
+            peer_mac: bss.bssid.clone(),
+        }),
+        Some(DriverFeature::SaeDriverAuth) => Ok(auth::Config::DriverSae { password }),
+        _ => Err(format_err!("Could not generate WPA3 auth config -- no SAE driver feature")),
+    }
+}
+
 pub fn get_wpa3_rsna(
     device_info: &DeviceInfo,
     credential: &fidl_sme::Credential,
@@ -165,11 +211,7 @@ pub fn get_wpa3_rsna(
     let negotiated_protection = NegotiatedProtection::from_rsne(&s_rsne)?;
     let supplicant = wlan_rsn::Supplicant::new_wpa_personal(
         NonceReader::new(&device_info.mac_addr[..])?,
-        auth::Config::Sae {
-            password,
-            mac: device_info.mac_addr.clone(),
-            peer_mac: bss.bssid.clone(),
-        },
+        get_wpa3_auth_config(device_info, password, bss)?,
         device_info.mac_addr,
         ProtectionInfo::Rsne(s_rsne),
         bss.bssid,
@@ -278,5 +320,50 @@ mod tests {
         let credential = fidl_sme::Credential::Psk(vec![0xAA; 32]);
         get_wpa3_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect_err("expected WPA3 RSNA failure with PSK");
+    }
+
+    #[test]
+    fn test_wpa3_sme_auth_config() {
+        let bss = fake_bss!(Wpa3);
+        let mut device_info = fake_device_info([0xaa; 6]);
+        device_info.driver_features = vec![fidl_fuchsia_wlan_common::DriverFeature::SaeSmeAuth];
+        let auth_config = get_wpa3_auth_config(&device_info, vec![0xbb; 8], &bss)
+            .expect("Failed to create auth config");
+        assert_variant!(auth_config,
+            auth::Config::Sae { password, .. } => assert_eq!(password, vec![0xbb; 8]));
+    }
+
+    #[test]
+    fn test_wpa3_driver_sme_auth_config() {
+        let bss = fake_bss!(Wpa3);
+        let mut device_info = fake_device_info([0xaa; 6]);
+        device_info.driver_features = vec![fidl_fuchsia_wlan_common::DriverFeature::SaeDriverAuth];
+        let auth_config = get_wpa3_auth_config(&device_info, vec![0xbb; 8], &bss)
+            .expect("Failed to create auth config");
+        assert_variant!(auth_config,
+            auth::Config::DriverSae { password } => assert_eq!(password, vec![0xbb; 8]));
+    }
+
+    #[test]
+    fn test_wpa3_sme_auth_config_preferred() {
+        let bss = fake_bss!(Wpa3);
+        let mut device_info = fake_device_info([0xaa; 6]);
+        device_info.driver_features = vec![
+            fidl_fuchsia_wlan_common::DriverFeature::SaeSmeAuth,
+            fidl_fuchsia_wlan_common::DriverFeature::SaeDriverAuth,
+        ];
+        let auth_config = get_wpa3_auth_config(&device_info, vec![0xbb; 8], &bss)
+            .expect("Failed to create auth config");
+        assert_variant!(auth_config,
+            auth::Config::Sae { password, .. } => assert_eq!(password, vec![0xbb; 8]));
+    }
+
+    #[test]
+    fn test_wpa3_invalid_auth_config() {
+        let bss = fake_bss!(Wpa3);
+        let mut device_info = fake_device_info([0xaa; 6]);
+        device_info.driver_features = vec![];
+        get_wpa3_auth_config(&device_info, vec![0xbb; 8], &bss)
+            .expect_err("Should not create auth config");
     }
 }

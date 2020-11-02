@@ -117,6 +117,15 @@ impl Supplicant {
         self.esssa.on_eapol_frame(update_sink, frame)
     }
 
+    pub fn on_pmk_available(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        pmk: &[u8],
+        pmkid: &[u8],
+    ) -> Result<(), anyhow::Error> {
+        self.esssa.on_pmk_available(update_sink, pmk, pmkid).map_err(|e| e.into())
+    }
+
     pub fn on_sae_handshake_ind(
         &mut self,
         update_sink: &mut UpdateSink,

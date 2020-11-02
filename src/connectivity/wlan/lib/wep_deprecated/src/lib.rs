@@ -78,19 +78,6 @@ pub fn make_mlme_set_keys_request(peer: [u8; 6], key: &Key) -> fidl_mlme::SetKey
     }
 }
 
-/// Create an MLME-AUTHENTICATE.request primitive for the given BSSID.
-pub fn make_mlme_authenticate_request(
-    bssid: [u8; 6],
-    timeout: u32,
-) -> fidl_mlme::AuthenticateRequest {
-    fidl_mlme::AuthenticateRequest {
-        peer_sta_address: bssid,
-        auth_type: fidl_mlme::AuthenticationTypes::SharedKey,
-        auth_failure_timeout: timeout,
-        sae_password: None,
-    }
-}
-
 fn to_array<A>(slice: &[u8]) -> A
 where
     A: Sized + Default + AsMut<[u8]>,
@@ -154,18 +141,6 @@ mod tests {
                 cipher_suite_type: 5,
                 rsc: 0,
             }],
-        };
-        assert_eq!(actual, expected);
-    }
-
-    #[test]
-    fn test_make_mlme_authenticate_request() {
-        let actual = make_mlme_authenticate_request([4; 6], 5);
-        let expected = fidl_mlme::AuthenticateRequest {
-            peer_sta_address: [4; 6],
-            auth_type: fidl_mlme::AuthenticationTypes::SharedKey,
-            auth_failure_timeout: 5,
-            sae_password: None,
         };
         assert_eq!(actual, expected);
     }
