@@ -13,5 +13,8 @@ group("tests") {
     "mock-reboot:tests",
     "mock-resolver:tests",
     "pkgfs-ramdisk:tests",
+
+    # Used by blobfs-ramdisk:tests
+    "//src/lib/isolated_devmgr/v2_component:isolated-devmgr",
   ]
 }

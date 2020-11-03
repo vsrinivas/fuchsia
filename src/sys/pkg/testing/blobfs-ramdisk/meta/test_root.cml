@@ -1,0 +1,52 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "isolated_devmgr",
+            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated_devmgr.cm",
+
+            // Decrease the time the tests wait for /dev/misc/ramctl to be served
+            startup: "eager",
+        },
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/blobfs-ramdisk-unit-tests#meta/test_driver.cm",
+        },
+    ],
+    offer: [
+        {
+            runner: "elf",
+            from: "parent",
+            to: [ "#isolated_devmgr" ],
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: [
+                "#isolated_devmgr",
+                "#test_driver",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: [ "#test_driver" ],
+        },
+        {
+            directory: "dev",
+            from: "#isolated_devmgr",
+            to: [ "#test_driver" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test_driver",
+        },
+    ],
+}

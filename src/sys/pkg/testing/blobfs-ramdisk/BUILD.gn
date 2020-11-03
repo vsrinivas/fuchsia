@@ -4,8 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("blobfs-ramdisk") {
   version = "0.1.0"
@@ -30,6 +29,7 @@ rustc_library("blobfs-ramdisk") {
   ]
 
   test_deps = [
+    "//src/lib/storage/ramdevice_client",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
   ]
@@ -40,35 +40,30 @@ rustc_library("blobfs-ramdisk") {
   ]
 }
 
-test_package("blobfs-ramdisk-tests") {
+fuchsia_component("unit-tests-root") {
+  testonly = true
+  component_name = "test_root"
+  manifest = "meta/test_root.cml"
+}
+
+fuchsia_component("unit-tests-driver") {
+  testonly = true
+  component_name = "test_driver"
+  manifest = "meta/test_driver.cml"
   deps = [
     ":blobfs-ramdisk_test",
     "//src/storage/bin/blobfs",
     "//src/storage/blobfs-corrupt",
   ]
+}
 
-  binaries = [
-    {
-      name = "blobfs"
-    },
-    {
-      name = "blobfs-corrupt"
-    },
-  ]
-
-  tests = [
-    {
-      name = "blobfs_ramdisk_lib_test"
-      dest = "blobfs-ramdisk-lib-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_test_package("unit-tests-package") {
+  package_name = "blobfs-ramdisk-unit-tests"
+  test_components = [ ":unit-tests-root" ]
+  deps = [ ":unit-tests-driver" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":blobfs-ramdisk-tests",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
-  ]
+  public_deps = [ ":unit-tests-package" ]
 }
