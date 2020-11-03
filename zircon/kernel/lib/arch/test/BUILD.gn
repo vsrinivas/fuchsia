@@ -14,8 +14,8 @@ group("tests") {
 if (is_host) {
   test("arch-tests") {
     sources = [
-      "x86-cpuid-tests.cc",
-      "x86-lbr-tests.cc",
+      "cpuid-basic-tests.cc",
+      "lbr-tests.cc",
     ]
     deps = [
       "//zircon/kernel/lib/arch",
