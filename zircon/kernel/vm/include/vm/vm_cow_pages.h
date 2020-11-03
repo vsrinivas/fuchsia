@@ -223,8 +223,8 @@ class VmCowPages final : public VmHierarchyBase,
 
   zx_status_t CreateHidden(fbl::RefPtr<VmCowPages>* hidden_cow);
 
-  bool is_hidden() const { return (options_ & kHidden); }
-  bool is_slice() const { return options_ & kSlice; }
+  bool is_hidden_locked() const TA_REQ(lock_) { return (options_ & kHidden); }
+  bool is_slice_locked() const TA_REQ(lock_) { return options_ & kSlice; }
 
   // Add a page to the object. This operation unmaps the corresponding
   // offset from any existing mappings.
@@ -326,7 +326,7 @@ class VmCowPages final : public VmHierarchyBase,
   // of the parent) into the remaining child.
   void MergeContentWithChildLocked(VmCowPages* removed, bool removed_left) TA_REQ(lock_);
 
-  // Only valid to be called when is_slice() is true and returns the first parent of this
+  // Only valid to be called when is_slice_locked() is true and returns the first parent of this
   // hierarchy that is not a slice. The offset of this slice within that VmObjectPaged is set as
   // the output.
   VmCowPages* PagedParentOfSliceLocked(uint64_t* offset) TA_REQ(lock_);
@@ -367,7 +367,7 @@ class VmCowPages final : public VmHierarchyBase,
   // child is second is the 'right' child. Children of a paged vmo will always be paged
   // vmos themselves.
   VmCowPages& left_child_locked() TA_REQ(lock_) TA_ASSERT(left_child_locked().lock()) {
-    DEBUG_ASSERT(is_hidden());
+    DEBUG_ASSERT(is_hidden_locked());
     DEBUG_ASSERT(children_list_len_ == 2);
 
     auto& ret = children_list_.front();
@@ -375,14 +375,14 @@ class VmCowPages final : public VmHierarchyBase,
     return ret;
   }
   VmCowPages& right_child_locked() TA_REQ(lock_) TA_ASSERT(right_child_locked().lock()) {
-    DEBUG_ASSERT(is_hidden());
+    DEBUG_ASSERT(is_hidden_locked());
     DEBUG_ASSERT(children_list_len_ == 2);
     auto& ret = children_list_.back();
     AssertHeld(ret.lock_);
     return ret;
   }
   const VmCowPages& left_child_locked() const TA_REQ(lock_) TA_ASSERT(left_child_locked().lock()) {
-    DEBUG_ASSERT(is_hidden());
+    DEBUG_ASSERT(is_hidden_locked());
     DEBUG_ASSERT(children_list_len_ == 2);
     const auto& ret = children_list_.front();
     AssertHeld(ret.lock_);
@@ -390,7 +390,7 @@ class VmCowPages final : public VmHierarchyBase,
   }
   const VmCowPages& right_child_locked() const TA_REQ(lock_)
       TA_ASSERT(right_child_locked().lock()) {
-    DEBUG_ASSERT(is_hidden());
+    DEBUG_ASSERT(is_hidden_locked());
     DEBUG_ASSERT(children_list_len_ == 2);
     const auto& ret = children_list_.back();
     AssertHeld(ret.lock_);
@@ -428,7 +428,7 @@ class VmCowPages final : public VmHierarchyBase,
   // |options_| is a bitmask of:
   static constexpr uint32_t kHidden = (1u << 2);
   static constexpr uint32_t kSlice = (1u << 3);
-  const uint32_t options_;
+  uint32_t options_ TA_GUARDED(lock_);
 
   uint64_t size_ TA_GUARDED(lock_);
   // Offset in the *parent* where this object starts.

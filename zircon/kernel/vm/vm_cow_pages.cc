@@ -179,7 +179,7 @@ void VmCowPages::InitializeOriginalParentLocked(fbl::RefPtr<VmCowPages> parent, 
 VmCowPages::~VmCowPages() {
   canary_.Assert();
 
-  if (!is_hidden()) {
+  if (!is_hidden_locked()) {
     // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
     // to be done before emptying the page list so that a hidden parent can't merge into this
     // vmo and repopulate the page list.
@@ -192,7 +192,7 @@ VmCowPages::~VmCowPages() {
       guard.Release();
       // Avoid recursing destructors when we delete our parent by using the deferred deletion
       // method. See common in parent else branch for why we can avoid this on a hidden parent.
-      if (!parent_->is_hidden()) {
+      if (!parent_->is_hidden_locked()) {
         hierarchy_state_ptr_->DoDeferredDelete(ktl::move(parent_));
       }
     }
@@ -290,10 +290,10 @@ uint32_t VmCowPages::ScanForZeroPagesLocked(bool reclaim) {
   // and so we need to also remove any mappings from them. Non-slice children could only have
   // read-only mappings, which is the state we already want, and so we don't need to touch them.
   for (auto& child : children_list_) {
-    if (child.is_slice()) {
+    AssertHeld(child.lock_);
+    if (child.is_slice_locked()) {
       // Slices are strict subsets of their parents so we don't need to bother looking at parent
       // limits etc and can just operate on the entire range.
-      AssertHeld(child.lock_);
       child.RangeChangeUpdateLocked(0, child.size_, RangeChangeOp::RemoveWrite);
     }
   }
@@ -447,10 +447,10 @@ zx_status_t VmCowPages::CreateChildSliceLocked(uint64_t offset, uint64_t size,
   //  * Slices are subsets and so every position in a slice always maps back to the paged parent.
   //  * Slices are not permitted to be resized and so nothing can be done on the intermediate parent
   //    that requires us to ever look at it again.
-  if (is_slice()) {
+  if (is_slice_locked()) {
     DEBUG_ASSERT(parent_);
-    DEBUG_ASSERT(!parent_->is_slice());
     AssertHeld(parent_->lock_ref());
+    DEBUG_ASSERT(!parent_->is_slice_locked());
     return parent_->CreateChildSliceLocked(offset + parent_offset_, size, cow_slice);
   }
 
@@ -596,7 +596,7 @@ void VmCowPages::RemoveChildLocked(VmCowPages* removed) {
 
   AssertHeld(removed->lock_);
 
-  if (!is_hidden()) {
+  if (!is_hidden_locked()) {
     DropChildLocked(removed);
     return;
   }
@@ -631,9 +631,9 @@ void VmCowPages::RemoveChildLocked(VmCowPages* removed) {
     AssertHeld(cur->lock_);
     uint64_t user_id_to_skip = page_attribution_user_id_;
     while (cur->parent_ != nullptr) {
-      DEBUG_ASSERT(cur->parent_->is_hidden());
       auto parent = cur->parent_.get();
       AssertHeld(parent->lock_);
+      DEBUG_ASSERT(parent->is_hidden_locked());
 
       if (parent->page_attribution_user_id_ == page_attribution_user_id_) {
         uint64_t new_user_id = parent->left_child_locked().page_attribution_user_id_;
@@ -720,7 +720,7 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
   // Overflow here means that something went wrong when setting up parent limits.
   DEBUG_ASSERT(!overflow);
 
-  if (child.is_hidden()) {
+  if (child.is_hidden_locked()) {
     // After the merge, either |child| can't see anything in parent (in which case
     // the parent limits could be anything), or |child|'s first visible offset will be
     // at least as large as |this|'s first visible offset.
@@ -767,13 +767,13 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
   //   - If |child| is hidden, then there can exist pages in this vmo which were split into
   //     |child|'s subtree and then migrated out of |child|. Those pages need to be freed, and
   //     the simplest way to find those pages is to examine the split bits.
-  bool fast_merge = merge_start_offset == 0 && !partial_cow_release_ && !child.is_hidden();
+  bool fast_merge = merge_start_offset == 0 && !partial_cow_release_ && !child.is_hidden_locked();
 
   if (fast_merge) {
     // Only leaf vmos can be directly removed, so this must always be true. This guarantees
     // that there are no pages that were split into |removed| that have since been migrated
     // to its children.
-    DEBUG_ASSERT(!removed->is_hidden());
+    DEBUG_ASSERT(!removed->is_hidden_locked());
 
     // Before merging, find any pages that are present in both |removed| and |this|. Those
     // pages are visibile to |child| but haven't been written to through |child|, so
@@ -896,7 +896,7 @@ void VmCowPages::DumpLocked(uint depth, bool verbose) const {
 size_t VmCowPages::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const {
   canary_.Assert();
 
-  if (is_hidden()) {
+  if (is_hidden_locked()) {
     return 0;
   }
 
@@ -914,7 +914,11 @@ size_t VmCowPages::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) c
 
         // If there's no parent, there's no pages to care about. If there is a non-hidden
         // parent, then that owns any pages in the gap, not us.
-        if (!parent_ || !parent_->is_hidden()) {
+        if (!parent_) {
+          return ZX_ERR_NEXT;
+        }
+        AssertHeld(parent_->lock_ref());
+        if (!parent_->is_hidden_locked()) {
           return ZX_ERR_NEXT;
         }
 
@@ -1472,7 +1476,7 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
                                       PageRequest* page_request, vm_page_t** const page_out,
                                       paddr_t* const pa_out) {
   canary_.Assert();
-  DEBUG_ASSERT(!is_hidden());
+  DEBUG_ASSERT(!is_hidden_locked());
 
   if (offset >= size_) {
     return ZX_ERR_OUT_OF_RANGE;
@@ -1480,7 +1484,7 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
 
   offset = ROUNDDOWN(offset, PAGE_SIZE);
 
-  if (is_slice()) {
+  if (is_slice_locked()) {
     uint64_t parent_offset;
     VmCowPages* parent = PagedParentOfSliceLocked(&parent_offset);
     AssertHeld(parent->lock_);
@@ -1586,7 +1590,7 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
   }
 
   vm_page_t* res_page;
-  if (!page_owner->is_hidden() || p == vm_get_zero_page()) {
+  if (!page_owner->is_hidden_locked() || p == vm_get_zero_page()) {
     // If the vmo isn't hidden, we can't move the page. If the page is the zero
     // page, there's no need to try to move the page. In either case, we need to
     // allocate a writable page for this vmo.
@@ -1659,7 +1663,7 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
   DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
   DEBUG_ASSERT(InRange(offset, len, size_));
 
-  if (is_slice()) {
+  if (is_slice_locked()) {
     uint64_t parent_offset;
     VmCowPages* parent = PagedParentOfSliceLocked(&parent_offset);
     AssertHeld(parent->lock_);
@@ -1669,7 +1673,7 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
     // recurse once instead of an unbound number of times.  DEBUG_ASSERT this so
     // that we don't actually end up with unbound recursion just in case the
     // property changes.
-    DEBUG_ASSERT(!parent->is_slice());
+    DEBUG_ASSERT(!parent->is_slice_locked());
 
     return parent->CommitRangeLocked(offset + parent_offset, len, committed_len, page_request);
   }
@@ -1759,7 +1763,7 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
   DEBUG_ASSERT(InRange(offset, len, size_));
 
-  if (is_slice()) {
+  if (is_slice_locked()) {
     uint64_t parent_offset;
     VmCowPages* parent = PagedParentOfSliceLocked(&parent_offset);
     AssertHeld(parent->lock_);
@@ -1769,7 +1773,7 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
     // recurse once instead of an unbound number of times.  DEBUG_ASSERT this so
     // that we don't actually end up with unbound recursion just in case the
     // property changes.
-    DEBUG_ASSERT(!parent->is_slice());
+    DEBUG_ASSERT(!parent->is_slice_locked());
 
     return parent->PinRangeLocked(offset + parent_offset, len);
   }
@@ -1847,11 +1851,11 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
   // PagedParentOfSliceLocked will iteratively walk all the way up to our
   // non-slice ancestor, not just our immediate parent, so we can guaranteed
   // bounded recursion.
-  if (is_slice()) {
+  if (is_slice_locked()) {
     uint64_t parent_offset;
     VmCowPages* parent = PagedParentOfSliceLocked(&parent_offset);
     AssertHeld(parent->lock_);
-    DEBUG_ASSERT(!parent->is_slice());  // assert bounded recursion.
+    DEBUG_ASSERT(!parent->is_slice_locked());  // assert bounded recursion.
     return parent->DecommitRangeLocked(offset + parent_offset, new_len);
   }
 
@@ -1918,7 +1922,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   DEBUG_ASSERT(IS_PAGE_ALIGNED(page_end_base));
 
   // Forward any operations on slices up to the original non slice parent.
-  if (is_slice()) {
+  if (is_slice_locked()) {
     uint64_t parent_offset;
     VmCowPages* parent = PagedParentOfSliceLocked(&parent_offset);
     AssertHeld(parent->lock_);
@@ -1962,7 +1966,12 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   // start.
   uint64_t rounded_start = ROUNDUP_PAGE_SIZE(start);
   if (rounded_start < parent_limit_ && end >= parent_limit_) {
-    if (parent_ && parent_->is_hidden()) {
+    bool hidden_parent = false;
+    if (parent_) {
+      AssertHeld(parent_->lock_ref());
+      hidden_parent = parent_->is_hidden_locked();
+    }
+    if (hidden_parent) {
       // Release any COW pages that are no longer necessary. This will also
       // update the parent limit.
       BatchPQRemove page_remover(&free_list);
@@ -1982,7 +1991,8 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // for this offset.
     auto parent_immutable = [can_see_parent, this]() TA_REQ(lock_) {
       DEBUG_ASSERT(can_see_parent);
-      return parent_->is_hidden();
+      AssertHeld(parent_->lock_ref());
+      return parent_->is_hidden_locked();
     };
 
     // Finding the initial page content is expensive, but we only need to call it
@@ -2083,7 +2093,8 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // We are able to insert a marker, but if our page content is from a hidden owner we need to
     // perform slightly more complex cow forking.
     const InitialPageContent& content = get_initial_page_content();
-    if (slot->IsEmpty() && content.page_owner->is_hidden()) {
+    AssertHeld(content.page_owner->lock_ref());
+    if (slot->IsEmpty() && content.page_owner->is_hidden_locked()) {
       free_any_pages();
       zx_status_t result = CloneCowPageAsZeroLocked(offset, &free_list, content.page_owner,
                                                     content.page, content.owner_offset);
@@ -2139,7 +2150,7 @@ void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len) {
   // forbid zero length unpins as zero length pins return errors.
   ASSERT(len != 0);
 
-  if (is_slice()) {
+  if (is_slice_locked()) {
     uint64_t parent_offset;
     VmCowPages* parent = PagedParentOfSliceLocked(&parent_offset);
     AssertHeld(parent->lock_);
@@ -2409,7 +2420,7 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
   // make sure everything is aligned before we get started
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(s));
-  DEBUG_ASSERT(!is_slice());
+  DEBUG_ASSERT(!is_slice_locked());
 
   list_node_t free_list;
   list_initialize(&free_list);
@@ -2444,7 +2455,12 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
       DEBUG_ASSERT(status == ZX_OK);
     }
 
-    if (parent_ && parent_->is_hidden()) {
+    bool hidden_parent = false;
+    if (parent_) {
+      AssertHeld(parent_->lock_ref());
+      hidden_parent = parent_->is_hidden_locked();
+    }
+    if (hidden_parent) {
       // Release any COW pages that are no longer necessary. This will also
       // update the parent limit.
       ReleaseCowParentPagesLocked(start, end, &page_remover);
@@ -2717,7 +2733,7 @@ bool VmCowPages::IsCowClonableLocked() const {
   // having non hidden VMOs between hidden VMOs. This case cannot be handled be CloneCowPageLocked
   // at the moment and so we forbid the construction of such cases for the moment.
   // Bug: 36841
-  if (is_slice()) {
+  if (is_slice_locked()) {
     return false;
   }
 
@@ -2734,10 +2750,11 @@ bool VmCowPages::IsCowClonableLocked() const {
 }
 
 VmCowPages* VmCowPages::PagedParentOfSliceLocked(uint64_t* offset) {
-  DEBUG_ASSERT(is_slice());
+  DEBUG_ASSERT(is_slice_locked());
   DEBUG_ASSERT(parent_);
   // Slices never have a slice parent, as there is no need to nest them.
-  DEBUG_ASSERT(!parent_->is_slice());
+  AssertHeld(parent_->lock_ref());
+  DEBUG_ASSERT(!parent_->is_slice_locked());
   *offset = parent_offset_;
   return parent_.get();
 }
@@ -2844,7 +2861,7 @@ bool VmCowPages::EvictPage(vm_page_t* page, uint64_t offset) {
 bool VmCowPages::DebugValidatePageSplitsLocked() const {
   canary_.Assert();
 
-  if (!is_hidden()) {
+  if (!is_hidden_locked()) {
     // Nothing to validate on a leaf vmo.
     return true;
   }
@@ -2886,7 +2903,7 @@ bool VmCowPages::DebugValidatePageSplitsLocked() const {
           off - cur->parent_offset_ >= cur->parent_limit_) {
         // This blank case is used to capture the scenario where current does not see the target
         // offset in the parent, in which case there is no point traversing into the children.
-      } else if (cur->is_hidden()) {
+      } else if (cur->is_hidden_locked()) {
         // A hidden VMO *may* have the page, but not necessarily if both children forked it out.
         const VmPageOrMarker* l = cur->page_list_.Lookup(off - cur->parent_offset_);
         if (!l || l->IsEmpty()) {
