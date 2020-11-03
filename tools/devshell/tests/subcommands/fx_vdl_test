@@ -21,6 +21,9 @@ BT_MOCKED_TOOLS=(
 
   # Emulator
   "${PREBUILT_AEMU_DIR}/emulator"
+
+  # SSH
+  "tools/devshell/ssh"
 )
 declare fx
 
@@ -28,9 +31,13 @@ BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
+  ssh="${BT_TEMP_DIR}/tools/devshell/ssh"
+  devfinder="$(btf::make_installed_hosttools_mock device-finder)"
+  emu_addr="fe80::4607:bff:fea0:44f%qemu"
+  echo "${emu_addr}" > "${devfinder}.mock_stdout"
+
   btf::make_mock "${BT_TEMP_DIR}/out/default/image_paths.sh"
   btf::make_mock "${BT_TEMP_DIR}/${PREBUILT_VDL_DIR}/device_launcher"
-  
   btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
   btf::make_mock "${BT_TEMP_DIR}/out/default/host/zbi"
   cat >> "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
@@ -43,7 +50,7 @@ EOF
 TEST_fx_vdl_default() {
   local out="${BT_TEMP_DIR}/output.log"
   BT_EXPECT ${fx} vdl >>${out} 2>&1
-  btf::expect-mock-args "${PREBUILT_VDL_DIR}/device_launcher.mock_state" \
+  btf::expect-mock-args "${PREBUILT_VDL_DIR}/device_launcher.mock_state.1" \
     "--action=start" _ANY_ _ANY_ _ANY_ _ANY_ \
     "--resize_fvm=2G" \
     "--gpu=swiftshader_indirect" \
@@ -52,13 +59,13 @@ TEST_fx_vdl_default() {
     _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ \
     "--ga=true" \
     _ANY_ _ANY_
+  btf::expect-mock-args "${ssh}.mock_state" "fuchsia@localhost" "-p" _ANY_
 }
 
 TEST_fx_vdl_tuntap() {
   local out="${BT_TEMP_DIR}/output.log"
   BT_EXPECT ${fx} vdl -N  >>${out} 2>&1
-
-  btf::expect-mock-args "${PREBUILT_VDL_DIR}/device_launcher.mock_state" \
+  btf::expect-mock-args "${PREBUILT_VDL_DIR}/device_launcher.mock_state.1" \
   "--action=start" _ANY_ _ANY_ _ANY_ _ANY_ \
   "--resize_fvm=2G" \
   "--gpu=swiftshader_indirect" \
@@ -67,13 +74,14 @@ TEST_fx_vdl_tuntap() {
   _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ \
   "--ga=true" \
   _ANY_ _ANY_
+  btf::expect-mock-args "${ssh}.mock_state" "${emu_addr}"
 }
 
 TEST_fx_vdl_headless_tuntap() {
   local out="${BT_TEMP_DIR}/output.log"
   BT_EXPECT ${fx} vdl -N --headless >>${out} 2>&1
 
-  btf::expect-mock-args "${PREBUILT_VDL_DIR}/device_launcher.mock_state" \
+  btf::expect-mock-args "${PREBUILT_VDL_DIR}/device_launcher.mock_state.1" \
   "--action=start" _ANY_ _ANY_ _ANY_ _ANY_ \
   "--resize_fvm=2G" \
   "--gpu=swiftshader_indirect" \
@@ -82,13 +90,14 @@ TEST_fx_vdl_headless_tuntap() {
   _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ \
   "--ga=true" \
   _ANY_ _ANY_
+  btf::expect-mock-args "${ssh}.mock_state" "${emu_addr}"
 }
 
 TEST_fx_vdl_tuntap_script() {
   local out="${BT_TEMP_DIR}/output.log"
   BT_EXPECT ${fx} vdl -N -u "./script" >>${out} 2>&1
 
-  btf::expect-mock-args "${PREBUILT_VDL_DIR}/device_launcher.mock_state" \
+  btf::expect-mock-args "${PREBUILT_VDL_DIR}/device_launcher.mock_state.1" \
   "--action=start" _ANY_ _ANY_ _ANY_ _ANY_ \
   "--resize_fvm=2G" \
   "--gpu=swiftshader_indirect" \
@@ -98,6 +107,7 @@ TEST_fx_vdl_tuntap_script() {
   _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ \
   "--ga=true" \
   _ANY_ _ANY_
+  btf::expect-mock-args "${ssh}.mock_state" "${emu_addr}"
 }
 
 BT_RUN_TESTS "$@"
