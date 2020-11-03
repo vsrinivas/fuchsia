@@ -192,11 +192,11 @@ namespace entries {
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result Example::Interface::fooCompleterBase::ReplySuccess(int64_t y) {
-  ::fidl::aligned<Example_foo_Response> response;
-  response.value.y = std::move(y);
+  ::fidl::aligned<Example_foo_Response> _response;
+  _response.value.y = std::move(y);
 
   return Reply(
-      Example_foo_Result::WithResponse(::fidl::unowned_ptr(&response)));
+      Example_foo_Result::WithResponse(::fidl::unowned_ptr(&_response)));
 }
 ::fidl::Result Example::Interface::fooCompleterBase::ReplyError(
     uint32_t error) {

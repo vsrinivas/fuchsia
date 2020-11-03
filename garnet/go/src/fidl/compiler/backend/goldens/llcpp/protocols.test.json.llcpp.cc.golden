@@ -2226,13 +2226,13 @@ namespace entries {
 ::fidl::Result
 WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
     int64_t a, int64_t b, int64_t c) {
-  ::fidl::aligned<WithErrorSyntax_ResponseAsStruct_Response> response;
-  response.value.a = std::move(a);
-  response.value.b = std::move(b);
-  response.value.c = std::move(c);
+  ::fidl::aligned<WithErrorSyntax_ResponseAsStruct_Response> _response;
+  _response.value.a = std::move(a);
+  _response.value.b = std::move(b);
+  _response.value.c = std::move(c);
 
   return Reply(WithErrorSyntax_ResponseAsStruct_Result::WithResponse(
-      ::fidl::unowned_ptr(&response)));
+      ::fidl::unowned_ptr(&_response)));
 }
 ::fidl::Result
 WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplyError(
@@ -2270,10 +2270,10 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
 }
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess() {
-  ::fidl::aligned<WithErrorSyntax_ErrorAsPrimitive_Response> response;
+  ::fidl::aligned<WithErrorSyntax_ErrorAsPrimitive_Response> _response;
 
   return Reply(WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(
-      ::fidl::unowned_ptr(&response)));
+      ::fidl::unowned_ptr(&_response)));
 }
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplyError(
@@ -2307,10 +2307,10 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
 }
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
-  ::fidl::aligned<WithErrorSyntax_ErrorAsEnum_Response> response;
+  ::fidl::aligned<WithErrorSyntax_ErrorAsEnum_Response> _response;
 
   return Reply(WithErrorSyntax_ErrorAsEnum_Result::WithResponse(
-      ::fidl::unowned_ptr(&response)));
+      ::fidl::unowned_ptr(&_response)));
 }
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplyError(
     ErrorEnun error) {

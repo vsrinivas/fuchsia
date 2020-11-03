@@ -822,10 +822,10 @@ class {{ .Name }} final {
       // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
       //
       // Because the reply status is identical to the unbinding status, it can be safely ignored.
-      ::fidl::Result {{ template "ReplyCFlavorMethodSignature" . }};
+      ::fidl::Result {{ template "ReplyManagedMethodSignature" . }};
           {{- if .Result }}
-      ::fidl::Result {{ template "ReplyCFlavorResultSuccessMethodSignature" . }};
-      ::fidl::Result {{ template "ReplyCFlavorResultErrorMethodSignature" . }};
+      ::fidl::Result {{ template "ReplyManagedResultSuccessMethodSignature" . }};
+      ::fidl::Result {{ template "ReplyManagedResultErrorMethodSignature" . }};
           {{- end }}
           {{- if .Response }}
       ::fidl::Result {{ template "ReplyCallerAllocateMethodSignature" . }};
@@ -883,7 +883,7 @@ class {{ .Name }} final {
       {{- range .DocComments }}
   //{{ . }}
       {{- end }}
-  static zx_status_t {{ template "SendEventCFlavorMethodSignature" . }};
+  static zx_status_t {{ template "SendEventManagedMethodSignature" . }};
       {{- if .Response }}
 {{ "" }}
         {{- range .DocComments }}
@@ -996,7 +996,7 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
   {{- range FilterMethodsWithoutResps .Methods -}}
     {{- if not .HasRequest }}
 {{ "" }}
-      {{- template "SendEventCFlavorMethodDefinition" . }}
+      {{- template "SendEventManagedMethodDefinition" . }}
       {{- if .Response }}
 {{ "" }}
         {{- template "SendEventCallerAllocateMethodDefinition" . }}
@@ -1004,10 +1004,10 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{ "" }}
     {{- else }}
 {{ "" }}
-      {{- template "ReplyCFlavorMethodDefinition" . }}
+      {{- template "ReplyManagedMethodDefinition" . }}
       {{- if .Result }}
-      {{- template "ReplyCFlavorResultSuccessMethodDefinition" . }}
-      {{- template "ReplyCFlavorResultErrorMethodDefinition" . }}
+      {{- template "ReplyManagedResultSuccessMethodDefinition" . }}
+      {{- template "ReplyManagedResultErrorMethodDefinition" . }}
       {{- end }}
       {{- if .Response }}
 {{ "" }}

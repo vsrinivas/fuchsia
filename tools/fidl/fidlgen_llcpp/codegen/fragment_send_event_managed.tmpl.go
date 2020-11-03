@@ -4,13 +4,13 @@
 
 package codegen
 
-const fragmentSendEventCFlavorTmpl = `
-{{- define "SendEventCFlavorMethodSignature" -}}
+const fragmentSendEventManagedTmpl = `
+{{- define "SendEventManagedMethodSignature" -}}
 Send{{ .Name }}Event(::zx::unowned_channel _channel {{- if .Response }}, {{ end }}{{ template "Params" .Response }})
 {{- end }}
 
-{{- define "SendEventCFlavorMethodDefinition" }}
-zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventCFlavorMethodSignature" . }} {
+{{- define "SendEventManagedMethodDefinition" }}
+zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventManagedMethodSignature" . }} {
   {{ .Name }}Response::OwnedOutgoingMessage _response{
   {{- template "PassthroughMessageParams" .Response -}}
   };
