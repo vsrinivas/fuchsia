@@ -50,12 +50,14 @@ int main(int argc, const char** argv) {
 
   zx_handle_t session, session_remote;
   if (zx_channel_create(0, &session, &session_remote) != ZX_OK) {
+    zx_handle_close(session_manager);
     return -1;
   }
 
   zx_status_t remote_status = ZX_OK;
   zx_status_t status = fuchsia_virtualconsole_SessionManagerCreateSession(
       session_manager, session_remote, &remote_status);
+  zx_handle_close(session_manager);
   if (status != ZX_OK || remote_status != ZX_OK) {
     fprintf(stderr, "run-vc: failed to create session: local: %s remote: %s\n",
             zx_status_get_string(status), zx_status_get_string(remote_status));
@@ -92,6 +94,7 @@ int main(int argc, const char** argv) {
   status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv, NULL, countof(actions), actions,
                           NULL, err_msg);
   if (status != ZX_OK) {
+    zx_handle_close(session);
     fprintf(stderr, "error %d (%s) launching: %s\n", status, zx_status_get_string(status), err_msg);
     return -1;
   }
