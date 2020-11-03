@@ -494,15 +494,9 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t min_frame_count, uint32_t max
   // potentially-non-zero offset into the VMO, and allows sharing code further
   // down.
   std::vector<CodecFrame> frames;
-  ::zx::bti duplicated_bti;
-  zx_status_t dup_result = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
-  if (dup_result != ZX_OK) {
-    DECODE_ERROR("Failed to duplicate BTI - status: %d", dup_result);
-    return dup_result;
-  }
-  zx_status_t initialize_result = client_->InitializeFrames(
-      std::move(duplicated_bti), min_frame_count, max_frame_count, coded_width, coded_height,
-      stride, display_width, display_height, has_sar, sar_width, sar_height);
+  zx_status_t initialize_result =
+      client_->InitializeFrames(min_frame_count, max_frame_count, coded_width, coded_height, stride,
+                                display_width, display_height, has_sar, sar_width, sar_height);
   if (initialize_result != ZX_OK) {
     if (initialize_result != ZX_ERR_STOP) {
       DECODE_ERROR("initialize_frames_handler_() failed - status: %d", initialize_result);

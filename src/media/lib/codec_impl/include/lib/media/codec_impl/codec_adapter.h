@@ -46,6 +46,15 @@ class CodecAdapter {
   CodecAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events);
   virtual ~CodecAdapter();
 
+  // This is called if a CodecMetrics instance is available, and not called if not.  See also
+  // LogEvent().
+  void SetCodecMetrics(CodecMetrics* codec_metrics);
+
+  // This will return std::nullopt by default.  A sub-class must implement this method if the
+  // sub-class ever calls LogEvent().
+  virtual std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
+  CoreCodecMetricsImplementation();
+
   // Core codec.
   //
   // For the moment, these methods are placeholders for calls to the core codec.
@@ -418,6 +427,10 @@ class CodecAdapter {
   virtual std::string CoreCodecGetName() { return ""; }
 
  protected:
+  // If SetCodecMetrics() was called, this will log an event.  If this method is ever called by a
+  // subclass, then CoreCodecMetricsImplementation() must be implemented by the subclass.
+  void LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code);
+
   // See comment on the constructor re. sharing this lock with the caller of
   // CodecAdapter methods, at least for now.
   std::mutex& lock_;

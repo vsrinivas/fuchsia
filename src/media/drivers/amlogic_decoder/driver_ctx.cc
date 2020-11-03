@@ -74,8 +74,8 @@ DriverCtx::DriverCtx() {
   // This won't actually be logged until codec_factory opens a device and calls
   // SetAuxServiceDirectory() on it.  Until then we're buffering event counts.
   metrics_.LogEvent(
-      media_metrics::StreamProcessorEventsMetricDimensionImplementation_AmlogicDecoderShared,
-      media_metrics::StreamProcessorEventsMetricDimensionEvent_HostProcessStart);
+      media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderShared,
+      media_metrics::StreamProcessorEvents2MetricDimensionEvent_HostProcessStart);
 }
 
 DriverCtx::~DriverCtx() {

@@ -17,6 +17,7 @@
 #include "macros.h"
 #include "pts_manager.h"
 #include "src/media/lib/memory_barriers/memory_barriers.h"
+#include "src/media/lib/metrics/metrics.cb.h"
 #include "third_party/libvpx/vp9/common/vp9_loopfilter.h"
 #include "third_party/vp9_adapt_probs/vp9_coefficient_adaptation.h"
 #include "util.h"
@@ -110,7 +111,7 @@ zx_status_t Vp9Decoder::BufferAllocator::AllocateBuffers(VideoDecoder::Owner* ow
                                rounded_up_size, buffer_is_secure,
                                /*is_writable=*/true, /*is_mapping_needed=*/!buffer_is_secure);
     if (!internal_buffer.is_ok()) {
-      DECODE_ERROR("VP9 working buffer allocation failed: %d", internal_buffer.error());
+      LOG(ERROR, "VP9 working buffer allocation failed: %d", internal_buffer.error());
       return internal_buffer.error();
     }
     buffer->SetBuffer(internal_buffer.take_value());
@@ -141,8 +142,8 @@ void Vp9Decoder::BufferAllocator::CheckBuffers() {
       buffer->buffer().CacheFlushInvalidate(offset, buffer_size - offset);
       for (uint32_t i = offset; i < buffer_size; ++i) {
         if (data[i] != (i & 0xff)) {
-          DECODE_ERROR("Data mismatch: %d != %d in buffer %d position %d", data[i], (i & 0xff),
-                       buf_number, i);
+          LOG(ERROR, "Data mismatch: %d != %d in buffer %d position %d", data[i], (i & 0xff),
+              buf_number, i);
         }
         ZX_DEBUG_ASSERT(data[i] == (i & 0xff));
       }
@@ -164,7 +165,7 @@ uint32_t Vp9Decoder::WorkingBuffer::addr32() { return truncate_to_32(buffer_->ph
 Vp9Decoder::Vp9Decoder(Owner* owner, Client* client, InputType input_type,
                        bool use_compressed_output, bool is_secure)
     : VideoDecoder(
-          media_metrics::StreamProcessorEventsMetricDimensionImplementation_AmlogicDecoderVp9,
+          media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderVp9,
           owner, client, is_secure),
       input_type_(input_type),
       use_compressed_output_(use_compressed_output) {
@@ -261,15 +262,21 @@ void Vp9Decoder::UpdateLoopFilter(HardwareRenderParams* param) {
 
 zx_status_t Vp9Decoder::Initialize() {
   zx_status_t status = InitializeBuffers();
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
+    LOG(ERROR, "InitializeBuffers() failed");
     return status;
+  }
   return InitializeHardware();
 }
 
 zx_status_t Vp9Decoder::InitializeBuffers() {
   zx_status_t status = working_buffers_.AllocateBuffers(owner_, is_secure());
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
+    LOG(ERROR, "working_buffers_.AllocateBuffers() failed");
     return status;
+  }
   status = AllocateFrames();
   BarrierAfterFlush();  // For all frames and working buffers.
   return status;
@@ -281,8 +288,11 @@ zx_status_t Vp9Decoder::InitializeHardware() {
   working_buffers_.CheckBuffers();
   zx_status_t status =
       owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kHevc, is_secure());
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_DrmConfigError);
+    LOG(ERROR, "SetProtected(kHevc) failed");
     return status;
+  }
   if (should_inject_initialization_fault_for_testing_) {
     should_inject_initialization_fault_for_testing_ = false;
     return ZX_ERR_BAD_STATE;
@@ -296,22 +306,30 @@ zx_status_t Vp9Decoder::InitializeHardware() {
     status =
         owner_->TeeSmcLoadVideoFirmware(firmware_type, FirmwareBlob::FirmwareVdecLoadMode::kHevc);
     if (status != ZX_OK) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirmwareLoadError);
       LOG(ERROR, "owner_->TeeSmcLoadVideoFirmware() failed - status: %d", status);
       return status;
     }
   } else {
     if (is_secure()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_DrmConfigError);
       LOG(ERROR, "VP9 secure decode requires TEE connection");
       return ZX_ERR_NOT_SUPPORTED;
     }
     uint8_t* data;
     uint32_t firmware_size;
     status = owner_->firmware_blob()->GetFirmwareData(firmware_type, &data, &firmware_size);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirmwareLoadError);
+      LOG(ERROR, "GetFirmwareData() failed");
       return status;
+    }
     status = owner_->core()->LoadFirmware(data, firmware_size);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirmwareLoadError);
+      LOG(ERROR, "LoadFirmware() failed");
       return status;
+    }
   }
 
   HevcRpmBuffer::Get().FromValue(working_buffers_.rpm.addr32()).WriteTo(owner_->dosbus());
@@ -523,23 +541,31 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
         io_buffer_init_vmo(&video_frame->buffer, owner_->bti()->get(),
                            frames[i].buffer_spec().vmo_range.vmo().get(), 0, IO_BUFFER_RW);
     if (status != ZX_OK) {
-      DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d", status);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
+      LOG(ERROR, "Failed to io_buffer_init_vmo() for frame - status: %d", status);
+      CallErrorHandler();
       return;
     }
     size_t vmo_size = io_buffer_size(&video_frame->buffer, 0);
     if (vmo_size < frame_vmo_bytes) {
-      DECODE_ERROR("Insufficient frame vmo bytes: %ld < %d", vmo_size, frame_vmo_bytes);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
+      LOG(ERROR, "Insufficient frame vmo bytes: %ld < %d", vmo_size, frame_vmo_bytes);
+      CallErrorHandler();
       return;
     }
     status = io_buffer_physmap(&video_frame->buffer);
     if (status != ZX_OK) {
-      DECODE_ERROR("Failed to io_buffer_physmap - status: %d", status);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
+      LOG(ERROR, "Failed to io_buffer_physmap - status: %d", status);
+      CallErrorHandler();
       return;
     }
 
     for (uint32_t i = 1; i < vmo_size / PAGE_SIZE; i++) {
       if (video_frame->buffer.phys_list[i - 1] + PAGE_SIZE != video_frame->buffer.phys_list[i]) {
-        DECODE_ERROR("VMO isn't contiguous");
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
+        LOG(ERROR, "VMO isn't contiguous");
+        CallErrorHandler();
         return;
       }
     }
@@ -740,7 +766,8 @@ void Vp9Decoder::HandleInterrupt() {
     // particularly large input frames, if we can get this to work. Currently
     // attempting to restart decoding after this in frame-based decoding mode
     // causes old data to be skipped.
-    DECODE_ERROR("Input buffer empty, insufficient padding?");
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InputProcessingError);
+    LOG(ERROR, "Input buffer empty, insufficient padding?");
     return;
   }
 
@@ -774,7 +801,8 @@ void Vp9Decoder::HandleInterrupt() {
   }
 
   if (dec_status != kProcessedHeader) {
-    DECODE_ERROR("Unexpected decode status %x", dec_status);
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_DecodeResultInvalidError);
+    LOG(ERROR, "Unexpected decode status %x", dec_status);
     return;
   };
 
@@ -901,14 +929,16 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
       zx_status_t status = io_buffer_init(&current_frame_->compressed_data, owner_->bti()->get(),
                                           frame_buffer_size, IO_BUFFER_RW);
       if (status != ZX_OK) {
-        DECODE_ERROR("Couldn't allocate compressed frame data: %d", status);
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
+        LOG(ERROR, "Couldn't allocate compressed frame data: %d", status);
         return;
       }
       SetIoBufferName(&current_frame_->compressed_data, "Vp9CompressedFrame");
 
       status = io_buffer_physmap(&current_frame_->compressed_data);
       if (status != ZX_OK) {
-        DECODE_ERROR("Couldn't map compressed frame data: %d", status);
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
+        LOG(ERROR, "Couldn't map compressed frame data: %d", status);
         return;
       }
       BarrierBeforeInvalidate();
@@ -1022,6 +1052,7 @@ bool Vp9Decoder::CanBeSwappedIn() {
 void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   Frame* frame = reference_frame_map_[params->frame_to_show];
   if (!frame) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_MissingPictureError);
     LOG(WARNING, "Showing existing frame that doesn't exist");
     SkipFrameAfterFirmwareSlow();
     return;
@@ -1109,10 +1140,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
     // The SkipFrameAfterFirmwareSlow() takes ~20-40 ms per frame, which isn't great.  That's why we
     // prefer to skip by parsing the cleartext frame_type from the uncompressed_header_size bytes
     // instead, which we currently do for non-DRM content.
-    //
-    // Since VP9 DRM packaging (see shaka-packager) does not encrypt any portion of the
-    // uncompressed_header_size of each frame, nor does it encrypt the superframe index, we can also
-    // do this for DRM content as soon as sysmem and decryptor changes are in.
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_SlowFrameSkip);
     LOG(WARNING, "!has_keyframe_ && params.frame_type != kVp9FrameTypeKeyFrame --- frame_type: %u",
         params.frame_type);
     SkipFrameAfterFirmwareSlow();
@@ -1123,6 +1151,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
     // actually observed this for non-keyframe frames where we never delivered the preceding
     // keyframe to the FW, so in that case most likely the frame size information wasn't availalbe
     // to the FW.
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_DimensionsInvalidError);
     LOG(WARNING, "params.hw_width == 0 || params.hw_height == 0 --- hw_width: %u hw_height: %u",
         params.hw_width, params.hw_height);
     SkipFrameAfterFirmwareSlow();
@@ -1259,7 +1288,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   // Support up to 4kx2k, the hardware limit.
   constexpr uint32_t kMaxWidth = 4096, kMaxHeight = 2176;
   if (coded_width > kMaxWidth || coded_height > kMaxHeight) {
-    DECODE_ERROR("Invalid stream size %dx%d", coded_width, coded_height);
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_DimensionsUnsupportedError);
+    LOG(ERROR, "Invalid stream size %dx%d", coded_width, coded_height);
     CallErrorHandler();
     return false;
   }
@@ -1284,7 +1314,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
       // does happen, maybe a new BufferCollection was allocated that ended up
       // with settings/constraints that are still incompatible with what params
       // needs, which is bad enough to fail the stream.
-      DECODE_ERROR(
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
+      LOG(ERROR,
           "params_checked_previously - calling error_handler_, allocated %d width %d height %d",
           buffers_allocated, coded_width, coded_height);
       CallErrorHandler();
@@ -1346,13 +1377,6 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     }
     valid_frames_count_ = 0;
 
-    ::zx::bti duplicated_bti;
-    zx_status_t dup_result = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
-    if (dup_result != ZX_OK) {
-      DECODE_ERROR("Failed to duplicate BTI - status: %d", dup_result);
-      CallErrorHandler();
-      return false;
-    }
     // VP9 doesn't have sample_aspect_ratio at ES (.ivf) layer, so here we
     // report "false, 1, 1" to indicate that the ES doesn't have a
     // sample_aspect_ratio.  The Codec client may potentially obtain
@@ -1360,11 +1384,12 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     // those potential sources don't provide sample_aspect_ratio, then 1:1 is
     // a reasonable default.
     zx_status_t initialize_result =
-        client_->InitializeFrames(std::move(duplicated_bti), kMinFrames, kMaxFrames, coded_width,
-                                  coded_height, stride, display_width, display_height, false, 1, 1);
+        client_->InitializeFrames(kMinFrames, kMaxFrames, coded_width, coded_height, stride,
+                                  display_width, display_height, false, 1, 1);
     if (initialize_result != ZX_OK) {
       if (initialize_result != ZX_ERR_STOP) {
-        DECODE_ERROR("initialize_frames_handler_() failed - status: %d", initialize_result);
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
+        LOG(ERROR, "initialize_frames_handler_() failed - status: %d", initialize_result);
         CallErrorHandler();
         return false;
       }
@@ -1430,7 +1455,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
         "Vp9MpredData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), rounded_up_size,
         (1 << 16), is_secure(), /*is_writable=*/true, /*is_mapping_needed=*/false);
     if (!internal_buffer.is_ok()) {
-      DECODE_ERROR("Alloc buffer error: %d", internal_buffer.error());
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
+      LOG(ERROR, "Alloc buffer error: %d", internal_buffer.error());
       CallErrorHandler();
       return false;
     }
@@ -1526,7 +1552,8 @@ zx_status_t Vp9Decoder::AllocateFrames() {
           "Vp9CompressedFrameHeader", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
           kCompressedHeaderSize, 1 << 16, false, /*is_writable=*/true, /*is_mapping_neede=*/true);
       if (!internal_buffer.is_ok()) {
-        DECODE_ERROR("Alloc buffer error: %d", internal_buffer.error());
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
+        LOG(ERROR, "Alloc buffer error: %d", internal_buffer.error());
         return internal_buffer.error();
       }
       frame->compressed_header.emplace(internal_buffer.take_value());
@@ -1693,11 +1720,13 @@ void Vp9Decoder::OnSignaledWatchdog() {
   DLOG("HevcStreamLevel %d", HevcStreamLevel::Get().ReadFrom(owner_->dosbus()).reg_value());
   DLOG("HevcParserIntStatus 0x%x",
        HevcParserIntStatus::Get().ReadFrom(owner_->dosbus()).reg_value());
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_WatchdogFired);
   if (!frame_data_provider_) {
     LOG(ERROR, "Got Vp9 watchdog timeout - fatal error");
     CallErrorHandler();
     return;
   }
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamReset);
   LOG(ERROR, "Got Vp9 watchdog timeout.  Doing async reset of the stream after current frame.");
   state_ = DecoderState::kFailed;
   frame_data_provider_->AsyncResetStreamAfterCurrentFrame();

@@ -14,13 +14,8 @@
 #include <mutex>
 
 #include "lib/async/cpp/task.h"
+#include "lib/media/codec_impl/log.h"
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
-
-namespace {
-
-const char* kLogTag = "CodecMetrics";
-
-}
 
 CodecMetrics::CodecMetrics() {
   std::lock_guard<std::mutex> lock(lock_);
@@ -37,14 +32,14 @@ CodecMetrics::~CodecMetrics() {
 }
 
 void CodecMetrics::SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> service_directory) {
-  FX_LOGF(INFO, kLogTag, "CodecMetrics::SetServiceDirectory()");
+  LOG(INFO, "CodecMetrics::SetServiceDirectory()");
   std::unique_ptr<cobalt::CobaltLogger> logger_to_delete_outside_lock;
   std::unique_ptr<async::Loop> loop_to_stop_outside_lock;
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     ZX_DEBUG_ASSERT(!!loop_ == !!cobalt_logger_);
     if (cobalt_logger_) {
-      FX_LOGF(INFO, kLogTag, "CodecMetrics::SetServiceDirectory() removing old logger.");
+      LOG(INFO, "CodecMetrics::SetServiceDirectory() removing old logger.");
       ZX_DEBUG_ASSERT(loop_);
       // Clean these up after we've released lock_, to avoid potential deadlock waiting on a thread
       // that may be trying to get lock_.
@@ -53,12 +48,12 @@ void CodecMetrics::SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> se
     }
     ZX_DEBUG_ASSERT(!loop_ && !cobalt_logger_);
     if (service_directory) {
-      FX_LOGF(INFO, kLogTag, "CodecMetrics::SetServiceDirectory() creating new logger.");
+      LOG(INFO, "CodecMetrics::SetServiceDirectory() creating new logger.");
       std::unique_ptr<cobalt::CobaltLogger> new_logger;
       auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       zx_status_t status = loop->StartThread("CodecMetrics");
       if (status != ZX_OK) {
-        FX_LOGF(WARNING, kLogTag, "CodecMetrics::SetServiceDirectory() thread creation failed.");
+        LOG(WARNING, "CodecMetrics::SetServiceDirectory() thread creation failed.");
         // ~loop
         // ~service_directory
         return;
@@ -66,7 +61,7 @@ void CodecMetrics::SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> se
       zx::event cobalt_logger_creation_done;
       status = zx::event::create(/*options=*/0, &cobalt_logger_creation_done);
       if (status != ZX_OK) {
-        FX_LOGF(WARNING, kLogTag, "zx::event::create() failed - status: %d", status);
+        LOG(WARNING, "zx::event::create() failed - status: %d", status);
         // ~loop
         // ~service_directory
         return;
@@ -91,7 +86,7 @@ void CodecMetrics::SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> se
       cobalt_logger_ = std::move(new_logger);
       ZX_DEBUG_ASSERT(!!loop_ && !!cobalt_logger_);
       if (!pending_counts_.empty()) {
-        FX_LOGF(INFO, kLogTag, "CodecMetrics::SetServiceDirectory() flushing counts soon.");
+        LOG(INFO, "CodecMetrics::SetServiceDirectory() flushing counts soon.");
         TryPostFlushCountsLocked();
       }
     }
@@ -112,8 +107,8 @@ void CodecMetrics::SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> se
 }
 
 void CodecMetrics::LogEvent(
-    media_metrics::StreamProcessorEventsMetricDimensionImplementation implementation,
-    media_metrics::StreamProcessorEventsMetricDimensionEvent event) {
+    media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation,
+    media_metrics::StreamProcessorEvents2MetricDimensionEvent event) {
   std::lock_guard<std::mutex> lock(lock_);
   ZX_DEBUG_ASSERT(!!loop_ == !!cobalt_logger_);
   bool was_empty = pending_counts_.empty();
@@ -130,7 +125,6 @@ void CodecMetrics::LogEvent(
 
 void CodecMetrics::FlushPendingEventCounts() {
   // This method is never called on the nop instance.
-  FX_LOGF(INFO, kLogTag, "CodecMetrics::FlushPendingEventCounts()");
   ZX_DEBUG_ASSERT(loop_);
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
@@ -143,14 +137,12 @@ void CodecMetrics::FlushPendingEventCounts() {
     while (iter != snapped_pending_event_counts.end()) {
       auto [key, count] = *iter;
       iter++;
-      batch.emplace_back(cobalt::CobaltEventBuilder(media_metrics::kStreamProcessorEventsMetricId)
+      batch.emplace_back(cobalt::CobaltEventBuilder(media_metrics::kStreamProcessorEvents2MetricId)
                              .with_event_codes({static_cast<uint32_t>(key.implementation()),
                                                 static_cast<uint32_t>(key.event())})
                              .as_count_event(/*period_duration_micros=*/0, count));
       ZX_DEBUG_ASSERT(batch.size() <= kMaxBatchSize);
       if (batch.size() == kMaxBatchSize || iter == snapped_pending_event_counts.end()) {
-        FX_LOGF(INFO, kLogTag, "CodecMetrics::FlushPendingEventCounts() batch.size: %" PRId64,
-                batch.size());
         cobalt_logger_->LogCobaltEvents(std::move(batch));
         ZX_DEBUG_ASSERT(batch.empty());
       }
@@ -169,31 +161,31 @@ void CodecMetrics::TryPostFlushCountsLocked() {
 }
 
 CodecMetrics::PendingCountsKey::PendingCountsKey(
-    media_metrics::StreamProcessorEventsMetricDimensionImplementation implementation,
-    media_metrics::StreamProcessorEventsMetricDimensionEvent event)
+    media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation,
+    media_metrics::StreamProcessorEvents2MetricDimensionEvent event)
     : implementation_(implementation), event_(event) {}
 
-media_metrics::StreamProcessorEventsMetricDimensionImplementation
+media_metrics::StreamProcessorEvents2MetricDimensionImplementation
 CodecMetrics::PendingCountsKey::implementation() const {
   return implementation_;
 }
 
-media_metrics::StreamProcessorEventsMetricDimensionEvent CodecMetrics::PendingCountsKey::event()
+media_metrics::StreamProcessorEvents2MetricDimensionEvent CodecMetrics::PendingCountsKey::event()
     const {
   return event_;
 }
 
 size_t CodecMetrics::PendingCountsKeyHash::operator()(const PendingCountsKey& key) const noexcept {
   // Rely on size_t being unsigned so it'll wrap without being undefined behavior.
-  return std::hash<media_metrics::StreamProcessorEventsMetricDimensionImplementation>{}(
+  return std::hash<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>{}(
              key.implementation()) +
-         std::hash<media_metrics::StreamProcessorEventsMetricDimensionEvent>{}(key.event());
+         std::hash<media_metrics::StreamProcessorEvents2MetricDimensionEvent>{}(key.event());
 }
 
 bool CodecMetrics::PendingCountsKeyEqual::operator()(const PendingCountsKey& lhs,
                                                      const PendingCountsKey& rhs) const noexcept {
-  return std::equal_to<media_metrics::StreamProcessorEventsMetricDimensionImplementation>{}(
+  return std::equal_to<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>{}(
              lhs.implementation(), rhs.implementation()) &&
-         std::equal_to<media_metrics::StreamProcessorEventsMetricDimensionEvent>{}(lhs.event(),
-                                                                                   rhs.event());
+         std::equal_to<media_metrics::StreamProcessorEvents2MetricDimensionEvent>{}(lhs.event(),
+                                                                                    rhs.event());
 }

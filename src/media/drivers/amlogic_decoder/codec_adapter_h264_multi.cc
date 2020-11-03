@@ -71,6 +71,11 @@ CodecAdapterH264Multi::~CodecAdapterH264Multi() {
   core_loop_.Shutdown();
 }
 
+std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
+CodecAdapterH264Multi::CoreCodecMetricsImplementation() {
+  return media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderH264;
+}
+
 bool CodecAdapterH264Multi::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
 
 bool CodecAdapterH264Multi::IsCoreCodecMappedBufferUseful(CodecPort port) {
@@ -1048,7 +1053,7 @@ std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ParseVideoAnne
 
 void CodecAdapterH264Multi::OnEos() { events_->onCoreCodecOutputEndOfStream(false); }
 
-zx_status_t CodecAdapterH264Multi::InitializeFrames(::zx::bti bti, uint32_t min_frame_count,
+zx_status_t CodecAdapterH264Multi::InitializeFrames(uint32_t min_frame_count,
                                                     uint32_t max_frame_count, uint32_t width,
                                                     uint32_t height, uint32_t stride,
                                                     uint32_t display_width, uint32_t display_height,

@@ -26,9 +26,11 @@ class H264Decoder : public VideoDecoder {
 
   H264Decoder(Owner* owner, Client* client, bool is_secure)
       : VideoDecoder(
-            media_metrics::
-                StreamProcessorEventsMetricDimensionImplementation_AmlogicDecoderH264Single,
-            owner, client, is_secure) {
+            // Unspecified because we don't need metrics from this decoder, as this decoder is only
+            // retained for problem diagnosis purposes (when diagnosing problems with the h264 multi
+            // decoder).
+            media_metrics::StreamProcessorEvents2MetricDimensionImplementation_Unspecified, owner,
+            client, is_secure) {
     constexpr uint32_t kStreamOffsetBitWidth = 28;
     pts_manager_->SetLookupBitWidth(kStreamOffsetBitWidth);
     power_ref_ = std::make_unique<PowerReference>(owner_->vdec1_core());

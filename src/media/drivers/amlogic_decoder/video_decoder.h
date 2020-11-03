@@ -148,11 +148,10 @@ class VideoDecoder {
     virtual void OnEos() = 0;
     virtual bool IsOutputReady() = 0;
     virtual void OnFrameReady(std::shared_ptr<VideoFrame> frame) = 0;
-    virtual zx_status_t InitializeFrames(zx::bti, uint32_t min_frame_count,
-                                         uint32_t max_frame_count, uint32_t width, uint32_t height,
-                                         uint32_t stride, uint32_t display_width,
-                                         uint32_t display_height, bool has_sar, uint32_t sar_width,
-                                         uint32_t sar_height) = 0;
+    virtual zx_status_t InitializeFrames(uint32_t min_frame_count, uint32_t max_frame_count,
+                                         uint32_t width, uint32_t height, uint32_t stride,
+                                         uint32_t display_width, uint32_t display_height,
+                                         bool has_sar, uint32_t sar_width, uint32_t sar_height) = 0;
     virtual bool IsCurrentOutputBufferCollectionUsable(uint32_t min_frame_count,
                                                        uint32_t max_frame_count,
                                                        uint32_t coded_width, uint32_t coded_height,
@@ -162,7 +161,7 @@ class VideoDecoder {
     virtual const AmlogicDecoderTestHooks& __WARN_UNUSED_RESULT test_hooks() const = 0;
   };
 
-  VideoDecoder(media_metrics::StreamProcessorEventsMetricDimensionImplementation implementation,
+  VideoDecoder(media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation,
                Owner* owner, Client* client, bool is_secure);
 
   virtual __WARN_UNUSED_RESULT zx_status_t Initialize() = 0;
@@ -209,7 +208,7 @@ class VideoDecoder {
   // In case a sub-class wants to do something directly with Metrics, like log using a separate
   // component or similar.
   CodecMetrics& metrics() { return owner_->metrics(); }
-  void LogEvent(media_metrics::StreamProcessorEventsMetricDimensionEvent event);
+  void LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent event);
 
   std::unique_ptr<PtsManager> pts_manager_;
   uint64_t next_non_codec_buffer_lifetime_ordinal_ = 0;
@@ -218,7 +217,7 @@ class VideoDecoder {
   bool is_secure_ = false;
 
  private:
-  const media_metrics::StreamProcessorEventsMetricDimensionImplementation implementation_;
+  const media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation_;
 };
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_DECODER_H_

@@ -323,7 +323,13 @@ void LocalCodecFactory::CreateDecoder(
                                         device_->driver()->shared_fidl_thread(),
                                         std::move(video_decoder_params), std::move(video_decoder));
 
-        codec->SetCoreCodecAdapter(factory->create(codec->lock(), codec.get(), device_));
+        codec->SetCodecMetrics(&device_->metrics());
+        auto core_codec = factory->create(codec->lock(), codec.get(), device_);
+        // Don't wait for CodecAdapter sub-class to call LogEvent().  Verify this is not
+        // std::nullopt here, as any CodecAdapter sub-class in amlogic_video_decoder is allowed to
+        // call LogEvent() and must override CoreCodecMetricsImplementation().
+        ZX_DEBUG_ASSERT(core_codec->CoreCodecMetricsImplementation());
+        codec->SetCoreCodecAdapter(std::move(core_codec));
 
         device_->device_fidl()->BindCodecImpl(std::move(codec));
       });

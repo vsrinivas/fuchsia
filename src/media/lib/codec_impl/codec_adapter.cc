@@ -75,6 +75,15 @@ CodecAdapter::~CodecAdapter() {
   // nothing to do here
 }
 
+void SetCodecMetrics(CodecMetrics* codec_metrics);
+
+std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
+CodecAdapter::CoreCodecMetricsImplementation() {
+  // This will cause a ZX_PANIC() if LogEvent() is being used by a sub-class, in which case the
+  // sub-class must override CoreCodecMetricsImplementation().
+  return std::nullopt;
+}
+
 void CodecAdapter::CoreCodecSetSecureMemoryMode(
     CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) {
   if (secure_memory_mode != fuchsia::mediacodec::SecureMemoryMode::OFF) {

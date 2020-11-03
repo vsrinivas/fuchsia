@@ -89,6 +89,12 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // appropriate CodecAdapter.
   std::mutex& lock();
 
+  // The LocalCodecFactory optionally calls this method between construction and
+  // SetCoreCodecAdapter().  If this method is not called, CodecImpl will treat
+  // any call to onCoreCodecLogEvent() as a nop, and will not require that the
+  // CodecAdapter sub-class implement CoreCodecMetricsImplementation().
+  void SetCodecMetrics(CodecMetrics* codec_metrics);
+
   // The LocalCodecFactory calls this method once just after CodecImpl
   // construction and just before BindAsync().
   //
@@ -447,6 +453,10 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   bool IsPortSecureRequired(CodecPort port);
   bool IsPortSecurePermitted(CodecPort port);
 
+  CodecMetrics* codec_metrics_ = nullptr;
+  std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
+      codec_metrics_implementation_dimension_;
+
   // The CodecAdapter is owned by the CodecImpl, and is listed near the top of
   // the local variables in CodecImpl so that it gets deleted near the end of
   // ~CodecImpl's implicit deletions (just in case, as of this writing).
@@ -479,7 +489,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   //
   // This points directly to a field of decoder_params_ (or encoder_params_),
   // which out-last all usages of this pointer.
-  const fuchsia::media::FormatDetails* initial_input_format_details_;
+  const fuchsia::media::FormatDetails* initial_input_format_details_ = nullptr;
 
   // Held here temporarily until DeviceFidl is ready to handle errors so we can
   // bind.
@@ -853,6 +863,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   __WARN_UNUSED_RESULT const fuchsia::mediacodec::CreateEncoder_Params& encoder_params() const;
   __WARN_UNUSED_RESULT const fuchsia::media::drm::DecryptorParams& decryptor_params() const;
 
+  void LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code) const;
+
   //
   // Core codec interfacing.
   //
@@ -905,12 +917,19 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   void onCoreCodecOutputEndOfStream(bool error_detected_before) override;
 
+  void onCoreCodecLogEvent(
+      media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code) override;
+
   //
   // Core codec.
   //
   // These are here to cleanly do a few asserts as we call out to the
   // codec_adapter_, and to make call sites look a bit nicer.
   //
+
+  __WARN_UNUSED_RESULT
+  std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
+  CoreCodecMetricsImplementation() override;
 
   __WARN_UNUSED_RESULT bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
 
@@ -973,7 +992,9 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
 
   CodecImpl() = delete;
-  DISALLOW_COPY_ASSIGN_AND_MOVE(CodecImpl);
+  CodecImpl(CodecImpl& to_copy) = delete;
+  CodecImpl(CodecImpl&& to_move) = delete;
+  CodecImpl& operator=(CodecImpl& to_assign) = delete;
 };
 
 #endif  // SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_IMPL_H_

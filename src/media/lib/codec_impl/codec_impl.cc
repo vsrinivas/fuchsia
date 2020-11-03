@@ -19,6 +19,9 @@
 
 #include <fbl/macros.h>
 
+#include "lib/media/codec_impl/codec_port.h"
+#include "src/media/lib/metrics/metrics.cb.h"
+
 // "is_bound_checks" - In several lambdas that just send a message, we check
 // is_bound() first, only because of ZX_POL_BAD_HANDLE ZX_POL_ACTION_EXCEPTION.
 // If it weren't for that, we really wouldn't care about passing
@@ -136,6 +139,7 @@ CodecImpl::CodecImpl(fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
   sysmem_.set_error_handler([this](zx_status_t status) {
     // This handler can't run until after sysmem_ is bound.
     ZX_DEBUG_ASSERT(was_logically_bound_);
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_SysmemChannelClosed);
     this->Fail("CodecImpl sysmem_ channel failed");
   });
 
@@ -213,9 +217,16 @@ CodecImpl::~CodecImpl() {
 
 std::mutex& CodecImpl::lock() { return lock_; }
 
+void CodecImpl::SetCodecMetrics(CodecMetrics* codec_metrics) {
+  ZX_DEBUG_ASSERT(codec_metrics);
+  codec_metrics_ = codec_metrics;
+}
+
 void CodecImpl::SetCoreCodecAdapter(std::unique_ptr<CodecAdapter> codec_adapter) {
+  ZX_DEBUG_ASSERT(codec_adapter);
   ZX_DEBUG_ASSERT(!codec_adapter_);
   codec_adapter_ = std::move(codec_adapter);
+  codec_metrics_implementation_dimension_ = codec_adapter_->CoreCodecMetricsImplementation();
 }
 
 void CodecImpl::BindAsync(fit::closure error_handler) {
@@ -279,6 +290,7 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
     PostToSharedFidl([this] {
       zx_status_t status = sysmem_.Bind(std::move(tmp_sysmem_), shared_fidl_dispatcher_);
       if (status != ZX_OK) {
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FidlError);
         Fail("sysmem_.Bind() failed");
         return;
       }
@@ -286,6 +298,7 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
 
       status = binding_.Bind(std::move(tmp_interface_request_), shared_fidl_dispatcher_);
       if (status != ZX_OK) {
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FidlError);
         Fail("binding_.Bind() failed");
         return;
       }
@@ -328,6 +341,7 @@ void CodecImpl::AddInputBuffer_StreamControl(CodecBuffer::Info buffer_info,
 void CodecImpl::SetInputBufferPartialSettings(
     fuchsia::media::StreamBufferPartialSettings input_settings) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InputBufferAllocationStarted);
   PostToStreamControl([this, input_settings = std::move(input_settings)]() mutable {
     SetInputBufferPartialSettings_StreamControl(std::move(input_settings));
   });
@@ -338,12 +352,7 @@ void CodecImpl::SetInputBufferPartialSettings_StreamControl(
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
-    if (!sysmem_) {
-      FailLocked(
-          "client sent SetInputBufferPartialSettings() to a CodecImpl that "
-          "lacks sysmem_");
-      return;
-    }
+    ZX_DEBUG_ASSERT(sysmem_);
     SetInputBufferSettingsCommon(lock, &input_partial_settings);
   }  // ~lock
 }
@@ -355,6 +364,7 @@ void CodecImpl::SetInputBufferSettingsCommon(
     return;
   }
   if (IsStreamActiveLocked()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked("client sent SetInputBuffer*Settings() with stream active");
     return;
   }
@@ -369,6 +379,7 @@ void CodecImpl::SetOutputBufferSettingsCommon(
     //
     // client must have received at least the initial OnOutputConstraints()
     // first before sending SetOutputBufferSettings().
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked(
         "client sent SetOutputBufferSettings()/SetOutputBufferPartialSettings()"
         " when no output_constraints_");
@@ -391,6 +402,7 @@ void CodecImpl::SetOutputBufferSettingsCommon(
   // channel if the client is sending a buffer_constraints_version_ordinal
   // that's newer than the last sent_buffer_constraints_version_ordinal_.
   if (IsStreamActiveLocked() && IsOutputConfiguredLocked()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked(
         "client sent SetOutputBufferSettings()/SetOutputBufferPartialSettings()"
         " with IsStreamActiveLocked() + already-fully-configured output");
@@ -419,6 +431,7 @@ void CodecImpl::SetOutputBufferPartialSettings(
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (!sysmem_) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(
           "client sent SetOutputBufferPartialSettings() to a CodecImpl "
           "that lacks a sysmem_");
@@ -434,6 +447,7 @@ void CodecImpl::CompleteOutputBufferPartialSettings(uint64_t buffer_lifetime_ord
     std::unique_lock<std::mutex> lock(lock_);
 
     if (buffer_lifetime_ordinal % 2 == 0) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(
           "CompleteOutputBufferPartialSettings client sent even "
           "buffer_lifetime_ordinal, but must be odd");
@@ -441,6 +455,7 @@ void CodecImpl::CompleteOutputBufferPartialSettings(uint64_t buffer_lifetime_ord
     }
 
     if (buffer_lifetime_ordinal != protocol_buffer_lifetime_ordinal_[kOutputPort]) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked("CompleteOutputBufferPartialSettings bad buffer_lifetime_ordinal");
       return;
     }
@@ -458,6 +473,7 @@ void CodecImpl::CompleteOutputBufferPartialSettings(uint64_t buffer_lifetime_ord
     }
 
     if (!IsPortBuffersAtLeastPartiallyConfiguredLocked(kOutputPort)) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(
           "CompleteOutputBufferPartialSettings seen without prior "
           "SetOutputBufferPartialSettings");
@@ -465,6 +481,7 @@ void CodecImpl::CompleteOutputBufferPartialSettings(uint64_t buffer_lifetime_ord
     }
 
     if (port_settings_[kOutputPort]->is_complete_seen_output()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(
           "CompleteOutputBufferPartialSettings permitted exactly once "
           "after each SetOutputBufferPartialSettings");
@@ -479,6 +496,7 @@ void CodecImpl::CompleteOutputBufferPartialSettings(uint64_t buffer_lifetime_ord
 
 void CodecImpl::FlushEndOfStreamAndCloseStream(uint64_t stream_lifetime_ordinal) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamFlushed);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (!EnsureFutureStreamFlushSeenLocked(stream_lifetime_ordinal)) {
@@ -511,6 +529,7 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
     ZX_DEBUG_ASSERT(stream_lifetime_ordinal >= stream_lifetime_ordinal_);
     if (!IsStreamActiveLocked() || stream_lifetime_ordinal != stream_lifetime_ordinal_) {
       // TODO(dustingreen): epitaph
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(
           "FlushEndOfStreamAndCloseStream() only valid on an active current "
           "stream (flush does not auto-create a new stream)");
@@ -522,6 +541,7 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
     ZX_DEBUG_ASSERT(IsStreamActiveLocked());
     ZX_DEBUG_ASSERT(stream_->stream_lifetime_ordinal() == stream_lifetime_ordinal);
     if (!stream_->input_end_of_stream()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(
           "FlushEndOfStreamAndCloseStream() is only permitted after "
           "QueueInputEndOfStream()");
@@ -556,6 +576,7 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
       if (std::cv_status::timeout ==
           output_end_of_stream_seen_.wait_until(
               lock, std::chrono::system_clock::now() + std::chrono::seconds(5))) {
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_EndOfStreamTimeoutError);
         FailLocked("Timeout waiting for end of stream");
         break;
       }
@@ -565,6 +586,7 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
     // any subsequent message for the current stream that's valid.
     EnsureStreamClosed(lock);
   }  // ~lock
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_CoreFlushed);
 }
 
 void CodecImpl::CloseCurrentStream(uint64_t stream_lifetime_ordinal, bool release_input_buffers,
@@ -656,6 +678,7 @@ void CodecImpl::RecycleOutputPacket(fuchsia::media::PacketHeader available_outpu
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (!available_output_packet.has_buffer_lifetime_ordinal()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked("output packet is missing buffer lifetime ordinal");
       return;
     }
@@ -679,22 +702,26 @@ void CodecImpl::RecycleOutputPacket(fuchsia::media::PacketHeader available_outpu
     ZX_DEBUG_ASSERT(available_output_packet.buffer_lifetime_ordinal() ==
                     buffer_lifetime_ordinal_[kOutputPort]);
     if (!IsOutputConfiguredLocked()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(
           "client sent RecycleOutputPacket() for buffer_lifetime_ordinal that "
           "isn't fully configured yet - bad client behavior");
       return;
     }
     if (!available_output_packet.has_packet_index()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked("output packet is missing packet index");
       return;
     }
     ZX_DEBUG_ASSERT(IsOutputConfiguredLocked());
     if (available_output_packet.packet_index() >= all_packets_[kOutputPort].size()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked("out of range packet_index from client in RecycleOutputPacket()");
       return;
     }
     uint32_t packet_index = available_output_packet.packet_index();
     if (all_packets_[kOutputPort][packet_index]->is_free()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(
           "packet_index already free at protocol level - invalid client "
           "message");
@@ -728,6 +755,7 @@ void CodecImpl::QueueInputFormatDetails(uint64_t stream_lifetime_ordinal,
   }  // ~lock
 
   if (!format_details.has_format_details_version_ordinal()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     Fail(
         "client QueueInputFormatDetails(): Format details have no version "
         "ordinal.");
@@ -771,6 +799,7 @@ void CodecImpl::QueueInputFormatDetails_StreamControl(
   }
   ZX_DEBUG_ASSERT(stream_lifetime_ordinal == stream_lifetime_ordinal_);
   if (stream_->input_end_of_stream()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked("QueueInputFormatDetails() after QueueInputEndOfStream() unexpected");
     return;
   }
@@ -803,6 +832,7 @@ void CodecImpl::QueueInputPacket(fuchsia::media::Packet packet) {
       return;
     }
     if (!packet.has_stream_lifetime_ordinal()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(
           "client QueueInputPacket() with packet that has no stream lifetime "
           "ordinal");
@@ -826,6 +856,7 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
   ZX_DEBUG_ASSERT(packet.has_stream_lifetime_ordinal());
 
   if (!packet.has_header()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     Fail("client QueueInputPacket() with packet has no header");
     return;
   }
@@ -854,6 +885,7 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
         });
 
     if (!packet.header().has_buffer_lifetime_ordinal()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(
           "client QueueInputPacket() with header that has no buffer lifetime "
           "ordinal");
@@ -866,6 +898,7 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
 
     if (!packet.has_stream_lifetime_ordinal()) {
       FailLocked("client QueueInputPacket() without packet stream_lifetime_ordinal.");
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       return;
     }
     if (!CheckStreamLifetimeOrdinalLocked(packet.stream_lifetime_ordinal())) {
@@ -894,6 +927,7 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
     // bugs faster thanks to this check.
     if (packet.header().buffer_lifetime_ordinal() !=
         port_settings_[kInputPort]->buffer_lifetime_ordinal()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked("client QueueInputPacket() with invalid buffer_lifetime_ordinal.");
       return;
     }
@@ -914,10 +948,12 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
     ZX_DEBUG_ASSERT(packet.stream_lifetime_ordinal() == stream_lifetime_ordinal_);
 
     if (!packet.header().has_packet_index()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked("client QueueInputPacket() with packet has no packet index");
       return;
     }
     if (packet.header().packet_index() >= all_packets_[kInputPort].size()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(
           "client QueueInputPacket() with packet_index out of range - "
           "packet_index: %u size: %u",
@@ -925,10 +961,12 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
       return;
     }
     if (!packet.has_buffer_index()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked("client QueueInputPacket() with packet has no buffer index");
       return;
     }
     if (packet.buffer_index() >= all_buffers_[kInputPort].size()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked("client QueueInputPacket() with buffer_index out of range");
       return;
     }
@@ -936,11 +974,13 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
     // Protocol check re. free/busy coherency.  This applies to packets only,
     // not buffers.
     if (!all_packets_[kInputPort][packet.header().packet_index()]->is_free()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked("client QueueInputPacket() with packet_index !free");
       return;
     }
 
     if (stream_->input_end_of_stream()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked("QueueInputPacket() after QueueInputEndOfStream() unexpeted");
       return;
     }
@@ -980,11 +1020,13 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
   CodecPacket* core_codec_packet = all_packets_[kInputPort][packet.header().packet_index()].get();
   core_codec_packet->SetBuffer(all_buffers_[kInputPort][packet.buffer_index()].get());
   if (!packet.has_start_offset()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     Fail("client QueueInputPacket() with packet has no start offset");
     return;
   }
   core_codec_packet->SetStartOffset(packet.start_offset());
   if (!packet.has_valid_length_bytes()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     Fail("client QueueInputPacket() with packet has no valid length bytes");
     return;
   }
@@ -996,16 +1038,19 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
   }
 
   if (core_codec_packet->valid_length_bytes() <= 0) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     Fail("client QueueInputPacket() with valid_length_bytes 0 - not allowed");
     return;
   }
   if (core_codec_packet->start_offset() + core_codec_packet->valid_length_bytes() <
       core_codec_packet->start_offset()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     Fail("client QueueInputPacket() start_offset + valid_length_bytes overflow");
     return;
   }
   if (core_codec_packet->start_offset() + core_codec_packet->valid_length_bytes() >
       core_codec_packet->buffer()->size()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     Fail("client QueueInputPacket() with packet end > buffer size");
     return;
   }
@@ -1026,6 +1071,7 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
 
 void CodecImpl::QueueInputEndOfStream(uint64_t stream_lifetime_ordinal) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamEndOfStreamInput);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (!EnsureFutureStreamSeenLocked(stream_lifetime_ordinal)) {
@@ -1064,6 +1110,7 @@ void CodecImpl::QueueInputEndOfStream_StreamControl(uint64_t stream_lifetime_ord
     }
 
     if (stream_->input_end_of_stream()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked("client already sent QueueInputEndOfStream() for this stream");
       return;
     }
@@ -1091,6 +1138,7 @@ zx_status_t CodecImpl::Pin(uint32_t options, const zx::vmo& vmo, uint64_t offset
 bool CodecImpl::CheckWaitEnsureInputConfigured(std::unique_lock<std::mutex>& lock) {
   // Ensure/finish input configuration.
   if (!IsPortBuffersAtLeastPartiallyConfiguredLocked(kInputPort)) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked(
         "client QueueInput*() with input buffers not at least partially "
         "configured");
@@ -1142,6 +1190,8 @@ bool CodecImpl::CheckWaitEnsureInputConfigured(std::unique_lock<std::mutex>& loc
             if (status != ZX_OK) {
               // This will cause any in-progress WaitEnsureSysmemReadyOnInput()
               // to return shortly and IsStoppingLocked() will be true.
+              LogEvent(
+                  media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
               FailLocked(
                   "Probably client did QueueInput* before the client "
                   "determined that sysmem was done successfully allocating "
@@ -1156,6 +1206,7 @@ bool CodecImpl::CheckWaitEnsureInputConfigured(std::unique_lock<std::mutex>& loc
     }
   }
   if (!IsInputConfiguredLocked()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked("client QueueInput*() with input buffers not configured");
     return false;
   }
@@ -1441,14 +1492,17 @@ void CodecImpl::SetBufferSettingsCommon(
   ZX_DEBUG_ASSERT(!IsStoppingLocked());
 
   if (!partial_settings->has_buffer_lifetime_ordinal()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked("partial_settings do not have buffer lifetime ordinal");
     return;
   }
   if (!partial_settings->has_buffer_constraints_version_ordinal()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked("partial_settings do not have buffer constraints version ordinal");
     return;
   }
   if (!partial_settings->has_sysmem_token() || !partial_settings->sysmem_token().is_valid()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked("partial_settings missing valid sysmem_token");
     return;
   }
@@ -1467,6 +1521,7 @@ void CodecImpl::SetBufferSettingsCommon(
       partial_settings->buffer_constraints_version_ordinal();
 
   if (buffer_lifetime_ordinal <= protocol_buffer_lifetime_ordinal_[port]) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked(
         "buffer_lifetime_ordinal <= "
         "protocol_buffer_lifetime_ordinal_[port] - port: %d",
@@ -1474,6 +1529,7 @@ void CodecImpl::SetBufferSettingsCommon(
     return;
   }
   if (buffer_lifetime_ordinal % 2 == 0) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked(
         "Only odd values for buffer_lifetime_ordinal are permitted - port: %d "
         "value %lu",
@@ -1483,6 +1539,7 @@ void CodecImpl::SetBufferSettingsCommon(
   protocol_buffer_lifetime_ordinal_[port] = buffer_lifetime_ordinal;
 
   if (buffer_constraints_version_ordinal > sent_buffer_constraints_version_ordinal_[port]) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked("Client sent too-new buffer_constraints_version_ordinal - port: %d", port);
     return;
   }
@@ -1636,6 +1693,14 @@ void CodecImpl::OnBufferCollectionInfoInternal(
   ZX_DEBUG_ASSERT(port == kInputPort && thrd_current() == stream_control_thread_ ||
                   port == kOutputPort && thrd_current() == fidl_thread());
 
+  if (port == kOutputPort) {
+    LogEvent(
+        media_metrics::StreamProcessorEvents2MetricDimensionEvent_OutputBufferAllocationCompleted);
+  } else {
+    LogEvent(
+        media_metrics::StreamProcessorEvents2MetricDimensionEvent_InputBufferAllocationCompleted);
+  }
+
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     if (IsStoppingLocked()) {
@@ -1648,6 +1713,13 @@ void CodecImpl::OnBufferCollectionInfoInternal(
       return;
     }
     if (allocate_status != ZX_OK) {
+      if (port == kOutputPort) {
+        LogEvent(media_metrics::
+                     StreamProcessorEvents2MetricDimensionEvent_OutputBufferAllocationFailure);
+      } else {
+        LogEvent(
+            media_metrics::StreamProcessorEvents2MetricDimensionEvent_InputBufferAllocationFailure);
+      }
       FailLocked(
           "OnBufferCollectionInfoLocked() sees failure - port: %d "
           "allocate_status: %d",
@@ -1698,10 +1770,12 @@ void CodecImpl::OnBufferCollectionInfoInternal(
   }
 
   if (IsPortSecureRequired(port) && !port_settings_[port]->is_secure()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolFailure);
     Fail("IsPortSecureRequired(port) && !port_settings_[port]->is_secure() - port: %d", port);
     return;
   }
   if (!IsPortSecurePermitted(port) && port_settings_[port]->is_secure()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolFailure);
     Fail("!IsPortSecurePermitted(port) && port_settings_[port]->is_secure() - port: %d", port);
     return;
   }
@@ -1712,6 +1786,7 @@ void CodecImpl::OnBufferCollectionInfoInternal(
       zx_status_t status =
           FakeMapRange::Create(port_settings_[port]->vmo_usable_size(), &fake_map_range_[port]);
       if (status != ZX_OK) {
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
         Fail("FakeMapRange::Init() failed");
         return;
       }
@@ -1749,6 +1824,14 @@ void CodecImpl::OnBufferCollectionInfoInternal(
       ZX_DEBUG_ASSERT(port == kOutputPort);
       AddOutputBufferInternal(std::move(buffer_info), std::move(vmo_range));
     }
+  }
+
+  if (port == kOutputPort) {
+    LogEvent(
+        media_metrics::StreamProcessorEvents2MetricDimensionEvent_OutputBufferAllocationSuccess);
+  } else {
+    LogEvent(
+        media_metrics::StreamProcessorEvents2MetricDimensionEvent_InputBufferAllocationSuccess);
   }
 }
 
@@ -1811,6 +1894,7 @@ bool CodecImpl::ValidatePartialBufferSettingsVsConstraintsLocked(
   // via the client, so there's not a ton to validate here.
   if ((partial_settings.has_single_buffer_mode() && partial_settings.single_buffer_mode()) &&
       !constraints.single_buffer_mode_allowed()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientConstraintsFailure);
     FailLocked("single_buffer_mode && !single_buffer_mode_allowed");
     return false;
   }
@@ -1819,10 +1903,12 @@ bool CodecImpl::ValidatePartialBufferSettingsVsConstraintsLocked(
   ZX_DEBUG_ASSERT(partial_settings.sysmem_token().is_valid());
   if (packet_count_needed) {
     if (!partial_settings.has_packet_count_for_server()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientConstraintsFailure);
       FailLocked("missing packet_count_for_server with single_buffer_mode true");
       return false;
     }
     if (!partial_settings.has_packet_count_for_client()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientConstraintsFailure);
       FailLocked("missing packet_count_for_client with single_buffer_mode true");
       return false;
     }
@@ -1830,6 +1916,7 @@ bool CodecImpl::ValidatePartialBufferSettingsVsConstraintsLocked(
   // if needed or provided anyway
   if (partial_settings.has_packet_count_for_server()) {
     if (partial_settings.packet_count_for_server() > constraints.packet_count_for_server_max()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientConstraintsFailure);
       FailLocked("packet_count_for_server > packet_count_for_server_max");
       return false;
     }
@@ -1837,6 +1924,7 @@ bool CodecImpl::ValidatePartialBufferSettingsVsConstraintsLocked(
   // if needed or provided anyway
   if (partial_settings.has_packet_count_for_client()) {
     if (partial_settings.packet_count_for_client() > constraints.packet_count_for_client_max()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientConstraintsFailure);
       FailLocked("packet_count_for_client > packet_count_for_client_max");
       return false;
     }
@@ -1853,12 +1941,14 @@ bool CodecImpl::AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo
   std::unique_lock<std::mutex> lock(lock_);
 
   if (buffer_info.lifetime_ordinal % 2 == 0) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolFailure);
     FailLocked("Client sent even buffer_lifetime_ordinal, but must be odd - exiting - port: %u\n",
                port);
     return false;
   }
 
   if (buffer_info.lifetime_ordinal != protocol_buffer_lifetime_ordinal_[port]) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolFailure);
     FailLocked(
         "Incoherent SetOutputBufferSettings()/SetInputBufferSettings() + "
         "AddOutputBuffer()/AddInputBuffer()s - exiting - port: %d\n",
@@ -1884,19 +1974,9 @@ bool CodecImpl::AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo
     return false;
   }
 
-  if (buffer_info.index != all_buffers_[port].size()) {
-    FailLocked(
-        "AddOutputBuffer()/AddInputBuffer() had buffer_index out of sequence "
-        "- port: %d buffer_index: %u all_buffers_[port].size(): %lu",
-        port, buffer_info.index, all_buffers_[port].size());
-    return false;
-  }
-
+  ZX_DEBUG_ASSERT(buffer_info.index == all_buffers_[port].size());
   uint32_t required_buffer_count = port_settings_[port]->buffer_count();
-  if (buffer_info.index >= required_buffer_count) {
-    FailLocked("AddOutputBuffer()/AddInputBuffer() extra buffer - port: %d", port);
-    return false;
-  }
+  ZX_DEBUG_ASSERT(buffer_info.index < required_buffer_count);
 
   std::unique_ptr<CodecBuffer> local_buffer = std::unique_ptr<CodecBuffer>(
       new CodecBuffer(this, std::move(buffer_info), std::move(vmo_range)));
@@ -1917,6 +1997,7 @@ bool CodecImpl::AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo
       // happening in any other code location where we could potentially move the
       // Map() either.
       if (!local_buffer->Map()) {
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
         FailLocked("AddOutputBuffer()/AddInputBuffer() couldn't Map() new buffer - port: %d", port);
         return false;
       }
@@ -1938,6 +2019,7 @@ bool CodecImpl::AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo
   if (IsCoreCodecHwBased(port) && *core_codec_bti_) {
     zx_status_t status = local_buffer->Pin();
     if (status != ZX_OK) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
       FailLocked("buffer->Pin() failed - status: %d port: %d", status, port);
       return false;
     }
@@ -2013,12 +2095,14 @@ bool CodecImpl::CheckOldBufferLifetimeOrdinalLocked(CodecPort port,
   // The client must only send odd values.  0 is even so we don't need a
   // separate check for that.
   if (buffer_lifetime_ordinal % 2 == 0) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolFailure);
     FailLocked(
         "CheckOldBufferLifetimeOrdinalLocked() - buffer_lifetime_ordinal must "
         "be odd");
     return false;
   }
   if (buffer_lifetime_ordinal > protocol_buffer_lifetime_ordinal_[port]) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolFailure);
     FailLocked(
         "client sent new buffer_lifetime_ordinal in message type that doesn't "
         "allow new buffer_lifetime_ordinals");
@@ -2029,10 +2113,12 @@ bool CodecImpl::CheckOldBufferLifetimeOrdinalLocked(CodecPort port,
 
 bool CodecImpl::CheckStreamLifetimeOrdinalLocked(uint64_t stream_lifetime_ordinal) {
   if (stream_lifetime_ordinal % 2 != 1) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolFailure);
     FailLocked("stream_lifetime_ordinal must be odd.\n");
     return false;
   }
   if (stream_lifetime_ordinal < stream_lifetime_ordinal_) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolFailure);
     FailLocked("client sent stream_lifetime_ordinal that went backwards");
     return false;
   }
@@ -2066,6 +2152,7 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
   // Codec layer first then core codec layer.
 
   if (!IsInputConfiguredLocked()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolFailure);
     FailLocked("input not configured before start of stream (QueueInputPacket())");
     return false;
   }
@@ -2329,6 +2416,7 @@ bool CodecImpl::EnsureFutureStreamSeenLocked(uint64_t stream_lifetime_ordinal) {
     return true;
   }
   if (stream_lifetime_ordinal < future_stream_lifetime_ordinal_) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolFailure);
     FailLocked("stream_lifetime_ordinal went backward - exiting\n");
     return false;
   }
@@ -2341,6 +2429,8 @@ bool CodecImpl::EnsureFutureStreamSeenLocked(uint64_t stream_lifetime_ordinal) {
   future_stream_lifetime_ordinal_ = stream_lifetime_ordinal;
   stream_queue_.push_back(std::make_unique<Stream>(stream_lifetime_ordinal));
   if (stream_queue_.size() > kMaxInFlightStreams) {
+    LogEvent(
+        media_metrics::StreamProcessorEvents2MetricDimensionEvent_MaxInFlightStreamsExceededError);
     FailLocked(
         "kMaxInFlightStreams reached - clients capable of causing this are "
         "instead supposed to wait/postpone to prevent this from occurring - "
@@ -2360,6 +2450,7 @@ bool CodecImpl::EnsureFutureStreamCloseSeenLocked(uint64_t stream_lifetime_ordin
   if (future_stream_lifetime_ordinal_ % 2 == 0) {
     // Already closed.
     if (stream_lifetime_ordinal != future_stream_lifetime_ordinal_ - 1) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(
           "CloseCurrentStream() seen with stream_lifetime_ordinal != "
           "most-recent seen stream");
@@ -2368,6 +2459,7 @@ bool CodecImpl::EnsureFutureStreamCloseSeenLocked(uint64_t stream_lifetime_ordin
     return true;
   }
   if (stream_lifetime_ordinal != future_stream_lifetime_ordinal_) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked("attempt to close a stream other than the latest seen stream");
     return false;
   }
@@ -2397,6 +2489,7 @@ bool CodecImpl::EnsureFutureStreamCloseSeenLocked(uint64_t stream_lifetime_ordin
 // stream_queue_ and future_stream_lifetime_ordinal_.
 bool CodecImpl::EnsureFutureStreamFlushSeenLocked(uint64_t stream_lifetime_ordinal) {
   if (stream_lifetime_ordinal != future_stream_lifetime_ordinal_) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked("FlushCurrentStream() stream_lifetime_ordinal inconsistent");
     return false;
   }
@@ -2406,6 +2499,7 @@ bool CodecImpl::EnsureFutureStreamFlushSeenLocked(uint64_t stream_lifetime_ordin
   // future stream is not discarded yet.
   ZX_DEBUG_ASSERT(!flushing_stream->future_discarded());
   if (flushing_stream->future_flush_end_of_stream()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked("FlushCurrentStream() used twice on same stream");
     return false;
   }
@@ -2634,6 +2728,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     // output.
     if (port == kInputPort) {
       if (usage.cpu & ~(fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften)) {
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
         FailLocked("Core codec set disallowed CPU usage bits (input port).");
         return false;
       }
@@ -2644,6 +2739,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
       }
     } else {
       if (usage.cpu & ~(fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageWriteOften)) {
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
         FailLocked("Core codec set disallowed CPU usage bit(s) (output port).");
         return false;
       }
@@ -2655,6 +2751,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     }
   } else {
     if (usage.cpu) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
       FailLocked("Core codec set usage.cpu despite !IsCoreCodecMappedBufferUseful()");
       return false;
     }
@@ -2662,11 +2759,13 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     usage.cpu = 0;
   }
   if (usage.vulkan) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
     FailLocked("Core codec set usage.vulkan bits");
     return false;
   }
   ZX_DEBUG_ASSERT(!usage.vulkan);
   if (usage.display) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
     FailLocked("Core codec set usage.display bits");
     return false;
   }
@@ -2674,6 +2773,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
   if (IsDecryptor()) {
     // DecryptorAdapter should not be setting video usage bits.
     if (usage.video) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
       FailLocked("Core codec set disallowed video usage bits for decryptor");
       return false;
     }
@@ -2684,12 +2784,14 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     // Let's see if we can deprecate videoUsageHwProtected, since it's redundant
     // with secure_required.
     if (usage.video & fuchsia::sysmem::videoUsageHwProtected) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
       FailLocked("Core codec set deprecated videoUsageHwProtected - disallow");
       return false;
     }
     uint32_t allowed_video_usage_bits =
         IsDecoder() ? fuchsia::sysmem::videoUsageHwDecoder : fuchsia::sysmem::videoUsageHwEncoder;
     if (usage.video & ~allowed_video_usage_bits) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
       FailLocked(
           "Core codec set disallowed video usage bit(s) - port: %d, usage: "
           "0x%08x, allowed: 0x%08x",
@@ -2713,6 +2815,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
 
   if (is_single_buffer_mode) {
     if (buffer_collection_constraints->min_buffer_count_for_camping != 0) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
       FailLocked(
           "Core codec set min_buffer_count_for_camping non-zero when single_buffer_mode true -- "
           "min_buffer_count_for_camping: %lu ",
@@ -2721,6 +2824,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     }
     if (buffer_collection_constraints->min_buffer_count_for_dedicated_slack != 0 ||
         buffer_collection_constraints->min_buffer_count_for_shared_slack != 0) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
       FailLocked(
           "Core codec set slack with single_buffer_mode - "
           "min_buffer_count_for_dedicated_slack: %lu "
@@ -2730,11 +2834,13 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
       return false;
     }
     if (buffer_collection_constraints->max_buffer_count != 1) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
       FailLocked("Core codec must specify max_buffer_count 1 when single_buffer_mode");
       return false;
     }
   } else {
     if (buffer_collection_constraints->min_buffer_count_for_camping < 1) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
       FailLocked("Core codec set min_buffer_count_for_camping to 0 when !single_buffer_mode.");
       return false;
     }
@@ -2743,6 +2849,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
   if (!buffer_collection_constraints->has_buffer_memory_constraints) {
     // Leaving all fields set to their defaults is fine if that's really true, but this encourages
     // CodecAdapter implementations to set fields in here.
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
     FailLocked("Core codec must set has_buffer_memory_constraints");
     return false;
   }
@@ -2759,6 +2866,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
   //
   // CoreCodecSetSecureMemoryMode() informed the core codec of the mode previously.
   if (!!IsPortSecureRequired(port) != !!buffer_memory_constraints.secure_required) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
     FailLocked("Core codec secure_required inconsistent with SecureMemoryMode");
     return false;
   }
@@ -2780,6 +2888,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     }
   }
   if (IsPortSecurePermitted(port) && !is_non_ram_heap_found) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
     FailLocked("Core codec must specify at least one non-RAM heap when secure_required");
     return false;
   }
@@ -2917,6 +3026,8 @@ void CodecImpl::vFailLocked(bool is_fatal, const char* format, va_list args) {
   // CodecEvents channel. Note to self: The channel failing server-side may race
   // with trying to send.
 
+  LogEvent(
+      media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamProcessorFailureAnyReason);
   if (is_fatal) {
     // Logs to syslog for non-driver clients
     FX_LOGS(ERROR) << buffer.get() << " -- " << message << "\n";
@@ -3006,6 +3117,17 @@ const fuchsia::media::drm::DecryptorParams& CodecImpl::decryptor_params() const 
   return fit::get<fuchsia::media::drm::DecryptorParams>(params_);
 }
 
+void CodecImpl::LogEvent(
+    media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code) const {
+  if (!codec_metrics_) {
+    return;
+  }
+  if (!codec_metrics_implementation_dimension_) {
+    return;
+  }
+  codec_metrics_->LogEvent(codec_metrics_implementation_dimension_.value(), event_code);
+}
+
 // true - maybe it's the core codec thread.
 // false - it's definitely not the core codec thread.
 bool CodecImpl::IsPotentiallyCoreCodecThread() {
@@ -3025,6 +3147,7 @@ void CodecImpl::HandlePendingInputFormatDetails() {
 }
 
 void CodecImpl::onCoreCodecFailCodec(const char* format, ...) {
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_CoreFailureAnyReason);
   std::string local_format = std::string("onCoreCodecFailCodec() called -- ") + format;
   va_list args;
   va_start(args, format);
@@ -3035,6 +3158,7 @@ void CodecImpl::onCoreCodecFailCodec(const char* format, ...) {
 
 void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
   {  // scope lock
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamFailureAnyReason);
     std::unique_lock<std::mutex> lock(lock_);
     if (IsStoppingLocked()) {
       // This CodecImpl is already stopping due to a previous FailLocked(),
@@ -3371,20 +3495,30 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet, bool error_detected
 
 void CodecImpl::onCoreCodecOutputEndOfStream(bool error_detected_before) {
   VLOGF("CodecImpl::onCoreCodecOutputEndOfStream()");
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_CoreEndOfStreamOuput);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     ZX_DEBUG_ASSERT(IsStreamActiveLocked());
     ZX_DEBUG_ASSERT(!stream_->is_mid_stream_output_constraints_change_active());
     stream_->SetOutputEndOfStream();
     output_end_of_stream_seen_.notify_all();
-    PostToSharedFidl(
-        [this, stream_lifetime_ordinal = stream_lifetime_ordinal_, error_detected_before] {
-          // See "is_bound_checks" comment up top.
-          if (binding_.is_bound()) {
-            binding_.events().OnOutputEndOfStream(stream_lifetime_ordinal, error_detected_before);
-          }
-        });
+    PostToSharedFidl([this, stream_lifetime_ordinal = stream_lifetime_ordinal_,
+                      error_detected_before] {
+      // See "is_bound_checks" comment up top.
+      if (binding_.is_bound()) {
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamEndOfStreamOutput);
+        binding_.events().OnOutputEndOfStream(stream_lifetime_ordinal, error_detected_before);
+      }
+    });
   }  // ~lock
+}
+
+void CodecImpl::onCoreCodecLogEvent(
+    media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code) {
+  // A CodecAdapter sub-class that ever calls LogEvent() must override
+  // CoreCodecMetricsImplementation() and must not return std::nullopt.
+  ZX_DEBUG_ASSERT(codec_metrics_implementation_dimension_);
+  LogEvent(event_code);
 }
 
 CodecImpl::Stream::Stream(uint64_t stream_lifetime_ordinal)
@@ -3675,6 +3809,7 @@ void CodecImpl::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
 
 void CodecImpl::CoreCodecStartStream() {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamCreated);
   codec_adapter_->CoreCodecStartStream();
 }
 
@@ -3691,17 +3826,25 @@ void CodecImpl::CoreCodecQueueInputPacket(CodecPacket* packet) {
 
 void CodecImpl::CoreCodecQueueInputEndOfStream() {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_CoreEndOfStreamInput);
   codec_adapter_->CoreCodecQueueInputEndOfStream();
 }
 
 void CodecImpl::CoreCodecStopStream() {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamDeleted);
   codec_adapter_->CoreCodecStopStream();
 }
 
 void CodecImpl::CoreCodecResetStreamAfterCurrentFrame() {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   codec_adapter_->CoreCodecResetStreamAfterCurrentFrame();
+}
+
+std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
+CodecImpl::CoreCodecMetricsImplementation() {
+  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  return codec_adapter_->CoreCodecMetricsImplementation();
 }
 
 bool CodecImpl::IsCoreCodecRequiringOutputConfigForFormatDetection() {

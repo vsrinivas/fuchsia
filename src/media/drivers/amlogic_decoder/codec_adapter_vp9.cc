@@ -123,6 +123,11 @@ CodecAdapterVp9::~CodecAdapterVp9() {
   // CoreCodecStopStream().
 }
 
+std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
+CodecAdapterVp9::CoreCodecMetricsImplementation() {
+  return media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderVp9;
+}
+
 bool CodecAdapterVp9::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
 
 bool CodecAdapterVp9::IsCoreCodecMappedBufferUseful(CodecPort port) {
@@ -1407,12 +1412,11 @@ bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
   return true;
 }
 
-zx_status_t CodecAdapterVp9::InitializeFrames(::zx::bti bti, uint32_t min_frame_count,
-                                              uint32_t max_frame_count, uint32_t coded_width,
-                                              uint32_t coded_height, uint32_t stride,
-                                              uint32_t display_width, uint32_t display_height,
-                                              bool has_sar, uint32_t sar_width,
-                                              uint32_t sar_height) {
+zx_status_t CodecAdapterVp9::InitializeFrames(uint32_t min_frame_count, uint32_t max_frame_count,
+                                              uint32_t coded_width, uint32_t coded_height,
+                                              uint32_t stride, uint32_t display_width,
+                                              uint32_t display_height, bool has_sar,
+                                              uint32_t sar_width, uint32_t sar_height) {
   ZX_DEBUG_ASSERT(!has_sar);
   ZX_DEBUG_ASSERT(sar_width == 1);
   ZX_DEBUG_ASSERT(sar_height == 1);

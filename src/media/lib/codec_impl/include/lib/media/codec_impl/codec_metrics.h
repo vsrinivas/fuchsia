@@ -43,23 +43,23 @@ class CodecMetrics final {
   // No attempt is made to flush pending events before driver exit or suspend, since this driver
   // isn't expected to unbind very often, if ever, and if we're suspending already then it's
   // unlikely that the pending cobalt events would be persisted anyway.
-  void LogEvent(media_metrics::StreamProcessorEventsMetricDimensionImplementation implementation,
-                media_metrics::StreamProcessorEventsMetricDimensionEvent event)
+  void LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation,
+                media_metrics::StreamProcessorEvents2MetricDimensionEvent event)
       __TA_EXCLUDES(lock_);
 
  private:
   class PendingCountsKey {
    public:
     PendingCountsKey(
-        media_metrics::StreamProcessorEventsMetricDimensionImplementation implementation,
-        media_metrics::StreamProcessorEventsMetricDimensionEvent event);
+        media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation,
+        media_metrics::StreamProcessorEvents2MetricDimensionEvent event);
 
-    media_metrics::StreamProcessorEventsMetricDimensionImplementation implementation() const;
-    media_metrics::StreamProcessorEventsMetricDimensionEvent event() const;
+    media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation() const;
+    media_metrics::StreamProcessorEvents2MetricDimensionEvent event() const;
 
    private:
-    media_metrics::StreamProcessorEventsMetricDimensionImplementation implementation_;
-    media_metrics::StreamProcessorEventsMetricDimensionEvent event_;
+    media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation_;
+    media_metrics::StreamProcessorEvents2MetricDimensionEvent event_;
   };
   struct PendingCountsKeyHash {
     size_t operator()(const PendingCountsKey& key) const noexcept;

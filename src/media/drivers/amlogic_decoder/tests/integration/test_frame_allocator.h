@@ -31,7 +31,7 @@ class TestFrameAllocator : public TestBasicClient {
   void set_pump_function(fit::closure pump_function) { pump_function_ = std::move(pump_function); }
   bool has_sar() const { return has_sar_; }
 
-  zx_status_t InitializeFrames(zx::bti bti, uint32_t min_frame_count, uint32_t max_frame_count,
+  zx_status_t InitializeFrames(uint32_t min_frame_count, uint32_t max_frame_count,
                                uint32_t coded_width, uint32_t coded_height, uint32_t stride,
                                uint32_t display_width, uint32_t display_height, bool has_sar,
                                uint32_t sar_width, uint32_t sar_height) override {
@@ -40,8 +40,8 @@ class TestFrameAllocator : public TestBasicClient {
     EXPECT_LE(min_frame_count + kMinFramesForClient, max_frame_count);
     has_sar_ = has_sar;
     // Post to other thread so that we initialize the frames in a different callstack.
-    async::PostTask(loop_.dispatcher(), [this, bti = std::move(bti), min_frame_count,
-                                         max_frame_count, coded_width, coded_height, stride]() {
+    async::PostTask(loop_.dispatcher(), [this, min_frame_count, max_frame_count, coded_width,
+                                         coded_height, stride]() {
       std::vector<CodecFrame> frames;
       uint32_t frame_vmo_bytes = coded_height * stride * 3 / 2;
       std::uniform_int_distribution<uint32_t> frame_count_distribution(min_frame_count,
@@ -53,7 +53,7 @@ class TestFrameAllocator : public TestBasicClient {
       for (uint32_t i = 0; i < frame_count; i++) {
         zx::vmo frame_vmo;
         zx_status_t vmo_create_result =
-            zx::vmo::create_contiguous(bti, frame_vmo_bytes, 0, &frame_vmo);
+            zx::vmo::create_contiguous(*video_->bti(), frame_vmo_bytes, 0, &frame_vmo);
         if (vmo_create_result != ZX_OK) {
           DECODE_ERROR("zx_vmo_create_contiguous failed - status: %d", vmo_create_result);
           return;

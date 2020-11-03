@@ -26,6 +26,29 @@
 #include "util.h"
 #include "watchdog.h"
 
+#if 0
+        1: StreamCreated
+        2: StreamDeleted
+        3: StreamFlushed
+        4: StreamEndOfStreamInput
+        5: StreamEndOfStreamOutput
+#In addition to separate reasons listed below.
+        6: StreamFailureAnyReason
+        7: CoreCreated
+        8: CoreDeleted
+        9: CoreFlushed
+        10: CoreEndOfStreamInput
+        11: CoreEndOfStreamOuput
+#In addition to separate reasons listed below.
+        12: CoreFailureAnyReason
+        13: InputBufferAllocationStarted
+        14: InputBufferAllocationSuccess
+        15: InputBufferAllocationFailure
+        16: OutputBufferAllocationStarted
+        17: OutputBufferAllocationSuccess
+        18: OutputBufferAllocationFailure
+#endif
+
 // TODO(fxbug.dev/13483): Currently there's one frame of latency imposed by the need for another
 // NALU after the last byte of a frame for that frame to generate a pic data done interrupt.  A
 // client can mitigate this by queueing an access unit delimeter NALU after each input frame's slice
@@ -335,7 +358,7 @@ enum H264Status {
 H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* provider,
                                    bool is_secure)
     : VideoDecoder(
-          media_metrics::StreamProcessorEventsMetricDimensionImplementation_AmlogicDecoderH264Multi,
+          media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderH264,
           owner, client, is_secure),
       frame_data_provider_(provider) {
   media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<MultiAccelerator>(this),
@@ -358,7 +381,8 @@ H264MultiDecoder::~H264MultiDecoder() {
 zx_status_t H264MultiDecoder::Initialize() {
   zx_status_t status = InitializeBuffers();
   if (status != ZX_OK) {
-    DECODE_ERROR("Failed to initialize buffers");
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
+    LOG(ERROR, "Failed to initialize buffers");
     return status;
   }
 
@@ -381,7 +405,8 @@ zx_status_t H264MultiDecoder::LoadSecondaryFirmware(const uint8_t* data, uint32_
       kSecondaryFirmwareBufferSize, 1 << kBufferAlignShift, /*is_secure*/ false,
       /*is_writable=*/true, /*is_mapping_needed*/ true);
   if (!result.is_ok()) {
-    DECODE_ERROR("Failed to make second firmware buffer: %d", result.error());
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
+    LOG(ERROR, "Failed to make second firmware buffer: %d", result.error());
     return result.error();
   }
 
@@ -420,7 +445,8 @@ zx_status_t H264MultiDecoder::InitializeBuffers() {
   static constexpr uint32_t kFirmwareSize = 4 * 4096;
   const uint32_t kBufferAlignShift = 16;
   if (firmware_size < kFirmwareSize) {
-    DECODE_ERROR("Firmware too small");
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirmwareSizeError);
+    LOG(ERROR, "Firmware too small");
     return ZX_ERR_INTERNAL;
   }
 
@@ -430,7 +456,8 @@ zx_status_t H264MultiDecoder::InitializeBuffers() {
         1 << kBufferAlignShift, /*is_secure=*/false, /*is_writable=*/true,
         /*is_mapping_needed=*/true);
     if (!create_result.is_ok()) {
-      DECODE_ERROR("Failed to make firmware buffer - %d", create_result.error());
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
+      LOG(ERROR, "Failed to make firmware buffer - %d", create_result.error());
       return {};
     }
     firmware_ = create_result.take_value();
@@ -450,6 +477,7 @@ zx_status_t H264MultiDecoder::InitializeBuffers() {
                                     owner_->bti(), kCodecDataSize, kBufferAlignment, is_secure(),
                                     /*is_writable=*/true, /*is_mapping_needed*/ false);
   if (!codec_data_create_result.is_ok()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
     LOG(ERROR, "Failed to make codec data buffer - status: %d", codec_data_create_result.error());
     return codec_data_create_result.error();
   }
@@ -462,6 +490,7 @@ zx_status_t H264MultiDecoder::InitializeBuffers() {
                                     kAuxBufSize, kBufferAlignment, /*is_secure=*/false,
                                     /*is_writable=*/true, /*is_mapping_needed*/ false);
   if (!aux_buf_create_result.is_ok()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
     LOG(ERROR, "Failed to make aux buffer - status: %d", aux_buf_create_result.error());
     return aux_buf_create_result.error();
   }
@@ -474,6 +503,7 @@ zx_status_t H264MultiDecoder::InitializeBuffers() {
                                     kLmemBufSize, kBufferAlignment, /*is_secure=*/false,
                                     /*is_writable=*/true, /*is_mapping_needed*/ true);
   if (!lmem_create_result.is_ok()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
     LOG(ERROR, "Failed to make lmem buffer - status: %d", lmem_create_result.error());
     return lmem_create_result.error();
   }
@@ -630,6 +660,7 @@ void H264MultiDecoder::StartFrameDecode() {
     // This is the second time we're trying the exact same decode, despite having not decoded
     // anything on the first try.  This can happen if the input data is broken or a client is
     // queueing more PTS values than frames.  In these cases we fail the stream.
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StuckError);
     LOG(ERROR, "no progress being made");
     OnFatalError();
     return;
@@ -681,6 +712,7 @@ void H264MultiDecoder::ConfigureDpb() {
   const auto stream_info2 = StreamInfo2::Get().ReadFrom(owner_->dosbus());
 
   if (!sequence_info.frame_mbs_only_flag()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InterlacedUnsupportedError);
     LOG(ERROR, "!sequence_info.frame_mbs_only_flag() - not supported");
     OnFatalError();
     return;
@@ -693,7 +725,8 @@ void H264MultiDecoder::ConfigureDpb() {
   if (!mb_width && stream_info.total_mbs())
     mb_width = 256;
   if (!mb_width) {
-    DECODE_ERROR("0 mb_width");
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ZeroMbWidthError);
+    LOG(ERROR, "0 mb_width");
     OnFatalError();
     return;
   }
@@ -703,6 +736,7 @@ void H264MultiDecoder::ConfigureDpb() {
   uint32_t coded_height = mb_height * 16;
   constexpr uint32_t kMaxDimension = 4096;  // for both width and height.
   if (coded_width > kMaxDimension || coded_height > kMaxDimension) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_DimensionTooLargeError);
     LOG(ERROR, "Unsupported dimensions %dx%d", coded_width, coded_height);
     OnFatalError();
     return;
@@ -710,12 +744,14 @@ void H264MultiDecoder::ConfigureDpb() {
 
   uint32_t stride = fbl::round_up(coded_width, 32u);
   if (coded_width <= crop_info.right()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_CropInfoError);
     LOG(ERROR, "coded_width <= crop_info.right()");
     OnFatalError();
     return;
   }
   uint32_t display_width = coded_width - crop_info.right();
   if (coded_height <= crop_info.bottom()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_CropInfoError);
     LOG(ERROR, "coded_height <= crop_info.bottom()");
     OnFatalError();
     return;
@@ -733,17 +769,20 @@ void H264MultiDecoder::ConfigureDpb() {
     level = hw_level_idc_;
   }
   if (level == 0) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_LevelZeroError);
     LOG(ERROR, "level == 0");
     OnFatalError();
     return;
   }
   if (level > std::numeric_limits<uint8_t>::max()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_LevelTooLargeError);
     LOG(ERROR, "level > std::numeric_limits<uint8_t>()::max()");
     OnFatalError();
     return;
   }
   uint32_t max_dpb_mbs = media::H264LevelToMaxDpbMbs(static_cast<uint8_t>(level));
   if (!max_dpb_mbs) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_MaxDpbMbsError);
     LOG(ERROR, "!max_dpb_mbs");
     OnFatalError();
     return;
@@ -807,6 +846,8 @@ void H264MultiDecoder::ConfigureDpb() {
     // This also excludes separate_colour_plane_flag true.
     if (sequence_info.chroma_format_idc() != static_cast<uint32_t>(ChromaFormatIdc::k420) &&
         sequence_info.chroma_format_idc() != static_cast<uint32_t>(ChromaFormatIdc::kMonochrome)) {
+      LogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent_ChromaFormatUnsupportedError);
       LOG(ERROR,
           "sequence_info.chroma_format_idc() not in {k420, kMonochrome} - "
           "sequence_info.chroma_format_idc(): %u",
@@ -825,6 +866,7 @@ void H264MultiDecoder::ConfigureDpb() {
     ZX_DEBUG_ASSERT(is_decoder_started_);
     ZX_DEBUG_ASSERT(!is_hw_active_);
     if (!media_decoder_->Flush()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FlushError);
       LOG(ERROR, "!media_decoder_->Flush()");
       OnFatalError();
       return;
@@ -843,13 +885,6 @@ void H264MultiDecoder::ConfigureDpb() {
     static constexpr uint32_t kHwMaxReferenceSizeAdjustment = 4;
     next_max_reference_size_ = stream_info2.max_reference_size() + kHwMaxReferenceSizeAdjustment;
 
-    zx::bti bti;
-    zx_status_t status = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &bti);
-    if (status != ZX_OK) {
-      DECODE_ERROR("bti duplicate failed, status: %d\n", status);
-      return;
-    }
-
     pending_display_width_ = display_width;
     pending_display_height_ = display_height;
     // We handle SAR on the fly in this decoder since we don't get SAR until the slice header shows
@@ -858,9 +893,8 @@ void H264MultiDecoder::ConfigureDpb() {
     static constexpr bool kHasSar = false;
     static constexpr uint32_t kSarWidth = 1;
     static constexpr uint32_t kSarHeight = 1;
-    client_->InitializeFrames(std::move(bti), min_frame_count, max_frame_count, coded_width,
-                              coded_height, stride, display_width, display_height, kHasSar,
-                              kSarWidth, kSarHeight);
+    client_->InitializeFrames(min_frame_count, max_frame_count, coded_width, coded_height, stride,
+                              display_width, display_height, kHasSar, kSarWidth, kSarHeight);
     waiting_for_surfaces_ = true;
     owner_->TryToReschedule();
     return;
@@ -889,7 +923,8 @@ bool H264MultiDecoder::InitializeRefPics(
       continue;
     auto internal_picture = amlogic_picture->internal_picture.lock();
     if (!internal_picture) {
-      DECODE_ERROR("InitializeRefPics reg_offset %d missing internal picture %d", reg_offset, i);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_MissingPictureError);
+      LOG(ERROR, "InitializeRefPics reg_offset %d missing internal picture %d", reg_offset, i);
       frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
       return false;
     }
@@ -988,6 +1023,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     sps->level_idc = params_.data[HardwareRenderParams::kLevelIdcMmco];
     sps->seq_parameter_set_id = params_.data[HardwareRenderParams::kCurrentSpsId];
     if (sps->seq_parameter_set_id >= 32) {
+      LogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent_SeqParameterSetIdTooLargeError);
       LOG(ERROR, "sps->seq_parameter_set_id >= 32");
       OnFatalError();
       return;
@@ -1003,6 +1040,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     // scaling_list8x8
     sps->log2_max_frame_num_minus4 = params_.data[HardwareRenderParams::kLog2MaxFrameNum] - 4;
     if (sps->log2_max_frame_num_minus4 >= 13) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_MaxFrameNumTooLargeError);
       LOG(ERROR, "sps->log2_max_frame_num_minus4 >= 13");
       OnFatalError();
       return;
@@ -1021,6 +1059,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     ZX_DEBUG_ASSERT(sps->num_ref_frames_in_pic_order_cnt_cycle >= 0);
     if (static_cast<uint32_t>(sps->num_ref_frames_in_pic_order_cnt_cycle) >
         HardwareRenderParams::kMaxNumRefFramesInPicOrderCntCycle) {
+      LogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent_NumRefFramesInPocCycleError);
       LOG(ERROR,
           "sps->num_ref_frames_in_pic_order_cnt_cycle > kMaxNumRefFramesInPicOrderCntCycle (128) - "
           "FW supports up to 128 (not 255) - value: %d",
@@ -1050,6 +1090,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     // Also available via SCRATCH2 during FW config request; more convenient to get this way though.
     sps->frame_mbs_only_flag = params_.data[HardwareRenderParams::kFrameMbsOnlyFlag];
     if (!sps->frame_mbs_only_flag) {
+      LogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent_InterlacedUnsupportedError);
       LOG(ERROR, "!sps->frame_mbs_only_flag - not supported");
       OnFatalError();
       return;
@@ -1086,7 +1128,9 @@ void H264MultiDecoder::HandleSliceHeadDone() {
         sps->sar_height = params_.data[HardwareRenderParams::kAspectRatioSarHeight];
       } else {
         if (aspect_ratio_idc >= countof(kTableSarWidth)) {
-          LOG(ERROR, "spect_ratio_idc >= countof(kTableSarWidth)");
+          LogEvent(media_metrics::
+                       StreamProcessorEvents2MetricDimensionEvent_AspectRatioIdcTooLargeError);
+          LOG(ERROR, "aspect_ratio_idc >= countof(kTableSarWidth)");
           OnFatalError();
           return;
         }
@@ -1163,6 +1207,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     pps->pic_parameter_set_id = params_.data[HardwareRenderParams::kCurrentPpsId];
     pps->seq_parameter_set_id = params_.data[HardwareRenderParams::kCurrentSpsId];
     if (pps->seq_parameter_set_id >= 32) {
+      LogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent_SeqParameterSetIdTooLargeError);
       LOG(ERROR, "pps->seq_parameter_set_id >= 32");
       OnFatalError();
       return;
@@ -1171,6 +1217,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     // bottom_field_pic_order_in_frame_present_flag not available from FW
     pps->num_slice_groups_minus1 = params_.data[HardwareRenderParams::kNumSliceGroupsMinus1];
     if (pps->num_slice_groups_minus1 > 0) {
+      LogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent_NumSliceGroupsUnsupportedError);
       LOG(ERROR, "pps->num_slice_groups_minus1 > 0 - not supported");
       OnFatalError();
       return;
@@ -1178,6 +1226,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     pps->num_ref_idx_l0_default_active_minus1 =
         params_.data[HardwareRenderParams::kPpsNumRefIdxL0ActiveMinus1];
     if (pps->num_ref_idx_l0_default_active_minus1 >= 32) {
+      LogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent_NumRefIdxDefaultActiveError);
       LOG(ERROR, "pps->num_ref_idx_l0_default_active_minus1 >= 32");
       OnFatalError();
       return;
@@ -1185,6 +1235,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     pps->num_ref_idx_l1_default_active_minus1 =
         params_.data[HardwareRenderParams::kPpsNumRefIdxL1ActiveMinus1];
     if (pps->num_ref_idx_l1_default_active_minus1 >= 32) {
+      LogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent_NumRefIdxDefaultActiveError);
       LOG(ERROR, "pps->num_ref_idx_l1_default_active_minus1 >= 32");
       OnFatalError();
       return;
@@ -1196,6 +1248,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     pps->pic_init_qp_minus26 =
         static_cast<int16_t>(params_.data[HardwareRenderParams::kPicInitQpMinus26]);
     if (pps->pic_init_qp_minus26 < -26 || pps->pic_init_qp_minus26 > 25) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_PicInitQpRangeError);
       LOG(ERROR, "pps->pic_init_qp_minus26 < -26 || pps->pic_init_qp_minus26 > 25 - value: %d",
           pps->pic_init_qp_minus26);
       OnFatalError();
@@ -1213,6 +1266,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
       // and fail here instead.  It also doesn't appear on first glance that H264Decoder handles
       // non-zero redundant_pic_cnt.  The kSkipPicCount field _might_ be the redundant_pic_cnt, or
       // maybe not.
+      LogEvent(media_metrics::
+                   StreamProcessorEvents2MetricDimensionEvent_RedundantPicCntUnsupportedError);
       LOG(ERROR, "pps->redundant_pic_cnt_present_flag - not supported");
       OnFatalError();
       return;
@@ -1241,6 +1296,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     slice_nalu->nal_ref_idc = params_.data[HardwareRenderParams::kNalRefIdc];
     slice_nalu->nal_unit_type = params_.data[HardwareRenderParams::kNalUnitType];
     if (slice_nalu->nal_unit_type == media::H264NALU::kCodedSliceExtension) {
+      LogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent_SliceExtensionUnsupportedError);
       LOG(ERROR, "nal_unit_type == kCodedSliceExtension - not supported");
       OnFatalError();
       return;
@@ -1262,6 +1319,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     // interlaced not supported
     if (params_.data[HardwareRenderParams::kPictureStructureMmco] !=
         HardwareRenderParams::kPictureStructureMmcoFrame) {
+      LogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent_InterlacedUnsupportedError);
       LOG(ERROR,
           "data[kPictureStructureMmco] != Frame - not supported - data[kPictureStructureMmco]: %x",
           params_.data[HardwareRenderParams::kPictureStructureMmco]);
@@ -1270,6 +1329,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     }
     if (params_.data[HardwareRenderParams::kNewPictureStructure] !=
         HardwareRenderParams::kNewPictureStructureFrame) {
+      LogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent_InterlacedUnsupportedError);
       LOG(ERROR, "data[kNewPictureStructure] != Frame - not supported");
       OnFatalError();
       return;
@@ -1324,12 +1385,15 @@ void H264MultiDecoder::HandleSliceHeadDone() {
               // this is actually ok, to have 32 commands with no terminating 3
               break;
             }
+            LogEvent(
+                media_metrics::StreamProcessorEvents2MetricDimensionEvent_ReorderListTooLargeError);
             LOG(ERROR, "command != 3 && dst_index == kRefListModSize");
             OnFatalError();
             return false;
           }
           if (command != 0 && command != 1 && command != 2 & command != 3) {
-            LOG(ERROR, "command != 3 && command not in {0, 1, 2, 3} - out of sync with FW?");
+            LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ReorderCommandError);
+            LOG(ERROR, "command not in {0, 1, 2, 3} - out of sync with FW?");
             OnFatalError();
             return false;
           }
@@ -1393,17 +1457,22 @@ void H264MultiDecoder::HandleSliceHeadDone() {
       constexpr uint32_t kDstMmcoCmdCount = media::H264SliceHeader::kRefListSize;
       while (true) {
         if (src_index >= kSrcMmcoCmdCount) {
+          LogEvent(media_metrics::
+                       StreamProcessorEvents2MetricDimensionEvent_MmcoSrcCmdCountUnsupportedError);
           LOG(ERROR, "src_index >= kSrcMmcoCmdCount - unsupported stream");
           OnFatalError();
           return;
         }
         if (dst_index >= kDstMmcoCmdCount) {
+          LogEvent(media_metrics::
+                       StreamProcessorEvents2MetricDimensionEvent_MmcoDstCmdCountUnsupportedError);
           LOG(ERROR, "dst_index >= kDstMmcoCmdCount - unsupported stream");
           OnFatalError();
           return;
         }
         uint16_t mmco = mmco_cmds[src_index++];
         if (mmco > 6) {
+          LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_MmcoCommandError);
           LOG(ERROR, "mmco > 6");
           OnFatalError();
           return;
@@ -1416,6 +1485,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
         // We need at least enough room to read mmco == 0 next loop iteration, if not something else
         // sooner.
         if (src_index >= kSrcMmcoCmdCount) {
+          LogEvent(media_metrics::
+                       StreamProcessorEvents2MetricDimensionEvent_MmcoSrcCmdCountUnsupportedError);
           LOG(ERROR, "src_index >= kSrcMmcoCmdCount - unsupported stream");
           OnFatalError();
           return;
@@ -1429,6 +1500,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
         // We need at least enough room to read mmco == 0 next loop iteration, if not something else
         // sooner.
         if (src_index >= kSrcMmcoCmdCount) {
+          LogEvent(media_metrics::
+                       StreamProcessorEvents2MetricDimensionEvent_MmcoSrcCmdCountUnsupportedError);
           LOG(ERROR, "src_index >= kSrcMmcoCmdCount - unsupported stream");
           OnFatalError();
           return;
@@ -1469,6 +1542,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     // when broken input data is detected.
     //
     // TODO(fxbug.dev/13483): Be more resilient to broken input data.
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FrameNumError);
     LOG(ERROR, "frame_num_ && frame_num_.value() != frame_num");
     OnFatalError();
     return;
@@ -1476,6 +1550,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   frame_num_.emplace(frame_num);
 
   if (first_mb_in_slice <= per_frame_attempt_seen_first_mb_in_slice_) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirstMbInSliceError);
     LOG(ERROR, "first_mb_in_slice out of order or repeated - broken input data");
     OnFatalError();
     return;
@@ -1484,17 +1559,20 @@ void H264MultiDecoder::HandleSliceHeadDone() {
 
   if (first_mb_in_slice == per_frame_seen_first_mb_in_slice_) {
     if (sps_nalu) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_BrokenPictureBodyError);
       LOG(ERROR, "no pic data done after slice header before new SPS - broken input data");
       OnFatalError();
       return;
     }
     if (pps_nalu) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_BrokenPictureBodyError);
       LOG(ERROR, "no pic data done after slice header before new PPS - broken input data");
       OnFatalError();
       return;
     }
     if (memcmp(slice_nalu->preparsed_header.get<std::unique_ptr<media::H264SliceHeader>>().get(),
                &stashed_latest_slice_header_, sizeof(stashed_latest_slice_header_))) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirstMbInSliceError);
       LOG(ERROR, "inconsistent slice data for same first_mb_in_slice - broken input data");
       OnFatalError();
       return;
@@ -1520,6 +1598,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
       decode_result = media_decoder_->Decode();
       switch (decode_result) {
         case media::AcceleratedVideoDecoder::kDecodeError:
+          LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_GenericDecodeError);
           LOG(ERROR, "kDecodeError");
           OnFatalError();
           return;
@@ -1534,19 +1613,25 @@ void H264MultiDecoder::HandleSliceHeadDone() {
           // were to happen, it'd very likely disrupt progress of any concurrent stream, since
           // swapping out at a slice header isn't implemented so far (unknown whether
           // saving/restoring state at a slice header is possible).
+          LogEvent(
+              media_metrics::StreamProcessorEvents2MetricDimensionEvent_MissingOutputSurfaceError);
           LOG(ERROR, "kRanOutOfSurfaces despite pre-check in PumpDecoder()");
           OnFatalError();
           ZX_DEBUG_ASSERT(!IsUnusedReferenceFrameAvailable());
           return;
         case media::AcceleratedVideoDecoder::kNeedContextUpdate:
+          LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
           LOG(ERROR, "kNeedContextUpdate is impossible");
           OnFatalError();
           return;
         case media::AcceleratedVideoDecoder::kTryAgain:
+          LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
           LOG(ERROR, "kTryAgain despite this accelerator never indicating that");
           OnFatalError();
           return;
         default:
+          LogEvent(
+              media_metrics::StreamProcessorEvents2MetricDimensionEvent_DecodeResultInvalidError);
           LOG(ERROR, "unexpected decode_result: %u", decode_result);
           OnFatalError();
           return;
@@ -1562,6 +1647,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   if (!current_frame_) {
     current_frame_ = current_metadata_frame_;
     if (!current_frame_) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_SwHwSyncError);
       LOG(ERROR, "HandleSliceDecode with no metadata frame available");
       OnFatalError();
       return;
@@ -1611,6 +1697,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
 
   auto poc = poc_.ComputePicOrderCnt(&current_slice_data_->sps, current_slice_data_->header);
   if (!poc) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_PicOrderCntError);
     LOG(ERROR, "No poc");
     OnFatalError();
     return;
@@ -1677,6 +1764,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   if (!SpinWaitForRegister(std::chrono::milliseconds(400), [&] {
         return !H264CoMbRwCtl::Get().ReadFrom(owner_->dosbus()).busy();
       })) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_TimeoutWaitingForHwError);
     LOG(ERROR, "Failed to wait for rw register nonbusy");
     OnFatalError();
     return;
@@ -1703,7 +1791,9 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     if (amlogic_picture) {
       auto internal_picture = amlogic_picture->internal_picture.lock();
       if (!internal_picture) {
-        DECODE_ERROR("Co-mb read buffer nonexistent");
+        LogEvent(
+            media_metrics::StreamProcessorEvents2MetricDimensionEvent_MotionVectorContextError);
+        LOG(ERROR, "Co-mb read buffer nonexistent");
         frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
         return;
       }
@@ -1791,10 +1881,12 @@ void H264MultiDecoder::HandlePicDataDone() {
   media::AcceleratedVideoDecoder::DecodeResult decode_result = media_decoder_->Decode();
   switch (decode_result) {
     case media::AcceleratedVideoDecoder::kDecodeError:
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_GenericDecodeError);
       LOG(ERROR, "kDecodeError");
       OnFatalError();
       return;
     case media::AcceleratedVideoDecoder::kConfigChange:
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
       LOG(ERROR, "kConfigChange unexpected here");
       OnFatalError();
       return;
@@ -1802,14 +1894,17 @@ void H264MultiDecoder::HandlePicDataDone() {
       // keep going
       break;
     case media::AcceleratedVideoDecoder::kRanOutOfSurfaces:
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_SwHwSyncError);
       LOG(ERROR, "kRanOutOfSurfaces desipte checking in advance of starting frame decode");
       OnFatalError();
       return;
     case media::AcceleratedVideoDecoder::kNeedContextUpdate:
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
       LOG(ERROR, "kNeedContextUpdate is impossible");
       OnFatalError();
       return;
     case media::AcceleratedVideoDecoder::kTryAgain:
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
       LOG(ERROR, "kTryAgain despite this accelerator never indicating that");
       OnFatalError();
       return;
@@ -1864,6 +1959,7 @@ void H264MultiDecoder::HandleBufEmpty() {
     //
     // This Flush() may output a few more frames.
     if (!media_decoder_->Flush()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FlushError);
       LOG(ERROR, "Flush failed");
       OnFatalError();
       return;
@@ -1902,7 +1998,7 @@ void H264MultiDecoder::HandleHardwareError() {
   // We need to reset the hardware here or for some malformed hardware streams (e.g.
   // bear_h264[638] = 44) the CPU will hang when trying to isolate VDEC1 power on shutdown.
   ResetHardware();
-  LOG(ERROR, "ResetHardware() done.");
+  LOG(WARNING, "ResetHardware() done.");
   frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
 }
 
@@ -1921,7 +2017,8 @@ void H264MultiDecoder::HandleInterrupt() {
       break;
     }
     case kH264DataRequest:
-      DECODE_ERROR("Got unhandled data request");
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_SwHwSyncError);
+      LOG(ERROR, "Got unhandled data request");
       HandleHardwareError();
       break;
     case kH264SliceHeadDone: {
@@ -1938,7 +2035,8 @@ void H264MultiDecoder::HandleInterrupt() {
       break;
     }
     case kH264DecodeTimeout:
-      DECODE_ERROR("Decoder got kH264DecodeTimeout");
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_HwTimeoutError);
+      LOG(ERROR, "Decoder got kH264DecodeTimeout");
       HandleHardwareError();
       break;
     default:
@@ -1956,7 +2054,9 @@ void H264MultiDecoder::HandleInterrupt() {
       // not any of the non-"default" values handled by this switch statement.  In this case the
       // stale interrupt is ignored in this path here.
       //
-      // ignore stale interrupt
+      // Ignore stale interrupt, but log an event so we can know how often this happens outside
+      // stress testing.  This is not considered an error.
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StaleInterruptSeen);
       break;
   }
 }
@@ -2002,7 +2102,8 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
         io_buffer_init_vmo(&frame->buffer, owner_->bti()->get(),
                            frames[i].buffer_spec().vmo_range.vmo().get(), 0, IO_BUFFER_RW);
     if (status != ZX_OK) {
-      DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n", status);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
+      LOG(ERROR, "Failed to io_buffer_init_vmo() for frame - status: %d\n", status);
       OnFatalError();
       return;
     }
@@ -2033,6 +2134,8 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
     auto uv_canvas = owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset, frame->stride,
                                              frame->coded_height / 2, 0, 0);
     if (!y_canvas || !uv_canvas) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
+      LOG(ERROR, "ConfigureCanvas() failed - y: %d uv: %d", !!y_canvas, !!uv_canvas);
       OnFatalError();
       return;
     }
@@ -2053,6 +2156,7 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
                                colocated_buffer_size, is_secure_,
                                /*is_writable=*/true, /*is_mapping_needed*/ false);
     if (!create_result.is_ok()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
       LOG(ERROR, "Couldn't allocate reference mv buffer - status: %d", create_result.error());
       OnFatalError();
       return;
@@ -2134,6 +2238,7 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
     zx_status_t status =
         owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser, is_secure_);
     if (status != ZX_OK) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_DrmConfigError);
       LOG(ERROR, "video_->SetProtected(kParser) failed - status: %d", status);
       OnFatalError();
       return;
@@ -2141,7 +2246,8 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
     // Pass nullptr because we'll handle syncing updates manually.
     status = owner_->parser()->InitializeEsParser(nullptr);
     if (status != ZX_OK) {
-      DECODE_ERROR("InitializeEsParser failed - status: %d", status);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
+      LOG(ERROR, "InitializeEsParser failed - status: %d", status);
       OnFatalError();
       return;
     }
@@ -2168,8 +2274,9 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
       // slowly grows to maximum size, before finally hitting this case and failing the stream.  The
       // test should verify that the decoder remains reasonably avaialble to a competing concurrent
       // well-behaved client providing a well-behaved stream.
-      DECODE_ERROR("Empty space in stream buffer %d too small for video data (0x%x)",
-                   stream_buffer_empty_space, length);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InputBufferFullError);
+      LOG(ERROR, "Empty space in stream buffer %d too small for video data (0x%x)",
+          stream_buffer_empty_space, length);
       OnFatalError();
       return;
     }
@@ -2182,13 +2289,15 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
       status = owner_->parser()->ParseVideo(data, length);
     }
     if (status != ZX_OK) {
-      DECODE_ERROR("Parsing video failed - status: %d", status);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InputHwError);
+      LOG(ERROR, "Parsing video failed - status: %d", status);
       OnFatalError();
       return;
     }
     status = owner_->parser()->WaitForParsingCompleted(ZX_SEC(10));
     if (status != ZX_OK) {
-      DECODE_ERROR("Parsing video timed out - status: %d", status);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InputHwTimeout);
+      LOG(ERROR, "Parsing video timed out - status: %d", status);
       owner_->parser()->CancelParsing();
       OnFatalError();
       return;
@@ -2198,7 +2307,8 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
   } else {
     zx_status_t status = owner_->ProcessVideoNoParser(data, length);
     if (status != ZX_OK) {
-      DECODE_ERROR("Failed to write video");
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InputProcessingError);
+      LOG(ERROR, "Failed to write video");
       OnFatalError();
     }
   }
@@ -2286,12 +2396,15 @@ void H264MultiDecoder::SwappedIn() {
 }
 
 void H264MultiDecoder::OnSignaledWatchdog() {
-  DECODE_ERROR("Hit watchdog");
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_WatchdogFired);
+  LOG(ERROR, "Hit watchdog");
   HandleHardwareError();
 }
 
 void H264MultiDecoder::OnFatalError() {
   if (!fatal_error_) {
+    // This causes most/all fatal errors to generate two Cobalt events, one more specific and one
+    // more generic (WAI).
     fatal_error_ = true;
     client_->OnError();
   }
@@ -2318,6 +2431,7 @@ void H264MultiDecoder::PropagatePotentialEos() {}
 
 void H264MultiDecoder::RequestStreamReset() {
   fatal_error_ = true;
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamReset);
   LOG(ERROR, "fatal_error_ = true");
   frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
   owner_->TryToReschedule();

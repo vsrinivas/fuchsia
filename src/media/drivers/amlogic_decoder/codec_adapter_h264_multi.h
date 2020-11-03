@@ -27,6 +27,9 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
                                  DeviceCtx* device);
   ~CodecAdapterH264Multi();
 
+  std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
+  CoreCodecMetricsImplementation() override;
+
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
   bool IsCoreCodecMappedBufferUseful(CodecPort port) override;
   bool IsCoreCodecHwBased(CodecPort port) override;
@@ -67,10 +70,10 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
   void OnEos() override;
   bool IsOutputReady() override { return true; }
   void OnFrameReady(std::shared_ptr<VideoFrame> frame) override;
-  zx_status_t InitializeFrames(zx::bti, uint32_t min_frame_count, uint32_t max_frame_count,
-                               uint32_t width, uint32_t height, uint32_t stride,
-                               uint32_t display_width, uint32_t display_height, bool has_sar,
-                               uint32_t sar_width, uint32_t sar_height) override;
+  zx_status_t InitializeFrames(uint32_t min_frame_count, uint32_t max_frame_count, uint32_t width,
+                               uint32_t height, uint32_t stride, uint32_t display_width,
+                               uint32_t display_height, bool has_sar, uint32_t sar_width,
+                               uint32_t sar_height) override;
   bool IsCurrentOutputBufferCollectionUsable(uint32_t min_frame_count, uint32_t max_frame_count,
                                              uint32_t coded_width, uint32_t coded_height,
                                              uint32_t stride, uint32_t display_width,

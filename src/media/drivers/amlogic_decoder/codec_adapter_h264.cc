@@ -14,6 +14,7 @@
 #include "device_ctx.h"
 #include "h264_decoder.h"
 #include "macros.h"
+#include "src/media/lib/metrics/metrics.cb.h"
 #include "pts_manager.h"
 #include "vdec1.h"
 
@@ -123,6 +124,13 @@ CodecAdapterH264::~CodecAdapterH264() {
 
   // nothing else to do here, at least not until we aren't calling PowerOff() in
   // CoreCodecStopStream().
+}
+
+std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
+CodecAdapterH264::CoreCodecMetricsImplementation() {
+  // Unspecified because we don't actually need metrics from h264-single, since we always use
+  // h264-multi outside of testing/debugging.
+  return media_metrics::StreamProcessorEvents2MetricDimensionImplementation_Unspecified;
 }
 
 bool CodecAdapterH264::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
@@ -1250,9 +1258,8 @@ bool CodecAdapterH264::ParseVideoAnnexB(const CodecBuffer* buffer, const uint8_t
   return true;
 }
 
-zx_status_t CodecAdapterH264::InitializeFrames(::zx::bti bti, uint32_t min_frame_count,
-                                               uint32_t max_frame_count, uint32_t width,
-                                               uint32_t height, uint32_t stride,
+zx_status_t CodecAdapterH264::InitializeFrames(uint32_t min_frame_count, uint32_t max_frame_count,
+                                               uint32_t width, uint32_t height, uint32_t stride,
                                                uint32_t display_width, uint32_t display_height,
                                                bool has_sar, uint32_t sar_width,
                                                uint32_t sar_height) {
