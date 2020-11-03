@@ -210,6 +210,11 @@ zx_status_t Imx227Device::CameraSensor2Update() {
   TRACE_DURATION("camera", "Imx227Device::CameraSensor2Update");
   std::lock_guard guard(lock_);
 
+  if (!analog_gain_.update_gain_ && !digital_gain_.update_gain_ &&
+      !integration_time_.update_integration_time_) {
+    return ZX_OK;
+  }
+
   auto status = SetGroupedParameterHold(true);
 
   if (analog_gain_.update_gain_) {

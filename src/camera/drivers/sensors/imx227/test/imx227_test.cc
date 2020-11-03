@@ -291,13 +291,7 @@ TEST_F(Imx227DeviceTest, UpdateAnalogGain) {
   dut().mock_i2c().VerifyAndClear();
   ASSERT_EQ(8.0, out_gain);
 
-  // TODO: Remove the grouped parameter hold register accesses if there are no parameter changes.
-  dut()
-      .mock_i2c()
-      // Grouped parameter hold == true
-      .ExpectWriteStop({0x01, 0x04, 1})
-      // Grouped parameter hold == false
-      .ExpectWriteStop({0x01, 0x04, 0});
+  // No i2c interactions expected.
   ASSERT_OK(dut().CameraSensor2Update());
   dut().mock_i2c().VerifyAndClear();
 }
