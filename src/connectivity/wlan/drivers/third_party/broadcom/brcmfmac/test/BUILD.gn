@@ -70,7 +70,6 @@ executable("debug_test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("dma_buffer_test") {
@@ -97,7 +96,6 @@ executable("dma_pool_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/zx",
   ]
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("dma_ring_test") {
@@ -111,7 +109,6 @@ executable("dma_ring_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/zx",
   ]
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("intrusive_list_test") {
@@ -136,7 +133,6 @@ executable("netbuf_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/zircon-internal",
   ]
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("task_queue_test") {
