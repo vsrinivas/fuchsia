@@ -11,6 +11,7 @@ use {
         RealTimeClockEventsMetricDimensionEventType as CobaltRtcEvent, TimeMetricDimensionRole,
         TimeMetricDimensionTrack,
         TimekeeperTimeSourceEventsMetricDimensionEventType as CobaltTimeSourceEvent,
+        TimekeeperTrackEventsMetricDimensionEventType as CobaltTrackEvent,
     },
 };
 
@@ -123,6 +124,63 @@ impl Into<TimeMetricDimensionTrack> for Track {
 pub enum StartClockSource {
     Rtc,
     External(Role),
+}
+
+/// The strategies that can be used to align a clock with the estimated UTC.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ClockCorrectionStrategy {
+    /// The clock error is not large enough to merit a change.
+    NotRequired,
+    /// The clock will be immediately stepped to the new value.
+    Step,
+    /// The clock will be gradually slewed to the new value by applying a small rate change for
+    /// as long as is necessary.
+    NominalRateSlew,
+    /// The clock will be slewed to the new value by applying whatever rate change is necessary to
+    /// complete the correction within the maximum allowed duration.
+    MaxDurationSlew,
+}
+
+// Required to instantiate a circular buffer of clock corrections in inspect.
+impl Default for ClockCorrectionStrategy {
+    fn default() -> Self {
+        ClockCorrectionStrategy::NotRequired
+    }
+}
+
+impl Into<CobaltTrackEvent> for ClockCorrectionStrategy {
+    fn into(self) -> CobaltTrackEvent {
+        match self {
+            Self::NotRequired => CobaltTrackEvent::CorrectionNotRequired,
+            Self::Step => CobaltTrackEvent::CorrectionByStep,
+            Self::NominalRateSlew => CobaltTrackEvent::CorrectionByNominalRateSlew,
+            Self::MaxDurationSlew => CobaltTrackEvent::CorrectionByMaxDurationSlew,
+        }
+    }
+}
+
+/// The reasons a clock may have been updated.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ClockUpdateReason {
+    TimeStep,
+    BeginSlew,
+    EndSlew,
+    ReduceError,
+    IncreaseError,
+    ChangeFrequency,
+}
+
+impl Into<CobaltTrackEvent> for ClockUpdateReason {
+    fn into(self) -> CobaltTrackEvent {
+        match self {
+            Self::TimeStep => CobaltTrackEvent::ClockUpdateTimeStep,
+            Self::BeginSlew => CobaltTrackEvent::ClockUpdateBeginSlew,
+            Self::EndSlew => CobaltTrackEvent::ClockUpdateEndSlew,
+            Self::ReduceError => CobaltTrackEvent::ClockUpdateReduceError,
+            Self::IncreaseError => CobaltTrackEvent::ClockUpdateIncreaseError,
+            Self::ChangeFrequency => CobaltTrackEvent::ClockUpdateChangeFrequency,
+        }
+    }
 }
 
 /// The reasons a received time sample may not be valid.

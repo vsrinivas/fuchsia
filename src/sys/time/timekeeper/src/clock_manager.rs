@@ -5,7 +5,9 @@
 use {
     crate::{
         diagnostics::{Diagnostics, Event},
-        enums::{StartClockSource, Track, WriteRtcOutcome},
+        enums::{
+            ClockCorrectionStrategy, ClockUpdateReason, StartClockSource, Track, WriteRtcOutcome,
+        },
         estimator::Estimator,
         notifier::Notifier,
         rtc::Rtc,
@@ -182,22 +184,35 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
         let correction = new_offset - current_offset;
 
         // For now we omit very small corrections and implement everything else as a simple step.
-        if within_bound(correction, CLOCK_UPDATE_THRESHOLD) {
-            info!(
-                "{:?} clock correction of {:?} very small, skipping",
-                self.track,
-                correction.into_nanos(),
-            );
+        let strategy = if within_bound(correction, CLOCK_UPDATE_THRESHOLD) {
+            ClockCorrectionStrategy::NotRequired
         } else {
-            let utc = zx::Time::get_monotonic() + new_offset;
-            let utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
-            if let Err(status) = self.clock.update(zx::ClockUpdate::new().value(utc)) {
-                // Clock update failures should only be caused by an invalid clock object. There
-                // isn't anything Timekeeper could do to effectively handle them.
-                panic!("failed to update {:?} clock to {}: {}", self.track, utc_chrono, status);
-            };
-            self.diagnostics.record(Event::UpdateClock { track: self.track });
-            info!("adjusted {:?} clock to {}", self.track, utc_chrono);
+            ClockCorrectionStrategy::Step
+        };
+        self.diagnostics.record(Event::ClockCorrection { track: self.track, correction, strategy });
+
+        match strategy {
+            ClockCorrectionStrategy::NotRequired => {
+                info!(
+                    "{:?} clock correction of {:?} very small, skipping",
+                    self.track,
+                    correction.into_nanos(),
+                );
+            }
+            _ => {
+                let utc = zx::Time::get_monotonic() + new_offset;
+                let utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
+                if let Err(status) = self.clock.update(zx::ClockUpdate::new().value(utc)) {
+                    // Clock update failures should only be caused by an invalid clock object. There
+                    // isn't anything Timekeeper could do to effectively handle them.
+                    panic!("failed to update {:?} clock to {}: {}", self.track, utc_chrono, status);
+                };
+                self.diagnostics.record(Event::UpdateClock {
+                    track: self.track,
+                    reason: ClockUpdateReason::TimeStep,
+                });
+                info!("adjusted {:?} clock to {}", self.track, utc_chrono);
+            }
         }
     }
 }
@@ -220,7 +235,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            diagnostics::FakeDiagnostics,
+            diagnostics::{FakeDiagnostics, ANY_DURATION},
             enums::{Role, WriteRtcOutcome},
             rtc::FakeRtc,
             time_source::{Event as TimeSourceEvent, FakeTimeSource, Sample},
@@ -421,7 +436,12 @@ mod tests {
                 offset: expected_offset,
                 sqrt_covariance: zx::Duration::from_nanos(62225396),
             },
-            Event::UpdateClock { track: *TEST_TRACK },
+            Event::ClockCorrection {
+                track: *TEST_TRACK,
+                correction: ANY_DURATION,
+                strategy: ClockCorrectionStrategy::Step,
+            },
+            Event::UpdateClock { track: *TEST_TRACK, reason: ClockUpdateReason::TimeStep },
         ]);
     }
 }

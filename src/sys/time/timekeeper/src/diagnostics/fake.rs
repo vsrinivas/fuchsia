@@ -3,19 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::diagnostics::{Diagnostics, Event},
+    crate::diagnostics::{Diagnostics, Event, ANY_DURATION, ANY_TIME},
     fuchsia_zircon as zx,
-    lazy_static::lazy_static,
     parking_lot::Mutex,
 };
-
-/// A special `Duration` that will match any value during an `eq_with_any` operation.
-pub const ANY_DURATION: zx::Duration = zx::Duration::from_nanos(i64::MIN);
-
-lazy_static! {
-    /// A special time that will match any value during an `eq_with_any` operation.
-    pub static ref ANY_TIME: zx::Time = zx::Time::from_nanos(i64::MIN);
-}
 
 /// A fake `Diagnostics` implementation useful for verifying unittest.
 pub struct FakeDiagnostics {
@@ -115,6 +106,18 @@ impl EqWithAny for Event {
                     track == other_track
                         && offset.eq_with_any(other_offset)
                         && sqrt_covariance.eq_with_any(other_sqrt_cov)
+                }
+                _ => false,
+            },
+            Event::ClockCorrection { track, correction, strategy } => match other {
+                Event::ClockCorrection {
+                    track: other_track,
+                    correction: other_correction,
+                    strategy: other_strategy,
+                } => {
+                    track == other_track
+                        && correction.eq_with_any(other_correction)
+                        && strategy == other_strategy
                 }
                 _ => false,
             },

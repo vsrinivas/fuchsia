@@ -64,8 +64,10 @@ const DEV_TEST_SOURCES: TimeSourceUrls = TimeSourceUrls {
     monitor: None,
 };
 
-/// The experiment to record on Cobalt events.
+/// The experiment to record on Cobalt events in the non-test case.
 const COBALT_EXPERIMENT: TimeMetricDimensionExperiment = TimeMetricDimensionExperiment::A;
+/// The experiment to record on Cobalt events to install when the dev_time_sources flag is set.
+const DEV_COBALT_EXPERIMENT: TimeMetricDimensionExperiment = TimeMetricDimensionExperiment::None;
 
 /// The information required to maintain UTC for the primary track.
 struct PrimaryTrack<T: TimeSource> {
@@ -124,9 +126,13 @@ async fn main() -> Result<(), Error> {
     });
 
     info!("initializing diagnostics and serving inspect on servicefs");
+    let cobalt_experiment = match options.dev_time_sources {
+        true => DEV_COBALT_EXPERIMENT,
+        false => COBALT_EXPERIMENT,
+    };
     let diagnostics = Arc::new(CompositeDiagnostics::new(
         InspectDiagnostics::new(diagnostics::INSPECTOR.root(), &primary_track, &monitor_track),
-        CobaltDiagnostics::new(COBALT_EXPERIMENT),
+        CobaltDiagnostics::new(cobalt_experiment),
     ));
     let mut fs = ServiceFs::new();
     diagnostics::INSPECTOR.serve(&mut fs)?;

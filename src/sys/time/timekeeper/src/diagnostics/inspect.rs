@@ -6,8 +6,8 @@ use {
     crate::{
         diagnostics::{Diagnostics, Event},
         enums::{
-            InitializeRtcOutcome, Role, SampleValidationError, TimeSourceError, Track,
-            WriteRtcOutcome,
+            ClockCorrectionStrategy, ClockUpdateReason, InitializeRtcOutcome, Role,
+            SampleValidationError, TimeSourceError, Track, WriteRtcOutcome,
         },
         MonitorTrack, PrimaryTrack, TimeSource,
     },
@@ -30,6 +30,8 @@ const ONE_MILLION: u32 = 1_000_000;
 const FAILED_TIME: i64 = -1;
 /// The number of time estimates that are retained.
 const ESTIMATE_UPDATE_COUNT: usize = 5;
+/// The number of clock corrections that are retained.
+const CLOCK_CORRECTION_COUNT: usize = 3;
 
 lazy_static! {
     pub static ref INSPECTOR: Inspector = Inspector::new();
@@ -103,7 +105,7 @@ impl TimeSet {
     }
 }
 
-/// A representation of a single update to the UTC zx::Clock.
+/// A representation of a single update to a UTC zx::Clock.
 #[derive(InspectWritable)]
 pub struct ClockDetails {
     /// The monotonic time at which the details were retrieved. Note this is the time the Rust
@@ -121,6 +123,16 @@ pub struct ClockDetails {
     rate_ppm: u32,
     /// The error bounds as documented in the zx::Clock.
     error_bounds: u64,
+    /// The reason this clock update occurred, if known.
+    reason: Option<ClockUpdateReason>,
+}
+
+impl ClockDetails {
+    /// Attaches a reason for the clock update.
+    pub fn with_reason(mut self, reason: ClockUpdateReason) -> Self {
+        self.reason = Some(reason);
+        self
+    }
 }
 
 impl From<zx::ClockDetails> for ClockDetails {
@@ -141,6 +153,7 @@ impl From<zx::ClockDetails> for ClockDetails {
             utc_offset: details.mono_to_synthetic.synthetic_offset,
             rate_ppm: rate_ppm as u32,
             error_bounds: details.error_bounds,
+            reason: None,
         }
     }
 }
@@ -247,10 +260,23 @@ pub struct Estimate {
     sqrt_covariance: u64,
 }
 
+/// A representation of a single planned clock correction.
+#[derive(InspectWritable, Default)]
+pub struct ClockCorrection {
+    /// The monotonic time at which the clock correction was received.
+    monotonic: i64,
+    /// The change to be applied to the current clock value, in nanoseconds.
+    correction: i64,
+    /// The strategy that will be used to apply this correction.
+    strategy: ClockCorrectionStrategy,
+}
+
 /// An inspect `Node` and properties used to describe the state and history of a time track.
 struct TrackNode {
     /// A circular buffer of recent updates to the time estimate.
     estimates: CircularBuffer<Estimate>,
+    /// A circular buffer of recently planned clock corrections.
+    corrections: CircularBuffer<ClockCorrection>,
     /// The inspect `Node` these fields are exported to.
     _node: Node,
 }
@@ -260,6 +286,7 @@ impl TrackNode {
     pub fn new(node: Node) -> Self {
         TrackNode {
             estimates: CircularBuffer::new(ESTIMATE_UPDATE_COUNT, "estimate_", &node),
+            corrections: CircularBuffer::new(CLOCK_CORRECTION_COUNT, "clock_correction_", &node),
             _node: node,
         }
     }
@@ -272,6 +299,20 @@ impl TrackNode {
             sqrt_covariance: sqrt_covariance.into_nanos() as u64,
         };
         self.estimates.update(&estimate);
+    }
+
+    /// Records a new planned correction for the clock.
+    pub fn clock_correction(
+        &mut self,
+        correction: zx::Duration,
+        strategy: ClockCorrectionStrategy,
+    ) {
+        let clock_correction = ClockCorrection {
+            monotonic: monotonic_time(),
+            correction: correction.into_nanos(),
+            strategy,
+        };
+        self.corrections.update(&clock_correction);
     }
 }
 
@@ -360,12 +401,15 @@ impl InspectDiagnostics {
     }
 
     /// Records an update to the UTC zx::Clock
-    fn update_clock(&self, track: Track) {
+    fn update_clock(&self, track: Track, reason: Option<ClockUpdateReason>) {
         if track == Track::Primary {
             self.health.lock().set_ok();
             match self.clock.get_details() {
                 Ok(details) => {
-                    let details_struct: ClockDetails = details.into();
+                    let mut details_struct: ClockDetails = details.into();
+                    if let Some(reason) = reason {
+                        details_struct = details_struct.with_reason(reason);
+                    }
                     let mut lock = self.last_update.lock();
                     if let Some(last_update) = &*lock {
                         last_update.update(&details_struct);
@@ -414,14 +458,19 @@ impl Diagnostics for InspectDiagnostics {
                     .get_mut(&track)
                     .map(|track| track.update_estimate(offset, sqrt_covariance));
             }
+            Event::ClockCorrection { track, correction, strategy } => {
+                self.tracks
+                    .lock()
+                    .get_mut(&track)
+                    .map(|track| track.clock_correction(correction, strategy));
+            }
             Event::WriteRtc { outcome } => {
                 if let Some(ref mut rtc_node) = *self.rtc.lock() {
                     rtc_node.write(outcome);
                 }
             }
-            Event::StartClock { track, .. } | Event::UpdateClock { track } => {
-                self.update_clock(track)
-            }
+            Event::StartClock { track, .. } => self.update_clock(track, None),
+            Event::UpdateClock { track, reason } => self.update_clock(track, Some(reason)),
         }
     }
 }
@@ -445,6 +494,7 @@ mod tests {
     const ERROR_BOUNDS: u64 = 4444444444;
     const GENERATION_COUNTER: u32 = 7777;
     const OFFSET: zx::Duration = zx::Duration::from_seconds(311);
+    const CORRECTION: zx::Duration = zx::Duration::from_millis(88);
     const SQRT_COVARIANCE: i64 = 5454545454;
 
     const VALID_DETAILS: zx::sys::zx_clock_details_v1_t = zx::sys::zx_clock_details_v1_t {
@@ -579,7 +629,7 @@ mod tests {
                     .error_bounds(0),
             )
             .expect("Failed to update test clock");
-        inspect_diagnostics.update_clock(Track::Primary);
+        inspect_diagnostics.update_clock(Track::Primary, None);
         clock
             .update(
                 zx::ClockUpdate::new()
@@ -588,7 +638,7 @@ mod tests {
                     .error_bounds(ERROR_BOUNDS),
             )
             .expect("Failed to update test clock");
-        inspect_diagnostics.update_clock(Track::Primary);
+        inspect_diagnostics.update_clock(Track::Primary, Some(ClockUpdateReason::TimeStep));
         assert_inspect_tree!(
             inspector,
             root: contains {
@@ -611,6 +661,7 @@ mod tests {
                     utc_offset: AnyProperty,
                     rate_ppm: 1_000_000u64 + RATE_ADJUST as u64,
                     error_bounds: ERROR_BOUNDS,
+                    reason: "Some(TimeStep)",
                 },
                 "fuchsia.inspect.Health": contains {
                     status: "OK",
@@ -740,6 +791,24 @@ mod tests {
                         offset: 0i64,
                         sqrt_covariance: 0u64,
                     },
+                    clock_correction_0: contains {
+                        counter: 0u64,
+                        monotonic: 0i64,
+                        correction: 0i64,
+                        strategy: "NotRequired",
+                    },
+                    clock_correction_1: contains {
+                        counter: 0u64,
+                        monotonic: 0i64,
+                        correction: 0i64,
+                        strategy: "NotRequired",
+                    },
+                    clock_correction_2: contains {
+                        counter: 0u64,
+                        monotonic: 0i64,
+                        correction: 0i64,
+                        strategy: "NotRequired",
+                    },
                 },
                 monitor_track: contains {
                     estimate_0: contains {},
@@ -747,6 +816,9 @@ mod tests {
                     estimate_2: contains {},
                     estimate_3: contains {},
                     estimate_4: contains {},
+                    clock_correction_0: contains {},
+                    clock_correction_1: contains {},
+                    clock_correction_2: contains {},
                 },
             }
         );
@@ -757,6 +829,11 @@ mod tests {
                 track: Track::Primary,
                 offset: OFFSET * i,
                 sqrt_covariance: zx::Duration::from_nanos(SQRT_COVARIANCE) * i,
+            });
+            test.record(Event::ClockCorrection {
+                track: Track::Primary,
+                correction: CORRECTION * i,
+                strategy: ClockCorrectionStrategy::MaxDurationSlew,
             });
         }
 
@@ -793,6 +870,24 @@ mod tests {
                         monotonic: AnyProperty,
                         offset: 5 * OFFSET.into_nanos(),
                         sqrt_covariance: 5 * SQRT_COVARIANCE as u64,
+                    },
+                    clock_correction_0: contains {
+                        counter: 7u64,
+                        monotonic: AnyProperty,
+                        correction: 7 * CORRECTION.into_nanos(),
+                        strategy: "MaxDurationSlew",
+                    },
+                    clock_correction_1: contains {
+                        counter: 5u64,
+                        monotonic: AnyProperty,
+                        correction: 5 * CORRECTION.into_nanos(),
+                        strategy: "MaxDurationSlew",
+                    },
+                    clock_correction_2: contains {
+                        counter: 6u64,
+                        monotonic: AnyProperty,
+                        correction: 6 * CORRECTION.into_nanos(),
+                        strategy: "MaxDurationSlew",
                     },
                 },
                 monitor_track: contains {

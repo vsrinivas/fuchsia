@@ -30,7 +30,6 @@ fn duration_to_f64(duration: zx::Duration) -> f64 {
 }
 
 /// Converts a floating point number of nanoseconds to a zx::Duration.
-#[allow(unused)]
 fn f64_to_duration(float: f64) -> zx::Duration {
     zx::Duration::from_nanos(float as i64)
 }

@@ -34,11 +34,12 @@ mod test {
     use {
         super::*,
         crate::diagnostics::FakeDiagnostics,
-        crate::enums::{Role, TimeSourceError, Track},
+        crate::enums::{ClockUpdateReason, Role, TimeSourceError, Track},
         std::sync::Arc,
     };
 
-    const UPDATE_EVENT: Event = Event::UpdateClock { track: Track::Monitor };
+    const UPDATE_EVENT: Event =
+        Event::UpdateClock { track: Track::Monitor, reason: ClockUpdateReason::TimeStep };
     const TIME_SOURCE_FAILED_EVENT: Event =
         Event::TimeSourceFailed { role: Role::Primary, error: TimeSourceError::CallFailed };
 

@@ -14,14 +14,26 @@ pub use self::composite::CompositeDiagnostics;
 pub use self::fake::FakeDiagnostics;
 pub use self::inspect::{InspectDiagnostics, INSPECTOR};
 
+#[cfg(test)]
+use lazy_static::lazy_static;
 use {
     crate::enums::{
-        InitialClockState, InitializeRtcOutcome, Role, SampleValidationError, StartClockSource,
-        TimeSourceError, Track, WriteRtcOutcome,
+        ClockCorrectionStrategy, ClockUpdateReason, InitialClockState, InitializeRtcOutcome, Role,
+        SampleValidationError, StartClockSource, TimeSourceError, Track, WriteRtcOutcome,
     },
     fidl_fuchsia_time_external::Status,
     fuchsia_zircon as zx,
 };
+
+/// A special `Duration` that will match any value during an `eq_with_sentinel` operation.
+#[cfg(test)]
+pub const ANY_DURATION: zx::Duration = zx::Duration::from_nanos(i64::MIN);
+
+#[cfg(test)]
+lazy_static! {
+    /// A special time that will match any value during an `eq_with_sentinel` operation.
+    pub static ref ANY_TIME: zx::Time = zx::Time::from_nanos(i64::MIN);
+}
 
 /// An event that is potantialle worth recording in one or more diagnostics systems.
 #[derive(Clone, Debug, PartialEq)]
@@ -47,12 +59,15 @@ pub enum Event {
         /// Square root of element [0,0] of the covariance matrix.
         sqrt_covariance: zx::Duration,
     },
+    /// A strategy has been determined to align the userspace clock with the estimated UTC.
+    /// This will be followed by zero or more `UpdateClock` events to implement the strategy.
+    ClockCorrection { track: Track, correction: zx::Duration, strategy: ClockCorrectionStrategy },
     /// An attempt was made to write to the real time clock.
     WriteRtc { outcome: WriteRtcOutcome },
     /// The userspace clock has been started for the first time.
     StartClock { track: Track, source: StartClockSource },
     /// The userspace clock has been updated.
-    UpdateClock { track: Track },
+    UpdateClock { track: Track, reason: ClockUpdateReason },
 }
 
 /// A standard interface for systems that record events for diagnostic purposes.

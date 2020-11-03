@@ -4,18 +4,21 @@
 
 use {
     crate::diagnostics::{Diagnostics, Event},
-    crate::enums::{InitialClockState, StartClockSource, Track},
+    crate::enums::{ClockCorrectionStrategy, InitialClockState, StartClockSource, Track},
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
+    fuchsia_zircon as zx,
     parking_lot::Mutex,
     time_metrics_registry::{
         RealTimeClockEventsMetricDimensionEventType as RtcEvent,
-        TimeMetricDimensionExperiment as Experiment, TimeMetricDimensionRole as CobaltRole,
-        TimeMetricDimensionTrack as CobaltTrack,
+        TimeMetricDimensionDirection as Direction, TimeMetricDimensionExperiment as Experiment,
+        TimeMetricDimensionRole as CobaltRole, TimeMetricDimensionTrack as CobaltTrack,
         TimekeeperLifecycleEventsMetricDimensionEventType as LifecycleEvent,
         TimekeeperTimeSourceEventsMetricDimensionEventType as TimeSourceEvent,
-        REAL_TIME_CLOCK_EVENTS_METRIC_ID, TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
-        TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID, TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
+        TimekeeperTrackEventsMetricDimensionEventType as TrackEvent,
+        REAL_TIME_CLOCK_EVENTS_METRIC_ID, TIMEKEEPER_CLOCK_CORRECTION_METRIC_ID,
+        TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
+        TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID, TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
     },
 };
 
@@ -41,6 +44,51 @@ impl CobaltDiagnostics {
         fasync::Task::spawn(fut).detach();
         Self { sender: Mutex::new(sender), experiment }
     }
+
+    /// Records an update to the estimate, including an event and a covariance report.
+    fn record_estimate_update(&self, track: Track, sqrt_covariance: zx::Duration) {
+        let mut locked_sender = self.sender.lock();
+        let cobalt_track = Into::<CobaltTrack>::into(track);
+        locked_sender.log_event_count(
+            TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+            (TrackEvent::EstimatedOffsetUpdated, cobalt_track, self.experiment),
+            PERIOD_DURATION,
+            1,
+        );
+        locked_sender.log_event_count(
+            TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
+            (Into::<CobaltTrack>::into(track), self.experiment),
+            PERIOD_DURATION,
+            // Unfortunately Cobalt does not follow the standard of nanoseconds everywhere.
+            sqrt_covariance.into_micros(),
+        );
+    }
+
+    /// Records a clock correction, including an event and a report on the magnitude of change.
+    fn record_clock_correction(
+        &self,
+        track: Track,
+        correction: zx::Duration,
+        strategy: ClockCorrectionStrategy,
+    ) {
+        let mut locked_sender = self.sender.lock();
+        let cobalt_track = Into::<CobaltTrack>::into(track);
+        let direction =
+            if correction.into_nanos() >= 0 { Direction::Positive } else { Direction::Negative };
+        locked_sender.log_event_count(
+            TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+            (Into::<TrackEvent>::into(strategy), cobalt_track, self.experiment),
+            PERIOD_DURATION,
+            1,
+        );
+        locked_sender.log_event_count(
+            TIMEKEEPER_CLOCK_CORRECTION_METRIC_ID,
+            (direction, cobalt_track, self.experiment),
+            PERIOD_DURATION,
+            // Unfortunately Cobalt does not follow the standard of nanoseconds everywhere.
+            correction.into_micros().abs(),
+        );
+    }
 }
 
 impl Diagnostics for CobaltDiagnostics {
@@ -60,38 +108,29 @@ impl Diagnostics for CobaltDiagnostics {
                     .log_event(REAL_TIME_CLOCK_EVENTS_METRIC_ID, Into::<RtcEvent>::into(outcome));
             }
             Event::TimeSourceFailed { role, error } => {
+                let event = Into::<TimeSourceEvent>::into(error);
                 self.sender.lock().log_event_count(
                     TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
-                    (
-                        Into::<TimeSourceEvent>::into(error),
-                        Into::<CobaltRole>::into(role),
-                        self.experiment,
-                    ),
+                    (event, Into::<CobaltRole>::into(role), self.experiment),
                     PERIOD_DURATION,
                     1,
                 );
             }
             Event::TimeSourceStatus { .. } => {}
             Event::SampleRejected { role, error } => {
+                let event = Into::<TimeSourceEvent>::into(error);
                 self.sender.lock().log_event_count(
                     TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
-                    (
-                        Into::<TimeSourceEvent>::into(error),
-                        Into::<CobaltRole>::into(role),
-                        self.experiment,
-                    ),
+                    (event, Into::<CobaltRole>::into(role), self.experiment),
                     PERIOD_DURATION,
                     1,
                 );
             }
             Event::EstimateUpdated { track, sqrt_covariance, .. } => {
-                self.sender.lock().log_event_count(
-                    TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
-                    (Into::<CobaltTrack>::into(track), self.experiment),
-                    PERIOD_DURATION,
-                    // Unfortunately Cobalt does not follow the standard of nanoseconds everywhere.
-                    sqrt_covariance.into_micros(),
-                );
+                self.record_estimate_update(track, sqrt_covariance);
+            }
+            Event::ClockCorrection { track, correction, strategy } => {
+                self.record_clock_correction(track, correction, strategy);
             }
             Event::WriteRtc { outcome } => {
                 self.sender
@@ -120,7 +159,6 @@ mod test {
             InitializeRtcOutcome, Role, SampleValidationError, TimeSourceError, WriteRtcOutcome,
         },
         fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, Event as EmptyEvent, EventPayload},
-        fuchsia_zircon as zx,
         futures::{channel::mpsc, StreamExt},
     };
 
@@ -261,10 +299,55 @@ mod test {
         assert_eq!(
             mpsc_receiver.next().await,
             Some(CobaltEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+                event_codes: vec![
+                    TrackEvent::EstimatedOffsetUpdated as u32,
+                    CobaltTrack::Primary as u32,
+                    TEST_EXPERIMENT as u32
+                ],
+                component: None,
+                payload: event_count_payload(1),
+            })
+        );
+        assert_eq!(
+            mpsc_receiver.next().await,
+            Some(CobaltEvent {
                 metric_id: time_metrics_registry::TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
                 event_codes: vec![CobaltTrack::Primary as u32, TEST_EXPERIMENT as u32],
                 component: None,
                 payload: event_count_payload(55555),
+            })
+        );
+
+        diagnostics.record(Event::ClockCorrection {
+            track: Track::Monitor,
+            correction: zx::Duration::from_micros(-777),
+            strategy: ClockCorrectionStrategy::NominalRateSlew,
+        });
+        assert_eq!(
+            mpsc_receiver.next().await,
+            Some(CobaltEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+                event_codes: vec![
+                    TrackEvent::CorrectionByNominalRateSlew as u32,
+                    CobaltTrack::Monitor as u32,
+                    TEST_EXPERIMENT as u32
+                ],
+                component: None,
+                payload: event_count_payload(1),
+            })
+        );
+        assert_eq!(
+            mpsc_receiver.next().await,
+            Some(CobaltEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_CLOCK_CORRECTION_METRIC_ID,
+                event_codes: vec![
+                    Direction::Negative as u32,
+                    CobaltTrack::Monitor as u32,
+                    TEST_EXPERIMENT as u32
+                ],
+                component: None,
+                payload: event_count_payload(777),
             })
         );
     }
