@@ -199,7 +199,7 @@ impl EventError {
 #[derive(Clone)]
 pub enum EventErrorPayload {
     // Keep the events listed below in alphabetical order!
-    CapabilityReady { path: String },
+    CapabilityReady { name: String },
     CapabilityRequested { source_moniker: AbsoluteMoniker, path: String },
     CapabilityRouted,
     Destroyed,
@@ -222,7 +222,7 @@ impl fmt::Debug for EventErrorPayload {
         let mut formatter = fmt.debug_struct("EventErrorPayload");
         formatter.field("type", &self.event_type());
         match self {
-            EventErrorPayload::CapabilityReady { path } => formatter.field("path", &path).finish(),
+            EventErrorPayload::CapabilityReady { name } => formatter.field("name", &name).finish(),
             EventErrorPayload::CapabilityRequested { source_moniker, path } => {
                 formatter.field("source_moniker", &source_moniker);
                 formatter.field("path", &path).finish()
@@ -272,7 +272,7 @@ impl HooksRegistration {
 pub enum EventPayload {
     // Keep the events listed below in alphabetical order!
     CapabilityReady {
-        path: String,
+        name: String,
         node: NodeProxy,
     },
     CapabilityRequested {
@@ -337,8 +337,8 @@ impl fmt::Debug for EventPayload {
         let mut formatter = fmt.debug_struct("EventPayload");
         formatter.field("type", &self.event_type());
         match self {
-            EventPayload::CapabilityReady { path, .. } => {
-                formatter.field("path", &path.as_str()).finish()
+            EventPayload::CapabilityReady { name, .. } => {
+                formatter.field("name", &name.as_str()).finish()
             }
             EventPayload::CapabilityRequested { path, .. } => {
                 formatter.field("path", &path).finish()
@@ -492,7 +492,7 @@ impl fmt::Display for Event {
         let output = match &self.result {
             Ok(payload) => {
                 let payload = match payload {
-                    EventPayload::CapabilityReady { path, .. } => format!("serving {}", path),
+                    EventPayload::CapabilityReady { name, .. } => format!("serving {}", name),
                     EventPayload::CapabilityRequested { source_moniker, path, .. } => {
                         format!("requested '{}' from '{}'", path.to_string(), source_moniker)
                     }

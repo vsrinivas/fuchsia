@@ -69,36 +69,36 @@ async fn main() {
             EventMatcher::default().expect_match::<CapabilityReady>(&mut event_stream).await;
         let (node_clone, server_end) = fidl::endpoints::create_proxy().expect("create proxy");
         match &event.result {
-            Ok(payload) if !seen.contains(&payload.path) => {
+            Ok(payload) if !seen.contains(&payload.name) => {
                 payload.node.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end).expect("clone node");
                 let directory = io_util::node_to_directory(node_clone).expect("node to directory");
 
                 let entries = list_entries(&directory).await;
-                assert_eq!(&entries, expected_entries.get(&payload.path).expect("entries"));
+                assert_eq!(&entries, expected_entries.get(&payload.name).expect("entries"));
 
-                call_trigger(&directory, expected_entries.get(&payload.path).expect("entries"))
+                call_trigger(&directory, expected_entries.get(&payload.name).expect("entries"))
                     .await;
 
                 let _ = echo
                     .echo_string(Some(&format!(
                         "[{}] Saw {} on {}",
                         event.component_url(),
-                        payload.path,
+                        payload.name,
                         event.target_moniker()
                     )))
                     .await;
-                seen.insert(payload.path.clone());
+                seen.insert(payload.name.clone());
             }
-            Err(error) if !seen.contains(&error.path) => {
+            Err(error) if !seen.contains(&error.name) => {
                 let _ = echo
                     .echo_string(Some(&format!(
                         "[{}] error {} on {}",
                         event.component_url(),
-                        error.path,
+                        error.name,
                         event.target_moniker()
                     )))
                     .await;
-                seen.insert(error.path.clone());
+                seen.insert(error.name.clone());
             }
             _ => {}
         }

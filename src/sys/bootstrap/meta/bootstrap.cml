@@ -575,7 +575,7 @@
             event: "capability_ready",
             from: "parent",
             to: [ "#archivist" ],
-            filter: { path: "diagnostics" },
+            filter: { name: "diagnostics" },
         },
 
         // Required services

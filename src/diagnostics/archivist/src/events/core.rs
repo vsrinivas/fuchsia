@@ -132,7 +132,7 @@ pub mod tests {
                 }),
                 event_result: Some(fsys::EventResult::Payload(
                     fsys::EventPayload::CapabilityReady(fsys::CapabilityReadyPayload {
-                        path: Some("diagnostics".to_string()),
+                        name: Some("diagnostics".to_string()),
                         node: Some(node),
                     }),
                 )),

@@ -81,7 +81,6 @@ resource table ComponentStartInfo {
     /// invalid.
     3: vector<ComponentNamespaceEntry>:MAX_NAMESPACE_COUNT ns;
 
-    /// The directory this component serves.
     4: request<fuchsia.io.Directory> outgoing_dir;
 
     /// The directory served by the runner to present runtime information about

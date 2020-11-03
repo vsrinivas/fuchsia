@@ -2997,8 +2997,8 @@ async fn event_filter_routing() {
                     target_name: "capability_ready".into(),
                     target: OfferTarget::Child("b".to_string()),
                     filter: Some(hashmap! {
-                        "path".to_string() => DictionaryValue::StrVec(vec![
-                            "/foo".to_string(), "/bar".to_string(), "/baz".to_string()
+                        "name".to_string() => DictionaryValue::StrVec(vec![
+                            "foo".to_string(), "bar".to_string(), "baz".to_string()
                         ])
                     }),
                 }))
@@ -3025,7 +3025,7 @@ async fn event_filter_routing() {
                     source_name: "capability_ready".into(),
                     target_name: "capability_ready_foo".into(),
                     filter: Some(hashmap! {
-                        "path".to_string() => DictionaryValue::Str("/foo".into()),
+                        "name".to_string() => DictionaryValue::Str("foo".into()),
                     }),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
@@ -3054,8 +3054,8 @@ async fn event_filter_routing() {
                     target_name: "capability_ready".into(),
                     target: OfferTarget::Child("c".to_string()),
                     filter: Some(hashmap! {
-                        "path".to_string() => DictionaryValue::StrVec(vec![
-                            "/foo".to_string(), "/bar".to_string()
+                        "name".to_string() => DictionaryValue::StrVec(vec![
+                            "foo".to_string(), "bar".to_string()
                         ])
                     }),
                 }))
@@ -3065,8 +3065,8 @@ async fn event_filter_routing() {
                     target_name: "capability_ready".into(),
                     target: OfferTarget::Child("d".to_string()),
                     filter: Some(hashmap! {
-                        "path".to_string() => DictionaryValue::StrVec(vec![
-                            "/foo".to_string(), "/bar".to_string()
+                        "name".to_string() => DictionaryValue::StrVec(vec![
+                            "foo".to_string(), "bar".to_string()
                         ])
                     }),
                 }))
@@ -3087,8 +3087,8 @@ async fn event_filter_routing() {
                     source_name: "capability_ready".into(),
                     target_name: "capability_ready_foo_bar".into(),
                     filter: Some(hashmap! {
-                        "path".to_string() => DictionaryValue::StrVec(vec![
-                            "/foo".to_string(), "/bar".to_string()
+                        "name".to_string() => DictionaryValue::StrVec(vec![
+                            "foo".to_string(), "bar".to_string()
                         ])
                     }),
                 }))
@@ -3113,7 +3113,7 @@ async fn event_filter_routing() {
                     source_name: "capability_ready".into(),
                     target_name: "capability_ready_baz".into(),
                     filter: Some(hashmap! {
-                        "path".to_string() => DictionaryValue::Str("/baz".into()),
+                        "name".to_string() => DictionaryValue::Str("baz".into()),
                     }),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {

@@ -100,8 +100,8 @@ async fn maybe_create_event_result(
     event_result: &EventResult,
 ) -> Result<Option<fsys::EventResult>, fidl::Error> {
     match event_result {
-        Ok(EventPayload::CapabilityReady { path, node, .. }) => {
-            Ok(Some(create_capability_ready_payload(path.to_string(), node)?))
+        Ok(EventPayload::CapabilityReady { name, node, .. }) => {
+            Ok(Some(create_capability_ready_payload(name.to_string(), node)?))
         }
         Ok(EventPayload::CapabilityRequested { path, capability, .. }) => Ok(Some(
             create_capability_requested_payload(path.to_string(), capability.clone()).await,
@@ -120,10 +120,10 @@ async fn maybe_create_event_result(
         Ok(payload) => Ok(maybe_create_empty_payload(payload.event_type())),
         Err(EventError {
             source,
-            event_error_payload: EventErrorPayload::CapabilityReady { path },
+            event_error_payload: EventErrorPayload::CapabilityReady { name },
         }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
             error_payload: Some(fsys::EventErrorPayload::CapabilityReady(
-                fsys::CapabilityReadyError { path: Some(path.to_string()) },
+                fsys::CapabilityReadyError { name: Some(name.to_string()) },
             )),
             description: Some(format!("{}", source)),
             ..fsys::EventError::empty()
@@ -153,7 +153,7 @@ async fn maybe_create_event_result(
 }
 
 fn create_capability_ready_payload(
-    path: String,
+    name: String,
     node: &NodeProxy,
 ) -> Result<fsys::EventResult, fidl::Error> {
     let node = {
@@ -167,7 +167,7 @@ fn create_capability_ready_payload(
         Some(node_client_end)
     };
 
-    let payload = fsys::CapabilityReadyPayload { path: Some(path), node };
+    let payload = fsys::CapabilityReadyPayload { name: Some(name), node };
     Ok(fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(payload)))
 }
 

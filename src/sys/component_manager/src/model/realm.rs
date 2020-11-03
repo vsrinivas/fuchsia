@@ -1703,7 +1703,7 @@ pub mod tests {
         assert_matches!(event.result,
                         Err(EventError {
                             event_error_payload:
-                                EventErrorPayload::CapabilityReady { path, .. }, .. }) if path == "diagnostics");
+                                EventErrorPayload::CapabilityReady { name, .. }, .. }) if name == "diagnostics");
     }
 
     #[fasync::run_singlethreaded(test)]

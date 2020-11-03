@@ -180,8 +180,8 @@ impl EventDispatcherScope {
             Ok(EventPayload::CapabilityRequested { path, .. }) => Some(hashmap! {
                 "path".to_string() => DictionaryValue::Str(path.into())
             }),
-            Ok(EventPayload::CapabilityReady { path, .. }) => Some(hashmap! {
-                "path".to_string() => DictionaryValue::Str(path.into())
+            Ok(EventPayload::CapabilityReady { name, .. }) => Some(hashmap! {
+                "name".to_string() => DictionaryValue::Str(name.into())
             }),
             Err(EventError {
                 event_error_payload: EventErrorPayload::CapabilityRequested { path, .. },
@@ -190,10 +190,10 @@ impl EventDispatcherScope {
                 "path".to_string() => DictionaryValue::Str(path.into())
             }),
             Err(EventError {
-                event_error_payload: EventErrorPayload::CapabilityReady { path, .. },
+                event_error_payload: EventErrorPayload::CapabilityReady { name, .. },
                 ..
             }) => Some(hashmap! {
-                "path".to_string() => DictionaryValue::Str(path.into())
+                "name".to_string() => DictionaryValue::Str(name.into())
             }),
             _ => None,
         };

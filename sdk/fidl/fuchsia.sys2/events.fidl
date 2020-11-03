@@ -151,7 +151,7 @@ flexible union EventErrorPayload {
 /// Error payload for CapabilityReady events
 table CapabilityReadyError {
     /// The path of the capability.
-    1: string:fuchsia.component.MAX_PATH_LENGTH path;
+    1: fuchsia.component.name name;
 };
 
 /// Error payload for CapabilityRequested events
@@ -235,10 +235,8 @@ flexible resource union EventPayload {
 
 /// Payload for CapabilityReady events
 resource table CapabilityReadyPayload {
-    // TODO(fxbug.dev/56604): Once name-based capabilities have landed, this (and the
-    // filter field) should be a name.
     /// The path of the capability.
-    1: string:fuchsia.component.MAX_PATH_LENGTH path;
+    1: fuchsia.component.name name;
 
     /// Channel to the node exposed by the event source at `path`.
     2: fuchsia.io.Node node;

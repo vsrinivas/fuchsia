@@ -1220,7 +1220,7 @@ mod tests {
                     "as": "capability_ready",
                     "from": "parent",
                     "filter": {
-                        "path": "/diagnositcs"
+                        "name": "diagnositcs"
                     }
                   },
                   {
@@ -1924,7 +1924,7 @@ mod tests {
                         "to": [ "#modular" ],
                         "as": "capability-ready-for-modular",
                         "filter": {
-                            "path": "/modular"
+                            "name": "modular"
                         }
                     },
                 ],

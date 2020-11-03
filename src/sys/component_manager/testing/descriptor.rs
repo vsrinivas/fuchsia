@@ -25,8 +25,8 @@ impl TryFrom<&fsys::Event> for EventDescriptor {
             event.descriptor.as_ref().and_then(|descriptor| descriptor.moniker.clone());
         let capability_id = match &event.event_result {
             Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
-                fsys::CapabilityReadyPayload { path, .. },
-            ))) => path.clone(),
+                fsys::CapabilityReadyPayload { name, .. },
+            ))) => name.clone(),
             Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
                 fsys::CapabilityRequestedPayload { path, .. },
             ))) => path.clone(),
@@ -36,11 +36,11 @@ impl TryFrom<&fsys::Event> for EventDescriptor {
             Some(fsys::EventResult::Error(fsys::EventError {
                 error_payload:
                     Some(fsys::EventErrorPayload::CapabilityReady(fsys::CapabilityReadyError {
-                        path,
+                        name,
                         ..
                     })),
                 ..
-            })) => path.clone(),
+            })) => name.clone(),
             Some(fsys::EventResult::Error(fsys::EventError {
                 error_payload:
                     Some(fsys::EventErrorPayload::CapabilityRequested(fsys::CapabilityRequestedError {

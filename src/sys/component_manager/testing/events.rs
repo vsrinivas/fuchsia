@@ -494,7 +494,7 @@ create_event!(
     payload: {
         data: {
             {
-                name: path,
+                name: name,
                 ty: String,
             }
         },
@@ -508,7 +508,7 @@ create_event!(
     },
     error_payload: {
         {
-            name: path,
+            name: name,
             ty: String,
         }
     }

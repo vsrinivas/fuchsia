@@ -233,11 +233,11 @@ impl CapabilityReadyNotifier {
         match node_result {
             Ok(node) => Event::new(
                 &target_realm,
-                Ok(EventPayload::CapabilityReady { path: target_name, node }),
+                Ok(EventPayload::CapabilityReady { name: target_name, node }),
             ),
             Err(e) => Event::new(
                 &target_realm,
-                Err(EventError::new(&e, EventErrorPayload::CapabilityReady { path: target_name })),
+                Err(EventError::new(&e, EventErrorPayload::CapabilityReady { name: target_name })),
             ),
         }
     }
@@ -258,7 +258,7 @@ fn filter_matching_exposes<'a>(
                     source, target, target_name, ..
                 }) => {
                     if let Some(filter) = filter {
-                        if !filter.contains("path", vec![target_name.to_string()]) {
+                        if !filter.contains("name", vec![target_name.to_string()]) {
                             return false;
                         }
                     }

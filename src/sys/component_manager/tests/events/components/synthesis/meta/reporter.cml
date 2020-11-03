@@ -34,7 +34,7 @@
         {
             event: "capability_ready",
             from: "framework",
-            filter: { path: "normal" },
+            filter: { name: "normal" },
         },
     ],
 }

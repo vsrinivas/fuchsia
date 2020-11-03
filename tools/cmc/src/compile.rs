@@ -1018,7 +1018,7 @@ mod tests {
                         "event": "capability_ready",
                         "as": "diagnostics",
                         "from": "parent",
-                        "filter": { "path": "/diagnostics" }
+                        "filter": { "name": "diagnostics" }
                     },
                 ],
             }),
@@ -1124,8 +1124,8 @@ mod tests {
                             filter: Some(fdata::Dictionary {
                                 entries: Some(vec![
                                     fdata::DictionaryEntry {
-                                        key: "path".to_string(),
-                                        value: Some(Box::new(fdata::DictionaryValue::Str("/diagnostics".to_string()))),
+                                        key: "name".to_string(),
+                                        value: Some(Box::new(fdata::DictionaryValue::Str("diagnostics".to_string()))),
                                     },
                                 ]),
                             }),
@@ -1452,9 +1452,9 @@ mod tests {
                         "to": [ "#netstack" ],
                         "as": "net-ready",
                         "filter": {
-                            "path": [
-                                "/diagnostics",
-                                "/foo/bar"
+                            "name": [
+                                "diagnostics",
+                                "foo"
                             ],
                         }
                     },
@@ -1722,9 +1722,9 @@ mod tests {
                             filter: Some(fdata::Dictionary {
                                 entries: Some(vec![
                                     fdata::DictionaryEntry {
-                                        key: "path".to_string(),
+                                        key: "name".to_string(),
                                         value: Some(Box::new(fdata::DictionaryValue::StrVec(
-                                            vec!["/diagnostics".to_string(), "/foo/bar".to_string()]
+                                            vec!["diagnostics".to_string(), "foo".to_string()]
                                         ))),
                                     },
                                 ]),

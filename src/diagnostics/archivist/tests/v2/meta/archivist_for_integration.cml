@@ -45,7 +45,7 @@
             event: "capability_ready",
             from: "parent",
             as: "diagnostics_ready",
-            filter: { path: "diagnostics" },
+            filter: { name: "diagnostics" },
         },
         {
             event: "capability_requested",
