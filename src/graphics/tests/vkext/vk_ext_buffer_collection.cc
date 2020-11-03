@@ -1072,8 +1072,8 @@ TEST_P(VulkanImageExtensionTest, MultiFormat) {
 
   bool linear = GetParam();
   auto nv12_create_info =
-      GetDefaultImageCreateInfo(false, VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 0, 0, linear);
-  auto rgb_create_info = GetDefaultImageCreateInfo(false, VK_FORMAT_R8G8B8A8_UNORM, 0, 0, linear);
+      GetDefaultImageCreateInfo(false, VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 1, 1, linear);
+  auto rgb_create_info = GetDefaultImageCreateInfo(false, VK_FORMAT_R8G8B8A8_UNORM, 1, 1, linear);
   auto rgb_create_info_full_size = GetDefaultImageCreateInfo(false, VK_FORMAT_R8G8B8A8_UNORM,
                                                              kDefaultWidth, kDefaultHeight, linear);
 
