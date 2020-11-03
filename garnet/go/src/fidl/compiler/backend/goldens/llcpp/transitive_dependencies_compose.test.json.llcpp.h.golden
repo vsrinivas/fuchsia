@@ -74,10 +74,7 @@ class Top final {
                              ::llcpp::bottom::Foo& foo)
           : message_(_bytes, _byte_size, sizeof(GetFooResponse), nullptr, 0,
                      0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetFooResponse)];
-        auto& _response = *new (_response_buffer) GetFooResponse(foo);
+        FIDL_ALIGNDECL GetFooResponse _response{foo};
         message_.LinearizeAndEncode<GetFooResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -217,10 +214,7 @@ class Top final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
                              zx_txid_t _txid)
           : message_(_bytes, _byte_size, sizeof(GetFooRequest), nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetFooRequest)];
-        auto& _request = *new (_request_buffer) GetFooRequest(_txid);
+        FIDL_ALIGNDECL GetFooRequest _request(_txid);
         message_.LinearizeAndEncode<GetFooRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,

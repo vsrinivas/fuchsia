@@ -205,10 +205,7 @@ class EmptyProtocol final {
                              zx_txid_t _txid,
                              ::llcpp::fidl::test::emptystruct::Empty& e)
           : message_(_bytes, _byte_size, sizeof(SendRequest), nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendRequest)];
-        auto& _request = *new (_request_buffer) SendRequest(_txid, e);
+        FIDL_ALIGNDECL SendRequest _request(_txid, e);
         message_.LinearizeAndEncode<SendRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -353,10 +350,7 @@ class EmptyProtocol final {
                              ::llcpp::fidl::test::emptystruct::Empty& e)
           : message_(_bytes, _byte_size, sizeof(ReceiveResponse), nullptr, 0,
                      0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(ReceiveResponse)];
-        auto& _response = *new (_response_buffer) ReceiveResponse(e);
+        FIDL_ALIGNDECL ReceiveResponse _response{e};
         message_.LinearizeAndEncode<ReceiveResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -499,10 +493,7 @@ class EmptyProtocol final {
                              ::llcpp::fidl::test::emptystruct::Empty& e)
           : message_(_bytes, _byte_size, sizeof(SendAndReceiveResponse),
                      nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(SendAndReceiveResponse)];
-        auto& _response = *new (_response_buffer) SendAndReceiveResponse(e);
+        FIDL_ALIGNDECL SendAndReceiveResponse _response{e};
         message_.LinearizeAndEncode<SendAndReceiveResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -651,10 +642,7 @@ class EmptyProtocol final {
                              ::llcpp::fidl::test::emptystruct::Empty& e)
           : message_(_bytes, _byte_size, sizeof(SendAndReceiveRequest), nullptr,
                      0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendAndReceiveRequest)];
-        auto& _request = *new (_request_buffer) SendAndReceiveRequest(_txid, e);
+        FIDL_ALIGNDECL SendAndReceiveRequest _request(_txid, e);
         message_.LinearizeAndEncode<SendAndReceiveRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,

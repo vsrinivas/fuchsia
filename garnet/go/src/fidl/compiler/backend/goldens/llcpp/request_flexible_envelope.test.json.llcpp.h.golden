@@ -303,7 +303,7 @@ class Protocol final {
           : message_(_bytes, _byte_size,
                      sizeof(RequestStrictResponseFlexibleResponse), nullptr, 0,
                      0) {
-        FIDL_ALIGNDECL RequestStrictResponseFlexibleResponse _response(f);
+        FIDL_ALIGNDECL RequestStrictResponseFlexibleResponse _response{f};
         message_.LinearizeAndEncode<RequestStrictResponseFlexibleResponse>(
             &_response);
       }
@@ -626,7 +626,7 @@ class Protocol final {
           : message_(_bytes, _byte_size,
                      sizeof(RequestFlexibleResponseStrictResponse), nullptr, 0,
                      0) {
-        FIDL_ALIGNDECL RequestFlexibleResponseStrictResponse _response(f);
+        FIDL_ALIGNDECL RequestFlexibleResponseStrictResponse _response{f};
         message_.LinearizeAndEncode<RequestFlexibleResponseStrictResponse>(
             &_response);
       }

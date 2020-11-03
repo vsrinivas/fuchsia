@@ -920,10 +920,7 @@ class Interface final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
                              zx_txid_t _txid)
           : message_(_bytes, _byte_size, sizeof(MethodRequest), nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)];
-        auto& _request = *new (_request_buffer) MethodRequest(_txid);
+        FIDL_ALIGNDECL MethodRequest _request(_txid);
         message_.LinearizeAndEncode<MethodRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -1061,10 +1058,7 @@ class Interface final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size)
           : message_(_bytes, _byte_size, sizeof(OnEventResponse), nullptr, 0,
                      0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(OnEventResponse)];
-        auto& _response = *new (_response_buffer) OnEventResponse();
+        FIDL_ALIGNDECL OnEventResponse _response{};
         message_.LinearizeAndEncode<OnEventResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,

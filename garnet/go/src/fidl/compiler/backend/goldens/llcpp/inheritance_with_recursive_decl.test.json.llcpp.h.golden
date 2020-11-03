@@ -82,10 +82,7 @@ class Parent final {
                              zx_txid_t _txid, ::zx::channel& request)
           : message_(_bytes, _byte_size, sizeof(FirstRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
-        auto& _request = *new (_request_buffer) FirstRequest(_txid, request);
+        FIDL_ALIGNDECL FirstRequest _request(_txid, request);
         message_.LinearizeAndEncode<FirstRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -393,10 +390,7 @@ class Child final {
                              zx_txid_t _txid, ::zx::channel& request)
           : message_(_bytes, _byte_size, sizeof(FirstRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
-        auto& _request = *new (_request_buffer) FirstRequest(_txid, request);
+        FIDL_ALIGNDECL FirstRequest _request(_txid, request);
         message_.LinearizeAndEncode<FirstRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -553,10 +547,7 @@ class Child final {
                              zx_txid_t _txid, ::zx::channel& request)
           : message_(_bytes, _byte_size, sizeof(SecondRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SecondRequest)];
-        auto& _request = *new (_request_buffer) SecondRequest(_txid, request);
+        FIDL_ALIGNDECL SecondRequest _request(_txid, request);
         message_.LinearizeAndEncode<SecondRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,

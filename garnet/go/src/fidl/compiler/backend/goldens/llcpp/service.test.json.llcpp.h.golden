@@ -79,10 +79,7 @@ class SecondProtocol final {
                              zx_txid_t _txid)
           : message_(_bytes, _byte_size, sizeof(MethodOnSecondRequest), nullptr,
                      0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnSecondRequest)];
-        auto& _request = *new (_request_buffer) MethodOnSecondRequest(_txid);
+        FIDL_ALIGNDECL MethodOnSecondRequest _request(_txid);
         message_.LinearizeAndEncode<MethodOnSecondRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -353,10 +350,7 @@ class FirstProtocol final {
                              zx_txid_t _txid)
           : message_(_bytes, _byte_size, sizeof(MethodOnFirstRequest), nullptr,
                      0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnFirstRequest)];
-        auto& _request = *new (_request_buffer) MethodOnFirstRequest(_txid);
+        FIDL_ALIGNDECL MethodOnFirstRequest _request(_txid);
         message_.LinearizeAndEncode<MethodOnFirstRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,

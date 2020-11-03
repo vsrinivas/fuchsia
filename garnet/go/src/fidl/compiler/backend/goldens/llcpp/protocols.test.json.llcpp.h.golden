@@ -864,10 +864,7 @@ class Transitional final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size, int64_t y)
           : message_(_bytes, _byte_size, sizeof(RequestResponse), nullptr, 0,
                      0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(RequestResponse)];
-        auto& _response = *new (_response_buffer) RequestResponse(y);
+        FIDL_ALIGNDECL RequestResponse _response{y};
         message_.LinearizeAndEncode<RequestResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -1012,10 +1009,7 @@ class Transitional final {
                              zx_txid_t _txid, int64_t x)
           : message_(_bytes, _byte_size, sizeof(RequestRequest), nullptr, 0,
                      0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(RequestRequest)];
-        auto& _request = *new (_request_buffer) RequestRequest(_txid, x);
+        FIDL_ALIGNDECL RequestRequest _request(_txid, x);
         message_.LinearizeAndEncode<RequestRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -1159,10 +1153,7 @@ class Transitional final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
                              zx_txid_t _txid, int64_t x)
           : message_(_bytes, _byte_size, sizeof(OneWayRequest), nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(OneWayRequest)];
-        auto& _request = *new (_request_buffer) OneWayRequest(_txid, x);
+        FIDL_ALIGNDECL OneWayRequest _request(_txid, x);
         message_.LinearizeAndEncode<OneWayRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -1301,10 +1292,7 @@ class Transitional final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size, int64_t x)
           : message_(_bytes, _byte_size, sizeof(EventResponse), nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(EventResponse)];
-        auto& _response = *new (_response_buffer) EventResponse(x);
+        FIDL_ALIGNDECL EventResponse _response{x};
         message_.LinearizeAndEncode<EventResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -1770,10 +1758,7 @@ class ChannelProtocol final {
                              zx_txid_t _txid, int64_t a, int64_t b)
           : message_(_bytes, _byte_size, sizeof(MethodARequest), nullptr, 0,
                      0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodARequest)];
-        auto& _request = *new (_request_buffer) MethodARequest(_txid, a, b);
+        FIDL_ALIGNDECL MethodARequest _request(_txid, a, b);
         message_.LinearizeAndEncode<MethodARequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -1917,10 +1902,7 @@ class ChannelProtocol final {
                              int64_t b)
           : message_(_bytes, _byte_size, sizeof(EventAResponse), nullptr, 0,
                      0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(EventAResponse)];
-        auto& _response = *new (_response_buffer) EventAResponse(a, b);
+        FIDL_ALIGNDECL EventAResponse _response{a, b};
         message_.LinearizeAndEncode<EventAResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -2060,10 +2042,7 @@ class ChannelProtocol final {
                              int64_t result)
           : message_(_bytes, _byte_size, sizeof(MethodBResponse), nullptr, 0,
                      0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(MethodBResponse)];
-        auto& _response = *new (_response_buffer) MethodBResponse(result);
+        FIDL_ALIGNDECL MethodBResponse _response{result};
         message_.LinearizeAndEncode<MethodBResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -2210,10 +2189,7 @@ class ChannelProtocol final {
                              zx_txid_t _txid, int64_t a, int64_t b)
           : message_(_bytes, _byte_size, sizeof(MethodBRequest), nullptr, 0,
                      0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodBRequest)];
-        auto& _request = *new (_request_buffer) MethodBRequest(_txid, a, b);
+        FIDL_ALIGNDECL MethodBRequest _request(_txid, a, b);
         message_.LinearizeAndEncode<MethodBRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -2357,10 +2333,7 @@ class ChannelProtocol final {
                              ::zx::socket& b)
           : message_(_bytes, _byte_size, sizeof(MutateSocketResponse), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(MutateSocketResponse)];
-        auto& _response = *new (_response_buffer) MutateSocketResponse(b);
+        FIDL_ALIGNDECL MutateSocketResponse _response{b};
         message_.LinearizeAndEncode<MutateSocketResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -2517,10 +2490,7 @@ class ChannelProtocol final {
                              zx_txid_t _txid, ::zx::socket& a)
           : message_(_bytes, _byte_size, sizeof(MutateSocketRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MutateSocketRequest)];
-        auto& _request = *new (_request_buffer) MutateSocketRequest(_txid, a);
+        FIDL_ALIGNDECL MutateSocketRequest _request(_txid, a);
         message_.LinearizeAndEncode<MutateSocketRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -3142,12 +3112,7 @@ class WithAndWithoutRequestResponse final {
                              zx_txid_t _txid)
           : message_(_bytes, _byte_size, sizeof(NoRequestNoResponseRequest),
                      nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t
-            _request_buffer[sizeof(NoRequestNoResponseRequest)];
-        auto& _request =
-            *new (_request_buffer) NoRequestNoResponseRequest(_txid);
+        FIDL_ALIGNDECL NoRequestNoResponseRequest _request(_txid);
         message_.LinearizeAndEncode<NoRequestNoResponseRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -3286,12 +3251,7 @@ class WithAndWithoutRequestResponse final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size)
           : message_(_bytes, _byte_size, sizeof(NoRequestEmptyResponseResponse),
                      nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t
-            _response_buffer[sizeof(NoRequestEmptyResponseResponse)];
-        auto& _response =
-            *new (_response_buffer) NoRequestEmptyResponseResponse();
+        FIDL_ALIGNDECL NoRequestEmptyResponseResponse _response{};
         message_.LinearizeAndEncode<NoRequestEmptyResponseResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -3434,12 +3394,7 @@ class WithAndWithoutRequestResponse final {
                              zx_txid_t _txid)
           : message_(_bytes, _byte_size, sizeof(NoRequestEmptyResponseRequest),
                      nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t
-            _request_buffer[sizeof(NoRequestEmptyResponseRequest)];
-        auto& _request =
-            *new (_request_buffer) NoRequestEmptyResponseRequest(_txid);
+        FIDL_ALIGNDECL NoRequestEmptyResponseRequest _request(_txid);
         message_.LinearizeAndEncode<NoRequestEmptyResponseRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -3585,7 +3540,7 @@ class WithAndWithoutRequestResponse final {
                              const ::fidl::StringView& ret)
           : message_(_bytes, _byte_size, sizeof(NoRequestWithResponseResponse),
                      nullptr, 0, 0) {
-        FIDL_ALIGNDECL NoRequestWithResponseResponse _response(ret);
+        FIDL_ALIGNDECL NoRequestWithResponseResponse _response{ret};
         message_.LinearizeAndEncode<NoRequestWithResponseResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -3734,12 +3689,7 @@ class WithAndWithoutRequestResponse final {
                              zx_txid_t _txid)
           : message_(_bytes, _byte_size, sizeof(NoRequestWithResponseRequest),
                      nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t
-            _request_buffer[sizeof(NoRequestWithResponseRequest)];
-        auto& _request =
-            *new (_request_buffer) NoRequestWithResponseRequest(_txid);
+        FIDL_ALIGNDECL NoRequestWithResponseRequest _request(_txid);
         message_.LinearizeAndEncode<NoRequestWithResponseRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -4035,12 +3985,7 @@ class WithAndWithoutRequestResponse final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size)
           : message_(_bytes, _byte_size,
                      sizeof(WithRequestEmptyResponseResponse), nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t
-            _response_buffer[sizeof(WithRequestEmptyResponseResponse)];
-        auto& _response =
-            *new (_response_buffer) WithRequestEmptyResponseResponse();
+        FIDL_ALIGNDECL WithRequestEmptyResponseResponse _response{};
         message_.LinearizeAndEncode<WithRequestEmptyResponseResponse>(
             &_response);
       }
@@ -4341,7 +4286,7 @@ class WithAndWithoutRequestResponse final {
                              const ::fidl::StringView& ret)
           : message_(_bytes, _byte_size,
                      sizeof(WithRequestWithResponseResponse), nullptr, 0, 0) {
-        FIDL_ALIGNDECL WithRequestWithResponseResponse _response(ret);
+        FIDL_ALIGNDECL WithRequestWithResponseResponse _response{ret};
         message_.LinearizeAndEncode<WithRequestWithResponseResponse>(
             &_response);
       }
@@ -4642,11 +4587,7 @@ class WithAndWithoutRequestResponse final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size)
           : message_(_bytes, _byte_size, sizeof(OnEmptyResponseResponse),
                      nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t
-            _response_buffer[sizeof(OnEmptyResponseResponse)];
-        auto& _response = *new (_response_buffer) OnEmptyResponseResponse();
+        FIDL_ALIGNDECL OnEmptyResponseResponse _response{};
         message_.LinearizeAndEncode<OnEmptyResponseResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -4789,7 +4730,7 @@ class WithAndWithoutRequestResponse final {
                              const ::fidl::StringView& ret)
           : message_(_bytes, _byte_size, sizeof(OnWithResponseResponse),
                      nullptr, 0, 0) {
-        FIDL_ALIGNDECL OnWithResponseResponse _response(ret);
+        FIDL_ALIGNDECL OnWithResponseResponse _response{ret};
         message_.LinearizeAndEncode<OnWithResponseResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -5728,7 +5669,7 @@ class WithErrorSyntax final {
               WithErrorSyntax_ResponseAsStruct_Result& result)
           : message_(_bytes, _byte_size, sizeof(ResponseAsStructResponse),
                      nullptr, 0, 0) {
-        FIDL_ALIGNDECL ResponseAsStructResponse _response(result);
+        FIDL_ALIGNDECL ResponseAsStructResponse _response{result};
         message_.LinearizeAndEncode<ResponseAsStructResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -5872,10 +5813,7 @@ class WithErrorSyntax final {
                              zx_txid_t _txid)
           : message_(_bytes, _byte_size, sizeof(ResponseAsStructRequest),
                      nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(ResponseAsStructRequest)];
-        auto& _request = *new (_request_buffer) ResponseAsStructRequest(_txid);
+        FIDL_ALIGNDECL ResponseAsStructRequest _request(_txid);
         message_.LinearizeAndEncode<ResponseAsStructRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -6025,7 +5963,7 @@ class WithErrorSyntax final {
               WithErrorSyntax_ErrorAsPrimitive_Result& result)
           : message_(_bytes, _byte_size, sizeof(ErrorAsPrimitiveResponse),
                      nullptr, 0, 0) {
-        FIDL_ALIGNDECL ErrorAsPrimitiveResponse _response(result);
+        FIDL_ALIGNDECL ErrorAsPrimitiveResponse _response{result};
         message_.LinearizeAndEncode<ErrorAsPrimitiveResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -6169,10 +6107,7 @@ class WithErrorSyntax final {
                              zx_txid_t _txid)
           : message_(_bytes, _byte_size, sizeof(ErrorAsPrimitiveRequest),
                      nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(ErrorAsPrimitiveRequest)];
-        auto& _request = *new (_request_buffer) ErrorAsPrimitiveRequest(_txid);
+        FIDL_ALIGNDECL ErrorAsPrimitiveRequest _request(_txid);
         message_.LinearizeAndEncode<ErrorAsPrimitiveRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -6321,7 +6256,7 @@ class WithErrorSyntax final {
               result)
           : message_(_bytes, _byte_size, sizeof(ErrorAsEnumResponse), nullptr,
                      0, 0) {
-        FIDL_ALIGNDECL ErrorAsEnumResponse _response(result);
+        FIDL_ALIGNDECL ErrorAsEnumResponse _response{result};
         message_.LinearizeAndEncode<ErrorAsEnumResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -6465,10 +6400,7 @@ class WithErrorSyntax final {
                              zx_txid_t _txid)
           : message_(_bytes, _byte_size, sizeof(ErrorAsEnumRequest), nullptr, 0,
                      0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(ErrorAsEnumRequest)];
-        auto& _request = *new (_request_buffer) ErrorAsEnumRequest(_txid);
+        FIDL_ALIGNDECL ErrorAsEnumRequest _request(_txid);
         message_.LinearizeAndEncode<ErrorAsEnumRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,

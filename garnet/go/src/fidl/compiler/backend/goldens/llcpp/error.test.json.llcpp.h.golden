@@ -312,7 +312,7 @@ class Example final {
           uint8_t* _bytes, uint32_t _byte_size,
           ::llcpp::fidl::test::error::Example_foo_Result& result)
           : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
-        FIDL_ALIGNDECL fooResponse _response(result);
+        FIDL_ALIGNDECL fooResponse _response{result};
         message_.LinearizeAndEncode<fooResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,

@@ -591,10 +591,7 @@ class ExampleProtocol final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
                              zx_txid_t _txid, ::llcpp::exampleusing::Empty& arg)
           : message_(_bytes, _byte_size, sizeof(MethodRequest), nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)];
-        auto& _request = *new (_request_buffer) MethodRequest(_txid, arg);
+        FIDL_ALIGNDECL MethodRequest _request(_txid, arg);
         message_.LinearizeAndEncode<MethodRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,

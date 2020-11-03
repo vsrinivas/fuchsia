@@ -1046,10 +1046,7 @@ class SimpleProtocol final {
      public:
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size, int32_t sum)
           : message_(_bytes, _byte_size, sizeof(AddResponse), nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(AddResponse)];
-        auto& _response = *new (_response_buffer) AddResponse(sum);
+        FIDL_ALIGNDECL AddResponse _response{sum};
         message_.LinearizeAndEncode<AddResponse>(&_response);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
@@ -1194,10 +1191,7 @@ class SimpleProtocol final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
                              zx_txid_t _txid, int32_t a, int32_t b)
           : message_(_bytes, _byte_size, sizeof(AddRequest), nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(AddRequest)];
-        auto& _request = *new (_request_buffer) AddRequest(_txid, a, b);
+        FIDL_ALIGNDECL AddRequest _request(_txid, a, b);
         message_.LinearizeAndEncode<AddRequest>(&_request);
       }
       UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,

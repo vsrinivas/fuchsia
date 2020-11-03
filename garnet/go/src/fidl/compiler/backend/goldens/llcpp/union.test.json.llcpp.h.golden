@@ -2778,7 +2778,7 @@ class TestProtocol final {
                 sizeof(StrictXUnionHenceResponseMayBeStackAllocatedResponse),
                 nullptr, 0, 0) {
         FIDL_ALIGNDECL StrictXUnionHenceResponseMayBeStackAllocatedResponse
-            _response(xu);
+            _response{xu};
         message_.LinearizeAndEncode<
             StrictXUnionHenceResponseMayBeStackAllocatedResponse>(&_response);
       }
@@ -2935,13 +2935,8 @@ class TestProtocol final {
                 _bytes, _byte_size,
                 sizeof(StrictXUnionHenceResponseMayBeStackAllocatedRequest),
                 nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(
-            StrictXUnionHenceResponseMayBeStackAllocatedRequest)];
-        auto& _request =
-            *new (_request_buffer)
-                StrictXUnionHenceResponseMayBeStackAllocatedRequest(_txid);
+        FIDL_ALIGNDECL StrictXUnionHenceResponseMayBeStackAllocatedRequest
+            _request(_txid);
         message_.LinearizeAndEncode<
             StrictXUnionHenceResponseMayBeStackAllocatedRequest>(&_request);
       }
@@ -3099,7 +3094,7 @@ class TestProtocol final {
                 sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse),
                 nullptr, 0, 0) {
         FIDL_ALIGNDECL FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse
-            _response(xu);
+            _response{xu};
         message_.LinearizeAndEncode<
             FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(&_response);
       }
@@ -3256,13 +3251,8 @@ class TestProtocol final {
                 _bytes, _byte_size,
                 sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest),
                 nullptr, 0, 0) {
-        // Destructors can't be called because it will lead to handle double
-        // close (here and in fidl::Encode).
-        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest)];
-        auto& _request =
-            *new (_request_buffer)
-                FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(_txid);
+        FIDL_ALIGNDECL FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest
+            _request(_txid);
         message_.LinearizeAndEncode<
             FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>(&_request);
       }
