@@ -480,7 +480,7 @@ TEST_F(AuthTest, WEP40ChallengeFailure) {
   VerifyAuthFrames();
 
   // Assoc should have failed
-  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);
+  EXPECT_NE(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
 }
 
 TEST_F(AuthTest, WEPOPEN) {

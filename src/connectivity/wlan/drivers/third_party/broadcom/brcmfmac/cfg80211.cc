@@ -4802,6 +4802,19 @@ static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct b
     BRCMF_ERR("  status %s", brcmf_fweh_get_event_status_str(e->status));
     BRCMF_ERR("  reason %s", wlan_status_code_str(static_cast<wlan_status_code_t>(e->reason)));
     BRCMF_ERR("  flags 0x%x", e->flags);
+    // It appears FW continues to be busy with authentication when this event is received
+    // specifically with WEP. Attempt to shutdown the IF.
+    bcme_status_t fwerr = BCME_OK;
+    zx_status_t status;
+    brcmf_bss_ctrl bss_down;
+    bss_down.bsscfgidx = ifp->bsscfgidx;
+    bss_down.value = 0;
+    BRCMF_DBG(CONN, "Attempt to stop IF id:%d", ifp->ifidx);
+    status = brcmf_fil_bsscfg_data_set(ifp, "bss", &bss_down, sizeof(bss_down));
+    if (status != ZX_OK) {
+      BRCMF_ERR("bss iovar error: %s, fw err %s", zx_status_get_string(status),
+                brcmf_fil_get_errstr(fwerr));
+    }
     brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED);
   }
 

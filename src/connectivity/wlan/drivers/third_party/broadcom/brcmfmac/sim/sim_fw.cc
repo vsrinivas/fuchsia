@@ -824,6 +824,7 @@ void SimFirmware::AssocScanDone() {
 }
 
 void SimFirmware::AssocClearContext() {
+  hw_.CancelCallback(assoc_state_.assoc_timer_id);
   SetAssocState(AssocState::NOT_ASSOCIATED);
   assoc_state_.opts = nullptr;
   assoc_state_.scan_results.clear();
@@ -835,11 +836,15 @@ void SimFirmware::AssocClearContext() {
 }
 
 void SimFirmware::AuthClearContext() {
+  hw_.CancelCallback(auth_state_.auth_timer_id);
   auth_state_.state = AuthState::NOT_AUTHENTICATED;
   auth_state_.sec_type = simulation::SEC_PROTO_TYPE_OPEN;
 }
 
 void SimFirmware::AssocHandleFailure() {
+  if (assoc_state_.state == AssocState::NOT_ASSOCIATED) {
+    return;
+  }
   if (assoc_state_.num_attempts >= assoc_max_retries_
       // The firmware has been observed to not retry when there is an
       // authentication challenge failure.
