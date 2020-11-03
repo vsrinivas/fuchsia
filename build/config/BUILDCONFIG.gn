@@ -313,7 +313,7 @@ if (zircon_toolchain == false) {
     default_executable_configs +=
         [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
   }
-  default_executable_deps = [ "//build/config/scudo:default_for_executable" ]
+  default_executable_deps = []
 
   if (toolchain_variant.is_pic_default) {
     default_common_binary_configs += [ "//build/config:shared_library_config" ]
@@ -812,8 +812,6 @@ _asan_variant = {
     }
   }
   toolchain_args = {
-    # -fsanitize=scudo is incompatible with -fsanitize=address.
-    use_scudo = false
   }
   tags = [
     "asan",
@@ -933,10 +931,6 @@ declare_args() {
         "instrumented",
         "profile",
       ]
-    },
-
-    {
-      configs = [ "//build/config/scudo" ]
     },
 
     {
