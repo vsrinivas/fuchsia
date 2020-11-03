@@ -78,6 +78,7 @@ class TtsManagerTest : public gtest::TestLoopFixture {
   void SetUp() override {
     startup_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     tts_manager_ = std::make_unique<TtsManager>(startup_context_.get());
+    tts_manager_->RegisterTTSEngineReadyCallback([]() {});
   }
 
   std::unique_ptr<sys::ComponentContext> startup_context_;
@@ -234,6 +235,68 @@ TEST_F(TtsManagerTest, FailsWhenThereIsNoEngine) {
   // Examine sent utterance.
   EXPECT_EQ(fake_engine_new.ExamineUtterances().size(), 1u);
   EXPECT_EQ(fake_engine_new.ExamineUtterances()[0].message(), "hello world new");
+}
+
+TEST_F(TtsManagerTest, RegisterSpeakerThenEngine) {
+  bool callback_invoked = false;
+  tts_manager_->RegisterTTSEngineReadyCallback([&callback_invoked]() { callback_invoked = true; });
+
+  // Register speaker.
+  fuchsia::accessibility::tts::EnginePtr speaker_1;
+  tts_manager_->OpenEngine(speaker_1.NewRequest(),
+                           [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
+                             EXPECT_TRUE(result.is_response());
+                           });
+  RunLoopUntilIdle();
+
+  // Callback should not have been invoked yet since no engine is registered
+  // yet.
+  EXPECT_FALSE(callback_invoked);
+
+  // Register engine.
+  FakeEngine fake_engine_1;
+  auto engine_handle_1 = fake_engine_1.GetHandle();
+  tts_manager_->RegisterEngine(
+      std::move(engine_handle_1),
+      [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {
+        EXPECT_TRUE(result.is_response());
+      });
+  RunLoopUntilIdle();
+
+  // Callback should have been invoked now that both engine and speaker are
+  // connected.
+  EXPECT_TRUE(callback_invoked);
+}
+
+TEST_F(TtsManagerTest, RegisterEngineThenSpeaker) {
+  bool callback_invoked = false;
+  tts_manager_->RegisterTTSEngineReadyCallback([&callback_invoked]() { callback_invoked = true; });
+
+  // Register engine.
+  FakeEngine fake_engine_1;
+  auto engine_handle_1 = fake_engine_1.GetHandle();
+  tts_manager_->RegisterEngine(
+      std::move(engine_handle_1),
+      [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {
+        EXPECT_TRUE(result.is_response());
+      });
+  RunLoopUntilIdle();
+
+  // Callback should not have been invoked yet since no speaker is registered
+  // yet.
+  EXPECT_FALSE(callback_invoked);
+
+  // Register speaker.
+  fuchsia::accessibility::tts::EnginePtr speaker_1;
+  tts_manager_->OpenEngine(speaker_1.NewRequest(),
+                           [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
+                             EXPECT_TRUE(result.is_response());
+                           });
+  RunLoopUntilIdle();
+
+  // Callback should have been invoked now that both engine and speaker are
+  // connected.
+  EXPECT_TRUE(callback_invoked);
 }
 
 }  // namespace

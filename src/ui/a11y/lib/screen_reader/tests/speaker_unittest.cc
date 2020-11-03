@@ -28,6 +28,7 @@ class SpeakerTest : public gtest::RealLoopFixture {
         executor_(async_get_default_dispatcher()) {
     fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle =
         mock_tts_engine_.GetHandle();
+    tts_manager_.RegisterTTSEngineReadyCallback([]() {});
     tts_manager_.RegisterEngine(
         std::move(engine_handle),
         [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {
