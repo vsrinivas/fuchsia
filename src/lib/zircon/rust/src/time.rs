@@ -303,11 +303,11 @@ impl Time {
         }
     }
 
-    pub fn into_nanos(self) -> i64 {
+    pub const fn into_nanos(self) -> i64 {
         self.0
     }
 
-    pub fn from_nanos(nanos: i64) -> Self {
+    pub const fn from_nanos(nanos: i64) -> Self {
         Time(nanos)
     }
 }
