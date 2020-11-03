@@ -31,7 +31,7 @@ class ShebangTest : public ::zxtest::Test {
     int fd;
     zx::socket socket;
     zx_status_t status = fdio_pipe_half(&fd, socket.reset_and_get_address());
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
 
     int flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
     fdio_spawn_action_t action = {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
@@ -44,7 +44,7 @@ class ShebangTest : public ::zxtest::Test {
     if (status != ZX_OK) {
       fprintf(stderr, "fdio_spawn_etc failed: %s\n", err_msg);
     }
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
 
     int64_t return_code;
     wait_for_process_exit(process, &return_code);

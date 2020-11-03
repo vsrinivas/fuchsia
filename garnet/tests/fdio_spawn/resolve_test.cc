@@ -29,7 +29,7 @@ TEST(ResolveTest, SpawnUtilWithoutResolve) {
   zx::process process;
   zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, path, argv,
                                   process.reset_and_get_address());
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_OK(status);
 
   int64_t return_code;
   wait_for_process_exit(process, &return_code);
@@ -44,7 +44,7 @@ TEST(ResolveTest, SpawnResolveOneHop) {
   zx::process process;
   zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, path, argv,
                                   process.reset_and_get_address());
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_OK(status);
 
   int64_t return_code;
   wait_for_process_exit(process, &return_code);
@@ -59,7 +59,7 @@ TEST(ResolveTest, SpawnResolveTwoHops) {
   zx::process process;
   zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, path, argv,
                                   process.reset_and_get_address());
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_OK(status);
 
   int64_t return_code;
   wait_for_process_exit(process, &return_code);
