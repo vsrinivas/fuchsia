@@ -654,8 +654,21 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(current_cpu);
   const cpu_mask_t active_mask = mp_get_active_mask();
 
+  // Returns true when the given thread requires active migration.
+  const auto needs_migration = [active_mask, current_cpu_mask](Thread* const thread) {
+    return (thread->scheduler_state().GetEffectiveCpuMask(active_mask) & current_cpu_mask) == 0 ||
+           thread->scheduler_state().next_cpu_ != INVALID_CPU;
+  };
+
   Thread* next_thread = nullptr;
-  if (is_active && likely(!is_idle)) {
+  if (is_active && needs_migration(current_thread)) {
+    // Avoid putting the current thread into the run queue in any of the paths
+    // below if it needs active migration. Let the migration loop below handle
+    // moving the thread. This avoids an edge case where time slice expiration
+    // coincides with an action that requires migration. Migration should take
+    // precedence over time slice expiration.
+    next_thread = current_thread;
+  } else if (is_active && likely(!is_idle)) {
     if (timeslice_expired) {
       // If the timeslice expired insert the current thread into the run queue.
       QueueThread(current_thread, Placement::Insertion, now, scaled_total_runtime_ns);
@@ -690,12 +703,6 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
   if (next_thread == nullptr) {
     next_thread = DequeueThread(now);
   }
-
-  // Returns true when the given thread requires active migration.
-  const auto needs_migration = [active_mask, current_cpu_mask](Thread* const thread) {
-    return (thread->scheduler_state().GetEffectiveCpuMask(active_mask) & current_cpu_mask) == 0 ||
-           thread->scheduler_state().next_cpu_ != INVALID_CPU;
-  };
 
   // If the next thread needs *active* migration, call the migration function,
   // migrate the thread, and select another thread to run.
