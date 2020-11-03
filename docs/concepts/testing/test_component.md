@@ -71,13 +71,13 @@ For more information, see [Run Fuchsia tests][executing-tests].
 
 ### Keep storage for debugging
 
-If you need to keep test storage for the debugging after the test ends, use
+If you need to keep test storage for debugging after the test ends, use
 [run-test-component][run-test-component] in the Fuchsia shell and pass
 `--realm-label` flag.
 
-The `--realm-label` flag defines the label for environment that your test runs
-in. When the test ends, the storage won't be deleted automatically - it'll be
-accessible at a path under /data. Assuming you:
+The `--realm-label` flag defines the label for an environment that your test
+runs in. When the test ends, the storage won't be deleted automatically -
+it'll be accessible at a path under /data. Assuming you:
 
 - gave your test component (in package `mypackage` with component manifest
   `myurl.cmx`) access to the "isolated-persistent-storage" feature
