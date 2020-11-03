@@ -95,12 +95,14 @@ test("zbitl-unittests") {
     "checking-tests.cc",
     "fd-tests.cc",
     "json-tests.cc",
+    "mem_config_test.cc",
     "memory-tests.cc",
     "stdio-tests.cc",
     "tests.cc",
     "view-tests.cc",
   ]
   deps = [
+    "$zx/kernel/lib/efi",
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

@@ -19,14 +19,21 @@ zx_library("zbitl") {
   sources = [
     "checking.cc",
     "item.cc",
+    "mem_config.cc",
   ]
   deps = [
+    "$zx/kernel/lib/efi",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxc",
     "$zx/third_party/ulib/cksum",
   ]
   public_deps = [
     # <lib/zbitl/view.h> has #include <lib/cksum.h>.
     "$zx/third_party/ulib/cksum:headers",
+
+    # <lib/zbitl/items/mem_config.h> has #include <fbl/span.h>.
+    "$zx/system/ulib/fbl:headers",
 
     # <lib/zbitl/view.h> has #include <lib/fitx/result.h>.
     "$zx/system/ulib/zxc:headers",
@@ -43,11 +50,6 @@ zx_library("zbitl") {
     sources += [
       "fd.cc",
       "stdio.cc",
-    ]
-    deps += [ "$zx/system/ulib/fbl" ]
-    public_deps += [
-      # <lib/zbitl/fd.h> has #include <fbl/unique_fd.h>.
-      "$zx/system/ulib/fbl:headers",
     ]
 
     if (is_fuchsia) {
