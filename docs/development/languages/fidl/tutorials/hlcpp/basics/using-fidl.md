@@ -40,7 +40,7 @@ rm -r examples/fidl/hlcpp/unittests/*
    } // namespace
    ```
 
-1. Define a `test` and then create a depencency on the test through the `$host_toolchain`.
+1. Define a `test` and then create a dependency on the test through the `$host_toolchain`.
    To do this, add the following to `examples/fidl/hlcpp/unittests/BUILD.gn`:
 
    ```gn
