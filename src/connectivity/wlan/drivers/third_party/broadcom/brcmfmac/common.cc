@@ -360,8 +360,8 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   char* clmver;
   char* ptr;
   zx_status_t err;
-  bcme_status_t fw_err = BCME_OK;
-  const wlanphy_country_t country = {{'U', 'S'}};
+  bcme_status_t fw_err;
+  const wlanphy_country_t country = {{'W', 'W'}};
 
   err = brcmf_set_macaddr(ifp);
   if (err != ZX_OK) {

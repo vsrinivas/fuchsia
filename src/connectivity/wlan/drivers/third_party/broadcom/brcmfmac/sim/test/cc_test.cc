@@ -64,7 +64,7 @@ TEST_F(CountryCodeTest, SetDefault) {
 }
 
 TEST_F(CountryCodeTest, SetCCode) {
-  const wlanphy_country_t valid_country = {{'W', 'W'}};
+  const wlanphy_country_t valid_country = {{'U', 'S'}};
   const wlanphy_country_t invalid_country = {{'X', 'X'}};
   struct brcmf_fil_country_le country_code;
   zx_status_t status;
@@ -73,8 +73,17 @@ TEST_F(CountryCodeTest, SetCCode) {
   Init();
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+
+  // Get the country code and verify that it is set to WW.
+  GetCountryCodeFromFirmware(&country_code);
+  code = memcmp(country_code.ccode, "WW", WLANPHY_ALPHA2_LEN);
+  ASSERT_EQ(code, 0);
+
+  // Set an invalid CC and verify it fails
   status = SetCountryCode(&invalid_country);
   ASSERT_NE(status, ZX_OK);
+
+  // Set a valid CC and verify it succeeds
   status = SetCountryCode(&valid_country);
   ASSERT_EQ(status, ZX_OK);
   GetCountryCodeFromFirmware(&country_code);
