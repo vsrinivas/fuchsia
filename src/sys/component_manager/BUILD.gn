@@ -90,6 +90,7 @@ template("component_manager") {
     "src/builtin/root_job.rs",
     "src/builtin/root_resource.rs",
     "src/builtin/runner.rs",
+    "src/builtin/smc_resource.rs",
     "src/builtin/system_controller.rs",
     "src/builtin/time.rs",
     "src/builtin/vmex.rs",

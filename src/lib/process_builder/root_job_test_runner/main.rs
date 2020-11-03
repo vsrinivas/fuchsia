@@ -70,6 +70,14 @@ fn serve_proxy_svc_dir() -> Result<zx::Channel, Error> {
         }
     }
 
+    let _smc_resource_path = PathBuf::from(format!("/svc/{}", fkernel::SmcResourceMarker::NAME));
+    #[cfg(target_arch = "aarch64")]
+    {
+        if _smc_resource_path.exists() {
+            fs.add_proxy_service::<fkernel::SmcResourceMarker, _>();
+        }
+    }
+
     let (client, server) = zx::Channel::create().expect("Failed to create channel");
     fs.serve_connection(server)?;
     fasync::Task::local(fs.collect()).detach();

@@ -82,6 +82,14 @@ test_package("policy-integration-tests") {
       dest = "ioport_resource_allowed.cmx"
     },
     {
+      path = "meta/smc_resource.cmx"
+      dest = "smc_resource_denied.cmx"
+    },
+    {
+      path = "meta/smc_resource.cmx"
+      dest = "smc_resource_allowed.cmx"
+    },
+    {
       path = "meta/root_resource.cmx"
       dest = "root_resource_denied.cmx"
     },

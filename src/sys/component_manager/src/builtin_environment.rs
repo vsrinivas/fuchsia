@@ -16,6 +16,7 @@ use {
             root_job::{RootJob, ROOT_JOB_CAPABILITY_NAME, ROOT_JOB_FOR_INSPECT_CAPABILITY_NAME},
             root_resource::RootResource,
             runner::{BuiltinRunner, BuiltinRunnerFactory},
+            smc_resource::SmcResource,
             system_controller::SystemController,
             time::{create_and_start_utc_clock, UtcTimeMaintainer},
             vmex::VmexService,
@@ -357,6 +358,8 @@ pub struct BuiltinEnvironment {
     pub write_only_log: Option<Arc<WriteOnlyLog>>,
     pub mmio_resource: Option<Arc<MmioResource>>,
     pub root_resource: Option<Arc<RootResource>>,
+    #[cfg(target_arch = "aarch64")]
+    pub smc_resource: Option<Arc<SmcResource>>,
     pub system_controller: Arc<SystemController>,
     pub utc_time_maintainer: Option<Arc<UtcTimeMaintainer>>,
     pub vmex_service: Option<Arc<VmexService>>,
@@ -514,6 +517,18 @@ impl BuiltinEnvironment {
             model.root_realm.hooks.install(root_resource.hooks()).await;
         }
 
+        // Set up the SMC resource.
+        let _smc_resource: Option<Arc<SmcResource>>;
+        #[cfg(target_arch = "aarch64")]
+        {
+            let smc_resource_handle =
+                take_startup_handle(HandleType::SmcResource.into()).map(zx::Resource::from);
+            _smc_resource = smc_resource_handle.map(SmcResource::new);
+            if let Some(_smc_resource) = _smc_resource.as_ref() {
+                model.root_realm.hooks.install(_smc_resource.hooks()).await;
+            }
+        }
+
         // Set up System Controller service.
         let system_controller = Arc::new(SystemController::new(model.clone(), SHUTDOWN_TIMEOUT));
         model.root_realm.hooks.install(system_controller.hooks()).await;
@@ -585,6 +600,8 @@ impl BuiltinEnvironment {
             irq_resource,
             #[cfg(target_arch = "x86_64")]
             ioport_resource: _ioport_resource,
+            #[cfg(target_arch = "aarch64")]
+            smc_resource: _smc_resource,
             root_resource,
             system_controller,
             utc_time_maintainer,

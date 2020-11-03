@@ -17,6 +17,7 @@ fidl("fuchsia.kernel") {
     "kernel-stats.fidl",
     "mmio-resource.fidl",
     "root-job.fidl",
+    "smc-resource.fidl",
   ]
 
   public_deps = [

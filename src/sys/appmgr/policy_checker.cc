@@ -26,6 +26,7 @@ constexpr char kPackageCacheAllowList[] = "allowlist/package_cache.txt";
 constexpr char kPkgFsVersionsAllowList[] = "allowlist/pkgfs_versions.txt";
 constexpr char kRootJobAllowList[] = "allowlist/root_job.txt";
 constexpr char kRootResourceAllowList[] = "allowlist/root_resource.txt";
+constexpr char kSmcResourceAllowList[] = "allowlist/smc_resource.txt";
 constexpr char kSystemUpdaterAllowList[] = "allowlist/system_updater.txt";
 constexpr char kVmexResourceAllowList[] = "allowlist/vmex_resource.txt";
 
@@ -87,6 +88,16 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
                    << "fuchsia.kernel.MmioResource";
     return std::nullopt;
   }
+  if (sandbox.HasService("fuchsia.kernel.RootJob") && !CheckRootJob(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.kernel.RootJob";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.kernel.SmcResource") && !CheckSmcResource(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.kernel.SmcResource";
+    return std::nullopt;
+  }
   if (sandbox.HasService("fuchsia.pkg.PackageResolver") && !CheckPackageResolver(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.pkg.PackageResolver. go/no-package-resolver";
@@ -105,11 +116,6 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasPkgFsPath("versions") && !CheckPkgFsVersions(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "pkgfs/versions. go/no-pkgfs-versions";
-    return std::nullopt;
-  }
-  if (sandbox.HasService("fuchsia.kernel.RootJob") && !CheckRootJob(pkg_url)) {
-    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
-                   << "fuchsia.kernel.RootJob";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.boot.RootResource") && !CheckRootResource(pkg_url)) {
@@ -198,6 +204,11 @@ bool PolicyChecker::CheckRootResource(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckSystemUpdater(const FuchsiaPkgUrl& pkg_url) {
   AllowList system_updater_allowlist(config_, kSystemUpdaterAllowList);
   return system_updater_allowlist.IsAllowed(pkg_url);
+}
+
+bool PolicyChecker::CheckSmcResource(const FuchsiaPkgUrl& pkg_url) {
+  AllowList smc_resource_allowlist(config_, kSmcResourceAllowList);
+  return smc_resource_allowlist.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckVmexResource(const FuchsiaPkgUrl& pkg_url) {

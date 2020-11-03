@@ -53,6 +53,7 @@ class PolicyChecker final {
   bool CheckPkgFsVersions(const FuchsiaPkgUrl& pkg_url);
   bool CheckRootJob(const FuchsiaPkgUrl& pkg_url);
   bool CheckRootResource(const FuchsiaPkgUrl& pkg_url);
+  bool CheckSmcResource(const FuchsiaPkgUrl& pkg_url);
   bool CheckSystemUpdater(const FuchsiaPkgUrl& pkg_url);
   bool CheckVmexResource(const FuchsiaPkgUrl& pkg_url);
 
@@ -67,6 +68,7 @@ class PolicyChecker final {
   FRIEND_TEST(PolicyCheckerTest, PkgFsVersionsPolicy);
   FRIEND_TEST(PolicyCheckerTest, RootJobPolicy);
   FRIEND_TEST(PolicyCheckerTest, RootResourcePolicy);
+  FRIEND_TEST(PolicyCheckerTest, SmcResourcePolicy);
   FRIEND_TEST(PolicyCheckerTest, SystemUpdaterPolicy);
   FRIEND_TEST(PolicyCheckerTest, VmexResourcePolicy);
 };

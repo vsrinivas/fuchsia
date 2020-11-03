@@ -167,6 +167,11 @@ pub enum HandleType {
     /// Equivalent to PA_IOPORT_RESOURCE.
     IoportResource = 0x52,
 
+    /// A Handle to an SMC resource object.
+    ///
+    /// Equivalent to PA_SMC_RESOURCE.
+    SmcResource = 0x53,
+
     /// A handle type with user-defined meaning.
     ///
     /// Equivalent to PA_USER0.

@@ -29,6 +29,8 @@ lazy_static! {
     static ref IRQ_RESOURCE_ALLOWED_URL: String = policy_url!("irq_resource_allowed.cmx");
     static ref IOPORT_RESOURCE_DENIED_URL: String = policy_url!("ioport_resource_denied.cmx");
     static ref IOPORT_RESOURCE_ALLOWED_URL: String = policy_url!("ioport_resource_allowed.cmx");
+    static ref SMC_RESOURCE_DENIED_URL: String = policy_url!("smc_resource_denied.cmx");
+    static ref SMC_RESOURCE_ALLOWED_URL: String = policy_url!("smc_resource_allowed.cmx");
     static ref ROOT_RESOURCE_DENIED_URL: String = policy_url!("root_resource_denied.cmx");
     static ref ROOT_RESOURCE_ALLOWED_URL: String = policy_url!("root_resource_allowed.cmx");
     static ref VMEX_RESOURCE_DENIED_URL: String = policy_url!("vmex_resource_denied.cmx");
@@ -137,6 +139,18 @@ async fn ioport_resource_allowed() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn ioport_resource_denied() -> Result<(), Error> {
     assert_launch_denied(&IOPORT_RESOURCE_DENIED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn smc_resource_allowed() -> Result<(), Error> {
+    assert_launch_allowed(&SMC_RESOURCE_ALLOWED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn smc_resource_denied() -> Result<(), Error> {
+    assert_launch_denied(&SMC_RESOURCE_DENIED_URL).await;
     Ok(())
 }
 
