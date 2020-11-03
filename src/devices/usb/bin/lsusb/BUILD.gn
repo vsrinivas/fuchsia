@@ -23,6 +23,7 @@ test("bin") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/runtime",
+    "//zircon/system/ulib/syslog",
   ]
 }
 
@@ -59,7 +60,7 @@ test_package("lsusb-test-package") {
   tests = [
     {
       name = "lsusb-test"
-      environments = basic_envs
+      environments = [ nuc_env ]
     },
   ]
 }

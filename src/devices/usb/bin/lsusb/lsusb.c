@@ -10,6 +10,8 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
+#include <lib/syslog/global.h>
+#include <lib/syslog/logger.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -63,22 +65,33 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
   char product[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
   ssize_t ret = 0;
 
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   ret = fuchsia_hardware_usb_device_DeviceGetDeviceDescriptor(svc, (uint8_t*)&device_desc);
+
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   if (ret != ZX_OK) {
     printf("DeviceGetDeviceDescriptor failed for %s/%s\n", DEV_USB, devname);
     return ret;
   }
 
   uint32_t speed;
+
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   ret = fuchsia_hardware_usb_device_DeviceGetDeviceSpeed(svc, &speed);
+
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   if (ret != ZX_OK || speed >= countof(usb_speeds)) {
     printf("DeviceGetDeviceSpeed failed for %s/%s\n", DEV_USB, devname);
     return ret;
   }
 
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   get_string_desc(svc, device_desc.iManufacturer, manufacturer, sizeof(manufacturer));
+
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   get_string_desc(svc, device_desc.iProduct, product, sizeof(product));
 
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   int left_pad = depth * 4;
   int right_pad = (max_depth - depth) * 4;
   printf("%*s%3s  %*s%04X:%04X  %-5s  %s %s\n", left_pad, "", devname, right_pad, "",
@@ -110,7 +123,10 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
 
     if (configuration == -1) {
       uint8_t config;
+      FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
       ret = fuchsia_hardware_usb_device_DeviceGetConfiguration(svc, &config);
+
+      FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
       if (ret != ZX_OK)
         return ret;
       configuration = config;
@@ -119,8 +135,12 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
     // Read header of configuration descriptor to get total length.
     zx_status_t status;
     uint16_t desc_size;
+
+    FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
     ret = fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSize(svc, configuration,
                                                                            &status, &desc_size);
+
+    FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
     if (ret == ZX_OK)
       ret = status;
     if (ret != ZX_OK) {
@@ -135,8 +155,10 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
     }
 
     size_t actual;
+    FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
     ret = fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptor(svc, configuration, &status,
                                                                        desc, desc_size, &actual);
+    FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
     if (ret == ZX_OK)
       ret = status;
     if (ret != ZX_OK || actual != desc_size) {
@@ -250,29 +272,43 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
 static int list_device(const char* device_id, int configuration, bool verbose) {
   char devname[128];
 
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   snprintf(devname, sizeof(devname), "%s/%s", DEV_USB, device_id);
   int fd = open(devname, O_RDONLY);
+
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   if (fd < 0) {
     printf("Error opening %s\n", devname);
     return fd;
   }
 
   zx_handle_t svc;
+
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   zx_status_t status = fdio_get_service_handle(fd, &svc);
+
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   if (status != ZX_OK) {
     close(fd);
     return status;
   }
 
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   int ret = do_list_device(svc, configuration, verbose, device_id, 0, 0);
+
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   zx_handle_close(svc);
   close(fd);
+
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   return ret;
 }
 
 static int list_devices(bool verbose) {
   struct dirent* de;
   DIR* dir = opendir(DEV_USB);
+
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   if (!dir) {
     printf("Error opening %s\n", DEV_USB);
     return -1;
@@ -357,7 +393,10 @@ static int list_tree(void) {
     if (!node)
       return -1;
 
+    FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
     int ret = fuchsia_hardware_usb_device_DeviceGetDeviceId(svc, &node->device_id);
+
+    FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
     if (ret != ZX_OK) {
       printf("DeviceGetDeviceId failed for %s\n", devname);
       free(node);
@@ -365,7 +404,11 @@ static int list_tree(void) {
       close(fd);
       continue;
     }
+
+    FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
     ret = fuchsia_hardware_usb_device_DeviceGetHubDeviceId(svc, &node->hub_id);
+
+    FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
     if (ret != ZX_OK) {
       printf("DeviceGetHubDeviceId failed for %s\n", devname);
       free(node);
@@ -408,6 +451,7 @@ static int list_tree(void) {
   // print device tree recursively
   do_list_tree(devices, 0, max_depth);
 
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   node = devices;
   while (node) {
     struct device_node* next = node->next;
@@ -421,12 +465,19 @@ static int list_tree(void) {
 }
 
 int main(int argc, const char** argv) {
+  const char* kTags[] = {"lsusb"};
   int result = 0;
   bool verbose = false;
   bool tree = false;
   const char* device_id = NULL;
   int configuration = -1;
-
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_SEVERITY_DEFAULT,
+      .console_fd = -1,
+      .log_service_channel = ZX_HANDLE_INVALID,
+      .tags = kTags,
+      .num_tags = 1,
+  };
   for (int i = 1; i < argc; i++) {
     const char* arg = argv[i];
     if (!strcmp(arg, "-v")) {
@@ -447,27 +498,34 @@ int main(int argc, const char** argv) {
         goto usage;
       }
       device_id = argv[i];
+
+    } else if (!strcmp(arg, "-debug")) {
+      config.min_severity = FX_LOG_DEBUG;
     } else {
       printf("unknown option \"%s\"\n", arg);
       result = -1;
       goto usage;
     }
   }
-
+  fx_log_reconfigure(&config);
+  FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
   if (tree) {
+    FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
     return list_tree();
   } else {
     printf("ID    VID:PID   SPEED  MANUFACTURER PRODUCT\n");
     if (device_id) {
+      FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
       return list_device(device_id, configuration, verbose);
     } else {
+      FX_LOGF(DEBUG, "", "%s:%i\n", __FILE__, __LINE__);
       return list_devices(verbose);
     }
   }
 
 usage:
   printf("Usage:\n");
-  printf("%s [-c <configuration>] [-d <device ID>] [-t] [-v]", argv[0]);
+  printf("%s [-c <configuration>] [-d <device ID>] [-t] [-v] [-debug]", argv[0]);
   printf(
       "  -c   Prints configuration descriptor for specified configuration (rather than current "
       "configuration)\n");

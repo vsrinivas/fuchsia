@@ -20,7 +20,7 @@
 
 TEST(lsusb, DoesNotCrashOrHang) {
   zx::process process;
-  const char* kArgs[] = {"/pkg/bin/lsusb", nullptr};
+  const char* kArgs[] = {"/pkg/bin/lsusb", "-debug", nullptr};
   ASSERT_OK(fdio_spawn(0, FDIO_SPAWN_CLONE_ALL, "/pkg/bin/lsusb", kArgs,
                        process.reset_and_get_address()));
   process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
