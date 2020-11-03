@@ -6,15 +6,18 @@ use {
     crate::display::{light_sensor_testing, LIGHT_SENSOR_SERVICE_NAME},
     crate::handler::device_storage::testing::*,
     crate::switchboard::base::SettingType,
+    crate::tests::fakes::service_registry::ServiceRegistry,
     crate::EnvironmentBuilder,
     anyhow::format_err,
     fidl::endpoints::ServerEnd,
+    fidl::Error::ClientChannelClosed,
     fidl_fuchsia_settings::*,
     fuchsia_zircon as zx,
     futures::future::{self, BoxFuture},
 };
 
 const ENV_NAME: &str = "settings_service_light_sensor_test_environment";
+const TEST_DELTA: f32 = 0.2;
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_light_sensor() {
@@ -50,7 +53,7 @@ async fn test_light_sensor() {
         .unwrap();
 
     let display_service = env.connect_to_service::<DisplayMarker>().unwrap();
-    let data = display_service.watch_light_sensor2(0.0).await.expect("watch completed");
+    let data = display_service.watch_light_sensor2(TEST_DELTA).await.expect("watch completed");
 
     assert_eq!(data.illuminance_lux, Some(light_sensor_testing::TEST_LUX_VAL as f32));
     assert_eq!(
@@ -60,5 +63,26 @@ async fn test_light_sensor() {
             green: light_sensor_testing::TEST_GREEN_VAL as f32,
             blue: light_sensor_testing::TEST_BLUE_VAL as f32,
         })
+    );
+}
+
+// Tests for light sensor.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_watch_light_sensor_no_service_error() {
+    let expected_error = fuchsia_zircon::Status::INTERNAL;
+
+    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+        .service(ServiceRegistry::serve(ServiceRegistry::create()))
+        .settings(&[SettingType::Display])
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap();
+
+    let display_service = env.connect_to_service::<DisplayMarker>().unwrap();
+    let light_sensor_watch_response = display_service.watch_light_sensor(TEST_DELTA).await;
+
+    matches::assert_matches!(
+        light_sensor_watch_response,
+        Err(ClientChannelClosed { status, .. }) if status == expected_error
     );
 }
