@@ -61,10 +61,11 @@ fn serve_proxy_svc_dir() -> Result<zx::Channel, Error> {
         fs.add_proxy_service::<fkernel::IrqResourceMarker, _>();
     }
 
-    if cfg!(x86_64) {
-        let ioport_resource_path =
-            PathBuf::from(format!("/svc/{}", fkernel::IoportResourceMarker::NAME));
-        if ioport_resource_path.exists() {
+    let _ioport_resource_path =
+        PathBuf::from(format!("/svc/{}", fkernel::IoportResourceMarker::NAME));
+    #[cfg(target_arch = "x86_64")]
+    {
+        if _ioport_resource_path.exists() {
             fs.add_proxy_service::<fkernel::IoportResourceMarker, _>();
         }
     }

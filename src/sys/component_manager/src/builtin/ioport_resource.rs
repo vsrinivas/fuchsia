@@ -25,6 +25,7 @@ pub struct IoportResource {
     resource: Resource,
 }
 
+#[cfg(target_arch = "x86_64")]
 impl IoportResource {
     /// `resource` must be the IOPORT resource.
     pub fn new(resource: Resource) -> Arc<Self> {
@@ -59,7 +60,7 @@ impl ResourceCapability for IoportResource {
     }
 }
 
-#[cfg(test, x86_64)]
+#[cfg(all(test, target_arch = "x86_64"))]
 mod tests {
     use {
         super::*,
@@ -70,7 +71,6 @@ mod tests {
                 moniker::AbsoluteMoniker,
             },
         },
-        cm_rust::CapabilityNameOrPath,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
         fuchsia_component::client::connect_to_service,
@@ -150,9 +150,7 @@ mod tests {
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Builtin {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
-                IOPORT_RESOURCE_CAPABILITY_NAME.clone(),
-            )),
+            capability: InternalCapability::Protocol(IOPORT_RESOURCE_CAPABILITY_NAME.clone()),
         };
 
         let event = Event::new_for_test(

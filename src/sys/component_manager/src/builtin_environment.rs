@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(x86_64)]
-use crate::builtin::ioport_resource::IoportResource;
 use {
     crate::{
         builtin::{
             arguments::Arguments as BootArguments,
             capability::BuiltinCapability,
+            ioport_resource::IoportResource,
             irq_resource::IrqResource,
             kernel_stats::KernelStats,
             log::{ReadOnlyLog, WriteOnlyLog},
@@ -347,7 +346,7 @@ pub struct BuiltinEnvironment {
 
     // Framework capabilities.
     pub boot_args: Arc<BootArguments>,
-    #[cfg(x86_64)]
+    #[cfg(target_arch = "x86_64")]
     pub ioport_resource: Option<Arc<IoportResource>>,
     pub irq_resource: Option<Arc<IrqResource>>,
     pub kernel_stats: Option<Arc<KernelStats>>,
@@ -492,6 +491,17 @@ impl BuiltinEnvironment {
             model.root_realm.hooks.install(mmio_resource.hooks()).await;
         }
 
+        let _ioport_resource: Option<Arc<IoportResource>>;
+        #[cfg(target_arch = "x86_64")]
+        {
+            let ioport_resource_handle =
+                take_startup_handle(HandleType::IoportResource.into()).map(zx::Resource::from);
+            _ioport_resource = ioport_resource_handle.map(IoportResource::new);
+            if let Some(_ioport_resource) = _ioport_resource.as_ref() {
+                model.root_realm.hooks.install(_ioport_resource.hooks()).await;
+            }
+        }
+
         // Set up the IrqResource service.
         let irq_resource = irq_resource_handle.map(IrqResource::new);
         if let Some(irq_resource) = irq_resource.as_ref() {
@@ -573,8 +583,8 @@ impl BuiltinEnvironment {
             write_only_log,
             mmio_resource,
             irq_resource,
-            #[cfg(x86_64)]
-            ioport_resource: get_ioport_resource(),
+            #[cfg(target_arch = "x86_64")]
+            ioport_resource: _ioport_resource,
             root_resource,
             system_controller,
             utc_time_maintainer,
@@ -633,17 +643,6 @@ impl BuiltinEnvironment {
         })
         .detach();
         Ok(())
-    }
-
-    #[cfg(x86_64)]
-    async fn get_ioport_resource() {
-        let ioport_resource_handle =
-            take_startup_handle(HandleType::IoportResource.into()).map(zx::Resource::from);
-        let ioport_resource = ioport_resource_handle.map(IoportResource::new);
-        if let Some(ioport_resource) = ioport_resource.as_ref() {
-            model.root_realm.hooks.install(ioport_resource.hooks()).await;
-        }
-        ioport_resource
     }
 
     /// Bind ServiceFs to the outgoing directory of this component, if it exists.

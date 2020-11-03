@@ -4,7 +4,6 @@
 
 pub mod arguments;
 pub mod capability;
-#[cfg(x86_64)]
 pub mod ioport_resource;
 pub mod irq_resource;
 pub mod kernel_stats;
