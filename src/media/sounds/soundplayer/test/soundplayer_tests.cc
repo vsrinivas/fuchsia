@@ -153,7 +153,7 @@ TEST_F(SoundPlayerTests, Buffer) {
         play_sound_completed = true;
       });
   RunLoopUntil([&play_sound_completed]() { return play_sound_completed; });
-  EXPECT_TRUE(renderers_completed());
+  RunLoopUntil([this]() { return renderers_completed(); });
   under_test().RemoveSound(0);
   RunLoopUntilIdle();
 }
@@ -185,7 +185,7 @@ TEST_F(SoundPlayerTests, MaxSinglePacketBuffer) {
         play_sound_completed = true;
       });
   RunLoopUntil([&play_sound_completed]() { return play_sound_completed; });
-  EXPECT_TRUE(renderers_completed());
+  RunLoopUntil([this]() { return renderers_completed(); });
   under_test().RemoveSound(0);
   RunLoopUntilIdle();
 }
@@ -224,7 +224,7 @@ TEST_F(SoundPlayerTests, TwoPacketBuffer) {
         play_sound_completed = true;
       });
   RunLoopUntil([&play_sound_completed]() { return play_sound_completed; });
-  EXPECT_TRUE(renderers_completed());
+  RunLoopUntil([this]() { return renderers_completed(); });
   under_test().RemoveSound(0);
   RunLoopUntilIdle();
 }
@@ -262,7 +262,7 @@ TEST_F(SoundPlayerTests, WavFile) {
         play_sound_completed = true;
       });
   RunLoopUntil([&play_sound_completed]() { return play_sound_completed; });
-  EXPECT_TRUE(renderers_completed());
+  RunLoopUntil([this]() { return renderers_completed(); });
   under_test().RemoveSound(0);
   RunLoopUntilIdle();
 }
@@ -320,7 +320,7 @@ TEST_F(SoundPlayerTests, WavFileTwice) {
         play_sound_completed = true;
       });
   RunLoopUntil([&play_sound_completed]() { return play_sound_completed; });
-  EXPECT_TRUE(renderers_completed());
+  RunLoopUntil([this]() { return renderers_completed(); });
 
   play_sound_completed = false;
   under_test().PlaySound(
@@ -329,7 +329,7 @@ TEST_F(SoundPlayerTests, WavFileTwice) {
         play_sound_completed = true;
       });
   RunLoopUntil([&play_sound_completed]() { return play_sound_completed; });
-  EXPECT_TRUE(renderers_completed());
+  RunLoopUntil([this]() { return renderers_completed(); });
 
   under_test().RemoveSound(0);
   RunLoopUntilIdle();
@@ -373,8 +373,7 @@ TEST_F(SoundPlayerTests, WavFileStop) {
   under_test().StopPlayingSound(0);
 
   RunLoopUntil([&play_sound_completed]() { return play_sound_completed; });
-  RunLoopUntilIdle();
-  EXPECT_TRUE(renderers_completed());
+  RunLoopUntil([this]() { return renderers_completed(); });
   under_test().RemoveSound(0);
   RunLoopUntilIdle();
 }
@@ -490,7 +489,7 @@ TEST_F(SoundPlayerTests, WavFileBogusStops) {
         play_sound_completed = true;
       });
   RunLoopUntil([&play_sound_completed]() { return play_sound_completed; });
-  EXPECT_TRUE(renderers_completed());
+  RunLoopUntil([this]() { return renderers_completed(); });
 
   // Stop a sound that has already completed.
   under_test().StopPlayingSound(0);
@@ -539,7 +538,7 @@ TEST_F(SoundPlayerTests, FileOggOpus) {
         play_sound_completed = true;
       });
   RunLoopUntil([&play_sound_completed]() { return play_sound_completed; });
-  EXPECT_TRUE(renderers_completed());
+  RunLoopUntil([this]() { return renderers_completed(); });
   under_test().RemoveSound(0);
   RunLoopUntilIdle();
 }
