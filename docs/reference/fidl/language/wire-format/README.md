@@ -787,7 +787,7 @@ Conformant FIDL bindings must check all of the following integrity constraints:
 | 3       | Unused                                                       |             |
 | 2       | Unused                                                       |             |
 | 1       | Unused                                                       |             |
-| 0       | | Indicates whether static unions should be encoded as xunions ([FTP-015]) |
+| 0       | Unused | Indicates whether static unions should be encoded as xunions ([FTP-015]) |
 
 *Flags[1]*
 

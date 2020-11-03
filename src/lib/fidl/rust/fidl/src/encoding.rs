@@ -161,7 +161,7 @@ impl Context {
     /// Returns the header flags to set when encoding with this context.
     #[inline]
     fn header_flags(&self) -> HeaderFlags {
-        HeaderFlags::UNIONS_USE_XUNION_FORMAT
+        HeaderFlags::empty()
     }
 }
 
@@ -3323,9 +3323,10 @@ fidl_struct! {
 bitflags! {
     /// Bitflags type for transaction header flags.
     pub struct HeaderFlags: u32 {
-        /// Indicates that unions in the transaction message body are encoded
-        /// using the xunion format.
-        const UNIONS_USE_XUNION_FORMAT = 1 << 0;
+        /// Empty placeholder since empty bitflags are not allowed. Should be
+        /// removed once any new header flags are defined.
+        #[deprecated = "Placeholder since empty bitflags are not allowed."]
+        const __PLACEHOLDER = 0;
     }
 }
 

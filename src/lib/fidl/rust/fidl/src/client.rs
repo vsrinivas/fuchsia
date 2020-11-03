@@ -804,7 +804,7 @@ mod tests {
     fn expected_sent_bytes(tx_id_low_byte: u8) -> [u8; 24] {
         [
             tx_id_low_byte, 0, 0, 0, // 32 bit tx_id
-            1, 0, 0, // flags (unions encoded as xunions)
+            0, 0, 0, // flags
             MAGIC_NUMBER_INITIAL,
             0, 0, 0, 0, // low bytes of 64 bit ordinal
             SEND_ORDINAL_HIGH_BYTE, 0, 0, 0, // high bytes of 64 bit ordinal
