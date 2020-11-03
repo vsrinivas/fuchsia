@@ -193,6 +193,17 @@ source_set("phys-unittests") {
   configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
+source_set("phys-memory-test") {
+  testonly = true
+  sources = [ "phys-memory-test.cc" ]
+  deps = [
+    ":test-main",
+    "$zx/kernel/lib/ktl",
+    "$zx/kernel/lib/libc",
+    "$zx/system/ulib/zbitl",
+  ]
+}
+
 group("test") {
   testonly = true
 

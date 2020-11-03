@@ -9,4 +9,5 @@ common_tests = [
   "hello-world-test",
   "backtrace-test",
   "phys-unittests",
+  "phys-memory-test",
 ]
