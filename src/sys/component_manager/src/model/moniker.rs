@@ -351,6 +351,21 @@ pub enum ExtendedMoniker {
     ComponentManager,
 }
 
+/// The string representation of ExtendedMoniker::ComponentManager
+const EXTENDED_MONIKER_COMPONENT_MANAGER_STR: &'static str = "<component_manager>";
+
+impl ExtendedMoniker {
+    pub fn parse_string_without_instances(rep: &str) -> Result<Self, MonikerError> {
+        if rep == EXTENDED_MONIKER_COMPONENT_MANAGER_STR {
+            Ok(ExtendedMoniker::ComponentManager)
+        } else {
+            Ok(ExtendedMoniker::ComponentInstance(AbsoluteMoniker::parse_string_without_instances(
+                rep,
+            )?))
+        }
+    }
+}
+
 impl fmt::Display for ExtendedMoniker {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -358,7 +373,7 @@ impl fmt::Display for ExtendedMoniker {
                 write!(f, "{}", m)?;
             }
             Self::ComponentManager => {
-                write!(f, "<component_manager>")?;
+                write!(f, "{}", EXTENDED_MONIKER_COMPONENT_MANAGER_STR)?;
             }
         }
         Ok(())
@@ -445,7 +460,7 @@ impl fmt::Display for RelativeMoniker {
 }
 
 /// Errors produced by `MonikerEnvironment`.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum MonikerError {
     #[error("invalid moniker: {}", rep)]
     InvalidMoniker { rep: String },
@@ -857,5 +872,21 @@ mod tests {
         );
         assert_eq!(false, cousin.is_self());
         assert_eq!(".\\a:1\\a0:1/b0:2/b:2", format!("{}", cousin));
+    }
+
+    #[test]
+    fn extended_monikers_parse() {
+        assert_eq!(
+            ExtendedMoniker::parse_string_without_instances(EXTENDED_MONIKER_COMPONENT_MANAGER_STR)
+                .unwrap(),
+            ExtendedMoniker::ComponentManager
+        );
+        assert_eq!(
+            ExtendedMoniker::parse_string_without_instances("/foo/bar").unwrap(),
+            ExtendedMoniker::ComponentInstance(
+                AbsoluteMoniker::parse_string_without_instances("/foo/bar").unwrap()
+            )
+        );
+        assert!(ExtendedMoniker::parse_string_without_instances("").is_err(), "cannot be empty");
     }
 }

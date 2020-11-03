@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        model::moniker::{AbsoluteMoniker, MonikerError},
+        model::moniker::{AbsoluteMoniker, ExtendedMoniker, MonikerError},
         startup,
     },
     anyhow::{format_err, Context, Error},
@@ -78,6 +78,8 @@ pub struct RuntimeConfig {
 pub struct SecurityPolicy {
     /// Allowlists for Zircon job policy.
     pub job_policy: JobPolicyAllowlists,
+    /// Capability routing policies.
+    pub capability_policy: Vec<CapabilityAllowlistEntry>,
 }
 
 /// Allowlists for Zircon job policy. Part of runtime security policy.
@@ -97,6 +99,30 @@ pub struct JobPolicyAllowlists {
     /// Components must request this critical marking by including "main_process_critical: true" in
     /// their manifest's program object and must be using the ELF runner.
     pub main_process_critical: Vec<AbsoluteMoniker>,
+}
+
+/// Define a wrapper around the component_internal type to implement Eq.
+#[derive(Debug, PartialEq)]
+pub enum AllowlistedCapability {
+    Directory(component_internal::AllowlistedDirectory),
+    Event(component_internal::AllowlistedEvent),
+    Protocol(component_internal::AllowlistedProtocol),
+    Service(component_internal::AllowlistedService),
+    Storage(component_internal::AllowlistedStorage),
+    Runner(component_internal::AllowlistedRunner),
+    Resolver(component_internal::AllowlistedResolver),
+}
+
+// Internal fidl tables implement PartialEq but not Eq, but this type is
+// semantically Eq.
+impl Eq for AllowlistedCapability {}
+
+/// Allowlist entry for capability routing policy. Part of the runtime security palicy.
+#[derive(Debug, PartialEq, Eq)]
+pub struct CapabilityAllowlistEntry {
+    source_moniker: ExtendedMoniker,
+    capability: AllowlistedCapability,
+    target_monikers: Vec<AbsoluteMoniker>,
 }
 
 impl Default for RuntimeConfig {
@@ -165,23 +191,27 @@ fn as_usize_or_default(value: Option<u32>, default: usize) -> usize {
     }
 }
 
+#[derive(Debug, Clone, Error, PartialEq, Eq)]
+pub enum PolicyConfigError {
+    #[error("Capability source name was empty in a capability policy entry.")]
+    EmptyCapabilitySourceName,
+    #[error("Capability type was empty in a capability policy entry.")]
+    EmptyAllowlistedCapability,
+    #[error("Capability from type was empty in a capability policy entry.")]
+    EmptyFromType,
+    #[error("Capability source_moniker was empty in a capability policy entry.")]
+    EmptySourceMoniker,
+    #[error("Invalid source capability.")]
+    InvalidSourceCapability,
+    #[error("Unsupported allowlist capability type")]
+    UnsupportedAllowlistedCapability,
+}
+
 impl TryFrom<component_internal::Config> for RuntimeConfig {
     type Error = Error;
 
     fn try_from(config: component_internal::Config) -> Result<Self, Error> {
         let default = RuntimeConfig::default();
-        let job_policy =
-            if let Some(component_internal::SecurityPolicy { job_policy: Some(job_policy) }) =
-                &config.security_policy
-            {
-                let ambient_mark_vmo_exec =
-                    parse_absolute_monikers_from_strings(&job_policy.ambient_mark_vmo_exec)?;
-                let main_process_critical =
-                    parse_absolute_monikers_from_strings(&job_policy.main_process_critical)?;
-                JobPolicyAllowlists { ambient_mark_vmo_exec, main_process_critical }
-            } else {
-                JobPolicyAllowlists::default()
-            };
 
         let list_children_batch_size =
             as_usize_or_default(config.list_children_batch_size, default.list_children_batch_size);
@@ -192,9 +222,15 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
             None => None,
         };
 
+        let security_policy = if let Some(security_policy) = config.security_policy {
+            SecurityPolicy::try_from(security_policy).context("Unable to parse security policy")?
+        } else {
+            SecurityPolicy::default()
+        };
+
         Ok(RuntimeConfig {
             list_children_batch_size,
-            security_policy: SecurityPolicy { job_policy },
+            security_policy,
             namespace_capabilities: Self::translate_namespace_capabilities(
                 config.namespace_capabilities,
             )?,
@@ -210,6 +246,122 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
             out_dir_contents: config.out_dir_contents.unwrap_or(default.out_dir_contents),
             root_component_url,
         })
+    }
+}
+
+impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
+    type Error = Error;
+
+    fn try_from(security_policy: component_internal::SecurityPolicy) -> Result<Self, Error> {
+        let job_policy = if let Some(job_policy) = &security_policy.job_policy {
+            let ambient_mark_vmo_exec =
+                parse_absolute_monikers_from_strings(&job_policy.ambient_mark_vmo_exec)?;
+            let main_process_critical =
+                parse_absolute_monikers_from_strings(&job_policy.main_process_critical)?;
+            JobPolicyAllowlists { ambient_mark_vmo_exec, main_process_critical }
+        } else {
+            JobPolicyAllowlists::default()
+        };
+
+        let capability_policy = if let Some(capability_policy) = &security_policy.capability_policy
+        {
+            if let Some(allowlist) = &capability_policy.allowlist {
+                let mut policies = Vec::with_capacity(allowlist.len());
+                for e in allowlist.iter() {
+                    let source_moniker = ExtendedMoniker::parse_string_without_instances(
+                        e.source_moniker
+                            .as_ref()
+                            .ok_or(Error::new(PolicyConfigError::EmptySourceMoniker))?,
+                    )?;
+
+                    let capability = if let Some(capability) = e.capability.as_ref() {
+                        match capability {
+                            component_internal::AllowlistedCapability::Directory(e) => {
+                                Ok(AllowlistedCapability::Directory(
+                                    component_internal::AllowlistedDirectory {
+                                        source_name: e.source_name.clone(),
+                                    },
+                                ))
+                            }
+                            component_internal::AllowlistedCapability::Event(e) => {
+                                // Only self and framework refs are valid in this context.
+                                let source = match e.source {
+                                    Some(fsys::Ref::Self_(_)) => {
+                                        Ok(fsys::Ref::Self_(fsys::SelfRef {}))
+                                    }
+                                    Some(fsys::Ref::Framework(_)) => {
+                                        Ok(fsys::Ref::Framework(fsys::FrameworkRef {}))
+                                    }
+                                    _ => {
+                                        Err(Error::new(PolicyConfigError::InvalidSourceCapability))
+                                    }
+                                }?;
+                                let event = component_internal::AllowlistedEvent {
+                                    source_name: e.source_name.clone(),
+                                    source: Some(source),
+                                };
+                                Ok(AllowlistedCapability::Event(event))
+                            }
+                            component_internal::AllowlistedCapability::Protocol(e) => {
+                                Ok(AllowlistedCapability::Protocol(
+                                    component_internal::AllowlistedProtocol {
+                                        source_name: e.source_name.clone(),
+                                    },
+                                ))
+                            }
+                            component_internal::AllowlistedCapability::Service(e) => {
+                                Ok(AllowlistedCapability::Service(
+                                    component_internal::AllowlistedService {
+                                        source_name: e.source_name.clone(),
+                                    },
+                                ))
+                            }
+                            component_internal::AllowlistedCapability::Storage(e) => {
+                                Ok(AllowlistedCapability::Storage(
+                                    component_internal::AllowlistedStorage {
+                                        source_name: e.source_name.clone(),
+                                    },
+                                ))
+                            }
+                            component_internal::AllowlistedCapability::Runner(e) => {
+                                Ok(AllowlistedCapability::Runner(
+                                    component_internal::AllowlistedRunner {
+                                        source_name: e.source_name.clone(),
+                                    },
+                                ))
+                            }
+                            component_internal::AllowlistedCapability::Resolver(e) => {
+                                Ok(AllowlistedCapability::Resolver(
+                                    component_internal::AllowlistedResolver {
+                                        source_name: e.source_name.clone(),
+                                    },
+                                ))
+                            }
+                            _ => {
+                                Err(Error::new(PolicyConfigError::UnsupportedAllowlistedCapability))
+                            }
+                        }
+                    } else {
+                        Err(Error::new(PolicyConfigError::EmptyAllowlistedCapability))
+                    }?;
+
+                    let target_monikers = parse_absolute_monikers_from_strings(&e.target_monikers)?;
+
+                    policies.push(CapabilityAllowlistEntry {
+                        source_moniker,
+                        capability,
+                        target_monikers,
+                    });
+                }
+                policies
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        };
+
+        Ok(SecurityPolicy { job_policy, capability_policy })
     }
 }
 
@@ -270,6 +422,7 @@ mod tests {
     use {
         super::*,
         crate::model::moniker::ChildMoniker,
+        cm_types::ParseError,
         fidl::encoding::encode_persistent,
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2, fuchsia_zircon as zx,
@@ -299,45 +452,19 @@ mod tests {
         };
     }
 
-    #[test]
-    fn invalid_moniker() {
-        let config = component_internal::Config {
-            debug: None,
-            list_children_batch_size: None,
-            maintain_utc_clock: None,
-            use_builtin_process_launcher: None,
-            builtin_pkg_resolver: None,
-            security_policy: Some(component_internal::SecurityPolicy {
-                job_policy: Some(component_internal::JobPolicyAllowlists {
-                    main_process_critical: None,
-                    ambient_mark_vmo_exec: Some(vec!["/".to_string(), "bad".to_string()]),
-                }),
-            }),
-            num_threads: None,
-            namespace_capabilities: None,
-            out_dir_contents: None,
-            root_component_url: None,
+    macro_rules! test_config_err {
+        (
+            $(
+                $test_name:ident => ($input:expr, $type:ty, $expected:expr),
+            )+
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    assert_eq!(*RuntimeConfig::try_from($input).unwrap_err().downcast_ref::<$type>().unwrap(), $expected);
+                }
+            )+
         };
-
-        assert_matches!(RuntimeConfig::try_from(config), Err(_));
-    }
-
-    #[test]
-    fn invalid_root_component_url() {
-        let config = component_internal::Config {
-            debug: None,
-            list_children_batch_size: None,
-            maintain_utc_clock: None,
-            use_builtin_process_launcher: None,
-            builtin_pkg_resolver: None,
-            security_policy: None,
-            num_threads: None,
-            namespace_capabilities: None,
-            out_dir_contents: None,
-            root_component_url: Some("invalid url".to_string()),
-        };
-
-        assert_matches!(RuntimeConfig::try_from(config), Err(_));
     }
 
     test_config_ok! {
@@ -364,6 +491,7 @@ mod tests {
                     main_process_critical: None,
                     ambient_mark_vmo_exec: None,
                 }),
+                capability_policy: None,
             }),
             num_threads: Some(10),
             namespace_capabilities: None,
@@ -387,6 +515,35 @@ mod tests {
                         main_process_critical: Some(vec!["/something/important".to_string()]),
                         ambient_mark_vmo_exec: Some(vec!["/".to_string(), "/foo/bar".to_string()]),
                     }),
+                    capability_policy: Some(component_internal::CapabilityPolicyAllowlists {
+                        allowlist: Some(vec![
+                        component_internal::CapabilityAllowlistEntry {
+                            source_moniker: Some("<component_manager>".to_string()),
+                            capability: Some(component_internal::AllowlistedCapability::Protocol(
+                                component_internal::AllowlistedProtocol {
+                                    source_name: Some("fuchsia.boot.RootResource".to_string())
+                                }
+                            )),
+                            target_monikers: Some(vec![
+                                "/root".to_string(),
+                                "/root/bootstrap".to_string(),
+                                "/root/core".to_string()
+                            ]),
+                        },
+                        component_internal::CapabilityAllowlistEntry {
+                            source_moniker: Some("/foo/bar".to_string()),
+                            capability: Some(component_internal::AllowlistedCapability::Event(
+                                    component_internal::AllowlistedEvent {
+                                        source_name: Some("running".to_string()),
+                                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                                    }
+                            )),
+                            target_monikers: Some(vec![
+                                "/foo/bar".to_string(),
+                                "/foo/bar/baz".to_string()
+                            ]),
+                        },
+                    ])}),
                 }),
                 num_threads: Some(24),
                 namespace_capabilities: Some(vec![
@@ -417,7 +574,35 @@ mod tests {
                         main_process_critical: vec![
                             AbsoluteMoniker::from(vec!["something:0", "important:0"]),
                         ],
-                    }
+                    },
+                    capability_policy: vec![
+                        CapabilityAllowlistEntry {
+                            source_moniker: ExtendedMoniker::ComponentManager,
+                            capability: AllowlistedCapability::Protocol(
+                                component_internal::AllowlistedProtocol {
+                                    source_name: Some("fuchsia.boot.RootResource".to_string()),
+                                }
+                            ),
+                            target_monikers: vec![
+                                AbsoluteMoniker::from(vec!["root:0"]),
+                                AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]),
+                                AbsoluteMoniker::from(vec!["root:0", "core:0"]),
+                            ],
+                        },
+                        CapabilityAllowlistEntry {
+                            source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
+                            capability: AllowlistedCapability::Event(
+                                component_internal::AllowlistedEvent {
+                                    source_name: Some("running".to_string()),
+                                    source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                                }
+                            ),
+                            target_monikers: vec![
+                                AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
+                                AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"]),
+                            ],
+                        },
+                    ],
                 },
                 num_threads: 24,
                 namespace_capabilities: vec![
@@ -436,6 +621,87 @@ mod tests {
                 root_component_url: Some(Url::new(FOO_PKG_URL.to_string()).unwrap()),
             }
         ),
+    }
+
+    test_config_err! {
+        invalid_job_policy => (component_internal::Config {
+            debug: None,
+            list_children_batch_size: None,
+            maintain_utc_clock: None,
+            use_builtin_process_launcher: None,
+            builtin_pkg_resolver: None,
+            security_policy: Some(component_internal::SecurityPolicy {
+                job_policy: Some(component_internal::JobPolicyAllowlists {
+                    main_process_critical: None,
+                    ambient_mark_vmo_exec: Some(vec!["/".to_string(), "bad".to_string()]),
+                }),
+                capability_policy: None,
+            }),
+            num_threads: None,
+            namespace_capabilities: None,
+            out_dir_contents: None,
+            root_component_url: None,
+        }, MonikerError, MonikerError::InvalidMoniker {rep: "bad".to_string()}),
+        invalid_capability_policy_empty_allowlist_cap => (component_internal::Config {
+            debug: None,
+            list_children_batch_size: None,
+            maintain_utc_clock: None,
+            use_builtin_process_launcher: None,
+            builtin_pkg_resolver: None,
+            security_policy: Some(component_internal::SecurityPolicy {
+                job_policy: None,
+                capability_policy: Some(component_internal::CapabilityPolicyAllowlists {
+                    allowlist: Some(vec![
+                    component_internal::CapabilityAllowlistEntry {
+                        source_moniker: Some("<component_manager>".to_string()),
+                        capability:  None,
+                        target_monikers: Some(vec!["/root".to_string()]),
+                    }])
+                })
+            }),
+            num_threads: None,
+            namespace_capabilities: None,
+            out_dir_contents: None,
+            root_component_url: None,
+    }, PolicyConfigError, PolicyConfigError::EmptyAllowlistedCapability),
+    invalid_capability_policy_empty_source_moniker => (component_internal::Config {
+        debug: None,
+        list_children_batch_size: None,
+        maintain_utc_clock: None,
+        use_builtin_process_launcher: None,
+        builtin_pkg_resolver: None,
+        security_policy: Some(component_internal::SecurityPolicy {
+            job_policy: None,
+            capability_policy: Some(component_internal::CapabilityPolicyAllowlists {
+                allowlist: Some(vec![
+                component_internal::CapabilityAllowlistEntry {
+                    source_moniker: None,
+                    capability: Some(component_internal::AllowlistedCapability::Protocol(
+                        component_internal::AllowlistedProtocol {
+                            source_name: Some("fuchsia.boot.RootResource".to_string())
+                        }
+                    )),
+                    target_monikers: Some(vec!["/root".to_string()]),
+                }])
+            })
+        }),
+        num_threads: None,
+        namespace_capabilities: None,
+        out_dir_contents: None,
+        root_component_url: None,
+    }, PolicyConfigError, PolicyConfigError::EmptySourceMoniker),
+    invalid_root_component_url => (component_internal::Config {
+        debug: None,
+        list_children_batch_size: None,
+        maintain_utc_clock: None,
+        use_builtin_process_launcher: None,
+        builtin_pkg_resolver: None,
+        security_policy: None,
+        num_threads: None,
+        namespace_capabilities: None,
+        out_dir_contents: None,
+        root_component_url: Some("invalid url".to_string()),
+    }, ParseError, ParseError::InvalidValue),
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -567,6 +833,7 @@ mod tests {
                     ambient_mark_vmo_exec: vec![allowed1.clone(), allowed2.clone()],
                     main_process_critical: vec![allowed1.clone(), allowed2.clone()],
                 },
+                capability_policy: vec![],
             },
             ..Default::default()
         });

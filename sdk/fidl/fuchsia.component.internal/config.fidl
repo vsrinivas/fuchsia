@@ -81,6 +81,8 @@ enum BuiltinPkgResolver : uint8 {
 table SecurityPolicy {
     /// Allowlists for Zircon job policy.
     1: JobPolicyAllowlists job_policy;
+    /// Capability access policy.
+    2: CapabilityPolicyAllowlists capability_policy;
 };
 
 /// Allowlists for Zircon job policy.
@@ -112,4 +114,66 @@ enum OutDirContents : uint8 {
 
     /// Expose root component's `expose/svc`.
     SVC = 3;
+};
+
+/// Represents the class of capabilities supported to be allowlisted.
+flexible union AllowlistedCapability {
+    1: AllowlistedDirectory directory;
+    2: AllowlistedEvent event;
+    3: AllowlistedProtocol protocol;
+    4: AllowlistedService service;
+    5: AllowlistedStorage storage;
+    6: AllowlistedRunner runner;
+    7: AllowlistedResolver resolver;
+};
+
+table AllowlistedDirectory {
+    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
+};
+
+table AllowlistedEvent {
+    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
+    2: fuchsia.sys2.Ref source;
+};
+
+table AllowlistedProtocol {
+    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
+};
+
+table AllowlistedService {
+    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
+};
+
+table AllowlistedStorage {
+    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
+};
+
+table AllowlistedRunner {
+    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
+};
+
+table AllowlistedResolver {
+    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
+};
+
+/// Defines a single capability policy entry in the set of capability policy
+/// allowlists.
+table CapabilityAllowlistEntry {
+    /// The `source_moniker` represents the origin of a capability. The
+    /// `source_moniker` is either an absolute moniker or '<component_manager>'.
+    1: string:fuchsia.component.MAX_MONIKER_LENGTH source_moniker;
+
+    /// Represents the type of capability that is being restricted along
+    /// with any other properties required by a particular capability type.
+    2: AllowlistedCapability capability;
+
+    /// The set of absolute monikers that are allowed to use this specific
+    /// capability.
+    3: vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX_ALLOWLIST_SIZE target_monikers;
+};
+
+/// Defines the total set of capability allowlists. Each
+/// `source_moniker` + `capability` pair must be unique in the vector.
+table CapabilityPolicyAllowlists {
+    1: vector<CapabilityAllowlistEntry>:MAX_ALLOWLIST_SIZE allowlist;
 };

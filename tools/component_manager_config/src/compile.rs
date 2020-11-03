@@ -7,7 +7,7 @@ use {
     cm_types::{symmetrical_enums, Url},
     cml::error::{Error, Location},
     fidl::encoding::encode_persistent,
-    fidl_fuchsia_component_internal as component_internal,
+    fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys,
     serde::Deserialize,
     serde_json5,
     std::{
@@ -60,13 +60,13 @@ impl std::default::Default for BuiltinPkgResolver {
 #[serde(deny_unknown_fields)]
 pub struct SecurityPolicy {
     job_policy: Option<JobPolicyAllowlists>,
+    capability_policy: Option<Vec<CapabilityAllowlistEntry>>,
 }
 
 #[derive(Deserialize, Debug, Default)]
 #[serde(deny_unknown_fields)]
 pub struct JobPolicyAllowlists {
     ambient_mark_vmo_exec: Option<Vec<String>>,
-
     main_process_critical: Option<Vec<String>>,
 }
 
@@ -84,6 +84,104 @@ impl std::default::Default for OutDirContents {
     fn default() -> Self {
         OutDirContents::None
     }
+}
+
+pub trait AllowlistedCapabilityExt {
+    fn get_source_name(&self) -> String;
+    fn get_source(&self) -> Option<&fsys::Ref>;
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "lowercase", tag = "type")]
+pub enum AllowlistedCapability {
+    Directory { source_name: String },
+    Event { source_name: String, source: CapabilityFrom },
+    Protocol { source_name: String },
+    Service { source_name: String },
+    Storage { source_name: String },
+    Runner { source_name: String },
+    Resolver { source_name: String },
+}
+
+impl Into<component_internal::AllowlistedCapability> for AllowlistedCapability {
+    fn into(self) -> component_internal::AllowlistedCapability {
+        match &self {
+            AllowlistedCapability::Directory { source_name } => {
+                component_internal::AllowlistedCapability::Directory(
+                    component_internal::AllowlistedDirectory {
+                        source_name: Some(source_name.clone()),
+                    },
+                )
+            }
+            AllowlistedCapability::Event { source_name, source } => {
+                component_internal::AllowlistedCapability::Event(
+                    component_internal::AllowlistedEvent {
+                        source_name: Some(source_name.clone()),
+                        source: Some(source.clone().into()),
+                    },
+                )
+            }
+            AllowlistedCapability::Protocol { source_name } => {
+                component_internal::AllowlistedCapability::Protocol(
+                    component_internal::AllowlistedProtocol {
+                        source_name: Some(source_name.clone()),
+                    },
+                )
+            }
+            AllowlistedCapability::Service { source_name } => {
+                component_internal::AllowlistedCapability::Service(
+                    component_internal::AllowlistedService {
+                        source_name: Some(source_name.clone()),
+                    },
+                )
+            }
+            AllowlistedCapability::Storage { source_name } => {
+                component_internal::AllowlistedCapability::Storage(
+                    component_internal::AllowlistedStorage {
+                        source_name: Some(source_name.clone()),
+                    },
+                )
+            }
+            AllowlistedCapability::Runner { source_name } => {
+                component_internal::AllowlistedCapability::Runner(
+                    component_internal::AllowlistedRunner {
+                        source_name: Some(source_name.clone()),
+                    },
+                )
+            }
+            AllowlistedCapability::Resolver { source_name } => {
+                component_internal::AllowlistedCapability::Resolver(
+                    component_internal::AllowlistedResolver {
+                        source_name: Some(source_name.clone()),
+                    },
+                )
+            }
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum CapabilityFrom {
+    Component,
+    Framework,
+}
+
+impl Into<fsys::Ref> for CapabilityFrom {
+    fn into(self) -> fsys::Ref {
+        match &self {
+            CapabilityFrom::Component => fsys::Ref::Self_(fsys::SelfRef {}),
+            CapabilityFrom::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
+pub struct CapabilityAllowlistEntry {
+    source_moniker: Option<String>,
+    capability: Option<AllowlistedCapability>,
+    target_monikers: Option<Vec<String>>,
 }
 
 impl TryFrom<Config> for component_internal::Config {
@@ -131,24 +229,34 @@ impl TryFrom<Config> for component_internal::Config {
 fn translate_security_policy(
     security_policy: Option<SecurityPolicy>,
 ) -> component_internal::SecurityPolicy {
+    let SecurityPolicy { job_policy, capability_policy } = security_policy.unwrap_or_default();
     component_internal::SecurityPolicy {
-        job_policy: Some(translate_job_policy(security_policy.and_then(|p| p.job_policy))),
+        job_policy: job_policy.map(translate_job_policy),
+        capability_policy: capability_policy.map(translate_capability_policy),
     }
 }
 
 fn translate_job_policy(
-    job_policy: Option<JobPolicyAllowlists>,
+    job_policy: JobPolicyAllowlists,
 ) -> component_internal::JobPolicyAllowlists {
-    job_policy.map_or_else(
-        || component_internal::JobPolicyAllowlists {
-            ambient_mark_vmo_exec: None,
-            main_process_critical: None,
-        },
-        |p| component_internal::JobPolicyAllowlists {
-            ambient_mark_vmo_exec: p.ambient_mark_vmo_exec,
-            main_process_critical: p.main_process_critical,
-        },
-    )
+    component_internal::JobPolicyAllowlists {
+        ambient_mark_vmo_exec: job_policy.ambient_mark_vmo_exec,
+        main_process_critical: job_policy.main_process_critical,
+    }
+}
+
+fn translate_capability_policy(
+    capability_policy: Vec<CapabilityAllowlistEntry>,
+) -> component_internal::CapabilityPolicyAllowlists {
+    let allowlist = capability_policy
+        .iter()
+        .map(|e| component_internal::CapabilityAllowlistEntry {
+            source_moniker: e.source_moniker.clone(),
+            capability: e.capability.clone().map_or_else(|| None, |t| Some(t.into())),
+            target_monikers: e.target_monikers.clone(),
+        })
+        .collect::<Vec<_>>();
+    component_internal::CapabilityPolicyAllowlists { allowlist: Some(allowlist) }
 }
 
 macro_rules! extend_if_unset {
@@ -293,7 +401,26 @@ mod tests {
                 job_policy: {
                     main_process_critical: [ "/", "/bar" ],
                     ambient_mark_vmo_exec: ["/foo"],
-                }
+                },
+                capability_policy: [
+                    {
+                        source_moniker: "<component_manager>",
+                        capability: {
+                            type: "protocol",
+                            source_name: "fuchsia.boot.RootResource",
+                        },
+                        target_monikers: ["/root", "/root/bootstrap", "/root/core"],
+                    },
+                    {
+                        source_moniker: "/foo/bar",
+                        capability: {
+                            type: "event",
+                            source_name: "running",
+                            source: "framework",
+                        },
+                        target_monikers: ["/foo/bar", "/foo/bar/baz"],
+                    },
+                ]
             },
             namespace_capabilities: [
                 {
@@ -322,6 +449,40 @@ mod tests {
                     job_policy: Some(component_internal::JobPolicyAllowlists {
                         main_process_critical: Some(vec!["/".to_string(), "/bar".to_string()]),
                         ambient_mark_vmo_exec: Some(vec!["/foo".to_string()]),
+                    }),
+                    capability_policy: Some(component_internal::CapabilityPolicyAllowlists {
+                        allowlist: Some(vec![
+                            component_internal::CapabilityAllowlistEntry {
+                                source_moniker: Some("<component_manager>".to_string()),
+                                capability: Some(
+                                    component_internal::AllowlistedCapability::Protocol(
+                                        component_internal::AllowlistedProtocol {
+                                            source_name: Some(
+                                                "fuchsia.boot.RootResource".to_string()
+                                            ),
+                                        }
+                                    )
+                                ),
+                                target_monikers: Some(vec![
+                                    "/root".to_string(),
+                                    "/root/bootstrap".to_string(),
+                                    "/root/core".to_string()
+                                ]),
+                            },
+                            component_internal::CapabilityAllowlistEntry {
+                                source_moniker: Some("/foo/bar".to_string()),
+                                capability: Some(component_internal::AllowlistedCapability::Event(
+                                    component_internal::AllowlistedEvent {
+                                        source_name: Some("running".to_string()),
+                                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                                    }
+                                )),
+                                target_monikers: Some(vec![
+                                    "/foo/bar".to_string(),
+                                    "/foo/bar/baz".to_string()
+                                ]),
+                            },
+                        ]),
                     }),
                 }),
                 namespace_capabilities: Some(vec![

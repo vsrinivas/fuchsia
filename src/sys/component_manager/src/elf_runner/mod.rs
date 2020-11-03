@@ -1345,6 +1345,7 @@ mod tests {
                     ambient_mark_vmo_exec: vec![AbsoluteMoniker::from(vec!["foo:0"])],
                     ..Default::default()
                 },
+                ..Default::default()
             },
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()

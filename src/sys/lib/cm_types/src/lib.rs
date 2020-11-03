@@ -77,7 +77,7 @@ macro_rules! symmetrical_enums {
 pub struct Name(String);
 
 /// The error representing a failure to parse a type from string.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum ParseError {
     /// The string did not match a valid value.
     #[error("invalid value")]
