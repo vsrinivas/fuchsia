@@ -29,35 +29,35 @@ struct AnalogGain {
   // Analog gain constants queried from the sensor, per the SMIA spec.
   //     gain = (m0 * x + c0) / (m1 * x + c1)
   // Exactly one of m0 and m1 must be 0.
-  int16_t m0_;
-  int16_t c0_;
-  int16_t m1_;
-  int16_t c1_;
-  uint16_t gain_code_min_;
-  uint16_t gain_code_max_;
-  uint16_t gain_code_step_size_;
+  int16_t m0;
+  int16_t c0;
+  int16_t m1;
+  int16_t c1;
+  uint16_t gain_code_min;
+  uint16_t gain_code_max;
+  uint16_t gain_code_step_size;
 
   // Flag to indicate when an update is needed.
-  bool update_gain_;
-  uint16_t gain_code_global_;
+  bool update_gain;
+  uint16_t gain_code_global;
 };
 
 // TODO(jsasinowski): Refactor into a class that incorporates relevant methods.
 struct DigitalGain {
-  uint16_t gain_min_;
-  uint16_t gain_max_;
-  uint16_t gain_step_size_;
+  uint16_t gain_min;
+  uint16_t gain_max;
+  uint16_t gain_step_size;
 
   // Flag to indicate when an update is needed.
-  bool update_gain_;
-  uint16_t gain_;
+  bool update_gain;
+  uint16_t gain;
 };
 
 // TODO(jsasinowski): Refactor into a class that incorporates relevant methods.
 struct IntegrationTime {
   // Flag to indicate when an update is needed.
-  bool update_integration_time_;
-  uint16_t coarse_integration_time_;
+  bool update_integration_time;
+  uint16_t coarse_integration_time;
 };
 
 class Imx227Device;

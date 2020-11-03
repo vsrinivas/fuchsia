@@ -131,11 +131,11 @@ zx_status_t Imx227Device::CameraSensor2SetAnalogGain(float gain, float* out_gain
   }
 
   auto new_analog_gain = AnalogTotalGainToRegValue(gain);
-  if (new_analog_gain != analog_gain_.gain_code_global_) {
-    analog_gain_.gain_code_global_ = new_analog_gain;
-    analog_gain_.update_gain_ = true;
+  if (new_analog_gain != analog_gain_.gain_code_global) {
+    analog_gain_.gain_code_global = new_analog_gain;
+    analog_gain_.update_gain = true;
   }
-  *out_gain = AnalogRegValueToTotalGain(analog_gain_.gain_code_global_);
+  *out_gain = AnalogRegValueToTotalGain(analog_gain_.gain_code_global);
 
   return ZX_OK;
 }
@@ -166,11 +166,11 @@ zx_status_t Imx227Device::CameraSensor2SetDigitalGain(float gain, float* out_gai
   }
 
   auto new_digital_gain = DigitalTotalGainToRegValue(gain);
-  if (new_digital_gain != digital_gain_.gain_) {
-    digital_gain_.gain_ = new_digital_gain;
-    digital_gain_.update_gain_ = true;
+  if (new_digital_gain != digital_gain_.gain) {
+    digital_gain_.gain = new_digital_gain;
+    digital_gain_.update_gain = true;
   }
-  *out_gain = DigitalRegValueToTotalGain(digital_gain_.gain_);
+  *out_gain = DigitalRegValueToTotalGain(digital_gain_.gain);
 
   return ZX_OK;
 }
@@ -197,9 +197,9 @@ zx_status_t Imx227Device::CameraSensor2SetIntegrationTime(float int_time, float*
   }
   uint16_t new_coarse_integration_time = int_time * result.value();
 
-  if (new_coarse_integration_time != integration_time_.coarse_integration_time_) {
-    integration_time_.coarse_integration_time_ = new_coarse_integration_time;
-    integration_time_.update_integration_time_ = true;
+  if (new_coarse_integration_time != integration_time_.coarse_integration_time) {
+    integration_time_.coarse_integration_time = new_coarse_integration_time;
+    integration_time_.update_integration_time = true;
   }
   *out_int_time = int_time;
 
@@ -210,35 +210,35 @@ zx_status_t Imx227Device::CameraSensor2Update() {
   TRACE_DURATION("camera", "Imx227Device::CameraSensor2Update");
   std::lock_guard guard(lock_);
 
-  if (!analog_gain_.update_gain_ && !digital_gain_.update_gain_ &&
-      !integration_time_.update_integration_time_) {
+  if (!analog_gain_.update_gain && !digital_gain_.update_gain &&
+      !integration_time_.update_integration_time) {
     return ZX_OK;
   }
 
   auto status = SetGroupedParameterHold(true);
 
-  if (analog_gain_.update_gain_) {
-    status = Write16(kAnalogGainCodeGlobalReg, analog_gain_.gain_code_global_);
+  if (analog_gain_.update_gain) {
+    status = Write16(kAnalogGainCodeGlobalReg, analog_gain_.gain_code_global);
     if (status != ZX_OK) {
       return status;
     }
-    analog_gain_.update_gain_ = false;
+    analog_gain_.update_gain = false;
   }
 
-  if (digital_gain_.update_gain_) {
-    status = Write16(kDigitalGainGlobalReg, digital_gain_.gain_);
+  if (digital_gain_.update_gain) {
+    status = Write16(kDigitalGainGlobalReg, digital_gain_.gain);
     if (status) {
       return status;
     }
-    digital_gain_.update_gain_ = false;
+    digital_gain_.update_gain = false;
   }
 
-  if (integration_time_.update_integration_time_) {
-    status = Write16(kCoarseIntegrationTimeReg, integration_time_.coarse_integration_time_);
+  if (integration_time_.update_integration_time) {
+    status = Write16(kCoarseIntegrationTimeReg, integration_time_.coarse_integration_time);
     if (status) {
       return status;
     }
-    integration_time_.update_integration_time_ = false;
+    integration_time_.update_integration_time = false;
   }
 
   status = SetGroupedParameterHold(false);

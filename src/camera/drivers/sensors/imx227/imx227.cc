@@ -289,8 +289,8 @@ fit::result<uint32_t, zx_status_t> Imx227Device::GetLinesPerSecond() {
 }
 
 float Imx227Device::AnalogRegValueToTotalGain(uint16_t reg_value) {
-  return (static_cast<float>(analog_gain_.m0_ * reg_value + analog_gain_.c0_)) /
-         (static_cast<float>(analog_gain_.m1_ * reg_value + analog_gain_.c1_));
+  return (static_cast<float>(analog_gain_.m0 * reg_value + analog_gain_.c0)) /
+         (static_cast<float>(analog_gain_.m1 * reg_value + analog_gain_.c1));
 }
 
 uint16_t Imx227Device::AnalogTotalGainToRegValue(float gain) {
@@ -298,28 +298,27 @@ uint16_t Imx227Device::AnalogTotalGainToRegValue(float gain) {
   uint16_t register_value;
 
   // Compute the register value.
-  if (analog_gain_.m0_ == 0) {
-    value = ((analog_gain_.c0_ / gain) - analog_gain_.c1_) / analog_gain_.m1_;
+  if (analog_gain_.m0 == 0) {
+    value = ((analog_gain_.c0 / gain) - analog_gain_.c1) / analog_gain_.m1;
   } else {
-    value = (analog_gain_.c1_ * gain - analog_gain_.c0_) / analog_gain_.m0_;
+    value = (analog_gain_.c1 * gain - analog_gain_.c0) / analog_gain_.m0;
   }
 
   // Round the final result, which is quantized to the gain code step size.
-  value += 0.5f * analog_gain_.gain_code_step_size_;
+  value += 0.5f * analog_gain_.gain_code_step_size;
 
   // Convert and clamp.
   register_value = value;
 
-  if (register_value < analog_gain_.gain_code_min_) {
-    register_value = analog_gain_.gain_code_min_;
+  if (register_value < analog_gain_.gain_code_min) {
+    register_value = analog_gain_.gain_code_min;
   }
 
-  register_value =
-      (register_value - analog_gain_.gain_code_min_) / analog_gain_.gain_code_step_size_;
-  register_value = register_value * analog_gain_.gain_code_step_size_ + analog_gain_.gain_code_min_;
+  register_value = (register_value - analog_gain_.gain_code_min) / analog_gain_.gain_code_step_size;
+  register_value = register_value * analog_gain_.gain_code_step_size + analog_gain_.gain_code_min;
 
-  if (register_value > analog_gain_.gain_code_max_) {
-    register_value = analog_gain_.gain_code_max_;
+  if (register_value > analog_gain_.gain_code_max) {
+    register_value = analog_gain_.gain_code_max;
   }
 
   return register_value;
@@ -337,20 +336,20 @@ uint16_t Imx227Device::DigitalTotalGainToRegValue(float gain) {
   value = gain * (1 << kDigitalGainShift);
 
   // Round the final result, which is quantized to the gain code step size.
-  value += 0.5f * digital_gain_.gain_step_size_;
+  value += 0.5f * digital_gain_.gain_step_size;
 
   // Convert and clamp.
   register_value = value;
 
-  if (register_value < digital_gain_.gain_min_) {
-    register_value = digital_gain_.gain_min_;
+  if (register_value < digital_gain_.gain_min) {
+    register_value = digital_gain_.gain_min;
   }
 
-  register_value = (register_value - digital_gain_.gain_min_) / digital_gain_.gain_step_size_;
-  register_value = register_value * digital_gain_.gain_step_size_ + digital_gain_.gain_min_;
+  register_value = (register_value - digital_gain_.gain_min) / digital_gain_.gain_step_size;
+  register_value = register_value * digital_gain_.gain_step_size + digital_gain_.gain_min;
 
-  if (register_value > digital_gain_.gain_max_) {
-    register_value = digital_gain_.gain_max_;
+  if (register_value > digital_gain_.gain_max) {
+    register_value = digital_gain_.gain_max;
   }
 
   return register_value;
@@ -370,13 +369,13 @@ zx_status_t Imx227Device::ReadAnalogGainConstants() {
   if (!(regs.m0 == 0) ^ (regs.m1 == 0)) {
     return ZX_ERR_BAD_STATE;
   }
-  analog_gain_.m0_ = be16toh(regs.m0);
-  analog_gain_.m1_ = be16toh(regs.m1);
-  analog_gain_.c0_ = be16toh(regs.c0);
-  analog_gain_.c1_ = be16toh(regs.c1);
-  analog_gain_.gain_code_min_ = be16toh(regs.code_min);
-  analog_gain_.gain_code_max_ = be16toh(regs.code_max);
-  analog_gain_.gain_code_step_size_ = be16toh(regs.code_step);
+  analog_gain_.m0 = be16toh(regs.m0);
+  analog_gain_.m1 = be16toh(regs.m1);
+  analog_gain_.c0 = be16toh(regs.c0);
+  analog_gain_.c1 = be16toh(regs.c1);
+  analog_gain_.gain_code_min = be16toh(regs.code_min);
+  analog_gain_.gain_code_max = be16toh(regs.code_max);
+  analog_gain_.gain_code_step_size = be16toh(regs.code_step);
 
   return ZX_OK;
 }
@@ -391,9 +390,9 @@ zx_status_t Imx227Device::ReadDigitalGainConstants() {
     return ZX_ERR_BAD_STATE;
   }
 
-  digital_gain_.gain_min_ = be16toh(regs.gain_min);
-  digital_gain_.gain_max_ = be16toh(regs.gain_max);
-  digital_gain_.gain_step_size_ = be16toh(regs.gain_step_size);
+  digital_gain_.gain_min = be16toh(regs.gain_min);
+  digital_gain_.gain_max = be16toh(regs.gain_max);
+  digital_gain_.gain_step_size = be16toh(regs.gain_step_size);
   return ZX_OK;
 }
 
