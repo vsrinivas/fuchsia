@@ -186,6 +186,12 @@ impl Sdk {
     pub fn get_version(&self) -> &SdkVersion {
         &self.version
     }
+
+    /// For tests only
+    #[doc(hidden)]
+    pub fn get_empty_sdk_with_version(version: SdkVersion) -> Self {
+        Sdk { metas: Vec::new(), real_paths: RealPaths::Prefix(std::path::PathBuf::new()), version }
+    }
 }
 
 impl SdkAtoms {
