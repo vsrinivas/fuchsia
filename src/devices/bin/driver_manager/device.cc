@@ -857,6 +857,7 @@ void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
                              PublishMetadataCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
+  ZX_ASSERT(device_path.size() <= fuchsia_device_manager_DEVICE_PATH_MAX);
   memcpy(path, device_path.data(), device_path.size());
   path[device_path.size()] = 0;
   zx_status_t status = dev->coordinator->PublishMetadata(dev, path, key, data.data(),
