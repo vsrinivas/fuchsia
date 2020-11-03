@@ -613,6 +613,18 @@ func TestCategory(t *testing.T) {
 		},
 		{
 			step: Step{
+				Command: &compdb.Command{Command: "'touch' a"},
+			},
+			want: "touch",
+		},
+		{
+			step: Step{
+				Command: &compdb.Command{Command: `"rm" a`},
+			},
+			want: "rm",
+		},
+		{
+			step: Step{
 				Command: &compdb.Command{
 					Command: "touch obj/third_party/cobalt/src/lib/client/rust/cobalt-client.inputs.stamp",
 				},
@@ -634,6 +646,14 @@ func TestCategory(t *testing.T) {
 				},
 			},
 			want: "fidlgen_rust",
+		},
+		{
+			step: Step{
+				Command: &compdb.Command{
+					Command: "/usr/bin/env ../../prebuilt/third_party/python3/linux-x64/bin/python3.8 ../../build/sdk/compute_atom_api.py --output /usr/local/google/home/jayzhuang/fuchsia/out/default/fidling/gen/sdk/fidl/fuchsia.media.target/fuchsia.media.target_sdk.api --file fidl/fuchsia.media.target /usr/local/google/home/jayzhuang/fuchsia/out/default/fidling/gen/sdk/fidl/fuchsia.media.target/fuchsia.media.target.normalized",
+				},
+			},
+			want: "compute_atom_api.py",
 		},
 	} {
 		if got := tc.step.Category(); got != tc.want {

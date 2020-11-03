@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -57,49 +58,75 @@ func (s Step) Duration() time.Duration {
 	return s.End - s.Start
 }
 
-var toSkip = map[string]bool{
-	"env": true,
+var pythonRE = regexp.MustCompile(`^python(\d(\.\d+)?)?$`)
+
+// extractPythonScript returns the first python script in input tokens.
+func extractPythonScript(tokens []string) string {
+	for _, t := range tokens {
+		if c := baseCmd(t); strings.HasSuffix(c, ".py") {
+			return c
+		}
+	}
+	return ""
 }
 
-// category returns a comma separate list of executed commands.
+func baseCmd(cmd string) string {
+	return strings.Trim(path.Base(cmd), "()")
+}
+
+// category returns a comma separated list of executed commands.
 func (s Step) Category() string {
 	if s.Command == nil {
 		return "unknown"
 	}
-	var categories []string
-
 	tokens, err := shlex.Split(s.Command.Command)
 	if err != nil {
 		return "invalid command"
 	}
 
-	var token string
-	cmdStart := true
-	for len(tokens) > 0 {
-		token, tokens = tokens[0], tokens[1:]
-		baseCmd := strings.Trim(path.Base(token), "()")
-		if toSkip[baseCmd] {
-			continue
-		}
-		// gn_run_binary.sh is a script to run an arbitrary binary produced by the
-		// current build.
-		//
-		// First argument to gn_run_binary.sh is the bin directory of the toolchain,
-		// skip it to take the second argument, which is the binary to run.
-		if baseCmd == "gn_run_binary.sh" {
-			tokens = tokens[1:]
-			continue
-		}
-		if baseCmd == "||" || baseCmd == "&&" {
-			cmdStart = true
-			continue
-		}
-		if cmdStart {
-			categories = append(categories, baseCmd)
-			cmdStart = false
+	var commands [][]string
+	start := 0
+	for i, t := range tokens {
+		if t == "||" || t == "&&" {
+			commands = append(commands, tokens[start:i])
+			start = i + 1
 		}
 	}
+	if start < len(tokens) {
+		commands = append(commands, tokens[start:])
+	}
 
+	var categories []string
+	for _, command := range commands {
+		for i, token := range command {
+			c := baseCmd(token)
+			if c == "env" {
+				continue
+			}
+
+			// gn_run_binary.sh is a script to run an arbitrary binary produced by the
+			// current build.
+			//
+			// First argument to gn_run_binary.sh is the bin directory of the toolchain,
+			// skip it to take the second argument, which is the binary to run.
+			if c == "gn_run_binary.sh" {
+				if i+2 < len(command) {
+					categories = append(categories, baseCmd(command[i+2]))
+				}
+				break
+			}
+
+			if pythonRE.MatchString(c) {
+				if script := extractPythonScript(command); script != "" {
+					categories = append(categories, script)
+				}
+				break
+			}
+
+			categories = append(categories, c)
+			break
+		}
+	}
 	return strings.Join(categories, ",")
 }
 
