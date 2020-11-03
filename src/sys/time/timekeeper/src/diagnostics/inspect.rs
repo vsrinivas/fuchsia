@@ -16,7 +16,7 @@ use {
         health::Reporter, Inspector, IntProperty, Node, NumericProperty, Property, StringProperty,
         UintProperty,
     },
-    fuchsia_zircon::{self as zx, HandleBased as _},
+    fuchsia_zircon as zx,
     futures::FutureExt,
     inspect_writable::{InspectWritable, InspectWritableNode},
     lazy_static::lazy_static,
@@ -346,16 +346,8 @@ impl InspectDiagnostics {
         primary: &PrimaryTrack<T>,
         optional_monitor: &Option<MonitorTrack<T>>,
     ) -> Self {
-        // Arc-wrapping the clock is necessary to support the potential multiple invocations of the
-        // lazy child node.
-        let clock = Arc::new(
-            primary
-                .clock
-                .duplicate_handle(zx::Rights::READ)
-                .expect("failed to duplicate UTC clock"),
-        );
-
         // Record fixed data directly into the node without retaining any references.
+        let clock = Arc::clone(&primary.clock);
         node.record_child("initialization", |child| TimeSet::now(&clock).record(child));
         let backstop = clock.get_details().expect("failed to get clock details").backstop;
         node.record_int("backstop", backstop.into_nanos());
@@ -523,9 +515,11 @@ mod tests {
     };
 
     /// Creates a new wrapped clock set to backstop time.
-    fn create_clock() -> zx::Clock {
-        zx::Clock::create(zx::ClockOpts::empty(), Some(zx::Time::from_nanos(BACKSTOP_TIME)))
-            .unwrap()
+    fn create_clock() -> Arc<zx::Clock> {
+        Arc::new(
+            zx::Clock::create(zx::ClockOpts::empty(), Some(zx::Time::from_nanos(BACKSTOP_TIME)))
+                .unwrap(),
+        )
     }
 
     /// Creates a new `InspectDiagnostics` object recording to the root of the supplied inspector,
@@ -533,7 +527,7 @@ mod tests {
     fn create_test_object(
         inspector: &Inspector,
         include_monitor: bool,
-    ) -> (InspectDiagnostics, zx::Clock) {
+    ) -> (InspectDiagnostics, Arc<zx::Clock>) {
         let primary = PrimaryTrack {
             time_source: FakeTimeSource::failing(),
             clock: create_clock(),

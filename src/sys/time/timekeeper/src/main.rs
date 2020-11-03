@@ -72,14 +72,14 @@ const DEV_COBALT_EXPERIMENT: TimeMetricDimensionExperiment = TimeMetricDimension
 /// The information required to maintain UTC for the primary track.
 struct PrimaryTrack<T: TimeSource> {
     time_source: T,
-    clock: zx::Clock,
+    clock: Arc<zx::Clock>,
     notifier: Notifier,
 }
 
 /// The information required to maintain UTC for the monitor track.
 struct MonitorTrack<T: TimeSource> {
     time_source: T,
-    clock: zx::Clock,
+    clock: Arc<zx::Clock>,
 }
 
 /// Command line arguments supplied to Timekeeper.
@@ -117,12 +117,12 @@ async fn main() -> Result<(), Error> {
     };
     let primary_track = PrimaryTrack {
         time_source: PushTimeSource::new(time_source_urls.primary.to_string()),
-        clock: utc_clock,
+        clock: Arc::new(utc_clock),
         notifier: notifier.clone(),
     };
     let monitor_track = time_source_urls.monitor.map(|url| MonitorTrack {
         time_source: PushTimeSource::new(url.to_string()),
-        clock: create_monitor_clock(&primary_track.clock),
+        clock: Arc::new(create_monitor_clock(&primary_track.clock)),
     });
 
     info!("initializing diagnostics and serving inspect on servicefs");
@@ -203,7 +203,7 @@ fn initial_clock_state(utc_clock: &zx::Clock) -> InitialClockState {
 /// sending progress to diagnosistics and a notifier as appropriate.
 async fn set_clock_from_rtc<R: Rtc, D: Diagnostics>(
     rtc: &R,
-    clock: &mut zx::Clock,
+    clock: &zx::Clock,
     notifier: &mut Notifier,
     diagnostics: Arc<D>,
 ) {
@@ -351,7 +351,6 @@ mod tests {
             time_source::{Event as TimeSourceEvent, FakeTimeSource, Sample},
         },
         fidl_fuchsia_time_external as ftexternal, fuchsia_zircon as zx,
-        fuchsia_zircon::HandleBased as _,
         futures::FutureExt,
         lazy_static::lazy_static,
         std::task::Poll,
@@ -371,15 +370,11 @@ mod tests {
 
     /// Creates and starts a new clock with default options, returning a tuple of the clock and its
     /// initial update time in ticks.
-    fn create_clock() -> (zx::Clock, i64) {
+    fn create_clock() -> (Arc<zx::Clock>, i64) {
         let clock = zx::Clock::create(*CLOCK_OPTS, Some(*BACKSTOP_TIME)).unwrap();
         clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
-        (clock, initial_update_ticks)
-    }
-
-    fn duplicate_clock(clock: &zx::Clock) -> zx::Clock {
-        clock.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap()
+        (Arc::new(clock), initial_update_ticks)
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -401,7 +396,7 @@ mod tests {
 
         let _task = fasync::Task::spawn(maintain_utc(
             PrimaryTrack {
-                clock: duplicate_clock(&primary_clock),
+                clock: Arc::clone(&primary_clock),
                 time_source: FakeTimeSource::events(vec![
                     TimeSourceEvent::StatusChange { status: ftexternal::Status::Ok },
                     TimeSourceEvent::from(Sample::new(
@@ -413,7 +408,7 @@ mod tests {
                 notifier: notifier.clone(),
             },
             Some(MonitorTrack {
-                clock: duplicate_clock(&monitor_clock),
+                clock: Arc::clone(&monitor_clock),
                 time_source: FakeTimeSource::events(vec![
                     TimeSourceEvent::StatusChange { status: ftexternal::Status::Network },
                     TimeSourceEvent::StatusChange { status: ftexternal::Status::Ok },
@@ -491,11 +486,7 @@ mod tests {
 
         // Maintain UTC until no more work remains
         let mut fut2 = maintain_utc(
-            PrimaryTrack {
-                clock: duplicate_clock(&clock),
-                time_source,
-                notifier: notifier.clone(),
-            },
+            PrimaryTrack { clock: Arc::clone(&clock), time_source, notifier: notifier.clone() },
             None,
             Some(rtc.clone()),
             interface_event_stream,
@@ -547,11 +538,7 @@ mod tests {
 
         // Maintain UTC until no more work remains
         let mut fut2 = maintain_utc(
-            PrimaryTrack {
-                clock: duplicate_clock(&clock),
-                time_source,
-                notifier: notifier.clone(),
-            },
+            PrimaryTrack { clock: Arc::clone(&clock), time_source, notifier: notifier.clone() },
             None,
             Some(rtc.clone()),
             interface_event_stream,
@@ -614,11 +601,7 @@ mod tests {
 
         // Maintain UTC until no more work remains
         let mut fut2 = maintain_utc(
-            PrimaryTrack {
-                clock: duplicate_clock(&clock),
-                time_source,
-                notifier: notifier.clone(),
-            },
+            PrimaryTrack { clock: Arc::clone(&clock), time_source, notifier: notifier.clone() },
             None,
             Some(rtc.clone()),
             interface_event_stream,

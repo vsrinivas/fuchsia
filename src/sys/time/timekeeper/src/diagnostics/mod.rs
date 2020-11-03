@@ -25,13 +25,13 @@ use {
     fuchsia_zircon as zx,
 };
 
-/// A special `Duration` that will match any value during an `eq_with_sentinel` operation.
+/// A special `Duration` that will match any value during an `eq_with_any` operation.
 #[cfg(test)]
 pub const ANY_DURATION: zx::Duration = zx::Duration::from_nanos(i64::MIN);
 
 #[cfg(test)]
 lazy_static! {
-    /// A special time that will match any value during an `eq_with_sentinel` operation.
+    /// A special time that will match any value during an `eq_with_any` operation.
     pub static ref ANY_TIME: zx::Time = zx::Time::from_nanos(i64::MIN);
 }
 

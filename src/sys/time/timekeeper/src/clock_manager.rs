@@ -29,7 +29,7 @@ const CLOCK_UPDATE_THRESHOLD: zx::Duration = zx::Duration::from_millis(1);
 /// `TimeSourceManager` and a UTC estimate is produced based on these samples by an `Estimator`.
 pub struct ClockManager<T: TimeSource, R: Rtc, D: Diagnostics> {
     /// The userspace clock to be maintained.
-    clock: zx::Clock,
+    clock: Arc<zx::Clock>,
     /// The `TimeSourceManager` that supplies validated samples from a time source.
     time_source_manager: TimeSourceManager<T, D, KernelMonotonicProvider>,
     /// The `Estimator` that maintains an estimate of the UTC and frequency, populated after the
@@ -49,7 +49,7 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
     /// Construct a new `ClockManager` and start synchronizing the clock. The returned future
     /// will never complete.
     pub async fn execute(
-        clock: zx::Clock,
+        clock: Arc<zx::Clock>,
         time_source_manager: TimeSourceManager<T, D, KernelMonotonicProvider>,
         rtc: Option<R>,
         notifier: Option<Notifier>,
@@ -68,7 +68,7 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
 
     /// Construct a new `ClockManager`.
     fn new(
-        clock: zx::Clock,
+        clock: Arc<zx::Clock>,
         time_source_manager: TimeSourceManager<T, D, KernelMonotonicProvider>,
         rtc: Option<R>,
         notifier: Option<Notifier>,
@@ -241,8 +241,7 @@ mod tests {
             time_source::{Event as TimeSourceEvent, FakeTimeSource, Sample},
         },
         fidl_fuchsia_time_external::{self as ftexternal, Status},
-        fuchsia_async as fasync,
-        fuchsia_zircon::{self as zx, HandleBased as _},
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::FutureExt,
         lazy_static::lazy_static,
         std::task::Poll,
@@ -266,15 +265,15 @@ mod tests {
     }
 
     /// Creates and starts a new clock with default options.
-    fn create_clock() -> zx::Clock {
+    fn create_clock() -> Arc<zx::Clock> {
         let clock = zx::Clock::create(*CLOCK_OPTS, Some(*BACKSTOP_TIME)).unwrap();
         clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
-        clock
+        Arc::new(clock)
     }
 
     /// Creates a new `ClockManager` from a time source manager that outputs the supplied samples.
     fn create_clock_manager(
-        clock: &zx::Clock,
+        clock: Arc<zx::Clock>,
         samples: Vec<Sample>,
         rtc: Option<FakeRtc>,
         notifier: Option<Notifier>,
@@ -290,14 +289,7 @@ mod tests {
             time_source,
             Arc::clone(&diagnostics),
         );
-        ClockManager::new(
-            clock.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap(),
-            time_source_manager,
-            rtc,
-            notifier,
-            diagnostics,
-            *TEST_TRACK,
-        )
+        ClockManager::new(clock, time_source_manager, rtc, notifier, diagnostics, *TEST_TRACK)
     }
 
     #[test]
@@ -319,7 +311,7 @@ mod tests {
         // Create a clock manager
         let monotonic_ref = zx::Time::get_monotonic();
         let clock_manager = create_clock_manager(
-            &clock,
+            Arc::clone(&clock),
             vec![Sample::new(monotonic_ref + OFFSET, monotonic_ref, STD_DEV)],
             Some(rtc.clone()),
             Some(notifier),
@@ -360,7 +352,7 @@ mod tests {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let monotonic_ref = zx::Time::get_monotonic();
         let clock_manager = create_clock_manager(
-            &clock,
+            Arc::clone(&clock),
             vec![Sample::new(monotonic_ref + OFFSET, monotonic_ref, STD_DEV)],
             None,
             None,
@@ -395,7 +387,7 @@ mod tests {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let monotonic_ref = zx::Time::get_monotonic();
         let clock_manager = create_clock_manager(
-            &clock,
+            Arc::clone(&clock),
             vec![
                 Sample::new(
                     monotonic_ref - SAMPLE_SPACING + OFFSET,
