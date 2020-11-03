@@ -4,13 +4,15 @@
 
 use {
     crate::ConfigLevel,
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
         fmt,
         fs::{File, OpenOptions},
         io::{BufReader, BufWriter, Read, Write},
+        path::PathBuf,
+        sync::Mutex,
     },
 };
 
@@ -21,13 +23,21 @@ pub struct Environment {
     pub global: Option<String>,
 }
 
+lazy_static::lazy_static! {
+    static ref ENV_MUTEX: Mutex<Option<String>> = Mutex::new(None);
+}
+
 impl Environment {
     fn load_from_reader<R: Read>(reader: R) -> Result<Self> {
+        let _e = ENV_MUTEX.lock().unwrap();
         serde_json::from_reader::<R, Environment>(reader).context("reading environment from disk")
     }
 
-    fn save_to_writer<W: Write>(&self, writer: W) -> Result<()> {
-        serde_json::to_writer_pretty(writer, &self).context("writing environment to disk")
+    fn save_to_writer<W: Write>(&self, mut writer: W) -> Result<()> {
+        let _e = ENV_MUTEX.lock().unwrap();
+        serde_json::to_writer_pretty(&mut writer, &self)
+            .context("writing environment to disk")
+            .and_then(|_| writer.flush().map_err(|e| anyhow!("Could not flush writer: {}", e)))
     }
 
     pub(crate) fn try_load(file: Option<&String>) -> Self {
@@ -113,6 +123,14 @@ impl Environment {
                 _ => format!(" This level is not saved in the environment file."),
             },
         )
+    }
+
+    pub fn init_env_file(path: &PathBuf) -> Result<()> {
+        let _e = ENV_MUTEX.lock().unwrap();
+        let mut f = File::create(path)?;
+        f.write_all(b"{}")?;
+        f.sync_all()?;
+        Ok(())
     }
 }
 

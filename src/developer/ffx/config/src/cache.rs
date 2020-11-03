@@ -13,8 +13,6 @@ use {
     serde_json::Value,
     std::{
         collections::HashMap,
-        fs::File,
-        io::Write,
         path::PathBuf,
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -51,7 +49,7 @@ pub fn env_file() -> Option<String> {
     lazy_static::lazy_static! {
         static ref FILE: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
     }
-    init_env_file(&FILE.path().to_path_buf()).expect("initializing env file");
+    Environment::init_env_file(&FILE.path().to_path_buf()).expect("initializing env file");
     FILE.path().to_str().map(|s| s.to_string())
 }
 
@@ -98,19 +96,12 @@ fn init_config_impl(
 
     if !env_path.is_file() {
         log::debug!("initializing environment {}", env_path.display());
-        init_env_file(&env_path)?;
+        Environment::init_env_file(&env_path)?;
     }
     env_path.to_str().map(String::from).context("getting environment file").and_then(|e| {
         let _ = ENV_FILE.lock().unwrap().replace(e);
         Ok(())
     })
-}
-
-fn init_env_file(path: &PathBuf) -> Result<()> {
-    let mut f = File::create(path)?;
-    f.write_all(b"{}")?;
-    f.sync_all()?;
-    Ok(())
 }
 
 fn is_cache_item_expired(item: &CacheItem, now: Instant) -> bool {
