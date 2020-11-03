@@ -71,7 +71,7 @@ impl DerivedConnection for ImmutableConnection {
                 Ok((requests, control_handle)) => (requests, control_handle),
                 Err(_) => {
                     // As we report all errors on `server_end`, if we failed to send an error over
-                    // this connection, there is nowhere to send the error tothe error to.
+                    // this connection, there is nowhere to send the error to.
                     return;
                 }
             };
