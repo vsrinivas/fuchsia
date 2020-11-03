@@ -72,6 +72,12 @@ class PlatformBuffer {
   // note: the implementation of this function is required to be threadsafe.
   virtual bool CommitPages(uint64_t start_page_index, uint64_t page_count) const = 0;
 
+  // Tries to ensure the pages are not backed by memory, and resets their contents to 0. May fail if
+  // the VMO is pinned.
+  virtual bool DecommitPages(uint64_t start_page_index, uint64_t page_count) const = 0;
+
+  virtual bool GetBufferInfo(magma_buffer_info_t* buffer_info_out) const = 0;
+
   // If |alignment| isn't 0, it must be a power of 2 and page-aligned. It's
   // invalid to map the same buffer twice with different alignments.
   virtual bool MapCpu(void** addr_out, uintptr_t alignment = 0) = 0;

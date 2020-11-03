@@ -143,6 +143,24 @@ enum {
   MAGMA_POLL_CONDITION_SIGNALED = 3,
 };
 
+enum {
+  // Eagerly populate GPU page tables with the pages mapping in this range, committing pages as
+  // needed. This is not needed for MAGMA_GPU_MAP_FLAG_GROWABLE allocations, since the page tables
+  // will be populated on demand.
+  MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES = 1,
+  // Commit memory on the client thread. GPU page tables may not be populated. This should be used
+  // before POPULATE_TABLES to ensure the expensive work of committing pages happens with the
+  // correct priority and without blocking the processing in the MSD of commands from other threads
+  // from the same connection.
+  MAGMA_BUFFER_RANGE_OP_COMMIT = 2,
+  // Depopulate GPU page table mappings for this range. This prevents the GPU from accessing pages
+  // in that range, but the pages retain their contents.
+  MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES = 3,
+  // Decommit memory wholy on the client thread. This may fail if the MSD currently has the page
+  // tables populated.
+  MAGMA_BUFFER_RANGE_OP_DECOMMIT = 4,
+};
+
 #define MAGMA_SYSMEM_FLAG_PROTECTED (1 << 0)
 #define MAGMA_SYSMEM_FLAG_DISPLAY (1 << 1)
 // This flag is only used to modify the name of the buffer to signal that the client requested it
@@ -274,6 +292,11 @@ typedef struct {
   uint32_t min_buffer_count_for_dedicated_slack;
   uint32_t min_buffer_count_for_shared_slack;
 } magma_buffer_format_additional_constraints_t;
+
+typedef struct {
+  uint64_t committed_byte_count;
+  uint64_t size;
+} magma_buffer_info_t;
 
 #if defined(__cplusplus)
 }

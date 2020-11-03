@@ -12,7 +12,9 @@ def usage():
     print('  virtio_magma_generic.h.gen.py INPUT OUTPUT')
     print('    INPUT    json file containing the magma interface definition')
     print('    OUTPUT   destination path for the header file to generate')
-    print('  Example: virtio_magma_generic.h.gen.py magma.json virtio_magma_generic.h')
+    print(
+        '  Example: virtio_magma_generic.h.gen.py magma.json virtio_magma_generic.h'
+    )
     print('  Generates a generic "glue" class that directly translates between')
     print('  virtmagma structs and magma commands, that may be overridden.')
 
@@ -59,6 +61,14 @@ def get_name(export):
     return export['name'][len('magma_'):]
 
 
+# Determine if the argument type needs special handling and a generic method can't be created for it.
+def has_unsupported_argument(export):
+    for argument in export['arguments']:
+        if "magma_buffer_info_t" in argument['type']:
+            return True
+    return False
+
+
 # Generate a method that does simple validation of a virtio command struct,
 # passes it on to magma, and populates the corresponding response struct.
 def generate_generic_method(export):
@@ -66,7 +76,12 @@ def generate_generic_method(export):
     ret = ''
     ret += '  virtual zx_status_t Handle_' + name + '(\n'
     ret += '    const virtio_magma_' + name + '_ctrl_t* request,\n'
-    ret += '    virtio_magma_' + name + '_resp_t* response) {\n'
+    ret += '    virtio_magma_' + name + '_resp_t* response)'
+
+    if has_unsupported_argument(export):
+        ret += ' { return ZX_ERR_NOT_SUPPORTED; }\n'
+        return ret
+    ret += ' {\n'
     ret += '    TRACE_DURATION("machina", "VirtioMagmaGeneric::Handle_' + name + '");\n'
     ret += '    FX_DCHECK(request->hdr.type == VIRTIO_MAGMA_CMD_' + name.upper(
     ) + ');\n'

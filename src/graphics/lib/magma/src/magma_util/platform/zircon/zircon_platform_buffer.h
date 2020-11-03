@@ -73,6 +73,8 @@ class ZirconPlatformBuffer : public PlatformBuffer {
 
   // PlatformBuffer implementation
   bool CommitPages(uint64_t start_page_index, uint64_t page_count) const override;
+  bool DecommitPages(uint64_t start_page_index, uint64_t page_count) const override;
+  bool GetBufferInfo(magma_buffer_info_t* buffer_info_out) const override;
   bool MapCpu(void** addr_out, uintptr_t alignment) override;
   bool MapCpuConstrained(void** va_out, uint64_t length, uint64_t upper_limit,
                          uint64_t alignment) override;

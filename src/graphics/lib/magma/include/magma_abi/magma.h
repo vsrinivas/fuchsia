@@ -211,7 +211,8 @@ magma_status_t magma_unmap(
 
 ///
 /// \brief Maps a number of pages from the given buffer onto the GPU in the connection's address
-///        space at the given address.
+///        space at the given address. Depending on the MSD this may automatically commit and
+///        populate that range.
 /// \param connection An open connection.
 /// \param buffer A valid buffer.
 /// \param page_offset Offset into the buffer in pages.
@@ -239,9 +240,9 @@ void magma_unmap_buffer_gpu(
     uint64_t gpu_va);
 
 ///
-/// \brief Ensures that the given page range of a buffer is backed by physical memory. If the buffer
-///        is mapped, also ensures that the CPU page tables are populated to avoid unnecessary page
-///        faults when supported by the platform.
+/// \brief Deprecated. Ensures that the given page range of a buffer is backed by physical memory.
+///        If the buffer is mapped, also ensures that the CPU page tables are populated to avoid
+///        unnecessary page faults when supported by the platform.
 /// \param connection An open connection.
 /// \param buffer A valid buffer.
 /// \param page_offset Page offset into the buffer.
@@ -640,6 +641,32 @@ magma_status_t magma_buffer_set_name(
     magma_connection_t connection,
     magma_buffer_t buffer,
     const char* name);
+
+///
+/// \brief Perform an operation on a range of a buffer
+/// \param connection An open connection.
+/// \param buffer A valid buffer.
+/// \param options Options for the operation.
+/// \param start_offset Byte offset into the buffer.
+/// \param length Length (in bytes) of the region to operate on.
+///
+magma_status_t magma_buffer_range_op(
+    magma_connection_t connection,
+    magma_buffer_t buffer,
+    uint32_t options,
+    uint64_t start_offset,
+    uint64_t length);
+
+///
+/// \brief Get information on a magma buffer
+/// \param connection An open connection.
+/// \param buffer A valid buffer.
+/// \param info_out Pointer to struct that receives the buffer info.
+///
+magma_status_t magma_buffer_get_info(
+    magma_connection_t connection,
+    magma_buffer_t buffer,
+    magma_buffer_info_t* info_out);
 
 #if defined(__cplusplus)
 }

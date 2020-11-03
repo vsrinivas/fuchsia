@@ -7,6 +7,7 @@
 #include <chrono>
 #include <map>
 
+#include "magma_common_defs.h"
 #include "magma_util/macros.h"
 #include "platform_connection_client.h"
 #include "platform_device_client.h"
@@ -304,6 +305,47 @@ magma_status_t magma_commit_buffer(magma_connection_t connection, magma_buffer_t
     return DRET(MAGMA_STATUS_MEMORY_ERROR);
   magma::PlatformConnectionClient::cast(connection)
       ->CommitBuffer(buffer_id, page_offset, page_count);
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_buffer_range_op(magma_connection_t connection, magma_buffer_t buffer,
+                                     uint32_t options, uint64_t start_offset, uint64_t length) {
+  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
+  uint64_t buffer_id = platform_buffer->id();
+  if (start_offset % magma::page_size() != 0) {
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid buffer offset %ld", start_offset);
+  }
+  if (length % magma::page_size() != 0) {
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid buffer length %ld", length);
+  }
+  switch (options) {
+    case MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES: {
+      magma::PlatformConnectionClient::cast(connection)
+          ->CommitBuffer(buffer_id, start_offset / magma::page_size(), length / magma::page_size());
+      return MAGMA_STATUS_OK;
+    }
+    case MAGMA_BUFFER_RANGE_OP_COMMIT: {
+      if (!platform_buffer->CommitPages(start_offset / magma::page_size(),
+                                        length / magma::page_size()))
+        return DRET(MAGMA_STATUS_MEMORY_ERROR);
+      return MAGMA_STATUS_OK;
+    }
+    case MAGMA_BUFFER_RANGE_OP_DECOMMIT: {
+      if (!platform_buffer->DecommitPages(start_offset / magma::page_size(),
+                                          length / magma::page_size()))
+        return DRET(MAGMA_STATUS_MEMORY_ERROR);
+      return MAGMA_STATUS_OK;
+    }
+    default:
+      return DRET(MAGMA_STATUS_INVALID_ARGS);
+  }
+}
+
+magma_status_t magma_buffer_get_info(magma_connection_t connection, magma_buffer_t buffer,
+                                     magma_buffer_info_t* info_out) {
+  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
+  if (!platform_buffer->GetBufferInfo(info_out))
+    return DRET(MAGMA_STATUS_INTERNAL_ERROR);
   return MAGMA_STATUS_OK;
 }
 

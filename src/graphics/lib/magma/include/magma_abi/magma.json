@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 65,
+    "next-free-ordinal": 67,
     "exports": [
       {
         "ordinal": 4,
@@ -378,7 +378,7 @@
         "ordinal": 23,
         "name": "magma_map_buffer_gpu",
         "type": "void",
-        "description": "Maps a number of pages from the given buffer onto the GPU in the connection's address space at the given address.",
+        "description": "Maps a number of pages from the given buffer onto the GPU in the connection's address space at the given address. Depending on the MSD this may automatically commit and populate that range.",
         "arguments": [
           {
             "name": "connection",
@@ -439,7 +439,7 @@
         "ordinal": 25,
         "name": "magma_commit_buffer",
         "type": "magma_status_t",
-        "description": "Ensures that the given page range of a buffer is backed by physical memory. If the buffer is mapped, also ensures that the CPU page tables are populated to avoid unnecessary page faults when supported by the platform.",
+        "description": "Deprecated. Ensures that the given page range of a buffer is backed by physical memory. If the buffer is mapped, also ensures that the CPU page tables are populated to avoid unnecessary page faults when supported by the platform.",
         "arguments": [
           {
             "name": "connection",
@@ -1179,6 +1179,62 @@
             "name": "name",
             "type": "const char*",
             "description": "The 0-terminated name of the buffer. May be truncated."
+          }
+        ]
+      },
+      {
+        "ordinal": 65,
+        "name": "magma_buffer_range_op",
+        "type": "magma_status_t",
+        "description": "Perform an operation on a range of a buffer",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "options",
+            "type": "uint32_t",
+            "description": "Options for the operation."
+          },
+          {
+            "name": "start_offset",
+            "type": "uint64_t",
+            "description": "Byte offset into the buffer."
+          },
+          {
+            "name": "length",
+            "type": "uint64_t",
+            "description": "Length (in bytes) of the region to operate on."
+          }
+        ]
+      },
+      {
+        "ordinal": 66,
+        "name": "magma_buffer_get_info",
+        "type": "magma_status_t",
+        "description": "Get information on a magma buffer",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "info_out",
+            "type": "magma_buffer_info_t*",
+            "description": "Pointer to struct that receives the buffer info."
           }
         ]
       }

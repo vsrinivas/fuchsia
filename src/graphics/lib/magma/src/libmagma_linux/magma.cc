@@ -172,6 +172,11 @@ void magma_execute_command_buffer_with_resources(magma_connection_t connection, 
   }
 }
 
+magma_status_t magma_buffer_get_info(magma_connection_t connection, magma_buffer_t buffer,
+                                     magma_buffer_info_t* info_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 magma_status_t magma_initialize_tracing(magma_handle_t channel) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }

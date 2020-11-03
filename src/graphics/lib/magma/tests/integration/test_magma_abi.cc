@@ -1091,3 +1091,52 @@ TEST(MagmaAbiPerf, ExecuteCommandBufferWithResources) {
 TEST(MagmaAbi, EnablePerformanceCounters) { TestConnection().EnablePerformanceCounters(); }
 
 TEST(MagmaAbi, DisabledPerformanceCounters) { TestConnection().DisabledPerformanceCounters(); }
+
+TEST(MagmaAbi, CommitBuffer) {
+#if !defined(__Fuchsia__)
+  // magma_buffer_get_info is only implemented on Fuchsia.
+  GTEST_SKIP();
+#endif
+  TestConnection connection;
+  magma_buffer_t buffer;
+  uint64_t size_out;
+  uint64_t buffer_size = page_size() * 10;
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            magma_create_buffer(connection.connection(), buffer_size, &size_out, &buffer));
+  magma_buffer_info_t info;
+  EXPECT_EQ(MAGMA_STATUS_OK, magma_buffer_get_info(connection.connection(), buffer, &info));
+  EXPECT_EQ(info.size, buffer_size);
+  EXPECT_EQ(0u, info.committed_byte_count);
+
+  EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
+            magma_buffer_range_op(connection.connection(), buffer, MAGMA_BUFFER_RANGE_OP_COMMIT, 0,
+                                  page_size() + 1));
+  EXPECT_EQ(MAGMA_STATUS_MEMORY_ERROR,
+            magma_buffer_range_op(connection.connection(), buffer, MAGMA_BUFFER_RANGE_OP_COMMIT,
+                                  page_size(), buffer_size));
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            magma_buffer_range_op(connection.connection(), buffer, MAGMA_BUFFER_RANGE_OP_COMMIT,
+                                  page_size(), page_size()));
+  EXPECT_EQ(MAGMA_STATUS_OK, magma_buffer_get_info(connection.connection(), buffer, &info));
+  EXPECT_EQ(page_size(), info.committed_byte_count);
+
+  EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
+            magma_buffer_range_op(connection.connection(), buffer, MAGMA_BUFFER_RANGE_OP_DECOMMIT,
+                                  0, page_size() + 1));
+  EXPECT_EQ(MAGMA_STATUS_MEMORY_ERROR,
+            magma_buffer_range_op(connection.connection(), buffer, MAGMA_BUFFER_RANGE_OP_DECOMMIT,
+                                  page_size(), buffer_size));
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            magma_buffer_range_op(connection.connection(), buffer, MAGMA_BUFFER_RANGE_OP_DECOMMIT,
+                                  2 * page_size(), page_size()));
+  EXPECT_EQ(MAGMA_STATUS_OK, magma_buffer_get_info(connection.connection(), buffer, &info));
+  EXPECT_EQ(page_size(), info.committed_byte_count);
+
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            magma_buffer_range_op(connection.connection(), buffer, MAGMA_BUFFER_RANGE_OP_DECOMMIT,
+                                  page_size(), page_size()));
+  EXPECT_EQ(MAGMA_STATUS_OK, magma_buffer_get_info(connection.connection(), buffer, &info));
+  EXPECT_EQ(0u, info.committed_byte_count);
+
+  magma_release_buffer(connection.connection(), buffer);
+}

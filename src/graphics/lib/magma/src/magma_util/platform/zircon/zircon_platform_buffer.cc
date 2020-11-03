@@ -222,8 +222,8 @@ bool ZirconPlatformBuffer::MapCpuConstrained(void** va_out, uint64_t length, uin
         static_cast<zx_vm_option_t>(alignment_log2 << ZX_VM_ALIGN_BASE);
     const zx_vm_option_t flags = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC |
                                  ZX_VM_OFFSET_IS_UPPER_LIMIT | alignment_flag;
-    zx_status_t status = parent_vmar_->get()->allocate2(flags, upper_limit_offset, length + padding_size_,
-                                                        &child_vmar, &child_addr);
+    zx_status_t status = parent_vmar_->get()->allocate2(
+        flags, upper_limit_offset, length + padding_size_, &child_vmar, &child_addr);
     if (status != ZX_OK) {
       return DRETF(false,
                    "failed to make vmar: base_addr=0x%zx upper_limit=0x%zx size=0x%zx "
@@ -308,6 +308,38 @@ bool ZirconPlatformBuffer::CommitPages(uint64_t start_page_index, uint64_t page_
     }
   }
 
+  return true;
+}
+
+bool ZirconPlatformBuffer::DecommitPages(uint64_t start_page_index, uint64_t page_count) const {
+  TRACE_DURATION("magma", "DeommitPages", "start_page_index",
+                 TA_UINT32(static_cast<uint32_t>(start_page_index)), "page_count",
+                 TA_UINT32(static_cast<uint32_t>(page_count)));
+  if (!page_count)
+    return true;
+
+  if ((start_page_index + page_count) * PAGE_SIZE > size())
+    return DRETF(false, "offset + length greater than buffer size");
+
+  const uint64_t op_start = start_page_index * PAGE_SIZE;
+  const uint64_t op_size = page_count * PAGE_SIZE;
+  zx_status_t status = vmo_.op_range(ZX_VMO_OP_DECOMMIT, op_start, op_size, nullptr, 0);
+
+  if (status != ZX_OK)
+    return DRETF(false, "failed to commit vmo pages: %d", status);
+
+  return true;
+}
+
+bool ZirconPlatformBuffer::GetBufferInfo(magma_buffer_info_t* buffer_info_out) const {
+  buffer_info_out->size = size();
+
+  zx_info_vmo_t info;
+  zx_status_t status = vmo_.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return DRETF(false, "vmo_.get_info failed: %d", status);
+  }
+  buffer_info_out->committed_byte_count = info.committed_bytes;
   return true;
 }
 
