@@ -31,7 +31,6 @@ async fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
         .map_err(|e| format_err!("failed to create test manager: {:?}", e))?;
 
     connect_to_protocol_at_dir_root::<ftest_manager::HarnessMarker>(&dir)
-        .await
         .context("failed to open test suite service")
 }
 

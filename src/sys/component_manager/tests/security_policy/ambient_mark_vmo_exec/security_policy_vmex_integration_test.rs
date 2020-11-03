@@ -26,7 +26,6 @@ async fn verify_ambient_vmex_default_denied() -> Result<(), Error> {
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
     let ops =
         client::connect_to_protocol_at_dir_root::<ftest::ProtectedOperationsMarker>(&exposed_dir)
-            .await
             .context("failed to connect to test service after bind")?;
 
     let vmo = zx::Vmo::create(1).unwrap();
@@ -44,7 +43,6 @@ async fn verify_ambient_vmex_allowed() -> Result<(), Error> {
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
     let ops =
         client::connect_to_protocol_at_dir_root::<ftest::ProtectedOperationsMarker>(&exposed_dir)
-            .await
             .context("failed to connect to test service after bind")?;
 
     let vmo = zx::Vmo::create(1).unwrap();

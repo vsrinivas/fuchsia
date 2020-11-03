@@ -31,8 +31,7 @@ pub async fn connect_to_harness() -> Result<io_test::Io1HarnessProxy, Error> {
     let exposed_dir = io::DirectoryProxy::new(fidl::AsyncChannel::from_channel(client)?);
     let proxy = fuchsia_component::client::connect_to_protocol_at_dir_root::<
         io_test::Io1HarnessMarker,
-    >(&exposed_dir)
-    .await?;
+    >(&exposed_dir)?;
     Ok(proxy)
 }
 

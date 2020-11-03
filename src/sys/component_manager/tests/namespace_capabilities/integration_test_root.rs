@@ -26,7 +26,6 @@ async fn main() {
         .expect(&format!("bind_child failed"))
         .expect(&format!("failed to bind to child"));
     let trigger = client::connect_to_protocol_at_dir_root::<ftest::TriggerMarker>(&exposed_dir)
-        .await
         .expect("failed to open trigger service");
     info!("Invoking trigger");
     let out = trigger.run().await.expect(&format!("trigger failed"));

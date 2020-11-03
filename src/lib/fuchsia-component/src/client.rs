@@ -222,22 +222,12 @@ pub fn connect_to_unified_service<US: UnifiedServiceMarker>() -> Result<US::Prox
 }
 
 /// Connect to an instance of a FIDL protocol hosted in `directory`.
-// TODO(fxbug.dev/56604): This probes for the protocol under root, then falls back to /svc if
-// it isn't there. Remove this fallback (and the async) once 56604 is done.
-pub async fn connect_to_protocol_at_dir_root<S: DiscoverableService>(
+pub fn connect_to_protocol_at_dir_root<S: DiscoverableService>(
     directory: &DirectoryProxy,
 ) -> Result<S::Proxy, Error> {
-    let path = if files_async::dir_contains(directory, S::SERVICE_NAME)
-        .await
-        .context("Failed to probe for protocol in directory")?
-    {
-        format!("{}", S::SERVICE_NAME)
-    } else {
-        format!("svc/{}", S::SERVICE_NAME)
-    };
     let proxy = io_util::open_node(
         directory,
-        &PathBuf::from(path),
+        &PathBuf::from(S::SERVICE_NAME),
         fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
     )
@@ -456,10 +446,10 @@ impl ScopedInstance {
     }
 
     /// Connect to an instance of a FIDL protocol hosted in the component's exposed directory`,
-    pub async fn connect_to_protocol_at_exposed_dir<S: DiscoverableService>(
+    pub fn connect_to_protocol_at_exposed_dir<S: DiscoverableService>(
         &self,
     ) -> Result<S::Proxy, Error> {
-        connect_to_protocol_at_dir_root::<S>(&self.exposed_dir).await
+        connect_to_protocol_at_dir_root::<S>(&self.exposed_dir)
     }
 
     /// Returns a future which can be awaited on for destruction to complete after the

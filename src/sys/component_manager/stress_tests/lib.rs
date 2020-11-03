@@ -19,7 +19,6 @@ pub async fn create_child(collection: &str, url: &str) -> Result<Child, Error> {
         .context(format_err!("Cannot create child for '{}:{}'", collection, url))?;
     let realm = instance
         .connect_to_protocol_at_exposed_dir::<fstresstests::ChildRealmMarker>()
-        .await
         .context(format_err!(
             "Cannot connect to child realm service for '{}'",
             instance.child_name()
