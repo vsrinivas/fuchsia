@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/partition-mapping"
+    },
+    "sandbox": {
+        "dev": [
+            "class/block"
+        ]
+    }
+}
