@@ -7,6 +7,8 @@ import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zircon_legacy_vars.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
+import(
+    "//zircon/public/gn/config/instrumentation/sanitizer_default_options.gni")
 
 assert(current_os == "fuchsia")
 
@@ -235,4 +237,13 @@ config("integer-paranoia") {
 
 config("libunwind") {
   libs = [ clang_libunwind ]
+}
+
+group("maybe_scudo_default_options") {
+  if (scudo_default_options != "" && scudo_default_options != []) {
+    public_deps = [ ":scudo_default_options" ]
+  }
+}
+
+sanitizer_default_options("scudo_default_options") {
 }

@@ -302,6 +302,7 @@ if (zircon_toolchain == false) {
                                  "//build/config:executable_config",
                                  "//build/config:default_libs",
                                ]
+  default_executable_deps = []
 
   # These configs are added here so that they can later be removed from default
   # configs for targets which do not need them. This cannot be done when the
@@ -312,8 +313,10 @@ if (zircon_toolchain == false) {
     # TODO(fxbug.dev/57585): Enable this for shared and (non-rlib) static libraries as well.
     default_executable_configs +=
         [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+
+    default_executable_deps +=
+        [ "//build/config/fuchsia:maybe_scudo_default_options" ]
   }
-  default_executable_deps = []
 
   if (toolchain_variant.is_pic_default) {
     default_common_binary_configs += [ "//build/config:shared_library_config" ]

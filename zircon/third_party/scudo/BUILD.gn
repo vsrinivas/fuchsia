@@ -6,8 +6,11 @@ import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 import("scudo_sources.gni")
 
-source_set("scudo") {
-  sources = scudo_sources
+# Most of the code can be shared between the production and test versions.
+source_set("scudo-except-flags") {
+  visibility = [ ":*" ]
+
+  sources = scudo_sources - [ "src/flags.cpp" ]
 
   include_dirs = [ "src/include" ]
 
@@ -32,6 +35,30 @@ source_set("scudo") {
   }
 }
 
+# The production version refers to `__scudo_default_options`.
+source_set("scudo") {
+  sources = [ "src/flags.cpp" ]
+  include_dirs = [ "src/include" ]
+  deps = [ ":scudo-except-flags" ]
+}
+
+# The test version avoids that symbol name since it also affects the system
+# libc and not only the code under test.  Instead it renames the function to a
+# safe name for the test.  The test code that defines its own function by this
+# name also uses this config so it renames its definition to match.
+config("testonly-options") {
+  visibility = [ ":*" ]
+  defines = [ "__scudo_default_options=testonly_scudo_default_options" ]
+}
+
+source_set("scudo-flags-testonly") {
+  visibility = [ ":*" ]
+  testonly = true
+  configs += [ ":testonly-options" ]
+  sources = [ "src/flags.cpp" ]
+  include_dirs = [ "src/include" ]
+}
+
 group("tests") {
   testonly = true
   deps = [ ":scudo-bootfs-test" ]
@@ -39,10 +66,14 @@ group("tests") {
 
 # This is also included in the standalone core-tests.
 source_set("unittests") {
+  testonly = true
+
   visibility = [
     ":*",
     "//zircon/system/utest/core:*",
   ]
+
+  configs += [ ":testonly-options" ]
 
   scudo_test_sources = [
     "atomic_test.cpp",
@@ -82,7 +113,8 @@ source_set("unittests") {
   ]
 
   deps = [
-    ":scudo",
+    ":scudo-except-flags",
+    ":scudo-flags-testonly",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
   ]

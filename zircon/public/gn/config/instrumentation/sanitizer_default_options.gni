@@ -41,6 +41,23 @@ declare_args() {
     "print_stacktrace=1",
     "halt_on_error=1",
   ]
+
+  # Default [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html) options
+  # (before the `SCUDO_OPTIONS` environment variable is read at runtime).
+  # Scudo is the memory allocator in Fuchsia's C library, so this affects all
+  # Fuchsia programs.  This can be a list of strings or a single string.
+  #
+  # This operates similarly to [`asan_default_options`](#asan_default_options)
+  # and its cousins for other sanitizers, but is slightly different.  If this
+  # variable is empty, then no `__scudo_default_options` function is injected
+  # into programs at all.  Individual targets can use dependencies on
+  # sanitizer_extra_options() targets to cause options to be injected, and that
+  # will be compatible with any build-wide settings of `scudo_default_options`.
+  # Programs **can** define their own `__scudo_default_options` functions, but
+  # doing so will break all builds with this variable is set to nonempty, so
+  # any program in the build that needs such a setting (which should be only in
+  # tests) can use the sanitizer_extra_options() mechanism instead.
+  scudo_default_options = []
 }
 
 # This lists the GN build arguments declared above.
@@ -49,6 +66,7 @@ sanitizer_default_options_args = [
   "asan_default_options",
   "lsan_default_options",
   "ubsan_default_options",
+  "scudo_default_options",
 ]
 
 # Adapt to being used in the Fuchsia GN build or in the Zircon build.
@@ -123,6 +141,8 @@ template("_sanitizer_default_options_target") {
 
       # On non-Fuchsia systems, the flag parsing calls this function so early
       # in startup that instrumented code cannot reliably run at all yet.
+      configs += [ _no_sanitizers_config ]
+      configs -= [ _no_sanitizers_config ]
       configs += [ _no_sanitizers_config ]
 
       # This is the default on Fuchsia but not on all host platforms.

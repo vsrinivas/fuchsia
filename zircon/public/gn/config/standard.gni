@@ -157,7 +157,10 @@ standard_environments = [
           "host_tool",
           "test",
         ]
-        add = [ "$zx/system/ulib/c:crt1" ]
+        add = [
+          "$zx/system/ulib/c:crt1",
+          "$zx_build_config:maybe_scudo_default_options",
+        ]
       },
     ]
     shlib = true

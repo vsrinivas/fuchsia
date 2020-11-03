@@ -5,6 +5,7 @@
 import("$zx/public/gn/toolchain/clang.gni")
 import("$zx/public/gn/toolchain/goma.gni")
 import("$zx/public/gn/toolchain/rustc.gni")
+import("$zx_build_config/instrumentation/sanitizer_default_options.gni")
 import("$zx_build_config/standard.gni")
 import("levels.gni")
 
@@ -914,6 +915,15 @@ config("tiny") {
   cflags = [ "-mcmodel=tiny" ]
   asmflags = cflags
   ldflags = cflags
+}
+
+group("maybe_scudo_default_options") {
+  if (scudo_default_options != "" && scudo_default_options != []) {
+    public_deps = [ ":scudo_default_options" ]
+  }
+}
+
+sanitizer_default_options("scudo_default_options") {
 }
 
 # TODO(fxbug.dev/42305): We will temporarily disable UBSan for a specified number of
