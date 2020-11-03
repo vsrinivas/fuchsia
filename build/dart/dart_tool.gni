@@ -160,6 +160,7 @@ template("dart_tool") {
                            [
                              "disable_analysis",
                              "disable_metadata_entry",
+                             "language_version",
                              "testonly",
                              "visibility",
                            ])
@@ -248,6 +249,8 @@ template("dart_tool") {
     }
 
     args = [
+      "--enable-experiment=non-nullable",
+      "--no-sound-null-safety",
       "--snapshot=$rebased_snapshot_path",
       "--snapshot-depfile=$rebased_depfile_path",
       "--packages=$rebased_packages_path",
