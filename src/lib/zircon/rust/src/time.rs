@@ -259,6 +259,7 @@ impl DurationNum for i64 {
 impl Time {
     pub const INFINITE: Time = Time(sys::ZX_TIME_INFINITE);
     pub const INFINITE_PAST: Time = Time(sys::ZX_TIME_INFINITE_PAST);
+    pub const ZERO: Time = Time(0);
 
     /// Get the current time, from the specific clock id.
     ///
