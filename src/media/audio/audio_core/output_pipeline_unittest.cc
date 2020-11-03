@@ -110,6 +110,14 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
     return AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic());
   }
 
+  std::shared_ptr<testing::FakeStream> CreateFakeStream(StreamUsage stream_usage) {
+    auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+    stream->set_usage_mask({stream_usage});
+    stream->set_gain_db(0.0);
+    stream->timeline_function()->Update(kDefaultTransform);
+    return stream;
+  }
+
   void CheckBuffer(void* buffer, float expected_sample, size_t num_samples) {
     float* floats = reinterpret_cast<float*>(buffer);
     for (size_t i = 0; i < num_samples; ++i) {
@@ -291,6 +299,10 @@ TEST_F(OutputPipelineTest, Loopback) {
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
                                                        kDefaultTransform, device_clock_);
 
+  // Add an input into our pipeline so that we have some frames to mix.
+  const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);
+  pipeline->AddInput(CreateFakeStream(stream_usage), stream_usage);
+
   // Present frames ahead of now to stay ahead of the safe_write_frame.
   auto scheduling_delay = zx::msec(25);  // need at least 25ms for sanitizer builds
   auto ref_start = device_clock_.Read() + scheduling_delay;
@@ -382,6 +394,10 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
                                                        kDefaultTransform, device_clock_);
 
+  // Add an input into our pipeline so that we have some frames to mix.
+  const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);
+  pipeline->AddInput(CreateFakeStream(stream_usage), stream_usage);
+
   // Present frames ahead of now to stay ahead of the safe_write_frame.
   auto scheduling_delay = zx::msec(25);  // need at least 25ms for sanitizer builds
   auto ref_start = device_clock_.Read() + scheduling_delay;
@@ -465,6 +481,10 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
                                                        kDefaultTransform, device_clock_);
+
+  // Add an input into our pipeline so that we have some frames to mix.
+  const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);
+  pipeline->AddInput(CreateFakeStream(stream_usage), stream_usage);
 
   pipeline->UpdateEffect(kInstanceName, kConfig);
 

@@ -9,6 +9,7 @@
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
+#include "src/media/audio/audio_core/testing/fake_stream.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/effects_loader/testing/test_effects.h"
@@ -383,6 +384,23 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   SetupMixTask();
   auto pipeline = audio_output_->output_pipeline();
 
+  // Add an input into our pipeline. Without this we won't run any effects as the stream will be
+  // silent. This actually sends silence through the pipeline, but it's flagged with a gain > MUTE
+  // so that it still gets mixed.
+  auto format = Format::Create({
+                                   .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                                   .channels = 2,
+                                   .frames_per_second = 48000,
+                               })
+                    .take_value();
+  auto default_stream = std::make_shared<testing::FakeStream>(format);
+  const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);
+  default_stream->set_usage_mask({stream_usage});
+  default_stream->set_gain_db(0.0);
+  default_stream->timeline_function()->Update(TimelineFunction(
+      TimelineRate(Fixed(format.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
+  pipeline->AddInput(default_stream, stream_usage);
+
   {
     auto buf = pipeline->ReadLock(Fixed(0), 48);
 
@@ -445,6 +463,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   RunLoopUntilIdle();
   EXPECT_TRUE(updated_device_profile);
   pipeline = audio_output_->output_pipeline();
+  pipeline->AddInput(default_stream, stream_usage);
 
   {
     auto buf = pipeline->ReadLock(Fixed(0), 48);
