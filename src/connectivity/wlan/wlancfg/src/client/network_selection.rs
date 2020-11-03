@@ -544,7 +544,7 @@ mod tests {
                 test_id_1.clone().into(),
                 &credential_1.clone(),
                 fidl_sme::ConnectResultCode::Success,
-                true,
+                None,
             )
             .await;
 
@@ -555,7 +555,7 @@ mod tests {
                 test_id_2.clone().into(),
                 &credential_2.clone(),
                 fidl_sme::ConnectResultCode::CredentialRejected,
-                true,
+                None,
             )
             .await;
 
@@ -1363,18 +1363,18 @@ mod tests {
         )
         .unwrap();
 
-        // mark them as having connected
+        // Mark them as having connected. Make connection passive so that no active scans are made.
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             test_id_1.clone().into(),
             &credential_1.clone(),
             fidl_sme::ConnectResultCode::Success,
-            true,
+            Some(fidl_common::ScanType::Passive),
         ));
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             test_id_2.clone().into(),
             &credential_2.clone(),
             fidl_sme::ConnectResultCode::Success,
-            true,
+            Some(fidl_common::ScanType::Passive),
         ));
 
         // Kick off network selection
@@ -1444,7 +1444,6 @@ mod tests {
                 types::NetworkSelectionMetadata { observed_in_passive_scan: true }
             ))
         );
-
         // Ignore that network, check that we pick the other one
         let results = exec.run_singlethreaded(
             network_selector.get_best_network(test_values.iface_manager, &vec![test_id_1.clone()]),

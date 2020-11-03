@@ -16,7 +16,8 @@ use {
     },
     anyhow::format_err,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
         future::FutureExt,
@@ -314,11 +315,12 @@ async fn connecting_state(
                 let code = connected.map_err({
                     |e| ExitReason(Err(format_err!("failed to send connect to sme: {:?}", e)))
                 })?;
-                // Notify the saved networks manager
-                let observed_in_passive_scan = match options.connect_request.metadata {
-                    Some(metadata) => metadata.observed_in_passive_scan,
-                    None => false
-                };
+                // Notify the saved networks manager. observed_in_passive_scan will be false if
+                // network was seen in active scan, or None if no scan was performed.
+                let observed_in_passive_scan = options.connect_request.metadata.map(|data| {
+                    if data.observed_in_passive_scan {fidl_common::ScanType::Passive}
+                    else {fidl_common::ScanType::Active}
+                });
                 common_options.saved_networks_manager.record_connect_result(
                     options.connect_request.network.clone().into(),
                     &options.connect_request.credential,

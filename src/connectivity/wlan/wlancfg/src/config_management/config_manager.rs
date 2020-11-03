@@ -5,13 +5,14 @@
 use {
     super::{
         network_config::{
-            Credential, FailureReason, NetworkConfig, NetworkConfigError, NetworkIdentifier,
-            SecurityType,
+            Credential, FailureReason, HiddenProbEvent, NetworkConfig, NetworkConfigError,
+            NetworkIdentifier, SecurityType,
         },
         stash_conversion::*,
     },
     crate::legacy::known_ess_store::{self, EssJsonRead, KnownEss, KnownEssStore},
     anyhow::format_err,
+    fidl_fuchsia_wlan_common::ScanType,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_cobalt::CobaltSender,
     futures::lock::Mutex,
@@ -363,7 +364,7 @@ impl SavedNetworksManager {
         id: NetworkIdentifier,
         credential: &Credential,
         connect_result: fidl_sme::ConnectResultCode,
-        connected_passive: bool,
+        discovered_in_scan: Option<ScanType>,
     ) {
         let mut saved_networks = self.saved_networks.lock().await;
         let mut ids = vec![id.clone()];
@@ -388,11 +389,12 @@ impl SavedNetworksManager {
                                 network.has_ever_connected = true;
                                 has_change = true;
                             }
-                            // Don't update hidden probability if this isn't the first
-                            // passive connect.
-                            if connected_passive && !network.hidden_stats.connected_passive {
-                                network.hidden_stats.connected_passive = true;
-                                network.update_hidden_prob();
+                            if let Some(scan_type) = discovered_in_scan {
+                                let connect_event = match scan_type {
+                                    ScanType::Passive => HiddenProbEvent::ConnectPassive,
+                                    ScanType::Active => HiddenProbEvent::ConnectActive,
+                                };
+                                network.update_hidden_prob(connect_event);
                                 // TODO(60619): Update the stash with new probability if it has changed
                             }
                             if has_change {
@@ -443,11 +445,7 @@ impl SavedNetworksManager {
         for net_id in net_ids.iter() {
             if let Some(networks) = saved_networks.get_mut(net_id) {
                 for network in networks.iter_mut() {
-                    // Don't update probability if this was already true
-                    if !network.hidden_stats.seen_in_passive_scan_results {
-                        network.hidden_stats.seen_in_passive_scan_results = true;
-                        network.update_hidden_prob();
-                    }
+                    network.update_hidden_prob(HiddenProbEvent::SeenPassive);
                 }
                 // TODO(60619): Update the stash with new probability if it has changed
             }
@@ -557,8 +555,8 @@ mod tests {
         super::*,
         crate::{
             config_management::{
-                HiddenStats, PerformanceStats, PROB_HIDDEN_DEFAULT, PROB_HIDDEN_IF_CONNECT_PASSIVE,
-                PROB_HIDDEN_IF_SEEN_PASSIVE,
+                PerformanceStats, PROB_HIDDEN_DEFAULT, PROB_HIDDEN_IF_CONNECT_ACTIVE,
+                PROB_HIDDEN_IF_CONNECT_PASSIVE, PROB_HIDDEN_IF_SEEN_PASSIVE,
             },
             util::cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
         },
@@ -780,7 +778,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Success,
-                false,
+                None,
             )
             .await;
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
@@ -800,15 +798,14 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Success,
-                false,
+                None,
             )
             .await;
 
         // The network should be saved with the connection recorded. We should not have recorded
-        // that the network was connected to passively.
+        // that the network was connected to passively or actively.
         assert_variant!(saved_networks.lookup(network_id.clone()).await.as_slice(), [config] => {
             assert_eq!(config.has_ever_connected, true);
-            assert_eq!(config.hidden_stats.connected_passive, false);
             assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
         });
 
@@ -817,13 +814,26 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Success,
-                true,
+                Some(ScanType::Active),
             )
             .await;
-        // We should now see that we have passively connected to the network.
+        // We should now see that we connected to the network after an active scan.
         assert_variant!(saved_networks.lookup(network_id.clone()).await.as_slice(), [config] => {
             assert_eq!(config.has_ever_connected, true);
-            assert_eq!(config.hidden_stats.connected_passive, true);
+            assert_eq!(config.hidden_probability, PROB_HIDDEN_IF_CONNECT_ACTIVE);
+        });
+
+        saved_networks
+            .record_connect_result(
+                network_id.clone(),
+                &credential,
+                fidl_sme::ConnectResultCode::Success,
+                Some(ScanType::Passive),
+            )
+            .await;
+        // The config should have a lower hidden probability after connecting after a passive scan.
+        assert_variant!(saved_networks.lookup(network_id.clone()).await.as_slice(), [config] => {
+            assert_eq!(config.has_ever_connected, true);
             assert_eq!(config.hidden_probability, PROB_HIDDEN_IF_CONNECT_PASSIVE);
         });
 
@@ -880,7 +890,7 @@ mod tests {
                 connected_id,
                 &credential,
                 fidl_sme::ConnectResultCode::Success,
-                true,
+                Some(ScanType::Active),
             )
             .await;
 
@@ -917,7 +927,7 @@ mod tests {
                 net_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Success,
-                true,
+                None,
             )
             .await;
 
@@ -948,7 +958,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Failed,
-                true,
+                None,
             )
             .await;
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
@@ -964,7 +974,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::CredentialRejected,
-                true,
+                None,
             )
             .await;
 
@@ -999,7 +1009,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Canceled,
-                true,
+                None,
             )
             .await;
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
@@ -1015,7 +1025,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Canceled,
-                true,
+                None,
             )
             .await;
 
@@ -1058,11 +1068,9 @@ mod tests {
         saved_networks.record_passive_scan(seen_networks).await;
 
         assert_variant!(saved_networks.lookup(saved_seen_id).await.as_slice(), [config] => {
-            assert_eq!(config.hidden_stats.seen_in_passive_scan_results, true);
             assert_eq!(config.hidden_probability, PROB_HIDDEN_IF_SEEN_PASSIVE);
         });
         assert_variant!(saved_networks.lookup(saved_unseen_id).await.as_slice(), [config] => {
-            assert_eq!(config.hidden_stats.seen_in_passive_scan_results, false);
             assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
         });
     }
@@ -1431,7 +1439,6 @@ mod tests {
             security_type: credential.derived_security_type(),
             credential,
             has_ever_connected: false,
-            hidden_stats: HiddenStats::new(),
             hidden_probability: PROB_HIDDEN_DEFAULT,
             perf_stats: PerformanceStats::new(),
         }
