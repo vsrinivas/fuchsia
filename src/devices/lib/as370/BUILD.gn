@@ -47,7 +47,4 @@ zx_library("as370") {
     "//zircon/system/ulib/fzl",
   ]
   public_deps = [ "//zircon/system/ulib/hwreg-i2c" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
