@@ -158,7 +158,7 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetParentNode(zx_koi
   auto tree_weak_ptr = GetTreeByKoid(koid);
 
   if (!tree_weak_ptr) {
-    FX_LOGS(ERROR) << "ViewManager::GetSemanticNode: No semantic tree found for koid: " << koid;
+    FX_LOGS(WARNING) << "ViewManager::GetSemanticNode: No semantic tree found for koid: " << koid;
     return nullptr;
   }
 
@@ -171,7 +171,7 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetNextNode(
   auto tree_weak_ptr = GetTreeByKoid(koid);
 
   if (!tree_weak_ptr) {
-    FX_LOGS(ERROR) << "ViewManager::GetSemanticNode: No semantic tree found for koid: " << koid;
+    FX_LOGS(WARNING) << "ViewManager::GetSemanticNode: No semantic tree found for koid: " << koid;
     return nullptr;
   }
 
@@ -184,7 +184,7 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetPreviousNode(
   auto tree_weak_ptr = GetTreeByKoid(koid);
 
   if (!tree_weak_ptr) {
-    FX_LOGS(ERROR) << "ViewManager::GetSemanticNode: No semantic tree found for koid: " << koid;
+    FX_LOGS(WARNING) << "ViewManager::GetSemanticNode: No semantic tree found for koid: " << koid;
     return nullptr;
   }
 
@@ -208,8 +208,8 @@ bool ViewManager::RemoveHighlight() {
 
   auto it = view_wrapper_map_.find(highlighted_node_->koid);
   if (it == view_wrapper_map_.end()) {
-    FX_LOGS(ERROR) << "ViewManager::UpdateHighlights: Invalid previously highlighted view koid: "
-                   << highlighted_node_->koid;
+    FX_LOGS(WARNING) << "ViewManager::UpdateHighlights: Invalid previously highlighted view koid: "
+                     << highlighted_node_->koid;
     return false;
   }
 
@@ -251,7 +251,7 @@ void ViewManager::ExecuteHitTesting(
   auto tree_weak_ptr = GetTreeByKoid(koid);
 
   if (!tree_weak_ptr) {
-    FX_LOGS(ERROR) << "ViewManager::ExecuteHitTesting: No semantic tree found for koid: " << koid;
+    FX_LOGS(WARNING) << "ViewManager::ExecuteHitTesting: No semantic tree found for koid: " << koid;
     return;
   }
 
@@ -265,8 +265,8 @@ void ViewManager::PerformAccessibilityAction(
   auto tree_weak_ptr = GetTreeByKoid(koid);
 
   if (!tree_weak_ptr) {
-    FX_LOGS(ERROR) << "ViewManager::PerformAccessibilityAction: No semantic tree found for koid: "
-                   << koid;
+    FX_LOGS(WARNING) << "ViewManager::PerformAccessibilityAction: No semantic tree found for koid: "
+                     << koid;
     callback(false);
     return;
   }
