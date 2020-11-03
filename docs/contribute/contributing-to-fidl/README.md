@@ -19,18 +19,95 @@ The [FIDL][fidl-readme] toolchain is composed of roughly three parts:
 
 ### Code Location
 
+#### Compiler front-end
 The front-end lives at [//zircon/tools/fidl/][fidlc-source],
 with tests in [//zircon/system/utest/fidl-compiler/][fidlc-compiler-tests].
 
-The back-end and runtime library locations are based on the target:
+#### Compiler back-ends {#compiler-backends}
 
-Target     | Back-end                                               | Runtime Libraries
------------|--------------------------------------------------------|------------------
-C          | [//zircon/tools/fidl/lib/c_generator.cc][be-c]         | [//zircon/system/ulib/fidl/][rtl-c]
-C++        | [//tools/fidl/fidlgen_hlcpp/][be-hlcpp]                | [//zircon/system/ulib/fidl/][rtl-c] & [//sdk/lib/fidl/cpp/][rtl-cpp]
-Go         | [//tools/fidl/fidlgen_go/][be-go]                      | [//third_party/go/src/syscall/zx/fidl/][rtl-go]
-Rust       | [//tools/fidl/fidlgen_rust/][be-rust]                  | [//src/lib/fidl/rust/fidl/][rtl-rust]
-Dart       | [//topaz/bin/fidlgen_dart/][be-dart]                   | [//topaz//public/dart/fidl/][rtl-dart]<br>[//topaz/bin/fidl_bindings_test/][bindings_test-dart]
+Target | Codegen | Runtime Libraries | Tests
+-------|---------|-------------------|-------
+C | [/zircon/tools/fidl/lib/c_generator.cc] | [/zircon/system/ulib/fidl] | [/src/lib/fidl/c]
+Coding Tables | [/zircon/tools/fidl/lib/tables_generator.cc] | - | [/src/lib/fidl/c]
+HLCPP | [/tools/fidl/fidlgen_hlcpp] | [/sdk/lib/fidl/cpp] | *(located alongside runtime libraries)*
+LLCPP | [/tools/fidl/fidlgen_llcpp] | [/zircon/system/ulib/fidl] | [/src/lib/fidl/llcpp]
+Go | [/tools/fidl/fidlgen_go] | [/third_party/go/src/syscall/zx/fidl] | *(located alongside runtime libraries)*
+Rust | [/tools/fidl/fidlgen_rust] | [/src/lib/fidl/rust] | *(located alongside runtime libraries)*
+Dart | [/topaz/bin/fidlgen_dart] | [/topaz/public/dart/fidl] | [/topaz/bin/fidl_bindings_test]
+
+Note: The tests column refers to hand-written tests that exercise both the generated code and
+the runtime libraries. There are also other tests, like unit tests for the
+codegen itself and GIDL generated tests, refer to the [tests section](#all-tests)
+for details.
+
+Supporting code for the target specific backends is located in
+[/garnet/go/src/fidl/compiler/backend], which also contains the
+codegen goldens.
+
+#### Testing tools
+
+##### GIDL
+
+GIDL is a tool used to create general "write once, generate for every backend"
+programs. Currently GIDL is used to generate encode or decode tests
+("conformance tests") as well as benchmarks.
+
+Path | Description
+-----|------------
+[/tools/fidl/gidl] | Source code and build templates for the GIDL tool itself.
+[/src/tests/fidl/conformance_suite] | Test definitions (`.fidl` and `.gidl` files) for conformance tests.
+[/sdk/lib/fidl/cpp/test/{test,handle}_utils.h](/sdk/lib/fidl/cpp/test) | Runtime support for HLCPP conformance tests.
+[/src/lib/fidl/llcpp/tests/test_utils.h] | Runtime support for LLCPP conformance tests.
+[/src/lib/fidl/rust/gidl_util] | Runtime support for Rust conformance tests.
+[/third_party/go/src/syscall/zx/fidl/fidl_test] | Runtime support for Go conformance tests.
+[/topaz/lib/gidl] | Runtime support for Dart conformance tests.
+[/src/tests/benchmarks/fidl/benchmark_suite] | Benchmark definitions (`.fidl` and `.gidl` files).
+[/src/tests/benchmarks/fidl] | Runtime support for benchmarks.
+
+The actual test targets for the conformance tests in each backend are generally
+defined alongside the [corresponding tests for that backend](#compiler-backends).
+Refer to the [Bindings tests](#bindings-tests) section for details.
+
+##### Source compatibility
+
+Source compatibility tests are used to test FIDL's
+[source compatibility guarantees][abi-api-compat]. They are found in
+[/src/tests/fidl/source_compatibility] and [/topaz/tests/fidl-changes].
+
+##### Compatibility
+
+Compatibility tests are integration tests that run FIDL clients
+and servers from different bindings with each other in order to test that they
+are compatible. Compatibility tests are found in
+[/src/tests/fidl/compatibility/] and [/topaz/bin/fidl_compatibility_test/].
+
+##### Dangerous Identifiers
+
+Dangerous identifier tests are found in
+[/src/tests/fidl/dangerous_identifiers] and
+[/topaz/tests/fidl-dangerous-identifiers].
+
+#### Other
+
+Some other FIDL related areas are:
+
+Path | Contents
+-------|-----
+[/tools/fidl/fidlgen_*](/tools/fidl/) | Various other compiler back-ends.
+[/zircon/tools/fidl/{linter,compiler}](/zircon/tools/fidl) | FIDL linter/formatter.
+[/tools/fidl/fidldoc] | Generate documentation for FIDL.
+[/tools/fidl/scripts] | Mostly one-off scripts for e.g. performing migrations that are kept for future reference.
+[/tools/fidl/measure-tape] | Tool to [max out pagination][pagination].
+[/garnet/go/src/fidlmerge] | Tool for generating code from FIDL JSON.
+[/garnet/public/lib/fostr] | `fidlmerge` based tool to generate formatting code in C++.
+[/garnet/public/build/fostr] | Build templates for the `fostr` formatting library.
+[/topaz/bin/dart_fidl_json] | `fidlmerge` based tool to generate code to serialize FIDL to JSON in Dart.
+[/src/lib/fidl_codec] | Library for encoding/decoding FIDL messages (used by `fidlcat`).
+
+Note: The FIDL team does not necessarily
+own all of these areas, but they may need to be updated when making changes to
+the FIDL API surface, such as when changing the FIDL JSON IR.
+Refer to the respective READMEs and OWNERS files for details.
 
 ### Other FIDL Tools
 
@@ -361,9 +438,9 @@ fx set core.x64 --with //tools/fidl/measure-tape/src:host
 fx build
 ```
 
-### All Tests
+### All Tests {#all-tests}
 
-#### Bindings Tests
+#### Bindings Tests {#bindings-tests}
 
 On device tests generally have greater coverage than host tests, due to support
 for only running a subset of features on host. However, host tests can be
@@ -583,13 +660,9 @@ fidl fmt --library my_library.fidl -i
 ```
 
 <!-- xrefs -->
+[abi-api-compat]: /docs/development/languages/fidl/guides/abi-api-compat.md
 [fidl-readme]: /docs/development/languages/fidl
 [cpp-style]: /docs/development/languages/c-cpp/cpp-style.md
-[be-c]: /zircon/tools/fidl/lib/c_generator.cc
-[be-hlcpp]: /tools/fidl/fidlgen_hlcpp/
-[be-dart]: https://fuchsia.googlesource.com/topaz/+/HEAD/bin/fidlgen_dart/
-[be-go]: /tools/fidl/fidlgen_go/
-[be-rust]: /tools/fidl/fidlgen_rust/
 [bindings_test-dart]: https://fuchsia.googlesource.com/topaz/+/HEAD/bin/fidl_bindings_test
 [fidlc-source]: /zircon/tools/fidl/
 [fidlc-coding-tables-tests]: /src/lib/fidl/c/coding_tables_tests/
@@ -597,13 +670,52 @@ fidl fmt --library my_library.fidl -i
 [fidlc-compiler-tests]: /zircon/system/utest/fidl-compiler/
 [walker-tests]: /src/lib/fidl/c/walker_tests/
 [jsonir]: /docs/reference/fidl/language/json-ir.md
-[rtl-c]: /zircon/system/ulib/fidl/
-[rtl-cpp]: /src/lib/fidl/llcpp/tests/
-[rtl-dart]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fidl/
-[rtl-go]: https://fuchsia.googlesource.com/third_party/go/+/HEAD/src/syscall/zx/fidl/
-[rtl-rust]: /src/lib/fidl/rust/fidl/
 [getting_started]: /docs/get-started/index.md
 [compat_readme]: /src/tests/fidl/compatibility/README.md
 [go-test-flags]: https://golang.org/cmd/go/#hdr-Testing_flags
 [fidl-misc]: https://fuchsia.googlesource.com/fidl-misc
 [fidldev]: https://fuchsia.googlesource.com/fidl-misc/+/HEAD/fidldev
+
+[/zircon/tools/fidl/lib/c_generator.cc]: /zircon/tools/fidl/lib/c_generator.cc
+[/zircon/tools/fidl/lib/tables_generator.cc]: /zircon/tools/fidl/lib/tables_generator.cc
+[/tools/fidl/fidlgen_hlcpp]: /tools/fidl/fidlgen_hlcpp
+[/tools/fidl/fidlgen_llcpp]: /tools/fidl/fidlgen_llcpp
+[/tools/fidl/fidlgen_go]: /tools/fidl/fidlgen_go
+[/tools/fidl/fidlgen_rust]: /tools/fidl/fidlgen_rust
+[/topaz/bin/fidlgen_dart]: /topaz/bin/fidlgen_dart
+[/sdk/lib/fidl/cpp]: /sdk/lib/fidl/cpp
+[/src/lib/fidl/rust]: /src/lib/fidl/rust
+[/zircon/system/ulib/fidl]: /zircon/system/ulib/fidl
+[/third_party/go/src/syscall/zx/fidl]: /third_party/go/src/syscall/zx/fidl
+[/sdk/lib/fidl/cpp]: /sdk/lib/fidl/cpp
+[/topaz/public/dart/fidl]: /topaz/public/dart/fidl
+[/src/lib/fidl/c]: /src/lib/fidl/c
+[/src/lib/fidl/llcpp]: /src/lib/fidl/llcpp
+[/topaz/bin/fidl_bindings_test]: /topaz/bin/fidl_bindings_test
+[/garnet/go/src/fidl/compiler/backend]: /garnet/go/src/fidl/compiler/backend
+
+[/tools/fidl/gidl]: /tools/fidl/gidl
+[/src/tests/fidl/conformance_suite]: /src/tests/fidl/conformance_suite
+[/src/lib/fidl/llcpp/tests/test_utils.h]: /src/lib/fidl/llcpp/tests/test_utils.h
+[/src/lib/fidl/rust/gidl_util]: /src/lib/fidl/rust/gidl_util
+[/third_party/go/src/syscall/zx/fidl/fidl_test]: /third_party/go/src/syscall/zx/fidl/fidl_test
+[/topaz/lib/gidl]: /topaz/lib/gidl
+[/src/tests/benchmarks/fidl/benchmark_suite]: /src/tests/benchmarks/fidl/benchmark_suite
+[/src/tests/benchmarks/fidl]: /src/tests/benchmarks/fidl
+
+[/src/tests/fidl/source_compatibility]: /src/tests/fidl/source_compatibility
+[/topaz/tests/fidl-changes]: /topaz/tests/fidl-changes
+
+[/src/tests/fidl/compatibility/]: /src/tests/fidl/compatibility/
+[/topaz/bin/fidl_compatibility_test/]: /topaz/bin/fidl_compatibility_test/
+[/src/tests/fidl/dangerous_identifiers]: /src/tests/fidl/dangerous_identifiers
+[/topaz/tests/fidl-dangerous-identifiers]: /topaz/tests/fidl-dangerous-identifiers
+
+[/tools/fidl/fidldoc]: /tools/fidl/fidldoc
+[/tools/fidl/scripts]: /tools/fidl/scripts
+[/tools/fidl/measure-tape]: /tools/fidl/measure-tape
+[/garnet/go/src/fidlmerge]: /garnet/go/src/fidlmerge
+[/garnet/public/lib/fostr]: /garnet/public/lib/fostr
+[/garnet/public/build/fostr]: /garnet/public/build/fostr
+[/topaz/bin/dart_fidl_json]: /topaz/bin/dart_fidl_json
+[/src/lib/fidl_codec]: /src/lib/fidl_codec
