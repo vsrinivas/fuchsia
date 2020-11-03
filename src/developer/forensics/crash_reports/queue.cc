@@ -155,13 +155,13 @@ size_t Queue::UploadAll() {
 }
 
 size_t Queue::ArchiveAll() {
-  size_t successful = 0;
   for (const auto& report_id : pending_reports_) {
     FX_LOGST(INFO, tags_->Get(report_id)) << "Archiving local report under /tmp/reports";
     info_.MarkReportAsArchived(upload_attempts_[report_id]);
     tags_->Unregister(report_id);
   }
 
+  const size_t successful = pending_reports_.size();
   pending_reports_.clear();
 
   return successful;
