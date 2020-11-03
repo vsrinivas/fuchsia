@@ -30,7 +30,8 @@ namespace crash_reports {
 class Queue {
  public:
   Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-        std::shared_ptr<InfoContext> info_context, LogTags* tags, CrashServer* crash_server);
+        std::shared_ptr<InfoContext> info_context, LogTags* tags, CrashServer* crash_server,
+        SnapshotManager* snapshot_manager);
 
   // Allow the queue's functionality to change based on the upload policy.
   void WatchSettings(Settings* settings);
@@ -65,17 +66,16 @@ class Queue {
   // queue. Returns the number of reports successfully uploaded.
   size_t UploadAll();
 
-  // Attempts to upload a report.
+  // Attempts to upload a report
   //
-  // Returns false if the report needs to be processed again.
-  bool Upload(ReportId report_id);
-
-  // Make a request to the crash server to attempt to upload a report.
-  //
-  // Returns false if the upload failed.
-  bool Upload(const Report& report, std::string* server_report_id);
+  // Returns false if another upload attempt should be made in the future.
+  bool Upload(const Report& report);
 
   void GarbageCollect(ReportId report_id);
+
+  // Free resources associated with a report, e.g., snapshot or log tags.
+  void FreeResources(ReportId report_id);
+  void FreeResources(const Report& report);
 
   // Callback to update |state_| on upload policy changes.
   void OnUploadPolicyChange(const Settings::UploadPolicy& upload_policy);
@@ -91,6 +91,7 @@ class Queue {
   LogTags* tags_;
   Store store_;
   CrashServer* crash_server_;
+  SnapshotManager* snapshot_manager_;
   QueueInfo info_;
 
   fuchsia::netstack::NetstackPtr netstack_;

@@ -143,7 +143,7 @@ class QueueTest : public UnitTestFixture {
     crash_server_->AddSnapshotManager(snapshot_manager_.get());
 
     queue_ = std::make_unique<Queue>(dispatcher(), services(), info_context_, &tags_,
-                                     crash_server_.get());
+                                     crash_server_.get(), snapshot_manager_.get());
     ASSERT_TRUE(queue_);
     queue_->WatchSettings(&settings_);
   }

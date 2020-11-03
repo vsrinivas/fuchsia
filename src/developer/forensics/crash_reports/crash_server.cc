@@ -198,14 +198,7 @@ bool CrashServer::MakeRequest(const Report& report, std::string* server_report_i
   http_transport->SetTimeout(60.0);  // 1 minute.
   http_transport->SetURL(url_);
 
-  // If the upload is successful, let |snapshot_manager_| know the snapshot isn't needed for this
-  // report any more.
-  if (http_transport->ExecuteSynchronously(server_report_id)) {
-    snapshot_manager_->Release(report.SnapshotUuid());
-    return true;
-  }
-
-  return false;
+  return http_transport->ExecuteSynchronously(server_report_id);
 }
 
 }  // namespace crash_reports
