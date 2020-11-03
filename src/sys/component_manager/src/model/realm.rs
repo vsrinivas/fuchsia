@@ -143,7 +143,7 @@ impl fmt::Debug for WeakRealm {
 /// that it contains, including component resolution, execution, and service discovery.
 pub struct Realm {
     /// The registry for resolving component URLs within the realm.
-    pub environment: Environment,
+    pub environment: Arc<Environment>,
     /// The component's URL.
     pub component_url: String,
     /// The mode of startup (lazy or eager).
@@ -212,7 +212,7 @@ impl Realm {
         component_url: String,
     ) -> Self {
         Self {
-            environment,
+            environment: Arc::new(environment),
             abs_moniker: AbsoluteMoniker::root(),
             component_url,
             // Started by main().
@@ -684,6 +684,8 @@ pub struct RealmState {
     /// The next unique identifier for a dynamic component instance created in the realm.
     /// (Static instances receive identifier 0.)
     next_dynamic_instance_id: InstanceId,
+    /// The set of named Environments defined by this realm.
+    environments: HashMap<String, Arc<Environment>>,
 }
 
 impl RealmState {
@@ -693,8 +695,10 @@ impl RealmState {
             live_child_realms: HashMap::new(),
             decl: decl.clone(),
             next_dynamic_instance_id: 1,
+            environments: Self::instantiate_environments(realm, decl)?,
         };
         state.add_static_child_realms(realm, &decl).await?;
+
         Ok(state)
     }
 
@@ -787,14 +791,35 @@ impl RealmState {
         self.child_realms.remove(moniker);
     }
 
-    /// Construct an environment for `child`, inheriting from `realm`'s environment if
+    /// Creates a set of Environments instantiated from their EnvironmentDecls.
+    fn instantiate_environments(
+        realm: &Arc<Realm>,
+        decl: &ComponentDecl,
+    ) -> Result<HashMap<String, Arc<Environment>>, ModelError> {
+        let mut environments = HashMap::new();
+        for env_decl in &decl.environments {
+            environments.insert(
+                env_decl.name.clone(),
+                Arc::new(Environment::from_decl(realm, env_decl).map_err(|e| {
+                    ModelError::EnvironmentInvalid {
+                        name: env_decl.name.clone(),
+                        moniker: realm.abs_moniker.clone(),
+                        err: e,
+                    }
+                })?),
+            );
+        }
+        Ok(environments)
+    }
+
+    /// Retrieve an environment for `child`, inheriting from `realm`'s environment if
     /// necessary.
     fn environment_for_child(
-        &self,
+        &mut self,
         realm: &Arc<Realm>,
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
-    ) -> Result<Environment, ModelError> {
+    ) -> Result<Arc<Environment>, ModelError> {
         // For instances in a collection, the environment (if any) is designated in the collection.
         // Otherwise, it's specified in the ChildDecl.
         let environment_name = match collection {
@@ -802,24 +827,12 @@ impl RealmState {
             None => child.environment.as_ref(),
         };
         if let Some(environment_name) = environment_name {
-            // The child has an environment assigned to it. Find that environment
-            // in the list of environment declarations.
-            let decl = self
-                .decl
-                .environments
-                .iter()
-                .find(|env| env.name == *environment_name)
-                .ok_or_else(|| {
-                    ModelError::environment_not_found(environment_name, realm.abs_moniker.clone())
-                })?;
-            Environment::from_decl(realm, decl).map_err(|e| ModelError::EnvironmentInvalid {
-                name: environment_name.to_string(),
-                moniker: realm.abs_moniker.clone(),
-                err: e,
-            })
+            Ok(Arc::clone(self.environments.get(environment_name).ok_or_else(|| {
+                ModelError::environment_not_found(environment_name, realm.abs_moniker.clone())
+            })?))
         } else {
             // Auto-inherit the environment from this realm.
-            Ok(Environment::new_inheriting(realm))
+            Ok(Arc::new(Environment::new_inheriting(realm)))
         }
     }
 
