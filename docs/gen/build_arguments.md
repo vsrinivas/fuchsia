@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1265
+From //build/config/BUILDCONFIG.gn:1259
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -489,7 +489,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:2157
+From //build/config/BUILDCONFIG.gn:2151
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -956,7 +956,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1028
+From //build/config/BUILDCONFIG.gn:1022
 
 ### fastboot_product
 
@@ -1593,8 +1593,6 @@ Each element of the list is one variant, which is a scope defining:
   configs = ["//build/config/profile"]
   tags = ["instrumented", "profile"]
 }, {
-  configs = ["//build/config/scudo"]
-}, {
   configs = ["//build/config/sanitizers:ubsan"]
   remove_common_configs = ["//build/config:no_rtti"]
   tags = ["instrumented", "instrumentation-runtime"]
@@ -1608,9 +1606,7 @@ Each element of the list is one variant, which is a scope defining:
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
   tags = ["asan", "instrumentation-runtime", "instrumented", "lsan"]
-  toolchain_args = {
-  use_scudo = false
-}
+  toolchain_args = { }
 }, {
   configs = ["//build/config/sanitizers:asan", "//build/config/sanitizers:ubsan"]
   host_only = {
@@ -1618,18 +1614,14 @@ Each element of the list is one variant, which is a scope defining:
 }
   remove_common_configs = ["//build/config:no_rtti"]
   tags = ["asan", "instrumentation-runtime", "instrumented", "lsan"]
-  toolchain_args = {
-  use_scudo = false
-}
+  toolchain_args = { }
 }, {
   configs = ["//build/config/sanitizers:asan", "//build/config/sanitizers:sancov"]
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
   tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "sancov"]
-  toolchain_args = {
-  use_scudo = false
-}
+  toolchain_args = { }
 }, {
   configs = ["//build/config/sanitizers:asan", "//build/config/fuzzer", "//build/config/sanitizers:rust-asan", "//build/config:icf"]
   host_only = {
@@ -1641,7 +1633,6 @@ Each element of the list is one variant, which is a scope defining:
   tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "fuzzer"]
   toolchain_args = {
   asan_default_options = "alloc_dealloc_mismatch=0:check_malloc_usable_size=0:detect_odr_violation=0:max_uar_stack_size_log=16:print_scariness=1:allocator_may_return_null=1:detect_leaks=0:detect_stack_use_after_return=1:malloc_context_size=128:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0"
-  use_scudo = false
 }
 }, {
   configs = ["//build/config/fuzzer", "//build/config/sanitizers:ubsan", "//build/config:icf"]
@@ -1655,7 +1646,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:920
+From //build/config/BUILDCONFIG.gn:918
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2288,17 +2279,6 @@ zero add increasing details at the cost of increased trace buffer use.
 
 From //zircon/kernel/params.gni:43
 
-### scudo_default_options
-Default [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
-options (before the `SCUDO_OPTIONS` environment variable is read at
-runtime).  *NOTE:* This affects only components using the `scudo`
-variant (see GN build argument `select_variant`), and does not affect
-anything when the `use_scudo` build flag is set instead.
-
-**Current value (from the default):** `["abort_on_error=1", "QuarantineSizeKb=0", "ThreadLocalQuarantineSizeKb=0", "DeallocationTypeMismatch=false", "DeleteSizeMismatch=false", "allocator_may_return_null=true"]`
-
-From //build/config/scudo/scudo.gni:17
-
 ### sdk_dirs
 The directories to search for parts of the SDK.
 
@@ -2385,7 +2365,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1255
+From //build/config/BUILDCONFIG.gn:1249
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2394,7 +2374,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1260
+From //build/config/BUILDCONFIG.gn:1254
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2432,7 +2412,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1074
+From //build/config/BUILDCONFIG.gn:1068
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2692,7 +2672,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1048
+From //build/config/BUILDCONFIG.gn:1042
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2813,16 +2793,6 @@ which requires:
 **Current value (from the default):** `true`
 
 From //src/media/lib/ffmpeg/BUILD.gn:14
-
-### use_scudo
-TODO(davemoore): Remove this entire mechanism once standalone scudo is the
-default (fxbug.dev/6857)
-Enable the [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
-memory allocator.
-
-**Current value (from the default):** `false`
-
-From //build/config/scudo/scudo.gni:10
 
 ### use_swiftshader_vulkan_icd_on_host
 
