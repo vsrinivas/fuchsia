@@ -72,6 +72,10 @@ bool AllocTrace(const IptConfig& config) {
   }
 
   Allocation allocation;
+  // TODO(61706): memset is done as the padding is set to 0xAA in release builds and encoding of the
+  // FIDL request fails as the non-zero padding is also copied to the FIDL message.
+  // Remove this once the bug is fixed.
+  memset(&allocation, 0x0, sizeof(Allocation));
   allocation.mode = config.mode;
   allocation.num_traces = (config.mode == Mode::CPU ? config.num_cpus : config.max_threads);
   FX_VLOGS(2) << fxl::StringPrintf("mode=%u, num_traces=0x%x",
