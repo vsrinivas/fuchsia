@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -153,7 +154,9 @@ TEST(MsgbufRingHandlerTest, Ioctl) {
       // Now construct the expected response data, by bitwise NOT of all the byte data.
       auto buffer = fake_interfaces->GetIoctlRxBuffer();
       EXPECT_NE(0u, buffer.address);
-      const size_t write_size = std::min<size_t>(ioctl_request->input_buf_len, buffer.size);
+      ASSERT_TRUE(buffer.size <= std::numeric_limits<uint16_t>::max());
+      const auto write_size =
+          std::min<uint16_t>(ioctl_request->input_buf_len, static_cast<uint16_t>(buffer.size));
       if (tx_buffer_address != 0 && buffer.address != 0) {
         const char* tx_buffer_data = reinterpret_cast<const char*>(tx_buffer_address);
         char* rx_buffer_data = reinterpret_cast<char*>(buffer.address);
@@ -256,7 +259,8 @@ TEST(MsgbufRingHandlerTest, WlEvent) {
     MsgbufWlEvent wl_event = {};
     wl_event.msg.msgtype = MsgbufWlEvent::kMsgType;
     wl_event.msg.request_id = rx_event_buffer.index;
-    wl_event.event_data_len = event_size;
+    ASSERT_TRUE(event_size <= std::numeric_limits<uint16_t>::max());
+    wl_event.event_data_len = static_cast<uint16_t>(event_size);
 
     EXPECT_EQ(ZX_OK, SpinInvoke(&FakeMsgbufInterfaces::AddControlCompleteRingEntry,
                                 fake_interfaces.get(), &wl_event, sizeof(wl_event)));
