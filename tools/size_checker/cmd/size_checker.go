@@ -27,12 +27,19 @@ type FileSystemSize struct {
 }
 
 type SizeLimits struct {
-	AssetLimit             json.Number `json:"asset_limit"`
-	CoreLimit              json.Number `json:"core_limit"`
-	AssetExt               []string    `json:"asset_ext"`
-	DistributedShlibs      []string    `json:"distributed_shlibs"`
+	// Specifies a size limit in bytes for ICU data files.
+	ICUDataLimit json.Number `json:"icu_data_limit"`
+	// Specifies a size limit in bytes for uncategorized packages.
+	CoreLimit json.Number `json:"core_limit"`
+	// Specifies the files that contribute to the ICU data limit.
+	ICUData []string `json:"icu_data"`
+	// Specifies the files that contributed to the distributed shared library
+	// size limits.
+	DistributedShlibs []string `json:"distributed_shlibs"`
+	// Specifies the distributed shared library size limit in bytes.
 	DistributedShlibsLimit json.Number `json:"distributed_shlibs_limit"`
-	Components             []Component `json:"components"`
+	// Specifies a series of size components/categories with a struct describing each.
+	Components []Component `json:"components"`
 }
 
 type Node struct {
@@ -269,8 +276,8 @@ func processBlobsJSON(blobsJSONFile io.Reader) (map[string]int64, error) {
 
 type processingState struct {
 	blobMap               map[string]*Blob
-	assetMap              map[string]struct{}
-	assetSize             int64
+	icuDataMap            map[string]struct{}
+	icuDataSize           int64
 	distributedShlibs     map[string]struct{}
 	distributedShlibsSize int64
 	root                  *Node
@@ -307,15 +314,15 @@ func parseBlobsJSON(
 	blobs []BlobFromJSON,
 	pkgPath string) {
 	for _, blob := range blobs {
-		// If the blob is an asset, we don't add it to the tree.
+		// If the blob is an ICU data file, we don't add it to the tree.
 		// We check the path instead of the source path because prebuilt packages have hashes as the
 		// source path for their blobs
-		if _, ok := state.assetMap[filepath.Ext(blob.Path)]; ok {
+		if _, ok := state.icuDataMap[filepath.Base(blob.Path)]; ok {
 			// The size of each blob is the total space occupied by the blob in blobfs (each blob may be
 			// referenced several times by different packages). Therefore, once we have already add the
 			// size, we should remove it from the map
 			if state.blobMap[blob.Merkle] != nil {
-				state.assetSize += state.blobMap[blob.Merkle].size
+				state.icuDataSize += state.blobMap[blob.Merkle].size
 				delete(state.blobMap, blob.Merkle)
 			}
 		} else if _, ok := state.distributedShlibs[blob.Path]; ok {
@@ -367,11 +374,12 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 		return outputSizes
 	}
 
-	// We create a set of extensions that should be considered as assets.
-	assetMap := make(map[string]struct{})
-	for _, ext := range sizeLimits.AssetExt {
-		assetMap[ext] = struct{}{}
+	// We create a set of ICU data filenames.
+	icuDataMap := make(map[string]struct{})
+	for _, icu_data := range sizeLimits.ICUData {
+		icuDataMap[icu_data] = struct{}{}
 	}
+
 	// We also create a map of paths that should be considered distributed shlibs.
 	distributedShlibs := make(map[string]struct{})
 	for _, path := range sizeLimits.DistributedShlibs {
@@ -379,7 +387,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 	}
 	st := processingState{
 		blobMap,
-		assetMap,
+		icuDataMap,
 		0,
 		distributedShlibs,
 		0,
@@ -425,14 +433,14 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 		}
 	}
 
-	AssetSizeLimit, err := sizeLimits.AssetLimit.Int64()
+	ICUDataLimit, err := sizeLimits.ICUDataLimit.Int64()
 	if err != nil {
-		log.Fatalf("Failed to parse %s as an int64: %s\n", sizeLimits.AssetLimit, err)
+		log.Fatalf("Failed to parse %s as an int64: %s\n", sizeLimits.ICUDataLimit, err)
 	}
-	const assetsName = "Assets (Fonts / Strings / Images)"
-	outputSizes[assetsName] = &ComponentSize{
-		Size:   st.assetSize,
-		Budget: AssetSizeLimit,
+	const icuDataName = "ICU Data"
+	outputSizes[icuDataName] = &ComponentSize{
+		Size:   st.icuDataSize,
+		Budget: ICUDataLimit,
 		nodes:  make([]*Node, 0),
 	}
 

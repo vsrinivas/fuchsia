@@ -108,8 +108,8 @@ func Test_processBlobs(t *testing.T) {
 	tests := []struct {
 		name                  string
 		blobMap               map[string]*Blob
-		assetMap              map[string]struct{}
-		assetSize             int64
+		icuDataMap            map[string]struct{}
+		icuSize               int64
 		distributedShlibsMap  map[string]struct{}
 		distributedShlibsSize int64
 		blobs                 []BlobFromJSON
@@ -119,7 +119,7 @@ func Test_processBlobs(t *testing.T) {
 		{
 			"Adding Asset Blob",
 			map[string]*Blob{"hash": {size: 1}},
-			map[string]struct{}{".asset": {}},
+			map[string]struct{}{"test.asset": {}},
 			0,
 			map[string]struct{}{"lib/ld.so.1": {}},
 			0,
@@ -130,7 +130,7 @@ func Test_processBlobs(t *testing.T) {
 		{
 			"Adding Non-asset Blob",
 			map[string]*Blob{"hash": {size: 1, dep: []string{"not used"}}},
-			map[string]struct{}{".asset": {}},
+			map[string]struct{}{"test.asset": {}},
 			0,
 			map[string]struct{}{"lib/ld.so.1": {}},
 			0,
@@ -144,8 +144,8 @@ func Test_processBlobs(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			st := processingState{
 				test.blobMap,
-				test.assetMap,
-				test.assetSize,
+				test.icuDataMap,
+				test.icuSize,
 				test.distributedShlibsMap,
 				test.distributedShlibsSize,
 				newDummyNode(),
@@ -156,8 +156,8 @@ func Test_processBlobs(t *testing.T) {
 				t.Fatalf("blob map: %v; expect %v", test.blobMap, test.expectedBlobMap)
 			}
 
-			if st.assetSize != test.expectedSize {
-				t.Fatalf("asset size: %d; expect %d", test.assetSize, test.expectedSize)
+			if st.icuDataSize != test.expectedSize {
+				t.Fatalf("ICU Data size: %d; expect %d", test.icuSize, test.expectedSize)
 			}
 		})
 	}
@@ -298,9 +298,9 @@ func Test_processInput(t *testing.T) {
 	const singleBlobSize = 4096
 	fooSrcRelPath := "foo.src"
 	input := SizeLimits{
-		AssetLimit: json.Number("1"),
-		CoreLimit:  json.Number("1"),
-		AssetExt:   []string{".txt"},
+		ICUDataLimit: json.Number("1"),
+		CoreLimit:    json.Number("1"),
+		ICUData:      []string{"icudtl.dat"},
 		Components: []Component{
 			{
 				Component: "foo",
