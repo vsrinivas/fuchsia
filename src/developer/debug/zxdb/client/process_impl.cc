@@ -207,7 +207,7 @@ void ProcessImpl::WriteMemory(uint64_t address, std::vector<uint8_t> data,
 }
 
 void ProcessImpl::LoadInfoHandleTable(
-    fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandleExtended>> handles)> callback) {
+    fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandle>> handles)> callback) {
   debug_ipc::LoadInfoHandleTableRequest request;
   request.process_koid = koid_;
   session()->remote_api()->LoadInfoHandleTable(

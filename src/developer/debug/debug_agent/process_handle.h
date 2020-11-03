@@ -16,7 +16,7 @@ namespace debug_ipc {
 struct AddressRegion;
 struct MemoryBlock;
 struct Module;
-struct InfoHandleExtended;
+struct InfoHandle;
 }  // namespace debug_ipc
 
 namespace debug_agent {
@@ -69,8 +69,7 @@ class ProcessHandle {
   virtual std::vector<debug_ipc::Module> GetModules(uint64_t dl_debug_addr) const = 0;
 
   // Returns the handles opened by the process.
-  virtual fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandleExtended>> GetHandles()
-      const = 0;
+  virtual fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandle>> GetHandles() const = 0;
 
   virtual zx_status_t ReadMemory(uintptr_t address, void* buffer, size_t len,
                                  size_t* actual) const = 0;

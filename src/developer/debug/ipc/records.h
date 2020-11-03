@@ -383,7 +383,7 @@ struct AddressRegion {
   uint64_t depth;
 };
 
-// ReadRegisters ---------------------------------------------------------------
+// ReadRegisters -----------------------------------------------------------------------------------
 
 struct ConfigAction {
   enum class Type : uint32_t {
@@ -402,14 +402,43 @@ struct ConfigAction {
 
 // LoadInfoHandleTable -----------------------------------------------------------------------------
 
-struct InfoHandleExtended {
-  uint32_t type = 0;
-  uint32_t handle_value = 0;
-  uint32_t rights = 0;
-  uint32_t reserved = 0;
-  uint64_t koid = 0;
-  uint64_t related_koid = 0;
-  uint64_t peer_owner_koid = 0;
+// VMO-specific handle information from zx_info_vmo that's not in the InfoHandle structure.
+struct InfoHandleVmo {
+  char name[32];  // Needs to be POD for use in union below, and 32 is the max from the kernel.
+  uint64_t size_bytes;
+  uint64_t parent_koid;
+  uint64_t num_children;
+  uint64_t num_mappings;
+  uint64_t share_count;
+  uint32_t flags;
+  uint64_t committed_bytes;
+  uint32_t cache_policy;
+  uint64_t metadata_bytes;
+  uint64_t committed_change_events;
+};
+
+// This structure is assumed to be entirely POD.
+struct InfoHandle {
+  // Provide 0-init that covers the union.
+  InfoHandle() { memset(this, 0, sizeof(InfoHandle)); }
+
+  // Standard information from zx_info_handle_extended.
+  //
+  // There is a special case for a VMO. It is possible to have a VMO mapped without a handle to it.
+  // These will appear here but the handle_value will be 0.
+  uint32_t type;
+  uint32_t handle_value;
+  uint32_t rights;
+  uint32_t reserved;
+  uint64_t koid;
+  uint64_t related_koid;
+  uint64_t peer_owner_koid;
+
+  // Type-specific handle information.
+  union {
+    InfoHandleVmo vmo;  // Valid when type == ZX_OBJ_TYPE_VMO.
+    // Other types go here.
+  } ext;
 };
 
 #pragma pack(pop)

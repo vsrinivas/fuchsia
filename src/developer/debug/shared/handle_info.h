@@ -15,11 +15,14 @@ namespace debug_ipc {
 // Converts a uint32_t handle type to a string. Returns "<unknown>" on failure.
 std::string HandleTypeToString(uint32_t handle_type);
 
+// Decodes a ZX_CACHE_POLICY_* enum.
+std::string CachePolicyToString(uint32_t cache_policy);
+
 // Returns a vector of strings, one for each right set.
 std::vector<std::string> HandleRightsToStrings(uint32_t handle_rights);
 
-// Returns a vector of right strings separated by "|" characters.
-std::string HandleRightsToString(uint32_t handle_rights);
+// Converts a bitmask of ZX_INFO_VMO_* to a list of strings.
+std::vector<std::string> VmoFlagsToStrings(uint32_t flags);
 
 }  // namespace debug_ipc
 

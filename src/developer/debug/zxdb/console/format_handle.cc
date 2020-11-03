@@ -29,16 +29,50 @@ std::string NumToString(T value, bool hex) {
   return std::to_string(value);
 }
 
+// Handle values can be 0 in the case of VMOs that are mapped but don't have open handles. This
+// can be confusing so replace 0 with "<none>".
+std::string HandleValueToString(uint64_t handle, bool hex) {
+  if (handle == 0)
+    return "<none>";
+  return NumToString(handle, hex);
+}
+
+// Appends the given array of flags, one-per line, using the heading as the key for the first.
+void AppendFlags(const std::string& heading, const std::vector<std::string>& flags,
+                 std::vector<std::vector<std::string>>& rows) {
+  for (size_t i = 0; i < flags.size(); i++) {
+    if (i == 0)
+      AppendTwoEltRow(heading, flags[i], rows);
+    else
+      AppendTwoEltRow(std::string(), flags[i], rows);
+  }
+}
+
+void AppendVmoInfo(const debug_ipc::InfoHandleVmo& vmo, std::vector<std::vector<std::string>>& rows,
+                   bool hex) {
+  AppendTwoEltRow("Name", std::string(vmo.name, strnlen(vmo.name, std::size(vmo.name))), rows);
+  AppendTwoEltRow("VMO size in bytes", NumToString(vmo.size_bytes, hex), rows);
+  AppendTwoEltRow("Parent koid", NumToString(vmo.parent_koid, hex), rows);
+  AppendTwoEltRow("# children", NumToString(vmo.num_children, hex), rows);
+  AppendTwoEltRow("# mappings", NumToString(vmo.num_mappings, hex), rows);
+  AppendTwoEltRow("Share count", NumToString(vmo.share_count, hex), rows);
+  AppendFlags("Flags", debug_ipc::VmoFlagsToStrings(vmo.flags), rows);
+  AppendTwoEltRow("Committed bytes", NumToString(vmo.committed_bytes, hex), rows);
+  AppendTwoEltRow("Cache policy", debug_ipc::CachePolicyToString(vmo.cache_policy), rows);
+  AppendTwoEltRow("Metadata bytes", NumToString(vmo.metadata_bytes, hex), rows);
+  AppendTwoEltRow("Committed change events", NumToString(vmo.committed_change_events, hex), rows);
+}
+
 }  // namespace
 
-OutputBuffer FormatHandles(const std::vector<debug_ipc::InfoHandleExtended>& handles, bool hex) {
+OutputBuffer FormatHandles(const std::vector<debug_ipc::InfoHandle>& handles, bool hex) {
   if (handles.empty())
     return OutputBuffer("No handles.");
 
   std::vector<std::vector<std::string>> rows;
   for (const auto& handle : handles) {
     auto& row = rows.emplace_back();
-    row.push_back(NumToString(handle.handle_value, hex));
+    row.push_back(HandleValueToString(handle.handle_value, hex));
     row.push_back(debug_ipc::HandleTypeToString(handle.type));
     row.push_back(NumToString(handle.koid, hex));
   }
@@ -50,25 +84,21 @@ OutputBuffer FormatHandles(const std::vector<debug_ipc::InfoHandleExtended>& han
   return out;
 }
 
-OutputBuffer FormatHandle(const debug_ipc::InfoHandleExtended& handle, bool hex) {
+OutputBuffer FormatHandle(const debug_ipc::InfoHandle& handle, bool hex) {
   std::vector<std::vector<std::string>> rows;
+  AppendTwoEltRow("Handle", HandleValueToString(handle.handle_value, hex), rows);
   AppendTwoEltRow("Type", debug_ipc::HandleTypeToString(handle.type), rows);
-  AppendTwoEltRow("Value", NumToString(handle.handle_value, hex), rows);
-
-  // Put each right on a separate line.
-  std::vector<std::string> rights = debug_ipc::HandleRightsToStrings(handle.rights);
-  for (size_t i = 0; i < rights.size(); i++) {
-    if (i == 0)
-      AppendTwoEltRow("Rights", rights[i], rows);
-    else
-      AppendTwoEltRow(std::string(), rights[i], rows);
-  }
-
   AppendTwoEltRow("Koid", NumToString(handle.koid, hex), rows);
+  AppendFlags("Rights", debug_ipc::HandleRightsToStrings(handle.rights), rows);
   if (handle.related_koid)
     AppendTwoEltRow("Related koid", NumToString(handle.related_koid, hex), rows);
   if (handle.peer_owner_koid)
     AppendTwoEltRow("Peer-owner koid", NumToString(handle.peer_owner_koid, hex), rows);
+
+  // Type-specific information.
+  if (handle.type == 3u) {  // ZX_OBJ_TYPE_VMO == 3
+    AppendVmoInfo(handle.ext.vmo, rows, hex);
+  }
 
   OutputBuffer out;
   FormatTable({ColSpec(Align::kRight, 0, std::string(), 2, Syntax::kHeading),

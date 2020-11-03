@@ -10,7 +10,7 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 
 namespace debug_ipc {
-struct InfoHandleExtended;
+struct InfoHandle;
 }
 
 namespace zxdb {
@@ -18,11 +18,11 @@ namespace zxdb {
 // Formats a table of the handles with minimal information. The order of the table will be the
 // same as the input vector. The hex flag prints values in hexadecimal. Otherwise decimal will be
 // used.
-OutputBuffer FormatHandles(const std::vector<debug_ipc::InfoHandleExtended>& handles, bool hex);
+OutputBuffer FormatHandles(const std::vector<debug_ipc::InfoHandle>& handles, bool hex);
 
 // Formats a detailed summary of a single handle's information. The hex flag prints values in
 // hexadecimal. Otherwise decimal will be used.
-OutputBuffer FormatHandle(const debug_ipc::InfoHandleExtended& handle, bool hex);
+OutputBuffer FormatHandle(const debug_ipc::InfoHandle& handle, bool hex);
 
 }  // namespace zxdb
 

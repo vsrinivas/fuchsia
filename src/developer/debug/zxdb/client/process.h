@@ -149,7 +149,7 @@ class Process : public ClientObject {
   // Executes zx_object_get_info with ZX_INFO_HANDLE_TABLE for the process and gives the result
   // back.
   virtual void LoadInfoHandleTable(
-      fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandleExtended>> handles)> callback) = 0;
+      fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandle>> handles)> callback) = 0;
 
   StartType start_type() const { return start_type_; }
 

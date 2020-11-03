@@ -86,7 +86,7 @@ void MockProcess::WriteMemory(uint64_t address, std::vector<uint8_t> data,
 }
 
 void MockProcess::LoadInfoHandleTable(
-    fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandleExtended>> handles)> cb) {
+    fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandle>> handles)> cb) {
   MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err()); });
 }
 

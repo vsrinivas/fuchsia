@@ -48,10 +48,10 @@ std::vector<debug_ipc::Module> MockProcessHandle::GetModules(uint64_t dl_debug_a
   return {};
 }
 
-fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandleExtended>>
-MockProcessHandle::GetHandles() const {
+fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandle>> MockProcessHandle::GetHandles()
+    const {
   // Not currently implemented in this mock.
-  return fitx::success(std::vector<debug_ipc::InfoHandleExtended>());
+  return fitx::success(std::vector<debug_ipc::InfoHandle>());
 }
 
 zx_status_t MockProcessHandle::ReadMemory(uintptr_t address, void* buffer, size_t len,

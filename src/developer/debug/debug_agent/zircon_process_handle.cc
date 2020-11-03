@@ -14,6 +14,25 @@
 
 namespace debug_agent {
 
+namespace {
+
+void FillVmoInfo(const zx_info_vmo_t& source, debug_ipc::InfoHandleVmo& dest) {
+  static_assert(sizeof(dest.name) == sizeof(source.name));
+  memcpy(dest.name, source.name, sizeof(source.name));
+  dest.size_bytes = source.size_bytes;
+  dest.parent_koid = source.parent_koid;
+  dest.num_children = source.num_children;
+  dest.num_mappings = source.num_mappings;
+  dest.share_count = source.share_count;
+  dest.flags = source.flags;
+  dest.committed_bytes = source.committed_bytes;
+  dest.cache_policy = source.cache_policy;
+  dest.metadata_bytes = source.metadata_bytes;
+  dest.committed_change_events = source.committed_change_events;
+}
+
+}  // namespace
+
 ZirconProcessHandle::ZirconProcessHandle(zx::process p)
     : process_koid_(zircon::KoidForObject(p)), process_(std::move(p)) {}
 
@@ -94,34 +113,81 @@ std::vector<debug_ipc::Module> ZirconProcessHandle::GetModules(uint64_t dl_debug
   return GetElfModulesForProcess(*this, dl_debug_addr);
 }
 
-fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandleExtended>>
-ZirconProcessHandle::GetHandles() const {
-  // Query the table size.
-  size_t actual = 0;
-  size_t avail = 0;
-  if (zx_status_t status = process_.get_info(ZX_INFO_HANDLE_TABLE, nullptr, 0, &actual, &avail);
+fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandle>> ZirconProcessHandle::GetHandles()
+    const {
+  // Query the handle table size.
+  size_t handles_actual = 0;
+  size_t handles_avail = 0;
+  if (zx_status_t status =
+          process_.get_info(ZX_INFO_HANDLE_TABLE, nullptr, 0, &handles_actual, &handles_avail);
       status != ZX_OK)
     return fitx::error(status);
 
   // We're technically racing with the program, so add some extra buffer in case the process has
   // opened more handles since the above query.
-  avail += 64;
+  handles_avail += 64;
 
-  std::vector<zx_info_handle_extended_t> handles(avail);
-  if (zx_status_t status =
-          process_.get_info(ZX_INFO_HANDLE_TABLE, handles.data(),
-                            avail * sizeof(zx_info_handle_extended_t), &actual, &avail);
+  // Read the extended handle table.
+  std::vector<zx_info_handle_extended_t> handles(handles_avail);
+  if (zx_status_t status = process_.get_info(ZX_INFO_HANDLE_TABLE, handles.data(),
+                                             handles_avail * sizeof(zx_info_handle_extended_t),
+                                             &handles_actual, &handles_avail);
       status != ZX_OK)
     return fitx::error(status);
+  handles.resize(handles_actual);
 
-  std::vector<debug_ipc::InfoHandleExtended> result(actual);
-  for (size_t i = 0; i < actual; ++i) {
+  // Query the VMO table size.
+  size_t vmo_actual = 0;
+  size_t vmo_avail = 0;
+  if (zx_status_t status =
+          process_.get_info(ZX_INFO_PROCESS_VMOS, nullptr, 0, &vmo_actual, &vmo_avail);
+      status != ZX_OK)
+    return fitx::error(status);
+  vmo_avail += 64;  // Try to prevent races as above.
+
+  // Read the VMO table.
+  std::vector<zx_info_vmo_t> vmos(vmo_avail);
+  if (zx_status_t status =
+          process_.get_info(ZX_INFO_PROCESS_VMOS, vmos.data(), vmo_avail * sizeof(zx_info_vmo_t),
+                            &vmo_actual, &vmo_avail);
+      status != ZX_OK)
+    return fitx::error(status);
+  vmos.resize(vmo_actual);
+
+  // Index VMOs by koid to allow merging below.
+  std::map<zx_koid_t, zx_info_vmo_t> vmo_index;
+  for (const auto& vmo : vmos)
+    vmo_index[vmo.koid] = vmo;
+
+  std::vector<debug_ipc::InfoHandle> result(handles.size());
+  for (size_t i = 0; i < handles.size(); ++i) {
     result[i].type = handles[i].type;
     result[i].handle_value = handles[i].handle_value;
     result[i].rights = handles[i].rights;
     result[i].koid = handles[i].koid;
     result[i].related_koid = handles[i].related_koid;
     result[i].peer_owner_koid = handles[i].peer_owner_koid;
+
+    // VMO-specific extended information.
+    if (handles[i].type == ZX_OBJ_TYPE_VMO) {
+      if (auto found_vmo = vmo_index.find(handles[i].koid); found_vmo != vmo_index.end()) {
+        FillVmoInfo(found_vmo->second, result[i].ext.vmo);
+
+        // Remove VMO info as we find it so we know what wasn't added below.
+        vmo_index.erase(found_vmo);
+      }
+    }
+  }
+
+  // Some VMOs won't have open handles. Add these to the table also with 0 handle values. All
+  // previously-matched items will have already been removed from the table, so everything left
+  // needs to be added.
+  for (const auto& [koid, vmo] : vmo_index) {
+    auto& dest = result.emplace_back();
+    dest.type = ZX_OBJ_TYPE_VMO;
+    dest.rights = vmo.handle_rights;
+    dest.koid = koid;
+    FillVmoInfo(vmo, dest.ext.vmo);
   }
 
   return fitx::success(std::move(result));

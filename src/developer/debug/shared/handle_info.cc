@@ -74,6 +74,21 @@ std::string HandleTypeToString(uint32_t handle_type) {
   }
 }
 
+std::string CachePolicyToString(uint32_t cache_policy) {
+  switch (cache_policy) {
+    case 0u:
+      return "ZX_CACHE_POLICY_CACHED";
+    case 1u:
+      return "ZX_CACHE_POLICY_UNCACHED";
+    case 2u:
+      return "ZX_CACHE_POLICY_UNCACHED_DEVICE";
+    case 3u:
+      return "ZX_CACHE_POLICY_WRITE_COMBINING";
+    default:
+      return "<unknown (" + std::to_string(cache_policy) + ")>";
+  }
+}
+
 std::vector<std::string> HandleRightsToStrings(uint32_t handle_rights) {
   std::vector<std::string> result;
   if (handle_rights == 0) {
@@ -112,15 +127,28 @@ std::vector<std::string> HandleRightsToStrings(uint32_t handle_rights) {
   return result;
 }
 
-std::string HandleRightsToString(uint32_t handle_rights) {
-  auto rights = HandleRightsToStrings(handle_rights);
+std::vector<std::string> VmoFlagsToStrings(uint32_t flags) {
+  std::vector<std::string> result;
 
-  std::string result;
-  for (size_t i = 0; i < rights.size(); i++) {
-    if (i > 0)
-      result += " | ";
-    result += rights[i];
+  // The low bit is special and has a flag for both set and unset values.
+  if (flags & (1u << 0)) {
+    result.emplace_back("ZX_INFO_VMO_TYPE_PAGED");
+  } else {
+    result.emplace_back("ZX_INFO_VMO_TYPE_PHYSICAL");
   }
+
+  if (flags & (1u << 1))
+    result.emplace_back("ZX_INFO_VMO_RESIZABLE");
+  if (flags & (1u << 2))
+    result.emplace_back("ZX_INFO_VMO_IS_COW_CLONE");
+  if (flags & (1u << 3))
+    result.emplace_back("ZX_INFO_VMO_VIA_HANDLE");
+  if (flags & (1u << 4))
+    result.emplace_back("ZX_INFO_VMO_VIA_MAPPING");
+  if (flags & (1u << 5))
+    result.emplace_back("ZX_INFO_VMO_PAGER_BACKED");
+  if (flags & (1u << 6))
+    result.emplace_back("ZX_INFO_VMO_CONTIGUOUS");
 
   return result;
 }

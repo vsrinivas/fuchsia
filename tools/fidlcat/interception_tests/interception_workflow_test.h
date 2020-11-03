@@ -317,22 +317,26 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
       const debug_ipc::LoadInfoHandleTableRequest& request,
       fit::callback<void(const zxdb::Err&, debug_ipc::LoadInfoHandleTableReply)> cb) override {
     debug_ipc::LoadInfoHandleTableReply reply;
-    reply.handles.push_back(debug_ipc::InfoHandleExtended{
-        .type = ZX_OBJ_TYPE_CHANNEL,
-        .handle_value = kHandle,
-        .rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL |
-                  ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT,
-        .koid = kHandleKoid,
-        .related_koid = kHandle2Koid,
-        .peer_owner_koid = 0});
-    reply.handles.push_back(debug_ipc::InfoHandleExtended{
-        .type = ZX_OBJ_TYPE_CHANNEL,
-        .handle_value = kHandle2,
-        .rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL |
-                  ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT,
-        .koid = kHandle2Koid,
-        .related_koid = kHandleKoid,
-        .peer_owner_koid = 0});
+
+    debug_ipc::InfoHandle info;
+    info.type = ZX_OBJ_TYPE_CHANNEL;
+    info.handle_value = kHandle;
+    info.rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL |
+                  ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT;
+    info.koid = kHandleKoid;
+    info.related_koid = kHandle2Koid;
+    info.peer_owner_koid = 0;
+    reply.handles.push_back(info);
+
+    info.type = ZX_OBJ_TYPE_CHANNEL;
+    info.handle_value = kHandle2;
+    info.rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL |
+                  ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT;
+    info.koid = kHandle2Koid;
+    info.related_koid = kHandleKoid;
+    info.peer_owner_koid = 0;
+    reply.handles.push_back(info);
+
     cb(zxdb::Err(), std::move(reply));
   }
 

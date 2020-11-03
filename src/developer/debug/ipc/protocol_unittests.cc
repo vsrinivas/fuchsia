@@ -749,18 +749,24 @@ TEST(Protocol, LoadInfoHandleTableRequest) {
 TEST(Protocol, LoadInfoHandleTableReply) {
   LoadInfoHandleTableReply initial;
   initial.status = 7645;
-  initial.handles.push_back(InfoHandleExtended{.type = 4,
-                                               .handle_value = 0x1234,
-                                               .rights = 0xe,
-                                               .koid = 884422,
-                                               .related_koid = 91823766,
-                                               .peer_owner_koid = 91823800});
-  initial.handles.push_back(InfoHandleExtended{.type = 3,
-                                               .handle_value = 0x1235,
-                                               .rights = 0xc,
-                                               .koid = 884433,
-                                               .related_koid = 91823767,
-                                               .peer_owner_koid = 91823801});
+
+  InfoHandle info;
+  info.type = 4;
+  info.handle_value = 0x1234;
+  info.rights = 0xe;
+  info.koid = 884422;
+  info.related_koid = 91823766;
+  info.peer_owner_koid = 91823800;
+  initial.handles.push_back(info);
+
+  info.type = 3;
+  info.handle_value = 0x1235;
+  info.rights = 0xc;
+  info.koid = 884433;
+  info.related_koid = 91823767;
+  info.peer_owner_koid = 91823801;
+  info.ext.vmo.metadata_bytes = 712;
+  initial.handles.push_back(info);
 
   LoadInfoHandleTableReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -774,6 +780,7 @@ TEST(Protocol, LoadInfoHandleTableReply) {
     ASSERT_EQ(initial.handles[i].koid, second.handles[i].koid);
     ASSERT_EQ(initial.handles[i].related_koid, second.handles[i].related_koid);
     ASSERT_EQ(initial.handles[i].peer_owner_koid, second.handles[i].peer_owner_koid);
+    ASSERT_EQ(initial.handles[i].ext.vmo.metadata_bytes, second.handles[i].ext.vmo.metadata_bytes);
   }
 }
 

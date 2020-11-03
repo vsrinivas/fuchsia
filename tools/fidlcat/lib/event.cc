@@ -26,7 +26,7 @@ void Process::LoadHandleInfo(Inference* inference) {
   loading_handle_info_ = true;
   needs_to_load_handle_info_ = false;
   zxdb_process->LoadInfoHandleTable(
-      [this, inference](zxdb::ErrOr<std::vector<debug_ipc::InfoHandleExtended>> handles) {
+      [this, inference](zxdb::ErrOr<std::vector<debug_ipc::InfoHandle>> handles) {
         loading_handle_info_ = false;
         if (!handles.ok()) {
           FX_LOGS(ERROR) << "msg: " << handles.err().msg();
