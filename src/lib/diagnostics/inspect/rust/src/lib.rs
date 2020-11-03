@@ -6,6 +6,7 @@
 
 use {
     crate::{
+        error::Error,
         format::{
             block::{ArrayFormat, LinkNodeDisposition, PropertyFormat},
             constants,
@@ -13,7 +14,7 @@ use {
         heap::Heap,
         state::State,
     },
-    anyhow::{format_err, Error},
+    anyhow,
     derivative::Derivative,
     fidl::endpoints::DiscoverableService,
     fidl_fuchsia_inspect::TreeMarker,
@@ -52,6 +53,7 @@ pub use fuchsia_inspect_node_hierarchy::{
 pub use testing::{assert_inspect_tree, tree_assertion};
 
 pub mod component;
+pub mod error;
 pub mod format;
 pub mod health;
 pub mod heap;
@@ -155,7 +157,7 @@ impl Inspector {
                 Inspector { vmo: Some(Arc::new(vmo)), root_node: Arc::new(root_node) }
             }
             Err(e) => {
-                error!("Failed to create root node. Error: {}", e);
+                error!("Failed to create root node. Error: {:?}", e);
                 Inspector::new_no_op()
             }
         }
@@ -206,7 +208,8 @@ impl Inspector {
         &self,
         service_fs: &mut ServiceFs<ServiceObjTy>,
     ) -> Result<(), Error> {
-        let (proxy, server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+        let (proxy, server) = fidl::endpoints::create_proxy::<DirectoryMarker>()
+            .map_err(|e| Error::Fidl(e.into()))?;
         let inspector_clone = self.clone();
         let dir = pseudo_directory! {
             TreeMarker::SERVICE_NAME => pseudo_fs_service::host(move |stream| {
@@ -250,9 +253,9 @@ impl Inspector {
                 (1 + size / constants::MINIMUM_VMO_SIZE_BYTES) * constants::MINIMUM_VMO_SIZE_BYTES;
         }
         let (mapping, vmo) = Mapping::allocate_with_name(size, "InspectHeap")
-            .map_err(|e| format_err!("failed to allocate vmo zx status={}", e))?;
-        let heap = Heap::new(Arc::new(mapping))?;
-        let state = State::create(heap)?;
+            .map_err(|status| Error::AllocateVmo(status))?;
+        let heap = Heap::new(Arc::new(mapping)).map_err(|e| Error::CreateHeap(Box::new(e)))?;
+        let state = State::create(heap).map_err(|e| Error::CreateState(Box::new(e)))?;
         Ok((vmo, Node::new_root(Arc::new(Mutex::new(state)))))
     }
 
@@ -383,9 +386,7 @@ impl InnerType for InnerNodeType {
         if block_index == 0 {
             return Ok(());
         }
-        state
-            .free_value(block_index)
-            .map_err(|err| err.context(format!("Failed to free node index={}", block_index)))
+        state.free_value(block_index).map_err(|err| Error::free("node", block_index, err))
     }
 }
 
@@ -395,9 +396,7 @@ struct InnerValueType;
 impl InnerType for InnerValueType {
     type Data = ();
     fn free(state: &mut State, block_index: u32) -> Result<(), Error> {
-        state
-            .free_value(block_index)
-            .map_err(|err| err.context(format!("Failed to free value index={}", block_index)))
+        state.free_value(block_index).map_err(|err| Error::free("value", block_index, err))
     }
 }
 
@@ -407,9 +406,7 @@ struct InnerPropertyType;
 impl InnerType for InnerPropertyType {
     type Data = ();
     fn free(state: &mut State, block_index: u32) -> Result<(), Error> {
-        state
-            .free_property(block_index)
-            .map_err(|err| err.context(format!("Failed to free property index={}", block_index)))
+        state.free_property(block_index).map_err(|err| Error::free("property", block_index, err))
     }
 }
 
@@ -419,9 +416,7 @@ struct InnerLazyNodeType;
 impl InnerType for InnerLazyNodeType {
     type Data = ();
     fn free(state: &mut State, block_index: u32) -> Result<(), Error> {
-        state
-            .free_lazy_node(block_index)
-            .map_err(|err| err.context(format!("Failed to free lazy node index={}", block_index)))
+        state.free_lazy_node(block_index).map_err(|err| Error::free("lazy node", block_index, err))
     }
 }
 
@@ -605,7 +600,7 @@ macro_rules! create_lazy_property_fn {
         paste::paste! {
             #[must_use]
             pub fn [<create_lazy_ $fn_suffix>]<F>(&self, name: impl AsRef<str>, callback: F) -> LazyNode
-            where F: Fn() -> BoxFuture<'static, Result<Inspector, Error>> + Sync + Send + 'static {
+            where F: Fn() -> BoxFuture<'static, Result<Inspector, anyhow::Error>> + Sync + Send + 'static {
                 self.inner.inner_ref().and_then(|inner_ref| {
                     inner_ref
                         .state
@@ -618,13 +613,14 @@ macro_rules! create_lazy_property_fn {
                         )
                         .map(|block| LazyNode::new(inner_ref.state.clone(), block.index()))
                         .ok()
+
                 })
                 .unwrap_or(LazyNode::new_no_op())
             }
 
             pub fn [<record_lazy_ $fn_suffix>]<F>(
                 &self, name: impl AsRef<str>, callback: F)
-            where F: Fn() -> BoxFuture<'static, Result<Inspector, Error>> + Sync + Send + 'static {
+            where F: Fn() -> BoxFuture<'static, Result<Inspector, anyhow::Error>> + Sync + Send + 'static {
                 let property = self.[<create_lazy_ $fn_suffix>](name, callback);
                 self.record(property);
             }
@@ -887,7 +883,7 @@ macro_rules! numeric_property {
                     if let Some(ref inner_ref) = self.inner.inner_ref() {
                         inner_ref.state.lock().[<get_ $name _metric>](inner_ref.block_index)
                     } else {
-                        Err(format_err!("Property is No-Op"))
+                        Err(Error::NoOp("Property"))
                     }
                 }
             }
@@ -1167,7 +1163,7 @@ mod tests {
             heap::Heap,
             reader,
         },
-        anyhow::bail,
+        anyhow::{bail, format_err},
         fdio,
         fidl::endpoints::DiscoverableService,
         fidl_fuchsia_sys::ComponentControllerEvent,
@@ -1693,7 +1689,7 @@ mod tests {
     }
 
     #[test]
-    fn dummy_partialeq() -> Result<(), Error> {
+    fn dummy_partialeq() {
         let inspector = Inspector::new();
         let root = inspector.root();
 
@@ -1712,8 +1708,6 @@ mod tests {
             root.create_bytes("property1", b"value1"),
             root.create_bytes("property2", b"value2")
         );
-
-        Ok(())
     }
 
     fn get_state(mapping: Arc<Mapping>) -> Arc<Mutex<State>> {
@@ -1894,7 +1888,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn connect_to_service() -> Result<(), Error> {
+    async fn connect_to_service() -> Result<(), anyhow::Error> {
         let mut service_fs = ServiceFs::new();
         let env = service_fs.create_nested_environment("test")?;
         let mut app = client::launch(&env.launcher(), TEST_COMPONENT_URL.to_string(), None)?;

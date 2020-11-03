@@ -1,14 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
+// anyhow::Error,
 // found in the LICENSE file.
 
 use {
     crate::{
         format::{block::PropertyFormat, block_type::BlockType},
-        reader::snapshot::{ScannedBlock, Snapshot},
+        reader::{
+            error::ReaderError,
+            snapshot::{ScannedBlock, Snapshot},
+        },
         utils, Inspector,
     },
-    anyhow::{format_err, Error},
     fidl_fuchsia_inspect::TreeProxy,
     fuchsia_inspect_node_hierarchy::{testing::NodeHierarchyGetter, *},
     fuchsia_zircon::Vmo,
@@ -23,18 +26,19 @@ pub use {
     },
 };
 
+mod error;
 mod readable_tree;
 #[allow(missing_docs)]
 pub mod snapshot;
 mod tree_reader;
 
 /// Read a NodeHierarchy from an |Inspector| object.
-pub async fn read_from_inspector(inspector: &Inspector) -> Result<NodeHierarchy, Error> {
+pub async fn read_from_inspector(inspector: &Inspector) -> Result<NodeHierarchy, ReaderError> {
     tree_reader::read(inspector).await
 }
 
 /// Read a NodeHierarchy from a |Tree| connection.
-pub async fn read_from_tree(tree: &TreeProxy) -> Result<NodeHierarchy, Error> {
+pub async fn read_from_tree(tree: &TreeProxy) -> Result<NodeHierarchy, ReaderError> {
     tree_reader::read(tree).await
 }
 
@@ -121,7 +125,7 @@ impl NodeHierarchyGetter<String> for PartialNodeHierarchy {
 }
 
 impl TryFrom<Snapshot> for PartialNodeHierarchy {
-    type Error = anyhow::Error;
+    type Error = ReaderError;
 
     fn try_from(snapshot: Snapshot) -> Result<Self, Self::Error> {
         read(&snapshot)
@@ -129,7 +133,7 @@ impl TryFrom<Snapshot> for PartialNodeHierarchy {
 }
 
 impl TryFrom<&Vmo> for PartialNodeHierarchy {
-    type Error = anyhow::Error;
+    type Error = ReaderError;
 
     fn try_from(vmo: &Vmo) -> Result<Self, Self::Error> {
         let snapshot = Snapshot::try_from(vmo)?;
@@ -138,7 +142,7 @@ impl TryFrom<&Vmo> for PartialNodeHierarchy {
 }
 
 impl TryFrom<Vec<u8>> for PartialNodeHierarchy {
-    type Error = anyhow::Error;
+    type Error = ReaderError;
 
     fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
         let snapshot = Snapshot::try_from(&bytes[..])?;
@@ -147,18 +151,20 @@ impl TryFrom<Vec<u8>> for PartialNodeHierarchy {
 }
 
 /// Read the blocks in the snapshot as a node hierarchy.
-fn read(snapshot: &Snapshot) -> Result<PartialNodeHierarchy, Error> {
+fn read(snapshot: &Snapshot) -> Result<PartialNodeHierarchy, ReaderError> {
     let result = scan_blocks(snapshot)?;
     result.reduce()
 }
 
-fn scan_blocks<'a>(snapshot: &'a Snapshot) -> Result<ScanResult<'a>, Error> {
+fn scan_blocks<'a>(snapshot: &'a Snapshot) -> Result<ScanResult<'a>, ReaderError> {
     let mut result = ScanResult::new(snapshot);
     for block in snapshot.scan() {
-        if block.index() == 0 && block.block_type_or()? != BlockType::Header {
-            return Err(format_err!("expected header block on index 0"));
+        if block.index() == 0
+            && block.block_type_or().map_err(ReaderError::VmoFormat)? != BlockType::Header
+        {
+            return Err(ReaderError::MissingHeader);
         }
-        match block.block_type_or()? {
+        match block.block_type_or().map_err(ReaderError::VmoFormat)? {
             BlockType::NodeValue => {
                 result.parse_node(&block)?;
             }
@@ -254,7 +260,7 @@ impl<'a> ScanResult<'a> {
         ScanResult { snapshot, parsed_nodes }
     }
 
-    fn reduce(self) -> Result<PartialNodeHierarchy, Error> {
+    fn reduce(self) -> Result<PartialNodeHierarchy, ReaderError> {
         // Stack of nodes that have been found that are complete.
         let mut complete_nodes = Vec::<ScannedNode>::new();
 
@@ -295,12 +301,12 @@ impl<'a> ScanResult<'a> {
                 // Add the current node to the parent hierarchy.
                 let parent_node = pending_nodes
                     .get_mut(&scanned_node.parent_index)
-                    .ok_or(format_err!("Cannot find index {}", scanned_node.parent_index))?;
+                    .ok_or(ReaderError::ParentIndexNotFound(scanned_node.parent_index))?;
                 parent_node.partial_hierarchy.children.push(scanned_node.partial_hierarchy);
             }
             if pending_nodes
                 .get(&scanned_node.parent_index)
-                .ok_or(format_err!("Cannot find index {}", scanned_node.parent_index))?
+                .ok_or(ReaderError::ParentIndexNotFound(scanned_node.parent_index))?
                 .is_complete()
             {
                 let parent_node = pending_nodes.remove(&scanned_node.parent_index).unwrap();
@@ -311,16 +317,17 @@ impl<'a> ScanResult<'a> {
             }
         }
 
-        return Err(format_err!("Malformed tree, no complete node with parent=0"));
+        return Err(ReaderError::MalformedTree);
     }
 
     fn get_name(&self, index: u32) -> Option<String> {
         self.snapshot.get_block(index).and_then(|block| block.name_contents().ok())
     }
 
-    fn parse_node(&mut self, block: &ScannedBlock<'_>) -> Result<(), Error> {
-        let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
-        let parent_index = block.parent_index()?;
+    fn parse_node(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
+        let name_index = block.name_index().map_err(ReaderError::VmoFormat)?;
+        let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
+        let parent_index = block.parent_index().map_err(ReaderError::VmoFormat)?;
         get_or_create_scanned_node!(self.parsed_nodes, block.index())
             .initialize(name, parent_index);
         if parent_index != block.index() {
@@ -329,20 +336,24 @@ impl<'a> ScanResult<'a> {
         Ok(())
     }
 
-    fn parse_numeric_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), Error> {
-        let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
-        let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
+    fn parse_numeric_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
+        let name_index = block.name_index().map_err(ReaderError::VmoFormat)?;
+        let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
+        let parent = get_or_create_scanned_node!(
+            self.parsed_nodes,
+            block.parent_index().map_err(ReaderError::VmoFormat)?
+        );
         match block.block_type() {
             BlockType::IntValue => {
-                let value = block.int_value()?;
+                let value = block.int_value().map_err(ReaderError::VmoFormat)?;
                 parent.partial_hierarchy.properties.push(Property::Int(name, value));
             }
             BlockType::UintValue => {
-                let value = block.uint_value()?;
+                let value = block.uint_value().map_err(ReaderError::VmoFormat)?;
                 parent.partial_hierarchy.properties.push(Property::Uint(name, value));
             }
             BlockType::DoubleValue => {
-                let value = block.double_value()?;
+                let value = block.double_value().map_err(ReaderError::VmoFormat)?;
                 parent.partial_hierarchy.properties.push(Property::Double(name, value));
             }
             _ => {}
@@ -350,12 +361,14 @@ impl<'a> ScanResult<'a> {
         Ok(())
     }
 
-    fn parse_bool_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), Error> {
-        let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
-        let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
+    fn parse_bool_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
+        let name_index = block.name_index().map_err(ReaderError::VmoFormat)?;
+        let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
+        let parent_index = block.parent_index().map_err(ReaderError::VmoFormat)?;
+        let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
         match block.block_type() {
             BlockType::BoolValue => {
-                let value = block.bool_value()?;
+                let value = block.bool_value().map_err(ReaderError::VmoFormat)?;
                 parent.partial_hierarchy.properties.push(Property::Bool(name, value));
             }
             _ => {}
@@ -363,22 +376,25 @@ impl<'a> ScanResult<'a> {
         Ok(())
     }
 
-    fn parse_array_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), Error> {
-        let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
-        let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
-        let array_slots = block.array_slots()?;
+    fn parse_array_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
+        let name_index = block.name_index().map_err(ReaderError::VmoFormat)?;
+        let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
+        let parent_index = block.parent_index().map_err(ReaderError::VmoFormat)?;
+        let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
+        let array_slots = block.array_slots().map_err(ReaderError::VmoFormat)?;
         if utils::array_capacity(block.order()) < array_slots {
-            return Err(format_err!("Tried to read more slots than available"));
+            return Err(ReaderError::AttemptedToReadTooManyArraySlots(block.index()));
         }
         let value_indexes = 0..array_slots;
-        match block.array_entry_type()? {
+        match block.array_entry_type().map_err(ReaderError::VmoFormat)? {
             BlockType::IntValue => {
                 let values = value_indexes
                     .map(|i| block.array_get_int_slot(i).unwrap())
                     .collect::<Vec<i64>>();
                 parent.partial_hierarchy.properties.push(Property::IntArray(
                     name,
-                    ArrayContent::new(values, block.array_format().unwrap())?,
+                    ArrayContent::new(values, block.array_format().unwrap())
+                        .map_err(ReaderError::Hierarchy)?,
                 ));
             }
             BlockType::UintValue => {
@@ -387,7 +403,8 @@ impl<'a> ScanResult<'a> {
                     .collect::<Vec<u64>>();
                 parent.partial_hierarchy.properties.push(Property::UintArray(
                     name,
-                    ArrayContent::new(values, block.array_format().unwrap())?,
+                    ArrayContent::new(values, block.array_format().unwrap())
+                        .map_err(ReaderError::Hierarchy)?,
                 ));
             }
             BlockType::DoubleValue => {
@@ -396,33 +413,38 @@ impl<'a> ScanResult<'a> {
                     .collect::<Vec<f64>>();
                 parent.partial_hierarchy.properties.push(Property::DoubleArray(
                     name,
-                    ArrayContent::new(values, block.array_format().unwrap())?,
+                    ArrayContent::new(values, block.array_format().unwrap())
+                        .map_err(ReaderError::Hierarchy)?,
                 ));
             }
-            _ => return Err(format_err!("Unexpected array entry type format")),
+            t => return Err(ReaderError::UnexpectedArrayEntryFormat(t)),
         }
         Ok(())
     }
 
-    fn parse_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), Error> {
-        let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
-        let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
-        let total_length = block.property_total_length()?;
-        let mut buffer = vec![0u8; block.property_total_length()?];
-        let mut extent_index = block.property_extent_index()?;
+    fn parse_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
+        let name_index = block.name_index().map_err(ReaderError::VmoFormat)?;
+        let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
+        let parent_index = block.parent_index().map_err(ReaderError::VmoFormat)?;
+        let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
+        let total_length = block.property_total_length().map_err(ReaderError::VmoFormat)?;
+        let mut buffer = vec![0u8; block.property_total_length().map_err(ReaderError::VmoFormat)?];
+        let mut extent_index = block.property_extent_index().map_err(ReaderError::VmoFormat)?;
         let mut offset = 0;
         // Incrementally add the contents of each extent in the extent linked list
         // until we reach the last extent or the maximum expected length.
         while extent_index != 0 && offset < total_length {
-            let extent =
-                self.snapshot.get_block(extent_index).ok_or(format_err!("failed to get extent"))?;
-            let content = extent.extent_contents()?;
+            let extent = self
+                .snapshot
+                .get_block(extent_index)
+                .ok_or(ReaderError::GetExtent(extent_index))?;
+            let content = extent.extent_contents().map_err(ReaderError::VmoFormat)?;
             let extent_length = min(total_length - offset, content.len());
             buffer[offset..offset + extent_length].copy_from_slice(&content[..extent_length]);
             offset += extent_length;
-            extent_index = extent.next_extent()?;
+            extent_index = extent.next_extent().map_err(ReaderError::VmoFormat)?;
         }
-        match block.property_format()? {
+        match block.property_format().map_err(ReaderError::VmoFormat)? {
             PropertyFormat::String => {
                 parent
                     .partial_hierarchy
@@ -436,15 +458,19 @@ impl<'a> ScanResult<'a> {
         Ok(())
     }
 
-    fn parse_link(&mut self, block: &ScannedBlock<'_>) -> Result<(), Error> {
-        let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
-        let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
+    fn parse_link(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
+        let name_index = block.name_index().map_err(ReaderError::VmoFormat)?;
+        let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
+        let parent_index = block.parent_index().map_err(ReaderError::VmoFormat)?;
+        let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
+        let link_content_index = block.link_content_index().map_err(ReaderError::VmoFormat)?;
         let content = self
             .snapshot
-            .get_block(block.link_content_index()?)
-            .ok_or(format_err!("failed to get link content block"))?
-            .name_contents()?;
-        let disposition = block.link_node_disposition()?;
+            .get_block(link_content_index)
+            .ok_or(ReaderError::GetLinkContent(link_content_index))?
+            .name_contents()
+            .map_err(ReaderError::VmoFormat)?;
+        let disposition = block.link_node_disposition().map_err(ReaderError::VmoFormat)?;
         parent.partial_hierarchy.links.push(LinkValue { name, content, disposition });
         Ok(())
     }
@@ -459,6 +485,7 @@ mod tests {
             format::{bitfields::Payload, constants},
             ArrayProperty, ExponentialHistogramParams, HistogramProperty, LinearHistogramParams,
         },
+        anyhow::Error,
         fuchsia_async as fasync,
         futures::prelude::*,
     };

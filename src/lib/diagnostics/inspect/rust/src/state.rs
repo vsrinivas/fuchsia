@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        error::Error,
         format::{
             block::{ArrayFormat, Block, LinkNodeDisposition, PropertyFormat},
             block_type::BlockType,
@@ -12,7 +13,7 @@ use {
         heap::Heap,
         utils, Inspector,
     },
-    anyhow::{format_err, Error},
+    anyhow,
     derivative::Derivative,
     futures::future::BoxFuture,
     mapped_vmo::Mapping,
@@ -28,7 +29,7 @@ use {
 
 /// Callback used to fill inspector lazy nodes.
 pub type LazyNodeContextFnArc =
-    Arc<dyn Fn() -> BoxFuture<'static, Result<Inspector, Error>> + Sync + Send>;
+    Arc<dyn Fn() -> BoxFuture<'static, Result<Inspector, anyhow::Error>> + Sync + Send>;
 
 /// Wraps a heap and implements the Inspect VMO API on top of it at a low level.
 #[derive(Derivative)]
@@ -156,7 +157,7 @@ macro_rules! array_fns {
                 let block_size =
                     slots as usize * std::mem::size_of::<$type>() + constants::MIN_ORDER_SIZE;
                 if block_size > constants::MAX_ORDER_SIZE {
-                    return Err(format_err!("cannot allocate block of size {}", block_size));
+                    return Err(Error::BlockSizeTooBig(block_size))
                 }
                 with_header_lock!(self, {
                     let (block, name_block) = self.allocate_reserved_value(
@@ -242,7 +243,7 @@ impl State {
         callback: F,
     ) -> Result<Block<Arc<Mapping>>, Error>
     where
-        F: Fn() -> BoxFuture<'static, Result<Inspector, Error>> + Sync + Send + 'static,
+        F: Fn() -> BoxFuture<'static, Result<Inspector, anyhow::Error>> + Sync + Send + 'static,
     {
         with_header_lock!(self, {
             let content = self.unique_link_name(name);
@@ -289,9 +290,9 @@ impl State {
         });
         match result {
             Ok(()) => Ok(value_block),
-            Err(e) => {
+            Err(err) => {
                 self.delete_value(value_block)?;
-                return Err(format_err!("Failed to create link: {:?}", e));
+                Err(err)
             }
         }
     }
@@ -405,14 +406,19 @@ impl State {
                 parent_block.set_child_count(parent_block.child_count().unwrap() + 1)
             }
             BlockType::Header => Ok(()),
-            _ => return Err(format_err!("Invalid block type:{}", parent_block.block_type())),
+            _ => {
+                return Err(Error::InvalidBlockType(
+                    parent_index as usize,
+                    parent_block.block_type(),
+                ))
+            }
         });
         match result {
             Ok(()) => Ok((block, name_block)),
-            Err(e) => {
-                self.heap.free_block(name_block).expect("Failed to free name block");
-                self.heap.free_block(block).expect("Failed to free block");
-                return Err(format_err!("Invalid parent index {}: {}", parent_index, e));
+            Err(err) => {
+                self.heap.free_block(name_block)?;
+                self.heap.free_block(block)?;
+                Err(err)
             }
         }
     }
@@ -511,6 +517,7 @@ mod tests {
             reader::{snapshot::Snapshot, PartialNodeHierarchy},
             Inspector,
         },
+        anyhow::format_err,
         fuchsia_async as fasync,
         futures::prelude::*,
         std::convert::TryFrom,
@@ -1003,7 +1010,7 @@ mod tests {
     #[test]
     fn test_with_header_lock() {
         let state = get_state(4096);
-        let result: Result<(), Error> =
+        let result: Result<(), anyhow::Error> =
             (|| with_header_lock!(state, { return Err(format_err!("some error")) }))();
         assert!(result.is_err());
         assert!(state.header.check_locked(false).is_ok());

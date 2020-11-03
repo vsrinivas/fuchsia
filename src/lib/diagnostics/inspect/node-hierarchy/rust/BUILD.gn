@@ -26,6 +26,7 @@ rustc_library("fuchsia-inspect-node-hierarchy") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [

@@ -61,7 +61,8 @@ pub fn root() -> &'static Node {
 }
 
 pub fn serve(service_fs: &mut ServiceFs<impl ServiceObjTrait>) -> Result<(), Error> {
-    component::inspector().serve(service_fs)
+    component::inspector().serve(service_fs)?;
+    Ok(())
 }
 
 pub(crate) fn set_group_stats(stats: &EventFileGroupStatsMap) {

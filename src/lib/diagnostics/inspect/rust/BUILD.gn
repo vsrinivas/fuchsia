@@ -47,6 +47,7 @@ rustc_library("fuchsia-inspect") {
 
   sources = [
     "src/component.rs",
+    "src/error.rs",
     "src/format/bitfields.rs",
     "src/format/block.rs",
     "src/format/block_type.rs",
@@ -56,6 +57,7 @@ rustc_library("fuchsia-inspect") {
     "src/health.rs",
     "src/heap.rs",
     "src/lib.rs",
+    "src/reader/error.rs",
     "src/reader/mod.rs",
     "src/reader/readable_tree.rs",
     "src/reader/snapshot.rs",

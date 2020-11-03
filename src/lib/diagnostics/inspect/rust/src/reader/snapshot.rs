@@ -5,9 +5,9 @@
 use {
     crate::{
         format::{block::Block, block_type::BlockType, constants},
+        reader::error::ReaderError,
         utils, Inspector,
     },
-    anyhow::{format_err, Error},
     fuchsia_zircon::Vmo,
     std::{
         convert::TryFrom,
@@ -46,16 +46,19 @@ impl Snapshot {
     /// Try to take a consistent snapshot of the given VMO once.
     ///
     /// Returns a Snapshot on success or an Error if a consistent snapshot could not be taken.
-    pub fn try_once_from_vmo(vmo: &Vmo) -> Result<Snapshot, Error> {
+    pub fn try_once_from_vmo(vmo: &Vmo) -> Result<Snapshot, ReaderError> {
         Snapshot::try_once_with_callback(vmo, &mut || {})
     }
 
-    fn try_once_with_callback<F>(vmo: &Vmo, first_read_callback: &mut F) -> Result<Snapshot, Error>
+    fn try_once_with_callback<F>(
+        vmo: &Vmo,
+        first_read_callback: &mut F,
+    ) -> Result<Snapshot, ReaderError>
     where
         F: FnMut() -> (),
     {
         let mut header_bytes: [u8; 16] = [0; 16];
-        vmo.read(&mut header_bytes, 0)?;
+        vmo.read(&mut header_bytes, 0).map_err(ReaderError::Vmo)?;
 
         let generation = header_generation_count(&header_bytes[..]);
 
@@ -64,9 +67,9 @@ impl Snapshot {
         }
 
         if let Some(gen) = generation {
-            let size = vmo.get_size()?;
+            let size = vmo.get_size().map_err(ReaderError::Vmo)?;
             let mut buffer = vec![0u8; size as usize];
-            vmo.read(&mut buffer[..], 0)?;
+            vmo.read(&mut buffer[..], 0).map_err(ReaderError::Vmo)?;
             let block = Block::new(&buffer[..16], 0);
             if block.block_type_or().unwrap_or(BlockType::Reserved) == BlockType::Header
                 && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
@@ -77,10 +80,13 @@ impl Snapshot {
             }
         }
 
-        Err(format_err!("Failed to get consistent snapshot"))
+        Err(ReaderError::InconsistentSnapshot)
     }
 
-    fn try_from_with_callback<F>(vmo: &Vmo, mut first_read_callback: F) -> Result<Snapshot, Error>
+    fn try_from_with_callback<F>(
+        vmo: &Vmo,
+        mut first_read_callback: F,
+    ) -> Result<Snapshot, ReaderError>
     where
         F: FnMut() -> (),
     {
@@ -89,7 +95,7 @@ impl Snapshot {
                 return Ok(ret);
             }
         }
-        Err(format_err!("Failed to read snapshot from vmo"))
+        Err(ReaderError::ReadSnapshotFromVmo)
     }
 
     // Used for snapshot tests.
@@ -120,20 +126,20 @@ fn header_generation_count(bytes: &[u8]) -> Option<u64> {
 
 /// Construct a snapshot from a byte array.
 impl TryFrom<&[u8]> for Snapshot {
-    type Error = anyhow::Error;
+    type Error = ReaderError;
 
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
         if header_generation_count(&bytes).is_some() {
             Ok(Snapshot { buffer: bytes.to_vec() })
         } else {
-            return Err(format_err!("expected block with at least a header"));
+            return Err(ReaderError::MissingHeaderOrLocked);
         }
     }
 }
 
 /// Construct a snapshot from a byte vector.
 impl TryFrom<Vec<u8>> for Snapshot {
-    type Error = anyhow::Error;
+    type Error = ReaderError;
 
     fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
         Snapshot::try_from(&bytes[..])
@@ -142,7 +148,7 @@ impl TryFrom<Vec<u8>> for Snapshot {
 
 /// Construct a snapshot from a VMO.
 impl TryFrom<&Vmo> for Snapshot {
-    type Error = anyhow::Error;
+    type Error = ReaderError;
 
     fn try_from(vmo: &Vmo) -> Result<Self, Self::Error> {
         Snapshot::try_from_with_callback(vmo, || {})
@@ -150,13 +156,13 @@ impl TryFrom<&Vmo> for Snapshot {
 }
 
 impl TryFrom<&Inspector> for Snapshot {
-    type Error = anyhow::Error;
+    type Error = ReaderError;
 
     fn try_from(inspector: &Inspector) -> Result<Self, Self::Error> {
         inspector
             .vmo
             .as_ref()
-            .ok_or(format_err!("Cannot read from no-op Inspector"))
+            .ok_or(ReaderError::NoOpInspector)
             .and_then(|vmo| Snapshot::try_from(&**vmo))
     }
 }
@@ -197,8 +203,8 @@ impl<'h> Iterator for BlockIterator<'h> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::format::container::WritableBlockContainer, mapped_vmo::Mapping,
-        std::sync::Arc,
+        super::*, crate::format::container::WritableBlockContainer, anyhow::Error,
+        mapped_vmo::Mapping, std::sync::Arc,
     };
 
     #[test]

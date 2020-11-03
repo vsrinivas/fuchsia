@@ -4,7 +4,7 @@
 
 use {
     crate::trie::*,
-    anyhow::{format_err, Error},
+    anyhow,
     base64::display::Base64Display,
     core::marker::PhantomData,
     fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
@@ -21,6 +21,7 @@ use {
         ops::{Add, AddAssign, MulAssign},
         sync::Arc,
     },
+    thiserror::Error,
 };
 
 pub mod serialization;
@@ -489,6 +490,34 @@ where
     }
 }
 
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error(
+        "Missing elements for {histogram_type:?} histogram. Expected {expected}, got {actual}"
+    )]
+    MissingHistogramElements { histogram_type: ArrayFormat, expected: usize, actual: usize },
+
+    #[error("TreeSelector only supports property and subtree selection.")]
+    InvalidTreeSelector,
+
+    #[error("Invalid regex")]
+    Regex(#[source] regex::Error),
+
+    // TODO: the selectors library should expose typed errors.
+    #[error("Selectors error")]
+    Selectors(#[source] anyhow::Error),
+}
+
+impl Error {
+    fn missing_histogram_elements(
+        histogram_type: ArrayFormat,
+        actual: usize,
+        expected: usize,
+    ) -> Self {
+        Self::MissingHistogramElements { histogram_type, actual, expected }
+    }
+}
+
 #[allow(missing_docs)]
 #[derive(Debug, Deserialize, PartialEq, Clone)]
 pub struct Bucket<T> {
@@ -536,8 +565,10 @@ impl<T: Add<Output = T> + AddAssign + Copy + MulAssign + Bounded> ArrayContent<T
         // Check that the minimum required values are available:
         // floor, stepsize, underflow, bucket 0, overflow
         if values.len() < 5 {
-            return Err(format_err!(
-                "Arrays for linear histograms should contain at least 5 elements"
+            return Err(Error::missing_histogram_elements(
+                ArrayFormat::LinearHistogram,
+                values.len(),
+                5,
             ));
         }
         let mut floor = values[0];
@@ -557,8 +588,10 @@ impl<T: Add<Output = T> + AddAssign + Copy + MulAssign + Bounded> ArrayContent<T
         // Check that the minimum required values are available:
         // floor, initial step, step multiplier, underflow, bucket 0, underflow
         if values.len() < 6 {
-            return Err(format_err!(
-                "Arrays for exponential histograms should contain at least 6 elements"
+            return Err(Error::missing_histogram_elements(
+                ArrayFormat::ExponentialHistogram,
+                values.len(),
+                6,
             ));
         }
         let floor = values[0];
@@ -627,21 +660,21 @@ pub struct InspectHierarchyMatcher {
 }
 
 impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
-    type Error = anyhow::Error;
+    type Error = Error;
 
-    fn try_from(selectors: &Vec<Arc<Selector>>) -> Result<Self, Error> {
+    fn try_from(selectors: &Vec<Arc<Selector>>) -> Result<Self, Self::Error> {
         selectors[..].try_into()
     }
 }
 
 impl TryFrom<&[Arc<Selector>]> for InspectHierarchyMatcher {
-    type Error = anyhow::Error;
+    type Error = Error;
 
-    fn try_from(selectors: &[Arc<Selector>]) -> Result<Self, Error> {
+    fn try_from(selectors: &[Arc<Selector>]) -> Result<Self, Self::Error> {
         let (node_path_regexes, property_regexes): (Vec<_>, Vec<_>) = selectors
             .iter()
             .map(|selector| {
-                selectors::validate_selector(selector)?;
+                selectors::validate_selector(selector).map_err(Error::Selectors)?;
 
                 // Unwrapping is safe here since we validate the selector above.
                 match selector.tree_selector.as_ref().unwrap() {
@@ -650,10 +683,12 @@ impl TryFrom<&[Arc<Selector>]> for InspectHierarchyMatcher {
                             selectors::convert_path_selector_to_regex(
                                 &subtree_selector.node_path,
                                 /*is_subtree_selector=*/ true,
-                            )?,
+                            )
+                            .map_err(Error::Selectors)?,
                             selectors::convert_property_selector_to_regex(
                                 &StringSelector::StringPattern("*".to_string()),
-                            )?,
+                            )
+                            .map_err(Error::Selectors)?,
                         ))
                     }
                     TreeSelector::PropertySelector(property_selector) => {
@@ -661,22 +696,22 @@ impl TryFrom<&[Arc<Selector>]> for InspectHierarchyMatcher {
                             selectors::convert_path_selector_to_regex(
                                 &property_selector.node_path,
                                 /*is_subtree_selector=*/ false,
-                            )?,
+                            )
+                            .map_err(Error::Selectors)?,
                             selectors::convert_property_selector_to_regex(
                                 &property_selector.target_properties,
-                            )?,
+                            )
+                            .map_err(Error::Selectors)?,
                         ))
                     }
-                    _ => Err(format_err!(
-                        "TreeSelector only supports property and subtree selection."
-                    )),
+                    _ => Err(Error::InvalidTreeSelector),
                 }
             })
             .collect::<Result<Vec<(String, String)>, Error>>()?
             .into_iter()
             .unzip();
 
-        let node_path_regex_set = RegexSet::new(&node_path_regexes)?;
+        let node_path_regex_set = RegexSet::new(&node_path_regexes).map_err(Error::Regex)?;
 
         Ok(InspectHierarchyMatcher {
             component_node_selector: node_path_regex_set,
@@ -794,7 +829,8 @@ where
                     })
                     .collect::<Vec<&String>>();
 
-                let property_regex_set = RegexSet::new(property_regex_strings)?;
+                let property_regex_set =
+                    RegexSet::new(property_regex_strings).map_err(Error::Regex)?;
 
                 if property_regex_set.len() > 0 {
                     working_node = new_root.get_or_add_node(node_path);

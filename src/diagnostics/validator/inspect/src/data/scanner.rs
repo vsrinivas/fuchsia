@@ -224,7 +224,7 @@ impl Scanner {
                 Ok(BlockType::Extent) => self.process_extent(block, buffer)?,
                 Ok(BlockType::Name) => self.process_name(block, buffer)?,
                 Ok(BlockType::Tombstone) => self.process_tombstone(block)?,
-                Err(error) => return Err(error),
+                Err(error) => return Err(format_err!("Failed to read block type: {:?}", error)),
             }
         }
         // We defer processing LINK blocks after because the population of the ScannedPayload::Link depends on all NAME blocks having been read.

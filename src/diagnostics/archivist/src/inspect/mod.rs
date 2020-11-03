@@ -85,7 +85,7 @@ pub struct ReaderServer {
 fn convert_snapshot_to_node_hierarchy(snapshot: ReadSnapshot) -> Result<NodeHierarchy, Error> {
     match snapshot {
         ReadSnapshot::Single(snapshot) => Ok(PartialNodeHierarchy::try_from(snapshot)?.into()),
-        ReadSnapshot::Tree(snapshot_tree) => snapshot_tree.try_into(),
+        ReadSnapshot::Tree(snapshot_tree) => Ok(snapshot_tree.try_into()?),
         ReadSnapshot::Finished(hierarchy) => Ok(hierarchy),
     }
 }

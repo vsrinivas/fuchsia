@@ -4,10 +4,12 @@
 
 use {
     crate::{
-        reader::{MissingValueReason, NodeHierarchy, PartialNodeHierarchy, ReadableTree, Snapshot},
+        reader::{
+            error::ReaderError, MissingValueReason, NodeHierarchy, PartialNodeHierarchy,
+            ReadableTree, Snapshot,
+        },
         LinkNodeDisposition,
     },
-    anyhow,
     fidl_fuchsia_inspect::TreeProxy,
     futures::{
         future::{self, BoxFuture},
@@ -27,15 +29,15 @@ pub struct SnapshotTree {
 
 impl SnapshotTree {
     /// Loads a snapshot tree from the given inspect tree.
-    pub async fn try_from(tree: &TreeProxy) -> Result<Self, anyhow::Error> {
+    pub async fn try_from(tree: &TreeProxy) -> Result<Self, ReaderError> {
         load_snapshot_tree(tree).await
     }
 }
 
-type SnapshotTreeMap = BTreeMap<String, Result<SnapshotTree, anyhow::Error>>;
+type SnapshotTreeMap = BTreeMap<String, Result<SnapshotTree, ReaderError>>;
 
 impl TryInto<NodeHierarchy> for SnapshotTree {
-    type Error = anyhow::Error;
+    type Error = ReaderError;
 
     fn try_into(mut self) -> Result<NodeHierarchy, Self::Error> {
         let partial = PartialNodeHierarchy::try_from(self.snapshot)?;
@@ -55,7 +57,7 @@ fn expand(partial: PartialNodeHierarchy, snapshot_children: &mut SnapshotTreeMap
             continue;
         }
         // TODO(miguelfrde): remove recursion or limit depth.
-        let result: Result<NodeHierarchy, anyhow::Error> =
+        let result: Result<NodeHierarchy, ReaderError> =
             result.unwrap().and_then(|snapshot_tree| snapshot_tree.try_into());
         match result {
             Err(_) => {
@@ -77,14 +79,14 @@ fn expand(partial: PartialNodeHierarchy, snapshot_children: &mut SnapshotTreeMap
     hierarchy
 }
 
-pub async fn read<T>(tree: &T) -> Result<NodeHierarchy, anyhow::Error>
+pub async fn read<T>(tree: &T) -> Result<NodeHierarchy, ReaderError>
 where
     T: ReadableTree + Send + Sync,
 {
     load_snapshot_tree(tree).await?.try_into()
 }
 
-fn load_snapshot_tree<'a, T>(tree: &T) -> BoxFuture<'_, Result<SnapshotTree, anyhow::Error>>
+fn load_snapshot_tree<'a, T>(tree: &T) -> BoxFuture<'_, Result<SnapshotTree, ReaderError>>
 where
     T: ReadableTree + Send + Sync,
 {
@@ -103,7 +105,7 @@ where
     .boxed()
 }
 
-async fn load<'a, T>(tree: T) -> Result<SnapshotTree, anyhow::Error>
+async fn load<'a, T>(tree: T) -> Result<SnapshotTree, ReaderError>
 where
     T: ReadableTree + Send + Sync,
 {
@@ -115,7 +117,7 @@ mod tests {
     use {
         super::*,
         crate::{assert_inspect_tree, reader, Inspector},
-        fuchsia_async as fasync,
+        anyhow, fuchsia_async as fasync,
     };
 
     #[fasync::run_singlethreaded(test)]

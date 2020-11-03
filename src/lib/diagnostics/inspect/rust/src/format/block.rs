@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        error::Error,
         format::{
             bitfields::{BlockHeader, Payload},
             block_type::BlockType,
@@ -12,7 +13,6 @@ use {
         },
         utils,
     },
-    anyhow::{format_err, Error},
     byteorder::{ByteOrder, LittleEndian},
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::{FromPrimitive, ToPrimitive},
@@ -118,9 +118,8 @@ impl<T: ReadableBlockContainer> Block<T> {
     pub fn property_format(&self) -> Result<PropertyFormat, Error> {
         self.check_type(BlockType::BufferValue)?;
         let raw_format = self.read_payload().property_flags();
-        PropertyFormat::from_u8(raw_format).ok_or_else(|| {
-            format_err!("Invalid property format {} at index {}", raw_format, self.index())
-        })
+        PropertyFormat::from_u8(raw_format)
+            .ok_or_else(|| Error::invalid_flags("property", raw_format, self.index()))
     }
 
     /// Returns the next EXTENT in an EXTENT chain.
@@ -148,9 +147,8 @@ impl<T: ReadableBlockContainer> Block<T> {
     pub fn array_format(&self) -> Result<ArrayFormat, Error> {
         self.check_type(BlockType::ArrayValue)?;
         let raw_flags = self.read_payload().array_flags();
-        ArrayFormat::from_u8(raw_flags).ok_or_else(|| {
-            format_err!("Invalid array format {} at index {}", raw_flags, self.index())
-        })
+        ArrayFormat::from_u8(raw_flags)
+            .ok_or_else(|| Error::invalid_flags("array", raw_flags, self.index()))
     }
 
     /// Gets the number of slots in an ARRAY_VALUE block.
@@ -159,18 +157,17 @@ impl<T: ReadableBlockContainer> Block<T> {
         self.read_payload()
             .array_slots_count()
             .to_usize()
-            .ok_or(format_err!("failed to convert to usize"))
+            .ok_or(Error::FailedToConvertArraySlotsToUsize)
     }
 
     /// Gets the type of each slot in an ARRAY_VALUE block.
     pub fn array_entry_type(&self) -> Result<BlockType, Error> {
         self.check_type(BlockType::ArrayValue)?;
         let array_type_raw = self.read_payload().array_entry_type();
-        let array_type = BlockType::from_u8(array_type_raw).ok_or_else(|| {
-            format_err!("Array entry type isn't a block type: {}", array_type_raw)
-        })?;
+        let array_type = BlockType::from_u8(array_type_raw)
+            .ok_or_else(|| Error::InvalidBlockTypeNumber(self.index(), array_type_raw))?;
         if !array_type.is_numeric_value() {
-            return Err(format_err!("Array type is non-numeric {:?}", array_type));
+            return Err(Error::NonNumericArrayType(self.index()));
         }
         Ok(array_type)
     }
@@ -217,9 +214,8 @@ impl<T: ReadableBlockContainer> Block<T> {
         self.check_type(BlockType::LinkValue)?;
         let payload = self.read_payload();
         let flag = payload.disposition_flags();
-        LinkNodeDisposition::from_u8(flag).ok_or_else(|| {
-            format_err!("Invalid disposition type {} at index {}", flag, self.index())
-        })
+        LinkNodeDisposition::from_u8(flag)
+            .ok_or_else(|| Error::invalid_flags("disposition type", flag, self.index()))
     }
 
     /// Ensures the type of the array is the expected one.
@@ -229,11 +225,7 @@ impl<T: ReadableBlockContainer> Block<T> {
             if actual == expected {
                 return Ok(());
             } else {
-                return Err(format_err!(
-                    "Invalid array entry type. Expected: {}, got: {}",
-                    expected,
-                    actual
-                ));
+                return Err(Error::UnexpectedBlockType(expected, actual));
             }
         }
         Ok(())
@@ -242,7 +234,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Ensure that the index is within the array bounds.
     fn check_array_index(&self, slot_index: usize) -> Result<(), Error> {
         if slot_index >= self.array_slots()? {
-            return Err(format_err!("Index out of bounds: {}", slot_index));
+            return Err(Error::ArrayIndexOutOfBounds(slot_index));
         }
         Ok(())
     }
@@ -277,7 +269,7 @@ impl<T: ReadableBlockContainer> Block<T> {
         let length = self.name_length()?;
         let mut bytes = vec![0u8; length];
         self.container.read_bytes(self.payload_offset(), &mut bytes);
-        Ok(String::from(std::str::from_utf8(&bytes)?))
+        Ok(String::from(std::str::from_utf8(&bytes).map_err(|_| Error::NameNotUtf8)?))
     }
 
     /// Returns the type of a block. Panics on an invalid value.
@@ -290,7 +282,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     pub fn block_type_or(&self) -> Result<BlockType, Error> {
         let raw_type = self.read_header().block_type();
         BlockType::from_u8(raw_type)
-            .ok_or_else(|| format_err!("Invalid block type {} at index {}", raw_type, self.index()))
+            .ok_or_else(|| Error::InvalidBlockTypeNumber(self.index(), raw_type))
     }
 
     /// Check that the block type is |block_type|
@@ -302,11 +294,12 @@ impl<T: ReadableBlockContainer> Block<T> {
         Ok(())
     }
 
-    fn check_type_eq(&self, actual: u8, expected: BlockType) -> Result<(), Error> {
+    fn check_type_eq(&self, actual_num: u8, expected: BlockType) -> Result<(), Error> {
         if cfg!(debug_assertions) {
-            let actual = BlockType::from_u8(actual).ok_or(format_err!("Invalid block type"))?;
+            let actual = BlockType::from_u8(actual_num)
+                .ok_or(Error::InvalidBlockTypeNumber(self.index(), actual_num.into()))?;
             if actual != expected {
-                return Err(format_err!("Expected type {}, got type {}", expected, actual));
+                return Err(Error::UnexpectedBlockType(expected, actual));
             }
         }
         Ok(())
@@ -340,7 +333,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     pub(in crate) fn check_locked(&self, value: bool) -> Result<(), Error> {
         let payload = self.read_payload();
         if (payload.header_generation_count() & 1 == 1) != value {
-            return Err(format_err!("Expected locked={}, actual={}", value, !value));
+            return Err(Error::ExpectedLockState(value));
         }
         Ok(())
     }
@@ -348,10 +341,11 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Check if the block is NODE or TOMBSTONE.
     fn check_node_or_tombstone(&self) -> Result<(), Error> {
         if cfg!(debug_assertions) {
-            if self.block_type().is_node_or_tombstone() {
+            let block_type = self.block_type();
+            if block_type.is_node_or_tombstone() {
                 return Ok(());
             }
-            return Err(format_err!("Expected NODE|TOMBSTONE, got: {}", self.block_type()));
+            return Err(Error::UnexpectedBlockTypeRepr("NODE|TOMBSTONE", block_type));
         }
         Ok(())
     }
@@ -359,10 +353,11 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Check if the block is of *_VALUE.
     fn check_any_value(&self) -> Result<(), Error> {
         if cfg!(debug_assertions) {
-            if self.block_type().is_any_value() {
+            let block_type = self.block_type();
+            if block_type.is_any_value() {
                 return Ok(());
             }
-            return Err(format_err!("Block type {} is not *_VALUE", self.block_type()));
+            return Err(Error::UnexpectedBlockTypeRepr("*_VALUE", block_type));
         }
         Ok(())
     }
@@ -372,7 +367,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Initializes an empty free block.
     pub fn new_free(container: T, index: u32, order: usize, next_free: u32) -> Result<Self, Error> {
         if order >= constants::NUM_ORDERS {
-            return Err(format_err!("Order {} must be less than {}", order, constants::NUM_ORDERS));
+            return Err(Error::InvalidBlockOrder(order));
         }
         let mut header = BlockHeader(0);
         header.set_order(order.to_u8().unwrap());
@@ -386,7 +381,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Swaps two blocks if they are the same order.
     pub fn swap(&mut self, other: &mut Block<T>) -> Result<(), Error> {
         if self.order() != other.order() || !self.container.ptr_eq(&other.container) {
-            return Err(format_err!("cannot swap blocks of different order or container"));
+            return Err(Error::InvalidBlockSwap);
         }
         std::mem::swap(&mut self.index, &mut other.index);
         Ok(())
@@ -395,11 +390,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Set the order of the block.
     pub fn set_order(&self, order: usize) -> Result<(), Error> {
         if order >= constants::NUM_ORDERS {
-            return Err(format_err!(
-                "Order {} must be less than max {}",
-                order,
-                constants::NUM_ORDERS
-            ));
+            return Err(Error::InvalidBlockOrder(order));
         }
         let mut header = self.read_header();
         header.set_order(order.to_u8().unwrap());
@@ -494,17 +485,12 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         parent_index: u32,
     ) -> Result<(), Error> {
         if !entry_type.is_numeric_value() {
-            return Err(format_err!("Invalid entry type"));
+            return Err(Error::NonNumericArrayType(self.index()));
         }
         let order = self.order();
         let max_capacity = utils::array_capacity(order);
         if slots > max_capacity {
-            return Err(format_err!(
-                "{} exceeds the maximum number of slots for order {}: {}",
-                slots,
-                order,
-                max_capacity
-            ));
+            return Err(Error::array_capacity_exceeded(slots, order, max_capacity));
         }
         self.write_value_header(BlockType::ArrayValue, name_index, parent_index)?;
         let mut payload = Payload(0);
@@ -767,7 +753,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         parent_index: u32,
     ) -> Result<(), Error> {
         if !block_type.is_any_value() {
-            return Err(format_err!("Block type {} is not *_VALUE", block_type));
+            return Err(Error::UnexpectedBlockTypeRepr("*_VALUE", block_type));
         }
         let header = self.read_header();
         self.check_type_eq(header.block_type(), BlockType::Reserved)?;
