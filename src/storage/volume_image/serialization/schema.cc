@@ -30,6 +30,9 @@ std::string GetSchema(Schema schema) {
     case Schema::kVolumeImage:
       file.open(base_path.append(kPath).append("volume_image.schema.json"));
       return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+    case Schema::kBlobManifest:
+      file.open(base_path.append(kPath).append("blob_manifest.schema.json"));
+      return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
     default:
       return std::string();
   }

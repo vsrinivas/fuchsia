@@ -42,5 +42,14 @@ TEST(SchemaTest, VolumeImageSchemaIsValid) {
   ASSERT_TRUE(unique_schema_result.is_ok()) << unique_schema_result.error_value().ToString();
 }
 
+TEST(SchemaTest, BlobManifestSchemaIsValid) {
+  auto schema_json = GetSchema(Schema::kVolumeImage);
+  json_parser::JSONParser parser;
+  auto document = parser.ParseFromString(schema_json, "blob_manifest.schema.json");
+  ASSERT_FALSE(parser.HasError()) << parser.error_str();
+  auto unique_schema_result = json_parser::InitSchema(schema_json);
+  ASSERT_TRUE(unique_schema_result.is_ok()) << unique_schema_result.error_value().ToString();
+}
+
 }  // namespace
 }  // namespace storage::volume_image

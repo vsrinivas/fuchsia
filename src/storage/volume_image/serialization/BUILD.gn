@@ -24,6 +24,7 @@ if (is_host) {
   host_test_data("schema_json") {
     sources = [
       "address_descriptor.schema.json",
+      "blob_manifest.schema.json",
       "volume_descriptor.schema.json",
       "volume_image.schema.json",
     ]

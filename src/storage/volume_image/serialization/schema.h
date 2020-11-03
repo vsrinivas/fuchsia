@@ -14,6 +14,7 @@ enum Schema {
   kVolumeDescriptor,
   kAddressDescriptor,
   kVolumeImage,
+  kBlobManifest,
 };
 
 // Returns a string with the respective schema.

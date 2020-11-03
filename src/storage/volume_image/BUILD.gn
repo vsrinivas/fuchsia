@@ -89,13 +89,18 @@ test_package("storage-volume-image-tests") {
   resources = [
     {
       path = rebase_path(
-              "//src/storage/volume_image/serialization/volume_descriptor.schema.json")
-      dest = "schema/volume_descriptor.schema.json"
+              "//src/storage/volume_image/serialization/address_descriptor.schema.json")
+      dest = "schema/address_descriptor.schema.json"
     },
     {
       path = rebase_path(
-              "//src/storage/volume_image/serialization/address_descriptor.schema.json")
-      dest = "schema/address_descriptor.schema.json"
+              "//src/storage/volume_image/serialization/blob_manifest.schema.json")
+      dest = "schema/blob_manifest.schema.json"
+    },
+    {
+      path = rebase_path(
+              "//src/storage/volume_image/serialization/volume_descriptor.schema.json")
+      dest = "schema/volume_descriptor.schema.json"
     },
     {
       path = rebase_path(
