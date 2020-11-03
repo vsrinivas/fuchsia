@@ -43,9 +43,11 @@ class MinfsProperties {
   // Adds to |out| the cost to create a regular file in emtry root directory.
   void AddCreateCost(BlockFidlMetrics* out) const;
 
-  // Adds tpo |out| the cost to write |size| bytes at |offset| to a zero sized
+  // Adds to |out| the cost to issue |write_count| write()s each of size
+  // |byte_per_write| bytes starting at |start_offset| to a zero sized
   // regular file.
-  void AddWriteCost(uint64_t offset, uint64_t size, BlockFidlMetrics* out) const;
+  void AddWriteCost(uint64_t start_offset, uint64_t bytes_per_write, int write_count,
+                    BlockFidlMetrics* out) const;
 
   const BlockDeviceSizes& DeviceSizes() const { return block_device_sizes_; }
   const disk_format_t& DiskFormat() const { return format_; }
@@ -79,7 +81,8 @@ class MinfsProperties {
   // blocks, to final locations. It also assumes that each of the block journaled goes to a
   // different location leading to a different write IO. For now, this does not consider journal to
   // be a ring buffer.
-  void AddJournalCosts(uint64_t payload, BlockFidlMetrics* out) const;
+  void AddJournalCosts(uint64_t operations_count, uint64_t payload_per_operation,
+                       BlockFidlMetrics* out) const;
 
   void AddCleanJournalLoadCosts(BlockFidlMetrics* out) const;
 

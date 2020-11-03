@@ -144,17 +144,20 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
     *out = std::move(fd);
   }
 
-  void WriteAndCompare(int fd) {
+  void WriteAndCompare(int fd, int bytes_per_write, int write_count) {
+    EXPECT_LE(bytes_per_write, minfs::kMinfsBlockSize);
     BlockFidlMetrics computed = {}, unused_;
     Sync();
     // Clear block metrics
     GetBlockMetrics(Reset::kReset, &unused_);
 
-    char ch;
-    EXPECT_EQ(write(fd, &ch, sizeof(ch)), 1);
-    SyncAndCompute(&computed, MinfsProperties::SyncKind::kTransactionWithData);
+    uint8_t ch[bytes_per_write];
+    for (int i = 0; i < write_count; i++) {
+      EXPECT_EQ(write(fd, ch, sizeof(ch)), sizeof(ch));
+    }
+    FsProperties().AddWriteCost(0, bytes_per_write, write_count, &computed);
 
-    FsProperties().AddWriteCost(0, 1, &computed);
+    SyncAndCompute(&computed, MinfsProperties::SyncKind::kTransactionWithData);
     CompareAndDump(computed);
   }
 
@@ -295,7 +298,29 @@ TEST_F(MinfsMicroBenchmark, WriteCosts) {
   filename.append("/file.txt");
   fbl::unique_fd fd;
   CreateAndCompare(filename.c_str(), &fd);
-  WriteAndCompare(fd.get());
+  // To write 1 byte, we end up writing 81920 bytes spread over 6 block device
+  // write IOs.
+  WriteAndCompare(fd.get(), 1, 1);
+}
+
+TEST_F(MinfsMicroBenchmark, MultipleWritesWithinOneBlockCosts) {
+  std::string filename = FsProperties().MountPath();
+  filename.append("/file.txt");
+  fbl::unique_fd fd;
+  CreateAndCompare(filename.c_str(), &fd);
+  // To write 81 bytes spread over 9 call, we end up writing 540672 bytes spread
+  // over 38 block device write IOs.
+  WriteAndCompare(fd.get(), 9, 9);
+}
+
+TEST_F(MinfsMicroBenchmark, SmallFileMultiBlockWriteCost) {
+  std::string filename = FsProperties().MountPath();
+  filename.append("/file.txt");
+  fbl::unique_fd fd;
+  CreateAndCompare(filename.c_str(), &fd);
+  // To write 49152 bytes spread over 6 call, we end up writing 450560 bytes spread
+  // over 31 block device write IOs.
+  WriteAndCompare(fd.get(), 8192, 6);
 }
 
 }  // namespace
