@@ -26,9 +26,17 @@ impl RealPaths {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum SdkVersion {
+    Version(String),
+    InTree,
+    Unknown,
+}
+
 pub struct Sdk {
     metas: Vec<Value>,
     real_paths: RealPaths,
+    version: SdkVersion,
 }
 
 #[derive(Deserialize)]
@@ -66,8 +74,7 @@ struct File {
 struct Manifest {
     #[allow(unused)]
     arch: Value,
-    #[allow(unused)]
-    id: String,
+    id: Option<String>,
     parts: Vec<Part>,
     #[allow(unused)]
     schema_version: String,
@@ -85,8 +92,14 @@ impl Sdk {
     pub fn from_build_dir(mut path: std::path::PathBuf) -> Result<Self> {
         path.push("sdk/manifest/core");
 
-        Self::atoms_from_core_manifest(std::io::BufReader::new(std::fs::File::open(path)?))?
-            .try_into()
+        let sdk =
+            Self::atoms_from_core_manifest(std::io::BufReader::new(std::fs::File::open(path)?))?
+                .try_into();
+
+        sdk.map(|mut x: Sdk| {
+            x.version = SdkVersion::InTree;
+            x
+        })
     }
 
     fn atoms_from_core_manifest<T>(reader: std::io::BufReader<T>) -> Result<SdkAtoms>
@@ -100,16 +113,19 @@ impl Sdk {
 
     pub fn from_sdk_dir(path: std::path::PathBuf) -> Result<Self> {
         let manifest_path = path.join("meta/manifest.json");
+        let mut version = SdkVersion::Unknown;
 
         Self::metas_from_sdk_manifest(
             std::io::BufReader::new(std::fs::File::open(manifest_path)?),
+            &mut version,
             |meta| Ok(std::io::BufReader::new(std::fs::File::open(path.join(meta))?)),
         )
-        .map(|metas| Sdk { metas, real_paths: RealPaths::Prefix(path) })
+        .map(|metas| Sdk { metas, real_paths: RealPaths::Prefix(path), version })
     }
 
     fn metas_from_sdk_manifest<M, T>(
         manifest: std::io::BufReader<T>,
+        version: &mut SdkVersion,
         get_meta: M,
     ) -> Result<Vec<Value>>
     where
@@ -118,6 +134,10 @@ impl Sdk {
     {
         let manifest: Manifest = serde_json::from_reader(manifest)?;
         // TODO: Check the schema version and log a warning if it's not what we expect.
+
+        if let Some(id) = manifest.id {
+            *version = SdkVersion::Version(id.clone());
+        }
 
         let metas = manifest
             .parts
@@ -162,6 +182,10 @@ impl Sdk {
                 ))?,
         )
     }
+
+    pub fn get_version(&self) -> &SdkVersion {
+        &self.version
+    }
 }
 
 impl SdkAtoms {
@@ -185,7 +209,7 @@ impl SdkAtoms {
             metas.push(serde_json::from_reader(get_meta(meta)?)?);
         }
 
-        Ok(Sdk { metas, real_paths: RealPaths::Map(real_paths) })
+        Ok(Sdk { metas, real_paths: RealPaths::Map(real_paths), version: SdkVersion::Unknown })
     }
 }
 
@@ -354,6 +378,7 @@ mod test {
                 .unwrap();
 
         let sdk = atoms.to_sdk(get_core_manifest_meta).unwrap();
+        assert_eq!(SdkVersion::Unknown, sdk.version);
 
         assert_eq!(2, sdk.metas.len());
         assert_eq!(
@@ -376,11 +401,15 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_sdk_manifest() {
+        let mut version = SdkVersion::Unknown;
         let metas = Sdk::metas_from_sdk_manifest(
             std::io::BufReader::new(SDK_MANIFEST.as_bytes()),
+            &mut version,
             get_sdk_manifest_meta,
         )
         .unwrap();
+
+        assert_eq!(SdkVersion::Version("0.20201005.4.1".to_owned()), version);
 
         assert_eq!(2, metas.len());
         assert_eq!("fidl_library", metas[0].get("type").unwrap().as_str().unwrap());
@@ -391,12 +420,16 @@ mod test {
     async fn test_sdk_manifest_host_tool() {
         let metas = Sdk::metas_from_sdk_manifest(
             std::io::BufReader::new(SDK_MANIFEST.as_bytes()),
+            &mut SdkVersion::Unknown,
             get_sdk_manifest_meta,
         )
         .unwrap();
 
-        let sdk =
-            Sdk { metas, real_paths: RealPaths::Prefix(std::path::PathBuf::from("/foo/bar")) };
+        let sdk = Sdk {
+            metas,
+            real_paths: RealPaths::Prefix(std::path::PathBuf::from("/foo/bar")),
+            version: SdkVersion::Unknown,
+        };
         let zxdb = sdk.get_host_tool("zxdb").unwrap();
 
         assert_eq!(std::path::PathBuf::from("/foo/bar/tools/zxdb"), zxdb);
