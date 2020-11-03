@@ -5,9 +5,10 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_H_
 
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 
 #include <map>
@@ -32,6 +33,7 @@
 #include "src/ui/lib/escher/flib/fence_queue.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/scheduling/present2_helper.h"
 
 namespace flatland {
 
@@ -47,6 +49,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // them to link to each other through operations that involve tokens and parent/child
   // relationships (e.g., by calling LinkToParent() and CreateLink()).
   explicit Flatland(
+      async_dispatcher_t* dispatcher,
+      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
       scheduling::SessionId session_id,
       const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
       const std::shared_ptr<LinkSystem>& link_system,
@@ -123,6 +127,11 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // Flatland instance should allow an additional |num_present_tokens| calls to Present().
   void OnPresentTokensReturned(uint32_t num_present_tokens);
 
+  // Called when this Flatland instance should send the OnFramePresented() event to the FIDL
+  // client.
+  void OnFramePresented(const std::map<scheduling::PresentId, zx::time>& latched_times,
+                        scheduling::PresentTimestamps present_times);
+
   // For validating the transform hierarchy in tests only. For the sake of testing, the "root" will
   // always be the top-most TransformHandle from the TransformGraph owned by this Flatland. If
   // currently linked to a parent, that means the link_origin. If not, that means the local_root_.
@@ -135,12 +144,23 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
  private:
   void ReportError();
 
+  // The dispatcher this Flatland instance is running on.
+  async_dispatcher_t* dispatcher_;
+
+  // The FIDL bindings for this Flatland instance, which reference |this| as the implementation and
+  // run on |dispatcher_|.
+  fidl::Binding<fuchsia::ui::scenic::internal::Flatland> binding_;
+
   // Users are not allowed to use zero as a transform ID.
   static constexpr TransformId kInvalidId = 0;
 
   // The unique SessionId for this Flatland instance. Used to schedule Presents and register
   // UberStructs with the UberStructSystem.
   const scheduling::SessionId session_id_;
+
+  // A Present2Helper to facilitate sendng the appropriate OnFramePresented() callback to FIDL
+  // clients when frames are presented to the display.
+  scheduling::Present2Helper present2_helper_;
 
   // A FlatlandPresenter shared between Flatland instances. Flatland uses this interface to get
   // PresentIds when publishing to the UberStructSystem.

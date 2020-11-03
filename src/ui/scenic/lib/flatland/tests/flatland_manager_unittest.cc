@@ -59,7 +59,8 @@ using fuchsia::ui::scenic::internal::Flatland_Present_Result;
     RunLoopUntil([this, session_id, num_pending_sessions] {                              \
       return GetNumPendingSessionUpdates(session_id) > num_pending_sessions;             \
     });                                                                                  \
-    EXPECT_TRUE(processed_callback);                                                     \
+    /* Wait for the callback to run as well. */                                          \
+    RunLoopUntil([&processed_callback] { return processed_callback; });                  \
   }
 
 namespace {
@@ -292,6 +293,96 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
 
   EXPECT_EQ(GetNumPendingSessionUpdates(id1), 1ul);
   EXPECT_EQ(GetNumPendingSessionUpdates(id2), 0ul);
+}
+
+TEST_F(FlatlandManagerTest, OnFramePresentedEvent) {
+  // Setup two Flatland instances with OnFramePresented() callbacks.
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
+  manager_->CreateFlatland(flatland1.NewRequest());
+  const scheduling::SessionId id1 = uber_struct_system_->GetLatestInstanceId();
+
+  std::optional<fuchsia::scenic::scheduling::FramePresentedInfo> info1;
+  flatland1.events().OnFramePresented =
+      [&info1](fuchsia::scenic::scheduling::FramePresentedInfo info) { info1 = std::move(info); };
+
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2;
+  manager_->CreateFlatland(flatland2.NewRequest());
+  const scheduling::SessionId id2 = uber_struct_system_->GetLatestInstanceId();
+
+  std::optional<fuchsia::scenic::scheduling::FramePresentedInfo> info2;
+  flatland2.events().OnFramePresented =
+      [&info2](fuchsia::scenic::scheduling::FramePresentedInfo info) { info2 = std::move(info); };
+
+  // Present both instances twice, but don't update sessions.
+  PRESENT(flatland1, id1, true);
+  PRESENT(flatland1, id1, true);
+
+  PRESENT(flatland2, id2, true);
+  PRESENT(flatland2, id2, true);
+
+  // Call OnFramePresented() with a PresentId for the first session and ensure the event fires.
+  scheduling::PresentTimestamps timestamps{
+      .presented_time = zx::time(111),
+      .vsync_interval = zx::duration(11),
+  };
+  zx::time latch_time1 = zx::time(123);
+  auto next_present_id1 = PopPendingPresent(id1);
+
+  std::unordered_map<scheduling::SessionId,
+                     std::map<scheduling::PresentId, /*latched_time*/ zx::time>>
+      latch_times;
+  latch_times[id1] = {{next_present_id1, latch_time1}};
+
+  manager_->OnFramePresented(latch_times, timestamps);
+
+  // Wait until the event has fired.
+  RunLoopUntil([&info1]() { return info1.has_value(); });
+
+  // Verify that info1 contains the expected data.
+  EXPECT_EQ(zx::time(info1->actual_presentation_time), timestamps.presented_time);
+  EXPECT_EQ(info1->num_presents_allowed, 0ul);
+  EXPECT_EQ(info1->presentation_infos.size(), 1ul);
+  EXPECT_EQ(zx::time(info1->presentation_infos[0].latched_time()), latch_time1);
+
+  // Run the loop again to show that info2 hasn't been populated.
+  RunLoopUntilIdle();
+  EXPECT_FALSE(info2.has_value());
+
+  // Call OnFramePresented with all the remaining PresentIds and ensure an event fires for both.
+  info1.reset();
+  latch_times.clear();
+
+  timestamps = scheduling::PresentTimestamps({
+      .presented_time = zx::time(222),
+      .vsync_interval = zx::duration(22),
+  });
+  latch_time1 = zx::time(234);
+  auto latch_time2_1 = zx::time(345);
+  auto latch_time2_2 = zx::time(456);
+  next_present_id1 = PopPendingPresent(id1);
+  auto next_present_id2_1 = PopPendingPresent(id2);
+  auto next_present_id2_2 = PopPendingPresent(id2);
+
+  latch_times[id1] = {{next_present_id1, latch_time1}};
+  latch_times[id2] = {{next_present_id2_1, latch_time2_1}, {next_present_id2_2, latch_time2_2}};
+
+  manager_->OnFramePresented(latch_times, timestamps);
+
+  // Wait until both events have fired.
+  RunLoopUntil([&info1]() { return info1.has_value(); });
+  RunLoopUntil([&info2]() { return info2.has_value(); });
+
+  // Verify that both infos contain the expected data.
+  EXPECT_EQ(zx::time(info1->actual_presentation_time), timestamps.presented_time);
+  EXPECT_EQ(info1->num_presents_allowed, 0ul);
+  EXPECT_EQ(info1->presentation_infos.size(), 1ul);
+  EXPECT_EQ(zx::time(info1->presentation_infos[0].latched_time()), latch_time1);
+
+  EXPECT_EQ(zx::time(info2->actual_presentation_time), timestamps.presented_time);
+  EXPECT_EQ(info2->num_presents_allowed, 0ul);
+  EXPECT_EQ(info2->presentation_infos.size(), 2ul);
+  EXPECT_EQ(zx::time(info2->presentation_infos[0].latched_time()), latch_time2_1);
+  EXPECT_EQ(zx::time(info2->presentation_infos[1].latched_time()), latch_time2_2);
 }
 
 #undef PRESENT

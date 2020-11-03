@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/flatland/flatland.h"
 
 #include <lib/async/default.h>
+#include <lib/async/time.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/eventpair.h>
 
@@ -39,12 +40,19 @@ GlobalImageId GenerateUniqueImageId() {
 }  // namespace
 
 Flatland::Flatland(
+    async_dispatcher_t* dispatcher,
+    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
     scheduling::SessionId session_id, const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
     const std::shared_ptr<LinkSystem>& link_system,
     const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
     const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers,
     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-    : session_id_(session_id),
+    : dispatcher_(dispatcher),
+      binding_(this, std::move(request), dispatcher_),
+      session_id_(session_id),
+      present2_helper_([this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
+        binding_.events().OnFramePresented(std::move(info));
+      }),
       flatland_presenter_(flatland_presenter),
       link_system_(link_system),
       uber_struct_queue_(uber_struct_queue),
@@ -127,9 +135,6 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
     // the current Present() and delay release until that fence is reached to ensure that the buffer
     // collections and/or images are no longer referenced in any render data.
     if (!images_to_release.empty() || !buffers_to_release.empty()) {
-      // Use the default dispatcher, which is the same one this Present() is running on.
-      auto dispatcher = async_get_default_dispatcher();
-
       // Create a release fence specifically for the buffer collections and their images.
       zx::event buffer_collection_and_image_release_fence;
       zx_status_t status = zx::event::create(0, &buffer_collection_and_image_release_fence);
@@ -144,7 +149,7 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
       auto wait = std::make_shared<async::WaitOnce>(buffer_collection_and_image_release_fence.get(),
                                                     ZX_EVENT_SIGNALED);
       status = wait->Begin(
-          dispatcher,
+          dispatcher_,
           [copy_ref = wait, importer_ref = buffer_collection_importers_, buffers_to_release,
            images_to_release](async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
                               const zx_packet_signal_t* /*signal*/) mutable {
@@ -189,6 +194,8 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
     // Register a Present to get the PresentId needed to queue the UberStruct. This happens before
     // waiting on the acquire fences to indicate that a Present is pending.
     auto present_id = flatland_presenter_->RegisterPresent(session_id_, std::move(release_fences));
+    present2_helper_.RegisterPresent(present_id,
+                                     /*present_received_time=*/zx::time(async_now(dispatcher_)));
 
     // Safe to capture |this| because the Flatland is guaranteed to outlive |fence_queue_|,
     // Flatland is non-movable and FenceQueue does not fire closures after destruction.
@@ -955,6 +962,12 @@ void Flatland::ReleaseImage(ContentId image_id) {
 
 void Flatland::OnPresentTokensReturned(uint32_t num_present_tokens) {
   present_tokens_remaining_ += num_present_tokens;
+  binding_.events().OnPresentTokensReturned(num_present_tokens);
+}
+
+void Flatland::OnFramePresented(const std::map<scheduling::PresentId, zx::time>& latched_times,
+                                scheduling::PresentTimestamps present_times) {
+  present2_helper_.OnPresented(latched_times, present_times, /*num_presents_allowed=*/0);
 }
 
 TransformHandle Flatland::GetRoot() const {

@@ -20,6 +20,7 @@ fidl("fuchsia.ui.scenic.internal") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.scenic.scheduling",
     "//sdk/fidl/fuchsia.sysmem",
     "//zircon/vdso/zx",
   ]

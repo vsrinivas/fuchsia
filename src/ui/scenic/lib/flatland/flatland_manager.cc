@@ -31,16 +31,16 @@ void FlatlandManager::CreateFlatland(
                                             sysmem_allocator.NewRequest().TakeChannel().release());
   FX_DCHECK(status == ZX_OK);
 
-  auto flatland = std::make_unique<Flatland>(
-      id, flatland_presenter_, link_system_, uber_struct_system_->AllocateQueueForSession(id),
-      buffer_collection_importers_, std::move(sysmem_allocator));
-
-  auto result = flatland_instances_.emplace(
-      id, std::make_unique<FlatlandInstance>(request.channel(), std::move(flatland)));
+  // Allocate the worker Loop first so that the Flatland impl can be bound to it's dispatcher.
+  auto result =
+      flatland_instances_.emplace(id, std::make_unique<FlatlandInstance>(request.channel()));
   FX_DCHECK(result.second);
 
   auto& instance = result.first->second;
-  instance->binding->Bind(std::move(request), instance->loop.dispatcher());
+  instance->impl = std::make_shared<Flatland>(
+      instance->loop.dispatcher(), std::move(request), id, flatland_presenter_, link_system_,
+      uber_struct_system_->AllocateQueueForSession(id), buffer_collection_importers_,
+      std::move(sysmem_allocator));
 
   // Run the waiter on the main thread, not the instance thread, so that it can clean up and join
   // the instance thread.
@@ -85,22 +85,42 @@ void FlatlandManager::OnFramePresented(
                              std::map<scheduling::PresentId, /*latched_time*/ zx::time>>&
         latched_times,
     scheduling::PresentTimestamps present_times) {
-  // TODO(fxbug.dev/62669): add a present2_helper to each Flatland instance and trigger them from
-  // here.
+  for (const auto& [session_id, latch_times] : latched_times) {
+    auto instance_kv = flatland_instances_.find(session_id);
+
+    // Skip sessions that have exited since their frame was rendered.
+    if (instance_kv == flatland_instances_.end()) {
+      continue;
+    }
+
+    SendFramePresented(instance_kv->second.get(), latch_times, present_times);
+  }
 }
 
 size_t FlatlandManager::GetSessionCount() const { return flatland_instances_.size(); }
 
 void FlatlandManager::SendPresentTokens(FlatlandInstance* instance, uint32_t num_present_tokens) {
-  // The FIDL binding must be accessed on the thread it is bound to. |instance| may be destroyed
-  // before the task is dispatched, so capture a weak_ptr to the binding since the tokens do not
+  // The Flatland impl must be accessed on the thread it is bound to. |instance| may be destroyed
+  // before the task is dispatched, so capture a weak_ptr to the impl since the tokens do not
   // need to be returned when the instance is destroyed.
-  std::weak_ptr<FlatlandInstance::ImplBinding> weak_binding = instance->binding;
-  async::PostTask(instance->loop.dispatcher(), [weak_binding, num_present_tokens]() {
-    // First return tokens to the instance, then return tokens to the client.
-    if (auto binding = weak_binding.lock()) {
-      binding->impl()->OnPresentTokensReturned(num_present_tokens);
-      binding->events().OnPresentTokensReturned(num_present_tokens);
+  std::weak_ptr<Flatland> weak_impl = instance->impl;
+  async::PostTask(instance->loop.dispatcher(), [weak_impl, num_present_tokens]() {
+    if (auto impl = weak_impl.lock()) {
+      impl->OnPresentTokensReturned(num_present_tokens);
+    }
+  });
+}
+
+void FlatlandManager::SendFramePresented(
+    FlatlandInstance* instance,
+    const std::map<scheduling::PresentId, /*latched_time*/ zx::time>& latched_times,
+    scheduling::PresentTimestamps present_times) {
+  // The Flatland impl must be accessed on the thread it is bound to. |instance| may be destroyed
+  // before the task is dispatched, so capture a weak_ptr to the impl.
+  std::weak_ptr<Flatland> weak_impl = instance->impl;
+  async::PostTask(instance->loop.dispatcher(), [weak_impl, latched_times, present_times]() {
+    if (auto impl = weak_impl.lock()) {
+      impl->OnFramePresented(latched_times, present_times);
     }
   });
 }
@@ -109,7 +129,7 @@ void FlatlandManager::RemoveFlatlandInstance(scheduling::SessionId session_id) {
   auto instance_kv = flatland_instances_.find(session_id);
   FX_DCHECK(instance_kv != flatland_instances_.end());
 
-  // The fidl::Binding must be destroyed on the thread that owns the looper it is bound to. Remove
+  // The Flatland impl must be destroyed on the thread that owns the looper it is bound to. Remove
   // the instance from the map, then push cleanup onto the worker thread. Note that the closure
   // exists only to transfer the cleanup responsibilities to the worker thread.
   async::PostTask(instance_kv->second->loop.dispatcher(),

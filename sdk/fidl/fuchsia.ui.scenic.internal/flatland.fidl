@@ -4,6 +4,7 @@
 
 library fuchsia.ui.scenic.internal;
 
+using fuchsia.scenic.scheduling;
 using fuchsia.sysmem;
 using zx;
 
@@ -187,6 +188,11 @@ protocol Flatland {
     /// client can call Present() additional times. `present_tokens` will always be greater than
     /// zero.
     -> OnPresentTokensReturned(uint32 present_tokens);
+
+    /// This event is fired whenever a set of one or more Present()s are presented simultaneously,
+    /// and are therefore no longer in flight.
+    /// TODO(fxbug.dev/63305): remove `num_presents_allowed` from this event.
+    -> OnFramePresented(fuchsia.scenic.scheduling.FramePresentedInfo frame_presented_info);
 
     // ***** Graph management *****
 
