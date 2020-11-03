@@ -356,48 +356,44 @@ uint16_t Imx227Device::DigitalTotalGainToRegValue(float gain) {
   return register_value;
 }
 zx_status_t Imx227Device::ReadAnalogGainConstants() {
-  auto result_m0 = Read16(kAnalogGainM0Reg);
-  auto result_m1 = Read16(kAnalogGainM1Reg);
-  auto result_c0 = Read16(kAnalogGainC0Reg);
-  auto result_c1 = Read16(kAnalogGainC1Reg);
-  auto result_amin = Read16(kAnalogGainCodeMinReg);
-  auto result_amax = Read16(kAnalogGainCodeMaxReg);
-  auto result_astep = Read16(kAnalogGainCodeStepSizeReg);
+  // Since these are contiguous, we do a single read for the block or registers.
+  Imx227AnalogGainRegisters regs;
 
-  if (result_m0.is_error() || result_m1.is_error() || result_c0.is_error() ||
-      result_c1.is_error() || result_amin.is_error() || result_amax.is_error() ||
-      result_astep.is_error()) {
+  // Convert the address to big endian format, as required by the sensor.
+  uint16_t i2c_addr = htobe16(Imx227AnalogGainRegisters::kBaseAddress);
+  auto status = i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&i2c_addr), sizeof(i2c_addr),
+                                   reinterpret_cast<uint8_t*>(&regs), sizeof(regs));
+  if (status != ZX_OK) {
     return ZX_ERR_BAD_STATE;
   }
-
-  analog_gain_.m0_ = result_m0.value();
-  analog_gain_.m1_ = result_m1.value();
-  analog_gain_.c0_ = result_c0.value();
-  analog_gain_.c1_ = result_c1.value();
-  analog_gain_.gain_code_min_ = result_amin.value();
-  analog_gain_.gain_code_max_ = result_amax.value();
-  analog_gain_.gain_code_step_size_ = result_astep.value();
-
   // Validate the m0,1 constraint
-  if (!(analog_gain_.m0_ == 0) ^ (analog_gain_.m1_ == 0)) {
+  if (!(regs.m0 == 0) ^ (regs.m1 == 0)) {
     return ZX_ERR_BAD_STATE;
   }
+  analog_gain_.m0_ = be16toh(regs.m0);
+  analog_gain_.m1_ = be16toh(regs.m1);
+  analog_gain_.c0_ = be16toh(regs.c0);
+  analog_gain_.c1_ = be16toh(regs.c1);
+  analog_gain_.gain_code_min_ = be16toh(regs.code_min);
+  analog_gain_.gain_code_max_ = be16toh(regs.code_max);
+  analog_gain_.gain_code_step_size_ = be16toh(regs.code_step);
 
   return ZX_OK;
 }
 
 zx_status_t Imx227Device::ReadDigitalGainConstants() {
-  auto result_dmin = Read16(kDigitalGainMinReg);
-  auto result_dmax = Read16(kDigitalGainMaxReg);
-  auto result_dstep = Read16(kDigitalGainStepSizeReg);
-
-  if (result_dmin.is_error() || result_dmax.is_error() || result_dstep.is_error()) {
+  // Since these are contiguous, we do a single read for the block or registers.
+  Imx227DigitalGainRegisters regs;
+  uint16_t i2c_addr = htobe16(Imx227DigitalGainRegisters::kBaseAddress);
+  auto status = i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&i2c_addr), sizeof(i2c_addr),
+                                   reinterpret_cast<uint8_t*>(&regs), sizeof(regs));
+  if (status != ZX_OK) {
     return ZX_ERR_BAD_STATE;
   }
 
-  digital_gain_.gain_min_ = result_dmin.value();
-  digital_gain_.gain_max_ = result_dmax.value();
-  digital_gain_.gain_step_size_ = result_dstep.value();
+  digital_gain_.gain_min_ = be16toh(regs.gain_min);
+  digital_gain_.gain_max_ = be16toh(regs.gain_max);
+  digital_gain_.gain_step_size_ = be16toh(regs.gain_step_size);
   return ZX_OK;
 }
 

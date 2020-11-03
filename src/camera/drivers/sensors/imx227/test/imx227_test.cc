@@ -122,6 +122,36 @@ class FakeImx227Device : public Imx227Device {
         .ExpectWriteStop({kSensorTestPatternModeByteVec[0]});
   }
 
+  void ExpectReadAnalogGainConstants() {
+    mock_i2c_.ExpectWrite({0x00, 0x84})
+        .ExpectReadStop({// gain_code_min = 0
+                         0, 0,
+                         // gain_code_max = 224
+                         0, 224,
+                         // code_step_size = 1
+                         0, 1,
+                         // gain_type = 0
+                         0, 0,
+                         // m0 = 0
+                         0, 0,
+                         // c0 = 256
+                         1, 0,
+                         // m1 = -1
+                         0xff, 0xff,
+                         // c1 = 256
+                         1, 0});
+  }
+
+  void ExpectReadDigitalGainConstants() {
+    mock_i2c_.ExpectWrite({0x10, 0x84})
+        .ExpectReadStop({// gain_min = 256
+                         1, 0,
+                         // gain_max = 4095
+                         0x0f, 0xff,
+                         // gain_step_size = 1
+                         0, 1});
+  }
+
   void SetProtocols() {
     i2c_ = ddk::I2cChannel(mock_i2c_.GetProto());
     gpio_vana_enable_ = ddk::GpioProtocolClient(mock_gpio_vana_enable_.GetProto());
@@ -141,6 +171,7 @@ class FakeImx227Device : public Imx227Device {
   }
 
   const camera_sensor2_protocol_t* proto() const { return &proto_; }
+  mock_i2c::MockI2c& mock_i2c() { return mock_i2c_; }
 
  private:
   camera_sensor2_protocol_t proto_;
@@ -229,6 +260,46 @@ TEST_F(Imx227DeviceTest, GetFrameRateCoarseIntLut) {
   EXPECT_EQ(
       kMaxCoarseIntegrationTimeFor15fpsInLines,
       GetCoarseMaxIntegrationTime(ext_val.frame_rate_info_value, EXTENSION_VALUE_ARRAY_LEN, 15));
+}
+
+TEST_F(Imx227DeviceTest, UpdateAnalogGain) {
+  ASSERT_OK(dut().CameraSensor2Init());
+
+  dut().ExpectReadAnalogGainConstants();
+  dut().ExpectReadDigitalGainConstants();
+
+  // Change gain, verify the new value is written to the sensor.
+  float out_gain;
+  ASSERT_OK(dut().CameraSensor2SetAnalogGain(8.0, &out_gain));
+  dut().mock_i2c().VerifyAndClear();
+  ASSERT_EQ(8.0, out_gain);
+
+  dut()
+      .mock_i2c()
+      // Grouped parameter hold == true
+      .ExpectWriteStop({0x01, 0x04, 1})
+      // Set Analog Gain:
+      //   8 = 256 / (256 - X) -- X == 224
+      .ExpectWriteStop({0x02, 0x04, 0, 224})
+      // Grouped parameter hold == false
+      .ExpectWriteStop({0x01, 0x04, 0});
+  ASSERT_OK(dut().CameraSensor2Update());
+  dut().mock_i2c().VerifyAndClear();
+
+  // Set the gain to the same value again; we should not update the sensor again.
+  ASSERT_OK(dut().CameraSensor2SetAnalogGain(8.0, &out_gain));
+  dut().mock_i2c().VerifyAndClear();
+  ASSERT_EQ(8.0, out_gain);
+
+  // TODO: Remove the grouped parameter hold register accesses if there are no parameter changes.
+  dut()
+      .mock_i2c()
+      // Grouped parameter hold == true
+      .ExpectWriteStop({0x01, 0x04, 1})
+      // Grouped parameter hold == false
+      .ExpectWriteStop({0x01, 0x04, 0});
+  ASSERT_OK(dut().CameraSensor2Update());
+  dut().mock_i2c().VerifyAndClear();
 }
 
 }  // namespace

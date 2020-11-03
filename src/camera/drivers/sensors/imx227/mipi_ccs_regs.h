@@ -12,13 +12,39 @@
 namespace camera {
 
 constexpr uint16_t kSensorModelIdReg = 0x0016;
-constexpr uint16_t kAnalogGainCodeMinReg = 0x0084;
-constexpr uint16_t kAnalogGainCodeMaxReg = 0x0086;
-constexpr uint16_t kAnalogGainCodeStepSizeReg = 0x0088;
-constexpr uint16_t kAnalogGainM0Reg = 0x008c;
-constexpr uint16_t kAnalogGainC0Reg = 0x008e;
-constexpr uint16_t kAnalogGainM1Reg = 0x0090;
-constexpr uint16_t kAnalogGainC1Reg = 0x0092;
+
+struct __PACKED Imx227AnalogGainRegisters {
+  static constexpr uint16_t kBaseAddress = 0x0084;
+
+  // 0x0084
+  uint16_t code_min;
+  // 0x0086
+  uint16_t code_max;
+  // 0x0088
+  uint16_t code_step;
+  // 0x008a
+  uint16_t gain_type;
+  // 0x008c
+  uint16_t m0;
+  // 0x008e
+  uint16_t c0;
+  // 0x0090
+  uint16_t m1;
+  // 0x0092
+  uint16_t c1;
+};
+
+struct __PACKED Imx227DigitalGainRegisters {
+  static constexpr uint16_t kBaseAddress = 0x1084;
+
+  // 0x1084
+  uint16_t gain_min;
+  // 0x1086
+  uint16_t gain_max;
+  // 0x1088
+  uint16_t gain_step_size;
+};
+
 constexpr uint16_t kModeSelectReg = 0x0100;
 constexpr uint16_t kGroupedParameterHoldReg = 0x104;
 constexpr uint16_t kTempCtrlReg = 0x0138;
@@ -29,9 +55,6 @@ constexpr uint16_t kDigitalGainGlobalReg = 0x020e;
 constexpr uint16_t kFrameLengthLinesReg = 0x0340;
 constexpr uint16_t kLineLengthPckReg = 0x0342;
 constexpr uint16_t kTestPatternReg = 0x0600;
-constexpr uint16_t kDigitalGainMinReg = 0x1084;
-constexpr uint16_t kDigitalGainMaxReg = 0x1086;
-constexpr uint16_t kDigitalGainStepSizeReg = 0x1088;
 
 }  // namespace camera
 
