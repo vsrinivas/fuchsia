@@ -355,8 +355,7 @@ zx_time_t GetTimeUTC() {
 void DumpInfo(const Superblock& info) {
   FS_TRACE_DEBUG("minfs: magic0:  %10" PRIu64 "\n", info.magic0);
   FS_TRACE_DEBUG("minfs: magic1:  %10" PRIu64 "\n", info.magic1);
-  FS_TRACE_DEBUG("minfs: major version:  %10u\n", info.version_major);
-  FS_TRACE_DEBUG("minfs: minor version:  %10u\n", info.version_minor);
+  FS_TRACE_DEBUG("minfs: format version:  %10u\n", info.format_version);
   FS_TRACE_DEBUG("minfs: data blocks:  %10u (size %u)\n", info.block_count, info.block_size);
   FS_TRACE_DEBUG("minfs: inodes:  %10u (size %u)\n", info.inode_count, info.inode_size);
   FS_TRACE_DEBUG("minfs: allocated blocks  @ %10u\n", info.alloc_block_count);
@@ -413,14 +412,9 @@ zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks) {
                    kMinfsMagic0);
     return ZX_ERR_WRONG_TYPE;
   }
-  if (info->version_major != kMinfsMajorVersion) {
+  if (info->format_version != kMinfsCurrentFormatVersion) {
     FS_TRACE_ERROR("minfs: FS major version: %08x. Driver major version: %08x\n",
-                   info->version_major, kMinfsMajorVersion);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (info->version_minor != kMinfsMinorVersion) {
-    FS_TRACE_ERROR("minfs: FS minor version: %08x. Driver minor version: %08x\n",
-                   info->version_minor, kMinfsMinorVersion);
+                   info->format_version, kMinfsCurrentFormatVersion);
     return ZX_ERR_NOT_SUPPORTED;
   }
   if ((info->block_size != kMinfsBlockSize) || (info->inode_size != kMinfsInodeSize)) {
@@ -822,8 +816,8 @@ zx_status_t Minfs::UpdateCleanBitAndOldestRevision(bool is_clean) {
     FS_TRACE_ERROR("minfs: failed to %s clean flag: %d\n", is_clean ? "set" : "unset", status);
     return status;
   }
-  if (kMinfsRevision < Info().oldest_revision) {
-    sb_->MutableInfo()->oldest_revision = kMinfsRevision;
+  if (kMinfsCurrentRevision < Info().oldest_revision) {
+    sb_->MutableInfo()->oldest_revision = kMinfsCurrentRevision;
   }
   UpdateFlags(transaction.get(), kMinfsFlagClean, is_clean);
   CommitTransaction(std::move(transaction));
@@ -1403,8 +1397,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
   memset(&info, 0x00, sizeof(info));
   info.magic0 = kMinfsMagic0;
   info.magic1 = kMinfsMagic1;
-  info.version_major = kMinfsMajorVersion;
-  info.version_minor = kMinfsMinorVersion;
+  info.format_version = kMinfsCurrentFormatVersion;
   info.flags = kMinfsFlagClean;
   info.block_size = kMinfsBlockSize;
   info.inode_size = kMinfsInodeSize;
@@ -1495,7 +1488,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
     info.integrity_start_block = kFvmSuperblockBackup;
     info.dat_block = kFVMBlockDataStart;
   }
-  info.oldest_revision = kMinfsRevision;
+  info.oldest_revision = kMinfsCurrentRevision;
   DumpInfo(info);
 
   RawBitmap abm;

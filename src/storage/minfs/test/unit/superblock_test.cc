@@ -56,8 +56,7 @@ void FillSuperblockFields(Superblock* info) {
   constexpr uint32_t kDefaultAllocCount = 2;
   info->magic0 = kMinfsMagic0;
   info->magic1 = kMinfsMagic1;
-  info->version_major = kMinfsMajorVersion;
-  info->version_minor = kMinfsMinorVersion;
+  info->format_version = kMinfsCurrentFormatVersion;
   info->flags = kMinfsFlagClean;
   info->block_size = kMinfsBlockSize;
   info->inode_size = kMinfsInodeSize;
@@ -71,6 +70,7 @@ void FillSuperblockFields(Superblock* info) {
   info->alloc_block_count = kDefaultAllocCount;
   info->alloc_inode_count = kDefaultAllocCount;
   info->generation_count = 0;
+  info->oldest_revision = kMinfsCurrentRevision;
   minfs::UpdateChecksum(info);
 }
 
@@ -180,12 +180,10 @@ TEST(SuperblockTest, TestCorruptSuperblockWithoutCorrection) {
   memcpy(&backup, &info, sizeof(backup));
 
   // Corrupt original Superblock.
-  info.version_major = 0xdeadbeef;
-  info.version_minor = 0xdeadbeef;
+  info.format_version = 0xdeadbeef;
 
   // Corrupt backup Superblock.
-  backup.version_major = 0x55;
-  backup.version_minor = 0x55;
+  backup.format_version = 0x55;
 
   // Write superblock and backup to disk.
   block_fifo_request_t request[2];
@@ -209,10 +207,8 @@ TEST(SuperblockTest, TestCorruptSuperblockWithoutCorrection) {
 
   // Confirm that the superblock is not updated by backup.
   ASSERT_BYTES_NE(&info, &backup, sizeof(backup));
-  ASSERT_EQ(0xdeadbeef, info.version_major);
-  ASSERT_EQ(0xdeadbeef, info.version_minor);
-  ASSERT_EQ(0x55, backup.version_major);
-  ASSERT_EQ(0x55, backup.version_minor);
+  ASSERT_EQ(0xdeadbeef, info.format_version);
+  ASSERT_EQ(0x55, backup.format_version);
 }
 
 // Tests corrupt superblock and non-corrupt backup superblock.
@@ -228,8 +224,7 @@ TEST(SuperblockTest, TestCorruptSuperblockWithCorrection) {
   memcpy(&backup, &info, sizeof(backup));
 
   // Corrupt original Superblock.
-  info.version_major = 0xdeadbeef;
-  info.version_minor = 0xdeadbeef;
+  info.format_version = 0xdeadbeef;
 
   // Write superblock and backup to disk.
   block_fifo_request_t request[2];

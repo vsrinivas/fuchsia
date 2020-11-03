@@ -26,8 +26,7 @@ TEST(InspectorDiskStruct, GetSuperblockString) {
   std::string output = R"""(Name: Superblock
 	magic0: 0
 	magic1: 0
-	version_major: 0
-	version_minor: 0
+	format_version: 0
 	checksum: 0
 	generation_count: 0
 	flags: 0

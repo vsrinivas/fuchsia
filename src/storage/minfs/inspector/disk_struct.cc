@@ -19,8 +19,7 @@ std::unique_ptr<disk_inspector::DiskStruct> GetSuperblockStruct() {
       disk_inspector::DiskStruct::Create("Superblock", sizeof(Superblock));
   ADD_FIELD(object, Superblock, magic0);
   ADD_FIELD(object, Superblock, magic1);
-  ADD_FIELD(object, Superblock, version_major);
-  ADD_FIELD(object, Superblock, version_minor);
+  ADD_FIELD(object, Superblock, format_version);
   ADD_FIELD(object, Superblock, checksum);
   ADD_FIELD(object, Superblock, generation_count);
   ADD_FIELD(object, Superblock, flags);

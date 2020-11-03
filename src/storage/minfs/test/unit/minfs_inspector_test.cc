@@ -112,8 +112,7 @@ TEST(MinfsInspector, InspectSuperblock) {
 
   EXPECT_EQ(sb.magic0, kMinfsMagic0);
   EXPECT_EQ(sb.magic1, kMinfsMagic1);
-  EXPECT_EQ(sb.version_major, kMinfsMajorVersion);
-  EXPECT_EQ(sb.version_minor, kMinfsMinorVersion);
+  EXPECT_EQ(sb.format_version, kMinfsCurrentFormatVersion);
   EXPECT_EQ(sb.flags, kMinfsFlagClean);
   EXPECT_EQ(sb.block_size, kMinfsBlockSize);
   EXPECT_EQ(sb.inode_size, kMinfsInodeSize);
@@ -261,8 +260,7 @@ TEST(MinfsInspector, InspectBackupSuperblock) {
 
   EXPECT_EQ(sb.magic0, kMinfsMagic0);
   EXPECT_EQ(sb.magic1, kMinfsMagic1);
-  EXPECT_EQ(sb.version_major, kMinfsMajorVersion);
-  EXPECT_EQ(sb.version_minor, kMinfsMinorVersion);
+  EXPECT_EQ(sb.format_version, kMinfsCurrentFormatVersion);
   EXPECT_EQ(sb.flags, kMinfsFlagClean);
   EXPECT_EQ(sb.block_size, kMinfsBlockSize);
   EXPECT_EQ(sb.inode_size, kMinfsInodeSize);
@@ -277,12 +275,11 @@ TEST(MinfsInspector, WriteSuperblock) {
   // Test original values are correct.
   EXPECT_EQ(sb.magic0, kMinfsMagic0);
   EXPECT_EQ(sb.magic1, kMinfsMagic1);
-  EXPECT_EQ(sb.version_major, kMinfsMajorVersion);
-  EXPECT_EQ(sb.version_minor, kMinfsMinorVersion);
+  EXPECT_EQ(sb.format_version, kMinfsCurrentFormatVersion);
 
   // Edit values and write.
   sb.magic0 = 0;
-  sb.version_major = 0;
+  sb.format_version = 0;
   auto result = inspector->WriteSuperblock(sb);
   ASSERT_TRUE(result.is_ok());
 
@@ -290,16 +287,14 @@ TEST(MinfsInspector, WriteSuperblock) {
   Superblock edit_sb = inspector->InspectSuperblock();
   EXPECT_EQ(edit_sb.magic0, 0);
   EXPECT_EQ(edit_sb.magic1, kMinfsMagic1);
-  EXPECT_EQ(edit_sb.version_major, 0);
-  EXPECT_EQ(edit_sb.version_minor, kMinfsMinorVersion);
+  EXPECT_EQ(edit_sb.format_version, 0);
 
   // Test reloading from disk.
   ASSERT_OK(inspector->ReloadSuperblock());
   Superblock reload_sb = inspector->InspectSuperblock();
   EXPECT_EQ(reload_sb.magic0, 0);
   EXPECT_EQ(reload_sb.magic1, kMinfsMagic1);
-  EXPECT_EQ(reload_sb.version_major, 0);
-  EXPECT_EQ(reload_sb.version_minor, kMinfsMinorVersion);
+  EXPECT_EQ(reload_sb.format_version, 0);
 }
 
 // TODO(fxbug.dev/46821): Implement these tests once we have a fake block device

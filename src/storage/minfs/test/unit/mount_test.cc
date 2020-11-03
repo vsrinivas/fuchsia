@@ -24,13 +24,13 @@ TEST(MountTest, OldestRevisionUpdatedOnMount) {
   Superblock superblock = {};
   ASSERT_OK(LoadSuperblock(bcache.get(), &superblock));
 
-  ASSERT_EQ(kMinfsRevision, superblock.oldest_revision);
+  ASSERT_EQ(kMinfsCurrentRevision, superblock.oldest_revision);
 
-  superblock.oldest_revision = kMinfsRevision + 1;
+  superblock.oldest_revision = kMinfsCurrentRevision + 1;
   UpdateChecksum(&superblock);
   ASSERT_OK(bcache->Writeblk(kSuperblockStart, &superblock));
   ASSERT_OK(LoadSuperblock(bcache.get(), &superblock));
-  ASSERT_EQ(kMinfsRevision + 1, superblock.oldest_revision);
+  ASSERT_EQ(kMinfsCurrentRevision + 1, superblock.oldest_revision);
 
   MountOptions options = {};
   std::unique_ptr<Minfs> fs;
@@ -38,7 +38,7 @@ TEST(MountTest, OldestRevisionUpdatedOnMount) {
   bcache = Minfs::Destroy(std::move(fs));
 
   ASSERT_OK(LoadSuperblock(bcache.get(), &superblock));
-  ASSERT_EQ(kMinfsRevision, superblock.oldest_revision);
+  ASSERT_EQ(kMinfsCurrentRevision, superblock.oldest_revision);
 }
 
 }  // namespace

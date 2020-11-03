@@ -47,8 +47,14 @@ TEST(FormatFilesystemTest, FilesystemFormatClearsJournal) {
   // Format the device. We expect this to clear the sentinel pages.
   ASSERT_OK(Mkfs(bcache.get()));
 
-  // Verify that the device has written zeros to the expected location, overwriting
-  // the sentinel pages.
+  // Verify the superblock has the correct versions.
+  Superblock new_superblock = {};
+  ASSERT_OK(LoadSuperblock(bcache.get(), &new_superblock));
+  EXPECT_EQ(kMinfsCurrentFormatVersion, new_superblock.format_version);
+  EXPECT_EQ(kMinfsCurrentRevision, new_superblock.oldest_revision);
+
+  // Verify that the device has written zeros to the expected location, overwriting the sentinel
+  // pages.
   operation.type = storage::OperationType::kRead;
   operation.vmo_offset = 0;
   operation.dev_offset = JournalStartBlock(superblock);

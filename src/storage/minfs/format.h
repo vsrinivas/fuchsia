@@ -30,9 +30,13 @@ using ino_t = uint32_t;
 
 constexpr uint64_t kMinfsMagic0         = (0x002153466e694d21ULL);
 constexpr uint64_t kMinfsMagic1         = (0x385000d3d3d3d304ULL);
-constexpr uint32_t kMinfsMajorVersion   = 0x00000009;
-constexpr uint32_t kMinfsMinorVersion   = 0x00000000;
-constexpr uint32_t kMinfsRevision       = 0x00000001;
+
+// Increment the FormatRevision for each backward-incompatible format change, and increment
+// kMinfsRevison for every change to how things are serialized, whether or not they are backwards
+// compatible. See //src/storage/docs/versioning.md
+constexpr uint32_t kMinfsCurrentFormatVersion = 9u;
+// Revision 2: Removed minor_version field.
+constexpr uint32_t kMinfsCurrentRevision      = 2u;
 
 constexpr ino_t    kMinfsRootIno        = 1;
 constexpr uint32_t kMinfsFlagClean      = 0x00000001;  // Currently unused,
@@ -92,8 +96,18 @@ constexpr uint32_t kMinfsMagicPurged = 0xdeaddead;
 struct Superblock {
   uint64_t magic0;
   uint64_t magic1;
-  uint32_t version_major;
-  uint32_t version_minor;
+
+  // The format version is the version of the overall format. If this is larger than
+  // kCurrentMinfsFormatVersion the driver must not access the data.
+  //
+  // See also "oldest_revision" below and //src/storage/docs/versioning.md.
+  //
+  // The deprecated2 field used to store a minor version which was never used and should always
+  // be zero. Old versions of the MinFS driver will fail to mount if this field is nonzero when
+  // otherwise they may have been able to mount a filesystem of version 9.
+  uint32_t format_version;
+  uint32_t deprecated2;
+
   uint32_t checksum;          // Crc32 checksum of the contents of the info block.
   uint32_t generation_count;  // Generation count of backup superblock for debugging purpose.
   uint32_t flags;
@@ -122,9 +136,12 @@ struct Superblock {
   uint32_t unlinked_head;  // Index to the first unlinked (but open) inode.
   uint32_t unlinked_tail;  // Index to the last unlinked (but open) inode.
 
-  // Records the oldest revision of Minfs code that has touched this volume. It can be used by
-  // fsck to determine what checks should be strict and what should be warnings. This should be
-  // incremented any time there's a change in behaviour that fsck might care about.
+  // Records the oldest revision of Minfs code that has touched this volume. It can be used for
+  // example by fsck to determine what checks should be strict and what should be warnings. This
+  // should be incremented any time there's any change in how data is written to the device, even
+  // if it's backwards compatible. Compatibility is determined by format_version above.
+  //
+  // See //src/storage/docs/versioning.md
   uint32_t oldest_revision;
 
   uint32_t reserved[2018];

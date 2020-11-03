@@ -87,16 +87,16 @@ void RunSuperblockTest(SuperblockType version) {
   Superblock sb;
   sb.magic0 = kMinfsMagic0;
   sb.magic1 = kMinfsMagic1;
-  sb.version_major = kMinfsMajorVersion;
-  sb.version_minor = kMinfsMinorVersion;
+  sb.format_version = kMinfsCurrentFormatVersion;
   sb.flags = kMinfsFlagClean;
   sb.block_size = kMinfsBlockSize;
   sb.inode_size = kMinfsInodeSize;
+  sb.oldest_revision = kMinfsCurrentRevision;
 
   size_t size;
   const void* buffer = nullptr;
 
-  std::unique_ptr<SuperBlockObject> superblock(new SuperBlockObject(sb, version));
+  auto superblock = std::make_unique<SuperBlockObject>(sb, version);
   switch (version) {
     case SuperblockType::kPrimary:
       ASSERT_STR_EQ(kSuperBlockName, superblock->GetName());
@@ -119,21 +119,17 @@ void RunSuperblockTest(SuperblockType version) {
 
   std::unique_ptr<disk_inspector::DiskObject> obj2 = superblock->GetElementAt(2);
   obj2->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsMajorVersion, *(reinterpret_cast<const uint32_t*>(buffer)));
+  ASSERT_EQ(kMinfsCurrentFormatVersion, *(reinterpret_cast<const uint32_t*>(buffer)));
 
-  std::unique_ptr<disk_inspector::DiskObject> obj3 = superblock->GetElementAt(3);
-  obj3->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsMinorVersion, *(reinterpret_cast<const uint32_t*>(buffer)));
-
-  std::unique_ptr<disk_inspector::DiskObject> obj4 = superblock->GetElementAt(4);
+  std::unique_ptr<disk_inspector::DiskObject> obj4 = superblock->GetElementAt(3);
   obj4->GetValue(&buffer, &size);
   ASSERT_EQ(kMinfsFlagClean, *(reinterpret_cast<const uint32_t*>(buffer)));
 
-  std::unique_ptr<disk_inspector::DiskObject> obj5 = superblock->GetElementAt(5);
+  std::unique_ptr<disk_inspector::DiskObject> obj5 = superblock->GetElementAt(4);
   obj5->GetValue(&buffer, &size);
   ASSERT_EQ(kMinfsBlockSize, *(reinterpret_cast<const uint32_t*>(buffer)));
 
-  std::unique_ptr<disk_inspector::DiskObject> obj6 = superblock->GetElementAt(6);
+  std::unique_ptr<disk_inspector::DiskObject> obj6 = superblock->GetElementAt(5);
   obj6->GetValue(&buffer, &size);
   ASSERT_EQ(kMinfsInodeSize, *(reinterpret_cast<const uint32_t*>(buffer)));
 }
