@@ -34,7 +34,8 @@
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.update.Manager"
+            "fuchsia.update.Manager",
+            "fuchsia.virtualization.Manager"
         ]
     }
 }
