@@ -181,6 +181,10 @@ TEST(Tas27xxTest, CodecDaiFormat) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
+  // We complete all i2c mock setup before executing server methods in a different thread.
+  mock_i2c.ExpectWriteStop({0x0a, 0x07});
+  mock_i2c.ExpectWriteStop({0x0a, 0x09});
+
   // Check getting DAI formats.
   {
     auto formats = client.GetDaiFormats();
@@ -202,7 +206,6 @@ TEST(Tas27xxTest, CodecDaiFormat) {
 
   // Check setting DAI formats.
   {
-    mock_i2c.ExpectWriteStop({0x0a, 0x07});
     DaiFormat format = GetDefaultDaiFormat();
     format.frame_rate = 48'000;
     auto formats = client.GetDaiFormats();
@@ -211,7 +214,6 @@ TEST(Tas27xxTest, CodecDaiFormat) {
   }
 
   {
-    mock_i2c.ExpectWriteStop({0x0a, 0x09});
     DaiFormat format = GetDefaultDaiFormat();
     format.frame_rate = 96'000;
     auto formats = client.GetDaiFormats();
@@ -253,29 +255,31 @@ TEST(Tas27xxTest, CodecGain) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
+  // We complete all i2c mock setup before executing server methods in a different thread.
   mock_i2c
       .ExpectWriteStop({0x05, 0x40})   // -32dB.
       .ExpectWriteStop({0x02, 0x0d});  // PWR_CTL stopped.
-  client.SetGainState({
-      .gain = -32.f,
-      .muted = false,
-      .agc_enable = false,
-  });
 
   // Lower than min gain.
   mock_i2c
       .ExpectWriteStop({0x05, 0xc8})   // -100dB.
       .ExpectWriteStop({0x02, 0x0d});  // PWR_CTL stopped.
-  client.SetGainState({
-      .gain = -999.f,
-      .muted = false,
-      .agc_enable = false,
-  });
 
   // Higher than max gain.
   mock_i2c
       .ExpectWriteStop({0x05, 0x0})    // 0dB.
       .ExpectWriteStop({0x02, 0x0d});  // PWR_CTL stopped.
+
+  client.SetGainState({
+      .gain = -32.f,
+      .muted = false,
+      .agc_enable = false,
+  });
+  client.SetGainState({
+      .gain = -999.f,
+      .muted = false,
+      .agc_enable = false,
+  });
   client.SetGainState({
       .gain = 111.f,
       .muted = false,

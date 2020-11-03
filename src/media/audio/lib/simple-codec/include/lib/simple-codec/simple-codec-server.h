@@ -56,8 +56,8 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   }
   virtual ~SimpleCodecServer() = default;
   void DdkRelease() {
-    Shutdown();
     loop_.Shutdown();
+    Shutdown();
     delete this;
   }
 

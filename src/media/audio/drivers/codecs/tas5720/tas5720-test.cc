@@ -126,6 +126,7 @@ TEST_F(Tas5720Test, CodecReset) {
   uint32_t instance_count = 0;
   tester.SetMetadata(&instance_count, sizeof(instance_count));
 
+  // We complete all i2c mock setup before executing server methods in a different thread.
   // Reset by the call to Reset.
   mock_i2c_.ExpectWrite({0x01})
       .ExpectReadStop({0xff})
@@ -150,15 +151,14 @@ TEST_F(Tas5720Test, CodecReset) {
       .ExpectReadStop({0x00})
       .ExpectWriteStop({0x03, 0x10});  // Muted.
 
+  mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});  // Shutdown.
+
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
   ASSERT_OK(client.Reset());
-
-  // Shutdown.
-  mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   codec->DdkAsyncRemove();
   ASSERT_TRUE(tester.Ok());
@@ -170,6 +170,7 @@ TEST_F(Tas5720Test, CodecBridgedMode) {
   fake_ddk::Bind tester;
   uint32_t instance_count = 0;
   tester.SetMetadata(&instance_count, sizeof(instance_count));
+
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
@@ -200,6 +201,20 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
+  // We complete all i2c mock setup before executing server methods in a different thread.
+  mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0xff});
+  mock_i2c_.ExpectWriteStop({0x03, 0xfc});  // Set slot to 0.
+  mock_i2c_.ExpectWriteStop({0x02, 0x45});  // Set rate to 48kHz.
+
+  mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0xff});
+  mock_i2c_.ExpectWriteStop({0x03, 0xfc});  // Set slot to 0.
+  mock_i2c_.ExpectWriteStop({0x02, 0x4d});  // Set rate to 96kHz.
+
+  mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0xff});
+  mock_i2c_.ExpectWriteStop({0x03, 0xfc});  // Set slot to 0.
+
+  mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});  // Shutdown.
+
   // Check getting DAI formats.
   {
     auto formats = client.GetDaiFormats();
@@ -222,9 +237,6 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
 
   // Check setting DAI formats.
   {
-    mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0xff});
-    mock_i2c_.ExpectWriteStop({0x03, 0xfc});  // Set slot to 0.
-    mock_i2c_.ExpectWriteStop({0x02, 0x45});  // Set rate to 48kHz.
     DaiFormat format = GetDefaultDaiFormat();
     format.frame_rate = 48'000;
     auto formats = client.GetDaiFormats();
@@ -233,9 +245,6 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
   }
 
   {
-    mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0xff});
-    mock_i2c_.ExpectWriteStop({0x03, 0xfc});  // Set slot to 0.
-    mock_i2c_.ExpectWriteStop({0x02, 0x4d});  // Set rate to 96kHz.
     DaiFormat format = GetDefaultDaiFormat();
     format.frame_rate = 96'000;
     auto formats = client.GetDaiFormats();
@@ -244,17 +253,12 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
   }
 
   {
-    mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0xff});
-    mock_i2c_.ExpectWriteStop({0x03, 0xfc});  // Set slot to 0.
     DaiFormat format = GetDefaultDaiFormat();
     format.frame_rate = 192'000;
     auto formats = client.GetDaiFormats();
     ASSERT_FALSE(IsDaiFormatSupported(format, formats.value()));
     ASSERT_NOT_OK(client.SetDaiFormat(std::move(format)));
   }
-
-  // Shutdown.
-  mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});  // Shutdown.
 
   codec->DdkAsyncRemove();
   ASSERT_TRUE(tester.Ok());
@@ -278,11 +282,6 @@ TEST_F(Tas5720Test, CodecGain) {
       .ExpectWrite({0x03})
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x03, 0xef});  // Not muted.
-  client.SetGainState({
-      .gain = -32.f,
-      .muted = false,
-      .agc_enable = false,
-  });
 
   // Lower than min gain.
   mock_i2c_
@@ -291,11 +290,6 @@ TEST_F(Tas5720Test, CodecGain) {
       .ExpectWrite({0x03})
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x03, 0xef});  // Not muted.
-  client.SetGainState({
-      .gain = -999.f,
-      .muted = false,
-      .agc_enable = false,
-  });
 
   // Higher than max gain.
   mock_i2c_
@@ -304,14 +298,24 @@ TEST_F(Tas5720Test, CodecGain) {
       .ExpectWrite({0x03})
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x03, 0xef});  // Not muted.
+
+  mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});  // Shutdown.
+
+  client.SetGainState({
+      .gain = -32.f,
+      .muted = false,
+      .agc_enable = false,
+  });
+  client.SetGainState({
+      .gain = -999.f,
+      .muted = false,
+      .agc_enable = false,
+  });
   client.SetGainState({
       .gain = 111.f,
       .muted = false,
       .agc_enable = false,
   });
-
-  // Shutdown.
-  mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   // Make a 2-wal call to make sure the server (we know single threaded) completed previous calls.
   auto unused = client.GetInfo();
