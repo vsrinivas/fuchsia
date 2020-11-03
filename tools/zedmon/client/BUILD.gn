@@ -28,9 +28,6 @@ if (is_host) {
       "//third_party/rust_crates:thiserror",
     ]
 
-    # Tests currently rely on static state, so they must run serially.
-    test_args = [ "--test-threads=1" ]
-
     test_deps = [ "//src/lib/test_util" ]
 
     sources = [

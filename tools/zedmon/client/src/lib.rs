@@ -12,7 +12,7 @@ use {
         os::raw::{c_uchar, c_ushort},
         time::SystemTime,
     },
-    usb_bulk::InterfaceInfo,
+    usb_bulk::{InterfaceInfo, Open},
 };
 
 const GOOGLE_VENDOR_ID: c_ushort = 0x18d1;
@@ -107,8 +107,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
 
     /// Creates a new ZedmonClient instance.
     // TODO(fxbug.dev/61148): Make the behavior predictable if multiple Zedmons are attached.
-    fn new() -> Result<Self, Error> {
-        let mut interface = InterfaceType::open(&mut zedmon_match).unwrap();
+    fn new(mut interface: InterfaceType) -> Result<Self, Error> {
         let parameters = Self::get_parameters(&mut interface).unwrap();
         let field_formats = Self::get_field_formats(&mut interface).unwrap();
 
@@ -347,7 +346,8 @@ pub fn list() -> Vec<String> {
 }
 
 pub fn zedmon() -> ZedmonClient<usb_bulk::Interface> {
-    let result = ZedmonClient::<usb_bulk::Interface>::new();
+    let interface = usb_bulk::Interface::open(&mut zedmon_match).unwrap();
+    let result = ZedmonClient::new(interface);
     if result.is_err() {
         eprintln!("Error initializing ZedmonClient: {:?}", result);
     }
@@ -359,12 +359,12 @@ mod tests {
     use {
         super::*,
         anyhow::{format_err, Error},
-        lazy_static::lazy_static,
         protocol::{Report, ScalarType},
         std::collections::VecDeque,
+        std::rc::Rc,
         std::sync::{
             atomic::{AtomicBool, Ordering},
-            mpsc, Arc, RwLock,
+            mpsc, Arc,
         },
         std::time::Duration,
         test_util::assert_near,
@@ -504,18 +504,12 @@ mod tests {
         assert_eq!(serials, ["zedmon-1", "zedmon-2"]);
     }
 
-    // Provides test support for ZedmonClient functionality that interacts with a Zedmon device.
-    //
-    // FakeZedmonInterface provides test support at the USB interface level. However, a test does
-    // not have direct access to ZedmonClient's FakeZedmonInterface instance.
-    //
-    // This module allows communication between the test and FakeZedmonInterface through a static
-    // instance of the Coordinator struct. Each test will create a CoordinatorBuilder, configure it
-    // appropriately, and call the build() method to populate the static COORDINATOR. The test
-    // receives a CoordinatorHandle that will destroy COORDINATOR when it goes out of scope. The
-    // test then uses ZedmonClient::<fake_device::FakeZedmonInterface>::new() to create a new
-    // ZedmonClient. ZedmonClient accesses COORDINATOR implicitly through its FakeZedmonInterface,
-    // which in turn uses `coordinator_get_*` functions.
+    // Provides test support for ZedmonClient functionality that interacts with a Zedmon device. It
+    // chiefly provides:
+    //  - FakeZedmonInterface, for faking ZedmonClient's access to a Zedmon device.
+    //  - Coordinator, for coordinating activity between the test and a FakeZedmonInterface.
+    //  - CoordinatorBuilder, for producing a Coordinator instance with its various optional
+    //    settings.
     mod fake_device {
         use {
             super::*,
@@ -523,8 +517,8 @@ mod tests {
             protocol::{tests::*, PacketType, Unit},
         };
 
-        // StopSignal implementer for testing ZedmonClient::read_reports. The state is set by
-        // COORDINATOR.
+        // StopSignal implementer for testing ZedmonClient::read_reports. The state is set by a
+        // Coordinator.
         pub struct Stopper {
             signal: Arc<AtomicBool>,
         }
@@ -535,8 +529,7 @@ mod tests {
             }
         }
 
-        // Coordinates interactions between FakeZedmonInterface and a test See module-level comments
-        // for high-level access patterns.
+        // Coordinates interactions between FakeZedmonInterface and a test.
         //
         // To test ZedmonClient::read_reports:
         //  - Use CoordinatorBuilder::with_report_queue to populate the `report_queue` field. Each
@@ -553,7 +546,7 @@ mod tests {
         //
         // To test ZedmonClient::set_relay, use CoordinatorBuilder::with_relay_enabled to
         // populate the relay state, and CoordinatorHandle::relay_enabled to check expectations.
-        struct Coordinator {
+        pub struct Coordinator {
             // Constants that define the fake device.
             device_config: DeviceConfiguration,
 
@@ -573,7 +566,47 @@ mod tests {
             relay_enabled: Option<bool>,
         }
 
-        // Constants that are inherent to a Zedmon device.
+        impl Coordinator {
+            pub fn get_stopper(&self) -> Stopper {
+                Stopper { signal: self.stop_signal.clone() }
+            }
+
+            pub fn relay_enabled(&self) -> bool {
+                self.relay_enabled.expect("relay_enabled not set")
+            }
+
+            fn get_device_config(&self) -> DeviceConfiguration {
+                self.device_config.clone()
+            }
+
+            // Gets the next packet's worth of Reports.
+            fn get_reports_for_packet(&mut self) -> Vec<Report> {
+                let report_queue = self.report_queue.as_mut().expect("report_queue not set");
+
+                assert!(report_queue.len() > 0, "No reports left in queue");
+                if report_queue.len() == 1 {
+                    self.stop_signal.store(true, Ordering::SeqCst);
+                }
+                report_queue.pop_front().unwrap()
+            }
+
+            // Retrieves a timestamp in microseconds to fill a Timestamp packet.
+            fn get_timestamp_micros(&self) -> u64 {
+                let offset_time = self.offset_time.expect("offset_time not set");
+
+                let zedmon_now = SystemTime::now() - offset_time;
+                let timestamp = zedmon_now.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+                timestamp.as_micros() as u64
+            }
+
+            fn set_relay_enabled(&mut self, enabled: bool) {
+                let relay_enabled = self.relay_enabled.as_mut().expect("relay_enabled not set");
+                *relay_enabled = enabled;
+            }
+        }
+
+        // Constants that are inherent to a Zedmon device. Even if these values are not exercised by
+        // a test, dummy values will be required by ZedmonClient::new().
         #[derive(Clone, Debug)]
         pub struct DeviceConfiguration {
             pub shunt_resistance: f32,
@@ -581,39 +614,7 @@ mod tests {
             pub v_bus_scale: f32,
         }
 
-        // Used to provide tests with RAII access to COORDINATOR.
-        pub struct CoordinatorHandle {}
-
-        impl CoordinatorHandle {
-            pub fn get_stopper(&self) -> Stopper {
-                let lock = COORDINATOR.read().unwrap();
-                let coordinator = lock.as_ref().expect("Coordinator not initialized");
-                Stopper { signal: coordinator.stop_signal.clone() }
-            }
-
-            pub fn relay_enabled(&self) -> bool {
-                let lock = COORDINATOR.read().unwrap();
-                let coordinator = lock.as_ref().expect("Coordinator not populated");
-                coordinator.relay_enabled.expect("relay_enabled not set")
-            }
-        }
-
-        impl Drop for CoordinatorHandle {
-            fn drop(&mut self) {
-                let mut lock = COORDINATOR.write().unwrap();
-                lock.take();
-            }
-        }
-
-        // At time of writing, COORDINATOR is only accessed on the same thread on which it was
-        // created, so it could be made thread-local. However, if ZedmonClient were to perform USB
-        // reading on a child thread and Report-parsing on its main thread, that would no longer be
-        // the case. So for robustness, COORDINATOR is not thread-local.
-        lazy_static! {
-            static ref COORDINATOR: RwLock<Option<Coordinator>> = RwLock::new(None);
-        }
-
-        // Entry point for tests. Populates the static COORDINATOR instance, via `build()`.
+        // Provides the interface for building a Coordinator with its various optional settings.
         pub struct CoordinatorBuilder {
             device_config: DeviceConfiguration,
             report_queue: Option<VecDeque<Vec<Report>>>,
@@ -646,62 +647,15 @@ mod tests {
                 self
             }
 
-            pub fn build(self) -> CoordinatorHandle {
-                let stop_signal = Arc::new(AtomicBool::new(false));
-                let mut lock = COORDINATOR.write().unwrap();
-
-                assert!(
-                    lock.is_none(),
-                    "COORDINATOR was not properly cleared; this should happen automatically."
-                );
-
-                lock.replace(Coordinator {
+            pub fn build(self) -> Rc<RefCell<Coordinator>> {
+                Rc::new(RefCell::new(Coordinator {
                     device_config: self.device_config,
                     report_queue: self.report_queue,
                     offset_time: self.offset_time,
                     relay_enabled: self.relay_enabled,
-                    stop_signal,
-                });
-                CoordinatorHandle {}
+                    stop_signal: Arc::new(AtomicBool::new(false)),
+                }))
             }
-        }
-
-        // Gets a copy of COORDINATOR's device_config.
-        fn coordinator_get_device_config() -> DeviceConfiguration {
-            let lock = COORDINATOR.read().unwrap();
-            let coordinator = lock.as_ref().expect("Coordinator not initialized");
-            coordinator.device_config.clone()
-        }
-
-        // Gets the next packet's worth of Reports from COORDINATOR.
-        fn coordinator_get_reports_for_packet() -> Vec<Report> {
-            let mut lock = COORDINATOR.write().unwrap();
-            let coordinator = lock.as_mut().expect("Coordinator not initialized");
-            let report_queue = coordinator.report_queue.as_mut().expect("report_queue not set");
-
-            assert!(report_queue.len() > 0, "No reports left in queue");
-            if report_queue.len() == 1 {
-                coordinator.stop_signal.store(true, Ordering::SeqCst);
-            }
-            report_queue.pop_front().unwrap()
-        }
-
-        // Retrieves a timestamp in microseconds to fill a Timestamp packet.
-        fn coordinator_get_timestamp_micros() -> u64 {
-            let lock = COORDINATOR.read().unwrap();
-            let coordinator = lock.as_ref().expect("Coordinator not initialized");
-            let offset_time = coordinator.offset_time.expect("offset_time not set");
-
-            let zedmon_now = SystemTime::now() - offset_time;
-            let timestamp = zedmon_now.duration_since(SystemTime::UNIX_EPOCH).unwrap();
-            timestamp.as_micros() as u64
-        }
-
-        fn coordinator_set_relay_enabled(enabled: bool) {
-            let mut lock = COORDINATOR.write().unwrap();
-            let coordinator = lock.as_mut().expect("Coodrinator not populated");
-            let relay_enabled = coordinator.relay_enabled.as_mut().expect("relay_enabled not set");
-            *relay_enabled = enabled;
         }
 
         // Indicates the contents of the next read from FakeZedmonInterface.
@@ -714,6 +668,8 @@ mod tests {
 
         // Interface that provides fakes for testing interactions with a Zedmon device.
         pub struct FakeZedmonInterface {
+            coordinator: Rc<RefCell<Coordinator>>,
+
             // The type of read that wil be performed next from this interface, if any.
             next_read: Option<NextRead>,
         }
@@ -723,18 +679,24 @@ mod tests {
             where
                 F: FnMut(&InterfaceInfo) -> bool,
             {
-                Ok(FakeZedmonInterface { next_read: None })
+                Err(format_err!("usb_bulk::Open not implemented"))
             }
         }
 
         impl FakeZedmonInterface {
+            pub fn new(coordinator: Rc<RefCell<Coordinator>>) -> Self {
+                Self { coordinator, next_read: None }
+            }
+
             // Populates a ParameterValue packet.
             fn read_parameter_value(&mut self, index: u8, buffer: &mut [u8]) -> usize {
                 match index {
                     0 => serialize_parameter_value(
                         ParameterValue {
                             name: "shunt_resistance".to_string(),
-                            value: Value::F32(coordinator_get_device_config().shunt_resistance),
+                            value: Value::F32(
+                                self.coordinator.borrow().get_device_config().shunt_resistance,
+                            ),
                         },
                         buffer,
                     ),
@@ -754,7 +716,7 @@ mod tests {
                             index,
                             field_type: ScalarType::I16,
                             unit: Unit::Volts,
-                            scale: coordinator_get_device_config().v_shunt_scale,
+                            scale: self.coordinator.borrow().get_device_config().v_shunt_scale,
                             name: "v_shunt".to_string(),
                         },
                         buffer,
@@ -764,7 +726,7 @@ mod tests {
                             index,
                             field_type: ScalarType::I16,
                             unit: Unit::Volts,
-                            scale: coordinator_get_device_config().v_bus_scale,
+                            scale: self.coordinator.borrow().get_device_config().v_bus_scale,
                             name: "v_bus".to_string(),
                         },
                         buffer,
@@ -785,19 +747,19 @@ mod tests {
 
             // Populates a Report packet.
             fn read_reports(&mut self, buffer: &mut [u8]) -> usize {
-                let reports = coordinator_get_reports_for_packet();
+                let reports = self.coordinator.borrow_mut().get_reports_for_packet();
                 serialize_reports(&reports, buffer)
             }
 
             // Populates a Timestamp packet.
             fn read_timestamp(&mut self, buffer: &mut [u8]) -> usize {
                 buffer[0] = PacketType::Timestamp as u8;
-                serialize_timestamp_micros(coordinator_get_timestamp_micros(), buffer)
+                serialize_timestamp_micros(self.coordinator.borrow().get_timestamp_micros(), buffer)
             }
 
             fn set_output(&self, index: u8, value: u8) {
                 if index == protocol::Output::Relay as u8 {
-                    coordinator_set_relay_enabled(value != 0);
+                    self.coordinator.borrow_mut().set_relay_enabled(value != 0);
                 }
             }
         }
@@ -897,8 +859,9 @@ mod tests {
 
             let builder =
                 fake_device::CoordinatorBuilder::new(device_config).with_report_queue(report_queue);
-            let handle = builder.build();
-            let zedmon = ZedmonClient::<fake_device::FakeZedmonInterface>::new()?;
+            let coordinator = builder.build();
+            let interface = fake_device::FakeZedmonInterface::new(coordinator.clone());
+            let zedmon = ZedmonClient::new(interface)?;
 
             // Implements Write by sending bytes over a channel. The holder of the channel's
             // Receiver can then inspect the data that was written to test expectations.
@@ -923,7 +886,8 @@ mod tests {
 
             let (sender, receiver) = mpsc::channel();
             let writer = Box::new(ChannelWriter { sender, buffer: Vec::new() });
-            zedmon.read_reports(writer, handle.get_stopper())?;
+            let stopper = coordinator.borrow().get_stopper();
+            zedmon.read_reports(writer, stopper)?;
 
             let output = receiver.recv()?;
             Ok(String::from_utf8(output)?)
@@ -994,8 +958,9 @@ mod tests {
 
         let builder =
             fake_device::CoordinatorBuilder::new(device_config).with_offset_time(zedmon_offset);
-        let _handle = builder.build();
-        let zedmon = ZedmonClient::<fake_device::FakeZedmonInterface>::new()?;
+        let coordinator = builder.build();
+        let interface = fake_device::FakeZedmonInterface::new(coordinator);
+        let zedmon = ZedmonClient::new(interface)?;
 
         let (reported_offset, uncertainty) = zedmon.get_time_offset_nanos()?;
         assert_near!(zedmon_offset.as_nanos() as i64, reported_offset, uncertainty);
@@ -1013,20 +978,21 @@ mod tests {
         };
 
         let builder = fake_device::CoordinatorBuilder::new(device_config).with_relay_enabled(false);
-        let handle = builder.build();
-        let zedmon = ZedmonClient::<fake_device::FakeZedmonInterface>::new()?;
+        let coordinator = builder.build();
+        let interface = fake_device::FakeZedmonInterface::new(coordinator.clone());
+        let zedmon = ZedmonClient::new(interface)?;
 
         // Test true->false and false->true transitions, and no-ops in each state.
         zedmon.set_relay(true)?;
-        assert_eq!(handle.relay_enabled(), true);
+        assert_eq!(coordinator.borrow().relay_enabled(), true);
         zedmon.set_relay(true)?;
-        assert_eq!(handle.relay_enabled(), true);
+        assert_eq!(coordinator.borrow().relay_enabled(), true);
         zedmon.set_relay(false)?;
-        assert_eq!(handle.relay_enabled(), false);
+        assert_eq!(coordinator.borrow().relay_enabled(), false);
         zedmon.set_relay(false)?;
-        assert_eq!(handle.relay_enabled(), false);
+        assert_eq!(coordinator.borrow().relay_enabled(), false);
         zedmon.set_relay(true)?;
-        assert_eq!(handle.relay_enabled(), true);
+        assert_eq!(coordinator.borrow().relay_enabled(), true);
 
         Ok(())
     }
