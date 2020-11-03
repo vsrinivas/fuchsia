@@ -3,15 +3,13 @@
 // found in the LICENSE file.
 
 mod bound;
+mod constants;
 mod datatypes;
 mod diagnostics;
 mod httpsdate;
 mod sampler;
 
-use crate::datatypes::Phase;
-use crate::diagnostics::{
-    CobaltDiagnostics, CompositeDiagnostics, Diagnostics, InspectDiagnostics,
-};
+use crate::diagnostics::{CobaltDiagnostics, CompositeDiagnostics, InspectDiagnostics};
 use crate::httpsdate::{HttpsDateUpdateAlgorithm, RetryStrategy};
 use crate::sampler::HttpsSamplerImpl;
 use anyhow::{Context, Error};
@@ -28,7 +26,8 @@ const RETRY_STRATEGY: RetryStrategy = RetryStrategy {
     min_between_failures: zx::Duration::from_seconds(1),
     max_exponent: 3,
     tries_per_exponent: 3,
-    between_successes: zx::Duration::from_minutes(30),
+    converge_time_between_samples: zx::Duration::from_minutes(2),
+    maintain_time_between_samples: zx::Duration::from_minutes(20),
 };
 
 /// URI used to obtain time samples.
@@ -45,8 +44,6 @@ async fn main() -> Result<(), Error> {
     let inspect = InspectDiagnostics::new(fuchsia_inspect::component::inspector().root());
     let (cobalt, cobalt_sender_fut) = CobaltDiagnostics::new();
     let diagnostics = CompositeDiagnostics::new(inspect, cobalt);
-    // TODO(satsukiu): remove once the algorithm starts in initial.
-    diagnostics.phase_update(&Phase::Maintain);
 
     fuchsia_inspect::component::inspector().serve(&mut fs)?;
 

@@ -30,10 +30,12 @@ rustc_binary("bin") {
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:rand",
   ]
 
   sources = [
     "src/bound.rs",
+    "src/constants.rs",
     "src/datatypes.rs",
     "src/diagnostics/cobalt.rs",
     "src/diagnostics/composite.rs",

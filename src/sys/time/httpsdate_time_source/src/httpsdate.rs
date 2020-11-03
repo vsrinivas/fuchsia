@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::constants::{
+    CONVERGE_SAMPLES, INITIAL_SAMPLE_POLLS, MAX_TIME_BETWEEN_SAMPLES_RANDOMIZATION, SAMPLE_POLLS,
+};
+use crate::datatypes::Phase;
 use crate::diagnostics::Diagnostics;
 use crate::sampler::HttpsSampler;
 use anyhow::Error;
@@ -13,17 +17,17 @@ use futures::{channel::mpsc::Sender, SinkExt};
 use httpdate_hyper::HttpsDateError;
 use log::{error, info, warn};
 use push_source::{Update, UpdateAlgorithm};
+use rand::Rng;
 
-const POLLS_PER_SAMPLE: u32 = 5;
-
-/// A definition of how long an algorithm should wait between polls. Defines a fixed wait duration
+/// A definition of how long an algorithm should wait between polls. Defines fixed wait durations
 /// following successful poll attempts, and a capped exponential backoff following failed poll
 /// attempts.
 pub struct RetryStrategy {
     pub min_between_failures: zx::Duration,
     pub max_exponent: u32,
     pub tries_per_exponent: u32,
-    pub between_successes: zx::Duration,
+    pub converge_time_between_samples: zx::Duration,
+    pub maintain_time_between_samples: zx::Duration,
 }
 
 impl RetryStrategy {
@@ -59,10 +63,31 @@ where
 
     async fn generate_updates(&self, mut sink: Sender<Update>) -> Result<(), Error> {
         // TODO(fxbug.dev/59972): wait for network to be available before polling.
+
+        // randomize poll timings somewhat so polls across devices will not be synchronized
+        let random_factor = 1f32
+            + rand::thread_rng().gen_range(
+                -MAX_TIME_BETWEEN_SAMPLES_RANDOMIZATION,
+                MAX_TIME_BETWEEN_SAMPLES_RANDOMIZATION,
+            );
+        let converge_time_between_samples =
+            mult_duration(self.retry_strategy.converge_time_between_samples, random_factor);
+        let maintain_time_between_samples =
+            mult_duration(self.retry_strategy.maintain_time_between_samples, random_factor);
+
+        self.diagnostics.phase_update(&Phase::Initial);
+        self.try_generate_sample_until_successful(INITIAL_SAMPLE_POLLS, &mut sink).await?;
+
+        self.diagnostics.phase_update(&Phase::Converge);
+        for _ in 0..CONVERGE_SAMPLES {
+            fasync::Timer::new(fasync::Time::after(converge_time_between_samples)).await;
+            self.try_generate_sample_until_successful(SAMPLE_POLLS, &mut sink).await?;
+        }
+
+        self.diagnostics.phase_update(&Phase::Maintain);
         loop {
-            self.try_generate_sample_until_successful(&mut sink).await?;
-            fasync::Timer::new(fasync::Time::after(self.retry_strategy.between_successes.clone()))
-                .await;
+            fasync::Timer::new(fasync::Time::after(maintain_time_between_samples)).await;
+            self.try_generate_sample_until_successful(SAMPLE_POLLS, &mut sink).await?;
         }
     }
 }
@@ -80,13 +105,14 @@ where
     /// |sink|.
     async fn try_generate_sample_until_successful(
         &self,
+        num_polls: usize,
         sink: &mut Sender<Update>,
     ) -> Result<(), Error> {
         let mut attempt_iter = 0u32..;
         let mut last_error = None;
         loop {
             let attempt = attempt_iter.next().unwrap_or(u32::MAX);
-            match self.sampler.produce_sample(POLLS_PER_SAMPLE).await {
+            match self.sampler.produce_sample(num_polls).await {
                 Ok(sample) => {
                     info!(
                         "Got a time sample - UTC {:?}, bound size {:?}, and round trip times {:?}",
@@ -131,6 +157,11 @@ where
     }
 }
 
+fn mult_duration(duration: zx::Duration, factor: f32) -> zx::Duration {
+    let nanos_float = (duration.into_nanos() as f64) * factor as f64;
+    zx::Duration::from_nanos(nanos_float as i64)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -148,7 +179,8 @@ mod test {
         min_between_failures: zx::Duration::from_nanos(100),
         max_exponent: 1,
         tries_per_exponent: 1,
-        between_successes: zx::Duration::from_nanos(100),
+        converge_time_between_samples: zx::Duration::from_nanos(100),
+        maintain_time_between_samples: zx::Duration::from_nanos(100),
     };
 
     lazy_static! {
@@ -182,7 +214,8 @@ mod test {
             min_between_failures: zx::Duration::from_seconds(1),
             max_exponent: 3,
             tries_per_exponent: 3,
-            between_successes: zx::Duration::from_seconds(60),
+            converge_time_between_samples: zx::Duration::from_seconds(10),
+            maintain_time_between_samples: zx::Duration::from_seconds(10),
         };
         let expectation = vec![1, 1, 1, 2, 2, 2, 4, 4, 4, 8, 8, 8, 8, 8];
         for i in 0..expectation.len() {
@@ -304,5 +337,48 @@ mod test {
                 HttpsDateError::NoCertificatesPresented
             ]
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_phases() {
+        let expected_num_samples = 1 /*initial*/ + CONVERGE_SAMPLES + 1 /*maintain*/;
+        let expected_samples = vec![TEST_SAMPLE_1.clone(); expected_num_samples];
+
+        let (sampler, response_complete_fut) =
+            FakeSampler::with_responses(expected_samples.iter().map(|sample| Ok(sample.clone())));
+        let sampler = Arc::new(sampler);
+        let diagnostics = Arc::new(FakeDiagnostics::new());
+        let update_algorithm = HttpsDateUpdateAlgorithm::new(
+            TEST_RETRY_STRATEGY,
+            Arc::clone(&diagnostics),
+            Arc::clone(&sampler),
+        );
+
+        let (sender, receiver) = channel(0);
+        let _update_task =
+            fasync::Task::spawn(async move { update_algorithm.generate_updates(sender).await });
+        let updates = receiver.take_until(response_complete_fut).collect::<Vec<_>>().await;
+
+        // All status updates should indicate OK.
+        assert!(updates
+            .iter()
+            .filter(|update| update.is_status())
+            .all(|update| *update == Update::Status(Status::Ok)));
+
+        assert_eq!(
+            diagnostics.phase_updates(),
+            vec![Phase::Initial, Phase::Converge, Phase::Maintain]
+        );
+        assert_eq!(diagnostics.successes(), expected_samples);
+        assert!(diagnostics.failures().is_empty());
+
+        // samples should be requested using the number of polls appropriate for the phase.
+        let expected_polls_per_sample = vec![
+            vec![INITIAL_SAMPLE_POLLS],
+            vec![SAMPLE_POLLS; CONVERGE_SAMPLES],
+            vec![SAMPLE_POLLS],
+        ]
+        .concat();
+        sampler.assert_produce_sample_requests(&expected_polls_per_sample).await;
     }
 }

@@ -48,7 +48,7 @@ impl HttpsDateClient for NetworkTimeClient {
 #[async_trait]
 pub trait HttpsSampler {
     /// Produce a single `HttpsSample` by polling |num_polls| times.
-    async fn produce_sample(&self, num_polls: u32) -> Result<HttpsSample, HttpsDateError>;
+    async fn produce_sample(&self, num_polls: usize) -> Result<HttpsSample, HttpsDateError>;
 }
 
 /// The default implementation of `HttpsSampler` that uses an `HttpsDateClient` to poll a server.
@@ -74,7 +74,7 @@ impl<C: HttpsDateClient + Send> HttpsSamplerImpl<C> {
 
 #[async_trait]
 impl<C: HttpsDateClient + Send> HttpsSampler for HttpsSamplerImpl<C> {
-    async fn produce_sample(&self, num_polls: u32) -> Result<HttpsSample, HttpsDateError> {
+    async fn produce_sample(&self, num_polls: usize) -> Result<HttpsSample, HttpsDateError> {
         let (mut bound, first_rtt) = self.poll_server().await?;
         let mut round_trip_times = vec![first_rtt];
 
@@ -207,18 +207,30 @@ mod fake {
         enqueued_responses: Mutex<VecDeque<Result<HttpsSample, HttpsDateError>>>,
         /// Channel used to signal exhaustion of the enqueued responses.
         completion_notifier: Mutex<Option<oneshot::Sender<()>>>,
+        /// List of num_polls requested during calls to `produce_sample`.
+        received_request_num_polls: Mutex<Vec<usize>>,
     }
 
     #[async_trait]
     impl HttpsSampler for FakeSampler {
-        async fn produce_sample(&self, _num_polls: u32) -> Result<HttpsSample, HttpsDateError> {
+        async fn produce_sample(&self, num_polls: usize) -> Result<HttpsSample, HttpsDateError> {
             match self.enqueued_responses.lock().await.pop_front() {
-                Some(result) => result,
+                Some(result) => {
+                    self.received_request_num_polls.lock().await.push(num_polls);
+                    result
+                }
                 None => {
                     self.completion_notifier.lock().await.take().unwrap().send(()).unwrap();
                     pending().await
                 }
             }
+        }
+    }
+
+    #[async_trait]
+    impl<T: AsRef<FakeSampler> + Send + Sync> HttpsSampler for T {
+        async fn produce_sample(&self, num_polls: usize) -> Result<HttpsSample, HttpsDateError> {
+            self.as_ref().produce_sample(num_polls).await
         }
     }
 
@@ -232,8 +244,14 @@ mod fake {
             let client = FakeSampler {
                 enqueued_responses: Mutex::new(VecDeque::from_iter(responses)),
                 completion_notifier: Mutex::new(Some(sender)),
+                received_request_num_polls: Mutex::new(vec![]),
             };
             (client, receiver)
+        }
+
+        /// Assert that calls to produce_sample were made with the expected num_polls arguments.
+        pub async fn assert_produce_sample_requests(&self, expected: &[usize]) {
+            assert_eq!(self.received_request_num_polls.lock().await.as_slice(), expected);
         }
     }
 }

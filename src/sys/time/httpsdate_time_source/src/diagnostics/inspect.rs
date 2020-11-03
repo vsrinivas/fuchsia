@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::constants::SAMPLE_POLLS;
 use crate::datatypes::{HttpsSample, Phase};
 use crate::diagnostics::Diagnostics;
 use fuchsia_inspect::{
@@ -13,10 +14,6 @@ use httpdate_hyper::HttpsDateError;
 use log::warn;
 use parking_lot::Mutex;
 use std::collections::HashMap;
-
-// TODO(satsukiu): once the new algorithm is in place this constant should live
-// elsewhere.
-const MAX_POLLS_PER_SAMPLE: usize = 5;
 
 /// Struct containing inspect metrics for HTTPSDate.
 pub struct InspectDiagnostics {
@@ -100,19 +97,19 @@ struct SampleMetric {
 impl SampleMetric {
     /// Create a new `SampleMetric` that records to the given Node.
     fn new(node: Node, sample: &HttpsSample) -> Self {
-        let round_trip_times = node.create_int_array("round_trip_times", MAX_POLLS_PER_SAMPLE);
-        if sample.round_trip_times.len() > MAX_POLLS_PER_SAMPLE {
+        let round_trip_times = node.create_int_array("round_trip_times", SAMPLE_POLLS);
+        if sample.round_trip_times.len() > SAMPLE_POLLS {
             warn!(
                 "Truncating {:?} round trip time entries to {:?} to fit in inspect",
                 sample.round_trip_times.len(),
-                MAX_POLLS_PER_SAMPLE
+                SAMPLE_POLLS
             );
         }
         sample
             .round_trip_times
             .iter()
             .enumerate()
-            .take(MAX_POLLS_PER_SAMPLE)
+            .take(SAMPLE_POLLS)
             .for_each(|(idx, duration)| round_trip_times.set(idx, duration.into_nanos()));
         let monotonic = node.create_int("monotonic", sample.monotonic.into_nanos());
         let bound_size = node.create_int("bound_size", sample.final_bound_size.into_nanos());
@@ -121,11 +118,11 @@ impl SampleMetric {
 
     /// Update the recorded values in the inspect Node.
     fn update(&self, sample: &HttpsSample) {
-        if sample.round_trip_times.len() > MAX_POLLS_PER_SAMPLE {
+        if sample.round_trip_times.len() > SAMPLE_POLLS {
             warn!(
                 "Truncating {:?} round trip time entries to {:?} to fit in inspect",
                 sample.round_trip_times.len(),
-                MAX_POLLS_PER_SAMPLE
+                SAMPLE_POLLS
             );
         }
         self.round_trip_times.clear();
@@ -133,7 +130,7 @@ impl SampleMetric {
             .round_trip_times
             .iter()
             .enumerate()
-            .take(MAX_POLLS_PER_SAMPLE)
+            .take(SAMPLE_POLLS)
             .for_each(|(idx, duration)| self.round_trip_times.set(idx, duration.into_nanos()));
         self.bound_size.set(sample.final_bound_size.into_nanos());
         self.monotonic.set(sample.monotonic.into_nanos());
