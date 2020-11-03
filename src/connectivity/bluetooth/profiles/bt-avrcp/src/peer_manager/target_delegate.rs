@@ -4,6 +4,7 @@
 
 use super::*;
 
+use fidl::endpoints::Proxy;
 use fidl_fuchsia_bluetooth_avrcp::{
     self as fidl_avrcp, AbsoluteVolumeHandlerProxy, MediaAttributes, Notification,
     NotificationEvent, PlayStatus, TargetAvcError, TargetHandlerProxy, TargetPassthroughError,
@@ -40,35 +41,30 @@ impl TargetDelegate {
 
     // Retrieves a clone of the current volume handler, if there is one, otherwise returns None.
     fn absolute_volume_handler(&self) -> Option<AbsoluteVolumeHandlerProxy> {
-        let guard = self.inner.lock();
+        let mut guard = self.inner.lock();
+        if guard.absolute_volume_handler.as_ref().map_or(false, Proxy::is_closed) {
+            guard.absolute_volume_handler = None;
+        }
         guard.absolute_volume_handler.clone()
     }
 
     // Retrieves a clone of the current target handler, if there is one, otherwise returns None.
     fn target_handler(&self) -> Option<TargetHandlerProxy> {
-        let guard = self.inner.lock();
+        let mut guard = self.inner.lock();
+        if guard.target_handler.as_ref().map_or(false, Proxy::is_closed) {
+            guard.target_handler = None;
+        }
         guard.target_handler.clone()
     }
 
     /// Sets the target delegate. Resets any pending registered notifications.
     /// If the delegate is already set, reutrns an Error.
     pub fn set_target_handler(&self, target_handler: TargetHandlerProxy) -> Result<(), Error> {
-        let mut inner_guard = self.inner.lock();
-        if inner_guard.target_handler.is_some() {
+        let mut guard = self.inner.lock();
+        if guard.target_handler.as_ref().map_or(false, |p| !p.is_closed()) {
             return Err(Error::TargetBound);
         }
-
-        let target_handler_event_stream = target_handler.take_event_stream();
-        // We were able to set the target delegate so spawn a task to watch for it
-        // to close.
-        let inner_ref = self.inner.clone();
-        fasync::Task::spawn(async move {
-            let _ = target_handler_event_stream.map(|_| ()).collect::<()>().await;
-            inner_ref.lock().target_handler = None;
-        })
-        .detach();
-
-        inner_guard.target_handler = Some(target_handler);
+        guard.target_handler = Some(target_handler);
         Ok(())
     }
 
@@ -77,22 +73,12 @@ impl TargetDelegate {
         &self,
         absolute_volume_handler: AbsoluteVolumeHandlerProxy,
     ) -> Result<(), Error> {
-        let mut inner_guard = self.inner.lock();
-        if inner_guard.absolute_volume_handler.is_some() {
+        let mut guard = self.inner.lock();
+        if guard.absolute_volume_handler.as_ref().map_or(false, |p| !p.is_closed()) {
             return Err(Error::TargetBound);
         }
 
-        let volume_event_stream = absolute_volume_handler.take_event_stream();
-        // We were able to set the target delegate so spawn a task to watch for it
-        // to close.
-        let inner_ref = self.inner.clone();
-        fasync::Task::spawn(async move {
-            let _ = volume_event_stream.map(|_| ()).collect::<()>().await;
-            inner_ref.lock().absolute_volume_handler = None;
-        })
-        .detach();
-
-        inner_guard.absolute_volume_handler = Some(absolute_volume_handler);
+        guard.absolute_volume_handler = Some(absolute_volume_handler);
         Ok(())
     }
 
@@ -294,6 +280,8 @@ mod tests {
     use fidl_fuchsia_bluetooth_avrcp::{
         Equalizer, PlayerApplicationSettings, TargetHandlerMarker, TargetHandlerRequest,
     };
+    use fuchsia_async as fasync;
+    use futures::stream::StreamExt;
     use matches::assert_matches;
     use std::task::Poll;
 
@@ -304,28 +292,21 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("executor::new failed");
         let (target_proxy_1, target_stream_1) = create_proxy_and_stream::<TargetHandlerMarker>()
             .expect("Error creating TargetHandler endpoint");
-        let (target_proxy_2, target_stream_2) = create_proxy_and_stream::<TargetHandlerMarker>()
+        let (target_proxy_2, _target_stream_2) = create_proxy_and_stream::<TargetHandlerMarker>()
             .expect("Error creating TargetHandler endpoint");
 
         let target_delegate = TargetDelegate::new();
         assert_matches!(target_delegate.set_target_handler(target_proxy_1), Ok(()));
         assert_matches!(
-            target_delegate.set_target_handler(target_proxy_2),
+            target_delegate.set_target_handler(target_proxy_2.clone()),
             Err(Error::TargetBound)
         );
+
+        // After the target handler is dropped, we should be able to set the handler.
         drop(target_stream_1);
-        drop(target_stream_2);
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
-        // pump the new task that got spawned. it should unset the target handler now that the stream
-        // is closed. using a no-op future just spin the other global executor tasks.
-        let no_op = async {};
-        pin_utils::pin_mut!(no_op);
-        assert!(exec.run_until_stalled(&mut no_op).is_ready());
-
-        let (target_proxy_3, target_stream_3) = create_proxy_and_stream::<TargetHandlerMarker>()
-            .expect("Error creating TargetHandler endpoint");
-        assert_matches!(target_delegate.set_target_handler(target_proxy_3), Ok(()));
-        drop(target_stream_3);
+        assert_matches!(target_delegate.set_target_handler(target_proxy_2), Ok(()));
     }
 
     #[test]
