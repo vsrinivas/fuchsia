@@ -33,6 +33,7 @@ rustc_binary("bin") {
   ]
 
   sources = [
+    "src/bound.rs",
     "src/datatypes.rs",
     "src/diagnostics/cobalt.rs",
     "src/diagnostics/composite.rs",

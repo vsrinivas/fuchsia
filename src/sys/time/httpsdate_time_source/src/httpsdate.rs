@@ -11,8 +11,10 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc::Sender, SinkExt};
 use httpdate_hyper::HttpsDateError;
-use log::{error, warn};
+use log::{error, info, warn};
 use push_source::{Update, UpdateAlgorithm};
+
+const POLLS_PER_SAMPLE: u32 = 5;
 
 /// A definition of how long an algorithm should wait between polls. Defines a fixed wait duration
 /// following successful poll attempts, and a capped exponential backoff following failed poll
@@ -58,7 +60,7 @@ where
     async fn generate_updates(&self, mut sink: Sender<Update>) -> Result<(), Error> {
         // TODO(fxbug.dev/59972): wait for network to be available before polling.
         loop {
-            self.poll_time_until_successful(&mut sink).await?;
+            self.try_generate_sample_until_successful(&mut sink).await?;
             fasync::Timer::new(fasync::Time::after(self.retry_strategy.between_successes.clone()))
                 .await;
         }
@@ -76,13 +78,20 @@ where
 
     /// Repeatedly poll for a time until one sample is successfully retrieved. Pushes updates to
     /// |sink|.
-    async fn poll_time_until_successful(&self, sink: &mut Sender<Update>) -> Result<(), Error> {
+    async fn try_generate_sample_until_successful(
+        &self,
+        sink: &mut Sender<Update>,
+    ) -> Result<(), Error> {
         let mut attempt_iter = 0u32..;
         let mut last_error = None;
         loop {
             let attempt = attempt_iter.next().unwrap_or(u32::MAX);
-            match self.sampler.produce_sample().await {
+            match self.sampler.produce_sample(POLLS_PER_SAMPLE).await {
                 Ok(sample) => {
+                    info!(
+                        "Got a time sample - UTC {:?}, bound size {:?}, and round trip times {:?}",
+                        sample.utc, sample.final_bound_size, sample.round_trip_times
+                    );
                     self.diagnostics.success(&sample);
                     sink.send(Status::Ok.into()).await?;
                     sink.send(sample.into()).await?;
