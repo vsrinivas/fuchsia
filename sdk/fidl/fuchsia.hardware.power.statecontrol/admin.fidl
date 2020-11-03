@@ -93,21 +93,3 @@ protocol RebootMethodsWatcherRegister {
 protocol RebootMethodsWatcher {
     OnReboot(RebootReason reason) -> ();
 };
-
-/// Why the system reboots.
-// If a new value is needed, please add a member of //src/developer/feedback/OWNERs as a reviewer.
-enum RebootReason {
-    USER_REQUEST = 1;
-    SYSTEM_UPDATE = 2;
-    HIGH_TEMPERATURE = 3;
-    FACTORY_DATA_RESET = 6;
-
-    /// Sessionmgr has failed.
-    SESSION_FAILURE = 4;
-
-    /// Some core system component has failed.
-    SYSTEM_FAILURE = 5;
-
-    /// A critical component managed by sysmgr has failed.
-    CRITICAL_COMPONENT_FAILURE = 7;
-};

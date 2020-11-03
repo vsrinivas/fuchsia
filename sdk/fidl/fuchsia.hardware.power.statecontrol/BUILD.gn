@@ -6,7 +6,13 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.power.statecontrol") {
   sdk_category = "partner"
+
   api = "fuchsia.hardware.power.statecontrol.api"
-  sources = [ "admin.fidl" ]
+
+  sources = [
+    "admin.fidl",
+    "reboot_reason.fidl",
+  ]
+
   public_deps = [ "//zircon/vdso/zx" ]
 }
