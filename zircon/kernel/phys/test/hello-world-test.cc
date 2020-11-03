@@ -8,9 +8,22 @@
 
 #include "test-main.h"
 
+#if defined(__x86_64__) || defined(__i386__)
+#include <lib/arch/x86/boot-cpuid.h>
+#endif
+
 const char Symbolize::kProgramName_[] = "hello-world-test";
 
 int TestMain(void*, arch::EarlyTicks) {
   printf("Hello, world!\n");
+
+#if defined(__x86_64__) || defined(__i386__)
+  printf("CPU features:\n");
+  constexpr auto print_one = [](const char* s) { printf("\t%s\n", s); };
+  arch::BootCpuid<arch::CpuidFeatureFlagsC>().Print(print_one);
+  arch::BootCpuid<arch::CpuidFeatureFlagsD>().Print(print_one);
+  arch::BootCpuid<arch::CpuidExtendedFeatureFlagsB>().Print(print_one);
+#endif
+
   return 0;
 }

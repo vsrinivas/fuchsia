@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hwreg/internal.h>
 #include <stdio.h>
+
+#include <hwreg/internal.h>
 
 namespace hwreg {
 
@@ -20,8 +21,8 @@ void FieldPrinter::Print(uint64_t value, char* buf, size_t len) const {
            val);
 #else
   int pad_len = (num_bits + 3) / 4;
-  snprintf(buf, len, "%s[%u:%u]: 0x%0*" PRIx64 " (%" PRIu64 ")", name_, bit_high_incl_, bit_low_,
-           pad_len, val, val);
+  snprintf(buf, len, "%s[%" PRIu32 ":%" PRIu32 "]: 0x%0*" PRIx64 " (%" PRIu64 ")", name_,
+           bit_high_incl_, bit_low_, pad_len, val, val);
 #endif  // _KERNEL
   buf[len - 1] = 0;
 }

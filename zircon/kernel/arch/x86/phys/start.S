@@ -6,6 +6,7 @@
 
 #include <lib/arch/asm.h>
 #include <lib/arch/ticks.h>
+#include <lib/arch/x86/cpuid-asm.h>
 #include <lib/arch/x86/msr.h>
 #include <zircon/tls.h>
 
@@ -36,31 +37,51 @@
   cld  // Assume nothing.  ABI requires that DF be clear.
   rep stosq
 
-  // Move first argument to PhysMain into place.
-  mov %rsi, %rdi
+  // Save first argument to PhysMain in a call-saved register.
+  // The time stamp is already safe in %rbx.
+  mov %rsi, %r12
 
-  // The time stamp will be the second argument to PhysMain.
-  mov %rbx, %rsi
+  // Get all the cpuid data in place.
+  // This only needs the basic stack to call and return.
+  lea (boot_stack + BOOT_STACK_SIZE)(%rip), %rsp
+  call InitializeBootCpuid
 
-  // Set up the stacks and the thread pointer area.
+  // Set up the secondary stacks and the thread pointer area.
   lea boot_thread_pointer(%rip), %rax
 
-  // TODO: check cpuid and use wrgsbase
-  // Use the MSR if wrgsbase is not available.
+  // The wrgsbase instruction is more efficient when it's supported.  But using
+  // it requires both checking CPUID for its support and then enabling it in
+  // %cr4.  There is no real need to bother with any of that in assembly since
+  // one wrmsr at boot is not costly enough to bother avoiding.  The kernel can
+  // check for and enable fsgsbase instructions easily and cleanly from C++
+  // before it does anything that is performance-sensitive enough to warrant
+  // preferring them over the MSRs.
   wrmsr64 MSR_IA32_GS_BASE
 
 .Lstack_guard:
-  // TODO: check cpuid and use rdseed or rdrand
+  // Use the best hardware randomness available for the stack canary value.
+  testl $CPUID_EXTF_RDSEED, (gBootCpuidExtf + CPUID_EBX)(%rip)
+  jnz .Lrdseed
+  testl $CPUID_FEATURE_RDRAND, (gBootCpuidFeature + CPUID_ECX)(%rip)
+  jnz .Lrdrand
+
   // The only "randomness" readily available is our own load address, so
   // swizzle that in with some arbitrary bits.
   lea _start(%rip), %rcx
   movabs $0xdeadbeef1ee2d00d, %rax
   xor %rcx, %rax
+  jmp .Lstack_guard_write
+
+.Lrdrand:
+  rdrand %rax
+  jmp .Lstack_guard_write
+
+.Lrdseed:
+  rdseed %rax
 
 .Lstack_guard_write:
   mov %rax, %gs:ZX_TLS_STACK_GUARD_OFFSET
 
-  lea (boot_stack + BOOT_STACK_SIZE)(%rip), %rsp
 #if __has_feature(safe_stack)
   lea (boot_unsafe_stack + BOOT_STACK_SIZE)(%rip), %rax
   mov %rax, %gs:ZX_TLS_UNSAFE_SP_OFFSET
@@ -70,6 +91,8 @@
   // call since it's obliged never to return, but it's nice to have the
   // caller in a backtrace (and the call implicitly adjusts the stack
   // alignment as the ABI requires).
+  mov %r12, %rdi
+  mov %rbx, %rsi
   call PhysMain
 
   // Trap forever just in case it does return.

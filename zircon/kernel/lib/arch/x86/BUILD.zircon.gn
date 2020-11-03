@@ -4,16 +4,54 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+if ("$zx/" == "//") {  # Zircon build only.
+  import("$zx/system/ulib/hwreg/hwreg_asm_header.gni")
+}
 import("$zx_build/public/gn/migrated_targets.gni")
 
-zx_library("x86") {
-  kernel = true
-  host = true
-  static = true
-  visibility = [ "../*" ]
-  sources = []
+# In the Zircon build, default_toolchain is used for the hwreg_asm_header()
+# generation action, but it cannot instantiate a compiling target like this.
+# So only define the library target in a non-default toolchain, or in the other
+# build where everything is different.
+if ("$zx/" != "//" || current_toolchain != default_toolchain) {
+  zx_library("x86") {
+    kernel = true
+    host = true
+    static = true
+    visibility = [ "../*" ]
+    sources = []
+    public_deps = [
+      # <lib/arch/x86/cpuid.h> has #include <hwreg/bitfields.h>.
+      "$zx/system/ulib/hwreg:headers",
+    ]
+    deps = [ "$zx/system/ulib/hwreg" ]
 
-  sdk = "source"
-  sdk_headers = [ "lib/arch/intrin.h" ]
-  sdk_migrated = true
+    include_dirs = [ "../include" ]
+
+    if ("$zx/" == "//") {
+      public_deps += [ ":gen-cpuid-asm" ]
+
+      if (!is_host) {
+        sources = [
+          "boot-cpuid.S",
+          "boot-cpuid.cc",
+        ]
+      }
+    }
+
+    sdk = "source"
+    sdk_headers = [ "lib/arch/intrin.h" ]
+    sdk_migrated = true
+  }
+}
+
+# Only the Zircon build has this build support, so the actual build of the
+# library can only be done in Zircon for now.  The other build only actually
+# compiles the machine-independent parts of the library.
+if ("$zx/" == "//") {
+  hwreg_asm_header("gen-cpuid-asm") {
+    output_name = "lib/arch/x86/cpuid-asm.h"
+    sources = [ "gen-cpuid-asm.cc" ]
+    deps = [ ".." ]
+  }
 }

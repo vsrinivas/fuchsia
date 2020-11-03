@@ -58,6 +58,16 @@ SECTIONS {
   }
   ASSERT(SIZEOF(.init_array) == 0, "no static constructors allowed")
 
+  /*
+   * TODO(mcgrathr): Clean things up so automatic orphans placement works
+   * and this explicit handling is not required for every section.
+   */
+  BootCpuid : {
+    PROVIDE_HIDDEN(__start_BootCpuid = .);
+    *(BootCpuid)
+    PROVIDE_HIDDEN(__stop_BootCpuid = .);
+  }
+
   .data : {
     *(.data*)
 

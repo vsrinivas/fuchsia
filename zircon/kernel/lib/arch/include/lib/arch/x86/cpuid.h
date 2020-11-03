@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_CPUID_H_
 
 #include <string_view>
+#include <type_traits>
 
 #include <hwreg/bitfields.h>
 
@@ -29,7 +30,14 @@ struct CpuidIo {
     kEdx = 3,
   };
 
-  uint32_t Read(uint32_t reg) const {
+  // The API needs this to be a template even though only one type is valid.
+  // In the general case, this is usually a template that admits multiple
+  // possible integer types.  So calls to it from template-generic code use
+  // `io.template Read<uint32_t>(offset)` and the like, which is invalid if
+  // this is not a template function.
+  template <typename T>
+  T Read(uint32_t reg) const {
+    static_assert(std::is_same_v<T, uint32_t>);
     ZX_ASSERT(reg < std::size(values_));
     return values_[reg];
   }

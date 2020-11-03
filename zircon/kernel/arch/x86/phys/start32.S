@@ -90,6 +90,10 @@
   push %ebx  // Second argument (3rd word): arch::EarlyTicks (high order)
   .cfi_adjust_cfa_offset 4
 
+  // Initialize cpuid data.  This could be done earlier, but nothing needs it
+  // and doing it here avoids saving and restoring any extra registers.
+  call InitializeBootCpuid
+
   // Now the full C++ ABI is available.  This could theoretically be a tail
   // call since it's obliged never to return, but it's nice to have the
   // caller in a backtrace (and the call implicitly adjusts the stack
