@@ -23,7 +23,6 @@ static const char* hostname;
 static struct sockaddr_in6 addr;
 static bool found = false;
 static char found_device_nodename[MAX_NODENAME_LENGTH];
-static bool fuchsia_address = false;
 static bool local_address = false;
 static const char* appname;
 
@@ -48,21 +47,16 @@ static bool on_device(device_info_t* device, void* cookie) {
 static void usage(void) {
   fprintf(stderr, "usage: %s [options] [hostname]\n", appname);
   netboot_usage(false);
-  fprintf(stderr, "    --fuchsia         Use fuchsia link local addresses.\n");
   fprintf(stderr, "    --local           Print local address that routes to remote.\n");
 }
 
 static struct option netaddr_opts[] = {
-    {"fuchsia", no_argument, NULL, 'f'},
     {"local", no_argument, NULL, 'l'},
     {NULL, 0, NULL, 0},
 };
 
 static bool netaddr_opt_callback(int ch, int argc, char* const* argv) {
   switch (ch) {
-    case 'f':
-      fuchsia_address = true;
-      break;
     case 'l':
       local_address = true;
       break;
@@ -116,11 +110,6 @@ int main(int argc, char** argv) {
       return -1;
     }
     shutdown(s, SHUT_RDWR);
-  }
-
-  if (fuchsia_address) {
-    // Make it a valid link-local address by fiddling some bits.
-    addr.sin6_addr.s6_addr[11] = 0xFF;
   }
 
   // Get the string form of the address.
