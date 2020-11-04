@@ -318,6 +318,18 @@ sdk("core") {
   ]
 }
 
+sdk("core2") {
+  id = sdk_id
+
+  category = "partner"
+
+  api = "core2.manifest"
+
+  testonly = true
+
+  deps = [ ":core_idk" ]
+}
+
 # The `modular_testing` SDK provides FIDL protocols and C++ libraries for writing hermetic
 # integration tests which use modular.
 #
