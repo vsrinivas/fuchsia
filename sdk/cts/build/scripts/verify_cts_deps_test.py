@@ -76,6 +76,30 @@ class CtsVerifyDepsTests(unittest.TestCase):
             root_build_dir + '/cts/sdk/sdk.this_is_cts',
             cts_element.get_file_path(dep))
 
+    # TODO(johnshamoon): Verify that _sdk.meta.json doesn't exist when it
+    # shouldn't.
+    def test_get_sdk_meta_path(self):
+        root_build_dir = os.getcwd()
+        cts_file = 'test.this_is_cts'
+        invoker_label = "//sdk/cts/build:verify_cts_deps_test"
+        deps = ['//zircon/public/lib/zxtest:zxtest']
+        allowed_cts_dirs = ['//sdk/*']
+        cts_element = VerifyCtsDeps(
+            root_build_dir, cts_file, invoker_label, deps, deps,
+            allowed_cts_dirs)
+
+        dep = '//sdk/lib/fdio:fdio'
+        self.assertEqual(root_build_dir + '/gen/sdk/lib/fdio/fdio_sdk.meta.json',
+                         cts_element.get_sdk_meta_path(dep))
+
+        dep = '//sdk/lib/fdio'
+        self.assertEqual(root_build_dir + '/gen/sdk/lib/fdio/fdio_sdk.meta.json',
+                         cts_element.get_sdk_meta_path(dep))
+
+        dep = '//sdk'
+        self.assertEqual(root_build_dir + '/gen/sdk/sdk_sdk.meta.json',
+                         cts_element.get_sdk_meta_path(dep))
+
     def test_verify_deps(self):
         root_build_dir = os.getcwd()
         cts_file = 'test.this_is_cts'

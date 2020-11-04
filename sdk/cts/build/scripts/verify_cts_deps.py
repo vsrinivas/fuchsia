@@ -92,6 +92,29 @@ class VerifyCtsDeps:
 
         return self.root_build_dir + '/cts/' + dep + '/' + target_name + CTS_EXTENSION
 
+    def get_sdk_meta_path(self, dep):
+        """Returns the path to the targets ${target_name}_sdk.meta.json file.
+
+        Args:
+          dep (string): A GN label.
+
+        Returns:
+          A string containing the absolute path to the target's _sdk.meta.json file.
+        """
+        dep = dep[2:]
+
+        if ':' in dep:
+            # //sdk:core
+            dep, target_name = dep.split(':')
+        elif '/' in dep:
+            # //sdk/cts
+            _, target_name = dep.rsplit('/', 1)
+        else:
+            # //sdk
+            target_name = dep
+
+        return self.root_build_dir + '/gen/' + dep + '/' + target_name + '_sdk.meta.json'
+
     def verify_deps(self):
         """Verifies the element's dependencies are allowed in CTS.
 
@@ -109,11 +132,15 @@ class VerifyCtsDeps:
                 dep_found = True
             else:
                 # Dep isn't in the allow list and a CTS file doesn't exist. Check if
-                # all targets in dep's directory are allowed (//sdk/*).
+                # all targets in dep's directory are allowed (//third_party/dart-pkg/pub/*).
                 for allowed_dir in self.allowed_cts_dirs:
                     pattern = re.compile(allowed_dir)
                     if pattern.match(dep):
                         dep_found = True
+
+                # Check if dep is an SDK target.
+                if not dep_found and os.path.exists(self.get_sdk_meta_path(dep)):
+                    dep_found = True
 
             if not dep_found:
                 unaccepted_deps.append(dep)
