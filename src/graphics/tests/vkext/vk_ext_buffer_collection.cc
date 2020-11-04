@@ -78,7 +78,12 @@ class VulkanExtensionTest : public testing::Test {
   bool SupportsMultiImageBufferCollection() {
     vk::PhysicalDeviceProperties physical_device_properties;
     ctx_->physical_device().getProperties(&physical_device_properties);
-    return std::string(physical_device_properties.deviceName).find("Mali") != std::string::npos;
+    auto deviceName = std::string(physical_device_properties.deviceName);
+    if (deviceName.find("Mali") != std::string::npos)
+      return true;
+    if (deviceName.find("Intel") != std::string::npos)
+      return true;
+    return false;
   }
 
  protected:
