@@ -56,7 +56,7 @@ class BlobLayout {
   // The uncompressed size of the file.
   ByteCountType FileSize() const;
   // The uncompressed size of the file rounded up to the next multiple of the block size.
-  zx::status<ByteCountType> FileBlockAlignedSize() const;
+  ByteCountType FileBlockAlignedSize() const;
 
   // The number of bytes used to store the blob's data.
   // When reading a compressed blob this may not be the exact size but a safe upper bound.  All
@@ -64,30 +64,30 @@ class BlobLayout {
   // because the size of the compressed file is not stored.  See fxbug.dev/44547.
   ByteCountType DataSizeUpperBound() const;
   // The size of buffer required to hold |DataBlockCount| blocks.
-  zx::status<ByteCountType> DataBlockAlignedSize() const;
+  ByteCountType DataBlockAlignedSize() const;
   // The number of blocks that the data spans.
-  zx::status<BlockCountType> DataBlockCount() const;
+  BlockCountType DataBlockCount() const;
   // The first block of the blob containing part of the blob's data.  The rest of the blob's data
   // will be in the following |DataBlockCount| - 1 blocks.
-  virtual zx::status<BlockCountType> DataBlockOffset() const = 0;
+  virtual BlockCountType DataBlockOffset() const = 0;
 
   // The number of bytes required to store the Merkle tree.
   ByteCountType MerkleTreeSize() const;
   // The size of buffer required to hold |MerkleTreeBlockCount| blocks.
-  zx::status<ByteCountType> MerkleTreeBlockAlignedSize() const;
+  ByteCountType MerkleTreeBlockAlignedSize() const;
   // The number of blocks that the Merkle tree spans.
-  zx::status<BlockCountType> MerkleTreeBlockCount() const;
+  BlockCountType MerkleTreeBlockCount() const;
   // The first block of the blob containing part of the Merkle tree.  The rest of the Merkle tree
   // will be in the following |MerkleTreeBlockCount| - 1 blocks.
-  virtual zx::status<BlockCountType> MerkleTreeBlockOffset() const = 0;
+  virtual BlockCountType MerkleTreeBlockOffset() const = 0;
   // The offset within |MerkleTreeBlockOffset| that the Merkle tree starts at.
   virtual ByteCountType MerkleTreeOffsetWithinBlockOffset() const = 0;
 
   // The total number of blocks that the blob spans.
-  virtual zx::status<BlockCountType> TotalBlockCount() const = 0;
+  virtual BlockCountType TotalBlockCount() const = 0;
 
   // True if the data and Merkle tree share a block.
-  virtual zx::status<bool> HasMerkleTreeAndDataSharedBlock() const = 0;
+  virtual bool HasMerkleTreeAndDataSharedBlock() const = 0;
 
   // The format that this layout is in.
   virtual BlobLayoutFormat Format() const = 0;
