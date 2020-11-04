@@ -77,7 +77,7 @@ class BazelTester(object):
         self._add_bazel_startup_options(invocation)
         invocation += ['query', query]
         self._add_bazel_command_flags(invocation)
-        return set(check_output(invocation, cwd=SCRIPT_DIR).splitlines())
+        return set(check_output(invocation, cwd=SCRIPT_DIR).decode().splitlines())
 
 
     def run(self):
