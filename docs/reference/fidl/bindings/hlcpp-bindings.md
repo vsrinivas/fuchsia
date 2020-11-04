@@ -383,6 +383,13 @@ Examples on how to set up and bind an `InterfacePtr` or a
 `SynchronousInterfacePtr` to a channel are covered in the
 [HLCPP tutorial][client-tut].
 
+The `fidl::InterfacePtr` type is thread-hostile.  All calls to an instance of
+this type must be made from the same thread. The `fidl::SynchronousInterfacePtr`
+type is thread-compatible. Once an instance of this type is bound it can be used
+from multiple threads simultaneously. The `fidl::InterfaceHandle` type can be
+used to safely transfer a channel handle between threads. See the class
+documentation on these types for more details.
+
 ### Server
 
 Implementing a server for a FIDL protocol involves providing a concrete
