@@ -54,7 +54,7 @@ default format is used.
 
 **Current value (from the default):** `""`
 
-From //public/gn/config/BUILD.zircon.gn:25
+From //public/gn/config/BUILD.zircon.gn:26
 
 ### clang_ml_inliner
 Controls whether to use the ML inliner in Clang to reduce size. Note that
@@ -78,7 +78,7 @@ Clang crash reports directory path. Use empty path to disable altogether.
 
 **Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir.zircon/clang-crashreports"`
 
-From //public/gn/config/BUILD.zircon.gn:13
+From //public/gn/config/BUILD.zircon.gn:14
 
 ### current_cpu
 
@@ -103,7 +103,7 @@ TODO(fxbug.dev/3156): This must be set by the controlling Fuchsia GN build.
 
 **Current value for `target_cpu = `:** `["//:legacy_unification-x64"]`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:12
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:13
 
 **Overridden from the default:** `false`
 
@@ -115,7 +115,7 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:13
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:14
 
 **Overridden from the default:** `false`
 
@@ -266,7 +266,7 @@ source-absolute path ("//...") or a system absolute path.
 
 **Current value for `target_cpu = `:** `"/b/s/w/ir/x/w/prebuilt/third_party/goma/linux-x64"`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:14
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:15
 
 **Overridden from the default:** `"//prebuilt/third_party/goma/linux-x64"`
 
@@ -378,7 +378,7 @@ Controls whether we should output GSYM files for Fuchsia binaries.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:15
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:16
 
 **Overridden from the default:** `false`
 
@@ -404,7 +404,7 @@ prebuilt.
 
 **Current value for `target_cpu = `:** `"hiBW1PvncaE9p_v8B7jYST7ykB4Nzw_2QdIlnyzoBkgC"`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:16
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:17
 
 **Overridden from the default:** `""`
 
@@ -431,6 +431,31 @@ zero add increasing details at the cost of increased trace buffer use.
 
 From //kernel/params.gni:43
 
+### scudo_default_options
+Default [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html) options
+(before the `SCUDO_OPTIONS` environment variable is read at runtime).
+Scudo is the memory allocator in Fuchsia's C library, so this affects all
+Fuchsia programs.  This can be a list of strings or a single string.
+
+This operates similarly to [`asan_default_options`](#asan_default_options)
+and its cousins for other sanitizers, but is slightly different.  If this
+variable is empty, then no `__scudo_default_options` function is injected
+into programs at all.  Individual targets can use dependencies on
+sanitizer_extra_options() targets to cause options to be injected, and that
+will be compatible with any build-wide settings of `scudo_default_options`.
+Programs **can** define their own `__scudo_default_options` functions, but
+doing so will break all builds with this variable is set to nonempty, so
+any program in the build that needs such a setting (which should be only in
+tests) can use the sanitizer_extra_options() mechanism instead.
+
+**Current value for `target_cpu = `:** `[]`
+
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:10
+
+**Overridden from the default:** `[]`
+
+From //public/gn/config/instrumentation/sanitizer_default_options.gni:60
+
 ### smp_max_cpus
 
 **Current value (from the default):** `16`
@@ -456,7 +481,7 @@ The empty list (or empty string) means don't use `--sysroot` at all.
 }]
 ```
 
-From //public/gn/config/BUILD.zircon.gn:19
+From //public/gn/config/BUILD.zircon.gn:20
 
 ### target_cpu
 
@@ -508,7 +533,7 @@ Set to true to enable compiling with ccache.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:17
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:18
 
 **Overridden from the default:** `false`
 
@@ -519,7 +544,7 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:18
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:19
 
 **Overridden from the default:** `false`
 
@@ -763,7 +788,7 @@ Variant scope parameters
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:19
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:20
 
 **Overridden from the default:** `[]`
 
@@ -793,7 +818,7 @@ compression available) probably makes sense.
 
 **Current value for `target_cpu = `:** `"zstd"`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:20
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:21
 
 **Overridden from the default:** `"zstd"`
 
@@ -835,7 +860,7 @@ does.
 
 **Current value for `target_cpu = `:** `0`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:21
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:22
 
 **Overridden from the default:** `0`
 

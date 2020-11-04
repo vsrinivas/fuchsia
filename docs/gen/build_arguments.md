@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1259
+From //build/config/BUILDCONFIG.gn:1262
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -489,7 +489,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:2151
+From //build/config/BUILDCONFIG.gn:2154
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -956,7 +956,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1022
+From //build/config/BUILDCONFIG.gn:1025
 
 ### fastboot_product
 
@@ -1646,7 +1646,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:918
+From //build/config/BUILDCONFIG.gn:921
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2279,6 +2279,27 @@ zero add increasing details at the cost of increased trace buffer use.
 
 From //zircon/kernel/params.gni:43
 
+### scudo_default_options
+Default [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html) options
+(before the `SCUDO_OPTIONS` environment variable is read at runtime).
+Scudo is the memory allocator in Fuchsia's C library, so this affects all
+Fuchsia programs.  This can be a list of strings or a single string.
+
+This operates similarly to [`asan_default_options`](#asan_default_options)
+and its cousins for other sanitizers, but is slightly different.  If this
+variable is empty, then no `__scudo_default_options` function is injected
+into programs at all.  Individual targets can use dependencies on
+sanitizer_extra_options() targets to cause options to be injected, and that
+will be compatible with any build-wide settings of `scudo_default_options`.
+Programs **can** define their own `__scudo_default_options` functions, but
+doing so will break all builds with this variable is set to nonempty, so
+any program in the build that needs such a setting (which should be only in
+tests) can use the sanitizer_extra_options() mechanism instead.
+
+**Current value (from the default):** `[]`
+
+From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:60
+
 ### sdk_dirs
 The directories to search for parts of the SDK.
 
@@ -2365,7 +2386,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1249
+From //build/config/BUILDCONFIG.gn:1252
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2374,7 +2395,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1254
+From //build/config/BUILDCONFIG.gn:1257
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2412,7 +2433,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1068
+From //build/config/BUILDCONFIG.gn:1071
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2672,7 +2693,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1042
+From //build/config/BUILDCONFIG.gn:1045
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3057,7 +3078,7 @@ From //BUILD.gn:113
 
 **Current value (from the default):** `true`
 
-From //build/config/fuchsia/BUILD.gn:193
+From //build/config/fuchsia/BUILD.gn:195
 
 ### zircon_b_partition
 
