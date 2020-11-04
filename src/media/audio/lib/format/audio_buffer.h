@@ -48,6 +48,12 @@ class AudioBuffer {
   size_t SampleIndex(size_t frame, size_t chan) const { return frame * format_.channels() + chan; }
   SampleT SampleAt(size_t frame, size_t chan) const { return samples_[SampleIndex(frame, chan)]; }
 
+  void Append(const AudioBufferSlice<SampleFormat>& slice_to_append) {
+    FX_CHECK(format() == slice_to_append.format());
+
+    samples_.insert(samples_.end(), slice_to_append.begin(), slice_to_append.end());
+  }
+
   // For debugging, display the given range of frames.
   void Display(size_t start_frame, size_t end_frame) const {
     start_frame = std::min(start_frame, NumFrames());
@@ -104,15 +110,15 @@ class AudioBufferSlice {
   bool empty() const { return !buf_ || start_frame_ == end_frame_; }
 
   typename std::vector<SampleT>::const_iterator begin() const {
-    return buf_->samples().begin() + start_frame_;
+    return buf_->samples().begin() + start_frame_ * format().channels();
   };
   typename std::vector<SampleT>::const_iterator end() const {
-    return buf_->samples().begin() + end_frame_;
+    return buf_->samples().begin() + end_frame_ * format().channels();
   };
 
   size_t NumFrames() const { return end_frame_ - start_frame_; }
-  size_t NumBytes() const { return NumFrames() * format().bytes_per_frame(); }
   size_t NumSamples() const { return NumFrames() * format().channels(); }
+  size_t NumBytes() const { return NumFrames() * format().bytes_per_frame(); }
   size_t SampleIndex(size_t frame, size_t chan) const {
     FX_CHECK(buf_);
     return buf_->SampleIndex(start_frame_ + frame, chan);
