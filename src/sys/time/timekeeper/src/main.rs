@@ -285,7 +285,7 @@ async fn maintain_utc<R: 'static, T: 'static, S: 'static, D: 'static>(
                     time: None,
                 });
             }
-            info!("clock was already running at intialization, reporting source as unverified");
+            info!("clock was already running at initialization, reporting source as unverified");
             primary.notifier.set_source(ftime::UtcSource::Unverified).await;
         }
     }
@@ -316,7 +316,7 @@ async fn maintain_utc<R: 'static, T: 'static, S: 'static, D: 'static>(
         Err(why) => warn!("failed to wait for network, attempted to sync time anyway: {:?}", why),
     }
 
-    info!("launching clock managers...");
+    info!("network connectivity check complete, launching clock managers...");
     let fut1 = ClockManager::execute(
         primary.clock,
         primary_source_manager,
