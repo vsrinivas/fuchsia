@@ -43,7 +43,7 @@ inline constexpr in_place_index_t<Index> in_place_index{};
 // For C++ 14 we need to provide storage for the variable so we define
 // a reference instead.
 
-template <typename Dummy = void>
+template <typename Placeholder = void>
 struct in_place_holder {
   static constexpr in_place_t instance{};
 };
@@ -58,8 +58,8 @@ struct in_place_index_holder {
   static constexpr in_place_index_t<Index> instance{};
 };
 
-template <typename Dummy>
-constexpr in_place_t in_place_holder<Dummy>::instance;
+template <typename Placeholder>
+constexpr in_place_t in_place_holder<Placeholder>::instance;
 
 template <typename T>
 constexpr in_place_type_t<T> in_place_type_holder<T>::instance;
