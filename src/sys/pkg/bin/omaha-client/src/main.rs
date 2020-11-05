@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{Context as _, Error};
+use fidl_fuchsia_paver::PaverMarker;
 use fuchsia_component::server::ServiceFs;
 use futures::{lock::Mutex, prelude::*, stream::FuturesUnordered};
 use http_request::FuchsiaHyperHttpRequest;
@@ -169,10 +170,20 @@ fn main() -> Result<(), Error> {
 }
 
 async fn check_and_set_system_health() {
-    if let Err(err) = system_health_check::check_system_health().await {
-        error!("error during system health check: {}", err);
-        return;
+    if let Err(err) = check_and_set_system_health_impl().await {
+        error!("error during system health check: {:#}", err);
     }
-    info!("Marking current slot as good...");
-    system_health_check::set_active_configuration_healthy().await;
+}
+
+async fn check_and_set_system_health_impl() -> Result<(), Error> {
+    system_health_check::check_system_health().await?;
+
+    let paver = fuchsia_component::client::connect_to_service::<PaverMarker>()?;
+    let (boot_manager, boot_manager_server_end) = ::fidl::endpoints::create_proxy()?;
+
+    paver
+        .find_boot_manager(boot_manager_server_end)
+        .context("transport error while calling find_boot_manager()")?;
+
+    system_health_check::set_active_configuration_healthy(&boot_manager).await
 }

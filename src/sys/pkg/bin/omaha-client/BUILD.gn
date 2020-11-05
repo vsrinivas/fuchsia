@@ -27,6 +27,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity-rustc",

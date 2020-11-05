@@ -4,29 +4,16 @@
 
 use {
     anyhow::{format_err, Context},
-    fidl_fuchsia_paver::{Configuration, PaverMarker},
-    fuchsia_component::client::connect_to_service,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fidl_fuchsia_paver::{BootManagerProxy, Configuration},
+    fuchsia_syslog::fx_log_info,
     fuchsia_zircon::Status,
 };
 
 /// Inform the Paver service that Fuchsia booted successfully, so it marks the partition healthy
 /// and stops decrementing the boot counter.
-pub async fn set_active_configuration_healthy() {
-    if let Err(err) = set_active_configuration_healthy_impl().await {
-        fx_log_err!("error marking active configuration successful: {:#}", err);
-    }
-}
-
-async fn set_active_configuration_healthy_impl() -> Result<(), anyhow::Error> {
-    let paver = connect_to_service::<PaverMarker>()?;
-
-    let (boot_manager, boot_manager_server_end) = fidl::endpoints::create_proxy()?;
-
-    paver
-        .find_boot_manager(boot_manager_server_end)
-        .context("transport error while calling find_boot_manager()")?;
-
+pub async fn set_active_configuration_healthy(
+    boot_manager: &BootManagerProxy,
+) -> Result<(), anyhow::Error> {
     // TODO(51480): This should use the "current" configuration, not active, when they differ.
     let active_config = match boot_manager
         .query_active_configuration()
@@ -90,4 +77,77 @@ async fn set_active_configuration_healthy_impl() -> Result<(), anyhow::Error> {
         .context("paver error while calling flush()")?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        fidl_fuchsia_paver::Configuration,
+        fuchsia_async as fasync,
+        fuchsia_zircon::Status,
+        mock_paver::{MockPaverServiceBuilder, PaverEvent},
+        std::sync::Arc,
+    };
+
+    // We should call SetConfigurationUnbootable when the device supports ABR and is not in recovery
+    #[fasync::run_singlethreaded(test)]
+    async fn test_calls_set_configuration_unbootable_config_a_active() {
+        let paver_service =
+            Arc::new(MockPaverServiceBuilder::new().active_config(Configuration::A).build());
+        set_active_configuration_healthy(&paver_service.spawn_boot_manager_service())
+            .await
+            .expect("setting active succeeds");
+        assert_eq!(
+            paver_service.take_events(),
+            vec![
+                PaverEvent::QueryActiveConfiguration,
+                PaverEvent::SetConfigurationHealthy { configuration: Configuration::A },
+                PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
+                PaverEvent::BootManagerFlush
+            ]
+        );
+    }
+
+    // We should call SetConfigurationUnbootable when the device supports ABR and is not in recovery
+    #[fasync::run_singlethreaded(test)]
+    async fn test_calls_set_configuration_unbootable_config_b_active() {
+        let paver_service =
+            Arc::new(MockPaverServiceBuilder::new().active_config(Configuration::B).build());
+        set_active_configuration_healthy(&paver_service.spawn_boot_manager_service())
+            .await
+            .expect("setting active succeeds");
+        assert_eq!(
+            paver_service.take_events(),
+            vec![
+                PaverEvent::QueryActiveConfiguration,
+                PaverEvent::SetConfigurationHealthy { configuration: Configuration::B },
+                PaverEvent::SetConfigurationUnbootable { configuration: Configuration::A },
+                PaverEvent::BootManagerFlush
+            ]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_does_not_change_metadata_when_device_does_not_support_abr() {
+        let paver_service = Arc::new(
+            MockPaverServiceBuilder::new()
+                .boot_manager_close_with_epitaph(Status::NOT_SUPPORTED)
+                .build(),
+        );
+        set_active_configuration_healthy(&paver_service.spawn_boot_manager_service())
+            .await
+            .expect("setting active succeeds");
+        assert_eq!(paver_service.take_events(), Vec::new());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_does_not_change_metadata_when_device_in_recovery() {
+        let paver_service =
+            Arc::new(MockPaverServiceBuilder::new().active_config(Configuration::Recovery).build());
+        set_active_configuration_healthy(&paver_service.spawn_boot_manager_service())
+            .await
+            .expect("setting active succeeds");
+        assert_eq!(paver_service.take_events(), vec![PaverEvent::QueryActiveConfiguration]);
+    }
 }
