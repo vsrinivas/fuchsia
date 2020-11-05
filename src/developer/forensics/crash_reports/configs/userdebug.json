@@ -1,0 +1,6 @@
+{
+    "crash_server" : {
+        "upload_policy": "read_from_privacy_settings",
+        "url": "https://clients2.google.com/cr/report"
+    }
+}

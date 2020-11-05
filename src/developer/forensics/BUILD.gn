@@ -38,11 +38,11 @@ group("infra_configs") {
 }
 
 group("userdebug_configs") {
-  deps = [ ":crash_reports_production_config" ]
+  deps = [ ":crash_reports_userdebug_config" ]
 }
 
 group("user_configs") {
-  deps = [ ":crash_reports_production_config" ]
+  deps = [ ":crash_reports_user_config" ]
 }
 
 ###############################################################################
@@ -179,10 +179,18 @@ resource("crash_reports_default_config") {
   outputs = [ "data/crash_reports/default_config.json" ]
 }
 
-config_data("crash_reports_production_config") {
+config_data("crash_reports_user_config") {
   for_pkg = "forensics"
 
-  sources = [ "crash_reports/configs/production.json" ]
+  sources = [ "crash_reports/configs/user.json" ]
+
+  outputs = [ "crash_reports/override_config.json" ]
+}
+
+config_data("crash_reports_userdebug_config") {
+  for_pkg = "forensics"
+
+  sources = [ "crash_reports/configs/userdebug.json" ]
 
   outputs = [ "crash_reports/override_config.json" ]
 }
