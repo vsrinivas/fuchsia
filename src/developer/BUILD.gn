@@ -6,7 +6,6 @@ group("developer") {
   testonly = true
   deps = [
     ":tests",
-    "cmd",
     "debug",
     "ffx",
     "forensics",
@@ -21,7 +20,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    "//src/developer/cmd:tests",
     "//src/developer/debug:tests",
     "//src/developer/ffx:tests",
     "//src/developer/forensics:tests",

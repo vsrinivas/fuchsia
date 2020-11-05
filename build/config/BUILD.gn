@@ -675,7 +675,6 @@ config("Wno-conversion") {
     "//src/connectivity/wlan/lib/common/cpp/*",
     "//src/connectivity/wlan/lib/mlme/cpp/*",
     "//src/connectivity/wlan/testing/wlantap-driver/*",
-    "//src/developer/cmd/*",
     "//src/developer/debug/debug_agent/*",
     "//src/developer/debug/ipc/*",
     "//src/developer/debug/shared/*",

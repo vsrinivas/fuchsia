@@ -232,7 +232,6 @@ group("deprecated_package_underscore") {
     "//src/connectivity/wlan/drivers/wlanif/test:wlanif_unittest",
     "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_tests",
     "//src/connectivity/wlan/testing/wlan-devmgr:wlan_devmgr",
-    "//src/developer/cmd:cmd_tests",
     "//src/developer/debug/debug_agent:debug_agent",
     "//src/developer/debug/debug_agent:debug_agent_tests",
     "//src/developer/kcounter_inspect:kcounter_inspect",
