@@ -132,7 +132,7 @@ async fn main() -> Result<(), Error> {
     };
     let diagnostics = Arc::new(CompositeDiagnostics::new(
         InspectDiagnostics::new(diagnostics::INSPECTOR.root(), &primary_track, &monitor_track),
-        CobaltDiagnostics::new(cobalt_experiment),
+        CobaltDiagnostics::new(cobalt_experiment, &primary_track, &monitor_track),
     ));
     let mut fs = ServiceFs::new();
     diagnostics::INSPECTOR.serve(&mut fs)?;
