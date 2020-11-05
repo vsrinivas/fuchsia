@@ -134,12 +134,7 @@ class {{ .Name }};
 extern "C" const fidl_type_t {{ .RequestTypeName }};
 extern "C" const fidl_type_t {{ .ResponseTypeName }};
   {{- end }}
-
-  {{- /* Trailing line feed after encoding tables. */}}
-  {{- if MethodsHaveReqOrResp .Methods }}
 {{ "" }}
-  {{- end }}
-  {{- /* End trailing line feed after encoding tables. */}}
 
 {{- range .DocComments }}
 //{{ . }}
@@ -558,10 +553,10 @@ class {{ .Name }} final {
 
   {{- end }}
 
-  {{- if .HasEvents }}
+  {{- if .Events }}
 {{ "" }}
   struct EventHandlers {
-    {{- range FilterMethodsWithReqs .Methods -}}
+    {{- range .Events -}}
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
@@ -582,7 +577,7 @@ class {{ .Name }} final {
   class ResultOf final {
     ResultOf() = delete;
    public:
-    {{- range FilterMethodsWithoutReqs .Methods -}}
+    {{- range .ClientMethods -}}
     {{- if .HasResponse -}}
 {{ "" }}
     {{- end }}
@@ -647,7 +642,7 @@ class {{ .Name }} final {
     UnownedResultOf() = delete;
 
    public:
-    {{- range FilterMethodsWithoutReqs .Methods -}}
+    {{- range .ClientMethods -}}
     class {{ .Name }} final : public ::fidl::Result {
      public:
       explicit {{ .Name }}(zx_handle_t _client
@@ -705,7 +700,7 @@ class {{ .Name }} final {
    public:
 {{ "" }}
     {{- /* Client-calling functions do not apply to events. */}}
-    {{- range FilterMethodsWithoutReqs .Methods -}}
+    {{- range .ClientMethods -}}
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
@@ -734,7 +729,7 @@ class {{ .Name }} final {
       {{- end }}
 {{ "" }}
     {{- end }}
-    {{- if .HasEvents }}
+    {{- if .Events }}
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
@@ -756,7 +751,7 @@ class {{ .Name }} final {
     ::zx::channel* mutable_channel() { return &channel_; }
 {{ "" }}
     {{- /* Client-calling functions do not apply to events. */}}
-    {{- range FilterMethodsWithoutReqs .Methods -}}
+    {{- range .ClientMethods -}}
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
@@ -784,7 +779,7 @@ class {{ .Name }} final {
       {{- end }}
 {{ "" }}
     {{- end }}
-    {{- if .HasEvents }}
+    {{- if .Events }}
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
@@ -878,7 +873,7 @@ class {{ .Name }} final {
   {{- if .Methods }}
 {{ "" }}
     {{- /* Events have no "request" part of the call; they are unsolicited. */}}
-    {{- range FilterMethodsWithReqs .Methods | FilterMethodsWithoutResps -}}
+    {{- range .Events -}}
 {{ "" }}
       {{- range .DocComments }}
   //{{ . }}
@@ -958,7 +953,7 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 }  // namespace
 
 {{- /* Client-calling functions do not apply to events. */}}
-{{- range FilterMethodsWithoutReqs .Methods -}}
+{{- range .ClientMethods -}}
 {{ "" }}
     {{- template "SyncRequestManagedMethodDefinition" . }}
   {{- if or .Request .Response }}
@@ -968,7 +963,7 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{ "" }}
 {{- end }}
 
-{{- range FilterMethodsWithoutReqs .Methods }}
+{{- range .ClientMethods }}
 {{ "" }}
   {{- template "ClientSyncRequestManagedMethodDefinition" . }}
   {{- if or .Request .Response }}
@@ -983,7 +978,7 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{ template "ClientDispatchDefinition" . }}
 {{ "" }}
 
-{{- if .HasEvents }}
+{{- if .Events }}
   {{- template "StaticCallSyncEventHandlerMethodDefinition" . }}
 {{- end }}
 
@@ -993,8 +988,7 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 
 {{- if .Methods }}
 {{ "" }}
-  {{- range FilterMethodsWithoutResps .Methods -}}
-    {{- if not .HasRequest }}
+  {{- range .Events -}}
 {{ "" }}
       {{- template "SendEventManagedMethodDefinition" . }}
       {{- if .Response }}
@@ -1002,25 +996,22 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
         {{- template "SendEventCallerAllocateMethodDefinition" . }}
       {{- end }}
 {{ "" }}
-    {{- else }}
+  {{- end }}
+  {{- range .TwoWayMethods -}}
 {{ "" }}
-      {{- template "ReplyManagedMethodDefinition" . }}
-      {{- if .Result }}
+    {{- template "ReplyManagedMethodDefinition" . }}
+    {{- if .Result }}
       {{- template "ReplyManagedResultSuccessMethodDefinition" . }}
       {{- template "ReplyManagedResultErrorMethodDefinition" . }}
-      {{- end }}
-      {{- if .Response }}
-{{ "" }}
-        {{- template "ReplyCallerAllocateMethodDefinition" . }}
-        {{- if .Result }}
-        {{- template "ReplyCallerAllocateResultSuccessMethodDefinition" . }}
-        {{- end }}
-      {{- end }}
-      {{- if .Response }}
-{{ "" }}
-      {{- end }}
-{{ "" }}
     {{- end }}
+    {{- if .Response }}
+{{ "" }}
+      {{- template "ReplyCallerAllocateMethodDefinition" . }}
+      {{- if .Result }}
+        {{- template "ReplyCallerAllocateResultSuccessMethodDefinition" . }}
+      {{- end }}
+    {{- end }}
+{{ "" }}
   {{- end }}
 {{ "" }}
 

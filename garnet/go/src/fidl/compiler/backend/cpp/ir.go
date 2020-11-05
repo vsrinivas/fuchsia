@@ -344,7 +344,9 @@ type StructMember struct {
 	Offset       int
 }
 
-type Protocol struct {
+// protocolInner contains information about a Protocol that should be
+// filled out by the compiler.
+type protocolInner struct {
 	types.Attributes
 	Namespace           string
 	Name                string
@@ -360,13 +362,59 @@ type Protocol struct {
 	ResponseEncoderName string
 	ResponseDecoderName string
 	Methods             []Method
-	HasEvents           bool
+}
 
-	// Kind should be default initialized.
+// Protocol should be created using protocolInner.build().
+type Protocol struct {
+	protocolInner
+
+	// OneWayMethods contains the list of one-way (i.e. fire-and-forget) methods
+	// in the protocol.
+	OneWayMethods []Method
+
+	// TwoWayMethods contains the list of two-way (i.e. has both request and
+	// response) methods in the protocol.
+	TwoWayMethods []Method
+
+	// ClientMethods contains the list of client-initiated methods (i.e. any
+	// interaction that is not an event). It is the union of one-way and two-way
+	// methods.
+	ClientMethods []Method
+
+	// Events contains the list of events (i.e. initiated by servers)
+	// in the protocol.
+	Events []Method
+
+	// Kind should always be default initialized.
 	Kind protocolKind
 }
 
-func (p Protocol) isResource() bool {
+func (inner protocolInner) build() *Protocol {
+	type kinds []methodKind
+
+	filterBy := func(kinds kinds) []Method {
+		var out []Method
+		for _, m := range inner.Methods {
+			k := m.methodKind()
+			for _, want := range kinds {
+				if want == k {
+					out = append(out, m)
+				}
+			}
+		}
+		return out
+	}
+
+	return &Protocol{
+		protocolInner: inner,
+		OneWayMethods: filterBy(kinds{oneWayMethod}),
+		TwoWayMethods: filterBy(kinds{twoWayMethod}),
+		ClientMethods: filterBy(kinds{oneWayMethod, twoWayMethod}),
+		Events:        filterBy(kinds{eventMethod}),
+	}
+}
+
+func (p *Protocol) isResource() bool {
 	return false
 }
 
@@ -447,6 +495,27 @@ func (m *Method) compileProperties(c compiler) {
 	for i := 0; i < len(m.Response); i++ {
 		m.Response[i].Type.compileProperties(c)
 	}
+}
+
+type methodKind int
+
+const (
+	oneWayMethod = methodKind(iota)
+	twoWayMethod
+	eventMethod
+)
+
+func (m *Method) methodKind() methodKind {
+	if m.HasRequest {
+		if m.HasResponse {
+			return twoWayMethod
+		}
+		return oneWayMethod
+	}
+	if !m.HasResponse {
+		panic("A method should have at least either a request or a response")
+	}
+	return eventMethod
 }
 
 // LLContextProps contain context-dependent properties of a method specific to llcpp.
@@ -1184,9 +1253,9 @@ func (m Method) NewLLContextProps(context LLContext) LLContextProps {
 	}
 }
 
-func (m Method) NewLLProps(r Protocol, reqTypeShape types.TypeShape, respTypeShape types.TypeShape) LLProps {
+func (m Method) NewLLProps(protocolName string, reqTypeShape types.TypeShape, respTypeShape types.TypeShape) LLProps {
 	return LLProps{
-		ProtocolName:      r.Name,
+		ProtocolName:      protocolName,
 		LinearizeRequest:  len(m.Request) > 0 && reqTypeShape.Depth > 0,
 		LinearizeResponse: len(m.Response) > 0 && respTypeShape.Depth > 0,
 		ClientContext:     m.NewLLContextProps(clientContext),
@@ -1194,25 +1263,9 @@ func (m Method) NewLLProps(r Protocol, reqTypeShape types.TypeShape, respTypeSha
 	}
 }
 
-func (c *compiler) compileProtocol(val types.Protocol) Protocol {
-	r := Protocol{
-		Attributes:          val.Attributes,
-		Namespace:           c.namespace,
-		Name:                c.compileCompoundIdentifier(val.Name, "", "", false),
-		ClassName:           c.compileCompoundIdentifier(val.Name, "_clazz", "", false),
-		ServiceName:         val.GetServiceName(),
-		ProxyName:           c.compileCompoundIdentifier(val.Name, "_Proxy", "", false),
-		StubName:            c.compileCompoundIdentifier(val.Name, "_Stub", "", false),
-		EventSenderName:     c.compileCompoundIdentifier(val.Name, "_EventSender", "", false),
-		SyncName:            c.compileCompoundIdentifier(val.Name, "_Sync", "", false),
-		SyncProxyName:       c.compileCompoundIdentifier(val.Name, "_SyncProxy", "", false),
-		RequestEncoderName:  c.compileCompoundIdentifier(val.Name, "_RequestEncoder", "", false),
-		RequestDecoderName:  c.compileCompoundIdentifier(val.Name, "_RequestDecoder", "", false),
-		ResponseEncoderName: c.compileCompoundIdentifier(val.Name, "_ResponseEncoder", "", false),
-		ResponseDecoderName: c.compileCompoundIdentifier(val.Name, "_ResponseDecoder", "", false),
-	}
-
-	hasEvents := false
+func (c *compiler) compileProtocol(val types.Protocol) *Protocol {
+	protocolName := c.compileCompoundIdentifier(val.Name, "", "", false)
+	methods := []Method{}
 	for _, v := range val.Methods {
 		name := changeIfReserved(v.Name, "")
 		callbackType := ""
@@ -1222,7 +1275,6 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 		responseTypeNameSuffix := "ResponseTable"
 		if !v.HasRequest {
 			responseTypeNameSuffix = "EventTable"
-			hasEvents = true
 		}
 
 		var result *Result
@@ -1242,11 +1294,11 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 			Name:                    name,
 			NameInLowerSnakeCase:    common.ToSnakeCase(name),
 			Ordinal:                 v.Ordinal,
-			OrdinalName:             fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
+			OrdinalName:             fmt.Sprintf("k%s_%s_Ordinal", protocolName, v.Name),
 			HasRequest:              v.HasRequest,
 			Request:                 c.compileParameterArray(v.Request),
 			RequestSize:             v.RequestTypeShapeV1.InlineSize,
-			RequestTypeName:         fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
+			RequestTypeName:         fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, protocolName, v.Name),
 			RequestMaxHandles:       v.RequestTypeShapeV1.MaxHandles,
 			RequestMaxOutOfLine:     v.RequestTypeShapeV1.MaxOutOfLine,
 			RequestSentMaxSize:      v.RequestTypeShapeV1.InlineSize + v.RequestTypeShapeV1.MaxOutOfLine,
@@ -1257,7 +1309,7 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 			HasResponse:             v.HasResponse,
 			Response:                c.compileParameterArray(v.Response),
 			ResponseSize:            v.ResponseTypeShapeV1.InlineSize,
-			ResponseTypeName:        fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
+			ResponseTypeName:        fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, protocolName, v.Name, responseTypeNameSuffix),
 			ResponseMaxHandles:      v.ResponseTypeShapeV1.MaxHandles,
 			ResponseMaxOutOfLine:    v.ResponseTypeShapeV1.MaxOutOfLine,
 			ResponseSentMaxSize:     v.ResponseTypeShapeV1.InlineSize + v.ResponseTypeShapeV1.MaxOutOfLine,
@@ -1267,17 +1319,33 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 			ResponseHasPointer:      v.ResponseTypeShapeV1.Depth > 0,
 			ResponseIsResource:      v.ResponseTypeShapeV1.IsResource,
 			CallbackType:            callbackType,
-			ResponseHandlerType:     fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
-			ResponderType:           fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
+			ResponseHandlerType:     fmt.Sprintf("%s_%s_ResponseHandler", protocolName, v.Name),
+			ResponderType:           fmt.Sprintf("%s_%s_Responder", protocolName, v.Name),
 			Transitional:            v.IsTransitional(),
 			Result:                  result,
 		}
 
-		m.LLProps = m.NewLLProps(r, v.RequestTypeShapeV1, v.ResponseTypeShapeV1)
-		r.Methods = append(r.Methods, m)
+		m.LLProps = m.NewLLProps(protocolName, v.RequestTypeShapeV1, v.ResponseTypeShapeV1)
+		methods = append(methods, m)
 	}
-	r.HasEvents = hasEvents
 
+	r := protocolInner{
+		Attributes:          val.Attributes,
+		Namespace:           c.namespace,
+		Name:                protocolName,
+		ClassName:           c.compileCompoundIdentifier(val.Name, "_clazz", "", false),
+		ServiceName:         val.GetServiceName(),
+		ProxyName:           c.compileCompoundIdentifier(val.Name, "_Proxy", "", false),
+		StubName:            c.compileCompoundIdentifier(val.Name, "_Stub", "", false),
+		EventSenderName:     c.compileCompoundIdentifier(val.Name, "_EventSender", "", false),
+		SyncName:            c.compileCompoundIdentifier(val.Name, "_Sync", "", false),
+		SyncProxyName:       c.compileCompoundIdentifier(val.Name, "_SyncProxy", "", false),
+		RequestEncoderName:  c.compileCompoundIdentifier(val.Name, "_RequestEncoder", "", false),
+		RequestDecoderName:  c.compileCompoundIdentifier(val.Name, "_RequestDecoder", "", false),
+		ResponseEncoderName: c.compileCompoundIdentifier(val.Name, "_ResponseEncoder", "", false),
+		ResponseDecoderName: c.compileCompoundIdentifier(val.Name, "_ResponseDecoder", "", false),
+		Methods:             methods,
+	}.build()
 	return r
 }
 
@@ -1589,7 +1657,7 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 
 	for _, v := range r.Protocols {
 		d := c.compileProtocol(v)
-		c.declarations[v.Name] = &d
+		c.declarations[v.Name] = d
 	}
 
 	for _, v := range r.Services {

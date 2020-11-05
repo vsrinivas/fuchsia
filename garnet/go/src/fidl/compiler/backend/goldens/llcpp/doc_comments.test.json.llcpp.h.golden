@@ -891,6 +891,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodResponseTable;
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventRequestTable;
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
+
 // interface comment #1
 //
 // interface comment #3

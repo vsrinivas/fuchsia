@@ -8,7 +8,7 @@ const fragmentEventSenderTmpl = `
 {{- define "EventSenderDeclaration" }}
 class {{ .Name }}::EventSender {
  public:
-  {{- range FilterMethodsWithReqs .Methods }}
+  {{- range .Events }}
   zx_status_t {{ .Name }}({{ template "Params" .Response }}) const {
     if (auto _binding = binding_.lock()) {
       return Send{{ .Name }}Event(_binding->channel() {{- if .Response }}, {{ end -}} {{ template "SyncClientMoveParams" .Response }});

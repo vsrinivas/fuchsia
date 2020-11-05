@@ -32,5 +32,6 @@ group("tests") {
     "fidlgen_syzkaller:tests",
     "gidl:tests",
     "measure-tape:tests",
+    "//garnet/go/src/fidl/compiler/backend/cpp:tests",
   ]
 }

@@ -7,7 +7,7 @@ package codegen
 const fragmentClientTmpl = `
 {{- define "ClientForwardDeclaration" }}
   struct AsyncEventHandlers;
-  {{- range FilterMethodsWithoutReqs .Methods | FilterMethodsWithoutResps }}
+  {{- range .TwoWayMethods }}
   class {{ .Name }}ResponseContext;
   {{- end }}
   class ClientImpl;
@@ -16,7 +16,7 @@ const fragmentClientTmpl = `
 {{- define "ClientDeclaration" }}
 {{- $outer := . }}
 struct {{ .Name }}::AsyncEventHandlers {
-  {{- range FilterMethodsWithReqs .Methods -}}
+  {{- range .Events -}}
     {{- range .DocComments }}
   //{{ . }}
     {{- end }}
@@ -29,7 +29,7 @@ struct {{ .Name }}::AsyncEventHandlers {
   {{- end }}
 };
 
-{{- range FilterMethodsWithoutReqs .Methods | FilterMethodsWithoutResps }}
+{{- range .TwoWayMethods }}
 {{ "" }}
 class {{ $outer.Name }}::{{ .Name }}ResponseContext : public ::fidl::internal::ResponseContext {
  public:
@@ -44,7 +44,7 @@ class {{ $outer.Name }}::{{ .Name }}ResponseContext : public ::fidl::internal::R
 
 class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
-  {{- range FilterMethodsWithoutReqs .Methods -}}
+  {{- range .ClientMethods -}}
     {{- if .HasResponse -}}
       {{- range .DocComments }}
   //{{ . }}
@@ -58,6 +58,7 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |{{ $outer.Name }}.{{ .Name }}()|. Caller provides the backing storage for FIDL message via request buffer. Ownership of _context is given unsafely to the binding until OnError() or OnReply() are called on it.
   ::fidl::Result {{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }});
     {{- end }}
+
     {{- range .DocComments }}
   //{{ . }}
     {{- end }}
@@ -88,8 +89,7 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
 std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-  {{- range FilterMethodsWithoutResps .Methods }}
-    {{- if not .HasRequest }}
+  {{- range .Events }}
     case {{ .OrdinalName }}:
     {
       const char* error_message;
@@ -108,7 +108,6 @@ std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_in
       );
       break;
     }
-    {{- end }}
   {{- end }}
     default:
       FidlHandleInfoCloseMany(msg->handles, msg->num_handles);

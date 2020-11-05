@@ -15,7 +15,7 @@ const fragmentSyncEventHandlerTmpl = `
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    {{- range FilterMethodsWithReqs .Methods }}
+    {{- range .Events }}
     if (::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving>();
     }
@@ -24,7 +24,7 @@ const fragmentSyncEventHandlerTmpl = `
   })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    {{- range FilterMethodsWithReqs .Methods }}
+    {{- range .Events }}
     if ({{ .Name }}Response::MaxNumHandles >= x) {
       x = {{ .Name }}Response::MaxNumHandles;
     }

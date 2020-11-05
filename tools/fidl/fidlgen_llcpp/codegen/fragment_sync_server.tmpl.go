@@ -38,18 +38,16 @@ void {{ .LLProps.ProtocolName }}Dispatch{{ .Name }}(void* interface, void* bytes
 namespace entries {
 
 ::fidl::internal::MethodEntry {{ .Name }}[] = {
-{{- range .Methods }}
-  {{- if .HasRequest }}
+{{- range .ClientMethods }}
   { {{ .OrdinalName }}, {{ .LLProps.ProtocolName }}::{{ .Name}}Request::Type,
     methods::{{ .LLProps.ProtocolName }}Dispatch{{ .Name }} },
-  {{- end }}
 {{- end }}
 };
 
 }  // namespace entries
 
 ::fidl::DispatchResult {{ .Name }}::TryDispatch{{ template "SyncServerDispatchMethodSignature" }} {
-  {{- if HasMethodWithReqs .Methods }}
+  {{- if .ClientMethods }}
   return ::fidl::internal::TryDispatch(
       impl, msg, txn,
       entries::{{ .Name }},
@@ -62,7 +60,7 @@ namespace entries {
 
 {{- define "SyncServerDispatchMethodDefinition" }}
 ::fidl::DispatchResult {{ .Name }}::Dispatch{{ template "SyncServerDispatchMethodSignature" }} {
-  {{- if HasMethodWithReqs .Methods }}
+  {{- if .ClientMethods }}
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);

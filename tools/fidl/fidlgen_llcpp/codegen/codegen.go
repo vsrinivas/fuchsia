@@ -27,56 +27,40 @@ type TypedArgument struct {
 	MutableAccess bool
 }
 
-func NewGenerator() *Generator {
-	tmpls := template.New("LLCPPTemplates").Funcs(template.FuncMap{
+// These are the helper functions we inject for use by the templates.
+var (
+	utilityFuncs = template.FuncMap{
 		"Kinds": func() interface{} { return cpp.Kinds },
 		"Eq":    func(a interface{}, b interface{}) bool { return a == b },
-		"MethodsHaveReqOrResp": func(ms []cpp.Method) string {
-			for _, m := range ms {
-				if (m.HasRequest && len(m.Request) != 0) || (m.HasResponse && len(m.Response) != 0) {
-					return "\n"
-				}
-			}
-			return ""
-		},
-		"FilterMethodsWithReqs": func(ms []cpp.Method) []cpp.Method {
-			var out []cpp.Method
-			for _, m := range ms {
-				if !m.HasRequest {
-					out = append(out, m)
-				}
-			}
-			return out
-		},
-		"HasMethodWithReqs": func(ms []cpp.Method) bool {
-			for _, m := range ms {
-				if m.HasRequest {
-					return true
-				}
-			}
-			return false
-		},
-		"FilterMethodsWithoutReqs": func(ms []cpp.Method) []cpp.Method {
-			var out []cpp.Method
-			for _, m := range ms {
-				if m.HasRequest {
-					out = append(out, m)
-				}
-			}
-			return out
-		},
-		"FilterMethodsWithoutResps": func(ms []cpp.Method) []cpp.Method {
-			var out []cpp.Method
-			for _, m := range ms {
-				if m.HasResponse {
-					out = append(out, m)
-				}
-			}
-			return out
-		},
 		"StackUse": func(props cpp.LLContextProps) int {
 			return props.StackUseRequest + props.StackUseResponse
 		},
+		"NewTypedArgument": func(argumentName string,
+			argumentType cpp.Type,
+			pointer bool,
+			access bool,
+			mutableAccess bool) TypedArgument {
+			return TypedArgument{
+				ArgumentName:  argumentName,
+				ArgumentValue: argumentName,
+				ArgumentType:  argumentType,
+				Pointer:       pointer,
+				Nullable:      pointer,
+				Access:        access,
+				MutableAccess: mutableAccess}
+		},
+		"NewTypedArgumentElement": func(argumentName string, argumentType cpp.Type) TypedArgument {
+			return TypedArgument{
+				ArgumentName:  argumentName + "_element",
+				ArgumentValue: "(*" + argumentName + "_element)",
+				ArgumentType:  argumentType,
+				Pointer:       true,
+				Nullable:      false,
+				Access:        false,
+				MutableAccess: false}
+		},
+	}
+	familyKindFuncs = template.FuncMap{
 		"TrivialCopy": func() cpp.FamilyKind {
 			return cpp.TrivialCopy
 		},
@@ -89,6 +73,8 @@ func NewGenerator() *Generator {
 		"Vector": func() cpp.FamilyKind {
 			return cpp.Vector
 		},
+	}
+	typeKindFuncs = template.FuncMap{
 		"ArrayKind": func() cpp.TypeKind {
 			return cpp.ArrayKind
 		},
@@ -128,31 +114,14 @@ func NewGenerator() *Generator {
 		"ProtocolKind": func() cpp.TypeKind {
 			return cpp.ProtocolKind
 		},
-		"NewTypedArgument": func(argument_name string,
-			argument_type cpp.Type,
-			pointer bool,
-			access bool,
-			mutable_access bool) TypedArgument {
-			return TypedArgument{
-				ArgumentName:  argument_name,
-				ArgumentValue: argument_name,
-				ArgumentType:  argument_type,
-				Pointer:       pointer,
-				Nullable:      pointer,
-				Access:        access,
-				MutableAccess: mutable_access}
-		},
-		"NewTypedArgumentElement": func(argument_name string, argument_type cpp.Type) TypedArgument {
-			return TypedArgument{
-				ArgumentName:  argument_name + "_element",
-				ArgumentValue: "(*" + argument_name + "_element)",
-				ArgumentType:  argument_type,
-				Pointer:       true,
-				Nullable:      false,
-				Access:        false,
-				MutableAccess: false}
-		},
-	})
+	}
+)
+
+func NewGenerator() *Generator {
+	tmpls := template.New("LLCPPTemplates").
+		Funcs(utilityFuncs).
+		Funcs(familyKindFuncs).
+		Funcs(typeKindFuncs)
 	templates := []string{
 		fragmentBitsTmpl,
 		fragmentClientTmpl,

@@ -346,18 +346,6 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(int64_t y) {
-  RequestResponse::OwnedOutgoingMessage _response{y};
-  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
-}
-
-::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(
-    ::fidl::BufferSpan _buffer, int64_t y) {
-  RequestResponse::UnownedOutgoingMessage _response(_buffer.data,
-                                                    _buffer.capacity, y);
-  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
-}
-
 zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _channel,
                                          int64_t x) {
   EventResponse::OwnedOutgoingMessage _response{x};
@@ -372,6 +360,18 @@ zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _channel,
                                                   _buffer.capacity, x);
   _response.Write(_channel->get());
   return _response.status();
+}
+
+::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(int64_t y) {
+  RequestResponse::OwnedOutgoingMessage _response{y};
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+}
+
+::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(
+    ::fidl::BufferSpan _buffer, int64_t y) {
+  RequestResponse::UnownedOutgoingMessage _response(_buffer.data,
+                                                    _buffer.capacity, y);
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 void Transitional::RequestRequest::_InitHeader(zx_txid_t _txid) {
@@ -1659,6 +1659,29 @@ namespace entries {
   return dispatch_result;
 }
 
+zx_status_t WithAndWithoutRequestResponse::SendOnEmptyResponseEvent(
+    ::zx::unowned_channel _channel) {
+  OnEmptyResponseResponse::OwnedOutgoingMessage _response{};
+  _response.Write(_channel->get());
+  return _response.status();
+}
+
+zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
+    ::zx::unowned_channel _channel, ::fidl::StringView ret) {
+  OnWithResponseResponse::OwnedOutgoingMessage _response{ret};
+  _response.Write(_channel->get());
+  return _response.status();
+}
+
+zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
+    ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer,
+    ::fidl::StringView ret) {
+  OnWithResponseResponse::UnownedOutgoingMessage _response(
+      _buffer.data, _buffer.capacity, ret);
+  _response.Write(_channel->get());
+  return _response.status();
+}
+
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestEmptyResponseCompleterBase::Reply() {
   NoRequestEmptyResponseResponse::OwnedOutgoingMessage _response{};
@@ -1697,29 +1720,6 @@ namespace entries {
   WithRequestWithResponseResponse::UnownedOutgoingMessage _response(
       _buffer.data, _buffer.capacity, ret);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
-}
-
-zx_status_t WithAndWithoutRequestResponse::SendOnEmptyResponseEvent(
-    ::zx::unowned_channel _channel) {
-  OnEmptyResponseResponse::OwnedOutgoingMessage _response{};
-  _response.Write(_channel->get());
-  return _response.status();
-}
-
-zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
-    ::zx::unowned_channel _channel, ::fidl::StringView ret) {
-  OnWithResponseResponse::OwnedOutgoingMessage _response{ret};
-  _response.Write(_channel->get());
-  return _response.status();
-}
-
-zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
-    ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer,
-    ::fidl::StringView ret) {
-  OnWithResponseResponse::UnownedOutgoingMessage _response(
-      _buffer.data, _buffer.capacity, ret);
-  _response.Write(_channel->get());
-  return _response.status();
 }
 
 void WithAndWithoutRequestResponse::NoRequestNoResponseRequest::_InitHeader(

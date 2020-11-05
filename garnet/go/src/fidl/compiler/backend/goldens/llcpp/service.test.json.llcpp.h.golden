@@ -50,6 +50,7 @@ extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
 extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondResponseTable;
+
 class SecondProtocol final {
   SecondProtocol() = delete;
 
@@ -321,6 +322,7 @@ extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
 extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstResponseTable;
+
 class FirstProtocol final {
   FirstProtocol() = delete;
 
