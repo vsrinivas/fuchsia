@@ -9,7 +9,7 @@ use {
     fuchsia_async::TimeoutExt,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
-    futures::{lock::Mutex, stream, StreamExt},
+    futures::{lock::Mutex, TryStreamExt},
     std::collections::HashSet,
     std::sync::Arc,
 };
@@ -33,11 +33,6 @@ impl RegistryService {
         // Set default value for trigger.
         if shortcut.trigger.is_none() {
             shortcut.trigger = Some(ui_shortcut::Trigger::KeyPressed);
-        }
-
-        // Set default value for use_priority.
-        if shortcut.use_priority.is_none() {
-            shortcut.use_priority = Some(false);
         }
     }
 }
@@ -111,85 +106,70 @@ impl ManagerService {
     }
 
     async fn trigger_matching_shortcuts(&self, event: KeyEvent) -> Result<bool, Error> {
+        #[derive(Debug)]
+        enum EarlyExit {
+            Handled,
+        };
         // Clone, upgrade, and filter out stale Weak pointers.
         // TODO: remove when Weak pointers filtering done in router.
         let registries = self.store.get_focused_registries().await;
-        let registries = registries.iter().cloned().filter_map(|r| r.upgrade()).into_iter();
+        let registries =
+            registries.iter().cloned().filter_map(|r| r.upgrade()).into_iter().map(|r| Ok(r));
 
-        let (key, pressed) = (event.key, event.pressed);
-        let handler = |use_priority| {
-            move |registry| async move {
-                let event = KeyEvent { key: key, pressed: pressed, inner: None };
-                match self.process_client_registry(registry, event, use_priority).await {
-                    Ok(true) => Some(()),
-                    Ok(false) => None,
-                    Err(e) => {
-                        fx_log_err!("shortcut handle error: {:?}", e);
-                        None
+        // Early exit for `try_for_each()` on error is used to propagate shortcut handle success.
+        // When shortcut was handled, closure returns a `Err(EarlyExit::Handled)` to indicate that.
+        let result = futures::stream::iter(registries)
+            .try_for_each({
+                let (key, pressed) = (event.key, event.pressed);
+                move |registry| async move {
+                    let event = KeyEvent { key: key, pressed: pressed, inner: None };
+                    let handled = self
+                        .process_client_registry(registry, event)
+                        .await
+                        .unwrap_or_else(|e: anyhow::Error| {
+                            fx_log_err!("shortcut handle error: {:?}", e);
+                            false
+                        });
+                    if handled {
+                        Err(EarlyExit::Handled)
+                    } else {
+                        Ok(())
                     }
                 }
-            }
-        };
+            })
+            .await;
 
-        let priority_stream =
-            stream::iter(registries.clone()).filter_map(handler(/* use_priority */ true));
-        futures::pin_mut!(priority_stream);
-        if priority_stream.next().await.is_some() {
-            return Ok(true);
+        match result {
+            Err(EarlyExit::Handled) => Ok(true),
+            _ => Ok(false),
         }
-
-        // Note that registries are processed in the reverse order.
-        // The reason is that `get_focused_registries` returns "parent-first" order, following
-        // FocusChain semantic, while non-priority shortcut disambiguation procedure calls for
-        // child shortcuts to take precedence over parent ones.
-        let non_priority_stream =
-            stream::iter(registries.rev()).filter_map(handler(/* use_priority */ false));
-        futures::pin_mut!(non_priority_stream);
-
-        Ok(non_priority_stream.next().await.is_some())
     }
 
-    /// Trigger all matching shortcuts for given `ClientRegistry` for given `event`.
-    /// Reads currently pressed keys from `&self`.
-    /// `use_priority` switches between priority and non-priority shortcuts.
-    /// See FIDL documentation at //sdk/fidl/fuchsia.ui.shortcut/README.md.
     async fn process_client_registry(
         &self,
         registry: Arc<Mutex<ClientRegistry>>,
         event: KeyEvent,
-        use_priority: bool,
     ) -> Result<bool, Error> {
         let registry = registry.lock().await;
 
-        let shortcuts = self.get_matching_shortuts(&registry, event, use_priority)?;
+        let shortcuts = self.get_matching_shortuts(&registry, event)?;
 
-        if let Some(ref subscriber) = registry.subscriber {
-            self.trigger_shortcuts(&subscriber, shortcuts).await
-        } else {
-            Ok(false)
-        }
-    }
-
-    async fn trigger_shortcuts<'a>(
-        &self,
-        subscriber: &'a Subscriber,
-        shortcuts: Vec<&'a Shortcut>,
-    ) -> Result<bool, Error> {
-        for shortcut in shortcuts {
-            let id = shortcut.id.unwrap_or(DEFAULT_SHORTCUT_ID);
-            let was_handled = subscriber
-                .listener
-                .on_shortcut(id)
-                .on_timeout(fasync::Time::after(DEFAULT_LISTENER_TIMEOUT), || Ok(false))
-                .await;
-            match was_handled {
-                // Stop processing client registry on successful handling.
-                Ok(true) => return Ok(true),
-                // Keep processing on shortcut not being handled.
-                Ok(false) => {}
-                // Log an error and keep processing on shortcut listener error.
-                Err(e) => {
-                    fx_log_info!("shortcut listener error: {:?}", e);
+        if let Some(Subscriber { ref listener, .. }) = &registry.subscriber {
+            for shortcut in shortcuts {
+                let id = shortcut.id.unwrap_or(DEFAULT_SHORTCUT_ID);
+                let was_handled = listener
+                    .on_shortcut(id)
+                    .on_timeout(fasync::Time::after(DEFAULT_LISTENER_TIMEOUT), || Ok(false))
+                    .await;
+                match was_handled {
+                    // Stop processing client registry on successful handling.
+                    Ok(true) => return Ok(true),
+                    // Keep processing on shortcut not being handled.
+                    Ok(false) => {}
+                    // Log an error and keep processing on shortcut listener error.
+                    Err(e) => {
+                        fx_log_info!("shortcut listener error: {:?}", e);
+                    }
                 }
             }
         }
@@ -200,20 +180,11 @@ impl ManagerService {
         &self,
         registry: &'a ClientRegistry,
         event: KeyEvent,
-        use_priority: bool,
     ) -> Result<Vec<&'a Shortcut>, Error> {
         let shortcuts = registry
             .shortcuts
             .iter()
             .filter(|shortcut| {
-                match shortcut.use_priority {
-                    Some(shortcut_use_priority) if use_priority != shortcut_use_priority => {
-                        return false
-                    }
-                    None => panic!("normalize_shortcut() should not let this happen"),
-                    // continue filtering
-                    _ => {}
-                }
                 let shortcut_key = match shortcut.key3 {
                     Some(key) => key,
                     None => return false,
@@ -262,7 +233,7 @@ mod tests {
             id: None,
             modifiers: None,
             key: None,
-            use_priority: Some(false),
+            use_priority: None,
             trigger: Some(ui_shortcut::Trigger::KeyPressed),
             key3: None,
         };

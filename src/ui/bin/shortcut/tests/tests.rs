@@ -21,7 +21,6 @@ mod v2_tests;
 
 static TEST_SHORTCUT_ID: u32 = 123;
 static TEST_SHORTCUT_2_ID: u32 = 321;
-static TEST_SHORTCUT_3_ID: u32 = 777;
 
 const LISTENER_ACTIVATION_TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
 const WAS_HANDLED_TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
@@ -213,12 +212,72 @@ async fn test_keys3() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_multiple_matches() -> Result<(), Error> {
+    let mut registry_service = RegistryService::new().await?;
+    let manager_service = ManagerService::new().await?;
+
+    let mut registry_service2 = RegistryService::new().await?;
+    manager_service
+        .set_focus_chain(vec![&registry_service.view_ref, &registry_service2.view_ref])
+        .await?;
+
+    // Set shortcut for LEFT_SHIFT + G.
+    let shortcut = ShortcutBuilder::new()
+        .set_id(TEST_SHORTCUT_ID)
+        .set_key3(input::Key::G)
+        .set_keys_required(vec![input::Key::LeftShift])
+        .build();
+    registry_service.register_shortcut(shortcut).await;
+
+    // Set another shortcut for the same client with a different shortcut ID.
+    let shortcut = ShortcutBuilder::new()
+        .set_id(TEST_SHORTCUT_2_ID)
+        .set_key3(input::Key::G)
+        .set_keys_required(vec![input::Key::LeftShift])
+        .build();
+    registry_service.register_shortcut(shortcut).await;
+
+    // Using another client, set one more shortcut for LEFT_SHIFT + G.
+    let shortcut = ShortcutBuilder::new()
+        .set_id(TEST_SHORTCUT_2_ID)
+        .set_key3(input::Key::G)
+        .set_keys_required(vec![input::Key::LeftShift])
+        .build();
+    registry_service2.register_shortcut(shortcut).await;
+
+    let client1 = TestCase::new()
+        .set_keys(vec![input::Key::LeftShift, input::Key::G])
+        .set_shortcut_hook(|id| {
+            // This handler should be activated only once, for the first shortcut ID.
+            assert_eq!(id, TEST_SHORTCUT_ID);
+            true
+        })
+        .set_handled_hook(|was_handled| assert_eq!(true, was_handled))
+        .run(&mut registry_service, &manager_service);
+
+    let client2 = TestCase::new()
+        .set_keys(vec![input::Key::LeftShift, input::Key::G])
+        .set_shortcut_hook(|_| {
+            // This handler should not be activated and handled by the other client.
+            panic!("One client should be notified of a shortcut!")
+        })
+        .run(&mut registry_service2, &manager_service);
+
+    let (client1_result, client2_result) = future::join(client1, client2).await;
+
+    // Check the Result in case of error.
+    client1_result?;
+    client2_result?;
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_client_timeout() -> Result<(), Error> {
     let mut registry_service = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
 
-    let shortcut =
-        ShortcutBuilder::new().set_id(TEST_SHORTCUT_3_ID).set_key3(input::Key::J).build();
+    let shortcut = ShortcutBuilder::new().set_id(777).set_key3(input::Key::J).build();
     registry_service.register_shortcut(shortcut).await;
 
     let listener = &mut registry_service.listener;
@@ -314,176 +373,6 @@ async fn test_focus_change() -> Result<(), Error> {
 
         assert!(matches!(activated_listener, future::Either::Left { .. }));
     }
-
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_multiple_matches() -> Result<(), Error> {
-    let mut parent = RegistryService::new().await?;
-    let mut child = RegistryService::new().await?;
-    let manager_service = ManagerService::new().await?;
-
-    manager_service.set_focus_chain(vec![&parent.view_ref, &child.view_ref]).await?;
-
-    // Set parent shortcut for LEFT_SHIFT + G.
-    let shortcut = ShortcutBuilder::new()
-        .set_keys_required(vec![input::Key::LeftShift])
-        .set_key3(input::Key::G)
-        .set_id(TEST_SHORTCUT_ID)
-        .build();
-    parent.register_shortcut(shortcut).await;
-
-    // Set same shortcut for a child view with a different shortcut ID.
-    let shortcut = ShortcutBuilder::new()
-        .set_keys_required(vec![input::Key::LeftShift])
-        .set_key3(input::Key::G)
-        .set_id(TEST_SHORTCUT_2_ID)
-        .build();
-    child.register_shortcut(shortcut).await;
-
-    // Add another child shortcut with a different ID.
-    let shortcut = ShortcutBuilder::new()
-        .set_keys_required(vec![input::Key::LeftShift])
-        .set_key3(input::Key::G)
-        .set_id(TEST_SHORTCUT_3_ID)
-        .build();
-    child.register_shortcut(shortcut).await;
-
-    let parent_fut = parent.listener.next();
-    futures::pin_mut!(parent_fut);
-
-    let child_fut = TestCase::new()
-        .set_keys(vec![input::Key::LeftShift, input::Key::G])
-        .set_shortcut_hook(|id| {
-            assert_eq!(id, TEST_SHORTCUT_2_ID);
-            true
-        })
-        .set_handled_hook(|was_handled| assert_eq!(true, was_handled))
-        .run(&mut child, &manager_service);
-    futures::pin_mut!(child_fut);
-
-    let activated_listener = future::select(child_fut, parent_fut).await;
-
-    assert!(matches!(activated_listener, future::Either::Left { .. }));
-
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_priority_matches() -> Result<(), Error> {
-    let mut parent = RegistryService::new().await?;
-    let mut child = RegistryService::new().await?;
-    let manager_service = ManagerService::new().await?;
-
-    manager_service.set_focus_chain(vec![&parent.view_ref, &child.view_ref]).await?;
-
-    // Register parent shortcut, with priority.
-    let shortcut = ShortcutBuilder::new()
-        .set_key3(input::Key::H)
-        .set_id(TEST_SHORTCUT_ID)
-        .set_use_priority(true)
-        .build();
-    parent.register_shortcut(shortcut).await;
-
-    // Register child shortcut, without priority.
-    let shortcut =
-        ShortcutBuilder::new().set_key3(input::Key::H).set_id(TEST_SHORTCUT_2_ID).build();
-    child.register_shortcut(shortcut).await;
-
-    let parent_fut = TestCase::new()
-        .set_keys(vec![input::Key::H])
-        .set_shortcut_hook(|id| {
-            assert_eq!(id, TEST_SHORTCUT_ID);
-            true
-        })
-        .set_handled_hook(|was_handled| assert_eq!(true, was_handled))
-        .run(&mut parent, &manager_service);
-    futures::pin_mut!(parent_fut);
-
-    let child_fut = child.listener.next();
-    futures::pin_mut!(child_fut);
-
-    let activated_listener = future::select(parent_fut, child_fut).await;
-
-    assert!(matches!(activated_listener, future::Either::Left { .. }));
-
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_multiple_priority_matches() -> Result<(), Error> {
-    let mut parent = RegistryService::new().await?;
-    let mut child = RegistryService::new().await?;
-    let manager_service = ManagerService::new().await?;
-
-    manager_service.set_focus_chain(vec![&parent.view_ref, &child.view_ref]).await?;
-
-    // Register parent shortcut, with priority.
-    let shortcut = ShortcutBuilder::new()
-        .set_key3(input::Key::I)
-        .set_id(TEST_SHORTCUT_ID)
-        .set_use_priority(true)
-        .build();
-    parent.register_shortcut(shortcut).await;
-
-    // Register child shortcut, with priority.
-    let shortcut = ShortcutBuilder::new()
-        .set_key3(input::Key::I)
-        .set_use_priority(true)
-        .set_id(TEST_SHORTCUT_2_ID)
-        .build();
-    child.register_shortcut(shortcut).await;
-
-    let parent_fut = TestCase::new()
-        .set_keys(vec![input::Key::I])
-        .set_shortcut_hook(|id| {
-            assert_eq!(id, TEST_SHORTCUT_ID);
-            true
-        })
-        .set_handled_hook(|was_handled| assert_eq!(true, was_handled))
-        .run(&mut parent, &manager_service);
-    futures::pin_mut!(parent_fut);
-
-    let child_fut = child.listener.next();
-    futures::pin_mut!(child_fut);
-
-    let activated_listener = future::select(parent_fut, child_fut).await;
-
-    assert!(matches!(activated_listener, future::Either::Left { .. }));
-
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_priority_same_client() -> Result<(), Error> {
-    let mut client = RegistryService::new().await?;
-    let manager_service = ManagerService::new().await?;
-
-    manager_service.set_focus_chain(vec![&client.view_ref]).await?;
-
-    // Register a shortcut, without priority.
-    let shortcut =
-        ShortcutBuilder::new().set_key3(input::Key::K).set_id(TEST_SHORTCUT_2_ID).build();
-    client.register_shortcut(shortcut).await;
-
-    // Register a shortcut, with priority.
-    let shortcut = ShortcutBuilder::new()
-        .set_key3(input::Key::K)
-        .set_id(TEST_SHORTCUT_ID)
-        .set_use_priority(true)
-        .build();
-    client.register_shortcut(shortcut).await;
-
-    TestCase::new()
-        .set_keys(vec![input::Key::K])
-        .set_shortcut_hook(|id| {
-            assert_eq!(id, TEST_SHORTCUT_ID);
-            true
-        })
-        .set_handled_hook(|was_handled| assert_eq!(true, was_handled))
-        .run(&mut client, &manager_service)
-        .await?;
 
     Ok(())
 }
