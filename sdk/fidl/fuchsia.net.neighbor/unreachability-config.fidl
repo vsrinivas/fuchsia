@@ -135,7 +135,7 @@ const float32 DEFAULT_MAX_RANDOM_FACTOR = 1.5;
 
 /// Default value for [`UnreachabilityConfig.max_multicast_probes`] as
 /// recommended by RFC 4861 section 10.
-const uint32 DEFAULT_MAX_MULITCAST_PROBES = 3;
+const uint32 DEFAULT_MAX_MULTICAST_PROBES = 3;
 
 /// Default value for [`UnreachabilityConfig.max_unicast_probes`] as
 /// recommended by RFC 4861 section 10.

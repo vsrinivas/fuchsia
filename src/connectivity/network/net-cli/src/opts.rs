@@ -336,6 +336,7 @@ pub enum NeighEnum {
     Del(NeighDel),
     List(NeighList),
     Watch(NeighWatch),
+    Config(NeighConfig),
 }
 
 #[derive(FromArgs, Clone, Debug)]
@@ -377,6 +378,95 @@ pub struct NeighDel {
 #[argh(subcommand, name = "watch")]
 /// watches neighbor table entries for state changes
 pub struct NeighWatch {}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "config")]
+/// commands for the Neighbor Unreachability Detection configuration
+pub struct NeighConfig {
+    #[argh(subcommand)]
+    pub neigh_config_cmd: NeighConfigEnum,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand)]
+pub enum NeighConfigEnum {
+    Get(NeighGetConfig),
+    Update(NeighUpdateConfig),
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "get")]
+/// returns the current NUD configuration options for the provided interface
+pub struct NeighGetConfig {
+    #[argh(positional)]
+    pub interface: u64,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "update")]
+/// updates the current NUD configuration options for the provided interface
+pub struct NeighUpdateConfig {
+    #[argh(positional)]
+    pub interface: u64,
+
+    /// a base duration, in nanoseconds, for computing the random reachable
+    /// time
+    #[argh(option)]
+    pub base_reachable_time: Option<i64>,
+
+    /// learn `base_reachable_time` during runtime from the neighbor discovery
+    /// protocol, if supported
+    #[argh(option)]
+    pub learn_base_reachable_time: Option<bool>,
+
+    /// the minimum value of the random factor used for computing reachable
+    /// time
+    #[argh(option)]
+    pub min_random_factor: Option<f32>,
+
+    /// the maximum value of the random factor used for computing reachable
+    /// time
+    #[argh(option)]
+    pub max_random_factor: Option<f32>,
+
+    /// duration, in nanoseconds, between retransmissions of reachability
+    /// probes in the PROBE state
+    #[argh(option)]
+    pub retransmit_timer: Option<i64>,
+
+    /// learn `retransmit_timer` during runtime from the neighbor discovery
+    /// protocol, if supported
+    #[argh(option)]
+    pub learn_retransmit_timer: Option<bool>,
+
+    /// duration, in nanoseconds, to wait for a non-Neighbor-Discovery related
+    /// protocol to reconfirm reachability after entering the DELAY state
+    #[argh(option)]
+    pub delay_first_probe_time: Option<i64>,
+
+    /// the number of reachability probes to send before concluding negative
+    /// reachability and deleting the entry from the INCOMPLETE state
+    #[argh(option)]
+    pub max_multicast_probes: Option<u32>,
+
+    /// the number of reachability probes to send before concluding
+    /// retransmissions from within the PROBE state should cease and the entry
+    /// SHOULD be deleted
+    #[argh(option)]
+    pub max_unicast_probes: Option<u32>,
+
+    /// if the target address is an anycast address, the stack SHOULD delay
+    /// sending a response for a random time between 0 and this duration, in
+    /// nanoseconds
+    #[argh(option)]
+    pub max_anycast_delay_time: Option<i64>,
+
+    /// a node MAY send up to this amount of unsolicited reachability
+    /// confirmations messages to all-nodes multicast address when a node
+    /// determines its link-layer address has changed
+    #[argh(option)]
+    pub max_reachability_confirmations: Option<u32>,
+}
 
 #[derive(FromArgs, Clone, Debug)]
 #[argh(subcommand, name = "route")]

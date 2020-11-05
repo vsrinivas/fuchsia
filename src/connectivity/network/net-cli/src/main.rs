@@ -585,6 +585,49 @@ async fn do_neigh(cmd: opts::NeighEnum) -> Result<(), Error> {
                 .await
                 .context("error watching for changes to the neighbor table")?;
         }
+        NeighEnum::Config(NeighConfig { neigh_config_cmd }) => match neigh_config_cmd {
+            NeighConfigEnum::Get(NeighGetConfig { interface }) => {
+                let view = connect_to_service::<neighbor::ViewMarker>()
+                    .context("failed to connect to neighbor view")?;
+                let () = print_neigh_config(interface, view)
+                    .await
+                    .context("failed during neigh config get command")?;
+            }
+            NeighConfigEnum::Update(NeighUpdateConfig {
+                interface,
+                base_reachable_time,
+                learn_base_reachable_time,
+                min_random_factor,
+                max_random_factor,
+                retransmit_timer,
+                learn_retransmit_timer,
+                delay_first_probe_time,
+                max_multicast_probes,
+                max_unicast_probes,
+                max_anycast_delay_time,
+                max_reachability_confirmations,
+            }) => {
+                let updates = neighbor::UnreachabilityConfig {
+                    base_reachable_time,
+                    learn_base_reachable_time,
+                    min_random_factor,
+                    max_random_factor,
+                    retransmit_timer,
+                    learn_retransmit_timer,
+                    delay_first_probe_time,
+                    max_multicast_probes,
+                    max_unicast_probes,
+                    max_anycast_delay_time,
+                    max_reachability_confirmations,
+                };
+                let controller = connect_to_service::<neighbor::ControllerMarker>()
+                    .context("failed to connect to neighbor controller")?;
+                let () = update_neigh_config(interface, updates, controller)
+                    .await
+                    .context("failed during neigh config update command")?;
+                info!("Updated config for interface {}", interface);
+            }
+        },
     }
     Ok(())
 }
@@ -647,6 +690,31 @@ async fn print_neigh_entries(watch_for_changes: bool) -> Result<(), Error> {
         })
         .try_fold((), |(), r| futures::future::ready(r))
         .await
+}
+
+async fn print_neigh_config(interface: u64, view: neighbor::ViewProxy) -> Result<(), Error> {
+    let config = view
+        .get_unreachability_config(interface)
+        .await
+        .context("get_unreachability_config FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("get_unreachability_config failed")?;
+
+    println!("{:#?}", config);
+    Ok(())
+}
+
+async fn update_neigh_config(
+    interface: u64,
+    updates: neighbor::UnreachabilityConfig,
+    controller: neighbor::ControllerProxy,
+) -> Result<(), Error> {
+    controller
+        .update_unreachability_config(interface, updates)
+        .await
+        .context("update_unreachability_config FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("update_unreachability_config failed")
 }
 
 fn neigh_entry_stream(
@@ -1335,5 +1403,63 @@ mod tests {
         let ((), ()) = futures::future::try_join(neigh, neigh_succeeds)
             .await
             .expect("neigh remove should succeed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_neigh_config_get() {
+        const WANT_INTERFACE: u64 = 1;
+
+        let (view, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<neighbor::ViewMarker>()
+                .expect("creating a request stream and proxy for testing should succeed");
+        let neigh = print_neigh_config(WANT_INTERFACE, view);
+        let neigh_succeeds = async {
+            let (got_interface, responder) = requests
+                .try_next()
+                .await
+                .expect("neigh FIDL error")
+                .expect("request stream should not have ended")
+                .into_get_unreachability_config()
+                .expect("request should be of type GetUnreachabilityConfig");
+            assert_eq!(got_interface, WANT_INTERFACE);
+            let () = responder
+                .send(&mut Ok(neighbor::UnreachabilityConfig::empty()))
+                .expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) = futures::future::try_join(neigh, neigh_succeeds)
+            .await
+            .expect("neigh config get should succeed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_neigh_config_update() {
+        const WANT_INTERFACE: u64 = 1;
+        const WANT_CONFIG: neighbor::UnreachabilityConfig = neighbor::UnreachabilityConfig::empty();
+
+        let (controller, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>()
+                .expect("creating a request stream and proxy for testing should succeed");
+        let neigh = update_neigh_config(
+            WANT_INTERFACE,
+            neighbor::UnreachabilityConfig::empty(),
+            controller,
+        );
+        let neigh_succeeds = async {
+            let (got_interface, got_config, responder) = requests
+                .try_next()
+                .await
+                .expect("neigh FIDL error")
+                .expect("request stream should not have ended")
+                .into_update_unreachability_config()
+                .expect("request should be of type UpdateUnreachabilityConfig");
+            assert_eq!(got_interface, WANT_INTERFACE);
+            assert_eq!(got_config, WANT_CONFIG);
+            let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) = futures::future::try_join(neigh, neigh_succeeds)
+            .await
+            .expect("neigh config update should succeed");
     }
 }

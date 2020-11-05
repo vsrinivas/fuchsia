@@ -784,3 +784,163 @@ async fn neigh_add_remove_entry() -> Result {
 
     Ok(())
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn neigh_unreachability_config_errors() -> Result {
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let network = sandbox.create_network("net").await.context("failed to create network")?;
+
+    let alice = create_environment(
+        &sandbox,
+        &network,
+        "neigh_update_unreachability_config_errors",
+        "alice",
+        fidl_fuchsia_net::Subnet { addr: ALICE_IP, prefix_len: SUBNET_PREFIX },
+        ALICE_MAC,
+    )
+    .await
+    .context("failed to setup environment")?;
+
+    let view = alice
+        .env
+        .connect_to_service::<fidl_fuchsia_net_neighbor::ViewMarker>()
+        .context("failed to connect to View")?;
+    assert_eq!(
+        view.get_unreachability_config(alice.ep.id() + 100)
+            .await
+            .context("get_unreachability_config FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw),
+        Err(fuchsia_zircon::Status::NOT_FOUND)
+    );
+
+    let controller = alice
+        .env
+        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .context("failed to connect to Controller")?;
+    assert_eq!(
+        controller
+            .update_unreachability_config(
+                alice.ep.id() + 100,
+                fidl_fuchsia_net_neighbor::UnreachabilityConfig::empty(),
+            )
+            .await
+            .context("update_unreachability_config FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw),
+        Err(fuchsia_zircon::Status::NOT_FOUND)
+    );
+    assert_eq!(
+        controller
+            .update_unreachability_config(
+                alice.loopback_id,
+                fidl_fuchsia_net_neighbor::UnreachabilityConfig::empty(),
+            )
+            .await
+            .context("update_unreachability_config FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw),
+        Err(fuchsia_zircon::Status::NOT_SUPPORTED)
+    );
+    let mut invalid_config = fidl_fuchsia_net_neighbor::UnreachabilityConfig::empty();
+    invalid_config.base_reachable_time = Some(-1);
+    assert_eq!(
+        controller
+            .update_unreachability_config(alice.ep.id(), invalid_config)
+            .await
+            .context("update_unreachability_config FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw),
+        Err(fuchsia_zircon::Status::INVALID_ARGS)
+    );
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn neigh_unreachability_config() -> Result {
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let network = sandbox.create_network("net").await.context("failed to create network")?;
+
+    let alice = create_environment(
+        &sandbox,
+        &network,
+        "neigh_update_unreachability_config",
+        "alice",
+        fidl_fuchsia_net::Subnet { addr: ALICE_IP, prefix_len: SUBNET_PREFIX },
+        ALICE_MAC,
+    )
+    .await
+    .context("failed to setup environment")?;
+
+    let view = alice
+        .env
+        .connect_to_service::<fidl_fuchsia_net_neighbor::ViewMarker>()
+        .context("failed to connect to View")?;
+    let controller = alice
+        .env
+        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .context("failed to connect to Controller")?;
+
+    {
+        // Get the current UnreachabilityConfig for comparison
+        let original_config = view
+            .get_unreachability_config(alice.ep.id())
+            .await
+            .context("get_unreachability_config FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("get_unreachability_config failed")?;
+        let expected = fidl_fuchsia_net_neighbor::UnreachabilityConfig { ..original_config };
+
+        // Verify that updating with the current config doesn't change anything
+        let () = controller
+            .update_unreachability_config(alice.ep.id(), original_config)
+            .await
+            .context("update_unreachability_config FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("update_unreachability_config failed")?;
+        assert_eq!(
+            view.get_unreachability_config(alice.ep.id())
+                .await
+                .context("get_unreachability_config FIDL error")?
+                .map_err(fuchsia_zircon::Status::from_raw),
+            Ok(expected),
+        );
+    }
+
+    {
+        let original_config = view
+            .get_unreachability_config(alice.ep.id())
+            .await
+            .context("get_unreachability_config FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("get_unreachability_config failed")?;
+
+        // Update config with some non-defaults
+        let mut updates = fidl_fuchsia_net_neighbor::UnreachabilityConfig::empty();
+        let updated_base_reachable_time =
+            Some(fidl_fuchsia_net_neighbor::DEFAULT_BASE_REACHABLE_TIME * 2);
+        let updated_retransmit_timer =
+            Some(fidl_fuchsia_net_neighbor::DEFAULT_RETRANSMIT_TIMER / 2);
+        updates.base_reachable_time = updated_base_reachable_time;
+        updates.retransmit_timer = updated_retransmit_timer;
+        let () = controller
+            .update_unreachability_config(alice.ep.id(), updates)
+            .await
+            .context("update_unreachability_config FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("update_unreachability_config failed")?;
+
+        // Verify that set fields are changed and unset fields remain the same
+        let updated_config = view
+            .get_unreachability_config(alice.ep.id())
+            .await
+            .context("get_unreachability_config FIDL error")?
+            .map_err(fuchsia_zircon::Status::from_raw);
+        assert_eq!(
+            updated_config,
+            Ok(fidl_fuchsia_net_neighbor::UnreachabilityConfig {
+                base_reachable_time: updated_base_reachable_time,
+                retransmit_timer: updated_retransmit_timer,
+                ..original_config
+            })
+        );
+    }
+
+    Ok(())
+}
