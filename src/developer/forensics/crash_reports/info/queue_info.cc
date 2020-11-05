@@ -41,5 +41,10 @@ void QueueInfo::MarkReportAsGarbageCollected(const uint64_t upload_attempts) {
   }
 }
 
+void QueueInfo::MarkReportAsThrottledByServer(const uint64_t upload_attempts) {
+  context_->Cobalt().LogOccurrence(cobalt::CrashState::kUploadThrottled);
+  context_->Cobalt().LogCount(cobalt::UploadAttemptState::kUploadThrottled, upload_attempts);
+}
+
 }  // namespace crash_reports
 }  // namespace forensics

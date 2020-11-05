@@ -48,8 +48,9 @@ using testing::UnorderedElementsAreArray;
 
 using UploadPolicy = Settings::UploadPolicy;
 
-constexpr bool kUploadSuccessful = true;
-constexpr bool kUploadFailed = false;
+constexpr CrashServer::UploadStatus kUploadSuccessful = CrashServer::UploadStatus::kSuccess;
+constexpr CrashServer::UploadStatus kUploadFailed = CrashServer::UploadStatus::kFailure;
+constexpr CrashServer::UploadStatus kUploadThrottled = CrashServer::UploadStatus::kThrottled;
 
 constexpr char kStorePath[] = "/tmp/reports";
 
@@ -130,7 +131,8 @@ class QueueTest : public UnitTestFixture {
     InjectServiceProvider(network_reachability_provider_.get());
   }
 
-  void SetUpQueue(std::vector<bool> upload_attempt_results = std::vector<bool>{}) {
+  void SetUpQueue(std::vector<CrashServer::UploadStatus> upload_attempt_results =
+                      std::vector<CrashServer::UploadStatus>{}) {
     report_id_ = 1;
     state_ = QueueOps::SetStateToLeaveAsPending;
     expected_queue_contents_.clear();
@@ -240,7 +242,7 @@ class QueueTest : public UnitTestFixture {
     // to be in the queue after processing.
     if (state_ != QueueOps::SetStateToUpload) {
       expected_queue_contents_.push_back(uuid);
-    } else if (!*next_upload_attempt_result_) {
+    } else if (*next_upload_attempt_result_ == CrashServer::UploadStatus::kFailure) {
       expected_queue_contents_.push_back(uuid);
       ++next_upload_attempt_result_;
     }
@@ -255,7 +257,7 @@ class QueueTest : public UnitTestFixture {
       std::vector<ReportId> new_queue_contents;
       for (const auto& uuid : expected_queue_contents_) {
         // We expect the reports we failed to upload to still be pending.
-        if (!(*next_upload_attempt_result_)) {
+        if (*next_upload_attempt_result_ == CrashServer::UploadStatus::kFailure) {
           new_queue_contents.push_back(uuid);
         }
         ++next_upload_attempt_result_;
@@ -268,8 +270,8 @@ class QueueTest : public UnitTestFixture {
 
   size_t report_id_ = 1;
   QueueOps state_ = QueueOps::SetStateToLeaveAsPending;
-  std::vector<bool> upload_attempt_results_;
-  std::vector<bool>::const_iterator next_upload_attempt_result_;
+  std::vector<CrashServer::UploadStatus> upload_attempt_results_;
+  std::vector<CrashServer::UploadStatus>::const_iterator next_upload_attempt_result_;
 
   Settings settings_;
   timekeeper::TestClock clock_;
@@ -344,8 +346,48 @@ TEST_F(QueueTest, Check_EarlyUploadSucceeds) {
               }));
 }
 
+TEST_F(QueueTest, Check_EarlyUploadThrottled) {
+  SetUpQueue({kUploadThrottled});
+  ApplyQueueOps({
+      QueueOps::SetStateToUpload,
+      QueueOps::AddNewReport,
+  });
+  CheckQueueContents();
+  CheckAnnotationsOnServer();
+  CheckAttachmentKeysOnServer();
+  EXPECT_TRUE(queue_->IsEmpty());
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploadThrottled),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadThrottled, 1u),
+              }));
+}
+
+TEST_F(QueueTest, Check_ThrottledReportDropped) {
+  SetUpQueue({kUploadThrottled});
+  ApplyQueueOps({
+      QueueOps::AddNewReport,
+      QueueOps::SetStateToUpload,
+  });
+  CheckQueueContents();
+  CheckAnnotationsOnServer();
+  CheckAttachmentKeysOnServer();
+  EXPECT_TRUE(queue_->IsEmpty());
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploadThrottled),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadThrottled, 1u),
+              }));
+}
+
 TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultipleReports) {
-  SetUpQueue(std::vector<bool>(5u, kUploadSuccessful));
+  SetUpQueue(std::vector<CrashServer::UploadStatus>(5u, kUploadSuccessful));
   ApplyQueueOps({
       QueueOps::AddNewReport,
       QueueOps::AddNewReport,
@@ -362,7 +404,7 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultipleReports) {
 }
 
 TEST_F(QueueTest, Check_NotIsEmptyQueue_OnFailedUpload_MultipleReports) {
-  SetUpQueue(std::vector<bool>(5u, kUploadFailed));
+  SetUpQueue(std::vector<CrashServer::UploadStatus>(5u, kUploadFailed));
   ApplyQueueOps({
       QueueOps::AddNewReport,
       QueueOps::AddNewReport,
@@ -568,8 +610,10 @@ TEST_F(QueueTest, Check_Cobalt) {
       kUploadFailed,
       kUploadFailed,
       kUploadSuccessful,
+      kUploadThrottled,
   });
   ApplyQueueOps({
+      QueueOps::AddNewReport,
       QueueOps::AddNewReport,
       QueueOps::AddNewReport,
       QueueOps::AddNewReport,
@@ -585,6 +629,7 @@ TEST_F(QueueTest, Check_Cobalt) {
                   cobalt::Event(cobalt::CrashState::kUploaded),
                   cobalt::Event(cobalt::CrashState::kUploaded),
                   cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::CrashState::kUploadThrottled),
                   cobalt::Event(cobalt::CrashState::kArchived),
                   cobalt::Event(cobalt::CrashState::kArchived),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
@@ -593,6 +638,8 @@ TEST_F(QueueTest, Check_Cobalt) {
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadThrottled, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kArchived, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),

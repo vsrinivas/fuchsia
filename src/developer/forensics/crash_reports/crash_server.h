@@ -23,6 +23,8 @@ namespace crash_reports {
 // |fuchsia.net.http.Loader| is expected to be in |services|.
 class CrashServer {
  public:
+  enum UploadStatus { kSuccess, kFailure, kThrottled };
+
   CrashServer(std::shared_ptr<sys::ServiceDirectory> services, const std::string& url,
               SnapshotManager* snapshot_manager, LogTags* tags);
 
@@ -33,7 +35,7 @@ class CrashServer {
   // Returns whether the request was successful, defined as returning a HTTP status code in the
   // range [200-203]. In case of success, |server_report_id| is set to the crash report id on the
   // server.
-  virtual bool MakeRequest(const Report& report, std::string* server_report_id);
+  virtual UploadStatus MakeRequest(const Report& report, std::string* server_report_id);
 
  private:
   std::shared_ptr<sys::ServiceDirectory> services_;

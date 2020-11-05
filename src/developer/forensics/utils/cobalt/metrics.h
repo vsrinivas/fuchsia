@@ -19,6 +19,7 @@ enum class CrashState {
   kArchived = cobalt_registry::CrashMetricDimensionState::Archived,
   kGarbageCollected = cobalt_registry::CrashMetricDimensionState::GarbageCollected,
   kDropped = cobalt_registry::CrashMetricDimensionState::Dropped,
+  kUploadThrottled = cobalt_registry::CrashMetricDimensionState::UploadThrottled,
 };
 
 enum class UploadAttemptState {
@@ -27,6 +28,7 @@ enum class UploadAttemptState {
   kUploaded = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Uploaded,
   kArchived = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Archived,
   kGarbageCollected = cobalt_registry::CrashUploadAttemptsMetricDimensionState::GarbageCollected,
+  kUploadThrottled = cobalt_registry::CrashMetricDimensionState::UploadThrottled,
 };
 
 enum class TimedOutData {

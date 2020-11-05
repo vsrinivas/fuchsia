@@ -36,14 +36,19 @@ class HTTPTransportService : public crashpad::HTTPTransport {
       : services_(std::move(services)), tags_(tags) {}
   ~HTTPTransportService() override = default;
 
-  bool ExecuteSynchronously(std::string* response_body) override;
+  CrashServer::UploadStatus Execute(std::string* response_body);
 
  private:
+  bool ExecuteSynchronously(std::string* response_body) override {
+    FX_LOGS(FATAL) << "Not implemented";
+    return false;
+  }
+
   std::shared_ptr<sys::ServiceDirectory> services_;
   const char* tags_;
 };
 
-bool HTTPTransportService::ExecuteSynchronously(std::string* response_body) {
+CrashServer::UploadStatus HTTPTransportService::Execute(std::string* response_body) {
   using namespace fuchsia::net::http;
 
   // Create the headers for the request.
@@ -78,7 +83,7 @@ bool HTTPTransportService::ExecuteSynchronously(std::string* response_body) {
   fsl::SizedVmo body_vmo;
   if (!fsl::VmoFromVector(body, &body_vmo)) {
     FX_LOGST(ERROR, tags_) << "Failed to create VMO";
-    return false;
+    return CrashServer::UploadStatus::kFailure;
   }
 
   // Create the request.
@@ -97,29 +102,34 @@ bool HTTPTransportService::ExecuteSynchronously(std::string* response_body) {
   Response response;
   if (const auto status = loader->Fetch(std::move(request), &response); status != ZX_OK) {
     FX_PLOGST(WARNING, tags_, status) << "Lost connection with fuchsia.net.http.Loader";
-    return false;
+    return CrashServer::UploadStatus::kFailure;
   }
 
   if (response.has_error()) {
     FX_LOGST(WARNING, tags_) << "Experienced network error: " << response.error();
-    return false;
+    return CrashServer::UploadStatus::kFailure;
   }
 
   if (!response.has_status_code()) {
     FX_LOGST(ERROR, tags_) << "No status code received";
-    return false;
+    return CrashServer::UploadStatus::kFailure;
+  }
+
+  if (response.status_code() == 429) {
+    FX_LOGST(WARNING, tags_) << "Upload throttled by server";
+    return CrashServer::UploadStatus::kThrottled;
   }
 
   if (response.status_code() < 200 || response.status_code() >= 204) {
-    FX_LOGST(WARNING, tags_) << "Error uploading report with status code "
+    FX_LOGST(WARNING, tags_) << "Failed to upload report, received HTTP status code "
                              << response.status_code();
-    return false;
+    return CrashServer::UploadStatus::kFailure;
   }
 
   // Read the response into |response_body|.
   if (!response.has_body()) {
     FX_LOGST(WARNING, tags_) << "Http response is missing body";
-    return false;
+    return CrashServer::UploadStatus::kFailure;
   }
 
   response_body->clear();
@@ -130,10 +140,10 @@ bool HTTPTransportService::ExecuteSynchronously(std::string* response_body) {
                                 return len;
                               })) {
     FX_LOGST(WARNING, tags_) << "Failed to read http body";
-    return false;
+    return CrashServer::UploadStatus::kFailure;
   }
 
-  return true;
+  return CrashServer::UploadStatus::kSuccess;
 }
 
 }  // namespace
@@ -142,7 +152,8 @@ CrashServer::CrashServer(std::shared_ptr<sys::ServiceDirectory> services, const 
                          SnapshotManager* snapshot_manager, LogTags* tags)
     : services_(services), url_(url), snapshot_manager_(snapshot_manager), tags_(tags) {}
 
-bool CrashServer::MakeRequest(const Report& report, std::string* server_report_id) {
+CrashServer::UploadStatus CrashServer::MakeRequest(const Report& report,
+                                                   std::string* server_report_id) {
   std::vector<SizedDataReader> attachment_readers;
   attachment_readers.reserve(report.Attachments().size() + 2u /*minidump and snapshot*/);
 
@@ -198,7 +209,7 @@ bool CrashServer::MakeRequest(const Report& report, std::string* server_report_i
   http_transport->SetTimeout(60.0);  // 1 minute.
   http_transport->SetURL(url_);
 
-  return http_transport->ExecuteSynchronously(server_report_id);
+  return http_transport->Execute(server_report_id);
 }
 
 }  // namespace crash_reports

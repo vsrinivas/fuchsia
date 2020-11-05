@@ -24,6 +24,7 @@ struct QueueInfo {
   void MarkReportAsUploaded(const std::string& server_report_id, uint64_t upload_attempts);
   void MarkReportAsArchived(uint64_t upload_attempts);
   void MarkReportAsGarbageCollected(uint64_t upload_attempts);
+  void MarkReportAsThrottledByServer(uint64_t upload_attempts);
 
  private:
   std::shared_ptr<InfoContext> context_;

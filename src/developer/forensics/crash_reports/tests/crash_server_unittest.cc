@@ -75,21 +75,32 @@ TEST_F(CrashServerTest, Fails_OnError) {
   SetUpLoader({stubs::LoaderResponse::WithError(fuchsia::net::http::Error::DEADLINE_EXCEEDED)});
 
   std::string server_report_id;
-  EXPECT_FALSE(crash_server().MakeRequest(kReport, &server_report_id));
+  EXPECT_EQ(crash_server().MakeRequest(kReport, &server_report_id),
+            CrashServer::UploadStatus::kFailure);
 }
 
 TEST_F(CrashServerTest, Fails_StatusCodeBelow200) {
   SetUpLoader({stubs::LoaderResponse::WithError(199)});
 
   std::string server_report_id;
-  EXPECT_FALSE(crash_server().MakeRequest(kReport, &server_report_id));
+  EXPECT_EQ(crash_server().MakeRequest(kReport, &server_report_id),
+            CrashServer::UploadStatus::kFailure);
 }
 
 TEST_F(CrashServerTest, Fails_StatusCodeAbove203) {
   SetUpLoader({stubs::LoaderResponse::WithError(204)});
 
   std::string server_report_id;
-  EXPECT_FALSE(crash_server().MakeRequest(kReport, &server_report_id));
+  EXPECT_EQ(crash_server().MakeRequest(kReport, &server_report_id),
+            CrashServer::UploadStatus::kFailure);
+}
+
+TEST_F(CrashServerTest, Fails_UploadThrottled) {
+  SetUpLoader({stubs::LoaderResponse::WithError(429)});
+
+  std::string server_report_id;
+  EXPECT_EQ(crash_server().MakeRequest(kReport, &server_report_id),
+            CrashServer::UploadStatus::kThrottled);
 }
 
 TEST_F(CrashServerTest, ReadBodyOnSuccess) {
@@ -101,16 +112,20 @@ TEST_F(CrashServerTest, ReadBodyOnSuccess) {
   });
 
   std::string server_report_id;
-  EXPECT_TRUE(crash_server().MakeRequest(kReport, &server_report_id));
+  EXPECT_EQ(crash_server().MakeRequest(kReport, &server_report_id),
+            CrashServer::UploadStatus::kSuccess);
   EXPECT_EQ(server_report_id, "body-200");
 
-  EXPECT_TRUE(crash_server().MakeRequest(kReport, &server_report_id));
+  EXPECT_EQ(crash_server().MakeRequest(kReport, &server_report_id),
+            CrashServer::UploadStatus::kSuccess);
   EXPECT_EQ(server_report_id, "body-201");
 
-  EXPECT_TRUE(crash_server().MakeRequest(kReport, &server_report_id));
+  EXPECT_EQ(crash_server().MakeRequest(kReport, &server_report_id),
+            CrashServer::UploadStatus::kSuccess);
   EXPECT_EQ(server_report_id, "body-202");
 
-  EXPECT_TRUE(crash_server().MakeRequest(kReport, &server_report_id));
+  EXPECT_EQ(crash_server().MakeRequest(kReport, &server_report_id),
+            CrashServer::UploadStatus::kSuccess);
   EXPECT_EQ(server_report_id, "body-203");
 }
 

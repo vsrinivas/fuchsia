@@ -74,8 +74,9 @@ using testing::Not;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
-constexpr bool kUploadSuccessful = true;
-constexpr bool kUploadFailed = false;
+constexpr CrashServer::UploadStatus kUploadSuccessful = CrashServer::UploadStatus::kSuccess;
+constexpr CrashServer::UploadStatus kUploadFailed = CrashServer::UploadStatus::kFailure;
+constexpr CrashServer::UploadStatus kUploadThrottled = CrashServer::UploadStatus::kThrottled;
 
 constexpr char kStorePath[] = "/tmp/reports";
 
@@ -177,7 +178,8 @@ class CrashReporterTest : public UnitTestFixture {
   }
 
   // Sets up the underlying crash reporter using a default config.
-  void SetUpCrashReporterDefaultConfig(const std::vector<bool>& upload_attempt_results = {}) {
+  void SetUpCrashReporterDefaultConfig(
+      const std::vector<CrashServer::UploadStatus>& upload_attempt_results = {}) {
     SetUpCrashReporter(
         Config{/*crash_server=*/
                {
@@ -682,7 +684,7 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
-      std::make_unique<StubCrashServer>(std::vector<bool>({kUploadSuccessful})));
+      std::make_unique<StubCrashServer>(std::vector({kUploadSuccessful})));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
@@ -703,7 +705,7 @@ TEST_F(CrashReporterTest, Archive_OnUserAlreadyOptedOutDataSharing) {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
-      std::make_unique<StubCrashServer>(std::vector<bool>({})));
+      std::make_unique<StubCrashServer>(std::vector<CrashServer::UploadStatus>({})));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
@@ -722,7 +724,7 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
-      std::make_unique<StubCrashServer>(std::vector<bool>({kUploadSuccessful})));
+      std::make_unique<StubCrashServer>(std::vector({kUploadSuccessful})));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
@@ -747,7 +749,24 @@ TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
-      std::make_unique<StubCrashServer>(std::vector<bool>({kUploadFailed})));
+      std::make_unique<StubCrashServer>(std::vector({kUploadFailed})));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+  SetUpUtcProviderServer({kExternalResponse});
+
+  EXPECT_TRUE(FileOneCrashReport().is_ok());
+}
+
+TEST_F(CrashReporterTest, Succeed_OnThrottledUpload) {
+  SetUpCrashReporter(
+      Config{/*crash_server=*/
+             {
+                 /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
+                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
+             }},
+      std::make_unique<StubCrashServer>(std::vector({kUploadThrottled})));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));

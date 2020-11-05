@@ -100,15 +100,22 @@ bool Queue::Upload(const Report& report) {
   info_.RecordUploadAttemptNumber(upload_attempts_[report.Id()]);
 
   std::string server_report_id;
-  if (!crash_server_->MakeRequest(report, &server_report_id)) {
-    return false;
-  }
+  const auto response = crash_server_->MakeRequest(report, &server_report_id);
 
-  FX_LOGST(INFO, tags_->Get(report.Id()))
-      << "Successfully uploaded report at https://crash.corp.google.com/" << server_report_id;
-  info_.MarkReportAsUploaded(server_report_id, upload_attempts_[report.Id()]);
-  FreeResources(report);
-  return true;
+  switch (response) {
+    case CrashServer::UploadStatus::kSuccess:
+      FX_LOGST(INFO, tags_->Get(report.Id()))
+          << "Successfully uploaded report at https://crash.corp.google.com/" << server_report_id;
+      info_.MarkReportAsUploaded(server_report_id, upload_attempts_[report.Id()]);
+      FreeResources(report);
+      return true;
+    case CrashServer::UploadStatus::kThrottled:
+      info_.MarkReportAsThrottledByServer(upload_attempts_[report.Id()]);
+      FreeResources(report);
+      return true;
+    case CrashServer::UploadStatus::kFailure:
+      return false;
+  }
 }
 
 void Queue::GarbageCollect(const ReportId report_id) {
