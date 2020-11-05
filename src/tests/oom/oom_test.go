@@ -57,7 +57,7 @@ func TestOOM(t *testing.T) {
 	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
 
 	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("vc: Successfully attached")
+	i.WaitForLogMessage("console.shell: enabled")
 
 	// Trigger a simulated OOM.
 	i.RunCommand("k pmm oom")
@@ -113,7 +113,7 @@ func TestOOMHard(t *testing.T) {
 	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
 
 	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("vc: Successfully attached")
+	i.WaitForLogMessage("console.shell: enabled")
 
 	// Trigger an OOM.
 	i.RunCommand("k pmm oom hard")
