@@ -36,7 +36,7 @@ struct Image {
     ZxPixelFormat pixel_format;
 
     /// The type conveys information about what is providing the pixel data. If this is not
-    /// IMAGE_FORMAT_SIMPLE, it is up to the driver and buffer producer to agree on the meaning
+    /// IMAGE_TYPE_SIMPLE, it is up to the driver and buffer producer to agree on the meaning
     /// of the value through some mechanism outside the scope of this API.
     uint32 type;
 
