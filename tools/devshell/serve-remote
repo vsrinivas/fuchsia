@@ -6,7 +6,7 @@
 #### CATEGORY=Other
 ### serve from a remote workstation
 
-## usage: fx serve-remote [--no-serve] HOSTNAME [REMOTE-PATH]
+## usage: fx serve-remote [--no-serve] [--tunnel-ports=NNNN,..] HOSTNAME [REMOTE-PATH]
 ##
 ## HOSTNAME     the hostname of the workstation you want to serve from
 ## REMOTE-PATH  defaults to ~/fuchsia. The path on the to FUCHSIA_DIR on the workstation.
@@ -14,6 +14,9 @@
 ##  --no-serve                    only tunnel, do not start a package server
 ##  --no-check-ssh-keys  do not verify that the default SSH
 ##                                credentials are the same before serving.
+##  --tunnel-ports=NNN1,NNN2,NNN3 comma-separated list of additional ports to
+##                                tunnel. This is used for e2e tests running on
+##                                remote host that needs to reach the local device.
 ##
 ## HOST and DIR are persisted in the file //.fx-remote-config and are reused as
 ## defaults in future invocations of any 'fx *-remote' tools.
@@ -23,11 +26,16 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-re
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/verify-default-keys.sh || exit $?
 fx-config-read
 
+fx-standard-switches "$@"
+set -- "${FX_ARGV[@]}"
+
 serve=true
 check_ssh_keys=true
 verbose=false
 host=""
 dir=""
+has_tunnel_ports=false
+
 while [[ $# -ne 0 ]]; do
   case "$1" in
   --help|-h)
@@ -42,6 +50,17 @@ while [[ $# -ne 0 ]]; do
     ;;
   -v)
     verbose=true
+    ;;
+  --tunnel-ports)
+    if [[ $# -lt 2 ]]; then
+      fx-error Invalid syntax
+      fx-command-help
+      exit 1
+    fi
+    has_tunnel_ports=true
+    # Split comma-separated list of ports to an array.
+    tunnel_ports=(${2//,/ })
+    shift
     ;;
   -*)
     fx-error "Unknown flag: $1"
@@ -136,6 +155,13 @@ ssh_tunnel_args=(
   -o ServerAliveInterval=30
   -o ServerAliveCountMax=20
 )
+
+# Add additional ports to tunnel if specified.
+if "${has_tunnel_ports}"; then
+  for port in "${tunnel_ports[@]}"; do
+    ssh_tunnel_args+=(-R "${port}:[${target_addr}]:${port}")
+  done
+fi
 
 # Start tunneling session in background. It's started seperately from the command invocations below
 # to allow the script to be consistent on how it is exited for both serve and non-serve cases. It
