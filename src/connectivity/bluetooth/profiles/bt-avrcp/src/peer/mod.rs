@@ -12,6 +12,8 @@ use {
     fidl_fuchsia_bluetooth_bredr::{ProfileProxy, PSM_AVCTP},
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
+    fuchsia_inspect::{self as inspect, Property},
+    fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
     futures::{
         self,
@@ -67,18 +69,61 @@ const MAX_CONNECTION_EST_TIME: zx::Duration = zx::Duration::from_millis(1000);
 const CONNECTION_THRESHOLD: zx::Duration = zx::Duration::from_millis(750);
 
 #[derive(Debug, PartialEq)]
-pub enum PeerChannel<T> {
+pub enum PeerChannelState<T> {
     Connected(Arc<T>),
     Connecting,
     Disconnected,
 }
 
+#[derive(Debug)]
+pub struct PeerChannel<T> {
+    /// The state of this channel.
+    state: PeerChannelState<T>,
+    inspect: inspect::StringProperty,
+}
+
 impl<T> PeerChannel<T> {
+    pub fn connected(&mut self, channel: Arc<T>) {
+        self.state = PeerChannelState::Connected(channel);
+        self.inspect.set("Connected");
+    }
+
+    pub fn connecting(&mut self) {
+        self.state = PeerChannelState::Connecting;
+        self.inspect.set("Connecting");
+    }
+
+    pub fn is_connecting(&self) -> bool {
+        matches!(self.state, PeerChannelState::Connecting)
+    }
+
+    pub fn disconnect(&mut self) {
+        self.state = PeerChannelState::Disconnected;
+        self.inspect.set("Disconnected");
+    }
+
+    pub fn state(&self) -> &PeerChannelState<T> {
+        &self.state
+    }
+
     pub fn connection(&self) -> Option<&Arc<T>> {
-        match self {
-            PeerChannel::Connected(t) => Some(&t),
+        match &self.state {
+            PeerChannelState::Connected(t) => Some(t),
             _ => None,
         }
+    }
+}
+
+impl<T> Default for PeerChannel<T> {
+    fn default() -> Self {
+        Self { state: PeerChannelState::Disconnected, inspect: inspect::StringProperty::default() }
+    }
+}
+
+impl<T> Inspect for &mut PeerChannel<T> {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect = parent.create_string(name, "Disconnected");
+        Ok(())
     }
 }
 
@@ -134,6 +179,19 @@ struct RemotePeer {
     /// Most recent notification values from the peer. Used to notify new controller listeners to
     /// the current state of the peer.
     notification_cache: HashMap<Discriminant<ControllerEvent>, ControllerEvent>,
+
+    /// The inspect node for this peer.
+    inspect: inspect::Node,
+}
+
+impl Inspect for &mut RemotePeer {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect = parent.create_child(name);
+        self.inspect.record_string("peer_id", format!("{}", self.peer_id));
+        self.control_channel.iattach(&self.inspect, "control")?;
+        self.browse_channel.iattach(&self.inspect, "browse")?;
+        Ok(())
+    }
 }
 
 impl RemotePeer {
@@ -146,8 +204,8 @@ impl RemotePeer {
             peer_id: peer_id.clone(),
             target_descriptor: None,
             controller_descriptor: None,
-            control_channel: PeerChannel::Disconnected,
-            browse_channel: PeerChannel::Disconnected,
+            control_channel: PeerChannel::default(),
+            browse_channel: PeerChannel::default(),
             controller_listeners: Vec::new(),
             profile_proxy,
             control_command_handler: ControlChannelHandler::new(&peer_id, target_delegate.clone()),
@@ -157,6 +215,7 @@ impl RemotePeer {
             cancel_tasks: false,
             last_connected_time: None,
             notification_cache: HashMap::new(),
+            inspect: inspect::Node::default(),
         }
     }
 
@@ -182,15 +241,12 @@ impl RemotePeer {
     }
 
     fn control_connected(&self) -> bool {
-        match self.control_channel {
-            PeerChannel::Connected(_) => true,
-            _ => false,
-        }
+        self.control_channel.connection().is_some()
     }
 
     /// Reset all known state about the remote peer to default values.
     fn reset_peer_state(&mut self) {
-        trace!("reset_peer_state {:?}", self.peer_id);
+        trace!("reset_peer_state {}", self.peer_id);
         self.notification_cache.clear();
         self.browse_command_handler.reset();
         self.control_command_handler.reset();
@@ -199,10 +255,14 @@ impl RemotePeer {
     /// `attempt_reconnection` will cause state_watcher to attempt to make an outgoing connection when
     /// woken.
     fn reset_connection(&mut self, attempt_reconnection: bool) {
-        trace!("reset_connection {:?}", self.peer_id);
+        info!(
+            "Disconnecting peer {}, will {}attempt to reconnect",
+            self.peer_id,
+            if attempt_reconnection { "" } else { "not " }
+        );
         self.reset_peer_state();
-        self.browse_channel = PeerChannel::Disconnected;
-        self.control_channel = PeerChannel::Disconnected;
+        self.browse_channel.disconnect();
+        self.control_channel.disconnect();
         self.attempt_connection = attempt_reconnection;
         self.cancel_tasks = true;
         self.last_connected_time = None;
@@ -239,16 +299,16 @@ impl RemotePeer {
         }
 
         self.reset_peer_state();
+        info!("Connected to peer {}", self.peer_id);
         self.last_connected_time = Some(current_time);
-        self.control_channel = PeerChannel::Connected(Arc::new(peer));
+        self.control_channel.connected(Arc::new(peer));
         self.cancel_tasks = true;
         self.wake_state_watcher();
     }
 
     fn set_browse_connection(&mut self, peer: AvctpPeer) {
-        trace!("set_browse_connection {:?}", self.peer_id);
-        let browse_peer = Arc::new(peer);
-        self.browse_channel = PeerChannel::Connected(browse_peer);
+        info!("Peer {} connected browse channel", self.peer_id);
+        self.browse_channel.connected(Arc::new(peer));
         self.wake_state_watcher();
     }
 
@@ -349,6 +409,12 @@ async fn get_supported_events_internal(
 #[derive(Debug, Clone)]
 pub struct RemotePeerHandle {
     peer: Arc<RwLock<RemotePeer>>,
+}
+
+impl Inspect for &mut RemotePeerHandle {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.peer.write().iattach(parent, name)
+    }
 }
 
 impl RemotePeerHandle {

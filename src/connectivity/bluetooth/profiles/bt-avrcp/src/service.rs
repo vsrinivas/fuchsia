@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_bluetooth_avrcp_test::*,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_zircon as zx,
     futures::{
         self,
@@ -524,9 +524,9 @@ where
 
 /// Sets up public FIDL services and client handlers.
 pub fn run_services(
+    mut fs: ServiceFs<ServiceObj<'_, ()>>,
     sender: mpsc::Sender<ServiceRequest>,
-) -> Result<impl Future<Output = Result<(), Error>>, Error> {
-    let mut fs = ServiceFs::new();
+) -> Result<impl Future<Output = Result<(), Error>> + '_, Error> {
     let sender_avrcp = sender.clone();
     let sender_test = sender.clone();
     fs.dir("svc")

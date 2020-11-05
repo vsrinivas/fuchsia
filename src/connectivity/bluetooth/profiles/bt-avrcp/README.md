@@ -70,6 +70,27 @@ src/connectivity/bluetooth/profiles/bt-avrcp --with
 1.  Issue commands to the peer using the AVRCP tool. Use the `help` command to
     get a list of supported commands available.
 
+## Inspect
+
+The `bt-avrcp` component includes support for
+[component inspection](https://fuchsia.dev/fuchsia-src/development/diagnostics/inspect). To view
+the current state of the peers connected, use `fx iquery show bt-avrcp.cmx`.
+
+### Hierarchy
+
+```
+ root:
+      peers:
+        peer_#:
+          browse = (connected / connecting / disconnected)
+          control = (connected / connecting / disconencted)
+          peer_id
+
+```
+
+One peer child exists in the hierarchy for each peer that has been discovered, whether or not it
+is connected.
+
 ## Code Layout
 
 ### `peer_manager` mod

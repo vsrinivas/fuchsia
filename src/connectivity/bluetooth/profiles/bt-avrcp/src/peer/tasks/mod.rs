@@ -156,9 +156,8 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
         let (peer_id, profile_service) = {
             let peer_guard = peer.read();
             // Return early if we are not in the `Connecting` state.
-            match peer_guard.control_channel {
-                PeerChannel::Connecting => {}
-                _ => return,
+            if !peer_guard.control_channel.is_connecting() {
+                return;
             }
             (peer_guard.peer_id, peer_guard.profile_proxy.clone())
         };
@@ -188,29 +187,23 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
                         return;
                     }
                 };
-                match peer_guard.control_channel {
-                    PeerChannel::Connecting => {
-                        let peer = AvcPeer::new(channel);
-                        trace!("Successfully established outgoing connection for peer {}", peer_id);
-                        peer_guard.set_control_connection(peer);
-                    }
-                    _ => {
-                        trace!(
-                            "Incoming connection by peer {} established while making outgoing.",
-                            peer_id
-                        );
+                if peer_guard.control_channel.is_connecting() {
+                    let peer = AvcPeer::new(channel);
+                    trace!("Successfully established outgoing connection for peer {}", peer_id);
+                    peer_guard.set_control_connection(peer);
+                } else {
+                    trace!("Connection collision from peer {} while making outgoing.", peer_id);
 
-                        // An incoming l2cap connection was made while we were making an
-                        // outgoing one. Drop both connections, per spec, and attempt
-                        // to reconnect.
-                        peer_guard.reset_connection(true);
-                    }
-                };
+                    // An incoming l2cap connection was made while we were making an
+                    // outgoing one. Drop both connections, per spec, and attempt
+                    // to reconnect.
+                    peer_guard.reset_connection(true);
+                }
             }
             Ok(Err(e)) => {
                 error!("Couldn't connect to peer {}: {:?}", peer_id, e);
                 let mut peer_guard = peer.write();
-                if let PeerChannel::Connecting = peer_guard.control_channel {
+                if peer_guard.control_channel.is_connecting() {
                     peer_guard.reset_connection(false);
                 }
             }
@@ -364,9 +357,9 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
             }
 
             trace!("state_watcher control channel {:?}", peer_guard.control_channel);
-            match peer_guard.control_channel {
-                PeerChannel::Connecting => {}
-                PeerChannel::Disconnected => {
+            match peer_guard.control_channel.state() {
+                &PeerChannelState::Connecting => {}
+                &PeerChannelState::Disconnected => {
                     // Have we discovered service profile data on the peer?
                     if (peer_guard.target_descriptor.is_some()
                         || peer_guard.controller_descriptor.is_some())
@@ -374,11 +367,11 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
                     {
                         trace!("Starting make_connection task for peer {:?}", peer_guard.peer_id);
                         peer_guard.attempt_connection = false;
-                        peer_guard.control_channel = PeerChannel::Connecting;
+                        peer_guard.control_channel.connecting();
                         start_make_connection_task(peer.clone());
                     }
                 }
-                PeerChannel::Connected(_) => {
+                &PeerChannelState::Connected(_) => {
                     // If we have discovered profile data on this peer, start processing requests
                     // over the control stream.
                     if (peer_guard.target_descriptor.is_some()
@@ -402,15 +395,15 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
                 }
             }
 
-            match peer_guard.browse_channel {
-                PeerChannel::Connecting => {}
-                PeerChannel::Disconnected => {
+            match peer_guard.browse_channel.state() {
+                &PeerChannelState::Connecting => {}
+                &PeerChannelState::Disconnected => {
                     if let Some(ref abort_handle) = browse_channel_abort_handle {
                         abort_handle.abort();
                         browse_channel_abort_handle = None;
                     }
                 }
-                PeerChannel::Connected(_) => {
+                &PeerChannelState::Connected(_) => {
                     // The Browse channel must be established after the control channel.
                     // Ensure that the control channel exists and the browse channel doesn't
                     // before spawning the browse processing task.

@@ -6,8 +6,11 @@
 use {
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::Inspect,
     futures::{channel::mpsc, stream::StreamExt, FutureExt},
-    log::{error, info},
+    log::{error, info, warn},
     std::convert::TryInto,
 };
 
@@ -40,10 +43,19 @@ async fn main() -> Result<(), Error> {
     // TODO(fxbug.dev/44330) handle back pressure correctly and reduce mpsc::channel buffer sizes.
     let (client_sender, mut service_request_receiver) = mpsc::channel(512);
 
-    let mut peer_manager = PeerManager::new(profile_proxy).expect("Unable to create Peer Manager");
+    let mut fs = ServiceFs::new();
 
-    let mut service_fut =
-        service::run_services(client_sender).expect("Unable to start AVRCP FIDL service").fuse();
+    let inspect = inspect::Inspector::new();
+    inspect.serve(&mut fs)?;
+
+    let mut peer_manager = PeerManager::new(profile_proxy).expect("Unable to create Peer Manager");
+    if let Err(e) = peer_manager.iattach(inspect.root(), "peers") {
+        warn!("Failed to attach to inspect: {:?}", e);
+    }
+
+    let mut service_fut = service::run_services(fs, client_sender)
+        .expect("Unable to start AVRCP FIDL service")
+        .fuse();
 
     loop {
         futures::select! {

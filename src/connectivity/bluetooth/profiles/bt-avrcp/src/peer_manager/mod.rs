@@ -10,6 +10,8 @@ use {
     },
     fidl_fuchsia_bluetooth_bredr::ProfileProxy,
     fuchsia_bluetooth::types::{Channel, PeerId},
+    fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{self, channel::oneshot},
     log::trace,
     parking_lot::{Mutex, RwLock},
@@ -78,32 +80,43 @@ impl ServiceRequest {
 /// accordingly.
 pub struct PeerManager {
     profile_proxy: ProfileProxy,
-
-    /// Connected peers, which may be connected or disconnected
-    remotes: RwLock<HashMap<PeerId, RemotePeerHandle>>,
-
+    /// Known peers, which may be connected or disconnected
+    peers: RwLock<HashMap<PeerId, RemotePeerHandle>>,
+    /// The delegate for the AVRCP target, where commands to this peer are sent.
     target_delegate: Arc<TargetDelegate>,
+    /// The 'peers' node of this inspect tree. All known peers have a child node in this tree.
+    inspect: inspect::Node,
+}
+
+impl Inspect for &mut PeerManager {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect = parent.create_child(name);
+        Ok(())
+    }
 }
 
 impl PeerManager {
     pub fn new(profile_proxy: ProfileProxy) -> Result<Self, FailureError> {
         Ok(Self {
             profile_proxy,
-            remotes: RwLock::new(HashMap::new()),
+            peers: RwLock::new(HashMap::new()),
             target_delegate: Arc::new(TargetDelegate::new()),
+            inspect: inspect::Node::default(),
         })
     }
 
     pub fn get_remote_peer(&self, peer_id: &PeerId) -> RemotePeerHandle {
-        self.remotes
+        self.peers
             .write()
             .entry(peer_id.clone())
             .or_insert_with(|| {
-                RemotePeerHandle::spawn_peer(
+                let mut handle = RemotePeerHandle::spawn_peer(
                     peer_id.clone(),
                     self.target_delegate.clone(),
                     self.profile_proxy.clone(),
-                )
+                );
+                let _ = handle.iattach(&self.inspect, inspect::unique_name("peer_"));
+                handle
             })
             .clone()
     }
