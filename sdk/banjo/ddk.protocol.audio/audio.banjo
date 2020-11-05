@@ -11,3 +11,9 @@ protocol Codec {
     /// control.
     Connect(handle<channel> channel) -> (zx.status status);
 };
+
+protocol Dai {
+    /// This method connects a channel in order to serve FIDL over it outside the driver host
+    /// control.
+    Connect(handle<channel> channel) -> (zx.status status);
+};

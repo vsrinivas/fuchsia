@@ -4,8 +4,8 @@
 
 library fuchsia.hardware.audio;
 
-// For an overview see //zircon/driver_interfaces/audio_streaming.md
-
+/// For an overview see
+/// [Audio Driver Streaming Interface](//docs/concepts/drivers/driver_interfaces/audio_streaming.md)
 protocol Device {
     /// This method obtains a channel in order to serve FIDL over it outside the devhost's control.
     GetChannel() -> (StreamConfig channel);

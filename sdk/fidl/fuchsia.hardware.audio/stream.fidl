@@ -6,8 +6,6 @@ library fuchsia.hardware.audio;
 
 using zx;
 
-// For an overview see //zircon/driver_interfaces/audio_streaming.md
-
 const uint32 UNIQUE_ID_SIZE = 16;
 const uint32 MAX_UI_STRING_SIZE = 256;
 const uint32 MAX_COUNT_CHANNELS_TO_USE = 64;
@@ -43,7 +41,7 @@ table SupportedFormats {
 /// bytes. All values listed in each vector are supported. When not all combinations supported by
 /// the driver can be described with one `SupportedFormats` (and hence one `PcmSupportedFormats`),
 /// `GetSupportedFormats` returns more than one `SupportedFormats` in the returned vector.
-/// For more detailed information see //zircon/driver_interfaces/audio_streaming.md.
+/// For more detailed information see //docs/concepts/drivers/driver_interfaces/audio_streaming.md.
 struct PcmSupportedFormats {
     /// Vector of possible number of channels supported in ascending order.
     vector<uint8>:MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS number_of_channels;
@@ -71,7 +69,8 @@ table Format {
 
 /// Format supporting non-compressed PCM audio. Frames are made up of `number_of_channels` samples
 /// which have `valid_bits_per_sample` bits of left-justified data within `bytes_per_channel`.
-/// bytes. For more detailed information see //zircon/driver_interfaces/audio_streaming.md.
+/// bytes. For more detailed information see
+/// //docs/concepts/drivers/driver_interfaces/audio_streaming.md.
 struct PcmFormat {
     /// Number of channels.
     uint8 number_of_channels;
@@ -174,6 +173,8 @@ table StreamProperties {
     11: clock_domain clock_domain;
 };
 
+/// For an overview see
+/// [Audio Driver Streaming Interface](//docs/concepts/drivers/driver_interfaces/audio_streaming.md)
 protocol StreamConfig {
     /// Retrieves top level static properties.
     GetProperties() -> (StreamProperties properties);

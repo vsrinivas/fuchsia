@@ -6,8 +6,6 @@ library fuchsia.hardware.audio;
 
 using zx;
 
-// For an overview see //zircon/driver_interfaces/audio_streaming.md
-
 table RingBufferProperties {
     /// The driver's best estimate of the external delay (in nanoseconds) present in the
     /// presentation pipeline for the chosen format. When precisely synchronizing presentation
@@ -69,6 +67,8 @@ enum GetVmoError {
     INTERNAL_ERROR = 2;
 };
 
+/// For an overview see
+/// [Audio Driver Streaming Interface](//docs/concepts/drivers/driver_interfaces/audio_streaming.md)
 protocol RingBuffer {
     /// Accessor for top level static properties.
     GetProperties() -> (RingBufferProperties properties);
