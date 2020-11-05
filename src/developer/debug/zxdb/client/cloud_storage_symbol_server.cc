@@ -20,6 +20,7 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
+#include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 
 namespace zxdb {
@@ -106,31 +107,33 @@ std::unique_ptr<CloudStorageSymbolServer> CloudStorageSymbolServer::Impl(Session
   return std::make_unique<CloudStorageSymbolServerImpl>(session, url);
 }
 
-bool CloudStorageSymbolServer::HandleRequestResult(Curl::Error result, long response_code,
-                                                   size_t previous_ready_count, Err* out_err) {
+Err CloudStorageSymbolServer::HandleRequestResult(Curl::Error result, long response_code,
+                                                  size_t previous_ready_count) {
   if (!result && response_code == 200) {
-    return true;
+    return Err();
   }
 
   if (state() != SymbolServer::State::kReady || previous_ready_count != ready_count_) {
-    return false;
+    return Err("Internal error.");
   }
 
+  Err out_err;
   if (result) {
-    *out_err = Err("Could not contact server: " + result.ToString());
+    out_err = Err("Could not contact server: " + result.ToString());
+    // Fall through to retry.
   } else if (response_code == 401) {
-    *out_err = Err("Authentication expired.");
-    return false;
+    return Err("Authentication expired.");
   } else if (response_code == 404 || response_code == 410) {
-    return false;
+    return Err("Server responded with code " + std::to_string(response_code));
   } else {
-    *out_err = Err("Unexpected response: " + std::to_string(response_code));
+    out_err = Err("Unexpected response: " + std::to_string(response_code));
+    // Fall through to retry.
   }
 
-  error_log_.push_back(out_err->msg());
+  error_log_.push_back(out_err.msg());
   IncrementRetries();
 
-  return false;
+  return out_err;
 }
 
 std::string CloudStorageSymbolServer::AuthInfo() const {
@@ -374,10 +377,10 @@ void CloudStorageSymbolServerImpl::CheckFetch(const std::string& build_id,
     if (!weak_this)
       return;
 
-    Err err;
     auto code = curl->ResponseCode();
 
-    if (weak_this->HandleRequestResult(result, code, previous_ready_count, &err)) {
+    Err err = weak_this->HandleRequestResult(result, code, previous_ready_count);
+    if (err.ok()) {
       curl->get_body() = true;
       cb(Err(), [weak_this, build_id, file_type, curl](SymbolServer::FetchCallback fcb) {
         if (weak_this)
@@ -422,6 +425,17 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
     }
   }
 
+  // Compute the destination file from the build ID.
+  if (build_id.size() <= 2) {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [build_id, cb = std::move(cb)]() mutable {
+          cb(Err("Invalid build ID \"" + build_id + "\" for symbol fetch."), "");
+        });
+    return;
+  }
+  auto target_path = std::filesystem::path(cache_path) / build_id.substr(0, 2);
+  auto target_name = ToDebugFileName(build_id.substr(2), file_type);
+
   FILE* file = nullptr;
 
   // We don't have a folder specified where downloaded symbols go. We'll just drop it in tmp and at
@@ -446,31 +460,27 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
     return;
   }
 
-  auto cleanup = [file, path, cache_path, build_id, file_type](bool valid,
-                                                               Err* result) -> std::string {
+  auto cleanup = [file, path, cache_path, target_path,
+                  target_name](const Err& in_err) -> ErrOr<std::string> {
     fclose(file);
 
     std::error_code ec;
-    if (!valid) {
+    if (in_err.has_error()) {
+      // Need to cleanup the file in the error case.
       std::filesystem::remove(path, ec);
-      return "";
+      return in_err;  // Just forward the same error to the caller.
     }
 
     if (cache_path.empty()) {
-      *result = Err("No symbol cache specified.");
-      return path;
+      return Err("No symbol cache specified.");
     }
-
-    auto target_path = std::filesystem::path(cache_path) / build_id.substr(0, 2);
-    auto target_name = ToDebugFileName(build_id.substr(2), file_type);
 
     std::filesystem::create_directory(target_path, ec);
     if (std::filesystem::is_directory(target_path, ec)) {
       std::filesystem::rename(path, target_path / target_name, ec);
-      return target_path / target_name;
+      return std::string(target_path / target_name);
     } else {
-      *result = Err("Could not move file in to cache.");
-      return path;
+      return Err("Could not move file in to cache.");
     }
   };
 
@@ -479,16 +489,15 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
 
   size_t previous_ready_count = ready_count_;
 
-  curl->Perform([weak_this = weak_factory_.GetWeakPtr(), cleanup, build_id, cb = std::move(cb),
+  curl->Perform([weak_this = weak_factory_.GetWeakPtr(), cleanup, cb = std::move(cb),
                  previous_ready_count](Curl* curl, Curl::Error result) mutable {
     if (!weak_this)
       return;
-    Err err;
-    bool valid =
-        weak_this->HandleRequestResult(result, curl->ResponseCode(), previous_ready_count, &err);
+    Err request_err =
+        weak_this->HandleRequestResult(result, curl->ResponseCode(), previous_ready_count);
 
-    std::string final_path = cleanup(valid, &err);
-    cb(err, final_path);
+    ErrOr<std::string> path_or = cleanup(request_err);
+    cb(path_or.err_or_empty(), path_or.value_or_empty());
   });
 }
 

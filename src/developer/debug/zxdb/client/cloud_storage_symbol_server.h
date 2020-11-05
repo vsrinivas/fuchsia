@@ -33,10 +33,9 @@ class CloudStorageSymbolServer : public SymbolServer {
   // manipulated first, so we break this out into a separate function.
   void DoInit();
 
-  // General dispatch from the result of a Curl transaction. Handles the error cases and then
-  // returns true if no error occurred.
-  bool HandleRequestResult(Curl::Error result, long response_code, size_t previous_ready_count,
-                           Err* out_err);
+  // General dispatch from the result of a Curl transaction. Handles the error cases and converts
+  // to a zxdb Err.
+  Err HandleRequestResult(Curl::Error result, long response_code, size_t previous_ready_count);
 
   // Use the refresh token to get a new access token.
   void AuthRefresh();
