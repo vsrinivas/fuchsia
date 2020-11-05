@@ -79,7 +79,7 @@ GracefulRebootReason ExtractGracefulRebootReason(const std::string_view line) {
     return GracefulRebootReason::kHighTemperature;
   } else if (line == "SESSION FAILURE") {
     return GracefulRebootReason::kSessionFailure;
-  } else if (line == "SYSTEM FAILURE") {
+  } else if (line == "SYSMGR FAILURE") {
     return GracefulRebootReason::kSystemFailure;
   } else if (line == "NOT SUPPORTED") {
     return GracefulRebootReason::kNotSupported;

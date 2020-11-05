@@ -24,8 +24,8 @@ std::string FormatReason(fuchsia::hardware::power::statecontrol::RebootReason re
       return "HIGH TEMPERATURE";
     case RebootReason::SESSION_FAILURE:
       return "SESSION FAILURE";
-    case RebootReason::SYSTEM_FAILURE:
-      return "SYSTEM FAILURE";
+    case RebootReason::SYSMGR_FAILURE:
+      return "SYSMGR FAILURE";
     case RebootReason::FACTORY_DATA_RESET:
       return "FACTORY DATA RESET";
     default:
@@ -42,7 +42,7 @@ ImminentGracefulRebootWatcher::ImminentGracefulRebootWatcher(
   // TODO(fxbug.dev/52187): Reconnect if the error handler runs.
   connection_.set_error_handler([](zx_status_t status) {
     FX_PLOGS(WARNING, status) << "Lost connection to client of "
-                               "fuchsia.hardware.power.statecontrol.RebootMethodsWatcher";
+                                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcher";
   });
 }
 

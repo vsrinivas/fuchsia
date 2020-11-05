@@ -78,7 +78,7 @@ TEST_F(AppmgrTest, RebootIfSysmgrExits) {
   auto controller =
       RunComponent("fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/failing_appmgr.cmx");
   RunLoopUntil([this] { return power_admin_.rebooted(); });
-  EXPECT_EQ(power_admin_.reboot_reason(), RebootReason::SYSTEM_FAILURE);
+  EXPECT_EQ(power_admin_.reboot_reason(), RebootReason::SYSMGR_FAILURE);
 }
 
 }  // namespace

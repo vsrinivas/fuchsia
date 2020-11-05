@@ -387,7 +387,7 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulWithCrashReporterTest,
                              },
                              {
                                  "SystemFailure",
-                                 "SYSTEM FAILURE",
+                                 "SYSMGR FAILURE",
                                  "fuchsia-system-failure",
                                  zx::msec(65487494),
                                  cobalt::LastRebootReason::kSystemFailure,

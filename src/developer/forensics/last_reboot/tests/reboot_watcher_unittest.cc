@@ -73,8 +73,8 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootReasons, ImminentGracefulRebootWatcher
                              },
                              {
                                  "SystemFailure",
-                                 RebootReason::SYSTEM_FAILURE,
-                                 "SYSTEM FAILURE",
+                                 RebootReason::SYSMGR_FAILURE,
+                                 "SYSMGR FAILURE",
                              },
                              {
                                  "FactoryDataReset",

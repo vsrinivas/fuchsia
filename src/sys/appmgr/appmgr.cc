@@ -120,7 +120,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
                                power_admin.NewRequest(dispatcher).TakeChannel().release());
       FX_CHECK(status == ZX_OK) << "Could not connect to power state control service: "
                                 << zx_status_get_string(status);
-      const auto reason = fuchsia::hardware::power::statecontrol::RebootReason::SYSTEM_FAILURE;
+      const auto reason = fuchsia::hardware::power::statecontrol::RebootReason::SYSMGR_FAILURE;
       auto cb = [](fuchsia::hardware::power::statecontrol::Admin_Reboot_Result result) {
         if (result.is_err()) {
           FX_LOGS(FATAL) << "Failed to reboot after sysmgr exited: "
