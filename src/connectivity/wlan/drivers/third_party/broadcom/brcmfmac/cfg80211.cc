@@ -3057,7 +3057,7 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
 
   if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state) &&
       !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state)) {
-    BRCMF_ERR("attempt to stop already stopped AP\n");
+    BRCMF_INFO("attempt to stop already stopped AP\n");
     return WLAN_STOP_RESULT_BSS_ALREADY_STOPPED;
   }
 

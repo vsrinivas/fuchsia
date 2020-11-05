@@ -222,9 +222,17 @@ impl ApSme {
     pub fn on_stop_command(&mut self) -> oneshot::Receiver<fidl_sme::StopApResultCode> {
         let (responder, receiver) = Responder::new();
         self.state = self.state.take().map(|mut state| match state {
-            s @ State::Idle { .. } => {
-                responder.respond(fidl_sme::StopApResultCode::Success);
-                s
+            State::Idle { mut ctx } => {
+                // We don't have an SSID, so just do a best-effort StopAP request with no SSID
+                // filled in
+                let stop_req = fidl_mlme::StopRequest { ssid: vec![] };
+                let timeout = send_stop_req(&mut ctx, stop_req.clone());
+                State::Stopping {
+                    ctx,
+                    stop_req,
+                    responders: vec![responder],
+                    stop_timeout: Some(timeout),
+                }
             }
             State::Starting { ref mut stop_responders, .. } => {
                 stop_responders.push(responder);
@@ -972,8 +980,14 @@ mod tests {
 
     #[test]
     fn ap_stops_while_idle() {
-        let (mut sme, _, _) = create_sme();
+        let (mut sme, mut mlme_stream, _) = create_sme();
         let mut receiver = sme.on_stop_command();
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
+            assert!(stop_req.ssid.is_empty());
+        });
+
+        // Respond with a successful stop result code
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::Success));
         assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), receiver.try_recv());
     }
 

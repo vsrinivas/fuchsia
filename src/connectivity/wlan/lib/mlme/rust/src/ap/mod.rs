@@ -189,10 +189,18 @@ impl Ap {
 
     /// Handles MLME-STOP.request (IEEE Std 802.11-2016, 6.3.12.2) from the SME.
     fn handle_mlme_stop_req(&mut self, _req: fidl_mlme::StopRequest) -> Result<(), Error> {
-        if let Some(bss) = self.bss.take() {
-            bss.stop(&mut self.ctx)?;
-        } else {
-            info!("MLME-STOP.request: BSS not started");
+        match self.bss.take() {
+            Some(bss) => match bss.stop(&mut self.ctx) {
+                Ok(_) => self.ctx.send_mlme_stop_conf(fidl_mlme::StopResultCodes::Success)?,
+                Err(e) => {
+                    self.ctx.send_mlme_stop_conf(fidl_mlme::StopResultCodes::InternalError)?;
+                    return Err(e);
+                }
+            },
+            None => {
+                info!("MLME-STOP.request: BSS not started");
+                self.ctx.send_mlme_stop_conf(fidl_mlme::StopResultCodes::BssAlreadyStopped)?;
+            }
         }
         info!("MLME-STOP.request: OK");
         Ok(())
@@ -879,6 +887,36 @@ mod tests {
         ap.handle_mlme_stop_req(fidl_mlme::StopRequest { ssid: b"coolnet".to_vec() })
             .expect("expected Ap::handle_mlme_stop_request OK");
         assert!(ap.bss.is_none());
+
+        let msg =
+            fake_device.next_mlme_msg::<fidl_mlme::StopConfirm>().expect("expected MLME message");
+        assert_eq!(
+            msg,
+            fidl_mlme::StopConfirm { result_code: fidl_mlme::StopResultCodes::Success },
+        );
+    }
+
+    #[test]
+    fn ap_handle_mlme_stop_req_already_stopped() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
+
+        ap.handle_mlme_stop_req(fidl_mlme::StopRequest { ssid: b"coolnet".to_vec() })
+            .expect("expected Ap::handle_mlme_stop_request OK");
+        assert!(ap.bss.is_none());
+
+        let msg =
+            fake_device.next_mlme_msg::<fidl_mlme::StopConfirm>().expect("expected MLME message");
+        assert_eq!(
+            msg,
+            fidl_mlme::StopConfirm { result_code: fidl_mlme::StopResultCodes::BssAlreadyStopped },
+        );
     }
 
     #[test]

@@ -69,6 +69,16 @@ impl Context {
         })
     }
 
+    /// Sends MLME-STOP.confirm to the SME.
+    pub fn send_mlme_stop_conf(
+        &self,
+        result_code: fidl_mlme::StopResultCodes,
+    ) -> Result<(), Error> {
+        self.device.access_sme_sender(|sender| {
+            sender.send_stop_conf(&mut fidl_mlme::StopConfirm { result_code })
+        })
+    }
+
     /// Sends MLME-AUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.5.4) to the SME.
     pub fn send_mlme_auth_ind(
         &self,
