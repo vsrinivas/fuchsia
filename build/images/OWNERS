@@ -3,4 +3,6 @@ per-file BUILD.gn=shayba@google.com
 per-file BUILD.gn=leonardchan@google.com
 per-file BUILD.gn=phosek@google.com
 
+per-file generate_flash_script.sh=dpursell@google.com,zyecheng@google.com,vars@google.com
+
 # COMPONENT: Build

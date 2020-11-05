@@ -182,8 +182,9 @@ done
 # Reboot into bootloader so that the new firmware image takes effect.
 if [[ ! -z "${FIRMWARE[@]}" ]]; then
   echo "${FASTBOOT_PATH} reboot bootloader" >> "${OUTPUT}"
-  # Wait for 1 seconds so that the reboot process can be recognized by the script.
-  echo "sleep 1" >> "${OUTPUT}"
+  # Wait for 5 seconds to allow enough time for the device to de-enumerate.
+  echo "echo 'Sleeping for 5 seconds for the device to de-enumerate.'" >> "${OUTPUT}"
+  echo "sleep 5" >> "${OUTPUT}"
 fi
 
 if [[ ! -z "${ZIRCON_A_PARTITION}" ]]; then
