@@ -15,14 +15,65 @@ use {
         time_source_manager::{KernelMonotonicProvider, TimeSourceManager},
     },
     chrono::prelude::*,
-    fidl_fuchsia_time as ftime, fuchsia_zircon as zx,
+    fidl_fuchsia_time as ftime, fuchsia_async as fasync, fuchsia_zircon as zx,
     log::{error, info},
-    std::sync::Arc,
+    std::{
+        fmt::{self, Debug},
+        sync::Arc,
+    },
 };
+
+/// One million for PPM calculations
+const MILLION: i64 = 1_000_000;
 
 /// The minimum size UTC mismatch that will lead to a clock update. If the difference between the
 /// current clock value and new estimate is smaller than this no update will be applied.
-const CLOCK_UPDATE_THRESHOLD: zx::Duration = zx::Duration::from_millis(1);
+const CLOCK_UPDATE_THRESHOLD: zx::Duration = zx::Duration::from_micros(10);
+
+/// The maximum clock frequency adjustment that Timekeeper will apply to slew away a UTC error,
+/// expressed as a PPM deviation from nominal.
+const MAX_RATE_CORRECTION_PPM: i64 = 200;
+
+/// The clock frequency adjustment that Timekeeper will prefer when slewing away a UTC error,
+/// expressed as a PPM deviation from nominal.
+const NOMINAL_RATE_CORRECTION_PPM: i64 = 20;
+
+/// The longest duration for which Timekeeper will apply a clock frequency adjustment in response to
+/// a single time update.
+const MAX_SLEW_DURATION: zx::Duration = zx::Duration::from_minutes(90);
+
+/// The largest error that may be corrected through slewing at the maximum rate.
+const MAX_RATE_MAX_ERROR: zx::Duration =
+    zx::Duration::from_nanos((MAX_SLEW_DURATION.into_nanos() * MAX_RATE_CORRECTION_PPM) / MILLION);
+
+/// The largest error that may be corrected through slewing at the preferred rate.
+const NOMINAL_RATE_MAX_ERROR: zx::Duration = zx::Duration::from_nanos(
+    (MAX_SLEW_DURATION.into_nanos() * NOMINAL_RATE_CORRECTION_PPM) / MILLION,
+);
+
+/// Describes how a clock will be slewed in order to correct time.
+#[derive(PartialEq)]
+struct Slew {
+    /// Clock adjustment in parts per million.
+    rate_adjust: i32,
+    /// Duration for which the slew is to maintained.
+    duration: zx::Duration,
+}
+
+impl Default for Slew {
+    fn default() -> Slew {
+        Slew { rate_adjust: 0, duration: zx::Duration::from_nanos(0) }
+    }
+}
+
+impl Debug for Slew {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Slew")
+            .field("rate_ppm", &self.rate_adjust)
+            .field("duration_ms", &self.duration.into_millis())
+            .finish()
+    }
+}
 
 /// Generates and applies all updates needed to maintain a userspace clock object (and optionally
 /// also a real time clock) with accurate UTC time. New time samples are received from a
@@ -43,9 +94,11 @@ pub struct ClockManager<T: TimeSource, R: Rtc, D: Diagnostics> {
     diagnostics: Arc<D>,
     /// The track of the estimate being managed.
     track: Track,
+    /// A task used to complete any deferred clock updates, such as finishing a slew.
+    delayed_updates: Option<fasync::Task<()>>,
 }
 
-impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
+impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
     /// Construct a new `ClockManager` and start synchronizing the clock. The returned future
     /// will never complete.
     pub async fn execute(
@@ -83,6 +136,7 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
             notifier,
             diagnostics,
             track,
+            delayed_updates: None,
         }
     }
 
@@ -116,7 +170,7 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
                 self.start_clock(estimate_offset);
                 clock_started = true;
             } else {
-                self.apply_clock_correction(estimate_offset);
+                self.apply_clock_correction(estimate_offset).await;
             }
 
             // Update the RTC clock if we have one.
@@ -165,11 +219,7 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
     fn start_clock(&mut self, new_offset: zx::Duration) {
         let utc = zx::Time::get_monotonic() + new_offset;
         let utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
-        if let Err(status) = self.clock.update(zx::ClockUpdate::new().value(utc)) {
-            // Clock update failures should only be caused by an invalid clock object. There
-            // isn't anything Timekeeper could do to effectively handle them.
-            panic!("failed to start {:?} clock at {}: {}", self.track, utc_chrono, status);
-        };
+        self.update_clock(zx::ClockUpdate::new().value(utc));
         self.diagnostics.record(Event::StartClock {
             track: self.track,
             source: StartClockSource::External(self.time_source_manager.role()),
@@ -179,55 +229,119 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
 
     /// Applies a correction to the clock to reach the requested offset between utc and monotonic
     /// time, selecting and applying the most appropriate strategy and recording diagnostic events.
-    fn apply_clock_correction(&mut self, new_offset: zx::Duration) {
+    async fn apply_clock_correction(&mut self, new_offset: zx::Duration) {
         let current_offset = get_clock_offset(&self.clock);
         let correction = new_offset - current_offset;
+        let track = self.track;
 
-        // For now we omit very small corrections and implement everything else as a simple step.
-        let strategy = if within_bound(correction, CLOCK_UPDATE_THRESHOLD) {
-            ClockCorrectionStrategy::NotRequired
-        } else {
-            ClockCorrectionStrategy::Step
-        };
-        self.diagnostics.record(Event::ClockCorrection { track: self.track, correction, strategy });
+        let (strategy, slew) = determine_strategy(correction);
+        self.diagnostics.record(Event::ClockCorrection { track, correction, strategy });
 
         match strategy {
             ClockCorrectionStrategy::NotRequired => {
                 info!(
-                    "{:?} clock correction of {:?} very small, skipping",
-                    self.track,
-                    correction.into_nanos(),
+                    "skipping small {:?} clock correction of {:?}ns",
+                    track,
+                    correction.into_nanos()
                 );
             }
-            _ => {
-                let utc = zx::Time::get_monotonic() + new_offset;
-                let utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
-                if let Err(status) = self.clock.update(zx::ClockUpdate::new().value(utc)) {
-                    // Clock update failures should only be caused by an invalid clock object. There
-                    // isn't anything Timekeeper could do to effectively handle them.
-                    panic!("failed to update {:?} clock to {}: {}", self.track, utc_chrono, status);
+            ClockCorrectionStrategy::NominalRateSlew | ClockCorrectionStrategy::MaxDurationSlew => {
+                // Any pending clock updates will be superseded by the handling of this one.
+                if let Some(task) = self.delayed_updates.take() {
+                    task.cancel().await;
                 };
-                self.diagnostics.record(Event::UpdateClock {
-                    track: self.track,
-                    reason: ClockUpdateReason::TimeStep,
-                });
-                info!("adjusted {:?} clock to {}", self.track, utc_chrono);
+                let finish_time = fasync::Time::after(slew.duration);
+
+                // Begin the slew.
+                // TODO(63368): Set error bounds.
+                self.update_clock(zx::ClockUpdate::new().rate_adjust(slew.rate_adjust));
+                self.record_clock_update(ClockUpdateReason::BeginSlew);
+                info!("started {:?} {:?}", track, slew);
+
+                // And create a task to asynchronously finish the slew.
+                let clock_clone = Arc::clone(&self.clock);
+                let diagnostics_clone = Arc::clone(&self.diagnostics);
+                self.delayed_updates = Some(fasync::Task::spawn(async move {
+                    fasync::Timer::new(finish_time).await;
+                    // TODO(63368): Set additional events to reduce error bounds during the slew.
+                    update_clock(&clock_clone, &track, zx::ClockUpdate::new().rate_adjust(0));
+                    diagnostics_clone
+                        .record(Event::UpdateClock { track, reason: ClockUpdateReason::EndSlew });
+                    info!("completed {:?} clock slew", track);
+                }));
+            }
+            ClockCorrectionStrategy::Step => {
+                // Any pending clock updates should be superseded by this time step.
+                if let Some(task) = self.delayed_updates.take() {
+                    task.cancel().await;
+                };
+
+                let utc = zx::Time::get_monotonic() + new_offset;
+                // TODO(63368): Set error bounds.
+                self.update_clock(zx::ClockUpdate::new().value(utc).rate_adjust(0));
+                self.record_clock_update(ClockUpdateReason::TimeStep);
+                let utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
+                info!("stepped {:?} clock to {}", self.track, utc_chrono);
             }
         }
+    }
+
+    /// Applies an update to the clock and records the reason with diagnostics.
+    fn update_clock(&mut self, update: zx::ClockUpdate) {
+        update_clock(&self.clock, &self.track, update);
+    }
+
+    /// Records a clock Applies an update to the clock and records the reason with diagnostics.
+    fn record_clock_update(&self, reason: ClockUpdateReason) {
+        self.diagnostics.record(Event::UpdateClock { track: self.track, reason });
+    }
+}
+
+/// Applies an update to the supplied clock, panicking with a comprehensible error on failure.
+fn update_clock(clock: &Arc<zx::Clock>, track: &Track, update: zx::ClockUpdate) {
+    if let Err(status) = clock.update(update) {
+        // Clock update errors should only be caused by an invalid clock (or potentially a
+        // serious bug in the generation of a time update). There isn't anything Timekeeper
+        // could do to gracefully handle them.
+        panic!("Failed to apply update to {:?} clock: {}", track, status);
+    }
+}
+
+/// Determines the strategy that should be used to apply the supplied correction and instructions
+/// for performing a slew. `Slew` will be set to default in the strategies that do not require
+/// slewing.
+fn determine_strategy(correction: zx::Duration) -> (ClockCorrectionStrategy, Slew) {
+    let correction_nanos = correction.into_nanos();
+    let correction_abs = zx::Duration::from_nanos(correction_nanos.abs());
+    let sign = if correction_nanos < 0 { -1 } else { 1 };
+
+    if correction_abs < CLOCK_UPDATE_THRESHOLD {
+        (ClockCorrectionStrategy::NotRequired, Slew::default())
+    } else if correction_abs < NOMINAL_RATE_MAX_ERROR {
+        let rate_adjust = NOMINAL_RATE_CORRECTION_PPM * sign;
+        let duration = (correction_abs * MILLION) / NOMINAL_RATE_CORRECTION_PPM;
+        (
+            ClockCorrectionStrategy::NominalRateSlew,
+            Slew { rate_adjust: rate_adjust as i32, duration },
+        )
+    } else if correction_abs < MAX_RATE_MAX_ERROR {
+        // Round rate up to the next greater PPM such that duration will be slightly under
+        // MAX_SLEW_DURATION rather that slightly over MAX_SLEW_DURATION.
+        let rate_adjust = ((correction_nanos * MILLION) / MAX_SLEW_DURATION.into_nanos()) + sign;
+        let duration = (correction * MILLION) / rate_adjust;
+        (
+            ClockCorrectionStrategy::MaxDurationSlew,
+            Slew { rate_adjust: rate_adjust as i32, duration },
+        )
+    } else {
+        (ClockCorrectionStrategy::Step, Slew::default())
     }
 }
 
 /// Returns the offset between UTC and monotonic times in the supplied clock.
 fn get_clock_offset(clock: &zx::Clock) -> zx::Duration {
     // Clock read failures should only be caused by an invalid clock object.
-    let details = clock.get_details().expect("failed to get UTC clock details");
-    zx::Time::from_nanos(details.mono_to_synthetic.synthetic_offset)
-        - zx::Time::from_nanos(details.mono_to_synthetic.reference_offset)
-}
-
-/// Returns true iff the absolute value of `value` is less than `bound`.
-fn within_bound(value: zx::Duration, bound: zx::Duration) -> bool {
-    value.into_nanos().abs() < bound.into_nanos().abs()
+    clock.read().expect("failed to read UTC clock") - zx::Time::get_monotonic()
 }
 
 #[cfg(test)]
@@ -290,6 +404,36 @@ mod tests {
             Arc::clone(&diagnostics),
         );
         ClockManager::new(clock, time_source_manager, rtc, notifier, diagnostics, *TEST_TRACK)
+    }
+
+    #[test]
+    fn determine_strategy_fn() {
+        for sign in vec![-1, 1] {
+            let (strategy, slew) = determine_strategy(zx::Duration::from_micros(sign * 5));
+            assert_eq!(strategy, ClockCorrectionStrategy::NotRequired);
+            assert_eq!(slew, Slew::default());
+
+            let (strategy, slew) = determine_strategy(zx::Duration::from_millis(sign * 5));
+            assert_eq!(strategy, ClockCorrectionStrategy::NominalRateSlew);
+            assert_eq!(
+                slew,
+                Slew { rate_adjust: (sign * 20) as i32, duration: zx::Duration::from_seconds(250) }
+            );
+
+            let (strategy, slew) = determine_strategy(zx::Duration::from_millis(sign * 500));
+            assert_eq!(strategy, ClockCorrectionStrategy::MaxDurationSlew);
+            assert_eq!(
+                slew,
+                Slew {
+                    rate_adjust: (sign * 93) as i32,
+                    duration: zx::Duration::from_nanos(5376344086021)
+                }
+            );
+
+            let (strategy, slew) = determine_strategy(zx::Duration::from_seconds(sign * 2));
+            assert_eq!(strategy, ClockCorrectionStrategy::Step);
+            assert_eq!(slew, Slew::default());
+        }
     }
 
     #[test]
@@ -434,6 +578,79 @@ mod tests {
                 strategy: ClockCorrectionStrategy::Step,
             },
             Event::UpdateClock { track: *TEST_TRACK, reason: ClockUpdateReason::TimeStep },
+        ]);
+    }
+
+    #[test]
+    fn correction_by_slew() {
+        let mut executor = fasync::Executor::new().unwrap();
+
+        // Calculate a small change in offset that will be corrected by slewing for a fraction of
+        // a second.
+        let delta_offset = zx::Duration::from_micros(30);
+        let filtered_delta_offset = delta_offset / 2;
+
+        let clock = create_clock();
+        let diagnostics = Arc::new(FakeDiagnostics::new());
+        let monotonic_ref = zx::Time::get_monotonic();
+        let clock_manager = create_clock_manager(
+            Arc::clone(&clock),
+            vec![
+                Sample::new(
+                    monotonic_ref - SAMPLE_SPACING + OFFSET,
+                    monotonic_ref - SAMPLE_SPACING,
+                    STD_DEV,
+                ),
+                Sample::new(monotonic_ref + OFFSET + delta_offset, monotonic_ref, STD_DEV),
+            ],
+            None,
+            None,
+            Arc::clone(&diagnostics),
+        );
+
+        // Maintain the clock until no more work remains, which should correspond to having started
+        // a clock skew but not waiting on the timer to end it.
+        let monotonic_before = zx::Time::get_monotonic();
+        let mut fut = clock_manager.maintain_clock().boxed();
+        let _ = executor.run_until_stalled(&mut fut);
+        let updated_utc = clock.read().unwrap();
+        let details = clock.get_details().unwrap();
+        let monotonic_after = zx::Time::get_monotonic();
+
+        // The clock time should still be very close to the original value but the details should
+        // show that a rate change is in progress.
+        assert_geq!(updated_utc, monotonic_before + OFFSET);
+        assert_leq!(updated_utc, monotonic_after + OFFSET + filtered_delta_offset);
+        assert_eq!(details.mono_to_synthetic.rate.synthetic_ticks, 1000020);
+        assert_eq!(details.mono_to_synthetic.rate.reference_ticks, 1000000);
+        assert_geq!(details.last_rate_adjust_update_ticks, details.last_value_update_ticks);
+
+        // After waiting for the timer, the clock should be back to the original rate.
+        assert!(executor.wake_next_timer().is_some());
+        let _ = executor.run_until_stalled(&mut fut);
+        let details2 = clock.get_details().unwrap();
+        assert_eq!(details2.mono_to_synthetic.rate.synthetic_ticks, 1000000);
+        assert_eq!(details2.mono_to_synthetic.rate.reference_ticks, 1000000);
+        assert_geq!(details2.last_rate_adjust_update_ticks, details2.last_value_update_ticks);
+        assert_geq!(details.last_value_update_ticks, details2.last_value_update_ticks);
+
+        // Check that the correct diagnostic events were logged.
+        diagnostics.assert_events(&[
+            Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
+            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, sqrt_covariance: STD_DEV },
+            Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
+            Event::EstimateUpdated {
+                track: *TEST_TRACK,
+                offset: OFFSET + filtered_delta_offset,
+                sqrt_covariance: zx::Duration::from_nanos(62225396),
+            },
+            Event::ClockCorrection {
+                track: *TEST_TRACK,
+                correction: ANY_DURATION,
+                strategy: ClockCorrectionStrategy::NominalRateSlew,
+            },
+            Event::UpdateClock { track: *TEST_TRACK, reason: ClockUpdateReason::BeginSlew },
+            Event::UpdateClock { track: *TEST_TRACK, reason: ClockUpdateReason::EndSlew },
         ]);
     }
 }
