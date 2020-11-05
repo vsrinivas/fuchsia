@@ -4,4 +4,5 @@
 
 pub mod fvm;
 pub mod state;
-pub mod utils;
+pub mod test_instance;
+pub(crate) mod utils;

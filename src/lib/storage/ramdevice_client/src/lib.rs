@@ -48,7 +48,111 @@ use {
         os::unix::io::{AsRawFd, RawFd},
         ptr,
     },
+    zx::HandleBased,
 };
+enum DevRoot {
+    Provided(fs::File),
+    Isolated,
+}
+
+/// A type to help construct a [`RamdeviceClient`] from an existing VMO.
+pub struct VmoRamdiskClientBuilder {
+    vmo: zx::Vmo,
+    block_size: Option<u64>,
+    dev_root: Option<DevRoot>,
+}
+
+impl VmoRamdiskClientBuilder {
+    /// Create a new ramdisk builder with the given VMO handle.
+    pub fn new(vmo: zx::Vmo) -> Self {
+        Self { vmo, block_size: None, dev_root: None }
+    }
+
+    /// Set the size of a single block (in bytes)
+    pub fn block_size(mut self, block_size: u64) -> Self {
+        self.block_size = Some(block_size);
+        self
+    }
+
+    /// Use the given directory as "/dev" instead of opening "/dev" from the environment.
+    pub fn dev_root(mut self, dev_root: fs::File) -> Self {
+        self.dev_root = Some(DevRoot::Provided(dev_root));
+        self
+    }
+
+    /// Use "/svc/fuchsia.test.IsolatedDevmgr" as "/dev" instead of opening "/dev" directly from
+    /// the environment. Tests using this API should ensure a service with that name exists in the
+    /// current namespace. See the module documentation for more info.
+    pub fn isolated_dev_root(mut self) -> Self {
+        self.dev_root = Some(DevRoot::Isolated);
+        self
+    }
+
+    /// Create the ramdisk.
+    pub fn build(self) -> Result<RamdiskClient, zx::Status> {
+        let vmo_handle = self.vmo.into_raw();
+
+        let mut ramdisk: *mut ramdevice_sys::ramdisk_client_t = ptr::null_mut();
+        let status = match (&self.dev_root, &self.block_size) {
+            (Some(dev_root), Some(block_size)) => {
+                // If this statement needs to open the dev_root itself, hold onto the File to
+                // ensure dev_root_fd is valid for this block.
+                let (dev_root_fd, _dev_root) = match &dev_root {
+                    DevRoot::Provided(f) => (f.as_raw_fd(), None),
+                    DevRoot::Isolated => {
+                        let devmgr = open_isolated_devmgr()?;
+                        (devmgr.as_raw_fd(), Some(devmgr))
+                    }
+                };
+
+                // Safe because ramdisk_create_at_from_vmo_with_block_size creates a duplicate fd
+                // of the provided dev_root_fd. The returned ramdisk is valid iff the FFI method
+                // returns ZX_OK.
+                unsafe {
+                    ramdevice_sys::ramdisk_create_at_from_vmo_with_block_size(
+                        dev_root_fd,
+                        vmo_handle,
+                        *block_size,
+                        &mut ramdisk,
+                    )
+                }
+            }
+            (Some(dev_root), None) => {
+                // If this statement needs to open the dev_root itself, hold onto the File to
+                // ensure dev_root_fd is valid for this block.
+                let (dev_root_fd, _dev_root) = match &dev_root {
+                    DevRoot::Provided(f) => (f.as_raw_fd(), None),
+                    DevRoot::Isolated => {
+                        let devmgr = open_isolated_devmgr()?;
+                        (devmgr.as_raw_fd(), Some(devmgr))
+                    }
+                };
+                // Safe because ramdisk_create_at_from_vmo creates a duplicate fd of the provided
+                // dev_root_fd. The returned ramdisk is valid iff the FFI method returns ZX_OK.
+                unsafe {
+                    ramdevice_sys::ramdisk_create_at_from_vmo(dev_root_fd, vmo_handle, &mut ramdisk)
+                }
+            }
+            (None, Some(block_size)) => {
+                // The returned ramdisk is valid iff the FFI method returns ZX_OK.
+                unsafe {
+                    ramdevice_sys::ramdisk_create_from_vmo_with_block_size(
+                        vmo_handle,
+                        *block_size,
+                        &mut ramdisk,
+                    )
+                }
+            }
+            (None, None) => {
+                // The returned ramdisk is valid iff the FFI method returns ZX_OK.
+                unsafe { ramdevice_sys::ramdisk_create_from_vmo(vmo_handle, &mut ramdisk) }
+            }
+        };
+        zx::Status::ok(status)?;
+
+        Ok(RamdiskClient { ramdisk })
+    }
+}
 
 /// A type to help construct a [`RamdeviceClient`].
 pub struct RamdiskClientBuilder {
@@ -56,11 +160,6 @@ pub struct RamdiskClientBuilder {
     block_count: u64,
     dev_root: Option<DevRoot>,
     guid: Option<[u8; 16]>,
-}
-
-enum DevRoot {
-    Provided(fs::File),
-    Isolated,
 }
 
 impl RamdiskClientBuilder {
@@ -220,6 +319,10 @@ impl RamdiskClient {
         zx::Status::ok(status)
     }
 }
+
+/// This struct has exclusive ownership of the ramdisk pointer.
+/// It is safe to move this struct between threads.
+unsafe impl Send for RamdiskClient {}
 
 impl Drop for RamdiskClient {
     fn drop(&mut self) {

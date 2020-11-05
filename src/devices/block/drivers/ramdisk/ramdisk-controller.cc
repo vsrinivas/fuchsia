@@ -85,11 +85,22 @@ zx_status_t RamdiskController::Create(uint64_t block_size, uint64_t block_count,
 
 zx::status<std::string> RamdiskController::CreateFromVmoWithBlockSize(zx::vmo vmo,
                                                                       uint64_t block_size) {
-  // Ensure this is the last handle to this VMO; otherwise, the size
-  // may change from underneath us.
-  zx_info_handle_count_t info;
-  zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK || info.handle_count != 1) {
+  zx_info_handle_count_t handle_count_info;
+  zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_COUNT, &handle_count_info,
+                                    sizeof(handle_count_info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  zx_info_vmo_t vmo_info;
+  status = vmo.get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  // If this is a resizeable VMO, ensure it has only one handle to prevent
+  // the size from changing underneath us.
+  if ((vmo_info.flags & ZX_INFO_VMO_RESIZABLE) && (handle_count_info.handle_count != 1)) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 

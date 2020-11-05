@@ -5,13 +5,11 @@
 use {
     anyhow::Error,
     argh::FromArgs,
-    fasync::{futures::future::join_all, Task},
+    fasync::futures::future::join_all,
     fuchsia_async as fasync,
-    fvm_stress_test_lib::{
-        fvm::{random_guid, GUID_TYPE},
-        state::VolumeOperator,
-        utils::{init_fvm, FVM_DRIVER_PATH},
-    },
+    fuchsia_zircon::Vmo,
+    futures::SinkExt,
+    fvm_stress_test_lib::test_instance::TestInstance,
     log::{debug, info, set_logger, set_max_level, LevelFilter},
     rand::{rngs::SmallRng, FromEntropy, Rng, SeedableRng},
     std::{thread::sleep, time::Duration},
@@ -59,17 +57,20 @@ struct Args {
     max_slices_in_extend: u64,
 
     /// controls the density of the partition.
-    /// If not specified, this value will be taken from the volume information.
-    /// Usually, the volume information sets this value to 2^64.
-    #[argh(option)]
-    max_vslice_count: Option<u64>,
+    #[argh(option, default = "65536")]
+    max_vslice_count: u64,
 
-    /// controls how often the FVM driver gets rebound (in seconds).
-    /// When the FVM driver rebinds, its internal state is reset, similar
-    /// to the device being disconnected and reconnected.
+    /// controls how often volumes are force-disconnected,
+    /// either by crashing FVM or by rebinding the driver.
     /// disabled if set to 0.
     #[argh(option, default = "0")]
-    rebind_repeat_secs: u64,
+    disconnect_secs: u64,
+
+    /// when force-disconnection is enabled, this
+    /// defines the probability with which a rebind
+    /// happens instead of a crash.
+    #[argh(option, default = "0.0")]
+    rebind_probability: f64,
 }
 
 // A simple logger that prints to stdout
@@ -114,6 +115,8 @@ async fn main() -> Result<(), Error> {
 
     if let Some(filter) = args.log_filter {
         set_max_level(filter);
+    } else {
+        set_max_level(LevelFilter::Info);
     }
 
     let seed = if let Some(seed_value) = args.seed {
@@ -123,6 +126,8 @@ async fn main() -> Result<(), Error> {
         let mut temp_rng = SmallRng::from_entropy();
         temp_rng.gen()
     };
+
+    let mut rng = SmallRng::from_seed(seed.to_le_bytes());
 
     info!("------------------ fvm_stressor is starting -------------------");
     info!("ARGUMENTS = {:#?}", args);
@@ -143,55 +148,53 @@ async fn main() -> Result<(), Error> {
         default_panic_hook(panic_info);
     }));
 
-    // Setup FVM and wait until it is ready
-    let (_test, controller, _ramdisk, mut volume_manger) =
-        init_fvm(args.ramdisk_block_size, args.ramdisk_block_count, args.fvm_slice_size).await;
+    // Create the VMO that the ramdisk is backed by
+    let vmo_size = args.ramdisk_block_count * args.ramdisk_block_size;
+    let vmo = Vmo::create(vmo_size).unwrap();
 
-    let mut rng = SmallRng::from_seed(seed.to_le_bytes());
-    let mut tasks = vec![];
+    // Create the first test instance, setup FVM on the ramdisk and wait until it is ready.
+    let mut instance = TestInstance::init(&vmo, args.fvm_slice_size, args.ramdisk_block_size).await;
 
-    for i in 0..args.num_volumes {
-        let volume_rng_seed: u128 = rng.gen();
-        let mut volume_rng = SmallRng::from_seed(volume_rng_seed.to_le_bytes());
-
-        let volume_name = format!("testpart-{}", i);
-        let volume_guid = random_guid(&mut volume_rng);
-
-        let volume = volume_manger.new_volume(1, GUID_TYPE, volume_guid, &volume_name, 0x0).await;
-
-        let mut operator = VolumeOperator::new(
-            volume,
-            volume_rng,
+    // Create the volume operators
+    let (tasks, mut senders) = instance
+        .create_volumes_and_operators(
+            &mut rng,
+            args.num_volumes,
             args.max_slices_in_extend,
             args.max_vslice_count,
+            args.num_operations,
         )
         .await;
 
-        let num_operations = args.num_operations;
-        // Start a new thread to operate on this volume
-        let task = Task::blocking(async move {
-            for i in 0..num_operations {
-                operator.do_random_operation(i + 1).await;
-            }
-            operator.destroy().await;
-        });
-
-        // Add this thread task to the list
-        tasks.push(task);
-    }
-
-    if args.rebind_repeat_secs > 0 {
-        // Setup a task that repeatedly rebinds the FVM driver
-        Task::blocking(async move {
+    if args.disconnect_secs > 0 {
+        // Create the disconnection task
+        fasync::Task::blocking(async move {
             loop {
-                sleep(Duration::from_secs(args.rebind_repeat_secs));
-                debug!("Rebinding FVM driver...");
-                controller.rebind(FVM_DRIVER_PATH).await.unwrap().unwrap();
+                sleep(Duration::from_secs(args.disconnect_secs));
+
+                if rng.gen_bool(args.rebind_probability) {
+                    debug!("Rebinding FVM");
+                    instance.rebind().await;
+                } else {
+                    // Crash the old instance and replace it with a new instance.
+                    // This will cause the component tree to be taken down abruptly.
+                    debug!("Crashing FVM");
+                    instance.crash();
+                    instance = TestInstance::existing(&vmo, args.ramdisk_block_size).await;
+                }
+
+                // Give the new block path to the operators.
+                // Ignore the result because some operators may have completed.
+                let path = instance.block_path();
+                for sender in senders.iter_mut() {
+                    let _ = sender.send(path.clone()).await;
+                }
             }
         })
         .detach();
     }
 
     join_all(tasks).await;
+
     Ok(())
 }

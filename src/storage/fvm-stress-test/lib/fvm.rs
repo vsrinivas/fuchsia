@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_hardware_block_volume::{VolumeManagerProxy, VolumeMarker, VolumeProxy},
     fuchsia_component::client::{connect_channel_to_service_at_path, connect_to_service_at_path},
     fuchsia_zircon::{Channel, Status},
+    futures::channel::mpsc,
+    futures::StreamExt,
     log::debug,
     rand::{rngs::SmallRng, Rng},
     remote_block_device::{BufferSlice, MutableBufferSlice, RemoteBlockDevice},
@@ -15,7 +16,7 @@ use {
 };
 
 // All partitions in this test have their type set to this arbitrary GUID.
-pub const GUID_TYPE: Guid = Guid {
+pub const TYPE_GUID: Guid = Guid {
     value: [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf],
 };
 
@@ -25,11 +26,14 @@ pub fn random_guid(rng: &mut SmallRng) -> Guid {
 }
 
 pub struct Volume {
-    // Path to the all block devices
-    block_path: PathBuf,
-
     // Instance GUID of this volume
     instance_guid: Guid,
+
+    // Receives a path to the new dev/class/block directory.
+    // When the volume loses its connection to the block device,
+    // it will expect to receive a path to the new block directory
+    // from this receiver.
+    path_receiver: mpsc::UnboundedReceiver<PathBuf>,
 
     // Client end of Volume FIDL protocol
     volume_proxy: VolumeProxy,
@@ -83,21 +87,22 @@ async fn connect(block_path: &PathBuf, instance_guid: &Guid) -> (VolumeProxy, Re
     }
 }
 
-// returns |true| if the |result| is a connection error.
-// returns |false| if the |result| is ok.
-// panics on other errors.
-pub fn need_reconnect(result: Result<(), Error>) -> bool {
+pub fn as_status_error(result: Result<(), anyhow::Error>) -> Result<(), Status> {
     match result {
-        Ok(()) => false,
+        Ok(()) => Ok(()),
         Err(e) => match e.downcast::<Status>() {
-            Ok(Status::CANCELED) => true,
-            other_error => panic!("Unexpected error: {:?}", other_error),
+            Ok(s) => Err(s),
+            Err(e) => panic!("Unrecoverable connection error: {:?}", e),
         },
     }
 }
 
 impl Volume {
-    pub async fn new(block_path: PathBuf, instance_guid: Guid) -> Self {
+    pub async fn new(
+        block_path: PathBuf,
+        instance_guid: Guid,
+    ) -> (Self, mpsc::UnboundedSender<PathBuf>) {
+        let (sender, path_receiver) = mpsc::unbounded::<PathBuf>();
         let (volume_proxy, block_device) = connect(&block_path, &instance_guid).await;
 
         // Get slice information from volume
@@ -107,7 +112,16 @@ impl Volume {
         let slice_size = volume_info.slice_size;
         let max_vslice_count = volume_info.vslice_count;
 
-        Self { block_path, instance_guid, volume_proxy, block_device, slice_size, max_vslice_count }
+        let volume = Self {
+            instance_guid,
+            path_receiver,
+            volume_proxy,
+            block_device,
+            slice_size,
+            max_vslice_count,
+        };
+
+        (volume, sender)
     }
 
     pub fn slice_size(&self) -> u64 {
@@ -118,28 +132,49 @@ impl Volume {
         self.max_vslice_count
     }
 
+    pub async fn status_code_or_reconnect(
+        &mut self,
+        result: Result<i32, fidl::Error>,
+    ) -> Option<i32> {
+        match result {
+            Ok(code) => Some(code),
+            Err(e) => {
+                if e.is_closed() {
+                    self.reconnect().await;
+                    None
+                } else {
+                    panic!("Unrecoverable connection error: {}", e);
+                }
+            }
+        }
+    }
+
     pub async fn reconnect(&mut self) {
-        // Connection lost. Reconnect!
-        let (volume_proxy, block_device) = connect(&self.block_path, &self.instance_guid).await;
+        debug!("Reconnecting...");
+        let new_block_path = self.path_receiver.next().await.unwrap();
+        let (volume_proxy, block_device) = connect(&new_block_path, &self.instance_guid).await;
         self.volume_proxy = volume_proxy;
         self.block_device = block_device;
     }
 
-    pub async fn write_slice_at(&mut self, data: &[u8], slice_offset: u64) {
+    pub async fn write_slice_at(&mut self, data: &[u8], slice_offset: u64) -> Result<(), Status> {
         let offset = slice_offset * self.slice_size;
         assert_eq!(data.len() as u64, self.slice_size);
 
         loop {
             let buffer_slice = BufferSlice::from(data);
             let result = self.block_device.write_at(buffer_slice, offset).await;
-            if !need_reconnect(result) {
-                break;
+            let result = as_status_error(result);
+
+            if let Err(Status::CANCELED) = result {
+                self.reconnect().await;
+            } else {
+                break result;
             }
-            self.reconnect().await;
         }
     }
 
-    pub async fn read_slice_at(&mut self, slice_offset: u64) -> Vec<u8> {
+    pub async fn read_slice_at(&mut self, slice_offset: u64) -> Result<Vec<u8>, Status> {
         let mut data: Vec<u8> = Vec::with_capacity(self.slice_size as usize);
         data.resize(self.slice_size as usize, 0);
 
@@ -149,72 +184,69 @@ impl Volume {
         loop {
             let buffer_slice = MutableBufferSlice::from(data.as_mut_slice());
             let result = self.block_device.read_at(buffer_slice, offset).await;
-            if !need_reconnect(result) {
-                break data;
+            let result = as_status_error(result);
+
+            if let Err(Status::CANCELED) = result {
+                self.reconnect().await;
+            } else {
+                break result.map(|_| data);
             }
-            self.reconnect().await;
         }
     }
 
     pub async fn extend(&mut self, start_slice: u64, slice_count: u64) -> Result<(), Status> {
-        loop {
+        let status_code = loop {
             let result = self.volume_proxy.extend(start_slice, slice_count).await;
-            match result {
-                Ok(status) => break Status::ok(status),
-                Err(fidl::Error::ClientChannelClosed { .. }) => self.reconnect().await,
-                Err(e) => panic!("Unexpected error: {}", e),
+            if let Some(code) = self.status_code_or_reconnect(result).await {
+                break code;
             }
-        }
+        };
+        Status::ok(status_code)
     }
 
-    pub async fn shrink(&mut self, start_slice: u64, slice_count: u64) {
-        loop {
+    pub async fn shrink(&mut self, start_slice: u64, slice_count: u64) -> Result<(), Status> {
+        let status_code = loop {
             let result = self.volume_proxy.shrink(start_slice, slice_count).await;
-            match result {
-                Ok(status) => break Status::ok(status).unwrap(),
-                Err(fidl::Error::ClientChannelClosed { .. }) => self.reconnect().await,
-                Err(e) => panic!("Unexpected error: {}", e),
+            if let Some(code) = self.status_code_or_reconnect(result).await {
+                break code;
             }
-        }
+        };
+        Status::ok(status_code)
     }
 
-    pub async fn destroy(mut self) {
-        loop {
+    pub async fn destroy(mut self) -> Result<(), Status> {
+        let status_code = loop {
             let result = self.volume_proxy.destroy().await;
-            match result {
-                Ok(status) => break Status::ok(status).unwrap(),
-                Err(fidl::Error::ClientChannelClosed { .. }) => self.reconnect().await,
-                Err(e) => panic!("Unexpected error: {}", e),
+            if let Some(code) = self.status_code_or_reconnect(result).await {
+                break code;
             }
-        }
+        };
+        Status::ok(status_code)
     }
 }
 
 pub struct VolumeManager {
     proxy: VolumeManagerProxy,
-    block_path: PathBuf,
 }
 
 impl VolumeManager {
-    pub fn new(proxy: VolumeManagerProxy, block_path: PathBuf) -> Self {
-        Self { proxy, block_path }
+    pub fn new(proxy: VolumeManagerProxy) -> Self {
+        Self { proxy }
     }
 
     pub async fn new_volume(
-        &mut self,
+        &self,
         slice_count: u64,
-        mut guid_type: Guid,
-        mut guid_instance: Guid,
+        mut type_guid: Guid,
+        mut instance_guid: Guid,
         name: &str,
         flags: u32,
-    ) -> Volume {
+    ) {
         let status = self
             .proxy
-            .allocate_partition(slice_count, &mut guid_type, &mut guid_instance, name, flags)
+            .allocate_partition(slice_count, &mut type_guid, &mut instance_guid, name, flags)
             .await
             .unwrap();
         Status::ok(status).unwrap();
-
-        Volume::new(self.block_path.clone(), guid_instance).await
     }
 }

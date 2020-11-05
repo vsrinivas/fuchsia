@@ -4,6 +4,7 @@
 
 use {
     crate::fvm::Volume,
+    fuchsia_async::Task,
     fuchsia_zircon::Status,
     log::{debug, info},
     rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
@@ -42,6 +43,27 @@ impl VSliceRange {
         (self.start <= other.start && other.start < self.end)
             || (self.start < other.end && other.end <= self.end)
     }
+
+    // Returns a subrange that ends at the same position, but
+    // may be smaller.
+    fn shrink_from_start(&self, rng: &mut SmallRng) -> VSliceRange {
+        let start = rng.gen_range(self.start, self.end);
+        VSliceRange::new(start, self.end)
+    }
+
+    // Returns a subrange that starts at the same position, but
+    // may be smaller.
+    fn shrink_from_end(&self, rng: &mut SmallRng) -> VSliceRange {
+        let end = rng.gen_range(self.start, self.end) + 1;
+        VSliceRange::new(self.start, end)
+    }
+
+    // Returns a subrange that may be smaller
+    fn subrange(&self, rng: &mut SmallRng) -> VSliceRange {
+        let start = rng.gen_range(self.start, self.end);
+        let end = rng.gen_range(start, self.end) + 1;
+        VSliceRange::new(start, end)
+    }
 }
 
 impl std::fmt::Debug for VSliceRange {
@@ -51,16 +73,19 @@ impl std::fmt::Debug for VSliceRange {
 }
 
 struct VSliceRanges {
-    // List of discontiguous virtual slice ranges, sorted by start slice index.
+    // List of virtual slice ranges, sorted by start slice index.
     ranges: Vec<VSliceRange>,
 
     // Maximum number of allocatable virtual slices
     max_vslice_count: u64,
+
+    // Limits the maximum slices in a single extend operation
+    max_slices_in_extend: u64,
 }
 
 impl VSliceRanges {
-    pub fn new(max_vslice_count: u64) -> Self {
-        Self { ranges: vec![], max_vslice_count }
+    pub fn new(max_vslice_count: u64, max_slices_in_extend: u64) -> Self {
+        Self { ranges: vec![], max_vslice_count, max_slices_in_extend }
     }
 
     // returns index of the range to the right of |new_range| after insertion.
@@ -82,36 +107,55 @@ impl VSliceRanges {
         self.ranges.len()
     }
 
-    pub fn unallocated(&self) -> Vec<VSliceRange> {
+    // Return the indices of extents that have empty space next to them, paired with the ranges
+    // that they could be extended into.
+    //
+    //                             |----------X-----------|
+    // |-----------i--------------|                        |-----------i+1-----------|
+    //
+    // In the above scenario, (i, range X) is returned
+    fn extensions(&mut self) -> Vec<(usize, VSliceRange)> {
         assert!(self.ranges.len() > 0);
 
-        let mut iter = self.ranges.iter().peekable();
-        let mut unallocated_ranges = vec![];
+        let mut iter = self.ranges.iter().enumerate().peekable();
+        let mut extensions = vec![];
 
-        // Create ranges between two consecutive allocated ranges
-        while let Some(cur_range) = iter.next() {
-            if let Some(next_range) = iter.peek() {
-                let range = VSliceRange::new(cur_range.end, next_range.start);
-                unallocated_ranges.push(range);
+        // Create extensions between two consecutive allocated ranges
+        while let Some((index, cur_range)) = iter.next() {
+            if let Some((_, next_range)) = iter.peek() {
+                let end = if next_range.start == cur_range.end {
+                    // There is no space between these ranges
+                    continue;
+                } else if next_range.start - cur_range.end > self.max_slices_in_extend {
+                    // There is too much space between these ranges.
+                    // Limit to |max_slices_in_extend|.
+                    cur_range.end + self.max_slices_in_extend
+                } else {
+                    next_range.start
+                };
+
+                let extension = VSliceRange::new(cur_range.end, end);
+                extensions.push((index, extension));
             }
         }
 
-        let first_range = self.ranges.first().unwrap();
+        let last_index = self.ranges.len() - 1;
         let last_range = self.ranges.last().unwrap();
 
-        // If possible, create a range to the first slice
-        if first_range.start > 0 {
-            let range = VSliceRange::new(0, first_range.start);
-            unallocated_ranges.push(range);
-        }
-
-        // If possible, create a range from the last slice
+        // If possible, create an extension from the last slice
         if last_range.end < self.max_vslice_count {
-            let range = VSliceRange::new(last_range.end, self.max_vslice_count);
-            unallocated_ranges.push(range);
+            let end = if self.max_vslice_count - last_range.end > self.max_slices_in_extend {
+                // There is too much space at the end.
+                // Limit to |max_slices_in_extend|.
+                last_range.end + self.max_slices_in_extend
+            } else {
+                self.max_vslice_count
+            };
+            let extension = VSliceRange::new(last_range.end, end);
+            extensions.push((last_index, extension));
         }
 
-        unallocated_ranges
+        extensions
     }
 
     pub fn get_mut(&mut self, index: usize) -> &mut VSliceRange {
@@ -138,7 +182,7 @@ impl VSliceRanges {
 
 // In-memory state of an FVM Volume
 pub struct VolumeOperator {
-    // The volume on which operations are being run
+    // The volume used by this operator
     volume: Volume,
 
     // Allocated virtual slice ranges
@@ -150,8 +194,8 @@ pub struct VolumeOperator {
     // Random number generator used for all operations
     rng: SmallRng,
 
-    // Limits the maximum slices in a single extend operation
-    max_slices_in_extend: u64,
+    // Number of operations this operator must complete
+    num_operations: u64,
 }
 
 fn generate_data(seed: u128, size: usize) -> Vec<u8> {
@@ -164,100 +208,104 @@ fn generate_data(seed: u128, size: usize) -> Vec<u8> {
 }
 
 impl VolumeOperator {
-    pub async fn new(
-        mut volume: Volume,
-        mut rng: SmallRng,
+    pub fn new(
+        volume: Volume,
+        rng: SmallRng,
         max_slices_in_extend: u64,
-        max_vslice_count: Option<u64>,
+        max_vslice_count: u64,
+        num_operations: u64,
     ) -> Self {
-        let max_vslice_count =
-            if let Some(count) = max_vslice_count { count } else { volume.max_vslice_count() };
+        let vslice_ranges = VSliceRanges::new(max_vslice_count, max_slices_in_extend);
+        let slice_seeds = HashMap::new();
 
-        let mut vslice_ranges = VSliceRanges::new(max_vslice_count);
-        let mut slice_seeds = HashMap::new();
-
-        // Initialize slice 0
-        vslice_ranges.insert(VSliceRange::new(0, 1));
-        let seed = rng.gen();
-        slice_seeds.insert(0, seed);
-        let slice_size = volume.slice_size() as usize;
-        let data = generate_data(seed, slice_size);
-        volume.write_slice_at(&data, 0).await;
-
-        VolumeOperator { volume, rng, vslice_ranges, slice_seeds, max_slices_in_extend }
+        VolumeOperator { volume, rng, vslice_ranges, slice_seeds, num_operations }
     }
 
-    async fn fill_data(&mut self, start: u64, end: u64) {
-        assert!(start < end);
-        for slice_offset in start..end {
+    async fn extend_volume(&mut self, range: &VSliceRange) -> Result<(), Status> {
+        // Do the extend operation on the volume. This is allowed to fail if there
+        // are not enough physical slices left.
+        let result = self.volume.extend(range.start, range.len()).await;
+        match result {
+            Ok(()) => Ok(()),
+            Err(Status::NO_SPACE) => Err(Status::NO_SPACE),
+            Err(s) => panic!("Unrecoverable error during extend: {}", s),
+        }
+    }
+
+    async fn fill_range(&mut self, range: &VSliceRange) -> Result<(), Status> {
+        let slice_size = self.volume.slice_size() as usize;
+        for slice_offset in range.start..range.end {
+            // Fill the slice with data
             let seed = self.rng.gen();
+            let data = generate_data(seed, slice_size);
+            self.volume.write_slice_at(&data, slice_offset).await?;
+
+            // Update state
             let prev = self.slice_seeds.insert(slice_offset, seed);
             assert!(prev.is_none());
-
-            let slice_size = self.volume.slice_size() as usize;
-            let data = generate_data(seed, slice_size);
-            self.volume.write_slice_at(&data, slice_offset).await;
         }
+        Ok(())
     }
 
-    pub async fn append(&mut self) {
-        let index = self.vslice_ranges.random_index(&mut self.rng);
-        let mut range = self.vslice_ranges.get_mut(index);
-        let num_slices_to_append = self.rng.gen_range(1, self.max_slices_in_extend);
+    async fn append(&mut self) -> Result<(), Status> {
+        let extensions = self.vslice_ranges.extensions();
+        assert!(extensions.len() > 0);
 
-        debug!("Range = {:?}", range);
-        debug!("Num slices to append = {}", num_slices_to_append);
+        // Choose an extension
+        let (index, extension) = extensions.choose(&mut self.rng).unwrap();
+        let append_range = extension.shrink_from_end(&mut self.rng);
+        debug!("Append Range = {:?}", append_range);
 
-        // This is allowed to fail if we:
-        // 1. run out of space
-        // 2. collide with an existing range
-        // 3. give unsupported ranges
-        let result = self.volume.extend(range.end, num_slices_to_append).await;
-        match result {
-            Err(Status::NO_SPACE) => {
-                debug!("Could not extend range. Ran out of space!");
-                return;
-            }
-            Err(Status::INVALID_ARGS) => {
-                debug!("Could not extend range. Invalid arguments.");
-                return;
-            }
-            Err(s) => {
-                panic!("Unexpected error: {}", s);
-            }
-            Ok(()) => {}
-        }
+        // Do the extend operation on the volume
+        self.extend_volume(&append_range).await?;
 
-        let old_end = range.end;
-        let new_end = old_end + num_slices_to_append;
-        range.end = new_end;
+        // Once the extend call succeeds, filling the range should not fail
+        self.fill_range(&append_range).await.unwrap();
 
-        // Generate data to fill the range
-        self.fill_data(old_end, new_end).await;
+        // Update state
+        let mut range = self.vslice_ranges.get_mut(*index);
+        range.end = append_range.end;
+
+        Ok(())
     }
 
-    pub async fn truncate(&mut self) {
+    async fn new_range(&mut self) -> Result<(), Status> {
+        let extensions = self.vslice_ranges.extensions();
+        assert!(extensions.len() > 0);
+
+        // Choose an extension
+        let (_, extension) = extensions.choose(&mut self.rng).unwrap();
+        let new_range = extension.subrange(&mut self.rng);
+        debug!("New Range = {:?}", new_range);
+
+        // Do the extend operation on the volume
+        self.extend_volume(&new_range).await?;
+
+        // Once the extend call succeeds, filling the range should not fail
+        self.fill_range(&new_range).await.unwrap();
+
+        // Update state
+        self.vslice_ranges.insert(new_range);
+
+        Ok(())
+    }
+
+    async fn truncate(&mut self) -> Result<(), Status> {
         let index = self.vslice_ranges.random_index(&mut self.rng);
         let mut range = self.vslice_ranges.get_mut(index);
-        let subrange = {
-            let start = if range.len() == 1 {
-                range.start
-            } else {
-                self.rng.gen_range(range.start, range.end)
-            };
-            VSliceRange::new(start, range.end)
-        };
+        let subrange = range.shrink_from_start(&mut self.rng);
 
-        debug!("Range = {:?}", range);
-        debug!("Subrange = {:?}", subrange);
+        debug!("Truncate Range = {:?}", subrange);
 
         // Shrinking from offset 0 is forbidden
         if subrange.start == 0 {
-            return;
+            return Ok(());
         }
 
-        self.volume.shrink(subrange.start, subrange.len()).await;
+        // Do the shrink operation on the volume
+        self.volume.shrink(subrange.start, subrange.len()).await?;
 
+        // Update state
         if subrange == *range {
             // Remove the entire range
             self.vslice_ranges.remove(index)
@@ -270,65 +318,26 @@ impl VolumeOperator {
         for slice_offset in subrange.start..subrange.end {
             self.slice_seeds.remove(&slice_offset).unwrap();
         }
+
+        Ok(())
     }
 
-    pub async fn new_range(&mut self) {
-        let unalloc_ranges = self.vslice_ranges.unallocated();
-        assert!(unalloc_ranges.len() > 0);
-
-        let range = unalloc_ranges.choose(&mut self.rng).unwrap();
-        let subrange = {
-            let start = self.rng.gen_range(range.start, range.end);
-            let end = self.rng.gen_range(start, start + self.max_slices_in_extend) + 1;
-            VSliceRange::new(start, end)
-        };
-
-        debug!("Range = {:?}", subrange);
-
-        // This is allowed to fail if we:
-        // 1. run out of space
-        // 2. collide with an existing range
-        // 3. give unsupported ranges
-        let result = self.volume.extend(subrange.start, subrange.len()).await;
-        match result {
-            Err(Status::NO_SPACE) => {
-                debug!("Could not create new range. Ran out of space!");
-                return;
-            }
-            Err(Status::INVALID_ARGS) => {
-                debug!("Could not create new range. Invalid arguments.");
-                return;
-            }
-            Err(s) => {
-                panic!("Unexpected error: {}", s);
-            }
-            Ok(()) => {}
-        }
-
-        if let Err(status) = result {
-            assert_eq!(status, Status::NO_SPACE);
-            debug!("Could not create new range. Ran out of space!");
-            return;
-        }
-
-        self.fill_data(subrange.start, subrange.end).await;
-        self.vslice_ranges.insert(subrange);
-    }
-
-    pub async fn verify(&mut self) {
+    async fn verify(&mut self) -> Result<(), Status> {
         let index = self.vslice_ranges.random_index(&mut self.rng);
         let range = self.vslice_ranges.get_mut(index);
 
-        debug!("Range = {:?}", range);
+        debug!("Verify Range = {:?}", range);
 
         // Perform verification on each slice
         for slice_offset in range.start..range.end {
             let seed = self.slice_seeds.get(&slice_offset).unwrap();
             let slice_size = self.volume.slice_size() as usize;
             let expected_data = generate_data(*seed, slice_size);
-            let actual_data = self.volume.read_slice_at(slice_offset).await;
+            let actual_data = self.volume.read_slice_at(slice_offset).await?;
             assert_eq!(expected_data, actual_data);
         }
+
+        Ok(())
     }
 
     // Returns a list of operations that are valid to perform,
@@ -342,29 +351,44 @@ impl VolumeOperator {
         ]
     }
 
-    pub async fn do_random_operation(&mut self, iteration: u64) {
-        let operations = self.get_operation_list();
-        let operation = operations.choose(&mut self.rng).unwrap();
-        debug!("-------> [OPERATION {}] {:?}", iteration, operation);
+    // Perform a single operation on the given volume.
+    async fn do_operation(&mut self, operation: &FvmOperation) -> Result<(), Status> {
         match operation {
-            FvmOperation::Append => {
-                self.append().await;
-            }
-            FvmOperation::Truncate => {
-                self.truncate().await;
-            }
-            FvmOperation::NewRange => {
-                self.new_range().await;
-            }
-            FvmOperation::Verify => {
-                self.verify().await;
-            }
+            FvmOperation::Append => self.append().await?,
+            FvmOperation::Truncate => self.truncate().await.expect("Truncation failed"),
+            FvmOperation::NewRange => self.new_range().await?,
+            FvmOperation::Verify => self.verify().await.expect("Verification failed"),
         }
-        debug!("<------- [OPERATION {}] {:?}", iteration, operation);
+        Ok(())
     }
 
-    pub async fn destroy(self) {
-        info!("Destroying partition. Freeing {} slices", self.vslice_ranges.num_allocated_slices());
-        self.volume.destroy().await;
+    async fn initialize_slice_zero(&mut self) {
+        let fill_range = VSliceRange::new(0, 1);
+        self.fill_range(&fill_range).await.unwrap();
+        self.vslice_ranges.insert(fill_range);
+    }
+
+    async fn do_operations(mut self) {
+        self.initialize_slice_zero().await;
+
+        for i in 1..=self.num_operations {
+            let operations = self.get_operation_list();
+            let operation = operations.choose(&mut self.rng).unwrap();
+
+            debug!(">>>>>>>>> [OPERATION {}] {:?}", i, operation);
+            let result = self.do_operation(operation).await;
+            debug!("<<<<<<<<< [OPERATION {}] {:?} [Result: {:?}]", i, operation, result);
+        }
+
+        // Attempt to destroy the volume, returning all slices back to the
+        // FVM volume manager.
+        info!("Freeing {} slices in volume", self.vslice_ranges.num_allocated_slices());
+        self.volume.destroy().await.unwrap();
+    }
+
+    // Start a new thread for this operator and run as many operations
+    // as possible before the volume disconnects.
+    pub fn run(self) -> Task<()> {
+        Task::blocking(async move { self.do_operations().await })
     }
 }
