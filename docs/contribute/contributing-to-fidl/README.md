@@ -17,7 +17,7 @@ The [FIDL][fidl-readme] toolchain is composed of roughly three parts:
     *   Implement encoding/decoding/validation of messages
     *   Method dispatching mechanics
 
-### Code Location
+### Code location
 
 #### Compiler front-end
 The front-end lives at [//zircon/tools/fidl/][fidlc-source],
@@ -81,7 +81,7 @@ and servers from different bindings with each other in order to test that they
 are compatible. Compatibility tests are found in
 [/src/tests/fidl/compatibility/] and [/topaz/bin/fidl_compatibility_test/].
 
-##### Dangerous Identifiers
+##### Dangerous identifiers
 
 Dangerous identifier tests are found in
 [/src/tests/fidl/dangerous_identifiers] and
@@ -109,7 +109,7 @@ own all of these areas, but they may need to be updated when making changes to
 the FIDL API surface, such as when changing the FIDL JSON IR.
 Refer to the respective READMEs and OWNERS files for details.
 
-### Other FIDL Tools
+### Other FIDL tools
 
 A number of FIDL tools are located in the [`fidl-misc` repo][fidl-misc]. To
 clone this repo, run
@@ -125,9 +125,7 @@ aliases easier:
 export FIDLMISC_DIR=...
 ```
 
-**TBD: linter, formatter, gidl, difl, regen scripts, etc.**
-
-### Common Development Tools
+### Common development tools
 
 This is a crowdsourced section from the FIDL team on useful tools that they
 use for working on the FIDL codebase.
@@ -162,7 +160,7 @@ really well for doing remote work from your laptop.
   },
   ```
 
-### C++ Style Guide
+### C++ style guide
 
 We follow the [Fuchsia C++ Style Guide][cpp-style], with additional rules to
 further remove ambiguity around the application or interpretation of guidelines.
@@ -204,9 +202,9 @@ auto add_dependency = [&](const flat::Library* dep_library) {
 };
 ```
 
-## General Setup
+## General setup
 
-### Fuchsia Setup
+### Fuchsia setup
 
 Read the [Fuchsia Getting Started][getting_started] guide first.
 
@@ -235,7 +233,7 @@ HOST_PLATFORM=linux-x64  # or mac-x64
 export ASAN_SYMBOLIZER_PATH="$FUCHSIA_DIR/prebuilt/third_party/clang/$HOST_PLATFORM/bin/llvm-symbolizer"
 ```
 
-## Compiling, and Running Tests
+## Compiling and running tests
 
 We provide mostly one-liners to run tests for the various parts.
 When in doubt, refer to the "`Test:`" comment in the git commit message;
@@ -401,7 +399,7 @@ To run a specific test or to pass flags to a specific test, run `fidldev` with
 the `--dry-run`, `--no-build`, `--no-regen` flags to obtain the desired test
 commands.
 
-### Compatibility Test
+### Compatibility test
 
 Details about how the compatibility tests work and where the code is located can be
 found in the README at [//src/tests/fidl/compatibility][compat_readme].
@@ -431,22 +429,22 @@ To rebuild GIDL:
 fx build host-tools/gidl
 ```
 
-### Measure Tape
+### Measure tape
 
 ```
 fx set core.x64 --with //tools/fidl/measure-tape/src:host
 fx build
 ```
 
-### All Tests {#all-tests}
+### All tests {#all-tests}
 
-#### Bindings Tests {#bindings-tests}
+#### Bindings tests {#bindings-tests}
 
 On device tests generally have greater coverage than host tests, due to support
 for only running a subset of features on host. However, host tests can be
 useful for debugging issues that prevent boot of the device.
 
-##### On Device
+##### On device
 
 | Name                     | Test Command                        | Coverage
 |--------------------------|-------------------------------------|---------------------------
@@ -475,7 +473,7 @@ Note: While `fx test fidl_bindings_test` prints test names as they run, it does 
 | go fidl tests (extended) | `fx test --host go_extended_fidl_test` | //third_party/go/syscall/zx/fidl
 | go unsafevalue test      | `fx test --host go_unsafevalue_test` | //third_party/go/syscall/zx/fidl/internal/unsafevalue
 
-#### Fidlgen Tests
+#### Fidlgen tests
 
 | Name                     | Test Command                        | Coverage
 |--------------------------|-------------------------------------|---------------------------
@@ -495,7 +493,7 @@ Note: While `fx test fidl_bindings_test` prints test names as they run, it does 
 | gidl parser              | `fx test gidl_parser_test`          | //tools/fidl/gidl/parser
 | measure tape test        | `fx test measure-tape_test`         | //tools/fidl/measure-tape
 
-### All Benchmarks
+### All benchmarks
 
 Benchmarks can either be run directly or through one of two test runners:
 fuchsia_benchmarks (old), SL4F (new).
@@ -540,9 +538,9 @@ To run all FIDL tests, use:
 fx test --e2e fidl_microbenchmarks_test
 ```
 
-### All Regen Commands
+### All regen commands
 
-| Name                  | Regen Commands                                                              | Input                                                             |  Output                                                                                    |
+| Name                  | Regen commands                                                              | Input                                                             |  Output                                                                                    |
 |-----------------------|-----------------------------------------------------------------------------|-------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
 | fidlc goldens         | fx exec $FUCHSIA_DIR/zircon/tools/fidl/testdata/regen.sh                    | zircon/tools/fidl/testdata                                        | zircon/tools/fidl/goldens                                                                  |
 | fidlgen goldens       | fx exec $FUCHSIA_DIR/garnet/go/src/fidl/compiler/backend/typestest/regen.sh | zircon/tools/fidl/goldens                                         | garnet/go/src/fidl/compiler/backend/goldens                                                |
