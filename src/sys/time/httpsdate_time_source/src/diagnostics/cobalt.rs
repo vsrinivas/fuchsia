@@ -34,15 +34,15 @@ impl CobaltDiagnostics {
 
     /// Calculate the bucket number in the latency metric for a given duration.
     fn round_trip_time_bucket(duration: &zx::Duration) -> u32 {
-        // bucket index 0 is reserved for underflow. Notably there are NUM_BUCKETS + 1 buckets,
+        // bucket index 0 is reserved for underflow. Notably there are NUM_BUCKETS + 2 buckets,
         // and the last bucket is reserved for overflow.
         const OVERFLOW_THRESHOLD: i64 = HTTPSDATE_POLL_LATENCY_INT_BUCKETS_FLOOR
-            + ((HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS - 1)
+            + (HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS
                 * HTTPSDATE_POLL_LATENCY_INT_BUCKETS_STEP_SIZE) as i64;
         if duration.into_micros() < HTTPSDATE_POLL_LATENCY_INT_BUCKETS_FLOOR {
             0
         } else if duration.into_micros() > OVERFLOW_THRESHOLD {
-            HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS
+            HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS + 1
         } else {
             ((duration.into_micros() - HTTPSDATE_POLL_LATENCY_INT_BUCKETS_FLOOR) as u32)
                 / HTTPSDATE_POLL_LATENCY_INT_BUCKETS_STEP_SIZE
@@ -108,7 +108,7 @@ mod test {
         static ref OVERFLOW_RTT: zx::Duration =
             BUCKET_FLOOR + BUCKET_SIZE * (HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS + 2);
         static ref OVERFLOW_ADJACENT_RTT: zx::Duration = BUCKET_FLOOR
-            + BUCKET_SIZE * (HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS - 1)
+            + BUCKET_SIZE * HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS
             - ONE_MICROS;
         static ref UNDERFLOW_RTT: zx::Duration = BUCKET_FLOOR - ONE_MICROS;
         static ref TEST_INITIAL_PHASE_COBALT: CobaltPhase = TEST_INITIAL_PHASE.into();
@@ -132,11 +132,11 @@ mod test {
         assert_eq!(CobaltDiagnostics::round_trip_time_bucket(&*BUCKET_5_RTT_1), 5);
         assert_eq!(
             CobaltDiagnostics::round_trip_time_bucket(&*OVERFLOW_RTT),
-            HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS
+            HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS + 1
         );
         assert_eq!(
             CobaltDiagnostics::round_trip_time_bucket(&*OVERFLOW_ADJACENT_RTT),
-            HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS - 1
+            HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS
         );
         assert_eq!(CobaltDiagnostics::round_trip_time_bucket(&*UNDERFLOW_RTT), 0);
     }
