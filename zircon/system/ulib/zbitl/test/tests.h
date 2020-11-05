@@ -36,6 +36,14 @@ enum class TestDataZbiType {
   kSecondItemOnPageBoundary,
 };
 
+// Parameterizes the behavior of copying a single item.
+enum class ItemCopyMode {
+  // Copy just the payload.
+  kRaw,
+  // Copy the header and payload.
+  kWithHeader,
+};
+
 //
 // Helpers for accessing test data.
 //
@@ -306,7 +314,7 @@ void TestMutation(TestDataZbiType type) {
                         TestDataZbiType::kSecondItemOnPageBoundary)
 
 template <typename TestTraits>
-void TestCopyCreation(TestDataZbiType type, bool with_header) {
+void TestCopyCreation(TestDataZbiType type, ItemCopyMode mode) {
   using CreationTraits = typename TestTraits::creation_traits;
 
   files::ScopedTempDir dir;
@@ -319,14 +327,34 @@ void TestCopyCreation(TestDataZbiType type, bool with_header) {
   ASSERT_NO_FATAL_FAILURE(TestTraits::Create(std::move(fd), size, &context));
   zbitl::View view(context.TakeStorage());
 
+  auto get_size = [&mode](const zbi_header_t& header) -> size_t {
+    switch (mode) {
+      case ItemCopyMode::kRaw:
+        return header.length;
+      case ItemCopyMode::kWithHeader:
+        return header.length + sizeof(header);
+    };
+    __UNREACHABLE;
+  };
+
+  auto do_copy = [&mode, &view ](auto it) -> auto {
+    switch (mode) {
+      case ItemCopyMode::kRaw:
+        return view.CopyRawItem(it);
+      case ItemCopyMode::kWithHeader:
+        return view.CopyRawItemWithHeader(it);
+    };
+    __UNREACHABLE;
+  };
+
   size_t idx = 0;
   for (auto it = view.begin(); it != view.end(); ++it, ++idx) {
     const zbi_header_t header = *((*it).header);
-    const size_t created_size = header.length + (with_header ? sizeof(header) : 0);
 
-    auto result = with_header ? view.CopyRawItemWithHeader(it) : view.CopyRawItem(it);
-    ASSERT_TRUE(result.is_ok()) << "item " << idx << ", " << (with_header ? "with" : "without")
-                                << " header: " << ViewCopyErrorString(result.error_value());
+    const size_t created_size = get_size(header);
+    auto result = do_copy(it);
+    ASSERT_TRUE(result.is_ok()) << "item " << idx << ": "
+                                << ViewCopyErrorString(result.error_value());
 
     auto created = std::move(result).value();
 
@@ -335,11 +363,15 @@ void TestCopyCreation(TestDataZbiType type, bool with_header) {
     ASSERT_NO_FATAL_FAILURE(CreationTraits::Read(created, created_payload, created_size, &actual));
 
     Bytes expected;
-    if (with_header) {
-      ASSERT_NO_FATAL_FAILURE(GetExpectedPayloadWithHeader(type, idx, &expected));
-    } else {
-      ASSERT_NO_FATAL_FAILURE(GetExpectedPayload(type, idx, &expected));
-    }
+    switch (mode) {
+      case ItemCopyMode::kRaw:
+        ASSERT_NO_FATAL_FAILURE(GetExpectedPayload(type, idx, &expected));
+        break;
+      case ItemCopyMode::kWithHeader:
+        ASSERT_NO_FATAL_FAILURE(GetExpectedPayloadWithHeader(type, idx, &expected));
+        break;
+    };
+
     EXPECT_EQ(expected, actual);
   }
   EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
@@ -514,33 +546,35 @@ void TestCopyingIntoSmallStorage() {
   ASSERT_FALSE(result.is_error()) << ViewErrorString(std::move(result).error_value());
 }
 
-#define TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, type_name, type, \
-                                              with_header, with_header_name)           \
-  TEST(suite_name, type_name##CopyCreation##with_header_name) {                        \
-    ASSERT_NO_FATAL_FAILURE(TestCopyCreation<TestTraits>(type, with_header));          \
+#define TEST_COPY_CREATION_BY_TYPE_AND_MODE(suite_name, TestTraits, type_name, type, mode, \
+                                            mode_name)                                     \
+  TEST(suite_name, type_name##CopyCreation##mode_name) {                                   \
+    ASSERT_NO_FATAL_FAILURE(TestCopyCreation<TestTraits>(type, mode));                     \
   }
 
-#define TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, type_name, type)                        \
-  TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, type_name, type, true, WithHeader) \
-  TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, type_name, type, false, )          \
-  TEST(suite_name, type_name##CopyCreationByByteRange) {                                           \
-    ASSERT_NO_FATAL_FAILURE(TestCopyCreationByByteRange<TestTraits>(type));                        \
-  }                                                                                                \
-  TEST(suite_name, type_name##CopyCreationByIteratorRange) {                                       \
-    ASSERT_NO_FATAL_FAILURE(TestCopyCreationByIteratorRange<TestTraits>(type));                    \
+#define TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, type_name, type)     \
+  TEST_COPY_CREATION_BY_TYPE_AND_MODE(suite_name, TestTraits, type_name, type,  \
+                                      ItemCopyMode::kRaw, )                     \
+  TEST_COPY_CREATION_BY_TYPE_AND_MODE(suite_name, TestTraits, type_name, type,  \
+                                      ItemCopyMode::kWithHeader, WithHeader)    \
+  TEST(suite_name, type_name##CopyCreationByByteRange) {                        \
+    ASSERT_NO_FATAL_FAILURE(TestCopyCreationByByteRange<TestTraits>(type));     \
+  }                                                                             \
+  TEST(suite_name, type_name##CopyCreationByIteratorRange) {                    \
+    ASSERT_NO_FATAL_FAILURE(TestCopyCreationByIteratorRange<TestTraits>(type)); \
   }
 
 #define TEST_COPY_CREATION(suite_name, TestTraits)                                          \
   TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, OneItemZbi, TestDataZbiType::kOneItem) \
-  TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, BadCrcItemZbi,              \
-                                        TestDataZbiType::kBadCrcItem, false, )              \
+  TEST_COPY_CREATION_BY_TYPE_AND_MODE(suite_name, TestTraits, BadCrcItemZbi,                \
+                                      TestDataZbiType::kBadCrcItem, ItemCopyMode::kRaw, )   \
   TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, MultipleSmallItemsZbi,                 \
                              TestDataZbiType::kMultipleSmallItems)                          \
   TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, SecondItemOnPageBoundaryZbi,           \
                              TestDataZbiType::kSecondItemOnPageBoundary)
 
 template <typename SrcTestTraits, typename DestTestTraits>
-void TestCopying(TestDataZbiType type, bool with_header) {
+void TestCopying(TestDataZbiType type, ItemCopyMode mode) {
   files::ScopedTempDir dir;
 
   fbl::unique_fd fd;
@@ -551,29 +585,52 @@ void TestCopying(TestDataZbiType type, bool with_header) {
   ASSERT_NO_FATAL_FAILURE(SrcTestTraits::Create(std::move(fd), size, &context));
   zbitl::View view(context.TakeStorage());
 
+  auto get_size = [&mode](const zbi_header_t& header) -> size_t {
+    switch (mode) {
+      case ItemCopyMode::kRaw:
+        return header.length;
+      case ItemCopyMode::kWithHeader:
+        return header.length + sizeof(header);
+    };
+    __UNREACHABLE;
+  };
+
+  auto do_copy = [&mode, &view ](auto&& storage, auto it) -> auto {
+    using Storage = decltype(storage);
+    switch (mode) {
+      case ItemCopyMode::kRaw:
+        return view.CopyRawItem(std::forward<Storage>(storage), it);
+      case ItemCopyMode::kWithHeader:
+        return view.CopyRawItemWithHeader(std::forward<Storage>(storage), it);
+    };
+    __UNREACHABLE;
+  };
+
   size_t idx = 0;
   for (auto it = view.begin(); it != view.end(); ++it, ++idx) {
     const zbi_header_t header = *((*it).header);
-    const size_t copy_size = header.length + (with_header ? sizeof(header) : 0);
+    const size_t copy_size = get_size(header);
 
     typename DestTestTraits::Context copy_context;
     ASSERT_NO_FATAL_FAILURE(DestTestTraits::Create(copy_size, &copy_context));
     auto copy = copy_context.TakeStorage();
-    auto result = with_header ? view.CopyRawItemWithHeader(std::move(copy), it)
-                              : view.CopyRawItem(std::move(copy), it);
-    ASSERT_TRUE(result.is_ok()) << "item " << idx << ", " << (with_header ? "with" : "without")
-                                << " header: " << ViewCopyErrorString(result.error_value());
+    auto result = do_copy(std::move(copy), it);
+    ASSERT_TRUE(result.is_ok()) << "item " << idx << ": "
+                                << ViewCopyErrorString(result.error_value());
 
     Bytes actual;
     auto copy_payload = DestTestTraits::AsPayload(copy);
     ASSERT_NO_FATAL_FAILURE(DestTestTraits::Read(copy, copy_payload, copy_size, &actual));
 
     Bytes expected;
-    if (with_header) {
-      ASSERT_NO_FATAL_FAILURE(GetExpectedPayloadWithHeader(type, idx, &expected));
-    } else {
-      ASSERT_NO_FATAL_FAILURE(GetExpectedPayload(type, idx, &expected));
-    }
+    switch (mode) {
+      case ItemCopyMode::kRaw:
+        ASSERT_NO_FATAL_FAILURE(GetExpectedPayload(type, idx, &expected));
+        break;
+      case ItemCopyMode::kWithHeader:
+        ASSERT_NO_FATAL_FAILURE(GetExpectedPayloadWithHeader(type, idx, &expected));
+        break;
+    };
     EXPECT_EQ(expected, actual);
   }
   EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
@@ -711,26 +768,26 @@ void TestZeroCopying() {
   static_assert(kCanZeroCopy == SrcTestTraits::kExpectOneshotReads || kExpectUnbufferedIo);
 }
 
-#define TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits,       \
-                                        dest_name, type_name, type, with_header, with_header_name) \
-  TEST(suite_name, type_name##Copy##src_name##To##dest_name##with_header_name) {                   \
-    auto test = TestCopying<SrcTestTraits, DestTestTraits>;                                        \
-    ASSERT_NO_FATAL_FAILURE(test(type, with_header));                                              \
+#define TEST_COPYING_BY_TYPE_AND_MODE(suite_name, SrcTestTraits, src_name, DestTestTraits, \
+                                      dest_name, type_name, type, mode, mode_name)         \
+  TEST(suite_name, type_name##Copy##src_name##To##dest_name##mode_name) {                  \
+    auto test = TestCopying<SrcTestTraits, DestTestTraits>;                                \
+    ASSERT_NO_FATAL_FAILURE(test(type, mode));                                             \
   }
 
-#define TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,      \
-                             type_name, type)                                                     \
-  TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, \
-                                  type_name, type, true, WithHeader)                              \
-  TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, \
-                                  type_name, type, false, )                                       \
-  TEST(suite_name, type_name##Copy##src_name##To##dest_name##ByByteRange) {                       \
-    auto test = TestCopyingByByteRange<SrcTestTraits, DestTestTraits>;                            \
-    ASSERT_NO_FATAL_FAILURE(test(type));                                                          \
-  }                                                                                               \
-  TEST(suite_name, type_name##Copy##src_name##To##dest_name##ByIteratorRange) {                   \
-    auto test = TestCopyingByIteratorRange<SrcTestTraits, DestTestTraits>;                        \
-    ASSERT_NO_FATAL_FAILURE(test(type));                                                          \
+#define TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,    \
+                             type_name, type)                                                   \
+  TEST_COPYING_BY_TYPE_AND_MODE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, \
+                                type_name, type, ItemCopyMode::kRaw, )                          \
+  TEST_COPYING_BY_TYPE_AND_MODE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, \
+                                type_name, type, ItemCopyMode::kWithHeader, WithHeader)         \
+  TEST(suite_name, type_name##Copy##src_name##To##dest_name##ByByteRange) {                     \
+    auto test = TestCopyingByByteRange<SrcTestTraits, DestTestTraits>;                          \
+    ASSERT_NO_FATAL_FAILURE(test(type));                                                        \
+  }                                                                                             \
+  TEST(suite_name, type_name##Copy##src_name##To##dest_name##ByIteratorRange) {                 \
+    auto test = TestCopyingByIteratorRange<SrcTestTraits, DestTestTraits>;                      \
+    ASSERT_NO_FATAL_FAILURE(test(type));                                                        \
   }
 
 // The macro indirection ensures that the relevant expansions in TEST_COPYING
@@ -750,8 +807,8 @@ void TestZeroCopying() {
 #define TEST_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)               \
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, OneItemZbi, \
                        TestDataZbiType::kOneItem)                                                  \
-  TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,  \
-                                  BadCrcItemZbi, TestDataZbiType::kBadCrcItem, false, )            \
+  TEST_COPYING_BY_TYPE_AND_MODE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,    \
+                                BadCrcItemZbi, TestDataZbiType::kBadCrcItem, ItemCopyMode::kRaw, ) \
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,             \
                        MultipleSmallItemsZbi, TestDataZbiType::kMultipleSmallItems)                \
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,             \
