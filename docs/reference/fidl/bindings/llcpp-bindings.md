@@ -1003,7 +1003,7 @@ then decoding it. In that case, the values can't use any handle.
 [llcpp-async-example]:
 /docs/development/languages/fidl/tutorials/llcpp/topics/async-completer.md
 [llcpp-tutorial]: /docs/development/languages/fidl/tutorials/llcpp
-[llcpp-server-example]: /garnet/examples/fidl/echo_server_llcpp
+[llcpp-server-example]: /examples/fidl/llcpp/server
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums
