@@ -107,6 +107,18 @@ class ArgsTest : public zxtest::Test {
   async::Loop loop_;
 };
 
+TEST_F(ArgsTest, CheckDisabled) {
+  Arguments args;
+
+  boot_args_server_->SetBool("virtcon.disable", false);
+  ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+  ASSERT_FALSE(args.disable);
+
+  boot_args_server_->SetBool("virtcon.disable", true);
+  ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+  ASSERT_TRUE(args.disable);
+}
+
 TEST_F(ArgsTest, CheckBootBools) {
   boot_args_server_->SetBool("virtcon.disable", true);
   boot_args_server_->SetBool("virtcon.keep-log-visible", true);

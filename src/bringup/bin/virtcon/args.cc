@@ -67,8 +67,8 @@ zx_status_t ParseArgs(llcpp::fuchsia::boot::Arguments::SyncClient& client, Argum
 
   auto bool_resp = client.GetBools(fidl::unowned_vec(bool_keys));
   if (bool_resp.ok()) {
-    out->disable = bool_resp->values[0];
-    out->keep_log_visible = bool_resp->values[1];
+    out->keep_log_visible = bool_resp->values[0];
+    out->disable = bool_resp->values[1];
     out->repeat_keys = bool_resp->values[2];
     out->hide_on_boot = bool_resp->values[3];
 
