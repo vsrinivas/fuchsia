@@ -25,7 +25,7 @@ use {
     std::{collections::HashMap, sync::Arc},
 };
 
-const ONE_MILLION: u32 = 1_000_000;
+const ONE_MILLION: i32 = 1_000_000;
 /// The value stored in place of any time that could not be generated.
 const FAILED_TIME: i64 = -1;
 /// The number of time estimates that are retained.
@@ -118,9 +118,9 @@ pub struct ClockDetails {
     monotonic_offset: i64,
     /// The UTC time from the monotonic-UTC correspondence pair, in ns.
     utc_offset: i64,
-    /// The ratio between UTC tick rate and monotonic tick rate in parts per million, where
-    /// a value above one million means UTC is ticking faster than monotonic.
-    rate_ppm: u32,
+    /// The ratio between UTC tick rate and monotonic tick rate in parts per million, expressed as
+    /// a PPM deviation from nominal. A positive number means UTC is running faster than monotonic.
+    rate_ppm: i32,
     /// The error bounds as documented in the zx::Clock.
     error_bounds: u64,
     /// The reason this clock update occurred, if known.
@@ -142,16 +142,16 @@ impl From<zx::ClockDetails> for ClockDetails {
             details.mono_to_synthetic.rate.synthetic_ticks,
             details.mono_to_synthetic.rate.reference_ticks,
         ) {
-            (0, _) => 0,
-            (_, 0) => std::i64::MAX,
-            (synthetic, reference) => (synthetic as i64 * ONE_MILLION as i64) / (reference as i64),
+            (0, _) => -ONE_MILLION,
+            (_, 0) => std::i32::MAX,
+            (syn, refr) => ((syn as i64 * ONE_MILLION as i64) / refr as i64) as i32 - ONE_MILLION,
         };
         ClockDetails {
             retrieval_monotonic: monotonic_time(),
             generation_counter: details.generation_counter,
             monotonic_offset: details.mono_to_synthetic.reference_offset,
             utc_offset: details.mono_to_synthetic.synthetic_offset,
-            rate_ppm: rate_ppm as u32,
+            rate_ppm,
             error_bounds: details.error_bounds,
             reason: None,
         }
@@ -482,7 +482,7 @@ mod tests {
 
     const BACKSTOP_TIME: i64 = 111111111;
     const RTC_INITIAL_TIME: i64 = 111111234;
-    const RATE_ADJUST: u32 = 222;
+    const RATE_ADJUST: i32 = 222;
     const ERROR_BOUNDS: u64 = 4444444444;
     const GENERATION_COUNTER: u32 = 7777;
     const OFFSET: zx::Duration = zx::Duration::from_seconds(311);
@@ -501,8 +501,8 @@ mod tests {
             reference_offset: 888888888888,
             synthetic_offset: 898989898989,
             rate: zx::sys::zx_clock_rate_t {
-                reference_ticks: ONE_MILLION,
-                synthetic_ticks: RATE_ADJUST as u32 + ONE_MILLION,
+                reference_ticks: ONE_MILLION as u32,
+                synthetic_ticks: (RATE_ADJUST + ONE_MILLION) as u32,
             },
         },
         error_bound: ERROR_BOUNDS,
@@ -549,7 +549,7 @@ mod tests {
         assert_eq!(details.generation_counter, GENERATION_COUNTER);
         assert_eq!(details.utc_offset, VALID_DETAILS.mono_to_synthetic.synthetic_offset);
         assert_eq!(details.monotonic_offset, VALID_DETAILS.mono_to_synthetic.reference_offset);
-        assert_eq!(details.rate_ppm, ONE_MILLION + RATE_ADJUST);
+        assert_eq!(details.rate_ppm, RATE_ADJUST);
         assert_eq!(details.error_bounds, ERROR_BOUNDS);
     }
 
@@ -562,7 +562,7 @@ mod tests {
         assert_eq!(details.generation_counter, GENERATION_COUNTER);
         assert_eq!(details.utc_offset, VALID_DETAILS.mono_to_synthetic.synthetic_offset);
         assert_eq!(details.monotonic_offset, VALID_DETAILS.mono_to_synthetic.reference_offset);
-        assert_eq!(details.rate_ppm, std::u32::MAX);
+        assert_eq!(details.rate_ppm, std::i32::MAX);
         assert_eq!(details.error_bounds, ERROR_BOUNDS);
     }
 
@@ -628,7 +628,7 @@ mod tests {
             .update(
                 zx::ClockUpdate::new()
                     .value(zx::Time::from_nanos(BACKSTOP_TIME + 2345))
-                    .rate_adjust(RATE_ADJUST as i32)
+                    .rate_adjust(RATE_ADJUST)
                     .error_bounds(ERROR_BOUNDS),
             )
             .expect("Failed to update test clock");
@@ -653,7 +653,7 @@ mod tests {
                     generation_counter: 4u64,
                     monotonic_offset: AnyProperty,
                     utc_offset: AnyProperty,
-                    rate_ppm: 1_000_000u64 + RATE_ADJUST as u64,
+                    rate_ppm: RATE_ADJUST as i64,
                     error_bounds: ERROR_BOUNDS,
                     reason: "Some(TimeStep)",
                 },
