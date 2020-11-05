@@ -123,7 +123,7 @@ impl SuiteServer for TestServer {
 
 lazy_static! {
     static ref RESTRICTED_FLAGS: HashSet<&'static str> =
-        vec!["-test.run", "-test.v", "-test.parallel"].into_iter().collect();
+        vec!["-test.run", "-test.v", "-test.parallel", "-test.count"].into_iter().collect();
 }
 
 impl TestServer {
@@ -483,7 +483,7 @@ mod tests {
     #[test]
     fn validate_args_test() {
         // choose a subset of restricted flags and run them through validation function.
-        let restricted_flags = vec!["-test.v", "-test.run", "-test.parallel"];
+        let restricted_flags = vec!["-test.v", "-test.run", "-test.parallel", "-test.count"];
 
         for flag in restricted_flags {
             let args = vec![flag.to_string()];

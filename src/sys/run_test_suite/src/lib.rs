@@ -10,6 +10,8 @@
 #![recursion_limit = "512"]
 
 use {
+    fidl_fuchsia_test::Invocation,
+    fidl_fuchsia_test_ext::CloneExt as _,
     fidl_fuchsia_test_manager::HarnessProxy,
     fuchsia_async as fasync,
     futures::{channel::mpsc, prelude::*},
@@ -77,7 +79,7 @@ pub struct TestParams {
     /// Arguments to pass to test using command line.
     pub test_args: Option<Vec<String>>,
 
-    /// |harness|: HarnessProxy that manages running the tests.
+    /// HarnessProxy that manages running the tests.
     pub harness: HarnessProxy,
 }
 
@@ -90,14 +92,14 @@ impl TestParams {
     }
 }
 
-/// Runs test defined by `url`, and writes logs to writer.
-/// |timeout|: Test timeout.should be more than zero.
-/// |harness|: HarnessProxy that manages running the tests.
-pub async fn run_test<W: Write>(
-    test_params: TestParams,
+async fn run_test_for_invocations<W: Write>(
+    suite_instance: &test_executor::SuiteInstance,
+    invocations: Vec<Invocation>,
+    run_options: TestRunOptions,
+    timeout: Option<std::num::NonZeroU32>,
     writer: &mut W,
 ) -> Result<RunResult, anyhow::Error> {
-    let mut timeout = match test_params.timeout {
+    let mut timeout = match timeout {
         Some(timeout) => futures::future::Either::Left(
             fasync::Timer::new(std::time::Duration::from_secs(timeout.get().into()))
                 .map(|()| Err(())),
@@ -107,29 +109,16 @@ pub async fn run_test<W: Write>(
     .fuse();
 
     let (sender, mut recv) = mpsc::channel(1);
-
     let mut outcome = Outcome::Passed;
 
     let mut test_cases_in_progress = HashSet::new();
     let mut test_cases_executed = HashSet::new();
     let mut test_cases_passed = HashSet::new();
-
     let mut successful_completion = false;
 
-    let run_options = TestRunOptions {
-        disabled_tests: test_params.disabled_tests(),
-        parallel: test_params.parallel,
-        arguments: test_params.test_args,
-    };
-
-    let test_fut = test_executor::run_v2_test_component(
-        test_params.harness,
-        test_params.test_url,
-        sender,
-        test_params.test_filter.as_ref().map(String::as_str),
-        run_options,
-    )
-    .fuse();
+    let test_fut = suite_instance
+        .run_and_collect_results_for_invocations(sender, invocations, run_options)
+        .fuse();
     futures::pin_mut!(test_fut);
 
     loop {
@@ -242,31 +231,134 @@ pub async fn run_test<W: Write>(
     })
 }
 
-/// Runs test defined by `test_url`, and writes logs to stdout.
-/// |timeout|: Test timeout.should be more than zero.
-/// |test_filter|: Glob filter for matching tests to run.
-/// |harness|: HarnessProxy that manages running the tests.
-pub async fn run_tests_and_get_outcome(test_params: TestParams) -> Outcome {
+/// Runs the test `count` number of times, and writes logs to writer.
+pub async fn run_test<'a, W: Write>(
+    test_params: TestParams,
+    count: u16,
+    writer: &'a mut W,
+) -> impl Stream<Item = Result<RunResult, anyhow::Error>> + 'a {
+    let run_options = TestRunOptions {
+        disabled_tests: test_params.disabled_tests(),
+        parallel: test_params.parallel,
+        arguments: test_params.test_args.clone(),
+    };
+
+    struct FoldArgs<'a, W: Write> {
+        current_count: u16,
+        count: u16,
+        suite_instance: Option<test_executor::SuiteInstance>,
+        invocations: Option<Vec<fidl_fuchsia_test::Invocation>>,
+        test_params: TestParams,
+        run_options: TestRunOptions,
+        writer: &'a mut W,
+    };
+
+    let args = FoldArgs {
+        current_count: 0,
+        count,
+        suite_instance: None,
+        invocations: None,
+        test_params,
+        run_options,
+        writer,
+    };
+
+    stream::try_unfold(args, |mut args| async move {
+        if args.current_count >= args.count {
+            return Ok(None);
+        }
+        let suite_instance = match args.suite_instance {
+            Some(s) => s,
+            None => {
+                test_executor::SuiteInstance::new(
+                    &args.test_params.harness,
+                    &args.test_params.test_url,
+                )
+                .await?
+            }
+        };
+
+        let invocations = match args.invocations {
+            Some(i) => i,
+            None => {
+                suite_instance
+                    .enumerate_tests(&args.test_params.test_filter.as_ref().map(String::as_str))
+                    .await?
+            }
+        };
+
+        let mut next_count = args.current_count + 1;
+        let result = run_test_for_invocations(
+            &suite_instance,
+            invocations.clone(),
+            args.run_options.clone(),
+            args.test_params.timeout,
+            args.writer,
+        )
+        .await?;
+        if result.outcome == Outcome::Timedout || result.outcome == Outcome::Error {
+            // don't run test again
+            next_count = args.count;
+        }
+
+        args.suite_instance = Some(suite_instance);
+        args.invocations = Some(invocations);
+        args.current_count = next_count;
+        Ok(Some((result, args)))
+    })
+}
+
+/// Runs the test and writes logs to stdout.
+/// |count|: Number of times to run this test.
+pub async fn run_tests_and_get_outcome(
+    test_params: TestParams,
+    count: std::num::NonZeroU16,
+) -> Outcome {
     let test_url = test_params.test_url.clone();
     println!("\nRunning test '{}'", &test_url);
 
     let mut stdout = io::stdout();
 
-    let RunResult { outcome, executed, passed, successful_completion } =
-        match run_test(test_params, &mut stdout).await {
-            Ok(run_result) => run_result,
-            Err(err) => {
-                println!("Test suite encountered error trying to run tests: {:?}", err);
+    let mut final_outcome = Outcome::Passed;
+
+    let stream = run_test(test_params, count.get(), &mut stdout).await;
+    futures::pin_mut!(stream);
+    let mut i: u16 = 1;
+
+    loop {
+        match stream.try_next().await {
+            Err(e) => {
+                println!("Test suite encountered error trying to run tests: {:?}", e);
                 return Outcome::Error;
             }
-        };
+            Ok(Some(RunResult { outcome, executed, passed, successful_completion })) => {
+                if count.get() > 1 {
+                    println!("\nTest run count {}/{}", i, count);
+                }
+                println!("{} out of {} tests passed...", passed.len(), executed.len());
+                println!("{} completed with result: {}", &test_url, outcome);
 
-    println!("{} out of {} tests passed...", passed.len(), executed.len());
-    println!("{} completed with result: {}", &test_url, outcome);
-
-    if !successful_completion {
-        println!("{} did not complete successfully.", &test_url);
+                if !successful_completion {
+                    println!("{} did not complete successfully.", &test_url);
+                }
+                i = i + 1;
+                if count.get() > 1 {
+                    if outcome != Outcome::Passed {
+                        final_outcome = Outcome::Failed;
+                    }
+                } else {
+                    final_outcome = outcome;
+                }
+            }
+            Ok(None) => {
+                break;
+            }
+        }
     }
 
-    outcome
+    if count.get() > 1 && final_outcome != Outcome::Passed {
+        println!("One or more test runs failed.");
+    }
+
+    final_outcome
 }

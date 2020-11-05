@@ -5,15 +5,16 @@
 //! This crate runs and collects results from a test which implements fuchsia.test.Suite protocol.
 
 use {
-    anyhow::Context as _,
+    anyhow::{format_err, Context as _, Error},
     fidl::handle::AsHandleRef,
     fidl_fuchsia_test::{
         CaseListenerRequest::Finished,
         CaseListenerRequestStream, Invocation,
         RunListenerRequest::{OnFinished, OnTestCaseStarted},
+        SuiteProxy,
     },
     fidl_fuchsia_test_ext::CloneExt as _,
-    fidl_fuchsia_test_manager::{HarnessProxy, LaunchOptions},
+    fidl_fuchsia_test_manager::{HarnessProxy, LaunchOptions, SuiteControllerProxy},
     fuchsia_zircon_status as zx_status,
     futures::{
         channel::mpsc,
@@ -335,141 +336,176 @@ impl TestCaseProcessor {
     }
 }
 
-/// Runs the test component using `suite` and collects logs and results.
-pub async fn run_and_collect_results(
-    suite: fidl_fuchsia_test::SuiteProxy,
-    sender: mpsc::Sender<TestEvent>,
-    test_filter: Option<&str>,
-    run_options: TestRunOptions,
-) -> Result<(), anyhow::Error> {
-    debug!("enumerating tests");
-    let (case_iterator, server_end) = fidl::endpoints::create_proxy()?;
-    let () = suite.get_tests(server_end).map_err(suite_error).context("getting test cases")?;
-    let mut invocations = Vec::<Invocation>::new();
-    let pattern = test_filter
-        .map(|filter| {
-            glob::Pattern::new(filter)
-                .map_err(|e| anyhow::anyhow!("Bad test filter pattern: {}", e))
-        })
-        .transpose()?;
-    loop {
-        let cases =
-            case_iterator.get_next().await.map_err(suite_error).context("getting test cases")?;
-        if cases.is_empty() {
-            break;
-        }
-        for case in cases {
-            let case_name = case.name.unwrap();
-            if !pattern.as_ref().map_or(true, |p| p.matches(&case_name)) {
-                continue;
-            }
-            invocations.push(Invocation { name: Some(case_name), tag: None });
-        }
-    }
-
-    debug!("invocations: {:#?}", invocations);
-    run_and_collect_results_for_invocations(suite, sender, invocations, run_options).await
+/// Encapsulates running suite instance.
+pub struct SuiteInstance {
+    suite: SuiteProxy,
+    // For safekeeping so that running component remains alive.
+    controller: SuiteControllerProxy,
 }
 
-/// Runs the test component using `suite` and collects logs and results.
-pub async fn run_and_collect_results_for_invocations(
-    suite: fidl_fuchsia_test::SuiteProxy,
-    mut sender: mpsc::Sender<TestEvent>,
-    invocations: Vec<Invocation>,
-    run_options: TestRunOptions,
-) -> Result<(), anyhow::Error> {
-    debug!("running tests");
-    let mut successful_completion = true; // will remain true, if there are no tests to run.
-    let mut invocations_iter = invocations.into_iter();
-    let run_options: fidl_fuchsia_test::RunOptions = run_options.into();
-    loop {
-        const INVOCATIONS_CHUNK: usize = 50;
-        let chunk = invocations_iter.by_ref().take(INVOCATIONS_CHUNK).collect::<Vec<_>>();
-        if chunk.is_empty() {
-            break;
+impl SuiteInstance {
+    /// Launches the test and returns an encapsulated object.
+    pub async fn new(harness: &HarnessProxy, test_url: &str) -> Result<Self, anyhow::Error> {
+        if !test_url.ends_with(".cm") {
+            return Err(anyhow::anyhow!(
+                "Tried to run a component as a v2 test that doesn't have a .cm extension"
+            ));
         }
-        successful_completion &= run_invocations(&suite, chunk, run_options.clone(), &mut sender)
+
+        let (suite, controller) = Self::launch_test_suite(harness, test_url).await?;
+        Ok(Self { suite, controller })
+    }
+
+    async fn launch_test_suite(
+        harness: &HarnessProxy,
+        test_url: &str,
+    ) -> Result<(SuiteProxy, SuiteControllerProxy), anyhow::Error> {
+        let (suite_proxy, suite_server_end) = fidl::endpoints::create_proxy().unwrap();
+        let (controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
+
+        debug!("Launching test component `{}`", test_url);
+        harness
+            .launch_suite(&test_url, LaunchOptions {}, suite_server_end, controller_server_end)
             .await
-            .context("running test cases")?;
+            .context("launch_test call failed")?
+            .map_err(|e: fidl_fuchsia_test_manager::LaunchError| {
+                anyhow::anyhow!("error launching test: {:?}", e)
+            })?;
+
+        Ok((suite_proxy, controller_proxy))
     }
-    if successful_completion {
-        let () =
-            sender.send(TestEvent::test_finished()).await.context("sending TestFinished event")?;
-    }
-    Ok(())
-}
 
-/// Runs the test component using `suite` and collects logs and results.
-async fn run_invocations(
-    suite: &fidl_fuchsia_test::SuiteProxy,
-    invocations: Vec<Invocation>,
-    run_options: fidl_fuchsia_test::RunOptions,
-    sender: &mut mpsc::Sender<TestEvent>,
-) -> Result<bool, anyhow::Error> {
-    let (run_listener_client, mut run_listener) =
-        fidl::endpoints::create_request_stream::<fidl_fuchsia_test::RunListenerMarker>()
-            .context("creating request stream")?;
-    suite.run(&mut invocations.into_iter().map(|i| i.into()), run_options, run_listener_client)?;
-
-    let mut test_case_processors = Vec::new();
-    let mut successful_completion = false;
-
-    while let Some(result_event) = run_listener.try_next().await.context("waiting for listener")? {
-        match result_event {
-            OnTestCaseStarted { invocation, primary_log, listener, control_handle: _ } => {
-                let name =
-                    invocation.name.ok_or(anyhow::anyhow!("cannot find name in invocation"))?;
-                sender.send(TestEvent::test_case_started(&name)).await?;
-                let test_case_processor = TestCaseProcessor::new(
-                    name,
-                    listener.into_stream()?,
-                    primary_log,
-                    sender.clone(),
-                );
-                test_case_processors.push(test_case_processor);
-            }
-            OnFinished { .. } => {
-                successful_completion = true;
+    /// Enumerates test and return invocations.
+    pub async fn enumerate_tests(
+        &self,
+        test_filter: &Option<&str>,
+    ) -> Result<Vec<Invocation>, anyhow::Error> {
+        debug!("enumerating tests");
+        let (case_iterator, server_end) = fidl::endpoints::create_proxy()?;
+        self.suite.get_tests(server_end).map_err(suite_error).context("getting test cases")?;
+        let mut invocations = vec![];
+        let pattern = test_filter
+            .map(|filter| {
+                glob::Pattern::new(filter)
+                    .map_err(|e| anyhow::anyhow!("Bad test filter pattern: {}", e))
+            })
+            .transpose()?;
+        loop {
+            let cases = case_iterator
+                .get_next()
+                .await
+                .map_err(suite_error)
+                .context("getting test cases")?;
+            if cases.is_empty() {
                 break;
             }
+            for case in cases {
+                let case_name =
+                    case.name.ok_or(format_err!("invocation should contain a name."))?;
+                if pattern.as_ref().map_or(true, |p| p.matches(&case_name)) {
+                    invocations.push(Invocation { name: Some(case_name), tag: None });
+                }
+            }
         }
+
+        debug!("invocations: {:#?}", invocations);
+
+        Ok(invocations)
     }
 
-    // await for all invocations to complete for which test case never completed.
-    join_all(test_case_processors.iter_mut().map(|i| i.wait_for_finish()))
-        .await
-        .into_iter()
-        .fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
-    Ok(successful_completion)
-}
-
-/// Runs v2 test component defined by `test_url` and reports `TestEvent` to sender for each test case.
-pub async fn run_v2_test_component(
-    harness: HarnessProxy,
-    test_url: String,
-    sender: mpsc::Sender<TestEvent>,
-    test_filter: Option<&str>,
-    run_options: TestRunOptions,
-) -> Result<(), anyhow::Error> {
-    if !test_url.ends_with(".cm") {
-        return Err(anyhow::anyhow!(
-            "Tried to run a component as a v2 test that doesn't have a .cm extension"
-        ));
+    /// Enumerate tests and then run all the test cases in the suite.
+    pub async fn run_and_collect_results(
+        &self,
+        sender: mpsc::Sender<TestEvent>,
+        test_filter: Option<&str>,
+        run_options: TestRunOptions,
+    ) -> Result<(), anyhow::Error> {
+        let invocations = self.enumerate_tests(&test_filter).await?;
+        self.run_and_collect_results_for_invocations(sender, invocations, run_options).await
     }
 
-    let (suite_proxy, suite_server_end) = fidl::endpoints::create_proxy().unwrap();
-    let (_controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
+    /// Runs the test component using `suite` and collects logs and results.
+    pub async fn run_and_collect_results_for_invocations(
+        &self,
+        mut sender: mpsc::Sender<TestEvent>,
+        invocations: Vec<Invocation>,
+        run_options: TestRunOptions,
+    ) -> Result<(), anyhow::Error> {
+        debug!("running tests");
+        let mut successful_completion = true; // will remain true, if there are no tests to run.
+        let mut invocations_iter = invocations.into_iter();
+        let run_options: fidl_fuchsia_test::RunOptions = run_options.into();
+        loop {
+            const INVOCATIONS_CHUNK: usize = 50;
+            let chunk = invocations_iter.by_ref().take(INVOCATIONS_CHUNK).collect::<Vec<_>>();
+            if chunk.is_empty() {
+                break;
+            }
+            successful_completion &= self
+                .run_invocations(chunk, run_options.clone(), &mut sender)
+                .await
+                .context("running test cases")?;
+        }
+        if successful_completion {
+            sender.send(TestEvent::test_finished()).await.context("sending TestFinished event")?;
+        }
+        Ok(())
+    }
 
-    debug!("Launching test component `{}`", test_url);
-    let () = harness
-        .launch_suite(&test_url, LaunchOptions {}, suite_server_end, controller_server_end)
-        .await
-        .context("launch_test call failed")?
-        .map_err(|e: fidl_fuchsia_test_manager::LaunchError| {
-            anyhow::anyhow!("error launching test: {:?}", e)
-        })?;
+    /// Runs the test component using `suite` and collects logs and results.
+    async fn run_invocations(
+        &self,
+        invocations: Vec<Invocation>,
+        run_options: fidl_fuchsia_test::RunOptions,
+        sender: &mut mpsc::Sender<TestEvent>,
+    ) -> Result<bool, anyhow::Error> {
+        let (run_listener_client, mut run_listener) =
+            fidl::endpoints::create_request_stream::<fidl_fuchsia_test::RunListenerMarker>()
+                .context("creating request stream")?;
+        self.suite.run(
+            &mut invocations.into_iter().map(|i| i.into()),
+            run_options,
+            run_listener_client,
+        )?;
 
-    run_and_collect_results(suite_proxy, sender, test_filter, run_options).await
+        let mut test_case_processors = Vec::new();
+        let mut successful_completion = false;
+
+        while let Some(result_event) =
+            run_listener.try_next().await.context("waiting for listener")?
+        {
+            match result_event {
+                OnTestCaseStarted { invocation, primary_log, listener, control_handle: _ } => {
+                    let name =
+                        invocation.name.ok_or(anyhow::anyhow!("cannot find name in invocation"))?;
+                    sender.send(TestEvent::test_case_started(&name)).await?;
+                    let test_case_processor = TestCaseProcessor::new(
+                        name,
+                        listener.into_stream()?,
+                        primary_log,
+                        sender.clone(),
+                    );
+                    test_case_processors.push(test_case_processor);
+                }
+                OnFinished { .. } => {
+                    successful_completion = true;
+                    break;
+                }
+            }
+        }
+
+        // await for all invocations to complete for which test case never completed.
+        join_all(test_case_processors.iter_mut().map(|i| i.wait_for_finish()))
+            .await
+            .into_iter()
+            .collect::<Result<Vec<()>, Error>>()?;
+        Ok(successful_completion)
+    }
+
+    /// Consume this instance and returns underlying proxies.
+    pub fn into_proxies(self) -> (SuiteProxy, SuiteControllerProxy) {
+        return (self.suite, self.controller);
+    }
 }
 
 fn suite_error(err: fidl::Error) -> anyhow::Error {

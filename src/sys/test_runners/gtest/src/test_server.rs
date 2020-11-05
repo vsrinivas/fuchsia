@@ -252,7 +252,8 @@ lazy_static! {
         "--gtest_filter",
         "--gtest_output",
         "--gtest_also_run_disabled_tests",
-        "--gtest_list_tests"
+        "--gtest_list_tests",
+        "--gtest_repeat"
     ];
 }
 

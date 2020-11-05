@@ -44,28 +44,23 @@ async fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
 async fn launch_test(
     test_url: &str,
 ) -> Result<(ftest::SuiteProxy, ftest_manager::SuiteControllerProxy), Error> {
-    let proxy = connect_test_manager().await?;
-    let (suite_proxy, suite_server_end) = fidl::endpoints::create_proxy()?;
-    let (controller_proxy, controller_server_end) = fidl::endpoints::create_proxy()?;
-    proxy
-        .launch_suite(test_url, LaunchOptions {}, suite_server_end, controller_server_end)
-        .await
-        .context("launch_test call failed")?
-        .map_err(|e| format_err!("error launching test: {:?}", e))?;
-    Ok((suite_proxy, controller_proxy))
+    let harness = connect_test_manager().await?;
+    let suite_instance = test_executor::SuiteInstance::new(&harness, test_url).await?;
+    Ok(suite_instance.into_proxies())
 }
 
 async fn run_test(
     test_url: &str,
     test_run_options: TestRunOptions,
 ) -> Result<Vec<TestEvent>, Error> {
-    let (suite_proxy, _keep_alive) = launch_test(test_url).await?;
+    let harness = connect_test_manager().await?;
+    let suite_instance = test_executor::SuiteInstance::new(&harness, test_url).await?;
 
     let (sender, recv) = mpsc::channel(1);
 
     let (events, ()) = futures::future::try_join(
         recv.collect::<Vec<_>>().map(Ok),
-        test_executor::run_and_collect_results(suite_proxy, sender, None, test_run_options),
+        suite_instance.run_and_collect_results(sender, None, test_run_options),
     )
     .await
     .context("running test")?;

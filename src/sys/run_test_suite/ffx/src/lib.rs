@@ -18,18 +18,25 @@ pub async fn test(
     cmd: TestCommand,
 ) -> Result<(), Error> {
     let writer = Box::new(stdout());
+    let count = cmd.count.unwrap_or(1);
+    let count = std::num::NonZeroU16::new(count)
+        .ok_or_else(|| anyhow!("--count should be greater than zero."))?;
+
     if cmd.list {
         get_tests(harness_proxy, writer, &cmd.test_url).await
     } else {
-        match run_test_suite_lib::run_tests_and_get_outcome(run_test_suite_lib::TestParams {
-            test_url: cmd.test_url,
-            timeout: cmd.timeout.and_then(std::num::NonZeroU32::new),
-            test_filter: cmd.test_filter,
-            also_run_disabled_tests: cmd.also_run_disabled_tests,
-            parallel: cmd.parallel,
-            test_args: None,
-            harness: harness_proxy,
-        })
+        match run_test_suite_lib::run_tests_and_get_outcome(
+            run_test_suite_lib::TestParams {
+                test_url: cmd.test_url,
+                timeout: cmd.timeout.and_then(std::num::NonZeroU32::new),
+                test_filter: cmd.test_filter,
+                also_run_disabled_tests: cmd.also_run_disabled_tests,
+                parallel: cmd.parallel,
+                test_args: None,
+                harness: harness_proxy,
+            },
+            count,
+        )
         .await
         {
             run_test_suite_lib::Outcome::Passed => Ok(()),

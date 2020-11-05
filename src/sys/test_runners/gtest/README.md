@@ -48,6 +48,7 @@ fuchsia.test.Suite provides equivalent functionality that replaces them
 - `gtest_output`
 - `gtest_also_run_disabled_tests`
 - `gtest_list_tests`
+- `gtest_repeat`
 
 ## Limitations
 

@@ -6,9 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
-    fidl_fuchsia_test_manager as ftest_manager,
-    ftest_manager::LaunchOptions,
+    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_manager as ftest_manager,
     fuchsia_component::client,
     fuchsia_component::client::connect_to_protocol_at_dir_root,
     futures::{channel::mpsc, prelude::*},
@@ -34,22 +32,6 @@ async fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
         .context("failed to open test suite service")
 }
 
-/// Returns SuiteProxy and SuiteControllerProxy. Keep SuiteControllerProxy alive for
-/// length of your test run so that your test doesn't die.
-async fn launch_test(
-    test_url: &str,
-) -> Result<(ftest::SuiteProxy, ftest_manager::SuiteControllerProxy), Error> {
-    let proxy = connect_test_manager().await?;
-    let (suite_proxy, suite_server_end) = fidl::endpoints::create_proxy()?;
-    let (controller_proxy, controller_server_end) = fidl::endpoints::create_proxy()?;
-    proxy
-        .launch_suite(test_url, LaunchOptions {}, suite_server_end, controller_server_end)
-        .await
-        .context("launch_test call failed")?
-        .map_err(|e| format_err!("error launching test: {:?}", e))?;
-    Ok((suite_proxy, controller_proxy))
-}
-
 async fn run_test(
     test_url: &str,
     disabled_tests: DisabledTestHandling,
@@ -57,7 +39,8 @@ async fn run_test(
     test_args: Option<Vec<String>>,
 ) -> Result<Vec<TestEvent>, Error> {
     let time_taken = Regex::new(r" \(.*?\)$").unwrap();
-    let (suite_proxy, _keep_alive) = launch_test(test_url).await?;
+    let harness = connect_test_manager().await?;
+    let suite_instance = test_executor::SuiteInstance::new(&harness, test_url).await?;
 
     let (sender, recv) = mpsc::channel(1);
 
@@ -66,7 +49,7 @@ async fn run_test(
 
     let (events, ()) = futures::future::try_join(
         recv.collect::<Vec<_>>().map(Ok),
-        test_executor::run_and_collect_results(suite_proxy, sender, None, run_options),
+        suite_instance.run_and_collect_results(sender, None, run_options),
     )
     .await
     .context("running test")?;

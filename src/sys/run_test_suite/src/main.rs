@@ -30,6 +30,12 @@ struct Args {
     /// run test cases in parallel, up to the number provided.
     #[argh(option)]
     parallel: Option<u16>,
+
+    /// number of times to run the test. By default run 1 time.
+    /// If an iteration of test times out, no further iterations
+    /// would be executed.
+    #[argh(option)]
+    count: Option<u16>,
 }
 
 // parses args, returns `Args` and everything after '--'.
@@ -51,20 +57,28 @@ async fn main() {
         })
     });
 
-    let Args { timeout, test_url, test_filter, also_run_disabled_tests, parallel } = args;
+    let Args { timeout, test_url, test_filter, also_run_disabled_tests, parallel, count } = args;
+    let count = count.unwrap_or(1);
+    if count == 0 {
+        println!("--count should be greater than zero.");
+        std::process::exit(1);
+    }
 
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
-    match run_test_suite_lib::run_tests_and_get_outcome(run_test_suite_lib::TestParams {
-        test_url,
-        timeout: timeout.and_then(std::num::NonZeroU32::new),
-        test_filter,
-        also_run_disabled_tests,
-        parallel,
-        test_args: test_args,
-        harness,
-    })
+    match run_test_suite_lib::run_tests_and_get_outcome(
+        run_test_suite_lib::TestParams {
+            test_url,
+            timeout: timeout.and_then(std::num::NonZeroU32::new),
+            test_filter,
+            also_run_disabled_tests,
+            parallel,
+            test_args: test_args,
+            harness,
+        },
+        std::num::NonZeroU16::new(count).unwrap(),
+    )
     .await
     {
         run_test_suite_lib::Outcome::Passed => {}

@@ -46,6 +46,7 @@ fuchsia.test.Suite provides equivalent functionality that replaces them
 - `test.run`
 - `test.v`
 - `test.parallel`
+- `test.count`
 
 ## Limitations
 

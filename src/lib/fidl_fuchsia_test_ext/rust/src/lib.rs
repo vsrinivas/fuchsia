@@ -20,3 +20,15 @@ impl CloneExt for ftest::RunOptions {
         }
     }
 }
+
+impl CloneExt for ftest::Invocation {
+    fn clone(&self) -> Self {
+        ftest::Invocation { name: self.name.clone(), tag: self.tag.clone() }
+    }
+}
+
+impl CloneExt for Vec<ftest::Invocation> {
+    fn clone(&self) -> Self {
+        self.iter().map(|i| i.clone()).collect()
+    }
+}

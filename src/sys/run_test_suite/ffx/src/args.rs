@@ -31,4 +31,10 @@ pub struct TestCommand {
     /// run test cases in parallel.
     #[argh(option)]
     pub parallel: Option<u16>,
+
+    /// number of times to run the test. By default run 1 time.
+    /// If an iteration of test times out, no further iterations
+    /// would be executed.
+    #[argh(option)]
+    pub count: Option<u16>,
 }

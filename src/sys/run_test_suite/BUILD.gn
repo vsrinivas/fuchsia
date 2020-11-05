@@ -22,7 +22,9 @@ rustc_library("lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//src/lib/fidl_fuchsia_test_ext/rust:fidl_fuchsia_test_ext",
     "//src/lib/fuchsia-async",
     "//src/lib/test_executor/rust:test_executor",
     "//third_party/rust_crates:anyhow",
