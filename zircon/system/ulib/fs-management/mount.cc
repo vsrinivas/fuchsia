@@ -178,6 +178,11 @@ disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) 
     return DISK_FORMAT_UNKNOWN;
   }
 
+  if (!resp.value().info->block_size) {
+    fprintf(stderr, "detect_disk_format: Expected a block size of > 0\n");
+    return DISK_FORMAT_UNKNOWN;
+  }
+
   // We need to read at least two blocks, because the GPT magic is located inside the second block
   // of the disk.
   size_t header_size =
@@ -191,6 +196,8 @@ disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) 
   // extra to read a multiple of the underlying block size.
   const size_t buffer_size =
       fbl::round_up(header_size, static_cast<size_t>(resp.value().info->block_size));
+
+  ZX_DEBUG_ASSERT_MSG(buffer_size > 0, "Expected buffer_size to be greater than 0\n");
 
   uint8_t data[buffer_size];
   if (read(fd, data, buffer_size) != static_cast<ssize_t>(buffer_size)) {
