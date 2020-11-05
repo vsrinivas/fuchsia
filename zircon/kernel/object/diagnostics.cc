@@ -549,11 +549,12 @@ namespace {
 // Counts memory usage under a VmAspace.
 class VmCounter final : public VmEnumerator {
  public:
-  bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth) override {
+  bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth)
+      TA_REQ(map->lock()) TA_REQ(vmar->lock()) override {
     usage.mapped_pages += map->size() / PAGE_SIZE;
 
     auto vmo = map->vmo_locked();
-    size_t committed_pages = vmo->AttributedPagesInRange(map->object_offset(), map->size());
+    size_t committed_pages = vmo->AttributedPagesInRange(map->object_offset_locked(), map->size());
     uint32_t share_count = vmo->share_count();
     if (share_count == 1) {
       usage.private_pages += committed_pages;
@@ -666,11 +667,15 @@ class RestartableVmEnumerator {
     }
 
     bool OnVmMapping([[maybe_unused]] const VmMapping* map,
-                     [[maybe_unused]] const VmAddressRegion* vmar,
-                     [[maybe_unused]] uint depth) override {
+                     [[maybe_unused]] const VmAddressRegion* vmar, [[maybe_unused]] uint depth)
+        TA_REQ(map->lock()) TA_REQ(vmar->lock()) override {
       if constexpr (EnumerateMapping) {
         return parent_->DoEntry(
-            [map, vmar, depth, this] {
+            [map, vmar, depth, this]() {
+              // These are true as they are required for calling OnVmMapping, but we cannot pass
+              // the capabilities easily via DoEntry to this callback.
+              AssertHeld(map->lock_ref());
+              AssertHeld(vmar->lock_ref());
               IMPL::MakeMappingEntry(map, vmar, depth, &parent_->entry_);
             },
             map->base(), depth);
@@ -753,7 +758,8 @@ class VmMapBuilder final
   }
 
   static void MakeMappingEntry(const VmMapping* map, const VmAddressRegion* vmar, uint depth,
-                               zx_info_maps_t* entry) {
+                               zx_info_maps_t* entry) TA_REQ(map->lock_ref())
+      TA_REQ(vmar->lock_ref()) {
     *entry = {};
     auto vmo = map->vmo_locked();
     vmo->get_name(entry->name, sizeof(entry->name));
@@ -762,10 +768,10 @@ class VmMapBuilder final
     entry->depth = depth + 1;  // The root aspace is depth 0.
     entry->type = ZX_INFO_MAPS_TYPE_MAPPING;
     zx_info_maps_mapping_t* u = &entry->u.mapping;
-    u->mmu_flags = arch_mmu_flags_to_vm_flags(map->arch_mmu_flags());
+    u->mmu_flags = arch_mmu_flags_to_vm_flags(map->arch_mmu_flags_locked());
     u->vmo_koid = vmo->user_id();
-    u->committed_pages = vmo->AttributedPagesInRange(map->object_offset(), map->size());
-    u->vmo_offset = map->object_offset();
+    u->committed_pages = vmo->AttributedPagesInRange(map->object_offset_locked(), map->size());
+    u->vmo_offset = map->object_offset_locked();
   }
 
  protected:

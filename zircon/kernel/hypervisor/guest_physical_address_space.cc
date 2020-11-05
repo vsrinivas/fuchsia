@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <align.h>
+
 #include <fbl/alloc_checker.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/range_check.h>
@@ -120,14 +121,14 @@ zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
   // physical memory, and to avoid the need for invalidation of the guest
   // physical address space on x86 (through the use of INVEPT), we fault the
   // page with the maximum allowable permissions of the mapping.
+  Guard<Mutex> guard{mapping->lock()};
   uint pf_flags = VMM_PF_FLAG_GUEST | VMM_PF_FLAG_HW_FAULT;
-  if (mapping->arch_mmu_flags() & ARCH_MMU_FLAG_PERM_WRITE) {
+  if (mapping->arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_WRITE) {
     pf_flags |= VMM_PF_FLAG_WRITE;
   }
-  if (mapping->arch_mmu_flags() & ARCH_MMU_FLAG_PERM_EXECUTE) {
+  if (mapping->arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_EXECUTE) {
     pf_flags |= VMM_PF_FLAG_INSTRUCTION;
   }
-  Guard<Mutex> guard{guest_aspace_->lock()};
   return mapping->PageFault(guest_paddr, pf_flags, nullptr);
 }
 
@@ -153,12 +154,18 @@ zx_status_t GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest_paddr, s
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  uint64_t mapping_object_offset;
+  {
+    Guard<Mutex> guard{guest_mapping->lock()};
+    mapping_object_offset = guest_mapping->object_offset_locked();
+  }
+
   fbl::RefPtr<VmMapping> host_mapping;
   zx_status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
       /* mapping_offset */ 0, mapping_len,
       /* align_pow2 */ false,
-      /* vmar_flags */ 0, guest_mapping->vmo(),
-      guest_mapping->object_offset() + intra_mapping_offset, kGuestMmuFlags, name, &host_mapping);
+      /* vmar_flags */ 0, guest_mapping->vmo(), mapping_object_offset + intra_mapping_offset,
+      kGuestMmuFlags, name, &host_mapping);
   if (status != ZX_OK) {
     return status;
   }

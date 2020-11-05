@@ -2709,7 +2709,8 @@ static bool vm_kernel_region_test() {
         // Every page from __code_start to _end should either be a VmMapping or a VMAR.
         EXPECT_NE(region.get(), nullptr);
         EXPECT_TRUE(region->is_mapping());
-        EXPECT_EQ(kernel_region.arch_mmu_flags, region->as_vm_mapping()->arch_mmu_flags());
+        Guard<Mutex> guard{region->as_vm_mapping()->lock()};
+        EXPECT_EQ(kernel_region.arch_mmu_flags, region->as_vm_mapping()->arch_mmu_flags_locked());
         break;
       }
     }

@@ -61,28 +61,9 @@
 // forward declarations
 class VmAddressRegion;
 class VmMapping;
+class VmEnumerator;
 
 class PageRequest;
-
-// Interface for walking a VmAspace-rooted VmAddressRegion/VmMapping tree.
-// Override this class and pass an instance to VmAspace::EnumerateChildren().
-class VmEnumerator {
- public:
-  // VmAspace::EnumerateChildren() will call the On* methods in depth-first
-  // pre-order. If any call returns false, the traversal will stop. The root
-  // VmAspace's lock will be held during the entire traversal.
-  // |depth| will be 0 for the root VmAddressRegion.
-  virtual bool OnVmAddressRegion(const VmAddressRegion* vmar, uint depth) { return true; }
-
-  // |vmar| is the parent of |map|. The root VmAspace's lock will be held when this is called.
-  virtual bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth) {
-    return true;
-  }
-
- protected:
-  VmEnumerator() = default;
-  ~VmEnumerator() = default;
-};
 
 // A VmAddressRegion represents a contiguous region of the virtual address
 // space.  It is partitioned by non-overlapping children of the following types:
@@ -134,6 +115,10 @@ class VmAddressRegionOrMapping
 
   // Dump debug info
   virtual void Dump(uint depth, bool verbose) const = 0;
+
+  // Expose our backing lock for annotation purposes.
+  Lock<Mutex>* lock() const TA_RET_CAP(aspace_->lock()) { return aspace_->lock(); }
+  Lock<Mutex>& lock_ref() const TA_RET_CAP(aspace_->lock()) { return aspace_->lock_ref(); }
 
  private:
   fbl::Canary<fbl::magic("VMRM")> canary_;
@@ -460,8 +445,21 @@ class VmMapping final : public VmAddressRegionOrMapping,
                         public fbl::DoublyLinkedListable<VmMapping*> {
  public:
   // Accessors for VMO-mapping state
-  uint arch_mmu_flags() const { return arch_mmu_flags_; }
-  uint64_t object_offset() const { return object_offset_; }
+  // These can be read under either lock (both locks being held for writing), so we provide two
+  // different accessors, one for each lock.
+  uint arch_mmu_flags_locked() const TA_REQ(aspace_->lock()) TA_NO_THREAD_SAFETY_ANALYSIS {
+    return arch_mmu_flags_;
+  }
+  uint arch_mmu_flags_locked_object() const TA_REQ(object_->lock()) TA_NO_THREAD_SAFETY_ANALYSIS {
+    return arch_mmu_flags_;
+  }
+  uint64_t object_offset_locked() const TA_REQ(lock()) TA_NO_THREAD_SAFETY_ANALYSIS {
+    return object_offset_;
+  }
+  uint64_t object_offset_locked_object() const
+      TA_REQ(object_->lock()) TA_NO_THREAD_SAFETY_ANALYSIS {
+    return object_offset_;
+  }
   // Intended to be used from VmEnumerator callbacks where the aspace_->lock() will be held.
   fbl::RefPtr<VmObject> vmo_locked() const { return object_; }
   fbl::RefPtr<VmObject> vmo() const;
@@ -553,13 +551,38 @@ class VmMapping final : public VmAddressRegionOrMapping,
 
   // pointer and region of the object we are mapping
   fbl::RefPtr<VmObject> object_;
-  uint64_t object_offset_ = 0;
+  // This can be read with either lock hold, but requires both locks to write it.
+  uint64_t object_offset_ TA_GUARDED(object_->lock()) TA_GUARDED(aspace_->lock()) = 0;
 
-  // cached mapping flags (read/write/user/etc)
-  uint arch_mmu_flags_;
+  // cached mapping flags (read/write/user/etc).
+  // This can be read with either lock hold, but requires both locks to write it.
+  uint arch_mmu_flags_ TA_GUARDED(object_->lock()) TA_GUARDED(aspace_->lock());
 
   // used to detect recursions through the vmo fault path
   bool currently_faulting_ TA_GUARDED(object_->lock()) = false;
+};
+
+// Interface for walking a VmAspace-rooted VmAddressRegion/VmMapping tree.
+// Override this class and pass an instance to VmAspace::EnumerateChildren().
+class VmEnumerator {
+ public:
+  // VmAspace::EnumerateChildren() will call the On* methods in depth-first
+  // pre-order. If any call returns false, the traversal will stop. The root
+  // VmAspace's lock will be held during the entire traversal.
+  // |depth| will be 0 for the root VmAddressRegion.
+  virtual bool OnVmAddressRegion(const VmAddressRegion* vmar, uint depth) TA_REQ(vmar->lock()) {
+    return true;
+  }
+
+  // |vmar| is the parent of |map|. The root VmAspace's lock will be held when this is called.
+  virtual bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth)
+      TA_REQ(map->lock()) TA_REQ(vmar->lock()) {
+    return true;
+  }
+
+ protected:
+  VmEnumerator() = default;
+  ~VmEnumerator() = default;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_ADDRESS_REGION_H_

@@ -596,6 +596,7 @@ bool VmAspace::EnumerateChildren(VmEnumerator* ve) {
     return true;
   }
   DEBUG_ASSERT(root_vmar_->IsAliveLocked());
+  AssertHeld(root_vmar_->lock_ref());
   if (!ve->OnVmAddressRegion(root_vmar_.get(), 0)) {
     return false;
   }

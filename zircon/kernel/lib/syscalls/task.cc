@@ -369,11 +369,15 @@ zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr, user_o
   if (!vmo)
     return ZX_ERR_NO_MEMORY;
 
-  uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
-  // TODO(fxbug.dev/31512): While this limits reading to the mapped address space of
-  // this VMO, it should be reading from multiple VMOs, not a single one.
-  // Additionally, it is racy with the mapping going away.
-  buffer_size = ktl::min(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
+  uint64_t offset;
+  {
+    Guard<Mutex> guard{vm_mapping->lock()};
+    offset = vaddr - vm_mapping->base() + vm_mapping->object_offset_locked();
+    // TODO(fxbug.dev/31512): While this limits reading to the mapped address space of
+    // this VMO, it should be reading from multiple VMOs, not a single one.
+    // Additionally, it is racy with the mapping going away.
+    buffer_size = ktl::min(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
+  }
   zx_status_t st =
       vmo->ReadUser(up->aspace().get(), buffer.reinterpret<char>(), offset, buffer_size);
 
@@ -428,11 +432,15 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
-  // TODO(fxbug.dev/31512): While this limits writing to the mapped address space of
-  // this VMO, it should be writing to multiple VMOs, not a single one.
-  // Additionally, it is racy with the mapping going away.
-  buffer_size = ktl::min(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
+  uint64_t offset;
+  {
+    Guard<Mutex> guard{vm_mapping->lock()};
+    offset = vaddr - vm_mapping->base() + vm_mapping->object_offset_locked();
+    // TODO(fxbug.dev/31512): While this limits writing to the mapped address space of
+    // this VMO, it should be writing to multiple VMOs, not a single one.
+    // Additionally, it is racy with the mapping going away.
+    buffer_size = ktl::min(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
+  }
   zx_status_t st =
       vmo->WriteUser(up->aspace().get(), buffer.reinterpret<const char>(), offset, buffer_size);
 

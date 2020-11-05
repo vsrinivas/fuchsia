@@ -5,8 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <align.h>
-
 #include <lib/unittest/unittest.h>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/arena.h>
 #include <vm/vm_aspace.h>
@@ -182,8 +182,13 @@ static bool count_committed_pages(vaddr_t start, vaddr_t end, size_t* committed,
   // Ask the VMO how many pages it's allocated within the range.
   auto start_off = ROUNDDOWN(start, PAGE_SIZE) - mapping->base();
   auto end_off = ROUNDUP(end, PAGE_SIZE) - mapping->base();
-  *committed = mapping->vmo()->AttributedPagesInRange(start_off + mapping->object_offset(),
-                                                      end_off - start_off);
+  uint64_t mapping_offset;
+  {
+    Guard<Mutex> guard{mapping->lock()};
+    mapping_offset = mapping->object_offset_locked();
+  }
+  *committed =
+      mapping->vmo()->AttributedPagesInRange(start_off + mapping_offset, end_off - start_off);
   *uncommitted = (end_off - start_off) / PAGE_SIZE - *committed;
   END_TEST;
 }

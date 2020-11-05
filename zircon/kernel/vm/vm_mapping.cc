@@ -47,15 +47,18 @@ fbl::RefPtr<VmObject> VmMapping::vmo() const {
 
 size_t VmMapping::AllocatedPagesLocked() const {
   canary_.Assert();
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
+  // TODO: Add annotations to remove this.
+  AssertHeld(lock_ref());
 
   if (state_ != LifeCycleState::ALIVE) {
     return 0;
   }
-  return object_->AttributedPagesInRange(object_offset_, size_);
+  return object_->AttributedPagesInRange(object_offset_locked(), size_);
 }
 
 void VmMapping::Dump(uint depth, bool verbose) const {
+  // TODO: Add annotations to remove this.
+  AssertHeld(lock_ref());
   canary_.Assert();
   for (uint i = 0; i < depth; ++i) {
     printf("  ");
@@ -63,16 +66,17 @@ void VmMapping::Dump(uint depth, bool verbose) const {
   char vmo_name[32];
   object_->get_name(vmo_name, sizeof(vmo_name));
   printf("map %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx mmufl %#x\n", this, base_, base_ + size_ - 1,
-         size_, arch_mmu_flags_);
+         size_, arch_mmu_flags_locked());
   for (uint i = 0; i < depth + 1; ++i) {
     printf("  ");
   }
   printf("vmo %p/k%" PRIu64 " off %#" PRIx64 " pages %zu ref %d '%s'\n", object_.get(),
-         object_->user_id(), object_offset_,
+         object_->user_id(), object_offset_locked(),
          // TODO(dbort): Use AttributedPagesInRange() once Dump() is locked
          // consistently. Currently, Dump() may be called without the aspace
          // lock.
-         object_->AttributedPagesInRange(object_offset_, size_), ref_count_debug(), vmo_name);
+         object_->AttributedPagesInRange(object_offset_locked(), size_), ref_count_debug(),
+         vmo_name);
   if (verbose) {
     object_->Dump(depth + 1, false);
   }
@@ -115,7 +119,8 @@ zx_status_t ProtectOrUnmap(const fbl::RefPtr<VmAspace>& aspace, vaddr_t base, si
 }  // namespace
 
 zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
+  // TODO: Add annotations to remove this.
+  AssertHeld(lock_ref());
   DEBUG_ASSERT(size != 0 && IS_PAGE_ALIGNED(base) && IS_PAGE_ALIGNED(size));
 
   // Do not allow changing caching
@@ -132,7 +137,7 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
   Guard<Mutex> guard{object_->lock()};
 
   // Persist our current caching mode
-  new_arch_mmu_flags |= (arch_mmu_flags_ & ARCH_MMU_FLAG_CACHE_MASK);
+  new_arch_mmu_flags |= (arch_mmu_flags_locked() & ARCH_MMU_FLAG_CACHE_MASK);
 
   // If we're not actually changing permissions, return fast.
   if (new_arch_mmu_flags == arch_mmu_flags_) {
@@ -155,7 +160,7 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
     fbl::AllocChecker ac;
     fbl::RefPtr<VmMapping> mapping(
         fbl::AdoptRef(new (&ac) VmMapping(*parent_, base + size, size_ - size, flags_, object_,
-                                          object_offset_ + size, arch_mmu_flags_)));
+                                          object_offset_ + size, arch_mmu_flags_locked())));
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -250,7 +255,8 @@ zx_status_t VmMapping::Unmap(vaddr_t base, size_t size) {
 
 zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
   canary_.Assert();
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
+  // TODO: Add annotations to remove this.
+  AssertHeld(lock_ref());
   DEBUG_ASSERT(size != 0 && IS_PAGE_ALIGNED(size) && IS_PAGE_ALIGNED(base));
   DEBUG_ASSERT(base >= base_ && base - base_ < size_);
   DEBUG_ASSERT(size_ - (base - base_) >= size);
@@ -299,7 +305,7 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
 
   fbl::AllocChecker ac;
   fbl::RefPtr<VmMapping> mapping(fbl::AdoptRef(new (&ac) VmMapping(
-      *parent_, new_base, new_size, flags_, object_, vmo_offset, arch_mmu_flags_)));
+      *parent_, new_base, new_size, flags_, object_, vmo_offset, arch_mmu_flags_locked())));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -324,6 +330,9 @@ bool VmMapping::ObjectRangeToVaddrRange(uint64_t offset, uint64_t len, vaddr_t* 
   DEBUG_ASSERT(base);
   DEBUG_ASSERT(virtual_len);
 
+  // TODO: Add annotations to remove this.
+  AssertHeld(object_->lock_ref());
+
   // Zero sized ranges are considered to have no overlap.
   if (len == 0) {
     *base = 0;
@@ -333,19 +342,19 @@ bool VmMapping::ObjectRangeToVaddrRange(uint64_t offset, uint64_t len, vaddr_t* 
 
   // compute the intersection of the passed in vmo range and our mapping
   uint64_t offset_new;
-  if (!GetIntersect(object_offset_, static_cast<uint64_t>(size_), offset, len, &offset_new,
-                    virtual_len)) {
+  if (!GetIntersect(object_offset_locked_object(), static_cast<uint64_t>(size_), offset, len,
+                    &offset_new, virtual_len)) {
     return false;
   }
 
   DEBUG_ASSERT(*virtual_len > 0 && *virtual_len <= SIZE_MAX);
-  DEBUG_ASSERT(offset_new >= object_offset_);
+  DEBUG_ASSERT(offset_new >= object_offset_locked_object());
 
   LTRACEF("intersection offset %#" PRIx64 ", len %#" PRIx64 "\n", offset_new, *virtual_len);
 
   // make sure the base + offset is within our address space
   // should be, according to the range stored in base_ + size_
-  bool overflowed = add_overflow(base_, offset_new - object_offset_, base);
+  bool overflowed = add_overflow(base_, offset_new - object_offset_locked_object(), base);
   ASSERT(!overflowed);
 
   // make sure we're only operating within our window
@@ -356,9 +365,6 @@ bool VmMapping::ObjectRangeToVaddrRange(uint64_t offset, uint64_t len, vaddr_t* 
 }
 
 zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
-  LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
-          this, object_offset_, size_, offset, len);
-
   canary_.Assert();
 
   // NOTE: must be acquired with the vmo lock held, but doesn't need to take
@@ -371,7 +377,11 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
   DEBUG_ASSERT(state_ == LifeCycleState::ALIVE);
 
   DEBUG_ASSERT(object_);
-  DEBUG_ASSERT(object_->lock()->lock().IsHeld());
+  // TODO: Add annotations to remove this.
+  AssertHeld(object_->lock_ref());
+
+  LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
+          this, object_offset_locked_object(), size_, offset, len);
 
   // If we're currently faulting and are responsible for the vmo code to be calling
   // back to us, detect the recursion and abort here.
@@ -396,9 +406,6 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
 zx_status_t VmMapping::HarvestAccessVmoRangeLocked(
     uint64_t offset, uint64_t len,
     const fbl::Function<bool(vm_page*, uint64_t)>& accessed_callback) const {
-  LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
-          this, object_offset_, size_, offset, len);
-
   canary_.Assert();
 
   // NOTE: must be acquired with the vmo lock held, but doesn't need to take
@@ -411,7 +418,11 @@ zx_status_t VmMapping::HarvestAccessVmoRangeLocked(
   DEBUG_ASSERT(state_ == LifeCycleState::ALIVE);
 
   DEBUG_ASSERT(object_);
-  DEBUG_ASSERT(object_->lock()->lock().IsHeld());
+  // TODO: Add annotations to remove this.
+  AssertHeld(object_->lock_ref());
+
+  LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
+          this, object_offset_locked_object(), size_, offset, len);
 
   // See if there's an intersect.
   vaddr_t base;
@@ -422,6 +433,7 @@ zx_status_t VmMapping::HarvestAccessVmoRangeLocked(
 
   ArchVmAspace::HarvestCallback callback = [&accessed_callback, this](paddr_t paddr, vaddr_t vaddr,
                                                                       uint) {
+    AssertHeld(object_->lock_ref());
     // Any pages mapped in from a vmo must have originated as a vm_page_t.
     vm_page_t* page = paddr_to_vm_page(paddr);
     DEBUG_ASSERT(page);
@@ -432,7 +444,7 @@ zx_status_t VmMapping::HarvestAccessVmoRangeLocked(
     uint64_t offset;
     bool overflow = sub_overflow(vaddr, base_, &offset);
     DEBUG_ASSERT(!overflow);
-    overflow = add_overflow(offset, object_offset_, &offset);
+    overflow = add_overflow(offset, object_offset_locked_object(), &offset);
     DEBUG_ASSERT(!overflow);
     return accessed_callback(page, offset);
   };
@@ -456,10 +468,13 @@ zx_status_t VmMapping::RemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) 
   DEBUG_ASSERT(state_ == LifeCycleState::ALIVE);
 
   DEBUG_ASSERT(object_);
-  DEBUG_ASSERT(object_->lock()->lock().IsHeld());
+
+  // TODO: Add annotations to remove this.
+  AssertHeld(object_->lock_ref());
 
   // If this doesn't support writing then nothing to be done, as we know we have no write mappings.
-  if (!(flags_ & VMAR_FLAG_CAN_MAP_WRITE) || !(arch_mmu_flags() & ARCH_MMU_FLAG_PERM_WRITE)) {
+  if (!(flags_ & VMAR_FLAG_CAN_MAP_WRITE) ||
+      !(arch_mmu_flags_locked_object() & ARCH_MMU_FLAG_PERM_WRITE)) {
     return ZX_OK;
   }
 
@@ -471,7 +486,7 @@ zx_status_t VmMapping::RemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) 
   }
 
   // Build new mmu flags without writing.
-  uint mmu_flags = arch_mmu_flags() & ~(ARCH_MMU_FLAG_PERM_WRITE);
+  uint mmu_flags = arch_mmu_flags_locked_object() & ~(ARCH_MMU_FLAG_PERM_WRITE);
 
   return ProtectOrUnmap(aspace_, base, new_len, mmu_flags);
 }
@@ -480,12 +495,13 @@ namespace {
 
 class VmMappingCoalescer {
  public:
-  VmMappingCoalescer(VmMapping* mapping, vaddr_t base);
+  VmMappingCoalescer(VmMapping* mapping, vaddr_t base) TA_REQ(mapping->lock());
   ~VmMappingCoalescer();
 
   // Add a page to the mapping run.  If this fails, the VmMappingCoalescer is
   // no longer valid.
   zx_status_t Append(vaddr_t vaddr, paddr_t paddr) {
+    AssertHeld(mapping_->lock_ref());
     DEBUG_ASSERT(!aborted_);
     // If this isn't the expected vaddr, flush the run we have first.
     if (count_ >= ktl::size(phys_) || vaddr != base_ + count_ * PAGE_SIZE) {
@@ -527,11 +543,13 @@ VmMappingCoalescer::~VmMappingCoalescer() {
 }
 
 zx_status_t VmMappingCoalescer::Flush() {
+  AssertHeld(mapping_->lock_ref());
+
   if (count_ == 0) {
     return ZX_OK;
   }
 
-  uint flags = mapping_->arch_mmu_flags();
+  uint flags = mapping_->arch_mmu_flags_locked();
   if (flags & ARCH_MMU_FLAG_PERM_RWX_MASK) {
     size_t mapped;
     zx_status_t ret = mapping_->aspace()->arch_aspace().Map(base_, phys_, count_, flags, &mapped);
@@ -556,6 +574,8 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
 
 zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
   canary_.Assert();
+  // TODO: Add annotations to remove this.
+  AssertHeld(lock_ref());
 
   len = ROUNDUP(len, PAGE_SIZE);
   if (len == 0) {
@@ -636,12 +656,13 @@ zx_status_t VmMapping::DecommitRange(size_t offset, size_t len) {
   }
   // VmObject::DecommitRange will typically call back into our instance's
   // VmMapping::UnmapVmoRangeLocked.
-  return object_->DecommitRange(object_offset_ + offset, len);
+  return object_->DecommitRange(object_offset_locked() + offset, len);
 }
 
 zx_status_t VmMapping::DestroyLocked() {
   canary_.Assert();
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
+  // TODO: Add annotations to remove this.
+  AssertHeld(lock_ref());
   LTRACEF("%p\n", this);
 
   // Take a reference to ourself, so that we do not get destructed after
@@ -691,34 +712,36 @@ zx_status_t VmMapping::DestroyLocked() {
 
 zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* page_request) {
   canary_.Assert();
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
+  // TODO: Add annotations to remove this.
+  AssertHeld(lock_ref());
 
   DEBUG_ASSERT(va >= base_ && va <= base_ + size_ - 1);
 
   va = ROUNDDOWN(va, PAGE_SIZE);
-  uint64_t vmo_offset = va - base_ + object_offset_;
+  uint64_t vmo_offset = va - base_ + object_offset_locked();
 
   __UNUSED char pf_string[5];
   LTRACEF("%p va %#" PRIxPTR " vmo_offset %#" PRIx64 ", pf_flags %#x (%s)\n", this, va, vmo_offset,
           pf_flags, vmm_pf_flags_to_string(pf_flags, pf_string));
 
   // make sure we have permission to continue
-  if ((pf_flags & VMM_PF_FLAG_USER) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_USER)) {
+  if ((pf_flags & VMM_PF_FLAG_USER) && !(arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_USER)) {
     // user page fault on non user mapped region
     LTRACEF("permission failure: user fault on non user region\n");
     return ZX_ERR_ACCESS_DENIED;
   }
-  if ((pf_flags & VMM_PF_FLAG_WRITE) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_WRITE)) {
+  if ((pf_flags & VMM_PF_FLAG_WRITE) && !(arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_WRITE)) {
     // write to a non-writeable region
     LTRACEF("permission failure: write fault on non-writable region\n");
     return ZX_ERR_ACCESS_DENIED;
   }
-  if (!(pf_flags & VMM_PF_FLAG_WRITE) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_READ)) {
+  if (!(pf_flags & VMM_PF_FLAG_WRITE) && !(arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_READ)) {
     // read to a non-readable region
     LTRACEF("permission failure: read fault on non-readable region\n");
     return ZX_ERR_ACCESS_DENIED;
   }
-  if ((pf_flags & VMM_PF_FLAG_INSTRUCTION) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_EXECUTE)) {
+  if ((pf_flags & VMM_PF_FLAG_INSTRUCTION) &&
+      !(arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_EXECUTE)) {
     // instruction fetch from a no execute region
     LTRACEF("permission failure: execute fault on no execute region\n");
     return ZX_ERR_ACCESS_DENIED;
@@ -847,7 +870,8 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
 
 void VmMapping::ActivateLocked() {
   DEBUG_ASSERT(state_ == LifeCycleState::NOT_READY);
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
+  // TODO: Add annotations to remove this.
+  AssertHeld(lock_ref());
   DEBUG_ASSERT(object_->lock()->lock().IsHeld());
   DEBUG_ASSERT(parent_);
   AssertHeld(*object_->lock());

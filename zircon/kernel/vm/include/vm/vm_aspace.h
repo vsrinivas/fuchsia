@@ -175,7 +175,8 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   friend class VmAddressRegionOrMapping;
   friend class VmAddressRegion;
   friend class VmMapping;
-  Lock<Mutex>* lock() { return &lock_; }
+  Lock<Mutex>* lock() const TA_RET_CAP(lock_) { return &lock_; }
+  Lock<Mutex>& lock_ref() const TA_RET_CAP(lock_) { return lock_; }
 
   // Expose the PRNG for ASLR to VmAddressRegion
   crypto::PRNG& AslrPrng() {

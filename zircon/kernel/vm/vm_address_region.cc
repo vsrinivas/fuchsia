@@ -386,13 +386,16 @@ zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, PageRequest* p
 bool VmAddressRegion::CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRegionOrMapping* next,
                                      vaddr_t* pva, vaddr_t search_base, vaddr_t align,
                                      size_t region_size, size_t min_gap, uint arch_mmu_flags) {
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
+  // TODO: Add annotations to remove this.
+  AssertHeld(lock_ref());
 
   vaddr_t gap_beg;  // first byte of a gap
   vaddr_t gap_end;  // last byte of a gap
 
   uint prev_arch_mmu_flags;
   uint next_arch_mmu_flags;
+  VmMapping* prev_mapping;
+  VmMapping* next_mapping;
 
   DEBUG_ASSERT(pva);
 
@@ -438,13 +441,20 @@ bool VmAddressRegion::CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRe
   LTRACEF_LEVEL(2, "search base %#" PRIxPTR " gap_beg %#" PRIxPTR " end %#" PRIxPTR "\n",
                 search_base, gap_beg, gap_end);
 
-  prev_arch_mmu_flags = (prev != nullptr && prev->is_mapping())
-                            ? prev->as_vm_mapping()->arch_mmu_flags()
-                            : ARCH_MMU_FLAG_INVALID;
-
-  next_arch_mmu_flags = (next != nullptr && next->is_mapping())
-                            ? next->as_vm_mapping()->arch_mmu_flags()
-                            : ARCH_MMU_FLAG_INVALID;
+  prev_mapping = (prev != nullptr ? prev->as_vm_mapping().get() : nullptr);
+  next_mapping = (next != nullptr ? next->as_vm_mapping().get() : nullptr);
+  if (prev_mapping) {
+    AssertHeld(prev_mapping->lock_ref());
+    prev_arch_mmu_flags = prev_mapping->arch_mmu_flags_locked();
+  } else {
+    prev_arch_mmu_flags = ARCH_MMU_FLAG_INVALID;
+  }
+  if (next_mapping) {
+    AssertHeld(next_mapping->lock_ref());
+    next_arch_mmu_flags = next_mapping->arch_mmu_flags_locked();
+  } else {
+    next_arch_mmu_flags = ARCH_MMU_FLAG_INVALID;
+  }
 
   *pva = aspace_->arch_aspace().PickSpot(gap_beg, prev_arch_mmu_flags, gap_end, next_arch_mmu_flags,
                                          align, region_size, arch_mmu_flags);
@@ -468,7 +478,8 @@ not_found:
 bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
   canary_.Assert();
   DEBUG_ASSERT(ve != nullptr);
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
+  // TODO: Add annotations to remove this.
+  AssertHeld(lock_ref());
 
   const uint min_depth = depth;
   for (auto itr = subregions_.begin(), end = subregions_.end(); itr != end;) {
@@ -478,13 +489,16 @@ bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
 
     if (curr->is_mapping()) {
       VmMapping* mapping = curr->as_vm_mapping().get();
+
       DEBUG_ASSERT(mapping != nullptr);
+      AssertHeld(mapping->lock_ref());
       if (!ve->OnVmMapping(mapping, this, depth)) {
         return false;
       }
     } else {
       VmAddressRegion* vmar = curr->as_vm_address_region().get();
       DEBUG_ASSERT(vmar != nullptr);
+      AssertHeld(vmar->lock_ref());
       if (!ve->OnVmAddressRegion(vmar, depth)) {
         return false;
       }
@@ -591,8 +605,9 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
     }
 
     auto mapping = curr->as_vm_mapping();
+    AssertHeld(mapping->lock_ref());
     fbl::RefPtr<VmObject> vmo = mapping->vmo_locked();
-    uint64_t vmo_offset = mapping->object_offset();
+    uint64_t vmo_offset = mapping->object_offset_locked();
 
     // The |op| range must not include unmapped regions.
     if (base < curr->base()) {
