@@ -1,0 +1,11 @@
+sdk://docs/low_level
+sdk://docs/metadata_schemas
+sdk://docs/musl_license
+sdk://docs/open_source
+sdk://pkg/async
+sdk://pkg/async-cpp
+sdk://pkg/fdio
+sdk://pkg/fit
+sdk://pkg/sync
+sdk://pkg/sysroot
+sdk://pkg/zx

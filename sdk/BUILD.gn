@@ -14,6 +14,7 @@ group("sdk") {
   testonly = true
 
   public_deps = [
+    ":bootstrap",
     ":core",
     ":e2e_testing",
     ":modular_testing",
@@ -328,6 +329,27 @@ sdk("core2") {
   testonly = true
 
   deps = [ ":core_idk" ]
+}
+
+sdk("bootstrap") {
+  id = sdk_id
+
+  category = "partner"
+
+  api = "bootstrap.manifest"
+
+  testonly = true
+
+  deps = [
+    ":license",
+    "docs",
+    "//sdk/lib/fdio:fdio_sdk",
+    "//zircon/public/lib/async:async_sdk",
+    "//zircon/public/lib/async-cpp:async-cpp_sdk",
+    "//zircon/public/lib/sync:sync_sdk",
+    "//zircon/public/sysroot:sysroot_sdk",
+    "//zircon/system/ulib/zx:zx_sdk",
+  ]
 }
 
 # The `modular_testing` SDK provides FIDL protocols and C++ libraries for writing hermetic
