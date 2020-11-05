@@ -80,15 +80,15 @@ success("FlexibleUnionUnknownValue") {
         xu: SampleXUnion{
             1234: {
                 // padding must be included in the raw bytes
-                bytes = [0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00],
+                bytes = [repeat(0xab):20, padding:4],
             },
         },
     },
     bytes = {
         v1 = [
-            num(1234):8,  // invalid ordinal
-            num(8):4, num(0):4, repeat(0xff):8, // envelope
-            0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
+            num(1234):8, // unknown ordinal
+            num(24):4, num(0):4, repeat(0xff):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
 }
@@ -101,15 +101,15 @@ success("FlexibleResourceUnionUnknownValue") {
         xu: SampleResourceXUnion{
             1234: {
                 // padding must be included in the raw bytes
-                bytes = [0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00],
+                bytes = [repeat(0xab):20, padding:4],
             },
         },
     },
     bytes = {
         v1 = [
-            num(1234):8,  // invalid ordinal
-            num(8):4, num(0):4, repeat(0xff):8, // envelope
-            0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
+            num(1234):8, // unknown ordinal
+            num(24):4, num(0):4, repeat(0xff):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
 }
@@ -127,16 +127,16 @@ success("FlexibleResourceUnionUnknownValueWithHandles") {
         xu: SampleResourceXUnion {
             1234: {
                 // padding must be included in the raw bytes
-                bytes = [0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00],
+                bytes = [repeat(0xab):20, padding:4],
                 handles = [#0, #1, #2, #3],
             },
         },
     },
     bytes = {
         v1 = [
-            num(1234):8,  // invalid ordinal
-            num(8):4, num(4):4, repeat(0xff):8, // envelope
-            0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
+            num(1234):8, // unknown ordinal
+            num(24):4, num(4):4, repeat(0xff):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
     handles = {
@@ -150,9 +150,9 @@ decode_failure("StrictUnionUnknownValue") {
     type = TestStrictXUnionInStruct,
     bytes = {
         v1 = [
-            num(1234):8,  // invalid ordinal
-            num(8):4, num(0):4, repeat(0xff):8, // envelope
-            0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
+            num(1234):8, // unknown ordinal
+            num(24):4, num(0):4, repeat(0xff):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
     err = STRICT_UNION_UNKNOWN_FIELD,
@@ -170,9 +170,9 @@ decode_failure("StrictUnionUnknownValueWithHandles") {
     type = TestStrictXUnionInStruct,
     bytes = {
         v1 = [
-            num(1234):8,  // invalid ordinal
-            num(8):4, num(4):4, repeat(0xff):8, // envelope
-            0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
+            num(1234):8, // unknown ordinal
+            num(24):4, num(4):4, repeat(0xff):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
     handles = {
@@ -196,9 +196,9 @@ decode_failure("FlexibleUnionUnknownValueWithHandles") {
     type = TestFlexibleXUnionInStruct,
     bytes = {
         v1 = [
-            num(1234):8,  // invalid ordinal
-            num(8):4, num(4):4, repeat(0xff):8, // envelope
-            0xde, 0xad, 0xbe, 0xef, padding:4,  // unknown bytes
+            num(1234):8, // unknown ordinal
+            num(24):4, num(4):4, repeat(0xff):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
     handles = {
@@ -216,7 +216,7 @@ encode_failure("StrictUnionUnknownValue") {
         xu: SampleStrictXUnion{
             1234: {
                 // padding must be included in the raw bytes
-                bytes = [0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00],
+                bytes = [repeat(0xab):20, padding:4],
             }
         }
     },

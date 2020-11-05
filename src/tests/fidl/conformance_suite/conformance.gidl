@@ -7,8 +7,7 @@ success("EmptyStruct") {
     },
     bytes = {
         v1 = [
-            0x00, // one byte
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+            0x00, padding:7,
         ],
     },
 }
@@ -509,9 +508,9 @@ decode_success("ValueTableUnknownTrailingHandlesDropped") {
             num(0):4, num(0):4, repeat(0):8, // absent envelope 3
             num(0):4, num(0):4, repeat(0):8, // absent envelope 4
             num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
-            num(8):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(24):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
             num(67):8, // field Y
-            0xde, 0xad, 0xbe, 0xef, padding:4, // unknown bytes
+            repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
     handles = {
@@ -544,9 +543,9 @@ decode_success("ResourceTableUnknownTrailingHandlesDropped") {
             num(0):4, num(0):4, repeat(0):8, // absent envelope 3
             num(0):4, num(0):4, repeat(0):8, // absent envelope 4
             num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
-            num(8):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(24):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
             num(67):8, // field Y
-            0xde, 0xad, 0xbe, 0xef, padding:4, // unknown bytes
+            repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
     handles = {
@@ -569,7 +568,7 @@ decode_success("ValueTableUnknownTrailingHandlesIncorrectlyStored") {
         table: SimpleTable {
             y: 67,
             6: {
-                bytes = [0xde, 0xad, 0xbe, 0xef, padding:4],
+                bytes = [repeat(0xab):20, padding:4],
                 handles = [#0, #1, #2],
             },
         },
@@ -583,9 +582,9 @@ decode_success("ValueTableUnknownTrailingHandlesIncorrectlyStored") {
             num(0):4, num(0):4, repeat(0):8, // absent envelope 3
             num(0):4, num(0):4, repeat(0):8, // absent envelope 4
             num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
-            num(8):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(24):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
             num(67):8, // field Y
-            0xde, 0xad, 0xbe, 0xef, padding:4, // unknown bytes
+            repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
     handles = {
@@ -614,9 +613,9 @@ decode_failure("ValueTableUnknownTrailingHandlesRejected") {
             num(0):4, num(0):4, repeat(0):8, // absent envelope 3
             num(0):4, num(0):4, repeat(0):8, // absent envelope 4
             num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
-            num(8):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(24):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
             num(67):8, // field Y
-            0xde, 0xad, 0xbe, 0xef, padding:4, // unknown bytes
+            repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
     handles = {
@@ -639,7 +638,7 @@ decode_success("ResourceTableUnknownTrailingHandlesStored") {
         table: SimpleResourceTable {
             y: 67,
             6: {
-                bytes = [0xde, 0xad, 0xbe, 0xef, padding:4],
+                bytes = [repeat(0xab):20, padding:4],
                 handles = [#0, #1, #2],
             },
         },
@@ -653,9 +652,9 @@ decode_success("ResourceTableUnknownTrailingHandlesStored") {
             num(0):4, num(0):4, repeat(0):8, // absent envelope 3
             num(0):4, num(0):4, repeat(0):8, // absent envelope 4
             num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
-            num(8):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(24):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
             num(67):8, // field Y
-            0xde, 0xad, 0xbe, 0xef, padding:4, // unknown bytes
+            repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
     handles = {
