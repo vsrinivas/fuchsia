@@ -211,7 +211,7 @@ template("clang_toolchain") {
       }
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
-      command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+      command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
       description = "RUST {{output}}"
@@ -254,7 +254,7 @@ template("clang_toolchain") {
       depfile = "{{output}}.d"
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
-      command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      command = "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
       description = "RUST {{output}}"
@@ -270,7 +270,7 @@ template("clang_toolchain") {
       depfile = "{{output}}.d"
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
-      command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      command = "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
       description = "RUST {{output}}"
@@ -321,7 +321,7 @@ template("clang_toolchain") {
       }
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
-      command = "{{rustenv}} $ld_location_env $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      command = "{{rustenv}} $ld_location_env RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
 
       description = "RUST {{output}}"
       outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
@@ -365,7 +365,7 @@ template("clang_toolchain") {
         link_map_args = ""
       }
 
-      command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+      command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
       description = "RUST {{output}}"
@@ -413,7 +413,7 @@ template("clang_toolchain") {
       depfile = "{{output}}.d"
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
-      command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      command = "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
       description = "RUST {{output}}"
