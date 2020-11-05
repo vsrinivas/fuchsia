@@ -485,7 +485,8 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
     return;
   }
 
-  usb_request_copy_to(req, &network_notification, sizeof(network_notification), 0);
+  auto result = usb_request_copy_to(req, &network_notification, sizeof(network_notification), 0);
+  ZX_ASSERT(result == sizeof(network_notification));
   req->header.length = sizeof(network_notification);
 
   usb_request_complete_t complete = {
@@ -501,7 +502,8 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
     return;
   }
 
-  usb_request_copy_to(req, &speed_notification, sizeof(speed_notification), 0);
+  result = usb_request_copy_to(req, &speed_notification, sizeof(speed_notification), 0);
+  ZX_ASSERT(result == sizeof(speed_notification));
   req->header.length = sizeof(speed_notification);
 
   usb_request_queue(cdc, &cdc->function, req, &complete);

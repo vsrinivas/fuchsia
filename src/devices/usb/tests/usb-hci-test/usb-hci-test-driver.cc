@@ -208,10 +208,10 @@ void HciTest::TestThread(RunCompleter::Async completer) {
                      }
                      isoch_packets++;
                      if (clock_val == 0) {
-                       request.CopyFrom(&clock_val, sizeof(clock_val), 0);
+                       __UNUSED auto copy_result = request.CopyFrom(&clock_val, sizeof(clock_val), 0);
                      } else {
-                       uint64_t device_val;
-                       request.CopyFrom(&device_val, sizeof(device_val), 0);
+                       uint64_t device_val = 0;
+                       __UNUSED auto copy_result = request.CopyFrom(&device_val, sizeof(device_val), 0);
                        if (clock_val > device_val) {
                          return;
                        }

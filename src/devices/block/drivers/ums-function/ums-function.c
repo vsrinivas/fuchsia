@@ -182,7 +182,8 @@ static void ums_continue_transfer(usb_ums_t* ums) {
   req->header.length = length;
 
   if (ums->data_state == DATA_STATE_READ) {
-    usb_request_copy_to(req, ums->storage + ums->data_offset, length, 0);
+    size_t result = usb_request_copy_to(req, ums->storage + ums->data_offset, length, 0);
+    ZX_ASSERT(result == length);
     ums_function_queue_data(ums, req);
   } else if (ums->data_state == DATA_STATE_WRITE) {
     ums_function_queue_data(ums, req);
@@ -435,7 +436,8 @@ static void ums_cbw_complete(void* ctx, usb_request_t* req) {
 
   if (req->response.status == ZX_OK && req->response.actual == sizeof(ums_cbw_t)) {
     ums_cbw_t* cbw = &ums->current_cbw;
-    usb_request_copy_from(req, cbw, sizeof(*cbw), 0);
+    memset(cbw, 0, sizeof(*cbw));
+    __UNUSED size_t result = usb_request_copy_from(req, cbw, sizeof(*cbw), 0);
     ums_handle_cbw(ums, cbw);
   }
 }
@@ -446,7 +448,9 @@ static void ums_data_complete(void* ctx, usb_request_t* req) {
   zxlogf(DEBUG, "ums_data_complete %d %ld", req->response.status, req->response.actual);
 
   if (ums->data_state == DATA_STATE_WRITE) {
-    usb_request_copy_from(req, ums->storage + ums->data_offset, req->response.actual, 0);
+    size_t result =
+        usb_request_copy_from(req, ums->storage + ums->data_offset, req->response.actual, 0);
+    ZX_ASSERT(result == req->response.actual);
   } else if (ums->data_state == DATA_STATE_FAILED) {
     ums->data_state = DATA_STATE_NONE;
     ums_queue_csw(ums, CSW_FAILED);

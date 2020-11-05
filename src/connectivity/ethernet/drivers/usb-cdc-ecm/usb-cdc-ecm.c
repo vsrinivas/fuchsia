@@ -437,8 +437,9 @@ static void ecm_handle_interrupt(ecm_ctx_t* ctx, usb_request_t* request) {
     return;
   }
 
-  usb_cdc_notification_t usb_req;
-  usb_request_copy_from(request, &usb_req, sizeof(usb_cdc_notification_t), 0);
+  usb_cdc_notification_t usb_req = {};
+  __UNUSED size_t result =
+      usb_request_copy_from(request, &usb_req, sizeof(usb_cdc_notification_t), 0);
   if (usb_req.bmRequestType == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
       usb_req.bNotification == USB_CDC_NC_NETWORK_CONNECTION) {
     ecm_update_online_status(ctx, usb_req.wValue != 0);
@@ -452,9 +453,9 @@ static void ecm_handle_interrupt(ecm_ctx_t* ctx, usb_request_t* request) {
       return;
     }
     // Data immediately follows notification in packet
-    uint32_t new_us_bps, new_ds_bps;
-    usb_request_copy_from(request, &new_us_bps, 4, sizeof(usb_cdc_notification_t));
-    usb_request_copy_from(request, &new_ds_bps, 4, sizeof(usb_cdc_notification_t) + 4);
+    uint32_t new_us_bps = 0, new_ds_bps = 0;
+    result = usb_request_copy_from(request, &new_us_bps, 4, sizeof(usb_cdc_notification_t));
+    result = usb_request_copy_from(request, &new_ds_bps, 4, sizeof(usb_cdc_notification_t) + 4);
     if (new_us_bps != ctx->us_bps) {
       zxlogf(INFO, "%s: connection speed change... upstream bits/s: %" PRIu32 "", module_name,
              new_us_bps);

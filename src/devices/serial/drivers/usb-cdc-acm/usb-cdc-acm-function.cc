@@ -121,7 +121,7 @@ void FakeUsbCdcAcmFunction::DataOutComplete() {
     return;
   }
   std::vector<uint8_t> data(data_out_req_->request()->response.actual);
-  usb_request_copy_from(data_out_req_->request(), data.data(), data.size(), 0);
+  __UNUSED size_t copied = usb_request_copy_from(data_out_req_->request(), data.data(), data.size(), 0);
 
   usb_request_complete_t complete = {
       .callback =
@@ -142,7 +142,7 @@ void FakeUsbCdcAcmFunction::DataOutComplete() {
   data_in_req_->request()->header.length = data.size();
   data_in_req_->request()->header.ep_address = bulk_in_addr_;
 
-  data_in_req_->CopyTo(data.data(), data.size(), 0);
+  copied = data_in_req_->CopyTo(data.data(), data.size(), 0);
 
   RequestQueue(data_in_req_->request(), &complete);
 }

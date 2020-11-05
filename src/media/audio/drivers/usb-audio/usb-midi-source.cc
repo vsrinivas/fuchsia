@@ -124,7 +124,8 @@ zx_status_t UsbMidiSource::DdkRead(void* data, size_t len, zx_off_t off, size_t*
   }
 
   // MIDI events are 4 bytes. We can ignore the zeroth byte
-  req->CopyFrom(data, 3, 1);
+  // TODO(fxb/63597): Do something with this value.
+  __UNUSED size_t not_sure_what_to_do_with_this = req->CopyFrom(data, 3, 1);
   *actual = get_midi_message_length(*(static_cast<uint8_t*>(data)));
   free_read_reqs_.push(std::move(*req));
 

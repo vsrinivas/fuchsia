@@ -711,7 +711,8 @@ void RndisFunction::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* net
   }
   offset += copied;
 
-  request->CopyTo(op.operation()->data_buffer, length, offset);
+  size_t result = request->CopyTo(op.operation()->data_buffer, length, offset);
+  ZX_ASSERT(result == length);
   if (copied < 0) {
     zxlogf(ERROR, "Failed to copy TX data: %zd", copied);
     op.Complete(ZX_ERR_INTERNAL);

@@ -313,7 +313,8 @@ zx_status_t UsbDevice::Control(uint8_t request_type, uint8_t request, uint16_t v
   }
 
   if (length > 0 && out) {
-    req->CopyTo(write_buffer, length, 0);
+    size_t result = req->CopyTo(write_buffer, length, 0);
+    ZX_ASSERT(result == length);
   }
 
   sync_completion_t completion;
@@ -344,7 +345,8 @@ zx_status_t UsbDevice::Control(uint8_t request_type, uint8_t request, uint16_t v
   if (status == ZX_OK && !out) {
     auto actual = req->request()->response.actual;
     if (length > 0) {
-      req->CopyFrom(out_read_buffer, actual, 0);
+      size_t result = req->CopyFrom(out_read_buffer, actual, 0);
+      ZX_ASSERT(result == actual);
     }
     if (out_read_actual != nullptr) {
       *out_read_actual = actual;

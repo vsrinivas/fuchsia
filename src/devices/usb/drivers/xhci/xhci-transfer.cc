@@ -578,7 +578,8 @@ zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request
 
   bool out = !!((request_type & USB_DIR_MASK) == USB_DIR_OUT);
   if (length > 0 && out) {
-    usb_request_copy_to(req, data, length, 0);
+    size_t copy_size = usb_request_copy_to(req, data, length, 0);
+    ZX_ASSERT(copy_size == length);
   }
 
   sync_completion_t completion;
@@ -606,7 +607,8 @@ zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request
     *out_actual = req->response.actual;
 
     if (length > 0 && !out) {
-      usb_request_copy_from(req, data, req->response.actual, 0);
+      size_t copy_size = usb_request_copy_from(req, data, req->response.actual, 0);
+      ZX_ASSERT(copy_size == req->response.actual);
     }
   }
 

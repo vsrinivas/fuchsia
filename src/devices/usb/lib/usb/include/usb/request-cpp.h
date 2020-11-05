@@ -159,13 +159,13 @@ class RequestBase {
 
   // Copies data from the Request's vm object.
   // Out of range operations are ignored.
-  ssize_t CopyFrom(void* data, size_t length, size_t offset) {
+  __WARN_UNUSED_RESULT ssize_t CopyFrom(void* data, size_t length, size_t offset) {
     return usb_request_copy_from(request(), data, length, offset);
   }
 
   // Copies data into a Request's vm object.
   // Out of range operations are ignored.
-  ssize_t CopyTo(const void* data, size_t length, size_t offset) {
+  __WARN_UNUSED_RESULT ssize_t CopyTo(const void* data, size_t length, size_t offset) {
     return usb_request_copy_to(request(), data, length, offset);
   }
 

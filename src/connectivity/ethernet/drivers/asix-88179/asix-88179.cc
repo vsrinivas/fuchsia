@@ -415,9 +415,11 @@ zx_status_t Asix88179Ethernet::RequestAppend(usb::Request<>& request,
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  request.CopyTo(&header, sizeof(header), offset);
-  request.CopyTo(netbuf.operation()->data_buffer, netbuf.operation()->data_size,
-                 offset + sizeof(header));
+  size_t result = request.CopyTo(&header, sizeof(header), offset);
+  ZX_ASSERT(result == sizeof(header));
+  result = request.CopyTo(netbuf.operation()->data_buffer, netbuf.operation()->data_size,
+                          offset + sizeof(header));
+  ZX_ASSERT(result == netbuf.operation()->data_size);
   request.request()->header.length = offset + sizeof(header) + netbuf.operation()->data_size;
 
   return ZX_OK;

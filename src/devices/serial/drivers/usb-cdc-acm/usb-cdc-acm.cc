@@ -86,7 +86,8 @@ zx_status_t UsbCdcAcmDevice::DdkRead(void* data, size_t len, zx_off_t /*off*/, s
       if ((to_copy + bytes_copied) > len) {
         to_copy = len - bytes_copied;
       }
-      req->CopyFrom(&buffer[bytes_copied], to_copy, offset);
+      size_t result = req->CopyFrom(&buffer[bytes_copied], to_copy, offset);
+      ZX_ASSERT(result == to_copy);
       bytes_copied += to_copy;
 
       // If we aren't reading the whole request, put it back on the front of the completed queue and

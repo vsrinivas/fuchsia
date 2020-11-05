@@ -214,7 +214,8 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
       }
       size_t len =
           usb_request->size < packet->data.size() ? usb_request->size : packet->data.size();
-      usb_request_copy_to(usb_request, packet->data.data(), len, 0);
+      size_t result = usb_request_copy_to(usb_request, packet->data.data(), len, 0);
+      ZX_ASSERT(result == len);
       usb_request->response.actual = len;
       usb_request->response.status = ZX_OK;
       complete_cb->callback(complete_cb->ctx, usb_request);

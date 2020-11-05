@@ -1090,11 +1090,13 @@ void UsbAudioStream::QueueRequestLocked() {
     uint32_t amt = std::min(avail, todo);
 
     const uint8_t* src = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_;
-    usb_request_copy_to(req, src, amt, 0);
+    // Not security-critical -- we're copying to a ring buffer that's moving based off of time
+    // anyways. If we don't copy enough data we'll just keep playing the same sample in a loop.
+    __UNUSED ssize_t copied = usb_request_copy_to(req, src, amt, 0);
     if (amt == avail) {
       ring_buffer_offset_ = todo - amt;
       if (ring_buffer_offset_ > 0) {
-        usb_request_copy_to(req, ring_buffer_virt_, ring_buffer_offset_, amt);
+        copied = usb_request_copy_to(req, ring_buffer_virt_, ring_buffer_offset_, amt);
       }
     } else {
       ring_buffer_offset_ += amt;
@@ -1125,9 +1127,9 @@ void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {
     uint8_t* dst = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_;
 
     if (req->response.status == ZX_OK) {
-      usb_request_copy_from(req, dst, amt, 0);
+      __UNUSED ssize_t size = usb_request_copy_from(req, dst, amt, 0);
       if (amt < todo) {
-        usb_request_copy_from(req, ring_buffer_virt_, todo - amt, amt);
+        __UNUSED ssize_t size = usb_request_copy_from(req, ring_buffer_virt_, todo - amt, amt);
       }
     } else {
       // TODO(johngro): filling with zeros is only the proper thing to do

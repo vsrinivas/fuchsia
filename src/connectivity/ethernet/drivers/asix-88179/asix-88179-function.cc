@@ -111,7 +111,8 @@ void FakeUsbAx88179Function::SetOnline(bool online, SetOnlineCompleter::Sync& co
 
   intr_req_->request()->header.length = sizeof(status);
   intr_req_->request()->header.ep_address = intr_addr_;
-  intr_req_->CopyTo(status, sizeof(status), 0);
+  size_t copy_result = intr_req_->CopyTo(status, sizeof(status), 0);
+  ZX_ASSERT(copy_result == sizeof(status));
   RequestQueue(intr_req_->request(), &complete);
 
   completer.Reply(ZX_OK);

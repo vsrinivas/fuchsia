@@ -219,8 +219,8 @@ zx_status_t FtdiDevice::DdkRead(void* data, size_t len, zx_off_t off, size_t* ac
       to_copy = len - bytes_copied;
     }
 
-    req->CopyFrom(&buffer[bytes_copied], to_copy, offset + FTDI_STATUS_SIZE);
-
+    size_t result = req->CopyFrom(&buffer[bytes_copied], to_copy, offset + FTDI_STATUS_SIZE);
+    ZX_ASSERT(result == to_copy);
     bytes_copied = bytes_copied + to_copy;
 
     // If we aren't reading the whole request then put it in the front of the queue

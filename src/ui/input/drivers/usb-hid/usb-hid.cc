@@ -193,7 +193,8 @@ zx_status_t UsbHidbus::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const v
     if (len > endptout_max_size_) {
       return ZX_ERR_BUFFER_TOO_SMALL;
     }
-    usb_request_copy_to(request_out_, data, len, 0);
+    size_t result = usb_request_copy_to(request_out_, data, len, 0);
+    ZX_ASSERT(result == len);
     usb_.RequestQueue(request_out_, &complete);
     auto status = sync_completion_wait(&set_report_complete_, ZX_TIME_INFINITE);
     return status;

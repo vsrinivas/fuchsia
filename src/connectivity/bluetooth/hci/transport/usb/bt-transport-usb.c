@@ -391,7 +391,8 @@ static void hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
 
     usb_req_internal_t* req_int = containerof(node, usb_req_internal_t, node);
     usb_request_t* req = REQ_INTERNAL_TO_USB_REQ(req_int, hci->parent_req_size);
-    usb_request_copy_to(req, buf, length, 0);
+    size_t result = usb_request_copy_to(req, buf, length, 0);
+    ZX_ASSERT(result == length);
     req->header.length = length;
     usb_request_complete_t complete = {
         .callback = hci_acl_write_complete,

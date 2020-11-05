@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <threads.h>
+#include <zircon/compiler.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 
@@ -60,11 +61,13 @@ zx_status_t usb_request_set_sg_list(usb_request_t* req, const phys_iter_sg_entry
 
 // usb_request_copy_from() copies data from the usb_request's vm object.
 // Out of range operations are ignored.
-ssize_t usb_request_copy_from(usb_request_t* req, void* data, size_t length, size_t offset);
+__WARN_UNUSED_RESULT ssize_t usb_request_copy_from(usb_request_t* req, void* data, size_t length,
+                                                   size_t offset);
 
 // usb_request_copy_to() copies data into a usb_request's vm object.
 // Out of range operations are ignored.
-ssize_t usb_request_copy_to(usb_request_t* req, const void* data, size_t length, size_t offset);
+__WARN_UNUSED_RESULT ssize_t usb_request_copy_to(usb_request_t* req, const void* data,
+                                                 size_t length, size_t offset);
 
 // usb_request_mmap() maps the usb request's vm object. The 'data' field is set with the
 // mapped address if this function succeeds.

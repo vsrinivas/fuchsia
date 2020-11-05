@@ -443,8 +443,8 @@ void Device::QmiInterruptHandler(usb_request_t* request) {
     return;
   }
 
-  usb_cdc_notification_t usb_req;
-  usb_request_copy_from(request, &usb_req, sizeof(usb_cdc_notification_t), 0);
+  usb_cdc_notification_t usb_req = {};
+  __UNUSED auto copy_length = usb_request_copy_from(request, &usb_req, sizeof(usb_cdc_notification_t), 0);
 
   // TODO (jiamingw): confirm this check is unnecessary
   uint16_t packet_size = max_packet_size_;

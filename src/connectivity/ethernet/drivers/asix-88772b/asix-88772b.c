@@ -204,8 +204,10 @@ static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request,
   header[2] = lo ^ 0xFF;
   header[3] = hi ^ 0xFF;
 
-  usb_request_copy_to(request, header, ETH_HEADER_SIZE, 0);
-  usb_request_copy_to(request, netbuf->data_buffer, length, ETH_HEADER_SIZE);
+  size_t result = usb_request_copy_to(request, header, ETH_HEADER_SIZE, 0);
+  ZX_ASSERT(result == ETH_HEADER_SIZE);
+  result = usb_request_copy_to(request, netbuf->data_buffer, length, ETH_HEADER_SIZE);
+  ZX_ASSERT(result == length);
   request->header.length = length + ETH_HEADER_SIZE;
 
   zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
@@ -304,8 +306,8 @@ static void ax88772b_interrupt_complete(void* ctx, usb_request_t* request) {
   mtx_lock(&eth->mutex);
   if (request->response.status == ZX_OK && request->response.actual == sizeof(eth->status)) {
     uint8_t status[INTR_REQ_SIZE];
-
-    usb_request_copy_from(request, status, sizeof(status), 0);
+    memset(status, 0, INTR_REQ_SIZE);
+    __UNUSED size_t result = usb_request_copy_from(request, status, sizeof(status), 0);
     if (memcmp(eth->status, status, sizeof(eth->status))) {
       const uint8_t* b = status;
       zxlogf(DEBUG, "ax88772b: status changed: %02X %02X %02X %02X %02X %02X %02X %02X", b[0], b[1],

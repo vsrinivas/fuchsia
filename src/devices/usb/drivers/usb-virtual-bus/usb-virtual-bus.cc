@@ -150,9 +150,11 @@ int UsbVirtualBus::DeviceThread() {
           }
 
           if (out) {
-            req->CopyFrom(device_buffer, length, 0);
+            size_t result = req->CopyFrom(device_buffer, length, 0);
+            ZX_ASSERT(result == length);
           } else {
-            req->CopyTo(device_buffer, length, 0);
+            size_t result = req->CopyTo(device_buffer, length, 0);
+            ZX_ASSERT(result == length);
           }
           req->request()->response.actual = length;
           req->request()->response.status = ZX_OK;

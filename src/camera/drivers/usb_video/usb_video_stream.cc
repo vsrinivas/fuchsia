@@ -436,7 +436,7 @@ static inline double device_clock_to_ms(uint32_t clock_reading, uint32_t clock_f
 void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
   // TODO(jocelyndang): handle other formats, the timestamp offset is variable.
   usb_video_vs_uncompressed_payload_header header = {};
-  usb_request_copy_from(req, &header, sizeof(usb_video_vs_uncompressed_payload_header), 0);
+  __UNUSED auto result = usb_request_copy_from(req, &header, sizeof(usb_video_vs_uncompressed_payload_header), 0);
 
   // PTS should stay the same for payloads of the same frame,
   // but it's probably not a critical error if they're different.
@@ -700,7 +700,8 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
 
   uint8_t* dst =
       reinterpret_cast<uint8_t*>(current_buffer_.virtual_address()) + cur_frame_state_.bytes;
-  usb_request_copy_from(req, dst, data_size, header_len);
+  // TODO (fxb/63635): Decide what to do here
+  __UNUSED auto copy_result = usb_request_copy_from(req, dst, data_size, header_len);
 
   cur_frame_state_.bytes += data_size;
 

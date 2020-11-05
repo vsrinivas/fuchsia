@@ -384,14 +384,16 @@ static zx_status_t xhci_rh_get_descriptor(xhci_t* xhci, uint8_t request_type, xh
     if (desc_type == USB_DT_DEVICE && index == 0) {
       if (length > sizeof(usb_device_descriptor_t))
         length = sizeof(usb_device_descriptor_t);
-      usb_request_copy_to(req, rh->device_desc, length, 0);
+      size_t copy_size = usb_request_copy_to(req, rh->device_desc, length, 0);
+      ZX_ASSERT(copy_size == length);
       usb_request_complete(req, ZX_OK, length, &req_int->complete_cb);
       return ZX_OK;
     } else if (desc_type == USB_DT_CONFIG && index == 0) {
       uint16_t desc_length = le16toh(rh->config_desc->wTotalLength);
       if (length > desc_length)
         length = desc_length;
-      usb_request_copy_to(req, rh->config_desc, length, 0);
+      size_t copy_size = usb_request_copy_to(req, rh->config_desc, length, 0);
+      ZX_ASSERT(copy_size == length);
       usb_request_complete(req, ZX_OK, length, &req_int->complete_cb);
       return ZX_OK;
     } else if (value >> 8 == USB_DT_STRING) {
@@ -401,7 +403,8 @@ static zx_status_t xhci_rh_get_descriptor(xhci_t* xhci, uint8_t request_type, xh
         if (length > string[0])
           length = string[0];
 
-        usb_request_copy_to(req, string, length, 0);
+        size_t copy_size = usb_request_copy_to(req, string, length, 0);
+        ZX_ASSERT(copy_size == length);
         usb_request_complete(req, ZX_OK, length, &req_int->complete_cb);
         return ZX_OK;
       }
@@ -419,7 +422,8 @@ static zx_status_t xhci_rh_get_descriptor(xhci_t* xhci, uint8_t request_type, xh
 
       if (length > sizeof(desc))
         length = sizeof(desc);
-      usb_request_copy_to(req, &desc, length, 0);
+      size_t copy_size = usb_request_copy_to(req, &desc, length, 0);
+      ZX_ASSERT(copy_size == length);
       usb_request_complete(req, ZX_OK, length, &req_int->complete_cb);
       return ZX_OK;
     }
@@ -493,7 +497,8 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
       size_t length = req->header.length;
       if (length > sizeof(*status))
         length = sizeof(*status);
-      usb_request_copy_to(req, status, length, 0);
+      size_t copy_size = usb_request_copy_to(req, status, length, 0);
+      ZX_ASSERT(copy_size == length);
       usb_request_complete(req, ZX_OK, length, &req_int->complete_cb);
       return ZX_OK;
     }
@@ -537,7 +542,8 @@ static void xhci_rh_handle_intr_req(xhci_t* xhci, xhci_root_hub_t* rh, usb_reque
     xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
     if (length > sizeof(status_bits))
       length = sizeof(status_bits);
-    usb_request_copy_to(req, status_bits, length, 0);
+    size_t copy_size = usb_request_copy_to(req, status_bits, length, 0);
+    ZX_ASSERT(copy_size == length);
     usb_request_complete(req, ZX_OK, length, &req_int->complete_cb);
   } else {
     // queue transaction until we have something to report

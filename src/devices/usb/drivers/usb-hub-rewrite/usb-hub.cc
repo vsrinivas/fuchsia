@@ -518,7 +518,8 @@ fit::promise<std::vector<uint8_t>, zx_status_t> UsbHubDevice::ControlIn(
         std::vector<uint8_t> data;
         if (read_size != 0) {
           data.resize(request.request()->response.actual);
-          request.CopyFrom(data.data(), data.size(), 0);
+          size_t copied = request.CopyFrom(data.data(), data.size(), 0);
+          ZX_ASSERT(copied == data.size());
         }
         request_pool_.Add(std::move(request));
         return fit::ok(data);
@@ -541,7 +542,8 @@ fit::promise<void, zx_status_t> UsbHubDevice::ControlOut(uint8_t request_type, u
   usb_request->request()->setup.wIndex = index;
   usb_request->request()->setup.wValue = value;
   usb_request->request()->setup.wLength = static_cast<uint16_t>(write_size);
-  usb_request->CopyTo(write_buffer, write_size, 0);
+  size_t result = usb_request->CopyTo(write_buffer, write_size, 0);
+  ZX_ASSERT(result == write_size);
   return RequestQueue(*std::move(usb_request))
       .then([this](fit::result<Request, void>& value) -> fit::result<void, zx_status_t> {
         auto request = std::move(value.take_ok_result().value);

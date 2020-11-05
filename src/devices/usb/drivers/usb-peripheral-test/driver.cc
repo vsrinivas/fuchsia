@@ -136,7 +136,8 @@ void UsbTest::TestBulkOutComplete(usb_request_t* req) {
       // Send data back to host.
       void* buffer;
       usb_request_mmap(req, &buffer);
-      (*in_req).CopyTo(buffer, req->response.actual, 0);
+      size_t result = (*in_req).CopyTo(buffer, req->response.actual, 0);
+      ZX_ASSERT(result == req->response.actual);
       req->header.length = req->response.actual;
 
       usb_request_complete_t complete = {
@@ -217,7 +218,8 @@ zx_status_t UsbTest::UsbFunctionInterfaceControl(const usb_setup_t* setup, const
       // TODO(voydanoff) maybe stall in this case?
       return ZX_OK;
     }
-    req->CopyTo(test_data_, test_data_length_, 0);
+    size_t result = req->CopyTo(test_data_, test_data_length_, 0);
+    ZX_ASSERT(result == test_data_length_);
     req->request()->header.length = test_data_length_;
 
     usb_request_complete_t complete = {

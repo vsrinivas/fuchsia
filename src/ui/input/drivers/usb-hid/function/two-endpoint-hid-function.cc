@@ -257,7 +257,8 @@ void FakeUsbHidFunction::UsbEndpointOutCallback(usb_request_t* request) {
   fbl::AutoLock lock(&mtx_);
   if (request->response.status == ZX_OK) {
     report_.resize(request->response.actual);
-    usb_request_copy_from(request, report_.data(), report_.size(), 0);
+    size_t result = usb_request_copy_from(request, report_.data(), report_.size(), 0);
+    ZX_ASSERT(result == request->response.actual);
   } else {
     zxlogf(ERROR, "request status: %d", request->response.status);
     active_ = false;

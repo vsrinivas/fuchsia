@@ -90,7 +90,8 @@ zx_status_t FakeUsbQmiFunction::UsbFunctionInterfaceControl(const usb_setup_t* s
         usb_cdc_notification_t cdc_notification;
         cdc_notification.bNotification = USB_CDC_NC_RESPONSE_AVAILABLE;
         usb_request_t* req = usb_int_req_.value();
-        usb_request_copy_to(req, &cdc_notification, sizeof(cdc_notification), 0);
+        size_t copied = usb_request_copy_to(req, &cdc_notification, sizeof(cdc_notification), 0);
+        ZX_ASSERT(copied == sizeof(cdc_notification));
         usb_int_req_.reset();
         function_.RequestQueue(req, &complete);
       } else {
