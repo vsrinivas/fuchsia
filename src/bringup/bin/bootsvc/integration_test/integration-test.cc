@@ -345,6 +345,8 @@ TEST(BootsvcIntegrationTest, ResourcesAvailable) {
   ASSERT_TRUE(mmio_resource.is_valid());
   zx::resource irq_resource(zx_take_startup_handle(PA_HND(PA_IRQ_RESOURCE, 0)));
   ASSERT_TRUE(irq_resource.is_valid());
+  zx::resource system_resource(zx_take_startup_handle(PA_HND(PA_SYSTEM_RESOURCE, 0)));
+  ASSERT_TRUE(system_resource.is_valid());
 #if __x86_64__
   zx::resource ioport_resource(zx_take_startup_handle(PA_HND(PA_IOPORT_RESOURCE, 0)));
   ASSERT_TRUE(ioport_resource.is_valid());

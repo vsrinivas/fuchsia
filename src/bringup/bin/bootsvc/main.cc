@@ -45,6 +45,7 @@ struct Resources {
   zx::resource root;
   zx::resource mmio;
   zx::resource irq;
+  zx::resource system;
 #if __x86_64__
   zx::resource ioport;
 #elif __aarch64__
@@ -245,6 +246,7 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   // Pass on resources to the next process.
   launchpad_add_handle(lp, resources.mmio.release(), PA_HND(PA_MMIO_RESOURCE, 0));
   launchpad_add_handle(lp, resources.irq.release(), PA_HND(PA_IRQ_RESOURCE, 0));
+  launchpad_add_handle(lp, resources.system.release(), PA_HND(PA_SYSTEM_RESOURCE, 0));
 #if __x86_64__
   launchpad_add_handle(lp, resources.ioport.release(), PA_HND(PA_IOPORT_RESOURCE, 0));
 #elif __aarch64__
@@ -353,6 +355,8 @@ int main(int argc, char** argv) {
   ZX_ASSERT_MSG(resources.mmio.is_valid(), "Invalid MMIO root resource handle\n");
   resources.irq.reset(zx_take_startup_handle(PA_HND(PA_IRQ_RESOURCE, 0)));
   ZX_ASSERT_MSG(resources.irq.is_valid(), "Invalid IRQ root resource handle\n");
+  resources.system.reset(zx_take_startup_handle(PA_HND(PA_SYSTEM_RESOURCE, 0)));
+  ZX_ASSERT_MSG(resources.system.is_valid(), "Invalid system root resource handle\n");
 #if __x86_64__
   resources.ioport.reset(zx_take_startup_handle(PA_HND(PA_IOPORT_RESOURCE, 0)));
   ZX_ASSERT_MSG(resources.ioport.is_valid(), "Invalid IOPORT root resource handle\n");
