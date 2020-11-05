@@ -157,7 +157,7 @@ zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t
   memcpy(backup, mvmo.get(), metadata_allocated_bytes);
 
   // Validate our new state.
-  if (!fvm::ValidateHeader(mvmo.get(), backup, metadata_used_bytes)) {
+  if (!fvm::PickValidHeader(mvmo.get(), backup, metadata_used_bytes)) {
     return ZX_ERR_BAD_STATE;
   }
 

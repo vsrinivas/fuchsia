@@ -8,6 +8,8 @@
 #include <lib/zx/status.h>
 #include <zircon/types.h>
 
+#include <limits>
+
 #include <fbl/span.h>
 #include <fvm/format.h>
 
@@ -79,9 +81,13 @@ class Metadata {
                                          const VPartitionEntry* partitions, size_t num_partitions,
                                          const SliceEntry* slices, size_t num_slices);
 
-  // Checks the validity of the metadata.
+  // Checks the validity of the metadata. The underlying device's information is passed in, see
+  // fvm::Header::IsValid(). The defaults for the disk information skips validation of the metadata
+  // relative to these values.
+  //
   // Should be called before serializing the contents to disk.
-  bool CheckValidity() const;
+  bool CheckValidity(uint64_t disk_size = std::numeric_limits<uint64_t>::max(),
+                     uint64_t disk_block_size = kBlockSize) const;
 
   // Updates the hashes stored in the metadata, based on its contents.
   void UpdateHash();

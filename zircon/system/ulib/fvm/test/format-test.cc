@@ -4,11 +4,23 @@
 
 #include <zircon/errors.h>
 
+#include <string_view>
+
 #include <fvm/format.h>
 #include <fvm/fvm.h>
 #include <zxtest/zxtest.h>
 
 namespace fvm {
+
+namespace {
+
+bool StringBeginsWith(const std::string_view& str, const std::string_view& begins_with) {
+  if (str.size() < begins_with.size())
+    return false;
+  return str.substr(0, begins_with.size()) == begins_with;
+}
+
+}  // namespace
 
 TEST(FvmFormat, DefaultInitializedGetterValues) {
   Header header;
@@ -123,6 +135,98 @@ TEST(FvmFormat, Getters) {
             header.GetMaxAllocationTableEntriesForDiskSize(header.fvm_partition_size));
   EXPECT_EQ(header.GetAllocationTableAllocatedEntryCount(),
             header.GetMaxAllocationTableEntriesForDiskSize(header.slice_size * 1024 * 1024));
+}
+
+TEST(FvmFormat, IsValid) {
+  constexpr uint64_t kMaxDiskSize = std::numeric_limits<uint64_t>::max();
+
+  // 0-initialized header is invalid.
+  Header header;
+  std::string error_message;
+  EXPECT_FALSE(header.IsValid(kMaxDiskSize, kBlockSize, error_message));
+
+  // Normal valid header.
+  Header valid_header = Header::FromDiskSize(kMaxUsablePartitions, 1028 * 1024 * 1024, 8192);
+  EXPECT_TRUE(valid_header.IsValid(kMaxDiskSize, kBlockSize, error_message));
+
+  // Magic is incorrect.
+  header = valid_header;
+  header.magic++;
+  EXPECT_FALSE(header.IsValid(kMaxDiskSize, kBlockSize, error_message));
+  EXPECT_TRUE(StringBeginsWith(error_message, "Bad magic value for FVM header.\n"));
+
+  // Version too new.
+  header = valid_header;
+  header.format_version = kCurrentFormatVersion + 1;
+  EXPECT_FALSE(header.IsValid(kMaxDiskSize, kBlockSize, error_message));
+  EXPECT_TRUE(StringBeginsWith(error_message, "Header format version does not match fvm driver"));
+
+  // Slice count overflow.
+  header = valid_header;
+  header.slice_size = kMaxSliceSize + kBlockSize;
+  EXPECT_FALSE(header.IsValid(kMaxDiskSize, kBlockSize, error_message));
+  EXPECT_TRUE(StringBeginsWith(error_message, "Slice size would overflow 64 bits"));
+
+  // Slice size overflow.
+  header = valid_header;
+  header.pslice_count = kMaxVSlices + 1;
+  EXPECT_FALSE(header.IsValid(kMaxDiskSize, kBlockSize, error_message));
+  EXPECT_TRUE(StringBeginsWith(error_message, "Slice count is greater than the max (2147483648)"));
+
+  // Slice size invalid.
+  header = valid_header;
+  header.slice_size = 13;
+  EXPECT_FALSE(header.IsValid(kMaxDiskSize, kBlockSize, error_message));
+  EXPECT_TRUE(StringBeginsWith(
+      error_message, "Slice size is not a multiple of the underlying disk's block size (8192)"));
+
+  // Allocation table size too small.
+  header = valid_header;
+  header.pslice_count = 1024 * 1024;  // Requires lots of allocation table entries.
+  header.allocation_table_size = kBlockSize;
+  EXPECT_FALSE(header.IsValid(16384, kBlockSize, error_message));
+  EXPECT_TRUE(StringBeginsWith(error_message, "Expected allocation table to be at least"));
+
+  // Data won't fit on the disk.
+  header = valid_header;
+  header.fvm_partition_size = 1024 * 1024 + kBlockSize;
+  EXPECT_FALSE(header.IsValid(header.fvm_partition_size - kBlockSize, kBlockSize, error_message));
+  EXPECT_TRUE(StringBeginsWith(error_message,
+                               "Block device (1048576 bytes) too small for fvm_partition_size"));
+}
+
+TEST(FvmFormat, HasValidTableSizes) {
+  // A 0-initialized header is invalid, the partition table must have a fixed size.
+  Header header;
+  std::string error_message;
+  EXPECT_FALSE(header.HasValidTableSizes(error_message));
+  EXPECT_EQ(
+      "Bad vpartition table size.\n"
+      "FVM Header\n"
+      "  magic: 6075990659671348806\n"
+      "  format_version: 1\n"
+      "  pslice_count: 0\n"
+      "  slice_size: 0\n"
+      "  fvm_partition_size: 0\n"
+      "  vpartition_table_size: 0\n"
+      "  allocation_table_size: 0\n"
+      "  generation: 0\n"
+      "  oldest_revision: 1\n",
+      error_message);
+
+  // Normal valid header.
+  header = Header::FromDiskSize(kMaxUsablePartitions, 1028 * 1024 * 1024, 8192);
+  EXPECT_TRUE(header.HasValidTableSizes(error_message));
+
+  // Allocation table needs to be an even multiple.
+  header.allocation_table_size--;
+  EXPECT_FALSE(header.HasValidTableSizes(error_message));
+  EXPECT_TRUE(StringBeginsWith(error_message, "Bad allocation table size"));
+
+  // Allocation table is too large.
+  header.allocation_table_size = kMaxAllocationTableByteSize + kBlockSize;
+  EXPECT_FALSE(header.HasValidTableSizes(error_message));
+  EXPECT_TRUE(StringBeginsWith(error_message, "Bad allocation table size"));
 }
 
 TEST(VPartitionEntry, DefaultConstructor) {

@@ -37,8 +37,8 @@ struct Metadata {
   }
 
   std::optional<fvm::SuperblockType> ValidateHeader() const {
-    return ::fvm::ValidateHeader(primary_buffer.data(), secondary_buffer.data(),
-                                 primary_buffer.size());
+    return ::fvm::PickValidHeader(primary_buffer.data(), secondary_buffer.data(),
+                                  primary_buffer.size());
   }
 };
 

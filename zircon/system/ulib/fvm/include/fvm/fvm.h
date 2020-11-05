@@ -23,11 +23,19 @@ void UpdateHash(void* metadata, size_t metadata_size);
 // their length (they should be the same size). These blocks should include both primary and
 // secondary copies of the metadata.
 //
+// The disk_size and disk_block_size are passed in to sanity check that the header values are
+// compatible with the current underlying device. See fvm::Header::IsValid() for more. The variant
+// that omits these does not validate the header matches these values.
+//
 // On success, the superblock type which is valid is returned. If both copies are invalid, a null
 // optional is returned.
-// TODO(jfsulliv): Remove this once all uses are ported to Metadata.
-std::optional<SuperblockType> ValidateHeader(const void* primary_metadata,
-                                             const void* secondary_metadata, size_t metadata_size);
+//
+// TODO(jfsulliv): Stop exposing this as a separate function once all code uses the Metadata class.
+std::optional<SuperblockType> PickValidHeader(const void* primary_metadata,
+                                              const void* secondary_metadata, size_t metadata_size);
+std::optional<SuperblockType> PickValidHeader(uint64_t disk_size, uint64_t disk_block_size,
+                                              const void* primary_metadata,
+                                              const void* secondary_metadata, size_t metadata_size);
 
 }  // namespace fvm
 

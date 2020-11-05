@@ -76,7 +76,8 @@ static constexpr uint64_t kMagic = 0x54524150204d5646;
 static constexpr uint64_t kCurrentFormatVersion = 1;
 static constexpr uint64_t kCurrentRevision = 1;
 
-// Defines the block size of that the FVM driver exposes.
+// Defines the block size of that the FVM driver exposes. This need not be the block size of the
+// underlying device.
 static constexpr uint64_t kBlockSize = 8192;
 
 // One past the maximum number of virtual partitions that can be created.
@@ -103,6 +104,9 @@ static constexpr uint64_t kSliceEntryVPartitionBits = 16;
 
 // Maximum number of VSlices that can be addressed.
 static constexpr uint64_t kMaxVSlices = 1ull << (kSliceEntryVSliceBits - 1);
+
+// The maximum slice size should be such that it never overflows the address space.
+static constexpr uint64_t kMaxSliceSize = std::numeric_limits<uint64_t>::max() / kMaxVSlices;
 
 // Provides a placeholder instange GUID, that will be updated when a driver loads a partition with
 // such instance GUID.
@@ -162,6 +166,28 @@ struct Header {
   void SetSliceCount(size_t usable_slices);
 
   // Getters ---------------------------------------------------------------------------------------
+
+  // Validates the header. This does NOT check the hash because that covers the entire metadata
+  // which is not available to just the header class.
+  //
+  // The disk size is passed to validate that the specified disk image does not overflow the device.
+  // To disable checking, pass std::numeric_limits<uint64_t>::max() for the disk_size.
+  //
+  // The underlying device's disk_block_size is passed to ensure that it is a multiple of of the
+  // slice size. To disable checking this, pass fvm::kBlockSize for the device block size.
+  //
+  // A description of the error (if present) will be placed into the given output parameter
+  // (required).
+  bool IsValid(uint64_t disk_size, uint64_t disk_block_size, std::string& out_err) const;
+
+  // Like IsValid but perfoms the minimal possible validation only on the partition and allocation
+  // table sizes. This does not check any other data, even the signature.
+  //
+  // This function is useful when reading the primary superblock and we need to find the secondary
+  // superblock. The secondary header is located after the allocation and partition tables, so the
+  // primary header must have valid sizes for these tables before we can consider which variant is
+  // valid.
+  bool HasValidTableSizes(std::string& out_err) const;
 
   // The partition table always starts at a block offset, and is always a multiple of blocks
   // long in bytes.
@@ -414,11 +440,16 @@ static_assert(!internal::block_alignment<SliceEntry>::may_cross_boundary,
 //
 // TODO(fxb/59980) Remove the unused 0th entry so we can actually use the full number passed in.
 constexpr size_t PartitionTableByteSizeForUsablePartitionCount(size_t usable_partitions) {
+  // This multiply shouldn't overflow because usable_partitions should always be <=
+  // kMaxUsablePartitions.
   return fbl::round_up(sizeof(VPartitionEntry) * (usable_partitions + 1), kBlockSize);
 }
 
 constexpr size_t AllocTableByteSizeForUsableSliceCount(size_t slice_count) {
   // Reserve the 0th table entry so need +1 to get the usable slices.
+  //
+  // This multiply shouldn't overflow since slice_count should be <= kMaxVSlices which leaves many
+  // spare bits.
   return fbl::round_up(sizeof(SliceEntry) * (slice_count + 1), fvm::kBlockSize);
 }
 
@@ -432,6 +463,8 @@ constexpr size_t BlocksToSlices(size_t slice_size, size_t block_size, size_t blo
 }
 
 constexpr size_t SlicesToBlocks(size_t slice_size, size_t block_size, size_t slice_count) {
+  // This multiply shouldn't overflow because the slice size and slice count show always be capped
+  // to the max values (which were picked to avoid overflow).
   return slice_count * slice_size / block_size;
 }
 
@@ -522,6 +555,8 @@ inline size_t Header::GetMetadataUsedBytes() const {
     return 0;  // Uninitialized header.
 
   // The used metadata ends after the used portion of the allocation table.
+  //
+  // This addition won't overflow when the allocation and partition tables are <= their max sizes.
   return GetAllocationTableOffset() + GetAllocationTableUsedByteSize();
 }
 
@@ -530,6 +565,8 @@ inline size_t Header::GetMetadataAllocatedBytes() const {
     return 0;  // Uninitialized header.
 
   // The metadata ends after the allocation table.
+  //
+  // This addition won't overflow when the allocation and partition tables are <= their max sizes.
   return GetAllocationTableOffset() + GetAllocationTableAllocatedByteSize();
 }
 

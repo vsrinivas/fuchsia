@@ -105,7 +105,7 @@ bool Checker::LoadFVM(FvmInfo* out) const {
     return false;
   }
 
-  std::optional<fvm::SuperblockType> use_superblock = fvm::ValidateHeader(
+  std::optional<fvm::SuperblockType> use_superblock = fvm::PickValidHeader(
       metadata.get(), metadata.get() + metadata_allocated_bytes, metadata_allocated_bytes);
   if (!use_superblock) {
     logger_.Error("Invalid FVM metadata\n");

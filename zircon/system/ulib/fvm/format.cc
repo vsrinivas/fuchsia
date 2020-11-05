@@ -122,18 +122,119 @@ Header Header::FromGrowableSliceCount(size_t usable_partitions, size_t initial_u
   return result;
 }
 
+bool Header::IsValid(uint64_t disk_size, uint64_t disk_block_size, std::string& out_err) const {
+  // Magic.
+  if (magic != kMagic) {
+    out_err = "Bad magic value for FVM header.\n" + ToString();
+    return false;
+  }
+
+  // Check version.
+  if (format_version > kCurrentFormatVersion) {
+    out_err = "Header format version does not match fvm driver (=" +
+              std::to_string(kCurrentFormatVersion) + ")\n" + ToString();
+    return false;
+  }
+
+  // Slice count. This is important to check before using it below to prevent integer overflows.
+  if (pslice_count > kMaxVSlices) {
+    out_err =
+        "Slice count is greater than the max (" + std::to_string(kMaxVSlices) + ")\n" + ToString();
+    return false;
+  }
+
+  // Check the slice size.
+  //
+  // It's not currently clear whether we currently require fvm::kBlockSize to be a multiple of the
+  // disk_block_size. If that requirement is solidifed in the future, that should be checked here.
+  if (slice_size > kMaxSliceSize) {
+    out_err = "Slice size would overflow 64 bits\n" + ToString();
+    return false;
+  }
+  if (slice_size % disk_block_size != 0) {
+    out_err = "Slice size is not a multiple of the underlying disk's block size (" +
+              std::to_string(disk_block_size) + ")\n" + ToString();
+    return false;
+  }
+
+  // Check partition and allocation table validity. Here we also perform additional validation on
+  // the allocation table that uses the pslice_count which is not checked by HasValidTableSizes().
+  if (!HasValidTableSizes(out_err))
+    return false;
+  size_t required_alloc_table_len = AllocTableByteSizeForUsableSliceCount(pslice_count);
+  if (allocation_table_size < required_alloc_table_len) {
+    out_err = "Expected allocation table to be at least " +
+              std::to_string(required_alloc_table_len) + "\n" + ToString();
+    return false;
+  }
+
+  // The partition must fit in the disk.
+  if (fvm_partition_size > disk_size) {
+    out_err = "Block device (" + std::to_string(disk_size) +
+              " bytes) too small for fvm_partition_size\n" + ToString();
+    return false;
+  }
+
+  // The header and addressable slices must fit in the partition.
+  //
+  // The required_data_bytes won't overflow because we already checked that pslice_count and
+  // slice_size are in range, that that range is specified to avoid overflow.
+  size_t required_data_bytes = GetAllocationTableUsedEntryCount() * slice_size;
+  size_t max_addressable_bytes = std::numeric_limits<size_t>::max() - GetDataStartOffset();
+  if (required_data_bytes > max_addressable_bytes) {
+    out_err = "Slice data (" + std::to_string(required_data_bytes) + " bytes) + metadata (" +
+              std::to_string(GetDataStartOffset()) + " bytes) exceeds max\n" + ToString();
+    return false;
+  }
+  size_t required_partition_size = GetDataStartOffset() + required_data_bytes;
+  if (required_partition_size > fvm_partition_size) {
+    out_err = "Slices + metadata requires " + std::to_string(required_partition_size) +
+              " bytes which don't fit in fvm_partition_size\n" + ToString();
+    return false;
+  }
+
+  return true;
+}
+
+bool Header::HasValidTableSizes(std::string& out_err) const {
+  // TODO(fxb/40192) Allow the partition table to be different lengths (aligned to blocks):
+  //   size_t kMinPartitionTableSize = kBlockSize;
+  //   if (sb.vpartition_table_size < kMinPartitionTableSize ||
+  //       sb.vpartition_table_size > kMaxPartitionTableByteSize ||
+  //       sb.vpartition_table_size % sizeof(VPartitionEntry) != 0) {
+  //     out_err = ...
+  //     return false;
+  //
+  // Currently the partition table must be a fixed size:
+  size_t kPartitionTableLength = fvm::kMaxPartitionTableByteSize;
+  if (vpartition_table_size != kPartitionTableLength) {
+    out_err = "Bad vpartition table size.\n" + ToString();
+    return false;
+  }
+
+  // Validate the allocation table size.
+  if (allocation_table_size > kMaxAllocationTableByteSize ||
+      allocation_table_size % kBlockSize != 0) {
+    out_err = "Bad allocation table size " + std::to_string(allocation_table_size) +
+              ", expected nonzero multiple of " + std::to_string(kBlockSize) + "\n" + ToString();
+    return false;
+  }
+
+  return true;
+}
+
 std::string Header::ToString() const {
   std::stringstream ss;
   ss << "FVM Header" << std::endl;
-  ss << "  magic: " << std::to_string(magic) << std::endl;
-  ss << "  format_version: " << std::to_string(format_version) << std::endl;
-  ss << "  pslice_count: " << std::to_string(pslice_count) << std::endl;
-  ss << "  slice_size: " << std::to_string(slice_size) << std::endl;
-  ss << "  fvm_partition_size: " << std::to_string(fvm_partition_size) << std::endl;
-  ss << "  vpartition_table_size: " << std::to_string(vpartition_table_size) << std::endl;
-  ss << "  allocation_table_size: " << std::to_string(allocation_table_size) << std::endl;
-  ss << "  generation: " << std::to_string(generation) << std::endl;
-  ss << "  oldest_revision: " << std::to_string(oldest_revision) << std::endl;
+  ss << "  magic: " << magic << std::endl;
+  ss << "  format_version: " << format_version << std::endl;
+  ss << "  pslice_count: " << pslice_count << std::endl;
+  ss << "  slice_size: " << slice_size << std::endl;
+  ss << "  fvm_partition_size: " << fvm_partition_size << std::endl;
+  ss << "  vpartition_table_size: " << vpartition_table_size << std::endl;
+  ss << "  allocation_table_size: " << allocation_table_size << std::endl;
+  ss << "  generation: " << generation << std::endl;
+  ss << "  oldest_revision: " << oldest_revision << std::endl;
   return ss.str();
 }
 

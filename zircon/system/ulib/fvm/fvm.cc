@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 
+#include <limits>
+
 #include <fvm/fvm.h>
 
 #ifdef __Fuchsia__
@@ -72,110 +74,44 @@ void UpdateHash(void* metadata, size_t metadata_size) {
   memcpy(header->hash, hash, sizeof(header->hash));
 }
 
-std::optional<SuperblockType> ValidateHeader(const void* primary_metadata,
-                                             const void* secondary_metadata, size_t metadata_size) {
+std::optional<SuperblockType> PickValidHeader(const void* primary_metadata,
+                                              const void* secondary_metadata,
+                                              size_t metadata_size) {
+  return PickValidHeader(std::numeric_limits<uint64_t>::max(), kBlockSize, primary_metadata,
+                         secondary_metadata, metadata_size);
+}
+
+std::optional<SuperblockType> PickValidHeader(uint64_t disk_size, uint64_t disk_block_size,
+                                              const void* primary_metadata,
+                                              const void* secondary_metadata,
+                                              size_t metadata_size) {
+  std::string header_error;
+
+  // Validate primary header.
   const Header* primary_header = static_cast<const Header*>(primary_metadata);
-  size_t primary_metadata_size = primary_header->GetMetadataUsedBytes();
-
-  const Header* secondary_header = static_cast<const Header*>(secondary_metadata);
-  size_t secondary_metadata_size = secondary_header->GetMetadataUsedBytes();
-
-  auto check_value_consistency = [metadata_size](const Header& header) {
-    // Check header signature and version.
-    if (header.magic != kMagic) {
-      fprintf(stderr, "fvm: Bad magic\n");
-      return false;
-    }
-    if (header.format_version > kCurrentFormatVersion) {
-      fprintf(stderr,
-              "fvm: Header format version (=%" PRIu64 ") does not match fvm driver (=%" PRIu64
-              ")\n",
-              header.format_version, kCurrentFormatVersion);
-      return false;
-    }
-
-    // Check no overflow for each region of metadata.
-    uint64_t calculated_metadata_size = 0;
-    if (add_overflow(header.allocation_table_size, header.GetAllocationTableOffset(),
-                     &calculated_metadata_size)) {
-      fprintf(stderr, "fvm: Calculated metadata size produces overflow(%" PRIu64 ", %zu).\n",
-              header.allocation_table_size, header.GetAllocationTableOffset());
-      return false;
-    }
-
-    // Check that the reported metadata size matches the calculated metadata size by format info.
-    // This may be slightly redundant since presumably the caller who passed in the metadata_size
-    // computed it from the header values, but it's useful to check for the backup copy.
-    if (header.GetMetadataUsedBytes() > metadata_size) {
-      fprintf(stderr,
-              "fvm: Reported metadata size of %zu is smaller than header buffer size %zu.\n",
-              header.GetMetadataUsedBytes(), metadata_size);
-      return false;
-    }
-
-    // Check metadata size is as least as big as the header.
-    if (header.GetMetadataUsedBytes() < sizeof(Header)) {
-      fprintf(stderr,
-              "fvm: Reported metadata size of %zu is smaller than header buffer size %lu.\n",
-              header.GetMetadataUsedBytes(), sizeof(Header));
-      return false;
-    }
-
-    // Check metadata allocated size is greater than used size.
-    if (header.GetMetadataUsedBytes() > header.GetMetadataAllocatedBytes()) {
-      fprintf(stderr, "fvm: Reported metadata size of %zu is greater than allocated size %lu.\n",
-              header.GetMetadataUsedBytes(), header.GetMetadataAllocatedBytes());
-      return false;
-    }
-
-    // Check bounds of slice size and partition.
-    if (header.fvm_partition_size < 2 * header.GetMetadataAllocatedBytes()) {
-      fprintf(stderr,
-              "fvm: Partition of size %" PRIu64 " can't fit both metadata copies of size %zu.\n",
-              header.fvm_partition_size, header.GetMetadataAllocatedBytes());
-      return false;
-    }
-
-    // Check that addressable slices fit in the partition.
-    if (header.GetDataStartOffset() +
-            (header.GetAllocationTableUsedEntryCount() * header.slice_size) >
-        header.fvm_partition_size) {
-      fprintf(stderr,
-              "fvm: Slice count %zu Slice Size %" PRIu64 " out of range for partition sz %" PRIu64
-              ".\n",
-              header.GetAllocationTableUsedEntryCount(), header.slice_size,
-              header.fvm_partition_size);
-      return false;
-    }
-
-    return true;
-  };
-
-  // Assume that the reported metadata size by each header is correct. This size must be smaller
-  // than metadata buffer size(|metadata_size|. If this is the case, then check that the contents
-  // from [start, reported_size] are valid.
-  // The metadata size should always be at least the size of the header.
   bool primary_valid = false;
-  if (check_value_consistency(*primary_header)) {
-    if (CheckHash(primary_metadata, primary_metadata_size)) {
+  if (primary_header->IsValid(disk_size, disk_block_size, header_error)) {
+    if (CheckHash(primary_metadata, primary_header->GetMetadataUsedBytes())) {
       primary_valid = true;
     } else {
       fprintf(stderr, "fvm: Primary metadata has invalid content hash\n");
     }
+  } else {
+    fprintf(stderr, "fvm: Primary metadata invalid: %s\n", header_error.c_str());
   }
-  if (!primary_valid) {
-    fprintf(stderr, "fvm: Primary metadata invalid\n");
-  }
+
+  // Validate secondary header.
+  const Header* secondary_header = static_cast<const Header*>(secondary_metadata);
+  header_error.clear();
   bool secondary_valid = false;
-  if (check_value_consistency(*secondary_header)) {
-    if (CheckHash(secondary_metadata, secondary_metadata_size)) {
+  if (secondary_header->IsValid(disk_size, disk_block_size, header_error)) {
+    if (CheckHash(secondary_metadata, secondary_header->GetMetadataUsedBytes())) {
       secondary_valid = true;
     } else {
       fprintf(stderr, "fvm: Secondary metadata has invalid content hash\n");
     }
-  }
-  if (!secondary_valid) {
-    fprintf(stderr, "fvm: Secondary metadata invalid\n");
+  } else {
+    fprintf(stderr, "fvm: Secondary metadata invalid: %s\n", header_error.c_str());
   }
 
   // Decide if we should use the primary or the secondary copy of metadata for reading.

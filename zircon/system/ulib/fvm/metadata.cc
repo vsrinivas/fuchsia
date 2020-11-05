@@ -66,8 +66,9 @@ void Metadata::MoveFrom(Metadata&& o) {
   active_header_ = o.active_header_;
 }
 
-bool Metadata::CheckValidity() const {
-  std::optional<SuperblockType> active_header = ValidateHeader(
+bool Metadata::CheckValidity(uint64_t disk_size, uint64_t disk_block_size) const {
+  std::optional<SuperblockType> active_header = PickValidHeader(
+      disk_size, disk_block_size,
       reinterpret_cast<const uint8_t*>(data_->data()) + MetadataOffset(SuperblockType::kPrimary),
       reinterpret_cast<const uint8_t*>(data_->data()) + MetadataOffset(SuperblockType::kSecondary),
       GetHeader(active_header_).GetMetadataAllocatedBytes());
@@ -172,7 +173,7 @@ zx::status<Metadata> Metadata::Create(std::unique_ptr<MetadataBuffer> data) {
   }
   const Header* primary_header = reinterpret_cast<const Header*>(data->data());
 
-  // For now just assume primary_header is valid. It may contain nonsense, but ValidateHeader will
+  // For now just assume primary_header is valid. It may contain nonsense, but PickValidHeader will
   // check this, and we can at least check that the offset is reasonable so we don't overflow now.
   size_t secondary_offset = primary_header->GetSuperblockOffset(SuperblockType::kSecondary);
   size_t meta_size = primary_header->GetMetadataAllocatedBytes();
@@ -182,7 +183,7 @@ zx::status<Metadata> Metadata::Create(std::unique_ptr<MetadataBuffer> data) {
             data->size());
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
-  std::optional<SuperblockType> active_header = ValidateHeader(
+  std::optional<SuperblockType> active_header = PickValidHeader(
       data->data(), reinterpret_cast<uint8_t*>(data->data()) + secondary_offset, meta_size);
   if (!active_header) {
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);

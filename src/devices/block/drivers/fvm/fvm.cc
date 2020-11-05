@@ -212,72 +212,37 @@ zx_status_t VPartitionManager::Load() {
       init_txn_->Reply(ZX_ERR_INTERNAL);
   });
 
+  // Sanity check the device info passed to the constructor.
+  if (info_.block_size == 0) {
+    zxlogf(ERROR, "Can't have a zero block size.");
+    return ZX_ERR_BAD_STATE;
+  }
+
   zx::vmo vmo;
   zx_status_t status;
   if ((status = zx::vmo::create(fvm::kBlockSize, 0, &vmo)) != ZX_OK) {
     return status;
   }
 
-  // Read the superblock first, to determine the slice sice
+  // Read the superblock first to find the secondary superblock.
+  //
+  // If the primary superblock is corrupt enough to cause us not to find the secondary one (the
+  // partition table allocation table sizes are incorrect), we won't be able to find the secondary
+  // and the drive will be lost. In the current design the A/B metadata primarily provides atomic
+  // update rather than full backup capabilities.
   if ((status = DoIoLocked(vmo.get(), 0, fvm::kBlockSize, BLOCK_OP_READ)) != ZX_OK) {
     zxlogf(ERROR, "Failed to read first block from underlying device");
     return status;
   }
 
-  Header sb;
+  Header sb;  // Use only to find the secondary superblock.
   status = vmo.read(&sb, 0, sizeof(sb));
   if (status != ZX_OK) {
     return status;
   }
+
   // Cancelled before we return ZX_OK at the end of Load().
   auto dump_header = fbl::MakeAutoCall([&sb]() { zxlogf(ERROR, "%s\n", sb.ToString().c_str()); });
-
-  slice_size_ = sb.slice_size;
-
-  // Validate the superblock, confirm the slice size
-  if ((sb.slice_size * VSliceMax()) / VSliceMax() != sb.slice_size) {
-    zxlogf(ERROR, "Slice Size (%zu), VSliceMax (%lu) overflow block address space", sb.slice_size,
-           VSliceMax());
-    return ZX_ERR_BAD_STATE;
-  }
-  if (info_.block_size == 0 || sb.slice_size % info_.block_size) {
-    zxlogf(ERROR, "Bad block (%u) or slice size (%zu)", info_.block_size, sb.slice_size);
-    return ZX_ERR_BAD_STATE;
-  }
-
-  // TODO(fxb/40192) Allow the partition table to be different lengths (aligned to blocks):
-  //   size_t kMinPartitionTableSize = kBlockSize;
-  //   if (sb.vpartition_table_size < kMinPartitionTableSize ||
-  //       sb.vpartition_table_size > kMaxPartitionTableByteSize ||
-  //       sb.vpartition_table_size % sizeof(VPartitionEntry) != 0) {
-  //     zxlogf(ERROR, "Bad vpartition table size %zu (expected %zu-%zu, multiple of %zu)",
-  //            sb.vpartition_table_size, kMinPartitionTableSize, kMaxPartitionTableByteSize,
-  //            sizeof(VPartitionEntry));
-  //     return ZX_ERR_BAD_STATE;
-  //
-  // Currently the partition table must be a fixed size:
-  size_t kPartitionTableLength = fvm::kMaxPartitionTableByteSize;
-  if (sb.vpartition_table_size != kPartitionTableLength) {
-    zxlogf(ERROR, "Bad vpartition table size %zu (expected %zu)", sb.vpartition_table_size,
-           kPartitionTableLength);
-    return ZX_ERR_BAD_STATE;
-  }
-
-  size_t required_alloc_table_len = AllocTableByteSizeForUsableSliceCount(sb.pslice_count);
-  if (sb.allocation_table_size > kMaxAllocationTableByteSize ||
-      sb.allocation_table_size % kBlockSize != 0 ||
-      sb.allocation_table_size < required_alloc_table_len) {
-    zxlogf(ERROR, "Bad allocation table size %zu (expected at least %zu, multiple of %zu)",
-           sb.allocation_table_size, required_alloc_table_len, kBlockSize);
-    return ZX_ERR_BAD_STATE;
-  }
-  if (sb.fvm_partition_size > DiskSize()) {
-    zxlogf(ERROR,
-           "Block Device too small (fvm_partition_size is %zu and block_device_size is "
-           "%zu).",
-           sb.fvm_partition_size, DiskSize());
-    return ZX_ERR_BAD_STATE;
-  }
 
   // Allocate a buffer big enough for the allocated metadata.
   size_t metadata_vmo_size = sb.GetMetadataAllocatedBytes();
@@ -317,7 +282,8 @@ zx_status_t VPartitionManager::Load() {
 
   // Validate metadata headers before growing and pick the correct one.
   std::optional<SuperblockType> use_type =
-      ValidateHeader(mapper.start(), mapper_backup.start(), sb.GetMetadataAllocatedBytes());
+      PickValidHeader(DiskSize(), info_.block_size, mapper.start(), mapper_backup.start(),
+                      sb.GetMetadataAllocatedBytes());
   if (!use_type) {
     zxlogf(ERROR, "Header validation failure.");
     return ZX_ERR_BAD_STATE;
@@ -330,6 +296,8 @@ zx_status_t VPartitionManager::Load() {
     first_metadata_is_primary_ = false;
     metadata_ = std::move(mapper_backup);
   }
+
+  slice_size_ = GetFvmLocked()->slice_size;
 
   // See if we need to grow the data.
   fvm::Header* header = GetFvmLocked();
