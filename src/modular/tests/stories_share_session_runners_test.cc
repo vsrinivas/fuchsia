@@ -16,6 +16,7 @@
 namespace {
 
 constexpr char kFakeRunnerUrl[] = "fuchsia-pkg://fuchsia.com/fake_runner#meta/fake_runner.cmx";
+constexpr char kFakeRunnerServiceName[] = "fake.fuchsia.Service";
 
 // A module that specifies kFakeRunnerUrl as the runner to be used to launch
 // itself. The module doesn't have any functionality besides starting up and
@@ -53,7 +54,6 @@ class FakeRunner : public modular_testing::FakeComponent, fuchsia::sys::Runner {
   int module_started_count_ = 0;
 };
 
-// Minimal agent that connects to `fuchsia.intl.PropertyProvider` and retrieves a `Profile`.
 class StoriesShareSessionRunnersTest : public modular_testing::TestHarnessFixture {
  protected:
   void SetUp() override {
@@ -66,11 +66,20 @@ class StoriesShareSessionRunnersTest : public modular_testing::TestHarnessFixtur
             {
                 fuchsia::modular::ComponentContext::Name_,
                 fuchsia::intl::PropertyProvider::Name_,
+                kFakeRunnerServiceName,
             },
     });
 
     fuchsia::modular::testing::TestHarnessSpec spec;
     spec.mutable_sessionmgr_config()->set_session_agents({fake_agent_url_});
+
+    // Used by AgentsCanConnectToRunnerComponentServices test.
+    std::vector<fuchsia::modular::session::AgentServiceIndexEntry> agent_service_index;
+    fuchsia::modular::session::AgentServiceIndexEntry agent_service;
+    agent_service.set_service_name(kFakeRunnerServiceName);
+    agent_service.set_agent_url(kModuleWithFakeRunnerUrl);
+    agent_service_index.emplace_back(std::move(agent_service));
+    spec.mutable_sessionmgr_config()->set_agent_service_index(std::move(agent_service_index));
 
     builder_ = std::make_unique<modular_testing::TestHarnessBuilder>(std::move(spec));
 
@@ -157,8 +166,7 @@ TEST_F(StoriesShareSessionRunnersTest, ModReusesRunner) {
                                                .action = "com.google.fuchsia.module.runner"};
   modular_testing::AddModToStory(test_harness(), "second_story", "mod_name_2_of_2",
                                  std::move(third_intent));
-  RunLoopUntil(
-      [&] { return fake_runner_->module_started_count() > 2 || runners_requested_ > 1 > 0; });
+  RunLoopUntil([&] { return fake_runner_->module_started_count() > 2 || runners_requested_ > 1; });
   EXPECT_EQ(3, fake_runner_->module_started_count());
   ASSERT_EQ(1, runners_requested_);
 
@@ -170,6 +178,40 @@ TEST_F(StoriesShareSessionRunnersTest, ModReusesRunner) {
   RunLoopUntil([&] { return fake_runner_->module_started_count() > 3 || runners_requested_ > 1; });
   EXPECT_EQ(4, fake_runner_->module_started_count());
   ASSERT_EQ(1, runners_requested_);
+}
+
+TEST_F(StoriesShareSessionRunnersTest, AgentsCanConnectToRunnerComponentServices) {
+  auto intent = fuchsia::modular::Intent{.handler = kModuleWithFakeRunnerUrl,
+                                         .action = "com.google.fuchsia.module.runner"};
+
+  // Add a mod that will be launched via a fake runner
+  modular_testing::AddModToStory(test_harness(), "story", "mod_name", std::move(intent));
+
+  RunLoopUntil([&] { return !!fake_runner_ && fake_runner_->module_started_count() > 0; });
+  EXPECT_EQ(1, fake_runner_->module_started_count());
+  EXPECT_EQ(1, runners_requested_);
+
+  // Create the fake Agent through which to request the service.
+  fuchsia::modular::ComponentContextPtr component_context;
+  fuchsia::modular::testing::ModularService modular_service;
+  modular_service.set_component_context(component_context.NewRequest());
+  test_harness()->ConnectToModularService(std::move(modular_service));
+  fuchsia::modular::AgentControllerPtr agent_controller;
+  fuchsia::sys::ServiceProviderPtr agent_services;
+  component_context->DeprecatedConnectToAgent(fake_agent_url_, agent_services.NewRequest(),
+                                              agent_controller.NewRequest());
+  RunLoopUntil([&] { return fake_agent_->is_running(); });
+
+  // Request the service to trigger and wait for the component to be started.
+  zx::channel channel0, channel1;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &channel0, &channel1));
+  ASSERT_EQ(ZX_OK, fake_agent_->component_context()->svc()->Connect(kFakeRunnerServiceName,
+                                                                    std::move(channel0)));
+  RunLoopUntil([&] { return fake_runner_->module_started_count() > 1 || runners_requested_ > 1; });
+  EXPECT_EQ(2, fake_runner_->module_started_count());
+
+  // The Runner used to launch the Module should have been re-used to provide the service.
+  EXPECT_EQ(1, runners_requested_);
 }
 
 // Tests that a runner can still access the fuchsia::intl::PropertyProvider from its environment.

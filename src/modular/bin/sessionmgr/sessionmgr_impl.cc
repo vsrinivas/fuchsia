@@ -145,14 +145,14 @@ void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
   auto ui_handlers = std::make_shared<UIHandlers>();
 
   // If connecting to the SessionShell errors out, use the GraphicalPresenter
-  ui_handlers->session_shell.set_error_handler(
-      [weak_this = weak_ptr_factory_.GetWeakPtr(), ui_handlers](zx_status_t status) mutable {
-        FX_PLOGS(INFO, status) << "Failed to connect to SessionShell, using GraphicalPresenter";
-        if (weak_this && weak_this->story_provider_impl_.get() && ui_handlers->graphical_presenter) {
-          weak_this->story_provider_impl_.get()->SetPresentationProtocol(
-              PresentationProtocolPtr{std::move(ui_handlers->graphical_presenter)});
-        }
-      });
+  ui_handlers->session_shell.set_error_handler([weak_this = weak_ptr_factory_.GetWeakPtr(),
+                                                ui_handlers](zx_status_t status) mutable {
+    FX_PLOGS(INFO, status) << "Failed to connect to SessionShell, using GraphicalPresenter";
+    if (weak_this && weak_this->story_provider_impl_.get() && ui_handlers->graphical_presenter) {
+      weak_this->story_provider_impl_.get()->SetPresentationProtocol(
+          PresentationProtocolPtr{std::move(ui_handlers->graphical_presenter)});
+    }
+  });
 
   // If connecting to the GraphicalPresenter errors out, use the SessionShell
   ui_handlers->graphical_presenter.set_error_handler(
@@ -265,8 +265,10 @@ void SessionmgrImpl::InitializeAgentRunner(std::string session_shell_url) {
   for (auto& component : config_accessor_.sessionmgr_config().component_args()) {
     argv_map.insert(std::make_pair(component.url(), component.args()));
   }
-  agent_runner_launcher_ = std::make_unique<ArgvInjectingLauncher>(
-      sessionmgr_context_->svc()->Connect<fuchsia::sys::Launcher>(), argv_map);
+
+  fuchsia::sys::LauncherPtr launcher;
+  session_environment_->environment()->GetLauncher(launcher.NewRequest());
+  agent_runner_launcher_ = std::make_unique<ArgvInjectingLauncher>(std::move(launcher), argv_map);
 
   auto restart_session_on_agent_crash =
       config_accessor_.sessionmgr_config().restart_session_on_agent_crash();
