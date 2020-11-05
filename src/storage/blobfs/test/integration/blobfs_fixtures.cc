@@ -8,7 +8,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 
 #include <fvm/format.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace {
 

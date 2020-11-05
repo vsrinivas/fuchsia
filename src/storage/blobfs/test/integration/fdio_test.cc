@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fdio_test.h"
+#include "src/storage/blobfs/test/integration/fdio_test.h"
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
@@ -20,33 +20,34 @@ void FdioTest::SetUp() {
 
   auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
   block_device_ = device.get();
-  ASSERT_OK(FormatFilesystem(block_device_, FilesystemOptions{}));
+  ASSERT_EQ(FormatFilesystem(block_device_, FilesystemOptions{}), ZX_OK);
 
   zx::channel root_client, root_server;
-  ASSERT_OK(zx::channel::create(0, &root_client, &root_server));
+  ASSERT_EQ(zx::channel::create(0, &root_client, &root_server), ZX_OK);
 
   zx::channel diagnostics_dir_server;
-  ASSERT_OK(zx::channel::create(0, &diagnostics_dir_client_, &diagnostics_dir_server));
+  ASSERT_EQ(zx::channel::create(0, &diagnostics_dir_client_, &diagnostics_dir_server), ZX_OK);
 
-  std::unique_ptr<blobfs::Runner> runner;
-  ASSERT_OK(blobfs::Runner::Create(loop_.get(), std::move(device), blobfs::MountOptions(),
-                                   std::move(vmex_resource_), std::move(diagnostics_dir_server),
-                                   &runner));
-  ASSERT_OK(runner->ServeRoot(std::move(root_server), layout_));
-  ASSERT_OK(loop_->StartThread("blobfs test dispatcher"));
+  std::unique_ptr<Runner> runner;
+  ASSERT_EQ(Runner::Create(loop_.get(), std::move(device), MountOptions(),
+                           std::move(vmex_resource_), std::move(diagnostics_dir_server), &runner),
+            ZX_OK);
+  ASSERT_EQ(runner->ServeRoot(std::move(root_server), layout_), ZX_OK);
+  ASSERT_EQ(loop_->StartThread("blobfs test dispatcher"), ZX_OK);
 
   runner_ = std::move(runner);
 
   // FDIO serving the root directory.
-  ASSERT_OK(fdio_fd_create(root_client.release(), root_fd_.reset_and_get_address()));
+  ASSERT_EQ(fdio_fd_create(root_client.release(), root_fd_.reset_and_get_address()), ZX_OK);
   ASSERT_TRUE(root_fd_.is_valid());
 }
 
 void FdioTest::TearDown() {
   zx::channel root_client;
-  ASSERT_OK(fdio_fd_transfer(root_fd_.release(), root_client.reset_and_get_address()));
-  ASSERT_OK(
-      llcpp::fuchsia::io::DirectoryAdmin::Call::Unmount(zx::unowned_channel(root_client)).status());
+  ASSERT_EQ(fdio_fd_transfer(root_fd_.release(), root_client.reset_and_get_address()), ZX_OK);
+  ASSERT_EQ(
+      llcpp::fuchsia::io::DirectoryAdmin::Call::Unmount(zx::unowned_channel(root_client)).status(),
+      ZX_OK);
 }
 
 }  // namespace blobfs

@@ -18,13 +18,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
-
-// TODO(fxbug.dev/52911): Remove after all tests are on gtest
-#ifdef BLOBFS_USE_ZXTEST
-#include <zxtest/zxtest.h>
-#else
 #include <gtest/gtest.h>
-#endif
 
 namespace blobfs {
 namespace {

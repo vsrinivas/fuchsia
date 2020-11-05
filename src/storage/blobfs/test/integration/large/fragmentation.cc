@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <sys/stat.h>
 
 #include <algorithm>
@@ -14,28 +15,20 @@
 #include <blobfs/common.h>
 #include <fbl/auto_call.h>
 #include <fvm/format.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "blobfs_fixtures.h"
 #include "load_generator.h"
 
+namespace blobfs {
 namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
-using blobfs::BlobInfo;
-using blobfs::GenerateBlob;
-using blobfs::GenerateRandomBlob;
-using blobfs::RandomFill;
-using blobfs::StreamAll;
-using blobfs::VerifyContents;
-using fs::FilesystemTest;
-using fs::RamDisk;
-
 // The following test attempts to fragment the underlying blobfs partition
 // assuming a trivial linear allocator. A more intelligent allocator may require
 // modifications to this test.
-void RunFragmentationTest(FilesystemTest* test) {
+void RunFragmentationTest(fs_test::TestFilesystem& fs) {
   // Keep generating blobs until we run out of space, in a pattern of large,
   // small, large, small, large.
   //
@@ -51,13 +44,13 @@ void RunFragmentationTest(FilesystemTest* test) {
   size_t count = 0;
   while (true) {
     std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FAILURES(
-        GenerateRandomBlob(kMountPath, do_small_blob ? kSmallSize : kLargeSize, &info));
+    ASSERT_NO_FATAL_FAILURE(
+        GenerateRandomBlob(fs.mount_path(), do_small_blob ? kSmallSize : kLargeSize, &info));
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd, "Failed to create blob");
+    ASSERT_TRUE(fd) << "Failed to create blob";
     ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
     if (StreamAll(write, fd.get(), info->data.get(), info->size_data) < 0) {
-      ASSERT_EQ(ENOSPC, errno, "Blobfs expected to run out of space");
+      ASSERT_EQ(ENOSPC, errno) << "Blobfs expected to run out of space";
       break;
     }
     if (do_small_blob) {
@@ -74,31 +67,30 @@ void RunFragmentationTest(FilesystemTest* test) {
   // We have filled up the disk with both small and large blobs.
   // Observe that we cannot add another large blob.
   std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FAILURES(GenerateRandomBlob(kMountPath, kLargeSize, &info));
+  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs.mount_path(), kLargeSize, &info));
 
   // Calculate actual number of blocks required to store the blob (including the merkle tree).
-  blobfs::Inode large_inode;
+  Inode large_inode;
   large_inode.blob_size = kLargeSize;
-  size_t kLargeBlocks =
-      blobfs::ComputeNumMerkleTreeBlocks(large_inode) + blobfs::BlobDataBlocks(large_inode);
+  size_t kLargeBlocks = ComputeNumMerkleTreeBlocks(large_inode) + BlobDataBlocks(large_inode);
 
   // We shouldn't have space (before we try allocating) ...
-  fio::FilesystemInfo usage;
-  ASSERT_NO_FAILURES(test->GetFsInfo(&usage));
-  ASSERT_LT(usage.total_bytes - usage.used_bytes, kLargeBlocks * blobfs::kBlobfsBlockSize);
+  auto fs_info_or = fs.GetFsInfo();
+  ASSERT_TRUE(fs_info_or.is_ok());
+  ASSERT_LT(fs_info_or->total_bytes - fs_info_or->used_bytes, kLargeBlocks * kBlobfsBlockSize);
 
   // ... and we don't have space (as we try allocating).
   fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
   ASSERT_NE(0, StreamAll(write, fd.get(), info->data.get(), info->size_data));
-  ASSERT_EQ(ENOSPC, errno, "Blobfs expected to be out of space");
+  ASSERT_EQ(ENOSPC, errno) << "Blobfs expected to be out of space";
   fd.reset();
 
   // Unlink all small blobs -- except for the last one, since we may have free
   // trailing space at the end.
   for (size_t i = 0; i < small_blobs.size() - 1; i++) {
-    ASSERT_EQ(0, unlink(small_blobs[i].c_str()), "Unlinking old blob");
+    ASSERT_EQ(0, unlink(small_blobs[i].c_str())) << "Unlinking old blob";
   }
 
   // This asserts an assumption of our test: Freeing these blobs should provide
@@ -106,8 +98,9 @@ void RunFragmentationTest(FilesystemTest* test) {
   ASSERT_GT(kSmallSize * (small_blobs.size() - 1), kLargeSize);
 
   // Validate that we have enough space (before we try allocating)...
-  ASSERT_NO_FAILURES(test->GetFsInfo(&usage));
-  ASSERT_GE(usage.total_bytes - usage.used_bytes, kLargeBlocks * blobfs::kBlobfsBlockSize);
+  fs_info_or = fs.GetFsInfo();
+  ASSERT_TRUE(fs_info_or.is_ok());
+  ASSERT_GE(fs_info_or->total_bytes - fs_info_or->used_bytes, kLargeBlocks * kBlobfsBlockSize);
 
   fd.reset(open(info->path, O_CREAT | O_RDWR));
   // Now that blobfs supports extents, verify that we can still allocate a large
@@ -119,7 +112,7 @@ void RunFragmentationTest(FilesystemTest* test) {
   std::unique_ptr<char[]> buf(new char[info->size_data]);
   ASSERT_EQ(0, lseek(fd.get(), 0, SEEK_SET));
   ASSERT_EQ(0, StreamAll(read, fd.get(), buf.get(), info->size_data));
-  ASSERT_BYTES_EQ(info->data.get(), buf.get(), info->size_data);
+  ASSERT_EQ(memcmp(info->data.get(), buf.get(), info->size_data), 0);
 
   // Sanity check that we can re-open and unlink the fragmented blob.
   fd.reset(open(info->path, O_RDONLY));
@@ -127,8 +120,9 @@ void RunFragmentationTest(FilesystemTest* test) {
   ASSERT_EQ(0, unlink(info->path));
 }
 
-TEST_F(BlobfsTest, Fragmentation) { RunFragmentationTest(this); }
+TEST_F(BlobfsTest, Fragmentation) { RunFragmentationTest(fs()); }
 
-TEST_F(BlobfsTestWithFvm, Fragmentation) { RunFragmentationTest(this); }
+TEST_F(BlobfsTestWithFvm, Fragmentation) { RunFragmentationTest(fs()); }
 
 }  // namespace
+}  // namespace blobfs

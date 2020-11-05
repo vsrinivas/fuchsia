@@ -6,45 +6,60 @@
 #define SRC_STORAGE_BLOBFS_TEST_INTEGRATION_BLOBFS_FIXTURES_H_
 
 #include <blobfs/format.h>
-#include <fs/test_support/fixtures.h>
 
+#include "src/storage/fs_test/fs_test_fixture.h"
 #include "test/blob_utils.h"
 
-// FVM slice size used for tests.
-constexpr size_t kTestFvmSliceSize = blobfs::kBlobfsBlockSize;  // 8kb.
+namespace blobfs {
 
-constexpr char kMountPath[] = "/blobfs-tmp/zircon-blobfs-test";
+class BlobfsTest : public fs_test::BaseFilesystemTest {
+ public:
+  static fs_test::TestFilesystemOptions DefaultOptions() {
+    return fs_test::TestFilesystemOptions::BlobfsWithoutFvm();
+  }
 
-class BlobfsTest : public fs::FilesystemTest {
- protected:
-  void CheckInfo() override;
+  explicit BlobfsTest(fs_test::TestFilesystemOptions options = DefaultOptions())
+      : fs_test::BaseFilesystemTest(options) {}
+
+  int root_fd() {
+    if (!root_fd_) {
+      root_fd_.reset(open(fs().mount_path().c_str(), O_DIRECTORY));
+    }
+    return root_fd_.get();
+  }
+
+ private:
+  fbl::unique_fd root_fd_;
 };
 
 // Base class for tests that create a dedicated disk of a given size.
-class BlobfsFixedDiskSizeTest : public fs::FixedDiskSizeTest {
+class BlobfsFixedDiskSizeTest : public BlobfsTest {
  protected:
-  explicit BlobfsFixedDiskSizeTest(uint64_t disk_size) : FixedDiskSizeTest(disk_size) {}
-  void CheckInfo() override;
+  static fs_test::TestFilesystemOptions OptionsWithSize(uint64_t disk_size) {
+    auto options = fs_test::TestFilesystemOptions::BlobfsWithoutFvm();
+    options.device_block_count = disk_size / options.device_block_size;
+    return options;
+  }
+  explicit BlobfsFixedDiskSizeTest(uint64_t disk_size) : BlobfsTest(OptionsWithSize(disk_size)) {}
 };
 
-class BlobfsTestWithFvm : public fs::FilesystemTestWithFvm {
+class BlobfsTestWithFvm : public BlobfsTest {
  public:
-  size_t GetSliceSize() const override { return kTestFvmSliceSize; }
-
- protected:
-  void CheckInfo() override;
-  void CheckPartitionSize() override;
+  BlobfsTestWithFvm() : BlobfsTest(fs_test::TestFilesystemOptions::DefaultBlobfs()) {}
 };
 
 // Base class for tests that create a dedicated disk of a given size.
-class BlobfsFixedDiskSizeTestWithFvm : public fs::FixedDiskSizeTestWithFvm {
+class BlobfsFixedDiskSizeTestWithFvm : public BlobfsTest {
  public:
-  size_t GetSliceSize() const override { return kTestFvmSliceSize; }
-
- protected:
+  static fs_test::TestFilesystemOptions OptionsWithSize(uint64_t disk_size) {
+    auto options = fs_test::TestFilesystemOptions::DefaultBlobfs();
+    options.device_block_count = disk_size / options.device_block_size;
+    return options;
+  }
   explicit BlobfsFixedDiskSizeTestWithFvm(uint64_t disk_size)
-      : FixedDiskSizeTestWithFvm(disk_size) {}
-  void CheckInfo() override;
+      : BlobfsTest(OptionsWithSize(disk_size)) {}
 };
+
+}  // namespace blobfs
 
 #endif  // SRC_STORAGE_BLOBFS_TEST_INTEGRATION_BLOBFS_FIXTURES_H_

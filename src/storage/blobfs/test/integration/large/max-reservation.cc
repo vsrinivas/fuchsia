@@ -9,35 +9,32 @@
 #include <blobfs/common.h>
 #include <fbl/auto_call.h>
 #include <fvm/format.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "blobfs_fixtures.h"
 
+namespace blobfs {
 namespace {
-
-using blobfs::BlobInfo;
-using blobfs::GenerateRandomBlob;
-using blobfs::StreamAll;
 
 TEST_F(BlobfsTest, MaxReservation) {
   // Create and destroy kBlobfsDefaultInodeCount number of blobs.
   // This verifies that creating blobs does not lead to stray node reservations.
   // Refer to fxbug.dev/54001 for the bug that lead to this test.
   size_t count = 0;
-  for (uint64_t i = 0; i < blobfs::kBlobfsDefaultInodeCount; i++) {
+  for (uint64_t i = 0; i < kBlobfsDefaultInodeCount; i++) {
     std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FAILURES(GenerateRandomBlob(kMountPath, 64, &info));
+    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 64, &info));
 
     // Write the blob
     {
       fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
-      ASSERT_TRUE(fd, "Failed to create blob");
+      ASSERT_TRUE(fd) << "Failed to create blob";
       ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
       ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0);
     }
 
     // Delete the blob
-    ASSERT_EQ(unlink(info->path), 0, "Unlinking blob");
+    ASSERT_EQ(unlink(info->path), 0) << "Unlinking blob";
 
     if (++count % 1000 == 0) {
       fprintf(stderr, "Allocated and deleted %lu blobs\n", count);
@@ -46,3 +43,4 @@ TEST_F(BlobfsTest, MaxReservation) {
 }
 
 }  // namespace
+}  // namespace blobfs

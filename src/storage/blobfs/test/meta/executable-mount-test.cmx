@@ -1,0 +1,19 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.security.resource.Vmex"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/executable_mount"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.exception.Handler",
+            "fuchsia.logger.LogSink",
+            "fuchsia.security.resource.Vmex"
+        ]
+    }
+}

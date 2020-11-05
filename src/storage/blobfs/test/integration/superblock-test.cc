@@ -4,49 +4,50 @@
 
 #include <fcntl.h>
 
-#include <fbl/unique_fd.h>
 #include <blobfs/format.h>
-#include <zxtest/zxtest.h>
+#include <fbl/unique_fd.h>
+#include <gtest/gtest.h>
 
 #include "blobfs_fixtures.h"
 
+namespace blobfs {
 namespace {
 
-using fs::FilesystemTest;
 using SuperblockTest = BlobfsTest;
 using SuperblockTestWithFvm = BlobfsTestWithFvm;
 
-void FsyncFilesystem() {
+void FsyncFilesystem(fs_test::TestFilesystem& fs) {
   // Open the root directory to fsync the filesystem.
-  fbl::unique_fd fd_mount(open(kMountPath, O_RDONLY));
+  fbl::unique_fd fd_mount(open(fs.mount_path().c_str(), O_RDONLY));
   ASSERT_TRUE(fd_mount);
   ASSERT_EQ(fsync(fd_mount.get()), 0);
 }
 
-void ReadSuperblock(const std::string& device_path, blobfs::Superblock* info) {
+void ReadSuperblock(const std::string& device_path, Superblock* info) {
   fbl::unique_fd device(open(device_path.c_str(), O_RDWR));
   ASSERT_TRUE(device);
-  ASSERT_EQ(blobfs::kBlobfsBlockSize, pread(device.get(), info, blobfs::kBlobfsBlockSize, 0));
+  ASSERT_EQ(kBlobfsBlockSize, pread(device.get(), info, kBlobfsBlockSize, 0));
 }
 
-void RunCheckDirtyBitOnMountTest(FilesystemTest* test) {
-  blobfs::Superblock info;
+void RunCheckDirtyBitOnMountTest(fs_test::TestFilesystem& fs) {
+  Superblock info;
 
-  ASSERT_NO_FAILURES(FsyncFilesystem());
+  ASSERT_NO_FATAL_FAILURE(FsyncFilesystem(fs));
 
   // Check if clean bit is unset.
-  ReadSuperblock(test->device_path(), &info);
-  ASSERT_EQ(0, info.flags & blobfs::kBlobFlagClean);
+  ReadSuperblock(fs.DevicePath().value(), &info);
+  ASSERT_EQ(info.flags & kBlobFlagClean, 0u);
 
   // Unmount and check if clean bit is set.
-  ASSERT_NO_FAILURES(test->Unmount());
+  ASSERT_TRUE(fs.Unmount().is_ok());
 
-  ReadSuperblock(test->device_path(), &info);
-  ASSERT_EQ(blobfs::kBlobFlagClean, info.flags & blobfs::kBlobFlagClean);
+  ReadSuperblock(fs.DevicePath().value(), &info);
+  ASSERT_EQ(kBlobFlagClean, info.flags & kBlobFlagClean);
 }
 
-TEST_F(SuperblockTest, CheckDirtyBitOnMount) { RunCheckDirtyBitOnMountTest(this); }
+TEST_F(SuperblockTest, CheckDirtyBitOnMount) { RunCheckDirtyBitOnMountTest(fs()); }
 
-TEST_F(SuperblockTestWithFvm, CheckDirtyBitOnMount) { RunCheckDirtyBitOnMountTest(this); }
+TEST_F(SuperblockTestWithFvm, CheckDirtyBitOnMount) { RunCheckDirtyBitOnMountTest(fs()); }
 
 }  // namespace
+}  // namespace blobfs

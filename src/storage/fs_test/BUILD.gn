@@ -24,7 +24,6 @@ static_library("fs_test") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.fs",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/storage/fuchsia-fatfs:fatfs",
@@ -36,6 +35,7 @@ static_library("fs_test") {
   ]
   public_deps = [
     # fs_test.h:
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/isolated_devmgr/v2_component:client",
     "//src/storage/blobfs",
     "//src/storage/minfs",

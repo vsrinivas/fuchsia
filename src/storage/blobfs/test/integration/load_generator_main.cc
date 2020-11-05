@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
   }
   printf("performing random operations on provided file system...\n");
 
-  BlobList blob_list(mount_point.c_str());
+  blobfs::BlobList blob_list(mount_point.c_str());
   if (num_ops) {
     blob_list.GenerateLoad(num_ops, &seed);
   } else {

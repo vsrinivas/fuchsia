@@ -4,8 +4,8 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 import("//src/sys/build/components.gni")
-import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 group("test") {
   testonly = true
@@ -34,30 +34,6 @@ resource("test-binary") {
 config("test-utils-headers") {
   # blob_utils.h is referred to as test/blob_utils.h.
   include_dirs = [ ".." ]
-}
-
-# TODO(fxbug.dev/52911): Remove migration target
-source_set("test-utils-zxtest") {
-  testonly = true
-  defines = [ "BLOBFS_USE_ZXTEST" ]
-  sources = [
-    "blob_utils.cc",
-    "blob_utils.h",
-  ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/digest",
-  ]
-  public_deps = [
-    "//src/storage/blobfs",
-    "//src/storage/blobfs:private_headers",
-  ]
-  public_configs = [ ":test-utils-headers" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("test-utils") {
@@ -133,7 +109,6 @@ test("blobfs_unittest") {
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/fs-test-utils",
     "//zircon/system/ulib/id_allocator",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
@@ -159,20 +134,6 @@ test("blobfs-host") {
   ]
 }
 
-source_set("integration-fixtures") {
-  testonly = true
-  sources = [ "integration/blobfs_fixtures.cc" ]
-  deps = [
-    ":test-utils-zxtest",
-    "//sdk/lib/fdio",
-    "//src/storage/blobfs",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/fs-test-utils",
-    "//zircon/system/ulib/fs/test_support",
-    "//zircon/system/ulib/fvm",
-  ]
-}
-
 test("blobfs-integration") {
   output_name = "blobfs-integration-test"
 
@@ -183,32 +144,29 @@ test("blobfs-integration") {
     "integration/blobfs_integration_test.cc",
     "integration/fdio_test.cc",
     "integration/fdio_test.h",
-    "integration/integration_main.cc",
     "integration/mount_test.cc",
-    "integration/nand_test.cc",
-    "integration/nand_test.h",
     "integration/query_service_test.cc",
     "integration/superblock-test.cc",
     "integration/sync_test.cc",
   ]
   deps = [
-    ":integration-fixtures",
-    ":test-utils-zxtest",
+    ":test-utils",
     "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
-    "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs",
+    "//src/storage/fs_test",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-utils",
-    "//zircon/system/ulib/fs-test-utils",
     "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/fzl",
@@ -219,12 +177,9 @@ test("blobfs-integration") {
   public_deps = [ "//zircon/system/ulib/fidl-utils" ]
 }
 
-isolated_devmgr_unittest_component("blobfs-integration-component") {
+isolated_devmgr_unittest_v2_component("blobfs-integration-component") {
   executable_path = "test/blobfs-integration-test"
   component_name = "blobfs-integration"
-
-  # This is required for the Vmex resource to get executable blobs.
-  services = [ "fuchsia.security.resource.Vmex" ]
 
   deps = [
     ":blobfs-integration",
@@ -243,6 +198,33 @@ isolated_devmgr_unittest_component("blobfs-integration-component") {
   ]
 }
 
+test("executable_mount") {
+  testonly = true
+  sources = [
+    "integration/executable_mount_test.cc",
+    "integration/fdio_test.cc",
+    "integration/fdio_test.h",
+  ]
+  deps = [
+    ":test-utils",
+    "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/id_allocator",
+  ]
+}
+
+fuchsia_component("executable-mount-test") {
+  testonly = true
+  manifest = "meta/executable-mount-test.cmx"
+  deps = [ ":executable_mount" ]
+}
+
 template("blobfs_large_integration_test") {
   test_name = target_name
   component_name = "${target_name}-component"
@@ -250,24 +232,24 @@ template("blobfs_large_integration_test") {
   test(test_name) {
     output_name = invoker.target_name
 
-    sources = invoker.sources + [ "integration/large/main.cc" ]
+    sources = invoker.sources
 
     include_dirs = [ "integration" ]
 
     deps = [
-      ":integration-fixtures",
       ":load-generator",
-      ":test-utils-zxtest",
+      ":test-utils",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
       "//sdk/lib/fdio",
+      "//src/lib/fxl/test:gtest_main",
       "//src/storage/blobfs",
-      "//zircon/public/lib/zxtest",
+      "//src/storage/fs_test",
+      "//third_party/googletest:gtest",
       "//zircon/system/ulib/async-loop",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/fdio-caller",
-      "//zircon/system/ulib/fs-test-utils",
-      "//zircon/system/ulib/fs/test_support",
       "//zircon/system/ulib/fvm",
       "//zircon/system/ulib/memfs",
     ]
@@ -276,13 +258,9 @@ template("blobfs_large_integration_test") {
     }
   }
 
-  isolated_devmgr_unittest_component(component_name) {
+  isolated_devmgr_unittest_v2_component(component_name) {
     executable_path = "test/$test_name"
     component_name = test_name
-
-    # TODO(bug 59859) "SysInfo" service should no longer be needed when the board querying code is
-    # removed and this line can be deleted.
-    services = [ "fuchsia.sysinfo.SysInfo" ]
     deps = [ ":$test_name" ]
   }
 }
@@ -311,6 +289,7 @@ fuchsia_test_package("blobfs-integration-package") {
     ":blobfs-max-reservation-component",
     ":blobfs-no-space-component",
     ":blobfs-use-second-bitmap-component",
+    ":executable-mount-test",
   ]
 }
 
@@ -319,12 +298,11 @@ source_set("load-generator") {
   sources = [ "integration/load_generator.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/fs-test-utils",
   ]
-  public_deps = [ ":test-utils-zxtest" ]
+  public_deps = [ ":test-utils" ]
 }
 
 fuzzer("zstd-fuzzer") {
@@ -385,7 +363,5 @@ executable("blobfs-load-generator") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/fs-test-utils",
   ]
 }

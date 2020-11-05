@@ -1,0 +1,77 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/fuchsia_component.gni")
+
+template("isolated_devmgr_unittest_v2_component") {
+  if (!defined(invoker.manifest)) {
+    generated_target = "${target_name}_generated_manifest"
+    manifest = "$target_out_dir/${generated_target}.cml"
+    generated_file(generated_target) {
+      contents = {
+        program = {
+          binary = invoker.executable_path
+        }
+        children = [
+          {
+            name = "isolated_devmgr"
+            url = "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated_devmgr.cm"
+            startup = "eager"
+          },
+        ]
+        capabilities = [
+          {
+            protocol = "fuchsia.test.Suite"
+          },
+        ]
+        use = [
+          {
+            runner = "gtest_runner"
+          },
+          {
+            protocol = [ "fuchsia.process.Launcher" ]
+          },
+          {
+            protocol = "fuchsia.sys2.Realm"
+            from = "framework"
+          },
+        ]
+        offer = [
+          {
+            protocol = [
+              "fuchsia.logger.LogSink",
+              "fuchsia.process.Launcher",
+              "fuchsia.sys.Launcher",
+            ]
+            from = "parent"
+            to = [ "#isolated_devmgr" ]
+          },
+        ]
+        expose = [
+          {
+            protocol = "fuchsia.test.Suite"
+            from = "self"
+          },
+        ]
+      }
+      outputs = [ "$manifest" ]
+      output_conversion = "json"
+      testonly = true
+      visibility = [ ":*" ]
+    }
+  }
+  fuchsia_component(target_name) {
+    testonly = true
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "manifest",
+                             "visibility",
+                             "component_name",
+                           ])
+    if (defined(generated_target)) {
+      deps += [ ":$generated_target" ]
+    }
+  }
+}

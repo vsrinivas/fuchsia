@@ -6,6 +6,7 @@
 #define SRC_STORAGE_FS_TEST_FS_TEST_H_
 
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
@@ -21,6 +22,7 @@
 
 #include <fbl/unique_fd.h>
 #include <fs-management/format.h>
+#include <fs-management/mount.h>
 #include <ramdevice-client/ramnand.h>
 
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
@@ -69,7 +71,7 @@ class FilesystemInstance {
   FilesystemInstance& operator=(const FilesystemInstance&) = delete;
   virtual ~FilesystemInstance() = default;
 
-  virtual zx::status<> Mount(const std::string& mount_path) = 0;
+  virtual zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) = 0;
   virtual zx::status<> Unmount(const std::string& mount_path);
   virtual zx::status<> Fsck() = 0;
 
@@ -78,6 +80,7 @@ class FilesystemInstance {
   virtual zx::status<std::string> DevicePath() const = 0;
   virtual isolated_devmgr::RamDisk* GetRamDisk() { return nullptr; }
   virtual ramdevice_client::RamNand* GetRamNand() { return nullptr; }
+  virtual zx::unowned_channel GetOutgoingDirectory() const { return {}; }
 };
 
 // Base class for all supported file systems. It is a factory class that generates
@@ -184,7 +187,8 @@ class TestFilesystem {
   bool is_mounted() const { return mounted_; }
 
   // Mounts the file system (only necessary after calling Unmount).
-  zx::status<> Mount();
+  zx::status<> Mount() { return MountWithOptions(default_mount_options); }
+  zx::status<> MountWithOptions(const mount_options_t&);
 
   // Unmounts a mounted file system.
   zx::status<> Unmount();
@@ -206,6 +210,10 @@ class TestFilesystem {
 
   // Returns the ram-nand device, or nullptr if one isn't being used.
   ramdevice_client::RamNand* GetRamNand() const { return filesystem_->GetRamNand(); }
+
+  zx::status<::llcpp::fuchsia::io::FilesystemInfo> GetFsInfo();
+
+  zx::unowned_channel GetOutgoingDirectory() const { return filesystem_->GetOutgoingDirectory(); }
 
  private:
   // Creates a mount point for the instance, mounts it and returns a TestFilesystem.

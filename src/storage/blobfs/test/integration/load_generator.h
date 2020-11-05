@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_TEST_INTEGRATION_LOAD_GENERATOR_H_
 #define SRC_STORAGE_BLOBFS_TEST_INTEGRATION_LOAD_GENERATOR_H_
 
-#include <lib/zircon-internal/thread_annotations.h>
+#include <zircon/compiler.h>
 
 #include <array>
 #include <list>
@@ -16,14 +16,16 @@
 
 #include "test/blob_utils.h"
 
+namespace blobfs {
+
 struct BlobFile {
-  BlobFile(std::unique_ptr<blobfs::BlobInfo> i, size_t writes_remaining)
+  BlobFile(std::unique_ptr<BlobInfo> i, size_t writes_remaining)
       : info(std::move(i)), writes_remaining(writes_remaining) {
     bytes_remaining = info->size_data;
   }
   BlobFile() {}
 
-  std::unique_ptr<blobfs::BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
   fbl::unique_fd fd;
   size_t writes_remaining;
   size_t bytes_remaining;
@@ -79,8 +81,10 @@ class BlobList {
 
   const char* mount_path_;
   fbl::Mutex list_lock_;
-  uint32_t blob_count_ TA_GUARDED(list_lock_) = 0;
-  std::array<std::list<BlobFile>, 3> lists_ TA_GUARDED(list_lock_);  // One per QueueId.
+  uint32_t blob_count_ __TA_GUARDED(list_lock_) = 0;
+  std::array<std::list<BlobFile>, 3> lists_ __TA_GUARDED(list_lock_);  // One per QueueId.
 };
+
+}  // namespace blobfs
 
 #endif  // SRC_STORAGE_BLOBFS_TEST_INTEGRATION_LOAD_GENERATOR_H_

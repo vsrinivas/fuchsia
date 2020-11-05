@@ -10,20 +10,18 @@
 #include <blobfs/mount.h>
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/fake-device.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "blobfs.h"
-#include "fdio_test.h"
-#include "nand_test.h"
 #include "runner.h"
+#include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
+#include "src/storage/blobfs/test/integration/fdio_test.h"
 #include "test/blob_utils.h"
 
 namespace blobfs {
-
 namespace {
 
 using SyncFdioTest = FdioTest;
-using SyncNandTest = NandTest;
 
 uint64_t GetSucceededFlushCalls(block_client::FakeBlockDevice* device) {
   fuchsia_hardware_block_BlockStats stats;
@@ -37,7 +35,7 @@ uint64_t GetSucceededFlushCalls(block_client::FakeBlockDevice* device) {
 // behavior for different lifecycles of creating a file.
 TEST_F(SyncFdioTest, Sync) {
   std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FAILURES(GenerateRandomBlob("", 64, &info));
+  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob("", 64, &info));
 
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
   int file = openat(root_fd(), info->path, O_RDWR | O_CREAT);
@@ -49,7 +47,7 @@ TEST_F(SyncFdioTest, Sync) {
 
   // Write the contents. The file must be truncated before writing to declare its size.
   EXPECT_EQ(0, ftruncate(file, info->size_data));
-  EXPECT_EQ(info->size_data, write(file, info->data.get(), info->size_data));
+  EXPECT_EQ(write(file, info->data.get(), info->size_data), static_cast<ssize_t>(info->size_data));
 
   // Sync the file. This will block until woken up by the file_wake_thread.
   EXPECT_EQ(0, fsync(file));
@@ -71,65 +69,65 @@ TEST_F(SyncFdioTest, Sync) {
 
 // Verifies that fdio "sync" actually flushes a NAND device. This tests the fdio, blobfs, block
 // device, and FTL layers.
-TEST_F(SyncNandTest, Sync) {
+TEST(SyncNandTest, Sync) {
   // Make a VMO to give to the RAM-NAND.
-  const size_t vmo_size = Connection::GetVMOSize();
-  zx::vmo initial_vmo;
-  ASSERT_OK(zx::vmo::create(vmo_size, 0, &initial_vmo));
+  const size_t kVmoSize = 100 * (4096 + 8) * 64;
+  fzl::OwnedVmoMapper vmo;
+  ASSERT_EQ(vmo.CreateAndMap(kVmoSize, "vmo"), ZX_OK);
+  memset(vmo.start(), 0xff, kVmoSize);
 
-  // NAND VMOs must be prepopulated with 0xff.
-  zx_vaddr_t vmar_address = 0;
-  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, initial_vmo, 0,
-                                       vmo_size, &vmar_address));
-  char* initial_vmo_data = reinterpret_cast<char*>(vmar_address);
-  std::fill(initial_vmo_data, &initial_vmo_data[vmo_size], 0xff);
-
-  // Create a second VMO for later use.
-  zx::vmo second_vmo;
-  ASSERT_OK(zx::vmo::create(vmo_size, 0, &second_vmo));
-  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, second_vmo, 0,
-                                       vmo_size, &vmar_address));
-  char* second_vmo_data = reinterpret_cast<char*>(vmar_address);
+  auto options = BlobfsTest::DefaultOptions();
+  options.use_ram_nand = true;
+  options.ram_nand_vmo = vmo.vmo().borrow();
+  options.device_block_count = 0;  // Uses VMO size.
+  options.device_block_size = 8192;
 
   std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FAILURES(GenerateRandomBlob("", 64, &info));
+  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob("", 64, &info));
+
+  memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
+  auto snapshot = std::make_unique<uint8_t[]>(kVmoSize);
 
   {
-    Connection initial_connection("/initial/dev", std::move(initial_vmo), true);
+    auto fs_or = fs_test::TestFilesystem::Create(options);
+    ASSERT_TRUE(fs_or.is_ok()) << "Unable to create file system: " << fs_or.status_string();
+    auto fs = std::move(fs_or).value();
 
-    memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
-    fbl::unique_fd file(openat(initial_connection.root_fd(), info->path, O_RDWR | O_CREAT));
+    fbl::unique_fd root_fd(open(fs.mount_path().c_str(), O_DIRECTORY));
+    fbl::unique_fd file(openat(root_fd.get(), info->path, O_RDWR | O_CREAT));
     ASSERT_TRUE(file.is_valid());
 
     // Write the contents. The file must be truncated before writing to declare its size.
-    ASSERT_EQ(0, ftruncate(file.get(), info->size_data));
-    ASSERT_EQ(info->size_data, write(file.get(), info->data.get(), info->size_data));
+    ASSERT_EQ(ftruncate(file.get(), info->size_data), 0);
+    ASSERT_EQ(write(file.get(), info->data.get(), info->size_data),
+              static_cast<ssize_t>(info->size_data));
 
     // This should block until the sync is complete. fsync-ing the root FD is required to flush
     // everything.
-    ASSERT_EQ(0, fsync(file.get()));
-    ASSERT_EQ(0, fsync(initial_connection.root_fd()));
+    ASSERT_EQ(fsync(file.get()), 0);
+    ASSERT_EQ(fsync(root_fd.get()), 0);
 
     // Without closing the file or tearing down the existing connection (which may add extra
-    // flushes, etc.), create a snapshot of the current memory in the second VMO. This will emulate
-    // a power cycle
-    memcpy(second_vmo_data, initial_vmo_data, vmo_size);
+    // flushes, etc.), create a snapshot of the current. This will emulate a power cycle.
+    memcpy(snapshot.get(), vmo.start(), kVmoSize);
   }
 
-  // New connection with a completely new NAND controller reading the same memory.
-  //
-  // This call may fail if the above fsync on the root directory is not successful because the
-  // device will have garbage data in it.
-  Connection second_connection("/second/dev", std::move(second_vmo), false);
+  // Restore snapshot and remount.
+  memcpy(vmo.start(), snapshot.get(), kVmoSize);
+  auto fs_or = fs_test::TestFilesystem::Open(options);
+  ASSERT_TRUE(fs_or.is_ok()) << "Unable to open file system: " << fs_or.status_string();
+  auto fs = std::move(fs_or).value();
 
   // The blob file should exist.
-  fbl::unique_fd file(openat(second_connection.root_fd(), info->path, O_RDONLY));
+  fbl::unique_fd root_fd(open(fs.mount_path().c_str(), O_DIRECTORY));
+  fbl::unique_fd file(openat(root_fd.get(), info->path, O_RDONLY));
   ASSERT_TRUE(file.is_valid());
 
   // The contents should be exactly what we wrote.
   std::unique_ptr<char[]> read_data = std::make_unique<char[]>(info->size_data);
-  ASSERT_EQ(info->size_data, read(file.get(), read_data.get(), info->size_data));
-  EXPECT_BYTES_EQ(info->data.get(), &read_data[0], info->size_data, "mismatch");
+  ASSERT_EQ(read(file.get(), read_data.get(), info->size_data),
+            static_cast<ssize_t>(info->size_data));
+  EXPECT_EQ(memcmp(info->data.get(), &read_data[0], info->size_data), 0);
 }
 
 }  // namespace blobfs

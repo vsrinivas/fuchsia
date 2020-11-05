@@ -2,31 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "load_generator.h"
+
 #include <errno.h>
 #include <fcntl.h>
 
 #include <fbl/auto_lock.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
-#include "load_generator.h"
-
-using blobfs::BlobInfo;
-using blobfs::GenerateRandomBlob;
-using blobfs::StreamAll;
-using blobfs::VerifyContents;
+namespace blobfs {
 
 // Make sure we do not exceed maximum fd count.
 static_assert(FDIO_MAX_FD >= 256, "");
 constexpr uint32_t kMaxBlobs = FDIO_MAX_FD - 32;
 
-enum class BlobList::QueueId : uint32_t {
-  kCreated = 0,
-  kTruncated,
-  kWritten
-};
+enum class BlobList::QueueId : uint32_t { kCreated = 0, kTruncated, kWritten };
 
 void BlobList::GenerateLoad(uint32_t num_operations, unsigned int* rand_state) {
-  for (uint32_t i = 0; i < num_operations; ++i) {
+  auto one_operation = [&]() {
     switch (rand_r(rand_state) % 6) {
       case 0:
         CreateBlob(rand_state);
@@ -47,7 +40,9 @@ void BlobList::GenerateLoad(uint32_t num_operations, unsigned int* rand_state) {
         UnlinkBlob(rand_state);
         break;
     }
-    ASSERT_NO_FAILURES();
+  };
+  for (uint32_t i = 0; i < num_operations; ++i) {
+    ASSERT_NO_FATAL_FAILURE(one_operation());
   }
 }
 
@@ -56,7 +51,8 @@ void BlobList::VerifyFiles() {
   for (auto it = lists_[static_cast<uint32_t>(QueueId::kWritten)].begin();
        it != lists_[static_cast<uint32_t>(QueueId::kWritten)].end(); ++it) {
     it->fd.reset(open(it->info->path, O_RDONLY));
-    ASSERT_NO_FAILURES(VerifyContents(it->fd.get(), it->info->data.get(), it->info->size_data));
+    ASSERT_NO_FATAL_FAILURE(
+        VerifyContents(it->fd.get(), it->info->data.get(), it->info->size_data));
   }
 }
 
@@ -98,7 +94,8 @@ void BlobList::CloseFilesFromQueue(QueueId queue) {
 
 void BlobList::CreateBlob(unsigned int* rand_state, size_t num_writes) {
   std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FAILURES(GenerateRandomBlob(mount_path_, 1 + (rand_r(rand_state) % (1 << 16)), &info));
+  ASSERT_NO_FATAL_FAILURE(
+      GenerateRandomBlob(mount_path_, 1 + (rand_r(rand_state) % (1 << 16)), &info));
 
   BlobFile file(std::move(info), num_writes);
 
@@ -130,7 +127,7 @@ void BlobList::TruncateBlob() {
   // ZX_ERR_NO_SPACE is going to come up here. if we run out of space, put the
   // kEmpty blob back onto the blob list.
   if (ftruncate(file.fd.get(), file.info->size_data) != 0) {
-    ASSERT_EQ(errno, ENOSPC, "ftruncate returned an unrecoverable error");
+    ASSERT_EQ(errno, ENOSPC) << "ftruncate returned an unrecoverable error";
   }
 
   PushFileInto(QueueId::kTruncated, std::move(file));
@@ -144,7 +141,8 @@ void BlobList::WriteData() {
 
   size_t to_write = file.bytes_remaining / file.writes_remaining;
   size_t bytes_offset = file.info->size_data - file.bytes_remaining;
-  ASSERT_EQ(to_write, write(file.fd.get(), file.info->data.get() + bytes_offset, to_write));
+  ASSERT_EQ(write(file.fd.get(), file.info->data.get() + bytes_offset, to_write),
+            static_cast<ssize_t>(to_write));
 
   file.writes_remaining--;
   file.bytes_remaining -= to_write;
@@ -162,7 +160,8 @@ void BlobList::ReadData() {
     return;
   }
 
-  ASSERT_NO_FAILURES(VerifyContents(file.fd.get(), file.info->data.get(), file.info->size_data));
+  ASSERT_NO_FATAL_FAILURE(
+      VerifyContents(file.fd.get(), file.info->data.get(), file.info->size_data));
 
   PushFileInto(QueueId::kWritten, std::move(file));
 }
@@ -193,3 +192,5 @@ void BlobList::ReopenBlob() {
 
   PushFileInto(QueueId::kWritten, std::move(file));
 }
+
+}  // namespace blobfs
