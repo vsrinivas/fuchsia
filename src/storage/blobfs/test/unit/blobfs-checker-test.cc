@@ -66,7 +66,7 @@ class BlobfsCheckerTest : public testing::Test {
   // provided, and the size of the blob if size_out is provided.
   void AddRandomBlob(fs::Vnode* node, uint64_t* block_out = nullptr, uint64_t* size_out = nullptr) {
     std::unique_ptr<BlobInfo> info;
-    GenerateRandomBlob("", 1024, &info);
+    GenerateRandomBlob("", 1024, GetBlobLayoutFormat(fs_->Info()), &info);
     memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
     fbl::RefPtr<fs::Vnode> file;

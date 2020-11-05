@@ -12,6 +12,8 @@
 #include <lib/zx/status.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+#include <zircon/assert.h>
 #include <zircon/device/vfs.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -22,15 +24,21 @@
 #include <utility>
 #include <vector>
 
+#include <blobfs/blob-layout.h>
 #include <blobfs/common.h>
 #include <blobfs/compression-settings.h>
+#include <blobfs/format.h>
 #include <digest/digest.h>
+#include <digest/merkle-tree.h>
+#include <digest/node-digest.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <fs/journal/data_streamer.h>
 #include <fs/metrics/events.h>
+#include <fs/trace.h>
 #include <fs/transaction/writeback.h>
 #include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
@@ -66,17 +74,17 @@ zx_status_t Blob::Verify() const {
     ZX_ASSERT(IsDataLoaded());
   }
 
-  const uint64_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode_);
-  uint64_t merkle_size;
-  if (mul_overflow(merkle_blocks, kBlobfsBlockSize, &merkle_size)) {
-    FS_TRACE_ERROR("blob: Verify() failed: would overflow; corrupted Inode?\n");
-    return ZX_ERR_IO_DATA_INTEGRITY;
+  auto blob_layout =
+      BlobLayout::CreateFromInode(GetBlobLayoutFormat(blobfs_->Info()), inode_, GetBlockSize());
+  if (blob_layout.is_error()) {
+    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %s\n", blob_layout.status_string());
+    return blob_layout.status_value();
   }
 
   zx_status_t status;
   std::unique_ptr<BlobVerifier> verifier;
 
-  if (merkle_size == 0) {
+  if (blob_layout->MerkleTreeSize() == 0) {
     // No merkle tree is stored for small blobs, because the entire blob can be verified based
     // on its merkle root digest (i.e. the blob's merkle tree is just a single root digest).
     // Still verify the blob's contents in this case.
@@ -87,9 +95,10 @@ zx_status_t Blob::Verify() const {
     }
   } else {
     ZX_ASSERT(IsMerkleTreeLoaded());
-    if ((status = BlobVerifier::Create(MerkleRoot(), blobfs_->Metrics(), GetMerkleTreeBuffer(),
-                                       merkle_size, inode_.blob_size,
-                                       blobfs_->GetCorruptBlobNotifier(), &verifier)) != ZX_OK) {
+    if ((status = BlobVerifier::Create(
+             MerkleRoot(), blobfs_->Metrics(), GetMerkleTreeBuffer(*blob_layout.value()),
+             blob_layout->MerkleTreeSize(), blob_layout->Format(), inode_.blob_size,
+             blobfs_->GetCorruptBlobNotifier(), &verifier)) != ZX_OK) {
       return status;
     }
   }
@@ -173,7 +182,7 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data) {
   return ZX_OK;
 }
 
-zx_status_t Blob::SpaceAllocate(uint64_t block_count) {
+zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "block_count", block_count);
   ZX_ASSERT(block_count != 0);
 
@@ -181,7 +190,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t block_count) {
 
   // Initialize the inode with known fields. The block count may change if the
   // blob is compressible.
-  inode_.block_count = ComputeNumMerkleTreeBlocks(inode_) + static_cast<uint32_t>(block_count);
+  inode_.block_count = block_count;
 
   fbl::Vector<ReservedExtent> extents;
   fbl::Vector<ReservedNode> nodes;
@@ -229,7 +238,14 @@ bool Blob::IsDataLoaded() const { return data_mapping_.vmo().is_valid(); }
 bool Blob::IsMerkleTreeLoaded() const { return merkle_mapping_.vmo().is_valid(); }
 
 void* Blob::GetDataBuffer() const { return data_mapping_.start(); }
-void* Blob::GetMerkleTreeBuffer() const { return merkle_mapping_.start(); }
+void* Blob::GetMerkleTreeBuffer(const BlobLayout& blob_layout) const {
+  void* vmo_start = merkle_mapping_.start();
+  if (vmo_start == nullptr) {
+    return nullptr;
+  }
+  // In the compact format the Merkle tree doesn't start at the beginning of the VMO.
+  return static_cast<uint8_t*>(vmo_start) + blob_layout.MerkleTreeOffsetWithinBlockOffset();
+}
 
 bool Blob::IsPagerBacked() const {
   return SupportsPaging(inode_) && state() == BlobState::kReadable;
@@ -396,63 +412,68 @@ zx_status_t Blob::Commit() {
     ConsiderCompressionAbort();
   }
 
-  // Since the merkle tree and data are co-allocated, use a block iterator
-  // to parse their data in order.
-  BlockIterator block_iter(std::make_unique<VectorExtentIterator>(write_info_->extents));
-
   fs::Duration generation_time;
-  std::vector<fit::promise<void, zx_status_t>> promises;
   fs::DataStreamer streamer(blobfs_->journal(), blobfs_->WritebackCapacity());
 
-  const uint64_t data_start = DataStartBlock(blobfs_->Info());
-  MerkleTreeCreator mtc;
-  if ((status = mtc.SetDataLength(inode_.blob_size)) != ZX_OK) {
+  const zx::vmo& data_vmo =
+      write_info_->compressor ? write_info_->compressor->Vmo() : data_mapping_.vmo();
+  uint64_t data_size = write_info_->compressor ? write_info_->compressor->Size() : inode_.blob_size;
+
+  auto blob_layout = BlobLayout::CreateFromSizes(GetBlobLayoutFormat(blobfs_->Info()),
+                                                 inode_.blob_size, data_size, GetBlockSize());
+  if (blob_layout.is_error()) {
+    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %s\n", blob_layout.status_string());
+    return blob_layout.status_value();
+  }
+
+  uint32_t total_block_count = blob_layout->TotalBlockCount();
+  if ((status = SpaceAllocate(total_block_count)) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to allocate %u blocks for the blob: %s\n", total_block_count,
+                   zx_status_get_string(status));
     return status;
   }
-  const uint32_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode_);
-  const size_t merkle_size = mtc.GetTreeLength();
-  uint64_t data_block_count =
-      fbl::round_up(write_info_->compressor ? write_info_->compressor->Size() : inode_.blob_size,
-                    kBlobfsBlockSize) /
-      kBlobfsBlockSize;
-  status = SpaceAllocate(data_block_count);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (merkle_size > 0) {
+
+  uint32_t merkle_tree_block_count = blob_layout->MerkleTreeBlockCount();
+
+  if (blob_layout->MerkleTreeSize() > 0) {
     // Tracking generation time.
     fs::Ticker ticker(blobfs_->Metrics()->Collecting());
 
     // TODO(smklein): As an optimization, use the Append method to create the merkle tree as we
     // write data, rather than waiting until the data is fully downloaded to create the tree.
+    MerkleTreeCreator mtc;
+    mtc.SetUseCompactFormat(ShouldUseCompactMerkleTreeFormat(blob_layout->Format()));
     uint8_t root[digest::kSha256Length];
-    if ((status = mtc.SetTree(GetMerkleTreeBuffer(), merkle_size, root, sizeof(root))) != ZX_OK ||
+    if ((status = mtc.SetDataLength(inode_.blob_size)) != ZX_OK ||
+        (status = mtc.SetTree(GetMerkleTreeBuffer(*blob_layout.value()),
+                              blob_layout->MerkleTreeSize(), root, sizeof(root))) != ZX_OK ||
         (status = mtc.Append(GetDataBuffer(), inode_.blob_size)) != ZX_OK) {
       FS_TRACE_ERROR("blob: Failed to create merkle: %s\n", zx_status_get_string(status));
       return status;
     }
 
-    Digest expected = MerkleRoot();
-    if (expected != root) {
+    if (MerkleRoot() != root) {
       // Downloaded blob did not match provided digest.
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    status = StreamBlocks(
-        &block_iter, merkle_blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-          storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(merkle_mapping_.vmo().get()),
-                                             {
-                                                 .type = storage::OperationType::kWrite,
-                                                 .vmo_offset = vmo_offset,
-                                                 .dev_offset = dev_offset + data_start,
-                                                 .length = length,
-                                             }};
-          streamer.StreamData(std::move(op));
-          return ZX_OK;
-        });
-
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("blob: failed to write blocks: %s\n", zx_status_get_string(status));
+    // If the Merkle tree and data share a block then copy the data from the last block of the data
+    // VMO to the start of the Merkle tree VMO.  The end of the data will be written along with the
+    // Merkle tree.
+    if (blob_layout->HasMerkleTreeAndDataSharedBlock()) {
+      uint64_t data_size_in_last_block = data_size % GetBlockSize();
+      if ((status = zx_vmo_read(data_vmo.get(), merkle_mapping_.start(),
+                                data_size - data_size_in_last_block, data_size_in_last_block)) !=
+          ZX_OK) {
+        FS_TRACE_ERROR("blobfs: Failed to copy the end of the data to the Merkle tree vmo: %s\n",
+                       zx_status_get_string(status));
+        return status;
+      }
+    }
+    if ((status = WriteBlocks(merkle_mapping_.vmo(), merkle_tree_block_count,
+                              blob_layout->MerkleTreeBlockOffset(), streamer)) != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Failed to write the Merkle tree to the block device: %s\n",
+                     zx_status_get_string(status));
       return status;
     }
     generation_time = ticker.End();
@@ -463,73 +484,30 @@ zx_status_t Blob::Commit() {
     return status;
   }
 
-  uint64_t data_bytes_written;
+  // This shouldn't be necessary because it should already be zeroed, but just in case:
+  if ((status = ZeroTail(data_vmo.get(), data_size)) != ZX_OK) {
+    FS_TRACE_ERROR("blob: Failed to zero out the end of the data vmo: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+
+  // If the Merkle tree and data don't share a block then |total_block_count| -
+  // |merkle_tree_block_count| = the data block count.
+  // If the Merkle tree and data do share a block then |data_blocks_to_write| will be 1 less than
+  // the data block count.  The last data block was written along with the Merkle tree so
+  // there's 1 less data block that needs to be written.
+  int32_t data_blocks_to_write = total_block_count - merkle_tree_block_count;
+  if ((status = WriteBlocks(data_vmo, data_blocks_to_write, blob_layout->DataBlockOffset(),
+                            streamer)) != ZX_OK) {
+    FS_TRACE_ERROR("blob: Failed to write the data to the block device: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
 
   if (write_info_->compressor) {
-    // This shouldn't be necessary because it should already be zeroed, but just in case:
-    status = ZeroTail(write_info_->compressor->Vmo().get(), write_info_->compressor->Size());
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    data_bytes_written = fbl::round_up(write_info_->compressor->Size(), kBlobfsBlockSize);
-    uint64_t blocks64 = data_bytes_written / kBlobfsBlockSize;
-    ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());
-    uint32_t blocks = static_cast<uint32_t>(blocks64);
-    status = StreamBlocks(&block_iter, blocks,
-                          [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                            ZX_DEBUG_ASSERT(vmo_offset >= merkle_blocks);
-                            storage::UnbufferedOperation op = {
-                                .vmo = zx::unowned_vmo(write_info_->compressor->Vmo().get()),
-                                {
-                                    .type = storage::OperationType::kWrite,
-                                    .vmo_offset = vmo_offset - merkle_blocks,
-                                    .dev_offset = dev_offset + data_start,
-                                    .length = length,
-                                }};
-                            streamer.StreamData(std::move(op));
-                            return ZX_OK;
-                          });
-
-    if (status != ZX_OK) {
-      return status;
-    }
     // By compressing, we used less blocks than we originally reserved.
-    ZX_DEBUG_ASSERT(blocks < fbl::round_up(inode_.blob_size, kBlobfsBlockSize) / kBlobfsBlockSize);
-
-    blocks += ComputeNumMerkleTreeBlocks(inode_);
-
-    // Verify that the block reserved matches blocks needed.
-    ZX_DEBUG_ASSERT(inode_.block_count == blocks);
-
+    ZX_DEBUG_ASSERT(blob_layout->DataBlockAlignedSize() < blob_layout->FileBlockAlignedSize());
     SetCompressionAlgorithm(&inode_, blobfs_->write_compression_settings().compression_algorithm);
-  } else {
-    // This shouldn't be necessary because it should already be zeroed, but just in case:
-    status = ZeroTail(data_mapping_.vmo().get(), inode_.blob_size);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    data_bytes_written = fbl::round_up(inode_.blob_size, kBlobfsBlockSize);
-    uint64_t blocks64 = data_bytes_written / kBlobfsBlockSize;
-    ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());
-    uint32_t blocks = static_cast<uint32_t>(blocks64);
-    status = StreamBlocks(
-        &block_iter, blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-          ZX_DEBUG_ASSERT(vmo_offset >= merkle_blocks);
-          storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(data_mapping_.vmo().get()),
-                                             {
-                                                 .type = storage::OperationType::kWrite,
-                                                 .vmo_offset = vmo_offset - merkle_blocks,
-                                                 .dev_offset = dev_offset + data_start,
-                                                 .length = length,
-                                             }};
-          streamer.StreamData(std::move(op));
-          return ZX_OK;
-        });
-    if (status != ZX_OK) {
-      return status;
-    }
   }
 
   // Enqueue the blob's final data work. Metadata must be enqueued separately.
@@ -546,13 +524,42 @@ zx_status_t Blob::Commit() {
   }
   transaction.Commit(*blobfs_->journal(), std::move(write_all_data),
                      [self = fbl::RefPtr(this)]() {});
-  blobfs_->Metrics()->UpdateClientWrite(data_bytes_written, merkle_size, ticker.End(),
+  blobfs_->Metrics()->UpdateClientWrite(data_size, blob_layout->MerkleTreeSize(), ticker.End(),
                                         generation_time);
   return ZX_OK;
 }
 
+zx_status_t Blob::WriteBlocks(const zx::vmo& vmo, uint32_t block_count, uint32_t blob_block_offset,
+                              fs::DataStreamer& streamer) {
+  const uint64_t blobfs_data_start = DataStartBlock(blobfs_->Info());
+  zx_status_t status;
+  BlockIterator block_iter(std::make_unique<VectorExtentIterator>(write_info_->extents));
+  if ((status = IterateToBlock(&block_iter, blob_block_offset)) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to iterate to the starting block: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+  return StreamBlocks(
+      &block_iter, block_count, [&](uint64_t block_offset, uint64_t dev_offset, uint32_t length) {
+        ZX_DEBUG_ASSERT(block_offset >= blob_block_offset);
+        storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(vmo.get()),
+                                           {
+                                               .type = storage::OperationType::kWrite,
+                                               .vmo_offset = block_offset - blob_block_offset,
+                                               .dev_offset = dev_offset + blobfs_data_start,
+                                               .length = length,
+                                           }};
+        streamer.StreamData(std::move(op));
+        return ZX_OK;
+      });
+}
+
 void Blob::ConsiderCompressionAbort() {
   // There's no point compressing if we're not going to actually save any disk space.
+  // TODO(fxbug.dev/36663): In the compact layout if the uncompressed data is larger than the
+  // compressed data and they both use same number of blocks this might waste a block if the
+  // compressed data could have shared a block with the Merkle tree where the uncompressed data
+  // couldn't.
   if (fbl::round_up(write_info_->compressor->Size(), kBlobfsBlockSize) >=
       fbl::round_up(inode_.blob_size, kBlobfsBlockSize)) {
     write_info_->compressor.reset();
@@ -738,24 +745,25 @@ zx_status_t Blob::PrepareVmosForWriting(uint32_t node_index, size_t data_size) {
   if (IsDataLoaded()) {
     return ZX_OK;
   }
-  size_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode_);
-  size_t merkle_size;
-  if (mul_overflow(merkle_blocks, kBlobfsBlockSize, &merkle_size)) {
-    FS_TRACE_ERROR("blobfs: Invalid merkle tree size\n");
-    return ZX_ERR_OUT_OF_RANGE;
+  // Assume the blob is uncompressed for creating the uncompressed VMOs.
+  auto blob_layout = BlobLayout::CreateFromSizes(GetBlobLayoutFormat(blobfs_->Info()), data_size,
+                                                 data_size, GetBlockSize());
+  if (blob_layout.is_error()) {
+    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %s\n", blob_layout.status_string());
+    return blob_layout.status_value();
   }
-  data_size = fbl::round_up(data_size, kBlobfsBlockSize);
 
   zx_status_t status;
 
   fzl::OwnedVmoMapper merkle_mapping;
   fzl::OwnedVmoMapper data_mapping;
 
+  uint64_t merkle_vmo_size = blob_layout->MerkleTreeBlockAlignedSize();
   // For small blobs, no merkle tree is stored, so we leave the merkle mapping uninitialized.
-  if (merkle_size > 0) {
+  if (merkle_vmo_size > 0) {
     fbl::StringBuffer<ZX_MAX_NAME_LEN> merkle_vmo_name;
     FormatBlobMerkleVmoName(node_index, &merkle_vmo_name);
-    if ((status = merkle_mapping.CreateAndMap(merkle_size, merkle_vmo_name.c_str())) != ZX_OK) {
+    if ((status = merkle_mapping.CreateAndMap(merkle_vmo_size, merkle_vmo_name.c_str())) != ZX_OK) {
       FS_TRACE_ERROR("blobfs: Failed to map merkle vmo: %s\n", zx_status_get_string(status));
       return status;
     }
@@ -763,7 +771,8 @@ zx_status_t Blob::PrepareVmosForWriting(uint32_t node_index, size_t data_size) {
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
   FormatBlobDataVmoName(node_index, &data_vmo_name);
-  if ((status = data_mapping.CreateAndMap(data_size, data_vmo_name.c_str())) != ZX_OK) {
+  if ((status = data_mapping.CreateAndMap(blob_layout->FileBlockAlignedSize(),
+                                          data_vmo_name.c_str())) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to map data vmo: %s\n", zx_status_get_string(status));
     return status;
   }
@@ -1034,5 +1043,7 @@ zx_status_t Blob::Purge() {
   set_state(BlobState::kPurged);
   return ZX_OK;
 }
+
+uint32_t Blob::GetBlockSize() const { return blobfs_->Info().block_size; }
 
 }  // namespace blobfs

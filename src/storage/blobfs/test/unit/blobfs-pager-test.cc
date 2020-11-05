@@ -15,6 +15,7 @@
 #include <random>
 #include <thread>
 
+#include <blobfs/blob-layout.h>
 #include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
 #include <digest/digest.h>
@@ -115,10 +116,13 @@ class MockBlobFactory {
                 ZX_OK);
     }
 
+    // The BlobLayoutFormat only impacts the format of the Merkle tree which is not relevant to
+    // these tests.
     std::unique_ptr<BlobVerifier> verifier;
-    EXPECT_EQ(BlobVerifier::Create(std::move(root), metrics_, merkle_tree.get(), tree_len, sz,
-                                   nullptr, &verifier),
-              ZX_OK);
+    EXPECT_EQ(
+        BlobVerifier::Create(std::move(root), metrics_, merkle_tree.get(), tree_len,
+                             BlobLayoutFormat::kPaddedMerkleTreeAtStart, sz, nullptr, &verifier),
+        ZX_OK);
 
     // Generate the contents as they would be stored on disk. (This includes compression if
     // applicable)
@@ -226,6 +230,12 @@ class MockTransferBuffer : public TransferBuffer {
     do_partial_transfer_ = do_partial_transfer;
   }
 
+  // Fakes the Merkle tree being present in the last block of the data to ensure that the pager
+  // removes it before verifying the blob.
+  void SetDoMerkleTreeAtEndOfData(bool do_merkle_tree_at_end_of_data = true) {
+    do_merkle_tree_at_end_of_data_ = do_merkle_tree_at_end_of_data;
+  }
+
   zx::status<> Populate(uint64_t offset, uint64_t length, const UserPagerInfo& info) final {
     if (failure_mode_ == PagerErrorStatus::kErrIO) {
       return zx::error(ZX_ERR_IO_REFUSED);
@@ -243,6 +253,17 @@ class MockTransferBuffer : public TransferBuffer {
     } else {
       EXPECT_EQ(vmo_.write(blob.raw_data() + offset, 0, length), ZX_OK);
     }
+    if (offset + length == blob.raw_data_size() && do_merkle_tree_at_end_of_data_) {
+      constexpr static std::array<uint8_t, 64> mock_merkle_tree = {0xAB};
+      uint64_t pos = offset + length;
+      uint64_t vmo_size;
+      EXPECT_EQ(vmo_.get_size(&vmo_size), ZX_OK);
+      while (pos + mock_merkle_tree.size() <= vmo_size) {
+        EXPECT_EQ(vmo_.write(mock_merkle_tree.data(), pos, mock_merkle_tree.size()), ZX_OK);
+        pos += mock_merkle_tree.size();
+      }
+      EXPECT_EQ(vmo_.write(mock_merkle_tree.data(), pos, vmo_size - pos), ZX_OK);
+    }
     return zx::ok();
   }
 
@@ -258,6 +279,7 @@ class MockTransferBuffer : public TransferBuffer {
   std::map<char, std::unique_ptr<MockBlob>> blob_registry_ = {};
   bool do_partial_transfer_ = false;
   PagerErrorStatus failure_mode_ = PagerErrorStatus::kOK;
+  bool do_merkle_tree_at_end_of_data_ = false;
 };
 
 class BlobfsPagerTest : public testing::Test {
@@ -622,6 +644,18 @@ TEST_F(BlobfsPagerTest, FailAfterPagerError_ZstdChunked) {
 
   // A verification error is fatal. Further requests should fail as well.
   ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_ERR_BAD_STATE);
+}
+
+TEST_F(BlobfsPagerTest, ReadWithMerkleTreeSharingTheLastBlockWithData) {
+  // The blob size should not be a multiple of the page size.
+  uint64_t blob_size = 24480;
+  ASSERT_NE(blob_size % ZX_PAGE_SIZE, 0ul);
+  MockBlob* blob = CreateBlob('x', CompressionAlgorithm::UNCOMPRESSED, blob_size);
+  // The blob verifier checks that the end of the blob is zeroed.  The pager needs to remove the
+  // Merkle tree from the last block of the data before trying to verify the blob or verification
+  // will fail.
+  transfer_buffer().SetDoMerkleTreeAtEndOfData();
+  blob->Read(0, blob_size);
 }
 
 }  // namespace

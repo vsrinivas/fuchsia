@@ -8,14 +8,19 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
+#include <zircon/assert.h>
 
 #include <set>
 
+#include <blobfs/blob-layout.h>
 #include <blobfs/common.h>
 #include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
+#include <digest/digest.h>
+#include <digest/merkle-tree.h>
+#include <digest/node-digest.h>
 #include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
@@ -27,6 +32,7 @@
 namespace blobfs {
 namespace {
 
+using ::testing::Combine;
 using ::testing::TestParamInfo;
 using ::testing::TestWithParam;
 using ::testing::ValuesIn;
@@ -36,18 +42,26 @@ using block_client::FakeBlockDevice;
 constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
 
-class BlobLoaderTest : public TestWithParam<CompressionAlgorithm> {
+using TestParamType = std::tuple<CompressionAlgorithm, BlobLayoutFormat>;
+
+class BlobLoaderTest : public TestWithParam<TestParamType> {
  public:
   void SetUp() override {
+    CompressionAlgorithm compression_algorithm;
+    std::tie(compression_algorithm, blob_layout_format_) = GetParam();
     srand(testing::UnitTest::GetInstance()->random_seed());
 
     auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
     ASSERT_TRUE(device);
-    ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
+    ASSERT_EQ(FormatFilesystem(device.get(),
+                               FilesystemOptions{
+                                   .blob_layout_format = blob_layout_format_,
+                               }),
+              ZX_OK);
     loop_.StartThread();
 
     options_ = {.compression_settings = {
-                    .compression_algorithm = GetParam(),
+                    .compression_algorithm = compression_algorithm,
                 }};
     ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), options_, zx::resource(), &fs_),
               ZX_OK);
@@ -75,7 +89,7 @@ class BlobLoaderTest : public TestWithParam<CompressionAlgorithm> {
     fs::Vnode* root_node = root.get();
 
     std::unique_ptr<BlobInfo> info;
-    GenerateRealisticBlob("", sz, &info);
+    GenerateRealisticBlob("", sz, blob_layout_format_, &info);
     memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
     fbl::RefPtr<fs::Vnode> file;
@@ -118,10 +132,29 @@ class BlobLoaderTest : public TestWithParam<CompressionAlgorithm> {
     return algorithm_or.value();
   }
 
+  void CheckMerkleTreeContents(const fzl::OwnedVmoMapper& merkle, const BlobInfo& info) {
+    ASSERT_TRUE(merkle.vmo().is_valid());
+    ASSERT_GE(merkle.size(), info.size_merkle);
+    switch (blob_layout_format_) {
+      case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
+        // In the padded layout the Merkle starts at the start of the vmo.
+        EXPECT_EQ(memcmp(merkle.start(), info.merkle.get(), info.size_merkle), 0);
+        break;
+      case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
+        // In the compact layout the Merkle tree is aligned to end at the end of the vmo.
+        EXPECT_EQ(
+            memcmp(static_cast<const uint8_t*>(merkle.start()) + (merkle.size() - info.size_merkle),
+                   info.merkle.get(), info.size_merkle),
+            0);
+        break;
+    }
+  }
+
  protected:
   std::unique_ptr<Blobfs> fs_;
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   MountOptions options_;
+  BlobLayoutFormat blob_layout_format_;
 };
 
 // A seperate parameterized test fixture that will only be run with compression algorithms that
@@ -197,9 +230,7 @@ TEST_P(BlobLoaderTest, LargeBlob) {
   ASSERT_GE(data.size(), info->size_data);
   EXPECT_EQ(memcmp(data.start(), info->data.get(), info->size_data), 0);
 
-  ASSERT_TRUE(merkle.vmo().is_valid());
-  ASSERT_GE(merkle.size(), info->size_merkle);
-  EXPECT_EQ(memcmp(merkle.start(), info->merkle.get(), info->size_merkle), 0);
+  CheckMerkleTreeContents(merkle, *info);
 }
 
 TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
@@ -215,9 +246,7 @@ TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
   ASSERT_GE(data.size(), info->size_data);
   EXPECT_EQ(memcmp(data.start(), info->data.get(), info->size_data), 0);
 
-  ASSERT_TRUE(merkle.vmo().is_valid());
-  ASSERT_GE(merkle.size(), info->size_merkle);
-  EXPECT_EQ(memcmp(merkle.start(), info->merkle.get(), info->size_merkle), 0);
+  CheckMerkleTreeContents(merkle, *info);
 }
 
 TEST_P(BlobLoaderPagedTest, LargeBlob) {
@@ -238,9 +267,7 @@ TEST_P(BlobLoaderPagedTest, LargeBlob) {
   ASSERT_EQ(data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
   EXPECT_EQ(memcmp(buf.get(), info->data.get(), info->size_data), 0);
 
-  ASSERT_TRUE(merkle.vmo().is_valid());
-  ASSERT_GE(merkle.size(), info->size_merkle);
-  EXPECT_EQ(memcmp(merkle.start(), info->merkle.get(), info->size_merkle), 0);
+  CheckMerkleTreeContents(merkle, *info);
 }
 
 TEST_P(BlobLoaderPagedTest, LargeBlobWithNonAlignedLength) {
@@ -261,9 +288,25 @@ TEST_P(BlobLoaderPagedTest, LargeBlobWithNonAlignedLength) {
   ASSERT_EQ(data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
   EXPECT_EQ(memcmp(buf.get(), info->data.get(), info->size_data), 0);
 
-  ASSERT_TRUE(merkle.vmo().is_valid());
-  ASSERT_GE(merkle.size(), info->size_merkle);
-  EXPECT_EQ(memcmp(merkle.start(), info->merkle.get(), info->size_merkle), 0);
+  CheckMerkleTreeContents(merkle, *info);
+}
+
+TEST_P(BlobLoaderTest, MediumBlobWithRoomForMerkleTree) {
+  // In the compact layout the Merkle tree can fit perfectly into the room leftover at the end of
+  // the data.
+  ASSERT_EQ(fs_->Info().block_size, digest::kDefaultNodeSize);
+  size_t blob_len = (digest::kDefaultNodeSize - digest::kSha256Length) * 3;
+  std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
+  ASSERT_EQ(Remount(), ZX_OK);
+
+  fzl::OwnedVmoMapper data, merkle;
+  ASSERT_EQ(loader().LoadBlob(LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
+
+  ASSERT_TRUE(data.vmo().is_valid());
+  ASSERT_GE(data.size(), info->size_data);
+  EXPECT_EQ(memcmp(data.start(), info->data.get(), info->size_data), 0);
+
+  CheckMerkleTreeContents(merkle, *info);
 }
 
 std::string GetCompressionAlgorithmName(CompressionAlgorithm compression_algorithm) {
@@ -283,8 +326,10 @@ std::string GetCompressionAlgorithmName(CompressionAlgorithm compression_algorit
   }
 }
 
-std::string GetTestParamName(const TestParamInfo<CompressionAlgorithm>& param) {
-  return GetCompressionAlgorithmName(param.param);
+std::string GetTestParamName(const TestParamInfo<TestParamType>& param) {
+  auto [compression_algorithm, blob_layout_format] = param.param;
+  return GetBlobLayoutFormatNameForTests(blob_layout_format) +
+         GetCompressionAlgorithmName(compression_algorithm);
 }
 
 constexpr std::array<CompressionAlgorithm, 4> kCompressionAlgorithms = {
@@ -299,10 +344,18 @@ constexpr std::array<CompressionAlgorithm, 2> kPagingCompressionAlgorithms = {
     CompressionAlgorithm::CHUNKED,
 };
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobLoaderTest, ValuesIn(kCompressionAlgorithms),
+constexpr std::array<BlobLayoutFormat, 2> kBlobLayoutFormats = {
+    BlobLayoutFormat::kPaddedMerkleTreeAtStart,
+    BlobLayoutFormat::kCompactMerkleTreeAtEnd,
+};
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobLoaderTest,
+                         Combine(ValuesIn(kCompressionAlgorithms), ValuesIn(kBlobLayoutFormats)),
                          GetTestParamName);
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobLoaderPagedTest, ValuesIn(kPagingCompressionAlgorithms),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobLoaderPagedTest,
+                         Combine(ValuesIn(kPagingCompressionAlgorithms),
+                                 ValuesIn(kBlobLayoutFormats)),
                          GetTestParamName);
 
 }  // namespace

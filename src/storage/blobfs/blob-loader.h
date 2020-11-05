@@ -12,6 +12,7 @@
 
 #include <memory>
 
+#include <blobfs/blob-layout.h>
 #include <blobfs/format.h>
 #include <blobfs/node-finder.h>
 #include <fbl/function.h>
@@ -86,27 +87,38 @@ class BlobLoader {
   // contents. (Small blobs may have no stored tree, in which case |vmo_out| is not mapped but
   // |verifier_out| is still initialized.)
   zx_status_t InitMerkleVerifier(uint32_t node_index, const Inode& inode,
+                                 const BlobLayout& blob_layout,
                                  const BlobCorruptionNotifier* corruption_notifier,
                                  fzl::OwnedVmoMapper* vmo_out,
                                  std::unique_ptr<BlobVerifier>* verifier_out);
   // Prepares |decompressor_out| to decompress the blob contents of |inode|.
   // If |inode| is not compressed, this is a NOP.
   // Depending on the format, some data may be read (e.g. for the CHUNKED format, the header
-  // containing the seek table is read and used to initialize the decomprssor).
+  // containing the seek table is read and used to initialize the decompressor).
   zx_status_t InitForDecompression(uint32_t node_index, const Inode& inode,
-                                   const BlobVerifier& verifier,
+                                   const BlobLayout& blob_layout, const BlobVerifier& verifier,
                                    std::unique_ptr<SeekableDecompressor>* decompressor_out);
-  zx_status_t LoadMerkle(uint32_t node_index, const Inode& inode,
+  zx_status_t LoadMerkle(uint32_t node_index, const BlobLayout& blob_layout,
                          const fzl::OwnedVmoMapper& vmo) const;
-  zx_status_t LoadData(uint32_t node_index, const Inode& inode,
+  zx_status_t LoadData(uint32_t node_index, const BlobLayout& blob_layout,
                        const fzl::OwnedVmoMapper& vmo) const;
   zx_status_t LoadAndDecompressData(uint32_t node_index, const Inode& inode,
+                                    const BlobLayout& blob_layout,
                                     const fzl::OwnedVmoMapper& vmo) const;
 
   // Reads |block_count| blocks starting at |block_offset| from the blob specified by |node_index|
   // into |vmo|.
   zx::status<uint64_t> LoadBlocks(uint32_t node_index, uint32_t block_offset, uint32_t block_count,
                                   const fzl::OwnedVmoMapper& vmo) const;
+
+  // If part of the Merkle tree is located within the data blocks then this function zeros out the
+  // Merkle tree within those blocks.
+  // |vmo| should contain the raw data stored which might be compressed or uncompressed.
+  void ZeroMerkleTreeWithinDataVmo(const fzl::OwnedVmoMapper& vmo,
+                                   const BlobLayout& blob_layout) const;
+
+  // Returns the block size used by blobfs.
+  uint32_t GetBlockSize() const;
 
   TransactionManager* txn_manager_ = nullptr;
   BlockIteratorProvider* block_iter_provider_ = nullptr;

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <memory>
 
+#include <blobfs/common.h>
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
@@ -426,7 +427,7 @@ class BlobfsTestFixture : public testing::Test {
           auto generated_data = GenerateInput(type, 0, length);
           memcpy(data, generated_data.get(), length);
         },
-        "", data_size, &blob_info);
+        "", data_size, GetBlobLayoutFormat(blobfs_->Info()), &blob_info);
 
     fbl::RefPtr<fs::Vnode> file;
     zx_status_t status = root_->Create(blob_info->path + 1, 0, &file);

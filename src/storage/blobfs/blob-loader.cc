@@ -9,10 +9,12 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #include <algorithm>
 #include <memory>
 
+#include <blobfs/blob-layout.h>
 #include <blobfs/common.h>
 #include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
@@ -45,9 +47,10 @@ BlobLoader::BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* b
       metrics_(metrics),
       scratch_vmo_(std::move(scratch_vmo)) {}
 
-zx::status<BlobLoader> BlobLoader::Create(
-    TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
-    NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics) {
+zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
+                                          BlockIteratorProvider* block_iter_provider,
+                                          NodeFinder* node_finder, pager::UserPager* pager,
+                                          BlobfsMetrics* metrics) {
   fzl::OwnedVmoMapper scratch_vmo;
   zx_status_t status = scratch_vmo.CreateAndMap(kScratchBufferSize, "blobfs-loader");
   if (status != ZX_OK) {
@@ -75,8 +78,13 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
 
   TRACE_DURATION("blobfs", "BlobLoader::LoadBlob", "blob_size", inode->blob_size);
 
-  const uint64_t num_data_blocks = BlobDataBlocks(*inode);
-  if (num_data_blocks == 0) {
+  auto blob_layout = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()), *inode,
+                                                 GetBlockSize());
+  if (blob_layout.is_error()) {
+    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %s\n", blob_layout.status_string());
+    return blob_layout.status_value();
+  }
+  if (inode->blob_size == 0) {
     // No data to load for the null blob.
     return ZX_OK;
   }
@@ -84,34 +92,31 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
   fzl::OwnedVmoMapper merkle_mapper;
   std::unique_ptr<BlobVerifier> verifier;
   zx_status_t status;
-  if ((status = InitMerkleVerifier(node_index, *inode, corruption_notifier, &merkle_mapper,
-                                   &verifier)) != ZX_OK) {
+  if ((status = InitMerkleVerifier(node_index, *inode, *blob_layout.value(), corruption_notifier,
+                                   &merkle_mapper, &verifier)) != ZX_OK) {
     return status;
   }
 
-  size_t data_vmo_size;
-  if (mul_overflow(num_data_blocks, kBlobfsBlockSize, &data_vmo_size)) {
-    FS_TRACE_ERROR("Multiplication overflow");
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
+  uint64_t file_block_aligned_size = blob_layout->FileBlockAlignedSize();
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
   FormatBlobDataVmoName(node_index, &data_vmo_name);
 
   fzl::OwnedVmoMapper data_mapper;
-  status = data_mapper.CreateAndMap(data_vmo_size, data_vmo_name.c_str());
+  status = data_mapper.CreateAndMap(file_block_aligned_size, data_vmo_name.c_str());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to initialize data vmo; error: %s\n",
                    zx_status_get_string(status));
     return status;
   }
-  status = inode->IsCompressed() ? LoadAndDecompressData(node_index, *inode, data_mapper)
-                                 : LoadData(node_index, *inode, data_mapper);
+  status = inode->IsCompressed()
+               ? LoadAndDecompressData(node_index, *inode, *blob_layout.value(), data_mapper)
+               : LoadData(node_index, *blob_layout.value(), data_mapper);
   if (status != ZX_OK) {
     return status;
   }
 
-  if ((status = verifier->Verify(data_mapper.start(), inode->blob_size, data_vmo_size)) != ZX_OK) {
+  if ((status = verifier->Verify(data_mapper.start(), inode->blob_size, file_block_aligned_size)) !=
+      ZX_OK) {
     return status;
   }
 
@@ -140,8 +145,14 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
 
   TRACE_DURATION("blobfs", "BlobLoader::LoadBlobPaged", "blob_size", inode->blob_size);
 
-  const uint64_t num_data_blocks = BlobDataBlocks(*inode);
-  if (num_data_blocks == 0) {
+  auto blob_layout = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()), *inode,
+                                                 GetBlockSize());
+  if (blob_layout.is_error()) {
+    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %s\n",
+                   zx_status_get_string(blob_layout.error_value()));
+    return blob_layout.error_value();
+  }
+  if (inode->blob_size == 0) {
     // No data to load for the null blob.
     return ZX_OK;
   }
@@ -149,19 +160,20 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   fzl::OwnedVmoMapper merkle_mapper;
   std::unique_ptr<BlobVerifier> verifier;
   zx_status_t status;
-  if ((status = InitMerkleVerifier(node_index, *inode, corruption_notifier, &merkle_mapper,
-                                   &verifier)) != ZX_OK) {
+  if ((status = InitMerkleVerifier(node_index, *inode, *blob_layout.value(), corruption_notifier,
+                                   &merkle_mapper, &verifier)) != ZX_OK) {
     return status;
   }
 
   std::unique_ptr<SeekableDecompressor> decompressor;
-  if ((status = InitForDecompression(node_index, *inode, *verifier, &decompressor)) != ZX_OK) {
+  if ((status = InitForDecompression(node_index, *inode, *blob_layout.value(), *verifier,
+                                     &decompressor)) != ZX_OK) {
     return status;
   }
 
   pager::UserPagerInfo userpager_info;
   userpager_info.identifier = node_index;
-  userpager_info.data_start_bytes = ComputeNumMerkleTreeBlocks(*inode) * kBlobfsBlockSize;
+  userpager_info.data_start_bytes = uint64_t{blob_layout->DataBlockOffset()} * GetBlockSize();
   userpager_info.data_length_bytes = inode->blob_size;
   userpager_info.verifier = std::move(verifier);
   userpager_info.decompressor = std::move(decompressor);
@@ -171,12 +183,8 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   FormatBlobDataVmoName(node_index, &data_vmo_name);
 
   zx::vmo data_vmo;
-  size_t data_vmo_size;
-  if (mul_overflow(num_data_blocks, kBlobfsBlockSize, &data_vmo_size)) {
-    FS_TRACE_ERROR("Multiplication overflow");
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  if ((status = page_watcher->CreatePagedVmo(data_vmo_size, &data_vmo)) != ZX_OK) {
+  if ((status = page_watcher->CreatePagedVmo(blob_layout->FileBlockAlignedSize(), &data_vmo)) !=
+      ZX_OK) {
     return status;
   }
   data_vmo.set_property(ZX_PROP_NAME, data_vmo_name.c_str(), data_vmo_name.length());
@@ -197,11 +205,11 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
 }
 
 zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& inode,
+                                           const BlobLayout& blob_layout,
                                            const BlobCorruptionNotifier* notifier,
                                            fzl::OwnedVmoMapper* vmo_out,
                                            std::unique_ptr<BlobVerifier>* verifier_out) {
-  uint64_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
-  if (num_merkle_blocks == 0) {
+  if (blob_layout.MerkleTreeSize() == 0) {
     return BlobVerifier::CreateWithoutTree(digest::Digest(inode.merkle_root_hash), metrics_,
                                            inode.blob_size, notifier, verifier_out);
   }
@@ -209,29 +217,30 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
   fzl::OwnedVmoMapper merkle_mapper;
   std::unique_ptr<BlobVerifier> verifier;
 
-  size_t merkle_vmo_size;
-  if (mul_overflow(num_merkle_blocks, kBlobfsBlockSize, &merkle_vmo_size)) {
-    FS_TRACE_ERROR("Multiplication overflow");
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
   fbl::StringBuffer<ZX_MAX_NAME_LEN> merkle_vmo_name;
   FormatBlobMerkleVmoName(node_index, &merkle_vmo_name);
 
   zx_status_t status;
-  if ((status = merkle_mapper.CreateAndMap(merkle_vmo_size, merkle_vmo_name.c_str())) != ZX_OK) {
+  if ((status = merkle_mapper.CreateAndMap(blob_layout.MerkleTreeBlockAlignedSize(),
+                                           merkle_vmo_name.c_str())) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to initialize merkle vmo; error: %s\n",
                    zx_status_get_string(status));
     return status;
   }
 
-  if ((status = LoadMerkle(node_index, inode, merkle_mapper)) != ZX_OK) {
+  if ((status = LoadMerkle(node_index, blob_layout, merkle_mapper)) != ZX_OK) {
     return status;
   }
 
+  // The Merkle tree may not start at the beginning of the vmo in the kCompactMerkleTreeAtEnd
+  // format.
+  void* merkle_tree_start = static_cast<uint8_t*>(merkle_mapper.start()) +
+                            blob_layout.MerkleTreeOffsetWithinBlockOffset();
+
   if ((status = BlobVerifier::Create(digest::Digest(inode.merkle_root_hash), metrics_,
-                                     merkle_mapper.start(), merkle_vmo_size, inode.blob_size,
-                                     notifier, &verifier)) != ZX_OK) {
+                                     merkle_tree_start, blob_layout.MerkleTreeSize(),
+                                     blob_layout.Format(), inode.blob_size, notifier, &verifier)) !=
+      ZX_OK) {
     return status;
   }
 
@@ -241,8 +250,8 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
 }
 
 zx_status_t BlobLoader::InitForDecompression(
-    uint32_t node_index, const Inode& inode, const BlobVerifier& verifier,
-    std::unique_ptr<SeekableDecompressor>* decompressor_out) {
+    uint32_t node_index, const Inode& inode, const BlobLayout& blob_layout,
+    const BlobVerifier& verifier, std::unique_ptr<SeekableDecompressor>* decompressor_out) {
   zx::status<CompressionAlgorithm> algorithm_status = AlgorithmForInode(inode);
   if (algorithm_status.is_error()) {
     FS_TRACE_ERROR("blobfs: Cannot decode blob due to multiple compression flags.\n");
@@ -273,27 +282,33 @@ zx_status_t BlobLoader::InitForDecompression(
   // The first few blocks of data contain the seek table, which we need to read to initialize
   // the decompressor. Read these from disk.
 
-  zx_status_t status;
-
-  uint32_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
+  uint32_t data_block_count = blob_layout.DataBlockCount();
   // We don't know exactly how long the header is, so fill up as much of the scratch VMO as we can.
   // (The header should never be bigger than the size of the scratch VMO.)
-  ZX_DEBUG_ASSERT(scratch_vmo_.size() % kBlobfsBlockSize == 0);
-  uint32_t num_data_blocks = static_cast<uint32_t>(scratch_vmo_.size()) / kBlobfsBlockSize;
-  num_data_blocks = std::min(num_data_blocks, inode.block_count - merkle_blocks);
-  if (num_data_blocks == 0) {
+  ZX_DEBUG_ASSERT(scratch_vmo_.size() % GetBlockSize() == 0);
+  uint32_t scratch_block_count = static_cast<uint32_t>(scratch_vmo_.size()) / GetBlockSize();
+  uint32_t blocks_to_read = std::min(scratch_block_count, data_block_count);
+  if (blocks_to_read == 0) {
     FS_TRACE_ERROR("blobfs: No data blocks; corrupted inode?\n");
     return ZX_ERR_BAD_STATE;
   }
 
-  auto bytes_read = LoadBlocks(node_index, merkle_blocks, num_data_blocks, scratch_vmo_);
+  auto bytes_read =
+      LoadBlocks(node_index, blob_layout.DataBlockOffset(), blocks_to_read, scratch_vmo_);
   if (bytes_read.is_error()) {
     FS_TRACE_ERROR("blobfs: Failed to load compression header: %s\n", bytes_read.status_string());
     return bytes_read.error_value();
   }
 
+  zx_status_t status;
+  // If we read all of the blob's data into the scratch VMO then the scratch VMO may contain part of
+  // the Merkle tree that should be removed.
+  if (blocks_to_read == data_block_count) {
+    ZeroMerkleTreeWithinDataVmo(scratch_vmo_, blob_layout);
+  }
+
   if ((status = SeekableChunkedDecompressor::CreateDecompressor(
-           scratch_vmo_.start(), num_data_blocks * kBlobfsBlockSize, inode.blob_size,
+           scratch_vmo_.start(), uint64_t{blocks_to_read} * GetBlockSize(), inode.blob_size,
            decompressor_out)) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to init decompressor: %s\n", zx_status_get_string(status));
     return status;
@@ -302,11 +317,11 @@ zx_status_t BlobLoader::InitForDecompression(
   return ZX_OK;
 }
 
-zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const Inode& inode,
+zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const BlobLayout& blob_layout,
                                    const fzl::OwnedVmoMapper& vmo) const {
-  const uint32_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
   fs::Ticker ticker(metrics_->Collecting());
-  auto bytes_read = LoadBlocks(node_index, /*block_offset=*/0, num_merkle_blocks, vmo);
+  auto bytes_read = LoadBlocks(node_index, blob_layout.MerkleTreeBlockOffset(),
+                               blob_layout.MerkleTreeBlockCount(), vmo);
   if (bytes_read.is_error()) {
     FS_TRACE_ERROR("blobfs: Failed to load Merkle tree: %s\n", bytes_read.status_string());
     return bytes_read.error_value();
@@ -316,23 +331,25 @@ zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const Inode& inode,
   return ZX_OK;
 }
 
-zx_status_t BlobLoader::LoadData(uint32_t node_index, const Inode& inode,
+zx_status_t BlobLoader::LoadData(uint32_t node_index, const BlobLayout& blob_layout,
                                  const fzl::OwnedVmoMapper& vmo) const {
   TRACE_DURATION("blobfs", "BlobLoader::LoadData");
 
-  const uint32_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
-  const uint32_t num_data_blocks = inode.block_count - num_merkle_blocks;
   fs::Ticker ticker(metrics_->Collecting());
-  auto bytes_read = LoadBlocks(node_index, num_merkle_blocks, num_data_blocks, vmo);
+  auto bytes_read =
+      LoadBlocks(node_index, blob_layout.DataBlockOffset(), blob_layout.DataBlockCount(), vmo);
   if (bytes_read.is_error()) {
     return bytes_read.error_value();
   }
   metrics_->unpaged_read_metrics().IncrementDiskRead(CompressionAlgorithm::UNCOMPRESSED,
                                                      bytes_read.value(), ticker.End());
+
+  ZeroMerkleTreeWithinDataVmo(vmo, blob_layout);
   return ZX_OK;
 }
 
 zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& inode,
+                                              const BlobLayout& blob_layout,
                                               const fzl::OwnedVmoMapper& vmo) const {
   zx::status<CompressionAlgorithm> algorithm_or = AlgorithmForInode(inode);
   if (algorithm_or.is_error()) {
@@ -342,34 +359,30 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
   CompressionAlgorithm algorithm = algorithm_or.value();
   ZX_DEBUG_ASSERT(algorithm != CompressionAlgorithm::UNCOMPRESSED);
 
-  const uint32_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
-  const uint32_t num_data_blocks = inode.block_count - num_merkle_blocks;
-  size_t compressed_size;
-  if (mul_overflow(num_data_blocks, kBlobfsBlockSize, &compressed_size)) {
-    FS_TRACE_ERROR("Multiplication overflow\n");
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  TRACE_DURATION("blobfs", "BlobLoader::LoadAndDecompressData", "compressed_size", compressed_size,
-                 "blob_size", inode.blob_size);
+  TRACE_DURATION("blobfs", "BlobLoader::LoadAndDecompressData", "compressed_size",
+                 blob_layout.DataSizeUpperBound(), "blob_size", inode.blob_size);
 
   // Create and attach a transfer VMO for fetching the compressed contents from the block FIFO.
   fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
   FormatBlobCompressedVmoName(node_index, &vmo_name);
   fzl::OwnedVmoMapper compressed_mapper;
-  zx_status_t status = compressed_mapper.CreateAndMap(compressed_size, vmo_name.c_str());
+  zx_status_t status =
+      compressed_mapper.CreateAndMap(blob_layout.DataBlockAlignedSize(), vmo_name.c_str());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to initialized compressed vmo; error: %d\n", status);
     return status;
   }
 
   fs::Ticker read_ticker(metrics_->Collecting());
-  auto bytes_read = LoadBlocks(node_index, num_merkle_blocks, num_data_blocks, compressed_mapper);
+  auto bytes_read = LoadBlocks(node_index, blob_layout.DataBlockOffset(),
+                               blob_layout.DataBlockCount(), compressed_mapper);
   if (bytes_read.is_error()) {
     return bytes_read.error_value();
   }
   metrics_->unpaged_read_metrics().IncrementDiskRead(algorithm, bytes_read.value(),
                                                      read_ticker.End());
+
+  ZeroMerkleTreeWithinDataVmo(compressed_mapper, blob_layout);
 
   fs::Ticker ticker(metrics_->Collecting());
 
@@ -383,7 +396,8 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
     return status;
   }
 
-  status = decompressor->Decompress(vmo.start(), &target_size, compressed_buffer, compressed_size);
+  status = decompressor->Decompress(vmo.start(), &target_size, compressed_buffer,
+                                    blob_layout.DataSizeUpperBound());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to decompress data: %s\n", zx_status_get_string(status));
     return status;
@@ -435,7 +449,22 @@ zx::status<uint64_t> BlobLoader::LoadBlocks(uint32_t node_index, uint32_t block_
     return zx::error(status);
   }
 
-  return zx::ok(uint64_t{block_count} * kBlobfsBlockSize);
+  return zx::ok(uint64_t{block_count} * GetBlockSize());
 }
+
+void BlobLoader::ZeroMerkleTreeWithinDataVmo(const fzl::OwnedVmoMapper& vmo,
+                                             const BlobLayout& blob_layout) const {
+  if (!blob_layout.HasMerkleTreeAndDataSharedBlock()) {
+    return;
+  }
+  uint64_t data_block_aligned_size = blob_layout.DataBlockAlignedSize();
+  ZX_DEBUG_ASSERT(vmo.size() >= data_block_aligned_size);
+  uint64_t len = uint64_t{GetBlockSize()} - blob_layout.MerkleTreeOffsetWithinBlockOffset();
+  // Since the block is shared, data_block_aligned_size is >= 1 block.
+  uint64_t offset = data_block_aligned_size - len;
+  memset(static_cast<uint8_t*>(vmo.start()) + offset, 0, len);
+}
+
+uint32_t BlobLoader::GetBlockSize() const { return txn_manager_->Info().block_size; }
 
 }  // namespace blobfs

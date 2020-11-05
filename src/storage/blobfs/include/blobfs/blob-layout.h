@@ -34,6 +34,9 @@ enum class BlobLayoutFormat : decltype(Superblock::blob_layout_format) {
   kCompactMerkleTreeAtEnd = 1,
 };
 
+// Returns whether |format| uses the compact Merkle tree format or not.
+bool ShouldUseCompactMerkleTreeFormat(BlobLayoutFormat format);
+
 // Layout information for where the data and Merkle tree are positioned in a blob.
 class BlobLayout {
  public:

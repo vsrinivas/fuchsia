@@ -7,6 +7,7 @@
 #include <fuchsia/blobfs/c/fidl.h>
 #include <zircon/status.h>
 
+#include <blobfs/blob-layout.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fs/trace.h>
@@ -17,12 +18,14 @@ namespace blobfs {
 BlobVerifier::BlobVerifier(BlobfsMetrics* metrics) : metrics_(metrics) {}
 
 zx_status_t BlobVerifier::Create(digest::Digest digest, BlobfsMetrics* metrics, const void* merkle,
-                                 size_t merkle_size, size_t data_size,
-                                 const BlobCorruptionNotifier* notifier,
+                                 size_t merkle_size, BlobLayoutFormat blob_layout_format,
+                                 size_t data_size, const BlobCorruptionNotifier* notifier,
                                  std::unique_ptr<BlobVerifier>* out) {
   std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(metrics));
   verifier->digest_ = std::move(digest);
   verifier->corruption_notifier_ = notifier;
+  verifier->tree_verifier_.SetUseCompactFormat(
+      ShouldUseCompactMerkleTreeFormat(blob_layout_format));
   zx_status_t status = verifier->tree_verifier_.SetDataLength(data_size);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to set merkle data length: %s\n", zx_status_get_string(status));

@@ -4,16 +4,22 @@
 
 #include "blob.h"
 
+#include <zircon/assert.h>
+
 #include <condition_variable>
 
+#include <blobfs/blob-layout.h>
 #include <blobfs/common.h>
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
+#include <digest/digest.h>
+#include <digest/node-digest.h>
 #include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
 #include "blobfs.h"
+#include "fuchsia/io/llcpp/fidl.h"
 #include "test/blob_utils.h"
 #include "utils.h"
 
@@ -25,13 +31,18 @@ constexpr const char kEmptyBlobName[] =
 
 constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
+namespace fio = ::llcpp::fuchsia::io;
 
-class BlobTest : public testing::Test {
+class BlobTest : public testing::TestWithParam<BlobLayoutFormat> {
  public:
   void SetUp() override {
     auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
     device_ = device.get();
-    ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
+    ASSERT_EQ(FormatFilesystem(device.get(),
+                               FilesystemOptions{
+                                   .blob_layout_format = GetParam(),
+                               }),
+              ZX_OK);
 
     ASSERT_EQ(
         Blobfs::Create(loop_.dispatcher(), std::move(device), MountOptions(), zx::resource(), &fs_),
@@ -53,7 +64,7 @@ class BlobTest : public testing::Test {
   std::unique_ptr<Blobfs> fs_;
 };
 
-TEST_F(BlobTest, Truncate_WouldOverflow) {
+TEST_P(BlobTest, Truncate_WouldOverflow) {
   fbl::RefPtr root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Create(kEmptyBlobName, 0, &file), ZX_OK);
@@ -63,11 +74,11 @@ TEST_F(BlobTest, Truncate_WouldOverflow) {
 
 // Tests that Blob::Sync issues the callback in the right way in the right cases. This does not
 // currently test that the data was actually written to the block device.
-TEST_F(BlobTest, SyncBehavior) {
+TEST_P(BlobTest, SyncBehavior) {
   auto root = OpenRoot();
 
   std::unique_ptr<BlobInfo> info;
-  GenerateRandomBlob("", 64, &info);
+  GenerateRandomBlob("", 64, GetBlobLayoutFormat(fs_->Info()), &info);
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
   fbl::RefPtr<fs::Vnode> file;
@@ -113,7 +124,7 @@ TEST_F(BlobTest, SyncBehavior) {
   });
 }
 
-TEST_F(BlobTest, ReadingBlobVerifiesTail) {
+TEST_P(BlobTest, ReadingBlobZerosTail) {
   // Remount without compression so that we can manipulate the data that is loaded.
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
@@ -126,7 +137,7 @@ TEST_F(BlobTest, ReadingBlobVerifiesTail) {
   uint64_t block;
   {
     auto root = OpenRoot();
-    GenerateRandomBlob("", 64, &info);
+    GenerateRandomBlob("", 64, GetBlobLayoutFormat(fs_->Info()), &info);
     fbl::RefPtr<fs::Vnode> file;
     ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
     size_t out_actual = 0;
@@ -169,13 +180,28 @@ TEST_F(BlobTest, ReadingBlobVerifiesTail) {
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
 
-  // Trying to read from the blob should fail with an error.
+  // Trying to read from the blob would fail if the tail wasn't zeroed.
   size_t actual;
   uint8_t data;
-  EXPECT_EQ(file->Read(&data, 1, 0, &actual), ZX_ERR_IO_DATA_INTEGRITY);
+  EXPECT_EQ(file->Read(&data, 1, 0, &actual), ZX_OK);
+  {
+    zx::vmo vmo = {};
+    size_t data_size;
+    EXPECT_EQ(file->GetVmo(fio::VMO_FLAG_READ, &vmo, &data_size), ZX_OK);
+    EXPECT_EQ(data_size, 64ul);
+
+    size_t vmo_size;
+    EXPECT_EQ(vmo.get_size(&vmo_size), ZX_OK);
+    ASSERT_EQ(vmo_size, size_t{PAGE_SIZE});
+
+    uint8_t data;
+    EXPECT_EQ(vmo.read(&data, PAGE_SIZE - 1, 1), ZX_OK);
+    // The corrupted bit in the tail was zeroed when being read.
+    EXPECT_EQ(data, 0);
+  }
 }
 
-TEST_F(BlobTest, ReadWriteAllCompressionFormats) {
+TEST_P(BlobTest, ReadWriteAllCompressionFormats) {
   CompressionAlgorithm algorithms[] = {
       CompressionAlgorithm::UNCOMPRESSED, CompressionAlgorithm::LZ4,
       CompressionAlgorithm::ZSTD,         CompressionAlgorithm::ZSTD_SEEKABLE,
@@ -197,7 +223,7 @@ TEST_F(BlobTest, ReadWriteAllCompressionFormats) {
 
     // Write the blob
     {
-      GenerateRealisticBlob("", 1 << 16, &info);
+      GenerateRealisticBlob("", 1 << 16, GetBlobLayoutFormat(fs_->Info()), &info);
       fbl::RefPtr<fs::Vnode> file;
       ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
       size_t out_actual = 0;
@@ -226,9 +252,55 @@ TEST_F(BlobTest, ReadWriteAllCompressionFormats) {
   }
 }
 
-TEST_F(BlobTest, WriteErrorsAreFused) {
+TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
+  // Remount without compression so we can force a specific blob size in storage.
+  MountOptions options = {.compression_settings = {
+                              .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
+                          }};
+  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
+                           zx::resource(), &fs_),
+            ZX_OK);
+
   std::unique_ptr<BlobInfo> info;
-  GenerateRandomBlob("", kBlockSize * kNumBlocks, &info);
+  {
+    // Create a blob where the Merkle tree in the compact layout fits perfectly into the space
+    // remaining at the end of the blob.
+    ASSERT_EQ(fs_->Info().block_size, digest::kDefaultNodeSize);
+    GenerateRealisticBlob("", (digest::kDefaultNodeSize - digest::kSha256Length) * 3,
+                          GetBlobLayoutFormat(fs_->Info()), &info);
+    if (GetBlobLayoutFormat(fs_->Info()) == BlobLayoutFormat::kCompactMerkleTreeAtEnd) {
+      EXPECT_EQ(info->size_data + info->size_merkle, digest::kDefaultNodeSize * 3);
+    }
+    fbl::RefPtr<fs::Vnode> file;
+    auto root = OpenRoot();
+    ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+    size_t out_actual = 0;
+    EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
+    EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
+    EXPECT_EQ(out_actual, info->size_data);
+  }
+
+  // Remount to avoid caching.
+  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
+                           zx::resource(), &fs_),
+            ZX_OK);
+
+  // Read back the blob
+  {
+    fbl::RefPtr<fs::Vnode> file;
+    auto root = OpenRoot();
+    ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+    size_t actual;
+    uint8_t data[info->size_data];
+    EXPECT_EQ(file->Read(&data, info->size_data, 0, &actual), ZX_OK);
+    EXPECT_EQ(info->size_data, actual);
+    EXPECT_EQ(memcmp(data, info->data.get(), info->size_data), 0);
+  }
+}
+
+TEST_P(BlobTest, WriteErrorsAreFused) {
+  std::unique_ptr<BlobInfo> info;
+  GenerateRandomBlob("", kBlockSize * kNumBlocks, GetBlobLayoutFormat(fs_->Info()), &info);
   auto root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
@@ -238,6 +310,15 @@ TEST_F(BlobTest, WriteErrorsAreFused) {
   // Writing just 1 byte now should see the same error returned.
   EXPECT_EQ(file->Write(info->data.get(), 1, 0, &out_actual), ZX_ERR_NO_SPACE);
 }
+
+std::string GetTestParamName(const ::testing::TestParamInfo<BlobLayoutFormat>& param) {
+  return GetBlobLayoutFormatNameForTests(param.param);
+}
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobTest,
+                         ::testing::Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
+                                           BlobLayoutFormat::kCompactMerkleTreeAtEnd),
+                         GetTestParamName);
 
 }  // namespace
 }  // namespace blobfs

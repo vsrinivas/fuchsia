@@ -8,6 +8,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <blobfs/blob-layout.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/macros.h>
@@ -29,7 +30,8 @@ class BlobVerifier {
   // Returns an error if the merkle tree's root does not match |digest|, or if the required tree
   // size for |data_size| bytes is bigger than |merkle_size|.
   [[nodiscard]] static zx_status_t Create(digest::Digest digest, BlobfsMetrics* metrics,
-                                          const void* merkle, size_t merkle_size, size_t data_size,
+                                          const void* merkle, size_t merkle_size,
+                                          BlobLayoutFormat blob_layout_format, size_t data_size,
                                           const BlobCorruptionNotifier* notifier,
                                           std::unique_ptr<BlobVerifier>* out);
 
@@ -71,7 +73,6 @@ class BlobVerifier {
   // Use |Create| or |CreateWithoutTree| to construct.
   explicit BlobVerifier(BlobfsMetrics* metrics);
 
-  // TODO(fxbug.dev/44742): Make this type movable (requires digest::* member classes to be move-friendly).
   BlobVerifier(const BlobVerifier&) = delete;
   BlobVerifier& operator=(const BlobVerifier&) = delete;
 

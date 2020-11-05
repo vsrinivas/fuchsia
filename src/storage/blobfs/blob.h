@@ -20,6 +20,7 @@
 #include <memory>
 #include <mutex>
 
+#include <blobfs/blob-layout.h>
 #include <blobfs/common.h>
 #include <blobfs/format.h>
 #include <digest/digest.h>
@@ -28,6 +29,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
+#include <fs/journal/data_streamer.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
@@ -49,7 +51,6 @@ namespace blobfs {
 class Blobfs;
 
 using digest::Digest;
-using digest::MerkleTreeVerifier;
 
 enum class BlobState : uint8_t {
   // After Open:
@@ -199,7 +200,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // If successful, allocates Blob Node and Blocks (in-memory)
   // kBlobStateEmpty --> kBlobStateDataWrite
-  zx_status_t SpaceAllocate(uint64_t size_data);
+  zx_status_t SpaceAllocate(uint32_t block_count);
 
   // Writes to either the Merkle Tree or the Data section,
   // depending on the state.
@@ -249,7 +250,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Acquires a pointer to the mapped data or merkle tree.
   // May return nullptr if the mappings have not been initialized.
   void* GetDataBuffer() const;
-  void* GetMerkleTreeBuffer() const;
+  void* GetMerkleTreeBuffer(const BlobLayout& blob_layout) const;
 
   // Returns whether the blob's contents are pager-backed or not.
   bool IsPagerBacked() const;
@@ -260,6 +261,14 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // Commits the blob to persistent storage.
   zx_status_t Commit();
+
+  // Writes |block_count| blocks from |vmo| to persistent storage.  The blocks are written at the
+  // offset |blob_block_offset| within the blob.
+  zx_status_t WriteBlocks(const zx::vmo& vmo, uint32_t block_count, uint32_t blob_block_offset,
+                          fs::DataStreamer& streamer);
+
+  // Returns the block size used by blobfs.
+  uint32_t GetBlockSize() const;
 
   Blobfs* const blobfs_;
   BlobState state_ = BlobState::kEmpty;

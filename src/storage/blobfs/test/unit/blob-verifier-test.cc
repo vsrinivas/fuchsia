@@ -6,35 +6,29 @@
 
 #include <random>
 
+#include <blobfs/blob-layout.h>
+#include <digest/merkle-tree.h>
 #include <gtest/gtest.h>
 
+#include "test/blob_utils.h"
 #include "utils.h"
 
 namespace blobfs {
 namespace {
 
-class BlobVerifierTest : public testing::Test {
+class BlobVerifierTest : public testing::TestWithParam<BlobLayoutFormat> {
  public:
   BlobfsMetrics* Metrics() { return &metrics_; }
 
   void SetUp() override { srand(testing::UnitTest::GetInstance()->random_seed()); }
 
+  static zx::status<MerkleTreeInfo> GenerateTree(const uint8_t* data, size_t len) {
+    return CreateMerkleTree(data, len, ShouldUseCompactMerkleTreeFormat(GetParam()));
+  }
+
  private:
   BlobfsMetrics metrics_{false};
 };
-
-void GenerateTree(const uint8_t* data, size_t len, Digest* out_digest,
-                  fbl::Array<uint8_t>* out_tree) {
-  digest::MerkleTreeCreator mtc;
-  ASSERT_EQ(mtc.SetDataLength(len), ZX_OK);
-  size_t merkle_size = mtc.GetTreeLength();
-  fbl::Array<uint8_t> merkle_buf(new uint8_t[merkle_size], merkle_size);
-  uint8_t root[digest::kSha256Length];
-  ASSERT_EQ(mtc.SetTree(merkle_buf.get(), merkle_size, root, sizeof(root)), ZX_OK);
-  ASSERT_EQ(mtc.Append(data, len), ZX_OK);
-  *out_digest = Digest(root);
-  *out_tree = std::move(merkle_buf);
-}
 
 void FillWithRandom(uint8_t* buf, size_t len) {
   for (unsigned i = 0; i < len; ++i) {
@@ -42,29 +36,28 @@ void FillWithRandom(uint8_t* buf, size_t len) {
   }
 }
 
-TEST_F(BlobVerifierTest, CreateAndVerify_NullBlob) {
-  fbl::Array<uint8_t> unused_merkle_buf;
-  Digest digest;
-  GenerateTree(nullptr, 0, &digest, &unused_merkle_buf);
+TEST_P(BlobVerifierTest, CreateAndVerify_NullBlob) {
+  auto merkle_tree = GenerateTree(nullptr, 0);
+  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::CreateWithoutTree(std::move(digest), Metrics(), 0ul, nullptr, &verifier),
+  ASSERT_EQ(BlobVerifier::CreateWithoutTree(std::move(merkle_tree->root), Metrics(), 0ul, nullptr,
+                                            &verifier),
             ZX_OK);
   EXPECT_EQ(verifier->Verify(nullptr, 0ul, 0ul), ZX_OK);
   EXPECT_EQ(verifier->VerifyPartial(nullptr, 0ul, 0ul, 0ul), ZX_OK);
 }
 
-TEST_F(BlobVerifierTest, CreateAndVerify_SmallBlob) {
+TEST_P(BlobVerifierTest, CreateAndVerify_SmallBlob) {
   uint8_t buf[8192];
   FillWithRandom(buf, sizeof(buf));
 
-  fbl::Array<uint8_t> unused_merkle_buf;
-  Digest digest;
-  GenerateTree(buf, sizeof(buf), &digest, &unused_merkle_buf);
+  auto merkle_tree = GenerateTree(buf, sizeof(buf));
+  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::CreateWithoutTree(std::move(digest), Metrics(), sizeof(buf), nullptr,
-                                            &verifier),
+  ASSERT_EQ(BlobVerifier::CreateWithoutTree(std::move(merkle_tree->root), Metrics(), sizeof(buf),
+                                            nullptr, &verifier),
             ZX_OK);
 
   EXPECT_EQ(verifier->Verify(buf, sizeof(buf), sizeof(buf)), ZX_OK);
@@ -78,39 +71,38 @@ TEST_F(BlobVerifierTest, CreateAndVerify_SmallBlob) {
   EXPECT_EQ(verifier->VerifyPartial(buf, 2 * 8192, 0, 2 * 8192), ZX_ERR_INVALID_ARGS);
 }
 
-TEST_F(BlobVerifierTest, CreateAndVerify_SmallBlob_DataCorrupted) {
+TEST_P(BlobVerifierTest, CreateAndVerify_SmallBlob_DataCorrupted) {
   uint8_t buf[8192];
   FillWithRandom(buf, sizeof(buf));
 
-  fbl::Array<uint8_t> unused_merkle_buf;
-  Digest digest;
-  GenerateTree(buf, sizeof(buf), &digest, &unused_merkle_buf);
+  auto merkle_tree = GenerateTree(buf, sizeof(buf));
+  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   // Invert one character
   buf[42] = ~(buf[42]);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::CreateWithoutTree(std::move(digest), Metrics(), sizeof(buf), nullptr,
-                                            &verifier),
+  ASSERT_EQ(BlobVerifier::CreateWithoutTree(std::move(merkle_tree->root), Metrics(), sizeof(buf),
+                                            nullptr, &verifier),
             ZX_OK);
 
   EXPECT_EQ(verifier->Verify(buf, sizeof(buf), sizeof(buf)), ZX_ERR_IO_DATA_INTEGRITY);
   EXPECT_EQ(verifier->VerifyPartial(buf, 8192, 0, 8192), ZX_ERR_IO_DATA_INTEGRITY);
 }
 
-TEST_F(BlobVerifierTest, CreateAndVerify_BigBlob) {
+TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob) {
   size_t sz = 1 << 16;
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   FillWithRandom(buf.get(), sz);
 
-  fbl::Array<uint8_t> merkle_buf;
-  Digest digest;
-  GenerateTree(buf.get(), sz, &digest, &merkle_buf);
+  auto merkle_tree = GenerateTree(buf.get(), sz);
+  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::Create(std::move(digest), Metrics(), merkle_buf.get(), merkle_buf.size(),
-                                 sz, nullptr, &verifier),
-            ZX_OK);
+  ASSERT_EQ(
+      BlobVerifier::Create(std::move(merkle_tree->root), Metrics(), merkle_tree->merkle_tree.get(),
+                           merkle_tree->merkle_tree_size, GetParam(), sz, nullptr, &verifier),
+      ZX_OK);
 
   EXPECT_EQ(verifier->Verify(buf.get(), sz, sz), ZX_OK);
 
@@ -129,22 +121,22 @@ TEST_F(BlobVerifierTest, CreateAndVerify_BigBlob) {
             ZX_ERR_INVALID_ARGS);
 }
 
-TEST_F(BlobVerifierTest, CreateAndVerify_BigBlob_DataCorrupted) {
+TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob_DataCorrupted) {
   size_t sz = 1 << 16;
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   FillWithRandom(buf.get(), sz);
 
-  fbl::Array<uint8_t> merkle_buf;
-  Digest digest;
-  GenerateTree(buf.get(), sz, &digest, &merkle_buf);
+  auto merkle_tree = GenerateTree(buf.get(), sz);
+  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   // Invert a char in the first block. All other blocks are still valid.
   buf.get()[42] = ~(buf.get()[42]);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::Create(std::move(digest), Metrics(), merkle_buf.get(), merkle_buf.size(),
-                                 sz, nullptr, &verifier),
-            ZX_OK);
+  ASSERT_EQ(
+      BlobVerifier::Create(std::move(merkle_tree->root), Metrics(), merkle_tree->merkle_tree.get(),
+                           merkle_tree->merkle_tree_size, GetParam(), sz, nullptr, &verifier),
+      ZX_OK);
 
   EXPECT_EQ(verifier->Verify(buf.get(), sz, sz), ZX_ERR_IO_DATA_INTEGRITY);
 
@@ -157,22 +149,22 @@ TEST_F(BlobVerifierTest, CreateAndVerify_BigBlob_DataCorrupted) {
   }
 }
 
-TEST_F(BlobVerifierTest, CreateAndVerify_BigBlob_MerkleCorrupted) {
+TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob_MerkleCorrupted) {
   size_t sz = 1 << 16;
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   FillWithRandom(buf.get(), sz);
 
-  fbl::Array<uint8_t> merkle_buf;
-  Digest digest;
-  GenerateTree(buf.get(), sz, &digest, &merkle_buf);
+  auto merkle_tree = GenerateTree(buf.get(), sz);
+  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   // Invert a char in the tree.
-  merkle_buf.get()[0] = ~(merkle_buf.get()[0]);
+  merkle_tree->merkle_tree.get()[0] = ~(merkle_tree->merkle_tree.get()[0]);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::Create(std::move(digest), Metrics(), merkle_buf.get(), merkle_buf.size(),
-                                 sz, nullptr, &verifier),
-            ZX_OK);
+  ASSERT_EQ(
+      BlobVerifier::Create(std::move(merkle_tree->root), Metrics(), merkle_tree->merkle_tree.get(),
+                           merkle_tree->merkle_tree_size, GetParam(), sz, nullptr, &verifier),
+      ZX_OK);
 
   EXPECT_EQ(verifier->Verify(buf.get(), sz, sz), ZX_ERR_IO_DATA_INTEGRITY);
 
@@ -184,21 +176,20 @@ TEST_F(BlobVerifierTest, CreateAndVerify_BigBlob_MerkleCorrupted) {
   }
 }
 
-TEST_F(BlobVerifierTest, NonZeroTailCausesVerifyToFail) {
+TEST_P(BlobVerifierTest, NonZeroTailCausesVerifyToFail) {
   constexpr int kBlobSize = 8000;
   uint8_t buf[kBlobfsBlockSize];
   FillWithRandom(buf, kBlobSize);
   // Zero the tail.
   memset(&buf[kBlobSize], 0, kBlobfsBlockSize - kBlobSize);
 
-  fbl::Array<uint8_t> unused_merkle_buf;
-  Digest digest;
-  GenerateTree(buf, kBlobSize, &digest, &unused_merkle_buf);
+  auto merkle_tree = GenerateTree(buf, kBlobSize);
+  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   std::unique_ptr<BlobVerifier> verifier;
-  EXPECT_EQ(
-      BlobVerifier::CreateWithoutTree(std::move(digest), Metrics(), kBlobSize, nullptr, &verifier),
-      ZX_OK);
+  EXPECT_EQ(BlobVerifier::CreateWithoutTree(std::move(merkle_tree->root), Metrics(), kBlobSize,
+                                            nullptr, &verifier),
+            ZX_OK);
 
   EXPECT_EQ(verifier->Verify(buf, kBlobSize, sizeof(buf)), ZX_OK);
 
@@ -206,18 +197,18 @@ TEST_F(BlobVerifierTest, NonZeroTailCausesVerifyToFail) {
   EXPECT_EQ(verifier->Verify(buf, kBlobSize, sizeof(buf)), ZX_ERR_IO_DATA_INTEGRITY);
 }
 
-TEST_F(BlobVerifierTest, NonZeroTailCausesVerifyPartialToFail) {
+TEST_P(BlobVerifierTest, NonZeroTailCausesVerifyPartialToFail) {
   constexpr unsigned kBlobSize = (1 << 16) - 100;
   std::vector<uint8_t> buf(fbl::round_up(kBlobSize, kBlobfsBlockSize));
   FillWithRandom(buf.data(), kBlobSize);
 
-  fbl::Array<uint8_t> merkle_buf;
-  Digest digest;
-  GenerateTree(buf.data(), kBlobSize, &digest, &merkle_buf);
+  auto merkle_tree = GenerateTree(buf.data(), kBlobSize);
+  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::Create(std::move(digest), Metrics(), merkle_buf.get(), merkle_buf.size(),
-                                 kBlobSize, nullptr, &verifier),
+  ASSERT_EQ(BlobVerifier::Create(std::move(merkle_tree->root), Metrics(),
+                                 merkle_tree->merkle_tree.get(), merkle_tree->merkle_tree_size,
+                                 GetParam(), kBlobSize, nullptr, &verifier),
             ZX_OK);
 
   constexpr int kVerifyOffset = kBlobSize - kBlobSize % kBlobfsBlockSize;
@@ -230,6 +221,15 @@ TEST_F(BlobVerifierTest, NonZeroTailCausesVerifyPartialToFail) {
                                     buf.size() - kVerifyOffset),
             ZX_ERR_IO_DATA_INTEGRITY);
 }
+
+std::string GetTestName(const testing::TestParamInfo<BlobLayoutFormat>& param) {
+  return GetBlobLayoutFormatNameForTests(param.param);
+}
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobVerifierTest,
+                         ::testing::Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
+                                           BlobLayoutFormat::kCompactMerkleTreeAtEnd),
+                         GetTestName);
 
 }  // namespace
 }  // namespace blobfs

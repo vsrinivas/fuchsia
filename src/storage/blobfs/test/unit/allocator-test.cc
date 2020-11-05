@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include <blobfs/common.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
@@ -550,7 +551,7 @@ TEST(AllocatorTest, FreedBlocksAreReservedUntilTransactionCommits) {
   fbl::RefPtr<fs::Vnode> root;
   ASSERT_EQ(fs->OpenRootNode(&root), ZX_OK);
   std::unique_ptr<BlobInfo> info;
-  GenerateRandomBlob("", kBlobSize, &info);
+  GenerateRandomBlob("", kBlobSize, GetBlobLayoutFormat(fs->Info()), &info);
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
   size_t actual;
@@ -560,7 +561,7 @@ TEST(AllocatorTest, FreedBlocksAreReservedUntilTransactionCommits) {
 
   // Attempting to create another blob should result in a no-space condition.
   std::unique_ptr<BlobInfo> info2;
-  GenerateRandomBlob("", kBlobSize, &info2);
+  GenerateRandomBlob("", kBlobSize, GetBlobLayoutFormat(fs->Info()), &info2);
   ASSERT_EQ(root->Create(info2->path + 1, 0, &file), ZX_OK);
   EXPECT_EQ(file->Truncate(info2->size_data), ZX_OK);
   EXPECT_EQ(file->Write(info2->data.get(), info2->size_data, 0, &actual), ZX_ERR_NO_SPACE);

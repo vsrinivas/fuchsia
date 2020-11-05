@@ -215,6 +215,23 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
 
   const uint64_t rounded_length = fbl::round_up<uint64_t, uint64_t>(length, PAGE_SIZE);
 
+  // The block size is a multiple of the page size and |length| has already been block aligned.  If
+  // |rounded_length| is greater than |length| then |length| isn't block aligned because it's at the
+  // end of the blob.  In the compact layout the Merkle tree can share the last block of the data
+  // and may have been read into the transfer buffer.  The Merkle tree needs to be removed before
+  // transfering the pages to the destination VMO.
+  static_assert(kBlobfsBlockSize % PAGE_SIZE == 0);
+  if (rounded_length > length) {
+    zx_status_t status = transfer_buffer_->vmo().op_range(ZX_VMO_OP_ZERO, length,
+                                                          rounded_length - length, nullptr, 0);
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR(
+          "blobfs: TransferUncompressed: Failed to remove Merkle tree from transfer buffer: %s\n",
+          zx_status_get_string(status));
+      return ToPagerErrorStatus(status);
+    }
+  }
+
   // Verify the pages read in.
   {
     fzl::VmoMapper mapping;

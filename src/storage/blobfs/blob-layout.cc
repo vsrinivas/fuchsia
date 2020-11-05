@@ -32,7 +32,7 @@ BlockCountType BlocksRequiredForBytes(ByteCountType byte_count, BlockSizeType bl
   return RoundUpToBlockMultiple(byte_count, blobfs_block_size) / blobfs_block_size;
 }
 
-// Returns the maxmimum number of bytes that can fit in |block_count| blocks.
+// Returns the maximum number of bytes that can fit in |block_count| blocks.
 ByteCountType BytesThatFitInBlocks(BlockCountType block_count, BlockSizeType blobfs_block_size) {
   return ByteCountType{block_count} * blobfs_block_size;
 }
@@ -256,6 +256,15 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
 };
 
 }  // namespace
+
+bool ShouldUseCompactMerkleTreeFormat(BlobLayoutFormat format) {
+  switch (format) {
+    case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
+      return false;
+    case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
+      return true;
+  }
+}
 
 BlobLayout::BlobLayout(ByteCountType file_size, ByteCountType data_size,
                        ByteCountType merkle_tree_size, BlockSizeType blobfs_block_size)
