@@ -291,7 +291,9 @@ pub async fn get_sdk() -> Result<sdk::Sdk> {
     } else {
         ffx_core::ffx_bail!(
             "SDK directory could not be found. Please set with \
-             `ffx config set sdk.root <PATH_TO_SDK_DIR>`"
+             `ffx config set sdk.root <PATH_TO_SDK_DIR>`\n\
+             If you are developing in the fuchsia tree, use the Fuchsia build directory, and \
+             also run `ffx config set sdk.type in-tree`"
         );
     }
 }
