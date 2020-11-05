@@ -500,7 +500,7 @@ where
             PeerManagerExtRequest::GetControllerForTarget { peer_id, client, responder } => {
                 let client: fidl::endpoints::ServerEnd<ControllerExtMarker> = client;
 
-                info!("New connection request for {}", peer_id);
+                info!("New test connection request for {}", peer_id);
 
                 match client.into_stream() {
                     Err(err) => {

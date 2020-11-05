@@ -8,7 +8,7 @@ use {
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_bluetooth::{profile::elem_to_profile_descriptor, types::Uuid},
-    log::info,
+    log::{debug, info},
     std::fmt::Debug,
 };
 
@@ -204,39 +204,32 @@ impl AvrcpService {
             }
         }
 
-        if service_uuids.is_none() || features.is_none() || profile.is_none() {
-            return None;
-        }
+        let (service_uuids, features, profile) = match (service_uuids, features, profile) {
+            (Some(s), Some(f), Some(p)) => (s, f, p),
+            (s, f, p) => {
+                debug!(
+                    "{}{}{}missing in service attrs",
+                    if s.is_some() { "" } else { "Class UUIDs " },
+                    if f.is_some() { "" } else { "Features " },
+                    if p.is_some() { "" } else { "Profile " }
+                );
+                return None;
+            }
+        };
 
-        let service_uuids = service_uuids.expect("service_uuids should not be none");
-        let features = features.expect("features should not be none");
-        let profile = profile.expect("profile should not be none");
+        let psm = PSM_AVCTP as u16; // TODO(fxbug.dev/63715): Parse instead of assuming default
+        let protocol_version = AvrcpProtocolVersion(profile.major_version, profile.minor_version);
 
         if service_uuids.contains(&Uuid::new16(AV_REMOTE_TARGET_CLASS)) {
-            if let Some(feature_flags) = AvcrpTargetFeatures::from_bits(features) {
-                return Some(AvrcpService::Target {
-                    features: feature_flags,
-                    psm: PSM_AVCTP as u16, // TODO: Parse this out instead of assuming it's default
-                    protocol_version: AvrcpProtocolVersion(
-                        profile.major_version,
-                        profile.minor_version,
-                    ),
-                });
-            }
+            let features = AvcrpTargetFeatures::from_bits_truncate(features);
+            return Some(AvrcpService::Target { features, psm, protocol_version });
         } else if service_uuids.contains(&Uuid::new16(AV_REMOTE_CLASS))
             || service_uuids.contains(&Uuid::new16(AV_REMOTE_CONTROLLER_CLASS))
         {
-            if let Some(feature_flags) = AvcrpControllerFeatures::from_bits(features) {
-                return Some(AvrcpService::Controller {
-                    features: feature_flags,
-                    psm: PSM_AVCTP as u16, // TODO: Parse this out instead of assuming it's default
-                    protocol_version: AvrcpProtocolVersion(
-                        profile.major_version,
-                        profile.minor_version,
-                    ),
-                });
-            }
+            let features = AvcrpControllerFeatures::from_bits_truncate(features);
+            return Some(AvrcpService::Controller { features, psm, protocol_version });
         }
+        info!("Failed to find any applicable services for AVRCP");
         None
     }
 }
@@ -286,6 +279,31 @@ pub fn connect_and_advertise(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn service_from_attributes_ignores_unknown_features() {
+        let attributes = vec![
+            Attribute {
+                id: ATTR_SERVICE_CLASS_ID_LIST,
+                element: DataElement::Sequence(vec![Some(Box::new(DataElement::Uuid(
+                    Uuid::new16(AV_REMOTE_TARGET_CLASS).into(),
+                )))]),
+            },
+            Attribute {
+                id: ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
+                element: DataElement::Sequence(vec![Some(Box::new(DataElement::Sequence(vec![
+                    Some(Box::new(DataElement::Uuid(Uuid::new16(4366).into()))),
+                    Some(Box::new(DataElement::Uint16(0xffff))),
+                ])))]),
+            },
+            Attribute {
+                id: SDP_SUPPORTED_FEATURES, // SDP Attribute "SUPPORTED FEATURES"
+                element: DataElement::Uint16(0xffff),
+            },
+        ];
+        let service = AvrcpService::from_attributes(attributes);
+        assert!(service.is_some());
+    }
 
     /// Tests parsing the PSM from the ProtocolDescriptor works as expected.
     #[test]
