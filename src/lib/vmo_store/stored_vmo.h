@@ -174,7 +174,8 @@ class StoredVmo {
     upper--;
     ZX_ASSERT(*upper <= offset);
     uint64_t region_offset = offset - *upper;
-    uint32_t region_index = (upper - first);
+    ZX_ASSERT(upper - first <= UINT32_MAX);
+    uint32_t region_index = static_cast<uint32_t>(upper - first);
     // If the region offset is larger than the selected region's size, it means our offset is out of
     // range.
     if (region_offset >= pinned_.region(region_index).size) {
