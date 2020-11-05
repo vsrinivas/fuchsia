@@ -1,14 +1,14 @@
 # Audio Driver Streaming Interface
 
 This document describes the audio streaming interface exposed by audio drivers
-in Zircon. It is meant to serve as a reference for both users and
+in Fuchsia. It is meant to serve as a reference for both users and
 driver-authors, and to unambiguously define the interface contract which drivers
 must implement and users must follow.
 
 ## Overview
 
 Audio streams are device nodes published by driver services intended to be used
-by applications in order to capture or render audio on a Zircon device, or both.
+by applications in order to capture or render audio on a Fuchsia device.
 Each stream in the system (input or output) represents a stream of digital audio
 information which may be either received or transmitted by device. Streams are
 dynamic and may created or destroyed by the system at any time. Which streams
@@ -36,7 +36,7 @@ audio is not a service provided by the audio stream interface.
 :                               : microphone, at a single instant in time.     :
 | LPCM                          | Linear pulse code modulation. The specific   |
 :                               : representation of audio samples present in   :
-:                               : all Zircon uncompressed audio streams. LPCM  :
+:                               : all Fuchsia uncompressed audio streams. LPCM :
 :                               : audio samples are representations of the     :
 :                               : amplitude of the audio signal at an instant  :
 :                               : in time where the numeric values of the      :

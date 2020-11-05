@@ -4,9 +4,13 @@
 toc:
 - title: "Overview"
   path: /docs/concepts/drivers/driver_interfaces/audio_overview.md
+- title: "Audio drivers architecture"
+  path: /docs/concepts/drivers/driver_interfaces/audio_architecture.md
+- title: "Audio driver streaming interface"
+  path: /docs/concepts/drivers/driver_interfaces/audio_streaming.md
+- title: "Digital Audio Interface (DAI)"
+  path: /docs/concepts/drivers/driver_interfaces/audio_dai.md
 - title: "Audio codec"
   path: /docs/concepts/drivers/driver_interfaces/audio_codec.md
-- title: "Audio streaming"
-  path: /docs/concepts/drivers/driver_interfaces/audio_streaming.md
 - title: "Legacy Audio streaming"
   path: /docs/concepts/drivers/driver_interfaces/audio_streaming_original.md

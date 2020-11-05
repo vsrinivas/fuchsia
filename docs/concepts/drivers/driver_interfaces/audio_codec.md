@@ -1,9 +1,11 @@
 # Audio Codec Interface
 
-This document describes the codec interface between controllers and codecs in
-Fuchsia. It is meant to serve as a reference for driver-authors, and to define
-the interface contract which codec drivers must implement and that controllers
-can use. The codec interface is a FIDL protocol exposed by codec drivers.
+The codec interface is meant to be used when the codecs are secondary to a
+controller driver. This interface is a FIDL protocol exposed by codec drivers.
+In this arrangement the codec drivers are not directly exposing a streaming
+interface, and they are configured via the codec interface by a controller.
+This is a reference for driver-authors, defining the interface contract which
+codec drivers must implement and that controllers can use.
 
 ## Notation and Terminology
 
@@ -23,8 +25,8 @@ In this document:
 :              : DAC-Amplifiers combos and ADC converters.                      :
 | Controller   | The part of a system that manages the audio signals, for       |
 :              : example an SOC's audio subsystem or an independent sound card. :
-| DAI          | Digital Audio Interface. Interface between controllers and     |
-:              : Codecs. For example an I2S or HDA link.                        :
+| DAI          | Digital Audio Interface. Interface between audio HW, for       :
+:              : instance a TDM or PDM link between controllers and codecs.     :
 | Frame Sync   | A DAI signal that marks frame boundaries, a.k.a. LRCLK, SYNC.  |
 | Sclk         | A DAI signal used to mark the data line(s) bits transferring,  :
 :              : a.k.a. SCK, BCLK.                                              :
