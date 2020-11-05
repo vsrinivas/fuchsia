@@ -217,6 +217,12 @@ resource table CreateFrameParams {
     /// to the system logger. The name does not affect user- or web-visible behavior.
     /// Popup Frames created by the Frame will have a name derived from the parent Frame's name.
     2: string:MAX debug_name;
+
+    /// Sets the autoplay policy for the Frame. If omitted, the default policy is
+    /// `REQUIRE_USER_ACTIVATION`.
+    /// [`CreateFrame`] will fail with `ZX_ERR_NOT_SUPPORTED` if the value specified is not
+    /// supported by the [`Context`].
+    3: AutoplayPolicy autoplay_policy;
 };
 
 /// Used by [`Context`] clients to delegate [`Frame`] hosting capabilities to selected peers.
@@ -224,4 +230,14 @@ resource table CreateFrameParams {
 protocol FrameHost {
     /// Behaves identically to [`Context.CreateFrameWithParams`].
     CreateFrameWithParams(CreateFrameParams params, request<Frame> frame);
+};
+
+/// Specifies the policy for automatic (non user-initiated) playback of video and audio content.
+enum AutoplayPolicy : int32 {
+    /// All media is permitted to autoplay.
+    ALLOW = 1;
+
+    /// Allow autoplay when the document has received a user activation. This can be the result of
+    /// user action or [`LoadUrlParams.was_user_activated`] being set.
+    REQUIRE_USER_ACTIVATION = 2;
 };
