@@ -125,6 +125,7 @@ AEMU="${AEMU_DIR}/emulator"
 FAR="${HOST_OUT_DIR}/far"
 FVM="${HOST_OUT_DIR}/fvm"
 PM="${HOST_OUT_DIR}/pm"
+DEVICE_FINDER="${HOST_OUT_DIR}/device-finder"
 
 img_dir="$(mktemp -d)"
 if [[ ! -d "${img_dir}" ]]; then
@@ -218,6 +219,7 @@ readonly PORT_MAP="hostfwd=tcp::${SSH_PORT}-:22"
     --output_launched_device_proto="${VDL_PROTO}" \
     --ga=true \
     --emu_log="/tmp/emulator_log.log" \
+    --device_finder_tool="${DEVICE_FINDER}" \
     --audio=true
 
 trap 'rm -Rf "${img_dir}" && kill_vdl' EXIT

@@ -58,7 +58,7 @@ TEST_fx_vdl_default() {
     "--tuntap=false" \
     _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ \
     "--ga=true" \
-    _ANY_ _ANY_
+    _ANY_ _ANY_ _ANY_
   btf::expect-mock-args "${ssh}.mock_state" "fuchsia@localhost" "-p" _ANY_
 }
 
@@ -73,7 +73,7 @@ TEST_fx_vdl_tuntap() {
   "--tuntap=true" \
   _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ \
   "--ga=true" \
-  _ANY_ _ANY_
+  _ANY_ _ANY_ _ANY_
   btf::expect-mock-args "${ssh}.mock_state" "${emu_addr}"
 }
 
@@ -89,7 +89,7 @@ TEST_fx_vdl_headless_tuntap() {
   "--tuntap=true" \
   _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ \
   "--ga=true" \
-  _ANY_ _ANY_
+  _ANY_ _ANY_ _ANY_
   btf::expect-mock-args "${ssh}.mock_state" "${emu_addr}"
 }
 
@@ -106,7 +106,7 @@ TEST_fx_vdl_tuntap_script() {
   "--upscript=./script" \
   _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ \
   "--ga=true" \
-  _ANY_ _ANY_
+  _ANY_ _ANY_ _ANY_
   btf::expect-mock-args "${ssh}.mock_state" "${emu_addr}"
 }
 
