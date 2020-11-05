@@ -19,6 +19,7 @@ rustc_library("tcp-stream-ext") {
   test_deps = [
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:socket2",
   ]
 
   sources = [ "src/lib.rs" ]

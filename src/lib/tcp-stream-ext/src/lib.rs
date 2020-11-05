@@ -194,12 +194,14 @@ fn get_tcp_option(stream: &std::net::TcpStream, option_name: libc::c_int) -> io:
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*,
-        matches::assert_matches,
-        proptest::prelude::*,
-        std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream},
-    };
+    use {super::*, matches::assert_matches, proptest::prelude::*};
+
+    fn stream() -> std::io::Result<std::net::TcpStream> {
+        use socket2::{Domain, Socket, Type};
+
+        let socket = Socket::new(Domain::ipv4(), Type::stream(), None)?;
+        Ok(socket.into_tcp_stream())
+    }
 
     const MAX_TCP_KEEPALIVE_IDLE: u64 = 32_767;
     const MAX_TCP_KEEPALIVE_INTERVAL: u64 = 32_767;
@@ -207,8 +209,7 @@ mod test {
 
     #[test]
     fn set_keepalive_rejects_more_than_i32_seconds() {
-        let listener = TcpListener::bind(&SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0)).unwrap();
-        let stream = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+        let stream = stream().unwrap();
         let interval = Duration::from_secs(i32::max_value() as u64 + 1);
 
         assert_matches!(
@@ -219,8 +220,7 @@ mod test {
 
     #[test]
     fn set_keepalive_interval_rejects_more_than_i32_seconds() {
-        let listener = TcpListener::bind(&SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0)).unwrap();
-        let stream = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+        let stream = stream().unwrap();
         let interval = Duration::from_secs(i32::max_value() as u64 + 1);
 
         assert_matches!(
@@ -231,8 +231,7 @@ mod test {
 
     #[test]
     fn set_user_timeout_rejects_more_than_i32_milliseconds() {
-        let listener = TcpListener::bind(&SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0)).unwrap();
-        let stream = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+        let stream = stream().unwrap();
         let timeout = Duration::from_millis(i32::max_value() as u64 + 1);
 
         assert_matches!(
@@ -242,22 +241,11 @@ mod test {
     }
 
     proptest! {
-        // TODO(fxbug.dev/57345) Remove custom proptest configuration. By default, proptest tries
-        // 256 cases, so the test component should be calling bind 3 + (4*256) = 1,027 times. The
-        // test component is given its own netstack, so it should not be possible for the test
-        // component to exhaust all of its available ports, but bind is sometimes returning
-        // AddrInUse.
-        #![proptest_config(ProptestConfig {
-            cases: 5, .. ProptestConfig::default()
-        })]
         #[test]
         fn keepalive_roundtrip
             (seconds in 1..=MAX_TCP_KEEPALIVE_IDLE)
         {
-            let listener = TcpListener::bind(
-                &SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0)
-            ).unwrap();
-            let stream = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+            let stream = stream().unwrap();
             let interval = Some(Duration::from_secs(seconds));
 
             stream.set_keepalive(interval).unwrap();
@@ -268,10 +256,7 @@ mod test {
         fn keepalive_interval_roundtrip
             (seconds in 1..=MAX_TCP_KEEPALIVE_INTERVAL)
         {
-            let listener = TcpListener::bind(
-                &SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0)
-            ).unwrap();
-            let stream = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+            let stream = stream().unwrap();
             let interval = Duration::from_secs(seconds);
 
             stream.set_keepalive_interval(interval).unwrap();
@@ -282,10 +267,7 @@ mod test {
         fn keepalive_count_roundtrip
             (count in 1..=MAX_TCP_KEEPALIVE_COUNT)
         {
-            let listener = TcpListener::bind(
-                &SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0)
-            ).unwrap();
-            let stream = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+            let stream = stream().unwrap();
 
             stream.set_keepalive_count(count).unwrap();
             prop_assert_eq!(stream.keepalive_count().unwrap(), count);
@@ -295,10 +277,7 @@ mod test {
         fn user_timeout_roundtrip
             (timeout in 0..=i32::max_value() as u64)
         {
-            let listener = TcpListener::bind(
-                &SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0)
-            ).unwrap();
-            let stream = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+            let stream = stream().unwrap();
             let timeout = Duration::from_millis(timeout);
 
             stream.set_user_timeout(timeout).unwrap();
