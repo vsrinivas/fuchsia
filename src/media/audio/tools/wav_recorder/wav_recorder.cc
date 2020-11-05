@@ -90,17 +90,17 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
   if (cmd_line_.GetOptionValue(kFileDurationOption, &opt)) {
     file_duration_specifed_ = true;
 
-    float duration;
+    double duration;
     if (opt == "") {
       duration = kDefaultFileDurationSecs;
     } else {
-      CLI_CHECK(sscanf(opt.c_str(), "%f", &duration) == 1, "Duration must be numeric");
+      CLI_CHECK(sscanf(opt.c_str(), "%lf", &duration) == 1, "Duration must be numeric");
       CLI_CHECK(duration >= 0, "Duration cannot be negative");
       CLI_CHECK(duration <= kMaxFileDurationSecs, "Maximum duration is " << kMaxFileDurationSecs);
     }
 
     printf("\nWe will record for %.3f seconds.", duration);
-    file_duration_ = zx::duration(duration * ZX_SEC(1));
+    file_duration_ = zx::duration(static_cast<zx_duration_t>(duration * ZX_SEC(1)));
   }
 
   // Handle any explicit reference clock selection. We allow Monotonic to be rate-adjusted,
@@ -248,9 +248,10 @@ bool WavRecorder::Shutdown() {
 }
 
 void WavRecorder::SetupPayloadBuffer() {
-  frames_per_packet_ = (packet_duration_ * frames_per_second_) / ZX_SEC(1);
-
-  packets_per_payload_buf_ = std::ceil(static_cast<float>(frames_per_second_) / frames_per_packet_);
+  // Max val (500ms * 192k) is 96000; min val (1ms 1k) is 1. These casts are safe.
+  frames_per_packet_ = static_cast<uint32_t>((packet_duration_ * frames_per_second_) / ZX_SEC(1));
+  packets_per_payload_buf_ = static_cast<uint32_t>(
+      std::ceil(static_cast<double>(frames_per_second_) / frames_per_packet_));
   payload_buf_frames_ = frames_per_packet_ * packets_per_payload_buf_;
   payload_buf_size_ = payload_buf_frames_ * bytes_per_frame_;
   CLI_CHECK(payload_buf_size_, "payload_buf_size must be non-zero");
@@ -471,8 +472,9 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
     CLI_CHECK(
         packet_size_msec >= kMinPacketSizeMsec && packet_size_msec <= kMaxPacketSizeMsec,
         "Packet size must be between " << kMinPacketSizeMsec << " and " << kMaxPacketSizeMsec);
+
     // Don't simply ZX_MSEC(packet_size_msec): that discards any fractional component
-    packet_duration_ = packet_size_msec * ZX_MSEC(1);
+    packet_duration_ = static_cast<zx_duration_t>(packet_size_msec * ZX_MSEC(1));
   }
 
   // Create a shared payload buffer, map it, dup the handle and pass it to the capturer to fill.
@@ -553,10 +555,10 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
     printf("using the default reference clock\n");
   }
 
-  printf("using %u packets of %u frames (%.3lf msec) in a %.3f-sec payload buffer\n",
+  printf("using %u packets of %u frames (%.3lf msec) in a %.3lf-sec payload buffer\n",
          packets_per_payload_buf_, frames_per_packet_,
-         (static_cast<float>(frames_per_packet_) / frames_per_second_) * 1000.0f,
-         (static_cast<float>(payload_buf_frames_) / frames_per_second_));
+         (static_cast<double>(frames_per_packet_) / frames_per_second_) * 1000.0,
+         (static_cast<double>(payload_buf_frames_) / frames_per_second_));
   if (change_gain) {
     printf("applying gain of %.2f dB ", stream_gain_db_);
   }
@@ -629,7 +631,10 @@ void WavRecorder::OnPacketProduced(fuchsia::media::StreamPacket pkt) {
 
     auto tgt = reinterpret_cast<uint8_t*>(payload_buf_virt_) + pkt.payload_offset;
 
-    uint32_t write_size = pkt.payload_size;
+    // Max payload buffer is 1.5sec, 192kHz, 4b/sample, 8chan: 8.7M. Min is 1s, 1k, 1 b/frame: 1K.
+    // Minimum 2 pkts/payload buffer, so max packet payload_size is 4'608'000; thus cast is safe.
+    uint32_t write_size = static_cast<uint32_t>(pkt.payload_size);
+
     // If 24_in_32, write as packed-24, skipping the first, least-significant of
     // each four bytes). Assuming Write does not buffer, compress locally and
     // call Write just once, to avoid potential performance problems.

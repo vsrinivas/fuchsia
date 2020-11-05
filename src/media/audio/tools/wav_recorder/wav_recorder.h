@@ -25,8 +25,8 @@ namespace media::tools {
 class WavRecorder {
   static constexpr float kDefaultCaptureGainDb = 0.0f;
 
-  static constexpr float kDefaultFileDurationSecs = 2.0f;
-  static constexpr float kMaxFileDurationSecs = 86400.0f;
+  static constexpr double kDefaultFileDurationSecs = 2.0;
+  static constexpr double kMaxFileDurationSecs = 86400.0;
 
   static constexpr zx_duration_t kDefaultPacketDuration = ZX_MSEC(100);
   static constexpr float kMinPacketSizeMsec = 1.0f;  // minimum packet size 1 msec!
