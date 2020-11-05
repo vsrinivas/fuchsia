@@ -1717,17 +1717,19 @@ template("variant_target") {
           # instrumentation-runtime-specific libraries.
           data_deps += [ "//build/toolchain/runtime:static-libc++-deps" ]
         }
-        should_add_shared_rust_runtime = true
-        dynamic_rust_config =
-            [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
-        if (!defined(configs) ||
-            configs + dynamic_rust_config - dynamic_rust_config == configs) {
-          # For rustc, static linking is the default. So we only add a runtime if
-          # the dynamic linking config is present.
-          should_add_shared_rust_runtime = false
-        }
-        if (should_add_shared_rust_runtime) {
-          data_deps += [ "//build/toolchain/runtime:shared-rust-libstd-deps" ]
+        if (defined(crate_root)) {
+          should_add_shared_rust_runtime = true
+          dynamic_rust_config =
+              [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+          if (!defined(configs) ||
+              configs + dynamic_rust_config - dynamic_rust_config == configs) {
+            # For rustc, static linking is the default. So we only add a runtime if
+            # the dynamic linking config is present.
+            should_add_shared_rust_runtime = false
+          }
+          if (should_add_shared_rust_runtime) {
+            data_deps += [ "//build/toolchain/runtime:shared-rust-libstd-deps" ]
+          }
         }
       }
     }
