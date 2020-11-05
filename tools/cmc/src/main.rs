@@ -17,8 +17,10 @@ use structopt::StructOpt;
 
 mod compile;
 mod format;
+mod include;
 mod merge;
 mod opts;
+mod util;
 mod validate;
 
 fn main() {
@@ -35,6 +37,9 @@ fn run_cmc() -> Result<(), Error> {
             validate::validate(&files, &extra_schemas)?
         }
         opts::Commands::Merge { files, output, fromfile } => merge::merge(files, output, fromfile)?,
+        opts::Commands::Include { file, output, depfile, includepath } => {
+            include::merge_includes(file, output, depfile, includepath)?
+        }
         opts::Commands::Format { file, pretty, cml, inplace, mut output } => {
             if inplace {
                 output = Some(file.clone());

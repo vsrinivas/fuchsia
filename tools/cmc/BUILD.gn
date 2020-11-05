@@ -43,9 +43,11 @@ rustc_binary("cmc") {
   sources = [
     "src/compile.rs",
     "src/format.rs",
+    "src/include.rs",
     "src/main.rs",
     "src/merge.rs",
     "src/opts.rs",
+    "src/util.rs",
     "src/validate.rs",
   ]
 

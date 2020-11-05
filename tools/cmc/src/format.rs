@@ -39,7 +39,7 @@ pub fn format(
     let res = if cml || file_path.ends_with(".cml") {
         format_cml(buffer, file.as_path())?
     } else {
-        format_cmx(buffer, file.as_path(), pretty)?
+        format_cmx(buffer, pretty)?
     };
 
     if let Some(output_path) = output {
@@ -57,33 +57,15 @@ pub fn format(
     Ok(())
 }
 
-pub fn format_cmx(buffer: String, file: &Path, pretty: bool) -> Result<Vec<u8>, Error> {
-    let v: serde_json::Value = serde_json::from_str(&buffer).map_err(|e| {
-        Error::parse(
-            format!("Couldn't read input as JSON: {}", e),
-            Some(Location { line: e.line(), column: e.column() }),
-            Some(file),
-        )
-    })?;
+pub fn format_cmx(buffer: String, pretty: bool) -> Result<Vec<u8>, Error> {
+    let v: serde_json::Value = serde_json::from_str(&buffer)?;
     let mut res = Vec::new();
     if pretty {
         let mut ser = Serializer::with_formatter(&mut res, PrettyFormatter::with_indent(b"    "));
-        v.serialize(&mut ser).map_err(|e| {
-            Error::parse(
-                format!("Couldn't serialize JSON: {}", e),
-                Some(Location { line: e.line(), column: e.column() }),
-                Some(file),
-            )
-        })?;
+        v.serialize(&mut ser)?;
     } else {
         let mut ser = Serializer::with_formatter(&mut res, CompactFormatter {});
-        v.serialize(&mut ser).map_err(|e| {
-            Error::parse(
-                format!("Couldn't serialize JSON: {}", e),
-                Some(Location { line: e.line(), column: e.column() }),
-                Some(file),
-            )
-        })?;
+        v.serialize(&mut ser)?;
     }
     Ok(res)
 }

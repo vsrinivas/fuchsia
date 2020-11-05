@@ -53,6 +53,28 @@ pub enum Commands {
         fromfile: Option<PathBuf>,
     },
 
+    #[structopt(name = "include")]
+    /// add contents from includes if any
+    Include {
+        #[structopt(name = "FILE", parse(from_os_str))]
+        /// file to process
+        file: PathBuf,
+
+        #[structopt(short = "o", long = "output", parse(from_os_str))]
+        /// file to write the merged results to, will print to stdout if not provided
+        output: Option<PathBuf>,
+
+        #[structopt(short = "d", long = "depfile", parse(from_os_str))]
+        /// depfile for includes
+        ///
+        /// If specified, include paths will be listed here, delimited by newlines.
+        depfile: Option<PathBuf>,
+
+        #[structopt(short = "i", long = "includepath", parse(from_os_str))]
+        /// base path for resolving includes
+        includepath: PathBuf,
+    },
+
     #[structopt(name = "format")]
     /// format a json file
     Format {

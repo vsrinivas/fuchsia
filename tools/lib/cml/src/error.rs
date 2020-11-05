@@ -6,7 +6,7 @@ use {
     cm_types::ParseError,
     std::path::Path,
     std::str::Utf8Error,
-    std::{error, fmt, io},
+    std::{convert::TryFrom, error, fmt, io},
 };
 
 /// The location in the file where an error was detected.
@@ -185,6 +185,18 @@ impl From<ParseError> for Error {
 impl From<cm_json::Location> for Location {
     fn from(location: cm_json::Location) -> Self {
         Location { line: location.line, column: location.column }
+    }
+}
+
+impl TryFrom<serde_json5::Error> for Location {
+    type Error = &'static str;
+    fn try_from(e: serde_json5::Error) -> Result<Self, Self::Error> {
+        match e {
+            serde_json5::Error::Message { location: Some(l), .. } => {
+                Ok(Location { line: l.line, column: l.column })
+            }
+            _ => Err("location unavailable"),
+        }
     }
 }
 

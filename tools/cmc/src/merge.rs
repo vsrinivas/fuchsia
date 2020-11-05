@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::error::{Error, Location},
+    crate::error::Error,
+    crate::util::json_or_json5_from_file,
     serde_json::{json, Value},
-    serde_json5,
     std::fs,
-    std::io::{BufRead, BufReader, Read, Write},
+    std::io::{BufRead, BufReader, Write},
     std::path::PathBuf,
 };
 
@@ -36,26 +36,7 @@ pub fn merge(
     }
     let mut res = json!({});
     for filename in files {
-        let mut buffer = String::new();
-        fs::File::open(&filename)?.read_to_string(&mut buffer)?;
-
-        let v: Value = match serde_json::from_str(&buffer) {
-            Ok(value) => value,
-            Err(_) => {
-                // If JSON parsing fails, try JSON5 parsing (which is slower)
-                serde_json5::from_str(&buffer).map_err(|e| {
-                    let serde_json5::Error::Message { ref location, .. } = e;
-                    let location =
-                        location.as_ref().map(|l| Location { line: l.line, column: l.column });
-                    Error::parse(
-                        format!("Couldn't read input as JSON: {}", e),
-                        location,
-                        Some(filename.as_path()),
-                    )
-                })?
-            }
-        };
-
+        let v: Value = json_or_json5_from_file(&filename)?;
         merge_json(&mut res, &v).map_err(|e| {
             Error::parse(
                 format!("Multiple manifests set the same key: {}", e),
@@ -82,7 +63,7 @@ pub fn merge(
 /// If `from` is an array of objects, each object in the array will be merged
 /// into `res` one at a time, in order. If `from` is an object, that object will
 /// be merged into `res`.
-fn merge_json(mut res: &mut Value, from: &Value) -> Result<(), String> {
+pub fn merge_json(mut res: &mut Value, from: &Value) -> Result<(), String> {
     match &from {
         Value::Array(from_arr) => {
             for item in from_arr {
@@ -129,7 +110,7 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::fs::File;
-    use std::io::{LineWriter, Write};
+    use std::io::{LineWriter, Read, Write};
     use tempfile::TempDir;
 
     #[test]

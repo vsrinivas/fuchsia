@@ -1058,6 +1058,7 @@ impl<'a> fmt::Display for DependencyNode<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::Location;
     use lazy_static::lazy_static;
     use matches::assert_matches;
     use serde_json::json;
