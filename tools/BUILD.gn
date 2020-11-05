@@ -27,7 +27,7 @@ group("tools") {
     "//tools/netprotocol($host_toolchain)",
     "//tools/symbol-index($host_toolchain)",
     "//tools/symbolizer($host_toolchain)",
-    "//tools/virtual_device/proto",
+    "//tools/virtual_device/cmd/fvd($host_toolchain)",
   ]
 }
 
@@ -129,6 +129,7 @@ group("tests") {
     "//tools/symbol-index:tests",
     "//tools/symbolizer:tests",
     "//tools/testing:tests($host_toolchain)",
+    "//tools/virtual_device/cmd/fvd:tests($host_toolchain)",
     "//tools/zedmon:tests",
   ]
 }

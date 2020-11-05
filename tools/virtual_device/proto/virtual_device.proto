@@ -23,11 +23,8 @@ message VirtualDevice {
   // This is meant to help humans identify this device.
   string name = 1;
 
-  // The virtual machine or emulator that is meant to run this device.
-  oneof vm {
-    QEMU qemu = 2;
-    // TODO(kjharland): AEMU
-  }
+  // Metadata indicating how to run QEMU.
+  QEMU qemu = 2;
 
   // The following fields specify the set of system images used to boot Fuchsia.
   // Each field's value is the name of the JSON object in images.json whose
