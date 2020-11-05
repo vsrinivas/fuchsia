@@ -132,15 +132,6 @@ if [[ -n "${target_core}" ]]; then
 
   core_name=`fx-command-run shell \
     "cd /tmp/r/sys/${crash_reports_dir}/reports 2>/dev/null && find . -name minidump.dmp -type f"`
-  core_prefix="/tmp/r/sys/${crash_reports_dir}/reports"
-
-
-  # TODO(fxbug.dev/47137): remove fallback on Crashpad database after a while.
-  if [[ -z "${core_name}" ]]; then
-    core_name=`fx-command-run shell \
-      ls "/tmp/r/sys/${crash_reports_dir}/crashes/completed" 2>/dev/null | grep -v meta`
-    core_prefix="/tmp/r/sys/${crash_reports_dir}/crashes/completed"
-  fi
 
   if [[ -z "${core_name}" ]]; then
     fx-error "No cores available on device"
@@ -157,7 +148,7 @@ if [[ -n "${target_core}" ]]; then
 
   core="/tmp/zxdb_fetched_core.dmp"
   fx-command-run "cp" "--to-host" \
-    "${core_prefix}/${core_name}" \
+    "/tmp/r/sys/${crash_reports_dir}/reports/${core_name}" \
     "${core}"
 fi
 
