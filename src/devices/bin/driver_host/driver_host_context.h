@@ -101,6 +101,8 @@ class DriverHostContext {
 
   zx_status_t LoadFirmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
                            zx_handle_t* vmo_handle, size_t* size);
+  void LoadFirmwareAsync(const fbl::RefPtr<zx_device_t>& dev, const char* path,
+                         load_firmware_callback_t callback, void* context);
   zx_status_t GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max,
                           size_t* actual);
   zx_status_t GetMetadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, void* buf,

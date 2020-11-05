@@ -1,0 +1,14 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.device.firmware.test;
+
+using zx;
+
+protocol TestDevice {
+    /// Call load_firmware and make sure it worked.
+    LoadFirmware(string path) -> () error zx.status;
+    /// Call load_firmware_async and make sure it worked.
+    LoadFirmwareAsync(string path) -> () error zx.status;
+};

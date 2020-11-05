@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -951,6 +952,48 @@ zx_status_t DriverHostContext::LoadFirmware(const fbl::RefPtr<zx_device_t>& dev,
     return ZX_ERR_INTERNAL;
   }
   return call_status;
+}
+
+void DriverHostContext::LoadFirmwareAsync(const fbl::RefPtr<zx_device_t>& dev, const char* path,
+                                          load_firmware_callback_t callback, void* context) {
+  ZX_DEBUG_ASSERT(callback);
+
+  fbl::RefPtr<zx_device_t> device_ref = dev;
+
+  const auto client = dev->coordinator_client;
+  if (!client) {
+    callback(context, ZX_ERR_IO_REFUSED, ZX_HANDLE_INVALID, 0);
+    return;
+  }
+  VLOGD(1, *dev, "load-firmware-async");
+  auto str_path = ::fidl::unowned_str(path, strlen(path));
+  auto response = client->LoadFirmware(
+      std::move(str_path),
+      [callback, context, dev = std::move(device_ref)](
+          llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result result) {
+        zx_status_t call_status = ZX_OK;
+        size_t size = 0;
+        zx::vmo vmo;
+
+        if (result.is_err()) {
+          call_status = result.err();
+        } else {
+          auto& resp = result.mutable_response();
+          size = resp.size;
+          vmo = std::move(resp.vmo);
+        }
+        log_rpc_result(dev, "load-firmware-async", ZX_OK, call_status);
+        if (call_status == ZX_OK && !vmo.is_valid()) {
+          call_status = ZX_ERR_INTERNAL;
+        }
+
+        callback(context, call_status, vmo.release(), size);
+      });
+
+  if (response.status() != ZX_OK) {
+    log_rpc_result(dev, "load-firmware-async", response.status(), ZX_OK);
+    callback(context, response.status(), ZX_HANDLE_INVALID, 0);
+  }
 }
 
 zx_status_t DriverHostContext::GetMetadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
