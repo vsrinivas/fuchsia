@@ -76,7 +76,8 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px, uint32_t height_in_px) 
     return 5.22f;
   } else {
     // TODO(fxbug.dev/23621): Don't lie.
-    FX_LOGS(WARNING) << "RootPresenter: unrecognized display.";
+    FX_LOGS(WARNING) << "RootPresenter: unrecognized display (width_in_px=" << width_in_px
+                     << " height_in_px=" << height_in_px << ").";
     return 9.f;
   }
 }

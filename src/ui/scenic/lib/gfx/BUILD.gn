@@ -248,6 +248,7 @@ source_set("gfx") {
     ":object_linker",
     ":view_focuser_registry",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/graphics/display/drivers/display:preferred-scanout-image-type",
     "//src/lib/fsl",
     "//src/ui/lib/escher/util:check_vulkan_support",
     "//src/ui/scenic/lib/display",

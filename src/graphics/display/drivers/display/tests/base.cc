@@ -12,75 +12,26 @@
 #include "../../fake/fake-display.h"
 #include "../controller.h"
 #include "lib/fake_ddk/fake_ddk.h"
+#include "src/devices/sysmem/drivers/sysmem/device.h"
 
 namespace display {
 
-zx_status_t Binder::DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
-                                      void* protocol) {
-  auto out = reinterpret_cast<fake_ddk::Protocol*>(protocol);
-  if (proto_id == ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL) {
-    const auto& p = display_->dcimpl_proto();
-    out->ops = p->ops;
-    out->ctx = p->ctx;
-    return ZX_OK;
-  }
-  if (proto_id == ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL) {
-    const auto& p = display_->clamp_rgbimpl_proto();
-    out->ops = p->ops;
-    out->ctx = p->ctx;
-    return ZX_OK;
-  }
-  for (const auto& proto : protocols_) {
-    if (proto_id == proto.id) {
-      out->ops = proto.proto.ops;
-      out->ctx = proto.proto.ctx;
-      return ZX_OK;
-    }
-  }
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_device_t* Binder::display() { return display_->zxdev(); }
-
 void TestBase::SetUp() {
   loop_.StartThread("display::TestBase::loop_", &loop_thrd_);
-  fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[4], 4);
-  protocols[0] = {ZX_PROTOCOL_COMPOSITE,
-                  *reinterpret_cast<const fake_ddk::Protocol*>(composite_.proto())};
-  protocols[1] = {ZX_PROTOCOL_PBUS, *reinterpret_cast<const fake_ddk::Protocol*>(pbus_.proto())};
-  protocols[2] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-  sysmem_ctx_ = std::make_unique<sysmem_driver::Driver>();
-  sysmem_ = std::make_unique<sysmem_driver::Device>(fake_ddk::kFakeParent, sysmem_ctx_.get());
-  protocols[3] = {ZX_PROTOCOL_SYSMEM,
-                  *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_->proto())};
-  ddk_.SetProtocols(std::move(protocols));
-  EXPECT_OK(sysmem_->Bind());
-  display_ = new fake_display::FakeDisplay(fake_ddk::kFakeParent);
-  ASSERT_OK(display_->Bind(/*start_vsync=*/false));
-  ddk_.SetDisplay(display_);
 
-  std::unique_ptr<display::Controller> c(new Controller(display_->zxdev()));
-  // Save a copy for test cases.
-  controller_ = c.get();
-  ASSERT_OK(c->Bind(&c));
+  auto sysmem = std::make_unique<GenericSysmemDeviceWrapper<sysmem_driver::Device>>();
+  tree_ = std::make_unique<FakeDisplayDeviceTree>(std::move(sysmem), /*start_vsync=*/false);
 }
 
 void TestBase::TearDown() {
-  // FIDL loops must be destroyed first to avoid races between cleanup tasks and loop_.
-  ddk_.ShutdownFIDL();
+  tree_->AsyncShutdown();
+  async::PostTask(loop_.dispatcher(), [this]() { loop_.Quit(); });
 
-  controller_->DdkAsyncRemove();
-  display_->DdkAsyncRemove();
-  ddk_.DeviceAsyncRemove(const_cast<zx_device_t*>(sysmem_->device()));
-  async::PostTask(loop_.dispatcher(),
-                  [this, sysmem = sysmem_.release(), sysmem_ctx = sysmem_ctx_.release()]() {
-                    delete sysmem;
-                    delete sysmem_ctx;
-                    loop_.Quit();
-                  });
   // Wait for loop_.Quit() to execute.
   loop_.JoinThreads();
-  EXPECT_TRUE(ddk_.Ok());
+
+  EXPECT_TRUE(tree_->ddk().Ok());
+  tree_.reset();
 }
 
 bool TestBase::RunLoopWithTimeoutOrUntil(fit::function<bool()>&& condition, zx::duration timeout,
@@ -129,8 +80,16 @@ bool TestBase::RunLoopWithTimeoutOrUntil(fit::function<bool()>&& condition, zx::
   return result->load();
 }
 
-zx::unowned_channel TestBase::sysmem_fidl() { return ddk_.fidl_loop(sysmem_->device()); }
+zx::unowned_channel TestBase::sysmem_fidl() {
+  auto channel = tree_->ddk().fidl_loop(tree_->sysmem_device());
+  ZX_ASSERT(channel->is_valid());
+  return channel;
+}
 
-zx::unowned_channel TestBase::display_fidl() { return ddk_.fidl_loop(controller_->zxdev()); }
+zx::unowned_channel TestBase::display_fidl() {
+  auto channel = tree_->ddk().fidl_loop(tree_->controller()->zxdev());
+  ZX_ASSERT(channel->is_valid());
+  return channel;
+}
 
 }  // namespace display

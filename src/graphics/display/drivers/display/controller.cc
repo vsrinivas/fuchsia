@@ -844,7 +844,8 @@ bool Controller::GetDisplayPhysicalDimensions(uint64_t display_id, uint32_t* hor
 zx_status_t Controller::DdkOpen(zx_device_t** dev_out, uint32_t flags) { return ZX_OK; }
 
 zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
-                                     zx::channel client_channel) {
+                                     zx::channel client_channel,
+                                     fit::function<void()> on_client_dead) {
   fbl::AllocChecker ac;
   std::unique_ptr<async::Task> task = fbl::make_unique_checked<async::Task>(&ac);
   if (!ac.check()) {
@@ -863,7 +864,8 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  auto client = fbl::make_unique_checked<ClientProxy>(&ac, this, is_vc, next_client_id_++);
+  auto client = fbl::make_unique_checked<ClientProxy>(&ac, this, is_vc, next_client_id_++,
+                                                      std::move(on_client_dead));
   if (!ac.check()) {
     zxlogf(DEBUG, "Failed to alloc client");
     return ZX_ERR_NO_MEMORY;
@@ -878,6 +880,7 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
   status = client->DdkAdd(ddk::DeviceAddArgs(is_vc ? "dc-vc" : "dc")
                               .set_flags(DEVICE_ADD_INSTANCE)
                               .set_client_remote(std::move(device_channel)));
+
   if (status != ZX_OK) {
     zxlogf(DEBUG, "Failed to add client %d", status);
     return status;
@@ -925,6 +928,7 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
         }
         delete task;
       });
+
   return task.release()->Post(loop_.dispatcher());
 }
 
@@ -945,6 +949,8 @@ zx_status_t Controller::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
+  ZX_DEBUG_ASSERT_MSG(device_ptr && device_ptr->get() == this, "Wrong controller passed to Bind()");
+
   zx_status_t status;
   dc_ = ddk::DisplayControllerImplProtocolClient(parent_);
   if (!dc_.is_valid()) {
@@ -1026,6 +1032,8 @@ Controller::Controller(zx_device_t* parent)
     : ControllerParent(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   mtx_init(&mtx_, mtx_plain);
 }
+
+Controller::~Controller() { zxlogf(INFO, "Controller::~Controller"); }
 
 size_t Controller::TEST_imported_images_count() const {
   fbl::AutoLock lock(mtx());

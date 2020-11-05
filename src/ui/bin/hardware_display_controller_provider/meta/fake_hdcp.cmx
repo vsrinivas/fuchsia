@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/fake_hw_display_controller_provider"
+    },
+    "sandbox": {
+        "dev": [
+            "class/display-controller"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

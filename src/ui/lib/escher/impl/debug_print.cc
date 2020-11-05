@@ -172,8 +172,15 @@ std::ostream& operator<<(std::ostream& str, const impl::ModelPipelineSpec& spec)
 }
 
 std::ostream& operator<<(std::ostream& str, const ImageInfo& info) {
-  return str << "ImageInfo[" << info.width << "x" << info.height << " "
-             << vk::to_string(info.format) << "  samples: " << info.sample_count << "]";
+  str << "ImageInfo[" << info.width << "x" << info.height << " " << vk::to_string(info.format)
+      << "  samples: " << info.sample_count;
+  if (info.is_mutable) {
+    str << " mutable";
+  }
+  if (info.is_external) {
+    str << " external";
+  }
+  return str << " " << vk::to_string(info.usage) << "]";
 }
 
 std::ostream& operator<<(std::ostream& str, const ViewingVolume& volume) {

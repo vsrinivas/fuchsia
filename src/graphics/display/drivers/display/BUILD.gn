@@ -23,7 +23,10 @@ driver_module("display") {
 
 # Also used by test/.
 source_set("shared") {
-  visibility = [ "./*" ]
+  visibility = [
+    "../fake:fake-display-device-tree",
+    "./*",
+  ]
   configs += [ "//build/config:all_source" ]
   sources = [
     "client.cc",
@@ -65,6 +68,10 @@ source_set("shared") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+source_set("preferred-scanout-image-type") {
+  sources = [ "preferred-scanout-image-type.h" ]
 }
 
 group("tests") {

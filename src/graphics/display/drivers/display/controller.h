@@ -11,6 +11,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/edid/edid.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 
@@ -82,6 +83,7 @@ class Controller : public ControllerParent,
                    private llcpp::fuchsia::hardware::display::Provider::Interface {
  public:
   Controller(zx_device_t* parent);
+  ~Controller();
 
   static void PopulateDisplayMode(const edid::timing_params_t& params, display_mode_t* mode);
 
@@ -149,6 +151,11 @@ class Controller : public ControllerParent,
   // Test helpers
   size_t TEST_imported_images_count() const;
 
+  // Typically called by OpenController/OpenVirtconController.  However, this is made public
+  // for use by testing services which provide a fake display controller.
+  zx_status_t CreateClient(bool is_vc, zx::channel device, zx::channel client,
+                           fit::function<void()> on_client_dead = nullptr);
+
  private:
   friend ControllerTest;
   friend IntegrationTest;
@@ -156,7 +163,6 @@ class Controller : public ControllerParent,
   void HandleClientOwnershipChanges() __TA_REQUIRES(mtx());
   void PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) __TA_EXCLUDES(mtx());
   void PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info);
-  zx_status_t CreateClient(bool is_vc, zx::channel device, zx::channel client);
 
   void OpenVirtconController(zx::channel device, zx::channel controller,
                              OpenVirtconControllerCompleter::Sync& _completer) override;

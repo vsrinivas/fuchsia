@@ -145,6 +145,7 @@ void Client::ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, 
     uint32_t minimum_row_bytes;
     if (!image_format::GetMinimumRowBytes(info.settings.image_format_constraints, dc_image.width,
                                           &minimum_row_bytes)) {
+      zxlogf(DEBUG, "Cannot determine minimum row bytes.\n");
       _completer.Reply(ZX_ERR_INVALID_ARGS, 0);
       return;
     }
@@ -155,6 +156,7 @@ void Client::ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, 
   fbl::AllocChecker ac;
   auto image = fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(vmo), stride));
   if (!ac.check()) {
+    zxlogf(DEBUG, "Alloc checker failed while constructing Image.\n");
     _completer.Reply(ZX_ERR_NO_MEMORY, 0);
     return;
   }
@@ -1718,7 +1720,12 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
   return ZX_OK;
 }  // namespace display
 
-void ClientProxy::OnClientDead() { controller_->OnClientDead(this); }
+void ClientProxy::OnClientDead() {
+  controller_->OnClientDead(this);
+  if (on_client_dead_) {
+    on_client_dead_();
+  }
+}
 
 void ClientProxy::CloseTest() { handler_.TearDownTest(); }
 
@@ -1801,11 +1808,13 @@ zx_status_t ClientProxy::Init(zx::channel server_channel) {
   return handler_.Init(std::move(server_channel));
 }
 
-ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id)
+ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
+                         fit::function<void()> on_client_dead)
     : ClientParent(controller->zxdev()),
       controller_(controller),
       is_vc_(is_vc),
-      handler_(controller_, this, is_vc_, client_id) {
+      handler_(controller_, this, is_vc_, client_id),
+      on_client_dead_(std::move(on_client_dead)) {
   mtx_init(&mtx_, mtx_plain);
 }
 

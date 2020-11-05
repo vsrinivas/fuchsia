@@ -13,6 +13,7 @@
 
 #include <memory>
 
+#include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
 #include "base.h"

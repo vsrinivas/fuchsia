@@ -30,6 +30,7 @@
 #include <fbl/auto_lock.h>
 
 #include "fbl/vector.h"
+#include "src/graphics/display/drivers/display/preferred-scanout-image-type.h"
 #include "zircon/types.h"
 
 namespace fake_display {
@@ -93,6 +94,10 @@ zx_status_t FakeDisplay::ImportVmoImage(image_t* image, zx::vmo vmo, size_t offs
   return status;
 }
 
+static bool IsAcceptableImageType(uint32_t image_type) {
+  return image_type == IMAGE_TYPE_PREFERRED_SCANOUT || image_type == IMAGE_TYPE_SIMPLE;
+}
+
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 zx_status_t FakeDisplay::DisplayControllerImplImportImage(image_t* image,
                                                           zx_unowned_handle_t handle,
@@ -104,9 +109,14 @@ zx_status_t FakeDisplay::DisplayControllerImplImportImage(image_t* image,
   }
 
   fbl::AutoLock lock(&image_lock_);
-  if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != kSupportedPixelFormats[0]) {
-    status = ZX_ERR_INVALID_ARGS;
-    return status;
+  if (!IsAcceptableImageType(image->type)) {
+    DISP_INFO("Image type is invalid (%u).\n", image->type);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (image->pixel_format != kSupportedPixelFormats[0]) {
+    DISP_INFO("Pixel format is unsupported (%u).\n", image->pixel_format);
+    return ZX_ERR_INVALID_ARGS;
   }
   zx_status_t status2;
   fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
@@ -230,6 +240,7 @@ zx_status_t FakeDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.secure_required = false;
   buffer_constraints.ram_domain_supported = true;
   buffer_constraints.cpu_domain_supported = true;
+  buffer_constraints.inaccessible_domain_supported = true;
   constraints.image_format_constraints_count = 1;
   fuchsia_sysmem_ImageFormatConstraints& image_constraints =
       constraints.image_format_constraints[0];

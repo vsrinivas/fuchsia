@@ -10,6 +10,7 @@
 
 #include <fbl/auto_call.h>
 
+#include "src/graphics/display/drivers/display/preferred-scanout-image-type.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/impl/naive_image.h"
@@ -160,15 +161,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   image_config_.height = height_in_px;
   image_config_.width = width_in_px;
   image_config_.pixel_format = pixel_format;
-
-#if defined(__x86_64__)
-  // IMAGE_TYPE_X_TILED from ddk/protocol/intelgpucore.h
-  image_config_.type = 1;
-#elif defined(__aarch64__)
-  image_config_.type = 0;
-#else
-  FX_DCHECK(false) << "Display swapchain only supported on intel and ARM";
-#endif
+  image_config_.type = IMAGE_TYPE_PREFERRED_SCANOUT;
 
   // Create all the tokens.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token =
@@ -347,9 +340,16 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
     zx_status_t transport_status = (*environment->display_controller)
                                        ->ImportImage(image_config_, display_collection_id, i,
                                                      &import_image_status, &buffer.id);
-    if (transport_status != ZX_OK || import_image_status != ZX_OK) {
+    if (transport_status != ZX_OK) {
       buffer.id = fuchsia::hardware::display::INVALID_DISP_ID;
-      FX_LOGS(ERROR) << "Importing image failed.";
+      FX_PLOGS(ERROR, transport_status) << "Importing image FIDL call failed.";
+      return false;
+    }
+    if (import_image_status != ZX_OK) {
+      buffer.id = fuchsia::hardware::display::INVALID_DISP_ID;
+      FX_PLOGS(ERROR, import_image_status)
+          << "Importing image failed (" << image_info
+          << "  use_protected_memory=" << (use_protected_memory ? "true" : "false") << ").";
       return false;
     }
 

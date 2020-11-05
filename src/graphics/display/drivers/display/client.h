@@ -13,6 +13,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/builder.h>
+#include <lib/fit/function.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -300,7 +301,8 @@ using ClientParent = ddk::Device<ClientProxy, ddk::Unbindable, ddk::Closable>;
 class ClientProxy : public ClientParent {
  public:
   // "client_id" is assigned by the Controller to distinguish clients.
-  ClientProxy(Controller* controller, bool is_vc, uint32_t client_id);
+  ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
+              fit::function<void()> on_client_dead);
 
   // This is used for testing
   ClientProxy(Controller* controller, bool is_vc, uint32_t client_id, zx::channel server_channel);
@@ -397,6 +399,8 @@ class ClientProxy : public ClientParent {
   uint64_t number_of_vsyncs_sent_ = 0;
   uint64_t last_cookie_sent_ = 0;
   bool acknowledge_request_sent_ = false;
+
+  fit::function<void()> on_client_dead_;
 };
 
 }  // namespace display

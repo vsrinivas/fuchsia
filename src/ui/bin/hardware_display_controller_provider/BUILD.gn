@@ -8,7 +8,29 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 group("hardware_display_controller_provider") {
-  public_deps = [ ":hardware-display-controller-provider" ]
+  testonly = true
+  public_deps = [
+    ":fake-hardware-display-controller-provider",
+    ":hardware-display-controller-provider",
+  ]
+}
+
+package("fake-hardware-display-controller-provider") {
+  testonly = true
+  deps = [ "fake:bin" ]
+
+  binaries = [
+    {
+      name = "fake_hw_display_controller_provider"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/fake_hdcp.cmx")
+      dest = "hdcp.cmx"
+    },
+  ]
 }
 
 package("hardware-display-controller-provider") {

@@ -21,7 +21,7 @@ class ComponentContext;
 namespace ui_display {
 
 // Implements the FIDL fuchsia.hardware.display.Provider API.  Only provides access to the primary
-// controller
+// controller, not the Virtcon controller.
 class HardwareDisplayControllerProviderImpl : public fuchsia::hardware::display::Provider {
  public:
   // |app_context| is used to publish this service.

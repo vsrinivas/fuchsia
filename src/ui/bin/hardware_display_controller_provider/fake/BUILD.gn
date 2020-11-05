@@ -1,0 +1,30 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "fake_hw_display_controller_provider"
+
+  configs += [ "//build/config:all_source" ]
+
+  sources = [
+    "main.cc",
+    "service.cc",
+    "service.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.display",
+    "//sdk/lib/sys/cpp",
+    "//src/graphics/display/drivers/fake:fake-display-device-tree",
+    "//src/graphics/display/drivers/fake:sysmem-proxy-device",
+    "//src/lib/fxl",
+    "//src/ui/lib/display:hdcp_service",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+  ]
+}

@@ -1,0 +1,18 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/display-core-unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.sysmem.DriverConnector"
+        ]
+    }
+}

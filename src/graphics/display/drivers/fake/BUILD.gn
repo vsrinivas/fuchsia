@@ -26,7 +26,10 @@ driver_module("fake-display") {
 
 source_set("fake-lib") {
   configs += [ "//build/config:all_source" ]
-  sources = [ "fake-display.cc" ]
+  sources = [
+    "fake-display.cc",
+    "fake-display.h",
+  ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.display.capture",
@@ -46,4 +49,52 @@ source_set("fake-lib") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
   ]
+  deps =
+      [ "//src/graphics/display/drivers/display:preferred-scanout-image-type" ]
+}
+
+static_library("sysmem-proxy-device") {
+  testonly = true
+
+  sources = [
+    "sysmem-proxy-device.cc",
+    "sysmem-proxy-device.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+
+  deps = [
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/sysmem-version",
+  ]
+}
+
+static_library("fake-display-device-tree") {
+  testonly = true
+
+  configs += [ "//build/config:all_source" ]
+
+  sources = [
+    "fake-display-device-tree.cc",
+    "fake-display-device-tree.h",
+  ]
+  public_deps = [
+    ":fake-lib",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake_ddk",
+    "//src/graphics/display/drivers/display:shared",
+    "//src/lib/ddktl",
+  ]
+
+  deps = [ "//zircon/public/lib/zxtest" ]
 }
