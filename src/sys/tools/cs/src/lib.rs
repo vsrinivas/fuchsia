@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 pub mod freq;
-pub mod io;
 pub mod log_stats;
 pub mod v1;
 pub mod v2;

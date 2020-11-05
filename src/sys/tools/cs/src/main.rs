@@ -14,7 +14,6 @@ use {
         v2::V2Component,
     },
     fuchsia_async as fasync,
-    std::path::PathBuf,
     structopt::StructOpt,
 };
 
@@ -31,9 +30,9 @@ enum Opt {
     /// Output detailed information about components on the system.
     #[structopt(name = "info")]
     Info {
-        /// Print information for any component whose URL/name matches this substring.
-        #[structopt(short = "f", long = "filter", default_value = "")]
-        filter: String,
+        /// Print information for any component whose URL matches this substring.
+        #[structopt(short = "f", long = "url-filter", default_value = "")]
+        url_filter: String,
     },
 
     /// Display per-component statistics for syslogs.
@@ -61,15 +60,19 @@ async fn main() -> Result<(), Error> {
             let log_stats = LogStats::new(min_severity).await?;
             println!("{}", log_stats);
         }
-        Opt::Info { filter } => {
-            let path = PathBuf::from("/hub-v2");
-            let component = V2Component::explore(path).await;
-            component.print_details(&filter);
+        Opt::Info { url_filter } => {
+            // Print out the component details
+            let component = V2Component::new_root_component("/hub-v2".to_string()).await;
+            let lines = component.generate_details(&url_filter);
+            let output = lines.join("\n");
+            println!("{}", output);
         }
         Opt::Tree => {
-            let path = PathBuf::from("/hub-v2");
-            let component = V2Component::explore(path).await;
-            component.print_tree();
+            // Print out the component tree
+            let component = V2Component::new_root_component("/hub-v2".to_string()).await;
+            let lines = component.generate_tree();
+            let output = lines.join("\n");
+            println!("{}", output);
         }
         Opt::PageInFrequencies => {
             let frequencies = BlobFrequencies::collect().await;
