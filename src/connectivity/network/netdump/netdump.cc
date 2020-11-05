@@ -410,6 +410,11 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count, const Netdu
     return;
   }
 
+  if (!count) {
+    std::cerr << "Expected non-zero count value. Bail out" << std::endl;
+    return;
+  }
+
   eth_fifo_entry_t entries[count];
 
   bool dumpfile_write_error =
