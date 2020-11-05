@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::u8;
+use std::{convert::TryFrom, u8};
 
-use super::*;
-use crate::packets;
-use crate::packets::player_application_settings::PlayerApplicationSettingAttributeId;
-use crate::packets::*;
+use crate::packets::player_application_settings::{
+    PlayerApplicationSettingAttributeId, PlayerApplicationSettings,
+};
+use crate::packets::{
+    AvcCommandType, Decodable, Encodable, Equalizer, Error, PacketResult, PduId, RepeatStatusMode,
+    ScanMode, ShuffleMode, VendorCommand, VendorDependentPdu,
+};
 
 /// Packet format for a SetPlayerApplicationSettingValue command.
 /// See AVRCP Sec 6.5.4
@@ -95,7 +98,7 @@ impl Encodable for SetPlayerApplicationSettingValueCommand {
 }
 
 impl TryFrom<SetPlayerApplicationSettingValueCommand> for PlayerApplicationSettings {
-    type Error = packets::Error;
+    type Error = Error;
     fn try_from(
         src: SetPlayerApplicationSettingValueCommand,
     ) -> Result<PlayerApplicationSettings, Error> {
@@ -172,6 +175,7 @@ impl Encodable for SetPlayerApplicationSettingValueResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::packets::{player_application_settings::settings_to_vec, VendorDependentRawPdu};
 
     #[test]
     // Test SetPlayerApplicationSettingValue command encoding success.

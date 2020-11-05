@@ -5,16 +5,13 @@
 use {
     anyhow::Error as FailureError,
     bt_avctp::{AvcPeer, AvctpPeer},
-    fidl_fuchsia_bluetooth_avrcp::{
-        AbsoluteVolumeHandlerProxy, AvcPanelCommand, TargetHandlerProxy,
-    },
-    fidl_fuchsia_bluetooth_bredr::ProfileProxy,
+    fidl_fuchsia_bluetooth_avrcp as fidl_avrcp, fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::types::{Channel, PeerId},
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{self, channel::oneshot},
     log::trace,
-    parking_lot::{Mutex, RwLock},
+    parking_lot::RwLock,
     std::{collections::HashMap, sync::Arc},
 };
 
@@ -35,13 +32,13 @@ pub enum ServiceRequest {
 
     /// Request to set the current volume handler. Returns an error if one is already set.
     RegisterAbsoluteVolumeHandler {
-        absolute_volume_handler: AbsoluteVolumeHandlerProxy,
+        absolute_volume_handler: fidl_avrcp::AbsoluteVolumeHandlerProxy,
         reply: oneshot::Sender<Result<(), Error>>,
     },
 
     /// Request to set the current target handler. Returns an error if one is already set.
     RegisterTargetHandler {
-        target_handler: TargetHandlerProxy,
+        target_handler: fidl_avrcp::TargetHandlerProxy,
         reply: oneshot::Sender<Result<(), Error>>,
     },
 }
@@ -55,14 +52,14 @@ impl ServiceRequest {
     }
 
     pub fn new_register_target_handler_request(
-        target_handler: TargetHandlerProxy,
+        target_handler: fidl_avrcp::TargetHandlerProxy,
     ) -> (oneshot::Receiver<Result<(), Error>>, ServiceRequest) {
         let (sender, receiver) = oneshot::channel();
         (receiver, ServiceRequest::RegisterTargetHandler { target_handler, reply: sender })
     }
 
     pub fn new_register_absolute_volume_handler_request(
-        absolute_volume_handler: AbsoluteVolumeHandlerProxy,
+        absolute_volume_handler: fidl_avrcp::AbsoluteVolumeHandlerProxy,
     ) -> (oneshot::Receiver<Result<(), Error>>, ServiceRequest) {
         let (sender, receiver) = oneshot::channel();
         (
@@ -79,7 +76,7 @@ impl ServiceRequest {
 /// service requests from FIDL and profile events from the BREDR service and dispatches them
 /// accordingly.
 pub struct PeerManager {
-    profile_proxy: ProfileProxy,
+    profile_proxy: bredr::ProfileProxy,
     /// Known peers, which may be connected or disconnected
     peers: RwLock<HashMap<PeerId, RemotePeerHandle>>,
     /// The delegate for the AVRCP target, where commands to this peer are sent.
@@ -96,7 +93,7 @@ impl Inspect for &mut PeerManager {
 }
 
 impl PeerManager {
-    pub fn new(profile_proxy: ProfileProxy) -> Result<Self, FailureError> {
+    pub fn new(profile_proxy: bredr::ProfileProxy) -> Result<Self, FailureError> {
         Ok(Self {
             profile_proxy,
             peers: RwLock::new(HashMap::new()),

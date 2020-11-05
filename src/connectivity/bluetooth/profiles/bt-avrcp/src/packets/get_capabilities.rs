@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
+use {fuchsia_bluetooth::pub_decodable_enum, std::convert::TryFrom};
+
+use crate::packets::{
+    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, VendorCommand,
+    VendorDependentPdu,
+};
 
 pub_decodable_enum!(
     /// AVRCP 1.6.1 section 6.4.1 Table 6.5
@@ -219,6 +224,7 @@ impl Encodable for GetCapabilitiesResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::packets::{NotificationEventId, VendorDependentRawPdu};
 
     #[test]
     /// Test GetCapabilitiesResponse company encoding

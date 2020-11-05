@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::u8;
+use std::{convert::TryFrom, u8};
 
-use super::*;
+use crate::packets::player_application_settings::PlayerApplicationSettingAttributeId;
+use crate::packets::{
+    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, VendorCommand,
+    VendorDependentPdu,
+};
 
 /// Packet format for a ListPlayerApplicationSettingAttributes command.
 /// See AVRCP Sec 6.5.1
@@ -248,6 +252,7 @@ impl Encodable for ListPlayerApplicationSettingValuesResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::packets::VendorDependentRawPdu;
 
     #[test]
     // Test ListPlayerApplicationSettingAttributes command encoding success.

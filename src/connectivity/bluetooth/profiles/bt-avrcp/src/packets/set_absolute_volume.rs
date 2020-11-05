@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
+use crate::packets::{
+    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, VendorCommand,
+    VendorDependentPdu,
+};
 
 /// AVRCP 1.6.1 SetAbsoluteVolume. Command encodes a requested volume. Response returns the volume
 /// actually set.

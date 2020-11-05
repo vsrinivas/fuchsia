@@ -2,9 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::u8;
+use std::{convert::TryFrom, u8};
 
-use super::*;
+use crate::packets::player_application_settings::{
+    PlayerApplicationSettingAttributeId, RepeatStatusMode,
+};
+use crate::packets::{
+    AvcCommandType, Decodable, Encodable, Equalizer, Error, PacketResult, PduId,
+    PlayerApplicationSettings, ScanMode, ShuffleMode, VendorCommand, VendorDependentPdu,
+};
 
 /// Packet format for a GetCurrentPlayerApplicationSettingValue command.
 /// See AVRCP Sec 6.5.3
@@ -235,6 +241,7 @@ impl TryFrom<GetCurrentPlayerApplicationSettingValueResponse> for PlayerApplicat
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::packets::VendorDependentRawPdu;
     use std::convert::TryInto;
 
     #[test]

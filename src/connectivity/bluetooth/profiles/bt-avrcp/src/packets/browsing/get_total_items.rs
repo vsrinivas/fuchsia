@@ -4,7 +4,7 @@
 
 use std::convert::TryFrom;
 
-use super::*;
+use crate::packets::{Decodable, Encodable, Error, PacketResult, Scope, StatusCode};
 
 /// GetTotalNumberOfItemsCommand used for retrieving the number of items in a folder.
 /// Defined in AVRCP 1.6.2, Section 6.10.4.4.

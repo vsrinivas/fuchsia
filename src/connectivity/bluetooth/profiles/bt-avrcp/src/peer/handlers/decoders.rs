@@ -1,12 +1,17 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use super::*;
 
 use {
+    bt_avctp::{AvcOpCode, AvcPacketType},
+    fidl_fuchsia_bluetooth_avrcp::AvcPanelCommand,
     log::{error, trace},
+    std::convert::TryFrom,
     thiserror::Error,
 };
+
+use crate::packets::{Decodable, Encodable};
+use crate::peer::*;
 
 /// The error types during decode
 #[derive(Error, Debug)]

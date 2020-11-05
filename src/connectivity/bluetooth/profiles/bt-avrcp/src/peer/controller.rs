@@ -2,11 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
+use {
+    fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
+    futures::channel::mpsc,
+    log::trace,
+    std::convert::{TryFrom, TryInto},
+};
 
-use {log::trace, std::convert::TryInto};
-
-use crate::packets::{SONG_LENGTH_NOT_SUPPORTED, SONG_POSITION_NOT_SUPPORTED};
+use crate::packets::{
+    player_application_settings::{
+        PlayerApplicationSettingAttributeId, SetPlayerApplicationSettingValueCommand,
+    },
+    Decodable, SONG_LENGTH_NOT_SUPPORTED, SONG_POSITION_NOT_SUPPORTED,
+};
+use crate::peer::*;
+use crate::types::PeerError as Error;
 
 #[derive(Debug, Clone)]
 pub enum ControllerEvent {
@@ -58,8 +68,8 @@ impl Controller {
 
     /// Sends GetElementAttributes command to the peer.
     /// Returns all the media attributes received as a response or an error.
-    pub async fn get_media_attributes(&self) -> Result<MediaAttributes, Error> {
-        let mut media_attributes = MediaAttributes::empty();
+    pub async fn get_media_attributes(&self) -> Result<fidl_avrcp::MediaAttributes, Error> {
+        let mut media_attributes = fidl_avrcp::MediaAttributes::empty();
         let cmd = GetElementAttributesCommand::all_attributes();
         trace!("get_media_attributes send command {:#?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
@@ -84,14 +94,14 @@ impl Controller {
 
     /// Send a GetPlayStatus command requesting current status of playing media.
     /// Returns the PlayStatus of current media on the peer, or an error.
-    pub async fn get_play_status(&self) -> Result<PlayStatus, Error> {
+    pub async fn get_play_status(&self) -> Result<fidl_avrcp::PlayStatus, Error> {
         let cmd = GetPlayStatusCommand::new();
         trace!("get_play_status send command {:?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let response =
             GetPlayStatusResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
         trace!("get_play_status received response {:?}", response);
-        let mut play_status = PlayStatus::empty();
+        let mut play_status = fidl_avrcp::PlayStatus::empty();
         play_status.song_length = if response.song_length != SONG_LENGTH_NOT_SUPPORTED {
             Some(response.song_length)
         } else {

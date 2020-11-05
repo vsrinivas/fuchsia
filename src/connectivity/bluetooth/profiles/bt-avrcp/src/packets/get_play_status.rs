@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::u32;
+use std::{convert::TryFrom, u32};
 
-use super::*;
+use crate::packets::{
+    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, PlaybackStatus,
+    VendorCommand, VendorDependentPdu,
+};
 
 #[derive(Debug)]
 /// AVRCP 1.6.1 section 6.7.1 GetPlayStatus

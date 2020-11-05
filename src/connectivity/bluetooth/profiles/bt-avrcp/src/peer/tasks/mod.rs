@@ -3,19 +3,28 @@
 // found in the LICENSE file.
 
 use {
-    super::*,
-    fidl_fuchsia_bluetooth_bredr::{ConnectParameters, L2capParameters},
+    bt_avctp::AvcPeer,
+    fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
     fuchsia_async::DurationExt,
     fuchsia_zircon as zx,
+    futures::{
+        future::{AbortHandle, Abortable, FutureExt},
+        select,
+        stream::{SelectAll, StreamExt, TryStreamExt},
+    },
     log::{error, info, trace},
     notification_stream::NotificationStream,
+    parking_lot::RwLock,
+    pin_utils::pin_mut,
     rand::Rng,
-    std::convert::TryInto,
+    std::{convert::TryInto, sync::Arc},
 };
 
 mod notification_stream;
 
-use crate::types::PeerError;
+use crate::packets::{Decodable, Encodable};
+use crate::peer::*;
+use crate::types::PeerError as Error;
 
 /// Processes incoming commands from the control stream and dispatches them to the control command
 /// handler. This is started only when we have a connection and when we have either a target or
@@ -38,7 +47,7 @@ async fn process_control_stream(peer: Arc<RwLock<RemotePeer>>) {
         .map(Ok)
         .try_for_each_concurrent(16, |command| async {
             let fut = peer.read().control_command_handler.handle_command(command.unwrap());
-            let result: Result<(), PeerError> = fut.await;
+            let result: Result<(), Error> = fut.await;
             result
         })
         .await
@@ -73,7 +82,7 @@ async fn process_browse_stream(peer: Arc<RwLock<RemotePeer>>) {
         .map(Ok)
         .try_for_each_concurrent(16, |command| async {
             let fut = peer.read().browse_command_handler.handle_command(command.unwrap());
-            let result: Result<(), PeerError> = fut.await;
+            let result: Result<(), Error> = fut.await;
             result
         })
         .await
@@ -165,9 +174,9 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
         match profile_service
             .connect(
                 &mut peer_id.into(),
-                &mut ConnectParameters::L2cap(L2capParameters {
-                    psm: Some(PSM_AVCTP),
-                    ..L2capParameters::empty()
+                &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
+                    psm: Some(bredr::PSM_AVCTP),
+                    ..bredr::L2capParameters::empty()
                 }),
             )
             .await
@@ -249,7 +258,7 @@ async fn pump_notifications(peer: Arc<RwLock<RemotePeer>>) {
 
     pin_mut!(notification_streams);
     loop {
-        if futures::select! {
+        if select! {
             event_result = notification_streams.select_next_some() => {
                 match event_result {
                     Ok((notif, data)) => {

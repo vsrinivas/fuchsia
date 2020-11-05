@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
+use crate::packets::{Encodable, Error, PacketResult, StatusCode, VendorDependentRawPdu};
 
 #[derive(Debug)]
 /// For rejection packets. This packets operates differently from most vendor dependant packets in
@@ -47,6 +47,7 @@ impl Encodable for RejectResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::packets::{PacketEncodable, PduId};
 
     #[test]
     fn test_reject_response() {

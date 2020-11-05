@@ -3,25 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::format_err,
-    bt_avctp::{
-        AvcCommand, AvcCommandResponse, AvcCommandType, AvcOpCode, AvcPacketType, AvcPeer,
-        AvcResponseType, AvctpPeer, Error as AvctpError,
-    },
-    fidl_fuchsia_bluetooth_avrcp::{AvcPanelCommand, MediaAttributes, PlayStatus},
-    fidl_fuchsia_bluetooth_bredr::{ProfileProxy, PSM_AVCTP},
-    fuchsia_async as fasync,
+    bt_avctp::{AvcCommandResponse, AvcCommandType, AvcPeer, AvcResponseType, AvctpPeer},
+    fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
-    futures::{
-        self,
-        channel::mpsc,
-        future::{AbortHandle, Abortable, FutureExt},
-        stream::{FusedStream, SelectAll, StreamExt, TryStreamExt},
-        Future, Stream,
-    },
+    futures::{channel::mpsc, future::FutureExt, stream::StreamExt, Future},
     log::{error, info, trace},
     parking_lot::RwLock,
     pin_utils::pin_mut,
@@ -29,9 +17,7 @@ use {
         collections::HashMap,
         convert::TryFrom,
         mem::{discriminant, Discriminant},
-        pin::Pin,
         sync::Arc,
-        task::{Context, Poll},
     },
 };
 
@@ -145,7 +131,7 @@ struct RemotePeer {
     browse_channel: PeerChannel<AvctpPeer>,
 
     /// Profile service. Used by RemotePeer to make outgoing L2CAP connections.
-    profile_proxy: ProfileProxy,
+    profile_proxy: bredr::ProfileProxy,
 
     /// All stream listeners obtained by any `Controller`s around this peer that are listening for
     /// events from this peer.
@@ -198,7 +184,7 @@ impl RemotePeer {
     fn new(
         peer_id: PeerId,
         target_delegate: Arc<TargetDelegate>,
-        profile_proxy: ProfileProxy,
+        profile_proxy: bredr::ProfileProxy,
     ) -> RemotePeer {
         Self {
             peer_id: peer_id.clone(),
@@ -423,7 +409,7 @@ impl RemotePeerHandle {
     pub fn spawn_peer(
         peer_id: PeerId,
         target_delegate: Arc<TargetDelegate>,
-        profile_proxy: ProfileProxy,
+        profile_proxy: bredr::ProfileProxy,
     ) -> RemotePeerHandle {
         let remote_peer =
             Arc::new(RwLock::new(RemotePeer::new(peer_id, target_delegate, profile_proxy)));
@@ -529,7 +515,9 @@ mod tests {
     use crate::profile::{AvcrpTargetFeatures, AvrcpProtocolVersion};
     use anyhow::Error;
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest, ProfileRequestStream};
+    use fidl_fuchsia_bluetooth_bredr::{
+        ProfileMarker, ProfileRequest, ProfileRequestStream, PSM_AVCTP,
+    };
     use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
     use fuchsia_bluetooth::types::Channel;
     use fuchsia_zircon::{self as zx, DurationNum};

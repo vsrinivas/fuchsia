@@ -2,9 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::u8;
+use std::{convert::TryFrom, u8};
 
-use super::*;
+use crate::packets::player_application_settings::{
+    PlayerApplicationSettingAttributeId, RepeatStatusMode,
+};
+use crate::packets::{
+    AvcCommandType, CharsetId, Decodable, Encodable, Error, PacketResult, PduId, ShuffleMode,
+    VendorCommand, VendorDependentPdu,
+};
 
 #[derive(Debug)]
 /// AVRCP 1.6.1 section 6.5.6 GetPlayerApplicationSettingValueText command.
@@ -268,6 +274,7 @@ impl Encodable for GetPlayerApplicationSettingValueTextResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::packets::VendorDependentRawPdu;
 
     #[test]
     // Test GetPlayerApplicationSettingValueTextCommand encoding success.

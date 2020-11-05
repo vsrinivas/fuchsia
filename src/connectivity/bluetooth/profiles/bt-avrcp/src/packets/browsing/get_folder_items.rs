@@ -2,9 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_bluetooth_avrcp as fidl_avrcp, std::convert::TryInto};
+use {
+    fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
+    std::convert::{TryFrom, TryInto},
+};
 
-use super::*;
+use crate::packets::{
+    CharsetId, Decodable, Encodable, Error, MediaAttributeId, PacketResult, PlaybackStatus, Scope,
+    StatusCode, ATTRIBUTE_ID_LEN,
+};
 
 /// The smallest packet size of a GetFolderItemsCommand.
 /// 1 byte for scope, 4 for start_item, 4 for end_item, 1 for attribute_count.

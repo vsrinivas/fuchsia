@@ -2,10 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{u32, u64};
+use {
+    fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
+    fuchsia_bluetooth::pub_decodable_enum,
+    std::{
+        convert::TryFrom,
+        {u32, u64},
+    },
+};
 
-use super::*;
-use fidl_fuchsia_bluetooth_avrcp::NotificationEvent;
+use crate::packets::{
+    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, PlaybackStatus,
+    PlayerApplicationSettingAttributeId, PlayerApplicationSettings, VendorCommand,
+    VendorDependentPdu,
+};
 
 pub_decodable_enum! {
     /// AVRCP 1.6.1 section 28 "Appendix H: list of defined notification events"
@@ -47,7 +57,9 @@ pub_decodable_enum! {
 }
 
 impl From<&fidl_avrcp::NotificationEvent> for NotificationEventId {
-    fn from(event: &NotificationEvent) -> Self {
+    fn from(event: &fidl_avrcp::NotificationEvent) -> Self {
+        use fidl_avrcp::NotificationEvent;
+
         match event {
             &NotificationEvent::PlaybackStatusChanged => {
                 NotificationEventId::EventPlaybackStatusChanged
@@ -80,6 +92,8 @@ impl From<&fidl_avrcp::NotificationEvent> for NotificationEventId {
 
 impl From<&NotificationEventId> for fidl_avrcp::NotificationEvent {
     fn from(event: &NotificationEventId) -> Self {
+        use fidl_avrcp::NotificationEvent;
+
         match event {
             &NotificationEventId::EventPlaybackStatusChanged => {
                 NotificationEvent::PlaybackStatusChanged
@@ -616,6 +630,7 @@ impl From<PlayerApplicationSettings> for PlayerApplicationSettingChangedResponse
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::packets::VendorDependentRawPdu;
 
     #[test]
     fn test_register_notification_encode() {

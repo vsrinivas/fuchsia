@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
+use crate::packets::{
+    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, VendorCommand,
+    VendorDependentPdu,
+};
 
 #[derive(Debug)]
 /// AVRCP 1.6.1 section 6.8 Continuation PDUs - RequestContinuingResponse
@@ -156,6 +159,7 @@ impl Encodable for AbortContinuingResponseResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::packets::{PacketEncodable, VendorDependentRawPdu};
 
     #[test]
     fn test_request_continuing_response_encode() {

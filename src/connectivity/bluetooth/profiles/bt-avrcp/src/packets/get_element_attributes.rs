@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
+use std::convert::TryFrom;
+
+use crate::packets::{
+    AvcCommandType, CharsetId, Decodable, Encodable, Error, FillExt, MediaAttributeId,
+    PacketResult, PduId, VendorCommand, VendorDependentPdu, ATTRIBUTE_ID_LEN,
+};
 
 // See AVRCP 1.6.1 section 6.6 Media Information PDUs - GetElementAttributes for format.
 
@@ -279,6 +284,7 @@ impl Encodable for GetElementAttributesResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::packets::{PacketEncodable, VendorDependentRawPdu};
 
     #[test]
     fn test_get_element_attributes_command_encode_all_attributes() {

@@ -2,9 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
+use {
+    anyhow::format_err,
+    bt_avctp::{AvcCommandResponse, AvcCommandType, AvcResponseType, Error as AvctpError},
+    futures::{
+        ready,
+        stream::{FusedStream, StreamExt},
+        Stream,
+    },
+    log::trace,
+    parking_lot::RwLock,
+    std::{
+        convert::TryFrom,
+        pin::Pin,
+        sync::Arc,
+        task::{Context, Poll},
+    },
+};
 
-use {futures::ready, log::trace};
+use crate::packets::{Decodable, Encodable, PacketEncodable};
+use crate::peer::{
+    NotificationEventId, RegisterNotificationCommand, RemotePeer, StatusCode,
+    VendorDependentPreamble,
+};
+use crate::types::PeerError as Error;
 
 /// NotificationStream returns each INTERIM response for a given NotificationEventId on a peer.
 ///

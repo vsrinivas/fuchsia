@@ -2,23 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
-
 use {
-    fidl_fuchsia_bluetooth_avrcp::{AddressedPlayerId, Notification, TargetPassthroughError},
-    fuchsia_async::Time,
+    bt_avctp::{AvcCommand, AvcOpCode, AvcPacketType},
+    fidl_fuchsia_bluetooth_avrcp::{
+        AddressedPlayerId, AvcPanelCommand, Notification, TargetPassthroughError,
+    },
+    fuchsia_async as fasync,
     fuchsia_zircon::Duration,
     futures::future::Either,
     log::{error, trace},
     parking_lot::Mutex,
-    std::collections::hash_map::Entry::{Occupied, Vacant},
-    std::collections::VecDeque,
+    std::{
+        collections::{
+            hash_map::Entry::{Occupied, Vacant},
+            VecDeque,
+        },
+        sync::Arc,
+    },
 };
 
 pub mod browse_channel;
-
 mod decoders;
 
+use crate::peer::*;
+use crate::types::PeerError as Error;
 use decoders::*;
 
 // Abstraction to assist with unit testing with mocks.
@@ -233,7 +240,7 @@ async fn handle_passthrough_command<'a>(
     pressed: bool,
 ) -> Result<(), Error> {
     // Passthrough commands need to be handled in 100ms
-    let timer = fasync::Timer::new(Time::after(Duration::from_millis(100))).fuse();
+    let timer = fasync::Timer::new(fasync::Time::after(Duration::from_millis(100))).fuse();
     pin_mut!(timer);
 
     // As per Table 9.27 in AV/C 4.0, send back the state_flag, operation_id, and operation_data.
@@ -359,7 +366,7 @@ async fn handle_notify_command(
     let notification_fut = delegate.send_get_notification(notify_command.event_id().into()).fuse();
     pin_mut!(notification_fut);
 
-    let interim_timer = fasync::Timer::new(Time::after(Duration::from_millis(1000))).fuse();
+    let interim_timer = fasync::Timer::new(fasync::Time::after(Duration::from_millis(1000))).fuse();
     pin_mut!(interim_timer);
 
     let notification: Notification = futures::select! {
@@ -657,7 +664,7 @@ async fn handle_status_command(
     let status_fut = status_fut.fuse();
     pin_mut!(status_fut);
 
-    let interim_timer = fasync::Timer::new(Time::after(Duration::from_millis(100))).fuse();
+    let interim_timer = fasync::Timer::new(fasync::Time::after(Duration::from_millis(100))).fuse();
     pin_mut!(interim_timer);
 
     loop {
@@ -819,7 +826,7 @@ async fn handle_control_command(
     let control_fut = control_fut.fuse();
     pin_mut!(control_fut);
 
-    let interim_timer = fasync::Timer::new(Time::after(Duration::from_millis(100))).fuse();
+    let interim_timer = fasync::Timer::new(fasync::Time::after(Duration::from_millis(100))).fuse();
     pin_mut!(interim_timer);
 
     loop {
@@ -843,8 +850,8 @@ mod test {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_avrcp::{
         self as fidl_avrcp, AbsoluteVolumeHandlerMarker, AbsoluteVolumeHandlerProxy,
-        AbsoluteVolumeHandlerRequest, TargetAvcError, TargetHandlerMarker, TargetHandlerProxy,
-        TargetHandlerRequest,
+        AbsoluteVolumeHandlerRequest, MediaAttributes, TargetAvcError, TargetHandlerMarker,
+        TargetHandlerProxy, TargetHandlerRequest,
     };
 
     #[derive(Debug)]
@@ -979,7 +986,7 @@ mod test {
         fasync::Task::spawn(async move {
             while let Some(Ok(event)) = target_stream.next().await {
                 if stall_responses {
-                    fasync::Timer::new(Time::after(Duration::from_millis(2000000))).await;
+                    fasync::Timer::new(fasync::Time::after(Duration::from_millis(2000000))).await;
                 }
 
                 let _result = match event {

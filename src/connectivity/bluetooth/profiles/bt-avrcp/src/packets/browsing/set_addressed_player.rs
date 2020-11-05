@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
+use std::convert::TryFrom;
+
+use crate::packets::{
+    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, StatusCode, VendorCommand,
+    VendorDependentPdu,
+};
 
 /// AVRCP 1.6.1 section 6.9.1 SetAddressedPlayer.
 #[derive(Debug)]
