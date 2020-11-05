@@ -4,7 +4,7 @@
 
 use {
     crate::protocol::{self, ParameterValue, ReportFormat, Value, MAX_PACKET_SIZE},
-    anyhow::{bail, Error},
+    anyhow::{bail, format_err, Error},
     std::{
         cell::RefCell,
         collections::HashMap,
@@ -105,11 +105,63 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         serials
     }
 
+    // Number of USB packets that can be queued in Zedmon's USB interface, based on STM32F072
+    // hardware limitations. The firmware currently only enqueues one packet, but the STM32F072 does
+    // support double-buffering.
+    const ZEDMON_USB_QUEUE_SIZE: u32 = 2;
+
+    /// Disables reporting and drains all enqueued packets from `interface`.
+    ///
+    /// This should be done if a packet of incorrect type is received on the first read from
+    /// `interface`. Typically, that scenario occurs if a previous invocation of the client
+    /// terminated irregularly and left reporting enabled, but in principle a packet could still be
+    /// enqueued from another request as well.
+    ///
+    /// Empirically, this process takes 4-5x as long as the timeout configured on `interface`, and
+    /// it should not be performed unconditionally to avoid unnecessary delays.
+    ///
+    /// An error is returned if a packet is still received once the packet queue should be clear.
+    fn disable_reporting_and_drain_packets(interface: &mut InterfaceType) -> Result<(), Error> {
+        Self::disable_reporting(interface)?;
+
+        // Read packets from the USB interface until an error (assumed to be due to lack of packets
+        // -- the reason for an error is not exposed) is encountered. If we do not encounter an
+        // error after reading more than the queue length, Zedmon is in an unexpected state.
+        let mut response = [0; MAX_PACKET_SIZE];
+        for _ in 0..Self::ZEDMON_USB_QUEUE_SIZE + 1 {
+            if interface.read(&mut response).is_err() {
+                return Ok(());
+            }
+        }
+        return Err(format_err!(
+            "The Zedmon device is in an unexpected state; received more than {} packets after \
+            disabling reporting. Consider rebooting the device.",
+            Self::ZEDMON_USB_QUEUE_SIZE
+        ));
+    }
+
     /// Creates a new ZedmonClient instance.
     // TODO(fxbug.dev/61148): Make the behavior predictable if multiple Zedmons are attached.
     fn new(mut interface: InterfaceType) -> Result<Self, Error> {
-        let parameters = Self::get_parameters(&mut interface).unwrap();
-        let field_formats = Self::get_field_formats(&mut interface).unwrap();
+        // Query parameters, disabling reporting and draining packets if a packet of the wrong type
+        // is received on the first attempt.
+        let parameters = match Self::get_parameters(&mut interface) {
+            Err(e) => match e.downcast_ref::<protocol::Error>() {
+                Some(protocol::Error::WrongPacketType { .. }) => {
+                    eprintln!(
+                        "WARNING: Received unexpected packet type while initializing; a prior \
+                        client invocation may have not terminated cleanly. Disabling reporting and \
+                        draining buffered packets. Be sure to terminate recording with ENTER."
+                    );
+                    Self::disable_reporting_and_drain_packets(&mut interface)?;
+                    Self::get_parameters(&mut interface)
+                }
+                _ => Err(e),
+            },
+            ok => ok,
+        }?;
+
+        let field_formats = Self::get_field_formats(&mut interface)?;
 
         let shunt_resistance = {
             let value = parameters["shunt_resistance"];
@@ -183,9 +235,9 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
     }
 
     /// Disables reporting on the Zedmon device.
-    fn disable_reporting(&self) -> Result<(), Error> {
+    fn disable_reporting(interface: &mut InterfaceType) -> Result<(), Error> {
         let request = protocol::encode_disable_reporting();
-        self.interface.borrow_mut().write(&request)?;
+        interface.write(&request)?;
         Ok(())
     }
 
@@ -254,7 +306,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
             }
 
             if stopper.should_stop()? {
-                self.disable_reporting()?;
+                Self::disable_reporting(&mut self.interface.borrow_mut())?;
                 drop(packet_sender);
                 break;
             }
@@ -359,7 +411,8 @@ mod tests {
     use {
         super::*,
         anyhow::{format_err, Error},
-        protocol::{Report, ScalarType},
+        num::FromPrimitive,
+        protocol::{tests::serialize_reports, PacketType, Report, ScalarType},
         std::collections::VecDeque,
         std::rc::Rc,
         std::sync::{
@@ -766,16 +819,18 @@ mod tests {
 
         impl Read for FakeZedmonInterface {
             fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
-                let bytes_read = match self.next_read.take().unwrap() {
-                    NextRead::ParameterValue(index) => self.read_parameter_value(index, buffer),
-                    NextRead::ReportFormat(index) => self.read_report_format(index, buffer),
-                    NextRead::Report => {
-                        self.next_read = Some(NextRead::Report);
-                        self.read_reports(buffer)
-                    }
-                    NextRead::Timestamp => self.read_timestamp(buffer),
-                };
-                Ok(bytes_read)
+                match self.next_read.take() {
+                    Some(value) => Ok(match value {
+                        NextRead::ParameterValue(index) => self.read_parameter_value(index, buffer),
+                        NextRead::ReportFormat(index) => self.read_report_format(index, buffer),
+                        NextRead::Report => {
+                            self.next_read = Some(NextRead::Report);
+                            self.read_reports(buffer)
+                        }
+                        NextRead::Timestamp => self.read_timestamp(buffer),
+                    }),
+                    None => Err(std::io::Error::new(std::io::ErrorKind::Other, "Read error: -1")),
+                }
             }
         }
 
@@ -892,6 +947,90 @@ mod tests {
             let output = receiver.recv()?;
             Ok(String::from_utf8(output)?)
         }
+    }
+
+    // Tests that ZedmonClient will disable reporting and drain enqueued packets on initialization.
+    #[test]
+    fn test_disable_reporting_and_drain_packets() {
+        // Interface that responds to reads with Report packets until reporting is disabled and an
+        // enqueued packet is drained. Afterwards, all calls are forwarded to an inner
+        // FakeZedmonInterface.
+        struct StillReportingInterface {
+            inner: fake_device::FakeZedmonInterface,
+            reporting_enabled: bool,
+            packets_enqueued: usize,
+        }
+
+        impl StillReportingInterface {
+            fn new(coordinator: Rc<RefCell<fake_device::Coordinator>>) -> Self {
+                Self {
+                    inner: fake_device::FakeZedmonInterface::new(coordinator),
+                    reporting_enabled: true,
+                    packets_enqueued: 1,
+                }
+            }
+
+            fn make_reports(&self) -> Vec<Report> {
+                let mut reports = Vec::new();
+                for i in 0..5 {
+                    reports.push(Report {
+                        timestamp_micros: 1000 * (i as u64),
+                        values: vec![Value::I16(i as i16), Value::I16(-(i as i16))],
+                    });
+                }
+                reports
+            }
+        }
+
+        impl usb_bulk::Open<StillReportingInterface> for StillReportingInterface {
+            fn open<F>(_matcher: &mut F) -> Result<StillReportingInterface, Error>
+            where
+                F: FnMut(&InterfaceInfo) -> bool,
+            {
+                Err(format_err!("usb_bulk::Open not implemented"))
+            }
+        }
+
+        impl Read for StillReportingInterface {
+            fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+                if self.reporting_enabled {
+                    Ok(serialize_reports(&self.make_reports(), buffer))
+                } else if self.packets_enqueued > 0 {
+                    self.packets_enqueued = self.packets_enqueued - 1;
+                    Ok(serialize_reports(&self.make_reports(), buffer))
+                } else {
+                    self.inner.read(buffer)
+                }
+            }
+        }
+
+        impl Write for StillReportingInterface {
+            fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+                if self.reporting_enabled
+                    && PacketType::from_u8(data[0]).unwrap() == PacketType::DisableReporting
+                {
+                    self.reporting_enabled = false;
+                    Ok(1)
+                } else {
+                    self.inner.write(data)
+                }
+            }
+
+            fn flush(&mut self) -> std::io::Result<()> {
+                self.inner.flush()
+            }
+        }
+
+        let device_config = fake_device::DeviceConfiguration {
+            shunt_resistance: 0.01,
+            v_shunt_scale: 1e-5,
+            v_bus_scale: 0.025,
+        };
+        let builder = fake_device::CoordinatorBuilder::new(device_config);
+        let coordinator = builder.build();
+        let interface = StillReportingInterface::new(coordinator);
+
+        assert!(ZedmonClient::new(interface).is_ok());
     }
 
     #[test]

@@ -221,16 +221,19 @@ fn validate_packet<T: AsRef<[u8]> + ?Sized>(
     len: usize,
     expected_type: PacketType,
 ) -> Result<Cursor<&T>> {
-    let packet_len = packet.as_ref().len();
-    if packet_len < len {
-        return Err(Error::ShortData { required: len, received: packet_len });
-    }
-
     let mut cursor = Cursor::new(packet);
     let packet_type = cursor.read_enum::<PacketType>()?;
     if packet_type != expected_type {
         return Err(Error::WrongPacketType { expected: expected_type, received: packet_type });
     }
+
+    // Check for expected length after the packet type, as WrongPacketType is more useful to a
+    // caller.
+    let packet_len = packet.as_ref().len();
+    if packet_len < len {
+        return Err(Error::ShortData { required: len, received: packet_len });
+    }
+
     Ok(cursor)
 }
 
@@ -589,7 +592,11 @@ pub mod tests {
 
         // Wrong packet length
         assert_eq!(
-            validate_packet(&[0xff, 0x00], 3, PacketType::ParameterValue),
+            validate_packet(
+                &[PacketType::ParameterValue as u8, 0x00],
+                3,
+                PacketType::ParameterValue
+            ),
             Err(Error::ShortData { required: 3, received: 2 })
         );
 
