@@ -23,7 +23,7 @@ Connected successfully.
 The `status` command will give the current state of the debugger. Be aware if
 the remote system dies the debugger won't always notice the connection is gone.
 
-### Debugging a process or component.
+### Debugging a process or component
 
 Running a process on Fuchsia is more complicated than in other systems because
 there are different loader environments (see "A note about launcher
@@ -128,9 +128,10 @@ work from the debugger's `run` command.
 
 ### Attaching to an existing process
 
-You can attach to most running processes given the process’ KOID. You can get
-the KOID by running `ps` on the target Fuchsia system. zxdb also has a built-in
-`ps` command:
+You can attach to most running processes given the process’ koid (the [kernel object
+ID](/docs/concepts/kernel/concepts.md) that, when applied to a process, is equivalent to a process
+ID on other systems). You can get the koid by running `ps` on the target Fuchsia system or use
+zxdb's built-in `ps` command:
 
 ```
 [zxdb] ps
@@ -139,6 +140,9 @@ j: 1030 root
     p: 1926 driver_host:sys
 ...
 ```
+
+In this listing, "j:" indicates a [job](/docs/concepts/kernel/concepts.md) (a container for
+processes) and "p:" indicates a process. The number following the type prefix is the object's koid.
 
 Then to attach:
 
@@ -149,6 +153,59 @@ Process 1 Running koid=1249 pwrbtn-monitor
 
 When you’re done, you can choose to `detach` (keep running) or `kill`
 (terminate) the process.
+
+### Attaching to processes in specific jobs
+
+By default the debugger will attampt to attach to the root job so process launch filters will apply
+globally. Normally this will appear as "job 1" in the debugger:
+
+```
+[zxdb] job
+  # State     Koid Name
+  1 Attached  1027 root
+```
+
+You can also apply filters for processes launched in a specific job. First attach to the job using
+the `attach-job` command, specifying the job's koid:
+
+```
+[zxdb] attach-job 30053
+Job 2 state=Attached koid=30053 name=""
+```
+
+The debugger will now be attach to two jobs, with the new job being the current one:
+
+```
+[zxdb] job
+  # State     Koid Name
+  1 Attached  1027 root
+▶ 2 Attached 30053
+```
+
+Now you can make a filter (see "Debugging a process or component" above) that applies to the process
+names only to this job by prefixing the attach command with the job object number (not koid) created
+above:
+
+```
+[zxdb] job 2 attach my_app
+Waiting for process matching "my_app".
+Type "filter" to see the current filters.
+```
+
+You can also attach to all current and future processes in a job using the `*` wildcard as the
+filter name:
+
+```
+[zxdb] attach-job 30053
+Job 2 state=Attached koid=30053 name=""
+
+[zxdb] job 2 attach *
+Attached Process 1 state=Running koid=28071 name=sysmem_connector.cmx
+```
+
+> **Warning:** Be careful only to use the wildcard `attach *` command with an explicit,
+> narrowly-scoped job. Making a global filter or applying it to a job with too many children can
+> attach to too many processes that may include drivers necessary for the system to function.
 
 ## Interaction model
 
@@ -417,7 +474,7 @@ Recall from the “Interaction model” section you can list the current process
   2 Not running 7235 pwrbtn-monitor
 ```
 
-Select one of those as the default by providing its index (not KOID):
+Select one of those as the default by providing its index (not koid):
 
 ```
 [zxdb] process 2
@@ -889,3 +946,52 @@ to switch back to source-code mode, type `list`.
     command for low-level debugging.
 
   * `sym-near`: Figure out which symbol corresponds to an address.
+
+### Handles and kernel objects
+
+List all handles and [VMOs](/docs/reference/kernel_objects/vm_object.md) (some of these "Virtual
+Memory Objects" can be mapped but won't have open handles) with the `handles` command.
+
+```[zxdb] handles
+      Handle  Type                  Koid
+      <none>  ZX_OBJ_TYPE_VMO      30040
+  4166674259  ZX_OBJ_TYPE_TIMER    30158
+  4167722515  ZX_OBJ_TYPE_PORT     30157
+  4169819767  ZX_OBJ_TYPE_CHANNEL  30222
+```
+
+You can look up more detailed information by handle value:
+
+```
+[zxdb] handle 4166674259
+  Handle  4166674259
+    Type  ZX_OBJ_TYPE_TIMER
+    Koid  30158
+  Rights  ZX_RIGHT_SIGNAL
+          ZX_RIGHT_WAIT
+          ZX_RIGHT_INSPECT
+```
+
+Or you can look up an object by koid. Koid lookup will only search the objects in the debugged
+process and won't match arbitrary kernel objects owned by other processes. Koid lookup is the only
+way to show detailed information for mapped VMOs that have no open handles.
+
+```
+[zxdb] handle -k 30108
+                   Handle  <none>
+                     Type  ZX_OBJ_TYPE_VMO
+                     Koid  30108
+                   Rights  ZX_RIGHT_NONE
+                     Name  data0:blob-60
+        VMO size in bytes  4096
+              Parent koid  30105
+               # children  0
+               # mappings  1
+              Share count  1
+                    Flags  ZX_INFO_VMO_TYPE_PAGED
+                           ZX_INFO_VMO_VIA_MAPPING
+          Committed bytes  4096
+             Cache policy  ZX_CACHE_POLICY_CACHED
+           Metadata bytes  176
+  Committed change events  0
+```
