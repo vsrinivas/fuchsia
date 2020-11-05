@@ -15,6 +15,14 @@ group("LLVM") {
   public_configs = [ ":LLVM_config" ]
 }
 
+config("LLVMHeaderOnly_config") {
+  include_dirs = [ "//prebuilt/third_party/llvm/${host_platform}/include" ]
+}
+
+group("LLVMHeaderOnly") {
+  public_configs = [ ":LLVMHeaderOnly_config" ]
+}
+
 template("llvm_library") {
   config(target_name + "_config") {
     visibility = [ ":*" ]

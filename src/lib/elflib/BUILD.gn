@@ -13,7 +13,10 @@ static_library("elflib") {
 
   deps = [ "//zircon/system/public" ]
 
-  public_deps = [ "//zircon/public/lib/fbl" ]
+  public_deps = [
+    "//src/lib/llvm:LLVMHeaderOnly",
+    "//zircon/public/lib/fbl",
+  ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
