@@ -2928,6 +2928,9 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
   brcmf_enable_mpc(ifp, 0);
   brcmf_configure_arp_nd_offload(ifp, false);
 
+  // Enter AP_START_PENDING mode right before the timer starts, because timer could check the AP
+  // start state when firing.
+  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
   // Start timer before starting to issue commands.
   cfg->ap_start_timer->Start(BRCMF_AP_START_TIMER_DUR_MS);
   // set to open authentication for external supplicant
@@ -3031,7 +3034,6 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
 
   BRCMF_DBG(TRACE, "AP mode configuration complete");
 
-  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
   brcmf_net_setcarrier(ifp, true);
 
   cfg->ap_started = true;

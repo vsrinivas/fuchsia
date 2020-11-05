@@ -627,12 +627,15 @@ TEST_F(DynamicIfTest, StartApIfaceTimeoutWithReqSpamAndFwIgnore) {
   // Make sure this extra request will not refresh the timer.
   SCHEDULE_CALL(zx::msec(510), &SimInterface::StartSoftAp, &softap_ifc_,
                 SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
-  // Check the timer is fired, it should fire at 1010 msec.
-  SCHEDULE_CALL(zx::msec(1011), &DynamicIfTest::VerifyStartApTimer, this);
+
+  // TODO(fxb/63542): The timeout for AP start is temporarily changed to 9 sec, change it back when
+  // the fix for start AP timeout issue is checked in. Check the timer is fired, it should fire at
+  // 9010 msec.
+  SCHEDULE_CALL(zx::msec(9011), &DynamicIfTest::VerifyStartApTimer, this);
   // Make firmware back to normal.
-  SCHEDULE_CALL(zx::msec(1011), &DynamicIfTest::DelInjectedStartAPIgnore, this);
+  SCHEDULE_CALL(zx::msec(9011), &DynamicIfTest::DelInjectedStartAPIgnore, this);
   // Issue start AP request again.
-  SCHEDULE_CALL(zx::msec(1100), &SimInterface::StartSoftAp, &softap_ifc_,
+  SCHEDULE_CALL(zx::msec(9100), &SimInterface::StartSoftAp, &softap_ifc_,
                 SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
 
   env_->Run(kTestDuration);
