@@ -65,7 +65,6 @@ struct SdmmcReqNew {
     uint32 cmd_flags;
     uint32 arg;
 
-    uint32 blockcount;
     uint32 blocksize;
 
     /// If true, the SDMMC driver should not print any error messages for this request. This is used

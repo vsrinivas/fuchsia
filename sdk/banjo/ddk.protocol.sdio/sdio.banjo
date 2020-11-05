@@ -56,7 +56,6 @@ struct SdioHwInfo {
 
 struct SdioRwTxnNew {
     uint32 addr;
-    uint32 data_size;
     bool incr;
     bool write;
 
