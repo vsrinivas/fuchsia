@@ -14,6 +14,7 @@ void main(List<String> args) {
 
   Duration duration = const Duration(milliseconds: 300);
   Duration keyEventDuration = const Duration(milliseconds: 1);
+  Duration keyPressDuration = const Duration(milliseconds: 1);
   setUp(() {
     sl4f = MockSl4f();
   });
@@ -150,5 +151,22 @@ void main(List<String> args) {
         'key_event_duration': keyEventDuration.inMilliseconds,
       }));
     });
+
+    test('enter key', () async {
+      await input.keyPress(40);
+      verify(sl4f.request('input_facade.KeyPress', {
+        'hid_usage_id': 40,
+        'key_press_duration': keyPressDuration.inMilliseconds,
+      }));
+    });
+
+    test('keyPress hidUsageId too large', () async {
+      expect(() async { return await input.keyPress(65536); }, throwsA(isA<ArgumentError>()));
+    });
+
+    test('keyPress hidUsageId too small', () async {
+      expect(() async { return await input.keyPress(-1); }, throwsA(isA<ArgumentError>()));
+    });
+
   });
 }

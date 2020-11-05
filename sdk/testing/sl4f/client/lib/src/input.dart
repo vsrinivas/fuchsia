@@ -171,6 +171,42 @@ class Input {
     return result == 'Success';
   }
 
+  /// Simulates a single key down + up sequence, for the given [hidUsageId],
+  /// with [keyEventDuration] between key events.
+  ///
+  /// [hidUsageId] must be representable as an unsigned 16-bit integer.
+  /// Otherwise, this method throws an [ArgumentError].
+  ///
+  /// [hidUsageId] will be interpreted as a "Usage ID" per
+  //  "HID Usage Table Conventions" in
+  /// https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf,
+  /// and will be interpreted in the context of "Usage Page" 0x07,
+  /// which is the "Keyboard/Keypad" page.
+  ///
+  /// Because Usage IDs are defined by an external standard, it is impractical
+  /// to perform detailed validation. Hence, any unsigned 16-bit value can be
+  /// injected successfully. Interpretation of unrecognized values is subject to
+  /// the choices of the system under test.
+  ///
+  /// Per fxbug.dev/63532, this method will be replaced with a method that deals in
+  /// `fuchsia.input.Key`s, instead of HID Usage IDs.
+  Future<bool> keyPress(int hidUsageId,
+      {Duration keyPressDuration = const Duration(milliseconds: 1)}) async {
+    const int maxHidUsageId = 0xFFFF;
+    if (hidUsageId > maxHidUsageId) {
+      throw new ArgumentError('hidUsageId is too large: $hidUsageId');
+    } else if (hidUsageId < 0) {
+      throw new ArgumentError('hidUsageId is negative: $hidUsageId');
+    }
+
+    final result = await _sl4f.request('input_facade.KeyPress', {
+      'hid_usage_id': hidUsageId,
+      'key_press_duration': keyPressDuration.inMilliseconds,
+    });
+
+    return result == 'Success';
+  }
+
   /// Compensates for the given [screenRotation].
   ///
   /// If null is provided, the default specified in the constructor is used.

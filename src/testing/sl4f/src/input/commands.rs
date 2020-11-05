@@ -32,6 +32,10 @@ impl Facade for InputFacade {
                 let result = self.text(args).await?;
                 Ok(to_value(result)?)
             }
+            InputMethod::KeyPress => {
+                let result = self.key_press(args).await?;
+                Ok(to_value(result)?)
+            }
         }
     }
 }

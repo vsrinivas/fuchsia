@@ -37,9 +37,21 @@ pub async fn media_button_event_command(
 
 /// Simulates a key press of specified `usage`.
 ///
-/// `duration` is the time spent between key-press and key-release events.
-pub async fn keyboard_event_command(usage: u32, duration: Duration) -> Result<(), Error> {
-    keyboard_event(usage, duration, &mut legacy_backend::InputDeviceRegistry::new())
+/// `key_event_duration` is the time spent between key-press and key-release events.
+///
+/// # Resolves to
+/// * `Ok(())` if the events were successfully injected.
+/// * `Err(Error)` otherwise.
+///
+/// # Corner case handling
+/// * `key_event_duration` of zero is permitted, and will result in events being generated as
+///    quickly as possible.
+///
+/// # Future directions
+/// Per fxbug.dev/63532, this method will be replaced with a method that deals in
+/// `fuchsia.input.Key`s, instead of HID Usage IDs.
+pub async fn keyboard_event_command(usage: u32, key_event_duration: Duration) -> Result<(), Error> {
+    keyboard_event(usage, key_event_duration, &mut legacy_backend::InputDeviceRegistry::new())
 }
 
 /// Simulates `input` being typed on a keyboard, with `key_event_duration` between key events.

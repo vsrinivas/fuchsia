@@ -13,6 +13,7 @@ pub enum InputMethod {
     Swipe,
     MultiFingerSwipe,
     Text,
+    KeyPress,
 }
 
 impl std::str::FromStr for InputMethod {
@@ -24,6 +25,7 @@ impl std::str::FromStr for InputMethod {
             "Swipe" => Ok(InputMethod::Swipe),
             "MultiFingerSwipe" => Ok(InputMethod::MultiFingerSwipe),
             "Text" => Ok(InputMethod::Text),
+            "KeyPress" => Ok(InputMethod::KeyPress),
             _ => return Err(format_err!("Invalid Input Facade method: {}", method)),
         }
     }
@@ -84,6 +86,12 @@ pub struct MultiFingerSwipeRequest {
 pub struct TextRequest {
     pub text: String,
     pub key_event_duration: Option<u64>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct KeyPressRequest {
+    pub hid_usage_id: u16,
+    pub key_press_duration: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

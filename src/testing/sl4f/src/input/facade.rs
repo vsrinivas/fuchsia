@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::input::types::{
-    ActionResult, MultiFingerSwipeRequest, MultiFingerTapRequest, SwipeRequest, TapRequest,
-    TextRequest,
+    ActionResult, KeyPressRequest, MultiFingerSwipeRequest, MultiFingerTapRequest, SwipeRequest,
+    TapRequest, TextRequest,
 };
 use anyhow::{Context, Error};
 use fuchsia_syslog::macros::fx_log_info;
@@ -14,6 +14,7 @@ use std::{convert::TryFrom, time::Duration};
 const DEFAULT_DIMENSION: u32 = 1000;
 const DEFAULT_DURATION: Duration = Duration::from_millis(300);
 const DEFAULT_KEY_EVENT_DURATION: Duration = Duration::from_millis(0);
+const DEFAULT_KEY_PRESS_DURATION: Duration = Duration::from_millis(0);
 const DEFAULT_TAP_EVENT_COUNT: usize = 1;
 
 macro_rules! validate_fingers {
@@ -242,7 +243,7 @@ impl InputFacade {
     /// Enters `text`, as if typed on a keyboard, with `key_event_duration` between key events.
     ///
     /// # Arguments
-    /// * `value`: will be parsed to `TestRequest`
+    /// * `value`: will be parsed to `TextRequest`
     ///   * must include:
     ///     * `text`: the characters to be input.
     ///        * Must be non-empty.
@@ -285,6 +286,56 @@ impl InputFacade {
             req.key_event_duration.map_or(DEFAULT_KEY_EVENT_DURATION, Duration::from_millis);
 
         input_synthesis::text_command(text, key_event_duration).await?;
+        Ok(ActionResult::Success)
+    }
+
+    /// Simulates a single key down + up sequence, for the given `hid_usage_id`.
+    ///
+    /// # Arguments
+    /// * `value`: will be parsed to `KeyPressRequest`
+    ///   * must include
+    ///     * `hid_usage_id`: desired HID Usage ID, per [HID Usages and Descriptions].
+    ///       * The Usage ID will be interpreted in the context of "Usage Page" 0x07, which
+    ///         is the "Keyboard/Keypad" page.
+    ///       * Because Usage IDs are defined by an external standard, it is impractical
+    ///         to validate this parameter. As such, any value can be injected successfully.
+    ///         However, the interpretation of unrecognized values is subject to the choices
+    ///         of the system under test.
+    ///   * optionally includes:
+    ///     * `key_press_duration`: time between the down event and the up event, in milliseconds
+    ///        * Serves as a lower bound on the time between the down event and the up event
+    ///          (actual time may be higher due to system load).
+    ///        * Defaults to 0 milliseconds (the up event is sent immediately after the down event)
+    ///
+    /// # Returns
+    /// * `Ok(ActionResult::Success)` if the arguments were successfully parsed and events
+    ///    successfully injected.
+    /// * `Err(Error)` otherwise.
+    ///
+    /// # Future directions
+    /// Per fxbug.dev/63532, this method will be replaced with a method that deals in
+    /// `fuchsia.input.Key`s, instead of HID Usage IDs.
+    ///
+    /// # Example
+    /// To simulate a press of the `ENTER` key, with 1 millisecond between the down and
+    /// up events:
+    ///
+    /// ```
+    /// key_press(KeyPressRequest {
+    ///   hid_usage_id: 40,
+    ///   key_press_duration: 1,
+    /// });
+    /// ```
+    ///
+    /// [HID Usages and Descriptions]: https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
+    pub async fn key_press(&self, args: Value) -> Result<ActionResult, Error> {
+        fx_log_info!("Executing KeyboardEvent in Input Facade.");
+        let req: KeyPressRequest = from_value(args)?;
+        let hid_usage_id = req.hid_usage_id;
+        let key_press_duration =
+            req.key_press_duration.map_or(DEFAULT_KEY_PRESS_DURATION, Duration::from_millis);
+
+        input_synthesis::keyboard_event_command(hid_usage_id.into(), key_press_duration).await?;
         Ok(ActionResult::Success)
     }
 }
