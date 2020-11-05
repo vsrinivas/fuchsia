@@ -20,6 +20,9 @@
 
 namespace media::tools {
 
+// The signal's duration, in nanoseconds, must fit into an int64_t. (292 yrs: not a problem)
+constexpr double kMaxDurationSecs = std::numeric_limits<int64_t>::max() / ZX_SEC(1);
+
 constexpr auto kPlayStartupDelay = zx::msec(0);
 
 const char* SampleFormatToString(const fuchsia::media::AudioSampleFormat& format) {
@@ -62,14 +65,14 @@ MediaApp::MediaApp(fit::closure quit_callback) : quit_callback_(std::move(quit_c
 
 // Prepare for playback, submit initial data, start the presentation timeline.
 void MediaApp::Run(sys::ComponentContext* app_context) {
+  // Calculate the frame size, number of packets, and shared-buffer size.
+  SetupPayloadCoefficients();
+
   // Check the cmdline flags; exit if any are invalid or out-of-range.
   ParameterRangeChecks();
 
   SetAudioCoreSettings(app_context);
   AcquireAudioRenderer(app_context);
-
-  // Calculate the frame size, number of packets, and shared-buffer size.
-  SetupPayloadCoefficients();
 
   // Show a summary of all our settings: exactly what we are about to do.
   DisplayConfigurationSettings();
@@ -82,6 +85,55 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
 
   // Retrieve the default reference clock for this renderer; once a device is ready, start playback.
   GetClockAndStart();
+}
+
+// Based on the user-specified values for signal frequency and milliseconds per payload, calculate
+// the other related coefficients needed for our mapped memory section, and for our series of
+// payloads that reference that section.
+void MediaApp::SetupPayloadCoefficients() {
+  // Max duration_secs_(2^33.1) and frame_rate_(192k: 2^17.6) ==> 2^50.7 frames: no overflow risk
+  total_frames_to_send_ = static_cast<uint64_t>(duration_secs_ * frame_rate_);
+
+  num_packets_to_send_ = total_frames_to_send_ / frames_per_packet_;
+  if (num_packets_to_send_ * frames_per_packet_ < total_frames_to_send_) {
+    ++num_packets_to_send_;
+  }
+
+  // Number of frames in each period of the recurring signal.
+  frames_per_period_ = frame_rate_ / frequency_;
+
+  amplitude_scalar_ = amplitude_;
+  switch (sample_format_) {
+    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+      amplitude_scalar_ *= (std::numeric_limits<int32_t>::max() & 0xFFFFFF00);
+      sample_size_ = sizeof(int32_t);
+      break;
+    case fuchsia::media::AudioSampleFormat::SIGNED_16:
+      amplitude_scalar_ *= std::numeric_limits<int16_t>::max();
+      sample_size_ = sizeof(int16_t);
+      break;
+    case fuchsia::media::AudioSampleFormat::FLOAT:
+      sample_size_ = sizeof(float);
+      break;
+    default:
+      printf("Unknown AudioSampleFormat: %u\n", sample_format_);
+      Shutdown();
+      return;
+  }
+
+  // As mentioned above, for 24-bit audio we use 32-bit samples (low byte 0).
+  frame_size_ = num_channels_ * sample_size_;
+
+  bytes_per_packet_ = frames_per_packet_ * frame_size_;
+
+  // From the specified size|number of payload buffers, determine how many packets fit, then trim
+  // the mapping to what will be used. This size will be split across |num_payload_buffers_|
+  // buffers, e.g. 2 buffers of 48000 frames each will be large enough hold 200 480-frame packets.
+  auto total_payload_buffer_space = num_payload_buffers_ * frames_per_payload_buffer_ * frame_size_;
+  total_mappable_packets_ = total_payload_buffer_space / bytes_per_packet_;
+
+  // Shard out the payloads across multiple buffers, ensuring we can hold at least 1 buffer.
+  packets_per_payload_buffer_ = std::max(1u, total_mappable_packets_ / num_payload_buffers_);
 }
 
 void MediaApp::ParameterRangeChecks() {
@@ -127,6 +179,11 @@ void MediaApp::ParameterRangeChecks() {
     std::cerr << "Duration cannot be negative" << std::endl;
     success = false;
   }
+  if (duration_secs_ > kMaxDurationSecs) {
+    std::cerr << "Duration must not exceed " << kMaxDurationSecs << " seconds ("
+              << (kMaxDurationSecs / 86400.0 / 365.25) << " years)" << std::endl;
+    success = false;
+  }
 
   if (frames_per_packet_ > (num_payload_buffers_ * frames_per_payload_buffer_ / 2) &&
       frames_per_packet_ < num_payload_buffers_ * frames_per_payload_buffer_) {
@@ -135,6 +192,14 @@ void MediaApp::ParameterRangeChecks() {
   }
   if (frames_per_packet_ < frame_rate_ / 1000) {
     std::cerr << "Packet size must be 1 millisecond or more" << std::endl;
+    success = false;
+  }
+
+  if (static_cast<uint64_t>(frames_per_payload_buffer_) * frame_size_ >
+      std::numeric_limits<uint32_t>::max()) {
+    std::cerr << "Payload buffer cannot exceed " << std::numeric_limits<uint32_t>::max()
+              << " bytes (" << (std::numeric_limits<uint32_t>::max() / frame_size_)
+              << " frames, for this frame_size)" << std::endl;
     success = false;
   }
 
@@ -171,58 +236,6 @@ void MediaApp::ParameterRangeChecks() {
   }
 
   CLI_CHECK(success, "Exiting.");
-}
-
-// Based on the user-specified values for signal frequency and milliseconds per payload, calculate
-// the other related coefficients needed for our mapped memory section, and for our series of
-// payloads that reference that section.
-//
-// We share a memory section with our AudioRenderer, divided into equally-sized payloads (size
-// specified by the user). For now, we trim the end of the memory section, rather than handle the
-// occasional irregularly-sized packet.
-// TODO(mpuryear): handle end-of-buffer wraparound; make it a true ring buffer.
-void MediaApp::SetupPayloadCoefficients() {
-  total_frames_to_send_ = duration_secs_ * frame_rate_;
-  num_packets_to_send_ = total_frames_to_send_ / frames_per_packet_;
-  if (num_packets_to_send_ * frames_per_packet_ < total_frames_to_send_) {
-    ++num_packets_to_send_;
-  }
-
-  // Number of frames in each period of the recurring signal.
-  frames_per_period_ = frame_rate_ / frequency_;
-
-  amplitude_scalar_ = amplitude_;
-  switch (sample_format_) {
-    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      amplitude_scalar_ *= (std::numeric_limits<int32_t>::max() & 0xFFFFFF00);
-      sample_size_ = sizeof(int32_t);
-      break;
-    case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      amplitude_scalar_ *= std::numeric_limits<int16_t>::max();
-      sample_size_ = sizeof(int16_t);
-      break;
-    case fuchsia::media::AudioSampleFormat::FLOAT:
-      sample_size_ = sizeof(float);
-      break;
-    default:
-      printf("Unknown AudioSampleFormat: %u\n", sample_format_);
-      Shutdown();
-      return;
-  }
-
-  // As mentioned above, for 24-bit audio we use 32-bit samples (low byte 0).
-  frame_size_ = num_channels_ * sample_size_;
-
-  bytes_per_packet_ = frames_per_packet_ * frame_size_;
-
-  // From the specified size|number of payload buffers, determine how many packets fit, then trim
-  // the mapping to what will be used. This size will be split across |num_payload_buffers_|
-  // buffers, e.g. 2 buffers of 48000 frames each will be large enough hold 200 480-frame packets.
-  auto total_payload_buffer_space = num_payload_buffers_ * frames_per_payload_buffer_ * frame_size_;
-  total_mappable_packets_ = total_payload_buffer_space / bytes_per_packet_;
-
-  // Shard out the payloads across multiple buffers, ensuring we can hold at least 1 buffer.
-  packets_per_payload_buffer_ = std::max(1u, total_mappable_packets_ / num_payload_buffers_);
 }
 
 void MediaApp::DisplayConfigurationSettings() {
@@ -493,10 +506,12 @@ void MediaApp::InitializeWavWriter() {
   }
 }
 
-// Create a VMO and map memory for 1 sec of audio between them. Reduce rights and send handle to
-// AudioRenderer: this is our shared buffer.
+// We share a memory section with our AudioRenderer, divided into equally-sized payloads (size
+// specified by the user). For now, we trim the end of the memory section, rather than handle the
+// occasional irregularly-sized packet.
+// TODO(mpuryear): handle end-of-buffer wraparound; make it a true ring buffer.
 void MediaApp::CreateMemoryMapping() {
-  for (size_t i = 0; i < num_payload_buffers_; ++i) {
+  for (uint32_t i = 0; i < num_payload_buffers_; ++i) {
     auto& payload_buffer = payload_buffers_.emplace_back();
     zx::vmo payload_vmo;
     zx_status_t status = payload_buffer.CreateAndMap(
@@ -549,13 +564,15 @@ void MediaApp::Play() {
 
   target_num_packets_outstanding_ =
       online_ ? (total_mappable_packets_ / 2) : total_mappable_packets_;
-  target_num_packets_outstanding_ =
-      std::min<uint64_t>(target_num_packets_outstanding_, num_packets_to_send_);
+
+  // std::min must be done at the higher width, but the result is guaranteed to fit into int32
+  target_num_packets_outstanding_ = static_cast<uint32_t>(
+      std::min<uint64_t>(target_num_packets_outstanding_, num_packets_to_send_));
 
   auto target_duration_outstanding =
       (zx::sec(1) * target_num_packets_outstanding_ * frames_per_packet_) / frame_rate_;
   if (target_duration_outstanding < min_lead_time_ &&
-      target_duration_outstanding < zx::nsec(ZX_SEC(1) * duration_secs_)) {
+      target_duration_outstanding < zx::nsec(static_cast<int64_t>(duration_secs_ * ZX_SEC(1)))) {
     printf("\nPayload buffer space is too small for the minimum lead time and signal duration.\n");
     Shutdown();
     return;
@@ -690,7 +707,7 @@ void MediaApp::GenerateAudioForPacket(const AudioPacket& audio_packet, uint64_t 
   //
   // TODO(mpuryear): don't recompute this every time; use payload_frames_ (and pre-compute this)
   // except for last packet, which we either check for here or pass in as a boolean parameter.
-  uint32_t payload_frames = packet.payload_size / frame_size_;
+  uint32_t payload_frames = static_cast<uint32_t>(packet.payload_size) / frame_size_;
 
   switch (sample_format_) {
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
@@ -757,30 +774,33 @@ double MediaApp::NextPinkNoiseSample(uint32_t chan) {
 }
 
 // Write signal into the next section of our buffer. Track how many total frames since playback
-// started, to handle arbitrary frequencies of type double.
+// started, to handle arbitrary frequencies of type double. Converting frames_since_start to a
+// double running_frame limits precision to 2^53 frames (1487 yrs @ 192kHz: more than adequate!).
 template <typename SampleType>
 void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frames,
                                     uint64_t frames_since_start) {
   const double rads_per_frame = 2.0 * M_PI / frames_per_period_;  // Radians/Frame.
 
   for (uint32_t frame = 0; frame < num_frames; ++frame, ++frames_since_start) {
+    double running_frame = static_cast<double>(frames_since_start);
+
     // Generated signal value, before applying amplitude scaling.
     double raw_val;
 
     for (auto chan_num = 0u; chan_num < num_channels_; ++chan_num) {
       switch (output_signal_type_) {
         case kOutputTypeSine:
-          raw_val = sin(rads_per_frame * frames_since_start);
+          raw_val = sin(rads_per_frame * running_frame);
           break;
         case kOutputTypeSquare:
           raw_val =
-              (fmod(frames_since_start, frames_per_period_) >= frames_per_period_ / 2) ? -1.0 : 1.0;
+              (fmod(running_frame, frames_per_period_) >= frames_per_period_ / 2) ? -1.0 : 1.0;
           break;
         case kOutputTypeSawtooth:
-          raw_val = (fmod(frames_since_start / frames_per_period_, 1.0) * 2.0) - 1.0;
+          raw_val = (fmod(running_frame / frames_per_period_, 1.0) * 2.0) - 1.0;
           break;
         case kOutputTypeTriangle:
-          raw_val = (abs(fmod(frames_since_start / frames_per_period_, 1.0) - 0.5) * 4.0) - 1.0;
+          raw_val = (abs(fmod(running_frame / frames_per_period_, 1.0) - 0.5) * 4.0) - 1.0;
           break;
         case kOutputTypeNoise:
           raw_val = drand48() * 2.0 - 1.0;
@@ -790,16 +810,18 @@ void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frame
           break;
       }
 
-      // Final generated signal value
+      // raw_val cannot exceed 1.0; amplitude_scalar_ cannot exceed the SampleType's max.
+      // Thus, the below static_casts are safe.
       SampleType val;
       if constexpr (std::is_same_v<SampleType, float>) {
-        val = raw_val * amplitude_scalar_;
+        val = static_cast<float>(raw_val * amplitude_scalar_);
       } else if constexpr (std::is_same_v<SampleType,
-                                          int32_t>) {       // 24-bit in 32-bit container:
-        val = lround(raw_val * amplitude_scalar_ / 256.0);  // round at bit 8, and
-        val = val << 8;                                     // leave bits 0-7 blank
+                                          int32_t>) {  // 24-bit in 32-bit container:
+        val = static_cast<int32_t>(
+            lround(raw_val * amplitude_scalar_ / 256.0));  // round at bit 8, and
+        val = val << 8;                                    // leave bits 0-7 blank
       } else {
-        val = lround(raw_val * amplitude_scalar_);
+        val = static_cast<int16_t>(lround(raw_val * amplitude_scalar_));
       }
 
       audio_buffer[frame * num_channels_ + chan_num] = val;
@@ -823,8 +845,9 @@ bool MediaApp::CheckPayloadSpace() {
     return false;
   }
 
-  target_num_packets_outstanding_ = std::min<uint64_t>(
-      num_packets_to_send_ - num_packets_completed_, target_num_packets_outstanding_);
+  target_num_packets_outstanding_ =
+      std::min(static_cast<uint32_t>(num_packets_to_send_ - num_packets_completed_),
+               target_num_packets_outstanding_);
   auto actual_packets_outstanding = num_packets_sent_ - num_packets_completed_;
 
   auto target_duration_outstanding =
@@ -832,7 +855,7 @@ bool MediaApp::CheckPayloadSpace() {
   auto actual_duration_outstanding =
       (zx::sec(1) * actual_packets_outstanding * frames_per_packet_) / frame_rate_;
 
-  auto elapsed_time_sec = static_cast<float>(num_frames_completed_) / frame_rate_;
+  auto elapsed_time_sec = static_cast<double>(num_frames_completed_) / frame_rate_;
   // Check whether payload buffer is staying at approx the same fullness.
   if (num_packets_completed_ > 0 &&
       actual_packets_outstanding + kPktCompleteTolerance <= target_num_packets_outstanding_ &&
@@ -920,9 +943,11 @@ void MediaApp::SendPacket() {
   GenerateAudioForPacket(packet, num_packets_sent_);
 
   if (file_name_) {
+    CLI_CHECK(packet.stream_packet.payload_size <= std::numeric_limits<uint32_t>::max(),
+              "Packet payload too large");
     CLI_CHECK(wav_writer_.Write(reinterpret_cast<char*>(packet.vmo->start()) +
                                     packet.stream_packet.payload_offset,
-                                packet.stream_packet.payload_size) ||
+                                static_cast<uint32_t>(packet.stream_packet.payload_size)) ||
                   Shutdown(),
               "WavWriter::Write() failed");
   }
