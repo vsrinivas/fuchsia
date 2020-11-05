@@ -49,16 +49,15 @@ fx test "--realm=$REALM" $PKG -- --save-inputs-and-outputs
 echo "Copying outputs to $HOST_DIR"
 mkdir -p $HOST_DIR
 ln -s -f $HOST_DIR /tmp/audio-hermetic-golden-tests/$PKG/latest
-cd $HOST_DIR
 for f in `fx shell ls $DEVICE_DIR`; do
-  fx cp --to-host $DEVICE_DIR/$f $f
+  fx cp --to-host $DEVICE_DIR/$f $HOST_DIR/$f
 done
 
-echo $PWD
-for input in `ls *_input.wav`; do
+echo $HOST_DIR
+for input in `ls $HOST_DIR/*_input.wav`; do
   ringbuffer=`echo $input | sed -E 's/(.*)_input.wav/\1_ring_buffer.wav/'`
   newoutput=`echo $input | sed -E 's/(.*)_input.wav/\1_output.wav/'`
-  oldoutput="$TESTDATA/"`echo $input | sed -E 's/(.*)_input.wav/\1_expected_output.wav/'`
+  oldoutput="$TESTDATA/"`basename $input | sed -E 's/(.*)_input.wav/\1_expected_output.wav/'`
   echo
 
   # If the test case does not have an _output.wav, it doesn't use goldens.
