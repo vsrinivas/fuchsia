@@ -751,9 +751,9 @@ struct Format {
   uint32_t flags;
   uint32_t min_rate;
   uint32_t max_rate;
-  uint32_t min_chans;
-  uint32_t max_chans;
-  uint32_t rate_family_flags;
+  uint8_t min_chans;
+  uint8_t max_chans;
+  uint16_t rate_family_flags;
 };
 
 // These formats exercise various scenarios:
