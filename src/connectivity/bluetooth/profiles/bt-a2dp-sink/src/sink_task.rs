@@ -18,15 +18,11 @@ use {
         select, FutureExt, StreamExt,
     },
     log::{info, trace},
-    std::{sync::Arc, vec::IntoIter},
+    std::sync::Arc,
     thiserror::Error,
 };
 
 use crate::player;
-
-/// The number of preload packets to load into the preload buffer before starting playback.
-// TODO(): This preload shouldn't be needed, since the AUdioConsumer should handle a jitter buffer.
-const PRELOAD_PACKETS: usize = 6;
 
 #[derive(Clone)]
 pub struct SinkTaskBuilder {
@@ -197,50 +193,6 @@ async fn media_stream_task(
     }
 }
 
-#[derive(PartialEq)]
-enum JitterBuffer<T> {
-    Empty,
-    Filling(Vec<T>),
-    Drained,
-}
-
-impl<T> JitterBuffer<T> {
-    /// Push into a filling buffer.
-    /// If the buffer is empty, this will change it to Filling().
-    /// If the buffer is drained, it will panic.
-    fn push(&mut self, packet: T) {
-        *self = match std::mem::replace(self, JitterBuffer::Empty) {
-            JitterBuffer::Empty => JitterBuffer::Filling(vec![packet]),
-            JitterBuffer::Filling(mut vec) => {
-                vec.push(packet);
-                JitterBuffer::Filling(vec)
-            }
-            JitterBuffer::Drained => panic!("Can't push into a drained buffer"),
-        }
-    }
-
-    /// Return the length of the buffer if it's currently filling or empty.
-    /// Returns None if the buffer is drained.
-    fn len(&self) -> Option<usize> {
-        match self {
-            JitterBuffer::Empty => Some(0),
-            JitterBuffer::Filling(vec) => Some(vec.len()),
-            JitterBuffer::Drained => None,
-        }
-    }
-
-    /// Drain a buffer, returning an iterator that produces all the packets
-    /// that have been pushed.
-    /// Returns an empty iterator if it is already drained.
-    fn drain(&mut self) -> IntoIter<T> {
-        let old = std::mem::replace(self, JitterBuffer::Drained);
-        match old {
-            JitterBuffer::Filling(vec) => vec.into_iter(),
-            _ => Vec::new().into_iter(),
-        }
-    }
-}
-
 /// Decodes a media stream by starting a Player and transferring media stream packets from AVDTP
 /// to the player.  Restarts the player on player errors.
 /// Ends when signaled from `end_signal`, or when the media transport stream is closed.
@@ -251,7 +203,6 @@ async fn decode_media_stream(
 ) -> StreamingError {
     let mut packet_count: u64 = 0;
     let _ = inspect.try_lock().map(|mut l| l.start());
-    let mut preload = JitterBuffer::Empty;
     loop {
         select! {
             stream_packet = stream.next().fuse() => {
@@ -270,19 +221,6 @@ async fn decode_media_stream(
                 let _ = inspect.try_lock().map(|mut l| {
                     l.record_transferred(pkt.len(), fasync::Time::now());
                 });
-
-                if let Some(len) = preload.len() {
-                    if len < (PRELOAD_PACKETS - 1) {
-                        preload.push(pkt);
-                        continue;
-                    }
-                    info!("Starting with {:} packets..", len);
-                    for past_pkt in preload.drain() {
-                        if let Err(e) = player.push_payload(&past_pkt.as_slice()).await {
-                            info!("can't push packet: {:?}", e);
-                        }
-                    }
-                }
 
                 if let Err(e) = player.push_payload(&pkt.as_slice()).await {
                     info!("can't push packet: {:?}", e);
@@ -431,7 +369,7 @@ mod tests {
 
         exec.set_fake_time(fasync::Time::from_nanos(5_678900000));
 
-        let (mut media_sender, mut media_receiver) = mpsc::channel(PRELOAD_PACKETS);
+        let (mut media_sender, mut media_receiver) = mpsc::channel(1);
 
         let decode_fut = decode_media_stream(&mut media_receiver, player, inspect);
         pin_mut!(decode_fut);
@@ -454,20 +392,17 @@ mod tests {
             0x9a, 0xab, 0x75, 0xae, 0x82, 0xad, 0x49, 0xb4, 0x6a, 0xad, 0xb1, 0xba, 0x52, 0xa9,
             0xa8, 0xc0, 0x32, 0xad, 0x11, 0xc6, 0x5a, 0xab, 0x3a,
         ];
-        let sbc_packet_size = 85;
+        let sbc_packet_size = 85u64;
 
-        // Need to send PRELOAD_PACKETS to get any sent to the player.
-        for _ in 0..PRELOAD_PACKETS {
-            media_sender.try_send(Ok(raw.clone())).expect("should be able to send into stream");
-            exec.set_fake_time(fasync::Time::after(1.seconds()));
-            assert!(exec.run_until_stalled(&mut decode_fut).is_pending());
-        }
+        media_sender.try_send(Ok(raw.clone())).expect("should be able to send into stream");
+        exec.set_fake_time(fasync::Time::after(1.seconds()));
+        assert!(exec.run_until_stalled(&mut decode_fut).is_pending());
 
         // We should have updated the rx stats.
         fuchsia_inspect::assert_inspect_tree!(inspector, root: {
         stream: {
             start_time: 5_678900000i64,
-            total_bytes: sbc_packet_size * PRELOAD_PACKETS as u64,
+            total_bytes: sbc_packet_size,
             bytes_per_second_current: sbc_packet_size,
         }});
         // Should get a packet send to the sink eventually as player gets around to it
