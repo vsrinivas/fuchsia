@@ -57,6 +57,7 @@ rustc_library("tuf") {
   ]
 
   sources = common_sources
+  enforce_source_listing = false
 }
 
 rustc_test("tuf_lib_test") {
@@ -94,6 +95,7 @@ rustc_test("tuf_lib_test") {
   ]
 
   sources = common_sources
+  enforce_source_listing = false
 
   inputs = [
     "//third_party/rust-mirrors/rust-tuf/tests/rsa/rsa-4096.pkcs1.der",
