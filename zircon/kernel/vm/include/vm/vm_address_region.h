@@ -559,7 +559,7 @@ class VmMapping final : public VmAddressRegionOrMapping,
   uint arch_mmu_flags_;
 
   // used to detect recursions through the vmo fault path
-  bool currently_faulting_ = false;
+  bool currently_faulting_ TA_GUARDED(object_->lock()) = false;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_ADDRESS_REGION_H_

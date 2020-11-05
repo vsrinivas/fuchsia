@@ -586,7 +586,10 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
   // set the currently faulting flag for any recursive calls the vmo may make back into us.
   DEBUG_ASSERT(!currently_faulting_);
   currently_faulting_ = true;
-  auto ac = fbl::MakeAutoCall([&]() { currently_faulting_ = false; });
+  auto ac = fbl::MakeAutoCall([&]() {
+    AssertHeld(object_->lock_ref());
+    currently_faulting_ = false;
+  });
 
   // iterate through the range, grabbing a page from the underlying object and
   // mapping it in
@@ -730,7 +733,10 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
   // the unmap operation.
   DEBUG_ASSERT(!currently_faulting_);
   currently_faulting_ = true;
-  auto ac = fbl::MakeAutoCall([&]() { currently_faulting_ = false; });
+  auto ac = fbl::MakeAutoCall([&]() {
+    AssertHeld(object_->lock_ref());
+    currently_faulting_ = false;
+  });
 
   // fault in or grab an existing page
   paddr_t new_pa;
