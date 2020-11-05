@@ -27,9 +27,9 @@ using AmlSdmmcType = ddk::Device<AmlSdmmc, ddk::Suspendable, ddk::Unbindable>;
 
 class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::base_protocol> {
  public:
-  explicit AmlSdmmc(zx_device_t* parent, zx::bti bti, ddk::MmioBuffer mmio,
-                    ddk::MmioPinnedBuffer pinned_mmio, aml_sdmmc_config_t config, zx::interrupt irq,
-                    const ddk::GpioProtocolClient& gpio)
+  AmlSdmmc(zx_device_t* parent, zx::bti bti, ddk::MmioBuffer mmio,
+           ddk::MmioPinnedBuffer pinned_mmio, aml_sdmmc_config_t config, zx::interrupt irq,
+           const ddk::GpioProtocolClient& gpio)
       : AmlSdmmcType(parent),
         mmio_(std::move(mmio)),
         bti_(std::move(bti)),
@@ -40,7 +40,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
         dead_(false),
         pending_txn_(false) {}
 
-  virtual ~AmlSdmmc() {}
+  virtual ~AmlSdmmc() = default;
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation
@@ -84,12 +84,6 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
     uint32_t middle() const { return start + (size / 2); }
   };
 
-  void DumpRegs();
-  void DumpSdmmcStatus(uint32_t status) const;
-  void DumpSdmmcCfg(uint32_t config) const;
-  void DumpSdmmcClock(uint32_t clock) const;
-  void DumpSdmmcCmdCfg(uint32_t cmd_desc) const;
-  uint32_t GetClkFreq(uint32_t clk_src) const;
   zx_status_t TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_size,
                                uint32_t tuning_cmd_idx);
   bool TuningTestSettings(fbl::Span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx);
@@ -111,7 +105,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
                                 aml_sdmmc_desc_t** last_desc);
   zx_status_t SetupDataDescs(sdmmc_req_t* req, aml_sdmmc_desc_t* desc,
                              aml_sdmmc_desc_t** last_desc);
-  zx_status_t FinishReq(sdmmc_req_t* req);
+  static zx_status_t FinishReq(sdmmc_req_t* req);
   void ClearStatus();
   zx_status_t WaitForInterrupt(sdmmc_req_t* req);
 

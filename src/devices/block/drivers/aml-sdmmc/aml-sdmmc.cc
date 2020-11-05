@@ -4,6 +4,7 @@
 
 #include "aml-sdmmc.h"
 
+#include <inttypes.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/sync/completion.h>
@@ -44,10 +45,9 @@
 #define AML_SDMMC_TRACE(fmt, ...) zxlogf(DEBUG, "%s: " fmt, __func__, ##__VA_ARGS__)
 #define AML_SDMMC_INFO(fmt, ...) zxlogf(INFO, "%s: " fmt, __func__, ##__VA_ARGS__)
 #define AML_SDMMC_ERROR(fmt, ...) zxlogf(ERROR, "%s: " fmt, __func__, ##__VA_ARGS__)
-#define AML_SDMMC_COMMAND(c) ((0x80) | (c))
 #define PAGE_MASK (PAGE_SIZE - 1ull)
 
-#define GET_REG_FROM_MMIO(NAME) NAME::Get().ReadFrom(&mmio_).reg_value()
+namespace {
 
 uint32_t log2_ceil(uint16_t blk_sz) {
   if (blk_sz == 1) {
@@ -56,109 +56,9 @@ uint32_t log2_ceil(uint16_t blk_sz) {
   return 32 - (__builtin_clz(blk_sz - 1));
 }
 
+}  // namespace
+
 namespace sdmmc {
-
-void AmlSdmmc::DumpRegs() {
-  uint32_t clk = GET_REG_FROM_MMIO(AmlSdmmcClock);
-  AML_SDMMC_TRACE("sd_emmc_clock : 0x%x", clk);
-  DumpSdmmcClock(clk);
-  AML_SDMMC_TRACE("sd_emmc_delay1 : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcDelay1)));
-  AML_SDMMC_TRACE("sd_emmc_delay2 : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcDelay2)));
-  AML_SDMMC_TRACE("sd_emmc_adjust : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcAdjust)));
-  AML_SDMMC_TRACE("sd_emmc_calout : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCalout)));
-  AML_SDMMC_TRACE("sd_emmc_start : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcStart)));
-  uint32_t config = GET_REG_FROM_MMIO(AmlSdmmcCfg);
-  AML_SDMMC_TRACE("sd_emmc_cfg : 0x%x", config);
-  DumpSdmmcCfg(config);
-  AML_SDMMC_TRACE("sd_emmc_status : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcStatus)));
-  AML_SDMMC_TRACE("sd_emmc_irq_en : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcIrqEn)));
-  AML_SDMMC_TRACE("sd_emmc_cmd_cfg : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCmdCfg)));
-  AML_SDMMC_TRACE("sd_emmc_cmd_arg : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCmdArg)));
-  AML_SDMMC_TRACE("sd_emmc_cmd_dat : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCmdDat)));
-  AML_SDMMC_TRACE("sd_emmc_cmd_resp : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCmdResp)));
-  AML_SDMMC_TRACE("sd_emmc_cmd_resp1 : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCmdResp1)));
-  AML_SDMMC_TRACE("sd_emmc_cmd_resp2 : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCmdResp2)));
-  AML_SDMMC_TRACE("sd_emmc_cmd_resp3 : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCmdResp3)));
-  AML_SDMMC_TRACE("bus_err : 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCmdBusErr)));
-  AML_SDMMC_TRACE("sd_emmc_cur_cfg: 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCurCfg)));
-  AML_SDMMC_TRACE("sd_emmc_cur_arg: 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCurArg)));
-  AML_SDMMC_TRACE("sd_emmc_cur_dat: 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCurDat)));
-  AML_SDMMC_TRACE("sd_emmc_cur_rsp: 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcCurResp)));
-  AML_SDMMC_TRACE("sd_emmc_next_cfg: 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcNextCfg)));
-  AML_SDMMC_TRACE("sd_emmc_next_arg: 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcNextArg)));
-  AML_SDMMC_TRACE("sd_emmc_next_dat: 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcNextDat)));
-  AML_SDMMC_TRACE("sd_emmc_next_rsp: 0x%x", (GET_REG_FROM_MMIO(AmlSdmmcNextResp)));
-}
-
-void AmlSdmmc::DumpSdmmcStatus(uint32_t status) const {
-  auto st = AmlSdmmcStatus::Get().FromValue(status);
-  AML_SDMMC_TRACE("Dumping sd_emmc_status 0x%0x", status);
-  AML_SDMMC_TRACE("    RXD_ERR: %d", st.rxd_err());
-  AML_SDMMC_TRACE("    TXD_ERR: %d", st.txd_err());
-  AML_SDMMC_TRACE("    DESC_ERR: %d", st.txd_err());
-  AML_SDMMC_TRACE("    RESP_ERR: %d", st.resp_err());
-  AML_SDMMC_TRACE("    RESP_TIMEOUT: %d", st.resp_timeout());
-  AML_SDMMC_TRACE("    DESC_TIMEOUT: %d", st.desc_timeout());
-  AML_SDMMC_TRACE("    END_OF_CHAIN: %d", st.end_of_chain());
-  AML_SDMMC_TRACE("    DESC_IRQ: %d", st.resp_status());
-  AML_SDMMC_TRACE("    IRQ_SDIO: %d", st.irq_sdio());
-  AML_SDMMC_TRACE("    DAT_I: %d", st.dat_i());
-  AML_SDMMC_TRACE("    CMD_I: %d", st.cmd_i());
-  AML_SDMMC_TRACE("    DS: %d", st.ds());
-  AML_SDMMC_TRACE("    BUS_FSM: %d", st.bus_fsm());
-  AML_SDMMC_TRACE("    BUS_DESC_BUSY: %d", st.desc_busy());
-  AML_SDMMC_TRACE("    CORE_RDY: %d", st.core_busy());
-}
-
-void AmlSdmmc::DumpSdmmcCfg(uint32_t config) const {
-  auto cfg = AmlSdmmcCfg::Get().FromValue(config);
-  AML_SDMMC_TRACE("Dumping sd_emmc_cfg 0x%0x", config);
-  AML_SDMMC_TRACE("    BUS_WIDTH: %d", cfg.bus_width());
-  AML_SDMMC_TRACE("    DDR: %d", cfg.ddr());
-  AML_SDMMC_TRACE("    DC_UGT: %d", cfg.dc_ugt());
-  AML_SDMMC_TRACE("    BLOCK LEN: %d", cfg.blk_len());
-}
-
-void AmlSdmmc::DumpSdmmcClock(uint32_t clock) const {
-  auto clk = AmlSdmmcClock::Get().FromValue(clock);
-  AML_SDMMC_TRACE("Dumping clock 0x%0x", clock);
-  AML_SDMMC_TRACE("   DIV: %d", clk.cfg_div());
-  AML_SDMMC_TRACE("   SRC: %d", clk.cfg_src());
-  AML_SDMMC_TRACE("   CORE_PHASE: %d", clk.cfg_co_phase());
-  AML_SDMMC_TRACE("   TX_PHASE: %d", clk.cfg_tx_phase());
-  AML_SDMMC_TRACE("   RX_PHASE: %d", clk.cfg_rx_phase());
-  AML_SDMMC_TRACE("   TX_DELAY: %d", clk.cfg_tx_delay());
-  AML_SDMMC_TRACE("   RX_DELAY: %d", clk.cfg_rx_delay());
-  AML_SDMMC_TRACE("   ALWAYS_ON: %d", clk.cfg_always_on());
-}
-
-void AmlSdmmc::DumpSdmmcCmdCfg(uint32_t cmd_desc) const {
-  auto cmd = AmlSdmmcCmdCfg::Get().FromValue(cmd_desc);
-  AML_SDMMC_TRACE("Dumping cmd_cfg 0x%0x", cmd_desc);
-  AML_SDMMC_TRACE("   REQ_LEN: %d", cmd.len());
-  AML_SDMMC_TRACE("   BLOCK_MODE: %d", cmd.block_mode());
-  AML_SDMMC_TRACE("   R1B: %d", cmd.r1b());
-  AML_SDMMC_TRACE("   END_OF_CHAIN: %d", cmd.end_of_chain());
-  AML_SDMMC_TRACE("   TIMEOUT: %d", cmd.timeout());
-  AML_SDMMC_TRACE("   NO_RESP: %d", cmd.no_resp());
-  AML_SDMMC_TRACE("   NO_CMD: %d", cmd.no_cmd());
-  AML_SDMMC_TRACE("   DATA_IO: %d", cmd.data_io());
-  AML_SDMMC_TRACE("   DATA_WR: %d", cmd.data_wr());
-  AML_SDMMC_TRACE("   RESP_NO_CRC: %d", cmd.resp_no_crc());
-  AML_SDMMC_TRACE("   RESP_128: %d", cmd.resp_128());
-  AML_SDMMC_TRACE("   RESP_NUM: %d", cmd.resp_num());
-  AML_SDMMC_TRACE("   DATA_NUM: %d", cmd.data_num());
-  AML_SDMMC_TRACE("   CMD_IDX: %d", cmd.cmd_idx());
-  AML_SDMMC_TRACE("   ERROR: %d", cmd.error());
-  AML_SDMMC_TRACE("   OWNER: %d", cmd.owner());
-}
-
-uint32_t AmlSdmmc::GetClkFreq(uint32_t clk_src) const {
-  if (clk_src == AmlSdmmcClock::kFClkDiv2Src) {
-    return AmlSdmmcClock::kFClkDiv2Freq;
-  }
-  return AmlSdmmcClock::kCtsOscinClkFreq;
-}
 
 zx_status_t AmlSdmmc::WaitForInterruptImpl() {
   zx::time timestamp;
@@ -176,7 +76,7 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
   zx_status_t status = WaitForInterruptImpl();
 
   if (status != ZX_OK) {
-    AML_SDMMC_ERROR("AmlSdmmc::WaitForInterrupt: WaitForInterruptImpl got %d", status);
+    AML_SDMMC_ERROR("WaitForInterruptImpl got %d", status);
     return status;
   }
 
@@ -241,8 +141,7 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
   }
 
   if (!(status_irq.end_of_chain())) {
-    AML_SDMMC_ERROR("AmlSdmmc::WaitForInterrupt: END OF CHAIN bit is not set status:0x%x",
-                    status_irq.reg_value());
+    AML_SDMMC_ERROR("END OF CHAIN bit is not set status:0x%x", status_irq.reg_value());
     return ZX_ERR_IO_INVALID;
   }
 
@@ -282,9 +181,9 @@ zx_status_t AmlSdmmc::SdmmcHostInfo(sdmmc_host_info_t* info) {
   return ZX_OK;
 }
 
-zx_status_t AmlSdmmc::SdmmcSetBusWidth(sdmmc_bus_width_t bw) {
+zx_status_t AmlSdmmc::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
   uint32_t bus_width_val;
-  switch (bw) {
+  switch (bus_width) {
     case SDMMC_BUS_WIDTH_EIGHT:
       bus_width_val = AmlSdmmcCfg::kBusWidth8Bit;
       break;
@@ -313,7 +212,9 @@ zx_status_t AmlSdmmc::SdmmcSetBusFreq(uint32_t freq) {
   if (freq == 0) {
     AmlSdmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(0).WriteTo(&mmio_);
     return ZX_OK;
-  } else if (freq > max_freq_) {
+  }
+
+  if (freq > max_freq_) {
     freq = max_freq_;
   } else if (freq < min_freq_) {
     freq = min_freq_;
@@ -455,8 +356,7 @@ zx_status_t AmlSdmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_
   bool is_read = req->cmd_flags & SDMMC_CMD_READ;
   uint64_t pagecount = ((req->buf_offset & PAGE_MASK) + req_len + PAGE_MASK) / PAGE_SIZE;
   if (pagecount > SDMMC_PAGES_COUNT) {
-    AML_SDMMC_ERROR("AmlSdmmc::SetupDataDescsDma: too many pages %lu vs %lu", pagecount,
-                    SDMMC_PAGES_COUNT);
+    AML_SDMMC_ERROR("too many pages %" PRIu64 " vs %" PRIu64, pagecount, SDMMC_PAGES_COUNT);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -468,19 +368,19 @@ zx_status_t AmlSdmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_
   zx_status_t st = zx_bti_pin(bti_.get(), options, req->dma_vmo, req->buf_offset & ~PAGE_MASK,
                               pagecount * PAGE_SIZE, phys, pagecount, &req->pmt);
   if (st != ZX_OK) {
-    AML_SDMMC_ERROR("AmlSdmmc::SetupDataDescsDma: bti-pin failed with error %d", st);
+    AML_SDMMC_ERROR("bti-pin failed with error %d", st);
     return st;
   }
 
   auto unpin_ac = fbl::MakeAutoCall([&req]() { zx_pmt_unpin(req->pmt); });
   if (is_read) {
     st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, req->buf_offset, req_len,
-                         NULL, 0);
+                         nullptr, 0);
   } else {
-    st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN, req->buf_offset, req_len, NULL, 0);
+    st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN, req->buf_offset, req_len, nullptr, 0);
   }
   if (st != ZX_OK) {
-    AML_SDMMC_ERROR("AmlSdmmc::SetupDataDescsDma: cache clean failed with error  %d", st);
+    AML_SDMMC_ERROR("cache clean failed with error  %d", st);
     return st;
   }
 
@@ -505,18 +405,17 @@ zx_status_t AmlSdmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_
         desc -= 1;
         *last_desc = desc;
         break;
-      } else {
-        AML_SDMMC_ERROR("AmlSdmmc::SetupDataDescsDma: empty descriptor list!");
-        return ZX_ERR_NOT_SUPPORTED;
       }
-    } else if (length > PAGE_SIZE) {
-      AML_SDMMC_ERROR("AmlSdmmc::SetupDataDescsDma: chunk size > %zu is unsupported", length);
+
+      AML_SDMMC_ERROR("empty descriptor list!");
       return ZX_ERR_NOT_SUPPORTED;
-    } else if ((++count) > AML_DMA_DESC_MAX_COUNT) {
-      AML_SDMMC_ERROR(
-          "AmlSdmmc::SetupDataDescsDma: request with more than %d chunks "
-          "is unsupported\n",
-          AML_DMA_DESC_MAX_COUNT);
+    }
+    if (length > PAGE_SIZE) {
+      AML_SDMMC_ERROR("chunk size > %zu is unsupported", length);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    if ((++count) > AML_DMA_DESC_MAX_COUNT) {
+      AML_SDMMC_ERROR("request with more than %d chunks is unsupported\n", AML_DMA_DESC_MAX_COUNT);
       return ZX_ERR_NOT_SUPPORTED;
     }
     auto cmd = AmlSdmmcCmdCfg::Get().FromValue(desc->cmd_info);
@@ -554,18 +453,14 @@ zx_status_t AmlSdmmc::SetupDataDescsPio(sdmmc_req_t* req, aml_sdmmc_desc_t* desc
   uint32_t length = req->blockcount * req->blocksize;
 
   if (length > AML_SDMMC_MAX_PIO_DATA_SIZE) {
-    AML_SDMMC_ERROR(
-        "AmlSdmmc::SetupDataDescsPio: Request transfer size is greater than "
-        "max transfer size");
+    AML_SDMMC_ERROR("Request transfer size is greater than max transfer size");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (length == 0 || ((length % 4) != 0)) {
     // From Amlogic documentation, Ping and Pong buffers in sram can be accessed only 4 bytes
     // at a time.
-    AML_SDMMC_ERROR(
-        "AmlSdmmc::SetupDataDescsPio: Request sizes that are not multiple of "
-        "4 are not supported in PIO mode");
+    AML_SDMMC_ERROR("Request sizes that are not multiple of 4 are not supported in PIO mode");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -640,15 +535,15 @@ zx_status_t AmlSdmmc::FinishReq(sdmmc_req_t* req) {
     uint64_t req_len = req->blockcount * req->blocksize;
     if ((req->cmd_flags & SDMMC_CMD_READ) && req->use_dma) {
       st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, req->buf_offset, req_len,
-                           NULL, 0);
+                           nullptr, 0);
       if (st != ZX_OK) {
-        AML_SDMMC_ERROR("AmlSdmmc::FinishReq: cache clean failed with error  %d", st);
+        AML_SDMMC_ERROR("cache clean failed with error  %d", st);
       }
     }
 
     st = zx_pmt_unpin(req->pmt);
     if (st != ZX_OK) {
-      AML_SDMMC_ERROR("AmlSdmmc::FinishReq: error %d in pmt_unpin", st);
+      AML_SDMMC_ERROR("error %d in pmt_unpin", st);
     }
     req->pmt = ZX_HANDLE_INVALID;
   }
@@ -683,7 +578,7 @@ zx_status_t AmlSdmmc::SdmmcRequest(sdmmc_req_t* req) {
   if (req->cmd_flags & SDMMC_RESP_DATA_PRESENT) {
     status = SetupDataDescs(req, desc, &last_desc);
     if (status != ZX_OK) {
-      AML_SDMMC_ERROR("AmlSdmmc::SdmmcRequest: Failed to setup data descriptors");
+      AML_SDMMC_ERROR("Failed to setup data descriptors");
 
       fbl::AutoLock lock(&mtx_);
       pending_txn_ = false;
@@ -754,7 +649,7 @@ bool AmlSdmmc::TuningTestSettings(fbl::Span<const uint8_t> tuning_blk, uint32_t 
   for (n = 0; n < AML_SDMMC_TUNING_TEST_ATTEMPTS; n++) {
     uint8_t tuning_res[512] = {0};
     status = TuningDoTransfer(tuning_res, tuning_blk.size(), tuning_cmd_idx);
-    if (status != ZX_OK || memcmp(tuning_blk.data(), tuning_res, tuning_blk.size())) {
+    if (status != ZX_OK || memcmp(tuning_blk.data(), tuning_res, tuning_blk.size()) != 0) {
       break;
     }
   }
@@ -864,7 +759,7 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
     tuning_blk = fbl::Span<const uint8_t>(aml_sdmmc_tuning_blk_pattern_8bit,
                                           sizeof(aml_sdmmc_tuning_blk_pattern_8bit));
   } else {
-    AML_SDMMC_ERROR("AmlSdmmc::SdmmcPerformTuning: Tuning at wrong buswidth: %d", bw);
+    AML_SDMMC_ERROR("Tuning at wrong buswidth: %d", bw);
     return ZX_ERR_INTERNAL;
   }
 
@@ -954,7 +849,7 @@ zx_status_t AmlSdmmc::Init() {
   AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_);
   zx_status_t status = bti_.release_quarantine();
   if (status != ZX_OK) {
-    AML_SDMMC_ERROR("AmlSdmmc::Init: Failed to release quarantined pages");
+    AML_SDMMC_ERROR("Failed to release quarantined pages");
     return status;
   }
 
@@ -965,7 +860,7 @@ zx_status_t AmlSdmmc::Init() {
     status = descs_buffer_.Init(bti_.get(), AML_DMA_DESC_MAX_COUNT * sizeof(aml_sdmmc_desc_t),
                                 IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
-      AML_SDMMC_ERROR("AmlSdmmc::Init: Failed to allocate dma descriptors");
+      AML_SDMMC_ERROR("Failed to allocate dma descriptors");
       return status;
     }
     dev_info_.max_transfer_size = AML_DMA_DESC_MAX_COUNT * PAGE_SIZE;
@@ -985,7 +880,7 @@ zx_status_t AmlSdmmc::Bind() {
   zx_status_t status = DdkAdd("aml-sd-emmc");
   if (status != ZX_OK) {
     irq_.destroy();
-    AML_SDMMC_ERROR("AmlSdmmc::Bind: DdkAdd failed");
+    AML_SDMMC_ERROR("DdkAdd failed");
   }
   return status;
 }
@@ -995,26 +890,26 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
 
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    AML_SDMMC_ERROR("AmlSdmmc::Could not get composite protocol");
+    AML_SDMMC_ERROR("Could not get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
-    AML_SDMMC_ERROR("AmlSdmmc::Create: Could not get pdev: %d", status);
+    AML_SDMMC_ERROR("Could not get pdev: %d", status);
     return ZX_ERR_NO_RESOURCES;
   }
 
   zx::bti bti;
   if ((status = pdev.GetBti(0, &bti)) != ZX_OK) {
-    AML_SDMMC_ERROR("AmlSdmmc::Create: Failed to get BTI: %d", status);
+    AML_SDMMC_ERROR("Failed to get BTI: %d", status);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    AML_SDMMC_ERROR("AmlSdmmc::Create: Failed to get mmio: %d", status);
+    AML_SDMMC_ERROR("Failed to get mmio: %d", status);
     return status;
   }
 
@@ -1022,29 +917,28 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
   std::optional<ddk::MmioPinnedBuffer> pinned_mmio;
   status = mmio->Pin(bti, &pinned_mmio);
   if (status != ZX_OK) {
-    AML_SDMMC_ERROR("AmlSdmmc::Create: Failed to pin mmio: %d", status);
+    AML_SDMMC_ERROR("Failed to pin mmio: %d", status);
     return status;
   }
 
   // Populate board specific information
   aml_sdmmc_config_t config;
   size_t actual;
-  status =
-      device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &config, sizeof(config), &actual);
+  status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &config, sizeof(config), &actual);
   if (status != ZX_OK || actual != sizeof(config)) {
-    AML_SDMMC_ERROR("AmlSdmmc::Create: Failed to get metadata: %d", status);
+    AML_SDMMC_ERROR("Failed to get metadata: %d", status);
     return status;
   }
 
   zx::interrupt irq;
   if ((status = pdev.GetInterrupt(0, &irq)) != ZX_OK) {
-    AML_SDMMC_ERROR("AmlSdmmc::Create: Failed to get interrupt: %d", status);
+    AML_SDMMC_ERROR("Failed to get interrupt: %d", status);
     return status;
   }
 
   pdev_device_info_t dev_info;
   if ((status = pdev.GetDeviceInfo(&dev_info)) != ZX_OK) {
-    AML_SDMMC_ERROR("AmlSdmmc::Create: Failed to get device info: %d", status);
+    AML_SDMMC_ERROR("Failed to get device info: %d", status);
     return status;
   }
 
