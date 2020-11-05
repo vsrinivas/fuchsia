@@ -73,7 +73,7 @@ protocol channel {
     channel_write(handle:CHANNEL handle,
                   uint32 options,
                   vector_void_u32size bytes,
-                  vector_handle_u32size handles)
+                  [Release] vector_handle_u32size handles)
         -> (status status);
 
     /// Write a message to a channel.
