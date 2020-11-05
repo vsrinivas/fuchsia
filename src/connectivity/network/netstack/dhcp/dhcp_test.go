@@ -527,6 +527,159 @@ func TestExponentialBackoff(t *testing.T) {
 	}
 }
 
+func TestAcquisitionAfterNAK(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		nakNthReq uint32
+		// The time durations to advance in test when the current time is requested.
+		durations     []time.Duration
+		wantInitAcq   uint64
+		wantRenewAcq  uint64
+		wantRebindAcq uint64
+		wantNaks      uint64
+		wantAcks      uint64
+		wantDiscovers uint64
+		wantReqs      uint64
+	}{
+		{
+			name: "initial acquisition",
+			// Nak the first address acquisition and let the client retry.
+			nakNthReq: 1,
+			durations: []time.Duration{
+				// Fail acquisition due to NAK and backoff.
+				0,
+				// Successful acquisition.
+				0,
+			},
+			wantInitAcq:   2,
+			wantNaks:      1,
+			wantAcks:      1,
+			wantDiscovers: 2,
+			wantReqs:      2,
+		},
+		{
+			name: "renew",
+			// Let the first address acquisition go through so client can renew.
+			nakNthReq: 2,
+			durations: []time.Duration{
+				// First acquisition.
+				0,
+				// Trasition to renew.
+				(defaultLeaseLength.Duration() / 2),
+				// Retry after NAK.
+				0,
+				// Second acquisition after NAK.
+				0,
+			},
+			wantInitAcq:   2,
+			wantRenewAcq:  1,
+			wantNaks:      1,
+			wantAcks:      2,
+			wantDiscovers: 2,
+			wantReqs:      3,
+		},
+		{
+			name: "rebind",
+			// Let the first address acquisition go through so client can rebind.
+			nakNthReq: 2,
+			durations: []time.Duration{
+				// First acquisition.
+				0,
+				// Trasition to renew.
+				(defaultLeaseLength.Duration() * 875 / 1000),
+				// Retry after NAK.
+				0,
+				// Second acquisition after NAK.
+				0,
+			},
+			wantInitAcq:   2,
+			wantRebindAcq: 1,
+			wantNaks:      1,
+			wantAcks:      2,
+			wantDiscovers: 2,
+			wantReqs:      3,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			var wg sync.WaitGroup
+			defer func() {
+				cancel()
+				wg.Wait()
+			}()
+
+			clientStack, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+			clientTransitionsDone := make(chan struct{})
+			c.now = stubTimeNow(ctx, time.Now(), tc.durations, clientTransitionsDone)
+
+			var ackCnt uint32
+			serverEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
+				if mustMsgType(t, b) != dhcpACK {
+					return b
+				}
+
+				ackCnt++
+				if ackCnt == tc.nakNthReq {
+					b = mustCloneWithNewMsgType(t, b, dhcpNAK)
+				}
+				return b
+			}
+
+			c.acquiredFunc = func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
+				if newAddr != oldAddr {
+					if oldAddr != (tcpip.AddressWithPrefix{}) {
+						if err := clientStack.RemoveAddress(testNICID, oldAddr.Address); err != nil {
+							t.Fatalf("RemoveAddress(%s): %s", oldAddr.Address, err)
+						}
+					}
+					if newAddr != (tcpip.AddressWithPrefix{}) {
+						protocolAddress := tcpip.ProtocolAddress{
+							Protocol:          ipv4.ProtocolNumber,
+							AddressWithPrefix: newAddr,
+						}
+						if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
+							t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
+						}
+					}
+				}
+			}
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				c.Run(ctx)
+			}()
+
+			<-clientTransitionsDone
+
+			if got := c.stats.InitAcquire.Value(); got != tc.wantInitAcq {
+				t.Errorf("got InitAcquire count: %d, want: %d", got, tc.wantInitAcq)
+			}
+			if got := c.stats.RenewAcquire.Value(); got != tc.wantRenewAcq {
+				t.Errorf("got RenewAcquire count: %d, want: %d", got, tc.wantRenewAcq)
+			}
+			if got := c.stats.RebindAcquire.Value(); got != tc.wantRebindAcq {
+				t.Errorf("got RebindAcquire count: %d, want: %d", got, tc.wantRebindAcq)
+			}
+			if got := c.stats.RecvNaks.Value(); got != tc.wantNaks {
+				t.Errorf("got RecvNaks count: %d, want: %d", got, tc.wantNaks)
+			}
+			if got := c.stats.RecvAcks.Value(); got != tc.wantAcks {
+				t.Errorf("got RecvAcks count: %d, want: %d", got, tc.wantAcks)
+			}
+			if got := c.stats.SendDiscovers.Value(); got != tc.wantDiscovers {
+				t.Errorf("got SendDiscovers count: %d, want: %d", got, tc.wantDiscovers)
+			}
+			if got := c.stats.SendRequests.Value(); got != tc.wantReqs {
+				t.Errorf("got SendRequests count: %d, want: %d", got, tc.wantReqs)
+			}
+			if got := c.stats.ReacquireAfterNAK.Value(); got != 1 {
+				t.Errorf("got ReacquireAfterNAK count: %d, want 1", got)
+			}
+		})
+	}
+}
+
 func waitForSignal(ctx context.Context, ch <-chan struct{}) {
 	select {
 	case <-ch:

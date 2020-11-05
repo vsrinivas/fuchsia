@@ -44,6 +44,7 @@ type Config struct {
 	LeaseLength   Seconds           // length of the address lease
 	RenewTime     Seconds           // time until client enters RENEWING state
 	RebindTime    Seconds           // time until client enters REBINDING state
+	Declined      bool              // server sent a NAK
 }
 
 func (cfg *Config) decode(opts []option) error {

@@ -90,6 +90,7 @@ type Stats struct {
 	RecvAckUnexpectedType       tcpip.StatCounter
 	RecvAckTimeout              tcpip.StatCounter
 	RecvAckAcquisitionTimeout   tcpip.StatCounter
+	ReacquireAfterNAK           tcpip.StatCounter
 }
 
 type Info struct {
@@ -211,6 +212,15 @@ func (c *Client) Run(ctx context.Context) {
 			cfg, err := c.acquire(ctx, c, &info)
 			if err != nil {
 				return err
+			}
+			if cfg.Declined {
+				c.stats.ReacquireAfterNAK.Increment()
+				c.cleanup(&info)
+				// Reset all the times so the client will re-acquire.
+				leaseExpirationTime = time.Time{}
+				renewTime = time.Time{}
+				rebindTime = time.Time{}
+				return nil
 			}
 
 			{
@@ -366,6 +376,24 @@ func (c *Client) exponentialBackoff(iteration uint) time.Duration {
 	return backoff
 }
 
+// configureEP binds the endpoint to the given NIC and enables port reuse. The former option
+// prevents interference with DHCP clients running on other NICs and the latter allows endpoints
+// configured this way to bind to the ANY address (all zeroes, required before an address has been
+// allocated) and the unspecified address (empty string, required for receiving broadcast and
+// unicast on the same endpoint) simultaneously.
+func configureEP(ep tcpip.Endpoint, nicID tcpip.NICID, reuse bool) error {
+	opt := tcpip.BindToDeviceOption(nicID)
+	if err := ep.SetSockOpt(&opt); err != nil {
+		return fmt.Errorf("send ep SetSockOpt(&%T(%d)): %s", opt, opt, err)
+	}
+	if reuse {
+		if err := ep.SetSockOptBool(tcpip.ReusePortOption, true); err != nil {
+			return fmt.Errorf("SetSockOptBool(ReusePortOption, true): %s", err)
+		}
+	}
+	return nil
+}
+
 func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 	// https://tools.ietf.org/html/rfc2131#section-4.3.6 Client messages:
 	//
@@ -377,11 +405,6 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 	// |requested-ip  |MUST         |MUST         |MUST NOT     |MUST NOT  |
 	// |ciaddr        |zero         |zero         |IP address   |IP address|
 	// ---------------------------------------------------------------------
-	bindAddress := tcpip.FullAddress{
-		Addr: info.Addr.Address,
-		Port: ClientPort,
-		NIC:  info.NICID,
-	}
 	writeOpts := tcpip.WriteOptions{
 		To: &tcpip.FullAddress{
 			Addr: header.IPv4Broadcast,
@@ -393,8 +416,6 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 	var sendEP tcpip.Endpoint
 	switch info.State {
 	case initSelecting:
-		bindAddress.Addr = header.IPv4Broadcast
-
 		protocolAddress := tcpip.ProtocolAddress{
 			Protocol: ipv4.ProtocolNumber,
 			AddressWithPrefix: tcpip.AddressWithPrefix{
@@ -425,14 +446,16 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 			return Config{}, fmt.Errorf("stack.NewEndpoint(%d, %d, _): %s", header.UDPProtocolNumber, header.IPv4ProtocolNumber, err)
 		}
 		defer sendEP.Close()
-		opt := tcpip.BindToDeviceOption(info.NICID)
-		if err := sendEP.SetSockOpt(&opt); err != nil {
-			return Config{}, fmt.Errorf("send ep SetSockOpt(&%T(%d)): %s", opt, opt, err)
+		if err := configureEP(sendEP, info.NICID, true); err != nil {
+			return Config{}, fmt.Errorf("configureEP(sendEP, _): %w", err)
 		}
-		sendBindAddress := bindAddress
-		sendBindAddress.Addr = header.IPv4Any
-		if err := sendEP.Bind(sendBindAddress); err != nil {
-			return Config{}, fmt.Errorf("send ep Bind(%+v): %s", sendBindAddress, err)
+		sendFrom := tcpip.FullAddress{
+			Addr: protocolAddress.AddressWithPrefix.Address,
+			Port: ClientPort,
+			NIC:  info.NICID,
+		}
+		if err := sendEP.Bind(sendFrom); err != nil {
+			return Config{}, fmt.Errorf("sendEP.Bind(%+v): %s", sendFrom, err)
 		}
 
 	case renewing:
@@ -446,25 +469,27 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 		return Config{}, fmt.Errorf("stack.NewEndpoint(): %s", err)
 	}
 	defer ep.Close()
+	if err := configureEP(ep, info.NICID, sendEP != nil); err != nil {
+		return Config{}, fmt.Errorf("configureEP(ep, _): %w", err)
+	}
+	// Bind to the unspecified address to receive both unicast and broadcast.
+	recvOn := tcpip.FullAddress{
+		Port: ClientPort,
+		NIC:  info.NICID,
+	}
+	if err := ep.Bind(recvOn); err != nil {
+		return Config{}, fmt.Errorf("ep.Bind(%+v): %s", recvOn, err)
+	}
 
 	// If we don't have a dedicated send endpoint, use ep.
 	if sendEP == nil {
 		sendEP = ep
 	}
 
-	// BindToDevice allows us to have multiple DHCP clients listening to the same
-	// IP address and port at the same time so long as the nic is unique.
-	opt := tcpip.BindToDeviceOption(info.NICID)
-	if err := ep.SetSockOpt(&opt); err != nil {
-		return Config{}, fmt.Errorf("send ep SetSockOpt(&%T(%d)): %s", opt, opt, err)
-	}
 	if writeOpts.To.Addr == header.IPv4Broadcast {
 		if err := sendEP.SetSockOptBool(tcpip.BroadcastOption, true); err != nil {
 			return Config{}, fmt.Errorf("SetSockOptBool(BroadcastOption, true): %s", err)
 		}
-	}
-	if err := ep.Bind(bindAddress); err != nil {
-		return Config{}, fmt.Errorf("Bind(%+v): %s", bindAddress, err)
 	}
 
 	we, ch := waiter.NewChannelEntry(nil)
@@ -643,7 +668,10 @@ retransmitRequest:
 					return Config{}, fmt.Errorf("%s: %x", typ, msg)
 				}
 				c.stats.RecvNaks.Increment()
-				return Config{}, fmt.Errorf("empty %s", typ)
+				// We lost the lease.
+				return Config{
+					Declined: true,
+				}, nil
 			default:
 				c.stats.RecvAckUnexpectedType.Increment()
 				_ = syslog.DebugTf(tag, "got DHCP type = %s from %s, want = %s or %s", typ, fromAddr.Addr, dhcpACK, dhcpNAK)
