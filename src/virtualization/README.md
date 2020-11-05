@@ -166,8 +166,8 @@ Fields:
 - `ints`    : The amount of interrupt exit.
 
 For x86_64:
- cpu    vm_entry vm_exit ints ints_win ept ctrl_reg msr(rd wr) inst(io hlt cpuid pause vmcall xsetbv)
-  0       40       40     10      0     0      0        10 10        5  5    0     0     0      0
+ cpu    vm_entry vm_exit ints ints_win ept ctrl_reg msr(rd wr) inst(io hlt cpuid ple vmcall xsetbv)
+  0       40       40     10      0     0      0        10 10        5  5    0    0    0      0
 
 Fields:
 - `ints`     : The amount of interrupt exit.
