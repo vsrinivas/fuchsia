@@ -34,7 +34,7 @@ func TestShellEnabled(t *testing.T) {
 	}
 	defer i.Kill()
 
-	i.WaitForLogMessage("console.shell: enabled")
+	i.WaitForLogMessage("vc: Successfully attached")
 	tokenFromSerial := support.RandomTokenAsString()
 	i.RunCommand("echo '" + tokenFromSerial + "'")
 	i.WaitForLogMessage(tokenFromSerial)
@@ -65,7 +65,9 @@ func TestAutorunEnabled(t *testing.T) {
 	}
 	defer i.Kill()
 
-	// Wait for console-launcher to come up before waiting for the autorun output.
-	i.WaitForLogMessage("console-launcher: running")
+	// Note that this is actually looking for the log message from driver_manager when it runs the
+	// autorun command, because the autorun output doesn't go to serial. We look for
+	// "console.shell: enabled" first because cmdargs are also logged early in boot.
+	i.WaitForLogMessage("console.shell: enabled")
 	i.WaitForLogMessage(tokenFromSerial)
 }

@@ -24,9 +24,8 @@ func TestShellDefault(t *testing.T) {
 	}
 
 	i := distro.Create(qemu.Params{
-		Arch:          arch,
-		ZBI:           support.ZbiPath(t),
-		AppendCmdline: "devmgr.log-to-debuglog",
+		Arch: arch,
+		ZBI:  support.ZbiPath(t),
 	})
 
 	i.Start()
@@ -35,7 +34,7 @@ func TestShellDefault(t *testing.T) {
 	}
 	defer i.Kill()
 
-	i.WaitForLogMessage("console.shell: enabled")
+	i.WaitForLogMessage("vc: Successfully attached")
 	tokenFromSerial := support.RandomTokenAsString()
 	i.RunCommand("echo '" + tokenFromSerial + "'")
 	i.WaitForLogMessage(tokenFromSerial)

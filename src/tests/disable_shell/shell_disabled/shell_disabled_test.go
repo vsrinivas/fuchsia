@@ -35,7 +35,7 @@ func TestShellDisabled(t *testing.T) {
 	}
 	defer i.Kill()
 
-	i.WaitForLogMessage("console-launcher: running")
+	i.WaitForLogMessage("vc: Successfully attached")
 	tokenFromSerial := support.RandomTokenAsString()
 	i.RunCommand("echo '" + tokenFromSerial + "'")
 	i.AssertLogMessageNotSeenWithinTimeout(tokenFromSerial, 3*time.Second)
