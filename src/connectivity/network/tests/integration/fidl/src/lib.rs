@@ -990,18 +990,6 @@ async fn test_interfaces_watcher() -> Result {
     assert_eq!(try_next(&mut blocking_stream).await?, want);
     assert_eq!(try_next(&mut stream).await?, want);
 
-    const fn empty_properties() -> fidl_fuchsia_net_interfaces::Properties {
-        fidl_fuchsia_net_interfaces::Properties {
-            id: None,
-            name: None,
-            device_class: None,
-            online: None,
-            has_default_ipv4_route: None,
-            has_default_ipv6_route: None,
-            addresses: None,
-        }
-    }
-
     // Set the link to up.
     let () = assert_blocked(&mut blocking_stream).await?;
     let () = dev.enable_interface().await.context("failed to bring device up")?;
@@ -1157,7 +1145,7 @@ async fn test_interfaces_watcher() -> Result {
         fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
             id: Some(id),
             has_default_ipv4_route: Some(true),
-            ..empty_properties()
+            ..fidl_fuchsia_net_interfaces::Properties::empty()
         });
     assert_eq!(try_next(&mut blocking_stream).await?, want);
     assert_eq!(try_next(&mut stream).await?, want);
@@ -1173,7 +1161,7 @@ async fn test_interfaces_watcher() -> Result {
         fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
             id: Some(id),
             has_default_ipv4_route: Some(false),
-            ..empty_properties()
+            ..fidl_fuchsia_net_interfaces::Properties::empty()
         });
     assert_eq!(try_next(&mut blocking_stream).await?, want);
     assert_eq!(try_next(&mut stream).await?, want);
