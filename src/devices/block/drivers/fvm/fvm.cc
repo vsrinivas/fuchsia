@@ -376,6 +376,7 @@ zx_status_t VPartitionManager::Load() {
 
   // Iterate through 'valid' VPartitions, and create their devices.
   size_t device_count = 0;
+  std::vector<Diagnostics::OnMountArgs::Partition> partitions = {};
   for (size_t i = 0; i < fvm::kMaxVPartitions; i++) {
     if (vpartitions[i] == nullptr) {
       continue;
@@ -391,6 +392,7 @@ zx_status_t VPartitionManager::Load() {
       zxlogf(ERROR, "Failed to add partition: %s", zx_status_get_string(status));
       continue;
     }
+    partitions.push_back({.name = entry->name(), .num_slices = entry->slices});
     device_count++;
   }
 
@@ -404,8 +406,8 @@ zx_status_t VPartitionManager::Load() {
       .partition_table_reserved_entries = header->GetPartitionTableEntryCount(),
       .allocation_table_entries = header->GetAllocationTableUsedEntryCount(),
       .allocation_table_reserved_entries = header->GetAllocationTableAllocatedEntryCount(),
-      .num_partitions = device_count,
       .num_reserved_slices = reserved_slices,
+      .partitions = std::move(partitions),
   });
   zxlogf(INFO, "Loaded %lu partitions, slice size=%zu", device_count, slice_size_);
 
@@ -516,7 +518,14 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
     }
   }
 
-  if ((status = WriteFvmLocked()) != ZX_OK) {
+  if ((status = WriteFvmLocked()) == ZX_OK) {
+    VPartitionEntry* entry = GetVPartEntryLocked(vp->GetEntryIndex());
+    zxlogf(INFO, "added part %s", entry->name().c_str());
+    diagnostics().OnAllocateSlices({
+        .vpart_name = entry->name(),
+        .count = count,
+    });
+  } else {
     // Undo allocation in the event of failure; avoid holding VPartition
     // lock while writing to fvm.
     fbl::AutoLock lock(&vp->lock_);

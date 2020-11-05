@@ -148,7 +148,8 @@ class BlockDeviceTestAtRevision : public zxtest::Test {
   }
 
   // Create a partition and returns it on success.
-  zx::status<std::unique_ptr<VPartition>> AllocatePartition() {
+  zx::status<std::unique_ptr<VPartition>> AllocatePartition(const std::string& name = "name",
+                                                            uint64_t slices = 1u) {
     static int next_id = 1;
 
     // Generates a test-unique id for the type and instance.
@@ -160,7 +161,8 @@ class BlockDeviceTestAtRevision : public zxtest::Test {
     memcpy(&instance_guid.value[0], &next_id, sizeof(int));
     next_id++;
 
-    return device_->AllocatePartition(1, &type_guid, &instance_guid, "name", 4, 0);
+    return device_->AllocatePartition(slices, &type_guid, &instance_guid, name.c_str(),
+                                      name.length(), 0);
   }
 
  protected:
@@ -244,6 +246,41 @@ TEST_F(BlockDeviceTest, InspectVmoPopulatedWithInitialState) {
             fvm::kCurrentFormatVersion);
   EXPECT_EQ(mount_time->node().get_property<inspect::UintPropertyValue>("oldest_revision")->value(),
             fvm::kCurrentRevision);
+}
+
+TEST_F(BlockDeviceTest, InspectVmoTracksSliceAllocations) {
+  auto partition_or = AllocatePartition("part1", 3u);
+  ASSERT_TRUE(partition_or.is_ok());
+
+  {
+    fit::result<inspect::Hierarchy> hierarchy =
+        inspect::ReadFromVmo(device_->diagnostics().DuplicateVmo());
+    ASSERT_TRUE(hierarchy.is_ok());
+    const inspect::Hierarchy* node = hierarchy.value().GetByPath({"fvm", "partitions", "part1"});
+    ASSERT_NE(node, nullptr);
+    EXPECT_EQ(
+        node->node().get_property<inspect::UintPropertyValue>("num_slice_reservations")->value(),
+        1u);
+    EXPECT_EQ(
+        node->node().get_property<inspect::UintPropertyValue>("total_slices_reserved")->value(),
+        3u);
+  }
+
+  ASSERT_EQ(device_->AllocateSlices(partition_or.value().get(), 0x100000, 1), ZX_OK);
+
+  {
+    fit::result<inspect::Hierarchy> hierarchy =
+        inspect::ReadFromVmo(device_->diagnostics().DuplicateVmo());
+    ASSERT_TRUE(hierarchy.is_ok());
+    const inspect::Hierarchy* node = hierarchy.value().GetByPath({"fvm", "partitions", "part1"});
+    ASSERT_NE(node, nullptr);
+    EXPECT_EQ(
+        node->node().get_property<inspect::UintPropertyValue>("num_slice_reservations")->value(),
+        2u);
+    EXPECT_EQ(
+        node->node().get_property<inspect::UintPropertyValue>("total_slices_reserved")->value(),
+        4u);
+  }
 }
 
 // Tests that opening a device at a newer "oldest revision" updates the device's oldest revision to

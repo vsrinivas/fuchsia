@@ -9,6 +9,9 @@
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/zx/vmo.h>
 
+#include <string>
+#include <vector>
+
 namespace fvm {
 
 // Diagnostics exposes internal information and metrics recorded by FVM to the rest of the system
@@ -42,13 +45,27 @@ class Diagnostics {
     uint64_t allocation_table_entries = 0;
     // Total number of slice entries the FVM instance can accomodate
     uint64_t allocation_table_reserved_entries = 0;
-    // Number of partitions
-    uint64_t num_partitions = 0;
     // Number of slices reserved
     uint64_t num_reserved_slices = 0;
+    struct Partition {
+      // Name of the partition
+      std::string name;
+      // Number of slices reserved for the partition
+      uint64_t num_slices = 0;
+    };
+    std::vector<Partition> partitions{};
   };
   // Reports the initial state of the FVM instance. Should be called once on mount.
-  void OnMount(const OnMountArgs& args);
+  void OnMount(OnMountArgs args);
+
+  struct OnAllocateSlicesArgs {
+    // The name of the partition which requested the slices.
+    std::string_view vpart_name = "";
+    // The number of slices requested.
+    size_t count = 0;
+  };
+  // Reports that a vpartition allocated slices.
+  void OnAllocateSlices(const OnAllocateSlicesArgs& args);
 
   // Returns a read-only duplicate of the VMO this object writes to. Suitable for giving out to an
   // external process which would like to subscribe to FVM's diagnostics.
@@ -67,12 +84,25 @@ class Diagnostics {
   inspect::UintProperty mount_time_oldest_revision_;
   inspect::UintProperty mount_time_slice_size_;
   inspect::UintProperty mount_time_num_slices_;
-  inspect::UintProperty mount_time_partition_table_entries;
-  inspect::UintProperty mount_time_partition_table_reserved_entries;
-  inspect::UintProperty mount_time_allocation_table_entries;
-  inspect::UintProperty mount_time_allocation_table_reserved_entries;
-  inspect::UintProperty mount_time_num_partitions;
-  inspect::UintProperty mount_time_num_reserved_slices;
+  inspect::UintProperty mount_time_partition_table_entries_;
+  inspect::UintProperty mount_time_partition_table_reserved_entries_;
+  inspect::UintProperty mount_time_allocation_table_entries_;
+  inspect::UintProperty mount_time_allocation_table_reserved_entries_;
+  inspect::UintProperty mount_time_num_partitions_;
+  inspect::UintProperty mount_time_num_reserved_slices_;
+
+  struct PerPartitionMetrics {
+    // Root node which all of the per-partition metrics live under.
+    inspect::Node root;
+
+    inspect::UintProperty num_slice_reservations;
+    inspect::UintProperty total_slices_reserved;
+  };
+  inspect::Node per_partition_node_;
+  // Maps vpartition names to an object holding metrics for that vpartition.
+  std::map<std::string, PerPartitionMetrics, std::less<>> per_partition_;
+
+  void AddPerPartitionMetrics(std::string name, uint64_t num_slices);
 };
 
 }  // namespace fvm
