@@ -105,7 +105,7 @@ impl ClientConfiguration {
                 name: channel_name.clone(),
                 ..Cohort::default()
             })
-            .with_extra("channel", channel_name.clone().unwrap_or("".to_string()))
+            .with_extra("channel", channel_name.clone().unwrap_or_default())
             .build();
         let app_set = AppSet::new(vec![app]);
 
@@ -138,8 +138,9 @@ pub async fn get_config(version: &str) -> Config {
     // This file does not exist in production, it is only used in integration/e2e testing.
     let service_url = match get_service_url_from_vbmeta().await {
         Ok(Some(url)) => url,
-        _ => fs::read_to_string("/config/data/omaha_url")
-            .unwrap_or("https://clients2.google.com/service/update2/fuchsia/json".to_string()),
+        _ => fs::read_to_string("/config/data/omaha_url").unwrap_or_else(|_| {
+            "https://clients2.google.com/service/update2/fuchsia/json".to_string()
+        }),
     };
     Config {
         updater: Updater { name: "Fuchsia".to_string(), version: Version::from([0, 0, 1, 0]) },

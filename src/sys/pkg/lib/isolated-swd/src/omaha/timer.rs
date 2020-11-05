@@ -14,12 +14,12 @@ pub struct FuchsiaTimer;
 impl FuchsiaTimer {
     // Return the duration until the given SystemTime, or a 0-length duration if it's in the past.
     fn duration_until_system_time(system: SystemTime) -> Duration {
-        system.duration_since(SystemTime::now()).ok().unwrap_or(Duration::from_secs(0))
+        system.duration_since(SystemTime::now()).ok().unwrap_or_default()
     }
 
     // Return the duration until the given Instant, or a 0-length duration if it's in the past.
     fn duration_until_instant(instant: Instant) -> Duration {
-        instant.checked_duration_since(Instant::now()).unwrap_or(Duration::from_secs(0))
+        instant.checked_duration_since(Instant::now()).unwrap_or_default()
     }
 
     fn determine_wait_until(time: PartialComplexTime) -> Duration {

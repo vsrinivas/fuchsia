@@ -164,8 +164,9 @@ async fn get_system_image_hash_from_update_package(
     let system_image = packages
         .into_iter()
         .find(|url| url.name() == "system_image" && url.variant() == Some("0"))
-        .ok_or(anyhow!("system image not found"))?;
-    let hash = system_image.package_hash().ok_or(anyhow!("system image package has no hash"))?;
+        .ok_or_else(|| anyhow!("system image not found"))?;
+    let hash =
+        system_image.package_hash().ok_or_else(|| anyhow!("system image package has no hash"))?;
     Ok(hash.to_string())
 }
 
@@ -191,8 +192,9 @@ async fn get_vbmeta_and_zbi_hash_from_environment(
     boot_manager: &BootManagerProxy,
 ) -> Result<(String, String), Error> {
     let current_configuration = paver::query_current_configuration(boot_manager).await?;
-    let configuration =
-        current_configuration.to_configuration().ok_or(anyhow!("device does not support ABR"))?;
+    let configuration = current_configuration
+        .to_configuration()
+        .ok_or_else(|| anyhow!("device does not support ABR"))?;
     let vbmeta_buffer =
         paver::paver_read_asset(data_sink, configuration, Asset::VerifiedBootMetadata).await?;
     let vbmeta_hash = sha256_hash_with_no_trailing_zeros(vbmeta_buffer)?;

@@ -201,7 +201,7 @@ impl App {
 
     /// Get the target channel name from cohort hint, fallback to current channel if no hint.
     pub fn get_target_channel(&self) -> &str {
-        self.cohort.hint.as_ref().map(|s| s.as_str()).unwrap_or(self.get_current_channel())
+        self.cohort.hint.as_ref().map(|s| s.as_str()).unwrap_or_else(|| self.get_current_channel())
     }
 
     /// Set the cohort hint to |channel|.

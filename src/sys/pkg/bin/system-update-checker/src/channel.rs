@@ -226,7 +226,7 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
             .await?
             .map_err(|s| zx::Status::from_raw(s))?
             .parse()?;
-        let channel = rewritten.repo().channel().unwrap_or(rewritten.host());
+        let channel = rewritten.repo().channel().unwrap_or_else(|| rewritten.host());
 
         Ok(channel.to_owned())
     }

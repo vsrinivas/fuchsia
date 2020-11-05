@@ -123,10 +123,10 @@ impl MountsBuilder {
         let mounts = Mounts {
             pkg_resolver_data: self
                 .pkg_resolver_data
-                .unwrap_or(DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist"))),
+                .unwrap_or_else(|| DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist"))),
             pkg_resolver_config_data: self
                 .pkg_resolver_config_data
-                .unwrap_or(DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist"))),
+                .unwrap_or_else(|| DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist"))),
         };
         if let Some(config) = self.config {
             mounts.add_config(&config);

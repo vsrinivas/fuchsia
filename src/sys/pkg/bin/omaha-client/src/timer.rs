@@ -12,11 +12,15 @@ use std::time::{Duration, Instant, SystemTime};
 pub struct FuchsiaTimer;
 impl FuchsiaTimer {
     // Return the duration until the given SystemTime, or a 0-length duration if it's in the past.
+    // w.r.t clippy, Duration::from_secs is a const fn, and is more readable than unwrap_or_default
+    #[allow(clippy::or_fun_call)]
     fn duration_until_system_time(system: SystemTime) -> Duration {
         system.duration_since(SystemTime::now()).ok().unwrap_or(Duration::from_secs(0))
     }
 
     // Return the duration until the given Instant, or a 0-length duration if it's in the past.
+    // w.r.t clippy, Duration::from_secs is a const fn, and is more readable than unwrap_or_default
+    #[allow(clippy::or_fun_call)]
     fn duration_until_instant(instant: Instant) -> Duration {
         instant.checked_duration_since(Instant::now()).unwrap_or(Duration::from_secs(0))
     }

@@ -132,7 +132,7 @@ async fn latest_system_image_merkle(
         .ok_or(errors::UpdatePackage::MissingSystemImage)?;
     let hash = system_image
         .package_hash()
-        .ok_or(errors::UpdatePackage::UnPinnedSystemImage(system_image.clone()))?;
+        .ok_or_else(|| errors::UpdatePackage::UnPinnedSystemImage(system_image.clone()))?;
     Ok(hash.to_owned())
 }
 
