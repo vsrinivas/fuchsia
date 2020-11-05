@@ -27,6 +27,10 @@ func zbiPath(t *testing.T) string {
 // Leaks memory until an out of memory event is triggered, then backs off.  Verifies that the system
 // reboots in a somewhat orderly fashion.
 func TestOOM(t *testing.T) {
+	// TODO(fxbug.dev/63505): driver_manager crashes due to ZX_ERR_NO_MEMORY causing an early
+	// non-OOM reboot.
+	t.Skip("Test disabled (fxbug.dev/63505)")
+
 	distro, err := qemu.Unpack()
 	if err != nil {
 		t.Fatal(err)
@@ -79,6 +83,10 @@ func TestOOM(t *testing.T) {
 // be terminated (e.g. because a page fault cannot commit).  As a result, the reboot sequence may be
 // less orderly and predictable.
 func TestOOMHard(t *testing.T) {
+	// TODO(fxbug.dev/63505): driver_manager crashes due to ZX_ERR_NO_MEMORY causing an early
+	// non-OOM reboot.
+	t.Skip("Test disabled (fxbug.dev/63505)")
+
 	distro, err := qemu.Unpack()
 	if err != nil {
 		t.Fatal(err)
