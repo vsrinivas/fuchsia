@@ -1,6 +1,12 @@
 {
     "program": {
-        "binary": "test/stressor"
+        "args": [
+            "--disconnect-secs",
+            "1800",
+            "--rebind-probability",
+            "0.1"
+        ],
+        "binary": "bin/stressor"
     },
     "sandbox": {
         "features": [

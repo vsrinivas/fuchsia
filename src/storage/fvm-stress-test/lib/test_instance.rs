@@ -29,7 +29,7 @@ pub struct TestInstance {
 
 impl TestInstance {
     // Create a test instance from the given VMO and initialize the ramdisk with FVM layout.
-    pub async fn init(vmo: &Vmo, fvm_slice_size: usize, ramdisk_block_size: u64) -> Self {
+    pub async fn init(vmo: &Vmo, fvm_slice_size: u64, ramdisk_block_size: u64) -> Self {
         let test = start_test().await;
         let ramdisk = create_ramdisk(&test, vmo, ramdisk_block_size);
 
@@ -43,9 +43,14 @@ impl TestInstance {
         Self { test, controller, ramdisk, volume_manager }
     }
 
-    pub fn crash(self) {
-        // To crash the test, we do not want the ramdisk
-        // to be destroyed cleanly. Forget the ramdisk struct.
+    pub fn crash(mut self) {
+        // Kill the test's component manager process.
+        // This should take down the entire test's component tree with it,
+        // including the driver manager and ramdisk + fvm drivers.
+        self.test.component_manager_app.kill().unwrap();
+
+        // We do not want the ramdisk to be destroyed cleanly.
+        // Forget the ramdisk struct.
         std::mem::forget(self.ramdisk);
     }
 
@@ -76,6 +81,7 @@ impl TestInstance {
         &self,
         rng: &mut SmallRng,
         num_volumes: u64,
+        slice_size: u64,
         max_slices_in_extend: u64,
         max_vslice_count: u64,
         num_operations: u64,
@@ -89,13 +95,15 @@ impl TestInstance {
             let mut volume_rng = SmallRng::from_seed(volume_rng_seed.to_le_bytes());
 
             let volume_name = format!("testpart-{}", i);
-            let instance_guid = random_guid(&mut volume_rng);
+            let mut instance_guid = random_guid(&mut volume_rng);
 
             // Create the new volume
-            self.volume_manager.new_volume(1, TYPE_GUID, instance_guid, &volume_name, 0x0).await;
+            self.volume_manager
+                .new_volume(1, TYPE_GUID, &mut instance_guid, &volume_name, 0x0)
+                .await;
 
             // Connect to the volume
-            let (volume, sender) = Volume::new(self.block_path(), instance_guid).await;
+            let (volume, sender) = Volume::new(instance_guid, slice_size).await;
 
             // Create the operator
             let operator = VolumeOperator::new(

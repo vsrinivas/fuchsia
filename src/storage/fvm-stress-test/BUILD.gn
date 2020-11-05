@@ -6,6 +6,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fvm-stress-test-lib") {
   edition = "2018"
@@ -47,6 +48,7 @@ rustc_library("fvm-stress-test-lib") {
 }
 
 rustc_binary("stressor-bin") {
+  testonly = true
   name = "stressor"
   edition = "2018"
   source_root = "main.rs"
@@ -68,26 +70,41 @@ rustc_binary("stressor-bin") {
   sources = [ "main.rs" ]
 }
 
-test_package("fvm-stress-test") {
-  deps = [
-    ":stressor-bin",
-    "//src/lib/isolated_devmgr/v2_component:isolated-devmgr",
-    "//src/sys/component_manager:component-manager",
-  ]
+fuchsia_component("crashable-stressor") {
+  testonly = true
+  manifest = "meta/crashable-stressor.cmx"
+  deps = [ ":stressor-bin" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/root.cml")
-      dest = "root.cm"
-    },
-  ]
+fuchsia_component("no-crash-stressor") {
+  testonly = true
+  manifest = "meta/no-crash-stressor.cmx"
+  deps = [ ":stressor-bin" ]
+}
 
-  tests = [
-    {
-      name = "stressor"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
+fuchsia_component("root") {
+  testonly = true
+  manifest = "meta/root.cml"
+  deps = [ "//src/lib/isolated_devmgr/v2_component:isolated-devmgr" ]
+}
+
+fuchsia_test_package("fvm-stress-test") {
+  test_components = [
+    ":crashable-stressor",
+    ":no-crash-stressor",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          device_type = "QEMU"
+        }
+        tags = [ "stress-tests" ]
+      },
+    ]
+  }
+  deps = [ ":root" ]
 }

@@ -32,13 +32,12 @@ pub async fn start_test() -> OpaqueTest {
         OpaqueTest::default("fuchsia-pkg://fuchsia.com/fvm-stress-test#meta/root.cm")
             .await
             .unwrap();
-    let event_source = test.connect_to_event_source().await.unwrap();
 
-    {
-        let mut started_event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
-        event_source.start_component_tree().await;
-        EventMatcher::ok().moniker(".").expect_match::<Started>(&mut started_event_stream).await;
-    }
+    // Wait for the root component to start
+    let event_source = test.connect_to_event_source().await.unwrap();
+    let mut started_event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
+    event_source.start_component_tree().await;
+    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut started_event_stream).await;
 
     test
 }
@@ -62,11 +61,11 @@ pub fn create_ramdisk(test: &OpaqueTest, vmo: &Vmo, ramdisk_block_size: u64) -> 
         .unwrap()
 }
 
-pub fn init_fvm(ramdisk_path: &str, fvm_slice_size: usize) {
+pub fn init_fvm(ramdisk_path: &str, fvm_slice_size: u64) {
     // Create the FVM filesystem
     let ramdisk_file = OpenOptions::new().read(true).write(true).open(ramdisk_path).unwrap();
     let ramdisk_fd = ramdisk_file.as_raw_fd();
-    let status = unsafe { fvm_init(ramdisk_fd, fvm_slice_size) };
+    let status = unsafe { fvm_init(ramdisk_fd, fvm_slice_size as usize) };
     Status::ok(status).unwrap();
 }
 

@@ -194,7 +194,7 @@ pub struct VolumeOperator {
     // Random number generator used for all operations
     rng: SmallRng,
 
-    // Number of operations this operator must complete
+    // Number of operations this operator must complete.
     num_operations: u64,
 }
 
@@ -362,6 +362,15 @@ impl VolumeOperator {
         Ok(())
     }
 
+    async fn iteration(&mut self, index: u64) {
+        let operations = self.get_operation_list();
+        let operation = operations.choose(&mut self.rng).unwrap();
+
+        debug!(">>>>>>>>> [OPERATION {}] {:?}", index, operation);
+        let result = self.do_operation(operation).await;
+        debug!("<<<<<<<<< [OPERATION {}] {:?} [Result: {:?}]", index, operation, result);
+    }
+
     async fn initialize_slice_zero(&mut self) {
         let fill_range = VSliceRange::new(0, 1);
         self.fill_range(&fill_range).await.unwrap();
@@ -371,13 +380,8 @@ impl VolumeOperator {
     async fn do_operations(mut self) {
         self.initialize_slice_zero().await;
 
-        for i in 1..=self.num_operations {
-            let operations = self.get_operation_list();
-            let operation = operations.choose(&mut self.rng).unwrap();
-
-            debug!(">>>>>>>>> [OPERATION {}] {:?}", i, operation);
-            let result = self.do_operation(operation).await;
-            debug!("<<<<<<<<< [OPERATION {}] {:?} [Result: {:?}]", i, operation, result);
+        for index in 1..=self.num_operations {
+            self.iteration(index).await;
         }
 
         // Attempt to destroy the volume, returning all slices back to the

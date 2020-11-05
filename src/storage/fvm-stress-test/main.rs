@@ -23,34 +23,43 @@ struct Args {
     seed: Option<u128>,
 
     /// number of operations to complete before exiting.
-    #[argh(option, short = 'o', default = "50")]
-    num_operations: u64,
+    #[argh(option, short = 'o')]
+    num_operations: Option<u64>,
+
+    /// if num_operations flag is not set, then the test
+    /// runs for this time limit before exiting successfully.
+    /// default time limit is 23 hours (the maximum time limit
+    /// supported by infra).
+    #[argh(option, short = 't', default = "82800")]
+    time_limit_secs: u64,
 
     /// filter logging by level (off, error, warn, info, debug, trace)
     #[argh(option, short = 'l')]
     log_filter: Option<LevelFilter>,
 
     /// number of volumes in FVM.
-    /// Each volume operates on a different thread and will perform
+    /// each volume operates on a different thread and will perform
     /// the required number of operations before exiting.
-    #[argh(option, short = 'n', default = "2")]
+    /// defaults to 3 volumes.
+    #[argh(option, short = 'n', default = "3")]
     num_volumes: u64,
 
-    /// use stdout for stressor output
+    /// use syslog for stressor output
     #[argh(switch)]
-    stdout: bool,
+    syslog: bool,
 
     /// size of one block of the ramdisk (in bytes)
     #[argh(option, default = "512")]
     ramdisk_block_size: u64,
 
     /// number of blocks in the ramdisk
-    #[argh(option, default = "108544")]
+    /// defaults to 106MiB ramdisk
+    #[argh(option, default = "217088")]
     ramdisk_block_count: u64,
 
     /// size of one slice in FVM (in bytes)
     #[argh(option, default = "32768")]
-    fvm_slice_size: usize,
+    fvm_slice_size: u64,
 
     /// limits the maximum slices in a single extend operation
     #[argh(option, default = "1024")]
@@ -105,18 +114,18 @@ async fn main() -> Result<(), Error> {
     // Get arguments from command line
     let args: Args = argh::from_env();
 
-    if args.stdout {
-        // Initialize SimpleStdoutLogger
-        set_logger(&SimpleStdoutLogger).expect("Failed to set SimpleLogger as global logger");
-    } else {
+    if args.syslog {
         // Use syslog
         fuchsia_syslog::init().unwrap();
+    } else {
+        // Initialize SimpleStdoutLogger
+        set_logger(&SimpleStdoutLogger).expect("Failed to set SimpleLogger as global logger");
     }
 
     if let Some(filter) = args.log_filter {
         set_max_level(filter);
     } else {
-        set_max_level(LevelFilter::Info);
+        set_max_level(LevelFilter::Debug);
     }
 
     let seed = if let Some(seed_value) = args.seed {
@@ -127,6 +136,9 @@ async fn main() -> Result<(), Error> {
         temp_rng.gen()
     };
 
+    let num_operations =
+        if let Some(operations) = args.num_operations { operations } else { u64::MAX };
+
     let mut rng = SmallRng::from_seed(seed.to_le_bytes());
 
     info!("------------------ fvm_stressor is starting -------------------");
@@ -134,19 +146,21 @@ async fn main() -> Result<(), Error> {
     info!("SEED FOR THIS INVOCATION = {}", seed);
     info!("------------------------------------------------------------------");
 
-    // Setup a panic handler that prints out details of this invocation
-    let seed_clone = seed.clone();
-    let args_clone = args.clone();
-    let default_panic_hook = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |panic_info| {
-        println!("");
-        println!("------------------ fvm_stressor has crashed -------------------");
-        println!("ARGUMENTS = {:#?}", args_clone);
-        println!("SEED FOR THIS INVOCATION = {}", seed_clone);
-        println!("------------------------------------------------------------------");
-        println!("");
-        default_panic_hook(panic_info);
-    }));
+    {
+        // Setup a panic handler that prints out details of this invocation
+        let seed = seed.clone();
+        let args = args.clone();
+        let default_panic_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |panic_info| {
+            println!("");
+            println!("------------------ fvm_stressor has crashed -------------------");
+            println!("ARGUMENTS = {:#?}", args);
+            println!("SEED FOR THIS INVOCATION = {}", seed);
+            println!("------------------------------------------------------------------");
+            println!("");
+            default_panic_hook(panic_info);
+        }));
+    }
 
     // Create the VMO that the ramdisk is backed by
     let vmo_size = args.ramdisk_block_count * args.ramdisk_block_size;
@@ -160,14 +174,21 @@ async fn main() -> Result<(), Error> {
         .create_volumes_and_operators(
             &mut rng,
             args.num_volumes,
+            args.fvm_slice_size,
             args.max_slices_in_extend,
             args.max_vslice_count,
-            args.num_operations,
+            num_operations,
         )
         .await;
 
+    // Send the initial block path to all operators
+    for sender in senders.iter_mut() {
+        let _ = sender.send(instance.block_path()).await;
+    }
+
     if args.disconnect_secs > 0 {
         // Create the disconnection task
+        let args = args.clone();
         fasync::Task::blocking(async move {
             loop {
                 sleep(Duration::from_secs(args.disconnect_secs));
@@ -194,7 +215,15 @@ async fn main() -> Result<(), Error> {
         .detach();
     }
 
-    join_all(tasks).await;
+    if args.num_operations.is_some() {
+        // Wait for the operator tasks to finish
+        join_all(tasks).await;
+    } else {
+        // Wait for the time limit
+        sleep(Duration::from_secs(args.time_limit_secs));
+    }
+
+    info!("Stress test is exiting successfully!");
 
     Ok(())
 }
