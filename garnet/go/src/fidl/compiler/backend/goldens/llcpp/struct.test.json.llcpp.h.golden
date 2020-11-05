@@ -36,15 +36,15 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace structs {
+namespace struct_ {
 
 struct Simple;
 struct BasicStruct;
 
-extern "C" const fidl_type_t fidl_test_structs_SimpleTable;
+extern "C" const fidl_type_t fidl_test_struct_SimpleTable;
 
 struct Simple {
-  static constexpr const fidl_type_t* Type = &fidl_test_structs_SimpleTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_struct_SimpleTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -159,11 +159,10 @@ struct Simple {
   };
 };
 
-extern "C" const fidl_type_t fidl_test_structs_BasicStructTable;
+extern "C" const fidl_type_t fidl_test_struct_BasicStructTable;
 
 struct BasicStruct {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_structs_BasicStructTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_struct_BasicStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -281,7 +280,7 @@ struct BasicStruct {
   };
 };
 
-}  // namespace structs
+}  // namespace struct_
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp
@@ -289,29 +288,29 @@ struct BasicStruct {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::structs::Simple>
+struct IsFidlType<::llcpp::fidl::test::struct_::Simple>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::structs::Simple> : public std::true_type {
+struct IsStruct<::llcpp::fidl::test::struct_::Simple> : public std::true_type {
 };
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::structs::Simple>);
-static_assert(offsetof(::llcpp::fidl::test::structs::Simple, f1) == 0);
-static_assert(offsetof(::llcpp::fidl::test::structs::Simple, f2) == 1);
-static_assert(sizeof(::llcpp::fidl::test::structs::Simple) ==
-              ::llcpp::fidl::test::structs::Simple::PrimarySize);
+static_assert(std::is_standard_layout_v<::llcpp::fidl::test::struct_::Simple>);
+static_assert(offsetof(::llcpp::fidl::test::struct_::Simple, f1) == 0);
+static_assert(offsetof(::llcpp::fidl::test::struct_::Simple, f2) == 1);
+static_assert(sizeof(::llcpp::fidl::test::struct_::Simple) ==
+              ::llcpp::fidl::test::struct_::Simple::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::structs::BasicStruct>
+struct IsFidlType<::llcpp::fidl::test::struct_::BasicStruct>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::structs::BasicStruct>
+struct IsStruct<::llcpp::fidl::test::struct_::BasicStruct>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::structs::BasicStruct>);
-static_assert(offsetof(::llcpp::fidl::test::structs::BasicStruct, x) == 0);
-static_assert(offsetof(::llcpp::fidl::test::structs::BasicStruct, y) == 8);
-static_assert(sizeof(::llcpp::fidl::test::structs::BasicStruct) ==
-              ::llcpp::fidl::test::structs::BasicStruct::PrimarySize);
+    std::is_standard_layout_v<::llcpp::fidl::test::struct_::BasicStruct>);
+static_assert(offsetof(::llcpp::fidl::test::struct_::BasicStruct, x) == 0);
+static_assert(offsetof(::llcpp::fidl::test::struct_::BasicStruct, y) == 8);
+static_assert(sizeof(::llcpp::fidl::test::struct_::BasicStruct) ==
+              ::llcpp::fidl::test::struct_::BasicStruct::PrimarySize);
 
 }  // namespace fidl
 
@@ -319,7 +318,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace structs {}  // namespace structs
+namespace struct_ {}  // namespace struct_
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

@@ -27,7 +27,7 @@ fidl_testdata_targets = [
   "//zircon/tools/fidl/testdata:fidl.test.protocols",
   "//zircon/tools/fidl/testdata:fidl.test.requestflexibleenvelope",
   "//zircon/tools/fidl/testdata:fidl.test.service",
-  "//zircon/tools/fidl/testdata:fidl.test.structs",
+  "//zircon/tools/fidl/testdata:fidl.test.struct",
   "//zircon/tools/fidl/testdata:fidl.test.table",
   "//zircon/tools/fidl/testdata:fidl.test.union",
   "//zircon/tools/fidl/testdata:fidl.test.unionsandwich",

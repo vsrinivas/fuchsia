@@ -6,7 +6,7 @@
 
 namespace fidl {
 namespace test {
-namespace structs {
+namespace struct_ {
 
 class Simple;
 class BasicStruct;
@@ -28,8 +28,8 @@ class Simple final {
   zx_status_t Clone(Simple* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::structs::Simple& _value,
-                         ::fidl::test::structs::Simple* _result) {
+inline zx_status_t Clone(const ::fidl::test::struct_::Simple& _value,
+                         ::fidl::test::struct_::Simple* _result) {
   return _value.Clone(_result);
 }
 
@@ -53,37 +53,37 @@ class BasicStruct final {
   zx_status_t Clone(BasicStruct* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::structs::BasicStruct& _value,
-                         ::fidl::test::structs::BasicStruct* _result) {
+inline zx_status_t Clone(const ::fidl::test::struct_::BasicStruct& _value,
+                         ::fidl::test::struct_::BasicStruct* _result) {
   return _value.Clone(_result);
 }
 
 using BasicStructPtr = ::std::unique_ptr<BasicStruct>;
-}  // namespace structs
+}  // namespace struct_
 }  // namespace test
 }  // namespace fidl
 namespace fidl {
 
 template <>
-struct CodingTraits<::fidl::test::structs::Simple>
-    : public EncodableCodingTraits<::fidl::test::structs::Simple, 2> {};
+struct CodingTraits<::fidl::test::struct_::Simple>
+    : public EncodableCodingTraits<::fidl::test::struct_::Simple, 2> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::structs::Simple>
+struct IsMemcpyCompatible<::fidl::test::struct_::Simple>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::structs::Simple>::value &&
+          !HasPadding<::fidl::test::struct_::Simple>::value &&
           IsMemcpyCompatible<bool>::value &&
           IsMemcpyCompatible<uint8_t>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::structs::Simple& value,
-                         ::fidl::test::structs::Simple* result) {
-  return ::fidl::test::structs::Clone(value, result);
+inline zx_status_t Clone(const ::fidl::test::struct_::Simple& value,
+                         ::fidl::test::struct_::Simple* result) {
+  return ::fidl::test::struct_::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::structs::Simple> {
-  bool operator()(const ::fidl::test::structs::Simple& _lhs,
-                  const ::fidl::test::structs::Simple& _rhs) const {
+struct Equality<::fidl::test::struct_::Simple> {
+  bool operator()(const ::fidl::test::struct_::Simple& _lhs,
+                  const ::fidl::test::struct_::Simple& _rhs) const {
     if (!::fidl::Equals(_lhs.f1, _rhs.f1)) {
       return false;
     }
@@ -94,29 +94,29 @@ struct Equality<::fidl::test::structs::Simple> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::structs::BasicStruct>
-    : public EncodableCodingTraits<::fidl::test::structs::BasicStruct, 24> {};
+struct CodingTraits<::fidl::test::struct_::BasicStruct>
+    : public EncodableCodingTraits<::fidl::test::struct_::BasicStruct, 24> {};
 
 template <>
-struct HasPadding<::fidl::test::structs::BasicStruct> : public std::true_type {
+struct HasPadding<::fidl::test::struct_::BasicStruct> : public std::true_type {
 };
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::structs::BasicStruct>
+struct IsMemcpyCompatible<::fidl::test::struct_::BasicStruct>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::structs::BasicStruct>::value &&
+          !HasPadding<::fidl::test::struct_::BasicStruct>::value &&
           IsMemcpyCompatible<::std::string>::value &&
           IsMemcpyCompatible<uint32_t>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::structs::BasicStruct& value,
-                         ::fidl::test::structs::BasicStruct* result) {
-  return ::fidl::test::structs::Clone(value, result);
+inline zx_status_t Clone(const ::fidl::test::struct_::BasicStruct& value,
+                         ::fidl::test::struct_::BasicStruct* result) {
+  return ::fidl::test::struct_::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::structs::BasicStruct> {
-  bool operator()(const ::fidl::test::structs::BasicStruct& _lhs,
-                  const ::fidl::test::structs::BasicStruct& _rhs) const {
+struct Equality<::fidl::test::struct_::BasicStruct> {
+  bool operator()(const ::fidl::test::struct_::BasicStruct& _lhs,
+                  const ::fidl::test::struct_::BasicStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.x, _rhs.x)) {
       return false;
     }

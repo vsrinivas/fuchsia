@@ -1032,7 +1032,7 @@ func Compile(fidlData types.Root) Root {
 
 	// Compile fidlData into r.
 	r := Root{
-		Name:          string(libraryName[len(libraryName)-1]),
+		Name:          changeIfReserved(libraryName[len(libraryName)-1], ""),
 		PackageName:   libraryPath,
 		BindingsAlias: BindingsAlias,
 	}

@@ -27,6 +27,7 @@ standalone_libraries = [
   "protocols.test.fidl",
   "request_flexible_envelope.test.fidl",
   "service.test.fidl",
+  "struct.test.fidl",
   "table.test.fidl",
   "union.test.fidl",
   "union_sandwich.test.fidl",
@@ -43,14 +44,4 @@ foreach(filename, standalone_libraries) {
     experimental_flags = [ "enable_handle_rights" ]
     host_llcpp = true
   }
-}
-
-# TODO(fxbug.dev/55850): Rename library to fidl.test.struct (no "s") and move
-# this back to the standalone_libraries list.
-fidl("fidl.test.structs") {
-  testonly = true
-  sources = [ "struct.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
-  experimental_flags = [ "enable_handle_rights" ]
-  host_llcpp = true
 }

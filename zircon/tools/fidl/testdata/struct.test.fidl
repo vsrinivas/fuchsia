@@ -1,4 +1,4 @@
-library fidl.test.structs;
+library fidl.test.struct;
 
 struct Simple {
     uint8 f1;

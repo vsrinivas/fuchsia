@@ -3,21 +3,21 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedStruct fidl_test_structs_SimpleTable;
-extern const struct FidlCodedStruct fidl_test_structs_BasicStructTable;
+extern const struct FidlCodedStruct fidl_test_struct_SimpleTable;
+extern const struct FidlCodedStruct fidl_test_struct_BasicStructTable;
 
 
 static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
 
-static const struct FidlStructElement Fields24fidl_test_structs_Simple[] = {
+static const struct FidlStructElement Fields23fidl_test_struct_Simple[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=1u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}}
 };
-const struct FidlCodedStruct fidl_test_structs_SimpleTable = {.tag=kFidlTypeStruct, .elements=Fields24fidl_test_structs_Simple, .element_count=1u, .size=2u, .name="fidl.test.structs/Simple"};
+const struct FidlCodedStruct fidl_test_struct_SimpleTable = {.tag=kFidlTypeStruct, .elements=Fields23fidl_test_struct_Simple, .element_count=1u, .size=2u, .name="fidl.test.struct/Simple"};
 
-static const struct FidlStructElement Fields29fidl_test_structs_BasicStruct[] = {
+static const struct FidlStructElement Fields28fidl_test_struct_BasicStruct[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=8u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
-const struct FidlCodedStruct fidl_test_structs_BasicStructTable = {.tag=kFidlTypeStruct, .elements=Fields29fidl_test_structs_BasicStruct, .element_count=2u, .size=24u, .name="fidl.test.structs/BasicStruct"};
+const struct FidlCodedStruct fidl_test_struct_BasicStructTable = {.tag=kFidlTypeStruct, .elements=Fields28fidl_test_struct_BasicStruct, .element_count=2u, .size=24u, .name="fidl.test.struct/BasicStruct"};
 
