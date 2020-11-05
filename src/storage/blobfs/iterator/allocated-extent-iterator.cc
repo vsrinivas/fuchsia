@@ -97,7 +97,7 @@ zx_status_t AllocatedExtentIterator::VerifyIteration(NodeFinder* finder, Inode* 
 bool AllocatedExtentIterator::IsInode() const { return extent_node_ == nullptr; }
 
 zx_status_t AllocatedExtentIterator::ValidateExtentCount() const {
-  ZX_DEBUG_ASSERT(local_index_ < (IsInode() ? kInlineMaxExtents : kContainerMaxExtents));
+  ZX_ASSERT(local_index_ < (IsInode() ? kInlineMaxExtents : kContainerMaxExtents));
   if (!IsInode() && local_index_ > extent_node_->extent_count) {
     // This container doesn't recognize this extent as valid.
     return ZX_ERR_IO_DATA_INTEGRITY;
