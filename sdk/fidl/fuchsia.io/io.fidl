@@ -26,7 +26,6 @@ resource union NodeInfo {
 
 /// The default protocol, interface information must be acquired some
 /// other way.
-[ForDeprecatedCBindings]
 struct Service {
 };
 
@@ -36,7 +35,6 @@ const uint32 FILE_SIGNAL_READABLE = 0x01000000; // ZX_USER_SIGNAL_0
 const uint32 FILE_SIGNAL_WRITABLE = 0x02000000; // ZX_USER_SIGNAL_1
 
 /// The object may be cast to interface 'File'.
-[ForDeprecatedCBindings]
 resource struct FileObject {
     /// An optional event which transmits information about an object's readability
     /// or writability. This event relays information about the underlying object, not
@@ -58,7 +56,6 @@ struct DirectoryObject {
 };
 
 /// The object is accompanied by a pipe.
-[ForDeprecatedCBindings]
 resource struct Pipe {
     zx.handle:SOCKET socket;
 };
@@ -67,7 +64,6 @@ resource struct Pipe {
 /// Although a VMO is returned as a part of this structure, this underlying object
 /// may represent multiple Vmofiles. To identify the logical portion of the VMO
 /// that represents the single file, an offset and length parameter are also supplied.
-[ForDeprecatedCBindings]
 resource struct Vmofile {
     /// The VMO which backs this file.
     zx.handle:VMO vmo;
@@ -89,7 +85,6 @@ const uint32 DEVICE_SIGNAL_ERROR = 0x08000000; // ZX_USER_SIGNAL_3
 const uint32 DEVICE_SIGNAL_HANGUP = 0x10000000; // ZX_USER_SIGNAL_4
 
 /// The object may be cast to interface 'Device'.
-[ForDeprecatedCBindings]
 resource struct Device {
     /// An optional event which transmits information about a device's state.
     ///
@@ -98,20 +93,17 @@ resource struct Device {
 };
 
 /// The object may be cast to interface 'Tty'
-[ForDeprecatedCBindings]
 resource struct Tty {
     zx.handle:EVENTPAIR? event;
 };
 
 /// The object may be cast to interface [`fuchsia.posix.socket.DatagramSocket`].
-[ForDeprecatedCBindings]
 resource struct DatagramSocket {
     /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
     zx.handle:EVENTPAIR event;
 };
 
 /// The object may be cast to interface [`fuchsia.posix.socket.StreamSocket`].
-[ForDeprecatedCBindings]
 resource struct StreamSocket {
     zx.handle:SOCKET socket;
 };
@@ -455,7 +447,6 @@ struct WatchedEvent {
 /// about events happening in the filesystem. Clients can register
 /// new watchers using the `Directory.Watch` method, where they can
 /// filter which events they want to receive notifications for.
-[ForDeprecatedCBindings]
 protocol DirectoryWatcher {
     // TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
     OnEvent(vector<uint8>:MAX_BUF events);
