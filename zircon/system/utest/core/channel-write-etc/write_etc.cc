@@ -220,9 +220,12 @@ TEST(ChannelWriteEtcTest, ChannelHandleNotValidShouldFail) {
     zx_handle_t channel_local_handle = channel_local.release();
     ASSERT_OK(zx_handle_close(channel_local_handle));
 
+// Disable this for analyzer since this is an intentional use-after-free.
+#ifndef __clang_analyzer__
     EXPECT_EQ(ZX_ERR_BAD_HANDLE,
               zx_channel_write_etc(channel_local_handle, 0, &kChannelData, sizeof(kChannelData),
                                    send_handle_list, countof(send_handle_list)));
+#endif
 
     EXPECT_EQ(expected_close_result, zx_handle_close(socket_local_handle), "%s",
               test_case_str[op].c_str());
@@ -308,7 +311,10 @@ TEST(ChannelWriteEtcTest, InvalidHandleInTransferredHandlesShouldFail) {
   zx_handle_t socket_handle = socket_local.release();
   EXPECT_OK(zx_handle_close(socket_handle));
 
+// Disable this for analyzer since this is an intentional use-after-free.
+#ifndef __clang_analyzer__
   TestHelper(socket_handle, "closed socket handle");
+#endif
   TestHelper(ZX_HANDLE_INVALID, "ZX_HANDLE_INVALID");
   TestHelper(0xffffffff, "0xffffffff");
 }
