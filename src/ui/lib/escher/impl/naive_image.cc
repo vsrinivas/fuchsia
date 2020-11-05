@@ -9,6 +9,8 @@
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 
+#include <vulkan/vulkan.hpp>
+
 namespace escher {
 namespace impl {
 
@@ -50,9 +52,20 @@ ImagePtr NaiveImage::AdoptVkImage(ResourceManager* image_owner, ImageInfo info, 
 NaiveImage::NaiveImage(ResourceManager* image_owner, ImageInfo info, vk::Image image, GpuMemPtr mem,
                        vk::ImageLayout initial_layout)
     : Image(image_owner, info, image, mem->size(), mem->mapped_ptr(), initial_layout),
-      mem_(std::move(mem)) {}
+      mem_(std::move(mem)) {
+  FX_CHECK(info.is_transient() ==
+           static_cast<bool>(info.memory_flags & vk::MemoryPropertyFlagBits::eLazilyAllocated));
+}
 
 NaiveImage::~NaiveImage() { vulkan_context().device.destroyImage(vk()); }
+
+vk::DeviceSize NaiveImage::GetDeviceMemoryCommitment() {
+  if (is_transient()) {
+    return vk_device().getMemoryCommitment(mem_->base());
+  } else {
+    return size();
+  }
+}
 
 }  // namespace impl
 }  // namespace escher

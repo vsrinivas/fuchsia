@@ -131,7 +131,8 @@ void WaterfallDemo::WarmPipelineCache(vk::Format swapchain_format) const {
         auto& output_format = p.first;
         auto& output_swapchain_layout = p.second;
         PaperRenderer::WarmPipelineAndRenderPassCaches(escher(), config, output_format,
-                                                       output_swapchain_layout, immutable_samplers);
+                                                       output_swapchain_layout, immutable_samplers,
+                                                       /*use_protected_memory*/ false);
       }
     }
   }

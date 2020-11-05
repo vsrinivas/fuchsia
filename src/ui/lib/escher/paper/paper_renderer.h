@@ -197,7 +197,12 @@ class PaperRenderer final : public fxl::RefCountedThreadSafe<PaperRenderer> {
   static void WarmPipelineAndRenderPassCaches(Escher* escher, const PaperRendererConfig& config,
                                               vk::Format output_format,
                                               vk::ImageLayout output_swapchain_layout,
-                                              const std::vector<SamplerPtr>& immutable_samplers);
+                                              const std::vector<SamplerPtr>& immutable_samplers,
+                                              bool use_protected_memory);
+
+  // Compute the sum total memory commitment of all transient depth-stencil and MSAA images.  Only
+  // count those images which are intended to be transient.
+  vk::DeviceSize GetTransientImageMemoryCommitment();
 
  private:
   friend class escher::test::PaperRendererTest;
@@ -273,6 +278,9 @@ class PaperRenderer final : public fxl::RefCountedThreadSafe<PaperRenderer> {
   const EscherWeakPtr escher_;
   const VulkanContext context_;
   PaperRendererConfig config_;
+
+  bool supports_transient_attachments_ = false;
+  bool supports_protected_transient_attachments_ = false;
 
   PaperDrawCallFactory draw_call_factory_;
   PaperRenderQueue render_queue_;

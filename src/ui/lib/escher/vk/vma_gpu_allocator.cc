@@ -7,6 +7,8 @@
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 
+#include <vulkan/vulkan.hpp>
+
 namespace {
 
 class VmaGpuMem : public escher::GpuMem {
@@ -65,6 +67,17 @@ class VmaImage : public escher::Image {
         allocation_(allocation) {}
 
   ~VmaImage() { vmaDestroyImage(allocator_, vk(), allocation_); }
+
+  // |Image|
+  vk::DeviceSize GetDeviceMemoryCommitment() override {
+    if (is_transient()) {
+      VmaAllocationInfo info;
+      vmaGetAllocationInfo(allocator_, allocation_, &info);
+      return vk_device().getMemoryCommitment(vk::DeviceMemory(info.deviceMemory));
+    } else {
+      return size();
+    }
+  }
 
  private:
   VmaAllocator allocator_;
@@ -180,7 +193,7 @@ ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInf
     return ImagePtr();
   }
 
-  VmaAllocationCreateInfo create_info = {VMA_ALLOCATION_CREATE_MAPPED_BIT,
+  VmaAllocationCreateInfo create_info = {/*creation flags filled in below*/ 0U,
                                          VMA_MEMORY_USAGE_UNKNOWN,
                                          static_cast<VkMemoryPropertyFlags>(info.memory_flags),
                                          0u,
@@ -192,6 +205,14 @@ ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInf
   // fxbug.dev/36620 for motivation.
   if (out_ptr || c_image_info.flags & VK_IMAGE_CREATE_PROTECTED_BIT) {
     create_info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+  }
+
+  if (c_image_info.usage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT) {
+    create_info.usage = VMA_MEMORY_USAGE_GPU_LAZILY_ALLOCATED;
+  } else {
+    // In all other cases (i.e. not using lazy/transient images), we assume that the
+    // image should be mappable to host memory.
+    create_info.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
   }
 
   // Output structs.
@@ -231,7 +252,19 @@ bool VmaGpuAllocator::CreateImage(const VkImageCreateInfo& image_create_info,
                                   VmaAllocationInfo* vma_allocation_info) {
   auto status = vmaCreateImage(allocator_, &image_create_info, &allocation_create_info, image,
                                vma_allocation, vma_allocation_info);
-  FX_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
+#if !defined(NDEBUG)
+  if (status != VK_SUCCESS) {
+    // Copy into vulkan.hpp struct for more convenient printing.
+    vk::ImageCreateInfo ici(image_create_info);
+    FX_DCHECK(status == VK_SUCCESS)
+        << "vmaAllocateMemory failed with status code " << status  //
+        << "\n\tflags:" << vk::to_string(ici.flags) << " mem-flags:"
+        << vk::to_string(vk::MemoryPropertyFlags(allocation_create_info.requiredFlags))  //
+        << " image-type:" << vk::to_string(ici.imageType)                                //
+        << " format:" << vk::to_string(ici.format)                                       //
+        << " usage:" << vk::to_string(ici.usage);
+  }
+#endif  // !defined(NDEBUG)
   return status == VK_SUCCESS;
 }
 

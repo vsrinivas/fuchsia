@@ -12,6 +12,9 @@ const ResourceTypeInfo Image::kTypeInfo("Image", ResourceType::kResource, Resour
 
 ImagePtr Image::WrapVkImage(ResourceManager* image_owner, ImageInfo info, vk::Image vk_image,
                             vk::ImageLayout initial_layout) {
+  // Wrapping transient image is disallowed because this class doesn't have access to the
+  // vk::DeviceMemory required to implement GetDeviceMemoryCommitment().
+  FX_CHECK(!info.is_transient()) << "Cannot wrap a transient image.";
   return fxl::AdoptRef(new Image(image_owner, info, vk_image, 0, nullptr, initial_layout));
 }
 
@@ -25,5 +28,14 @@ Image::Image(ResourceManager* image_owner, ImageInfo info, vk::Image image, vk::
       size_(size),
       host_ptr_(host_ptr),
       layout_(initial_layout) {}
+
+vk::DeviceSize Image::GetDeviceMemoryCommitment() {
+  // See WrapVkImage().  Since WrapVkImage() is the only way to directly instantiate an Image,
+  // and since WrapVkImage() disallows wrapping of transient images, this implies that this is an
+  // instance of a subclass of Image, which must override this implementation of
+  // GetDeviceMemoryCommitment().
+  FX_CHECK(!is_transient()) << "Subclass must implement GetDeviceMemoryCommitment()";
+  return size();
+}
 
 }  // namespace escher

@@ -3,6 +3,7 @@
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader"
             ]
         }

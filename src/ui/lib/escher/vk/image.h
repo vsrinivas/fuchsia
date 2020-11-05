@@ -87,6 +87,16 @@ class Image : public Resource {
     return static_cast<bool>(info_.memory_flags & vk::MemoryPropertyFlagBits::eProtected);
   }
 
+  // Return the number of bytes of committed memory.  Unlike the similarly-named Vulkan function,
+  // the image's memory need not be created as lazily-allocated; if not, this will simply return
+  // size().  If the memory is lazily-allocated, this will return the result of
+  // vkGetDeviceMemoryCommitment().
+  //
+  // This method is virtual because this class doesn't have direct access to the VkDeviceMemory that
+  // is required to call vkGetDeviceMemoryCommitment(); each subclass implements this slightly
+  // differently.
+  virtual vk::DeviceSize GetDeviceMemoryCommitment();
+
  protected:
   // Constructor. In some cases it is necessary to wrap an un-owned vk::Image,
   // which should not be destroyed when this Image is destroyed (e.g. when

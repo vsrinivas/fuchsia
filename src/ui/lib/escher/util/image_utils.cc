@@ -126,7 +126,7 @@ vk::ImageAspectFlags FormatToColorOrDepthStencilAspectFlags(vk::Format format) {
   }
 }
 
-vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info, vk::ImageLayout initial_layout) {
+vk::ImageCreateInfo CreateVkImageCreateInfo(const ImageInfo& info, vk::ImageLayout initial_layout) {
   // Per Vulkan spec, for new images the layout should be only ePreinitialized or eUndefined.
   FX_CHECK(initial_layout == vk::ImageLayout::ePreinitialized ||
            initial_layout == vk::ImageLayout::eUndefined);
@@ -151,7 +151,8 @@ vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info, vk::ImageLayout init
   return create_info;
 }
 
-vk::Image CreateVkImage(const vk::Device& device, ImageInfo info, vk::ImageLayout initial_layout) {
+vk::Image CreateVkImage(const vk::Device& device, const ImageInfo& info,
+                        vk::ImageLayout initial_layout) {
   vk::Image image =
       ESCHER_CHECKED_VK_RESULT(device.createImage(CreateVkImageCreateInfo(info, initial_layout)));
   return image;

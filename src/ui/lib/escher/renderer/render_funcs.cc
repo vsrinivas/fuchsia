@@ -5,9 +5,12 @@
 #include "src/ui/lib/escher/renderer/render_funcs.h"
 
 #include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/render_pass.h"
 #include "src/ui/lib/escher/vk/texture.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -84,47 +87,49 @@ RenderFuncs::VertexAttributeBinding* RenderFuncs::NewVertexAttributeBindings(
   return bindings;
 }
 
-void RenderFuncs::ObtainDepthAndMsaaTextures(Escher* escher, const FramePtr& frame,
-                                             const ImageInfo& info, uint32_t msaa_sample_count,
-                                             vk::Format depth_stencil_format,
-                                             TexturePtr& depth_texture, TexturePtr& msaa_texture) {
-  // Support for other sample_counts should fairly easy to add, if necessary.
-  FX_DCHECK(info.sample_count == 1);
-
+void RenderFuncs::ObtainDepthAndMsaaTextures(
+    Escher* escher, const FramePtr& frame, uint32_t width, uint32_t height, uint32_t sample_count,
+    bool use_transient_attachment, vk::Format depth_stencil_format, vk::Format msaa_format,
+    TexturePtr& depth_texture_inout, TexturePtr& msaa_texture_inout) {
   const bool realloc_textures =
-      !depth_texture ||
-      (depth_texture->image()->use_protected_memory() != frame->use_protected_memory()) ||
-      info.width != depth_texture->width() || info.height != depth_texture->height() ||
-      msaa_sample_count != depth_texture->image()->info().sample_count;
+      !depth_texture_inout ||
+      (depth_texture_inout->image()->use_protected_memory() != frame->use_protected_memory()) ||
+      (depth_texture_inout->image()->is_transient() != use_transient_attachment) ||
+      width != depth_texture_inout->width() || height != depth_texture_inout->height() ||
+      sample_count != depth_texture_inout->image()->info().sample_count;
+  if (!realloc_textures) {
+    return;
+  }
 
-  if (realloc_textures) {
-    // Need to generate a new depth buffer.
-    {
-      TRACE_DURATION("gfx", "RenderFuncs::ObtainDepthAndMsaaTextures (new depth)");
-      depth_texture = escher->NewAttachmentTexture(
-          depth_stencil_format, info.width, info.height, msaa_sample_count, vk::Filter::eLinear,
-          vk::ImageUsageFlags(), /*is_transient_attachment=*/false,
-          /*is_input_attachment=*/false, /*use_unnormalized_coordinates=*/false,
-          frame->use_protected_memory() ? vk::MemoryPropertyFlagBits::eProtected
-                                        : vk::MemoryPropertyFlags());
-    }
-    // If the sample count is 1, there is no need for a MSAA buffer.
-    if (msaa_sample_count == 1) {
-      msaa_texture = nullptr;
-    } else {
-      TRACE_DURATION("gfx", "RenderFuncs::ObtainDepthAndMsaaTextures (new msaa)");
-      // TODO(fxbug.dev/23860): use lazy memory allocation and transient attachments
-      // when available.
-      msaa_texture = escher->NewAttachmentTexture(
-          info.format, info.width, info.height, msaa_sample_count, vk::Filter::eLinear,
-          vk::ImageUsageFlags(), /*is_transient_attachment=*/false,
-          /*is_input_attachment=*/false, /*use_unnormalized_coordinates=*/false,
-          frame->use_protected_memory() ? vk::MemoryPropertyFlagBits::eProtected
-                                        : vk::MemoryPropertyFlags()
-          // TODO(fxbug.dev/7166): , vk::ImageUsageFlagBits::eTransientAttachment
-      );
+  vk::ImageUsageFlags image_usage = use_transient_attachment
+                                        ? vk::ImageUsageFlagBits::eTransientAttachment
+                                        : vk::ImageUsageFlags();
+  vk::MemoryPropertyFlags memory_properties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+  if (use_transient_attachment) {
+    memory_properties |= vk::MemoryPropertyFlagBits::eLazilyAllocated;
+  }
+  if (frame->use_protected_memory()) {
+    memory_properties |= vk::MemoryPropertyFlagBits::eProtected;
+  }
 
-      frame->cmds()->ImageBarrier(msaa_texture->image(), vk::ImageLayout::eUndefined,
+  // Need to generate a new depth buffer.
+  {
+    TRACE_DURATION("gfx", "RenderFuncs::ObtainDepthAndMsaaTextures (new depth)");
+    depth_texture_inout = escher->NewAttachmentTexture(
+        depth_stencil_format, width, height, sample_count, vk::Filter::eLinear, image_usage,
+        /*use_unnormalized_coordinates=*/false, memory_properties);
+  }
+  if (sample_count == 1) {
+    msaa_texture_inout = nullptr;
+  } else {
+    TRACE_DURATION("gfx", "RenderFuncs::ObtainDepthAndMsaaTextures (new msaa)");
+    msaa_texture_inout = escher->NewAttachmentTexture(
+        msaa_format, width, height, sample_count, vk::Filter::eLinear, image_usage,
+        /*use_unnormalized_coordinates=*/false, memory_properties);
+
+    // Don't transition layout for transient attachment images.
+    if (!use_transient_attachment) {
+      frame->cmds()->ImageBarrier(msaa_texture_inout->image(), vk::ImageLayout::eUndefined,
                                   vk::ImageLayout::eColorAttachmentOptimal,
                                   vk::PipelineStageFlagBits::eAllGraphics, vk::AccessFlags(),
                                   vk::PipelineStageFlagBits::eColorAttachmentOutput,
@@ -151,8 +156,7 @@ void RenderFuncs::ObtainDepthTexture(Escher* escher, const bool use_protected_me
       TRACE_DURATION("gfx", "RenderFuncs::ObtainDepthAndMsaaTextures (new depth)");
       depth_texture = escher->NewAttachmentTexture(
           depth_stencil_format, info.width, info.height, 1, vk::Filter::eLinear,
-          vk::ImageUsageFlags(), /*is_transient_attachment=*/false,
-          /*is_input_attachment=*/false, /*use_unnormalized_coordinates=*/false,
+          vk::ImageUsageFlags(), /*use_unnormalized_coordinates=*/false,
           use_protected_memory ? vk::MemoryPropertyFlagBits::eProtected
                                : vk::MemoryPropertyFlags());
     }

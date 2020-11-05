@@ -73,9 +73,10 @@ bool FillColorAttachmentDescription(const RenderPassInfo& rpi,
   const auto& color_info = rpi.color_attachment_infos[index];
   const bool is_swapchain_image = color_info.is_swapchain_image();
 
-  // TODO(fxbug.dev/7166): support for transient images.  What's missing?
+  // Transient swapchain images make no sense.  The whole point of a transient attachment is NOT to
+  // flush the contents out of tile memory.
   FX_DCHECK(!color_info.is_transient || !is_swapchain_image)
-      << "transient+swapchain images not yet handled.";
+      << "transient+swapchain images not allowed.";
 
   const auto load_store_ops_pair = rpi.LoadStoreOpsForColorAttachment(index);
   const vk::AttachmentLoadOp load_op = load_store_ops_pair.first;
@@ -91,7 +92,7 @@ bool FillColorAttachmentDescription(const RenderPassInfo& rpi,
   desc.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
 
   if (color_info.is_transient) {
-    FX_DCHECK(load_op == vk::AttachmentLoadOp::eDontCare);
+    FX_DCHECK(load_op != vk::AttachmentLoadOp::eLoad);
     desc.initialLayout = vk::ImageLayout::eUndefined;
     // This will be filled in later with the layout of the last subpass that
     // uses this attachment, in order to avoid an unnecessary transition at

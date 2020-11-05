@@ -22,7 +22,7 @@ class NaiveGpuAllocator : public GpuAllocator {
   ~NaiveGpuAllocator();
 
   // |GpuAllocator|
-  GpuMemPtr AllocateMemory(vk::MemoryRequirements reqs, vk::MemoryPropertyFlags flags) override;
+  GpuMemPtr AllocateMemory(vk::MemoryRequirements reqs, vk::MemoryPropertyFlags flags) final;
 
   // |GpuAllocator|
   BufferPtr AllocateBuffer(ResourceManager* manager, vk::DeviceSize size,

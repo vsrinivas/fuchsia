@@ -93,7 +93,6 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   TexturePtr NewAttachmentTexture(
       vk::Format format, uint32_t width, uint32_t height, uint32_t sample_count, vk::Filter filter,
       vk::ImageUsageFlags additional_usage_flags = vk::ImageUsageFlags(),
-      bool is_transient_attachment = false, bool is_input_attachment = false,
       bool use_unnormalized_coordinates = false,
       vk::MemoryPropertyFlags memory_flags = vk::MemoryPropertyFlags());
 

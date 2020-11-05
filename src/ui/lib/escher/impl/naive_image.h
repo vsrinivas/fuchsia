@@ -20,6 +20,9 @@ class NaiveImage : public Image {
   // Destroys image_ and releases the reference to mem_.
   ~NaiveImage() override;
 
+  // |Image|
+  vk::DeviceSize GetDeviceMemoryCommitment() override;
+
   const GpuMemPtr& memory() const { return mem_; }
 
  private:

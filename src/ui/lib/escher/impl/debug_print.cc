@@ -390,8 +390,8 @@ std::ostream& operator<<(std::ostream& str, const CommandBufferPipelineState::St
 }
 
 std::ostream& operator<<(std::ostream& str, const RenderPassInfo::AttachmentInfo& info) {
-  return str << vk::to_string(info.format) << ", " << vk::to_string(info.swapchain_layout) << ", "
-             << info.sample_count << ", " << (info.is_transient ? "true" : "false");
+  return str << vk::to_string(info.format) << ", " << vk::to_string(info.swapchain_layout)
+             << ", samples=" << info.sample_count << (info.is_transient ? ", transient" : "");
 }
 
 std::ostream& operator<<(std::ostream& str, const RenderPassInfo& rpi) {

@@ -106,16 +106,37 @@ FormatResult GetSupportedDepthStencilFormat(vk::PhysicalDevice device) {
 
 uint32_t GetMemoryTypeIndex(vk::PhysicalDevice device, uint32_t type_bits,
                             vk::MemoryPropertyFlags required_properties) {
-  vk::PhysicalDeviceMemoryProperties memory_types = device.getMemoryProperties();
-  for (uint32_t i = 0; i < memory_types.memoryTypeCount; ++i) {
-    if ((type_bits & 1) == 1) {
-      auto available_properties = memory_types.memoryTypes[i].propertyFlags;
+  vk::PhysicalDeviceMemoryProperties props = device.getMemoryProperties();
+  for (uint32_t i = 0; i < props.memoryTypeCount; ++i) {
+    if (type_bits & 1) {
+      auto available_properties = props.memoryTypes[i].propertyFlags;
       if ((available_properties & required_properties) == required_properties)
         return i;
     }
     type_bits >>= 1;
   }
-  return memory_types.memoryTypeCount;
+  return props.memoryTypeCount;
+}
+
+uint32_t GetMemoryTypeIndices(vk::PhysicalDevice device, uint32_t type_bits,
+                              vk::MemoryPropertyFlags required_flags) {
+  vk::PhysicalDeviceMemoryProperties props = device.getMemoryProperties();
+  return GetMemoryTypeIndices(props, type_bits, required_flags);
+}
+
+uint32_t GetMemoryTypeIndices(const vk::PhysicalDeviceMemoryProperties& properties,
+                              uint32_t type_bits, vk::MemoryPropertyFlags required_flags) {
+  uint32_t result = 0;
+  for (uint32_t i = 0; i < properties.memoryTypeCount; ++i) {
+    if (type_bits & 1) {
+      auto available_flags = properties.memoryTypes[i].propertyFlags;
+      if ((available_flags & required_flags) == required_flags) {
+        result |= (1 << i);
+      }
+    }
+    type_bits >>= 1;
+  }
+  return result;
 }
 
 // Return the sample-count corresponding to the specified flag-bits.

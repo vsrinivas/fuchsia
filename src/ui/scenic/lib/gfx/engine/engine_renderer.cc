@@ -330,8 +330,15 @@ void EngineRenderer::WarmPipelineCache(std::set<vk::Format> framebuffer_formats)
 
   framebuffer_formats.insert(kIntermediateLayerFormat);
   for (auto fmt : framebuffer_formats) {
+    // Depending on the memory types provided by the Vulkan implementation, separate versions of the
+    // render-passes (and therefore pipelines) may be required for protected/non-protected memory.
+    // Or not; if not, then the second call will simply use the ones that are already cached.
     escher::PaperRenderer::WarmPipelineAndRenderPassCaches(
-        escher_.get(), config, fmt, vk::ImageLayout::eColorAttachmentOptimal, immutable_samplers);
+        escher_.get(), config, fmt, vk::ImageLayout::eColorAttachmentOptimal, immutable_samplers,
+        /*use_protected_memory*/ false);
+    escher::PaperRenderer::WarmPipelineAndRenderPassCaches(
+        escher_.get(), config, fmt, vk::ImageLayout::eColorAttachmentOptimal, immutable_samplers,
+        /*use_protected_memory*/ true);
   }
 }
 

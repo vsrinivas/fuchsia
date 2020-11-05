@@ -65,6 +65,14 @@ FormatResult GetSupportedDepthStencilFormat(vk::PhysicalDevice device);
 uint32_t GetMemoryTypeIndex(vk::PhysicalDevice device, uint32_t type_bits,
                             vk::MemoryPropertyFlags required_properties);
 
+// Search through all memory types specified by |type_bits| and return a bit-mask containing only
+// those which match |required_flags|.  In other words, the returned bits will be a subset of the
+// input |type_bits|.
+uint32_t GetMemoryTypeIndices(vk::PhysicalDevice device, uint32_t type_bits,
+                              vk::MemoryPropertyFlags required_flags);
+uint32_t GetMemoryTypeIndices(const vk::PhysicalDeviceMemoryProperties& properties,
+                              uint32_t type_bits, vk::MemoryPropertyFlags required_flags);
+
 // Return the sample-count corresponding to the specified flag-bits.
 uint32_t SampleCountFlagBitsToInt(vk::SampleCountFlagBits bits);
 

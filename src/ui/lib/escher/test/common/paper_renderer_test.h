@@ -8,6 +8,7 @@
 #include "src/ui/lib/escher/debug/debug_rects.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/paper/paper_renderer.h"
+#include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/test/common/readback_test.h"
 
 namespace escher {

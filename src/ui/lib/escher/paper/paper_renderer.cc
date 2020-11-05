@@ -11,6 +11,7 @@
 #include "src/ui/lib/escher/debug/debug_font.h"
 #include "src/ui/lib/escher/debug/debug_rects.h"
 #include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/paper/paper_render_queue_context.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
@@ -55,6 +56,16 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher, const PaperRendererConfi
   FX_DCHECK(config.num_depth_buffers > 0);
   depth_buffers_.resize(config.num_depth_buffers);
   msaa_buffers_.resize(config.num_depth_buffers);
+
+  supports_transient_attachments_ =
+      (0 != escher::impl::GetMemoryTypeIndices(escher_->vk_physical_device(), 0xffffffff,
+                                               vk::MemoryPropertyFlagBits::eLazilyAllocated |
+                                                   vk::MemoryPropertyFlagBits::eDeviceLocal));
+  supports_protected_transient_attachments_ =
+      (0 != escher::impl::GetMemoryTypeIndices(escher_->vk_physical_device(), 0xffffffff,
+                                               vk::MemoryPropertyFlagBits::eLazilyAllocated |
+                                                   vk::MemoryPropertyFlagBits::eDeviceLocal |
+                                                   vk::MemoryPropertyFlagBits::eProtected));
 }
 
 PaperRenderer::~PaperRenderer() = default;
@@ -200,9 +211,15 @@ void PaperRenderer::BeginFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUp
   auto index = frame->frame_number() % depth_buffers_.size();
   TexturePtr& depth_texture = depth_buffers_[index];
   TexturePtr& msaa_texture = msaa_buffers_[index];
-  RenderFuncs::ObtainDepthAndMsaaTextures(escher(), frame, output_image->info(),
-                                          config_.msaa_sample_count, config_.depth_stencil_format,
-                                          depth_texture, msaa_texture);
+
+  const bool use_transient_attachment = frame->use_protected_memory()
+                                            ? supports_protected_transient_attachments_
+                                            : supports_transient_attachments_;
+
+  RenderFuncs::ObtainDepthAndMsaaTextures(escher(), frame, output_image->width(),
+                                          output_image->height(), config_.msaa_sample_count,
+                                          use_transient_attachment, config_.depth_stencil_format,
+                                          output_image->format(), depth_texture, msaa_texture);
 
   frame_data_ = std::make_unique<FrameData>(
       frame, std::move(uploader), scene, output_image,
@@ -756,7 +773,8 @@ void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
 static impl::RenderPassPtr WarmRenderPassCache(impl::RenderPassCache* cache,
                                                const PaperRendererConfig& config,
                                                vk::Format output_format,
-                                               vk::ImageLayout output_swapchain_layout) {
+                                               vk::ImageLayout output_swapchain_layout,
+                                               bool use_transient_attachments) {
   TRACE_DURATION("gfx", "PaperRenderer::WarmRenderPassCache", "format",
                  vk::to_string(output_format), "layout", vk::to_string(output_swapchain_layout));
   RenderPassInfo info;
@@ -767,7 +785,8 @@ static impl::RenderPassPtr WarmRenderPassCache(impl::RenderPassCache* cache,
   color_attachment_info.sample_count = 1;
 
   if (!RenderPassInfo::InitRenderPassInfo(&info, color_attachment_info, config.depth_stencil_format,
-                                          output_format, config.msaa_sample_count, false)) {
+                                          output_format, config.msaa_sample_count,
+                                          use_transient_attachments)) {
     FX_LOGS(ERROR) << "WarmRenderPassCache(): InitRenderPassInfo failed. Exiting.";
     return nullptr;
   };
@@ -815,16 +834,30 @@ static void WarmProgramHelper(impl::PipelineLayoutCache* pipeline_layout_cache,
 // Populate caches with all render passes and pipelines required by |config|.
 void PaperRenderer::WarmPipelineAndRenderPassCaches(
     Escher* escher, const PaperRendererConfig& config, vk::Format output_format,
-    vk::ImageLayout output_swapchain_layout, const std::vector<SamplerPtr>& immutable_samplers) {
+    vk::ImageLayout output_swapchain_layout, const std::vector<SamplerPtr>& immutable_samplers,
+    bool use_protected_memory) {
   TRACE_DURATION("gfx", "PaperRenderer::WarmPipelineAndRenderPassCaches");
+
+  // Determine whether transient attachments can be used for this render pass.  Depending on the
+  // memory types provided by the Vulkan impl, the answer may differ when protected memory is/isn't
+  // being used.
+  const vk::MemoryPropertyFlags transient_memory_properties =
+      use_protected_memory
+          ? vk::MemoryPropertyFlagBits::eLazilyAllocated |
+                vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eProtected
+          : vk::MemoryPropertyFlagBits::eLazilyAllocated | vk::MemoryPropertyFlagBits::eDeviceLocal;
+  const bool use_transient_attachments =
+      (0 != escher::impl::GetMemoryTypeIndices(escher->vk_physical_device(), 0xffffffff,
+                                               transient_memory_properties));
 
   CommandBufferPipelineState cbps(escher->pipeline_builder()->GetWeakPtr());
 
   // Obtain and set the render pass; this is the only render pass that is used, so we just need to
   // set it once.
   // TODO(fxbug.dev/44894): try to avoid using this "impl" type directly.
-  impl::RenderPassPtr render_pass = WarmRenderPassCache(escher->render_pass_cache(), config,
-                                                        output_format, output_swapchain_layout);
+  impl::RenderPassPtr render_pass =
+      WarmRenderPassCache(escher->render_pass_cache(), config, output_format,
+                          output_swapchain_layout, use_transient_attachments);
 
   FX_DCHECK(render_pass);
   cbps.set_render_pass(render_pass.get());
@@ -940,6 +973,21 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
     default:
       FX_CHECK(false) << "unhandled shadow type";
   }
+}
+
+vk::DeviceSize PaperRenderer::GetTransientImageMemoryCommitment() {
+  vk::DeviceSize num_bytes_committed = 0;
+  for (auto& texture : depth_buffers_) {
+    if (texture && texture->image()->is_transient()) {
+      num_bytes_committed += texture->image()->GetDeviceMemoryCommitment();
+    }
+  }
+  for (auto& texture : msaa_buffers_) {
+    if (texture && texture->image()->is_transient()) {
+      num_bytes_committed += texture->image()->GetDeviceMemoryCommitment();
+    }
+  }
+  return num_bytes_committed;
 }
 
 }  // namespace escher

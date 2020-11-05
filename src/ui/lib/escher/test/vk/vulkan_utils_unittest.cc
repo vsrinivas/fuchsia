@@ -6,6 +6,8 @@
 
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
 
+#include <vulkan/vulkan.hpp>
+
 namespace {
 using namespace escher;
 
@@ -47,6 +49,37 @@ TEST(VulkanUtils, ClipToRect) {
   vk::Rect2D copy = rect;
   impl::ClipToRect(&rect, encloser);
   EXPECT_EQ(rect, copy);
+}
+
+TEST(VulkanUtils, GetMemoryTypeIndices) {
+  vk::PhysicalDeviceMemoryProperties properties;
+
+  auto& memory_types = properties.memoryTypes;
+  memory_types[0].propertyFlags = vk::MemoryPropertyFlagBits::eDeviceLocal |
+                                  vk::MemoryPropertyFlagBits::eLazilyAllocated |
+                                  vk::MemoryPropertyFlagBits::eProtected;
+  memory_types[1].propertyFlags =
+      vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eLazilyAllocated;
+  memory_types[2].propertyFlags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+  properties.memoryTypeCount = 3;
+
+  uint32_t types = impl::GetMemoryTypeIndices(properties, 0x7,
+                                              vk::MemoryPropertyFlagBits::eDeviceLocal |
+                                                  vk::MemoryPropertyFlagBits::eLazilyAllocated |
+                                                  vk::MemoryPropertyFlagBits::eProtected);
+  EXPECT_EQ(types, 0x1u);
+
+  types = impl::GetMemoryTypeIndices(
+      properties, 0x7,
+      vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eLazilyAllocated);
+  EXPECT_EQ(types, 0x3u);
+
+  types = impl::GetMemoryTypeIndices(properties, 0x7, vk::MemoryPropertyFlagBits::eDeviceLocal);
+  EXPECT_EQ(types, 0x7u);
+
+  // Verify that result is a subset of the input types.
+  types = impl::GetMemoryTypeIndices(properties, 0x2, vk::MemoryPropertyFlagBits::eDeviceLocal);
+  EXPECT_EQ(types, 0x2u);
 }
 
 // This test ensures that Fuchsia-specific Vulkan functions

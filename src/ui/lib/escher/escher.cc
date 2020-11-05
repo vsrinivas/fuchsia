@@ -232,23 +232,11 @@ TexturePtr Escher::NewTexture(vk::Format format, uint32_t width, uint32_t height
 TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width, uint32_t height,
                                         uint32_t sample_count, vk::Filter filter,
                                         vk::ImageUsageFlags usage_flags,
-                                        bool is_transient_attachment, bool is_input_attachment,
                                         bool use_unnormalized_coordinates,
                                         vk::MemoryPropertyFlags memory_flags) {
   const auto pair = image_utils::IsDepthStencilFormat(format);
   usage_flags |= (pair.first || pair.second) ? vk::ImageUsageFlagBits::eDepthStencilAttachment
                                              : vk::ImageUsageFlagBits::eColorAttachment;
-  if (is_transient_attachment) {
-    // TODO(fxbug.dev/23860): when specifying that it is being used as a transient
-    // attachment, we should use lazy memory if supported by the Vulkan
-    // device... but only if no non-attachment flags are present.
-    // TODO(fxbug.dev/23860): also, clients should probably just add this usage flag
-    // themselves, rather than having a separate bool to do it.
-    usage_flags |= vk::ImageUsageFlagBits::eTransientAttachment;
-  }
-  if (is_input_attachment) {
-    usage_flags |= vk::ImageUsageFlagBits::eInputAttachment;
-  }
   return NewTexture(format, width, height, sample_count, usage_flags, filter,
                     image_utils::FormatToColorOrDepthStencilAspectFlags(format),
                     use_unnormalized_coordinates, memory_flags);
