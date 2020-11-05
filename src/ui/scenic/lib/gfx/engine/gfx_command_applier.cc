@@ -403,7 +403,12 @@ bool GfxCommandApplier::ApplySetDisplayMinimumRgbCmd(
     FX_LOGS(WARNING)
         << "GfxCommandApplier:ApplySetDisplayMinimumRgbCmd failed, controller returned status: "
         << status << " with error: " << cmd_result.err();
-    return false;
+    // Treat ZX_ERR_INTERNAL as success. This error code is only returned when
+    // the device is waiting for Scenic to apply its very first frame.
+    //
+    // TODO(60471): replace this with a solution that does not depend on
+    // knowledge of specific error codes from drivers. See comment #23 on the cited bug.
+    return cmd_result.err() == ZX_ERR_INTERNAL;
   }
 
   // Now check the config.
