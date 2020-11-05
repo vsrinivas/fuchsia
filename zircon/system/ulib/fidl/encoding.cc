@@ -464,18 +464,14 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
 }
 
 void close_handles_op(const zx_handle_t* handles, uint32_t max_idx) {
-  if (handles) {
-    // Return value intentionally ignored. This is best-effort cleanup.
-    FidlHandleCloseMany(handles, max_idx);
-  }
+  // Return value intentionally ignored. This is best-effort cleanup.
+  FidlHandleCloseMany(handles, max_idx);
 }
 
 void close_handle_dispositions_op(const zx_handle_disposition_t* handle_dispositions,
                                   uint32_t max_idx) {
-  if (handle_dispositions) {
-    // Return value intentionally ignored. This is best-effort cleanup.
-    FidlHandleDispositionCloseMany(handle_dispositions, max_idx);
-  }
+  // Return value intentionally ignored. This is best-effort cleanup.
+  FidlHandleDispositionCloseMany(handle_dispositions, max_idx);
 }
 
 }  // namespace

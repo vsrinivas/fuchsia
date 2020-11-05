@@ -10,16 +10,21 @@
 #endif  // __Fuchsia__
 
 zx_status_t FidlHandleCloseMany(const zx_handle_t* handles, size_t num_handles) {
+  if (num_handles == 0) {
+    return ZX_OK;
+  }
 #ifdef __Fuchsia__
   return zx_handle_close_many(handles, num_handles);
 #else
-  ZX_ASSERT_MSG(num_handles != 0, "handle closing not implemented on host");
-  return ZX_OK;
+  ZX_PANIC("handle closing not implemented on host");
 #endif  // __Fuchsia__
 }
 
 zx_status_t FidlHandleDispositionCloseMany(const zx_handle_disposition_t* handle_dispositions,
                                            size_t num_handles) {
+  if (num_handles == 0) {
+    return ZX_OK;
+  }
 #ifdef __Fuchsia__
   ZX_ASSERT(num_handles <= ZX_CHANNEL_MAX_MSG_HANDLES);
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -28,12 +33,14 @@ zx_status_t FidlHandleDispositionCloseMany(const zx_handle_disposition_t* handle
   }
   return zx_handle_close_many(handles, num_handles);
 #else
-  ZX_ASSERT_MSG(num_handles != 0, "handle closing not implemented on host");
-  return ZX_OK;
+  ZX_PANIC("handle closing not implemented on host");
 #endif  // __Fuchsia__
 }
 
 zx_status_t FidlHandleInfoCloseMany(const zx_handle_info_t* handle_infos, size_t num_handles) {
+  if (num_handles == 0) {
+    return ZX_OK;
+  }
 #ifdef __Fuchsia__
   ZX_ASSERT(num_handles <= ZX_CHANNEL_MAX_MSG_HANDLES);
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -42,7 +49,6 @@ zx_status_t FidlHandleInfoCloseMany(const zx_handle_info_t* handle_infos, size_t
   }
   return zx_handle_close_many(handles, num_handles);
 #else
-  ZX_ASSERT_MSG(num_handles != 0, "handle closing not implemented on host");
-  return ZX_OK;
+  ZX_PANIC("handle closing not implemented on host");
 #endif  // __Fuchsia__
 }

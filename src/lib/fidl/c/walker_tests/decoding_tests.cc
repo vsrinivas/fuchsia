@@ -31,6 +31,7 @@ namespace {
 // TODO(kulakowski) Change the tests to check for more specific error
 // values, once those are settled.
 
+#ifdef __Fuchsia__
 constexpr zx_handle_t dummy_handle_0 = static_cast<zx_handle_t>(23);
 constexpr zx_handle_t dummy_handle_1 = static_cast<zx_handle_t>(24);
 constexpr zx_handle_t dummy_handle_2 = static_cast<zx_handle_t>(25);
@@ -61,6 +62,7 @@ constexpr zx_handle_t dummy_handle_26 = static_cast<zx_handle_t>(49);
 constexpr zx_handle_t dummy_handle_27 = static_cast<zx_handle_t>(50);
 constexpr zx_handle_t dummy_handle_28 = static_cast<zx_handle_t>(51);
 constexpr zx_handle_t dummy_handle_29 = static_cast<zx_handle_t>(52);
+#endif
 
 // All sizes in fidl encoding tables are 32 bits. The fidl compiler
 // normally enforces this. Check manually in manual tests.
@@ -96,7 +98,8 @@ bool IsPeerValid(const zx::unowned_eventpair handle) {
 TEST(NullParameters, decode_null_decode_parameters) {
   zx_handle_t handles[] = {static_cast<zx_handle_t>(23)};
 
-  // Null message type.
+// Null message type.
+#ifdef __Fuchsia__
   {
     nonnullable_handle_message_layout message = {};
     message.inline_struct.handle = FIDL_HANDLE_PRESENT;
@@ -116,6 +119,7 @@ TEST(NullParameters, decode_null_decode_parameters) {
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NOT_NULL(error);
   }
+#endif  // __Fuchsia__
 
   // Null handles, for a message that has a handle.
   {
@@ -156,6 +160,7 @@ TEST(NullParameters, decode_null_decode_parameters) {
   }
 }
 
+#ifdef __Fuchsia__
 TEST(Unaligned, decode_single_present_handle_unaligned_error) {
   // Test a short, unaligned version of nonnullable message
   // handle. All fidl message objects should be 8 byte aligned.
@@ -185,6 +190,7 @@ TEST(Unaligned, decode_single_present_handle_unaligned_error) {
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
 }
+#endif  //__Fuchsia__
 
 TEST(Unaligned, decode_present_nonnullable_string_unaligned_error) {
   unbounded_nonnullable_string_message_layout message = {};
@@ -205,6 +211,7 @@ TEST(Unaligned, decode_present_nonnullable_string_unaligned_error) {
   ASSERT_SUBSTR(error, "must be aligned to FIDL_ALIGNMENT");
 }
 
+#ifdef __Fuchsia__
 TEST(Handles, decode_single_present_handle) {
   nonnullable_handle_message_layout message = {};
   message.inline_struct.handle = FIDL_HANDLE_PRESENT;
@@ -264,8 +271,6 @@ TEST(Handles, decode_too_many_handles_specified_error) {
   EXPECT_EQ(message.inline_struct.handle, dummy_handle_0);
 }
 
-// Disabled on host due to syscall.
-#ifdef __Fuchsia__
 TEST(Handles, decode_too_many_handles_specified_should_close_handles) {
   nonnullable_handle_message_layout message = {};
   message.inline_struct.handle = FIDL_HANDLE_PRESENT;
@@ -323,7 +328,6 @@ TEST(Handles, decode_too_many_bytes_specified_should_close_handles) {
   zx_handle_t unused = ep0.release();
   (void)unused;
 }
-#endif
 
 TEST(Handles, decode_multiple_present_handles) {
   multiple_nonnullable_handles_message_layout message = {};
@@ -410,8 +414,6 @@ TEST(Arrays, decode_array_of_present_handles) {
   EXPECT_EQ(message.inline_struct.handles[3], dummy_handle_3);
 }
 
-// Disabled on host due to syscall.
-#ifdef __Fuchsia__
 TEST(Arrays, decode_array_of_present_handles_error_closes_handles) {
   array_of_nonnullable_handles_message_layout message = {};
   zx_handle_t handle_pairs[4][2];
@@ -460,7 +462,6 @@ TEST(Arrays, decode_array_of_present_handles_error_closes_handles) {
     EXPECT_EQ(zx_handle_close(handle_pairs[i][1]), ZX_OK);
   }
 }
-#endif
 
 TEST(Arrays, decode_array_of_nonnullable_handles_some_absent_error) {
   array_of_nonnullable_handles_message_layout message = {};
@@ -603,6 +604,7 @@ TEST(Arrays, decode_out_of_line_array) {
   EXPECT_EQ(array_ptr->handles[2], dummy_handle_2);
   EXPECT_EQ(array_ptr->handles[3], dummy_handle_3);
 }
+#endif
 
 TEST(Strings, decode_present_nonnullable_string) {
   unbounded_nonnullable_string_message_layout message = {};
@@ -820,6 +822,7 @@ TEST(Vectors, decode_vector_with_huge_count) {
   EXPECT_NOT_NULL(message_uint32);
 }
 
+#if __Fuchsia__
 TEST(Vectors, decode_present_nonnullable_vector_of_handles) {
   unbounded_nonnullable_vector_of_handles_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
@@ -1051,6 +1054,7 @@ TEST(Vectors, decode_present_nullable_bounded_vector_of_handles_short_error) {
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
 }
+#endif
 
 TEST(Vectors, decode_present_nonnullable_vector_of_uint32) {
   unbounded_nonnullable_vector_of_uint32_message_layout message = {};
@@ -1219,6 +1223,7 @@ TEST(Vectors, decode_present_nullable_bounded_vector_of_uint32_short_error) {
   EXPECT_NOT_NULL(error);
 }
 
+#ifdef __Fuchsia__
 TEST(Structs, decode_nested_nonnullable_structs) {
   nested_structs_message_layout message = {};
   message.inline_struct.l0.handle_0 = FIDL_HANDLE_PRESENT;
@@ -1502,6 +1507,7 @@ TEST(Structs, decode_nested_nullable_structs) {
   EXPECT_NULL(message.inline_struct.l0_present->l1_present->l2_inline.l3_absent);
   EXPECT_NULL(message.inline_struct.l0_present->l1_present->l2_present->l3_absent);
 }
+#endif
 
 TEST(UnknownEnvelope, NumUnknownHandlesExceedsUnknownArraySize) {
   uint8_t bytes[] = {
@@ -1526,6 +1532,7 @@ TEST(UnknownEnvelope, NumUnknownHandlesExceedsUnknownArraySize) {
 // Most fidl_encode_etc code paths are covered by the fidl_encode tests.
 // The FidlDecodeEtc tests cover additional paths.
 
+#ifdef __Fuchsia__
 TEST(FidlDecodeEtc, decode_invalid_handle_info) {
   nonnullable_handle_message_layout message = {};
   message.inline_struct.handle = FIDL_HANDLE_PRESENT;
@@ -1625,8 +1632,6 @@ TEST(FidlDecodeEtc, decode_single_present_handle_info_handle_rights_missing_requ
   ASSERT_SUBSTR(error, "required rights");
 }
 
-// Disabled on host due to syscall.
-#ifdef __Fuchsia__
 TEST(FidlDecodeEtc, decode_single_present_handle_info_handle_rights_too_many_rights) {
   nonnullable_handle_message_layout message = {};
   message.inline_struct.handle = FIDL_HANDLE_PRESENT;

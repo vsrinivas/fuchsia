@@ -121,11 +121,7 @@ IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle
                .num_bytes = byte_actual,
                .num_handles = handle_actual} {}
 
-IncomingMessage::~IncomingMessage() {
-  if (handle_actual() > 0) {
-    FidlHandleInfoCloseMany(handles(), handle_actual());
-  }
-}
+IncomingMessage::~IncomingMessage() { FidlHandleInfoCloseMany(handles(), handle_actual()); }
 
 void IncomingMessage::Init(OutgoingMessage& outgoing_message, zx_handle_info_t* handles,
                            uint32_t handle_capacity) {
