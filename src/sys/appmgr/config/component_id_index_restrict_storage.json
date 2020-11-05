@@ -1,0 +1,8 @@
+// This index file does not contain an index of components, but only enables
+// the option to disallow components from using storage if they are not part of
+// the index.
+{
+    appmgr_restrict_isolated_persistent_storage: true,
+    // The `instances` field is require, but please leave it empty here.
+    instances: []
+}

@@ -230,10 +230,18 @@ config_data("appmgr_scheme_config") {
   outputs = [ "scheme_map/default.config" ]
 }
 
-# Supply a component ID index to appmgr. This index contains component ID entries for components
-# whose source-code lives in this repository (fuchsia.git).
+# Supply a component ID index to appmgr. This index contains component ID
+# entries for components whose source-code lives in this repository
+# (fuchsia.git).
 component_id_index("core_component_id_index") {
   source = "config/core_component_id_index.json"
+}
+
+# If this target is included in the build, only components which are part of
+# the index are allowed to use `isolated-persistent-storage`. Otherwise, they
+# fail to launch.
+component_id_index("component_id_index_restrict_storage") {
+  source = "config/component_id_index_restrict_storage.json"
 }
 
 group("unittests") {
