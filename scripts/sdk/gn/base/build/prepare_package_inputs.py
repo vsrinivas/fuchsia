@@ -71,7 +71,7 @@ def _is_binary(path):
 
     with open(path, 'rb') as f:
         file_tag = f.read(4)
-    return file_tag == '\x7fELF'
+    return file_tag == b'\x7fELF'
 
 
 def _write_build_ids_txt(binary_paths, ids_txt_path):
@@ -89,7 +89,7 @@ def _write_build_ids_txt(binary_paths, ids_txt_path):
         # unstripped versions of a binary are specified.
         stripped_binary_paths = set(map(_get_stripped_path, binary_paths))
         readelf_stdout = subprocess.check_output(
-            ['readelf', '-n'] + list(stripped_binary_paths))
+            ['readelf', '-n'] + list(stripped_binary_paths)).decode('utf8')
 
         if len(binary_paths) == 1:
             # Readelf won't report a binary's path if only one was provided to the
