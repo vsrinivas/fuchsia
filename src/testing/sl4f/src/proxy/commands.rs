@@ -14,8 +14,10 @@ impl Facade for ProxyFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.as_ref() {
             "OpenProxy" => {
-                let target_port: u16 = serde_json::from_value(args)?;
-                let open_port = self.open_proxy(target_port).await?;
+                let ports: Vec<u16> = serde_json::from_value(args)?;
+                let target_port: u16 = ports[0];
+                let proxy_port: u16 = ports[1];
+                let open_port = self.open_proxy(target_port, proxy_port).await?;
                 Ok(to_value(open_port)?)
             }
             "DropProxy" => {

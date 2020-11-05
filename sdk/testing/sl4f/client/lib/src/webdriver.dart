@@ -361,7 +361,7 @@ class TcpPortForwarder implements PortForwarder {
   Future<void> tearDown() async => await _proxyControl.stopAllProxies();
 
   TcpPortForwarder(Sl4f sl4f)
-      : _proxyControl = TcpProxyController(sl4f),
+      : _proxyControl = sl4f.proxy,
         _target = sl4f.target;
 }
 

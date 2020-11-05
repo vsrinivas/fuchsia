@@ -305,6 +305,38 @@ void main() {
       expect(client.target, equals('[::1]'));
       expect(client.port, equals(8282));
     });
+
+    test('tunnel proxy ports', () {
+      Sl4f client = Sl4f.fromEnvironment(environment: {
+        'FUCHSIA_IPV4_ADDR': '1.2.3.4',
+        'FUCHSIA_SSH_KEY': '/foo',
+        'FUCHSIA_SSH_PORT': '8022',
+        'FUCHSIA_PROXY_PORTS': '9001,9002,9003'
+      });
+      expect(client.proxy.proxyPorts, [9001, 9002, 9003]);
+    });
+
+    test('invalid proxy ports', () {
+      expect(
+        () => Sl4f.fromEnvironment(environment: {
+          'FUCHSIA_IPV4_ADDR': '1.2.3.4',
+          'FUCHSIA_SSH_KEY': '/foo',
+          'FUCHSIA_SSH_PORT': '8022',
+          'FUCHSIA_PROXY_PORTS': '9001 9002 9003'
+        }),
+        throwsA(isFormatException),
+      );
+    });
+
+    test('skips negative proxy ports', () {
+      Sl4f client = Sl4f.fromEnvironment(environment: {
+        'FUCHSIA_IPV4_ADDR': '1.2.3.4',
+        'FUCHSIA_SSH_KEY': '/foo',
+        'FUCHSIA_SSH_PORT': '8022',
+        'FUCHSIA_PROXY_PORTS': '9001,-2,9003'
+      });
+      expect(client.proxy.proxyPorts, [9001, 9003]);
+    });
   });
 
   group('Sl4f constructor', () {

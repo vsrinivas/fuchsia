@@ -38,8 +38,7 @@ class FlutterDriverConnector {
 
   frdp.FuchsiaRemoteConnection _connection;
 
-  FlutterDriverConnector(this._sl4f)
-      : _proxyController = TcpProxyController(_sl4f);
+  FlutterDriverConnector(this._sl4f) : _proxyController = _sl4f.proxy;
 
   /// Initializes the connection to fuchsia.
   Future<void> initialize() async {

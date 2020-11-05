@@ -25,16 +25,16 @@ impl ProxyFacade {
     /// Opens an externally accessible proxy to target_port. Returns the
     /// port with which to access the proxy. In case a proxy to |target_port|
     /// is already open, the proxy is reused.
-    pub async fn open_proxy(&self, target_port: u16) -> Result<u16, Error> {
+    pub async fn open_proxy(&self, target_port: u16, proxy_port: u16) -> Result<u16, Error> {
         let mut internal_lock = self.internal.lock().await;
         match *internal_lock {
             None => {
                 let mut internal = ProxyFacadeInternal::new()?;
-                let result = internal.open_proxy(target_port).await;
+                let result = internal.open_proxy(target_port, proxy_port).await;
                 *internal_lock = Some(internal);
                 result
             }
-            Some(ref mut internal) => internal.open_proxy(target_port).await,
+            Some(ref mut internal) => internal.open_proxy(target_port, proxy_port).await,
         }
     }
 
@@ -89,7 +89,7 @@ impl ProxyFacadeInternal {
         Ok(Self { _app: app, proxy_control, open_proxies: HashMap::new() })
     }
 
-    async fn open_proxy(&mut self, target_port: u16) -> Result<u16, Error> {
+    async fn open_proxy(&mut self, target_port: u16, proxy_port: u16) -> Result<u16, Error> {
         match self.open_proxies.get_mut(&target_port) {
             Some(mut proxy) => {
                 proxy.num_users += 1;
@@ -97,7 +97,8 @@ impl ProxyFacadeInternal {
             }
             None => {
                 let (client, server) = fidl::endpoints::create_endpoints::<TcpProxy_Marker>()?;
-                let open_port = self.proxy_control.open_proxy_(target_port, server).await?;
+                let open_port =
+                    self.proxy_control.open_proxy_(target_port, proxy_port, server).await?;
                 self.open_proxies.insert(
                     target_port,
                     OpenProxy { open_port, _proxy_handle: client, num_users: 1 },

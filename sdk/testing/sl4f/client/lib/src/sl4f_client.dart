@@ -16,6 +16,7 @@ import 'package:pedantic/pedantic.dart';
 
 import 'dump.dart';
 import 'exceptions.dart';
+import 'proxy.dart';
 import 'ssh.dart';
 
 final _log = Logger('sl4f_client');
@@ -97,6 +98,11 @@ class Sl4f {
   /// facades to start commands and forward ports.
   final Ssh ssh;
 
+  TcpProxyController _proxy;
+
+  /// [TcpProxyController] proxy controller used to open ports to device.
+  TcpProxyController get proxy => _proxy;
+
   /// Additional HTTP headers to send with each request.
   ///
   /// These may be used by proxy servers.
@@ -114,6 +120,7 @@ class Sl4f {
   /// Optionally specify [headers] and [cookies] to attach those to all requests.
   Sl4f(String target, this.ssh,
       [int port = _sl4fHttpDefaultPort,
+      List<int> proxyPorts = const [],
       this.headers = const {},
       this.cookies = const []])
       : assert(target != null && target.isNotEmpty),
@@ -122,6 +129,7 @@ class Sl4f {
       throw ArgumentError('Target argument cannot contain a port. '
           'Use the port argument instead.');
     }
+    _proxy = TcpProxyController(this, proxyPorts: proxyPorts);
 
     _log.info('Target device: $target');
   }
@@ -158,6 +166,11 @@ class Sl4f {
   /// If `FUCHSIA_SSH_KEY` is not set but `SSH_AUTH_SOCK` is, then it's
   /// assumed that ssh-agent can provide the credentials to connect to the
   /// device. Otherwise an [Sl4fException] is thrown.
+  ///
+  /// If `FUCHSIA_PROXY_PORTS` is specified, then it should be formatted as a
+  /// comma-separated list of port numbers. Ex: '12313,12314,12315,12316'. This
+  /// is the pool of device ports that can be used for listening by the
+  /// TcpProxyController; if not specified then any unbound port will be used.
   factory Sl4f.fromEnvironment({Map<String, String> environment}) {
     environment ??= Platform.environment;
     final address = environment['FUCHSIA_DEVICE_ADDR'] ??
@@ -198,7 +211,24 @@ class Sl4f {
       port = int.parse(environment['SL4F_HTTP_PORT']);
     }
 
-    return Sl4f(host, ssh, port);
+    List<int> proxyPorts = [];
+    if (!_isNullOrEmpty(environment['FUCHSIA_PROXY_PORTS'])) {
+      final portList = environment['FUCHSIA_PROXY_PORTS'];
+      try {
+        proxyPorts.addAll(portList
+            .split(',')
+            .map((e) => e.trim())
+            .map(int.parse)
+            .where((e) => e > 0));
+      } on Exception catch (e) {
+        _log.severe('FUCHSIA_PROXY_PORTS not formatted correctly: $portList'
+            'Specify a comma separated list of port numbers like:'
+            'FUCHSIA_PROXY_PORTS=9000,9001,9002\n$e');
+        throw FormatException('FUCHSIA_PROXY_PORTS not formatted correctly');
+      }
+    }
+
+    return Sl4f(host, ssh, port, proxyPorts);
   }
 
   /// Get the IP address that the device under test will use to reach the test

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:io';
+
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
@@ -12,7 +14,7 @@ void main() {
   setUp(() async {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
-    tcpProxyController = sl4f.TcpProxyController(sl4fDriver);
+    tcpProxyController = sl4fDriver.proxy;
   });
 
   tearDown(() async {
@@ -59,5 +61,23 @@ void main() {
       expect(http.get(Uri.http('${sl4fDriver.target}:$proxyPort', '/')),
           throwsException);
     });
+
+    test('throws exception if run out of tunneled ports', () async {
+      // Get the number of tunneled ports provided by the user.
+      final ports = Platform.environment['FUCHSIA_PROXY_PORTS']
+          .split(',')
+          .map((e) => e.trim())
+          .map(int.parse);
+      expect(ports, isNotEmpty);
+
+      // Exhaust the number of tunneled ports.
+      for (int i = 0; i < ports.length; i++) {
+        await tcpProxyController.openProxy(80);
+      }
+
+      // Opening any more proxies should throw SocketException.
+      final isSocketException = TypeMatcher<SocketException>();
+      expect(tcpProxyController.openProxy(80), throwsA(isSocketException));
+    }, skip: Platform.environment['FUCHSIA_PROXY_PORTS'] == null);
   });
 }

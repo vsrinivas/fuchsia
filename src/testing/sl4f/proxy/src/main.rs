@@ -60,11 +60,17 @@ impl TcpProxyControl {
         mut stream: TcpProxyControlRequestStream,
     ) -> Result<(), Error> {
         while let Some(req) = stream.try_next().await? {
-            let TcpProxyControlRequest::OpenProxy_ { target_port, tcp_proxy, responder } = req;
-            let open_port = self.open_proxy(target_port, tcp_proxy).await.map_err(|e| {
-                warn!("Error opening proxy: {:?}", e);
-                e
-            })?;
+            let TcpProxyControlRequest::OpenProxy_ {
+                target_port,
+                proxy_port,
+                tcp_proxy,
+                responder,
+            } = req;
+            let open_port =
+                self.open_proxy(target_port, proxy_port, tcp_proxy).await.map_err(|e| {
+                    warn!("Error opening proxy: {:?}", e);
+                    e
+                })?;
             responder.send(open_port)?;
         }
         Ok(())
@@ -73,6 +79,7 @@ impl TcpProxyControl {
     async fn open_proxy(
         &self,
         target_port: u16,
+        proxy_port: u16,
         tcp_proxy_token: ServerEnd<TcpProxy_Marker>,
     ) -> Result<u16, Error> {
         let mut tcp_proxy_stream = tcp_proxy_token.into_stream()?;
@@ -87,7 +94,7 @@ impl TcpProxyControl {
             }
         }
 
-        let (tcp_proxy, tcp_proxy_handle) = TcpProxy::new(target_port)?;
+        let (tcp_proxy, tcp_proxy_handle) = TcpProxy::new(target_port, proxy_port)?;
         let open_port = tcp_proxy_handle
             .register_client(tcp_proxy_stream)
             .map_err(|_| anyhow!("Error registering channel with new proxy"))?;
@@ -139,8 +146,8 @@ impl TcpProxyHandle {
 
 impl TcpProxy {
     /// Creates a new `TcpProxy` and corresponding `TcpProxyHandle` with which to register clients.
-    pub fn new(target_port: u16) -> Result<(Self, TcpProxyHandle), Error> {
-        let open_addr: SocketAddrV6 = "[::]:0".parse()?;
+    pub fn new(target_port: u16, proxy_port: u16) -> Result<(Self, TcpProxyHandle), Error> {
+        let open_addr: SocketAddrV6 = format!("[::]:{}", proxy_port).parse()?;
         let tcp_listener = fasync::net::TcpListener::bind(&open_addr.into())?;
         let open_port = tcp_listener.local_addr()?.port();
 
@@ -298,7 +305,7 @@ mod test {
         let test_port = launch_test_server_v6();
         assert_request(test_port).await;
 
-        let (tcp_proxy, tcp_proxy_handle) = TcpProxy::new(test_port).unwrap();
+        let (tcp_proxy, tcp_proxy_handle) = TcpProxy::new(test_port, 0).unwrap();
         let (tcp_proxy_token, tcp_proxy_server_end) =
             create_proxy_and_stream::<TcpProxy_Marker>().unwrap();
         let proxy_port = tcp_proxy_handle
@@ -323,7 +330,7 @@ mod test {
     async fn test_tcp_proxy_ipv4() {
         let test_port = launch_test_server_v4();
 
-        let (tcp_proxy, tcp_proxy_handle) = TcpProxy::new(test_port).unwrap();
+        let (tcp_proxy, tcp_proxy_handle) = TcpProxy::new(test_port, 0).unwrap();
         let (tcp_proxy_token, tcp_proxy_server_end) =
             create_proxy_and_stream::<TcpProxy_Marker>().unwrap();
         let proxy_port = tcp_proxy_handle
@@ -347,7 +354,7 @@ mod test {
         let test_port = launch_test_server_v6();
         assert_request(test_port).await;
 
-        let (tcp_proxy, tcp_proxy_handle) = TcpProxy::new(test_port).unwrap();
+        let (tcp_proxy, tcp_proxy_handle) = TcpProxy::new(test_port, 0).unwrap();
         let (tcp_proxy_token, tcp_proxy_server_end) =
             create_proxy_and_stream::<TcpProxy_Marker>().unwrap();
         let proxy_port = tcp_proxy_handle
@@ -384,12 +391,12 @@ mod test {
 
         let (_proxy_client, proxy_client_server_end) = create_proxy::<TcpProxy_Marker>().unwrap();
         let open_port =
-            control_proxy.open_proxy_(target_port, proxy_client_server_end).await.unwrap();
+            control_proxy.open_proxy_(target_port, 0, proxy_client_server_end).await.unwrap();
 
         let (_proxy_client_2, proxy_client_server_end_2) =
             create_proxy::<TcpProxy_Marker>().unwrap();
         let open_port_2 =
-            control_proxy.open_proxy_(target_port, proxy_client_server_end_2).await.unwrap();
+            control_proxy.open_proxy_(target_port, 0, proxy_client_server_end_2).await.unwrap();
 
         assert_eq!(open_port, open_port_2);
     }
@@ -402,7 +409,8 @@ mod test {
 
         // echo server reachable through proxy
         let (tcp_proxy, tcp_proxy_server_end) = create_proxy().unwrap();
-        let proxy_port = control_proxy.open_proxy_(test_port, tcp_proxy_server_end).await.unwrap();
+        let proxy_port =
+            control_proxy.open_proxy_(test_port, 0, tcp_proxy_server_end).await.unwrap();
         assert_request(proxy_port).await;
 
         // after dropping the TcpProxy, serving should stop
@@ -412,7 +420,8 @@ mod test {
 
         // reachable after recreating proxy
         let (_tcp_proxy, tcp_proxy_server_end) = create_proxy().unwrap();
-        let proxy_port = control_proxy.open_proxy_(test_port, tcp_proxy_server_end).await.unwrap();
+        let proxy_port =
+            control_proxy.open_proxy_(test_port, 0, tcp_proxy_server_end).await.unwrap();
         assert_request(proxy_port).await;
     }
 }

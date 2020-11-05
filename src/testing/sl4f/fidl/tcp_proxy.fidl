@@ -17,8 +17,12 @@ protocol TcpProxyControl {
     /// for the specified |target_port|, the existing |open_port| is returned.
     /// The proxy remains open as long as at least a single client keeps their
     /// |proxy_token| handle for the specified |target_port|. Once all the
-    /// |proxy_token| handles are closed, the proxy is closed.
-    OpenProxy(uint16 target_port, request<TcpProxy> tcp_proxy) -> (uint16 open_port);
+    /// |proxy_token| handles are closed, the proxy is closed. |proxy_port| is
+    /// the source port where the proxy is opened. Except when the test running
+    /// on remote host needs to reach a local device, its value is 0. This is
+    /// only useful when the user has tunneled these ports to the local device
+    /// and specified that port number as |proxy_port|.
+    OpenProxy(uint16 target_port, uint16 proxy_port, request<TcpProxy> tcp_proxy) -> (uint16 open_port);
 };
 
 /// An empty protocol which serves as a token for a proxy started with

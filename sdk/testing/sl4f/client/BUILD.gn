@@ -85,6 +85,7 @@ dart_test("sl4f_client_tests") {
     "modular_test.dart",
     "performance_test.dart",
     "power_test.dart",
+    "proxy_test.dart",
     "scenic_test.dart",
     "sl4f_client_test.dart",
     "ssh_test.dart",

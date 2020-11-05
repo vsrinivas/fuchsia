@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:io';
 import 'sl4f_client.dart';
 
 /// `TcpProxyController` is a utility for host-driven tests that need to access ports on a DUT that
@@ -16,13 +17,19 @@ import 'sl4f_client.dart';
 class TcpProxyController {
   final Sl4f _sl4f;
 
-  TcpProxyController(this._sl4f);
+  int _nextPortIndex = 0;
+
+  /// The pool of ports to use that are explicitly forwarded by the user. These
+  /// are drained in FIFO order for every [openProxy] call.
+  final List<int> proxyPorts;
+
+  TcpProxyController(this._sl4f, {this.proxyPorts = const <int>[]});
 
   /// Open a tunnel to [targetPort] on the DUT.
   ///
   /// Returns the port on the DUT through which the tunnel is accessible.
-  Future<int> openProxy(int targetPort) async =>
-      await _sl4f.request('proxy_facade.OpenProxy', targetPort);
+  Future<int> openProxy(int targetPort) async => await _sl4f
+      .request('proxy_facade.OpenProxy', [targetPort, _nextProxyPort()]);
 
   /// Stop a tunnel to [targetPort] on the DUT.
   ///
@@ -37,4 +44,19 @@ class TcpProxyController {
   /// This method is intended for cleanup after a test only.
   Future<void> stopAllProxies() async =>
       await _sl4f.request('proxy_facade.StopAllProxies');
+
+  // Returns the next proxy port from the list of ports provided during
+  // construction. If no ports where provided, or `_nextPortIndex` is out of
+  // range, it returns 0.
+  int _nextProxyPort() {
+    if (_nextPortIndex < proxyPorts.length) {
+      return proxyPorts[_nextPortIndex++];
+    } else {
+      if (proxyPorts.isNotEmpty) {
+        // Halt the test and notify the user that they ran out of proxy ports.
+        throw SocketException('Tcp proxy ran out of ports.');
+      }
+      return 0;
+    }
+  }
 }
