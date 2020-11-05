@@ -110,7 +110,7 @@ TEST(LauncherTest, ExposeDevfsToHub) {
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
 
   // Add devfs to out directory
-  devmgr.AddDevfsToOutgoingDir(context->outgoing()->root_dir(), loop.dispatcher());
+  devmgr.AddDevfsToOutgoingDir(context->outgoing()->root_dir());
 
   // Verify that devfs is accessible in the outgoing directory
   constexpr char kGlob[] = "/hub/c/devmgr-integration-test.cmx/*/out/dev";

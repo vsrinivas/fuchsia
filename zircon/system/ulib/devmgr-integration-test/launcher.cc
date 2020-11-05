@@ -283,8 +283,7 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
 }
 
 __EXPORT
-zx_status_t IsolatedDevmgr::AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir,
-                                                  async_dispatcher_t* dispatcher) {
+zx_status_t IsolatedDevmgr::AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir) {
   zx::channel client, server;
   auto status = zx::channel::create(0, &client, &server);
   if (status != ZX_OK) {
@@ -294,7 +293,7 @@ zx_status_t IsolatedDevmgr::AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_
   fdio_service_clone_to(fd.borrow_channel(), server.release());
 
   // Add devfs to out directory.
-  auto devfs_out = std::make_unique<vfs::RemoteDir>(std::move(client), dispatcher);
+  auto devfs_out = std::make_unique<vfs::RemoteDir>(std::move(client));
   outgoing_root_dir->AddEntry("dev", std::move(devfs_out));
   return ZX_OK;
 }

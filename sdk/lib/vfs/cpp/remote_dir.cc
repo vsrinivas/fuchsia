@@ -10,19 +10,14 @@
 
 namespace vfs {
 
-RemoteDir::RemoteDir(zx::channel remote_dir, async_dispatcher_t* dispatcher) {
+RemoteDir::RemoteDir(zx::channel remote_dir) {
   ZX_ASSERT(remote_dir.is_valid());
-  dir_ptr_.Bind(std::move(remote_dir), dispatcher);
+  dir_ptr_.Bind(std::move(remote_dir));
 }
 
-RemoteDir::RemoteDir(fidl::InterfaceHandle<fuchsia::io::Directory> dir,
-                     async_dispatcher_t* dispatcher) {
+RemoteDir::RemoteDir(fidl::InterfaceHandle<fuchsia::io::Directory> dir) {
   ZX_ASSERT(dir.is_valid());
-  dir_ptr_.Bind(std::move(dir), dispatcher);
-}
-
-RemoteDir::RemoteDir(fuchsia::io::DirectoryPtr dir_ptr) : dir_ptr_(std::move(dir_ptr)) {
-  ZX_ASSERT(dir_ptr_.is_bound());
+  dir_ptr_.Bind(std::move(dir));
 }
 
 RemoteDir::~RemoteDir() = default;

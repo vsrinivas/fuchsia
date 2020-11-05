@@ -22,16 +22,11 @@ class RemoteDir final : public vfs::internal::Directory {
  public:
   // Binds to a remotely hosted directory using the specified
   // |fuchsia.io.Directory| client channel endpoint.The channel must be valid.
-  explicit RemoteDir(zx::channel remote_dir, async_dispatcher_t* dispatcher = nullptr);
+  explicit RemoteDir(zx::channel remote_dir);
 
   // Binds to a remotely hosted directory using the specified
   // InterfaceHandle. Handle must be valid.
-  explicit RemoteDir(fidl::InterfaceHandle<fuchsia::io::Directory> dir,
-                     async_dispatcher_t* dispatcher = nullptr);
-
-  // Binds to a remotely hosted directory using the specified
-  // |fuchsia::io::DirectoryPtr| endpoint. |dir_ptr| must be valid.
-  explicit RemoteDir(fuchsia::io::DirectoryPtr dir_ptr);
+  explicit RemoteDir(fidl::InterfaceHandle<fuchsia::io::Directory> dir);
 
   ~RemoteDir() override;
 
@@ -46,7 +41,7 @@ class RemoteDir final : public vfs::internal::Directory {
   NodeKind::Type GetKind() const final;
 
  private:
-  fuchsia::io::DirectoryPtr dir_ptr_;
+  fuchsia::io::DirectorySyncPtr dir_ptr_;
 };
 
 }  // namespace vfs

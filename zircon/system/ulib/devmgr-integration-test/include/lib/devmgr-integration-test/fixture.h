@@ -52,8 +52,7 @@ class IsolatedDevmgr {
   zx::channel TakeSvcRootDir() { return std::move(svc_root_dir_); }
 
   // Expose devfs in component outgoing directory.
-  zx_status_t AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir,
-                                    async_dispatcher_t* dispatcher);
+  zx_status_t AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir);
 
   // Notifies if driver manager job has an exception.
   void SetExceptionCallback(fit::closure exception_callback);
