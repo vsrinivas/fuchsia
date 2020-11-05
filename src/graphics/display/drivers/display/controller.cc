@@ -14,6 +14,7 @@
 #include <iterator>
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/binding.h>
@@ -396,7 +397,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
       }
       fbl::AutoLock lock(mtx());
 
-      uint64_t added_ids[added_success_count];
+      std::vector<uint64_t> added_ids(added_success_count);
       uint32_t final_added_success_count = 0;
       for (unsigned i = 0; i < added_success_count; i++) {
         // Dropping some add events can result in spurious removes, but
@@ -410,13 +411,14 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
       }
 
       if (vc_client_ && vc_ready_) {
-        vc_client_->OnDisplaysChanged(added_ids, final_added_success_count, removed_ptr,
+        vc_client_->OnDisplaysChanged(added_ids.data(), final_added_success_count, removed_ptr,
                                       removed_count);
       }
       if (primary_client_ && primary_ready_) {
-        primary_client_->OnDisplaysChanged(added_ids, final_added_success_count, removed_ptr,
+        primary_client_->OnDisplaysChanged(added_ids.data(), final_added_success_count, removed_ptr,
                                            removed_count);
       }
+
     } else {
       zxlogf(ERROR, "Failed to dispatch display change task %d", status);
     }
@@ -516,7 +518,8 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     // displayed), is older than its layer's image (i.e. in front of in the queue) and can be
     // retired, or is newer than its layer's image (i.e. behind in the queue) and has yet to be
     // presented.
-    uint32_t z_indices[handle_count];
+
+    std::vector<uint32_t> z_indices(handle_count);
     for (unsigned i = 0; i < handle_count; i++) {
       z_indices[i] = UINT32_MAX;
     }
@@ -552,7 +555,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     }
   }
 
-  uint64_t images[handle_count];
+  std::vector<uint64_t> images(handle_count);
   image_node_t* cur;
   list_for_every_entry (&info->images, cur, image_node_t, link) {
     for (unsigned i = 0; i < handle_count; i++) {
@@ -577,7 +580,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   }
 
   if (vc_applied_ && vc_client_) {
-    vc_client_->OnDisplayVsync(display_id, timestamp, images, handle_count);
+    vc_client_->OnDisplayVsync(display_id, timestamp, images.data(), handle_count);
   } else if (!vc_applied_ && primary_client_) {
     // A previous client applied a config and then disconnected before the vsync. Don't send garbage
     // image IDs to the new primary client.
@@ -587,7 +590,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
              "but client[%d] is currently active.\n",
              applied_client_id_, primary_client_->id());
     } else {
-      primary_client_->OnDisplayVsync(display_id, timestamp, images, handle_count);
+      primary_client_->OnDisplayVsync(display_id, timestamp, images.data(), handle_count);
     }
   }
 }
