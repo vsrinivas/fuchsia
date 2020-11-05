@@ -127,7 +127,6 @@ Members are appointed by each functional area of the project:
 
 | Area              | Appointee                |
 | ----------------- | ------------------------ |
-| Architecture      | silberst@google.com      |
 | Auth              | jsankey@google.com       |
 | Bluetooth         | jamuraa@google.com       |
 | Component Runtime | geb@google.com           |
