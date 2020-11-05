@@ -106,23 +106,19 @@ func Test_processBlobsManifest(t *testing.T) {
 }
 func Test_processBlobs(t *testing.T) {
 	tests := []struct {
-		name                  string
-		blobMap               map[string]*Blob
-		icuDataMap            map[string]struct{}
-		icuSize               int64
-		distributedShlibsMap  map[string]struct{}
-		distributedShlibsSize int64
-		blobs                 []BlobFromJSON
-		expectedBlobMap       map[string]*Blob
-		expectedSize          int64
+		name                 string
+		blobMap              map[string]*Blob
+		icuDataMap           map[string]*Node
+		distributedShlibsMap map[string]*Node
+		blobs                []BlobFromJSON
+		expectedBlobMap      map[string]*Blob
+		expectedSize         int64
 	}{
 		{
 			"Adding Asset Blob",
 			map[string]*Blob{"hash": {size: 1}},
-			map[string]struct{}{"test.asset": {}},
-			0,
-			map[string]struct{}{"lib/ld.so.1": {}},
-			0,
+			map[string]*Node{"test.asset": {fullPath: "test.asset", size: 0, copies: 1}},
+			map[string]*Node{"lib/ld.so.1": {fullPath: "lib/ld.so.1", size: 0, copies: 1}},
 			[]BlobFromJSON{{Path: "test.asset", Merkle: "hash"}},
 			map[string]*Blob{},
 			1,
@@ -130,10 +126,8 @@ func Test_processBlobs(t *testing.T) {
 		{
 			"Adding Non-asset Blob",
 			map[string]*Blob{"hash": {size: 1, dep: []string{"not used"}}},
-			map[string]struct{}{"test.asset": {}},
-			0,
-			map[string]struct{}{"lib/ld.so.1": {}},
-			0,
+			map[string]*Node{"test.asset": {fullPath: "test.asset", size: 0, copies: 1}},
+			map[string]*Node{"lib/ld.so.1": {fullPath: "lib/ld.so.1", size: 0, copies: 1}},
 			[]BlobFromJSON{{Path: "test.notasset", Merkle: "hash"}},
 			map[string]*Blob{"hash": {size: 1, dep: []string{"not used"}}},
 			0,
@@ -145,9 +139,7 @@ func Test_processBlobs(t *testing.T) {
 			st := processingState{
 				test.blobMap,
 				test.icuDataMap,
-				test.icuSize,
 				test.distributedShlibsMap,
-				test.distributedShlibsSize,
 				newDummyNode(),
 			}
 			parseBlobsJSON(&st, test.blobs, "")
@@ -156,8 +148,12 @@ func Test_processBlobs(t *testing.T) {
 				t.Fatalf("blob map: %v; expect %v", test.blobMap, test.expectedBlobMap)
 			}
 
-			if st.icuDataSize != test.expectedSize {
-				t.Fatalf("ICU Data size: %d; expect %d", test.icuSize, test.expectedSize)
+			var totalIcuDataSize int64
+			for _, node := range test.icuDataMap {
+				totalIcuDataSize += node.size
+			}
+			if totalIcuDataSize != test.expectedSize {
+				t.Fatalf("ICU Data size: %d; expect %d", totalIcuDataSize, test.expectedSize)
 			}
 		})
 	}
@@ -194,8 +190,7 @@ func Test_processBlobsJSON_blobLookup(t *testing.T) {
 		},
 	}
 
-	var dummyMap map[string]struct{}
-	var dummySize int64
+	var dummyMap map[string]*Node
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -203,9 +198,7 @@ func Test_processBlobsJSON_blobLookup(t *testing.T) {
 			st := processingState{
 				test.blobMap,
 				dummyMap,
-				dummySize,
 				dummyMap,
-				dummySize,
 				root,
 			}
 			parseBlobsJSON(&st, []BlobFromJSON{test.blob}, test.pkgPath)
@@ -274,7 +267,7 @@ func Test_nodeFind(t *testing.T) {
 		{
 			"Find Existing Node",
 			"foo",
-			&Node{"foo", 10, make(map[string]*Node)},
+			&Node{"foo", 10, 0, make(map[string]*Node)},
 		},
 		{
 			"Find Nonexistent Node",

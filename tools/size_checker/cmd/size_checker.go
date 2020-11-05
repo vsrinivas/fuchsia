@@ -45,6 +45,7 @@ type SizeLimits struct {
 type Node struct {
 	fullPath string
 	size     int64
+	copies   int64
 	children map[string]*Node
 }
 
@@ -97,6 +98,7 @@ func newDummyNode() *Node {
 func newNode(p string) *Node {
 	return &Node{
 		fullPath: p,
+		copies:   0,
 		children: make(map[string]*Node),
 	}
 }
@@ -158,7 +160,14 @@ func (node *Node) getOnlyChild() (*Node, error) {
 // `level` controls the indentation level to preserve hierarchy in the
 // output.
 func (node *Node) storageBreakdown(level int) string {
-	ret := fmt.Sprintf("%s%s: %s (%d)\n", strings.Repeat("  ", level), node.fullPath, formatSize(node.size), node.size)
+	var copies string
+	if node.copies > 1 {
+		copies = fmt.Sprintf("from %d copies", node.copies)
+	} else if node.copies == 1 {
+		copies = fmt.Sprintf("from 1 copy")
+	}
+
+	ret := fmt.Sprintf("%s%s: %s %s\n", strings.Repeat("  ", level), node.fullPath, formatSize(node.size), copies)
 	for _, n := range node.children {
 		ret += n.storageBreakdown(level + 1)
 	}
@@ -275,12 +284,10 @@ func processBlobsJSON(blobsJSONFile io.Reader) (map[string]int64, error) {
 }
 
 type processingState struct {
-	blobMap               map[string]*Blob
-	icuDataMap            map[string]struct{}
-	icuDataSize           int64
-	distributedShlibs     map[string]struct{}
-	distributedShlibsSize int64
-	root                  *Node
+	blobMap           map[string]*Blob
+	icuDataMap        map[string]*Node
+	distributedShlibs map[string]*Node
+	root              *Node
 }
 
 // Process the packages extracted from blob.manifest.list and process the blobs.json file to build a
@@ -322,12 +329,20 @@ func parseBlobsJSON(
 			// referenced several times by different packages). Therefore, once we have already add the
 			// size, we should remove it from the map
 			if state.blobMap[blob.Merkle] != nil {
-				state.icuDataSize += state.blobMap[blob.Merkle].size
+				if state.icuDataMap[filepath.Base(blob.Path)] == nil {
+					state.icuDataMap[filepath.Base(blob.Path)] = newNode(filepath.Base(blob.Path))
+				}
+				state.icuDataMap[filepath.Base(blob.Path)].size += state.blobMap[blob.Merkle].size
+				state.icuDataMap[filepath.Base(blob.Path)].copies += 1
 				delete(state.blobMap, blob.Merkle)
 			}
 		} else if _, ok := state.distributedShlibs[blob.Path]; ok {
 			if state.blobMap[blob.Merkle] != nil {
-				state.distributedShlibsSize += state.blobMap[blob.Merkle].size
+				if state.distributedShlibs[blob.Path] == nil {
+					state.distributedShlibs[blob.Path] = newNode(blob.Path)
+				}
+				state.distributedShlibs[blob.Path].size += state.blobMap[blob.Merkle].size
+				state.distributedShlibs[blob.Path].copies += 1
 				delete(state.blobMap, blob.Merkle)
 			}
 		} else {
@@ -375,28 +390,40 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 	}
 
 	// We create a set of ICU data filenames.
-	icuDataMap := make(map[string]struct{})
+	icuDataMap := make(map[string]*Node)
 	for _, icu_data := range sizeLimits.ICUData {
-		icuDataMap[icu_data] = struct{}{}
+		icuDataMap[icu_data] = newNode(icu_data)
 	}
 
 	// We also create a map of paths that should be considered distributed shlibs.
-	distributedShlibs := make(map[string]struct{})
+	distributedShlibs := make(map[string]*Node)
 	for _, path := range sizeLimits.DistributedShlibs {
-		distributedShlibs[path] = struct{}{}
+		distributedShlibs[path] = newNode(path)
 	}
 	st := processingState{
 		blobMap,
 		icuDataMap,
-		0,
 		distributedShlibs,
-		0,
 		// The dummy node will have the root node as its only child.
 		newDummyNode(),
 	}
 	// We process the meta.far files that were found in the blobs.manifest here.
 	if err := openAndParseBlobsJSON(buildDir, packages, &st); err != nil {
 		return outputSizes
+	}
+
+	var distributedShlibsNodes []*Node
+	var totalDistributedShlibsSize int64
+	for _, node := range st.distributedShlibs {
+		totalDistributedShlibsSize += node.size
+		distributedShlibsNodes = append(distributedShlibsNodes, node)
+	}
+
+	var icuDataNodes []*Node
+	var totalIcuDataSize int64
+	for _, node := range st.icuDataMap {
+		totalIcuDataSize += node.size
+		icuDataNodes = append(icuDataNodes, node)
 	}
 
 	var total int64
@@ -439,9 +466,9 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 	}
 	const icuDataName = "ICU Data"
 	outputSizes[icuDataName] = &ComponentSize{
-		Size:   st.icuDataSize,
+		Size:   totalIcuDataSize,
 		Budget: ICUDataLimit,
-		nodes:  make([]*Node, 0),
+		nodes:  icuDataNodes,
 	}
 
 	CoreSizeLimit, err := sizeLimits.CoreLimit.Int64()
@@ -460,11 +487,12 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 		if err != nil {
 			log.Fatalf("Failed to parse %s as an int64: %s\n", sizeLimits.DistributedShlibsLimit, err)
 		}
+
 		const distributedShlibsName = "Distributed shared libraries"
 		outputSizes[distributedShlibsName] = &ComponentSize{
-			Size:   st.distributedShlibsSize,
+			Size:   totalDistributedShlibsSize,
 			Budget: DistributedShlibsSizeLimit,
-			nodes:  make([]*Node, 0),
+			nodes:  distributedShlibsNodes,
 		}
 	}
 
