@@ -7,6 +7,7 @@ group("hello_world") {
   deps = [
     ":tests",
     "cpp",
+    "dart",
     "rust",
   ]
 }
@@ -15,6 +16,7 @@ group("tests") {
   testonly = true
   data_deps = [
     "cpp:tests",
+    "dart:tests",
     "rust:tests",
   ]
 }

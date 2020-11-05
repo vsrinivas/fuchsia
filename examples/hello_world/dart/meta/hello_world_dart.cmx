@@ -1,0 +1,9 @@
+{
+  "program": {
+    "data": "data/hello-world-dart"
+  },
+  "sandbox": {
+    "features": [],
+    "services": []
+  }
+}

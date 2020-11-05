@@ -1,0 +1,31 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+import("//build/testing/test_spec.gni")
+
+dart_library("zircon") {
+  package_name = "zircon"
+  language_version = "2.10"
+
+  # sdk_category = "partner"
+
+  sources = [
+    "src/channel.dart",
+    "src/channel_reader.dart",
+    "src/constants.dart",
+    "src/errors.dart",
+    "src/eventpair.dart",
+    "src/fakes/handle.dart",
+    "src/fakes/handle_waiter.dart",
+    "src/fakes/system.dart",
+    "src/fakes/zircon_fakes.dart",
+    "src/handle_wrapper.dart",
+    "src/socket.dart",
+    "src/socket_reader.dart",
+    "src/vmo.dart",
+    "zircon.dart",
+  ]
+}
+# TODO(fxb/62912): Move over the extract constants tests left out of this migration //topaz/public/dart/zircon.
