@@ -7,7 +7,7 @@ use crate::datatypes::HttpsSample;
 use async_trait::async_trait;
 use fuchsia_async::{self as fasync, TimeoutExt};
 use fuchsia_zircon as zx;
-use futures::lock::Mutex;
+use futures::{future::BoxFuture, lock::Mutex, FutureExt};
 use httpdate_hyper::{HttpsDateError, NetworkTimeClient};
 use hyper::Uri;
 use log::warn;
@@ -47,8 +47,14 @@ impl HttpsDateClient for NetworkTimeClient {
 /// the results of multiple polls.
 #[async_trait]
 pub trait HttpsSampler {
-    /// Produce a single `HttpsSample` by polling |num_polls| times.
-    async fn produce_sample(&self, num_polls: usize) -> Result<HttpsSample, HttpsDateError>;
+    /// Produce a single `HttpsSample` by polling |num_polls| times. Returns an Ok result
+    /// containing a Future as soon as the first poll succeeds. The Future yields a sample. This
+    /// signature enables the caller to act on a success as soon as possible without waiting for
+    /// all polls to complete.
+    async fn produce_sample(
+        &self,
+        num_polls: usize,
+    ) -> Result<BoxFuture<'_, HttpsSample>, HttpsDateError>;
 }
 
 /// The default implementation of `HttpsSampler` that uses an `HttpsDateClient` to poll a server.
@@ -74,40 +80,46 @@ impl<C: HttpsDateClient + Send> HttpsSamplerImpl<C> {
 
 #[async_trait]
 impl<C: HttpsDateClient + Send> HttpsSampler for HttpsSamplerImpl<C> {
-    async fn produce_sample(&self, num_polls: usize) -> Result<HttpsSample, HttpsDateError> {
+    async fn produce_sample(
+        &self,
+        num_polls: usize,
+    ) -> Result<BoxFuture<'_, HttpsSample>, HttpsDateError> {
         let (mut bound, first_rtt) = self.poll_server().await?;
         let mut round_trip_times = vec![first_rtt];
 
-        for _ in 1..num_polls {
-            let ideal_next_poll_time = ideal_next_poll_time(&bound, &round_trip_times);
-            fasync::Timer::new(ideal_next_poll_time).await;
+        let sample_fut = async move {
+            for _ in 1..num_polls {
+                let ideal_next_poll_time = ideal_next_poll_time(&bound, &round_trip_times);
+                fasync::Timer::new(ideal_next_poll_time).await;
 
-            // For subsequent polls ignore errors. This allows producing a degraded sample
-            // instead of outright failing as long as one poll succeeds.
-            if let Ok((new_bound, new_rtt)) = self.poll_server().await {
-                bound = match bound.combine(&new_bound) {
-                    Some(combined) => combined,
-                    None => {
-                        // Bounds might fail to combine if e.g. the device went to sleep and
-                        // monotonic time was not updated. We assume the most recent poll is most
-                        // accurate and discard accumulated information.
-                        // TODO(satsukiu): report this event to Cobalt
-                        round_trip_times.clear();
-                        warn!("Unable to combine time bound, time may have moved.");
-                        new_bound
-                    }
-                };
-                round_trip_times.push(new_rtt);
+                // For subsequent polls ignore errors. This allows producing a degraded sample
+                // instead of outright failing as long as one poll succeeds.
+                if let Ok((new_bound, new_rtt)) = self.poll_server().await {
+                    bound = match bound.combine(&new_bound) {
+                        Some(combined) => combined,
+                        None => {
+                            // Bounds might fail to combine if e.g. the device went to sleep and
+                            // monotonic time was not updated. We assume the most recent poll is
+                            // most accurate and discard accumulated information.
+                            // TODO(satsukiu): report this event to Cobalt
+                            round_trip_times.clear();
+                            warn!("Unable to combine time bound, time may have moved.");
+                            new_bound
+                        }
+                    };
+                    round_trip_times.push(new_rtt);
+                }
             }
-        }
+            HttpsSample {
+                utc: avg_time(bound.utc_min, bound.utc_max),
+                monotonic: bound.monotonic,
+                standard_deviation: bound.size() * STANDARD_DEVIATION_BOUND_PERCENTAGE / 100,
+                final_bound_size: bound.size(),
+                round_trip_times,
+            }
+        };
 
-        Ok(HttpsSample {
-            utc: avg_time(bound.utc_min, bound.utc_max),
-            monotonic: bound.monotonic,
-            standard_deviation: bound.size() * STANDARD_DEVIATION_BOUND_PERCENTAGE / 100,
-            final_bound_size: bound.size(),
-            round_trip_times,
-        })
+        Ok(sample_fut.boxed())
     }
 }
 
@@ -213,11 +225,14 @@ mod fake {
 
     #[async_trait]
     impl HttpsSampler for FakeSampler {
-        async fn produce_sample(&self, num_polls: usize) -> Result<HttpsSample, HttpsDateError> {
+        async fn produce_sample(
+            &self,
+            num_polls: usize,
+        ) -> Result<BoxFuture<'_, HttpsSample>, HttpsDateError> {
             match self.enqueued_responses.lock().await.pop_front() {
                 Some(result) => {
                     self.received_request_num_polls.lock().await.push(num_polls);
-                    result
+                    result.map(|sample| futures::future::ready(sample).boxed())
                 }
                 None => {
                     self.completion_notifier.lock().await.take().unwrap().send(()).unwrap();
@@ -229,7 +244,10 @@ mod fake {
 
     #[async_trait]
     impl<T: AsRef<FakeSampler> + Send + Sync> HttpsSampler for T {
-        async fn produce_sample(&self, num_polls: usize) -> Result<HttpsSample, HttpsDateError> {
+        async fn produce_sample(
+            &self,
+            num_polls: usize,
+        ) -> Result<BoxFuture<'_, HttpsSample>, HttpsDateError> {
             self.as_ref().produce_sample(num_polls).await
         }
     }
@@ -259,7 +277,7 @@ mod fake {
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures::FutureExt;
+    use futures::{FutureExt, TryFutureExt};
     use lazy_static::lazy_static;
     use std::{collections::VecDeque, iter::FromIterator};
 
@@ -312,7 +330,7 @@ mod test {
             TestClient::with_offset_responses(vec![Ok(TEST_UTC_OFFSET)]),
         );
         let monotonic_before = zx::Time::get_monotonic();
-        let sample = sampler.produce_sample(1).await.unwrap();
+        let sample = sampler.produce_sample(1).await.unwrap().await;
         let monotonic_after = zx::Time::get_monotonic();
 
         assert!(sample.utc >= monotonic_before + TEST_UTC_OFFSET - ONE_SECOND);
@@ -340,7 +358,7 @@ mod test {
             ]),
         );
         let monotonic_before = zx::Time::get_monotonic();
-        let sample = sampler.produce_sample(3).await.unwrap();
+        let sample = sampler.produce_sample(3).await.unwrap().await;
         let monotonic_after = zx::Time::get_monotonic();
 
         assert!(sample.utc >= monotonic_before + TEST_UTC_OFFSET - ONE_SECOND);
@@ -367,7 +385,10 @@ mod test {
             TestClient::with_offset_responses(vec![Err(HttpsDateError::NetworkError)]),
         );
 
-        assert_eq!(sampler.produce_sample(3).await.unwrap_err(), HttpsDateError::NetworkError);
+        match sampler.produce_sample(3).await {
+            Ok(_) => panic!("Expected error but received Ok"),
+            Err(e) => assert_eq!(e, HttpsDateError::NetworkError),
+        };
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -381,7 +402,7 @@ mod test {
             ]),
         );
 
-        let sample = sampler.produce_sample(3).await.unwrap();
+        let sample = sampler.produce_sample(3).await.unwrap().await;
         assert_eq!(sample.round_trip_times.len(), 2);
     }
 
@@ -398,7 +419,7 @@ mod test {
         );
 
         let monotonic_before = zx::Time::get_monotonic();
-        let sample = sampler.produce_sample(3).await.unwrap();
+        let sample = sampler.produce_sample(3).await.unwrap().await;
         let monotonic_after = zx::Time::get_monotonic();
 
         assert_eq!(sample.round_trip_times.len(), 1);
@@ -485,7 +506,13 @@ mod test {
         ];
         let (fake_sampler, complete_fut) = FakeSampler::with_responses(expected_responses.clone());
         for expected in expected_responses {
-            assert_eq!(expected, fake_sampler.produce_sample(1).await);
+            assert_eq!(
+                expected,
+                fake_sampler
+                    .produce_sample(1)
+                    .and_then(|sample_fut| async move { Ok(sample_fut.await) })
+                    .await
+            );
         }
 
         // After exhausting canned responses, the sampler should stall.

@@ -113,13 +113,14 @@ where
         loop {
             let attempt = attempt_iter.next().unwrap_or(u32::MAX);
             match self.sampler.produce_sample(num_polls).await {
-                Ok(sample) => {
+                Ok(sample_fut) => {
+                    sink.send(Status::Ok.into()).await?;
+                    let sample = sample_fut.await;
                     info!(
                         "Got a time sample - UTC {:?}, bound size {:?}, and round trip times {:?}",
                         sample.utc, sample.final_bound_size, sample.round_trip_times
                     );
                     self.diagnostics.success(&sample);
-                    sink.send(Status::Ok.into()).await?;
                     sink.send(sample.into()).await?;
                     return Ok(());
                 }
