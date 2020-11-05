@@ -21,9 +21,9 @@ static const struct FidlCodedVector Vector4294967295nullable5int32Table = {.tag=
 
 static const struct FidlCodedString String4294967295nullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nullable};
 
-static const struct FidlCodedHandle Request33fidl_test_nullable_SimpleProtocolnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nullable};
+static const struct FidlCodedHandle Request33fidl_test_nullable_SimpleProtocolnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nullable};
 
-static const struct FidlCodedHandle Protocol33fidl_test_nullable_SimpleProtocolnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nullable};
+static const struct FidlCodedHandle Protocol33fidl_test_nullable_SimpleProtocolnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nullable};
 
 static const struct FidlCodedHandle HandlevmonullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable};
 

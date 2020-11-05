@@ -875,7 +875,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
   }  // switch
 
   // close inbound handles so they do not leak
-  zx_handle_close_many(msg->handles, msg->num_handles);
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ZX_ERR_NOT_SUPPORTED;
 }
 

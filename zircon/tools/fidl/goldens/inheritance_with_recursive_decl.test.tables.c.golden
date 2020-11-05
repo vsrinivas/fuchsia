@@ -5,7 +5,7 @@
 
 
 
-static const struct FidlCodedHandle Request45fidl_test_inheritancewithrecursivedecl_ParentnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedHandle Request45fidl_test_inheritancewithrecursivedecl_ParentnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
 extern const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 static const struct FidlStructElement Fields57fidl_test_inheritancewithrecursivedecl_ParentFirstRequest[] = {

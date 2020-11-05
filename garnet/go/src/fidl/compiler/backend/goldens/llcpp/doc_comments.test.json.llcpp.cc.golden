@@ -60,8 +60,8 @@ std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
     case kInterface_OnEvent_Ordinal: {
       const char* error_message;
       zx_status_t status =
-          fidl_decode(OnEventResponse::Type, msg->bytes, msg->num_bytes,
-                      msg->handles, msg->num_handles, &error_message);
+          fidl_decode_etc(OnEventResponse::Type, msg->bytes, msg->num_bytes,
+                          msg->handles, msg->num_handles, &error_message);
       if (status != ZX_OK) {
         return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
       }
@@ -73,7 +73,7 @@ std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
       break;
     }
     default:
-      zx_handle_close_many(msg->handles, msg->num_handles);
+      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
       return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                                 ZX_ERR_NOT_SUPPORTED};
   }
@@ -148,7 +148,7 @@ std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
       return ::fidl::Result(handlers.on_event(), nullptr);
     }
     default: {
-      zx_handle_close_many(read_handles, actual_handles);
+      FidlHandleCloseMany(read_handles, actual_handles);
       return ::fidl::Result(handlers.unknown(), nullptr);
     }
   }
@@ -187,7 +187,7 @@ namespace entries {
                                            ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
+    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }

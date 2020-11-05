@@ -417,6 +417,7 @@ zx_cache_flush
 zx_channel_call
 zx_channel_create
 zx_channel_read
+zx_channel_read_etc
 zx_channel_write
 zx_clock_get_monotonic
 zx_cprng_draw

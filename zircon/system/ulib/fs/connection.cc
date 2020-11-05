@@ -224,15 +224,15 @@ bool Connection::OnMessage() {
   }
   std::shared_ptr<Binding> binding = binding_;
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_incoming_msg_t msg = {
       .bytes = bytes,
       .handles = handles,
       .num_bytes = 0,
       .num_handles = 0,
   };
-  zx_status_t r = binding->channel().read(0, bytes, handles, std::size(bytes), std::size(handles),
-                                          &msg.num_bytes, &msg.num_handles);
+  zx_status_t r = binding->channel().read_etc(0, bytes, handles, std::size(bytes),
+                                              std::size(handles), &msg.num_bytes, &msg.num_handles);
   if (r != ZX_OK) {
     return false;
   }
@@ -242,7 +242,7 @@ bool Connection::OnMessage() {
   r = msg.num_bytes < sizeof(fidl_message_header_t) ? ZX_ERR_INVALID_ARGS
                                                     : fidl_validate_txn_header(header);
   if (r != ZX_OK) {
-    zx_handle_close_many(msg.handles, msg.num_handles);
+    FidlHandleInfoCloseMany(msg.handles, msg.num_handles);
     return false;
   }
 

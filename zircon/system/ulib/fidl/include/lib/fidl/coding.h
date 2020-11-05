@@ -71,6 +71,16 @@ zx_status_t fidl_decode_skip_unknown_union_handles(const fidl_type_t* type, void
                                                    uint32_t num_bytes, const zx_handle_t* handles,
                                                    uint32_t num_handles,
                                                    const char** error_msg_out);
+
+// Perform a fidl_decode and check handle types and rights against the types and rights specified
+// in the FIDL file.
+//
+// It is an error for a zx_handle_info_t to contain a handle type that does not match what is
+// expected from FIDL unless either the expected or actual type is ZX_OBJ_TYPE_NONE.
+// It is also error if there are fewer actual rights than expected rights and the actual or
+// expected rights are not ZX_RIGHT_SAME_RIGHTS. If there are more actual rights than expected
+// rights, the actual rights will be reduced to the expected rights via a call to
+// zx_handle_replace.
 zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                             const zx_handle_info_t* handle_infos, uint32_t num_handle_infos,
                             const char** error_msg_out);

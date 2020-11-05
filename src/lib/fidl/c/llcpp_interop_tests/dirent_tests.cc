@@ -147,7 +147,7 @@ class Server {
   static zx_status_t FidlDispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* msg,
                                   const void* ops) {
     if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-      zx_handle_close_many(msg->handles, msg->num_handles);
+      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
       return ZX_ERR_INVALID_ARGS;
     }
     fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);

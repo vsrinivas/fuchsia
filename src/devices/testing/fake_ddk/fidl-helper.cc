@@ -60,7 +60,7 @@ std::variant<::fidl::Transaction*, std::unique_ptr<::fidl::Transaction>> FromDdk
   auto status = message_op_(op_ctx_, msg, ddk_txn.Txn());
   const bool found = status == ZX_OK || status == ZX_ERR_ASYNC;
   if (!found) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
+    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->Close(status);
   }
   return found ? ::fidl::DispatchResult::kFound : ::fidl::DispatchResult::kNotFound;

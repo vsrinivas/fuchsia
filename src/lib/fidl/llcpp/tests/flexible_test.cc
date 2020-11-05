@@ -241,9 +241,9 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
             .num_bytes = 0u,
             .num_handles = 0u,
         };
-        status = zx_channel_read(async_wait_t::object, 0, msg.bytes, msg.handles,
-                                 ZX_CHANNEL_MAX_MSG_BYTES, ZX_CHANNEL_MAX_MSG_HANDLES,
-                                 &msg.num_bytes, &msg.num_handles);
+        status = zx_channel_read_etc(async_wait_t::object, 0, msg.bytes, msg.handles,
+                                     ZX_CHANNEL_MAX_MSG_BYTES, ZX_CHANNEL_MAX_MSG_HANDLES,
+                                     &msg.num_bytes, &msg.num_handles);
         if (status != ZX_OK || msg.num_bytes < sizeof(fidl_message_header_t)) {
           return;
         }
@@ -269,8 +269,8 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
  private:
   async_dispatcher_t* dispatcher_;
   std::unique_ptr<char[]> bytes_ = std::make_unique<char[]>(ZX_CHANNEL_MAX_MSG_BYTES);
-  std::unique_ptr<zx_handle_t[]> handles_ =
-      std::make_unique<zx_handle_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
+  std::unique_ptr<zx_handle_info_t[]> handles_ =
+      std::make_unique<zx_handle_info_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
 };
 
 }  // namespace

@@ -65,12 +65,12 @@ namespace entries {
   {{- if HasMethodWithReqs .Methods }}
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
+    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return dispatch_result;
   {{- else }}
-  zx_handle_close_many(msg->handles, msg->num_handles);
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
   {{- end }}

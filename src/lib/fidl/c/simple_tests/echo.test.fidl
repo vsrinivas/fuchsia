@@ -8,6 +8,6 @@ using zx;
 
 [ForDeprecatedCBindings]
 protocol Echo {
-    Echo(zx.handle:PROCESS process, zx.handle:THREAD thread) -> (zx.status status);
+    Echo(zx.handle:EVENTPAIR process, zx.handle:EVENTPAIR thread) -> (zx.status status);
     Ping();
 };

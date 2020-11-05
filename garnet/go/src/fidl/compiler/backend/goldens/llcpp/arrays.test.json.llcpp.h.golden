@@ -296,7 +296,8 @@ class TableSmallArray final {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<TableSmallArray>();
@@ -554,7 +555,8 @@ class TableLargeArray final {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<TableLargeArray>();
@@ -792,7 +794,8 @@ struct StructSmallArray {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct StructSmallArray>();
@@ -909,7 +912,8 @@ struct StructLargeArray {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct StructLargeArray>();

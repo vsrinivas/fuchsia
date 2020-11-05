@@ -146,7 +146,8 @@ class SimpleTable final {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<SimpleTable>();
@@ -471,7 +472,8 @@ class ReverseOrdinalTable final {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<ReverseOrdinalTable>();
@@ -809,7 +811,8 @@ class OlderSimpleTable final {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<OlderSimpleTable>();
@@ -1091,7 +1094,8 @@ class NewerSimpleTable final {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<NewerSimpleTable>();
@@ -1419,7 +1423,8 @@ class EmptyTable final {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<EmptyTable>();

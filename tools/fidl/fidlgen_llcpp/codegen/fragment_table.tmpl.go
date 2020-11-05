@@ -139,7 +139,7 @@ public:
   // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
-    IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
+    IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
                     uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
       Decode<{{ .Name }}>();
@@ -182,7 +182,7 @@ public:
    private:
     IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
     {{- if gt .MaxHandles 0 }}
-      zx_handle_t handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+      zx_handle_info_t handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       Init(outgoing_message, handles, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
     {{- else }}
       Init(outgoing_message, nullptr, 0);

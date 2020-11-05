@@ -56,9 +56,18 @@ void Driver::set_binding(
 }
 
 zx::status<> Driver::Start(const fidl::OutgoingMessage& message, async_dispatcher_t* dispatcher) {
+  // TODO(fxb/63182) Convert type and rights from the handle disposition.
+  zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
+  for (size_t i = 0; i < message.handle_actual(); i++) {
+    handle_infos[i] = zx_handle_info_t{
+        .handle = message.handles()[i],
+        .type = ZX_OBJ_TYPE_NONE,        // Skip handle type check in fidl_decode_etc.
+        .rights = ZX_RIGHT_SAME_RIGHTS,  // Skip handle rights check in fidl_decode_etc.
+    };
+  }
   fidl_incoming_msg_t msg = {
       .bytes = message.bytes(),
-      .handles = message.handles(),
+      .handles = handle_infos,
       .num_bytes = message.byte_actual(),
       .num_handles = message.handle_actual(),
   };

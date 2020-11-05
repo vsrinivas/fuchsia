@@ -234,7 +234,8 @@ struct StructWithNullableVector {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct StructWithNullableVector>();
@@ -352,7 +353,8 @@ struct StructWithNullableUnion {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct StructWithNullableUnion>();
@@ -470,7 +472,8 @@ struct StructWithNullableStruct {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct StructWithNullableStruct>();
@@ -590,7 +593,8 @@ struct StructWithNullableString {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct StructWithNullableString>();
@@ -710,7 +714,8 @@ struct StructWithNullableRequest {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct StructWithNullableRequest>();
@@ -753,7 +758,8 @@ struct StructWithNullableRequest {
 
    private:
     IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
-      zx_handle_t handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+      zx_handle_info_t
+          handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       Init(outgoing_message, handles,
            std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
       if (ok()) {
@@ -837,7 +843,8 @@ struct StructWithNullableProtocol {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct StructWithNullableProtocol>();
@@ -880,7 +887,8 @@ struct StructWithNullableProtocol {
 
    private:
     IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
-      zx_handle_t handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+      zx_handle_info_t
+          handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       Init(outgoing_message, handles,
            std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
       if (ok()) {
@@ -963,7 +971,8 @@ struct StructWithNullableHandle {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct StructWithNullableHandle>();
@@ -1006,7 +1015,8 @@ struct StructWithNullableHandle {
 
    private:
     IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
-      zx_handle_t handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+      zx_handle_info_t
+          handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       Init(outgoing_message, handles,
            std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
       if (ok()) {
@@ -1112,7 +1122,7 @@ class SimpleProtocol final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -1257,7 +1267,7 @@ class SimpleProtocol final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -1581,7 +1591,8 @@ struct Int32Wrapper {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Int32Wrapper>();

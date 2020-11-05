@@ -168,9 +168,8 @@ TEST(X86Board, InvalidObject) {
   zx::channel::create(/*flags=*/0, &a, &b);
   Acpi::ResultOf::ReadNamedTable result =
       Acpi::Call::ReadNamedTable(dev.channel(), StringToSignature("DSDT"), 0, zx::vmo(a.release()));
-  ASSERT_TRUE(result.ok());
-  EXPECT_TRUE(result.value().result.is_err());
-  EXPECT_EQ(result.value().result.err(), ZX_ERR_WRONG_TYPE);
+  // FIDL detects that a channel is being sent as a VMO handle.
+  ASSERT_FALSE(result.ok());
 }
 
 }  // namespace

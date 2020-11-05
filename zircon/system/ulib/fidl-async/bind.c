@@ -55,7 +55,7 @@ static void fidl_message_handler(async_dispatcher_t* dispatcher, async_wait_t* w
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint64_t i = 0; i < signal->count; i++) {
       fidl_incoming_msg_t msg = {
           .bytes = bytes,
@@ -64,8 +64,8 @@ static void fidl_message_handler(async_dispatcher_t* dispatcher, async_wait_t* w
           .num_handles = 0u,
       };
       fidl_trace(WillCChannelRead);
-      status = zx_channel_read(wait->object, 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
-                               ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
+      status = zx_channel_read_etc(wait->object, 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
+                                   ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
       if (status == ZX_ERR_SHOULD_WAIT) {
         // This occurs when someone else has read the message we were expecting.
         goto shutdown;

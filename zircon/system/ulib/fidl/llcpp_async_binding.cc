@@ -72,7 +72,7 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint64_t i = 0; i < signal->count; i++) {
       fidl_incoming_msg_t msg = {
           .bytes = bytes,
@@ -81,8 +81,8 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
           .num_handles = 0u,
       };
       fidl_trace(WillLLCPPAsyncChannelRead);
-      status = zx_channel_read(handle(), 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
-                               ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
+      status = zx_channel_read_etc(handle(), 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
+                                   ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
       if (status != ZX_OK)
         return OnUnbind(std::move(keep_alive_), {UnbindInfo::kChannelError, status});
 
@@ -91,7 +91,7 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
                    ? ZX_ERR_INVALID_ARGS
                    : fidl_validate_txn_header(reinterpret_cast<fidl_message_header_t*>(msg.bytes));
       if (status != ZX_OK) {
-        zx_handle_close_many(msg.handles, msg.num_handles);
+        FidlHandleInfoCloseMany(msg.handles, msg.num_handles);
         return OnUnbind(std::move(keep_alive_), {UnbindInfo::kUnexpectedMessage, status});
       }
       fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes, msg.num_bytes,

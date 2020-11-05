@@ -93,7 +93,7 @@ std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_in
     case {{ .OrdinalName }}:
     {
       const char* error_message;
-      zx_status_t status = fidl_decode({{ .Name }}Response::Type, msg->bytes, msg->num_bytes,
+      zx_status_t status = fidl_decode_etc({{ .Name }}Response::Type, msg->bytes, msg->num_bytes,
                                        msg->handles, msg->num_handles, &error_message);
       if (status != ZX_OK) {
         return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
@@ -111,7 +111,7 @@ std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_in
     {{- end }}
   {{- end }}
     default:
-      zx_handle_close_many(msg->handles, msg->num_handles);
+      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
       return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
   }
   return {};

@@ -167,14 +167,22 @@ class FidlDecoder final : public BaseVisitor<Byte> {
       return Status::kConstraintViolationError;
     }
 
+    // Note: objects returned from the kernel should never have type
+    // ZX_OBJ_TYPE_NONE, however this is used for backwards compatibility in
+    // some places.
     if (unlikely(required_handle_subtype != received_handle_info.type &&
-                 required_handle_subtype != ZX_OBJ_TYPE_NONE)) {
+                 required_handle_subtype != ZX_OBJ_TYPE_NONE &&
+                 received_handle_info.type != ZX_OBJ_TYPE_NONE)) {
       SetError("decoded handle object type does not match expected type");
       return Status::kConstraintViolationError;
     }
 
     // Special case: ZX_HANDLE_SAME_RIGHTS allows all handles through unchanged.
-    if (required_handle_rights == ZX_RIGHT_SAME_RIGHTS) {
+    // Note: objects returned from the kernel should never have rights
+    // ZX_RIGHT_SAME_RIGHTS, however this is used for backwards compatibility
+    // in some places.
+    if (required_handle_rights == ZX_RIGHT_SAME_RIGHTS ||
+        received_handle_info.rights == ZX_RIGHT_SAME_RIGHTS) {
       AssignInDecode<mode>(handle, received_handle);
       handle_idx_++;
       return Status::kSuccess;
@@ -485,8 +493,8 @@ zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_b
 
 zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
                             const char** out_error_msg) {
-  return fidl_decode(type, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles,
-                     out_error_msg);
+  return fidl_decode_etc(type, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles,
+                         out_error_msg);
 }
 
 zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,

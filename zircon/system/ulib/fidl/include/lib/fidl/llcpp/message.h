@@ -130,7 +130,7 @@ class IncomingMessage : public ::fidl::Result {
   // |IncomingMessage| is destructed.
   // If Decode has been called, the handles have been transferred to the allocated memory.
   IncomingMessage();
-  IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
+  IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles,
                   uint32_t handle_actual);
   explicit IncomingMessage(const fidl_incoming_msg_t* msg)
       : ::fidl::Result(ZX_OK, nullptr), message_(*msg) {}
@@ -144,7 +144,7 @@ class IncomingMessage : public ::fidl::Result {
   ~IncomingMessage();
 
   uint8_t* bytes() const { return reinterpret_cast<uint8_t*>(message_.bytes); }
-  zx_handle_t* handles() const { return message_.handles; }
+  zx_handle_info_t* handles() const { return message_.handles; }
   uint32_t byte_actual() const { return message_.num_bytes; }
   uint32_t handle_actual() const { return message_.num_handles; }
   fidl_incoming_msg_t* message() { return &message_; }
@@ -152,7 +152,8 @@ class IncomingMessage : public ::fidl::Result {
  protected:
   // Initialize the |IncomingMessage| from an |OutgoingMessage|. The handles within
   // |OutgoingMessage| are transferred to the |IncomingMessage|.
-  void Init(OutgoingMessage& outgoing_message, zx_handle_t* handles, uint32_t handle_capacity);
+  // This is intended only for tests.
+  void Init(OutgoingMessage& outgoing_message, zx_handle_info_t* handles, uint32_t handle_capacity);
 
   // Reset the byte pointer. Used to relase the control onwership of the bytes.
   void ResetBytes() { message_.bytes = nullptr; }

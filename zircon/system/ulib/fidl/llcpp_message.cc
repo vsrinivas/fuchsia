@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/coding.h>
+#include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/message.h>
@@ -112,7 +113,7 @@ namespace internal {
 
 IncomingMessage::IncomingMessage() : ::fidl::Result(ZX_OK, nullptr) {}
 
-IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
+IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles,
                                  uint32_t handle_actual)
     : ::fidl::Result(ZX_OK, nullptr),
       message_{.bytes = bytes,
@@ -121,16 +122,12 @@ IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle
                .num_handles = handle_actual} {}
 
 IncomingMessage::~IncomingMessage() {
-#ifdef __Fuchsia__
   if (handle_actual() > 0) {
-    zx_handle_close_many(handles(), handle_actual());
+    FidlHandleInfoCloseMany(handles(), handle_actual());
   }
-#else
-  ZX_ASSERT(handle_actual() == 0);
-#endif
 }
 
-void IncomingMessage::Init(OutgoingMessage& outgoing_message, zx_handle_t* handles,
+void IncomingMessage::Init(OutgoingMessage& outgoing_message, zx_handle_info_t* handles,
                            uint32_t handle_capacity) {
   message_.bytes = outgoing_message.bytes();
   message_.handles = handles;
@@ -140,7 +137,11 @@ void IncomingMessage::Init(OutgoingMessage& outgoing_message, zx_handle_t* handl
     SetResult(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall);
   } else {
     for (uint32_t i = 0; i < outgoing_message.handle_actual(); ++i) {
-      message_.handles[i] = outgoing_message.handles()[i];
+      message_.handles[i] = zx_handle_info_t{
+          .handle = outgoing_message.handles()[i],
+          .type = ZX_OBJ_TYPE_NONE,
+          .rights = ZX_RIGHT_SAME_RIGHTS,
+      };
     }
     message_.num_handles = outgoing_message.handle_actual();
     outgoing_message.ReleaseHandles();
@@ -148,7 +149,8 @@ void IncomingMessage::Init(OutgoingMessage& outgoing_message, zx_handle_t* handl
 }
 
 void IncomingMessage::Decode(const fidl_type_t* message_type) {
-  status_ = fidl_decode(message_type, bytes(), byte_actual(), handles(), handle_actual(), &error_);
+  status_ =
+      fidl_decode_etc(message_type, bytes(), byte_actual(), handles(), handle_actual(), &error_);
   ReleaseHandles();
 }
 

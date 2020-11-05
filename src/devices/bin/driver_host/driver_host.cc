@@ -630,10 +630,10 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_clien
 zx_status_t DevhostControllerConnection::HandleRead() {
   zx::unowned_channel conn = channel();
   uint8_t msg[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_info_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t msize = sizeof(msg);
   uint32_t hcount = std::size(hin);
-  zx_status_t status = conn->read(0, msg, hin, msize, hcount, &msize, &hcount);
+  zx_status_t status = conn->read_etc(0, msg, hin, msize, hcount, &msize, &hcount);
   if (status != ZX_OK) {
     return status;
   }
@@ -646,7 +646,7 @@ zx_status_t DevhostControllerConnection::HandleRead() {
   };
 
   if (fidl_msg.num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
+    FidlHandleInfoCloseMany(fidl_msg.handles, fidl_msg.num_handles);
     return ZX_ERR_IO;
   }
 

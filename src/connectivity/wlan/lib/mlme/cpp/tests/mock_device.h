@@ -48,8 +48,8 @@ struct FidlMessage {
   static std::optional<FidlMessage> ReadFromChannel(zx::channel* endpoint) {
     FidlMessage msg = {};
     auto status =
-        endpoint->read(ZX_CHANNEL_READ_MAY_DISCARD, msg.bytes, msg.handles, sizeof(msg.bytes),
-                       sizeof(msg.handles), &msg.actual_bytes, &msg.actual_handles);
+        endpoint->read_etc(ZX_CHANNEL_READ_MAY_DISCARD, msg.bytes, msg.handles, sizeof(msg.bytes),
+                           sizeof(msg.handles), &msg.actual_bytes, &msg.actual_handles);
     if (status != ZX_OK) {
       return {std::nullopt};
     }
@@ -66,7 +66,7 @@ struct FidlMessage {
   fbl::Span<uint8_t> data() { return {bytes, actual_bytes}; }
 
   FIDL_ALIGNDECL uint8_t bytes[256];
-  zx_handle_t handles[256];
+  zx_handle_info_t handles[256];
   uint32_t actual_bytes;
   uint32_t actual_handles;
 };

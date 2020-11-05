@@ -86,15 +86,15 @@ TEST(ClientTests, magic_number_request_test) {
   ASSERT_EQ(ZX_OK, status, "");
 
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_incoming_msg_t msg = {
       .bytes = bytes,
       .handles = handles,
       .num_bytes = 0u,
       .num_handles = 0u,
   };
-  status = zx_channel_read(server, 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
-                           ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
+  status = zx_channel_read_etc(server, 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
+                               ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
   ASSERT_EQ(ZX_OK, status, "");
   ASSERT_EQ(msg.num_bytes, sizeof(fidl_message_header_t), "");
 

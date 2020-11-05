@@ -535,7 +535,8 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct WithErrorSyntax_ResponseAsStruct_Response>();
@@ -658,7 +659,8 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct WithErrorSyntax_ErrorAsPrimitive_Response>();
@@ -779,7 +781,8 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct WithErrorSyntax_ErrorAsEnum_Response>();
@@ -930,7 +933,7 @@ class Transitional final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -1075,7 +1078,7 @@ class Transitional final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -1219,7 +1222,7 @@ class Transitional final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -1358,7 +1361,7 @@ class Transitional final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -1824,7 +1827,7 @@ class ChannelProtocol final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -1968,7 +1971,7 @@ class ChannelProtocol final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -2108,7 +2111,7 @@ class ChannelProtocol final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -2255,7 +2258,7 @@ class ChannelProtocol final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -2401,7 +2404,7 @@ class ChannelProtocol final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -2445,7 +2448,7 @@ class ChannelProtocol final {
 
      private:
       IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
-        zx_handle_t
+        zx_handle_info_t
             handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
         Init(outgoing_message, handles,
              std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
@@ -2558,7 +2561,7 @@ class ChannelProtocol final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -2602,7 +2605,7 @@ class ChannelProtocol final {
 
      private:
       IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
-        zx_handle_t
+        zx_handle_info_t
             handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
         Init(outgoing_message, handles,
              std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
@@ -3179,7 +3182,7 @@ class WithAndWithoutRequestResponse final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -3318,7 +3321,7 @@ class WithAndWithoutRequestResponse final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -3462,7 +3465,7 @@ class WithAndWithoutRequestResponse final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -3612,7 +3615,7 @@ class WithAndWithoutRequestResponse final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -3757,7 +3760,7 @@ class WithAndWithoutRequestResponse final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -3913,7 +3916,7 @@ class WithAndWithoutRequestResponse final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -4053,7 +4056,7 @@ class WithAndWithoutRequestResponse final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -4208,7 +4211,7 @@ class WithAndWithoutRequestResponse final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -4359,7 +4362,7 @@ class WithAndWithoutRequestResponse final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -4515,7 +4518,7 @@ class WithAndWithoutRequestResponse final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -4653,7 +4656,7 @@ class WithAndWithoutRequestResponse final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -4801,7 +4804,7 @@ class WithAndWithoutRequestResponse final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -5738,7 +5741,7 @@ class WithErrorSyntax final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -5880,7 +5883,7 @@ class WithErrorSyntax final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -6032,7 +6035,7 @@ class WithErrorSyntax final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -6174,7 +6177,7 @@ class WithErrorSyntax final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -6325,7 +6328,7 @@ class WithErrorSyntax final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -6467,7 +6470,7 @@ class WithErrorSyntax final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {

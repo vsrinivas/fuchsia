@@ -117,7 +117,7 @@ std::optional<::fidl::UnbindInfo> super::ClientImpl::DispatchEvent(
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     default:
-      zx_handle_close_many(msg->handles, msg->num_handles);
+      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
       return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                                 ZX_ERR_NOT_SUPPORTED};
   }
@@ -157,7 +157,7 @@ namespace entries {
                                        ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
+    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -290,7 +290,7 @@ std::optional<::fidl::UnbindInfo> sub::ClientImpl::DispatchEvent(
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     default:
-      zx_handle_close_many(msg->handles, msg->num_handles);
+      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
       return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                                 ZX_ERR_NOT_SUPPORTED};
   }
@@ -329,7 +329,7 @@ namespace entries {
                                      ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
+    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }

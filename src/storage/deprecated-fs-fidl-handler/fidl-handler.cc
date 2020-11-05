@@ -5,6 +5,7 @@
 #include "fidl-handler.h"
 
 #include <fuchsia/io/c/fidl.h>
+#include <lib/fidl/internal.h>
 #include <lib/fidl/txn_header.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +34,7 @@ zx_status_t NullReply(fidl_txn_t* reply, const fidl_outgoing_msg_t* msg) { retur
 zx_status_t ReadMessage(zx_handle_t h, FidlDispatchFunction dispatch) {
   ZX_ASSERT(zx_object_get_info(h, ZX_INFO_HANDLE_VALID, NULL, 0, NULL, NULL) == ZX_OK);
   uint8_t bytes[ZXFIDL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZXFIDL_MAX_MSG_HANDLES];
+  zx_handle_info_t handles[ZXFIDL_MAX_MSG_HANDLES];
   fidl_incoming_msg_t msg = {
       .bytes = bytes,
       .handles = handles,
@@ -41,14 +42,14 @@ zx_status_t ReadMessage(zx_handle_t h, FidlDispatchFunction dispatch) {
       .num_handles = 0,
   };
 
-  zx_status_t r = zx_channel_read(h, 0, bytes, handles, countof(bytes), countof(handles),
-                                  &msg.num_bytes, &msg.num_handles);
+  zx_status_t r = zx_channel_read_etc(h, 0, bytes, handles, countof(bytes), countof(handles),
+                                      &msg.num_bytes, &msg.num_handles);
   if (r != ZX_OK) {
     return r;
   }
 
   if (msg.num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(msg.handles, msg.num_handles);
+    FidlHandleInfoCloseMany(msg.handles, msg.num_handles);
     return ZX_ERR_IO;
   }
 

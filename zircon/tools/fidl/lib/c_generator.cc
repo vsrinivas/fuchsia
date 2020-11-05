@@ -450,8 +450,8 @@ void EmitArraySizeOf(std::ostream* file, const CGenerator::Member& member) {
 void EmitMagicNumberCheck(std::ostream* file) {
   *file << kIndent << "status = fidl_validate_txn_header(hdr);\n";
   *file << kIndent << "if (status != ZX_OK) {\n";
-  *file << kIndent << kIndent << "zx_handle_close_many(msg->handles, msg->num_handles);\n";
-  *file << kIndent << kIndent << "ZX_DEBUG_ASSERT(status == ZX_ERR_PROTOCOL_NOT_SUPPORTED);\n";
+  *file << kIndent << kIndent << "FidlHandleInfoCloseMany(msg->handles, msg->num_handles);\n";
+  *file << kIndent << kIndent << "ZX_DEBUG_ASSERT(status == ZX_ERR_PROTOCOL_NOT_SUPPORTED);";
   *file << kIndent << kIndent << "return status;\n";
   *file << kIndent << "}\n";
 }
@@ -1424,7 +1424,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
   EmitServerTryDispatchDecl(&file_, named_protocol.c_name);
   file_ << " {\n";
   file_ << kIndent << "if (msg->num_bytes < sizeof(fidl_message_header_t)) {\n";
-  file_ << kIndent << kIndent << "zx_handle_close_many(msg->handles, msg->num_handles);\n";
+  file_ << kIndent << kIndent << "FidlHandleInfoCloseMany(msg->handles, msg->num_handles);\n";
   file_ << kIndent << kIndent << "return ZX_ERR_INVALID_ARGS;\n";
   file_ << kIndent << "}\n";
   file_ << kIndent << "zx_status_t status = ZX_OK;\n";
@@ -1520,7 +1520,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
   file_ << kIndent << "zx_status_t status = " << named_protocol.c_name
         << "_try_dispatch(ctx, txn, msg, ops);\n";
   file_ << kIndent << "if (status == ZX_ERR_NOT_SUPPORTED)\n";
-  file_ << kIndent << kIndent << "zx_handle_close_many(msg->handles, msg->num_handles);\n";
+  file_ << kIndent << kIndent << "FidlHandleInfoCloseMany(msg->handles, msg->num_handles);\n";
   file_ << kIndent << "return status;\n";
   file_ << "}\n\n";
 
@@ -1764,6 +1764,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 std::ostringstream CGenerator::ProduceClient() {
   EmitFileComment(&file_);
   EmitIncludeHeader(&file_, "<lib/fidl/coding.h>");
+  EmitIncludeHeader(&file_, "<lib/fidl/internal.h>");
   EmitIncludeHeader(&file_, "<lib/fidl/txn_header.h>");
   EmitIncludeHeader(&file_, "<alloca.h>");
   EmitIncludeHeader(&file_, "<string.h>");
@@ -1806,6 +1807,7 @@ std::ostringstream CGenerator::ProduceClient() {
 std::ostringstream CGenerator::ProduceServer() {
   EmitFileComment(&file_);
   EmitIncludeHeader(&file_, "<lib/fidl/coding.h>");
+  EmitIncludeHeader(&file_, "<lib/fidl/internal.h>");
   EmitIncludeHeader(&file_, "<lib/fidl/txn_header.h>");
   EmitIncludeHeader(&file_, "<alloca.h>");
   EmitIncludeHeader(&file_, "<string.h>");

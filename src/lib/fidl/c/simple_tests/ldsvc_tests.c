@@ -84,15 +84,15 @@ static void ldsvc_server(zx_handle_t channel_handle) {
     if ((observed & ZX_CHANNEL_READABLE) != 0) {
       ASSERT_EQ(ZX_OK, status, "");
       char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-      zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+      zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
       fidl_incoming_msg_t msg = {
           .bytes = bytes,
           .handles = handles,
           .num_bytes = 0u,
           .num_handles = 0u,
       };
-      status = zx_channel_read(conn.channel, 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
-                               ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
+      status = zx_channel_read_etc(conn.channel, 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
+                                   ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
       ASSERT_EQ(ZX_OK, status, "");
       ASSERT_GE(msg.num_bytes, sizeof(fidl_message_header_t), "");
       fidl_message_header_t* hdr = (fidl_message_header_t*)msg.bytes;
@@ -145,7 +145,7 @@ TEST(LdsvcTests, loader_test) {
   {
     zx_status_t rv = ZX_OK;
     zx_handle_t h1, h2;
-    ASSERT_EQ(ZX_OK, zx_eventpair_create(0, &h1, &h2), "");
+    ASSERT_EQ(ZX_OK, zx_channel_create(0, &h1, &h2), "");
     ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderClone(client, h1, &rv), "");
     ASSERT_EQ(45, rv, "");
     ASSERT_EQ(ZX_ERR_PEER_CLOSED, zx_object_signal_peer(h2, 0, 0), "");

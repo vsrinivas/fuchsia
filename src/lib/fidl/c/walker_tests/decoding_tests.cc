@@ -1542,7 +1542,7 @@ TEST(FidlDecodeEtc, decode_invalid_handle_info) {
                                 handle_infos, ArrayCount(handle_infos), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NOT_NULL(error);
+  ASSERT_NOT_NULL(error);
   const char expected_error_msg[] = "invalid handle detected in handle table";
   EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
 }

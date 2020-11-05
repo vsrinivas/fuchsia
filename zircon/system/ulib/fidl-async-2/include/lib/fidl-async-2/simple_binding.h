@@ -481,8 +481,8 @@ class SimpleBinding {
             .num_bytes = 0u,
             .num_handles = 0u,
         };
-        status = zx_channel_read(wait_.object, 0, bytes_, handles_, ZX_CHANNEL_MAX_MSG_BYTES,
-                                 ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
+        status = zx_channel_read_etc(wait_.object, 0, bytes_, handles_, ZX_CHANNEL_MAX_MSG_BYTES,
+                                     ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
         if (status != ZX_OK) {
           goto error;
         }
@@ -622,7 +622,7 @@ class SimpleBinding {
   // each zx_channel_read() for this connection.  Note that each _reply()
   // function will still put similarly-sized arrays on the stack.
   char bytes_[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_info_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
 };
 
 #endif  // LIB_FIDL_ASYNC_2_SIMPLE_BINDING_H_

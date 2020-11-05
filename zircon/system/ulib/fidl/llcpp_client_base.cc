@@ -81,7 +81,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl_incoming_msg_t* msg) {
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
 
   if (hdr->ordinal == kFidlOrdinalEpitaph) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
+    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     if (hdr->txid != 0) {
       return UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_INVALID_ARGS};
     }
@@ -106,8 +106,8 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl_incoming_msg_t* msg) {
     const char* error_message = nullptr;
     // Perform in-place decoding
     fidl_trace(WillLLCPPDecode, context->type(), msg->bytes, msg->num_bytes, msg->num_handles);
-    zx_status_t status = fidl_decode(context->type(), msg->bytes, msg->num_bytes, msg->handles,
-                                     msg->num_handles, &error_message);
+    zx_status_t status = fidl_decode_etc(context->type(), msg->bytes, msg->num_bytes, msg->handles,
+                                         msg->num_handles, &error_message);
     fidl_trace(DidLLCPPDecode);
     if (status != ZX_OK) {
       context->OnError();

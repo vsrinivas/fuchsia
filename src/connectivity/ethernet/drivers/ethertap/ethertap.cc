@@ -355,7 +355,7 @@ int TapDevice::Thread() {
   const uint32_t buff_size = 2 * mtu_;
   constexpr uint32_t handle_count = 8;
   std::unique_ptr<uint8_t[]> data_buff(new uint8_t[buff_size]);
-  zx_handle_t handles_buff[handle_count];
+  zx_handle_info_t handles_buff[handle_count];
 
   fidl_incoming_msg_t msg = {
       .bytes = data_buff.get(),
@@ -380,8 +380,8 @@ int TapDevice::Thread() {
     }
 
     if (pending & ZX_CHANNEL_READABLE) {
-      status = channel_.read(0, msg.bytes, msg.handles, buff_size, handle_count, &msg.num_bytes,
-                             &msg.num_handles);
+      status = channel_.read_etc(0, msg.bytes, msg.handles, buff_size, handle_count, &msg.num_bytes,
+                                 &msg.num_handles);
       if (status != ZX_OK) {
         ethertap_trace("message read failed: %d\n", status);
         break;

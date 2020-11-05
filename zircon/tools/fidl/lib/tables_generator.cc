@@ -331,6 +331,7 @@ void TablesGenerator::Generate(const coded::RequestHandleType& request_type) {
   Emit(&tables_file_, NameTable(request_type.coded_name));
   Emit(&tables_file_,
        " = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, "
+       ".handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, "
        ".nullable=");
   Emit(&tables_file_, request_type.nullability);
   Emit(&tables_file_, "};\n\n");
@@ -341,6 +342,7 @@ void TablesGenerator::Generate(const coded::ProtocolHandleType& protocol_type) {
   Emit(&tables_file_, NameTable(protocol_type.coded_name));
   Emit(&tables_file_,
        " = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, "
+       ".handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, "
        ".nullable=");
   Emit(&tables_file_, protocol_type.nullability);
   Emit(&tables_file_, "};\n\n");

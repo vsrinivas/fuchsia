@@ -82,7 +82,7 @@ static zx_status_t default_rxrpc(void* ctx, zx_handle_t channel) { return ZX_ERR
 static zx_status_t default_message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;
   LOGF(WARNING, "Unsupported FIDL protocol (ordinal %#16lx)", hdr->ordinal);
-  zx_handle_close_many(msg->handles, msg->num_handles);
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ZX_ERR_NOT_SUPPORTED;
 }
 

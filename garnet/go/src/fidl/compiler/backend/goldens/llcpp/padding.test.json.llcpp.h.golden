@@ -129,7 +129,8 @@ struct Padding7ByteMiddle {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding7ByteMiddle>();
@@ -248,7 +249,8 @@ struct Padding7ByteEnd {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding7ByteEnd>();
@@ -368,7 +370,8 @@ struct Padding6ByteMiddle {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding6ByteMiddle>();
@@ -487,7 +490,8 @@ struct Padding6ByteEnd {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding6ByteEnd>();
@@ -609,7 +613,8 @@ struct Padding5ByteMiddle {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding5ByteMiddle>();
@@ -730,7 +735,8 @@ struct Padding5ByteEnd {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding5ByteEnd>();
@@ -850,7 +856,8 @@ struct Padding4ByteMiddle {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding4ByteMiddle>();
@@ -969,7 +976,8 @@ struct Padding4ByteEnd {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding4ByteEnd>();
@@ -1094,7 +1102,8 @@ struct Padding4ByteAlignmentLength12 {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding4ByteAlignmentLength12>();
@@ -1214,7 +1223,8 @@ struct Padding3ByteMiddle {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding3ByteMiddle>();
@@ -1333,7 +1343,8 @@ struct Padding3ByteEnd {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding3ByteEnd>();
@@ -1453,7 +1464,8 @@ struct Padding2ByteMiddle {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding2ByteMiddle>();
@@ -1572,7 +1584,8 @@ struct Padding2ByteEnd {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding2ByteEnd>();
@@ -1695,7 +1708,8 @@ struct Padding2ByteAlignmentLength6 {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding2ByteAlignmentLength6>();
@@ -1815,7 +1829,8 @@ struct Padding1ByteMiddle {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding1ByteMiddle>();
@@ -1934,7 +1949,8 @@ struct Padding1ByteEnd {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Padding1ByteEnd>();

@@ -421,7 +421,8 @@ class Table final {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<Table>();
@@ -839,7 +840,8 @@ struct Struct {
   class IncomingMessage final : public ::fidl::internal::IncomingMessage {
    public:
     IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                    zx_handle_t* handles = nullptr, uint32_t handle_actual = 0)
+                    zx_handle_info_t* handles = nullptr,
+                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
       Decode<struct Struct>();
@@ -986,7 +988,7 @@ class Interface final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -1123,7 +1125,7 @@ class Interface final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {

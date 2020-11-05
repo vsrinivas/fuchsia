@@ -61,9 +61,9 @@ static const struct FidlCodedHandle HandlevmarnonnullableTable = {.tag=kFidlType
 
 static const struct FidlCodedHandle HandlevmononnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedHandle Protocol30fidl_test_handles_SomeProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedHandle Protocol30fidl_test_handles_SomeProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedHandle Request30fidl_test_handles_SomeProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedHandle Request30fidl_test_handles_SomeProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
 
 static bool EnumValidatorFor_fidl_test_handles_obj_type(uint64_t v) {

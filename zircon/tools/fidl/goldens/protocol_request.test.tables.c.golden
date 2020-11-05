@@ -8,7 +8,7 @@
 extern const struct FidlCodedStruct fidl_test_protocolrequest_ParentGetChildRequestTable;
 const struct FidlCodedStruct fidl_test_protocolrequest_ParentGetChildRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.protocolrequest/ParentGetChildRequest"};
 
-static const struct FidlCodedHandle Protocol31fidl_test_protocolrequest_ChildnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedHandle Protocol31fidl_test_protocolrequest_ChildnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
 extern const struct FidlCodedStruct fidl_test_protocolrequest_ParentGetChildResponseTable;
 static const struct FidlStructElement Fields48fidl_test_protocolrequest_ParentGetChildResponse[] = {
@@ -20,7 +20,7 @@ const struct FidlCodedStruct fidl_test_protocolrequest_ParentGetChildResponseTab
 extern const struct FidlCodedStruct fidl_test_protocolrequest_ParentGetChildRequestRequestTable;
 const struct FidlCodedStruct fidl_test_protocolrequest_ParentGetChildRequestRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.protocolrequest/ParentGetChildRequestRequest"};
 
-static const struct FidlCodedHandle Request31fidl_test_protocolrequest_ChildnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedHandle Request31fidl_test_protocolrequest_ChildnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
 extern const struct FidlCodedStruct fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
 static const struct FidlStructElement Fields55fidl_test_protocolrequest_ParentGetChildRequestResponse[] = {

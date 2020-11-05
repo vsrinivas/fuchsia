@@ -14,8 +14,8 @@ namespace internal {
   while (begin < end) {
     if (hdr->ordinal == begin->ordinal) {
       const char* error_message;
-      zx_status_t status = fidl_decode(begin->type, msg->bytes, msg->num_bytes, msg->handles,
-                                       msg->num_handles, &error_message);
+      zx_status_t status = fidl_decode_etc(begin->type, msg->bytes, msg->num_bytes, msg->handles,
+                                           msg->num_handles, &error_message);
       if (status != ZX_OK) {
         txn->InternalError({::fidl::UnbindInfo::kDecodeError, status});
       } else {

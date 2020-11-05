@@ -132,7 +132,7 @@ TEST(MagicNumberTest, RequestWrite) {
   std::string s = "hi";
   test::Frobinator::Call::Frob(zx::unowned_channel(h1), fidl::unowned_str(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
 
   fidl_incoming_msg_t msg = {
       .bytes = bytes,
@@ -140,8 +140,8 @@ TEST(MagicNumberTest, RequestWrite) {
       .num_bytes = 0u,
       .num_handles = 0u,
   };
-  auto status = zx_channel_read(h2.get(), 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
-                                ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
+  auto status = zx_channel_read_etc(h2.get(), 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
+                                    ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
   ASSERT_EQ(status, ZX_OK);
   ASSERT_GE(msg.num_bytes, sizeof(fidl_message_header_t));
 
@@ -155,7 +155,7 @@ TEST(MagicNumberTest, EventWrite) {
   std::string s = "hi";
   test::Frobinator::SendHrobEvent(zx::unowned_channel(h1), fidl::unowned_str(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
 
   fidl_incoming_msg_t msg = {
       .bytes = bytes,
@@ -163,8 +163,8 @@ TEST(MagicNumberTest, EventWrite) {
       .num_bytes = 0u,
       .num_handles = 0u,
   };
-  auto status = zx_channel_read(h2.get(), 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
-                                ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
+  auto status = zx_channel_read_etc(h2.get(), 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
+                                    ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
   ASSERT_EQ(status, ZX_OK);
   ASSERT_GE(msg.num_bytes, sizeof(fidl_message_header_t));
 

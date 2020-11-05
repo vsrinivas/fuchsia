@@ -150,7 +150,7 @@ class Parent final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -194,7 +194,7 @@ class Parent final {
 
      private:
       IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
-        zx_handle_t
+        zx_handle_info_t
             handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
         Init(outgoing_message, handles,
              std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
@@ -458,7 +458,7 @@ class Child final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -502,7 +502,7 @@ class Child final {
 
      private:
       IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
-        zx_handle_t
+        zx_handle_info_t
             handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
         Init(outgoing_message, handles,
              std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
@@ -615,7 +615,7 @@ class Child final {
     class IncomingMessage final : public ::fidl::internal::IncomingMessage {
      public:
       IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_t* handles = nullptr,
+                      zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
@@ -659,7 +659,7 @@ class Child final {
 
      private:
       IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
-        zx_handle_t
+        zx_handle_info_t
             handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
         Init(outgoing_message, handles,
              std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));

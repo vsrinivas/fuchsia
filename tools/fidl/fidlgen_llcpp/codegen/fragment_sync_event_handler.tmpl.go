@@ -81,7 +81,7 @@ const fragmentSyncEventHandlerTmpl = `
     {{- end }}
   {{- end }}
     default: {
-      zx_handle_close_many(read_handles, actual_handles);
+      FidlHandleCloseMany(read_handles, actual_handles);
       return ::fidl::Result(handlers.unknown(), nullptr);
     }
   }

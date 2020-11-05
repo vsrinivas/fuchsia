@@ -572,11 +572,11 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
   // TODO(fxbug.dev/34151): Handle the case where the channel fills up before we begin reading.
   while (true) {
     uint8_t msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t msize = sizeof(msg_bytes);
     uint32_t hcount = std::size(handles);
 
-    zx_status_t r = test_output_.read(0, &msg_bytes, handles, msize, hcount, &msize, &hcount);
+    zx_status_t r = test_output_.read_etc(0, &msg_bytes, handles, msize, hcount, &msize, &hcount);
     if (r == ZX_ERR_PEER_CLOSED) {
       test_reporter->TestFinished();
       break;
@@ -594,7 +594,7 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
     };
 
     if (fidl_msg.num_bytes < sizeof(fidl_message_header_t)) {
-      zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
+      FidlHandleInfoCloseMany(fidl_msg.handles, fidl_msg.num_handles);
       LOGF(ERROR, "Invalid FIDL message header for device %p '%s'", this, name_.data());
       break;
     }
@@ -612,7 +612,7 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
 
 zx_status_t Device::HandleRead() {
   uint8_t msg[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_info_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t msize = sizeof(msg);
   uint32_t hcount = std::size(hin);
 
@@ -622,7 +622,7 @@ zx_status_t Device::HandleRead() {
   }
 
   zx_status_t r;
-  if ((r = channel()->read(0, &msg, hin, msize, hcount, &msize, &hcount)) != ZX_OK) {
+  if ((r = channel()->read_etc(0, &msg, hin, msize, hcount, &msize, &hcount)) != ZX_OK) {
     return r;
   }
 
@@ -634,7 +634,7 @@ zx_status_t Device::HandleRead() {
   };
 
   if (fidl_msg.num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
+    FidlHandleInfoCloseMany(fidl_msg.handles, fidl_msg.num_handles);
     return ZX_ERR_IO;
   }
 
@@ -657,7 +657,7 @@ zx_status_t Device::HandleRead() {
 
   LOGF(ERROR, "Unsupported FIDL protocol (ordinal %#16lx) for device %p '%s'", hdr->ordinal, this,
        name_.data());
-  zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
+  FidlHandleInfoCloseMany(fidl_msg.handles, fidl_msg.num_handles);
   return ZX_ERR_IO;
 }
 
