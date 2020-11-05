@@ -105,11 +105,43 @@ probably located under a `//vendor` repository where the relevant product is
 defined.
 
 ### Add an entry to the index
-Append an entry to the `instances` list with the component's moniker. You may
-omit the `instance_id` field to have the build fail and suggest a new one you
+
+The first step is to determine the component instance's moniker, which is its
+URL and realm path. You can find the the realm path of a component on a
+particular product's eng build by checking `fx shell cs tree` and collecting
+"(realm)" labels under appmgr leading up to the component.
+
+Then, append an entry to the `instances` list with the component's moniker.
+Omit the `instance_id` field to have the build fail and suggest a new one you
 can use.
 
 #### Example
+
+In this example, component `fuchsia-pkg://example.com/my_other_package#meta/my_other_component.cmx`
+is added to the index.
+
+To determine the component instance's realm_path, you can look at the output of
+`fx shell cs tree`:
+
+```shell
+$ fx shell cs tree
+<root>
+  .
+  .
+  core
+    appmgr
+      app (realm)
+        sysmgr.cmx
+        sys (realm)
+          my_other_component.cmx
+          .
+          .
+  .
+  .
+```
+
+The above output tells us that my_other_component.cmx runs under the
+`[app, sys]` realm path.
 
 Add `fuchsia-pkg://example.com/my_other_package#meta/my_other_component.cmx` to
 the index by appending this entry to [core_component_id_index.json](/src/sys/appmgr/config/core_component_id_index.json)'s
