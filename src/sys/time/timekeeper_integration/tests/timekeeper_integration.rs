@@ -371,23 +371,12 @@ fn create_cobalt_event_stream(
     proxy: Arc<LoggerQuerierProxy>,
     log_method: LogMethod,
 ) -> std::pin::Pin<Box<dyn Stream<Item = CobaltEvent>>> {
-    // mock_cobalt contains a race condition where it returns an error if timekeeper hasn't
-    // connected yet (fxbug.dev/45615). Therefore, we retry the first watch.
-    let proxy_clone = Arc::clone(&proxy);
-    let first_poll_stream = poll_until(move || {
-        let clone = Arc::clone(&proxy_clone);
-        clone
-            .watch_logs(PROJECT_ID, log_method)
-            .map(|res| res.unwrap().ok().map(|(events, _)| events))
-    })
-    .into_stream();
-
-    let subsequent_polls_stream =
-        async_utils::hanging_get::client::GeneratedFutureStream::new(Box::new(move || {
-            Some(proxy.watch_logs(PROJECT_ID, log_method).map(|res| res.unwrap().unwrap().0))
-        }));
-
-    first_poll_stream.chain(subsequent_polls_stream).map(futures::stream::iter).flatten().boxed()
+    async_utils::hanging_get::client::GeneratedFutureStream::new(Box::new(move || {
+        Some(proxy.watch_logs2(PROJECT_ID, log_method).map(|res| res.unwrap().0))
+    }))
+    .map(futures::stream::iter)
+    .flatten()
+    .boxed()
 }
 
 #[test]

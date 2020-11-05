@@ -17,7 +17,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     // period so that the test always advances faster than the cobalt client in
     // Netstack produces new sets of logs.
 
-    // netstack is launched here so that watch_logs(networking_metrics::PROJECT_ID, ...)
+    // netstack is launched here so that watch_logs2(networking_metrics::PROJECT_ID, ...)
     // can be called before the first socket is created.
     let netstack =
         fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()
@@ -40,18 +40,12 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         logger_querier: &fidl_fuchsia_cobalt_test::LoggerQuerierProxy,
         func: F,
     ) -> Result<(T, Vec<fidl_fuchsia_cobalt::CobaltEvent>), anyhow::Error> {
-        let watch = logger_querier.watch_logs(
+        let watch = logger_querier.watch_logs2(
             networking_metrics::PROJECT_ID,
             fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
         );
         let res = func()?;
-        let (events, more) = watch.await.context("failed to call watch_logs")?.map_err(
-            |query_error: fidl_fuchsia_cobalt_test::QueryError| {
-                // anyhow::Error::new requires std::error::Error
-                // anyhow::Error::msg requires std::fmt::Display
-                anyhow::anyhow!("{:?}", query_error)
-            },
-        )?;
+        let (events, more) = watch.await.context("failed to call watch_logs2")?;
         assert!(!more);
         Ok((res, events))
     }

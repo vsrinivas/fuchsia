@@ -24,6 +24,28 @@ struct LogState {
     hanging: Vec<HangingGetState>,
 }
 
+/// Send a success response on a watch logs responder. Used to abstract over the WatchLogs and
+/// WatchLogs2 fidl methods.
+trait WatchLogsResponder {
+    fn send_ok(self: Box<Self>, events: Vec<CobaltEvent>, more: bool) -> Result<(), fidl::Error>;
+}
+
+impl WatchLogsResponder for cobalt_test::LoggerQuerierWatchLogsResponder {
+    fn send_ok(self: Box<Self>, events: Vec<CobaltEvent>, more: bool) -> Result<(), fidl::Error> {
+        self.send(&mut Ok((events, more)))
+    }
+}
+
+impl WatchLogsResponder for cobalt_test::LoggerQuerierWatchLogs2Responder {
+    fn send_ok(
+        self: Box<Self>,
+        mut events: Vec<CobaltEvent>,
+        more: bool,
+    ) -> Result<(), fidl::Error> {
+        self.send(&mut events.iter_mut(), more)
+    }
+}
+
 #[derive(Default)]
 // Does not record StartTimer, EndTimer, and LogCustomEvent requests
 struct EventsLog {
@@ -44,11 +66,11 @@ impl Default for LogState {
 }
 
 struct HangingGetState {
-    // last_observed is concurrently mutated by calls to run_cobalt_query_service (one for each client
-    // of fuchsia.cobalt.test.LoggerQuerier) and calls to handle_cobalt_logger (one for each client
-    // of fuchsia.cobalt.Logger).
+    // last_observed is concurrently mutated by calls to run_cobalt_query_service (one for each
+    // client of fuchsia.cobalt.test.LoggerQuerier) and calls to handle_cobalt_logger (one for each
+    // client of fuchsia.cobalt.Logger).
     last_observed: Arc<Mutex<usize>>,
-    responder: fidl_fuchsia_cobalt_test::LoggerQuerierWatchLogsResponder,
+    responder: Box<dyn WatchLogsResponder>,
 }
 
 // The LogState#log vectors in EventsLog are mutated by handle_cobalt_logger and
@@ -194,7 +216,7 @@ async fn handle_cobalt_logger(
                 .map(Clone::clone)
                 .collect();
             *last_observed = log_state.log.len();
-            let () = hanging_get_state.responder.send(&mut Ok((events, false)))?;
+            let () = hanging_get_state.responder.send_ok(events, false)?;
         }
         Ok(())
     });
@@ -222,6 +244,54 @@ async fn run_cobalt_query_service(
             >,
              event| async {
                 match event {
+                    cobalt_test::LoggerQuerierRequest::WatchLogs2 {
+                        project_id,
+                        method,
+                        responder,
+                    } => {
+                        let state = loggers
+                            .lock()
+                            .await
+                            .entry(project_id)
+                            .or_insert_with(Default::default)
+                            .clone();
+
+                        let mut state = state.lock().await;
+                        let log_state = match method {
+                            LogEvent => &mut state.log_event,
+                            LogEventCount => &mut state.log_event_count,
+                            LogElapsedTime => &mut state.log_elapsed_time,
+                            LogFrameRate => &mut state.log_frame_rate,
+                            LogMemoryUsage => &mut state.log_memory_usage,
+                            LogIntHistogram => &mut state.log_int_histogram,
+                            LogCobaltEvent => &mut state.log_cobalt_event,
+                            LogCobaltEvents => &mut state.log_cobalt_events,
+                        };
+                        let last_observed = client_state
+                            .entry(project_id)
+                            .or_insert_with(Default::default)
+                            .entry(method)
+                            .or_insert_with(Default::default);
+                        let mut last_observed_len = last_observed.lock().await;
+                        let current_len = log_state.log.len();
+                        if current_len != *last_observed_len {
+                            let events = &mut log_state.log;
+                            let more = events.len() > cobalt_test::MAX_QUERY_LENGTH as usize;
+                            let mut events: Vec<_> = events
+                                .iter()
+                                .skip(*last_observed_len)
+                                .take(MAX_QUERY_LENGTH)
+                                .cloned()
+                                .collect();
+                            *last_observed_len = current_len;
+                            let () = responder.send(&mut events.iter_mut(), more)?;
+                        } else {
+                            let () = log_state.hanging.push(HangingGetState {
+                                responder: Box::new(responder),
+                                last_observed: last_observed.clone(),
+                            });
+                        }
+                    }
                     cobalt_test::LoggerQuerierRequest::WatchLogs {
                         project_id,
                         method,
@@ -253,13 +323,13 @@ async fn run_cobalt_query_service(
                                     .iter()
                                     .skip(*last_observed_len)
                                     .take(MAX_QUERY_LENGTH)
-                                    .map(Clone::clone)
+                                    .cloned()
                                     .collect();
                                 *last_observed_len = current_len;
                                 let () = responder.send(&mut Ok((events, more)))?;
                             } else {
                                 let () = log_state.hanging.push(HangingGetState {
-                                    responder,
+                                    responder: Box::new(responder),
                                     last_observed: last_observed.clone(),
                                 });
                             }
@@ -328,6 +398,7 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_utils::PollExt;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_cobalt::*;
     use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierMarker, QueryError};
@@ -360,7 +431,7 @@ mod tests {
     async fn mock_logger_and_query_interface_single_event() {
         let loggers = LoggersHandle::default();
 
-        // Create channels
+        // Create channels.
         let (factory_proxy, factory_stream) = create_proxy_and_stream::<LoggerFactoryMarker>()
             .expect("create logger factroy proxy and stream to succeed");
         let (logger_proxy, server) =
@@ -380,7 +451,7 @@ mod tests {
             .await
             .expect("create_logger_from_project_id fidl call to succeed");
 
-        // Log a single event
+        // Log a single event.
         logger_proxy.log_event(1, 2).await.expect("log_event fidl call to succeed");
         assert_eq!(
             Ok((vec![CobaltEvent::builder(1).with_event_code(2).as_event()], false)),
@@ -395,7 +466,7 @@ mod tests {
     async fn mock_logger_and_query_interface_multiple_events() {
         let loggers = LoggersHandle::default();
 
-        // Create channels
+        // Create channels.
         let (factory_proxy, factory_stream) = create_proxy_and_stream::<LoggerFactoryMarker>()
             .expect("create logger factroy proxy and stream to succeed");
         let (logger_proxy, server) =
@@ -416,7 +487,7 @@ mod tests {
             .expect("create_logger_from_project_id fidl call to succeed");
 
         // Log 1 more than the maximum number of events that can be stored and assert that
-        // `more` flag is true on logger query request
+        // `more` flag is true on logger query request.
         for i in 0..(MAX_QUERY_LENGTH as u32 + 1) {
             logger_proxy
                 .log_event(i, i + 1)
@@ -437,7 +508,7 @@ mod tests {
     async fn mock_query_interface_no_logger_error() {
         let loggers = LoggersHandle::default();
 
-        // Create channel
+        // Create channel.
         let (querier_proxy, query_stream) = create_proxy_and_stream::<LoggerQuerierMarker>()
             .expect("create logger querier proxy and stream to succeed");
 
@@ -446,7 +517,7 @@ mod tests {
         fasync::Task::local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()))
             .detach();
 
-        // Assert on initial state
+        // Assert on initial state.
         assert_eq!(
             Err(QueryError::LoggerNotFound),
             querier_proxy
@@ -454,6 +525,173 @@ mod tests {
                 .await
                 .expect("watch_logs fidl call to succeed")
         );
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn mock_logger_and_query_interface_single_event2() {
+        let loggers = LoggersHandle::default();
+
+        // Create channels.
+        let (factory_proxy, factory_stream) = create_proxy_and_stream::<LoggerFactoryMarker>()
+            .expect("create logger factroy proxy and stream to succeed");
+        let (logger_proxy, server) =
+            create_proxy::<LoggerMarker>().expect("create logger proxy and server end to succeed");
+        let (querier_proxy, query_stream) = create_proxy_and_stream::<LoggerQuerierMarker>()
+            .expect("create logger querier proxy and stream to succeed");
+
+        // Spawn service handlers. Any failures in the services spawned here will trigger panics
+        // via expect method calls below.
+        fasync::Task::local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()))
+            .detach();
+        fasync::Task::local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()))
+            .detach();
+
+        factory_proxy
+            .create_logger_from_project_id(123, server)
+            .await
+            .expect("create_logger_from_project_id fidl call to succeed");
+
+        // Log a single event.
+        logger_proxy.log_event(1, 2).await.expect("log_event fidl call to succeed");
+        assert_eq!(
+            (vec![CobaltEvent::builder(1).with_event_code(2).as_event()], false),
+            querier_proxy
+                .watch_logs2(123, LogMethod::LogEvent)
+                .await
+                .expect("log_event fidl call to succeed")
+        );
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn mock_logger_and_query_interface_multiple_events2() {
+        let loggers = LoggersHandle::default();
+
+        // Create channels.
+        let (factory_proxy, factory_stream) = create_proxy_and_stream::<LoggerFactoryMarker>()
+            .expect("create logger factroy proxy and stream to succeed");
+        let (logger_proxy, server) =
+            create_proxy::<LoggerMarker>().expect("create logger proxy and server end to succeed");
+        let (querier_proxy, query_stream) = create_proxy_and_stream::<LoggerQuerierMarker>()
+            .expect("create logger querier proxy and stream to succeed");
+
+        // Spawn service handlers. Any failures in the services spawned here will trigger panics
+        // via expect method calls below.
+        fasync::Task::local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()))
+            .detach();
+        fasync::Task::local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()))
+            .detach();
+
+        factory_proxy
+            .create_logger_from_project_id(12, server)
+            .await
+            .expect("create_logger_from_project_id fidl call to succeed");
+
+        // Log 1 more than the maximum number of events that can be stored and assert that
+        // `more` flag is true on logger query request.
+        for i in 0..(MAX_QUERY_LENGTH as u32 + 1) {
+            logger_proxy
+                .log_event(i, i + 1)
+                .await
+                .expect("repeated log_event fidl call to succeed");
+        }
+        let (events, more) = querier_proxy
+            .watch_logs2(12, LogMethod::LogEvent)
+            .await
+            .expect("watch_logs2 fidl call to succeed");
+        assert_eq!(CobaltEvent::builder(0).with_event_code(1).as_event(), events[0]);
+        assert_eq!(MAX_QUERY_LENGTH, events.len());
+        assert!(more);
+    }
+
+    #[test]
+    fn mock_query_interface_no_logger_never_completes() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let loggers = LoggersHandle::default();
+
+        let (factory_proxy, factory_stream) = create_proxy_and_stream::<LoggerFactoryMarker>()
+            .expect("create logger factroy proxy and stream to succeed");
+        let (logger_proxy, server) =
+            create_proxy::<LoggerMarker>().expect("create logger proxy and server end to succeed");
+        let (querier_proxy, query_stream) = create_proxy_and_stream::<LoggerQuerierMarker>()
+            .expect("create logger querier proxy and stream to succeed");
+
+        // Spawn service handlers. Any failures in the services spawned here will trigger panics
+        // via expect method calls below.
+        fasync::Task::local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()))
+            .detach();
+        fasync::Task::local(run_cobalt_query_service(query_stream, loggers).map(|_| ())).detach();
+
+        // watch_logs2 query does not complete without a logger for the requested project id.
+        let watch_logs_fut = querier_proxy.watch_logs2(123, LogMethod::LogEvent);
+        futures::pin_mut!(watch_logs_fut);
+
+        assert!(exec.run_until_stalled(&mut watch_logs_fut).is_pending());
+
+        // Create a new logger for the requested project id
+        let create_logger_fut = factory_proxy.create_logger_from_project_id(123, server);
+        futures::pin_mut!(create_logger_fut);
+        exec.run_until_stalled(&mut create_logger_fut)
+            .expect("logger creation future to complete")
+            .expect("create_logger_from_project_id fidl call to succeed");
+
+        // watch_logs2 query still does not complete without a LogEvent for the requested project
+        // id.
+        assert!(exec.run_until_stalled(&mut watch_logs_fut).is_pending());
+
+        // Log a single event
+        let log_event_fut = logger_proxy.log_event(1, 2);
+        futures::pin_mut!(log_event_fut);
+        exec.run_until_stalled(&mut log_event_fut)
+            .expect("log event future to complete")
+            .expect("log_event fidl call to succeed");
+
+        // finally, now that a logger and log event have been created, watch_logs2 query will
+        // succeed.
+        let result = exec
+            .run_until_stalled(&mut watch_logs_fut)
+            .expect("log_event future to complete")
+            .expect("log_event fidl call to succeed");
+        assert_eq!((vec![CobaltEvent::builder(1).with_event_code(2).as_event()], false), result);
+    }
+
+    #[test]
+    fn mock_query_interface_no_events_never_completes() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let loggers = LoggersHandle::default();
+
+        // Create channels.
+        let (factory_proxy, factory_stream) = create_proxy_and_stream::<LoggerFactoryMarker>()
+            .expect("create logger factroy proxy and stream to succeed");
+        let (querier_proxy, query_stream) = create_proxy_and_stream::<LoggerQuerierMarker>()
+            .expect("create logger querier proxy and stream to succeed");
+        let (_logger_proxy, server) =
+            create_proxy::<LoggerMarker>().expect("create logger proxy and server end to succeed");
+
+        // Spawn service handlers. Any failures in the services spawned here will trigger panics
+        // via expect method calls below.
+        fasync::Task::local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()))
+            .detach();
+        fasync::Task::local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()))
+            .detach();
+
+        let test = async move {
+            factory_proxy
+                .create_logger_from_project_id(123, server)
+                .await
+                .expect("create_logger_from_project_id fidl call to succeed");
+
+            assert_eq!(
+                (vec![CobaltEvent::builder(1).with_event_code(2).as_event()], false),
+                querier_proxy
+                    .watch_logs2(123, LogMethod::LogEvent)
+                    .await
+                    .expect("log_event fidl call to succeed")
+            );
+        };
+        futures::pin_mut!(test);
+        assert!(exec.run_until_stalled(&mut test).is_pending());
     }
 
     #[fasync::run_until_stalled(test)]
@@ -519,7 +757,7 @@ mod tests {
     async fn mock_query_interface_reset_state() {
         let loggers = LoggersHandle::default();
 
-        // Create channels
+        // Create channels.
         let (factory_proxy, factory_stream) = create_proxy_and_stream::<LoggerFactoryMarker>()
             .expect("create logger factroy proxy and stream to succeed");
         let (logger_proxy, server) =
@@ -539,27 +777,27 @@ mod tests {
             .await
             .expect("create_logger_from_project_id fidl call to succeed");
 
-        // Log a single event
+        // Log a single event.
         logger_proxy.log_event(1, 2).await.expect("log_event fidl call to succeed");
         assert_eq!(
-            Ok((vec![CobaltEvent::builder(1).with_event_code(2).as_event()], false)),
+            (vec![CobaltEvent::builder(1).with_event_code(2).as_event()], false),
             querier_proxy
-                .watch_logs(987, LogMethod::LogEvent)
+                .watch_logs2(987, LogMethod::LogEvent)
                 .await
                 .expect("log_event fidl call to succeed")
         );
 
-        // Clear logger state
+        // Clear logger state.
         querier_proxy
             .reset_logger(987, LogMethod::LogEvent)
             .expect("reset_logger fidl call to succeed");
 
         assert_eq!(
-            Ok((vec![], false)),
+            (vec![], false),
             querier_proxy
-                .watch_logs(987, LogMethod::LogEvent)
+                .watch_logs2(987, LogMethod::LogEvent)
                 .await
-                .expect("watch_logs fidl call to succeed")
+                .expect("watch_logs2 fidl call to succeed")
         );
     }
 
@@ -594,20 +832,27 @@ mod tests {
         assert!(create_logger_poll.is_ready());
 
         let mut continuation = match create_logger_poll {
-            core::task::Poll::Pending => unreachable!("we asserted that create_logger_poll was ready"),
-            core::task::Poll::Ready(either) => match either {
-                futures::future::Either::Left(_services_future_returned) => unreachable!("unexpected services future return (cannot be formatted with default formatter)"),
-                futures::future::Either::Right((create_logger_status, services_continuation)) => {
-                    assert_eq!(create_logger_status.expect("fidl call failed"), fidl_fuchsia_cobalt::Status::Ok);
-                    services_continuation
-                },
+            core::task::Poll::Pending => {
+                unreachable!("we asserted that create_logger_poll was ready")
             }
+            core::task::Poll::Ready(either) => match either {
+                futures::future::Either::Left(_services_future_returned) => unreachable!(
+                    "unexpected services future return (cannot be formatted with default formatter)"
+                ),
+                futures::future::Either::Right((create_logger_status, services_continuation)) => {
+                    assert_eq!(
+                        create_logger_status.expect("fidl call failed"),
+                        fidl_fuchsia_cobalt::Status::Ok
+                    );
+                    services_continuation
+                }
+            },
         };
 
         // Resolve two hanging gets and ensure that only the novel data (the same data both times)
         // is returned.
         for _ in 0..2 {
-            let watch_logs_hanging_get = querier_proxy.watch_logs(project_id, LogMethod::LogEvent);
+            let watch_logs_hanging_get = querier_proxy.watch_logs2(project_id, LogMethod::LogEvent);
             let mut watch_logs_hanging_get =
                 futures::future::select(continuation, watch_logs_hanging_get);
             let watch_logs_poll = executor.run_until_stalled(&mut watch_logs_hanging_get);
@@ -632,14 +877,16 @@ mod tests {
                     );
 
                     match watch_logs_result {
-                        futures::future::Either::Left(_services_future_returned) => unreachable!("unexpected services future return (cannot be formatted with the default formatter)"),
+                        futures::future::Either::Left(_services_future_returned) => unreachable!(
+                            "unexpected services future return (cannot be formatted with the \
+                            default formatter)"
+                        ),
                         futures::future::Either::Right((
                             cobalt_query_result,
                             services_continuation,
                         )) => {
                             let (mut logged_events, more) = cobalt_query_result
-                                .expect("expect cobalt query FIDL call to succeed")
-                                .expect("expect cobalt query call to return success");
+                                .expect("expect cobalt query FIDL call to succeed");
                             assert_eq!(logged_events.len(), 1);
                             let mut logged_event = logged_events.pop().unwrap();
                             assert_eq!(logged_event.metric_id, event_metric_id);
