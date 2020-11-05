@@ -211,7 +211,7 @@ impl SessionInner {
             Ok(channel) => {
                 let server_channel = dlci.try_into().unwrap();
                 let result = if dlci.initiator(self.role()).expect("should be valid") {
-                    self.relay_outbound_channel_to_client(server_channel, channel)
+                    self.relay_outbound_channel_result_to_client(server_channel, Ok(channel))
                 } else {
                     self.relay_inbound_channel_to_client(server_channel, channel).await
                 };
@@ -251,6 +251,16 @@ impl SessionInner {
         Ok(())
     }
 
+    /// Cancels any pending channel requests that are waiting for multiplexer startup or
+    /// parameter negotiation to complete.
+    fn cancel_pending_channels(&mut self) {
+        let outstanding_requests = std::mem::take(&mut self.pending_channels);
+        for ChannelRequest(_, callback) in outstanding_requests {
+            // Result of the callback irrelevant as it means there is an issue with the client.
+            let _ = callback(Err(ErrorCode::Canceled));
+        }
+    }
+
     /// Finishes parameter negotiation for the Session with the provided `params` and
     /// reserves the specified DLCI.
     fn finish_parameter_negotiation(&mut self, params: &ParameterNegotiationParams) {
@@ -284,18 +294,18 @@ impl SessionInner {
         }
     }
 
-    /// Relays the outbound `channel` opened for the provided `server_channel` to the local client
+    /// Relays the outbound `channel_result` for the provided `server_channel` to the local client
     /// who requested it. Returns an error if delivery fails or if there is no such client.
-    fn relay_outbound_channel_to_client(
+    fn relay_outbound_channel_result_to_client(
         &mut self,
         server_channel: ServerChannel,
-        channel: Channel,
+        channel_result: Result<Channel, ErrorCode>,
     ) -> Result<(), RfcommError> {
         if let Some(idx) =
             self.pending_channels.iter().position(|request| request.0 == server_channel)
         {
             let ChannelRequest(_, callback) = self.pending_channels.remove(idx);
-            return callback(Ok(channel))
+            return callback(channel_result)
                 .map_err(|e| RfcommError::Other(format_err!("{:?}", e).into()));
         }
         Err(RfcommError::Other(
@@ -348,6 +358,24 @@ impl SessionInner {
         Ok(())
     }
 
+    /// Cancels parameter negotiation for the provided `dlci`. The `dlci` should be a valid
+    /// user DLCI.
+    fn cancel_parameter_negotiation(&mut self, dlci: DLCI) {
+        if !dlci.is_user() {
+            return;
+        }
+
+        // Reset the session-wide parameter negotiation state.
+        if self.multiplexer().negotiating_parameters() {
+            self.multiplexer().reset_parameters();
+        }
+        // Notify the client of the canceled request.
+        let _ = self.relay_outbound_channel_result_to_client(
+            dlci.try_into().unwrap(),
+            Err(ErrorCode::Canceled),
+        );
+    }
+
     /// Attempts to open an RFCOMM channel for the provided `channel_request`.
     async fn open_remote_channel(
         &mut self,
@@ -383,8 +411,8 @@ impl SessionInner {
             return Ok(());
         }
 
-        // TODO(fxbug.dev/59585): Cancel the request if DLCI already established.
         if self.multiplexer().dlci_established(&dlci) {
+            let _ = channel_request.1(Err(ErrorCode::Canceled));
             return Err(RfcommError::ChannelAlreadyEstablished(dlci));
         }
 
@@ -533,12 +561,10 @@ impl SessionInner {
         let terminate_session = if dlci.is_user() {
             let pn_identifier =
                 MuxCommandIdentifier(Some(dlci), MuxCommandMarker::ParameterNegotiation);
-            // Peer rejected our request to negotiate parameters for the `dlci`.
-            // See RFCOMM 5.5.3. Reset the session parameters and let peer retry if needed.
+            // Peer rejected our request to negotiate parameters for the `dlci`. Cancel the
+            // PN and respond positively. See RFCOMM 5.5.3.
             if self.outstanding_frames.remove_mux_command(&pn_identifier).is_some() {
-                if self.multiplexer().negotiating_parameters() {
-                    self.multiplexer().reset_parameters();
-                }
+                self.cancel_parameter_negotiation(dlci);
                 self.send_ua_response(dlci).await;
                 return false;
             }
@@ -630,20 +656,22 @@ impl SessionInner {
                 self.multiplexer().reset();
             }
             Some(FrameData::SetAsynchronousBalancedMode) => {
-                // Peer rejected our request to open a user DLC - close the DLC and let
-                // the peer retry.
+                // Peer rejected our request to open a user DLC - close the DLC, notify the client
+                // of failure, and let the peer retry.
                 let _ = self.multiplexer().close_session_channel(&dlci);
+                let _ = self.relay_outbound_channel_result_to_client(
+                    dlci.try_into().unwrap(),
+                    Err(ErrorCode::Canceled),
+                );
             }
             Some(frame_data) => warn!("Unexpected DM for {:?}", frame_data),
             None => {
                 let pn_identifier =
                     MuxCommandIdentifier(Some(dlci), MuxCommandMarker::ParameterNegotiation);
                 // Special case: Peer rejected our request to negotiate parameters for the `dlci`.
-                // See RFCOMM 5.5.3. Reset the session parameters and let peer retry if needed.
+                // See RFCOMM 5.5.3. Cancel the PN.
                 if self.outstanding_frames.remove_mux_command(&pn_identifier).is_some() {
-                    if self.multiplexer().negotiating_parameters() {
-                        self.multiplexer().reset_parameters();
-                    }
+                    self.cancel_parameter_negotiation(dlci);
                 }
             }
         }
@@ -763,7 +791,7 @@ impl SessionInner {
             };
         }
         // The `data_receiver` has closed, indicating peer disconnection.
-        // TODO(fxbug.dev/59585): Cancel pending channels.
+        inner.lock().await.cancel_pending_channels();
         Ok(())
     }
 }
@@ -834,7 +862,14 @@ impl Session {
         let peer_processing_task =
             Session::peer_processing_task(l2cap, frame_receiver, data_sender).boxed().fuse();
 
-        let _ = futures::future::select(session_inner_task, peer_processing_task).await;
+        // If the `peer_processing_task` terminates first, then the peer disconnected. In this case,
+        // we wait for the `session_inner_task` to clean up state and complete.
+        match futures::future::select(session_inner_task, peer_processing_task).await {
+            futures::future::Either::Left((_, _)) => {}
+            futures::future::Either::Right((_, session_task)) => {
+                let _ = session_task.await;
+            }
+        }
         info!("Session with peer {:?} ended", id);
     }
 
@@ -933,6 +968,7 @@ mod tests {
     use std::convert::TryFrom;
 
     use crate::rfcomm::frame::{mux_commands::*, FrameTypeMarker};
+    use crate::rfcomm::server::tests::{expect_frame_received_by_peer, send_peer_frame};
 
     /// Makes a DLC PN frame with arbitrary command parameters.
     /// `command_response` indicates whether the frame should be a command or response.
@@ -985,12 +1021,12 @@ mod tests {
 
     /// Creates a ChannelOpenedFn that relays inbound RFCOMM channels using the `channel_sender`.
     /// Tests should use the returned Receiver to assert on the delivery of opened RFCOMM channels.
-    fn create_inbound_relay() -> (ChannelOpenedFn, mpsc::Receiver<Channel>) {
+    fn create_inbound_relay() -> (ChannelOpenedFn, mpsc::Receiver<Result<Channel, ErrorCode>>) {
         let (channel_sender, channel_receiver) = mpsc::channel(0);
         let f = Box::new(move |_server_channel, channel| {
             let mut sender = channel_sender.clone();
             async move {
-                assert!(sender.send(channel).await.is_ok());
+                assert!(sender.send(Ok(channel)).await.is_ok());
                 Ok(())
             }
             .boxed()
@@ -1000,11 +1036,10 @@ mod tests {
 
     /// Creates a ChannelRequestFn that relays outbound RFCOMM channels using the `channel_sender`.
     /// Tests should use the returned Receiver to assert on delivery of outbound channels.
-    fn create_outbound_relay() -> (ChannelRequestFn, mpsc::Receiver<Channel>) {
+    fn create_outbound_relay() -> (ChannelRequestFn, mpsc::Receiver<Result<Channel, ErrorCode>>) {
         let (channel_sender, channel_receiver) = mpsc::channel(0);
         let f = Box::new(move |channel: Result<Channel, ErrorCode>| {
             let mut sender = channel_sender.clone();
-            let channel = channel.unwrap();
             assert!(sender.try_send(channel).is_ok());
             Ok(())
         });
@@ -1014,7 +1049,8 @@ mod tests {
     /// Creates and returns 1) A SessionInner 2) A stream of outgoing frames to be sent to the
     /// remote peer. Use this to validate SessionInner behavior and 3) A stream of opened RFCOMM
     /// channels. Use this to validate channel establishment.
-    fn setup_session() -> (SessionInner, mpsc::Receiver<Frame>, mpsc::Receiver<Channel>) {
+    fn setup_session(
+    ) -> (SessionInner, mpsc::Receiver<Frame>, mpsc::Receiver<Result<Channel, ErrorCode>>) {
         let (channel_opened_fn, channel_receiver) = create_inbound_relay();
         let (outgoing_frame_sender, outgoing_frames) = mpsc::channel(0);
         let session = SessionInner {
@@ -1090,12 +1126,26 @@ mod tests {
     #[track_caller]
     fn expect_channel(
         exec: &mut fasync::Executor,
-        receiver: &mut mpsc::Receiver<Channel>,
+        receiver: &mut mpsc::Receiver<Result<Channel, ErrorCode>>,
     ) -> Channel {
         let mut channel_fut = Box::pin(receiver.next());
         match exec.run_until_stalled(&mut channel_fut) {
-            Poll::Ready(Some(channel)) => channel,
+            Poll::Ready(Some(Ok(channel))) => channel,
             x => panic!("Expected a channel but got {:?}", x),
+        }
+    }
+
+    /// Expects a cancellation Error over the provided `receiver`.
+    #[track_caller]
+    fn expect_channel_error(
+        exec: &mut fasync::Executor,
+        receiver: &mut mpsc::Receiver<Result<Channel, ErrorCode>>,
+        expected_error: ErrorCode,
+    ) {
+        let mut channel_fut = Box::pin(receiver.next());
+        match exec.run_until_stalled(&mut channel_fut) {
+            Poll::Ready(Some(Err(e))) => assert_eq!(e, expected_error),
+            x => panic!("Expected ready error but got {:?}", x),
         }
     }
 
@@ -1591,16 +1641,12 @@ mod tests {
 
         // Remote sends SABM to start up session multiplexer.
         let sabm = Frame::make_sabm_command(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
-        let mut buf = vec![0; sabm.encoded_len()];
-        assert!(sabm.encode(&mut buf).is_ok());
-        remote.as_ref().write(&buf).expect("Should send");
+        send_peer_frame(remote.as_ref(), sabm);
         assert!(exec.run_until_stalled(&mut session_fut).is_pending());
 
         // Remote sends us a disconnect frame over the Mux Control DLCI.
         let disconnect = Frame::make_disc_command(Role::Initiator, DLCI::MUX_CONTROL_DLCI);
-        let mut buf = vec![0; disconnect.encoded_len()];
-        assert!(disconnect.encode(&mut buf).is_ok());
-        remote.as_ref().write(&buf).expect("Should send");
+        send_peer_frame(remote.as_ref(), disconnect);
 
         // Once we process the frame, the session should terminate.
         assert!(exec.run_until_stalled(&mut session_fut).is_ready());
@@ -1729,19 +1775,22 @@ mod tests {
         let mut exec = fasync::Executor::new().unwrap();
 
         let (mut session, mut outgoing_frames, _rfcomm_channels) = setup_session();
+        let (outbound_fn, mut outbound_channels) = create_outbound_relay();
         assert!(session.multiplexer().start(Role::Initiator).is_ok());
 
-        // Initiate a PN request - expect an outgoing PN command.
-        let user_dlci = DLCI::try_from(20).unwrap();
+        // Request to open a channel - should initiate parameter negotiation.
+        let server_channel = ServerChannel::try_from(13).unwrap();
+        let user_dlci = server_channel.to_dlci(Role::Responder).unwrap();
         {
-            let mut pn_fut = Box::pin(session.start_parameter_negotiation(user_dlci));
-            assert!(exec.run_until_stalled(&mut pn_fut).is_pending());
+            let mut open_fut =
+                Box::pin(session.open_remote_channel(ChannelRequest(server_channel, outbound_fn)));
+            assert!(exec.run_until_stalled(&mut open_fut).is_pending());
             expect_mux_command(
                 &mut exec,
                 &mut outgoing_frames,
                 MuxCommandMarker::ParameterNegotiation,
             );
-            assert_matches!(exec.run_until_stalled(&mut pn_fut), Poll::Ready(Ok(_)));
+            assert_matches!(exec.run_until_stalled(&mut open_fut), Poll::Ready(Ok(_)));
         }
         assert_eq!(
             session.multiplexer().parameter_negotiation_state(),
@@ -1758,26 +1807,31 @@ mod tests {
             session.multiplexer().parameter_negotiation_state(),
             ParameterNegotiationState::NotNegotiated
         );
+        // Client should be notified of cancellation.
+        expect_channel_error(&mut exec, &mut outbound_channels, ErrorCode::Canceled);
     }
 
     #[test]
     fn test_peer_rejects_parameter_negotiation_with_disc() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let (mut session, mut outgoing_frames, _rfcomm_channels) = setup_session();
+        let (mut session, mut outgoing_frames, _inbound_channels) = setup_session();
+        let (outbound_fn, mut outbound_channels) = create_outbound_relay();
         assert!(session.multiplexer().start(Role::Initiator).is_ok());
 
-        // Initiate a PN request - expect an outgoing PN command.
-        let user_dlci = DLCI::try_from(26).unwrap();
+        // Request to open a channel - should initiate parameter negotiation.
+        let server_channel = ServerChannel::try_from(13).unwrap();
+        let user_dlci = server_channel.to_dlci(Role::Responder).unwrap();
         {
-            let mut pn_fut = Box::pin(session.start_parameter_negotiation(user_dlci));
-            assert!(exec.run_until_stalled(&mut pn_fut).is_pending());
+            let mut open_fut =
+                Box::pin(session.open_remote_channel(ChannelRequest(server_channel, outbound_fn)));
+            assert!(exec.run_until_stalled(&mut open_fut).is_pending());
             expect_mux_command(
                 &mut exec,
                 &mut outgoing_frames,
                 MuxCommandMarker::ParameterNegotiation,
             );
-            assert_matches!(exec.run_until_stalled(&mut pn_fut), Poll::Ready(Ok(_)));
+            assert_matches!(exec.run_until_stalled(&mut open_fut), Poll::Ready(Ok(_)));
         }
         assert_eq!(
             session.multiplexer().parameter_negotiation_state(),
@@ -1803,6 +1857,8 @@ mod tests {
             session.multiplexer().parameter_negotiation_state(),
             ParameterNegotiationState::NotNegotiated
         );
+        // Client should be notified of cancellation.
+        expect_channel_error(&mut exec, &mut outbound_channels, ErrorCode::Canceled);
     }
 
     #[test]
@@ -1889,7 +1945,7 @@ mod tests {
 
         // Start SessionInner with negotiated parameters - don't expect any relayed channels.
         let (mut session, mut outgoing_frames, _inbound_channels) = setup_session();
-        let (outbound_fn, _outbound_channels) = create_outbound_relay();
+        let (outbound_fn, mut outbound_channels) = create_outbound_relay();
         session.channel_opened_fn =
             Box::new(|_, _channel| async { panic!("Don't expect channels!") }.boxed());
         assert!(session.multiplexer().start(Role::Initiator).is_ok());
@@ -1914,13 +1970,44 @@ mod tests {
         {
             // Simulate peer responding negatively with a DM.
             let mut handle_fut = Box::pin(
-                session
-                    .handle_frame(Frame::make_dm_response(Role::Responder, DLCI::MUX_CONTROL_DLCI)),
+                session.handle_frame(Frame::make_dm_response(Role::Responder, expected_dlci)),
             );
             assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(_)));
         }
-        // The DLCI should not be established as peer rejected our request.
+        // The DLCI should not be established due to peer rejection - client should be notified.
         assert!(!session.multiplexer().dlci_established(&expected_dlci));
+        expect_channel_error(&mut exec, &mut outbound_channels, ErrorCode::Canceled);
+    }
+
+    #[test]
+    fn test_cancellation_during_open_channel_notifies_client() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let (local, mut remote) = Channel::create();
+        let (channel_open_fn, _inbound_channels) = create_inbound_relay();
+        let mut session = Session::create(PeerId(42), local, channel_open_fn);
+        let (outbound_fn, mut outbound_channels) = create_outbound_relay();
+
+        // Local profile client requests to open an RFCOMM channel.
+        let server_channel = ServerChannel::try_from(2).unwrap();
+        {
+            let mut open_fut = Box::pin(session.open_rfcomm_channel(server_channel, outbound_fn));
+            assert!(exec.run_until_stalled(&mut open_fut).is_ready());
+        }
+
+        // Remote should receive an RFCOMM frame to start up the multiplexer.
+        expect_frame_received_by_peer(&mut exec, &mut remote);
+        // Remote responds positively.
+        let ua = Frame::make_ua_response(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
+        send_peer_frame(remote.as_ref(), ua);
+
+        // Remote should receive an RFCOMM frame to negotiate parameters.
+        expect_frame_received_by_peer(&mut exec, &mut remote);
+        // Remote disconnects - run any background tasks to completion.
+        drop(remote);
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        // Client should be notified of cancellation.
+        expect_channel_error(&mut exec, &mut outbound_channels, ErrorCode::Canceled);
     }
 
     #[test]
@@ -1996,16 +2083,10 @@ mod tests {
     fn test_open_rfcomm_channel_relays_channel_to_callback() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let (local, remote) = Channel::create();
+        let (local, mut remote) = Channel::create();
         let (channel_open_fn, _inbound_channels) = create_inbound_relay();
         let mut session = Session::create(PeerId(321), local, channel_open_fn);
         let (outbound_fn, mut outbound_channels) = create_outbound_relay();
-
-        // `remote_fut` is a stream of bytes received from the `session`. It is what we'd expect
-        // the remote peer to receive.
-        let mut vec = Vec::new();
-        let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
-        assert!(exec.run_until_stalled(&mut remote_fut).is_pending());
 
         // 1. Simulate local profile client requesting to open an RFCOMM channel.
         let server_channel = ServerChannel::try_from(2).unwrap();
@@ -2016,43 +2097,31 @@ mod tests {
         }
 
         // 2. Remote should receive an RFCOMM frame to start up the multiplexer.
-        assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
+        expect_frame_received_by_peer(&mut exec, &mut remote);
         // 3. Remote responds positively.
         let ua = Frame::make_ua_response(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
-        let mut buf = vec![0; ua.encoded_len()];
-        assert!(ua.encode(&mut buf[..]).is_ok());
-        assert!(remote.as_ref().write(&buf).is_ok());
+        send_peer_frame(remote.as_ref(), ua);
 
         // 4. Remote should receive an RFCOMM frame to negotiate parameters.
-        let mut vec = Vec::new();
-        let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
-        assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
+        expect_frame_received_by_peer(&mut exec, &mut remote);
         // 5. Remote responds positively.
         let pn_response = make_dlc_pn_frame(CommandResponse::Response, expected_dlci, true, 100);
-        let mut buf = vec![0; pn_response.encoded_len()];
-        assert!(pn_response.encode(&mut buf[..]).is_ok());
-        assert!(remote.as_ref().write(&buf).is_ok());
+        send_peer_frame(remote.as_ref(), pn_response);
 
         // 6. Remote should receive an RFCOMM frame to establish the `expected_dlci`.
-        let mut vec = Vec::new();
-        let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
-        assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
+        expect_frame_received_by_peer(&mut exec, &mut remote);
         // 7. Remote responds positively.
         let ua = Frame::make_ua_response(Role::Responder, expected_dlci);
-        let mut buf = vec![0; ua.encoded_len()];
-        assert!(ua.encode(&mut buf[..]).is_ok());
-        assert!(remote.as_ref().write(&buf).is_ok());
+        send_peer_frame(remote.as_ref(), ua);
 
         // Mux startup, Parameter negotiation, and channel establishment are complete. The RFCOMM
         // channel should be ready and relayed to the client.
         let _channel = expect_channel(&mut exec, &mut outbound_channels);
 
         // Client trying to connect again on the same channel should fail immediately.
-        let outbound_err_fn = Box::new(move |channel: Result<Channel, ErrorCode>| {
-            assert!(channel.is_err());
-            Ok(())
-        });
-        let mut open_fut = Box::pin(session.open_rfcomm_channel(server_channel, outbound_err_fn));
+        let (outbound_fn2, mut outbound_channels2) = create_outbound_relay();
+        let mut open_fut = Box::pin(session.open_rfcomm_channel(server_channel, outbound_fn2));
         assert!(exec.run_until_stalled(&mut open_fut).is_ready());
+        expect_channel_error(&mut exec, &mut outbound_channels2, ErrorCode::Canceled);
     }
 }

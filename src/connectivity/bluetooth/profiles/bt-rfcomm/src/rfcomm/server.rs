@@ -193,7 +193,7 @@ impl RfcommServer {
     }
 }
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     use crate::rfcomm::{
@@ -219,14 +219,14 @@ mod tests {
     }
 
     #[track_caller]
-    fn send_peer_frame(remote: &fidl::Socket, frame: Frame) {
+    pub fn send_peer_frame(remote: &fidl::Socket, frame: Frame) {
         let mut buf = vec![0; frame.encoded_len()];
         assert!(frame.encode(&mut buf[..]).is_ok());
         assert!(remote.write(&buf).is_ok());
     }
 
     #[track_caller]
-    fn expect_frame_received_by_peer(exec: &mut fasync::Executor, remote: &mut Channel) {
+    pub fn expect_frame_received_by_peer(exec: &mut fasync::Executor, remote: &mut Channel) {
         let mut vec = Vec::new();
         let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
         assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
