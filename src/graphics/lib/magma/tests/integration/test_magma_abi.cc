@@ -827,6 +827,9 @@ class TestConnection {
   }
 
   void DisabledPerformanceCounters() {
+#if !defined(__Fuchsia__)
+    GTEST_SKIP();
+#else
     uint64_t counter = 5;
     magma_semaphore_t semaphore;
     ASSERT_EQ(magma_create_semaphore(connection_, &semaphore), MAGMA_STATUS_OK);
@@ -876,6 +879,7 @@ class TestConnection {
 
     magma_release_buffer(connection_, buffer);
     magma_release_semaphore(connection_, semaphore);
+#endif
   }
 
  private:
