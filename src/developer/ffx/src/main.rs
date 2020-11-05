@@ -5,12 +5,12 @@
 use {
     anyhow::{anyhow, Context, Result},
     async_std::future::timeout,
-    ffx_core::FfxError,
+    ffx_core::{ffx_error, FfxError},
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
     ffx_lib_args::Ffx,
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_bridge::{DaemonProxy, FastbootMarker, FastbootProxy},
+    fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, FastbootMarker, FastbootProxy},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     lazy_static::lazy_static,
     std::sync::{Arc, Mutex},
@@ -19,6 +19,17 @@ use {
 
 // Config key for event timeout.
 const PROXY_TIMEOUT_SECS: &str = "proxy.timeout_secs";
+// TODO: a nice way to focus this error message would be to get a list of targets from the daemon
+// and be able to distinguish whether there are in fact 0 or multiple available targets.
+const TARGET_FAILURE_MSG: &str = "\
+We weren't able to open a connection to a target.
+
+Use `ffx target list` to verify the state of connected devices. This error probably means that either:
+
+1) There are no available targets. Make sure your device is connected.
+2) There are multiple available targets and you haven't specified a target or provided a default.
+Tip: You can use `ffx --target \"my-nodename\" <command>` to specify a target for a particular command, or
+use `ffx target default set \"my-nodename\"` if you always want to use a particular target.";
 
 lazy_static! {
     // Using a mutex to guard the spawning of the daemon - the value it contains is not used.
@@ -66,7 +77,8 @@ async fn get_remote_proxy() -> Result<RemoteControlProxy> {
     let daemon_proxy = get_daemon_proxy().await?;
     let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
     let app: Ffx = argh::from_env();
-    timeout(
+
+    let result = timeout(
         proxy_timeout().await?,
         daemon_proxy.get_remote_control(
             app.target().await?.as_ref().map(|s| s.as_str()),
@@ -75,8 +87,13 @@ async fn get_remote_proxy() -> Result<RemoteControlProxy> {
     )
     .await
     .context("timeout")?
-    .context("connecting to RCS")
-    .map(|_| remote_proxy)
+    .context("connecting to daemon")?;
+
+    match result {
+        Ok(_) => Ok(remote_proxy),
+        Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
+        Err(e) => Err(anyhow!("unexpected failure connecting to RCS: {:?}", e)),
+    }
 }
 
 async fn is_experiment_subcommand_on(key: &'static str) -> bool {
