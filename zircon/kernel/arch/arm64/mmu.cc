@@ -22,7 +22,6 @@
 
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/aspace.h>
-#include <arch/mmu.h>
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
 #include <fbl/auto_call.h>

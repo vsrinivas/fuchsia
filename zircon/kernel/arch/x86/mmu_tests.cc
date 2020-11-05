@@ -11,7 +11,6 @@
 #include <zircon/types.h>
 
 #include <arch/aspace.h>
-#include <arch/mmu.h>
 #include <arch/x86/mmu.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/physmap.h>

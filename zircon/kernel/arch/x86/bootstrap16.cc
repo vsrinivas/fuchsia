@@ -14,7 +14,6 @@
 #include <trace.h>
 #include <zircon/types.h>
 
-#include <arch/mmu.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/descriptor.h>

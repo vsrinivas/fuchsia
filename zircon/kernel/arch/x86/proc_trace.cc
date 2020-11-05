@@ -39,7 +39,6 @@
 #include <zircon/types.h>
 
 #include <arch/arch_ops.h>
-#include <arch/mmu.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>

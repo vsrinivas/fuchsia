@@ -39,7 +39,6 @@
 #include <new>
 
 #include <arch/arch_ops.h>
-#include <arch/mmu.h>
 #include <arch/regs.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>

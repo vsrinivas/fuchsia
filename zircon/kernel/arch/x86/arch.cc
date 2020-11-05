@@ -21,7 +21,6 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <arch/mmu.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
 #include <arch/regs.h>

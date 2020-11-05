@@ -19,7 +19,6 @@
 #include <trace.h>
 #include <zircon/types.h>
 
-#include <arch/mmu.h>
 #include <fbl/algorithm.h>
 #include <kernel/thread.h>
 #include <ktl/array.h>

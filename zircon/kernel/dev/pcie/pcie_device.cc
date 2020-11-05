@@ -16,7 +16,6 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
-#include <arch/mmu.h>
 #include <dev/interrupt.h>
 #include <dev/pcie_bridge.h>
 #include <dev/pcie_bus_driver.h>

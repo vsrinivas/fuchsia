@@ -10,7 +10,6 @@
 #include <sys/types.h>
 #include <zircon/types.h>
 
-#include <arch/mmu.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <vm/page.h>

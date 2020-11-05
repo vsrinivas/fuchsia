@@ -10,7 +10,6 @@
 #include <zircon/types.h>
 
 #include <arch/aspace.h>
-#include <arch/mmu.h>
 #include <fbl/auto_call.h>
 #include <ktl/iterator.h>
 #include <vm/arch_vm_aspace.h>

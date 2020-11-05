@@ -12,7 +12,6 @@
 #include <zircon/types.h>
 
 #include <arch/aspace.h>
-#include <arch/mmu.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>

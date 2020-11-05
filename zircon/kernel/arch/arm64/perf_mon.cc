@@ -25,7 +25,6 @@
 #include <arch/arch_ops.h>
 #include <arch/arm64.h>
 #include <arch/arm64/perf_mon.h>
-#include <arch/mmu.h>
 #include <arch/regs.h>
 #include <dev/interrupt/arm_gic_common.h>
 #include <fbl/algorithm.h>

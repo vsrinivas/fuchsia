@@ -10,7 +10,6 @@
 #include <assert.h>
 #include <lib/zircon-internal/macros.h>
 
-#include <arch/mmu.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
 #include <arch/x86.h>
