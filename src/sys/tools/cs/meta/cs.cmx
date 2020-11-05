@@ -3,6 +3,9 @@
         "binary": "bin/cs"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.diagnostics.ArchiveAccessor"
         ]

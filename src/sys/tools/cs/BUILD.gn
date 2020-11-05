@@ -11,12 +11,14 @@ rustc_library("lib") {
   name = "cs"
   edition = "2018"
   with_unit_tests = true
+  source_root = "lib/mod.rs"
 
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -31,17 +33,19 @@ rustc_library("lib") {
   test_deps = [ "//third_party/rust_crates:tempfile" ]
 
   sources = [
-    "src/freq.rs",
-    "src/lib.rs",
-    "src/log_stats.rs",
-    "src/v1.rs",
-    "src/v2.rs",
+    "lib/freq.rs",
+    "lib/io.rs",
+    "lib/log_stats.rs",
+    "lib/mod.rs",
+    "lib/v1.rs",
+    "lib/v2.rs",
   ]
 }
 
 rustc_binary("bin") {
   name = "cs_bin"
   edition = "2018"
+  source_root = "main.rs"
 
   deps = [
     ":lib",
@@ -56,7 +60,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  sources = [ "src/main.rs" ]
+  sources = [ "main.rs" ]
 }
 
 package("cs") {
