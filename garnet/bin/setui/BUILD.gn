@@ -212,6 +212,7 @@ rustc_library("lib") {
     "src/tests/fakes/recovery_policy_service.rs",
     "src/tests/fakes/service_registry.rs",
     "src/tests/fakes/sound_player_service.rs",
+    "src/tests/fidl_processor_tests.rs",
     "src/tests/hanging_get_tests.rs",
     "src/tests/input_tests.rs",
     "src/tests/intl_tests.rs",

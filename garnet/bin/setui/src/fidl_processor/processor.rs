@@ -53,7 +53,6 @@ where
 
 /// `BaseFidlProcessor` delegates request processing for setting requests across a number of
 /// processing units. There should be a single FidlProcessor per stream.
-// TODO(fxbug.dev/61243): write tests for this class
 pub struct BaseFidlProcessor<S, P, A>
 where
     S: ServiceMarker,
@@ -73,6 +72,15 @@ where
 {
     pub fn new(request_stream: RequestStream<S>, messenger: MessengerClient<P, A>) -> Self {
         Self { request_stream, messenger, processing_units: Vec::new() }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_processing_units(
+        request_stream: RequestStream<S>,
+        messenger: MessengerClient<P, A>,
+        processing_units: Vec<Box<dyn ProcessingUnit<S, P, A>>>,
+    ) -> Self {
+        Self { request_stream, messenger, processing_units }
     }
 
     // Process the stream. Note that we pass in the processor here as it cannot
@@ -176,15 +184,11 @@ impl<S> PolicyFidlProcessor<S>
 where
     S: ServiceMarker,
 {
-    // TODO(fxb/59705): remove annotation once used.
-    #[allow(dead_code)]
     pub async fn new(stream: RequestStream<S>, messenger: policy::message::Messenger) -> Self {
         Self { base_processor: BaseFidlProcessor::new(stream, messenger) }
     }
 
     /// Registers a fidl processing unit for policy requests.
-    // TODO(fxb/59705): remove annotation once used.
-    #[allow(dead_code)]
     pub async fn register(
         &mut self,
         callback: PolicyRequestCallback<S, policy::Payload, policy::Address>,
@@ -193,8 +197,6 @@ where
         self.base_processor.processing_units.push(processing_unit);
     }
 
-    // TODO(fxb/59705): remove annotation once used.
-    #[allow(dead_code)]
     pub async fn process(self) {
         self.base_processor.process().await
     }
