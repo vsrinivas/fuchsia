@@ -107,18 +107,6 @@ constexpr uint64_t kPersistentLogsMaxSizeInKb = 512;
 constexpr char kCurrentLogsDir[] = "/cache/current_system_logs";
 constexpr size_t kMaxNumLogFiles = 8u;
 
-// TODO(fxbug.dev/61101): Delete this when all devices have migrated to using |kCurrentLogsDir|.
-const std::vector<const std::string> kLegacyCurrentLogFilePaths({
-    "/cache/current_system_log_0.txt",
-    "/cache/current_system_log_1.txt",
-    "/cache/current_system_log_2.txt",
-    "/cache/current_system_log_3.txt",
-    "/cache/current_system_log_4.txt",
-    "/cache/current_system_log_5.txt",
-    "/cache/current_system_log_6.txt",
-    "/cache/current_system_log_7.txt",
-});
-
 // At most 16KB of logs will be persisted each second.
 constexpr size_t kMaxWriteSizeInBytes = 16 * 1024;
 

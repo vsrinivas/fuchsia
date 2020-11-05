@@ -148,37 +148,35 @@ std::string PostProcess(const std::string& log) {
 
 }  // namespace
 
-bool Concatenate(const std::vector<const std::string>& input_file_paths,
-                 const std::string& logs_dir, Decoder* decoder, const std::string& output_file_path,
+bool Concatenate(const std::string& logs_dir, Decoder* decoder, const std::string& output_file_path,
                  float* compression_ratio) {
   // Set the default compression to NAN in case Concatenate() fails.
   *compression_ratio = NAN;
 
-  FX_CHECK(files::IsDirectory(logs_dir) | !input_file_paths.empty());
+  if(!files::IsDirectory(logs_dir)) {
+     FX_LOGS(WARNING) << "No previous boot logs found";
+     return false;
+  }
 
   std::vector<std::string> file_paths;
-  if (!files::IsDirectory(logs_dir)) {
-    // TODO(fxbug.dev/61101): Stop using |input_file_paths|.
-    file_paths = std::vector(input_file_paths.cbegin(), input_file_paths.cend());
-  } else {
-    files::ReadDirContents(logs_dir, &file_paths);
+  files::ReadDirContents(logs_dir, &file_paths);
 
-    // Remove the current directory from the files.
-    file_paths.erase(std::find(file_paths.begin(), file_paths.end(), "."));
+  // Remove the current directory from the files.
+  file_paths.erase(std::find(file_paths.begin(), file_paths.end(), "."));
 
-    // Sort the files based on the number the previous writer assigned them. The lower the number,
-    // the older the file.
-    std::sort(file_paths.begin(), file_paths.end(),
-              [](const std::string& lhs, const std::string& rhs) {
-                return std::strtoull(lhs.c_str(), nullptr, /*base=*/10) >
-                       std::strtoull(rhs.c_str(), nullptr, /*base=*/10);
-              });
+  // Sort the files based on the number the previous writer assigned them. The lower the number,
+  // the older the file.
+  std::sort(file_paths.begin(), file_paths.end(),
+            [](const std::string& lhs, const std::string& rhs) {
+              return std::strtoull(lhs.c_str(), nullptr, /*base=*/10) >
+                     std::strtoull(rhs.c_str(), nullptr, /*base=*/10);
+            });
 
-    // Turn each file name into a complete path.
-    for (auto& fname : file_paths) {
-      fname = files::JoinPath(logs_dir, fname);
-    }
+  // Turn each file name into a complete path.
+  for (auto& fname : file_paths) {
+    fname = files::JoinPath(logs_dir, fname);
   }
+
   uint64_t total_compressed_log_size{0};
   for (auto path = file_paths.crbegin(); path != file_paths.crend(); ++path) {
     uint64_t size;

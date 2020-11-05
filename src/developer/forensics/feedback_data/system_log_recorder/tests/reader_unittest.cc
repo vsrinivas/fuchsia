@@ -65,7 +65,7 @@ TEST(ReaderTest, MergeRepeatedMessages) {
   float compression_ratio;
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder, output_path,
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
                           &compression_ratio));
 
   std::string contents;
@@ -93,7 +93,7 @@ TEST(ReaderTest, SortsMessagesNoTimeTagOnly) {
   float compression_ratio;
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder, output_path,
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
                           &compression_ratio));
 
   std::string contents;
@@ -122,7 +122,7 @@ TEST(ReaderTest, SortsMessagesMixed) {
   float compression_ratio;
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder, output_path,
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
                           &compression_ratio));
 
   std::string contents;
@@ -153,7 +153,7 @@ TEST(ReaderTest, SortsMessages) {
   IdentityDecoder decoder;
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder, output_path,
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
                           &compression_ratio));
   EXPECT_EQ(compression_ratio, 1.0);
 
@@ -196,7 +196,7 @@ TEST(ReaderTest, SortsMessagesDifferentTimestampLength) {
   float compression_ratio;
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder, output_path,
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
                           &compression_ratio));
 
   std::string contents;
@@ -230,55 +230,8 @@ TEST(ReaderTest, SortsMessagesMultipleFiles) {
   IdentityDecoder decoder;
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder, output_path,
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
                           &compression_ratio));
-  EXPECT_EQ(compression_ratio, 1.0);
-
-  std::string contents;
-  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
-  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
-[15604.001][07559][07687][] INFO: line 1
-[15604.001][07559][07687][] INFO: line11
-[15604.002][07559][07687][] INFO: line 2
-[15604.003][07559][07687][] INFO: line 3
-[15604.004][07559][07687][] INFO: line
-4
-[15604.005][07559][07687][] INFO: dup
-!!! MESSAGE REPEATED 2 MORE TIMES !!!
-)");
-}
-
-TEST(ReaderTest, UsesPaths) {
-  files::ScopedTempDir temp_dir;
-
-  // Set the block and buffer to both hold 4 log messages.
-  LogMessageStore store(kMaxLogLineSize * 4, kMaxLogLineSize * 4, MakeIdentityEncoder());
-  SystemLogWriter writer(temp_dir.path(), 8u, &store);
-
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::msec(0))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3", zx::msec(3))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2", zx::msec(2))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1", zx::msec(1))));
-  writer.Write();
-
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line11", zx::msec(1))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "dup", zx::msec(5))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "dup", zx::msec(6))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "dup", zx::msec(7))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line\n4", zx::msec(4))));
-  writer.Write();
-
-  files::ScopedTempDir output_dir;
-  const std::string output_path = files::JoinPath(output_dir.path(), "output.txt");
-  IdentityDecoder decoder;
-
-  float compression_ratio;
-  ASSERT_TRUE(Concatenate(
-      {
-          MakeLogFilePath(temp_dir, 1u),
-          MakeLogFilePath(temp_dir, 0u),
-      },
-      "GARBAGE PATH", &decoder, output_path, &compression_ratio));
   EXPECT_EQ(compression_ratio, 1.0);
 
   std::string contents;

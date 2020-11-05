@@ -268,7 +268,7 @@ RebootLog RebootLog::ParseRebootLog(const std::string& zircon_reboot_log_path,
   const auto reboot_log = MakeRebootLog(zircon_reboot_log, graceful_reboot_log);
 
   if (reboot_log.has_value()) {
-    FX_LOGS(INFO) << "Found reboot log:\n" << reboot_log.value();
+    FX_LOGS(INFO) << "Reboot info:\n" << reboot_log.value();
   }
 
   return RebootLog(reboot_reason, reboot_log, last_boot_uptime);

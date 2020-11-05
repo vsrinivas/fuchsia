@@ -14,9 +14,7 @@ namespace forensics {
 namespace feedback_data {
 namespace system_log_recorder {
 
-// TODO(fxbug.dev/61101): Remove |input_file_paths| once |logs_dir| is used everywhere.
-bool Concatenate(const std::vector<const std::string>& input_file_paths,
-                 const std::string& logs_dir, Decoder* decoder, const std::string& output_file_path,
+bool Concatenate(const std::string& logs_dir, Decoder* decoder, const std::string& output_file_path,
                  float* compression_ratio);
 
 }  // namespace system_log_recorder

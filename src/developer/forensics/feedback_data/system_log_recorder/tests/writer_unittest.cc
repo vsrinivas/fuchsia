@@ -116,7 +116,7 @@ TEST(WriterTest, VerifyFileOrdering) {
 )");
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder, output_path,
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
                           &compression_ratio));
   EXPECT_EQ(compression_ratio, 1.0);
 
@@ -179,7 +179,7 @@ TEST(WriterTest, WritesMessages) {
   IdentityDecoder decoder;
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder, output_path,
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
                           &compression_ratio));
   EXPECT_EQ(compression_ratio, 1.0);
 
@@ -194,7 +194,7 @@ TEST(WriterTest, WritesMessages) {
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 4")));
   writer.Write();
 
-  ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder, output_path,
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
                           &compression_ratio));
   EXPECT_EQ(compression_ratio, 1.0);
 
@@ -221,7 +221,7 @@ TEST(WriterTest, VerifyCompressionRatio) {
   Decoder2x decoder;
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder, output_path,
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
                           &compression_ratio));
   EXPECT_EQ(compression_ratio, 2.0);
 }
@@ -246,7 +246,7 @@ TEST(WriterTest, VerifyProductionEcoding) {
   ProductionDecoder decoder;
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder, output_path,
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
                           &compression_ratio));
   EXPECT_FALSE(std::isnan(compression_ratio));
 
@@ -291,7 +291,7 @@ TEST(WriterTest, FilesAlreadyPresent) {
   ProductionDecoder decoder;
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder, output_path,
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
                           &compression_ratio));
   EXPECT_FALSE(std::isnan(compression_ratio));
 

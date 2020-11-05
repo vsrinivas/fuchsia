@@ -120,7 +120,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder,
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder,
                             output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
@@ -134,7 +134,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder,
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder,
                             output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
@@ -149,7 +149,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder,
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder,
                             output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
@@ -165,7 +165,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder,
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder,
                             output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
@@ -180,7 +180,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder,
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder,
                             output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
@@ -196,7 +196,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder,
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder,
                             output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
