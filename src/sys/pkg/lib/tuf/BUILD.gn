@@ -18,10 +18,13 @@ common_sources = [
   "//third_party/rust-mirrors/rust-tuf/src/interchange/mod.rs",
   "//third_party/rust-mirrors/rust-tuf/src/lib.rs",
   "//third_party/rust-mirrors/rust-tuf/src/metadata.rs",
+  "//third_party/rust-mirrors/rust-tuf/src/repo_builder.rs",
   "//third_party/rust-mirrors/rust-tuf/src/repository.rs",
   "//third_party/rust-mirrors/rust-tuf/src/repository/ephemeral.rs",
+  "//third_party/rust-mirrors/rust-tuf/src/repository/error_repo.rs",
   "//third_party/rust-mirrors/rust-tuf/src/repository/file_system.rs",
   "//third_party/rust-mirrors/rust-tuf/src/repository/http.rs",
+  "//third_party/rust-mirrors/rust-tuf/src/repository/track_repo.rs",
   "//third_party/rust-mirrors/rust-tuf/src/tuf.rs",
   "//third_party/rust-mirrors/rust-tuf/src/util.rs",
   "//third_party/rust-mirrors/rust-tuf/src/verify.rs",
@@ -57,7 +60,6 @@ rustc_library("tuf") {
   ]
 
   sources = common_sources
-  enforce_source_listing = false
 }
 
 rustc_test("tuf_lib_test") {
@@ -95,7 +97,6 @@ rustc_test("tuf_lib_test") {
   ]
 
   sources = common_sources
-  enforce_source_listing = false
 
   inputs = [
     "//third_party/rust-mirrors/rust-tuf/tests/rsa/rsa-4096.pkcs1.der",
