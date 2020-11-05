@@ -67,12 +67,7 @@ void ll6addr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
   ip[8] = mac[0] ^ 2;
   ip[9] = mac[1];
   ip[10] = mac[2];
-  // Normally this would be set to 0xFF when generating the modified EUI-64 interface identifier, as
-  // per RFC 4291 section 2.5.1. However, various bits of infrastructure rely on having knowledge of
-  // this address generation algorithm.
-  //
-  // TODO(fxbug.dev/60888): change this to 0xFF when infrastructure no longer relies on this magic.
-  ip[11] = 'M';
+  ip[11] = 0xFF;
   ip[12] = 0xFE;
   ip[13] = mac[3];
   ip[14] = mac[4];

@@ -111,7 +111,7 @@ have to be annotated with the interface they apply to, so make sure the address
 you use includes the appropriate interface (should be the name of the bridge
 device).
 
-The address should look like `fe80::5054:4d:fe63:5e7a%br0`
+The address should look like `fe80::5054:ff:fe63:5e7a%br0`
 
 ```sh
 fx zxdb
@@ -120,7 +120,7 @@ or
 
 out/<out_dir>/host_x64/zxdb
 
-[zxdb] connect [fe80::5054:4d:fe63:5e7a%br0]:2345
+[zxdb] connect [fe80::5054:ff:fe63:5e7a%br0]:2345
 ```
 
 (Substitute your build directory as-needed).
@@ -128,7 +128,7 @@ out/<out_dir>/host_x64/zxdb
 If you're connecting or running many times, there are command-line switches:
 
 ```sh
-zxdb -c [fe80::5054:4d:fe63:5e7a%br0]:2345
+zxdb -c [fe80::5054:ff:fe63:5e7a%br0]:2345
 ```
 
   * The `status` command will give you a summary of the current state of the

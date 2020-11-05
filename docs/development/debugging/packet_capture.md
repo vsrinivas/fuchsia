@@ -202,7 +202,7 @@ workflows. The following table lists noteworthy signatures.
 | Bootserver           | port 33341                   | NB_TFTP_INCOMING_PORT                      |
 | Package Server       | port 8083                    | docs/packages.md                           |
 | fx shell             | port 22                      | devshell/shell                             |
-| target netsvc addr   | fe80::xxxx:xx4d:fexx:xxxx%XX | fx device-finder list --netboot            |
+| target netsvc addr   | fe80::xxxx:xxff:fexx:xxxx%XX | fx device-finder list --netboot            |
 | host link-local addr | fe80::xxxx:xxxx:xxxx:xxxx%XX | fx device-finder list --ipv4=false --local |
 | target netstack addr | fe80::xxxx:xxxx:xxxx:xxxx%XX | fx get-device-addr                         |
 | zxdb                 | port 2345                    | devshell/contrib/debug                     |

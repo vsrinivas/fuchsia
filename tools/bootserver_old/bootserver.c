@@ -721,7 +721,7 @@ int main(int argc, char** argv) {
     }
     if (allowed_scope_id == -1) {
       log("need to specify interface number in -a for --no-bind.");
-      log("Ex: -a fe80::5054:4d:fe12:3456/4 \nHint: use netls to get the address");
+      log("Ex: -a fe80::5054:ff:fe12:3456/4 \nHint: use netls to get the address");
       close(sock);
       return -1;
     }
