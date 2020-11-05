@@ -33,7 +33,7 @@ test("fdio-caller") {
   }
   sources = [ "fdio.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",

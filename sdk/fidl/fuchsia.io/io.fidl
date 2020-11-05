@@ -336,7 +336,6 @@ const uint32 VMO_FLAG_PRIVATE = 0x00010000;
 const uint32 VMO_FLAG_EXACT = 0x00020000;
 
 /// File defines the interface of a node which contains a flat layout of data.
-[ForDeprecatedCBindings]
 protocol File {
     compose Node;
 

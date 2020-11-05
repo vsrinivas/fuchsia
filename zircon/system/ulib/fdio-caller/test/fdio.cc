@@ -3,40 +3,41 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <unistd.h>
-
-#include <fbl/unique_fd.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fd.h>
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
-#include <zxtest/zxtest.h>
+#include <unistd.h>
 
 #include <utility>
+
+#include <fbl/unique_fd.h>
+#include <zxtest/zxtest.h>
+
+namespace fio = llcpp::fuchsia::io;
 
 namespace {
 
 void TryFilesystemOperations(const fdio_cpp::FdioCaller& caller) {
   const char* golden = "foobar";
-  zx_status_t status;
-  uint64_t actual;
-  ASSERT_EQ(
-      fuchsia_io_FileWriteAt(caller.borrow_channel(), reinterpret_cast<const uint8_t*>(golden),
-                             strlen(golden), 0, &status, &actual),
-      ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(actual, strlen(golden));
+  auto write_result = fio::File::Call::WriteAt(
+      caller.channel(),
+      fidl::VectorView(
+          fidl::unowned_ptr(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(golden))),
+          strlen(golden)),
+      0);
+  ASSERT_EQ(write_result.status(), ZX_OK);
+  ASSERT_EQ(write_result->s, ZX_OK);
+  ASSERT_EQ(write_result->actual, strlen(golden));
 
-  char buf[256];
-  ASSERT_EQ(fuchsia_io_FileReadAt(caller.borrow_channel(), static_cast<uint64_t>(sizeof(buf)), 0,
-                                  &status, reinterpret_cast<uint8_t*>(buf), sizeof(buf), &actual),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(actual, strlen(golden));
-  ASSERT_EQ(memcmp(buf, golden, strlen(golden)), 0);
+  auto read_result = fio::File::Call::ReadAt(caller.channel(), 256, 0);
+  ASSERT_EQ(read_result.status(), ZX_OK);
+  ASSERT_EQ(read_result->s, ZX_OK);
+  ASSERT_EQ(read_result->data.count(), strlen(golden));
+  ASSERT_EQ(memcmp(read_result->data.data(), golden, strlen(golden)), 0);
 }
 
 class Harness {

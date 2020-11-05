@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <zircon/device/vfs.h>
 
 #include <block-client/cpp/remote-block-device.h>
 #include <fs/trace.h>
+
+namespace fio = llcpp::fuchsia::io;
 
 namespace block_client {
 namespace {
@@ -36,19 +38,20 @@ zx_status_t BlockCloseFifo(const zx::channel& device) {
 zx_status_t RemoteBlockDevice::ReadBlock(uint64_t block_num, uint64_t block_size,
                                          void* block) const {
   uint64_t offset = block_num * block_size;
-  size_t actual;
-  zx_status_t status, io_status;
-  io_status = fuchsia_io_FileReadAt(device_.get(), block_size, offset, &status,
-                                    reinterpret_cast<uint8_t*>(block), block_size, &actual);
-  if (io_status != ZX_OK) {
-    return io_status;
+  fidl::Buffer<fio::File::ReadAtRequest> request_buffer;
+  fidl::Buffer<fio::File::ReadAtResponse> response_buffer;
+  auto result = fio::File::Call::ReadAt(device_.borrow(), request_buffer.view(), block_size, offset,
+                                        response_buffer.view());
+  if (result.status() != ZX_OK) {
+    return result.status();
   }
-  if (status != ZX_OK) {
-    return status;
+  if (result->s != ZX_OK) {
+    return result->s;
   }
-  if (actual != block_size) {
+  if (result->data.count() != block_size) {
     return ZX_ERR_IO;
   }
+  memcpy(block, result->data.data(), result->data.count());
   return ZX_OK;
 }
 
@@ -99,8 +102,7 @@ zx_status_t RemoteBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* ou
   return status;
 }
 
-zx_status_t RemoteBlockDevice::BlockAttachVmo(const zx::vmo& vmo,
-                                              storage::Vmoid* out_vmoid) {
+zx_status_t RemoteBlockDevice::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) {
   zx::vmo xfer_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
   if (status != ZX_OK) {
@@ -128,9 +130,9 @@ zx_status_t RemoteBlockDevice::VolumeQuery(
     return status;
   }
   uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
-  status = fuchsia_io_NodeClone(device_.get(), flags, server.release());
-  if (status != ZX_OK) {
-    return status;
+  auto result = fio::Node::Call::Clone(device_.borrow(), flags, std::move(server));
+  if (result.status() != ZX_OK) {
+    return result.status();
   }
 
   zx_status_t io_status =
