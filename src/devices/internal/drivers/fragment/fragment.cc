@@ -762,6 +762,31 @@ zx_status_t Fragment::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_
   }
 }
 
+zx_status_t Fragment::RpcDai(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                             uint32_t* out_resp_size, zx::handle* req_handles,
+                             uint32_t req_handle_count, zx::handle* resp_handles,
+                             uint32_t* resp_handle_count) {
+  if (!dai_client_.proto_client().is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto* req = reinterpret_cast<const DaiProxyRequest*>(req_buf);
+  auto* resp = reinterpret_cast<DaiProxyResponse*>(resp_buf);
+  *out_resp_size = sizeof(*resp);
+
+  switch (req->op) {
+    case DaiOp::GET_CHANNEL:
+      if (req_handle_count != 1) {
+        zxlogf(ERROR, "%s received %u handles, expecting 1", __func__, req_handle_count);
+        return ZX_ERR_INTERNAL;
+      }
+      return dai_client_.proto_client().Connect(zx::channel(std::move(req_handles[0])));
+    default:
+      zxlogf(ERROR, "%s: unknown DAI op %u", __func__, static_cast<uint32_t>(req->op));
+      return ZX_ERR_INTERNAL;
+  }
+}
+
 zx_status_t Fragment::RpcRpmb(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                               uint32_t* out_resp_size, zx::handle* req_handles,
                               uint32_t req_handle_count, zx::handle* resp_handles,
@@ -986,6 +1011,10 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
       status = RpcCodec(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                         resp_handles, &resp_handle_count);
       break;
+    case ZX_PROTOCOL_DAI:
+      status = RpcDai(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                      resp_handles, &resp_handle_count);
+      break;
     case ZX_PROTOCOL_RPMB:
       status = RpcRpmb(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                        resp_handles, &resp_handle_count);
@@ -1092,6 +1121,13 @@ zx_status_t Fragment::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
         return ZX_ERR_NOT_SUPPORTED;
       }
       codec_client_.proto_client().GetProto(static_cast<codec_protocol_t*>(out_protocol));
+      return ZX_OK;
+    }
+    case ZX_PROTOCOL_DAI: {
+      if (!dai_client_.proto_client().is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      dai_client_.proto_client().GetProto(static_cast<dai_protocol_t*>(out_protocol));
       return ZX_OK;
     }
     case ZX_PROTOCOL_PDEV: {

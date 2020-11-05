@@ -114,6 +114,20 @@ struct CodecProxyResponse {
   ProxyResponse header;
 };
 
+// ZX_PROTOCOL_DAI proxy support.
+enum class DaiOp {
+  GET_CHANNEL,
+};
+
+struct DaiProxyRequest {
+  ProxyRequest header;
+  DaiOp op;
+};
+
+struct DaiProxyResponse {
+  ProxyResponse header;
+};
+
 // ZX_PROTOCOL_CLOCK proxy support.
 enum class ClockOp {
   ENABLE,

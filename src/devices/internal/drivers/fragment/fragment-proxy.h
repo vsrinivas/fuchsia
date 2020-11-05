@@ -47,6 +47,7 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::GpioProtocol<FragmentProxy>,
                       public ddk::I2cProtocol<FragmentProxy>,
                       public ddk::CodecProtocol<FragmentProxy>,
+                      public ddk::DaiProtocol<FragmentProxy>,
                       public ddk::PDevProtocol<FragmentProxy>,
                       public ddk::PowerProtocol<FragmentProxy>,
                       public ddk::PwmProtocol<FragmentProxy>,
@@ -162,6 +163,7 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t DsiConnect(zx::channel server);
 
   zx_status_t CodecConnect(zx::channel chan);
+  zx_status_t DaiConnect(zx::channel chan);
 
  private:
   zx::channel rpc_;

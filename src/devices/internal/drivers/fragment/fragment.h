@@ -82,6 +82,7 @@ class Fragment : public FragmentBase {
         gpio_client_(parent, ZX_PROTOCOL_GPIO),
         i2c_client_(parent, ZX_PROTOCOL_I2C),
         codec_client_(parent, ZX_PROTOCOL_CODEC),
+        dai_client_(parent, ZX_PROTOCOL_DAI),
         pdev_client_(parent, ZX_PROTOCOL_PDEV),
         power_client_(parent, ZX_PROTOCOL_POWER),
         pwm_client_(parent, ZX_PROTOCOL_PWM),
@@ -178,6 +179,9 @@ class Fragment : public FragmentBase {
   zx_status_t RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                        uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                        zx::handle* resp_handles, uint32_t* resp_handle_count);
+  zx_status_t RpcDai(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                     uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
+                     zx::handle* resp_handles, uint32_t* resp_handle_count);
   zx_status_t RpcRpmb(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                       uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                       zx::handle* resp_handles, uint32_t* resp_handle_count);
@@ -205,6 +209,7 @@ class Fragment : public FragmentBase {
   ProtocolClient<ddk::GpioProtocolClient, gpio_protocol_t> gpio_client_;
   ProtocolClient<ddk::I2cProtocolClient, i2c_protocol_t> i2c_client_;
   ProtocolClient<ddk::CodecProtocolClient, codec_protocol_t> codec_client_;
+  ProtocolClient<ddk::DaiProtocolClient, dai_protocol_t> dai_client_;
   ProtocolClient<ddk::PDevProtocolClient, pdev_protocol_t> pdev_client_;
   ProtocolClient<ddk::PowerProtocolClient, power_protocol_t> power_client_;
   ProtocolClient<ddk::PwmProtocolClient, pwm_protocol_t> pwm_client_;
