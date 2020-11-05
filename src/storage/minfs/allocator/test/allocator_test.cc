@@ -7,11 +7,13 @@
 #include "src/storage/minfs/allocator/allocator.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 
 #include <fbl/array.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
+#include "src/storage/minfs/allocator_reservation.h"
 #include "src/storage/minfs/format.h"
 
 namespace minfs {
@@ -87,7 +89,7 @@ void CreateAllocator(std::unique_ptr<Allocator>* out) {
   std::unique_ptr<FakeStorage> storage(new FakeStorage(kTotalElements + 1));
   std::unique_ptr<Allocator> allocator;
   fs::BufferedOperationsBuilder builder;
-  ASSERT_OK(Allocator::Create(&builder, std::move(storage), &allocator));
+  ASSERT_EQ(ZX_OK, Allocator::Create(&builder, std::move(storage), &allocator));
 
   // Allocate the '0' index (the Allocator assumes that this is reserved).
   AllocatorReservation zero_reservation(allocator.get());
@@ -104,40 +106,40 @@ void CreateAllocator(std::unique_ptr<Allocator>* out) {
 // Initializes the |reservation| with |reserved_count| elements from |allocator|.
 // Should only be called if initialization is expected to succeed.
 void InitializeReservation(size_t reserved_count, AllocatorReservation* reservation) {
-  ASSERT_OK(reservation->Reserve(nullptr, reserved_count));
+  ASSERT_EQ(ZX_OK, reservation->Reserve(nullptr, reserved_count));
   ASSERT_EQ(reservation->GetReserved(), reserved_count);
 }
 
 TEST(AllocatorTest, ReserveEmpty) {
   std::unique_ptr<Allocator> allocator;
-  ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
+  ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
 
   // Initialize an empty AllocatorReservation (with no reserved units);
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
   AllocatorReservation reservation(allocator.get());
-  ASSERT_NO_FATAL_FAILURES(InitializeReservation(0, &reservation));
+  ASSERT_NO_FATAL_FAILURE(InitializeReservation(0, &reservation));
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
 }
 
 TEST(AllocatorTest, OverReserve) {
   std::unique_ptr<Allocator> allocator;
-  ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
+  ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
 
   // Attempt to reserve more elements than the allocator has.
   AllocatorReservation reservation(allocator.get());
-  ASSERT_NOT_OK(reservation.Reserve(nullptr, kTotalElements + 1));
+  ASSERT_NE(ZX_OK, reservation.Reserve(nullptr, kTotalElements + 1));
 }
 
 TEST(AllocatorTest, ReserveTwiceFails) {
   std::unique_ptr<Allocator> allocator;
-  ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
+  ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
 
   AllocatorReservation reservation(allocator.get());
-  ASSERT_NO_FATAL_FAILURES(InitializeReservation(1, &reservation));
+  ASSERT_NO_FATAL_FAILURE(InitializeReservation(1, &reservation));
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements - 1);
 
   // Attempting to initialize a previously initialized AllocatorReservation should fail.
-  ASSERT_NOT_OK(reservation.Reserve(nullptr, 1));
+  ASSERT_NE(ZX_OK, reservation.Reserve(nullptr, 1));
 
   reservation.Cancel();
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
@@ -153,8 +155,8 @@ fbl::Array<size_t> CreateArray(size_t size) {
 // Allocated indices are returned in |out|.
 void PerformAllocate(size_t allocate_count, AllocatorReservation* reservation,
                      fbl::Array<size_t>* out) {
-  ASSERT_NOT_NULL(reservation);
-  ASSERT_NOT_NULL(out);
+  ASSERT_NE(nullptr, reservation);
+  ASSERT_NE(nullptr, out);
   ASSERT_LE(allocate_count, reservation->GetReserved());
   size_t remaining_count = reservation->GetReserved() - allocate_count;
 
@@ -172,8 +174,8 @@ void PerformAllocate(size_t allocate_count, AllocatorReservation* reservation,
 // be swapped out (can be 0). These values will be replaced with the newly swapp indices.
 void PerformSwap(size_t swap_count, AllocatorReservation* reservation,
                  fbl::Array<size_t>* indices) {
-  ASSERT_NOT_NULL(reservation);
-  ASSERT_NOT_NULL(indices);
+  ASSERT_NE(nullptr, reservation);
+  ASSERT_NE(nullptr, indices);
   ASSERT_GE(indices->size(), swap_count);
   ASSERT_GE(reservation->GetReserved(), swap_count);
   size_t remaining_count = reservation->GetReserved() - swap_count;
@@ -204,16 +206,16 @@ void PerformFree(Allocator* allocator, const fbl::Array<size_t>& indices) {
 
 TEST(AllocatorTest, Allocate) {
   std::unique_ptr<Allocator> allocator;
-  ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
+  ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
 
   fbl::Array<size_t> indices;
   {
     // Reserve all of the elements.
     AllocatorReservation reservation(allocator.get());
-    ASSERT_OK(reservation.Reserve(nullptr, kTotalElements));
+    ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, kTotalElements));
 
     // Allocate half of the reservation's reserved elements.
-    ASSERT_NO_FATAL_FAILURES(PerformAllocate(kTotalElements / 2, &reservation, &indices));
+    ASSERT_NO_FATAL_FAILURE(PerformAllocate(kTotalElements / 2, &reservation, &indices));
 
     // Cancel the remaining reservation.
     size_t reserved_count = reservation.GetReserved();
@@ -225,24 +227,24 @@ TEST(AllocatorTest, Allocate) {
   }
 
   // Free the allocated elements.
-  ASSERT_NO_FATAL_FAILURES(PerformFree(allocator.get(), indices));
+  ASSERT_NO_FATAL_FAILURE(PerformFree(allocator.get(), indices));
 }
 
 TEST(AllocatorTest, Swap) {
   std::unique_ptr<Allocator> allocator;
-  ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
+  ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
 
   size_t swap_count = kTotalElements / 2;
   fbl::Array<size_t> indices = CreateArray(swap_count);
   {
     // Reserve all of the elements.
     AllocatorReservation reservation(allocator.get());
-    ASSERT_OK(reservation.Reserve(nullptr, kTotalElements));
+    ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, kTotalElements));
 
     // Swap half of the reservation's reserved elements.
-    ASSERT_GT(swap_count, 0);
-    ASSERT_NO_FATAL_FAILURES(PerformSwap(swap_count, &reservation, &indices));
-    ASSERT_EQ(allocator->GetAvailable(), 0);
+    ASSERT_GT(swap_count, 0u);
+    ASSERT_NO_FATAL_FAILURE(PerformSwap(swap_count, &reservation, &indices));
+    ASSERT_EQ(allocator->GetAvailable(), 0ul);
 
     // Cancel the remaining reservation.
     size_t reserved_count = reservation.GetReserved();
@@ -254,28 +256,28 @@ TEST(AllocatorTest, Swap) {
   }
 
   // Free the allocated elements.
-  ASSERT_NO_FATAL_FAILURES(PerformFree(allocator.get(), indices));
+  ASSERT_NO_FATAL_FAILURE(PerformFree(allocator.get(), indices));
 }
 
 TEST(AllocatorTest, AllocateSwap) {
   std::unique_ptr<Allocator> allocator;
-  ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
+  ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
 
   fbl::Array<size_t> indices;
   {
     // Reserve all of the elements.
     AllocatorReservation reservation(allocator.get());
-    ASSERT_OK(reservation.Reserve(nullptr, kTotalElements));
+    ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, kTotalElements));
 
     // Allocate half of the reservation's reserved elements.
     size_t allocate_count = kTotalElements / 2;
-    ASSERT_GT(allocate_count, 0);
-    ASSERT_NO_FATAL_FAILURES(PerformAllocate(allocate_count, &reservation, &indices));
+    ASSERT_GT(allocate_count, 0ul);
+    ASSERT_NO_FATAL_FAILURE(PerformAllocate(allocate_count, &reservation, &indices));
 
     // Swap as many of the allocated elements as possible.
     size_t swap_count = std::min(reservation.GetReserved(), allocate_count);
-    ASSERT_GT(swap_count, 0);
-    ASSERT_NO_FATAL_FAILURES(PerformSwap(swap_count, &reservation, &indices));
+    ASSERT_GT(swap_count, 0ul);
+    ASSERT_NO_FATAL_FAILURE(PerformSwap(swap_count, &reservation, &indices));
 
     // Cancel the remaining reservation.
     size_t reserved_count = reservation.GetReserved();
@@ -287,7 +289,7 @@ TEST(AllocatorTest, AllocateSwap) {
   }
 
   // Free the allocated elements.
-  ASSERT_NO_FATAL_FAILURES(PerformFree(allocator.get(), indices));
+  ASSERT_NO_FATAL_FAILURE(PerformFree(allocator.get(), indices));
 }
 
 TEST(AllocatorTest, PersistRange) {
@@ -297,31 +299,31 @@ TEST(AllocatorTest, PersistRange) {
   PersistentStorage storage(nullptr, nullptr, kMinfsBlockSize, nullptr, std::move(metadata),
                             kMinfsBlockSize);
   FakeTransaction transaction;
-  ASSERT_EQ(transaction.BlockCount(), 0);
+  ASSERT_EQ(transaction.BlockCount(), 0ul);
 
   // Add a transaction which crosses the boundary between two blocks within the storage bitmap.
   storage.PersistRange(&transaction, 1, kMinfsBlockBits - 1, 2);
 
   // Check that two distinct blocks have been added to the txn.
-  ASSERT_EQ(transaction.BlockCount(), 2);
+  ASSERT_EQ(transaction.BlockCount(), 2ul);
 }
 
 TEST(AllocatorTest, PendingAllocationIsReserved) {
   std::unique_ptr<Allocator> allocator;
-  ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
+  ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
 
   AllocatorReservation reservation1(allocator.get());
   FakeTransaction transaction;
-  ASSERT_OK(reservation1.Reserve(&transaction, 1));
+  ASSERT_EQ(ZX_OK, reservation1.Reserve(&transaction, 1));
   size_t item = reservation1.Allocate();
 
   AllocatorReservation reservation2(allocator.get());
-  ASSERT_OK(reservation2.Reserve(&transaction, 1));
+  ASSERT_EQ(ZX_OK, reservation2.Reserve(&transaction, 1));
   size_t item2 = reservation2.Allocate();
   EXPECT_NE(item, item2);
 
   AllocatorReservation reservation3(allocator.get());
-  ASSERT_OK(reservation3.Reserve(&transaction, 1));
+  ASSERT_EQ(ZX_OK, reservation3.Reserve(&transaction, 1));
   size_t item3 = reservation3.Allocate();
   EXPECT_NE(item, item3);
   EXPECT_NE(item2, item3);
@@ -329,13 +331,13 @@ TEST(AllocatorTest, PendingAllocationIsReserved) {
 
 TEST(AllocatorTest, PendingDeallocationIsReserved) {
   std::unique_ptr<Allocator> allocator;
-  ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
+  ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
 
   size_t item;
   {
     AllocatorReservation reservation(allocator.get());
     FakeTransaction transaction;
-    ASSERT_OK(reservation.Reserve(&transaction, 1));
+    ASSERT_EQ(ZX_OK, reservation.Reserve(&transaction, 1));
     item = reservation.Allocate();
     reservation.Commit(&transaction);
   }

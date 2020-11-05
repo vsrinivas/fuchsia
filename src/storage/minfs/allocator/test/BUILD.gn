@@ -13,7 +13,8 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/components.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
 
 group("test") {
   testonly = true
@@ -21,23 +22,22 @@ group("test") {
 }
 
 test("minfs-allocator-unit") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  sources = [
-    "allocator_test.cc",
-    "main.cc",
-  ]
+  sources = [ "allocator_test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
+    "//src/lib/fxl/test:gtest_main",
     "//src/storage/minfs",
-    "//zircon/public/lib/zxtest",
+    "//third_party/googletest:gtest",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/block-client",
   ]
 }
 
-bootfs_test("minfs-allocator-unit-bootfs-test") {
-  name = "minfs-allocator-unit"
+fuchsia_unittest_component("minfs-allocator-test") {
+  executable_path = "test/minfs-allocator-unit"
   deps = [ ":minfs-allocator-unit" ]
+}
+
+fuchsia_test_package("minfs-allocator-tests") {
+  test_components = [ ":minfs-allocator-test" ]
 }

@@ -31,7 +31,6 @@ group("tests") {
     "//src/devices/usb/tests/usb:usb-bootfs-test",  # HW-required.
     "//src/media/audio/drivers/intel-hda/test:intel-hda-bootfs-test",  # HW-required.
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-bootfs-test",  # HW-required.
-    "//src/storage/minfs/allocator/test:minfs-allocator-unit-bootfs-test",
     "//src/zircon/tests/entropy:entropy-bootfs-test",
     "//src/zircon/tests/events:events-bootfs-test",
     "//src/zircon/tests/exception:exception-bootfs-test",

@@ -174,6 +174,7 @@ static_library("minfs") {
 group("tests") {
   testonly = true
   deps = [
+    "allocator/test:minfs-allocator-tests",
     "test:minfs-fuzzers",
     "test:minfs-host($host_toolchain)",
     "test:minfs-tests",
