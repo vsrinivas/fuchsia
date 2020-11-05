@@ -221,6 +221,18 @@ class VmObjectPaged final : public VmObject {
   // Apply the specified operation to all mappings in the given range.
   void RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) TA_REQ(lock_);
 
+  // This is exposed so that VmCowPages can call it. It is used to update the VmCowPages object
+  // that this VMO points to for its operations. When updating it must be set to a non-null
+  // reference, and any mappings or pin operations must remain equivalently valid.
+  // The previous cow pages references is returned so that the caller can perform sanity checks.
+  fbl::RefPtr<VmCowPages> SetCowPagesReferenceLocked(fbl::RefPtr<VmCowPages> cow_pages)
+      TA_REQ(lock_) {
+    DEBUG_ASSERT(cow_pages);
+    fbl::RefPtr<VmCowPages> ret = ktl::move(cow_pages_);
+    cow_pages_ = ktl::move(cow_pages);
+    return ret;
+  }
+
  private:
   // private constructor (use Create())
   VmObjectPaged(uint32_t options, fbl::RefPtr<VmHierarchyState> root_state);

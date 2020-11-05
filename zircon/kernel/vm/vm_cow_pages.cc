@@ -166,27 +166,20 @@ VmCowPages::VmCowPages(fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr, uint32
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
 }
 
-void VmCowPages::InitializeOriginalParentLocked(fbl::RefPtr<VmCowPages> parent, uint64_t offset) {
-  DEBUG_ASSERT(parent_ == nullptr);
-
-  AssertHeld(parent->lock_);
-  page_list_.InitializeSkew(parent->page_list_.GetSkew(), offset);
-
-  AssertHeld(parent->lock_ref());
-  parent_ = ktl::move(parent);
-}
-
 VmCowPages::~VmCowPages() {
   canary_.Assert();
 
+  // To prevent races with a hidden parent creation or merging, it is necessary to hold the lock
+  // over the is_hidden and parent_ check and into the subsequent removal call.
+  // It is safe to grab the lock here because we are careful to never cause the last reference to
+  // a VmCowPages to be dropped in this code whilst holding the lock. The single place we drop a
+  // a VmCowPages reference that could trigger a deletion is in this destructor when parent_ is
+  // dropped, but that is always done without holding the lock.
+  Guard<Mutex> guard{&lock_};
+  // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
+  // to be done before emptying the page list so that a hidden parent can't merge into this
+  // vmo and repopulate the page list.
   if (!is_hidden_locked()) {
-    // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
-    // to be done before emptying the page list so that a hidden parent can't merge into this
-    // vmo and repopulate the page list.
-    //
-    // To prevent races with a hidden parent merging itself into this vmo, it is necessary
-    // to hold the lock over the parent_ check and into the subsequent removal call.
-    Guard<Mutex> guard{&lock_};
     if (parent_) {
       parent_->RemoveChildLocked(this);
       guard.Release();
@@ -366,69 +359,30 @@ void VmCowPages::DropChildLocked(VmCowPages* child) {
   --children_list_len_;
 }
 
-void VmCowPages::AddChildLocked(VmCowPages* child) {
+void VmCowPages::AddChildLocked(VmCowPages* child, uint64_t offset, uint64_t root_parent_offset,
+                                uint64_t parent_limit) {
   canary_.Assert();
+
+  // As we do not want to have to return failure from this function we require root_parent_offset to
+  // be calculated and validated that it does not overflow externally, but we can still assert that
+  // it has been calculated correctly to prevent accidents.
+  AssertHeld(child->lock_ref());
+  DEBUG_ASSERT(CheckedAdd(root_parent_offset_, offset) == root_parent_offset);
+
+  // Write in the parent view values.
+  child->root_parent_offset_ = root_parent_offset;
+  child->parent_offset_ = offset;
+  child->parent_limit_ = parent_limit;
+
+  // This child should be in an initial state and these members should be clear.
+  DEBUG_ASSERT(!child->partial_cow_release_);
+  DEBUG_ASSERT(child->parent_start_limit_ == 0);
+
+  child->page_list_.InitializeSkew(page_list_.GetSkew(), offset);
+
+  child->parent_ = fbl::RefPtr(this);
   children_list_.push_front(child);
   children_list_len_++;
-}
-
-void VmCowPages::InsertHiddenParentLocked(fbl::RefPtr<VmCowPages> hidden_parent) {
-  AssertHeld(hidden_parent->lock_);
-  // Insert the new VmObject |hidden_parent| between between |this| and |parent_|.
-  if (parent_) {
-    AssertHeld(parent_->lock_ref());
-    hidden_parent->InitializeOriginalParentLocked(parent_, 0);
-    parent_->ReplaceChildLocked(this, hidden_parent.get());
-  }
-  hidden_parent->AddChildLocked(this);
-  parent_ = hidden_parent;
-
-  // Hidden parent starts of attributed to us as we are really the original user created parent, and
-  // our sibling is our child. As such all the pages in the hidden parent were just previously our
-  // pages, so keep attributing them to us.
-  hidden_parent->page_attribution_user_id_ = page_attribution_user_id_;
-
-  // The hidden parent should have the same view as we had into
-  // its parent, and this vmo has a full view into the hidden vmo
-  hidden_parent->parent_offset_ = parent_offset_;
-  hidden_parent->parent_limit_ = parent_limit_;
-  // Although we are inserting the hidden parent between this and parent_ they share the same
-  // root_parent_offset_.
-  hidden_parent->root_parent_offset_ = root_parent_offset_;
-  parent_offset_ = 0;
-  parent_limit_ = size_;
-
-  // This method should only ever be called on leaf vmos (i.e. non-hidden),
-  // so this flag should never be set.
-  DEBUG_ASSERT(!partial_cow_release_);
-  DEBUG_ASSERT(parent_start_limit_ == 0);  // Should only ever be set for hidden vmos
-
-  // Moving our page list would be bad if we had a page source and potentially have pages with
-  // links back to this object.
-  DEBUG_ASSERT(!page_source_);
-  // Move everything into the hidden parent, for immutability
-  hidden_parent->page_list_ = ktl::move(page_list_);
-
-  // As we are moving pages between objects we need to make sure no backlinks are broken. We know
-  // there's no page_source_ and hence no pages will be in the pager_backed queue, but we could
-  // have pages in the unswappable_zero_forked queue. We do know that pages in this queue cannot
-  // have been pinned, so we can just move (or re-move potentially) any page that is not pinned
-  // into the regular unswappable queue.
-  {
-    PageQueues* pq = pmm_page_queues();
-    Guard<SpinLock, IrqSave> guard{pq->get_lock()};
-    hidden_parent->page_list_.ForEveryPage([pq](auto* p, uint64_t off) {
-      if (p->IsPage()) {
-        vm_page_t* page = p->Page();
-        if (page->object.pin_count == 0) {
-          AssertHeld<Lock<SpinLock>, IrqSave>(*pq->get_lock());
-          pq->MoveToUnswappableLocked(page);
-        }
-      }
-      return ZX_ERR_NEXT;
-    });
-  }
-  hidden_parent->size_ = size_;
 }
 
 zx_status_t VmCowPages::CreateChildSliceLocked(uint64_t offset, uint64_t size,
@@ -468,18 +422,48 @@ zx_status_t VmCowPages::CreateChildSliceLocked(uint64_t offset, uint64_t size,
 
   AssertHeld(slice->lock_);
 
-  slice->parent_offset_ = offset;
-  slice->parent_limit_ = size;
   // As our slice must be in range of the parent it is impossible to have the accumulated parent
   // offset overflow.
-  slice->root_parent_offset_ = CheckedAdd(offset, slice->root_parent_offset_);
-  CheckedAdd(slice->root_parent_offset_, size);
+  uint64_t root_parent_offset = CheckedAdd(offset, root_parent_offset_);
+  CheckedAdd(root_parent_offset, size);
 
-  AddChildLocked(slice.get());
-  slice->InitializeOriginalParentLocked(fbl::RefPtr(this), offset);
+  AddChildLocked(slice.get(), offset, root_parent_offset, size);
 
   *cow_slice = slice;
   return ZX_OK;
+}
+
+void VmCowPages::CloneParentIntoChildLocked(fbl::RefPtr<VmCowPages>& child) {
+  AssertHeld(child->lock_ref());
+  // This function is invalid to call if any pages are pinned as the unpin after we change the
+  // backlink will not work.
+  DEBUG_ASSERT(pinned_page_count_ == 0);
+  // We are going to change our linked VmObjectPaged to eventually point to our left child instead
+  // of us, so we need to make the left child look equivalent. To do this it inherits our
+  // children, attribution id and eviction count and is sized to completely cover us.
+  for (auto& c : children_list_) {
+    AssertHeld(c.lock_ref());
+    c.parent_ = child;
+  }
+  child->children_list_ = ktl::move(children_list_);
+  child->children_list_len_ = children_list_len_;
+  children_list_len_ = 0;
+  child->eviction_event_count_ = eviction_event_count_;
+  child->page_attribution_user_id_ = page_attribution_user_id_;
+  AddChildLocked(child.get(), 0, root_parent_offset_, size_);
+
+  // Time to change the VmCowPages that our paged_ref_ is point to.
+  if (paged_ref_) {
+    child->paged_ref_ = paged_ref_;
+    AssertHeld(paged_ref_->lock_ref());
+    fbl::RefPtr<VmCowPages> __UNUSED previous =
+        paged_ref_->SetCowPagesReferenceLocked(ktl::move(child));
+    // Validate that we replaced a reference to ourself as we expected, this ensures we can safely
+    // drop the refptr without triggering our own destructor, since we know someone else must be
+    // holding a refptr to us to be in this function.
+    DEBUG_ASSERT(previous.get() == this);
+    paged_ref_ = nullptr;
+  }
 }
 
 zx_status_t VmCowPages::CreateCloneLocked(CloneType type, uint64_t offset, uint64_t size,
@@ -490,6 +474,7 @@ zx_status_t VmCowPages::CreateCloneLocked(CloneType type, uint64_t offset, uint6
 
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+  DEBUG_ASSERT(!is_hidden_locked());
 
   // All validation *must* be performed here prior to construction the VmCowPages, as the
   // destructor for VmCowPages may acquire the lock, which we are already holding.
@@ -527,67 +512,74 @@ zx_status_t VmCowPages::CreateCloneLocked(CloneType type, uint64_t offset, uint6
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Create the hidden cow pages first. If we later fail and need to destroy them it is fine, as
-  // hidden destruction does not require taking the lock which we are currently holding.
-  fbl::RefPtr<VmCowPages> hidden_parent;
+  const uint64_t child_parent_limit = offset >= size_ ? 0 : ktl::min(size, size_ - offset);
+
+  // Invalidate everything the clone will be able to see. They're COW pages now,
+  // so any existing mappings can no longer directly write to the pages.
+  RangeChangeUpdateLocked(offset, size, RangeChangeOp::RemoveWrite);
+
   if (type == CloneType::Snapshot) {
-    // The initial size is 0. It will be initialized as part of the atomic
-    // insertion into the child tree.
-    zx_status_t status = CreateHidden(&hidden_parent);
-    if (status != ZX_OK) {
-      return status;
+    // We need two new VmCowPages for our two children. To avoid destructor of the first being
+    // invoked if the second fails we separately perform allocations and construction.
+    union VmCowPagesPlaceHolder {
+      VmCowPagesPlaceHolder() {}
+      ~VmCowPagesPlaceHolder() {}
+
+      uint8_t trivially_destructible_default_variant;
+      VmCowPages vm_cow_pages;
+    };
+    fbl::AllocChecker ac;
+    ktl::unique_ptr<VmCowPagesPlaceHolder> left_child_placeholder =
+        ktl::make_unique<VmCowPagesPlaceHolder>(&ac);
+    if (!ac.check()) {
+      return ZX_ERR_NO_MEMORY;
     }
-  }
+    ktl::unique_ptr<VmCowPagesPlaceHolder> right_child_placeholder =
+        ktl::make_unique<VmCowPagesPlaceHolder>(&ac);
+    if (!ac.check()) {
+      return ZX_ERR_NO_MEMORY;
+    }
+    // At this point cow_pages must *not* be destructed in this function, as doing so would cause a
+    // deadlock. That means from this point on we *must* succeed and any future error checking needs
+    // to be added prior to creation.
 
-  fbl::AllocChecker ac;
-  auto cow_pages = fbl::AdoptRef<VmCowPages>(
-      new (&ac) VmCowPages(hierarchy_state_ptr_, 0, pmm_alloc_flags_, size, nullptr));
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  // At this point cow_pages must *not* be destructed in this function, as doing so would cause a
-  // deadlock. That means from this point on we *must* succeed and any future error checking needs
-  // to be added prior to creation.
+    fbl::RefPtr<VmCowPages> left_child =
+        fbl::AdoptRef<VmCowPages>(new (&left_child_placeholder.release()->vm_cow_pages) VmCowPages(
+            hierarchy_state_ptr_, 0, pmm_alloc_flags_, size_, nullptr));
+    fbl::RefPtr<VmCowPages> right_child =
+        fbl::AdoptRef<VmCowPages>(new (&right_child_placeholder.release()->vm_cow_pages) VmCowPages(
+            hierarchy_state_ptr_, 0, pmm_alloc_flags_, size, nullptr));
+    AssertHeld(left_child->lock_ref());
+    AssertHeld(right_child->lock_ref());
 
-  AssertHeld(cow_pages->lock_);
+    // The left child becomes a full clone of us, inheriting our children, paged backref etc.
+    CloneParentIntoChildLocked(left_child);
 
-  cow_pages->root_parent_offset_ = new_root_parent_offset;
-  cow_pages->parent_offset_ = offset;
-  if (offset > size_) {
-    cow_pages->parent_limit_ = 0;
+    // The right child is the, potential, subset view into the parent so has a variable offset. If
+    // this view would extend beyond us then we need to clip the parent_limit to our size_, which
+    // will ensure any pages in that range just get initialized from zeroes.
+    AddChildLocked(right_child.get(), offset, new_root_parent_offset, child_parent_limit);
+
+    // Transition into being the hidden node.
+    options_ |= kHidden;
+    DEBUG_ASSERT(children_list_len_ == 2);
+
+    *cow_child = ktl::move(right_child);
+
+    return ZX_OK;
   } else {
-    cow_pages->parent_limit_ = ktl::min(size, size_ - offset);
+    fbl::AllocChecker ac;
+    auto cow_pages = fbl::AdoptRef<VmCowPages>(
+        new (&ac) VmCowPages(hierarchy_state_ptr_, 0, pmm_alloc_flags_, size, nullptr));
+    if (!ac.check()) {
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    AddChildLocked(cow_pages.get(), offset, new_root_parent_offset, child_parent_limit);
+
+    *cow_child = ktl::move(cow_pages);
   }
 
-  VmCowPages* clone_parent;
-  if (type == CloneType::Snapshot) {
-    clone_parent = hidden_parent.get();
-
-    InsertHiddenParentLocked(ktl::move(hidden_parent));
-
-    // Invalidate everything the clone will be able to see. They're COW pages now,
-    // so any existing mappings can no longer directly write to the pages.
-    RangeChangeUpdateLocked(offset, size, RangeChangeOp::RemoveWrite);
-  } else {
-    clone_parent = this;
-  }
-
-  cow_pages->InitializeOriginalParentLocked(fbl::RefPtr(clone_parent), offset);
-  AssertHeld(clone_parent->lock_ref());
-  clone_parent->AddChildLocked(cow_pages.get());
-
-  *cow_child = ktl::move(cow_pages);
-  return ZX_OK;
-}
-
-zx_status_t VmCowPages::CreateHidden(fbl::RefPtr<VmCowPages>* hidden_cow) {
-  fbl::AllocChecker ac;
-  auto cow_pages = fbl::AdoptRef<VmCowPages>(
-      new (&ac) VmCowPages(hierarchy_state_ptr_, kHidden, pmm_alloc_flags_, 0, nullptr));
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  *hidden_cow = ktl::move(cow_pages);
   return ZX_OK;
 }
 
