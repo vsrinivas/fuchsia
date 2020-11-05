@@ -350,7 +350,9 @@ pub async fn test_no_network() -> Result<(), Error> {
             },
             PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
             PaverEvent::QueryCurrentConfiguration,
-            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
+            PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
+            PaverEvent::BootManagerFlush,
         ]
     );
     update_result.check_packages();
@@ -393,7 +395,9 @@ pub async fn test_pave_fails() -> Result<(), Error> {
             },
             PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
             PaverEvent::QueryCurrentConfiguration,
-            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
+            PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
+            PaverEvent::BootManagerFlush,
             PaverEvent::WriteAsset {
                 asset: Asset::Kernel,
                 configuration: Configuration::B,
@@ -445,7 +449,9 @@ pub async fn test_updater_succeeds() -> Result<(), Error> {
             },
             PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
             PaverEvent::QueryCurrentConfiguration,
-            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
+            PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
+            PaverEvent::BootManagerFlush,
             PaverEvent::WriteFirmware {
                 configuration: Configuration::B,
                 firmware_type: "".to_owned(),
@@ -689,7 +695,9 @@ pub async fn test_omaha_works() -> Result<(), Error> {
             },
             PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
             PaverEvent::QueryCurrentConfiguration,
-            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
+            PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
+            PaverEvent::BootManagerFlush,
             PaverEvent::WriteFirmware {
                 configuration: Configuration::B,
                 firmware_type: "".to_owned(),

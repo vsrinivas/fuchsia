@@ -52,28 +52,6 @@ impl NonCurrentConfiguration {
     }
 }
 
-/// The configuration which will be used as the default boot choice on a normal cold boot, which
-/// may or may not be the currently running configuration, or NotSupported if the device doesn't
-/// support ABR.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ActiveConfiguration {
-    A,
-    B,
-    NotSupported,
-}
-
-impl ActiveConfiguration {
-    /// Converts this [`ActiveConfiguration`] into a specific configuration, or none if ABR is
-    /// not supported.
-    pub fn to_configuration(self) -> Option<Configuration> {
-        match self {
-            ActiveConfiguration::A => Some(Configuration::A),
-            ActiveConfiguration::B => Some(Configuration::B),
-            ActiveConfiguration::NotSupported => None,
-        }
-    }
-}
-
 /// The currently running configuration, or NotSupported if the device doesn't
 /// support ABR.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -104,23 +82,6 @@ impl CurrentConfiguration {
             CurrentConfiguration::B => NonCurrentConfiguration::A,
             CurrentConfiguration::Recovery => NonCurrentConfiguration::A,
             CurrentConfiguration::NotSupported => NonCurrentConfiguration::NotSupported,
-        }
-    }
-
-    /// Returns true if this configuration is either A or B, and [`active`] is the same configuration.
-    pub fn same_primary_configuration_as_active(self, active: ActiveConfiguration) -> bool {
-        match self {
-            CurrentConfiguration::A => active == ActiveConfiguration::A,
-            CurrentConfiguration::B => active == ActiveConfiguration::B,
-            _ => false,
-        }
-    }
-
-    /// Returns true if this configuration is either A or B, false otherwise
-    pub fn is_primary_configuration(self) -> bool {
-        match self {
-            CurrentConfiguration::A | CurrentConfiguration::B => true,
-            _ => false,
         }
     }
 }
@@ -177,39 +138,5 @@ mod tests {
             CurrentConfiguration::Recovery.to_non_current_configuration().to_configuration(),
             Some(Configuration::A),
         );
-    }
-
-    #[test]
-    fn same_primary_configuration_as_active_works_for_primary() {
-        assert!(
-            CurrentConfiguration::A.same_primary_configuration_as_active(ActiveConfiguration::A)
-        );
-        assert!(
-            CurrentConfiguration::B.same_primary_configuration_as_active(ActiveConfiguration::B)
-        );
-
-        assert!(
-            !CurrentConfiguration::A.same_primary_configuration_as_active(ActiveConfiguration::B)
-        );
-
-        assert!(
-            !CurrentConfiguration::B.same_primary_configuration_as_active(ActiveConfiguration::A)
-        );
-    }
-
-    #[test]
-    fn same_primary_configuration_as_active_always_false_for_non_primary() {
-        assert!(!CurrentConfiguration::Recovery
-            .same_primary_configuration_as_active(ActiveConfiguration::A));
-        assert!(!CurrentConfiguration::Recovery
-            .same_primary_configuration_as_active(ActiveConfiguration::B));
-        assert!(!CurrentConfiguration::Recovery
-            .same_primary_configuration_as_active(ActiveConfiguration::NotSupported));
-        assert!(!CurrentConfiguration::NotSupported
-            .same_primary_configuration_as_active(ActiveConfiguration::A));
-        assert!(!CurrentConfiguration::NotSupported
-            .same_primary_configuration_as_active(ActiveConfiguration::B));
-        assert!(!CurrentConfiguration::NotSupported
-            .same_primary_configuration_as_active(ActiveConfiguration::NotSupported));
     }
 }

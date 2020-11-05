@@ -38,7 +38,11 @@ async fn rejects_invalid_package_name() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(not_update_package_url.to_string())
         ]
@@ -78,7 +82,11 @@ async fn fails_if_package_unavailable() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
         ]
@@ -111,7 +119,11 @@ async fn uses_custom_update_package() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve("fuchsia-pkg://fuchsia.com/another-update/4".to_string()),
             Gc,

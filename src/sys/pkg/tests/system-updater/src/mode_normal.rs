@@ -48,7 +48,11 @@ async fn updates_the_system() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -95,7 +99,11 @@ async fn requires_zbi() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -160,7 +168,11 @@ async fn updates_the_system_with_progress() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,

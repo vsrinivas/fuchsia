@@ -55,7 +55,11 @@ async fn writes_recovery_and_force_reboots_into_it() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -153,7 +157,11 @@ async fn rejects_zbi() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc

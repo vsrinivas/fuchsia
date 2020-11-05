@@ -300,34 +300,28 @@ impl<'a> Attempt<'a> {
         &mut self,
         target_version: &mut history::Version,
     ) -> Result<(UpdatePackage, UpdateMode, Vec<PkgUrl>, paver::CurrentConfiguration), Error> {
-        // Ensure that the current configuration is also the active configuration.
+        // Ensure that the partition boot metadata is ready for the update to begin. Specifically:
+        // - the current configuration must be Healthy and Active, and
+        // - the non-current configuration must be Unbootable.
+        //
+        // If anything goes wrong, abort the update. See the comments in
+        // `prepare_partition_metadata` for why this is justified.
+        //
         // We do this here rather than just before we write images because this location allows us
-        // to "unstage" a previously staged OS in the non-current configuration that would
-        // otherwise become active on next reboot.
-        // If we moved this to just before writing images, we would be susceptible to a bug of
-        // the form:
+        // to "unstage" a previously staged OS in the non-current configuration that would otherwise
+        // become active on next reboot. If we moved this to just before writing images, we would be
+        // susceptible to a bug of the form:
         // - A is active/current running system version 1.
         // - Stage an OTA of version 2 to B, B is now marked active. Defer reboot.
-        // - Start to stage a new OTA (version 3). Fetch packages encounters an error after
-        //   fetching half of the updated packages.
+        // - Start to stage a new OTA (version 3). Fetch packages encounters an error after fetching
+        //   half of the updated packages.
         // - Retry the attempt for the new OTA (version 3). This GC may delete packages from the
         //   not-yet-booted system (version 2).
         // - Interrupt the update attempt, reboot.
-        // - System attempts to boot to B (version 2), but the packages are not all present
-        //   anymore
-
-        let current_config = paver::query_current_configuration(&self.env.boot_manager)
+        // - System attempts to boot to B (version 2), but the packages are not all present anymore
+        let current_config = paver::prepare_partition_metadata(&self.env.boot_manager)
             .await
-            .context("while querying current partition")?;
-        if let Err(e) =
-            paver::ensure_current_partition_active(&self.env.boot_manager, current_config).await
-        {
-            // If we continue after this error, we can no longer guarantee (in the presence of
-            // later errors) that the active configuration always contains a working system
-            // (assuming that the build itself works), but we do so anyway so that paver errors
-            // that are not critical to updating do not make a device un-updatable.
-            fx_log_err!("unable to set current partition active: {:#}", anyhow!(e));
-        }
+            .context("while preparing partitions for update")?;
 
         if let Err(e) = gc(&self.env.space_manager).await {
             fx_log_err!("unable to gc packages (1/2): {:#}", anyhow!(e));

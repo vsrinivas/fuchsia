@@ -29,7 +29,11 @@ async fn writes_bootloader() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -77,7 +81,11 @@ async fn writes_firmware() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -117,7 +125,7 @@ async fn writes_multiple_firmware_types() {
     // The order of files listed from a directory isn't guaranteed so the
     // firmware could be written in either order. Sort by type string so
     // we can easily validate contents.
-    interactions[9..11].sort_by_key(|event| {
+    interactions[11..13].sort_by_key(|event| {
         if let Paver(PaverEvent::WriteFirmware { configuration: _, firmware_type, payload: _ }) =
             event
         {
@@ -140,7 +148,11 @@ async fn writes_multiple_firmware_types() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -198,7 +210,11 @@ async fn skips_unsupported_firmware_type() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,

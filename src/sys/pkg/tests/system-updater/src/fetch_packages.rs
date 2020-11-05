@@ -28,7 +28,11 @@ async fn fails_on_package_resolver_connect_error() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             // The connect succeeds, so the system updater only notices the resolver is not there when
             // it tries to resolve a package
             Gc
@@ -74,7 +78,11 @@ async fn fails_on_update_package_fetch_error() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -172,7 +180,11 @@ async fn fails_on_content_package_fetch_error() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -215,7 +227,11 @@ async fn fails_when_package_cache_sync_fails() {
                 asset: paver::Asset::Kernel
             }),
             Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,

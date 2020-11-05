@@ -9,14 +9,14 @@ use {
         Asset, BootManagerMarker, BootManagerProxy, Configuration, ConfigurationStatus,
         DataSinkMarker, DataSinkProxy, PaverMarker, WriteFirmwareResult,
     },
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon::{Status, VmoChildOptions},
     thiserror::Error,
     update_package::{Image, UpdatePackage},
 };
 
 mod configuration;
-use configuration::{ActiveConfiguration, TargetConfiguration};
+use configuration::TargetConfiguration;
 pub use configuration::{CurrentConfiguration, NonCurrentConfiguration};
 
 #[derive(Debug, Error)]
@@ -231,35 +231,6 @@ pub fn connect_in_namespace() -> Result<(DataSinkProxy, BootManagerProxy), Error
     Ok((data_sink, boot_manager))
 }
 
-/// Determines the active configuration which will be used as the default boot choice on a normal
-/// cold boot, which may or may not be the currently running configuration, or none if no
-/// configurations are currently bootable.
-pub async fn query_active_configuration(
-    boot_manager: &BootManagerProxy,
-) -> Result<ActiveConfiguration, Error> {
-    match boot_manager.query_active_configuration().await {
-        Ok(Ok(Configuration::A)) => Ok(ActiveConfiguration::A),
-        Ok(Ok(Configuration::B)) => Ok(ActiveConfiguration::B),
-        Ok(Ok(Configuration::Recovery)) => {
-            fx_log_err!("ignoring active configuration of recovery and assuming A is active");
-            Ok(ActiveConfiguration::A)
-        }
-        // FIXME Configuration::Recovery isn't actually possible.
-        //Ok(Ok(configuration)) => Err(anyhow!(
-        //    "query_active_configuration responded with invalid configuration: {:?}",
-        //    configuration
-        //)),
-        Ok(Err(status)) => {
-            Err(anyhow!("query_active_configuration responded with {}", Status::from_raw(status)))
-        }
-        Err(fidl::Error::ClientChannelClosed { status: Status::NOT_SUPPORTED, .. }) => {
-            fx_log_warn!("device does not support ABR. Kernel image updates will not be atomic.");
-            Ok(ActiveConfiguration::NotSupported)
-        }
-        Err(err) => Err(anyhow!(err).context("while performing query_active_configuration call")),
-    }
-}
-
 /// Retrieve the currently-running configuration from the paver service (the configuration the
 /// device booted from) which may be distinct from the 'active' configuration.
 pub async fn query_current_configuration(
@@ -293,122 +264,107 @@ async fn paver_query_configuration_status(
     }
 }
 
-async fn paver_set_current_configuration_healthy(
-    boot_manager: &BootManagerProxy,
-    configuration: CurrentConfiguration,
-) -> Result<(), Error> {
-    let configuration = if let Some(configuration) = configuration.to_configuration() {
-        configuration
-    } else {
-        fx_log_info!("ABR not supported, not setting current configuration to healthy");
-        return Ok(());
-    };
-    let status = boot_manager
-        .set_configuration_healthy(configuration)
-        .await
-        .context("while performing set_configuration_healthy call")?;
-    Status::ok(status).context("set_configuration_healthy responded with")?;
-    Ok(())
+/// Error conditions possibly returned by prepare_partition_metadata.
+#[derive(Debug, Error)]
+pub enum PreparePartitionMetadataError {
+    #[error(
+        "current configuration ({current_configuration:?}) is not Healthy \
+        (status = {current_configuration_status:?}). Refusing to perform update."
+    )]
+    CurrentConfigurationUnhealthy {
+        current_configuration: Configuration,
+        current_configuration_status: ConfigurationStatus,
+    },
+
+    #[error(transparent)]
+    Other(#[from] Error),
 }
 
-/// If the current partition is either A or B, ensure that it is also the active partition.
+/// Ensure that the partition boot metadata is in a state where we're ready to write the update.
+///
+/// Specifically, this means:
+/// - The current partition must be marked as Healthy. If it isn't, this function returns an error.
+/// - The non-current partition must be marked as Unbootable. If it isn't, this function will mark
+///   it as Unbootable and flush the BootManager.
+///
+/// As a side effect of marking non-current Unbootable, current will be made Active (if it wasn't
+/// already).
+///
+/// If the result is OK, this function returns the current partition. The update should be written
+/// to the current partition's respective non-current partition. If the result is an error, the
+/// update should be aborted. Each time we return an error in the code below we justify why the
+/// update shouldn't continue.
 ///
 /// This operation can fail, and it is very important that all states it can end in (by returning)
-/// don't end in a bricked device when the update continues.
-/// Some devices use BootManager's flush to flush operations, and some don't. This function needs
-/// to support both strategies.
-pub async fn ensure_current_partition_active(
+/// don't end in a bricked device when the update continues. Some devices use BootManager's flush to
+/// flush operations, and some don't. This function needs to support both strategies.
+pub async fn prepare_partition_metadata(
     boot_manager: &BootManagerProxy,
-    current: CurrentConfiguration,
-) -> Result<(), Error> {
-    if current == CurrentConfiguration::NotSupported {
-        fx_log_info!("ABR not supported, not setting current configuration to active");
-        return Ok(());
-    }
-
-    if !current.is_primary_configuration() {
-        fx_log_info!(
-            "Current partition is neither A nor B, not resetting the active partition to it"
-        );
-        return Ok(());
-    }
-
-    let originally_active = query_active_configuration(boot_manager)
+) -> Result<CurrentConfiguration, PreparePartitionMetadataError> {
+    // ERROR JUSTIFICATION: If we can't get the current configuration, we won't know where to write
+    // the update.
+    let current = query_current_configuration(boot_manager)
         .await
-        .context("while determining originally active configuration")?;
+        .context("while querying current configuration")?;
 
-    if current.same_primary_configuration_as_active(originally_active) {
-        fx_log_info!(
-            "Current partition ({:?}) is already active, not resetting active ({:?})",
-            current,
-            originally_active
-        );
-
-        return Ok(());
-    }
-
-    // Internal function because this is dangerous enough that we never want another function
-    // to call it - it arbitrarily resets active to current.
-    async fn ensure_current_partition_active_without_flush(
-        boot_manager: &BootManagerProxy,
-        current: CurrentConfiguration,
-        originally_active: ActiveConfiguration,
-    ) -> Result<(), Error> {
-        {
-            let current_configuration = if let Some(configuration) = current.to_configuration() {
-                configuration
-            } else {
-                return Ok(());
-            };
-
-            let original_status_of_current_partition =
-                paver_query_configuration_status(boot_manager, current_configuration).await?;
-
-            // This will reset the boot counter on the current partition, which could be a
-            // problem if it is PENDING, but our health check framework should prevent the
-            // system-updater from getting here on a non-healthy current partition
-            // If this operation fails and we bail out here, we'll have written nothing.
-            let () = paver_set_arbitrary_configuration_active(boot_manager, current_configuration)
-                .await
-                .context("while setting current partition active")?;
-
-            if original_status_of_current_partition == ConfigurationStatus::Healthy {
-                // If this operation fails and we bail out of the entire update, we'll have set the
-                // current configuration active, but not healthy.
-                // That will result in the next boot going into that partition and running the
-                // health check, which will set its health status appropriately.
-                let () = paver_set_current_configuration_healthy(boot_manager, current)
-                    .await
-                    .context("while setting current partition healthy")?;
-            }
+    let current_configuration = match current.to_configuration() {
+        None => {
+            fx_log_info!("ABR not supported, no partition preparation necessary");
+            return Ok(CurrentConfiguration::NotSupported);
         }
+        Some(current_configuration) => current_configuration,
+    };
 
-        {
-            let originally_active_configuration = if let Some(configuration) =
-                originally_active.to_configuration()
-            {
-                configuration
-            } else {
-                fx_log_info!("active partition is not transformable to a Configuration, not setting originally active unbootable");
-                return Ok(());
-            };
+    // ERROR JUSTIFICATION: We only want to write the update if `current` is `Healthy` (see below),
+    // so if we can't determine its status, we don't know if we want to continue.
+    let current_configuration_status =
+        paver_query_configuration_status(boot_manager, current_configuration)
+            .await
+            .context("while querying current configuration status")?;
 
-            let () = set_configuration_unbootable(boot_manager, originally_active_configuration)
-                .await
-                .context("while setting originally active configuration unbootable")?;
+    match current_configuration_status {
+        // It's the responsibility of the caller who triggered the update to ensure `current_config`
+        // is Healthy (probably by calling `system_health_check::check_and_set_system_health()`
+        // before we'll apply an update. If they didn't, bail out.
+        //
+        // ERROR JUSTIFICATION: We want to be confident the OTA will succeed before throwing away
+        // our rollback target in the non-current configuration. (Note: In almost all circumstances,
+        // the non-current configuration will be bootable at this point, because we never mark it
+        // `Unbootable` until after `current_config` has been marked `Healthy`). Thus, we refuse to
+        // update unless `current_config` has been marked `Healthy`.
+        ConfigurationStatus::Pending | ConfigurationStatus::Unbootable => {
+            Err(PreparePartitionMetadataError::CurrentConfigurationUnhealthy {
+                current_configuration,
+                current_configuration_status,
+            })
         }
+        // If the current configuration is Healthy, we mark the non-current configuration as
+        // Unbootable.
+        ConfigurationStatus::Healthy => {
+            // We need to flush the boot manager regardless, but if that operation succeeded while
+            // set_non_current_configuration_unbootable failed, propagate the error.
+            //
+            // ERROR JUSTIFICATION: the non-current configuration might be active, meaning it'll be
+            // used on the next reboot. If we don't mark it Unbootable, and we reboot halfway
+            // through writing the update for some reason, we'll reboot into a totally broken
+            // system.
+            let set_unbootable_result = set_non_current_configuration_unbootable(
+                boot_manager,
+                current.to_non_current_configuration(),
+            )
+            .await
+            .context("while setting non-current configuration unbootable");
 
-        Ok(())
+            // ERROR JUSTIFICATION: Same as above; we want to make sure marking it Unbootable goes
+            // through.
+            let () = paver_flush_boot_manager(boot_manager)
+                .await
+                .context("while flushing boot manager")?;
+
+            let () = set_unbootable_result?;
+            Ok(current)
+        }
     }
-
-    // We need to flush the boot manager regardless, but if that operation succeeded while something
-    // in ensure_current_partition_without_flush failed, propagate that error.
-    let result =
-        ensure_current_partition_active_without_flush(boot_manager, current, originally_active)
-            .await;
-    let () = paver_flush_boot_manager(boot_manager).await.context("while flushing boot manager")?;
-
-    result
 }
 
 /// Sets an arbitrary configuration active. Not pub because it's possible to use this function to set a
@@ -437,8 +393,21 @@ pub async fn set_configuration_active(
     Ok(())
 }
 
-/// Set an arbitrary configuration as unbootable. Dangerous!
-async fn set_configuration_unbootable(
+/// Set a non-current configuration as unbootable. Dangerous! If ABR is not supported, return an
+/// error.
+async fn set_non_current_configuration_unbootable(
+    boot_manager: &BootManagerProxy,
+    configuration: NonCurrentConfiguration,
+) -> Result<(), Error> {
+    if let Some(configuration) = configuration.to_configuration() {
+        set_arbitrary_configuration_unbootable(boot_manager, configuration).await
+    } else {
+        Err(anyhow!("could not set non-current configuration unbootable: {:?}", configuration))
+    }
+}
+
+/// Set an arbitrary configuration as unbootable. Extra dangerous!
+async fn set_arbitrary_configuration_unbootable(
     boot_manager: &BootManagerProxy,
     configuration: Configuration,
 ) -> Result<(), Error> {
@@ -455,10 +424,10 @@ async fn set_configuration_unbootable(
 pub async fn set_recovery_configuration_active(
     boot_manager: &BootManagerProxy,
 ) -> Result<(), Error> {
-    let () = set_configuration_unbootable(boot_manager, Configuration::A)
+    let () = set_arbitrary_configuration_unbootable(boot_manager, Configuration::A)
         .await
         .context("while marking Configuration::A unbootable")?;
-    let () = set_configuration_unbootable(boot_manager, Configuration::B)
+    let () = set_arbitrary_configuration_unbootable(boot_manager, Configuration::B)
         .await
         .context("while marking Configuration::B unbootable")?;
     Ok(())
@@ -654,21 +623,6 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn set_configuration_healthy_makes_call() {
-        let paver = Arc::new(MockPaverServiceBuilder::new().build());
-        let boot_manager = paver.spawn_boot_manager_service();
-
-        paver_set_current_configuration_healthy(&boot_manager, CurrentConfiguration::A)
-            .await
-            .unwrap();
-
-        assert_eq!(
-            paver.take_events(),
-            vec![PaverEvent::SetConfigurationHealthy { configuration: Configuration::A }]
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
     async fn flush_boot_manager_makes_call() {
         let paver = Arc::new(MockPaverServiceBuilder::new().build());
         let boot_manager = paver.spawn_boot_manager_service();
@@ -678,112 +632,116 @@ mod tests {
         assert_eq!(paver.take_events(), vec![PaverEvent::BootManagerFlush]);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn ensure_current_partition_active_bails_out_if_current_equals_active_with_current_a() {
+    async fn assert_prepare_partition_metadata_bails_out_with_unhealthy_current(
+        current_config: Configuration,
+        status: ConfigurationStatus,
+    ) {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
-                .current_config(Configuration::A)
-                .active_config(Configuration::A)
+                .current_config(current_config)
+                .config_status_hook(move |_| status)
                 .build(),
         );
         let boot_manager = paver.spawn_boot_manager_service();
 
-        ensure_current_partition_active(&boot_manager, CurrentConfiguration::A).await.unwrap();
-
-        // We should only get as far as finding out the active config.
-        assert_eq!(paver.take_events(), vec![PaverEvent::QueryActiveConfiguration,]);
+        assert_matches!(prepare_partition_metadata(&boot_manager).await,
+            Err(PreparePartitionMetadataError::CurrentConfigurationUnhealthy{
+                current_configuration: cc,
+                current_configuration_status: ccs,
+            })
+            if cc == current_config && ccs == status
+        );
+        assert_eq!(
+            paver.take_events(),
+            vec![
+                PaverEvent::QueryCurrentConfiguration,
+                PaverEvent::QueryConfigurationStatus { configuration: current_config },
+            ]
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn ensure_current_partition_active_bails_out_if_current_equals_active_with_current_b() {
-        let paver = Arc::new(
-            MockPaverServiceBuilder::new()
-                .current_config(Configuration::B)
-                .active_config(Configuration::B)
-                .build(),
-        );
-        let boot_manager = paver.spawn_boot_manager_service();
-
-        ensure_current_partition_active(&boot_manager, CurrentConfiguration::B).await.unwrap();
-
-        // We should only get as far as finding out the active config.
-        assert_eq!(paver.take_events(), vec![PaverEvent::QueryActiveConfiguration,]);
+    async fn prepare_partition_metadata_bails_out_if_current_pending_a() {
+        assert_prepare_partition_metadata_bails_out_with_unhealthy_current(
+            Configuration::A,
+            ConfigurationStatus::Pending,
+        )
+        .await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn ensure_current_partition_active_bails_out_with_current_r() {
+    async fn prepare_partition_metadata_bails_out_if_current_unbootable_a() {
+        assert_prepare_partition_metadata_bails_out_with_unhealthy_current(
+            Configuration::A,
+            ConfigurationStatus::Unbootable,
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn prepare_partition_metadata_bails_out_if_current_pending_b() {
+        assert_prepare_partition_metadata_bails_out_with_unhealthy_current(
+            Configuration::B,
+            ConfigurationStatus::Pending,
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn prepare_partition_metadata_bails_out_if_current_unbootable_b() {
+        assert_prepare_partition_metadata_bails_out_with_unhealthy_current(
+            Configuration::B,
+            ConfigurationStatus::Unbootable,
+        )
+        .await;
+    }
+
+    async fn assert_successful_prepare_partition_metadata(
+        current_config: Configuration,
+        target_config: Configuration,
+    ) {
+        let paver = Arc::new(MockPaverServiceBuilder::new().current_config(current_config).build());
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        prepare_partition_metadata(&boot_manager).await.unwrap();
+        assert_eq!(
+            paver.take_events(),
+            vec![
+                PaverEvent::QueryCurrentConfiguration,
+                PaverEvent::QueryConfigurationStatus { configuration: current_config },
+                PaverEvent::SetConfigurationUnbootable { configuration: target_config },
+                PaverEvent::BootManagerFlush,
+            ]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn prepare_partition_metadata_targets_b_in_config_a() {
+        assert_successful_prepare_partition_metadata(Configuration::A, Configuration::B).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn prepare_partition_metadata_targets_a_in_config_b() {
+        assert_successful_prepare_partition_metadata(Configuration::B, Configuration::A).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn prepare_partition_metadata_targets_a_in_config_r() {
+        assert_successful_prepare_partition_metadata(Configuration::Recovery, Configuration::A)
+            .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn prepare_partition_metadata_does_nothing_if_abr_not_supported() {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
-                .current_config(Configuration::Recovery)
-                .active_config(Configuration::A)
+                .boot_manager_close_with_epitaph(Status::NOT_SUPPORTED)
                 .build(),
         );
         let boot_manager = paver.spawn_boot_manager_service();
 
-        ensure_current_partition_active(&boot_manager, CurrentConfiguration::Recovery)
-            .await
-            .unwrap();
-
+        prepare_partition_metadata(&boot_manager).await.unwrap();
         assert_eq!(paver.take_events(), vec![]);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn ensure_current_partition_resets_active() {
-        let paver = Arc::new(
-            MockPaverServiceBuilder::new()
-                .current_config(Configuration::A)
-                .active_config(Configuration::B)
-                .build(),
-        );
-        let boot_manager = paver.spawn_boot_manager_service();
-
-        ensure_current_partition_active(&boot_manager, CurrentConfiguration::A).await.unwrap();
-
-        assert_eq!(
-            paver.take_events(),
-            vec![
-                PaverEvent::QueryActiveConfiguration,
-                PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
-                PaverEvent::SetConfigurationActive { configuration: Configuration::A },
-                PaverEvent::SetConfigurationHealthy { configuration: Configuration::A },
-                PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
-                PaverEvent::BootManagerFlush,
-            ]
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn ensure_current_partition_resets_active_when_current_isnt_healthy() {
-        let paver = Arc::new(
-            MockPaverServiceBuilder::new()
-                .current_config(Configuration::A)
-                .active_config(Configuration::B)
-                .config_status_hook(move |event| {
-                    if let PaverEvent::QueryConfigurationStatus { configuration } = event {
-                        if *configuration == Configuration::A {
-                            // The current config is unbootable, all others should be fine.
-                            return fidl_fuchsia_paver::ConfigurationStatus::Unbootable;
-                        }
-                    }
-                    fidl_fuchsia_paver::ConfigurationStatus::Healthy
-                })
-                .build(),
-        );
-
-        let boot_manager = paver.spawn_boot_manager_service();
-
-        ensure_current_partition_active(&boot_manager, CurrentConfiguration::A).await.unwrap();
-
-        assert_eq!(
-            paver.take_events(),
-            vec![
-                PaverEvent::QueryActiveConfiguration,
-                PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
-                PaverEvent::SetConfigurationActive { configuration: Configuration::A },
-                PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
-                PaverEvent::BootManagerFlush,
-            ]
-        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1158,23 +1116,6 @@ mod abr_not_supported_tests {
             .await
             .unwrap();
 
-        assert_eq!(paver.take_events(), vec![]);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn ensure_current_partition_active_bails_out() {
-        let paver = Arc::new(
-            MockPaverServiceBuilder::new()
-                .boot_manager_close_with_epitaph(Status::NOT_SUPPORTED)
-                .build(),
-        );
-        let boot_manager = paver.spawn_boot_manager_service();
-
-        ensure_current_partition_active(&boot_manager, CurrentConfiguration::NotSupported)
-            .await
-            .unwrap();
-
-        // We shouldn't even get as far as finding out the active config.
         assert_eq!(paver.take_events(), vec![]);
     }
 
