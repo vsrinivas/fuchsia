@@ -24,7 +24,8 @@ typedef uint32_t zx_rsrc_kind_t;
 #define ZX_RSRC_KIND_ROOT ((zx_rsrc_kind_t)4u)
 #define ZX_RSRC_KIND_VMEX ((zx_rsrc_kind_t)5u)
 #define ZX_RSRC_KIND_SMC ((zx_rsrc_kind_t)6u)
-#define ZX_RSRC_KIND_COUNT ((zx_rsrc_kind_t)7u)
+#define ZX_RSRC_KIND_SYSTEM ((zx_rsrc_kind_t)7u)
+#define ZX_RSRC_KIND_COUNT ((zx_rsrc_kind_t)8u)
 
 typedef uint32_t zx_rsrc_flags_t;
 #define ZX_RSRC_FLAG_EXCLUSIVE ((zx_rsrc_flags_t)0x00010000u)
@@ -32,5 +33,10 @@ typedef uint32_t zx_rsrc_flags_t;
 
 #define ZX_RSRC_EXTRACT_KIND(x) ((x)&0x0000FFFF)
 #define ZX_RSRC_EXTRACT_FLAGS(x) ((x)&0xFFFF0000)
+
+typedef uint64_t zx_rsrc_system_base_t;
+#define ZX_RSRC_SYSTEM_BASE_HYPERVISOR ((zx_rsrc_system_base_t)0u)
+#define ZX_RSRC_SYSTEM_BASE_VMEX ((zx_rsrc_system_base_t)1u)
+#define ZX_RSRC_SYSTEM_BASE_COUNT ((zx_rsrc_system_base_t)2u)
 
 #endif  // SYSROOT_ZIRCON_SYSCALLS_RESOURCE_H_

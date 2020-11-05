@@ -163,6 +163,7 @@ struct zx_proc_args {
 #define PA_IRQ_RESOURCE 0x51
 #define PA_IOPORT_RESOURCE 0x52
 #define PA_SMC_RESOURCE 0x53
+#define PA_SYSTEM_RESOURCE 0x54
 
 // --- Various ---
 

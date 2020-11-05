@@ -42,6 +42,7 @@ enum HandleIndex : uint32_t {
 #elif __aarch64__
   kSmcResource,
 #endif
+  kSystemResource,
 
   // Essential VMO handles.
   kZbi,

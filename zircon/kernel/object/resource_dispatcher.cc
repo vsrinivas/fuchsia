@@ -28,6 +28,7 @@ KCOUNTER(mmio_resource_created, "resource.mmio.created")
 KCOUNTER(irq_resource_created, "resource.irq.created")
 KCOUNTER(ioport_resource_created, "resource.ioport.created")
 KCOUNTER(smc_resource_created, "resource.smc.created")
+KCOUNTER(system_resource_created, "resource.system.created")
 KCOUNTER(dispatcher_resource_create_count, "dispatcher.resource.create")
 KCOUNTER(dispatcher_resource_destroy_count, "dispatcher.resource.destroy")
 
@@ -233,6 +234,9 @@ ResourceDispatcher::ResourceDispatcher(zx_rsrc_kind_t kind, uint64_t base, uint6
     case ZX_RSRC_KIND_SMC:
       kcounter_add(smc_resource_created, 1);
       break;
+    case ZX_RSRC_KIND_SYSTEM:
+      kcounter_add(system_resource_created, 1);
+      break;
   }
   resource_list_->push_back(this);
 }
@@ -372,6 +376,16 @@ void ResourceDispatcher::Dump() {
         break;
       case ZX_RSRC_KIND_SMC:
         printf("%.*s", kTypeLen, "smc");
+        printf("\t%8lu", r.get_koid());
+        printf("\t%.*s", kFlagLen, flag_str);
+        printf("\t%.*s", kNameLen, name);
+        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
+        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
+        printf("\t%.*s", kPrettyLen, format_size(pretty_size, sizeof(pretty_size), r.get_size()));
+        printf("\n");
+        break;
+      case ZX_RSRC_KIND_SYSTEM:
+        printf("%.*s", kTypeLen, "system");
         printf("\t%8lu", r.get_koid());
         printf("\t%.*s", kFlagLen, flag_str);
         printf("\t%.*s", kNameLen, name);

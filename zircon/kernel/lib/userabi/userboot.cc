@@ -69,6 +69,9 @@ HandleOwner get_resource_handle(zx_rsrc_kind_t kind) {
     case ZX_RSRC_KIND_SMC:
       strlcpy(name, "smc", ZX_MAX_NAME_LEN);
       break;
+    case ZX_RSRC_KIND_SYSTEM:
+      strlcpy(name, "system", ZX_MAX_NAME_LEN);
+      break;
   }
   zx_rights_t rights;
   KernelHandle<ResourceDispatcher> rsrc;
@@ -86,6 +89,7 @@ HandleOwner get_resource_handle(zx_rsrc_kind_t kind) {
 #elif ARCH_ARM64
     case ZX_RSRC_KIND_SMC:
 #endif
+    case ZX_RSRC_KIND_SYSTEM:
       result = ResourceDispatcher::CreateRangedRoot(&rsrc, &rights, kind, name);
       break;
     default:
@@ -326,6 +330,8 @@ void userboot_init(uint) {
   handles[userboot::kSmcResource] = get_resource_handle(ZX_RSRC_KIND_SMC).release();
   ASSERT(handles[userboot::kSmcResource]);
 #endif
+  handles[userboot::kSystemResource] = get_resource_handle(ZX_RSRC_KIND_SYSTEM).release();
+  ASSERT(handles[userboot::kSystemResource]);
   handles[userboot::kRootJob] = get_job_handle().release();
   ASSERT(handles[userboot::kRootJob]);
 

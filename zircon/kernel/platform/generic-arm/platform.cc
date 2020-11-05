@@ -718,6 +718,12 @@ static void arm_resource_dispatcher_init_hook(unsigned int rl) {
   if (status != ZX_OK) {
     printf("Resources: Failed to initialize SMC allocator: %d\n", status);
   }
+  // Set up range of valid system resources.
+  status =
+      ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_SYSTEM, 0, ZX_RSRC_SYSTEM_BASE_COUNT);
+  if (status != ZX_OK) {
+    printf("Resources: Failed to initialize system allocator: %d\n", status);
+  }
 }
 LK_INIT_HOOK(arm_resource_init, arm_resource_dispatcher_init_hook, LK_INIT_LEVEL_HEAP)
 

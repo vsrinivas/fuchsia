@@ -28,12 +28,10 @@ zx_status_t validate_ranged_resource(fbl::RefPtr<ResourceDispatcher> resource, z
 zx_status_t validate_ranged_resource(zx_handle_t handle, zx_rsrc_kind_t kind, uint64_t base,
                                      size_t len);
 
-#if ARCH_X86
 // Validates enabling ioport access bits for a given process based on a resource handle
 static inline zx_status_t validate_resource_ioport(zx_handle_t handle, uint64_t base, size_t len) {
   return validate_ranged_resource(handle, ZX_RSRC_KIND_IOPORT, base, len);
 }
-#endif
 
 // Validates mapping an MMIO range based on a resource handle
 static inline zx_status_t validate_resource_mmio(zx_handle_t handle, uint64_t base, size_t len) {
