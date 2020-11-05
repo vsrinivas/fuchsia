@@ -31,7 +31,8 @@ executable("sdio_test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/public",
   ]
-  configs += [ "//build/config:Wno-conversion" ]
+
+  #configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("brcmfmac_sdio_test") {

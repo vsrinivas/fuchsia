@@ -20,10 +20,12 @@
 #include <lib/zircon-internal/align.h>
 #include <lib/zx/vmo.h>
 #include <pthread.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <algorithm>
 #include <atomic>
+#include <limits>
 
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -295,7 +297,11 @@ zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t func, u
   txn.addr = addr;
   txn.write = write;
   txn.virt_buffer = data;
-  txn.data_size = size;
+  if (size > std::numeric_limits<uint32_t>::max()) {
+    BRCMF_ERR("brcmf_sdiod_transfer failed: size invalid (overflow)");
+    return ZX_ERR_INTERNAL;
+  }
+  txn.data_size = static_cast<uint32_t>(size);
   txn.incr = !fifo;
   txn.use_dma = use_dma;
   txn.dma_vmo = use_dma ? sdiodev->dma_buffer.get() : ZX_HANDLE_INVALID;
@@ -331,7 +337,7 @@ static uint8_t brcmf_sdiod_func_rb(struct brcmf_sdio_dev* sdiodev, uint8_t func,
   return data;
 }
 
-uint8_t brcmf_sdiod_vendor_control_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
+uint8_t brcmf_sdiod_vendor_control_rb(struct brcmf_sdio_dev* sdiodev, uint8_t addr,
                                       zx_status_t* result_out) {
   uint8_t data = 0;
   zx_status_t result;
@@ -348,7 +354,7 @@ uint8_t brcmf_sdiod_func1_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
   return brcmf_sdiod_func_rb(sdiodev, SDIO_FN_1, addr, result_out);
 }
 
-void brcmf_sdiod_vendor_control_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t data,
+void brcmf_sdiod_vendor_control_wb(struct brcmf_sdio_dev* sdiodev, uint8_t addr, uint8_t data,
                                    zx_status_t* result_out) {
   zx_status_t result;
   // Any function device can access the vendor control registers; fn2 could be used here instead.
@@ -420,11 +426,10 @@ void brcmf_sdiod_func1_wl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_
   }
 }
 
-static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint32_t func,
+static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint8_t func,
                                            uint32_t addr, uint8_t* data, size_t size) {
   zx_status_t err;
-  TRACE_DURATION("brcmfmac:isr", "netbuf_read", "func", TA_UINT32((uint32_t)func), "len",
-                 TA_UINT32(size));
+  TRACE_DURATION("brcmfmac:isr", "netbuf_read", "func", func, "len", size);
 
   SBSDIO_FORMAT_ADDR(addr);
   /* Single netbuf use the standard mmc interface */
@@ -453,12 +458,11 @@ static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint3
   return err;
 }
 
-static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev, uint32_t func,
+static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev, uint8_t func,
                                             uint32_t addr, uint8_t* data, size_t size) {
   zx_status_t err;
 
-  TRACE_DURATION("brcmfmac:isr", "sdiod_netbuf_write", "func", TA_UINT32((uint32_t)func), "len",
-                 TA_UINT32(size));
+  TRACE_DURATION("brcmfmac:isr", "sdiod_netbuf_write", "func", func, "len", size);
 
   SBSDIO_FORMAT_ADDR(addr);
   /* Single netbuf use the standard mmc interface */
@@ -608,7 +612,7 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
 }
 
 zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
-                              void* data, size_t data_size) {
+                              void* data, uint32_t data_size) {
   zx_status_t err = ZX_OK;
   // SBSDIO_SB_OFT_ADDR_LIMIT is the max transfer limit a single chunk.
   uint32_t transfer_address = address & SBSDIO_SB_OFT_ADDR_MASK;
@@ -652,7 +656,7 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
       data = static_cast<char*>(data) + transfer_size;
     address += transfer_size;
     transfer_address += transfer_size;
-    transfer_size = std::min<uint>(SBSDIO_SB_OFT_ADDR_LIMIT, data_size);
+    transfer_size = std::min<uint32_t>(SBSDIO_SB_OFT_ADDR_LIMIT, data_size);
   }
 
   sdio_release_host(sdiodev->func1);

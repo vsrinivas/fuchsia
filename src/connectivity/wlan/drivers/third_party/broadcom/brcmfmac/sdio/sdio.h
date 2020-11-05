@@ -339,10 +339,10 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev);
  * wb, wl - write byte / word.
  * Success is returned in result_out which may be NULL.
  */
-uint8_t brcmf_sdiod_vendor_control_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
+uint8_t brcmf_sdiod_vendor_control_rb(struct brcmf_sdio_dev* sdiodev, uint8_t addr,
                                       zx_status_t* result_out);
 
-void brcmf_sdiod_vendor_control_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t value,
+void brcmf_sdiod_vendor_control_wb(struct brcmf_sdio_dev* sdiodev, uint8_t addr, uint8_t value,
                                    zx_status_t* result_out);
 
 uint8_t brcmf_sdiod_func1_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
@@ -394,7 +394,7 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
  * Returns 0 or error code.
  */
 zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
-                              void* data, size_t size);
+                              void* data, uint32_t size);
 // TODO(cphoenix): Expand "uint" to "unsigned int" everywhere.
 
 /* Issue an abort to the specified function */
@@ -404,7 +404,7 @@ void brcmf_sdiod_change_state(struct brcmf_sdio_dev* sdiodev, enum brcmf_sdiod_s
 
 struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev);
 zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
-                                         size_t firmware_size, const void* nvram,
+                                         uint32_t firmware_size, const void* nvram,
                                          size_t nvram_size);
 void brcmf_sdio_remove(struct brcmf_sdio* bus);
 void brcmf_sdio_isr(struct brcmf_sdio* bus);

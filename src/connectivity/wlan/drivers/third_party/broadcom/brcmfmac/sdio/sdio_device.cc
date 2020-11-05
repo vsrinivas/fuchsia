@@ -15,6 +15,7 @@
 
 #include <lib/zircon-internal/align.h>
 
+#include <limits>
 #include <string>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/chipset_regs.h"
@@ -67,9 +68,13 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   const size_t padded_size_nvram = ZX_ROUNDUP(nvram_binary.size(), SDIOD_SIZE_ALIGNMENT);
   nvram_binary.resize(padded_size_nvram, '\0');
 
+  if (firmware_binary.size() > std::numeric_limits<uint32_t>::max()) {
+    BRCMF_ERR("Firmware binary size too large");
+    return ZX_ERR_INTERNAL;
+  }
   if ((status = brcmf_sdio_firmware_callback(device->brcmf_pub_.get(), firmware_binary.data(),
-                                             firmware_binary.size(), nvram_binary.data(),
-                                             nvram_binary.size())) != ZX_OK) {
+                                             static_cast<uint32_t>(firmware_binary.size()),
+                                             nvram_binary.data(), nvram_binary.size())) != ZX_OK) {
     return status;
   }
 

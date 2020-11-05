@@ -343,7 +343,7 @@ TEST(Sdio, AlignSize) {
 // This test case verifies the alignment functionality of pkt_align() defined in sdio.cc is correct.
 
 TEST(Sdio, PktAlignTest) {
-  for (size_t pkt_size = NOT_ALIGNED_SIZE; pkt_size <= ALIGNED_SIZE; pkt_size++) {
+  for (uint32_t pkt_size = NOT_ALIGNED_SIZE; pkt_size <= ALIGNED_SIZE; pkt_size++) {
     struct brcmf_netbuf* buf = brcmf_netbuf_allocate(pkt_size);
     brcmf_netbuf_grow_tail(buf, pkt_size);
     // The third parameter is not used to do alignment for buf->len.
@@ -401,7 +401,7 @@ static zx_status_t sdio_bus_txctl_test(enum brcmf_sdiod_state sdiod_state,
   // Call brcmf_sdio_bus_txctl() with a blank message. Message processing is not mocked,
   // so this call purely tests
   unsigned char msg[] = "";
-  uint msglen = strlen((char*)msg);
+  const uint msglen = 0;
   zx_status_t status = brcmf_sdio_bus_txctl(&bus_if, msg, msglen);
   EXPECT_EQ(bus.sdcnt.tx_ctlpkts, expected_tx_ctlpkts);
   EXPECT_EQ(bus.sdcnt.tx_ctlerrs, expected_tx_ctlerrs);
