@@ -22,7 +22,7 @@ protocol process {
     /// Rights: arg1 must have ZX_RIGHT_TRANSFER.
     process_start(handle:PROCESS handle, handle:THREAD thread,
                   vaddr entry, vaddr stack,
-                  handle arg1, uintptr arg2)
+                  [Release] handle arg1, uintptr arg2)
         -> (status status);
 
     /// Read from the given process's address space.

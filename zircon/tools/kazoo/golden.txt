@@ -19515,7 +19515,7 @@ KERNEL_SYSCALL(process_start, zx_status_t, /* no attributes */, 6,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t thread,
     zx_vaddr_t entry,
     zx_vaddr_t stack,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t arg1,
+    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t arg1,
     uintptr_t arg2))
 
 KERNEL_SYSCALL(process_read_memory, zx_status_t, /* no attributes */, 5,
@@ -22038,7 +22038,7 @@ KERNEL_SYSCALL(process_start, zx_status_t, /* no attributes */, 6,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t thread,
     zx_vaddr_t entry,
     zx_vaddr_t stack,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t arg1,
+    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t arg1,
     uintptr_t arg2))
 
 KERNEL_SYSCALL(process_read_memory, zx_status_t, /* no attributes */, 5,
@@ -23206,7 +23206,7 @@ _ZX_SYSCALL_DECL(process_start, zx_status_t, /* no attributes */, 6,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t thread,
     zx_vaddr_t entry,
     zx_vaddr_t stack,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t arg1,
+    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t arg1,
     uintptr_t arg2))
 
 _ZX_SYSCALL_DECL(process_read_memory, zx_status_t, /* no attributes */, 5,
