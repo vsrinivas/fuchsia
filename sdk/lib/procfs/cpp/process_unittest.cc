@@ -20,8 +20,13 @@ namespace {
 class ProcessHost {
  public:
   ProcessHost()
-      : process_dir_(procfs::CreateProcessDir()), loop_(&kAsyncLoopConfigNeverAttachToThread) {
+      : loop_(&kAsyncLoopConfigNeverAttachToThread),
+        process_dir_(procfs::CreateProcessDir(loop_.dispatcher())) {
     loop_.StartThread("procfs test thread");
+  }
+
+  ~ProcessHost() {
+    loop_.Shutdown();
   }
 
   // The returned file descriptor must be closed before the |ProcessHost| is destructed.
@@ -45,8 +50,8 @@ class ProcessHost {
   }
 
  private:
-  std::unique_ptr<vfs::PseudoDir> process_dir_;
   async::Loop loop_;
+  std::unique_ptr<vfs::PseudoDir> process_dir_;
 };
 
 TEST(ProcessDir, ReadEnviron) {
@@ -67,6 +72,30 @@ TEST(ProcessDir, ReadEnviron) {
 
   ASSERT_TRUE(files::ReadFileToStringAt(fd.get(), "environ", &content));
   EXPECT_EQ(std::string::npos, content.find("THE_TEXT_WE_EXPECT"));
+}
+
+TEST(ProcessDir, CurrentWorkingDirectory) {
+  ProcessHost host;
+  auto fd = host.Open();
+  ASSERT_TRUE(fd.is_valid());
+
+  char buffer[PATH_MAX];
+  getcwd(buffer, sizeof(buffer));
+
+  ASSERT_EQ(0, chdir("/pkg/test"));
+
+  fbl::unique_fd cwd(openat(fd.get(), "cwd", O_DIRECTORY | O_RDONLY));
+  ASSERT_TRUE(cwd.is_valid());
+
+  fbl::unique_fd probe(openat(cwd.get(), "procfs_cpp_unittests", O_RDONLY));
+  ASSERT_TRUE(probe.is_valid());
+
+  ASSERT_EQ(0, chdir("/pkg/lib"));
+
+  probe.reset(openat(cwd.get(), "procfs_cpp_unittests", O_DIRECTORY | O_RDONLY));
+  ASSERT_FALSE(probe.is_valid());
+
+  ASSERT_EQ(0, chdir(buffer));
 }
 
 }  // namespace

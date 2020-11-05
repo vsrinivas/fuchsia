@@ -12,7 +12,7 @@ namespace internal {
 // TODO(abarth): What is a reasonable maximum size?
 static constexpr size_t kMaxEnvironSize = 32 * 1024;
 
-std::unique_ptr<vfs::PseudoFile> CreateEnvironFile() {
+std::unique_ptr<vfs::PseudoFile> CreateEnviron() {
   return std::make_unique<vfs::PseudoFile>(
       kMaxEnvironSize, [](std::vector<uint8_t>* out, size_t max_bytes) {
         size_t bytes_remaining = max_bytes;

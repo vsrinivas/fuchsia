@@ -5,13 +5,14 @@
 #ifndef LIB_PROCFS_CPP_PROCESS_H_
 #define LIB_PROCFS_CPP_PROCESS_H_
 
+#include <lib/async/dispatcher.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 
 #include <memory>
 
 namespace procfs {
 
-std::unique_ptr<vfs::PseudoDir> CreateProcessDir();
+std::unique_ptr<vfs::PseudoDir> CreateProcessDir(async_dispatcher_t* dispatcher);
 
 }  // namespace procfs
 

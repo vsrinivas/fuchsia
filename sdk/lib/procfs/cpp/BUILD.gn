@@ -19,6 +19,8 @@ sdk_source_set("cpp") {
 
   include_base = "//sdk"
   sources = [
+    "internal/cwd.cc",
+    "internal/cwd.h",
     "internal/environ.cc",
     "internal/environ.h",
     "process.cc",
