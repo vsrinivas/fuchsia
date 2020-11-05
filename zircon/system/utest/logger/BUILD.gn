@@ -34,6 +34,7 @@ test("logger") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/logger",
     "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/syslog:helpers",
   ]
 }
 

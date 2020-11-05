@@ -51,13 +51,14 @@ struct fx_logger {
   ~fx_logger() = default;
 
   zx_status_t VLogWrite(fx_log_severity_t severity, const char* tag, const char* format,
-                        va_list args) {
-    return VLogWrite(severity, tag, format, args, true);
+                        va_list args, const char* file = nullptr, uint32_t line = 0) {
+    return VLogWrite(severity, tag, file, line, format, args, true);
   }
 
-  zx_status_t LogWrite(fx_log_severity_t severity, const char* tag, const char* msg) {
+  zx_status_t LogWrite(fx_log_severity_t severity, const char* tag, const char* msg,
+                       const char* file = nullptr, uint32_t line = 0) {
     va_list empty_args;
-    return VLogWrite(severity, tag, msg, empty_args, false);
+    return VLogWrite(severity, tag, file, line, msg, empty_args, false);
   }
 
   zx_status_t SetSeverity(fx_log_severity_t log_severity) {
@@ -82,14 +83,14 @@ struct fx_logger {
   void SetLogConnection(zx_handle_t handle);
 
  private:
-  zx_status_t VLogWrite(fx_log_severity_t severity, const char* tag, const char* format,
-                        va_list args, bool perform_format);
+  zx_status_t VLogWrite(fx_log_severity_t severity, const char* tag, const char* file,
+                        uint32_t line, const char* format, va_list args, bool perform_format);
 
-  zx_status_t VLogWriteToSocket(fx_log_severity_t severity, const char* tag, const char* msg,
-                                va_list args, bool perform_format);
+  zx_status_t VLogWriteToSocket(fx_log_severity_t severity, const char* tag, const char* file,
+                                uint32_t line, const char* msg, va_list args, bool perform_format);
 
-  zx_status_t VLogWriteToFd(int fd, fx_log_severity_t severity, const char* tag, const char* msg,
-                            va_list args, bool perform_format);
+  zx_status_t VLogWriteToFd(int fd, fx_log_severity_t severity, const char* tag, const char* file,
+                            uint32_t line, const char* msg, va_list args, bool perform_format);
 
   zx_status_t SetTags(const char** tags, size_t ntags);
 

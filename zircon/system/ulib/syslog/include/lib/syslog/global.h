@@ -94,28 +94,29 @@ zx_status_t fx_log_reconfigure(const fx_logger_config_t* config);
 #define FX_LOG_SET_VERBOSITY(verbosity) \
   _FX_LOG_SET_SEVERITY(fx_log_severity_from_verbosity(verbosity))
 
-#define _FX_LOG(severity, tag, message)                     \
-  do {                                                      \
-    fx_logger_t* logger = fx_log_get_logger();              \
-    if (fx_logger_get_min_severity(logger) <= (severity)) { \
-      fx_logger_log(logger, (severity), (tag), (message));  \
-    }                                                       \
+#define _FX_LOG(severity, tag, message)                                                    \
+  do {                                                                                     \
+    fx_logger_t* logger = fx_log_get_logger();                                             \
+    if (fx_logger_get_min_severity(logger) <= (severity)) {                                \
+      fx_logger_log_with_source(logger, (severity), (tag), __FILE__, __LINE__, (message)); \
+    }                                                                                      \
   } while (0)
 
-#define _FX_LOGF(severity, tag, message...)                 \
-  do {                                                      \
-    fx_logger_t* logger = fx_log_get_logger();              \
-    if (fx_logger_get_min_severity(logger) <= (severity)) { \
-      fx_logger_logf(logger, (severity), (tag), message);   \
-    }                                                       \
+#define _FX_LOGF(severity, tag, message...)                                               \
+  do {                                                                                    \
+    fx_logger_t* logger = fx_log_get_logger();                                            \
+    if (fx_logger_get_min_severity(logger) <= (severity)) {                               \
+      fx_logger_logf_with_source(logger, (severity), (tag), __FILE__, __LINE__, message); \
+    }                                                                                     \
   } while (0)
 
-#define _FX_LOGVF(severity, tag, message, args)                      \
-  do {                                                               \
-    fx_logger_t* logger = fx_log_get_logger();                       \
-    if (fx_logger_get_min_severity(logger) <= (severity)) {          \
-      fx_logger_logvf(logger, (severity), (tag), (message), (args)); \
-    }                                                                \
+#define _FX_LOGVF(severity, tag, message, args)                                             \
+  do {                                                                                      \
+    fx_logger_t* logger = fx_log_get_logger();                                              \
+    if (fx_logger_get_min_severity(logger) <= (severity)) {                                 \
+      fx_logger_logvf_with_source(logger, (severity), (tag), __FILE__, __LINE__, (message), \
+                                  (args));                                                  \
+    }                                                                                       \
   } while (0)
 
 // Writes a message to the global logger.

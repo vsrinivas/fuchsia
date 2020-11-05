@@ -11,15 +11,22 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <fbl/string_printf.h>
 #include <zxtest/zxtest.h>
 
-static bool ends_with(const char* str, const char* suffix) {
-  if (strlen(str) < strlen(suffix)) {
+#include "zircon/system/ulib/syslog/helpers.h"
+
+const char* kFileName = syslog::internal::StripPath(__FILE__);
+const char* kFilePath = syslog::internal::StripDots(__FILE__);
+
+bool ends_with(const char* str, const fbl::String& suffix) {
+  size_t str_len = strlen(str);
+  size_t suffix_len = suffix.size();
+  if (str_len < suffix_len) {
     return false;
   }
-  size_t l = strlen(suffix);
-  str += strlen(str) - l;
-  return strcmp(str, suffix) == 0;
+  str += str_len - suffix_len;
+  return strcmp(str, suffix.c_str()) == 0;
 }
 
 static void smallest_unused_fd(int* fd) {
@@ -89,12 +96,15 @@ TEST(SyslogTests, test_log_write) {
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
+  int line = __LINE__ + 1;
   FX_LOGF(INFO, NULL, "%d, %s", 10, "just some number");
   char buf[256];
   size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "INFO: 10, just some number\n"), "%s", buf);
+  EXPECT_TRUE(
+      ends_with(buf, fbl::StringPrintf("INFO: [%s(%d)] 10, just some number\n", kFileName, line)),
+      "%s", buf);
   close(pipefd[1]);
 }
 
@@ -102,12 +112,14 @@ TEST(SyslogTests, test_log_preprocessed_message) {
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
+  int line = __LINE__ + 1;
   FX_LOG(INFO, NULL, "%d, %s");
   char buf[256];
   size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "INFO: %d, %s\n"), "%s", buf);
+  EXPECT_TRUE(ends_with(buf, fbl::StringPrintf("INFO: [%s(%d)] %%d, %%s\n", kFileName, line)), "%s",
+              buf);
   close(pipefd[1]);
 }
 
@@ -138,12 +150,15 @@ TEST(SyslogTests, test_log_write_with_tag) {
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
+  int line = __LINE__ + 1;
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   char buf[256];
   size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "[tag] INFO: 10, just some string\n"), "%s", buf);
+  EXPECT_TRUE(ends_with(buf, fbl::StringPrintf("[tag] INFO: [%s(%d)] 10, just some string\n",
+                                               kFileName, line)),
+              "%s", buf);
   close(pipefd[1]);
 }
 
@@ -152,12 +167,15 @@ TEST(SyslogTests, test_log_write_with_global_tag) {
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   const char* tags[] = {"gtag"};
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], tags, 1), "");
+  int line = __LINE__ + 1;
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   char buf[256];
   size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "[gtag, tag] INFO: 10, just some string\n"), "%s", buf);
+  EXPECT_TRUE(ends_with(buf, fbl::StringPrintf("[gtag, tag] INFO: [%s(%d)] 10, just some string\n",
+                                               kFileName, line)),
+              "%s", buf);
   close(pipefd[1]);
 }
 
@@ -166,12 +184,16 @@ TEST(SyslogTests, test_log_write_with_multi_global_tag) {
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   const char* tags[] = {"gtag", "gtag2"};
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], tags, 2), "");
+  int line = __LINE__ + 1;
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   char buf[256];
   size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "[gtag, gtag2, tag] INFO: 10, just some string\n"), "%s", buf);
+  EXPECT_TRUE(
+      ends_with(buf, fbl::StringPrintf("[gtag, gtag2, tag] INFO: [%s(%d)] 10, just some string\n",
+                                       kFileName, line)),
+      "%s", buf);
   close(pipefd[1]);
 }
 
@@ -208,12 +230,15 @@ TEST(SyslogTests, test_vlog_simple_write) {
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
   FX_LOG_SET_VERBOSITY(5);  // INFO - 5
+  int line = __LINE__ + 1;
   FX_VLOG(5, NULL, "test message");
   char buf[256];
   size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "VLOG(5): test message\n"), "%s", buf);
+  EXPECT_TRUE(
+      ends_with(buf, fbl::StringPrintf("VLOG(5): [%s(%d)] test message\n", kFileName, line)), "%s",
+      buf);
   close(pipefd[1]);
 }
 
@@ -222,36 +247,42 @@ TEST(SyslogTests, test_vlog_write) {
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
   FX_LOG_SET_VERBOSITY(1);  // INFO - 1
+  int line = __LINE__ + 1;
   FX_VLOGF(1, NULL, "%d, %s", 10, "just some number");
   char buf[256];
   size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "VLOG(1): 10, just some number\n"), "%s", buf);
+  EXPECT_TRUE(ends_with(buf, fbl::StringPrintf("VLOG(1): [%s(%d)] 10, just some number\n",
+                                               kFileName, line)),
+              "%s", buf);
   close(pipefd[1]);
 }
 
 TEST(SyslogTests, test_log_reconfiguration) {
-
   // Initialize with no tags.
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
+  int line = __LINE__ + 1;
   FX_LOG(INFO, NULL, "Hi");
   char buf[256];
   size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "INFO: Hi\n"), "%s", buf);
+  EXPECT_TRUE(ends_with(buf, fbl::StringPrintf("INFO: [%s(%d)] Hi\n", kFileName, line)), "%s", buf);
 
   // Now reconfigure the logger and add tags.
   const char* tags[] = {"tag1", "tag2"};
   EXPECT_EQ(ZX_OK, init_helper(-1, tags, 2), "");
+  line = __LINE__ + 1;
   FX_LOG(INFO, NULL, "Hi");
   n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "[tag1, tag2] INFO: Hi\n"), "%s", buf);
+  EXPECT_TRUE(
+      ends_with(buf, fbl::StringPrintf("[tag1, tag2] INFO: [%s(%d)] Hi\n", kFileName, line)), "%s",
+      buf);
 
   close(pipefd[1]);
 }

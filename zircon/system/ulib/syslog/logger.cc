@@ -26,6 +26,20 @@ zx_status_t fx_logger_logf(fx_logger_t* logger, fx_log_severity_t severity, cons
 }
 
 SYSLOG_EXPORT
+zx_status_t fx_logger_logf_with_source(fx_logger_t* logger, fx_log_severity_t severity,
+                                       const char* tag, const char* file, int line,
+                                       const char* format, ...) {
+  if (!logger || !file || line <= 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  va_list args;
+  va_start(args, format);
+  zx_status_t s = logger->VLogWrite(severity, tag, format, args, file, line);
+  va_end(args);
+  return s;
+}
+
+SYSLOG_EXPORT
 zx_status_t fx_logger_log(fx_logger_t* logger, fx_log_severity_t severity, const char* tag,
                           const char* msg) {
   if (logger == nullptr) {
@@ -35,12 +49,32 @@ zx_status_t fx_logger_log(fx_logger_t* logger, fx_log_severity_t severity, const
 }
 
 SYSLOG_EXPORT
+zx_status_t fx_logger_log_with_source(fx_logger_t* logger, fx_log_severity_t severity,
+                                      const char* tag, const char* file, int line,
+                                      const char* msg) {
+  if (!logger || !file || line <= 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return logger->LogWrite(severity, tag, msg, file, line);
+}
+
+SYSLOG_EXPORT
 zx_status_t fx_logger_logvf(fx_logger_t* logger, fx_log_severity_t severity, const char* tag,
                             const char* format, va_list args) {
   if (logger == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
   return logger->VLogWrite(severity, tag, format, args);
+}
+
+SYSLOG_EXPORT
+zx_status_t fx_logger_logvf_with_source(fx_logger_t* logger, fx_log_severity_t severity,
+                                        const char* tag, const char* file, int line,
+                                        const char* format, va_list args) {
+  if (!logger || !file || line <= 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return logger->VLogWrite(severity, tag, format, args, file, line);
 }
 
 SYSLOG_EXPORT

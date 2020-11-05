@@ -13,18 +13,24 @@
 #include <memory>
 #include <utility>
 
+#include <fbl/string_printf.h>
 #include <zxtest/zxtest.h>
+
+#include "zircon/system/ulib/syslog/helpers.h"
 
 namespace {
 
-bool ends_with(const char* str, const char* suffix) {
+const char* kFileName = syslog::internal::StripPath(__FILE__);
+const char* kFilePath = syslog::internal::StripDots(__FILE__);
+
+bool ends_with(const char* str, const fbl::String& suffix) {
   size_t str_len = strlen(str);
-  size_t suffix_len = strlen(suffix);
+  size_t suffix_len = suffix.size();
   if (str_len < suffix_len) {
     return false;
   }
   str += str_len - suffix_len;
-  return strcmp(str, suffix) == 0;
+  return strcmp(str, suffix.c_str()) == 0;
 }
 
 class Fixture {
@@ -119,23 +125,30 @@ TEST(LoggerTests, TestLogSimple) {
 TEST(LoggerTests, TestLogMultipleMsgs) {
   Fixture fixture;
   ASSERT_NO_FATAL_FAILURES(fixture.FullSetup());
+  int line = __LINE__ + 1;
   FX_LOG(INFO, nullptr, "test_message");
   fixture.RunLoop();
   const char* out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "INFO: test_message\n"), "%s", out);
+  ASSERT_TRUE(ends_with(out, fbl::StringPrintf("INFO: [%s(%d)] test_message\n", kFileName, line)),
+              "%s", out);
+  line = __LINE__ + 1;
   FX_LOG(INFO, nullptr, "test_message2");
   fixture.RunLoop();
   out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "INFO: test_message2\n"), "%s", out);
+  ASSERT_TRUE(ends_with(out, fbl::StringPrintf("INFO: [%s(%d)] test_message2\n", kFileName, line)),
+              "%s", out);
 }
 
 TEST(LoggerTests, TestLogWithTag) {
   Fixture fixture;
   ASSERT_NO_FATAL_FAILURES(fixture.FullSetup());
+  int line = __LINE__ + 1;
   FX_LOG(INFO, "tag", "test_message");
   fixture.RunLoop();
   const char* out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "[tag] INFO: test_message\n"), "%s", out);
+  ASSERT_TRUE(
+      ends_with(out, fbl::StringPrintf("[tag] INFO: [%s(%d)] test_message\n", kFileName, line)),
+      "%s", out);
 }
 
 TEST(LoggerTests, TestLogWithMultipleTags) {
@@ -144,29 +157,41 @@ TEST(LoggerTests, TestLogWithMultipleTags) {
   ASSERT_NO_FATAL_FAILURES(fixture.ConnectToLogger());
   const char* gtags[] = {"gtag1", "gtag2"};
   ASSERT_NO_FATAL_FAILURES(fixture.InitSyslog(gtags, 2));
+  int line = __LINE__ + 1;
   FX_LOG(INFO, "tag", "test_message");
   fixture.RunLoop();
   const char* out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "[gtag1, gtag2, tag] INFO: test_message\n"), "%s", out);
+  ASSERT_TRUE(ends_with(out, fbl::StringPrintf("[gtag1, gtag2, tag] INFO: [%s(%d)] test_message\n",
+                                               kFileName, line)),
+              "%s", out);
 }
 
 TEST(LoggerTests, TestLogSeverity) {
   Fixture fixture;
   ASSERT_NO_FATAL_FAILURES(fixture.FullSetup());
+  int line = __LINE__ + 1;
   FX_LOG(INFO, "", "test_message");
   fixture.RunLoop();
   const char* out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "[] INFO: test_message\n"), "%s", out);
+  ASSERT_TRUE(
+      ends_with(out, fbl::StringPrintf("[] INFO: [%s(%d)] test_message\n", kFileName, line)), "%s",
+      out);
 
+  line = __LINE__ + 1;
   FX_LOG(WARNING, "", "test_message");
   fixture.RunLoop();
   out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "[] WARNING: test_message\n"), "%s", out);
+  ASSERT_TRUE(
+      ends_with(out, fbl::StringPrintf("[] WARNING: [%s(%d)] test_message\n", kFilePath, line)),
+      "%s", out);
 
+  line = __LINE__ + 1;
   FX_LOG(ERROR, "", "test_message");
   fixture.RunLoop();
   out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "[] ERROR: test_message\n"), "%s", out);
+  ASSERT_TRUE(
+      ends_with(out, fbl::StringPrintf("[] ERROR: [%s(%d)] test_message\n", kFilePath, line)), "%s",
+      out);
 }
 
 TEST(LoggerTests, TestLogWhenLoggerHandleDies) {
@@ -174,10 +199,13 @@ TEST(LoggerTests, TestLogWhenLoggerHandleDies) {
   ASSERT_NO_FATAL_FAILURES(fixture.FullSetup());
   fixture.ResetLoggerHandle();
   fixture.RunLoop();
+  int line = __LINE__ + 1;
   FX_LOG(INFO, "tag", "test_message");
   fixture.RunLoop();
   const char* out = fixture.read_buffer();
-  ASSERT_TRUE(ends_with(out, "[tag] INFO: test_message\n"), "%s", out);
+  ASSERT_TRUE(
+      ends_with(out, fbl::StringPrintf("[tag] INFO: [%s(%d)] test_message\n", kFileName, line)),
+      "%s", out);
   ASSERT_EQ(ZX_OK, fixture.error_status());
 }
 

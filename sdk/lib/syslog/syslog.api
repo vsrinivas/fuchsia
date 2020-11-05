@@ -1,5 +1,5 @@
 {
-  "pkg/syslog/include/lib/syslog/global.h": "ac86a0c4b4b31f690d1869c45eb32fe4",
-  "pkg/syslog/include/lib/syslog/logger.h": "83aa66824c9934e2d81af2af4c201aef",
+  "pkg/syslog/include/lib/syslog/global.h": "50ab73fb8a09fb3a956ae69c703830b7",
+  "pkg/syslog/include/lib/syslog/logger.h": "594122e28aa2eb1ea6d9721781be4ce1",
   "pkg/syslog/include/lib/syslog/wire_format.h": "a0898347fbde08832e36e7c69d1b7c00"
 }

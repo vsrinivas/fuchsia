@@ -16,6 +16,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/string_buffer.h>
 
+#include "zircon/system/ulib/syslog/helpers.h"
+
 namespace {
 
 // This thread's koid.
@@ -91,7 +93,8 @@ void fx_logger::SetLogConnection(zx_handle_t handle) {
 }
 
 zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char* tag,
-                                         const char* msg, va_list args, bool perform_format) {
+                                         const char* file, uint32_t line, const char* msg,
+                                         va_list args, bool perform_format) {
   zx_time_t time = zx_clock_get_monotonic();
   fx_log_packet_t packet;
   memset(&packet, 0, sizeof(packet));
@@ -123,6 +126,20 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
   }
   packet.data[pos++] = 0;
   ZX_DEBUG_ASSERT(pos < kDataSize);
+  // Write file and line
+  constexpr size_t kMaxFileAndLineLength = 2048;
+  if (file) {
+    int file_path_bytes = snprintf(packet.data + pos, kMaxFileAndLineLength, "[%s(%d)] ",
+                                   syslog::internal::StripFile(file, severity), line);
+    if (file_path_bytes < 0) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (static_cast<size_t>(file_path_bytes) < kMaxFileAndLineLength) {
+      pos += file_path_bytes;
+    } else {
+      pos += kMaxFileAndLineLength - 1;
+    }
+  }
   // Write msg
   int n = static_cast<int>(kDataSize - pos);
   int count = 0;
@@ -151,7 +168,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
   auto status = socket_.write(0, &packet, size, nullptr);
   if (status == ZX_ERR_BAD_STATE || status == ZX_ERR_PEER_CLOSED) {
     ActivateFallback(-1);
-    return VLogWriteToFd(logger_fd_.load(std::memory_order_relaxed), severity, tag,
+    return VLogWriteToFd(logger_fd_.load(std::memory_order_relaxed), severity, tag, file, line,
                          packet.data + msg_pos, args, false);
   }
   if (status != ZX_OK) {
@@ -161,7 +178,8 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
 }
 
 zx_status_t fx_logger::VLogWriteToFd(int fd, fx_log_severity_t severity, const char* tag,
-                                     const char* msg, va_list args, bool perform_format) {
+                                     const char* file, uint32_t line, const char* msg, va_list args,
+                                     bool perform_format) {
   zx_time_t time = zx_clock_get_monotonic();
   constexpr char kEllipsis[] = "...";
   constexpr size_t kEllipsisSize = sizeof(kEllipsis) - 1;
@@ -211,6 +229,10 @@ zx_status_t fx_logger::VLogWriteToFd(int fd, fx_log_severity_t severity, const c
   }
   buf.Append(": ");
 
+  if (file) {
+    buf.AppendPrintf("[%s(%d)] ", syslog::internal::StripFile(file, severity), line);
+  }
+
   if (!perform_format) {
     buf.Append(msg);
   } else {
@@ -228,9 +250,11 @@ zx_status_t fx_logger::VLogWriteToFd(int fd, fx_log_severity_t severity, const c
   return ZX_OK;
 }
 
-zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag, const char* msg,
-                                 va_list args, bool perform_format) {
-  if (msg == NULL || severity > (FX_LOG_SEVERITY_MAX * FX_LOG_SEVERITY_STEP_SIZE)) {
+zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag, const char* file,
+                                 uint32_t line, const char* msg, va_list args,
+                                 bool perform_format) {
+  if (msg == NULL || severity > (FX_LOG_SEVERITY_MAX * FX_LOG_SEVERITY_STEP_SIZE) ||
+      (file && line == 0)) {
     return ZX_ERR_INVALID_ARGS;
   }
   if (GetSeverity() > severity) {
@@ -240,9 +264,9 @@ zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag, co
   zx_status_t status;
   int fd = logger_fd_.load(std::memory_order_relaxed);
   if (fd != -1) {
-    status = VLogWriteToFd(fd, severity, tag, msg, args, perform_format);
+    status = VLogWriteToFd(fd, severity, tag, file, line, msg, args, perform_format);
   } else if (socket_.is_valid()) {
-    status = VLogWriteToSocket(severity, tag, msg, args, perform_format);
+    status = VLogWriteToSocket(severity, tag, file, line, msg, args, perform_format);
   } else {
     return ZX_ERR_BAD_STATE;
   }

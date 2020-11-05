@@ -27,12 +27,12 @@
 // Log entry severity. Used for coarse filtering of log messages.
 typedef int fx_log_severity_t;
 #define FX_LOG_ALL (-0x7F)
-#define FX_LOG_TRACE (0x10)  // 1 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_DEBUG (0x20)  // 2 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_INFO (0x30)  // 3 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_TRACE (0x10)    // 1 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_DEBUG (0x20)    // 2 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_INFO (0x30)     // 3 * FX_LOG_SEVERITY_STEP_SIZE
 #define FX_LOG_WARNING (0x40)  // 4 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_ERROR (0x50)  // 5 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_FATAL (0x60)  // 6 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_ERROR (0x50)    // 5 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_FATAL (0x60)    // 6 * FX_LOG_SEVERITY_STEP_SIZE
 #define FX_LOG_NONE (0x7F)
 
 #define FX_LOG_SEVERITY_MAX (6)  // FX_LOG_FATAL
@@ -147,6 +147,12 @@ zx_status_t fx_logger_reconfigure(fx_logger_t* logger, const fx_logger_config_t*
 zx_status_t fx_logger_logf(fx_logger_t* logger, fx_log_severity_t severity, const char* tag,
                            const char* msg, ...);
 
+// Similar to fx_logger_logf(), but also takes the file path and the line number of where the log
+// originated from.
+zx_status_t fx_logger_logf_with_source(fx_logger_t* logger, fx_log_severity_t severity,
+                                       const char* tag, const char* file, int line, const char* msg,
+                                       ...);
+
 // Writes formatted message to a logger using varargs.
 // The message will be discarded if |severity| is less than the logger's
 // minimum log severity.
@@ -157,6 +163,12 @@ zx_status_t fx_logger_logf(fx_logger_t* logger, fx_log_severity_t severity, cons
 zx_status_t fx_logger_logvf(fx_logger_t* logger, fx_log_severity_t severity, const char* tag,
                             const char* msg, va_list args);
 
+// Similar to fx_logger_logvf(), but also takes the file path and the line number of where the log
+// originated from.
+zx_status_t fx_logger_logvf_with_source(fx_logger_t* logger, fx_log_severity_t severity,
+                                        const char* tag, const char* file, int line,
+                                        const char* msg, va_list args);
+
 // Writes a message to a logger.
 // The message will be discarded if |severity| is less than the logger's
 // minimum log severity.
@@ -166,6 +178,11 @@ zx_status_t fx_logger_logvf(fx_logger_t* logger, fx_log_severity_t severity, con
 // No message is written if |message| is NULL.
 zx_status_t fx_logger_log(fx_logger_t* logger, fx_log_severity_t severity, const char* tag,
                           const char* msg);
+
+// Similar to fx_logger_log(), but also takes the file path and the line number of where the log
+// originated from.
+zx_status_t fx_logger_log_with_source(fx_logger_t* logger, fx_log_severity_t severity,
+                                      const char* tag, const char* file, int line, const char* msg);
 
 __END_CDECLS
 

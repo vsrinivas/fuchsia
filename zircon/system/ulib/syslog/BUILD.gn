@@ -32,6 +32,7 @@ zx_library("syslog") {
     "logger.cc",
   ]
   deps = [
+    ":helpers",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
@@ -59,6 +60,7 @@ zx_library("syslog-static") {
     "logger.cc",
   ]
   deps = [
+    ":helpers",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
@@ -71,4 +73,12 @@ zx_library("syslog-static") {
 zx_library("syslog-headers") {
   sdk = "static"
   sdk_headers = syslog_headers
+}
+
+source_set("helpers") {
+  sources = [
+    "helpers.cc",
+    "helpers.h",
+  ]
+  deps = [ ":syslog-headers" ]
 }
