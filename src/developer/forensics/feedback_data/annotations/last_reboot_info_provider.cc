@@ -99,8 +99,8 @@ std::string GetReason(const LastReboot& last_reboot) {
         return "device too hot";
       case RebootReason::SESSION_FAILURE:
         return "fatal session failure";
-      case RebootReason::SYSTEM_FAILURE:
-        return "fatal system failure";
+      case RebootReason::SYSMGR_FAILURE:
+        return "fatal sysmgr failure";
       case RebootReason::CRITICAL_COMPONENT_FAILURE:
         return "fatal critical component failure";
       case RebootReason::FACTORY_DATA_RESET:

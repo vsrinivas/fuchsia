@@ -135,14 +135,14 @@ TEST(RebootReasonTest, SessionFailure) {
   EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::SESSION_FAILURE);
 }
 
-TEST(RebootReasonTest, SystemFailure) {
-  const auto reason = RebootReason::kSystemFailure;
+TEST(RebootReasonTest, SysmgrFailure) {
+  const auto reason = RebootReason::kSysmgrFailure;
 
   EXPECT_TRUE(IsCrash(reason));
-  EXPECT_EQ(ToCobaltLastRebootReason(reason), cobalt::LastRebootReason::kSystemFailure);
-  EXPECT_EQ(ToCrashSignature(reason), "fuchsia-system-failure");
+  EXPECT_EQ(ToCobaltLastRebootReason(reason), cobalt::LastRebootReason::kSysmgrFailure);
+  EXPECT_EQ(ToCrashSignature(reason), "fuchsia-sysmgr-failure");
   EXPECT_EQ(ToCrashProgramName(reason), "system");
-  EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::SYSTEM_FAILURE);
+  EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::SYSMGR_FAILURE);
 }
 
 TEST(RebootReasonTest, CriticalComponentFailure) {

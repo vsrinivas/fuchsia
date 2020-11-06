@@ -68,7 +68,8 @@ enum class LastRebootReason {
   kSystemUpdate = cobalt_registry::LastRebootUptimeMetricDimensionReason::SystemUpdate,
   kHighTemperature = cobalt_registry::LastRebootUptimeMetricDimensionReason::HighTemperature,
   kSessionFailure = cobalt_registry::LastRebootUptimeMetricDimensionReason::SessionFailure,
-  kSystemFailure = cobalt_registry::LastRebootUptimeMetricDimensionReason::SystemFailure,
+  // TODO(fxbug.dev/62285): switch back to a named constant once it has been renamed upstream.
+  kSysmgrFailure = 14,
   kFactoryDataReset = cobalt_registry::LastRebootUptimeMetricDimensionReason::FactoryDataReset,
   kCriticalComponentFailure =
       cobalt_registry::LastRebootUptimeMetricDimensionReason::CriticalComponentFailure,
