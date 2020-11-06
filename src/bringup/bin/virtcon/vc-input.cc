@@ -19,9 +19,9 @@
 
 static struct list_node g_vc_list = LIST_INITIAL_VALUE(g_vc_list);
 static unsigned g_vc_count = 0;
-static unsigned g_active_vc_index;
+static unsigned g_active_vc_index = 0;
 
-vc_t* g_active_vc;
+vc_t* g_active_vc = nullptr;
 int g_status_width = 0;
 
 // Process key sequences that affect the console (scrolling, switching

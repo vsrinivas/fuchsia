@@ -25,18 +25,22 @@ source_set("lib") {
     "autorun.h",
     "console_launcher.cc",
     "console_launcher.h",
+    "virtcon-setup.cc",
+    "virtcon-setup.h",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_llcpp",
     "//sdk/fidl/fuchsia.kernel",
+    "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
   ]
 
   public_deps = [

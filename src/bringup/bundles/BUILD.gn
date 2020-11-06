@@ -38,6 +38,6 @@ group("zedboot") {
 group("debugging") {
   deps = [
     "//src/bringup/bin/trace-benchmark",
-    "//src/bringup/bin/virtcon:virtual-console",
+    "//src/bringup/bin/virtcon:bootfs",
   ]
 }

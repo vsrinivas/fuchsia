@@ -3,9 +3,21 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/dist/component_manifest_resources.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+group("bootfs") {
+  deps = [
+    ":meta",
+    ":virtual-console",
+  ]
+}
+
+component_manifest_resources("meta") {
+  sources = [ "meta/virtual-console.cml" ]
+}
 
 # This can't be a source_set() because the test compiles with a #define.
 common_sources = [
@@ -61,8 +73,14 @@ executable("virtual-console") {
               "main.cc",
               "vc-display.cc",
               "vc-log.cc",
+              "session-manager.cc",
             ]
-  deps = [ ":common" ]
+  deps = [
+    ":common",
+    "//sdk/lib/syslog/cpp",
+    "//src/sys/lib/stdout-to-debuglog/cpp",
+    "//zircon/public/lib/zxc",
+  ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -105,6 +123,23 @@ test("virtual-console-test-text") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
+test("virtual-console-session-manager-test") {
+  sources = [
+    "keyboard-vt100.cc",
+    "session-manager-test.cc",
+    "session-manager.cc",
+    "textcon.cc",
+    "vc-device.cc",
+    "vc-input.cc",
+  ]
+
+  deps = [
+    ":common",
+    "//zircon/public/lib/zxc",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
 test("virtual-console-test-integration") {
   sources = [ "vc-integration-test.cc" ]
 
@@ -124,6 +159,7 @@ test("virtual-console-args-test") {
 
   deps = [
     ":common",
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -137,6 +173,7 @@ test_package("test") {
   package_name = "virtual-console-test"
   deps = [
     ":virtual-console-args-test",
+    ":virtual-console-session-manager-test",
     ":virtual-console-test-display",
     ":virtual-console-test-integration",
     ":virtual-console-test-text",
@@ -156,6 +193,10 @@ test_package("test") {
     },
     {
       name = "virtual-console-args-test"
+      environments = basic_envs
+    },
+    {
+      name = "virtual-console-session-manager-test"
       environments = basic_envs
     },
   ]
