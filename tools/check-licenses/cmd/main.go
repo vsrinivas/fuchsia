@@ -29,7 +29,7 @@ var (
 	baseDir                      = flag.String("base_dir", "", "Root location to begin directory traversal.")
 	target                       = flag.String("target", "", "Analyze the dependency tree of a specific GN build target.")
 	logLevel                     = flag.Int("log_level", 0, "Log level, see https://godoc.org/github.com/golang/glog for more info.")
-	exitOnUnlicensedFiles        = flag.Bool("exit_on_unlicensed_files", false, "If true, exits if it encounters files that are unlicensed.")
+	exitOnUnlicensedFiles        = flag.Bool("exit_on_unlicensed_files", true, "If true, exits if it encounters files that are unlicensed.")
 	exitOnProhibitedLicenseTypes = flag.Bool("exit_on_prohibited_license_types", true, "If true, exits if it encounters a prohibited license type.")
 	outputLicenseFile            = flag.Bool("output_license_file", true, "If true, outputs a license file with all the licenses for the project.")
 	outputTreeStateFilename      = flag.String("output_tree_state_filename", "", "Filename for saving the state of the file tree.")
@@ -81,23 +81,6 @@ func mainImpl() error {
 		}
 	}
 
-	additionalSkipDirs := []string{
-		"third_party/catapult",                                      // TODO(b/171586646): Remove once completed.
-		"third_party/openthread/third_party/nxp",                    // TODO(b/172066115): Remove once completed.
-		"third_party/openthread/third_party/openthread-test-driver", // TODO(b/171816602): Remove once completed.
-		"third_party/openthread/third_party/ti",                     // TODO(b/172066853): Remove once completed.
-		"third_party/vim",                                           // TODO(b/172066343): Remove once completed.
-		"third_party/zlib",                                          // TODO(b/172069467): Remove once completed.
-		"prebuilt",                                                  // TODO(b/172076124): Remove once completed.
-		"prebuilt/third_party/flutter",                              // TODO(b/169676435): Remove once completed.
-		"prebuilt/third_party/llvm",                                 // TODO(b/172076113): Remove once completed.
-		"prebuilt/third_party/ovmf",                                 // TODO(fxb/59350): Remove once completed.
-		"prebuilt/third_party/zlib",                                 // TODO(b/172066115): Remove once completed.
-		"prebuilt/virtualization/packages/termina_guest",            // TODO(b/171975485): Remove once completed.
-		"zircon/third_party/ulib/musl/third_party",                  // TODO(b/172066115): Remove once completed.
-		"zircon/third_party/zstd",                                   // TODO(b/171584331): Remove once completed.
-	}
-
 	config.SkipDirs = append(config.SkipDirs, additionalSkipDirs...)
 
 	if *skipFiles != "" {
@@ -110,7 +93,7 @@ func mainImpl() error {
 	}
 
 	// TODO(b/172070492): Remove this list once completed.
-	for _, f := range unlicensed {
+	for _, f := range additionalSkipFiles {
 		config.SkipFiles = append(config.SkipFiles, strings.ToLower(f))
 	}
 

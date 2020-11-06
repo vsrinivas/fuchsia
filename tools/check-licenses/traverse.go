@@ -93,13 +93,13 @@ func Walk(ctx context.Context, config *Config) error {
 		filesWithProhibitedLicenses := licenses.GetFilesWithProhibitedLicenses()
 		if len(filesWithProhibitedLicenses) > 0 {
 			files := strings.Join(filesWithProhibitedLicenses, "\n")
-			return fmt.Errorf("Encountered prohibited license types. File paths are:\n%v", files)
+			return fmt.Errorf("Encountered prohibited license types. File paths are:\n\n%v\n\nPlease remove the offending files, or reach out to //tools/check-licenses/OWNERS for license exceptions or errors.", files)
 		}
 	}
 
 	if config.ExitOnUnlicensedFiles && len(unlicensedFiles.files) > 0 {
 		files := strings.Join(unlicensedFiles.files, "\n")
-		return fmt.Errorf("Encountered files that are missing licenses. File paths are:\n%v", files)
+		return fmt.Errorf("Encountered files that are missing licenses. File paths are:\n\n%v\n\nPlease add license information to the headers of each file, or reach out to //tools/check-licenses/OWNERS for file exceptions or errors.", files)
 	}
 
 	if config.OutputLicenseFile {

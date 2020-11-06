@@ -128,7 +128,7 @@
     "redhat"
   ],
   "exitOnProhibitedLicenseTypes": true,
-  "exitOnUnlicensedFiles": false,
+  "exitOnUnlicensedFiles": true,
   "strictAnalysis": true,
   "outputLicenseFile": true,
   "outputFilePrefix": "NOTICE",
