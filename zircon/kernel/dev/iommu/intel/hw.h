@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_DEV_IOMMU_INTEL_HW_H_
 #define ZIRCON_KERNEL_DEV_IOMMU_INTEL_HW_H_
 
-#include <err.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <arch/ops.h>
 #include <hwreg/bitfields.h>

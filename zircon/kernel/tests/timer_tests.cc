@@ -4,13 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <err.h>
 #include <inttypes.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 #include <pow2.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/errors.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 

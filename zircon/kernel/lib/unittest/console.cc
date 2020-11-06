@@ -10,7 +10,6 @@
  */
 #include <assert.h>
 #include <debug.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <lib/unittest/unittest.h>
@@ -22,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <fbl/auto_call.h>

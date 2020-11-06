@@ -7,11 +7,11 @@
 #include "object/port_dispatcher.h"
 
 #include <assert.h>
-#include <err.h>
 #include <lib/counters.h>
 #include <platform.h>
 #include <pow2.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>

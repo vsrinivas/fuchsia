@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <debug.h>
-#include <err.h>
 #include <lib/cmdline.h>
 #include <lib/ktrace.h>
 #include <lib/ktrace/string_ref.h>
@@ -13,6 +12,8 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <platform.h>
 #include <string.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <arch/ops.h>
 #include <arch/user_copy.h>

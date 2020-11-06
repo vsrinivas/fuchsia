@@ -6,11 +6,11 @@
 #include "vm/kstack.h"
 
 #include <assert.h>
-#include <err.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>

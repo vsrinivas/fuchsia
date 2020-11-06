@@ -7,7 +7,6 @@
 
 #include "cmpctmalloc.h"
 
-#include <err.h>
 #include <inttypes.h>
 #include <lib/heap.h>
 #include <lib/zircon-internal/align.h>
@@ -15,6 +14,7 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/limits.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 

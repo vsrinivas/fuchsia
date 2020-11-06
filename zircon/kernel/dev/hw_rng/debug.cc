@@ -8,6 +8,7 @@
 #include <debug.h>
 #include <lib/console.h>
 #include <stdlib.h>
+#include <zircon/errors.h>
 
 #include <dev/hw_rng.h>
 #include <fbl/algorithm.h>

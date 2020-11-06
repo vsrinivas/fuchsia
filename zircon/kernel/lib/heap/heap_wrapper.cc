@@ -8,7 +8,6 @@
 #include <align.h>
 #include <assert.h>
 #include <debug.h>
-#include <err.h>
 #include <lib/cmpctmalloc.h>
 #include <lib/console.h>
 #include <lib/heap.h>
@@ -16,6 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <arch/ops.h>
 #include <fbl/intrusive_double_list.h>

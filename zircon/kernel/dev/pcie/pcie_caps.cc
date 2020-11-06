@@ -7,9 +7,10 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <err.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <dev/pci_config.h>
 #include <dev/pcie_device.h>

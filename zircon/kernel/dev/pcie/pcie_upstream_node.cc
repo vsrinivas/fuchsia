@@ -7,12 +7,13 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <err.h>
 #include <inttypes.h>
 #include <platform.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <dev/interrupt.h>
 #include <dev/pcie_bridge.h>

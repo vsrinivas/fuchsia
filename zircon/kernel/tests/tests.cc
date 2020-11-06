@@ -9,7 +9,6 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <err.h>
 #include <lib/console.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>

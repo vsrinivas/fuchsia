@@ -4,11 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <err.h>
 #include <lib/affine/ratio.h>
 #include <lib/affine/transform.h>
 #include <lib/arch/intrin.h>
 #include <lib/counters.h>
+#include <zircon/errors.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/clock.h>
 

@@ -7,13 +7,13 @@
 
 #include <align.h>
 #include <assert.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <lib/counters.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/ops.h>

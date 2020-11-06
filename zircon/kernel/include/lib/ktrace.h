@@ -7,7 +7,6 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_LIB_KTRACE_H_
 #define ZIRCON_KERNEL_INCLUDE_LIB_KTRACE_H_
 
-#include <err.h>
 #include <lib/ktrace/string_ref.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <platform.h>

@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <align.h>
-#include <err.h>
 #include <lib/pci/pio.h>
 #include <lib/user_copy/user_ptr.h>
 #include <platform.h>
@@ -14,7 +13,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/pci.h>
+#include <zircon/types.h>
 
 #include <dev/interrupt.h>
 #include <fbl/algorithm.h>

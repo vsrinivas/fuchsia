@@ -6,9 +6,10 @@
 
 #include "object/suspend_token_dispatcher.h"
 
-#include <err.h>
 #include <lib/counters.h>
+#include <zircon/errors.h>
 #include <zircon/rights.h>
+#include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
 #include <kernel/auto_lock.h>

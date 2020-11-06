@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <err.h>
 #include <inttypes.h>
 #include <lib/arch/intrin.h>
 #include <platform.h>

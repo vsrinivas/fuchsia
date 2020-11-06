@@ -5,8 +5,9 @@
 // https://opensource.org/licenses/MIT
 #include "kernel/semaphore.h"
 
-#include <err.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <kernel/thread_lock.h>
 

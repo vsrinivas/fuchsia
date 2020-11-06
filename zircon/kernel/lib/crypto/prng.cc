@@ -5,10 +5,10 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <err.h>
 #include <lib/crypto/prng.h>
 #include <pow2.h>
 #include <string.h>
+#include <zircon/errors.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

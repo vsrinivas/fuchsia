@@ -5,9 +5,9 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <err.h>
 #include <string.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/ops.h>

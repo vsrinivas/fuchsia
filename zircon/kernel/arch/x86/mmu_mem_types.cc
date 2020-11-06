@@ -7,11 +7,12 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <err.h>
 #include <lib/arch/intrin.h>
 #include <lib/console.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <arch/x86.h>
 #include <arch/x86/mmu.h>

@@ -7,7 +7,6 @@
 
 #include <align.h>
 #include <assert.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/crypto/prng.h>
 #include <lib/userabi/vdso.h>

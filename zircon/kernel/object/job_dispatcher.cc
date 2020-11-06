@@ -6,11 +6,12 @@
 
 #include "object/job_dispatcher.h"
 
-#include <err.h>
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <platform.h>
+#include <zircon/errors.h>
 #include <zircon/rights.h>
+#include <zircon/types.h>
 #include <zircon/syscalls/policy.h>
 
 #include <fbl/alloc_checker.h>

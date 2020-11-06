@@ -23,7 +23,6 @@
 #if defined(WITH_KERNEL_PCIE)
 #include <dev/pcie_bus_driver.h>
 #endif
-#include <err.h>
 #include <lib/cksum.h>
 #include <lib/cmdline.h>
 #include <lib/debuglog.h>
@@ -37,6 +36,7 @@
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/e820.h>
 #include <zircon/boot/image.h>
+#include <zircon/errors.h>
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
 

@@ -4,11 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <err.h>
 #include <inttypes.h>
 #include <lib/heap.h>
 #include <platform.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/time.h>
 #include <zircon/types.h>

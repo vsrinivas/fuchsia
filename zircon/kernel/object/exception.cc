@@ -6,11 +6,12 @@
 
 #include <arch.h>
 #include <assert.h>
-#include <err.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 #include <arch/exception.h>
 #include <fbl/auto_call.h>

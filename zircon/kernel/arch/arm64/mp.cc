@@ -5,9 +5,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 #include <assert.h>
-#include <err.h>
 #include <platform.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/mp.h>

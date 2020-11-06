@@ -7,7 +7,6 @@
 
 #include <align.h>
 #include <assert.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/cmdline.h>
 #include <lib/crypto/global_prng.h>
@@ -16,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/kernel_aspace.h>

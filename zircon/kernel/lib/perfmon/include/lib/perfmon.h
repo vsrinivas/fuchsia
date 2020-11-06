@@ -4,8 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <err.h>
-
 #include <arch/arch_perfmon.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/align.h>
@@ -17,6 +15,8 @@
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 using PmuEventId = perfmon::EventId;
 

@@ -5,9 +5,9 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
-#include <err.h>
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/macros.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/aspace.h>

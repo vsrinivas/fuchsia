@@ -7,7 +7,6 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_ARCH_USER_COPY_H_
 #define ZIRCON_KERNEL_INCLUDE_ARCH_USER_COPY_H_
 
-#include <err.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

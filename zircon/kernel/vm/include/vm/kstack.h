@@ -6,8 +6,8 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_KSTACK_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_KSTACK_H_
 
-#include <err.h>
 #include <sys/types.h>
+#include <zircon/types.h>
 
 #include <fbl/ref_ptr.h>
 

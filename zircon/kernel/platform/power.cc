@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <debug.h>
-#include <err.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/crashlog.h>
@@ -14,6 +13,7 @@
 #include <platform.h>
 #include <stdio.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 
 #include <dev/hw_watchdog.h>
 #include <kernel/thread.h>

@@ -7,11 +7,12 @@
 #include "iommu_impl.h"
 
 #include <align.h>
-#include <err.h>
 #include <lib/root_resource_filter.h>
 #include <platform.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/time.h>
+#include <zircon/types.h>
 
 #include <new>
 

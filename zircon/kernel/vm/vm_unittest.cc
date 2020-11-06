@@ -6,10 +6,10 @@
 
 #include <align.h>
 #include <assert.h>
-#include <err.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/unittest/unittest.h>
 #include <lib/unittest/user_memory.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/kernel_aspace.h>

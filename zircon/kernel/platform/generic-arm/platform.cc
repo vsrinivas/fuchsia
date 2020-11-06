@@ -7,7 +7,6 @@
 
 #include <arch.h>
 #include <debug.h>
-#include <err.h>
 #include <lib/arch/intrin.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
@@ -55,6 +54,7 @@
 
 #include <lib/zbi/zbi-cpp.h>
 #include <zircon/boot/image.h>
+#include <zircon/errors.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/smc.h>
 #include <zircon/types.h>

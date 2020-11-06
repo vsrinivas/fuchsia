@@ -7,11 +7,12 @@
 //
 #include <assert.h>
 #include <debug.h>
-#include <err.h>
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/listnode.h>
+#include <zircon/types.h>
 
 #include <limits>
 

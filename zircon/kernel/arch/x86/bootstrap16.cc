@@ -8,10 +8,10 @@
 
 #include <align.h>
 #include <assert.h>
-#include <err.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/x86.h>

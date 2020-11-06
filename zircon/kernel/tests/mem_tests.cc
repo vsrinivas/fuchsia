@@ -8,12 +8,12 @@
 #include <align.h>
 #include <arch.h>
 #include <debug.h>
-#include <err.h>
 #include <lib/console.h>
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/ops.h>

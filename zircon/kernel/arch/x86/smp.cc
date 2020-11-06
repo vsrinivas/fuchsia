@@ -6,12 +6,12 @@
 
 #include <align.h>
 #include <assert.h>
-#include <err.h>
 #include <lib/arch/intrin.h>
 #include <lib/zircon-internal/macros.h>
 #include <stdint.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/x86.h>

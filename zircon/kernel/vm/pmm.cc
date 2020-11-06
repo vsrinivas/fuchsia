@@ -8,7 +8,6 @@
 #include "vm/pmm.h"
 
 #include <assert.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
@@ -17,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 

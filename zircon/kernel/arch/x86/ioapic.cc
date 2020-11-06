@@ -5,9 +5,9 @@
 // https://opensource.org/licenses/MIT
 #include <align.h>
 #include <assert.h>
-#include <err.h>
 #include <lib/root_resource_filter.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <new>

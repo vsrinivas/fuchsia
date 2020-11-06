@@ -7,7 +7,6 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PROC_TRACE_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PROC_TRACE_H_
 
-#include <err.h>
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <stdint.h>
 #include <zircon/compiler.h>

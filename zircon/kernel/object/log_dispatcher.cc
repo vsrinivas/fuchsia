@@ -6,8 +6,8 @@
 
 #include "object/log_dispatcher.h"
 
-#include <err.h>
 #include <lib/counters.h>
+#include <zircon/errors.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/log.h>
 

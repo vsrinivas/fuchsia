@@ -4,7 +4,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <debug.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/arch/intrin.h>
 #include <platform.h>

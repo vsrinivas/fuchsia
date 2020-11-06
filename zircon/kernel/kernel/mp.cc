@@ -9,13 +9,13 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/arch/intrin.h>
 #include <lib/console.h>
 #include <platform.h>
 #include <stdlib.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/mp.h>

@@ -7,10 +7,10 @@
 
 #include "kernel/wait.h"
 
-#include <err.h>
 #include <lib/ktrace.h>
 #include <platform.h>
 #include <trace.h>
+#include <zircon/errors.h>
 
 #include <kernel/owned_wait_queue.h>
 #include <kernel/scheduler.h>

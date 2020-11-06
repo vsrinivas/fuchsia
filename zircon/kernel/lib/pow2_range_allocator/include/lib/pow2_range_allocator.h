@@ -8,8 +8,8 @@
 #ifndef ZIRCON_KERNEL_LIB_POW2_RANGE_ALLOCATOR_INCLUDE_LIB_POW2_RANGE_ALLOCATOR_H_
 #define ZIRCON_KERNEL_LIB_POW2_RANGE_ALLOCATOR_INCLUDE_LIB_POW2_RANGE_ALLOCATOR_H_
 
-#include <err.h>
 #include <sys/types.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <fbl/intrusive_double_list.h>

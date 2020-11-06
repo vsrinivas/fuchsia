@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <align.h>
-#include <err.h>
 #include <lib/user_copy/user_ptr.h>
 #include <platform.h>
 #include <stdint.h>
@@ -18,6 +17,7 @@
 #include <zircon/syscalls/iommu.h>
 #include <zircon/syscalls/pci.h>
 #include <zircon/syscalls/smc.h>
+#include <zircon/types.h>
 
 #include <new>
 

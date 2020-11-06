@@ -7,10 +7,11 @@
 
 #include <ctype.h>
 #include <debug.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <string.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <dev/pcie_bridge.h>
 #include <dev/pcie_bus_driver.h>

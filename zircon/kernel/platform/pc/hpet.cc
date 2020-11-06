@@ -5,10 +5,10 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
-#include <err.h>
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/structures.h>
 #include <lib/affine/ratio.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <fbl/algorithm.h>

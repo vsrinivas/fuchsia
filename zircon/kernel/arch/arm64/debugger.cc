@@ -4,9 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <err.h>
 #include <string.h>
 #include <sys/types.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/types.h>
 

@@ -5,8 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
-#include <err.h>
 #include <lib/code_patching.h>
+#include <zircon/errors.h>
 
 #define STAC APPLY_CODE_PATCH_FUNC(fill_out_stac_instruction, 3)
 #define CLAC APPLY_CODE_PATCH_FUNC(fill_out_clac_instruction, 3)

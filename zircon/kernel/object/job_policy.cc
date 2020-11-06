@@ -7,8 +7,8 @@
 #include "object/job_policy.h"
 
 #include <assert.h>
-#include <err.h>
 #include <lib/counters.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/policy.h>
 
 #include <fbl/algorithm.h>

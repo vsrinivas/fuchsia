@@ -7,12 +7,12 @@
 #include <assert.h>
 #include <bits.h>
 #include <debug.h>
-#include <err.h>
 #include <lib/arch/intrin.h>
 #include <lib/console.h>
 #include <lib/root_resource_filter.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/ops.h>

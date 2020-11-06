@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <err.h>
 #include <inttypes.h>
 #include <lib/user_copy/user_ptr.h>
 #include <trace.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>

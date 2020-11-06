@@ -7,7 +7,7 @@
 
 #include <asm.h>
 #include <arch/x86/mp.h>
-#include <err.h>
+#include <zircon/errors.h>
 
 .text
 

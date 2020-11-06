@@ -7,9 +7,9 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PINNED_MEMORY_TOKEN_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PINNED_MEMORY_TOKEN_DISPATCHER_H_
 
-#include <err.h>
 #include <sys/types.h>
 #include <zircon/rights.h>
+#include <zircon/types.h>
 
 #include <dev/iommu.h>
 #include <fbl/array.h>

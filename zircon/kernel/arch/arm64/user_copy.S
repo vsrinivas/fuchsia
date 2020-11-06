@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
-#include <err.h>
+#include <zircon/errors.h>
 
 lr .req x30
 dst .req x0

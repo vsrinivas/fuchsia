@@ -7,13 +7,14 @@
 #include "object/socket_dispatcher.h"
 
 #include <assert.h>
-#include <err.h>
 #include <lib/counters.h>
 #include <lib/user_copy/user_ptr.h>
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/rights.h>
+#include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>

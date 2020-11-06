@@ -8,11 +8,12 @@
 #include <assert.h>
 #include <ctype.h>
 #include <debug.h>
-#include <err.h>
 #include <lib/debuglog.h>
 #include <lib/io.h>
 #include <platform.h>
 #include <string.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <arch/ops.h>
 #include <kernel/auto_lock.h>

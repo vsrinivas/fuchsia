@@ -7,11 +7,11 @@
 #include "object/channel_dispatcher.h"
 
 #include <assert.h>
-#include <err.h>
 #include <lib/counters.h>
 #include <platform.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>

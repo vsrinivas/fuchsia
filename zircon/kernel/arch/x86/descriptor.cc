@@ -9,10 +9,11 @@
 
 #include <assert.h>
 #include <bits.h>
-#include <err.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <arch/arch_ops.h>
 #include <arch/x86.h>

@@ -7,8 +7,8 @@
 #ifndef ZIRCON_KERNEL_DEV_IOMMU_INTEL_DOMAIN_ALLOCATOR_H_
 #define ZIRCON_KERNEL_DEV_IOMMU_INTEL_DOMAIN_ALLOCATOR_H_
 
-#include <err.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <fbl/macros.h>
 

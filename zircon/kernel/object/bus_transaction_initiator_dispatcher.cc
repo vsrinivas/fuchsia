@@ -7,10 +7,11 @@
 #include "object/bus_transaction_initiator_dispatcher.h"
 
 #include <align.h>
-#include <err.h>
 #include <lib/counters.h>
 #include <lib/debuglog.h>
+#include <zircon/errors.h>
 #include <zircon/rights.h>
+#include <zircon/types.h>
 
 #include <new>
 

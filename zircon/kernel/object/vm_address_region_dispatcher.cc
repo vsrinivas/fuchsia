@@ -8,11 +8,12 @@
 
 #include <align.h>
 #include <assert.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/rights.h>
+#include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
 #include <vm/vm_address_region.h>

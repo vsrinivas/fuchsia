@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <err.h>
 #include <lib/cmdline.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
@@ -16,6 +15,8 @@
 #include <lib/crypto/prng.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <new>
 

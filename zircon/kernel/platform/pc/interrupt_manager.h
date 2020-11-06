@@ -10,9 +10,10 @@
 #define ZIRCON_KERNEL_PLATFORM_PC_INTERRUPT_MANAGER_H_
 
 #include <align.h>
-#include <err.h>
 #include <pow2.h>
 #include <trace.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>

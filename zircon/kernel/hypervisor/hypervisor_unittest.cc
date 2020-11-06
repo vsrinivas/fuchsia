@@ -5,8 +5,9 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <err.h>
 #include <lib/unittest/unittest.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/interrupt_tracker.h>

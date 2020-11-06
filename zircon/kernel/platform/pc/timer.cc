@@ -7,7 +7,6 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/affine/transform.h>
 #include <lib/cmdline.h>
@@ -17,6 +16,7 @@
 #include <pow2.h>
 #include <sys/types.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 

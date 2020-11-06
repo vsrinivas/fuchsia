@@ -10,7 +10,6 @@
 #include <assert.h>
 #include <bits.h>
 #include <debug.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/ktrace.h>
 #include <lib/root_resource_filter.h>
@@ -18,6 +17,7 @@
 #include <sys/types.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/arm64/hypervisor/gic/gicv2.h>

@@ -6,9 +6,9 @@
 
 #include <align.h>
 #include <assert.h>
-#include <err.h>
 #include <inttypes.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>

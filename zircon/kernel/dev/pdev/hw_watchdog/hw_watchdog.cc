@@ -4,11 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <err.h>
-#include <zircon/types.h>
 #include <lib/arch/intrin.h>
 #include <dev/hw_watchdog.h>
 #include <pdev/watchdog.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 static const struct pdev_watchdog_ops default_ops = {
     .pet = []() {},

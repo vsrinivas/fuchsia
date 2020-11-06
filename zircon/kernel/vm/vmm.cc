@@ -6,12 +6,12 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <fbl/null_lock.h>

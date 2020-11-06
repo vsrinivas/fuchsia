@@ -6,10 +6,10 @@
 #include "pmm_arena.h"
 
 #include <align.h>
-#include <err.h>
 #include <inttypes.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <ktl/limits.h>

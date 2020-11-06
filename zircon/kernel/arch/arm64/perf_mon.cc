@@ -12,7 +12,6 @@
 // TODO(fxbug.dev/33109): chain event handling
 
 #include <assert.h>
-#include <err.h>
 #include <lib/perfmon.h>
 #include <lib/zircon-internal/mtrace.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -45,6 +44,7 @@
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_physical.h>
+#include <zircon/errors.h>
 
 #define LOCAL_TRACE 0
 

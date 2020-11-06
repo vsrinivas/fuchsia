@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <err.h>
 #include <zircon/types.h>
 
 #include <dev/interrupt/arm_gic_common.h>

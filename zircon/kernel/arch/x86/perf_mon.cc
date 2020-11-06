@@ -25,7 +25,6 @@
 #include "arch/x86/perf_mon.h"
 
 #include <assert.h>
-#include <err.h>
 #include <lib/ktrace.h>
 #include <lib/pci/pio.h>
 #include <lib/perfmon.h>
@@ -35,6 +34,8 @@
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <new>
 

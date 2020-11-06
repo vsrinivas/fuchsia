@@ -7,11 +7,11 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_DISPATCHER_H_
 
-#include <err.h>
 #include <stdint.h>
 #include <string.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <fbl/auto_lock.h>

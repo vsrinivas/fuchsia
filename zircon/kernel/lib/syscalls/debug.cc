@@ -4,7 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <err.h>
 #include <lib/console.h>
 #include <lib/debuglog.h>
 #include <lib/io.h>
@@ -17,7 +16,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/debug.h>
+#include <zircon/types.h>
 
 #include <object/handle.h>
 #include <object/process_dispatcher.h>

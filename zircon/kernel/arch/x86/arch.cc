@@ -11,7 +11,6 @@
 #include <arch.h>
 #include <assert.h>
 #include <debug.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <platform.h>
@@ -19,6 +18,7 @@
 #include <sys/types.h>
 #include <trace.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/mp.h>

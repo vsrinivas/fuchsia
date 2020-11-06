@@ -8,7 +8,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include <debug.h>
-#include <err.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
 #include <stdio.h>
@@ -16,6 +15,7 @@
 #include <string.h>
 #include <trace.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <kernel/mutex.h>

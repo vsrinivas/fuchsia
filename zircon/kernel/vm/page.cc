@@ -6,12 +6,12 @@
 // https://opensource.org/licenses/MIT
 #include "vm/page.h"
 
-#include <err.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 
 #include <kernel/percpu.h>
 #include <pretty/hexdump.h>

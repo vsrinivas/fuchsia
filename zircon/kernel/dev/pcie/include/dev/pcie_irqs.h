@@ -9,7 +9,6 @@
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_IRQS_H_
 
 #include <assert.h>
-#include <err.h>
 #include <sys/types.h>
 
 #include <dev/interrupt.h>

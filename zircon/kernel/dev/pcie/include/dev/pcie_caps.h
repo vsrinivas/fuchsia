@@ -10,7 +10,6 @@
 
 #include <assert.h>
 #include <endian.h>
-#include <err.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 

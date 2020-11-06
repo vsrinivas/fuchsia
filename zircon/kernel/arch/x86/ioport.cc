@@ -6,8 +6,8 @@
 
 #include <assert.h>
 #include <bits.h>
-#include <err.h>
 #include <string.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/x86.h>

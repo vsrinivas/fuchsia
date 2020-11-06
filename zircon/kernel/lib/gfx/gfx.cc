@@ -17,13 +17,14 @@
  */
 #include <assert.h>
 #include <debug.h>
-#include <err.h>
 #include <lib/gfx-font-data/gfx-font-data.h>
 #include <lib/gfx.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <trace.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <arch/ops.h>
 #include <dev/display.h>

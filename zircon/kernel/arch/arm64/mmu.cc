@@ -10,7 +10,6 @@
 #include <assert.h>
 #include <bits.h>
 #include <debug.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
@@ -18,6 +17,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <trace.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/arm64/hypervisor/el2_state.h>

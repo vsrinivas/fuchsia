@@ -9,11 +9,12 @@
 #include <assert.h>
 #include <ctype.h>
 #include <debug.h>
-#include <err.h>
 #include <lib/cbuf.h>
 #include <platform.h>
 #include <sys/types.h>
 #include <trace.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <arch/x86.h>
 #include <arch/x86/apic.h>

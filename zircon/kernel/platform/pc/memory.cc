@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/memory_limit.h>
 #include <lib/zircon-internal/macros.h>
@@ -13,6 +12,7 @@
 #include <string.h>
 #include <trace.h>
 #include <zircon/boot/e820.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/x86/bootstrap16.h>

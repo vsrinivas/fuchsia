@@ -6,7 +6,6 @@
 
 #include <align.h>
 #include <assert.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/cmdline.h>
 #include <lib/memory_limit.h>
@@ -15,6 +14,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <fbl/algorithm.h>
 #include <kernel/range_check.h>

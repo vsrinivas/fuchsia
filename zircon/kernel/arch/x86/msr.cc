@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <err.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>

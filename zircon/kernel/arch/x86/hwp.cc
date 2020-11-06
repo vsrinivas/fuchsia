@@ -5,11 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <err.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <string.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <arch/x86/cpuid.h>
 #include <arch/x86/feature.h>

@@ -16,12 +16,12 @@
  */
 
 #include <debug.h>
-#include <err.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/errors.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
