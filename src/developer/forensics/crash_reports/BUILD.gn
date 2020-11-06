@@ -97,6 +97,7 @@ source_set("crash_reporter") {
     ":crash_register",
     ":crash_server",
     ":log_tags",
+    ":network_watcher",
     ":privacy_settings_ptr",
     ":product",
     ":queue",
@@ -188,6 +189,23 @@ source_set("main") {
   ]
 }
 
+source_set("network_watcher") {
+  sources = [
+    "network_watcher.cc",
+    "network_watcher.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/backoff",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
 source_set("privacy_settings_ptr") {
   sources = [
     "privacy_settings_ptr.cc",
@@ -231,10 +249,10 @@ source_set("queue") {
   public_deps = [
     ":crash_server",
     ":log_tags",
+    ":network_watcher",
     ":report_id",
     ":settings",
     ":store",
-    "//sdk/fidl/fuchsia.netstack",
     "//src/developer/forensics/crash_reports/info",
     "//src/lib/backoff",
     "//src/lib/fxl",

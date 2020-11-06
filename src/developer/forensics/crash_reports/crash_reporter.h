@@ -19,6 +19,7 @@
 #include "src/developer/forensics/crash_reports/info/crash_reporter_info.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/log_tags.h"
+#include "src/developer/forensics/crash_reports/network_watcher.h"
 #include "src/developer/forensics/crash_reports/privacy_settings_ptr.h"
 #include "src/developer/forensics/crash_reports/product_quotas.h"
 #include "src/developer/forensics/crash_reports/queue.h"
@@ -71,6 +72,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   ProductQuotas product_quotas_;
   CrashReporterInfo info_;
   Settings settings_;
+  NetworkWatcher network_watcher_;
   PrivacySettingsWatcher privacy_settings_watcher_;
   fidl::DeviceIdProviderPtr device_id_provider_ptr_;
 

@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_QUEUE_H_
 #define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_QUEUE_H_
 
-#include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include <map>
@@ -16,11 +15,11 @@
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/info/queue_info.h"
 #include "src/developer/forensics/crash_reports/log_tags.h"
+#include "src/developer/forensics/crash_reports/network_watcher.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/settings.h"
 #include "src/developer/forensics/crash_reports/store.h"
-#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/fxl/macros.h"
 
 namespace forensics {
@@ -33,8 +32,11 @@ class Queue {
         std::shared_ptr<InfoContext> info_context, LogTags* tags, CrashServer* crash_server,
         SnapshotManager* snapshot_manager);
 
-  // Allow the queue's functionality to change based on the upload policy.
+  // Allows the queue's functionality to change based on the upload policy.
   void WatchSettings(Settings* settings);
+
+  // Allows the queue's functionality to change based on the network status.
+  void WatchNetwork(NetworkWatcher* network_watcher);
 
   // Add a report to the queue.
   bool Add(Report report);
@@ -77,14 +79,8 @@ class Queue {
   void FreeResources(ReportId report_id);
   void FreeResources(const Report& report);
 
-  // Callback to update |state_| on upload policy changes.
-  void OnUploadPolicyChange(const Settings::UploadPolicy& upload_policy);
-
   // Schedules ProcessAll() to run every 15 minutes.
   void ProcessAllEveryFifteenMinutes();
-
-  // Calls ProcessAll() whenever the network becomes reachable.
-  void ProcessAllOnNetworkReachable();
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
@@ -93,11 +89,6 @@ class Queue {
   CrashServer* crash_server_;
   SnapshotManager* snapshot_manager_;
   QueueInfo info_;
-
-  fuchsia::netstack::NetstackPtr netstack_;
-  // We need to be able to cancel a posted retry task when |this| is destroyed.
-  fxl::CancelableClosure network_reconnection_task_;
-  backoff::ExponentialBackoff network_reconnection_backoff_;
 
   State state_ = State::LeaveAsPending;
 

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/network_watcher_unittest_exe"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

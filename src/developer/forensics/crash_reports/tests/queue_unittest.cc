@@ -14,6 +14,7 @@
 
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
+#include "src/developer/forensics/crash_reports/network_watcher.h"
 #include "src/developer/forensics/crash_reports/settings.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -113,6 +114,8 @@ Report MakeReport(const std::size_t report_id) {
 
 class QueueTest : public UnitTestFixture {
  public:
+  QueueTest() : network_watcher_(dispatcher(), services()) {}
+
   void SetUp() override {
     settings_.set_upload_policy(UploadPolicy::LIMBO);
     info_context_ =
@@ -148,6 +151,7 @@ class QueueTest : public UnitTestFixture {
                                      crash_server_.get(), snapshot_manager_.get());
     ASSERT_TRUE(queue_);
     queue_->WatchSettings(&settings_);
+    queue_->WatchNetwork(&network_watcher_);
   }
 
   enum class QueueOps {
@@ -274,6 +278,7 @@ class QueueTest : public UnitTestFixture {
   std::vector<CrashServer::UploadStatus>::const_iterator next_upload_attempt_result_;
 
   Settings settings_;
+  NetworkWatcher network_watcher_;
   timekeeper::TestClock clock_;
   std::unique_ptr<SnapshotManager> snapshot_manager_;
   std::unique_ptr<StubCrashServer> crash_server_;

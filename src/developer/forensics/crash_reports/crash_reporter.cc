@@ -110,6 +110,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
              snapshot_manager_.get()),
       product_quotas_(dispatcher_, config_->daily_per_product_quota),
       info_(info_context),
+      network_watcher_(dispatcher_, services_),
       privacy_settings_watcher_(dispatcher, services_, &settings_),
       device_id_provider_ptr_(dispatcher_, services_) {
   FX_CHECK(dispatcher_);
@@ -128,6 +129,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
   next_report_id_ = SeedReportId();
 
   queue_.WatchSettings(&settings_);
+  queue_.WatchNetwork(&network_watcher_);
 
   info_.ExposeSettings(&settings_);
 }
