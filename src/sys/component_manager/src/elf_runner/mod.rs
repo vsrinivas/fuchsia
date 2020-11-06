@@ -319,6 +319,33 @@ impl ElfRunner {
         let resolved_url =
             runner::get_resolved_url(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
 
+        // This also checks relevant security policy for config that it wraps using the provided
+        // PolicyChecker.
+        let program_config = start_info
+            .program
+            .as_ref()
+            .map(|p| ElfProgramConfig::parse_and_check(p, &checker, &resolved_url))
+            .transpose()?
+            .unwrap_or_default();
+
+        let url = resolved_url.clone();
+        let main_process_critical = program_config.main_process_critical;
+        let res: Result<Option<ElfComponent>, ElfRunnerError> =
+            self.start_component_helper(start_info, resolved_url, program_config).await;
+        match res {
+            Err(e) if main_process_critical => {
+                panic!("failed to launch component with a critical process ({:?}): {:?}", url, e)
+            }
+            x => x,
+        }
+    }
+
+    async fn start_component_helper(
+        &self,
+        start_info: fcrunner::ComponentStartInfo,
+        resolved_url: String,
+        program_config: ElfProgramConfig,
+    ) -> Result<Option<ElfComponent>, ElfRunnerError> {
         let launcher = self
             .launcher_connector
             .connect()
@@ -352,15 +379,6 @@ impl ElfRunner {
                 vec![(zx::JobCondition::NewProcess, zx::JobAction::Deny)],
             ))
             .map_err(|e| ElfRunnerError::component_job_policy_error(resolved_url.clone(), e))?;
-
-        // This also checks relevant security policy for config that it wraps using the provided
-        // PolicyChecker.
-        let program_config = start_info
-            .program
-            .as_ref()
-            .map(|p| ElfProgramConfig::parse_and_check(p, &checker, &resolved_url))
-            .transpose()?
-            .unwrap_or_default();
 
         // Default deny the job policy which allows ambiently marking VMOs executable, i.e. calling
         // vmo_replace_as_executable without an appropriate resource handle.
@@ -1409,5 +1427,44 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    #[should_panic]
+    async fn fail_to_launch_critical_component() {
+        let mut start_info = hello_world_startinfo_main_process_critical(None);
+
+        start_info.program = start_info.program.map(|mut program| {
+            program.entries =
+                Some(program.entries.unwrap().into_iter().filter(|e| &e.key != "binary").collect());
+            program
+        });
+
+        // Config does not allowlist any monikers to be marked as critical
+        let config = Arc::new(RuntimeConfig {
+            use_builtin_process_launcher: should_use_builtin_process_launcher(),
+            security_policy: SecurityPolicy {
+                job_policy: JobPolicyAllowlists {
+                    main_process_critical: vec![AbsoluteMoniker::from(vec![])],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        let runner = Arc::new(ElfRunner::new(&config, None));
+        let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
+            Arc::downgrade(&config),
+            AbsoluteMoniker::root(),
+        ));
+        let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
+            .expect("could not create component controller endpoints");
+
+        runner.start(start_info, server_controller).await;
+
+        // Starting this component isn't actually possible, as start_info is missing the binary
+        // field. We should panic before anything happens on the controller stream, because the
+        // component is critical.
+        let _ = controller.take_event_stream().try_next().await;
     }
 }
