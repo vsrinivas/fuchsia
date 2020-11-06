@@ -24,7 +24,6 @@ driver_module("virtio_input") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
@@ -49,7 +48,6 @@ test("virtio-input-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//src/devices/bus/lib/virtio",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/no_ddk",

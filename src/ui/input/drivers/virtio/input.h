@@ -4,7 +4,6 @@
 #ifndef SRC_UI_INPUT_DRIVERS_VIRTIO_INPUT_H_
 #define SRC_UI_INPUT_DRIVERS_VIRTIO_INPUT_H_
 
-#include <fuchsia/hardware/pty/c/fidl.h>
 #include <lib/virtio/device.h>
 #include <lib/virtio/ring.h>
 #include <stdlib.h>
@@ -24,7 +23,7 @@
 namespace virtio {
 
 class InputDevice : public Device,
-                    public ddk::Device<InputDevice, ddk::Messageable>,
+                    public ddk::Device<InputDevice>,
                     public ddk::HidbusProtocol<InputDevice, ddk::base_protocol> {
  public:
   InputDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
@@ -38,7 +37,6 @@ class InputDevice : public Device,
 
   // DDK driver hooks
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc);
   void HidbusStop();
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);

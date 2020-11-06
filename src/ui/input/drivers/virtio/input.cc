@@ -24,49 +24,6 @@
 
 namespace virtio {
 
-// DDK level ops
-static zx_status_t virtio_input_OpenClient(void* ctx, uint32_t id, zx_handle_t handle,
-                                           fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_DeviceOpenClient_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static zx_status_t virtio_input_ClrSetFeature(void* ctx, uint32_t clr, uint32_t set,
-                                              fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_DeviceClrSetFeature_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
-}
-
-static zx_status_t virtio_input_GetWindowSize(void* ctx, fidl_txn_t* txn) {
-  fuchsia_hardware_pty_WindowSize wsz = {.width = 0, .height = 0};
-  return fuchsia_hardware_pty_DeviceGetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED, &wsz);
-}
-
-static zx_status_t virtio_input_MakeActive(void* ctx, uint32_t client_pty_id, fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_DeviceMakeActive_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static zx_status_t virtio_input_ReadEvents(void* ctx, fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_DeviceReadEvents_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
-}
-
-static zx_status_t virtio_input_SetWindowSize(void* ctx,
-                                              const fuchsia_hardware_pty_WindowSize* size,
-                                              fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_DeviceSetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static constexpr fuchsia_hardware_pty_Device_ops_t fidl_ops = []() {
-  // TODO: Why does this implement fuchsia.hardware.pty/Device?  This device
-  // does not provide read/write methods, so shouldn't be usable as a terminal.
-  fuchsia_hardware_pty_Device_ops_t ops = {};
-  ops.OpenClient = virtio_input_OpenClient;
-  ops.ClrSetFeature = virtio_input_ClrSetFeature;
-  ops.GetWindowSize = virtio_input_GetWindowSize;
-  ops.MakeActive = virtio_input_MakeActive;
-  ops.ReadEvents = virtio_input_ReadEvents;
-  ops.SetWindowSize = virtio_input_SetWindowSize;
-  return ops;
-}();
-
 static bool IsQemuTouchscreen(const virtio_input_config_t& config) {
   if (config.u.ids.bustype == 0x06 && config.u.ids.vendor == 0x00 && config.u.ids.product == 0x00) {
     if (config.u.ids.version == 0x01 || config.u.ids.version == 0x00) {
@@ -74,10 +31,6 @@ static bool IsQemuTouchscreen(const virtio_input_config_t& config) {
     }
   }
   return false;
-}
-
-zx_status_t InputDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_Device_dispatch(this, txn, msg, &fidl_ops);
 }
 
 zx_status_t InputDevice::HidbusGetReport(hid_report_type_t rpt_type, uint8_t rpt_id, void* data,
@@ -102,7 +55,7 @@ zx_status_t InputDevice::HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
 InputDevice::InputDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : virtio::Device(bus_device, std::move(bti), std::move(backend)),
-      ddk::Device<InputDevice, ddk::Messageable>(bus_device) {}
+      ddk::Device<InputDevice>(bus_device) {}
 
 InputDevice::~InputDevice() {}
 
