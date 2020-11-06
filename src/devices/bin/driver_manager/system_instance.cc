@@ -44,6 +44,15 @@ struct ServiceStarterArgs {
 
 struct ServiceStarterParams {
   std::string clock_backstop;
+  bool netsvc_disable = true;
+  bool netsvc_netboot = false;
+  bool virtcon_disable = false;
+};
+
+struct ConsoleParams {
+  std::string term = "TERM=";
+  std::string device = "/svc/console";
+  bool valid = false;
 };
 
 ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
@@ -57,6 +66,41 @@ ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::Sy
     auto& values = string_resp->values;
     ret.clock_backstop = std::string{values[0].data(), values[0].size()};
   }
+
+  llcpp::fuchsia::boot::BoolPair bool_keys[]{
+      {fidl::StringView{"netsvc.disable"}, true},
+      {fidl::StringView{"netsvc.netboot"}, false},
+      {fidl::StringView{"virtcon.disable"}, false},
+  };
+
+  auto bool_resp = client->GetBools(fidl::unowned_vec(bool_keys));
+  if (bool_resp.ok()) {
+    ret.netsvc_disable = bool_resp->values[0];
+    ret.netsvc_netboot = bool_resp->values[1];
+    ret.virtcon_disable = bool_resp->values[2];
+  }
+
+  return ret;
+}
+
+ConsoleParams GetConsoleParams(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
+  fidl::StringView vars[]{"TERM", "console.path"};
+  auto resp = client->GetStrings(fidl::unowned_vec(vars));
+  ConsoleParams ret;
+  if (!resp.ok()) {
+    return ret;
+  }
+
+  if (resp->values[0].is_null()) {
+    ret.term += "uart";
+  } else {
+    ret.term += std::string{resp->values[0].data(), resp->values[0].size()};
+  }
+  if (!resp->values[1].is_null()) {
+    ret.device = std::string{resp->values[1].data(), resp->values[1].size()};
+  }
+
+  ret.valid = true;
   return ret;
 }
 
@@ -211,6 +255,30 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
     }
   }
 
+  zx::channel virtcon_client;
+  {
+    zx::channel virtcon_client_remote;
+    status = zx::channel::create(0, &virtcon_client, &virtcon_client_remote);
+    if (status != ZX_OK) {
+      printf("Unable to create virtcon channel.\n");
+      return status;
+    }
+
+    zx::channel virtcon_svc;
+    status = zx::channel::create(0, &virtcon_svc, &virtcon_fidl_);
+    if (status != ZX_OK) {
+      printf("Unable to create virtcon channel.\n");
+      return status;
+    }
+
+    // XXX: Investigate how virtcon_svc leaves scope and gets closed.
+    status = fdio_service_connect_at(virtcon_svc.get(), "svc", virtcon_client_remote.release());
+    if (status != ZX_OK) {
+      printf("Unable to connect to virtcon channel.\n");
+      return status;
+    }
+  }
+
   zx::channel devcoordinator_svc;
   {
     zx::channel devcoordinator_svc_req;
@@ -278,6 +346,16 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
       .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
       .h = {.id = PA_HND(PA_USER0, 3), .handle = coordinator_client.release()},
   });
+
+  auto resp = coordinator->boot_args()->GetBool(fidl::StringView{"virtcon.disable"}, false);
+  if (resp.ok() && !resp->value) {
+    // Add handle to channel to allow svchost to proxy fidl services to
+    // virtcon.
+    actions.push_back((fdio_spawn_action_t){
+        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+        .h = {.id = PA_HND(PA_USER0, 5), .handle = virtcon_client.release()},
+    });
+  }
 
   // Add handle to channel to allow svchost to connect to services from devcoordinator's /svc, which
   // is hosted by fragment_manager and includes services routed from other fragments; see
@@ -379,7 +457,60 @@ int wait_for_system_available(void* arg) {
 }
 
 int SystemInstance::ServiceStarter(Coordinator* coordinator) {
+  bool netboot = false;
+  bool vruncmd = false;
+
   auto params = GetServiceStarterParams(coordinator->boot_args());
+
+  if (!params.netsvc_disable && !coordinator->disable_netsvc()) {
+    if (params.netsvc_netboot) {
+      netboot = true;
+      vruncmd = true;
+    }
+  }
+
+  if (!params.virtcon_disable) {
+    // pass virtcon.* options along
+    fbl::Vector<const char*> env;
+    std::vector<std::string> strings;
+    auto resp = coordinator->boot_args()->Collect(fidl::StringView{"virtcon."});
+    if (!resp.ok()) {
+      return resp.status();
+    }
+    for (auto& v : resp->results) {
+      strings.emplace_back(v.data(), v.size());
+      env.push_back(strings.back().data());
+    }
+    env.push_back(nullptr);
+
+    const char* num_shells = coordinator->require_system() && !netboot ? "0" : "3";
+    size_t handle_count = 0;
+    zx_handle_t handles[2];
+    uint32_t types[2];
+
+    handles[handle_count] = virtcon_fidl_.release();
+    types[handle_count] = PA_DIRECTORY_REQUEST;
+    ++handle_count;
+
+    zx::debuglog debuglog;
+    zx_status_t status =
+        zx::debuglog::create(coordinator->root_resource(), ZX_LOG_FLAG_READABLE, &debuglog);
+    if (status == ZX_OK) {
+      handles[handle_count] = debuglog.release();
+      types[handle_count] = PA_HND(PA_USER0, 1);
+      ++handle_count;
+    }
+
+    const char* args[] = {
+        "/boot/bin/virtual-console", "--shells", num_shells, nullptr, nullptr, nullptr};
+    if (vruncmd) {
+      args[3] = "--run";
+      args[4] = "dlog -f -t";
+    }
+    launcher_.Launch(svc_job_, "virtual-console", args, env.data(), -1,
+                     coordinator->root_resource(), handles, types, handle_count, nullptr, FS_ALL);
+  }
+
   if (!params.clock_backstop.empty()) {
     auto offset = zx::sec(atoi(params.clock_backstop.data()));
     zx_status_t status =

@@ -60,11 +60,10 @@ void log_delete_vc(vc_t* vc) {
   vc_free(vc);
 }
 
-int log_start(async_dispatcher_t* dispatcher, zx::debuglog read_only_debuglog,
-              const color_scheme_t* color_scheme) {
+int log_start(async_dispatcher_t* dispatcher) {
   log_dispatcher = dispatcher;
   // Create initial console for debug log.
-  if (vc_create(&g_log_vc, color_scheme) != ZX_OK) {
+  if (vc_create(&g_log_vc, &color_schemes[kDefaultColorScheme]) != ZX_OK) {
     return -1;
   }
   snprintf(g_log_vc->title, sizeof(g_log_vc->title), "debuglog");
@@ -77,7 +76,13 @@ int log_start(async_dispatcher_t* dispatcher, zx::debuglog read_only_debuglog,
     proc_koid = info.koid;
   }
 
-  log_wait.emplace(read_only_debuglog.release(), ZX_LOG_READABLE, 0, log_reader_cb);
+  zx_handle_t handle = zx_take_startup_handle(PA_HND(PA_USER0, 1));
+  if (handle == ZX_HANDLE_INVALID) {
+    printf("vc log listener: did not receive log startup handle\n");
+    return -1;
+  }
+
+  log_wait.emplace(handle, ZX_LOG_READABLE, 0, log_reader_cb);
   return 0;
 }
 

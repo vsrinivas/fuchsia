@@ -40,7 +40,7 @@ zedboot_deps += [
 
 # For debugging.
 zedboot_deps += [
-  "//src/bringup/bin/virtcon:bootfs",
+  "//src/bringup/bin/virtcon:virtual-console",
   "//src/connectivity/network/bin/ping",
   "//src/devices/nand/bin/nand-util",
   "//src/devices/nand/drivers/broker:nand-broker",
@@ -98,7 +98,6 @@ cmdline = [
             "netsvc.disable=false",
             "kernel.enable-debugging-syscalls=true",
             "kernel.enable-serial-syscalls=true",
-            "virtcon.colorscheme=special",
           ] + zedboot_cmdline_args + board_zedboot_cmdline_args
 
 zbi_input("kernel_cmdline") {

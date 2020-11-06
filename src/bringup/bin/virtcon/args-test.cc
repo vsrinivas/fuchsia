@@ -239,3 +239,31 @@ TEST_F(ArgsTest, CheckKeymap) {
     ASSERT_EQ(args.keymap, qwerty_map);
   }
 }
+
+TEST_F(ArgsTest, CheckNetbootConfig) {
+  boot_args_server_->SetBool("netsvc.disable", false);
+  boot_args_server_->SetBool("netsvc.netboot", true);
+  boot_args_server_->SetBool("devmgr.require-system", true);
+  Arguments args;
+  ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+  ASSERT_EQ(args.command, "dlog -f -t");
+  ASSERT_EQ(args.shells, 3);
+  // Check that it's the special color scheme.
+  ASSERT_EQ(args.color_scheme->front, 0x0F);
+  ASSERT_EQ(args.color_scheme->back, 0x04);
+}
+
+TEST_F(ArgsTest, CheckShells) {
+  // Default.
+  Arguments args;
+  ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+  ASSERT_EQ(args.shells, 3);
+
+  // Require System.
+  {
+    boot_args_server_->SetBool("devmgr.require-system", true);
+    Arguments args;
+    ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+    ASSERT_EQ(args.shells, 0);
+  }
+}

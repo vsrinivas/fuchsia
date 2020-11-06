@@ -14,7 +14,6 @@
 
 #include "src/bringup/bin/console-launcher/autorun.h"
 #include "src/bringup/bin/console-launcher/console_launcher.h"
-#include "src/bringup/bin/console-launcher/virtcon-setup.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 namespace {
@@ -109,11 +108,6 @@ int main(int argv, char** argc) {
   }
 
   LOGF(INFO, "console-launcher: running");
-
-  status = console_launcher::SetupVirtcon(&boot_args);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to start virtcon shells: %s", zx_status_get_string(status));
-  }
 
   if (!args->run_shell) {
     if (!args->autorun_boot.empty()) {

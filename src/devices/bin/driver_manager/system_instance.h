@@ -80,6 +80,10 @@ class SystemInstance : public FsProvider {
   // The job in which we run "svc" realm services, like svchost, netsvc, etc.
   zx::job svc_job_;
 
+  // Used to bind the svchost to the virtual-console binary to provide fidl
+  // services.
+  zx::channel virtcon_fidl_;
+
   DevmgrLauncher launcher_;
 
   // Hosts vfs which filters driver host svc requests to /svc provided by svchost.

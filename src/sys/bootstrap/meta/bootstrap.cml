@@ -60,21 +60,8 @@
             name: "power_manager",
             url: "fuchsia-pkg://fuchsia.com/power_manager#meta/power_manager.cm",
         },
-        {
-            name: "virtual_console",
-            url: "fuchsia-boot:///#meta/virtual-console.cm",
-        },
     ],
     offer: [
-        {
-            protocol: [
-                "fuchsia.boot.Arguments",
-                "fuchsia.boot.ReadOnlyLog",
-                "fuchsia.boot.WriteOnlyLog",
-            ],
-            from: "parent",
-            to: [ "#virtual_console" ],
-        },
         {
             protocol: [
                 "fuchsia.boot.Arguments",
@@ -230,14 +217,6 @@
             dependency: "weak_for_migration",
         },
         {
-            protocol: [ "fuchsia.virtualconsole.SessionManager" ],
-            from: "#virtual_console",
-            to: [
-                "#console-launcher",
-                "#netsvc",
-            ],
-        },
-        {
             protocol: [
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.manager.BindDebugger",
@@ -247,17 +226,13 @@
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.kernel.Controller",
+                "fuchsia.virtualconsole.SessionManager",
             ],
             from: "#driver_manager",
             to: [
                 "#console-launcher",
                 "#netsvc",
             ],
-        },
-        {
-            protocol: [ "fuchsia.sysmem.Allocator" ],
-            from: "#driver_manager",
-            to: [ "#virtual_console" ],
         },
         {
             directory: "dev",
@@ -269,22 +244,7 @@
                 "#miscsvc",
                 "#netsvc",
                 "#sysinfo",
-                "#virtual_console",
             ],
-        },
-        {
-            directory: "dev",
-            from: "#driver_manager",
-            as: "input-report",
-            to: [ "#virtual_console" ],
-            subdir: "class/input-report",
-        },
-        {
-            directory: "dev",
-            from: "#driver_manager",
-            as: "display-controller",
-            to: [ "#virtual_console" ],
-            subdir: "class/display-controller",
         },
         {
             directory: "minfs",
@@ -445,7 +405,6 @@
                 "#console-launcher",
                 "#driver_manager",
                 "#netsvc",
-                "#virtual_console",
             ],
         },
 
@@ -477,7 +436,6 @@
                 "#driver_manager",
                 "#netsvc",
                 "#pwrbtn-monitor",
-                "#virtual_console",
             ],
         },
 
@@ -714,12 +672,9 @@
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.tracing.kernel.Controller",
                 "fuchsia.tracing.kernel.Reader",
+                "fuchsia.virtualconsole.SessionManager",
             ],
             from: "#driver_manager",
-        },
-        {
-            protocol: [ "fuchsia.virtualconsole.SessionManager" ],
-            from: "#virtual_console",
         },
         {
             protocol: "fuchsia.hardware.power.statecontrol.Admin",
