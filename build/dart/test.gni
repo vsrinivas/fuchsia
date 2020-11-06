@@ -142,6 +142,7 @@ template("dart_test") {
       "--snapshot=$_rebased_snapshot",
       "--snapshot-depfile=$_rebased_depfile",
       "--packages=$_rebased_packages_path",
+      "--no-sound-null-safety",
       rebase_path(_grouped_main_file),
     ]
 
