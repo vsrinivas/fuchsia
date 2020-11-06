@@ -89,8 +89,6 @@ protocol NeededBlobs {
     Open(BlobId blob_id, request<fuchsia.io.File> file) -> () error zx.status;
 };
 
-const uint32 PACKAGE_INDEX_CHUNK_SIZE = 32;
-
 /// A chunk iterator for the package index. This is required because it is possible for the
 /// package index to be too large to send over in a single request (over 64KiB).
 protocol PackageIndexIterator {
@@ -98,5 +96,5 @@ protocol PackageIndexIterator {
     /// this returns an empty vector.
     ///
     /// - response `entries` the next chunk of entries in the package index.
-    Next() -> (vector<PackageIndexEntry>:PACKAGE_INDEX_CHUNK_SIZE entries);
+    Next() -> (vector<PackageIndexEntry>:MAX entries);
 };

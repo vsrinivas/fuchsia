@@ -8,6 +8,9 @@ use std::fmt;
 use std::str;
 use thiserror::Error;
 
+mod iter;
+pub use iter::*;
+
 /// The size of a hash in bytes.
 pub const HASH_SIZE: usize = 32;
 

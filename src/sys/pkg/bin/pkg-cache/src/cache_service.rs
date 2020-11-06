@@ -10,19 +10,19 @@ use {
     fidl_fuchsia_pkg::{
         NeededBlobsMarker, PackageCacheRequest, PackageCacheRequestStream, PackageIndexEntry,
         PackageIndexIteratorRequest, PackageIndexIteratorRequestStream, PackageUrl,
-        PACKAGE_INDEX_CHUNK_SIZE,
     },
     fidl_fuchsia_pkg_ext::{BlobId, BlobInfo},
-    fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{sys::ZX_CHANNEL_MAX_MSG_BYTES, Status},
     futures::prelude::*,
-    std::convert::TryInto,
     std::sync::Arc,
     system_image::StaticPackages,
 };
+
+// sizeof(TransactionHeader) + sizeof(VectorHeader)
+const FIDL_VEC_RESPONSE_OVERHEAD_BYTES: usize = 32;
 
 pub async fn serve(
     pkgfs_versions: pkgfs::versions::Client,
@@ -45,7 +45,8 @@ pub async fn serve(
                 } => {
                     let meta_far_blob: BlobInfo = meta_far_blob.into();
                     trace::duration_begin!("app", "cache_get",
-                    "meta_far_blob_id" => meta_far_blob.blob_id.to_string().as_str());
+                        "meta_far_blob_id" => meta_far_blob.blob_id.to_string().as_str()
+                    );
                     let response = get(
                         &pkgfs_versions,
                         meta_far_blob,
@@ -56,23 +57,26 @@ pub async fn serve(
                     )
                     .await;
                     trace::duration_end!("app", "cache_get",
-                    "status" => Status::from(response).to_string().as_str());
+                        "status" => Status::from(response).to_string().as_str()
+                    );
                     responder.send(&mut response.map_err(|status| status.into_raw()))?;
                 }
                 PackageCacheRequest::Open { meta_far_blob_id, selectors, dir, responder } => {
                     let meta_far_blob_id: BlobId = meta_far_blob_id.into();
                     trace::duration_begin!("app", "cache_open",
-                    "meta_far_blob_id" => meta_far_blob_id.to_string().as_str());
+                        "meta_far_blob_id" => meta_far_blob_id.to_string().as_str()
+                    );
                     let response =
                         open(&pkgfs_versions, meta_far_blob_id, selectors, dir, cobalt_sender)
                             .await;
                     trace::duration_end!("app", "cache_open",
-                    "status" => Status::from(response).to_string().as_str());
+                        "status" => Status::from(response).to_string().as_str()
+                    );
                     responder.send(&mut response.map_err(|status| status.into_raw()))?;
                 }
                 PackageCacheRequest::BasePackageIndex { iterator, control_handle: _ } => {
                     let stream = iterator.into_stream()?;
-                    base_package_index(Arc::clone(&static_packages), stream).await;
+                    serve_base_package_index(Arc::clone(&static_packages), stream).await;
                 }
                 PackageCacheRequest::Sync { responder } => {
                     responder.send(&mut pkgfs_ctl.sync().await.map_err(|e| {
@@ -167,14 +171,12 @@ async fn open<'a>(
     Ok(())
 }
 
-/// Serves the `PackageIndexIteratorRequest` with `LIST_CHUNK_SIZE` entries per request.
-async fn base_package_index(
+/// Serves the `PackageIndexIteratorRequest` with as many entries per request as will fit in a fidl
+/// message.
+async fn serve_base_package_index(
     static_packages: Arc<StaticPackages>,
     mut stream: PackageIndexIteratorRequestStream,
 ) {
-    let list_chunk_size: usize = PACKAGE_INDEX_CHUNK_SIZE
-        .try_into()
-        .expect("Failed to convert PACKAGE_INDEX_CHUNK_SIZE into usize");
     let mut package_entries = static_packages
         .contents()
         .map(|(path, hash)| PackageIndexEntry {
@@ -182,29 +184,112 @@ async fn base_package_index(
             meta_far_blob_id: BlobId::from(hash.clone()).into(),
         })
         .collect::<Vec<PackageIndexEntry>>();
-    fasync::Task::spawn(
-        async move {
-            for chunk in package_entries.chunks_mut(list_chunk_size) {
-                if let Some(PackageIndexIteratorRequest::Next { responder }) =
-                    stream.try_next().await?
-                {
-                    responder.send(&mut chunk.iter_mut())?;
-                } else {
-                    return Ok(());
+
+    let () = async move {
+        let mut package_entries = &mut package_entries[..];
+
+        while !package_entries.is_empty() {
+            let mut bytes_used: usize = FIDL_VEC_RESPONSE_OVERHEAD_BYTES;
+            let mut entry_count = 0;
+
+            for entry in &*package_entries {
+                bytes_used += measure_fuchsia_pkg::measure(&entry).num_bytes;
+                if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize {
+                    break;
                 }
+                entry_count += 1;
             }
-            // Continue to send empty payloads if we passed all chunks to the stream and they are
-            // still being requested.
-            let mut eof = Vec::<PackageIndexEntry>::new();
+
+            let (chunk, rest) = package_entries.split_at_mut(entry_count);
+            package_entries = rest;
+
             if let Some(PackageIndexIteratorRequest::Next { responder }) = stream.try_next().await?
             {
-                responder.send(&mut eof.iter_mut())?;
+                responder.send(&mut chunk.iter_mut())?;
+            } else {
+                return Ok(());
             }
-            Ok(())
         }
-        .unwrap_or_else(|e: anyhow::Error| {
-            fx_log_err!("error running BasePackageIndex protocol: {:#}", anyhow!(e))
-        }),
-    )
-    .detach();
+
+        // Send an empty payload if requested to indicate the iterator is completed.
+        let mut eof = Vec::<PackageIndexEntry>::new();
+        if let Some(PackageIndexIteratorRequest::Next { responder }) = stream.try_next().await? {
+            responder.send(&mut eof.iter_mut())?;
+        }
+        Ok(())
+    }
+    .unwrap_or_else(|e: anyhow::Error| {
+        fx_log_err!("error running BasePackageIndex protocol: {:#}", anyhow!(e))
+    })
+    .await;
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*, fidl_fuchsia_pkg::PackageIndexIteratorMarker, fuchsia_async::Task,
+        fuchsia_hash::HashRangeFull, fuchsia_pkg::PackagePath,
+    };
+
+    const PACKAGE_INDEX_CHUNK_SIZE_MAX: usize = 818;
+    const PACKAGE_INDEX_CHUNK_SIZE_MIN: usize = 372;
+
+    #[test]
+    fn verify_fidl_vec_response_overhead() {
+        let vec_response_overhead = {
+            use fidl::encoding::{TransactionHeader, TransactionMessage};
+
+            let mut nop: Vec<()> = vec![];
+            let mut msg =
+                TransactionMessage { header: TransactionHeader::new(0, 0), body: &mut nop };
+
+            fidl::encoding::with_tls_encoded(&mut msg, |bytes, _handles| {
+                Result::<_, fidl::Error>::Ok(bytes.len())
+            })
+            .unwrap()
+        };
+        assert_eq!(vec_response_overhead, FIDL_VEC_RESPONSE_OVERHEAD_BYTES);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn base_package_index_iterator_paginates_shortest_entries() {
+        let names = ('a'..='z').cycle().map(|c| c.to_string());
+        let paths = names.map(|name| PackagePath::from_name_and_variant(name, "0").unwrap());
+
+        verify_base_package_iterator_pagination(paths, PACKAGE_INDEX_CHUNK_SIZE_MAX).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn base_package_index_iterator_paginates_longest_entries() {
+        let names = ('a'..='z')
+            .map(|c| std::iter::repeat(c).take(PackagePath::MAX_NAME_BYTES).collect::<String>())
+            .cycle();
+        let paths = names.map(|name| PackagePath::from_name_and_variant(name, "0").unwrap());
+
+        verify_base_package_iterator_pagination(paths, PACKAGE_INDEX_CHUNK_SIZE_MIN).await;
+    }
+
+    async fn verify_base_package_iterator_pagination(
+        paths: impl Iterator<Item = PackagePath>,
+        expected_chunk_size: usize,
+    ) {
+        let static_packages =
+            paths.zip(HashRangeFull::default()).take(expected_chunk_size * 2).collect();
+        let static_packages = Arc::new(StaticPackages::from_entries(static_packages));
+
+        let (iter, stream) =
+            fidl::endpoints::create_proxy_and_stream::<PackageIndexIteratorMarker>().unwrap();
+        let task = Task::local(serve_base_package_index(static_packages, stream));
+
+        let chunk = iter.next().await.unwrap();
+        assert_eq!(chunk.len(), expected_chunk_size);
+
+        let chunk = iter.next().await.unwrap();
+        assert_eq!(chunk.len(), expected_chunk_size);
+
+        let chunk = iter.next().await.unwrap();
+        assert_eq!(chunk.len(), 0);
+
+        let () = task.await;
+    }
 }

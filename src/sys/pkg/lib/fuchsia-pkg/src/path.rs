@@ -99,6 +99,9 @@ pub struct PackagePath {
 }
 
 impl PackagePath {
+    pub const MAX_NAME_BYTES: usize = MAX_PACKAGE_NAME_BYTES;
+    pub const MAX_VARIANT_BYTES: usize = MAX_PACKAGE_VARIANT_BYTES;
+
     pub fn from_name_and_variant(
         name: impl Into<String>,
         variant: impl Into<String>,

@@ -5,14 +5,13 @@
 use {
     crate::TestEnv,
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl_fuchsia_pkg::{
-        PackageIndexIteratorMarker, PackageIndexIteratorProxy, PACKAGE_INDEX_CHUNK_SIZE,
-    },
+    fidl_fuchsia_pkg::{PackageIndexIteratorMarker, PackageIndexIteratorProxy},
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
+    fuchsia_hash::{Hash, HashRangeFull},
+    fuchsia_pkg::PackagePath,
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
     pkgfs_ramdisk::PkgfsRamdisk,
-    std::convert::TryInto,
 };
 
 /// Sets up the test environment and writes the packages out to base.
@@ -48,21 +47,34 @@ async fn assert_base_packages_match(
     pkg_iterator: PackageIndexIteratorProxy,
     static_packages: &[&Package],
 ) {
-    let mut expected_pkg_url =
-        static_packages.into_iter().map(|pkg| format!("fuchsia-pkg://fuchsia.com/{}", pkg.name()));
-    let mut expected_merkle =
-        static_packages.into_iter().map(|pkg| BlobId::from(pkg.meta_far_merkle_root().clone()));
-    let mut chunk = pkg_iterator.next().await.unwrap();
-    let max_chunk_size: usize = 32;
+    let expected_entries = static_packages.into_iter().map(|pkg| {
+        let url = format!("fuchsia-pkg://fuchsia.com/{}", pkg.name());
+        let merkle = pkg.meta_far_merkle_root().clone();
+        (url, merkle)
+    });
 
-    while chunk.len() != 0 {
-        assert!(chunk.len() <= max_chunk_size);
-        for entry in chunk {
-            assert_eq!(entry.package_url.url, expected_pkg_url.next().unwrap());
-            assert_eq!(BlobId::from(entry.meta_far_blob_id), expected_merkle.next().unwrap());
+    verify_base_packages_iterator(pkg_iterator, expected_entries).await;
+}
+
+async fn verify_base_packages_iterator(
+    pkg_iterator: PackageIndexIteratorProxy,
+    mut expected_entries: impl Iterator<Item = (String, Hash)>,
+) {
+    loop {
+        let chunk = pkg_iterator.next().await.unwrap();
+        if chunk.is_empty() {
+            break;
         }
-        chunk = pkg_iterator.next().await.unwrap();
+
+        for entry in chunk {
+            let (expected_url, expected_hash) = expected_entries.next().unwrap();
+
+            assert_eq!(entry.package_url.url, expected_url);
+            assert_eq!(BlobId::from(entry.meta_far_blob_id), BlobId::from(expected_hash));
+        }
     }
+
+    assert_eq!(expected_entries.next(), None);
 }
 
 /// Verifies that a single base package is handled correctly.
@@ -104,20 +116,35 @@ async fn base_pkg_index_verify_ordering() {
 /// Verifies that the package index can be split across multiple chunks.
 #[fasync::run_singlethreaded(test)]
 async fn base_pkg_index_verify_multiple_chunks() {
-    let bundle_size = (PACKAGE_INDEX_CHUNK_SIZE * 3 + 1).try_into().unwrap();
-    let mut larger_bundle = Vec::<Package>::with_capacity(bundle_size);
-    // A non-chunk aligned value is selected to ensure we get the remainder.
-    for i in 0..bundle_size {
-        larger_bundle.push(
-            PackageBuilder::new(format!("base-package-{}", i))
-                .add_resource_at("resource", &[][..])
-                .build()
-                .await
-                .unwrap(),
-        );
+    // Try to get a partial chunk by using an unaligned value, though the server may choose to
+    // provide fewer entries in a single chunk.
+    const PACKAGE_INDEX_CHUNK_SIZE_MAX: usize = 818;
+    let bundle_size = PACKAGE_INDEX_CHUNK_SIZE_MAX * 3 + 1;
+
+    let mut system_image = SystemImageBuilder::new();
+    let mut expected_entries = Vec::with_capacity(bundle_size);
+
+    for (i, hash) in HashRangeFull::default().enumerate().take(bundle_size) {
+        let name = format!("base-package-{}", i);
+        let url = format!("fuchsia-pkg://fuchsia.com/{}", name);
+        let path = PackagePath::from_name_and_variant(name, "0").unwrap();
+
+        expected_entries.push((url, hash));
+        system_image = system_image.static_package(path, hash);
     }
-    let env = setup_test_env(&larger_bundle.iter().collect::<Vec<&Package>>()).await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    let system_image = system_image.build().await;
+
+    system_image.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image.meta_far_merkle_root())
+        .start()
+        .unwrap();
+
+    let env = TestEnv::new(pkgfs);
+
     let pkg_iterator = get_pkg_iterator(&env).await;
-    assert_base_packages_match(pkg_iterator, &larger_bundle.iter().collect::<Vec<&Package>>())
-        .await;
+    verify_base_packages_iterator(pkg_iterator, expected_entries.into_iter()).await;
 }

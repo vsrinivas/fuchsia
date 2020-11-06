@@ -33,6 +33,8 @@ impl BasePackageIndex {
             }
             chunk = pkg_iterator.next().await?;
         }
+        index.shrink_to_fit();
+
         Ok(Self { index })
     }
 
@@ -68,7 +70,6 @@ mod tests {
         fidl_fuchsia_pkg::{
             PackageCacheMarker, PackageCacheRequest, PackageCacheRequestStream, PackageIndexEntry,
             PackageIndexIteratorRequest, PackageIndexIteratorRequestStream, PackageUrl,
-            PACKAGE_INDEX_CHUNK_SIZE,
         },
         fuchsia_async as fasync,
         fuchsia_syslog::fx_log_err,
@@ -76,6 +77,11 @@ mod tests {
         maplit::hashmap,
         std::sync::Arc,
     };
+
+    // The actual pkg-cache will fit as many items per chunk as possible.  Intentionally choose a
+    // small, fixed value here to verify the BasePackageIndex behavior with multiple chunks without
+    // having to actually send hundreds of entries in these tests.
+    const PACKAGE_INDEX_CHUNK_SIZE: u32 = 30;
 
     struct MockPackageCacheService {
         base_packages: Arc<HashMap<PkgUrl, BlobId>>,

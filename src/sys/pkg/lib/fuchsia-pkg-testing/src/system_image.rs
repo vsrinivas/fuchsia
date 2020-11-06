@@ -13,8 +13,8 @@ use {
 /// Builds a system_image package.
 #[derive(Default)]
 pub struct SystemImageBuilder<'a> {
-    static_packages: Option<&'a [&'a Package]>,
-    cache_packages: Option<&'a [&'a Package]>,
+    static_packages: Option<Vec<(PackagePath, Hash)>>,
+    cache_packages: Option<Vec<(PackagePath, Hash)>>,
     pkgfs_non_static_packages_allowlist: Option<&'a [&'a str]>,
     pkgfs_disable_executability_restrictions: bool,
 }
@@ -25,17 +25,32 @@ impl<'a> SystemImageBuilder<'a> {
         Self::default()
     }
 
-    /// Use the supplied static_packages with the system image. Call at most once.
-    pub fn static_packages(mut self, static_packages: &'a [&'a Package]) -> Self {
-        assert!(self.static_packages.is_none());
-        self.static_packages = Some(static_packages);
+    /// Appends the given path and hash to the static packages manifest.
+    pub fn static_package(mut self, path: PackagePath, hash: Hash) -> Self {
+        self.static_packages.get_or_insert_with(Vec::new).push((path, hash));
         self
     }
 
-    /// Use the supplied cache_packages with the system image. Call at most once.
-    pub fn cache_packages(mut self, cache_packages: &'a [&'a Package]) -> Self {
-        assert!(self.cache_packages.is_none());
-        self.cache_packages = Some(cache_packages);
+    /// Use the supplied static_packages with the system image. Call at most once and not after
+    /// calling [`Self::static_package`].
+    pub fn static_packages(mut self, static_packages: &[&Package]) -> Self {
+        assert_eq!(self.static_packages, None);
+        self.static_packages = Some(Self::packages_to_entries(static_packages));
+        self
+    }
+
+    /// Appends the given path and hash to the cache packages manifest, creating the manifest if it
+    /// was not already staged to be added to the package.
+    pub fn cache_package(mut self, path: PackagePath, hash: Hash) -> Self {
+        self.cache_packages.get_or_insert_with(Vec::new).push((path, hash));
+        self
+    }
+
+    /// Use the supplied cache_packages with the system image. Call at most once and not after
+    /// calling [`Self::cache_package`].
+    pub fn cache_packages(mut self, cache_packages: &[&Package]) -> Self {
+        assert_eq!(self.cache_packages, None);
+        self.cache_packages = Some(Self::packages_to_entries(cache_packages));
         self
     }
 
@@ -54,32 +69,33 @@ impl<'a> SystemImageBuilder<'a> {
         self
     }
 
+    fn packages_to_entries(pkgs: &[&Package]) -> Vec<(PackagePath, Hash)> {
+        pkgs.iter()
+            .map(|pkg| {
+                (
+                    PackagePath::from_name_and_variant(pkg.name(), "0").unwrap(),
+                    *pkg.meta_far_merkle_root(),
+                )
+            })
+            .collect()
+    }
+
     /// Build the system_image package.
     pub fn build(&self) -> impl Future<Output = Package> {
-        fn packages_to_entries(pkgs: &[&Package]) -> Vec<(PackagePath, Hash)> {
-            pkgs.iter()
-                .map(|pkg| {
-                    (
-                        PackagePath::from_name_and_variant(pkg.name(), "0").unwrap(),
-                        *pkg.meta_far_merkle_root(),
-                    )
-                })
-                .collect()
-        }
-
         let mut builder = PackageBuilder::new("system_image");
         let mut bytes = vec![];
-        StaticPackages::from_entries(packages_to_entries(self.static_packages.unwrap_or(&[])))
+
+        StaticPackages::from_entries(self.static_packages.clone().unwrap_or_else(Vec::new))
             .serialize(&mut bytes)
             .unwrap();
         builder = builder.add_resource_at("data/static_packages", bytes.as_slice());
-        if let Some(cache_packages) = self.cache_packages {
+
+        if let Some(cache_packages) = &self.cache_packages {
             bytes.clear();
-            CachePackages::from_entries(packages_to_entries(cache_packages))
-                .serialize(&mut bytes)
-                .unwrap();
+            CachePackages::from_entries(cache_packages.clone()).serialize(&mut bytes).unwrap();
             builder = builder.add_resource_at("data/cache_packages", bytes.as_slice());
         }
+
         if let Some(allowlist) = &self.pkgfs_non_static_packages_allowlist {
             let contents = allowlist.join("\n");
             builder = builder.add_resource_at(
@@ -87,10 +103,12 @@ impl<'a> SystemImageBuilder<'a> {
                 contents.as_bytes(),
             );
         }
+
         if self.pkgfs_disable_executability_restrictions {
             builder = builder
                 .add_resource_at("data/pkgfs_disable_executability_restrictions", &[] as &[u8]);
         }
+
         async move { builder.build().await.unwrap() }
     }
 }
