@@ -18,7 +18,6 @@
 
 #include "lib/fidl/cpp/optional.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/url/gurl.h"
 #include "src/media/playback/examples/audio_player/audio_player_params.h"
 
 namespace examples {
@@ -35,11 +34,9 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params, fit::closure quit_call
     HandleStatusChanged(status);
   };
 
-  if (!params.url().empty()) {
-    url::GURL url = url::GURL(params.url());
-
+  if (!params.path().empty()) {
     player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(
-        fbl::unique_fd(open(url.path().c_str(), O_RDONLY)).get()));
+        fbl::unique_fd(open(params.path().c_str(), O_RDONLY)).get()));
     GetKeystroke();
 
     player_->Play();

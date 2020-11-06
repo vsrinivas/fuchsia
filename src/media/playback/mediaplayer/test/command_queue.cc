@@ -13,7 +13,6 @@
 #include "lib/fidl/cpp/optional.h"
 #include "lib/media/cpp/type_converters.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/url/gurl.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {
@@ -113,21 +112,6 @@ void CommandQueue::ExecuteNextCommand() {
     command_queue_.pop();
     command->Execute(this);
   });
-}
-
-void CommandQueue::SetUrlCommand::Execute(CommandQueue* command_queue) {
-  if (command_queue->verbose_) {
-    std::cerr << "SetUrl " << url_ << "\n";
-  }
-
-  url::GURL url = url::GURL(url_);
-
-  auto fd = fbl::unique_fd(open(url.path().c_str(), O_RDONLY));
-  FX_CHECK(fd.is_valid());
-  command_queue->player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(fd.get()));
-  command_queue->prev_seek_position_ = 0;
-  command_queue->status_ = nullptr;
-  command_queue->ExecuteNextCommand();
 }
 
 void CommandQueue::SetFileCommand::Execute(CommandQueue* command_queue) {

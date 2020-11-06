@@ -39,7 +39,7 @@ executable("audio_player_bin") {
     "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
-    "//src/lib/url",
+    "//src/lib/fxl",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

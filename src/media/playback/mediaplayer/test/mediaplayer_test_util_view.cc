@@ -16,7 +16,6 @@
 #include <hid/usages.h>
 
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/url/gurl.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_params.h"
 
@@ -58,7 +57,7 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(scenic::ViewContext view_contex
       progress_bar_slider_node_(session()) {
   FX_DCHECK(quit_callback_);
   FX_DCHECK(params_.is_valid());
-  FX_DCHECK(!params_.urls().empty());
+  FX_DCHECK(!params_.paths().empty());
 
   scenic::Material background_material(session());
   background_material.SetColor(0x00, 0x00, 0x00, 0xff);
@@ -116,7 +115,7 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(scenic::ViewContext view_contex
     TestSeek();
   } else {
     // Get the player primed now.
-    commands_.SetUrl(params_.urls().front());
+    commands_.SetFile(params_.paths().front());
     commands_.Pause();
     commands_.WaitForViewReady();
 
@@ -124,7 +123,7 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(scenic::ViewContext view_contex
       commands_.Play();
     }
 
-    ScheduleNextUrl();
+    ScheduleNextFile();
   }
 
   commands_.Execute();
@@ -136,7 +135,7 @@ void MediaPlayerTestUtilView::RunExperiment() {
 }
 
 void MediaPlayerTestUtilView::TestSeek() {
-  commands_.SetUrl(params_.urls().front());
+  commands_.SetFile(params_.paths().front());
   commands_.WaitForViewReady();
 
   // Need to load content before deciding where to seek.
@@ -185,20 +184,20 @@ void MediaPlayerTestUtilView::ContinueTestSeek() {
   commands_.Invoke([this]() { ContinueTestSeek(); });
 }
 
-void MediaPlayerTestUtilView::ScheduleNextUrl() {
-  if (++next_url_index_ == params_.urls().size()) {
+void MediaPlayerTestUtilView::ScheduleNextFile() {
+  if (++next_path_index_ == params_.paths().size()) {
     if (!params_.loop()) {
       // No more files, not looping.
       return;
     }
 
-    next_url_index_ = 0;
+    next_path_index_ = 0;
   }
 
   commands_.WaitForEndOfStream();
 
-  if (params_.urls().size() > 1) {
-    commands_.SetUrl(params_.urls()[next_url_index_]);
+  if (params_.paths().size() > 1) {
+    commands_.SetFile(params_.paths()[next_path_index_]);
   } else {
     // Just one file...seek to the beginning.
     commands_.Seek(0);
@@ -206,7 +205,7 @@ void MediaPlayerTestUtilView::ScheduleNextUrl() {
 
   commands_.Play();
 
-  commands_.Invoke([this]() { ScheduleNextUrl(); });
+  commands_.Invoke([this]() { ScheduleNextFile(); });
 }
 
 MediaPlayerTestUtilView::~MediaPlayerTestUtilView() {}

@@ -52,9 +52,6 @@ class CommandQueue {
   void NotifyViewReady();
 
   // Queues a |SetFileSource| command.
-  void SetUrl(const std::string& url) { AddCommand(new SetUrlCommand(url)); }
-
-  // Queues a |SetFileSource| command.
   void SetFile(const std::string& path) { AddCommand(new SetFileCommand(path)); }
 
   // Queues a |SetPlaybackRate| command.
@@ -131,12 +128,6 @@ class CommandQueue {
   struct Command {
     virtual ~Command() = default;
     virtual void Execute(CommandQueue* command_queue) = 0;
-  };
-
-  struct SetUrlCommand : public Command {
-    SetUrlCommand(const std::string& url) : url_(url) {}
-    void Execute(CommandQueue* command_queue) override;
-    std::string url_;
   };
 
   struct SetFileCommand : public Command {

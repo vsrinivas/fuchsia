@@ -18,7 +18,7 @@ class AudioPlayerParams {
 
   bool is_valid() const { return is_valid_; }
 
-  const std::string& url() const { return url_; }
+  const std::string& path() const { return path_; }
 
   bool stay() const { return stay_; }
 
@@ -27,7 +27,7 @@ class AudioPlayerParams {
 
   bool is_valid_;
 
-  std::string url_;
+  std::string path_;
   bool stay_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AudioPlayerParams);

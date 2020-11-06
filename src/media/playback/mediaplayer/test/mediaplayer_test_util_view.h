@@ -42,12 +42,12 @@ class MediaPlayerTestUtilView : public scenic::BaseView {
   // Implements --test-seek.
   void TestSeek();
 
-  // Continues --test-seek assuming that a URL is loaded and the view is ready.
+  // Continues --test-seek assuming that a file is loaded and the view is ready.
   void ContinueTestSeek();
 
-  // Schedules playback of the next URL when end-of-stream is reached, if there
-  // is a next URL to be played.
-  void ScheduleNextUrl();
+  // Schedules playback of the next file when end-of-stream is reached, if there
+  // is a next file to be played.
+  void ScheduleNextFile();
 
   // |scenic::BaseView|
   void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) override;
@@ -81,7 +81,7 @@ class MediaPlayerTestUtilView : public scenic::BaseView {
 
   fit::function<void(int)> quit_callback_;
   const MediaPlayerTestUtilParams& params_;
-  size_t next_url_index_ = 0;
+  size_t next_path_index_ = 0;
 
   scenic::ShapeNode background_node_;
   scenic::ShapeNode progress_bar_node_;

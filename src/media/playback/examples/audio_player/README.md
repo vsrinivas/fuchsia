@@ -10,10 +10,6 @@ reader, you'll need to have an accessible file. Here's an example command line:
 ```
     audio_player /tmp/audio.ogg
 ```
-Here's an example using the network reader:
-```
-    audio_player http://example.com/audio.ogg
-```
-Given a path or URL to play, the audio player will terminate unless the
+Given a path to play, the audio player will terminate unless the
 'service' option is used. The 'stay' option will also prevent the player from
 terminating.

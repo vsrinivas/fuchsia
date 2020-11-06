@@ -32,7 +32,7 @@ class MediaPlayerTestUtilParams {
 
   bool auto_play() const { return play_ || loop_ || test_seek_; }
 
-  const std::vector<std::string>& urls() const { return urls_; }
+  const std::vector<std::string>& paths() const { return paths_; }
 
   float rate() const { return rate_; }
 
@@ -41,7 +41,7 @@ class MediaPlayerTestUtilParams {
 
   bool is_valid_;
 
-  std::vector<std::string> urls_;
+  std::vector<std::string> paths_;
   bool play_ = false;
   bool loop_ = false;
   bool test_seek_ = false;
