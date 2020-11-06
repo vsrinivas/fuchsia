@@ -77,6 +77,11 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootReasons, ImminentGracefulRebootWatcher
                                  "SYSMGR FAILURE",
                              },
                              {
+                                 "CriticalComponentFailure",
+                                 RebootReason::CRITICAL_COMPONENT_FAILURE,
+                                 "CRITICAL COMPONENT FAILURE",
+                             },
+                             {
                                  "FactoryDataReset",
                                  RebootReason::FACTORY_DATA_RESET,
                                  "FACTORY DATA RESET",

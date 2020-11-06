@@ -26,6 +26,8 @@ std::string FormatReason(fuchsia::hardware::power::statecontrol::RebootReason re
       return "SESSION FAILURE";
     case RebootReason::SYSMGR_FAILURE:
       return "SYSMGR FAILURE";
+    case RebootReason::CRITICAL_COMPONENT_FAILURE:
+      return "CRITICAL COMPONENT FAILURE";
     case RebootReason::FACTORY_DATA_RESET:
       return "FACTORY DATA RESET";
     default:

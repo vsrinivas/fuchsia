@@ -70,6 +70,8 @@ enum class LastRebootReason {
   kSessionFailure = cobalt_registry::LastRebootUptimeMetricDimensionReason::SessionFailure,
   kSystemFailure = cobalt_registry::LastRebootUptimeMetricDimensionReason::SystemFailure,
   kFactoryDataReset = cobalt_registry::LastRebootUptimeMetricDimensionReason::FactoryDataReset,
+  kCriticalComponentFailure =
+      cobalt_registry::LastRebootUptimeMetricDimensionReason::CriticalComponentFailure,
 };
 
 enum class RebootReasonWriteResult {

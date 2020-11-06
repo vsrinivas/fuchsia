@@ -42,6 +42,8 @@ std::string ToString(const RebootReason reason) {
       return "RebootReason::kSessionFailure";
     case RebootReason::kSystemFailure:
       return "RebootReason::kSystemFailure";
+    case RebootReason::kCriticalComponentFailure:
+      return "RebootReason::kCriticalComponentFailure";
     case RebootReason::kFdr:
       return "RebootReason::kFdr";
   }
@@ -60,6 +62,7 @@ bool IsCrash(const RebootReason reason) {
     case RebootReason::kBrownout:
     case RebootReason::kSessionFailure:
     case RebootReason::kSystemFailure:
+    case RebootReason::kCriticalComponentFailure:
       return true;
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
@@ -79,6 +82,7 @@ std::optional<bool> OptionallyGraceful(const RebootReason reason) {
     case RebootReason::kHighTemperature:
     case RebootReason::kSessionFailure:
     case RebootReason::kSystemFailure:
+    case RebootReason::kCriticalComponentFailure:
     case RebootReason::kFdr:
       return true;
     case RebootReason::kCold:
@@ -110,6 +114,8 @@ cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reason) {
       return cobalt::LastRebootReason::kSessionFailure;
     case RebootReason::kSystemFailure:
       return cobalt::LastRebootReason::kSystemFailure;
+    case RebootReason::kCriticalComponentFailure:
+      return cobalt::LastRebootReason::kCriticalComponentFailure;
     case RebootReason::kFdr:
       return cobalt::LastRebootReason::kFactoryDataReset;
     case RebootReason::kCold:
@@ -149,6 +155,8 @@ std::string ToCrashSignature(const RebootReason reason) {
       return "fuchsia-session-failure";
     case RebootReason::kSystemFailure:
       return "fuchsia-system-failure";
+    case RebootReason::kCriticalComponentFailure:
+      return "fuchsia-critical-component-failure";
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
@@ -174,6 +182,7 @@ std::string ToCrashProgramName(const RebootReason reason) {
     case RebootReason::kSoftwareWatchdogTimeout:
     case RebootReason::kSessionFailure:
     case RebootReason::kSystemFailure:
+    case RebootReason::kCriticalComponentFailure:
       return "system";
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
@@ -201,6 +210,8 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(const RebootRe
       return fuchsia::feedback::RebootReason::SESSION_FAILURE;
     case RebootReason::kSystemFailure:
       return fuchsia::feedback::RebootReason::SYSTEM_FAILURE;
+    case RebootReason::kCriticalComponentFailure:
+      return fuchsia::feedback::RebootReason::CRITICAL_COMPONENT_FAILURE;
     case RebootReason::kFdr:
       return fuchsia::feedback::RebootReason::FACTORY_DATA_RESET;
     case RebootReason::kCold:

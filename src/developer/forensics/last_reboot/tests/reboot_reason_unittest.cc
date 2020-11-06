@@ -145,6 +145,17 @@ TEST(RebootReasonTest, SystemFailure) {
   EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::SYSTEM_FAILURE);
 }
 
+TEST(RebootReasonTest, CriticalComponentFailure) {
+  const auto reason = RebootReason::kCriticalComponentFailure;
+
+  EXPECT_TRUE(IsCrash(reason));
+  EXPECT_EQ(ToCobaltLastRebootReason(reason), cobalt::LastRebootReason::kCriticalComponentFailure);
+  EXPECT_EQ(ToCrashSignature(reason), "fuchsia-critical-component-failure");
+  EXPECT_EQ(ToCrashProgramName(reason), "system");
+  EXPECT_EQ(ToFidlRebootReason(reason),
+            fuchsia::feedback::RebootReason::CRITICAL_COMPONENT_FAILURE);
+}
+
 TEST(RebootReasonTest, FDR) {
   const auto reason = RebootReason::kFdr;
 
