@@ -4,19 +4,11 @@
 
 #include "src/lib/line_input/line_input.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
-#include <unistd.h>
-
-#ifdef __Fuchsia__
-#include <fuchsia/hardware/pty/c/fidl.h>
-#include <lib/fdio/io.h>
-#include <lib/fdio/unsafe.h>
-#else
 #include <sys/ioctl.h>
 #include <termios.h>
-#endif
-
-#include <lib/syslog/cpp/macros.h>
+#include <unistd.h>
 
 #include "src/lib/fxl/strings/split_string.h"
 
@@ -29,25 +21,9 @@ const char* SpecialCharacters::kTermCursorToColFormat = "\r\x1b[%dC";
 namespace {
 
 size_t GetTerminalMaxCols(int fileno) {
-#ifdef __Fuchsia__
-  if (isatty(STDIN_FILENO)) {
-    fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-    fuchsia_hardware_pty_WindowSize wsz;
-    zx_status_t status;
-    zx_status_t call_status =
-        fuchsia_hardware_pty_DeviceGetWindowSize(fdio_unsafe_borrow_channel(io), &status, &wsz);
-    fdio_unsafe_release(io);
-    if (call_status != ZX_OK || status != ZX_OK) {
-      return 0;
-    }
-
-    return wsz.width;
-  }
-#else
   struct winsize ws;
   if (ioctl(fileno, TIOCGWINSZ, &ws) != -1)
     return ws.ws_col;
-#endif
   return 0;  // 0 means disable scrolling.
 }
 

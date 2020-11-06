@@ -54,32 +54,12 @@
 #include <fcntl.h>
 
 #ifdef __Fuchsia__
-#include <fuchsia/hardware/pty/c/fidl.h>
-#include <lib/fdio/unsafe.h>
 
 time_t time(time_t *t) {
     if (t) {
         *t = 0;
     }
     return 0;
-}
-
-static int getConsoleSize(int *rows, int *cols) {
-    if (isatty(STDIN_FILENO)) {
-        fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-        fuchsia_hardware_pty_WindowSize wsz;
-        zx_status_t status;
-        zx_status_t call_status = fuchsia_hardware_pty_DeviceGetWindowSize(
-            fdio_unsafe_borrow_channel(io), &status, &wsz);
-        fdio_unsafe_release(io);
-        if (call_status != ZX_OK || status != ZX_OK) {
-            return -1;
-        }
-        *rows = wsz.height;
-        *cols = wsz.width;
-        return 0;
-    }
-    return -1;
 }
 
 #endif
@@ -355,14 +335,8 @@ int getCursorPosition(int ifd, int ofd, int *rows, int *cols) {
  * call fails the function will try to query the terminal itself.
  * Returns 0 on success, -1 on error. */
 int getWindowSize(int ifd, int ofd, int *rows, int *cols) {
-#ifdef __Fuchsia__
-    if (getConsoleSize(rows, cols) == 0) {
-        return 0;
-    } else {
-#else
     struct winsize ws;
     if (ioctl(1, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
-#endif
         /* ioctl() failed. Try to query the terminal itself. */
         int orig_row, orig_col, retval;
 
@@ -382,12 +356,10 @@ int getWindowSize(int ifd, int ofd, int *rows, int *cols) {
             /* Can't recover... */
         }
         return 0;
-#ifndef __Fuchsia__
     } else {
         *cols = ws.ws_col;
         *rows = ws.ws_row;
         return 0;
-#endif
     }
 
 failed:

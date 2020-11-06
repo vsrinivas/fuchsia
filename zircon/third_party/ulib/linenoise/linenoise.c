@@ -117,12 +117,6 @@
 #include <unistd.h>
 #include "linenoise.h"
 
-#ifdef __Fuchsia__
-#include <fuchsia/hardware/pty/c/fidl.h>
-#include <lib/fdio/io.h>
-#include <lib/fdio/unsafe.h>
-#endif
-
 #define LINENOISE_DEFAULT_HISTORY_MAX_LEN 100
 #define LINENOISE_MAX_LINE 4096
 static const char *unsupported_term[] = {"dumb","cons25","emacs",NULL};
@@ -306,25 +300,10 @@ static int getCursorPosition(int ifd, int ofd) {
 /* Try to get the number of columns in the current terminal, or assume
  * the last successful columns if it fails. */
 static int getColumns(int ifd, int ofd) {
-#ifdef __Fuchsia__
-    int tty = isatty(STDIN_FILENO);
-    zx_status_t status;
-    zx_status_t call_status;
-    fuchsia_hardware_pty_WindowSize wsz;
     static int last_cols = 80;
-
-    if (tty) {
-        fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-        call_status = fuchsia_hardware_pty_DeviceGetWindowSize(
-            fdio_unsafe_borrow_channel(io), &status, &wsz);
-        fdio_unsafe_release(io);
-    }
-    if (!tty || call_status != ZX_OK || status != ZX_OK) {
-#else
     struct winsize ws;
 
     if (ioctl(1, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
-#endif
         /* ioctl() failed. Try to query the terminal itself. */
         int start, cols;
 
@@ -356,11 +335,7 @@ static int getColumns(int ifd, int ofd) {
         }
         return cols;
     } else {
-#ifdef __Fuchsia__
-        return wsz.width;
-#else
         return ws.ws_col;
-#endif
     }
 }
 

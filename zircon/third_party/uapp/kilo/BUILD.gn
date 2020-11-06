@@ -24,10 +24,7 @@ executable("kilo") {
   }
   sources = [ "kilo.c" ]
   configs += [ ":config" ]
-  deps = [
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
-    "//sdk/lib/fdio",
-  ]
+  deps = [ "//sdk/lib/fdio" ]
   configs += [ "//build/config:Wno-conversion" ]
 }
 

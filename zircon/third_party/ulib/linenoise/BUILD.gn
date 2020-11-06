@@ -19,9 +19,5 @@ zx_library("linenoise") {
   sdk_headers = [ "linenoise/linenoise.h" ]
   sources = [ "linenoise.c" ]
   include_dirs = [ "include/linenoise" ]
-  deps = [
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
-    "//sdk/lib/fdio",
-  ]
   configs += [ "//build/config:Wno-conversion" ]
 }
