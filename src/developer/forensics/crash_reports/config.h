@@ -7,7 +7,9 @@
 
 #include <zircon/types.h>
 
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace forensics {
@@ -40,6 +42,7 @@ struct CrashServerConfig {
 // It is intended to represent an immutable configuration, typically loaded from a file.
 struct Config {
   CrashServerConfig crash_server;
+  std::optional<uint64_t> daily_per_product_quota;
 };
 
 // Parses the JSON config at |filepath| as |config|.

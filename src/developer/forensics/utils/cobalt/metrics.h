@@ -20,6 +20,7 @@ enum class CrashState {
   kGarbageCollected = cobalt_registry::CrashMetricDimensionState::GarbageCollected,
   kDropped = cobalt_registry::CrashMetricDimensionState::Dropped,
   kUploadThrottled = cobalt_registry::CrashMetricDimensionState::UploadThrottled,
+  kOnDeviceQuotaReached = cobalt_registry::CrashMetricDimensionState::OnDeviceQuotaReached,
 };
 
 enum class UploadAttemptState {

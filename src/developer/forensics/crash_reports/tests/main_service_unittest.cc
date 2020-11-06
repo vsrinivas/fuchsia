@@ -47,7 +47,8 @@ class MainServiceTest : public UnitTestFixture {
                      {
                          /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                          /*url=*/std::make_unique<std::string>(kCrashServerUrl),
-                     }};
+                     },
+                     /*daily_per_product_quota=*/100u};
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
 

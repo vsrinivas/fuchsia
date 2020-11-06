@@ -16,6 +16,8 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <tuple>
 #include <utility>
 
 #include "src/developer/forensics/crash_reports/config.h"
@@ -57,6 +59,11 @@ ReportId SeedReportId() {
   std::sort(all_report_ids.begin(), all_report_ids.end());
   return (all_report_ids.empty()) ? 0u : all_report_ids.back() + 1;
 }
+
+struct CrashReporterError {
+  cobalt::CrashState crash_state;
+  std::string_view log_message;
+};
 
 }  // namespace
 
@@ -101,6 +108,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       crash_server_(std::move(crash_server)),
       queue_(dispatcher_, services_, info_context, tags_.get(), crash_server_.get(),
              snapshot_manager_.get()),
+      product_quotas_(dispatcher_, config_->daily_per_product_quota),
       info_(info_context),
       privacy_settings_watcher_(dispatcher, services_, &settings_),
       device_id_provider_ptr_(dispatcher_, services_) {
@@ -136,50 +144,69 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
 
   tags_->Register(report_id, {Logname(program_name)});
 
-  FX_LOGST(INFO, tags_->Get(report_id)) << "Generating report";
-
-  auto snapshot_uuid_promise = snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout);
-  auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
-  auto product_promise =
-      crash_register_->GetProduct(program_name, fit::Timeout(kChannelOrDeviceIdTimeout));
+  using promise_tuple_t = std::tuple<::fit::result<SnapshotUuid>, ::fit::result<std::string, Error>,
+                                     ::fit::result<Product>>;
 
   auto promise =
-      ::fit::join_promises(std::move(snapshot_uuid_promise), std::move(device_id_promise),
-                           std::move(product_promise))
-          .and_then(
-              [this, report = std::move(report), report_id](
-                  std::tuple<::fit::result<SnapshotUuid>, ::fit::result<std::string, Error>,
-                             ::fit::result<Product>>& results) mutable -> ::fit::result<void> {
-                auto snapshot_uuid = std::move(std::get<0>(results));
-                auto device_id = std::move(std::get<1>(results));
-                auto product = std::move(std::get<2>(results));
+      crash_register_->GetProduct(program_name, fit::Timeout(kChannelOrDeviceIdTimeout))
+          .or_else([]() -> ::fit::result<Product, CrashReporterError> {
+            return ::fit::error(
+                CrashReporterError{cobalt::CrashState::kDropped, "failed GetProduct"});
+          })
+          .and_then([this](
+                        Product& product) -> ::fit::promise<promise_tuple_t, CrashReporterError> {
+            if (!product_quotas_.HasQuotaRemaining(product)) {
+              return ::fit::make_result_promise<promise_tuple_t, CrashReporterError>(
+                  ::fit::error(CrashReporterError{
+                      cobalt::CrashState::kOnDeviceQuotaReached,
+                      "daily report quota reached",
+                  }));
+            }
 
-                FX_CHECK(snapshot_uuid.is_ok());
+            product_quotas_.DecrementRemainingQuota(product);
 
-                if (product.is_error()) {
-                  return ::fit::error();
-                }
+            auto snapshot_uuid_promise = snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout);
+            auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
+            auto product_promise = ::fit::make_ok_promise(std::move(product));
 
-                std::optional<Report> final_report = MakeReport(
-                    std::move(report), report_id, snapshot_uuid.value(),
-                    utc_provider_.CurrentTime(), device_id, build_version_, product.value());
-                if (!final_report.has_value()) {
-                  FX_LOGST(ERROR, tags_->Get(report_id)) << "Error generating report";
-                  return ::fit::error();
-                }
+            return ::fit::join_promises(std::move(snapshot_uuid_promise),
+                                        std::move(device_id_promise), std::move(product_promise))
+                .or_else([]() -> ::fit::result<promise_tuple_t, CrashReporterError> {
+                  return ::fit::error(CrashReporterError{
+                      cobalt::CrashState::kDropped,
+                      "Failed join_promises()",
+                  });
+                });
+          })
+          .and_then([this, report = std::move(report), report_id](promise_tuple_t& results) mutable
+                    -> ::fit::result<void, CrashReporterError> {
+            auto snapshot_uuid = std::get<0>(results).take_value();
+            auto device_id = std::move(std::get<1>(results));
+            auto product = std::get<2>(results).take_value();
 
-                if (!queue_.Add(std::move(final_report.value()))) {
-                  FX_LOGST(ERROR, tags_->Get(report_id)) << "Error adding new report to the queue";
-                  return ::fit::error();
-                }
+            FX_LOGST(INFO, tags_->Get(report_id)) << "Generating report";
+            std::optional<Report> final_report =
+                MakeReport(std::move(report), report_id, snapshot_uuid, utc_provider_.CurrentTime(),
+                           device_id, build_version_, product);
+            if (!final_report.has_value()) {
+              return ::fit::error(
+                  CrashReporterError{cobalt::CrashState::kDropped, "failed MakeReport()"});
+            }
 
-                return ::fit::ok();
-              })
-          .then([this, callback = std::move(callback), report_id](::fit::result<void>& result) {
+            if (!queue_.Add(std::move(final_report.value()))) {
+              return ::fit::error(
+                  CrashReporterError{cobalt::CrashState::kDropped, "failed Queue::Add()"});
+            }
+
+            return ::fit::ok();
+          })
+          .then([this, callback = std::move(callback),
+                 report_id](::fit::result<void, CrashReporterError>& result) {
             if (result.is_error()) {
-              FX_LOGST(ERROR, tags_->Get(report_id)) << "Failed to file report. Won't retry.";
+              FX_LOGST(ERROR, tags_->Get(report_id))
+                  << "Failed to file report: " << result.error().log_message << ". Won't retry";
               tags_->Unregister(report_id);
-              info_.LogCrashState(cobalt::CrashState::kDropped);
+              info_.LogCrashState(result.error().crash_state);
               callback(::fit::error(ZX_ERR_INTERNAL));
             } else {
               info_.LogCrashState(cobalt::CrashState::kFiled);

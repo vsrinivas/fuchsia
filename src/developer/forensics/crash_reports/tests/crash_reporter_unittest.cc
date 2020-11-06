@@ -92,6 +92,8 @@ constexpr char kSingleAttachmentValue[] = "attachment.value";
 constexpr bool kUserOptInDataSharing = true;
 constexpr bool kUserOptOutDataSharing = false;
 
+constexpr size_t kDailyPerProductQuota = 100u;
+
 constexpr UtcProvider::Response kExternalResponse =
     UtcProvider::Response(UtcProvider::Response::Value::kExternal, zx::nsec(0));
 
@@ -185,7 +187,8 @@ class CrashReporterTest : public UnitTestFixture {
                {
                    /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                    /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
-               }},
+               },
+               /*daily_per_product_quota=*/kDailyPerProductQuota},
         std::make_unique<StubCrashServer>(upload_attempt_results));
   }
 
@@ -437,6 +440,64 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReport) {
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
 
+TEST_F(CrashReporterTest, EnforcesQuota) {
+  SetUpCrashReporterDefaultConfig(
+      std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota, kUploadSuccessful));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+  SetUpUtcProviderServer({kExternalResponse});
+
+  for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
+    ASSERT_TRUE(FileOneCrashReport().is_ok());
+  }
+
+  for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
+    ASSERT_TRUE(FileOneCrashReport().is_error());
+  }
+}
+
+TEST_F(CrashReporterTest, ResetsQuota) {
+  SetUpCrashReporterDefaultConfig(
+      std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota * 2, kUploadSuccessful));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+  SetUpUtcProviderServer({kExternalResponse});
+
+  for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
+    ASSERT_TRUE(FileOneCrashReport().is_ok());
+  }
+  RunLoopFor(zx::hour(24));
+
+  for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
+    ASSERT_TRUE(FileOneCrashReport().is_ok());
+  }
+}
+
+TEST_F(CrashReporterTest, NoQuota) {
+  SetUpCrashReporter(
+      Config{/*crash_server=*/
+             {
+                 /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
+                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
+             },
+             /*daily_per_product_quota=*/std::nullopt},
+      std::make_unique<StubCrashServer>(
+          std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota, kUploadSuccessful)));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+  SetUpUtcProviderServer({kExternalResponse});
+
+  for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
+    ASSERT_TRUE(FileOneCrashReport().is_ok());
+  }
+}
+
 TEST_F(CrashReporterTest, Check_UtcTimeIsNotReady) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
@@ -683,7 +744,8 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
-             }},
+             },
+             /*daily_per_product_quota=*/kDailyPerProductQuota},
       std::make_unique<StubCrashServer>(std::vector({kUploadSuccessful})));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
@@ -704,7 +766,8 @@ TEST_F(CrashReporterTest, Archive_OnUserAlreadyOptedOutDataSharing) {
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
-             }},
+             },
+             /*daily_per_product_quota=*/kDailyPerProductQuota},
       std::make_unique<StubCrashServer>(std::vector<CrashServer::UploadStatus>({})));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
@@ -723,7 +786,8 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
-             }},
+             },
+             /*daily_per_product_quota=*/kDailyPerProductQuota},
       std::make_unique<StubCrashServer>(std::vector({kUploadSuccessful})));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
@@ -748,7 +812,8 @@ TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
-             }},
+             },
+             /*daily_per_product_quota=*/kDailyPerProductQuota},
       std::make_unique<StubCrashServer>(std::vector({kUploadFailed})));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
@@ -765,7 +830,8 @@ TEST_F(CrashReporterTest, Succeed_OnThrottledUpload) {
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
-             }},
+             },
+             /*daily_per_product_quota=*/kDailyPerProductQuota},
       std::make_unique<StubCrashServer>(std::vector({kUploadThrottled})));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
@@ -781,7 +847,8 @@ TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
                             {
                                 /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                                 /*url=*/nullptr,
-                            }});
+                            },
+                            /*daily_per_product_quota=*/kDailyPerProductQuota});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
@@ -862,6 +929,27 @@ TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
               }));
+}
+
+TEST_F(CrashReporterTest, Check_CobaltAfterQuotaReached) {
+  SetUpCrashReporter(
+      Config{/*crash_server=*/
+             {
+                 /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
+                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
+             },
+             /*daily_per_product_quota=*/0u},
+      std::make_unique<StubCrashServer>(std::vector<CrashServer::UploadStatus>({})));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+  SetUpUtcProviderServer({kExternalResponse});
+
+  EXPECT_TRUE(FileOneCrashReport().is_error());
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          cobalt::Event(cobalt::CrashState::kOnDeviceQuotaReached),
+                                      }));
 }
 
 TEST_F(CrashReporterTest, Check_CobaltAfterInvalidInputCrashReport) {

@@ -29,7 +29,7 @@ void StubCrashServer::AddSnapshotManager(SnapshotManager* snapshot_manager) {
 }
 
 CrashServer::UploadStatus StubCrashServer::MakeRequest(const Report& report,
-                                                   std::string* server_report_id) {
+                                                       std::string* server_report_id) {
   latest_annotations_ = report.Annotations();
   latest_attachment_keys_.clear();
   for (const auto& [key, _] : report.Attachments()) {

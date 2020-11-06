@@ -53,6 +53,19 @@ TEST(ConfigTest, ParseConfig_ValidConfig_UploadDisabledServerUrlIgnored) {
   EXPECT_EQ(config.crash_server.url, nullptr);
 }
 
+TEST(ConfigTest, ParseConfig_HasDailyPerProductQuota) {
+  Config config;
+  ASSERT_EQ(ParseConfig("/pkg/data/configs/has_quota.json", &config), ZX_OK);
+  ASSERT_TRUE(config.daily_per_product_quota.has_value());
+  EXPECT_EQ(config.daily_per_product_quota.value(), 100u);
+}
+
+TEST(ConfigTest, ParseConfig_MissingDailyPerProductQuota) {
+  Config config;
+  ASSERT_EQ(ParseConfig("/pkg/data/configs/missing_quota.json", &config), ZX_OK);
+  EXPECT_FALSE(config.daily_per_product_quota.has_value());
+}
+
 TEST(ConfigTest, ParseConfig_MissingConfig) {
   Config config;
   ASSERT_EQ(ParseConfig("undefined file", &config), ZX_ERR_IO);

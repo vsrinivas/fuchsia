@@ -20,6 +20,7 @@
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/log_tags.h"
 #include "src/developer/forensics/crash_reports/privacy_settings_ptr.h"
+#include "src/developer/forensics/crash_reports/product_quotas.h"
 #include "src/developer/forensics/crash_reports/queue.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/settings.h"
@@ -67,6 +68,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   std::unique_ptr<CrashServer> crash_server_;
   Queue queue_;
 
+  ProductQuotas product_quotas_;
   CrashReporterInfo info_;
   Settings settings_;
   PrivacySettingsWatcher privacy_settings_watcher_;

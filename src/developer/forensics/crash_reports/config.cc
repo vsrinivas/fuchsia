@@ -7,6 +7,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
+#include <optional>
+
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/lib/files/file.h"
 // TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
@@ -22,6 +24,18 @@ namespace {
 const char kSchema[] = R"({
   "type": "object",
   "properties": {
+    "crash_reporter": {
+      "type": "object",
+      "properties": {
+        "daily_per_product_quota": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "daily_per_product_quota"
+      ],
+      "additionalProperties": false
+    },
     "crash_server": {
       "type": "object",
       "properties": {
@@ -68,6 +82,17 @@ bool CheckAgainstSchema(rapidjson::Document& doc) {
     FX_LOGS(ERROR) << "config does not match schema, violating '"
                    << validator.GetInvalidSchemaKeyword() << "' rule";
     return false;
+  }
+  return true;
+}
+
+template <typename JsonObject>
+bool ParseCrashReporterConfig(const JsonObject& obj,
+                              std::optional<uint64_t>* daily_per_product_quota) {
+  if (obj.HasMember(kDailyPerProductQuotaKey)) {
+    *daily_per_product_quota = obj[kDailyPerProductQuotaKey].GetUint64();
+  } else {
+    *daily_per_product_quota = std::nullopt;
   }
   return true;
 }
@@ -135,6 +160,18 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
   // checked the config against the schema.
   if (!ParseCrashServerConfig(doc[kCrashServerKey].GetObject(), &local_config.crash_server)) {
     return ZX_ERR_INTERNAL;
+  }
+
+  if (!doc.HasMember(kCrashReporterKey)) {
+    local_config.daily_per_product_quota = std::nullopt;
+  } else if (!ParseCrashReporterConfig(doc[kCrashReporterKey].GetObject(),
+                                       &local_config.daily_per_product_quota)) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // If crash reports won't be uploaded, there shouldn't be a quota in the config.
+  if (local_config.crash_server.upload_policy == CrashServerConfig::UploadPolicy::DISABLED) {
+    FX_CHECK(local_config.daily_per_product_quota == std::nullopt);
   }
 
   *config = std::move(local_config);

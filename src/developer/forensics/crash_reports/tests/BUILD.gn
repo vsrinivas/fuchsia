@@ -319,6 +319,8 @@ resource("test_configs") {
     "configs/bad_schema_missing_server_upload_enabled.json",
     "configs/bad_schema_missing_server_upload_read_from_privacy_settings.json",
     "configs/bad_schema_spurious_field.json",
+    "configs/has_quota.json",
+    "configs/missing_quota.json",
     "configs/valid_upload_disabled.json",
     "configs/valid_upload_disabled_spurious_server.json",
     "configs/valid_upload_enabled.json",

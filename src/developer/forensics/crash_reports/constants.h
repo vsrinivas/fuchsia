@@ -10,6 +10,9 @@
 namespace forensics {
 namespace crash_reports {
 
+constexpr char kCrashReporterKey[] = "crash_reporter";
+constexpr char kDailyPerProductQuotaKey[] = "daily_per_product_quota";
+
 constexpr char kCrashServerKey[] = "crash_server";
 constexpr char kCrashServerUploadPolicyKey[] = "upload_policy";
 constexpr char kCrashServerUrlKey[] = "url";

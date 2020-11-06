@@ -89,6 +89,8 @@ source_set("crash_reporter") {
   sources = [
     "crash_reporter.cc",
     "crash_reporter.h",
+    "product_quotas.cc",
+    "product_quotas.h",
   ]
 
   public_deps = [
