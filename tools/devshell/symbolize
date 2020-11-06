@@ -118,8 +118,7 @@ function exit-with-warning {
 declare ids_txt=()
 declare is_remote=0
 declare auth_mode=0
-# TODO(fxb/58309): change the default to experimental.
-declare use_experimental=0
+declare use_experimental=1
 
 while [[ $# -ne 0 ]]; do
   case "$1" in
