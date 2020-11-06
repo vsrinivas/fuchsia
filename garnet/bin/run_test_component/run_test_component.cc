@@ -186,7 +186,16 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
 
   result.launch_info.url = url;
   result.launch_info.arguments.emplace();
-  for (int i = url_or_matcher_argi + 1; i < argc; i++) {
+  int i = url_or_matcher_argi + 1;
+  if (i < argc && std::string(argv[i]) != "--") {
+    printf(
+        "WARNING: Please use Option delimiter(--) before specifying test args. Current commandline "
+        "will error out in future. Use\n 'run-test-component [run-test-component-args] <test_url> "
+        "-- [test_args]'\n");
+  } else {
+    i++;
+  }
+  for (; i < argc; i++) {
     result.launch_info.arguments->push_back(argv[i]);
   }
   return result;

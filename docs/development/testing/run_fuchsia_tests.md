@@ -30,7 +30,7 @@ fx test --e2e <END_TO_END_TEST_NAME>
 
 ## Customize invocations {#customize-invocations}
 
-`fx test` can run mutiple tests or test suites at once. The command can also
+`fx test` can run multiple tests or test suites at once. The command can also
 filter those tests to be only device, host, or end-to-end tests.
 
 To customize `fx test`, you can [add flags][fx-test-flags] and provide a
@@ -80,20 +80,9 @@ For example, the command above internally calls the following command on the
 device:
 
 ```none
-$ fx shell run-test-component <TEST_COMPONENT_URI> --timeout=5
+$ fx shell run-test-component <TEST_COMPONENT_URI> -- --timeout=5
+$ fx shell run-test-suite <TEST_COMPONENT_URI> -- --timeout=5
 ```
-
-### Use test filter {#use-test-filter}
-
-If your test is a [Components v2][glossary-components-v2] test, with the `--`
-flag, you can specify a filter to control which test cases to run. For example:
-
-```none
-fx test <TEST_NAME> -- --test-filter FooTest*
-```
-
-There must be a space between `--test-filter` and the filter, without `=`. The
-filter uses a [glob style pattern][rust-glob-syntax]{:.external}.
 
 ## Specify a test in multiple ways {#specify-a-test-in-multiple-ways}
 

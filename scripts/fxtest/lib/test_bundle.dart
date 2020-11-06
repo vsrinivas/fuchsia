@@ -138,23 +138,36 @@ class TestBundle {
     double confidence,
     Function(String) realtimeOutputSink,
     String fxPath,
-  }) =>
-      TestBundle(
-        testDefinition,
-        confidence: confidence ?? 1,
-        directoryBuilder: directoryBuilder,
-        environment: testsConfig.environment,
-        extraFlags: testsConfig.testArguments.passThroughArgs,
-        isDryRun: testsConfig.flags.dryRun,
-        fxPath: fxPath,
-        raiseOnFailure: testsConfig.flags.shouldFailFast,
-        shouldRestrictLogs: testsConfig.flags.shouldRestrictLogs,
-        runnerFlags: testsConfig.runnerTokens,
-        realtimeOutputSink: realtimeOutputSink ?? (String val) => null,
-        testRunner: testRunnerBuilder(testsConfig),
-        timeElapsedSink: timeElapsedSink,
-        workingDirectory: workingDirectory,
-      );
+  }) {
+    List<String> _extraFlags = [];
+
+    // for component tests pass test arguments separated by option delimiter(--).
+    if ((testDefinition.testType == TestType.component ||
+            testDefinition.testType == TestType.suite) &&
+        testsConfig.testArguments.passThroughArgs.isNotEmpty) {
+      _extraFlags
+        ..add('--')
+        ..addAll(testsConfig.testArguments.passThroughArgs);
+    } else {
+      _extraFlags = testsConfig.testArguments.passThroughArgs;
+    }
+    return TestBundle(
+      testDefinition,
+      confidence: confidence ?? 1,
+      directoryBuilder: directoryBuilder,
+      environment: testsConfig.environment,
+      extraFlags: _extraFlags,
+      isDryRun: testsConfig.flags.dryRun,
+      fxPath: fxPath,
+      raiseOnFailure: testsConfig.flags.shouldFailFast,
+      shouldRestrictLogs: testsConfig.flags.shouldRestrictLogs,
+      runnerFlags: testsConfig.runnerTokens,
+      realtimeOutputSink: realtimeOutputSink ?? (String val) => null,
+      testRunner: testRunnerBuilder(testsConfig),
+      timeElapsedSink: timeElapsedSink,
+      workingDirectory: workingDirectory,
+    );
+  }
 
   Function(String) get realtimeOutputSink => (String val) {
         _outputBuffer.writeln(val);

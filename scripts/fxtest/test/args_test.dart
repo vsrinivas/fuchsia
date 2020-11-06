@@ -155,10 +155,17 @@ void main() {
     List<TestDefinition> testDefinitions = [
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
-        name: 'device test',
+        name: 'device test v1',
         os: 'fuchsia',
         packageUrl:
             PackageUrl.fromString('fuchsia-pkg://fuchsia.com/fancy#test.cmx'),
+      ),
+      TestDefinition(
+        buildDir: FakeFxEnv.shared.outputDir,
+        name: 'device test v2',
+        os: 'fuchsia',
+        packageUrl:
+            PackageUrl.fromString('fuchsia-pkg://fuchsia.com/fancy#test.cm'),
       ),
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
@@ -168,7 +175,7 @@ void main() {
       ),
     ];
 
-    test('when there are pass-thru commands', () async {
+    test('when there are pass-thru commands for binary tests', () async {
       var testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['example-test', '--', '--xyz'],
         fxEnv: FakeFxEnv.shared,
@@ -196,6 +203,56 @@ void main() {
       // [FakeTestRunner] passes args through to its stdout, so we can check
       // that the args were in fact passed through by evaluating that
       expect(resultEvent.message, '--xyz');
+    });
+
+    test('when there are pass-thru commands for suite tests', () async {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['example-test', '--', '--xyz'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        testRunnerBuilder: (TestsConfig testsConfig) =>
+            FakeTestRunner.passing(),
+      );
+      var bundle = cmd.testBundleBuilder(testDefinitions[1]);
+      var stream = StreamQueue(bundle.run());
+
+      TestEvent event = await stream.next;
+      expect(event, isA<TestStarted>());
+      event = await stream.next;
+      expect(event, isA<TestResult>());
+      TestResult resultEvent = event;
+
+      // [FakeTestRunner] passes args through to its stdout, so we can check
+      // that the args were in fact passed through by evaluating that
+      expect(resultEvent.message,
+          'shell run-test-suite fuchsia-pkg://fuchsia.com/fancy#meta/test.cm -- --xyz');
+    });
+
+    test('when there are pass-thru commands for component tests', () async {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['example-test', '--', '--xyz'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        testRunnerBuilder: (TestsConfig testsConfig) =>
+            FakeTestRunner.passing(),
+      );
+      var bundle = cmd.testBundleBuilder(testDefinitions[0]);
+      var stream = StreamQueue(bundle.run());
+
+      TestEvent event = await stream.next;
+      expect(event, isA<TestStarted>());
+      event = await stream.next;
+      expect(event, isA<TestResult>());
+      TestResult resultEvent = event;
+
+      // [FakeTestRunner] passes args through to its stdout, so we can check
+      // that the args were in fact passed through by evaluating that
+      expect(resultEvent.message,
+          'shell run-test-component fuchsia-pkg://fuchsia.com/fancy#meta/test.cmx -- --xyz');
     });
 
     test('when there are no pass-thru commands', () async {

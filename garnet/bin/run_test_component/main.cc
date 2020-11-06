@@ -58,7 +58,7 @@ const std::string max_severity_config_path =
 
 void PrintUsage() {
   fprintf(stderr, R"(
-Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-severity-logs=string] [--max-log-severity=string] <test_url>|<test_matcher> [arguments...]
+Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-severity-logs=string] [--max-log-severity=string] <test_url>|<test_matcher> -- [arguments...]
 
        *test_url* takes the form of component manifest URL which uniquely
        identifies a test component. Example:
