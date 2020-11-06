@@ -272,11 +272,11 @@ TEST_run-cipd-not-found() {
     return 1
   }
 
-  # Capture the return code and any output.  
+  # Capture the return code and any output.
   rc=0
   RESULT="$(run-cipd ls  2>&1)"
   rc=$?
-  
+
   BT_EXPECT_EQ  $rc 1
   BT_EXPECT_EQ "${RESULT}" "ERROR: Cannot find cipd."
 }
@@ -328,6 +328,9 @@ EOF
 
   BT_EXPECT kill-running-pm 2> "${BT_TEMP_DIR}/kill-running-pm_output.txt"
   BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/kill-running-pm_output.txt" "WARNING: Killing existing pm process"
+
+  source "${BT_TEMP_DIR}/${MOCKED_KILL}.mock_state"
+  gn-test-check-mock-args "_ANY_" "-9" 987654321
 }
 
 TEST_get-fuchsia-property-names() {

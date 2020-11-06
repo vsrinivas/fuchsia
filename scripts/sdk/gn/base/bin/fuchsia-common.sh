@@ -284,11 +284,11 @@ function kill-running-pm {
     # mac only provides the pid, not the name
     if is-mac; then
       fx-warn "Killing existing pm process"
-      kill "${PM_PROCESS[0]}"
+      kill -9 "${PM_PROCESS[0]}"
       return $?
     elif [[ ${#PM_PROCESS[@]} -gt 1 &&  "${PM_PROCESS[1]}" == *"tools/pm" ]]; then
       fx-warn "Killing existing pm process"
-      kill "${PM_PROCESS[0]}"
+      kill -9 "${PM_PROCESS[0]}"
       return $?
     fi
   else
