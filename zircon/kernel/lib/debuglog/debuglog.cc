@@ -199,7 +199,7 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str)
     if (holding_thread_lock) {
       this->event.SignalThreadLocked();
     } else {
-      this->event.SignalNoResched();
+      this->event.Signal();
     }
   }();
 
@@ -378,7 +378,7 @@ void dlog_serial_write(ktl::string_view str) {
 // and kernel serial console.
 static void debuglog_dumper_notify(void* cookie) {
   Event* event = reinterpret_cast<Event*>(cookie);
-  event->SignalNoResched();
+  event->Signal();
 }
 
 static AutounsignalEvent dumper_event;
@@ -451,7 +451,7 @@ static zx_status_t dlog_shutdown_thread(Thread* thread, const char* name,
                                         ktl::atomic<bool>* shutdown_requested, Event* event,
                                         zx_time_t deadline) {
   shutdown_requested->store(true);
-  event->SignalNoResched();
+  event->Signal();
   if (thread != nullptr) {
     zx_status_t status = thread->Join(nullptr, deadline);
     if (status != ZX_OK) {
