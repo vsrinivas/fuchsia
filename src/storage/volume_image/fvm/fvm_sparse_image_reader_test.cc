@@ -189,7 +189,7 @@ TEST(FvmSparseImageReaderTest, ImageWithMaxSizeAllocatesEnoughMetadata) {
   fvm::Header header = {};
   auto header_stream = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(header));
   read_result = sparse_image.reader()->Read(
-      sparse_image.reader()->GetMaximumOffset() - expected_header.GetDataStartOffset(),
+      sparse_image.reader()->GetMaximumOffset() - expected_header.GetMetadataAllocatedBytes(),
       header_stream);
   ASSERT_TRUE(read_result.is_ok()) << read_result.error();
   ASSERT_EQ(header.magic, fvm::kMagic);

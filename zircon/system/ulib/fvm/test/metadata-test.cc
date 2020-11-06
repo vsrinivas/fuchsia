@@ -44,73 +44,60 @@ VPartitionEntry CreatePartitionEntry(size_t slices) {
 
 void ValidateMetadata(Metadata& metadata, const std::vector<VPartitionEntry>& expected_partitions,
                       const std::vector<SliceEntry>& expected_slices) {
-  const Header& header = metadata.GetHeader(metadata.active_header());
+  const Header& header = metadata.GetHeader();
 
   // Zeroth entry must not be used.
-  EXPECT_TRUE(metadata.GetPartitionEntry(SuperblockType::kPrimary, 0).IsFree());
-  EXPECT_TRUE(metadata.GetPartitionEntry(SuperblockType::kSecondary, 0).IsFree());
+  EXPECT_TRUE(metadata.GetPartitionEntry(0).IsFree());
   unsigned i = 0;
   ASSERT_GE(header.GetPartitionTableEntryCount(), expected_partitions.size());
   for (; i < expected_partitions.size(); ++i) {
-    EXPECT_BYTES_EQ(&expected_partitions[i],
-                    &metadata.GetPartitionEntry(SuperblockType::kPrimary, i + 1),
-                    sizeof(VPartitionEntry));
-    EXPECT_BYTES_EQ(&expected_partitions[i],
-                    &metadata.GetPartitionEntry(SuperblockType::kSecondary, i + 1),
+    EXPECT_BYTES_EQ(&expected_partitions[i], &metadata.GetPartitionEntry(i + 1),
                     sizeof(VPartitionEntry));
   }
   i++;  // We already checked [i+1] in the above loop
   for (; i < header.GetPartitionTableEntryCount(); ++i) {
-    EXPECT_TRUE(metadata.GetPartitionEntry(SuperblockType::kPrimary, i).IsFree());
-    EXPECT_TRUE(metadata.GetPartitionEntry(SuperblockType::kSecondary, i).IsFree());
+    EXPECT_TRUE(metadata.GetPartitionEntry(i).IsFree());
   }
 
   // Zeroth entry must not be used.
-  EXPECT_TRUE(metadata.GetSliceEntry(SuperblockType::kPrimary, 0).IsFree());
-  EXPECT_TRUE(metadata.GetSliceEntry(SuperblockType::kSecondary, 0).IsFree());
+  EXPECT_TRUE(metadata.GetSliceEntry(0).IsFree());
   ASSERT_GE(header.GetAllocationTableUsedEntryCount(), expected_slices.size());
   for (i = 0; i < expected_slices.size(); ++i) {
-    EXPECT_BYTES_EQ(&expected_slices[i], &metadata.GetSliceEntry(SuperblockType::kPrimary, i + 1),
-                    sizeof(SliceEntry));
-    EXPECT_BYTES_EQ(&expected_slices[i], &metadata.GetSliceEntry(SuperblockType::kSecondary, i + 1),
-                    sizeof(SliceEntry));
+    EXPECT_BYTES_EQ(&expected_slices[i], &metadata.GetSliceEntry(i + 1), sizeof(SliceEntry));
   }
   i++;  // We already checked [i+1] in the above loop
   for (; i < header.GetAllocationTableUsedEntryCount(); ++i) {
-    EXPECT_TRUE(metadata.GetSliceEntry(SuperblockType::kPrimary, i).IsFree());
-    EXPECT_TRUE(metadata.GetSliceEntry(SuperblockType::kSecondary, i).IsFree());
+    EXPECT_TRUE(metadata.GetSliceEntry(i).IsFree());
   }
 }
 
 void CheckMetadataContainSameEntries(const Metadata& a, const Metadata& b) {
-  const Header& header_a = a.GetHeader(a.active_header());
-  const Header& header_b = b.GetHeader(b.active_header());
+  const Header& header_a = a.GetHeader();
+  const Header& header_b = b.GetHeader();
 
   size_t i = 1, j = 1;
   for (; i < header_a.GetPartitionTableEntryCount() && j < header_b.GetPartitionTableEntryCount();
        ++i, ++j) {
-    EXPECT_BYTES_EQ(&a.GetPartitionEntry(a.active_header(), i),
-                    &b.GetPartitionEntry(b.active_header(), j), sizeof(VPartitionEntry));
+    EXPECT_BYTES_EQ(&a.GetPartitionEntry(i), &b.GetPartitionEntry(j), sizeof(VPartitionEntry));
   }
   for (; i < header_a.GetPartitionTableEntryCount(); ++i) {
-    EXPECT_FALSE(a.GetPartitionEntry(a.active_header(), i).IsAllocated());
+    EXPECT_FALSE(a.GetPartitionEntry(i).IsAllocated());
   }
   for (; j < header_b.GetPartitionTableEntryCount(); ++j) {
-    EXPECT_FALSE(b.GetPartitionEntry(b.active_header(), j).IsAllocated());
+    EXPECT_FALSE(b.GetPartitionEntry(j).IsAllocated());
   }
 
   i = 1, j = 1;
   for (; i < header_a.GetAllocationTableUsedEntryCount() &&
          j < header_b.GetAllocationTableUsedEntryCount();
        ++i, ++j) {
-    EXPECT_BYTES_EQ(&a.GetSliceEntry(a.active_header(), i), &b.GetSliceEntry(b.active_header(), j),
-                    sizeof(SliceEntry));
+    EXPECT_BYTES_EQ(&a.GetSliceEntry(i), &b.GetSliceEntry(j), sizeof(SliceEntry));
   }
   for (; i < header_a.GetAllocationTableUsedEntryCount(); ++i) {
-    EXPECT_FALSE(a.GetSliceEntry(a.active_header(), i).IsAllocated());
+    EXPECT_FALSE(a.GetSliceEntry(i).IsAllocated());
   }
   for (; j < header_b.GetAllocationTableUsedEntryCount(); ++j) {
-    EXPECT_FALSE(b.GetSliceEntry(b.active_header(), j).IsAllocated());
+    EXPECT_FALSE(b.GetSliceEntry(j).IsAllocated());
   }
 }
 
@@ -180,7 +167,7 @@ TEST(CreateMetadata, ZeroSizedSliceTable) {
 
   auto result = Metadata::Synthesize(header, nullptr, 0, nullptr, 0);
   ASSERT_EQ(result.status_value(), ZX_OK);
-  EXPECT_EQ(result->GetHeader(result->active_header()).GetAllocationTableUsedEntryCount(), 0);
+  EXPECT_EQ(result->GetHeader().GetAllocationTableUsedEntryCount(), 0);
 }
 
 TEST(CreateMetadata, NoPartitionsAndSlices) {
@@ -238,11 +225,11 @@ TEST(MoveMetadata, EmptyInstance) {
 
   auto result = Metadata::Synthesize(header, nullptr, 0, nullptr, 0);
   ASSERT_TRUE(result.is_ok());
-  ASSERT_NE(result->UnsafeGetRaw(), nullptr);
+  ASSERT_NE(result->Get(), nullptr);
 
   Metadata metadata = std::move(result.value());
-  EXPECT_EQ(result->UnsafeGetRaw(), nullptr);
-  EXPECT_NE(metadata.UnsafeGetRaw(), nullptr);
+  EXPECT_EQ(result->Get(), nullptr);
+  EXPECT_NE(metadata.Get(), nullptr);
 }
 
 TEST(MoveMetadata, NonemptyInstance) {
@@ -263,11 +250,11 @@ TEST(MoveMetadata, NonemptyInstance) {
   auto result = Metadata::Synthesize(header, partitions.data(), partitions.size(), slices.data(),
                                      slices.size());
   ASSERT_TRUE(result.is_ok());
-  ASSERT_NE(result->UnsafeGetRaw(), nullptr);
+  ASSERT_NE(result->Get(), nullptr);
 
   Metadata metadata = std::move(result.value());
-  EXPECT_EQ(result->UnsafeGetRaw(), nullptr);
-  EXPECT_NE(metadata.UnsafeGetRaw(), nullptr);
+  EXPECT_EQ(result->Get(), nullptr);
+  EXPECT_NE(metadata.Get(), nullptr);
   ValidateMetadata(metadata, partitions, slices);
 }
 
@@ -308,8 +295,7 @@ TEST(CopyMetadata, MetadataWithZeroSlicesToBiggerDimensions) {
   auto copy_result = result.value().CopyWithNewDimensions(dimensions);
   ASSERT_TRUE(copy_result.is_ok());
   CheckMetadataContainSameEntries(result.value(), copy_result.value());
-  ASSERT_EQ(copy_result->GetHeader(copy_result->active_header()).GetAllocationTableUsedEntryCount(),
-            1024);
+  ASSERT_EQ(copy_result->GetHeader().GetAllocationTableUsedEntryCount(), 1024);
 }
 
 TEST(CopyMetadata, EmptyMetadataSameDimensions) {
@@ -415,10 +401,9 @@ TEST(CopyMetadata, CopyAllocationTableWithEnoughPadding) {
   auto copy_result = result.value().CopyWithNewDimensions(dimensions);
   ASSERT_TRUE(copy_result.is_ok());
   CheckMetadataContainSameEntries(result.value(), copy_result.value());
-  EXPECT_EQ(copy_result->GetHeader(SuperblockType::kPrimary).GetMetadataAllocatedBytes(),
+  EXPECT_EQ(copy_result->GetHeader().GetMetadataAllocatedBytes(),
             header.GetMetadataAllocatedBytes());
-  EXPECT_GT(copy_result->GetHeader(SuperblockType::kPrimary).GetMetadataUsedBytes(),
-            header.GetMetadataUsedBytes());
+  EXPECT_GT(copy_result->GetHeader().GetMetadataUsedBytes(), header.GetMetadataUsedBytes());
 }
 
 TEST(CopyMetadata, CopyAllocationTableWithoutEnoughPadding) {
@@ -445,10 +430,9 @@ TEST(CopyMetadata, CopyAllocationTableWithoutEnoughPadding) {
   auto copy_result = result.value().CopyWithNewDimensions(dimensions);
   ASSERT_TRUE(copy_result.is_ok());
   CheckMetadataContainSameEntries(result.value(), copy_result.value());
-  EXPECT_GT(copy_result->GetHeader(SuperblockType::kPrimary).GetMetadataAllocatedBytes(),
+  EXPECT_GT(copy_result->GetHeader().GetMetadataAllocatedBytes(),
             header.GetMetadataAllocatedBytes());
-  EXPECT_GT(copy_result->GetHeader(SuperblockType::kPrimary).GetMetadataUsedBytes(),
-            header.GetMetadataUsedBytes());
+  EXPECT_GT(copy_result->GetHeader().GetMetadataUsedBytes(), header.GetMetadataUsedBytes());
 }
 
 TEST(CopyMetadata, CopyFullPartitionTable) {

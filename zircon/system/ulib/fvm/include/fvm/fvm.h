@@ -16,6 +16,11 @@ namespace fvm {
 // Update's the metadata's hash field to accurately reflect the contents of metadata.
 void UpdateHash(void* metadata, size_t metadata_size);
 
+// Validate the FVM header.
+//
+// TODO(jfsulliv): Remove this once all uses are ported to Metadata.
+bool ValidateHeader(const void* metadata, size_t metadata_size);
+
 // Validate the FVM header information, and identify which copy of metadata (primary or backup)
 // should be used for initial reading, if either.
 //

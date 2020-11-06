@@ -118,7 +118,6 @@ std::optional<SuperblockType> PickValidHeader(uint64_t disk_size, uint64_t disk_
   if (!primary_valid && !secondary_valid) {
     return std::nullopt;
   }
-
   if (primary_valid && !secondary_valid) {
     return SuperblockType::kPrimary;
   }

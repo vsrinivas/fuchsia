@@ -422,7 +422,12 @@ zx_status_t FvmContainer::Commit() {
     return status;
   }
 
-  non_empty_segments_ = {{disk_offset_, disk_offset_ + info_.MetadataSize()}};
+  size_t primary_offset = info_.SuperBlock().GetSuperblockOffset(fvm::SuperblockType::kPrimary);
+  size_t secondary_offset = info_.SuperBlock().GetSuperblockOffset(fvm::SuperblockType::kSecondary);
+  non_empty_segments_ = {
+      {disk_offset_ + primary_offset, disk_offset_ + primary_offset + info_.MetadataSize()},
+      {disk_offset_ + secondary_offset, disk_offset_ + secondary_offset + info_.MetadataSize()},
+  };
   for (unsigned i = 0; i < partitions_.size(); i++) {
     if ((status = WritePartition(i)) != ZX_OK) {
       return status;
@@ -438,7 +443,7 @@ zx_status_t FvmContainer::ResizeImageFileToFit() {
   // the metadata header remains the same. Metadatasize and slice offset stay consistent with the
   // the specified disk size.
   size_t required_data_size = CountAddedSlices() * slice_size_;
-  size_t minimal_size = disk_offset_ + required_data_size + info_.MetadataSize();
+  size_t minimal_size = disk_offset_ + info_.SuperBlock().GetDataStartOffset() + required_data_size;
   if (ftruncate(fd_.get(), minimal_size) != 0) {
     fprintf(stderr, "Failed to truncate fvm container");
     return ZX_ERR_IO;

@@ -5,6 +5,7 @@
 #include <lib/zx/status.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -37,9 +38,7 @@ fbl::Span<const uint8_t> ContainerToSpan(const T& container) {
 }  // namespace
 
 size_t MetadataBuffer::BytesNeeded(const fvm::Header& header) {
-  // Enough for both the A/B copies of metadata.
-  // TODO(fxbug.dev/59567): Account for snapshot metadata.
-  return 2 * header.GetMetadataAllocatedBytes();
+  return header.GetMetadataAllocatedBytes();
 }
 
 HeapMetadataBuffer::HeapMetadataBuffer(std::unique_ptr<uint8_t[]> buffer, size_t size)
@@ -67,31 +66,25 @@ void Metadata::MoveFrom(Metadata&& o) {
 }
 
 bool Metadata::CheckValidity(uint64_t disk_size, uint64_t disk_block_size) const {
-  std::optional<SuperblockType> active_header = PickValidHeader(
-      disk_size, disk_block_size,
-      reinterpret_cast<const uint8_t*>(data_->data()) + MetadataOffset(SuperblockType::kPrimary),
-      reinterpret_cast<const uint8_t*>(data_->data()) + MetadataOffset(SuperblockType::kSecondary),
-      GetHeader(active_header_).GetMetadataAllocatedBytes());
-  // TODO(jfsulliv): should we be strict and fail if active_header_ (the instance field) is
-  // inconsistent with active_header?
-  return active_header != std::nullopt;
+  std::string header_err;
+  bool valid = GetHeader().IsValid(disk_size, disk_block_size, header_err);
+  if (!valid) {
+    fprintf(stderr, "Invalid header: %s\n", header_err.c_str());
+  }
+  return valid;
 }
 
 void Metadata::UpdateHash() {
-  ::fvm::UpdateHash(static_cast<uint8_t*>(data_->data()) + MetadataOffset(SuperblockType::kPrimary),
-                    GetHeader(SuperblockType::kPrimary).GetMetadataUsedBytes());
-  ::fvm::UpdateHash(
-      static_cast<uint8_t*>(data_->data()) + MetadataOffset(SuperblockType::kSecondary),
-      GetHeader(SuperblockType::kSecondary).GetMetadataUsedBytes());
+  ::fvm::UpdateHash(static_cast<uint8_t*>(data_->data()), GetHeader().GetMetadataUsedBytes());
 }
 
-Header& Metadata::GetHeader(SuperblockType type) const {
-  return *reinterpret_cast<Header*>(static_cast<uint8_t*>(data_->data()) + MetadataOffset(type));
+Header& Metadata::GetHeader() const {
+  return *reinterpret_cast<Header*>(static_cast<uint8_t*>(data_->data()));
 }
 
-VPartitionEntry& Metadata::GetPartitionEntry(SuperblockType type, unsigned idx) const {
-  const Header& header = GetHeader(type);
-  size_t offset = MetadataOffset(type) + header.GetPartitionEntryOffset(idx);
+VPartitionEntry& Metadata::GetPartitionEntry(unsigned idx) const {
+  const Header& header = GetHeader();
+  size_t offset = MetadataOffset(SuperblockType::kPrimary) + header.GetPartitionEntryOffset(idx);
   ZX_ASSERT(offset + sizeof(VPartitionEntry) <= data_->size());
   if (idx > header.GetPartitionTableEntryCount()) {
     fprintf(stderr,
@@ -102,9 +95,9 @@ VPartitionEntry& Metadata::GetPartitionEntry(SuperblockType type, unsigned idx) 
   return *reinterpret_cast<VPartitionEntry*>(reinterpret_cast<uint8_t*>(data_->data()) + offset);
 }
 
-SliceEntry& Metadata::GetSliceEntry(SuperblockType type, unsigned idx) const {
-  const Header& header = GetHeader(type);
-  size_t offset = MetadataOffset(type) + header.GetSliceEntryOffset(idx);
+SliceEntry& Metadata::GetSliceEntry(unsigned idx) const {
+  const Header& header = GetHeader();
+  size_t offset = MetadataOffset(SuperblockType::kPrimary) + header.GetSliceEntryOffset(idx);
   ZX_ASSERT(offset + sizeof(SliceEntry) <= data_->size());
   if (idx > header.GetAllocationTableUsedEntryCount()) {
     fprintf(stderr, "fatal: Accessing out-of-bounds slice (idx %u, table has %lu usable entries)\n",
@@ -115,21 +108,16 @@ SliceEntry& Metadata::GetSliceEntry(SuperblockType type, unsigned idx) const {
 }
 
 size_t Metadata::MetadataOffset(SuperblockType type) const {
-  // Due to the secondary header being at a dynamic offset, we have to look at the primary
-  // header's contents to find the secondary header. This is safe to do even if the primary
-  // is partially corrupt, because otherwise the Metadata object would fail checks in
-  // |Metadata::Create|.
-  const Header* primary_header = reinterpret_cast<const Header*>(data_->data());
-  return primary_header->GetSuperblockOffset(type);
+  return GetHeader().GetSuperblockOffset(type);
 }
 
-const MetadataBuffer* Metadata::UnsafeGetRaw() const { return data_.get(); }
+const MetadataBuffer* Metadata::Get() const { return data_.get(); }
 
 zx::status<Metadata> Metadata::CopyWithNewDimensions(const Header& dimensions) const {
   if (MetadataBuffer::BytesNeeded(dimensions) < data_->size()) {
     return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
   }
-  const Header& header = GetHeader(active_header_);
+  const Header& header = GetHeader();
   if (dimensions.fvm_partition_size < header.fvm_partition_size ||
       dimensions.GetPartitionTableEntryCount() < header.GetPartitionTableEntryCount() ||
       dimensions.GetAllocationTableUsedEntryCount() < header.GetAllocationTableUsedEntryCount() ||
@@ -153,7 +141,7 @@ zx::status<Metadata> Metadata::CopyWithNewDimensions(const Header& dimensions) c
     // Both 0 and 1 partitions count as having no partitions to copy.
     num_partitions = 0;
   } else {
-    partitions = &GetPartitionEntry(active_header_, 1);
+    partitions = &GetPartitionEntry(1u);
   }
   const SliceEntry* slices = nullptr;
   size_t num_slices = header.GetAllocationTableUsedEntryCount();
@@ -161,34 +149,45 @@ zx::status<Metadata> Metadata::CopyWithNewDimensions(const Header& dimensions) c
     // Both 0 and 1 slices count as having no slices to copy.
     num_slices = 0;
   } else {
-    slices = &GetSliceEntry(active_header_, 1);
+    slices = &GetSliceEntry(1u);
   }
 
   return Synthesize(new_header, partitions, num_partitions, slices, num_slices);
 }
 
-zx::status<Metadata> Metadata::Create(std::unique_ptr<MetadataBuffer> data) {
-  if (data->size() < sizeof(Header)) {
+zx::status<Metadata> Metadata::Create(std::unique_ptr<MetadataBuffer> data_a,
+                                      std::unique_ptr<MetadataBuffer> data_b) {
+  if (data_a->size() < sizeof(Header)) {
     return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
   }
-  const Header* primary_header = reinterpret_cast<const Header*>(data->data());
+  if (data_b->size() < sizeof(Header)) {
+    return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
+  }
 
-  // For now just assume primary_header is valid. It may contain nonsense, but PickValidHeader will
-  // check this, and we can at least check that the offset is reasonable so we don't overflow now.
-  size_t secondary_offset = primary_header->GetSuperblockOffset(SuperblockType::kSecondary);
-  size_t meta_size = primary_header->GetMetadataAllocatedBytes();
-  if (meta_size > data->size() || !safemath::CheckAdd(secondary_offset, meta_size).IsValid() ||
-      secondary_offset + meta_size > data->size()) {
-    fprintf(stderr, "fvm: Metadata (%lu bytes/copy) too large for buffer (%lu bytes)\n", meta_size,
-            data->size());
+  // For now just assume header is valid. It may contain nonsense, but PickValidHeader will check
+  // this, and we can at least check that the offset is reasonable so we don't overflow now.
+  const Header* header = reinterpret_cast<const Header*>(data_a->data());
+  size_t meta_size = header->GetMetadataAllocatedBytes();
+  if (meta_size > data_a->size() || meta_size > data_b->size()) {
+    fprintf(stderr, "fvm: Metadata (%lu bytes) too large for buffers (%lu and %lu bytes)\n",
+            meta_size, data_a->size(), data_b->size());
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
-  std::optional<SuperblockType> active_header = PickValidHeader(
-      data->data(), reinterpret_cast<uint8_t*>(data->data()) + secondary_offset, meta_size);
+  std::optional<SuperblockType> active_header =
+      PickValidHeader(data_a->data(), data_b->data(), meta_size);
   if (!active_header) {
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
 
+  std::unique_ptr<MetadataBuffer> data;
+  switch (active_header.value()) {
+    case SuperblockType::kPrimary:
+      data = std::move(data_a);
+      break;
+    case SuperblockType::kSecondary:
+      data = std::move(data_b);
+      break;
+  }
   return zx::ok(Metadata(std::move(data), active_header.value()));
 }
 
@@ -237,27 +236,21 @@ zx::status<Metadata> Metadata::Synthesize(const fvm::Header& header,
     bzero(buf.get() + offset + span.size(), sz - span.size());
   };
 
-  // Write the A copy.
-  size_t a_offset = header.GetSuperblockOffset(SuperblockType::kPrimary);
-  write_metadata(a_offset, fvm::kBlockSize, header_span);
-  write_metadata(a_offset + header.GetPartitionTableOffset(), header.GetPartitionTableByteSize(),
+  write_metadata(0, fvm::kBlockSize, header_span);
+  write_metadata(header.GetPartitionTableOffset(), header.GetPartitionTableByteSize(),
                  partitions_span);
-  write_metadata(a_offset + header.GetAllocationTableOffset(),
-                 header.GetAllocationTableAllocatedByteSize(), slices_span);
-  size_t b_offset = header.GetSuperblockOffset(SuperblockType::kSecondary);
-  // Write the B copy.
-  write_metadata(b_offset, fvm::kBlockSize, header_span);
-  write_metadata(b_offset + header.GetPartitionTableOffset(), header.GetPartitionTableByteSize(),
-                 partitions_span);
-  write_metadata(b_offset + header.GetAllocationTableOffset(),
-                 header.GetAllocationTableAllocatedByteSize(), slices_span);
-
+  write_metadata(header.GetAllocationTableOffset(), header.GetAllocationTableAllocatedByteSize(),
+                 slices_span);
   // TODO(fxbug.dev/59567): Synthesize snapshot metadata.
 
-  ::fvm::UpdateHash(buf.get() + a_offset, header.GetMetadataUsedBytes());
-  ::fvm::UpdateHash(buf.get() + b_offset, header.GetMetadataUsedBytes());
+  ::fvm::UpdateHash(buf.get(), header.GetMetadataUsedBytes());
 
-  return Create(std::make_unique<HeapMetadataBuffer>(std::move(buf), buffer_size));
+  Metadata metadata(std::make_unique<HeapMetadataBuffer>(std::move(buf), buffer_size),
+                    SuperblockType::kPrimary);
+  if (!metadata.CheckValidity()) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  return zx::ok(std::move(metadata));
 }
 
 }  // namespace fvm

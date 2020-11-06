@@ -117,9 +117,9 @@ class BlockDeviceTestAtRevision : public zxtest::Test {
     ASSERT_TRUE(metadata_or.is_ok());
 
     // Write the FVM data to the device.
-    ASSERT_LT(metadata_or.value().UnsafeGetRaw()->size(), block_device_.data().size());
-    memcpy(block_device_.data().data(), metadata_or.value().UnsafeGetRaw()->data(),
-           metadata_or.value().UnsafeGetRaw()->size());
+    ASSERT_LT(metadata_or.value().Get()->size(), block_device_.data().size());
+    memcpy(block_device_.data().data(), metadata_or.value().Get()->data(),
+           metadata_or.value().Get()->size());
 
     device_ =
         std::make_unique<VPartitionManager>(nullptr, info, block_op_size_, block_device_.proto());
@@ -128,7 +128,7 @@ class BlockDeviceTestAtRevision : public zxtest::Test {
     ASSERT_EQ(kBlocksPerSlice, kFvmSliceSize / info.block_size);
   }
 
-  // Returns a copy of the current FVM metadata written to the block device.
+  // Returns a copy of the FVM metadata written to the block device.
   zx::status<fvm::Metadata> GetMetadata() const {
     // Need to look at the header to tell how big the metadata will be.
     fvm::Header header;
@@ -137,14 +137,18 @@ class BlockDeviceTestAtRevision : public zxtest::Test {
     memcpy(&header, block_device_.data().data(), sizeof(fvm::Header));
 
     // Now copy the full metadata out.
-    size_t metadata_size = header.GetDataStartOffset();
-    if (block_device_.data().size() < metadata_size)
+    size_t metadata_size = header.GetMetadataAllocatedBytes();
+    if (block_device_.data().size() < metadata_size * 2)
       return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
-    auto metadata_buffer = std::make_unique<uint8_t[]>(metadata_size);
-    memcpy(metadata_buffer.get(), block_device_.data().data(), metadata_size);
+    auto metadata_a_buffer = std::make_unique<uint8_t[]>(metadata_size);
+    auto metadata_b_buffer = std::make_unique<uint8_t[]>(metadata_size);
+    memcpy(metadata_a_buffer.get(), block_device_.data().data(), metadata_size);
+    memcpy(metadata_b_buffer.get(),
+           block_device_.data().data() + header.GetMetadataAllocatedBytes(), metadata_size);
 
     return fvm::Metadata::Create(
-        std::make_unique<fvm::HeapMetadataBuffer>(std::move(metadata_buffer), metadata_size));
+        std::make_unique<fvm::HeapMetadataBuffer>(std::move(metadata_a_buffer), metadata_size),
+        std::make_unique<fvm::HeapMetadataBuffer>(std::move(metadata_b_buffer), metadata_size));
   }
 
   // Create a partition and returns it on success.
@@ -295,8 +299,7 @@ TEST_F(BlockDeviceTestAtNextRevision, UpdateOldestRevision) {
 
   // No operations have been performed, the FVM header will be unchanged from initialization and
   // will reference the next revision.
-  EXPECT_EQ(first_metadata_or.value().GetHeader(first_metadata_type).oldest_revision,
-            kNextRevision);
+  EXPECT_EQ(first_metadata_or.value().GetHeader().oldest_revision, kNextRevision);
 
   // Trigger a write operation. This allocated a new partition but could be any operation that
   // forces a write to the FVM metadata.
@@ -311,12 +314,8 @@ TEST_F(BlockDeviceTestAtNextRevision, UpdateOldestRevision) {
   EXPECT_NE(first_metadata_type, second_metadata_type);
 
   // The newly active header should have the oldest revision downgraded to the current one.
-  EXPECT_EQ(second_metadata_or.value().GetHeader(second_metadata_type).oldest_revision,
+  EXPECT_EQ(second_metadata_or.value().GetHeader().oldest_revision,
             fvm::kCurrentRevision);
-
-  // The previously active header should still have the old value since it hasn't been written to.
-  EXPECT_EQ(first_metadata_or.value().GetHeader(first_metadata_type).oldest_revision,
-            kNextRevision);
 }
 
 // Tests that opening a device at a older "oldest revision" doesn't change the oldest revision.
@@ -330,8 +329,7 @@ TEST_F(BlockDeviceTestAtPreviousRevision, DontUpdateOldestRevision) {
 
   // No operations have been performed, the FVM header will be unchanged from initialization and
   // will reference the next revision.
-  EXPECT_EQ(first_metadata_or.value().GetHeader(first_metadata_type).oldest_revision,
-            kPreviousRevision);
+  EXPECT_EQ(first_metadata_or.value().GetHeader().oldest_revision, kPreviousRevision);
 
   // Trigger a write operation. This allocated a new partition but could be any operation that
   // forces a write to the FVM metadata.
@@ -347,8 +345,7 @@ TEST_F(BlockDeviceTestAtPreviousRevision, DontUpdateOldestRevision) {
 
   // The newly active header should still have the oldest revision unchanged rather than the current
   // one.
-  EXPECT_EQ(second_metadata_or.value().GetHeader(second_metadata_type).oldest_revision,
-            kPreviousRevision);
+  EXPECT_EQ(second_metadata_or.value().GetHeader().oldest_revision, kPreviousRevision);
 }
 
 }  // namespace

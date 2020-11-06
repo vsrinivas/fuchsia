@@ -117,14 +117,12 @@ class SparseImageReader : public Reader {
   SparseImageReader(Reader& base_reader, uint64_t data_offset, fvm::Metadata&& metadata)
       : decompression_helper_(base_reader, data_offset), metadata_(std::move(metadata)) {}
 
-  uint64_t GetMaximumOffset() const override {
-    return kMetadataOffset + metadata_.UnsafeGetRaw()->size();
-  }
+  uint64_t GetMaximumOffset() const override { return kMetadataOffset + metadata_.Get()->size(); }
 
   fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const override {
     if (IsMetadata(offset)) {
       size_t some = 0;
-      const fvm::MetadataBuffer* raw_metadata = metadata_.UnsafeGetRaw();
+      const fvm::MetadataBuffer* raw_metadata = metadata_.Get();
       for (size_t done = 0; done < buffer.size(); done += some, offset += some) {
         size_t metadata_offset =
             static_cast<size_t>((offset - kMetadataOffset) % raw_metadata->size());
@@ -251,11 +249,17 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
   // Build the address mappings now.
   AddressDescriptor address_descriptor;
 
-  // Push a single mapping for the metadata at a source offset we'll never use in the sparse image.
+  // Push mappings for the metadata at source offsets we'll never use in the sparse image.
+  // Both the A/B copies have the same source, pointing to the synthesized metadata.
   address_descriptor.mappings.push_back(AddressMap{
       .source = SparseImageReader::kMetadataOffset,
-      .target = 0,
-      .count = metadata_or->UnsafeGetRaw()->size(),
+      .target = header.GetSuperblockOffset(fvm::SuperblockType::kPrimary),
+      .count = metadata_or->Get()->size(),
+  });
+  address_descriptor.mappings.push_back(AddressMap{
+      .source = SparseImageReader::kMetadataOffset,
+      .target = header.GetSuperblockOffset(fvm::SuperblockType::kSecondary),
+      .count = metadata_or->Get()->size(),
   });
 
   // Push the remaining mappings.

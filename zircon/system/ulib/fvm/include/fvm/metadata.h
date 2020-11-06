@@ -10,7 +10,6 @@
 
 #include <limits>
 
-#include <fbl/span.h>
 #include <fvm/format.h>
 
 namespace fvm {
@@ -51,8 +50,8 @@ class HeapMetadataBuffer : public MetadataBuffer {
 // Metadata is an in-memory representation of the metadata for an FVM image.
 //
 // At construction, |Metadata| objects are well-formed, since they validate the underlying metadata
-// when first created by |Metadata::Create|. Subsequent updates by clients can, of course, corrupt
-// the metadata.
+// when first created by |Metadata::Create| or |Metadata::Synthesize|. Subsequent updates by clients
+// can, of course, corrupt the metadata.
 //
 // This class owns the underlying buffer (see |MetadataBuffer)|.
 //
@@ -66,10 +65,13 @@ class Metadata {
   Metadata(Metadata&&) noexcept;
   Metadata& operator=(Metadata&&) noexcept;
 
-  // Attempts to parse the FVM metadata stored at |data|.
-  // Returns a |Metadata| instance over the passed buffer on success, or a failure if the buffer was
-  // not parseable.
-  static zx::status<Metadata> Create(std::unique_ptr<MetadataBuffer> data);
+  // Attempts to parse the FVM metadata stored at |data_a| and |data_b|, picking the latest copy.
+  // The copy with the latest generation (that is also valid) will be retained; the other is
+  // discarded.
+  // Returns a |Metadata| instance over the passed metadata on success, or a failure if neither was
+  // valid.
+  static zx::status<Metadata> Create(std::unique_ptr<MetadataBuffer> data_a,
+                                     std::unique_ptr<MetadataBuffer> data_b);
 
   // Creates an instance of |Metadata|, initialized by copying the contents of |header|,
   // |partitions| and |slices|.
@@ -89,25 +91,23 @@ class Metadata {
   bool CheckValidity(uint64_t disk_size = std::numeric_limits<uint64_t>::max(),
                      uint64_t disk_block_size = kBlockSize) const;
 
-  // Updates the hashes stored in the metadata, based on its contents.
+  // Updates the hash stored in the metadata, based on its contents.
   void UpdateHash();
 
-  // Returns which of the A/B copies is active.
-  // Generally, the active copy should *NOT* be written to.
+  // Returns whether the metadata represents an active A copy or B copy.
   SuperblockType active_header() const { return active_header_; }
 
-  // Accesses the headers managed by the Metadata instance.
-  Header& GetHeader(SuperblockType type) const;
+  // Accesses the header managed by the Metadata instance.
+  Header& GetHeader() const;
 
-  // Accesses the partition tables. Note that |idx| is one-based.
-  VPartitionEntry& GetPartitionEntry(SuperblockType type, unsigned idx) const;
+  // Accesses the partition table. Note that |idx| is one-based.
+  VPartitionEntry& GetPartitionEntry(unsigned idx) const;
 
-  // Accesses the allocation tables. Note that |idx| is one-based.
-  SliceEntry& GetSliceEntry(SuperblockType type, unsigned idx) const;
+  // Accesses the allocation table. Note that |idx| is one-based.
+  SliceEntry& GetSliceEntry(unsigned idx) const;
 
-  // Gets a view of the raw metadata buffer. Should not be widely used, as the layout has no
-  // guarantees. Example uses are copying the metadata in bulk without interpreting it.
-  const MetadataBuffer* UnsafeGetRaw() const;
+  // Gets a view of the raw metadata buffer.
+  const MetadataBuffer* Get() const;
 
   // Creates a copy of this Metadata instance, with additional room described by |dimensions|.
   // The metadata is not copied verbatim; for instance, which of the A/B copies is active
@@ -118,6 +118,15 @@ class Metadata {
 
  private:
   Metadata(std::unique_ptr<MetadataBuffer> data, SuperblockType active_header);
+
+  constexpr static SuperblockType OppositeHeader(SuperblockType type) {
+    switch (type) {
+      case SuperblockType::kPrimary:
+        return SuperblockType::kSecondary;
+      case SuperblockType::kSecondary:
+        return SuperblockType::kPrimary;
+    }
+  }
 
   void MoveFrom(Metadata&& o);
 

@@ -55,8 +55,8 @@ class FvmInfo {
   zx_status_t GetPartition(size_t index, fvm::VPartitionEntry** out) const;
   zx_status_t GetSlice(size_t index, fvm::SliceEntry** out) const;
 
-  const fvm::Header& SuperBlock() const;
-  size_t MetadataSize() const { return metadata_.UnsafeGetRaw()->size(); }
+  const fvm::Header& SuperBlock() const { return metadata_.GetHeader(); }
+  size_t MetadataSize() const { return metadata_.Get()->size(); }
   size_t DiskSize() const { return SuperBlock().fvm_partition_size; }
   size_t SliceSize() const { return SuperBlock().slice_size; }
 

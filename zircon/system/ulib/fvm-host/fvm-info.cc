@@ -64,11 +64,25 @@ zx_status_t FvmInfo::Load(fvm::host::FileWrapper* file, uint64_t disk_offset, ui
     return ZX_ERR_IO;
   }
 
-  // Read remainder of metadata.
+  // Sanity check the magic in the header now. More robust checks are done in fvm::Metadata::Create.
+  if (header.magic != fvm::kMagic) {
+    fprintf(stderr, "Invalid magic; not an fvm image\n");
+    return ZX_ERR_IO;
+  }
   size_t metadata_size = fvm::MetadataBuffer::BytesNeeded(header);
-  std::unique_ptr<uint8_t[]> metadata_raw(new uint8_t[metadata_size]);
-  file->Seek(disk_offset, SEEK_SET);
-  result = file->Read(metadata_raw.get(), metadata_size);
+
+  // Read both copies of the metadata in full.
+  std::unique_ptr<uint8_t[]> metadata_a_raw(new uint8_t[metadata_size]);
+  file->Seek(disk_offset + header.GetSuperblockOffset(fvm::SuperblockType::kPrimary), SEEK_SET);
+  result = file->Read(metadata_a_raw.get(), metadata_size);
+  file->Seek(start_position, SEEK_SET);
+  if (result != static_cast<ssize_t>(metadata_size)) {
+    fprintf(stderr, "Superblock read failed: expected %ld, actual %ld\n", metadata_size, result);
+    return ZX_ERR_IO;
+  }
+  std::unique_ptr<uint8_t[]> metadata_b_raw(new uint8_t[metadata_size]);
+  file->Seek(disk_offset + header.GetSuperblockOffset(fvm::SuperblockType::kSecondary), SEEK_SET);
+  result = file->Read(metadata_b_raw.get(), metadata_size);
   file->Seek(start_position, SEEK_SET);
   if (result != static_cast<ssize_t>(metadata_size)) {
     fprintf(stderr, "Superblock read failed: expected %ld, actual %ld\n", metadata_size, result);
@@ -76,25 +90,28 @@ zx_status_t FvmInfo::Load(fvm::host::FileWrapper* file, uint64_t disk_offset, ui
   }
 
   auto metadata_or = fvm::Metadata::Create(
-      std::make_unique<fvm::HeapMetadataBuffer>(std::move(metadata_raw), metadata_size));
+      std::make_unique<fvm::HeapMetadataBuffer>(std::move(metadata_a_raw), metadata_size),
+      std::make_unique<fvm::HeapMetadataBuffer>(std::move(metadata_b_raw), metadata_size));
   if (metadata_or.is_error()) {
     return metadata_or.status_value();
   }
   metadata_ = std::move(metadata_or.value());
 
+  valid_ = false;
+  if (!Validate()) {
+    fprintf(stderr, "Invalid fvm metadata\n");
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+  if (metadata_.active_header() != fvm::SuperblockType::kPrimary) {
+    fprintf(stderr, "Can only update FVM with valid primary as first copy\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  valid_ = true;
   if (DiskSize() != disk_size) {
-    fprintf(stderr, "Disk size does not match expected");
+    fprintf(stderr, "Disk size %zu does not match expected %" PRIu64 "\n", DiskSize(), disk_size);
     return ZX_ERR_BAD_STATE;
   }
 
-  valid_ = true;
-  if (!Validate()) {
-    if (metadata_.active_header() != fvm::SuperblockType::kPrimary) {
-      fprintf(stderr, "Can only update FVM with valid primary as first copy\n");
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    valid_ = false;
-  }
   return ZX_OK;
 }
 
@@ -122,14 +139,26 @@ zx_status_t FvmInfo::Write(fvm::host::FileWrapper* file, size_t disk_offset, siz
     return ZX_ERR_BAD_STATE;
   }
 
-  if (file->Seek(disk_offset, SEEK_SET) < 0) {
-    fprintf(stderr, "Error seeking disk\n");
+  const fvm::MetadataBuffer* data = metadata_.Get();
+
+  // Write the A copy.
+  if (file->Seek(disk_offset + SuperBlock().GetSuperblockOffset(fvm::SuperblockType::kPrimary),
+                 SEEK_SET) < 0) {
+    fprintf(stderr, "Error seeking disk to primary metadata offset\n");
     return ZX_ERR_IO;
   }
-
-  const fvm::MetadataBuffer* data = metadata_.UnsafeGetRaw();
   if (file->Write(data->data(), data->size()) != static_cast<ssize_t>(data->size())) {
-    fprintf(stderr, "Error writing metadata to disk\n");
+    fprintf(stderr, "Error writing primary metadata to disk\n");
+    return ZX_ERR_IO;
+  }
+  // Write the B copy.
+  if (file->Seek(disk_offset + SuperBlock().GetSuperblockOffset(fvm::SuperblockType::kSecondary),
+                 SEEK_SET) < 0) {
+    fprintf(stderr, "Error seeking disk to secondary metadata offset\n");
+    return ZX_ERR_IO;
+  }
+  if (file->Write(data->data(), data->size()) != static_cast<ssize_t>(data->size())) {
+    fprintf(stderr, "Error writing secondary metadata to disk\n");
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -264,7 +293,7 @@ zx_status_t FvmInfo::GetPartition(size_t index, fvm::VPartitionEntry** out) cons
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  *out = &metadata_.GetPartitionEntry(fvm::SuperblockType::kPrimary, index);
+  *out = &metadata_.GetPartitionEntry(index);
   return ZX_OK;
 }
 
@@ -276,10 +305,6 @@ zx_status_t FvmInfo::GetSlice(size_t index, fvm::SliceEntry** out) const {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  *out = &metadata_.GetSliceEntry(fvm::SuperblockType::kPrimary, index);
+  *out = &metadata_.GetSliceEntry(index);
   return ZX_OK;
-}
-
-const fvm::Header& FvmInfo::SuperBlock() const {
-  return metadata_.GetHeader(fvm::SuperblockType::kPrimary);
 }
