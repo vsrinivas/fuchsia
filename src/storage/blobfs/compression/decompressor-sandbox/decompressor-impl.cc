@@ -178,6 +178,8 @@ void SetDeadlineProfile(thrd_t* thread) {
   }
   fuchsia::scheduler::ProfileProvider_SyncProxy profile_provider(std::move(channel1));
 
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
   const zx_duration_t capacity = ZX_USEC(1000);
   const zx_duration_t deadline = ZX_MSEC(2);
   const zx_duration_t period = deadline;
