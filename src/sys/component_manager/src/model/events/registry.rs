@@ -405,7 +405,7 @@ mod tests {
             "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRequested {
                 source_moniker: AbsoluteMoniker::root(),
-                path: "/svc/foo".to_string(),
+                name: "foo".to_string(),
                 capability: capability_server_end,
             }),
         );

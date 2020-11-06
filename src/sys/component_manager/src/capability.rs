@@ -54,25 +54,12 @@ impl CapabilitySource {
         }
     }
 
-    pub fn id(&self) -> String {
+    pub fn name(&self) -> Option<&CapabilityName> {
         match self {
-            CapabilitySource::Component { capability, .. } => capability.source_id(),
-            CapabilitySource::Framework { capability, .. } => capability.name().to_string(),
-            CapabilitySource::Builtin { capability } => capability.name().to_string(),
-            CapabilitySource::Namespace { capability } => capability.source_id(),
-        }
-    }
-
-    pub fn name(&self) -> Option<String> {
-        match self {
-            CapabilitySource::Component { capability, .. } => {
-                capability.source_name().map(|name| name.to_string())
-            }
-            CapabilitySource::Framework { capability, .. } => Some(capability.name().to_string()),
-            CapabilitySource::Builtin { capability } => Some(capability.name().to_string()),
-            CapabilitySource::Namespace { capability } => {
-                capability.source_name().map(|name| name.to_string())
-            }
+            CapabilitySource::Component { capability, .. } => capability.name(),
+            CapabilitySource::Framework { capability, .. } => Some(capability.name()),
+            CapabilitySource::Builtin { capability } => Some(capability.name()),
+            CapabilitySource::Namespace { capability } => capability.name(),
         }
     }
 }
@@ -362,6 +349,18 @@ impl ComponentCapability {
             ComponentCapability::Directory(directory) => Some(&directory.source_path),
             ComponentCapability::Runner(runner) => Some(&runner.source_path),
             ComponentCapability::Resolver(resolver) => Some(&resolver.source_path),
+            _ => None,
+        }
+    }
+
+    /// Return the name of the capability, if this is a capability declaration.
+    pub fn name<'a>(&self) -> Option<&CapabilityName> {
+        match self {
+            ComponentCapability::Storage(storage) => Some(&storage.name),
+            ComponentCapability::Protocol(protocol) => Some(&protocol.name),
+            ComponentCapability::Directory(directory) => Some(&directory.name),
+            ComponentCapability::Runner(runner) => Some(&runner.name),
+            ComponentCapability::Resolver(resolver) => Some(&resolver.name),
             _ => None,
         }
     }

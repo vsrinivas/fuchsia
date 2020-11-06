@@ -35,9 +35,7 @@
         {
             event: [ "capability_requested" ],
             from: "framework",
-
-            // TODO(fxbug.dev/56604): This filter should take the capability name, not path.
-            filter: { path: "/svc/fidl.test.components.Trigger" },
+            filter: { name: "fidl.test.components.Trigger" },
         },
         {
             event_stream: [ "capability_requested" ],

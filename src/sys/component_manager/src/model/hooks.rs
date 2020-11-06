@@ -200,7 +200,7 @@ impl EventError {
 pub enum EventErrorPayload {
     // Keep the events listed below in alphabetical order!
     CapabilityReady { name: String },
-    CapabilityRequested { source_moniker: AbsoluteMoniker, path: String },
+    CapabilityRequested { source_moniker: AbsoluteMoniker, name: String },
     CapabilityRouted,
     Destroyed,
     Discovered,
@@ -223,9 +223,9 @@ impl fmt::Debug for EventErrorPayload {
         formatter.field("type", &self.event_type());
         match self {
             EventErrorPayload::CapabilityReady { name } => formatter.field("name", &name).finish(),
-            EventErrorPayload::CapabilityRequested { source_moniker, path } => {
+            EventErrorPayload::CapabilityRequested { source_moniker, name } => {
                 formatter.field("source_moniker", &source_moniker);
-                formatter.field("path", &path).finish()
+                formatter.field("name", &name).finish()
             }
             EventErrorPayload::CapabilityRouted
             | EventErrorPayload::Destroyed
@@ -277,7 +277,7 @@ pub enum EventPayload {
     },
     CapabilityRequested {
         source_moniker: AbsoluteMoniker,
-        path: String,
+        name: String,
         capability: Arc<Mutex<Option<zx::Channel>>>,
     },
     CapabilityRouted {
@@ -340,8 +340,8 @@ impl fmt::Debug for EventPayload {
             EventPayload::CapabilityReady { name, .. } => {
                 formatter.field("name", &name.as_str()).finish()
             }
-            EventPayload::CapabilityRequested { path, .. } => {
-                formatter.field("path", &path).finish()
+            EventPayload::CapabilityRequested { name, .. } => {
+                formatter.field("name", &name).finish()
             }
             EventPayload::CapabilityRouted { source: capability, .. } => {
                 formatter.field("capability", &capability).finish()
@@ -446,19 +446,19 @@ impl HasEventType for Result<EventPayload, EventError> {
 impl TransferEvent for Result<EventPayload, EventError> {
     async fn transfer(&self) -> Self {
         match self {
-            Ok(EventPayload::CapabilityRequested { source_moniker, path, capability }) => {
+            Ok(EventPayload::CapabilityRequested { source_moniker, name, capability }) => {
                 let capability = capability.lock().await.take();
                 match capability {
                     Some(capability) => Ok(EventPayload::CapabilityRequested {
                         source_moniker: source_moniker.clone(),
-                        path: path.to_string(),
+                        name: name.to_string(),
                         capability: Arc::new(Mutex::new(Some(capability))),
                     }),
                     None => Err(EventError {
                         source: EventsError::cannot_transfer(EventType::CapabilityRequested).into(),
                         event_error_payload: EventErrorPayload::CapabilityRequested {
                             source_moniker: source_moniker.clone(),
-                            path: path.to_string(),
+                            name: name.to_string(),
                         },
                     }),
                 }
@@ -493,8 +493,8 @@ impl fmt::Display for Event {
             Ok(payload) => {
                 let payload = match payload {
                     EventPayload::CapabilityReady { name, .. } => format!("serving {}", name),
-                    EventPayload::CapabilityRequested { source_moniker, path, .. } => {
-                        format!("requested '{}' from '{}'", path.to_string(), source_moniker)
+                    EventPayload::CapabilityRequested { source_moniker, name, .. } => {
+                        format!("requested '{}' from '{}'", name.to_string(), source_moniker)
                     }
                     EventPayload::CapabilityRouted { source, .. } => {
                         format!("routed {}", source.to_string())
@@ -858,7 +858,7 @@ mod tests {
             "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRequested {
                 source_moniker: AbsoluteMoniker::root(),
-                path: "/svc/foo".to_string(),
+                name: "foo".to_string(),
                 capability: capability_server_end,
             }),
         );
@@ -886,10 +886,10 @@ mod tests {
         let second_transferred_event = event.transfer().await;
         match second_transferred_event.result {
             Err(EventError {
-                event_error_payload: EventErrorPayload::CapabilityRequested { path, .. },
+                event_error_payload: EventErrorPayload::CapabilityRequested { name, .. },
                 ..
             }) => {
-                assert_eq!("/svc/foo".to_string(), path);
+                assert_eq!("foo".to_string(), name);
             }
             _ => panic!("Event type unexpected"),
         }

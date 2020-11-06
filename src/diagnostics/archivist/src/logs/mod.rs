@@ -354,9 +354,9 @@ impl LogManager {
                 }
             })?;
 
-        let capability_path = payload.path.ok_or(format_err!("Missing capability path"))?;
-        if capability_path != format!("/svc/{}", LogSinkMarker::NAME) {
-            return Err(format_err!("Incorrect LogSink capability_path {}", capability_path));
+        let capability_name = payload.name.ok_or(format_err!("Missing capability path"))?;
+        if &capability_name != LogSinkMarker::NAME {
+            return Err(format_err!("Incorrect LogSink capability_name {}", capability_name));
         }
         let capability = payload.capability.ok_or(format_err!("Missing capability"))?;
         let server_end = ServerEnd::<LogSinkMarker>::new(capability);

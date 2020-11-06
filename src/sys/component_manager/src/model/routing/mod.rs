@@ -180,6 +180,7 @@ pub(super) async fn route_expose_capability<'a>(
 struct DefaultComponentCapabilityProvider {
     target_realm: WeakRealm,
     source_realm: WeakRealm,
+    name: CapabilityName,
     path: CapabilityPath,
 }
 
@@ -208,7 +209,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
             &self.target_realm.upgrade()?,
             Ok(EventPayload::CapabilityRequested {
                 source_moniker: source_realm.abs_moniker.clone(),
-                path: path.as_path().display().to_string(),
+                name: self.name.to_string(),
                 capability: capability.clone(),
             }),
         );
@@ -245,6 +246,10 @@ fn get_default_provider(
                 Some(path) => Some(Box::new(DefaultComponentCapabilityProvider {
                     target_realm,
                     source_realm: realm.clone(),
+                    name: capability
+                        .name()
+                        .expect("capability with source path should have a name")
+                        .clone(),
                     path: path.clone(),
                 })),
                 _ => None,

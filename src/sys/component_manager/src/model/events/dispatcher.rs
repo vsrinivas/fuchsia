@@ -177,17 +177,17 @@ impl EventDispatcherScope {
         // TODO(fsamuel): Creating hashmaps on every lookup is not ideal, but in practice this
         // likely doesn't happen too often.
         let filterable_fields = match &event.result {
-            Ok(EventPayload::CapabilityRequested { path, .. }) => Some(hashmap! {
-                "path".to_string() => DictionaryValue::Str(path.into())
+            Ok(EventPayload::CapabilityRequested { name, .. }) => Some(hashmap! {
+                "name".to_string() => DictionaryValue::Str(name.into())
             }),
             Ok(EventPayload::CapabilityReady { name, .. }) => Some(hashmap! {
                 "name".to_string() => DictionaryValue::Str(name.into())
             }),
             Err(EventError {
-                event_error_payload: EventErrorPayload::CapabilityRequested { path, .. },
+                event_error_payload: EventErrorPayload::CapabilityRequested { name, .. },
                 ..
             }) => Some(hashmap! {
-                "path".to_string() => DictionaryValue::Str(path.into())
+                "name".to_string() => DictionaryValue::Str(name.into())
             }),
             Err(EventError {
                 event_error_payload: EventErrorPayload::CapabilityReady { name, .. },
@@ -251,7 +251,7 @@ mod tests {
             "fuchsia-pkg://root/a/b/c",
             Ok(EventPayload::CapabilityRequested {
                 source_moniker: source_moniker.clone(),
-                path: "/svc/foo".to_string(),
+                name: "foo".to_string(),
                 capability: capability_server_end,
             }),
         );
@@ -268,7 +268,7 @@ mod tests {
             Ok(EventPayload::CapabilityRouted {
                 source: CapabilitySource::Builtin {
                     capability: InternalCapability::Protocol(
-                        "/svc/fuchsia.sys2.MyAwesomeProtocol".try_into().unwrap(),
+                        "fuchsia.sys2.MyAwesomeProtocol".try_into().unwrap(),
                     ),
                 },
                 capability_provider: empty_capability_provider,

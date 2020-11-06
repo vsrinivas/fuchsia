@@ -9,7 +9,7 @@ use {
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Debug)]
 pub struct EventDescriptor {
     pub event_type: Option<fsys::EventType>,
-    pub capability_id: Option<String>,
+    pub capability_name: Option<String>,
     pub target_moniker: Option<String>,
     pub exit_status: Option<ExitStatus>,
     pub event_is_ok: Option<bool>,
@@ -23,16 +23,16 @@ impl TryFrom<&fsys::Event> for EventDescriptor {
         let event_type = Some(event.event_type.ok_or(format_err!("No event type"))?);
         let target_moniker =
             event.descriptor.as_ref().and_then(|descriptor| descriptor.moniker.clone());
-        let capability_id = match &event.event_result {
+        let capability_name = match &event.event_result {
             Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
                 fsys::CapabilityReadyPayload { name, .. },
             ))) => name.clone(),
             Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
-                fsys::CapabilityRequestedPayload { path, .. },
-            ))) => path.clone(),
+                fsys::CapabilityRequestedPayload { name, .. },
+            ))) => name.clone(),
             Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(
-                fsys::CapabilityRoutedPayload { capability_id, .. },
-            ))) => capability_id.clone(),
+                fsys::CapabilityRoutedPayload { name, .. },
+            ))) => name.clone(),
             Some(fsys::EventResult::Error(fsys::EventError {
                 error_payload:
                     Some(fsys::EventErrorPayload::CapabilityReady(fsys::CapabilityReadyError {
@@ -44,19 +44,19 @@ impl TryFrom<&fsys::Event> for EventDescriptor {
             Some(fsys::EventResult::Error(fsys::EventError {
                 error_payload:
                     Some(fsys::EventErrorPayload::CapabilityRequested(fsys::CapabilityRequestedError {
-                        path,
+                        name,
                         ..
                     })),
                 ..
-            })) => path.clone(),
+            })) => name.clone(),
             Some(fsys::EventResult::Error(fsys::EventError {
                 error_payload:
                     Some(fsys::EventErrorPayload::CapabilityRouted(fsys::CapabilityRoutedError {
-                        capability_id,
+                        name,
                         ..
                     })),
                 ..
-            })) => capability_id.clone(),
+            })) => name.clone(),
             _ => None,
         };
         let exit_status = match &event.event_result {
@@ -71,6 +71,12 @@ impl TryFrom<&fsys::Event> for EventDescriptor {
             _ => None,
         };
 
-        Ok(EventDescriptor { event_type, target_moniker, capability_id, exit_status, event_is_ok })
+        Ok(EventDescriptor {
+            event_type,
+            target_moniker,
+            capability_name,
+            exit_status,
+            event_is_ok,
+        })
     }
 }

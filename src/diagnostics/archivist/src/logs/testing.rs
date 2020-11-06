@@ -49,7 +49,7 @@ pub fn create_capability_requested_event(
         }),
         event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
             fsys::CapabilityRequestedPayload {
-                path: Some(format!("/svc/{}", LogSinkMarker::NAME)),
+                name: Some(LogSinkMarker::NAME.into()),
                 capability: Some(capability),
             },
         ))),

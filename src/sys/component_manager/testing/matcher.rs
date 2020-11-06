@@ -44,21 +44,21 @@ impl RawFieldMatcher<fsys::EventType> for EventTypeMatcher {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CapabilityIdMatcher {
-    capability_id: String,
+pub struct CapabilityNameMatcher {
+    capability_name: String,
 }
 
-impl CapabilityIdMatcher {
-    fn new(capability_id: impl Into<String>) -> Self {
-        Self { capability_id: capability_id.into() }
+impl CapabilityNameMatcher {
+    fn new(capability_name: impl Into<String>) -> Self {
+        Self { capability_name: capability_name.into() }
     }
 }
 
-impl RawFieldMatcher<String> for CapabilityIdMatcher {
-    const NAME: &'static str = "capability_id";
+impl RawFieldMatcher<String> for CapabilityNameMatcher {
+    const NAME: &'static str = "name";
 
     fn matches(&self, other: &String) -> bool {
-        self.capability_id == *other || &format!("/svc/{}", self.capability_id) == other
+        self.capability_name == *other
     }
 }
 
@@ -164,7 +164,7 @@ where
 pub struct EventMatcher {
     pub event_type: Option<EventTypeMatcher>,
     pub target_monikers: Option<MonikerMatcher>,
-    pub capability_id: Option<CapabilityIdMatcher>,
+    pub capability_name: Option<CapabilityNameMatcher>,
     pub exit_status: Option<ExitStatusMatcher>,
     pub event_is_ok: Option<EventIsOkMatcher>,
 }
@@ -205,7 +205,7 @@ impl EventMatcher {
 
     /// The expected capability id.
     pub fn capability_id(mut self, capability_id: impl Into<String>) -> Self {
-        self.capability_id = Some(CapabilityIdMatcher::new(capability_id));
+        self.capability_name = Some(CapabilityNameMatcher::new(capability_id));
         self
     }
 
@@ -243,7 +243,7 @@ impl EventMatcher {
     pub fn matches(&self, other: &EventDescriptor) -> Result<(), Error> {
         self.event_type.matches(&other.event_type)?;
         self.target_monikers.matches(&other.target_moniker)?;
-        self.capability_id.matches(&other.capability_id)?;
+        self.capability_name.matches(&other.capability_name)?;
         self.exit_status.matches(&other.exit_status)?;
         self.event_is_ok.matches(&other.event_is_ok)?;
         Ok(())

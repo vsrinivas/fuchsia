@@ -105,7 +105,7 @@ async fn scoped_events_test() {
         events_echo.message,
         concat!(
             "Events: [",
-            "EventDescriptor { event_type: Some(Started), capability_id: None, target_moniker: Some(\"./echo_server:0\"), exit_status: None, event_is_ok: Some(true) }",
+            "EventDescriptor { event_type: Some(Started), capability_name: None, target_moniker: Some(\"./echo_server:0\"), exit_status: None, event_is_ok: Some(true) }",
             "]"
         )
     );

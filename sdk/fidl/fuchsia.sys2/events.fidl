@@ -150,24 +150,20 @@ flexible union EventErrorPayload {
 
 /// Error payload for CapabilityReady events
 table CapabilityReadyError {
-    /// The path of the capability.
+    /// The name of the capability.
     1: fuchsia.component.name name;
 };
 
 /// Error payload for CapabilityRequested events
 table CapabilityRequestedError {
-    /// Identifier of capability being requested.
-    /// For a path-based capability, this is the path.
-    /// For a runner capability, this is the name.
-    1: string:MAX_CAPABILITY_ID_LENGTH path;
+    /// The name of the capability being requested.
+    1: fuchsia.component.name name;
 };
 
 /// Error payload for CapabilityRouted events
 table CapabilityRoutedError {
-    /// Identifier of capability being requested.
-    /// For a path-based capability, this is the path.
-    /// For a runner capability, this is the name.
-    1: string:MAX_CAPABILITY_ID_LENGTH capability_id;
+    /// Name of the capability being requested.
+    1: fuchsia.component.name name;
 };
 
 /// Error payload for Discovered events.
@@ -235,7 +231,7 @@ flexible resource union EventPayload {
 
 /// Payload for CapabilityReady events
 resource table CapabilityReadyPayload {
-    /// The path of the capability.
+    /// The name of the capability.
     1: fuchsia.component.name name;
 
     /// Channel to the node exposed by the event source at `path`.
@@ -244,10 +240,8 @@ resource table CapabilityReadyPayload {
 
 /// Payload for CapabilityRequested events
 resource table CapabilityRequestedPayload {
-    /// The path of the capability.
-    // TODO(fxbug.dev/56604): Once name-based capabilities have landed, this (and the
-    // filter field) should be a name.
-    1: string:fuchsia.component.MAX_PATH_LENGTH path;
+    /// The name of the capability.
+    1: fuchsia.component.name name;
 
     /// A handle to the server end of the channel to host
     /// capability.
@@ -261,10 +255,8 @@ resource table CapabilityRoutedPayload {
     /// This will not be available with an async event.
     1: RoutingProtocol routing_protocol;
 
-    /// Identifier of capability being requested.
-    /// For a path-based capability, this is the path.
-    /// For a runner capability, this is the name.
-    2: string:MAX_CAPABILITY_ID_LENGTH capability_id;
+    /// Name of capability being requested.
+    2: fuchsia.component.name name;
 
     /// Source of the capability that needs to be routed.
     3: CapabilitySource source;

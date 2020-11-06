@@ -307,7 +307,7 @@ async fn capability_requested_event_at_parent() {
                     source: UseSource::Framework,
                     source_name: "capability_requested".into(),
                     target_name: "capability_requested".into(),
-                    filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/svc/foo".to_string())}),
+                    filter: Some(hashmap!{"name".to_string() => DictionaryValue::Str("foo_svc".to_string())}),
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -365,9 +365,9 @@ async fn capability_requested_event_at_parent() {
             event_result: Some(
                 fsys::EventResult::Payload(
                         fsys::EventPayload::CapabilityRequested(
-                            fsys::CapabilityRequestedPayload { path: Some(path), .. }))), ..}
+                            fsys::CapabilityRequestedPayload { name: Some(name), .. }))), ..}
 
-    if *path == "/svc/foo".to_string()
+    if *name == "foo_svc".to_string()
     );
 }
 

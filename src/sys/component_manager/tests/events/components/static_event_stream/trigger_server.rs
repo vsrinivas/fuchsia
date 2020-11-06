@@ -54,8 +54,8 @@ fn run_main_event_stream(
             "fuchsia-pkg://fuchsia.com/events_integration_test#meta/static_event_stream_trigger_client.cm",
             capability_request.component_url());
         assert_eq!(
-            format!("/svc/{}", ftest::TriggerMarker::NAME),
-            capability_request.unwrap_payload().path
+            format!("{}", ftest::TriggerMarker::NAME),
+            capability_request.unwrap_payload().name
         );
         if let Some(trigger_stream) = capability_request.take_capability::<ftest::TriggerMarker>() {
             trigger_capability.serve_async(trigger_stream);
@@ -72,10 +72,9 @@ fn run_second_event_stream(
         let mut event_stream = EventStream::new(stream);
         let capability_request =
             EventMatcher::err().expect_match::<CapabilityRequested>(&mut event_stream).await;
-        let trigger_path = format!("/svc/{}", ftest::TriggerMarker::NAME);
         // Verify that the second stream gets an error.
         match capability_request.result {
-            Err(CapabilityRequestedError { path, .. }) if path == trigger_path => {
+            Err(CapabilityRequestedError { name, .. }) if &name == ftest::TriggerMarker::NAME => {
                 tx.send(()).await.expect("Could not send response");
             }
             _ => panic!("Incorrect event received"),

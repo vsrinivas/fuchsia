@@ -103,8 +103,8 @@ async fn maybe_create_event_result(
         Ok(EventPayload::CapabilityReady { name, node, .. }) => {
             Ok(Some(create_capability_ready_payload(name.to_string(), node)?))
         }
-        Ok(EventPayload::CapabilityRequested { path, capability, .. }) => Ok(Some(
-            create_capability_requested_payload(path.to_string(), capability.clone()).await,
+        Ok(EventPayload::CapabilityRequested { name, capability, .. }) => Ok(Some(
+            create_capability_requested_payload(name.to_string(), capability.clone()).await,
         )),
         Ok(EventPayload::CapabilityRouted { source, capability_provider, .. }) => {
             Ok(maybe_create_capability_routed_payload(scope, source, capability_provider.clone()))
@@ -130,10 +130,10 @@ async fn maybe_create_event_result(
         }))),
         Err(EventError {
             source,
-            event_error_payload: EventErrorPayload::CapabilityRequested { path, .. },
+            event_error_payload: EventErrorPayload::CapabilityRequested { name, .. },
         }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
             error_payload: Some(fsys::EventErrorPayload::CapabilityRequested(
-                fsys::CapabilityRequestedError { path: Some(path.to_string()) },
+                fsys::CapabilityRequestedError { name: Some(name.to_string()) },
             )),
             description: Some(format!("{}", source)),
             ..fsys::EventError::empty()
@@ -172,21 +172,21 @@ fn create_capability_ready_payload(
 }
 
 async fn create_capability_requested_payload(
-    path: String,
+    name: String,
     capability: Arc<Mutex<Option<zx::Channel>>>,
 ) -> fsys::EventResult {
     let capability = capability.lock().await.take();
     match capability {
         Some(capability) => {
             let payload =
-                fsys::CapabilityRequestedPayload { path: Some(path), capability: Some(capability) };
+                fsys::CapabilityRequestedPayload { name: Some(name), capability: Some(capability) };
             fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(payload))
         }
         None => {
             // This can happen if a hook takes the capability prior to the events system.
             let payload =
                 fsys::EventErrorPayload::CapabilityRequested(fsys::CapabilityRequestedError {
-                    path: Some(path),
+                    name: Some(name),
                 });
             fsys::EventResult::Error(fsys::EventError {
                 error_payload: Some(payload),
@@ -204,7 +204,7 @@ fn maybe_create_capability_routed_payload(
 ) -> Option<fsys::EventResult> {
     let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
 
-    let capability_id = Some(source.id());
+    let name = source.name().map(|n| n.to_string());
     let source = Some(match source {
         CapabilitySource::Component { realm, .. } => {
             let realm = realm.upgrade().ok()?;
@@ -228,7 +228,7 @@ fn maybe_create_capability_routed_payload(
         }
     });
 
-    let payload = fsys::CapabilityRoutedPayload { routing_protocol, capability_id, source };
+    let payload = fsys::CapabilityRoutedPayload { routing_protocol, name, source };
     Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(payload)))
 }
 

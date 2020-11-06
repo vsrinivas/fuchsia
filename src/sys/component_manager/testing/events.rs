@@ -519,7 +519,7 @@ create_event!(
     payload: {
         data: {
             {
-                name: path,
+                name: name,
                 ty: String,
             }
         },
@@ -532,7 +532,7 @@ create_event!(
     },
     error_payload: {
         {
-            name: path,
+            name: name,
             ty: String,
         }
     }
@@ -547,7 +547,7 @@ create_event!(
                 ty: fsys::CapabilitySource,
             }
             {
-                name: capability_id,
+                name: name,
                 ty: String,
             }
         },
@@ -561,7 +561,7 @@ create_event!(
     },
     error_payload: {
         {
-            name: capability_id,
+            name: name,
             ty: String,
         }
     }
