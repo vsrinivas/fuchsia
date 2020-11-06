@@ -20,5 +20,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0007_remove_thread_killing.md
 - title: "RFC-0008: Remove zx_clock_get and zx_clock_adjust"
   path: /docs/contribute/governance/rfcs/0008_remove_zx_clock_get_and_adjust.md
+- title: "RFC-0009: Edge triggered async_wait"
+  path: /docs/contribute/governance/rfcs/0009_edge_triggered_async_wait.md
 - title: "RFC template"
   path: /docs/contribute/governance/rfcs/TEMPLATE.md
