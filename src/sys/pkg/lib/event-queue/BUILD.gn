@@ -36,7 +36,7 @@ group("tests") {
   deps = [ ":event-queue-tests" ]
 }
 
-test_package("event-queue-tests") {
+unittest_package("event-queue-tests") {
   deps = [ ":event-queue_test" ]
 
   tests = [
