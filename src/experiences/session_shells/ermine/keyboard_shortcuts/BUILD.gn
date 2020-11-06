@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import("//build/dart/dart_library.gni")
+import("//build/dart/fidl_move.gni")
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//topaz/runtime/dart/flutter_test.gni")
@@ -21,7 +22,7 @@ dart_library("keyboard_shortcuts") {
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/meta",
     "//topaz/public/dart/fuchsia_services",
-    "//topaz/public/dart/zircon",
+    dart_package_label.zircon,
   ]
 }
 

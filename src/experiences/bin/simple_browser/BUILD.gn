@@ -4,6 +4,7 @@
 
 import("//build/config.gni")
 import("//build/dart/dart_library.gni")
+import("//build/dart/fidl_move.gni")
 import("//build/fidl/fidl.gni")
 import("//build/flutter/flutter_component.gni")
 import("//build/flutter/flutter_test_component.gni")
@@ -53,12 +54,12 @@ dart_library("lib") {
     "//third_party/dart-pkg/pub/http",
     "//third_party/dart-pkg/pub/intl",
     "//third_party/dart-pkg/pub/meta",
-    "//topaz/public/dart/fidl",
     "//topaz/public/dart/fuchsia_internationalization_flutter",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_scenic_flutter",
     "//topaz/public/dart/fuchsia_services",
-    "//topaz/public/dart/zircon",
+    dart_package_label.fidl,
+    dart_package_label.zircon,
   ]
 }
 
@@ -71,8 +72,8 @@ flutter_component("component") {
   component_name = "simple-browser"
   manifest = "meta/simple_browser.cmx"
   deps = [
-    ":lib",
     ":keyboard-shortcuts",
+    ":lib",
   ]
 }
 
