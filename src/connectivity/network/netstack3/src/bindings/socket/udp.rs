@@ -382,12 +382,6 @@ where
                                 &mut self.make_handler().await.connect(addr)
                             );
                         }
-                        psocket::DatagramSocketRequest::Connect2 { addr, responder } => {
-                            responder_send!(
-                                responder,
-                                &mut self.make_handler().await.connect(addr)
-                            );
-                        }
                         psocket::DatagramSocketRequest::Disconnect { responder } => {
                             responder_send!(responder, &mut Err(Errno::Eafnosupport));
                         }
@@ -428,28 +422,13 @@ where
                         psocket::DatagramSocketRequest::Bind { addr, responder } => {
                             responder_send!(responder, &mut self.make_handler().await.bind(addr));
                         }
-                        psocket::DatagramSocketRequest::Bind2 { addr, responder } => {
-                            responder_send!(responder, &mut self.make_handler().await.bind(addr));
-                        }
                         psocket::DatagramSocketRequest::GetSockName { responder } => {
                             responder_send!(
                                 responder,
                                 &mut self.make_handler().await.get_sock_name()
                             );
                         }
-                        psocket::DatagramSocketRequest::GetSockName2 { responder } => {
-                            responder_send!(
-                                responder,
-                                &mut self.make_handler().await.get_sock_name()
-                            );
-                        }
                         psocket::DatagramSocketRequest::GetPeerName { responder } => {
-                            responder_send!(
-                                responder,
-                                &mut self.make_handler().await.get_peer_name()
-                            );
-                        }
-                        psocket::DatagramSocketRequest::GetPeerName2 { responder } => {
                             responder_send!(
                                 responder,
                                 &mut self.make_handler().await.get_peer_name()
@@ -476,26 +455,6 @@ where
                             responder,
                             &mut self.make_handler().await.shutdown(mode)
                         ),
-                        DatagramSocketRequest::Shutdown2 { mode, responder } => responder_send!(
-                            responder,
-                            &mut self.make_handler().await.shutdown(mode)
-                        ),
-                        DatagramSocketRequest::RecvMsg2 {
-                            want_addr,
-                            data_len,
-                            want_control: _,
-                            flags: _,
-                            responder,
-                        } => {
-                            // TODO(brunodalbo) handle control and flags
-                            responder_send!(
-                                responder,
-                                &mut self
-                                    .make_handler()
-                                    .await
-                                    .recv_msg(want_addr, data_len as usize)
-                            );
-                        }
                         DatagramSocketRequest::RecvMsg {
                             want_addr,
                             data_len,

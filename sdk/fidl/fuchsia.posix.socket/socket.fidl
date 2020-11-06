@@ -46,23 +46,6 @@ protocol BaseSocket {
     /// Retrieves the remote socket address.
     GetPeerName() -> (fuchsia.net.SocketAddress addr) error fuchsia.posix.Errno;
 
-    /// Sets the local address used for the socket.
-    // TODO(fxbug.dev/44347): Remove after soft transition.
-    [Deprecated = "Use Bind"]
-    Bind2(fuchsia.net.SocketAddress addr) -> () error fuchsia.posix.Errno;
-    /// Initiates a connection to a remote address.
-    // TODO(fxbug.dev/44347): Remove after soft transition.
-    [Deprecated = "Use Connect"]
-    Connect2(fuchsia.net.SocketAddress addr) -> () error fuchsia.posix.Errno;
-    /// Retrieves the local socket address.
-    // TODO(fxbug.dev/44347): Remove after soft transition.
-    [Deprecated = "Use GetSockName"]
-    GetSockName2() -> (fuchsia.net.SocketAddress addr) error fuchsia.posix.Errno;
-    /// Retrieves the remote socket address.
-    // TODO(fxbug.dev/44347): Remove after soft transition.
-    [Deprecated = "Use GetPeerName"]
-    GetPeerName2() -> (fuchsia.net.SocketAddress addr) error fuchsia.posix.Errno;
-
     /// Sets the value of a socket option.
     SetSockOpt(int16 level, int16 optname, sockopt optval) -> () error fuchsia.posix.Errno;
     /// Retrieves the value of a socket option.
@@ -118,16 +101,6 @@ protocol DatagramSocket {
     RecvMsg(bool want_addr, uint32 data_len, bool want_control, RecvMsgFlags flags) -> (fuchsia.net.SocketAddress? addr, bytes data, RecvControlData control, uint32 truncated) error fuchsia.posix.Errno;
     /// Sends a message on the socket.
     SendMsg(fuchsia.net.SocketAddress? addr, bytes:MAX data, SendControlData control, SendMsgFlags flags) -> (int64 len) error fuchsia.posix.Errno;
-
-    /// Shuts down part of the socket.
-    [Depcrecated = "Use Shutdown"]
-    // TODO(fxbug.dev/44347): Remove after soft transition.
-    Shutdown2(ShutdownMode mode) -> () error fuchsia.posix.Errno;
-
-    /// Receives a message from the socket.
-    // TODO(fxbug.dev/44347): Remove after soft transition.
-    [Deprecated = "Use RecvMsg"]
-    RecvMsg2(bool want_addr, uint32 data_len, bool want_control, RecvMsgFlags flags) -> (fuchsia.net.SocketAddress? addr, bytes data, RecvControlData control, uint32 truncated) error fuchsia.posix.Errno;
 };
 
 /// A stream socket.
@@ -146,11 +119,6 @@ protocol StreamSocket {
     Listen(int16 backlog) -> () error fuchsia.posix.Errno;
     /// Accepts a buffered incoming connection.
     Accept(bool want_addr) -> (fuchsia.net.SocketAddress? addr, StreamSocket s) error fuchsia.posix.Errno;
-
-    /// Accepts a buffered incoming connection.
-    // TODO(fxbug.dev/44347): Remove after soft transition.
-    [Deprecated = "Use Accept"]
-    Accept2() -> (StreamSocket s) error fuchsia.posix.Errno;
 };
 
 /// Holds information about an interface and its addresses.
