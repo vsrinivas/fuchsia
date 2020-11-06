@@ -440,7 +440,7 @@ static void x86_resource_init_hook(unsigned int rl) {
   ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IOPORT, 0, UINT16_MAX);
   ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ, interrupt_get_base_vector(),
                                           interrupt_get_max_vector());
-  ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_SYSTEM, 0, ZX_RSRC_SYSTEM_BASE_COUNT);
+  ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_SYSTEM, 0, ZX_RSRC_SYSTEM_COUNT);
 
   // Exclusively reserve the regions marked as memory earlier so that physical
   // vmos cannot be created against them.

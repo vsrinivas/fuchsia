@@ -35,8 +35,8 @@ typedef uint32_t zx_rsrc_flags_t;
 #define ZX_RSRC_EXTRACT_FLAGS(x) ((x)&0xFFFF0000)
 
 typedef uint64_t zx_rsrc_system_base_t;
-#define ZX_RSRC_SYSTEM_BASE_HYPERVISOR ((zx_rsrc_system_base_t)0u)
-#define ZX_RSRC_SYSTEM_BASE_VMEX ((zx_rsrc_system_base_t)1u)
-#define ZX_RSRC_SYSTEM_BASE_COUNT ((zx_rsrc_system_base_t)2u)
+#define ZX_RSRC_SYSTEM_HYPERVISOR_BASE ((zx_rsrc_system_base_t)0u)
+#define ZX_RSRC_SYSTEM_VMEX_BASE ((zx_rsrc_system_base_t)1u)
+#define ZX_RSRC_SYSTEM_COUNT ((zx_rsrc_system_base_t)2u)
 
 #endif  // SYSROOT_ZIRCON_SYSCALLS_RESOURCE_H_
