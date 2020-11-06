@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/stream_cpp_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
