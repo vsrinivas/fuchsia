@@ -581,7 +581,7 @@ impl ComponentCapability {
                     child_moniker,
                     &child_use.source_name,
                     &offer.target,
-                    &offer.source_name,
+                    &offer.target_name,
                 ),
                 (
                     ComponentCapability::Offer(OfferDecl::Storage(child_offer)),
@@ -590,7 +590,7 @@ impl ComponentCapability {
                     child_moniker,
                     &child_offer.source_name,
                     &offer.target,
-                    &offer.source_name,
+                    &offer.target_name,
                 ),
                 // Runners offered from parent.
                 (
@@ -936,7 +936,7 @@ mod tests {
 
     #[test]
     fn find_offer_source_runner() {
-        // Parents offers runner named "elf" to "child".
+        // Parent offers runner named "elf" to "child".
         let parent_decl = ComponentDecl {
             offers: vec![
                 // Offer as "elf" to chilr_d "child".
@@ -970,12 +970,50 @@ mod tests {
     }
 
     #[test]
+    fn find_offer_source_storage() {
+        // Parent offers storage named "cache" to "child".
+        let parent_decl = ComponentDecl {
+            offers: vec![
+                // Offer as "cache" to child "child".
+                OfferDecl::Storage(cm_rust::OfferStorageDecl {
+                    source: cm_rust::OfferStorageSource::Self_,
+                    source_name: "source".into(),
+                    target: cm_rust::OfferTarget::Child("child".to_string()),
+                    target_name: "cache".into(),
+                }),
+            ],
+            ..default_component_decl()
+        };
+
+        // A child named "child" uses storage "cache" offered by its parent. Should successfully
+        // match the declaration.
+        let child_cap = ComponentCapability::Use(UseDecl::Storage(UseStorageDecl {
+            source_name: "cache".into(),
+            target_path: "/target-path".parse().unwrap(),
+        }));
+        assert_eq!(
+            child_cap.find_offer_source(&parent_decl, &"child:0".into()),
+            Some(&parent_decl.offers[0])
+        );
+
+        // Mismatched child name.
+        assert_eq!(child_cap.find_offer_source(&parent_decl, &"other-child:0".into()), None);
+
+        // Mismatched cap name.
+        let misnamed_child_cap = ComponentCapability::Use(UseDecl::Storage(UseStorageDecl {
+            source_name: "not-cache".into(),
+            target_path: "/target-path".parse().unwrap(),
+        }));
+        assert_eq!(misnamed_child_cap.find_offer_source(&parent_decl, &"child:0".into()), None);
+    }
+
+    #[test]
     fn find_offer_source_event() {
         // Parent offers event named "started" to "child"
         let parent_decl = ComponentDecl {
             offers: vec![OfferDecl::Event(cm_rust::OfferEventDecl {
                 source: cm_rust::OfferEventSource::Parent,
-                source_name: "started".into(),
+                source_name: "source".into(),
                 target: cm_rust::OfferTarget::Child("child".to_string()),
                 target_name: "started".into(),
                 filter: None,
