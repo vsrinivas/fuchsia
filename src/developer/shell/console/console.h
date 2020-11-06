@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_SHELL_CONSOLE_CONSOLE_H_
 #define SRC_DEVELOPER_SHELL_CONSOLE_CONSOLE_H_
 
-#include <fuchsia/hardware/pty/c/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/unsafe.h>
 

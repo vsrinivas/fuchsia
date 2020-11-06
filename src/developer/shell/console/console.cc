@@ -6,12 +6,15 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <poll.h>
 #include <unistd.h>
 #include <zircon/assert.h>
 
 #include <iostream>
 #include <utility>
+
+namespace fpty = ::llcpp::fuchsia::hardware::pty;
 
 namespace shell::console {
 
@@ -95,11 +98,13 @@ void Console::WaitForInterruptAsynchronously() {
           return;
         }
         uint32_t events = 0;
-        zx_status_t pty_status = ZX_OK;
-        status = fuchsia_hardware_pty_DeviceReadEvents(fdio_unsafe_borrow_channel(tty_),
-                                                       &pty_status, &events);
+        auto result =
+            fpty::Device::Call::ReadEvents(zx::unowned_channel(fdio_unsafe_borrow_channel(tty_)));
+        if (result.status() == ZX_OK && result->status == ZX_OK) {
+          events = result->events;
+        }
         WaitForInterruptAsynchronously();
-        if (events & fuchsia_hardware_pty_EVENT_INTERRUPT) {
+        if (events & fpty::EVENT_INTERRUPT) {
           if (should_read_) {
             line_input_.OnInput(line_input::SpecialCharacters::kKeyControlC);
           } else {

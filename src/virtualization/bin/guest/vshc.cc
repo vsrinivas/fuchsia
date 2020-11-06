@@ -5,7 +5,7 @@
 #include "src/virtualization/bin/guest/vshc.h"
 
 #include <fcntl.h>
-#include <fuchsia/hardware/pty/c/fidl.h>
+#include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <poll.h>
@@ -22,32 +22,31 @@
 #include "src/virtualization/lib/vsh/util.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/vsh.pb.h"
 
+namespace fpty = ::llcpp::fuchsia::hardware::pty;
+
 std::pair<int, int> init_tty(void) {
   int cols = 80;
   int rows = 24;
 
   if (isatty(STDIN_FILENO)) {
     fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-    fuchsia_hardware_pty_WindowSize wsz;
-    zx_status_t status;
-    zx_status_t call_status =
-        fuchsia_hardware_pty_DeviceGetWindowSize(fdio_unsafe_borrow_channel(io), &status, &wsz);
+    auto wsz =
+        fpty::Device::Call::GetWindowSize(zx::unowned_channel(fdio_unsafe_borrow_channel(io)));
 
-    if (call_status != ZX_OK || status != ZX_OK) {
+    if (wsz.status() != ZX_OK || wsz->status != ZX_OK) {
       FX_LOGS(WARNING) << "Unable to determine shell geometry, defaulting to 80x24";
     } else {
-      cols = wsz.width;
-      rows = wsz.height;
+      cols = wsz->size.width;
+      rows = wsz->size.height;
     }
 
     // Enable raw mode on tty so that inputs such as ctrl-c are passed on
     // faithfully to the client for forwarding to the remote shell
     // (instead of closing the client side).
-    uint32_t feature;
-    call_status = fuchsia_hardware_pty_DeviceClrSetFeature(
-        fdio_unsafe_borrow_channel(io), 0, fuchsia_hardware_pty_FEATURE_RAW, &status, &feature);
+    auto result = fpty::Device::Call::ClrSetFeature(
+        zx::unowned_channel(fdio_unsafe_borrow_channel(io)), 0, fpty::FEATURE_RAW);
 
-    if (call_status != ZX_OK || status != ZX_OK) {
+    if (result.status() != ZX_OK || result->status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to set FEATURE_RAW, some features may not work.";
     }
 
@@ -60,12 +59,10 @@ std::pair<int, int> init_tty(void) {
 void reset_tty(void) {
   if (isatty(STDIN_FILENO)) {
     fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-    uint32_t feature;
-    zx_status_t status;
-    zx_status_t call_status = fuchsia_hardware_pty_DeviceClrSetFeature(
-        fdio_unsafe_borrow_channel(io), fuchsia_hardware_pty_FEATURE_RAW, 0, &status, &feature);
+    auto result = fpty::Device::Call::ClrSetFeature(
+        zx::unowned_channel(fdio_unsafe_borrow_channel(io)), fpty::FEATURE_RAW, 0);
 
-    if (call_status != ZX_OK || status != ZX_OK) {
+    if (result.status() != ZX_OK || result->status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to reset FEATURE_RAW";
     }
 

@@ -4,7 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/pty/c/fidl.h>
+#include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -16,6 +16,8 @@
 #include <zircon/status.h>
 
 #include <zxtest/zxtest.h>
+
+namespace fpty = ::llcpp::fuchsia::hardware::pty;
 
 // returns an int to avoid sign errors from ASSERT_*()
 static int fd_signals(const fbl::unique_fd& fd, uint32_t wait_for_any, zx::time deadline) {
@@ -88,20 +90,20 @@ static zx_status_t open_client(int fd, uint32_t client_id, int* out_fd) {
   zx::channel device_channel, client_channel;
   zx_status_t status = zx::channel::create(0, &device_channel, &client_channel);
   if (status != ZX_OK) {
+    fdio_unsafe_release(io);
     return status;
   }
 
-  zx_status_t fidl_status = fuchsia_hardware_pty_DeviceOpenClient(
-      fdio_unsafe_borrow_channel(io), client_id, device_channel.release(), &status);
-  if (status != ZX_OK) {
-    return status;
-  }
+  auto result = fpty::Device::Call::OpenClient(zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
+                                               client_id, std::move(device_channel));
+
   fdio_unsafe_release(io);
-  if (fidl_status != ZX_OK) {
-    return fidl_status;
+
+  if (result.status() != ZX_OK) {
+    return result.status();
   }
-  if (status != ZX_OK) {
-    return status;
+  if (result->s != ZX_OK) {
+    return result->s;
   }
 
   status = fdio_fd_create(client_channel.release(), out_fd);
@@ -184,28 +186,26 @@ TEST(PtyTests, pty_test) {
   ASSERT_EQ(fd_signals(pc, POLLOUT, zx::time{}), POLLOUT, "");
 
   // verify no events pending
-  uint32_t events;
-  zx_status_t status;
+  auto result1 = fpty::Device::Call::ReadEvents(pc_io.channel());
 
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceReadEvents(pc_io.borrow_channel(), &status, &events), ZX_OK,
-            "");
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(events, 0u, "");
+  ASSERT_EQ(result1.status(), ZX_OK, "");
+  ASSERT_EQ(result1->status, ZX_OK, "");
+  ASSERT_EQ(result1->events, 0u, "");
 
   // write a ctrl-c
   ASSERT_EQ(write(ps.get(), "\x03", 1), 1, "");
 
   // should be an event now
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceReadEvents(pc_io.borrow_channel(), &status, &events), ZX_OK,
-            "");
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(events, fuchsia_hardware_pty_EVENT_INTERRUPT, "");
+  auto result2 = fpty::Device::Call::ReadEvents(pc_io.channel());
+  ASSERT_EQ(result2.status(), ZX_OK, "");
+  ASSERT_EQ(result2->status, ZX_OK, "");
+  ASSERT_EQ(result2->events, fpty::EVENT_INTERRUPT, "");
 
   // should vanish once we read it
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceReadEvents(pc_io.borrow_channel(), &status, &events), ZX_OK,
-            "");
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(events, 0u, "");
+  auto result3 = fpty::Device::Call::ReadEvents(pc_io.channel());
+  ASSERT_EQ(result3.status(), ZX_OK, "");
+  ASSERT_EQ(result3->status, ZX_OK, "");
+  ASSERT_EQ(result3->events, 0u, "");
 
   // write something containing a special char
   // should write up to and including the special char
@@ -213,42 +213,41 @@ TEST(PtyTests, pty_test) {
   ASSERT_EQ(write(ps.get(), "hello\x03world", 11), 6, "");
   ASSERT_EQ(read(pc.get(), tmp, 6), 5, "");
   ASSERT_EQ(memcmp(tmp, "hello", 5), 0, "");
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceReadEvents(pc_io.borrow_channel(), &status, &events), ZX_OK,
-            "");
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(events, fuchsia_hardware_pty_EVENT_INTERRUPT, "");
+  auto result4 = fpty::Device::Call::ReadEvents(pc_io.channel());
+  ASSERT_EQ(result4.status(), ZX_OK, "");
+  ASSERT_EQ(result4->status, ZX_OK, "");
+  ASSERT_EQ(result4->events, fpty::EVENT_INTERRUPT, "");
 
-  fuchsia_hardware_pty_WindowSize ws;
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceGetWindowSize(pc_io.borrow_channel(), &status, &ws), ZX_OK,
-            "");
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(ws.width, 0u, "");
-  ASSERT_EQ(ws.height, 0u, "");
+  auto ws_result1 = fpty::Device::Call::GetWindowSize(pc_io.channel());
+  ASSERT_EQ(ws_result1.status(), ZX_OK, "");
+  ASSERT_EQ(ws_result1->status, ZX_OK, "");
+  ASSERT_EQ(ws_result1->size.width, 0u, "");
+  ASSERT_EQ(ws_result1->size.height, 0u, "");
+
+  fpty::WindowSize ws;
   ws.width = 80;
   ws.height = 25;
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceSetWindowSize(ps_io.borrow_channel(), &ws, &status), ZX_OK,
-            "");
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceGetWindowSize(pc_io.borrow_channel(), &status, &ws), ZX_OK,
-            "");
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(ws.width, 80u, "");
-  ASSERT_EQ(ws.height, 25u, "");
+  auto result5 = fpty::Device::Call::SetWindowSize(pc_io.channel(), ws);
+  ASSERT_EQ(result5.status(), ZX_OK, "");
+  ASSERT_EQ(result5->status, ZX_OK, "");
+  auto ws_result2 = fpty::Device::Call::GetWindowSize(pc_io.channel());
+  ASSERT_EQ(ws_result2.status(), ZX_OK, "");
+  ASSERT_EQ(ws_result2->status, ZX_OK, "");
+  ASSERT_EQ(ws_result2->size.width, 80u, "");
+  ASSERT_EQ(ws_result2->size.height, 25u, "");
 
   // verify that we don't get events for special chars in raw mode
-  uint32_t features;
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceClrSetFeature(
-                pc_io.borrow_channel(), 0, fuchsia_hardware_pty_FEATURE_RAW, &status, &features),
-            ZX_OK, "");
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(features & fuchsia_hardware_pty_FEATURE_RAW, fuchsia_hardware_pty_FEATURE_RAW, "");
+  auto result6 = fpty::Device::Call::ClrSetFeature(pc_io.channel(), 0, fpty::FEATURE_RAW);
+  ASSERT_EQ(result6.status(), ZX_OK, "");
+  ASSERT_EQ(result6->status, ZX_OK, "");
+  ASSERT_EQ(result6->features & fpty::FEATURE_RAW, fpty::FEATURE_RAW, "");
   ASSERT_EQ(write(ps.get(), "\x03", 1), 1, "");
   ASSERT_EQ(read(pc.get(), tmp, 1), 1, "");
   ASSERT_EQ(tmp[0], '\x03', "");
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceReadEvents(pc_io.borrow_channel(), &status, &events), ZX_OK,
-            "");
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(events, 0u, "");
+  auto result7 = fpty::Device::Call::ReadEvents(pc_io.channel());
+  ASSERT_EQ(result7.status(), ZX_OK, "");
+  ASSERT_EQ(result7->status, ZX_OK, "");
+  ASSERT_EQ(result7->events, 0u, "");
 
   // create a second client
   int pc1_fd;
@@ -268,17 +267,20 @@ TEST(PtyTests, pty_test) {
   ASSERT_EQ(errno, EAGAIN, "");
 
   uint32_t n = 2;
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceMakeActive(pc_io.borrow_channel(), n, &status), ZX_OK, "");
-  ASSERT_EQ(status, ZX_ERR_NOT_FOUND, "");
+  auto result8 = fpty::Device::Call::MakeActive(pc_io.channel(), n);
+  ASSERT_EQ(result8.status(), ZX_OK, "");
+  ASSERT_EQ(result8->status, ZX_ERR_NOT_FOUND, "");
 
   // non-controlling client cannot change active client
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceMakeActive(pc1_io.borrow_channel(), n, &status), ZX_OK, "");
-  ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED, "");
+  auto result9 = fpty::Device::Call::MakeActive(pc1_io.channel(), n);
+  ASSERT_EQ(result9.status(), ZX_OK, "");
+  ASSERT_EQ(result9->status, ZX_ERR_ACCESS_DENIED, "");
 
   // but controlling client can
   n = 1;
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceMakeActive(pc_io.borrow_channel(), n, &status), ZX_OK, "");
-  ASSERT_EQ(status, ZX_OK, "");
+  auto result10 = fpty::Device::Call::MakeActive(pc_io.channel(), n);
+  ASSERT_EQ(result10.status(), ZX_OK, "");
+  ASSERT_EQ(result10->status, ZX_OK, "");
   ASSERT_EQ(fd_signals(pc, 0, zx::time{}), 0, "");
   ASSERT_EQ(fd_signals(pc1, POLLOUT, zx::time{}), POLLOUT, "");
   ASSERT_EQ(write(pc1.get(), "test", 4), 4, "");
@@ -289,10 +291,10 @@ TEST(PtyTests, pty_test) {
   pc1_io.reset();
   pc1.reset();
   ASSERT_EQ(fd_signals(pc, POLLHUP | POLLPRI, zx::time::infinite()), POLLHUP | POLLPRI, "");
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceReadEvents(pc_io.borrow_channel(), &status, &events), ZX_OK,
-            "");
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(events, fuchsia_hardware_pty_EVENT_HANGUP, "");
+  auto result11 = fpty::Device::Call::ReadEvents(pc_io.channel());
+  ASSERT_EQ(result11.status(), ZX_OK, "");
+  ASSERT_EQ(result11->status, ZX_OK, "");
+  ASSERT_EQ(result11->events, fpty::EVENT_HANGUP, "");
 
   // verify that server observes departure of last client
   pc_io.reset();
@@ -311,10 +313,8 @@ TEST(PtyTests, not_a_pty_test) {
 
   // Sending pty messages such as 'get window size' should fail
   // properly on things that are not ptys.
-  fuchsia_hardware_pty_WindowSize ws;
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_pty_DeviceGetWindowSize(io.borrow_channel(), &status, &ws),
-            ZX_ERR_BAD_HANDLE, "");
+  auto result = fpty::Device::Call::GetWindowSize(io.channel());
+  ASSERT_EQ(result.status(), ZX_ERR_BAD_HANDLE, "");
 
   io.reset();
 }

@@ -38,7 +38,7 @@ executable("bin") {
     "//zircon/system/ulib/virtio",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c" ]
+  public_deps = [ "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

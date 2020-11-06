@@ -4,7 +4,7 @@
 
 #include <assert.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/pty/c/fidl.h>
+#include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/virtualconsole/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 #include <zircon/device/vfs.h>
 #include <zircon/process.h>
@@ -45,6 +46,8 @@
 #include "keyboard.h"
 #include "src/lib/listnode/listnode.h"
 #include "vc.h"
+
+namespace fpty = ::llcpp::fuchsia::hardware::pty;
 
 static bool keep_log;
 
@@ -159,15 +162,14 @@ static zx_status_t remote_session_create(vc_t** out, zx::channel session, bool m
     return ZX_ERR_INTERNAL;
   }
 
-  zx_status_t status;
-  zx_status_t fidl_status = fuchsia_hardware_pty_DeviceOpenClient(fdio_unsafe_borrow_channel(io), 0,
-                                                                  session.release(), &status);
+  auto result = fpty::Device::Call::OpenClient(zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
+                                               0, std::move(session));
   fdio_unsafe_release(io);
-  if (fidl_status != ZX_OK) {
-    return fidl_status;
+  if (result.status() != ZX_OK) {
+    return result.status();
   }
-  if (status != ZX_OK) {
-    return status;
+  if (result->s != ZX_OK) {
+    return result->s;
   }
 
   vc_t* vc;
@@ -185,14 +187,12 @@ static zx_status_t remote_session_create(vc_t** out, zx::channel session, bool m
                                       session_io_cb(vc, dispatcher, wait, status, signal);
                                     });
 
-  fuchsia_hardware_pty_WindowSize wsz = {
-      .width = vc->columns,
-      .height = vc->rows,
-  };
+  struct winsize wsz = {};
+  wsz.ws_col = vc->columns;
+  wsz.ws_row = vc->rows;
+  ioctl(fd.get(), TIOCSWINSZ, &wsz);
 
   vc->io = fdio_unsafe_fd_to_io(fd.get());
-  fuchsia_hardware_pty_DeviceSetWindowSize(fdio_unsafe_borrow_channel(vc->io), &wsz, &status);
-
   vc->fd = fd.release();
   if (make_active) {
     vc_set_active(-1, vc);

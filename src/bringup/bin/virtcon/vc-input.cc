@@ -4,11 +4,11 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
-#include <fuchsia/hardware/pty/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/zx/channel.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/param.h>
 
 #include <hid/usages.h>
@@ -168,15 +168,10 @@ void vc_show_active() {
   list_for_every_entry (&g_vc_list, vc, vc_t, node) {
     vc_attach_gfx(vc);
     if ((vc->fd >= 0) && isatty(vc->fd)) {
-      fuchsia_hardware_pty_WindowSize wsz = {
-          .width = vc->columns,
-          .height = vc->rows,
-      };
-
-      fdio_t* io = fdio_unsafe_fd_to_io(vc->fd);
-      zx_status_t status;
-      fuchsia_hardware_pty_DeviceSetWindowSize(fdio_unsafe_borrow_channel(io), &wsz, &status);
-      fdio_unsafe_release(io);
+      struct winsize sz = {};
+      sz.ws_col = vc->columns;
+      sz.ws_row = vc->rows;
+      ioctl(vc->fd, TIOCSWINSZ, &sz);
     }
     if (vc == g_active_vc) {
       vc_full_repaint(vc);
