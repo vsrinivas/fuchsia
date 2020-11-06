@@ -19,10 +19,14 @@ int TestMain(void*, arch::EarlyTicks) {
 
 #if defined(__x86_64__) || defined(__i386__)
   printf("CPU features:\n");
-  constexpr auto print_one = [](const char* s) { printf("\t%s\n", s); };
-  arch::BootCpuid<arch::CpuidFeatureFlagsC>().Print(print_one);
-  arch::BootCpuid<arch::CpuidFeatureFlagsD>().Print(print_one);
-  arch::BootCpuid<arch::CpuidExtendedFeatureFlagsB>().Print(print_one);
+  constexpr auto print_feature = [](const char* name, auto value, auto high_bit, auto low_bit) {
+    if (name && value) {
+      printf("\t%s\n", name);
+    }
+  };
+  arch::BootCpuid<arch::CpuidFeatureFlagsC>().ForEachField(print_feature);
+  arch::BootCpuid<arch::CpuidFeatureFlagsD>().ForEachField(print_feature);
+  arch::BootCpuid<arch::CpuidExtendedFeatureFlagsB>().ForEachField(print_feature);
 #endif
 
   return 0;

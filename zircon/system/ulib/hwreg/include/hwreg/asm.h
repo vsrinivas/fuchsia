@@ -38,11 +38,12 @@ class AsmHeader {
   // of reserved-zero bits and a macro for the mask of unknown bits.
   template <typename T>
   AsmHeader& Register(std::string_view prefix) {
-    T{}.ForEachField([this, prefix](const char* name, auto bit_high_incl, auto bit_low) {
-      if (name) {
-        FieldMacro(prefix, name, bit_high_incl, bit_low);
-      }
-    });
+    T{}.ForEachField(
+        [this, prefix](const char* name, auto value, auto bit_high_incl, auto bit_low) {
+          if (name) {
+            FieldMacro(prefix, name, bit_high_incl, bit_low);
+          }
+        });
     RegisterMacros(prefix, T{}.rsvdz_mask(), ~T{}.fields_mask());
     return *this;
   }

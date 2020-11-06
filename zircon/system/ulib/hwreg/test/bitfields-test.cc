@@ -704,6 +704,42 @@ TEST(RegisterTestCase, Print) {
   }
 }
 
+TEST(RegisterTestCase, ForEachField) {
+  class TestReg : public hwreg::RegisterBase<TestReg, uint32_t, hwreg::EnablePrinter> {
+   public:
+    DEF_RSVDZ_BIT(31);
+    DEF_FIELD(30, 21, field1);
+    DEF_FIELD(20, 12, field2);
+    DEF_RSVDZ_FIELD(11, 0);
+  };
+
+  auto reg = TestReg{}.set_field1(0b1001111001).set_field2(0b101010101);
+  const struct {
+    const char* name;
+    uint32_t value;
+    uint32_t high_bit;
+    uint32_t low_bit;
+  } expected_calls[] = {
+      {nullptr, 0, 31, 31},
+      {"field1", 0b1001111001, 30, 21},
+      {"field2", 0b101010101, 20, 12},
+      {nullptr, 0, 11, 0},
+  };
+
+  size_t call_idx = 0;
+  auto cb = [&call_idx, expected_calls](const char* name, uint32_t value, uint32_t high_bit,
+                                        uint32_t low_bit) {
+    ASSERT_LT(call_idx, std::size(expected_calls));
+    auto& expected = expected_calls[call_idx++];
+    EXPECT_STR_EQ(name, expected.name);
+    EXPECT_EQ(value, expected.value);
+    EXPECT_EQ(high_bit, expected.high_bit);
+    EXPECT_EQ(low_bit, expected.low_bit);
+  };
+  reg.ForEachField(cb);
+  EXPECT_EQ(std::size(expected_calls), call_idx);
+}
+
 // Test using the "fluent" style of chaining calls, like:
 // TestReg::Get().ReadFrom(&mmio).set_field1(0x234).set_field2(0x123).WriteTo(&mmio);
 TEST(RegisterTestCase, SetChaining) {

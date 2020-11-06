@@ -175,14 +175,16 @@ class RegisterBase {
                                   reg_value_, params_.fields_mask, sizeof(ValueType));
   }
 
-  template <typename F>
-  constexpr void ForEachField(F callback) const {
+  template <typename FieldCallback>
+  constexpr void ForEachField(FieldCallback callback) const {
     static_assert(PrinterEnabled::value, "Pass hwreg::EnablePrinter to RegisterBase to enable");
+    static_assert(std::is_invocable_v<FieldCallback, const char*, ValueType, uint32_t, uint32_t>);
     for (unsigned i = 0; i < params_.printer.num_fields; ++i) {
-      IntType mask = internal::ComputeMask<IntType>(params_.printer.fields[i].bit_high_incl() -
-                                                    params_.printer.fields[i].bit_low() + 1)
-                     << params_.printer.fields[i].bit_low();
-      callback((mask & rsvdz_mask()) == mask ? nullptr : params_.printer.fields[i].name(),
+      ValueType mask = internal::ComputeMask<ValueType>(params_.printer.fields[i].bit_high_incl() -
+                                                        params_.printer.fields[i].bit_low() + 1)
+                       << params_.printer.fields[i].bit_low();
+      ValueType value = (reg_value_ & mask) >> params_.printer.fields[i].bit_low();
+      callback((mask & rsvdz_mask()) == mask ? nullptr : params_.printer.fields[i].name(), value,
                params_.printer.fields[i].bit_high_incl(), params_.printer.fields[i].bit_low());
     }
   }
