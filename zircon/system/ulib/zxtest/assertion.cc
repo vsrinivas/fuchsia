@@ -133,17 +133,24 @@ fbl::String PrintStatus(zx_status_t status) {
 #endif
 }
 
-bool StrCmp(const fbl::String& actual, const fbl::String& expected) { return actual == expected; }
+bool StrCmp(const char* actual, const char* expected) {
+  // We take precaution not to call strcmp on a nullptr, as it varies by
+  // implementation whether that is supported.
+  if (actual == nullptr && expected == nullptr) {
+    return true;
+  }
+  return (!actual == !expected) && strcmp(actual, expected) == 0;
+}
 
 bool StrCmp(const fbl::String& actual, const char* expected) {
-  return strcmp(actual.c_str(), expected) == 0;
+  return StrCmp(actual.c_str(), expected);
 }
 
 bool StrCmp(const char* actual, const fbl::String& expected) {
-  return strcmp(actual, expected.c_str()) == 0;
+  return StrCmp(actual, expected.c_str());
 }
 
-bool StrCmp(const char* actual, const char* expected) { return strcmp(actual, expected) == 0; }
+bool StrCmp(const fbl::String& actual, const fbl::String& expected) { return actual == expected; }
 
 bool StrContain(const fbl::String& str, const fbl::String& substr) {
   const auto str_view = std::string_view(str.data(), str.size());
