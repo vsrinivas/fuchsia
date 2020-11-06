@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Package ring gives a simple implementation of a ring/b.bufular buffer.
+// Package ring gives a simple implementation of a ring/circular buffer.
 package ring
 
 import (
@@ -12,8 +12,8 @@ import (
 	"sync"
 )
 
-// Buffer is a simple implementation of a ring/b.bufular buffer.
-// See https://en.wikipedia.org/wiki/b.bufular_buffer for more details.
+// Buffer is a simple implementation of a ring/circular buffer.
+// See https://en.wikipedia.org/wiki/Circular_buffer for more details.
 type Buffer struct {
 	sync.Mutex
 	buf []byte
@@ -50,7 +50,7 @@ func (b *Buffer) Read(p []byte) (int, error) {
 	}
 }
 
-// Write writes to the buffer, b.bufularly overwriting data if p exceeds the
+// Write writes to the buffer, circularly overwriting data if p exceeds the
 // size of the buffer.
 func (b *Buffer) Write(p []byte) (int, error) {
 	total := len(p)
@@ -81,7 +81,7 @@ func (b *Buffer) Write(p []byte) (int, error) {
 	return total, nil
 }
 
-// Bytes returns the number of unread bytes in the buffer.
+// Bytes returns the unread bytes in the buffer.
 func (b *Buffer) Bytes() []byte {
 	b.Lock()
 	defer b.Unlock()
