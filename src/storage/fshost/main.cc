@@ -134,7 +134,7 @@ int RamctlWatcher(void* arg) {
   return 0;
 }
 
-int BlockWatcher(std::unique_ptr<devmgr::FsManager> fs_manager) {
+int BlockWatcher(std::shared_ptr<devmgr::FsManager> fs_manager) {
   // Check relevant boot arguments
   devmgr::BlockWatcherOptions options = {};
   options.netboot = fs_manager->boot_args()->netboot();
@@ -254,7 +254,7 @@ int main(int argc, char** argv) {
   // Initialize the local filesystem in isolation.
   zx::channel dir_request(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
-  std::unique_ptr<devmgr::FsManager> fs_manager;
+  std::shared_ptr<devmgr::FsManager> fs_manager;
   status =
       devmgr::FsManager::Create(std::move(loader), std::move(dir_request),
                                 std::move(lifecycle_request), devmgr::MakeMetrics(), &fs_manager);
@@ -281,9 +281,6 @@ int main(int argc, char** argv) {
     printf("fshost: cannot bind namespace\n");
     return status;
   }
-  // TODO(dgonyeo): call WatchExit from inside FsManager, instead of doing it
-  // here.
-  fs_manager->WatchExit();
 
   // If there is a ramdisk, setup the ramctl filesystems.
   zx::vmo ramdisk_vmo;
@@ -304,12 +301,12 @@ int main(int argc, char** argv) {
   }
 
   if (!disable_block_watcher) {
-    std::thread t(&devmgr::BlockWatcher, std::move(fs_manager));
+    std::thread t(&devmgr::BlockWatcher, fs_manager);
     t.detach();
   }
 
-  zx::nanosleep(zx::time::infinite());
+  fs_manager->WaitForShutdown();
 
-  printf("fshost: terminating (block device filesystems finished?)\n");
+  printf("fshost: terminating\n");
   return 0;
 }

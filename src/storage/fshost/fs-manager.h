@@ -38,7 +38,7 @@ class FsManager {
  public:
   static zx_status_t Create(std::shared_ptr<loader::LoaderServiceBase> loader,
                             zx::channel dir_request, zx::channel lifecycle_request,
-                            FsHostMetrics metrics, std::unique_ptr<FsManager>* out);
+                            FsHostMetrics metrics, std::shared_ptr<FsManager>* out);
 
   ~FsManager();
 
@@ -58,13 +58,8 @@ class FsManager {
   // |server|.
   zx_status_t ServeFshostRoot(zx::channel server) { return registry_.ServeRoot(std::move(server)); }
 
-  // Triggers unmount when the FSHOST_SIGNAL_EXIT signal is raised on |event_|.
-  //
-  // Sets FSHOST_SIGNAL_EXIT_DONE when unmounting is complete.
-  void WatchExit();
-
-  // Signals FSHOST_SIGNAL_EXIT on |event_|, causing filesystems to be shutdown
-  // and unmounted. Calls |callback| when this is complete.
+  // Asynchronously shut down all the filesystems managed by fshost and then signal the main thread
+  // to exit. Calls |callback| when complete.
   void Shutdown(fit::function<void(zx_status_t)> callback);
 
   // Returns a pointer to the |FsHostMetrics| instance.
@@ -75,7 +70,8 @@ class FsManager {
 
   std::shared_ptr<devmgr::FshostBootArgs> boot_args() { return boot_args_; }
 
-  zx::event* event() { return &event_; }
+  bool IsShutdown();
+  void WaitForShutdown();
 
   // Creates a RemoteDir sub-directory in the fshost diagnostics directory.
   // This allows a filesystem to expose its Inspect API to Archivist alongside fshost.
@@ -91,12 +87,8 @@ class FsManager {
   zx_status_t SetupLifecycleServer(zx::channel lifecycle_request);
   zx_status_t Initialize();
 
-  // Event on which "FSHOST_SIGNAL_XXX" signals are set.
-  // Communicates state changes internal to FsManager.
-  zx::event event_;
-
-  static constexpr const char* kMountPoints[] = {"/bin","/data", "/volume", "/system", "/install",
-                                                 "/blob", "/pkgfs", "/factory", "/durable"};
+  static constexpr const char* kMountPoints[] = {
+      "/bin", "/data", "/volume", "/system", "/install", "/blob", "/pkgfs", "/factory", "/durable"};
   fbl::RefPtr<fs::Vnode> mount_nodes[std::size(kMountPoints)];
 
   // The Root VFS manages the following filesystems:
@@ -106,7 +98,6 @@ class FsManager {
 
   std::unique_ptr<async::Loop> global_loop_;
   fs::ManagedVfs outgoing_vfs_;
-  async::Wait global_shutdown_;
 
   // The base, root directory which serves the rest of the fshost.
   fbl::RefPtr<memfs::VnodeDir> global_root_;
@@ -134,7 +125,9 @@ class FsManager {
   // Archivist will parse all the inspect trees found in this directory tree.
   fbl::RefPtr<fs::PseudoDir> diagnostics_dir_;
 
-  std::unique_ptr<async::Wait> shutdown_waiter_;
+  std::mutex lock_;
+  bool shutdown_called_ TA_GUARDED(lock_) = false;
+  sync_completion_t shutdown_;
 };
 
 }  // namespace devmgr

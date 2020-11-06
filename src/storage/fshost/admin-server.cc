@@ -27,8 +27,7 @@ void AdminServer::Shutdown(ShutdownCompleter::Sync& completer) {
   printf("fshost: received shutdown command over admin interface\n");
   fs_manager_->Shutdown([completer = completer.ToAsync()](zx_status_t status) mutable {
     if (status != ZX_OK) {
-      printf("fshost: error waiting for FSHOST_SIGNAL_EXIT_DONE: %s\n",
-             zx_status_get_string(status));
+      printf("fshost: filesystem shutdown failed: %s\n", zx_status_get_string(status));
     } else {
       completer.Reply();
       printf("fshost: shutdown complete\n");

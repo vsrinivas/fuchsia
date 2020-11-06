@@ -57,24 +57,22 @@ FsManager::FsManager(FsHostMetrics metrics)
 
 // In the event that we haven't been explicitly signalled, tear ourself down.
 FsManager::~FsManager() {
-  if (global_shutdown_.has_handler()) {
-    event_.signal(0, FSHOST_SIGNAL_EXIT);
-    auto deadline = zx::deadline_after(zx::sec(2));
-    zx_signals_t pending;
-    event_.wait_one(FSHOST_SIGNAL_EXIT_DONE, deadline, &pending);
+  if (!shutdown_called_) {
+    Shutdown([](zx_status_t status) {
+      if (status != ZX_OK) {
+        fprintf(stderr, "fshost: filesystem shutdown failed: %s\n", zx_status_get_string(status));
+        return;
+      }
+      printf("fshost: filesystem shutdown complete\n");
+    });
   }
-  // Ensure all asynchronous work on global_loop_ finishes.
-  // Some of the asynchronous work references memory owned by this instance, so we need to ensure
-  // the work is complete before destruction.
-  // TODO(sdemos): Clean up ordering of fields to let the natural destructor ordering handle
-  // shutdown.
-  global_loop_->Shutdown();
+  sync_completion_wait(&shutdown_, ZX_TIME_INFINITE);
 }
 
 zx_status_t FsManager::Create(std::shared_ptr<loader::LoaderServiceBase> loader,
                               zx::channel dir_request, zx::channel lifecycle_request,
-                              FsHostMetrics metrics, std::unique_ptr<FsManager>* out) {
-  auto fs_manager = std::unique_ptr<FsManager>(new FsManager(std::move(metrics)));
+                              FsHostMetrics metrics, std::shared_ptr<FsManager>* out) {
+  auto fs_manager = std::shared_ptr<FsManager>(new FsManager(std::move(metrics)));
   zx_status_t status = fs_manager->Initialize();
   if (status != ZX_OK) {
     return status;
@@ -221,12 +219,6 @@ zx_status_t FsManager::Initialize() {
     fprintf(stderr, "fshost: failed to serve /data stats");
   }
 
-  status = zx::event::create(0, &event_);
-  if (status != ZX_OK) {
-    fprintf(stderr, "fshost: failed to create fs-manager event: %d\n", status);
-    return status;
-  }
-
   global_loop_->StartThread("root-dispatcher");
   root_vfs_->SetDispatcher(global_loop_->dispatcher());
   return ZX_OK;
@@ -252,33 +244,27 @@ zx_status_t FsManager::ServeRoot(zx::channel server) {
   return root_vfs_->ServeDirectory(global_root_, std::move(server), rights);
 }
 
-void FsManager::WatchExit() {
-  printf("fshost: watching for exit\n");
-  global_shutdown_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
-                                      zx_status_t status, const zx_packet_signal_t* signal) {
-    printf("fshost: exit signal detected\n");
-    root_vfs_->UninstallAll(zx::time::infinite());
-    event_.signal(0, FSHOST_SIGNAL_EXIT_DONE);
-  });
-
-  global_shutdown_.set_object(event_.get());
-  global_shutdown_.set_trigger(FSHOST_SIGNAL_EXIT);
-  global_shutdown_.Begin(global_loop_->dispatcher());
-}
-
 void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
-  zx_status_t status = event_.signal(0, FSHOST_SIGNAL_EXIT);
-  if (status != ZX_OK) {
-    printf("fshost: error signalling event: %s\n", zx_status_get_string(status));
+  std::lock_guard guard(lock_);
+  if (shutdown_called_) {
+    fprintf(stderr, "fshost: shutdown called more than once\n");
+    callback(ZX_ERR_INTERNAL);
     return;
   }
+  shutdown_called_ = true;
 
-  shutdown_waiter_ = std::make_unique<async::Wait>(event_.get(), FSHOST_SIGNAL_EXIT_DONE);
-  shutdown_waiter_->set_handler(
-      [callback = std::move(callback)](async_dispatcher_t*, async::Wait*, zx_status_t status,
-                                       /*signal*/ const zx_packet_signal_t*) { callback(status); });
-  shutdown_waiter_->Begin(global_loop_->dispatcher());
+  async::PostTask(global_loop_->dispatcher(), [this, callback = std::move(callback)]() {
+    printf("fshost: filesystem shutdown initiated\n");
+    zx_status_t status = root_vfs_->UninstallAll(zx::time::infinite());
+    callback(status);
+    sync_completion_signal(&shutdown_);
+    // after this signal, FsManager can be destroyed.
+  });
 }
+
+bool FsManager::IsShutdown() { return sync_completion_signaled(&shutdown_); }
+
+void FsManager::WaitForShutdown() { sync_completion_wait(&shutdown_, ZX_TIME_INFINITE); }
 
 zx_status_t FsManager::AddFsDiagnosticsDirectory(const char* diagnostics_dir_name,
                                                  zx::channel fs_diagnostics_dir_client) {

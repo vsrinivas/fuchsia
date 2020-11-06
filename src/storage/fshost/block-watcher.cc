@@ -79,7 +79,7 @@ class Watcher {
     return options;
   }
 
-  Watcher(std::unique_ptr<FsManager> fshost, BlockWatcherOptions options)
+  Watcher(std::shared_ptr<FsManager> fshost, BlockWatcherOptions options)
       : mounter_(std::move(fshost), options),
         device_manager_(GetDeviceManagerOptions(options.netboot)) {
     zx_status_t status = zx::event::create(0, &pause_event_);
@@ -339,7 +339,7 @@ class Watcher {
 // Ideally, we'd pass the watcher directly to the server.
 static Watcher* watcher = nullptr;
 
-void BlockDeviceWatcher(std::unique_ptr<FsManager> fshost, BlockWatcherOptions options) {
+void BlockDeviceWatcher(std::shared_ptr<FsManager> fshost, BlockWatcherOptions options) {
   ZX_ASSERT(watcher == nullptr);
   Watcher w(std::move(fshost), options);
   watcher = &w;

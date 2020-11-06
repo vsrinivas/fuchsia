@@ -24,13 +24,11 @@ void LifecycleServer::Stop(StopCompleter::Sync& completer) {
   printf("fshost: received shutdown command over lifecycle interface\n");
   fs_manager_->Shutdown([completer = completer.ToAsync()](zx_status_t status) mutable {
     if (status != ZX_OK) {
-      printf("fshost: error waiting for FSHOST_SIGNAL_EXIT_DONE: %s\n",
-             zx_status_get_string(status));
+      printf("fshost: filesystem shutdown failed: %s\n", zx_status_get_string(status));
     } else {
       printf("fshost: shutdown complete\n");
     }
     completer.Close(status);
-    // TODO(sdemos): this should send a signal to the main thread to exit
   });
 }
 

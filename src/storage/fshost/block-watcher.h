@@ -38,7 +38,7 @@ class BlockWatcherServer final : public llcpp::fuchsia::fshost::BlockWatcher::In
 };
 
 // Monitors "/dev/class/block" for new devices indefinitely.
-void BlockDeviceWatcher(std::unique_ptr<FsManager> fshost, BlockWatcherOptions options);
+void BlockDeviceWatcher(std::shared_ptr<FsManager> fshost, BlockWatcherOptions options);
 
 }  // namespace devmgr
 
