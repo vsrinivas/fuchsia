@@ -782,22 +782,11 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   TuneWindow adj_delay_window;
   uint32_t best_phase = 0;
 
-  // First look for the largest window in which transfers failed at some settings.
+  // Find the largest window of working settings.
   for (uint32_t phase = 0; phase < std::size(phase_windows); phase++) {
-    if (phase_windows[phase].size < clk.cfg_div() &&
-        phase_windows[phase].size > adj_delay_window.size) {
+    if (phase_windows[phase].size > adj_delay_window.size) {
       adj_delay_window = phase_windows[phase];
       best_phase = phase;
-    }
-  }
-
-  // If no such window is found just use the largest one.
-  if (adj_delay_window.size == 0) {
-    for (uint32_t phase = 0; phase < std::size(phase_windows); phase++) {
-      if (phase_windows[phase].size > adj_delay_window.size) {
-        adj_delay_window = phase_windows[phase];
-        best_phase = phase;
-      }
     }
   }
 

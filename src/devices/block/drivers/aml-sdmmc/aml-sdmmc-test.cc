@@ -245,7 +245,7 @@ TEST_F(AmlSdmmcTest, AdjDelayTuningNoWindowWrap) {
     */
 
     0, 0, 1, 1, 1, 1, 1, 1, 0, 0,  // Phase 0
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 1
+    0, 0, 0, 1, 1, 1, 0, 0, 0, 0,  // Phase 1
     0, 0, 0, 1, 1, 1, 1, 1, 1, 1,  // Phase 3
   });
   // clang-format on
@@ -264,6 +264,35 @@ TEST_F(AmlSdmmcTest, AdjDelayTuningNoWindowWrap) {
 
   EXPECT_EQ(clock.cfg_tx_phase(), 3);
   EXPECT_EQ(adjust.adj_delay(), 6);
+}
+
+TEST_F(AmlSdmmcTest, AdjDelayTuningLargestWindowChosen) {
+  // clang-format off
+  dut_->SetRequestResults({
+    /*
+    0  1  2  3  4  5  6  7  8  9
+    */
+
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 0
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 1
+    0, 0, 0, 1, 1, 1, 1, 1, 1, 1,  // Phase 3
+  });
+  // clang-format on
+
+  ASSERT_OK(dut_->Init());
+
+  AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
+
+  auto clock = AmlSdmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(10).WriteTo(&mmio_);
+  auto adjust = AmlSdmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
+
+  EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  clock.ReadFrom(&mmio_);
+  adjust.ReadFrom(&mmio_);
+
+  EXPECT_EQ(clock.cfg_tx_phase(), 1);
+  EXPECT_EQ(adjust.adj_delay(), 0);
 }
 
 TEST_F(AmlSdmmcTest, AdjDelayTuningWindowWrap) {
