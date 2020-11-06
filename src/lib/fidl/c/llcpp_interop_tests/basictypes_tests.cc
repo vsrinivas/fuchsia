@@ -159,7 +159,7 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
   basictypes::TestInterface::ConsumeSimpleStructRequest request(0);
   FillRequestHandles handles;
   FillRequest(handles, request);
-  fidl::OwnedOutgoingMessage<basictypes::TestInterface::ConsumeSimpleStructRequest> encoded(
+  fidl::OwnedEncodedMessage<basictypes::TestInterface::ConsumeSimpleStructRequest> encoded(
       &request);
 
   FIDL_ALIGNDECL uint8_t response_storage[512];
@@ -186,7 +186,7 @@ TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
   basictypes::TestInterface::ConsumeSimpleStructRequest request(0);
   FillRequestHandles handles;
   FillRequest(handles, request);
-  fidl::OwnedOutgoingMessage<basictypes::TestInterface::ConsumeSimpleStructRequest> encoded(
+  fidl::OwnedEncodedMessage<basictypes::TestInterface::ConsumeSimpleStructRequest> encoded(
       &request);
 
   FIDL_ALIGNDECL uint8_t response_storage[512];

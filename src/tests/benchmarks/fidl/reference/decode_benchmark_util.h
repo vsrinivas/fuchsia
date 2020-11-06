@@ -22,7 +22,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   fidl::aligned<FidlType> aligned_value = builder();
-  fidl::OwnedOutgoingMessage<FidlType> encoded(&aligned_value.value);
+  fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value.value);
   ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
   fidl::OutgoingMessage& encoded_message = encoded.GetOutgoingMessage();
 
@@ -46,7 +46,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   }
 
   // Reencode the decoded result and compare against the initial (expected) encode_result.
-  fidl::OwnedOutgoingMessage<FidlType> reencoded(reinterpret_cast<FidlType*>(test_data.data()));
+  fidl::OwnedEncodedMessage<FidlType> reencoded(reinterpret_cast<FidlType*>(test_data.data()));
   if (!reencoded.ok()) {
     std::cout << "fidl::Encode failed with error: " << reencoded.error() << std::endl;
     return false;

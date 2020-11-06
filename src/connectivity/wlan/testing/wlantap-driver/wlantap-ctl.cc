@@ -63,13 +63,13 @@ struct WlantapCtl : wlantap::WlantapCtl::Interface {
     // Convert to HLCPP by transiting through fidl bytes.
     auto phy_config = ::fuchsia::wlan::tap::WlantapPhyConfig::New();
     {
-      fidl::OwnedOutgoingMessage<wlantap::WlantapPhyConfig> encoded(&config);
+      fidl::OwnedEncodedMessage<wlantap::WlantapPhyConfig> encoded(&config);
       if (!encoded.ok()) {
         completer.Reply(encoded.status());
         return;
       }
       auto decoded =
-          fidl::IncomingMessage<wlantap::WlantapPhyConfig>::FromOutgoingWithRawHandleCopy(&encoded);
+          fidl::DecodedMessage<wlantap::WlantapPhyConfig>::FromOutgoingWithRawHandleCopy(&encoded);
       if (!decoded.ok()) {
         completer.Reply(status);
         return;

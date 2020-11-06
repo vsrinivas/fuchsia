@@ -132,7 +132,7 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
   }
   // We encode start_args outside of callback in order to access stack-allocated
   // data before it is destroyed.
-  auto message = std::make_unique<fdf::DriverStartArgs::OwnedOutgoingMessage>(&start_args);
+  auto message = std::make_unique<fdf::DriverStartArgs::OwnedEncodedMessage>(&start_args);
   if (!message->ok()) {
     LOGF(ERROR, "Failed to start driver '/pkg/%s', could not encode start args: %s", binary->data(),
          message->error());

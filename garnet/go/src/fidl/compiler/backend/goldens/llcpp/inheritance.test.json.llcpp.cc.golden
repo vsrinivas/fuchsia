@@ -18,7 +18,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
 
 }  // namespace
 super::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
-  fooRequest::OwnedOutgoingMessage _request(zx_txid_t(0), s);
+  fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -27,7 +27,7 @@ super::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
 
 super::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s,
                           zx_time_t _deadline) {
-  fooRequest::OwnedOutgoingMessage _request(zx_txid_t(0), s);
+  fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
       _deadline);
@@ -41,8 +41,8 @@ super::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
                                  uint8_t* _response_bytes,
                                  uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  fooRequest::UnownedOutgoingMessage _request(_request_bytes,
-                                              _request_byte_capacity, 0, s);
+  fooRequest::UnownedEncodedMessage _request(_request_bytes,
+                                             _request_byte_capacity, 0, s);
   _request.GetOutgoingMessage().Call<fooResponse>(_client, _response_bytes,
                                                   _response_byte_capacity);
   status_ = _request.status();
@@ -97,7 +97,7 @@ void super::fooResponseContext::OnReply(uint8_t* reply) {
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  fooRequest::OwnedOutgoingMessage _request(_context->Txid(), s);
+  fooRequest::OwnedEncodedMessage _request(_context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -106,7 +106,7 @@ void super::fooResponseContext::OnReply(uint8_t* reply) {
                                       fooResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  fooRequest::UnownedOutgoingMessage _request(
+  fooRequest::UnownedEncodedMessage _request(
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
@@ -165,14 +165,14 @@ namespace entries {
 }
 
 ::fidl::Result super::Interface::fooCompleterBase::Reply(int64_t y) {
-  fooResponse::OwnedOutgoingMessage _response{y};
+  fooResponse::OwnedEncodedMessage _response{y};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result super::Interface::fooCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
-  fooResponse::UnownedOutgoingMessage _response(_buffer.data, _buffer.capacity,
-                                                y);
+  fooResponse::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
+                                               y);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -192,7 +192,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 
 }  // namespace
 sub::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
-  fooRequest::OwnedOutgoingMessage _request(zx_txid_t(0), s);
+  fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -201,7 +201,7 @@ sub::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
 
 sub::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s,
                         zx_time_t _deadline) {
-  fooRequest::OwnedOutgoingMessage _request(zx_txid_t(0), s);
+  fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
       _deadline);
@@ -215,8 +215,8 @@ sub::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
                                uint8_t* _response_bytes,
                                uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  fooRequest::UnownedOutgoingMessage _request(_request_bytes,
-                                              _request_byte_capacity, 0, s);
+  fooRequest::UnownedEncodedMessage _request(_request_bytes,
+                                             _request_byte_capacity, 0, s);
   _request.GetOutgoingMessage().Call<fooResponse>(_client, _response_bytes,
                                                   _response_byte_capacity);
   status_ = _request.status();
@@ -270,7 +270,7 @@ void sub::fooResponseContext::OnReply(uint8_t* reply) {
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  fooRequest::OwnedOutgoingMessage _request(_context->Txid(), s);
+  fooRequest::OwnedEncodedMessage _request(_context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -279,7 +279,7 @@ void sub::fooResponseContext::OnReply(uint8_t* reply) {
                                     fooResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  fooRequest::UnownedOutgoingMessage _request(
+  fooRequest::UnownedEncodedMessage _request(
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
@@ -337,14 +337,14 @@ namespace entries {
 }
 
 ::fidl::Result sub::Interface::fooCompleterBase::Reply(int64_t y) {
-  fooResponse::OwnedOutgoingMessage _response{y};
+  fooResponse::OwnedEncodedMessage _response{y};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result sub::Interface::fooCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
-  fooResponse::UnownedOutgoingMessage _response(_buffer.data, _buffer.capacity,
-                                                y);
+  fooResponse::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
+                                               y);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

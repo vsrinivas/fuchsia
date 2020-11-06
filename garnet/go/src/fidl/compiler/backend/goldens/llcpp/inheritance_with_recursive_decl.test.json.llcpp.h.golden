@@ -76,25 +76,25 @@ class Parent final {
     void _CloseHandles();
 
     // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
-    class UnownedOutgoingMessage final {
+    class UnownedEncodedMessage final {
      public:
-      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
-                             zx_txid_t _txid, ::zx::channel& request)
+      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
+                            zx_txid_t _txid, ::zx::channel& request)
           : message_(_bytes, _byte_size, sizeof(FirstRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         FIDL_ALIGNDECL FirstRequest _request(_txid, request);
         message_.LinearizeAndEncode<FirstRequest>(&_request);
       }
-      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
-                             FirstRequest* request)
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                            FirstRequest* request)
           : message_(bytes, byte_size, sizeof(FirstRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         message_.LinearizeAndEncode<FirstRequest>(request);
       }
-      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
-      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
-      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
-      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -116,16 +116,16 @@ class Parent final {
     };
 
     // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
-    class OwnedOutgoingMessage final {
+    class OwnedEncodedMessage final {
      public:
-      explicit OwnedOutgoingMessage(zx_txid_t _txid, ::zx::channel& request)
+      explicit OwnedEncodedMessage(zx_txid_t _txid, ::zx::channel& request)
           : message_(bytes_, sizeof(bytes_), _txid, request) {}
-      explicit OwnedOutgoingMessage(FirstRequest* request)
+      explicit OwnedEncodedMessage(FirstRequest* request)
           : message_(bytes_, sizeof(bytes_), request) {}
-      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
-      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
-      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
-      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -143,28 +143,28 @@ class Parent final {
      private:
       FIDL_ALIGNDECL
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
-      UnownedOutgoingMessage message_;
+      UnownedEncodedMessage message_;
     };
 
     // TODO(fxbug.dev/62485): rename to DecodedMessage.
-    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
      public:
-      IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_info_t* handles = nullptr,
-                      uint32_t handle_actual = 0)
+      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                     zx_handle_info_t* handles = nullptr,
+                     uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
         Decode<FirstRequest>();
       }
-      IncomingMessage(fidl_incoming_msg_t* msg)
+      DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
         Decode<FirstRequest>();
       }
-      IncomingMessage(const IncomingMessage&) = delete;
-      IncomingMessage(IncomingMessage&&) = delete;
-      IncomingMessage* operator=(const IncomingMessage&) = delete;
-      IncomingMessage* operator=(IncomingMessage&&) = delete;
-      ~IncomingMessage() {
+      DecodedMessage(const DecodedMessage&) = delete;
+      DecodedMessage(DecodedMessage&&) = delete;
+      DecodedMessage* operator=(const DecodedMessage&) = delete;
+      DecodedMessage* operator=(DecodedMessage&&) = delete;
+      ~DecodedMessage() {
         if (ok() && (PrimaryObject() != nullptr)) {
           PrimaryObject()->_CloseHandles();
         }
@@ -177,23 +177,23 @@ class Parent final {
 
       // Release the ownership of the decoded message. That means that the
       // handles won't be closed When the object is destroyed. After calling
-      // this method, the IncomingMessage object should not be used anymore.
+      // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
 
       // These methods should only be used for testing purpose.
-      // They create an IncomingMessage using the bytes of an outgoing message
+      // They create an DecodedMessage using the bytes of an outgoing message
       // and copying the handles.
-      static IncomingMessage FromOutgoingWithRawHandleCopy(
-          UnownedOutgoingMessage* outgoing_message) {
-        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      static DecodedMessage FromOutgoingWithRawHandleCopy(
+          UnownedEncodedMessage* encoded_message) {
+        return DecodedMessage(encoded_message->GetOutgoingMessage());
       }
-      static IncomingMessage FromOutgoingWithRawHandleCopy(
-          OwnedOutgoingMessage* outgoing_message) {
-        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      static DecodedMessage FromOutgoingWithRawHandleCopy(
+          OwnedEncodedMessage* encoded_message) {
+        return DecodedMessage(encoded_message->GetOutgoingMessage());
       }
 
      private:
-      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
         zx_handle_info_t
             handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
         Init(outgoing_message, handles,
@@ -384,25 +384,25 @@ class Child final {
     void _CloseHandles();
 
     // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
-    class UnownedOutgoingMessage final {
+    class UnownedEncodedMessage final {
      public:
-      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
-                             zx_txid_t _txid, ::zx::channel& request)
+      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
+                            zx_txid_t _txid, ::zx::channel& request)
           : message_(_bytes, _byte_size, sizeof(FirstRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         FIDL_ALIGNDECL FirstRequest _request(_txid, request);
         message_.LinearizeAndEncode<FirstRequest>(&_request);
       }
-      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
-                             FirstRequest* request)
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                            FirstRequest* request)
           : message_(bytes, byte_size, sizeof(FirstRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         message_.LinearizeAndEncode<FirstRequest>(request);
       }
-      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
-      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
-      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
-      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -424,16 +424,16 @@ class Child final {
     };
 
     // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
-    class OwnedOutgoingMessage final {
+    class OwnedEncodedMessage final {
      public:
-      explicit OwnedOutgoingMessage(zx_txid_t _txid, ::zx::channel& request)
+      explicit OwnedEncodedMessage(zx_txid_t _txid, ::zx::channel& request)
           : message_(bytes_, sizeof(bytes_), _txid, request) {}
-      explicit OwnedOutgoingMessage(FirstRequest* request)
+      explicit OwnedEncodedMessage(FirstRequest* request)
           : message_(bytes_, sizeof(bytes_), request) {}
-      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
-      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
-      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
-      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -451,28 +451,28 @@ class Child final {
      private:
       FIDL_ALIGNDECL
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
-      UnownedOutgoingMessage message_;
+      UnownedEncodedMessage message_;
     };
 
     // TODO(fxbug.dev/62485): rename to DecodedMessage.
-    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
      public:
-      IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_info_t* handles = nullptr,
-                      uint32_t handle_actual = 0)
+      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                     zx_handle_info_t* handles = nullptr,
+                     uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
         Decode<FirstRequest>();
       }
-      IncomingMessage(fidl_incoming_msg_t* msg)
+      DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
         Decode<FirstRequest>();
       }
-      IncomingMessage(const IncomingMessage&) = delete;
-      IncomingMessage(IncomingMessage&&) = delete;
-      IncomingMessage* operator=(const IncomingMessage&) = delete;
-      IncomingMessage* operator=(IncomingMessage&&) = delete;
-      ~IncomingMessage() {
+      DecodedMessage(const DecodedMessage&) = delete;
+      DecodedMessage(DecodedMessage&&) = delete;
+      DecodedMessage* operator=(const DecodedMessage&) = delete;
+      DecodedMessage* operator=(DecodedMessage&&) = delete;
+      ~DecodedMessage() {
         if (ok() && (PrimaryObject() != nullptr)) {
           PrimaryObject()->_CloseHandles();
         }
@@ -485,23 +485,23 @@ class Child final {
 
       // Release the ownership of the decoded message. That means that the
       // handles won't be closed When the object is destroyed. After calling
-      // this method, the IncomingMessage object should not be used anymore.
+      // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
 
       // These methods should only be used for testing purpose.
-      // They create an IncomingMessage using the bytes of an outgoing message
+      // They create an DecodedMessage using the bytes of an outgoing message
       // and copying the handles.
-      static IncomingMessage FromOutgoingWithRawHandleCopy(
-          UnownedOutgoingMessage* outgoing_message) {
-        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      static DecodedMessage FromOutgoingWithRawHandleCopy(
+          UnownedEncodedMessage* encoded_message) {
+        return DecodedMessage(encoded_message->GetOutgoingMessage());
       }
-      static IncomingMessage FromOutgoingWithRawHandleCopy(
-          OwnedOutgoingMessage* outgoing_message) {
-        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      static DecodedMessage FromOutgoingWithRawHandleCopy(
+          OwnedEncodedMessage* encoded_message) {
+        return DecodedMessage(encoded_message->GetOutgoingMessage());
       }
 
      private:
-      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
         zx_handle_info_t
             handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
         Init(outgoing_message, handles,
@@ -541,25 +541,25 @@ class Child final {
     void _CloseHandles();
 
     // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
-    class UnownedOutgoingMessage final {
+    class UnownedEncodedMessage final {
      public:
-      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
-                             zx_txid_t _txid, ::zx::channel& request)
+      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
+                            zx_txid_t _txid, ::zx::channel& request)
           : message_(_bytes, _byte_size, sizeof(SecondRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         FIDL_ALIGNDECL SecondRequest _request(_txid, request);
         message_.LinearizeAndEncode<SecondRequest>(&_request);
       }
-      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
-                             SecondRequest* request)
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                            SecondRequest* request)
           : message_(bytes, byte_size, sizeof(SecondRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         message_.LinearizeAndEncode<SecondRequest>(request);
       }
-      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
-      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
-      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
-      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -581,16 +581,16 @@ class Child final {
     };
 
     // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
-    class OwnedOutgoingMessage final {
+    class OwnedEncodedMessage final {
      public:
-      explicit OwnedOutgoingMessage(zx_txid_t _txid, ::zx::channel& request)
+      explicit OwnedEncodedMessage(zx_txid_t _txid, ::zx::channel& request)
           : message_(bytes_, sizeof(bytes_), _txid, request) {}
-      explicit OwnedOutgoingMessage(SecondRequest* request)
+      explicit OwnedEncodedMessage(SecondRequest* request)
           : message_(bytes_, sizeof(bytes_), request) {}
-      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
-      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
-      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
-      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -608,28 +608,28 @@ class Child final {
      private:
       FIDL_ALIGNDECL
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
-      UnownedOutgoingMessage message_;
+      UnownedEncodedMessage message_;
     };
 
     // TODO(fxbug.dev/62485): rename to DecodedMessage.
-    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
      public:
-      IncomingMessage(uint8_t* bytes, uint32_t byte_actual,
-                      zx_handle_info_t* handles = nullptr,
-                      uint32_t handle_actual = 0)
+      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                     zx_handle_info_t* handles = nullptr,
+                     uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
         Decode<SecondRequest>();
       }
-      IncomingMessage(fidl_incoming_msg_t* msg)
+      DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
         Decode<SecondRequest>();
       }
-      IncomingMessage(const IncomingMessage&) = delete;
-      IncomingMessage(IncomingMessage&&) = delete;
-      IncomingMessage* operator=(const IncomingMessage&) = delete;
-      IncomingMessage* operator=(IncomingMessage&&) = delete;
-      ~IncomingMessage() {
+      DecodedMessage(const DecodedMessage&) = delete;
+      DecodedMessage(DecodedMessage&&) = delete;
+      DecodedMessage* operator=(const DecodedMessage&) = delete;
+      DecodedMessage* operator=(DecodedMessage&&) = delete;
+      ~DecodedMessage() {
         if (ok() && (PrimaryObject() != nullptr)) {
           PrimaryObject()->_CloseHandles();
         }
@@ -642,23 +642,23 @@ class Child final {
 
       // Release the ownership of the decoded message. That means that the
       // handles won't be closed When the object is destroyed. After calling
-      // this method, the IncomingMessage object should not be used anymore.
+      // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
 
       // These methods should only be used for testing purpose.
-      // They create an IncomingMessage using the bytes of an outgoing message
+      // They create an DecodedMessage using the bytes of an outgoing message
       // and copying the handles.
-      static IncomingMessage FromOutgoingWithRawHandleCopy(
-          UnownedOutgoingMessage* outgoing_message) {
-        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      static DecodedMessage FromOutgoingWithRawHandleCopy(
+          UnownedEncodedMessage* encoded_message) {
+        return DecodedMessage(encoded_message->GetOutgoingMessage());
       }
-      static IncomingMessage FromOutgoingWithRawHandleCopy(
-          OwnedOutgoingMessage* outgoing_message) {
-        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      static DecodedMessage FromOutgoingWithRawHandleCopy(
+          OwnedEncodedMessage* encoded_message) {
+        return DecodedMessage(encoded_message->GetOutgoingMessage());
       }
 
      private:
-      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
         zx_handle_info_t
             handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
         Init(outgoing_message, handles,

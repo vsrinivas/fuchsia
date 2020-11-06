@@ -74,7 +74,7 @@ void CannotProxyUnknownEnvelope(std::vector<uint8_t> bytes, std::vector<zx_handl
   // we always use a full size buffer.
   FIDL_ALIGNDECL
   uint8_t encoded_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  fidl::UnownedOutgoingMessage<FidlType> encoded(encoded_bytes, ZX_CHANNEL_MAX_MSG_BYTES, result);
+  fidl::UnownedEncodedMessage<FidlType> encoded(encoded_bytes, ZX_CHANNEL_MAX_MSG_BYTES, result);
   ASSERT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS) << encoded.status_string();
 
   EXPECT_STREQ(encoded.error(), "Cannot encode unknown union or table") << encoded.error();

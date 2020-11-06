@@ -277,7 +277,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   }
 
   // Parse
-  fidl::IncomingMessage<Metadata> decoded(bytes.get(), static_cast<uint32_t>(size), nullptr, 0);
+  fidl::DecodedMessage<Metadata> decoded(bytes.get(), static_cast<uint32_t>(size), nullptr, 0);
   if (!decoded.ok() || (decoded.error() != nullptr)) {
     zxlogf(ERROR, "%s: Unable to parse metadata %s", __FILE__, decoded.error());
     return ZX_ERR_INTERNAL;

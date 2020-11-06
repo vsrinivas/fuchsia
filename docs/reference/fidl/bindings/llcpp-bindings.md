@@ -930,12 +930,12 @@ This section describes how to explicitly use the encoding and the decoding.
 
 ### Encoding
 
-When an object is allocated and initialized, `fidl::OwnedOutgoingMessage<FidlType>` can be used to
+When an object is allocated and initialized, `fidl::OwnedEncodedMessage<FidlType>` can be used to
 encode it. For example:
 
 ```c++
 void Encode(::llcpp::fuchsia::examples::User& user) {
-  ::fidl::OwnedOutgoingMessage<::llcpp::fuchsia::examples::User> encoded(&user);
+  ::fidl::OwnedEncodedMessage<::llcpp::fuchsia::examples::User> encoded(&user);
   if (!encoded.ok()) {
     // Do something about the error.
     return;
@@ -959,11 +959,11 @@ available on an encoded FIDL type:
 ### Decoding
 
 Once an object has been encoded (and eventually stored somewhere),
-`fidl::IncomingMessage<FidlType>` can be used to decode it. For example:
+`fidl::DecodedMessage<FidlType>` can be used to decode it. For example:
 
 ```c++
 void UseEncodedUser(std::vector<uint8_t> buffer) {
-  fidl::IncomingMessage<::llcpp::fuchsia::examples::User> decoded(
+  fidl::DecodedMessage<::llcpp::fuchsia::examples::User> decoded(
       buffer.data(), static_cast<uint32_t>(buffer.size()));
   if (!decoded.ok()) {
     // Display an error.

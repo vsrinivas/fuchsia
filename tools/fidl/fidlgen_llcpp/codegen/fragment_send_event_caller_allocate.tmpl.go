@@ -12,7 +12,7 @@ Send{{ .Name }}Event(
 
 {{- define "SendEventCallerAllocateMethodDefinition" }}
 zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventCallerAllocateMethodSignature" . }} {
-  {{ .Name }}Response::UnownedOutgoingMessage _response(_buffer.data, _buffer.capacity
+  {{ .Name }}Response::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
       {{- template "CommaPassthroughMessageParams" .Response -}}
   );
   _response.Write(_channel->get());

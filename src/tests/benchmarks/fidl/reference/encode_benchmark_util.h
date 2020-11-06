@@ -40,7 +40,7 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
 
   // Encode the input with fidl::Encode and compare againt encode().
   fidl::aligned<FidlType> aligned_value = builder();
-  ::fidl::OwnedOutgoingMessage<FidlType> encoded(&aligned_value.value);
+  ::fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value.value);
   ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
 
   aligned_value = builder();

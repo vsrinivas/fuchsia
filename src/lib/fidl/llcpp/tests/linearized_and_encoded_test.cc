@@ -13,7 +13,7 @@ namespace fidl_linearized = ::llcpp::fidl::llcpp::linearized::test;
 TEST(LinearizedAndEncoded, FullyLinearizedAndEncoded) {
   fidl_linearized::InnerStruct inner = {.x = 1};
   fidl_linearized::FullyLinearizedStruct input{.ptr = fidl::unowned_ptr(&inner)};
-  fidl::OwnedOutgoingMessage<fidl_linearized::FullyLinearizedStruct> encoded(&input);
+  fidl::OwnedEncodedMessage<fidl_linearized::FullyLinearizedStruct> encoded(&input);
   EXPECT_TRUE(encoded.ok());
 
   auto encoded_obj = reinterpret_cast<fidl_linearized::FullyLinearizedStruct*>(

@@ -114,11 +114,11 @@ TEST_F(RegistersDeviceTest, EncodeDecodeTest) {
 
   auto metadata_original =
       registers::BuildMetadata(allocator_, std::move(mmio), std::move(registers));
-  fidl::OwnedOutgoingMessage<Metadata> msg(&metadata_original);
+  fidl::OwnedEncodedMessage<Metadata> msg(&metadata_original);
   EXPECT_EQ(msg.GetOutgoingMessage().handle_actual(), 0);
   EXPECT_EQ(msg.GetOutgoingMessage().handles(), nullptr);
 
-  auto metadata = Metadata::IncomingMessage::FromOutgoingWithRawHandleCopy(&msg);
+  auto metadata = Metadata::DecodedMessage::FromOutgoingWithRawHandleCopy(&msg);
   ASSERT_TRUE(metadata.ok(), "%s", metadata.error());
   ASSERT_EQ(metadata.PrimaryObject()->mmio().count(), 3);
   EXPECT_EQ(metadata.PrimaryObject()->mmio()[0].base_address(), 0x1234123412341234);
@@ -142,8 +142,8 @@ TEST_F(RegistersDeviceTest, EncodeDecodeTest) {
 }
 
 TEST_F(RegistersDeviceTest, InvalidDecodeTest) {
-  fidl::OwnedOutgoingMessage<Metadata> msg(nullptr);
-  auto metadata = Metadata::IncomingMessage::FromOutgoingWithRawHandleCopy(&msg);
+  fidl::OwnedEncodedMessage<Metadata> msg(nullptr);
+  auto metadata = Metadata::DecodedMessage::FromOutgoingWithRawHandleCopy(&msg);
   EXPECT_FALSE(metadata.ok());
 }
 

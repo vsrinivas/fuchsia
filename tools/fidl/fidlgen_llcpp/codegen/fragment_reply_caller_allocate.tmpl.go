@@ -12,7 +12,7 @@ Reply(::fidl::BufferSpan _buffer {{- if .Response }}, {{ end }}
 
 {{- define "ReplyCallerAllocateMethodDefinition" }}
 ::fidl::Result {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCallerAllocateMethodSignature" . }} {
-  {{ .Name }}Response::UnownedOutgoingMessage _response(_buffer.data, _buffer.capacity
+  {{ .Name }}Response::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
   {{- template "CommaPassthroughMessageParams" .Response -}}
   );
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

@@ -181,25 +181,22 @@ class IncomingMessage : public ::fidl::Result {
 
 }  // namespace internal
 
-// TODO(vbelliard): rename to OwnedEncodedMessage.
 // This class owns a message of |FidlType| and encodes the message automatically upon construction.
 template <typename FidlType>
-using OwnedOutgoingMessage = typename FidlType::OwnedOutgoingMessage;
+using OwnedEncodedMessage = typename FidlType::OwnedEncodedMessage;
 
-// TODO(vbelliard): rename to UnownedEncodedMessage.
 // This class manages the handles within |FidlType| and encodes the message automatically upon
-// construction. Different from |OwnedOutgoingMessage|, it takes in a caller-allocated buffer and
+// construction. Different from |OwnedEncodedMessage|, it takes in a caller-allocated buffer and
 // uses that as the backing storage for the message. The buffer must outlive instances of this
 // class.
 template <typename FidlType>
-using UnownedOutgoingMessage = typename FidlType::UnownedOutgoingMessage;
+using UnownedEncodedMessage = typename FidlType::UnownedEncodedMessage;
 
-// TODO(vbelliard): rename to DecodedMessage.
 // This class manages the handles within |FidlType| and decodes the message automatically upon
 // construction. It always borrows external buffers for the backing storage of the message.
 // This class should mostly be used for tests.
 template <typename FidlType>
-using IncomingMessage = typename FidlType::IncomingMessage;
+using DecodedMessage = typename FidlType::DecodedMessage;
 
 }  // namespace fidl
 

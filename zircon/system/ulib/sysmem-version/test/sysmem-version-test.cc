@@ -59,7 +59,7 @@ class LinearSnap {
  private:
   explicit LinearSnap(FidlType&& to_move_in) {
     alignas(FIDL_ALIGNMENT) FidlType aligned = std::move(to_move_in);
-    fidl::UnownedOutgoingMessage<FidlType> encoded(linear_data_, kMaxDataSize, &aligned);
+    fidl::UnownedEncodedMessage<FidlType> encoded(linear_data_, kMaxDataSize, &aligned);
     ZX_ASSERT(encoded.ok());
     ZX_ASSERT(encoded.error() == nullptr);
 
@@ -73,7 +73,7 @@ class LinearSnap {
            outgoing_message.handle_actual() * sizeof(zx_handle_t));
     snap_handles_count_ = outgoing_message.handle_actual();
 
-    auto decoded = fidl::IncomingMessage<FidlType>::FromOutgoingWithRawHandleCopy(&encoded);
+    auto decoded = fidl::DecodedMessage<FidlType>::FromOutgoingWithRawHandleCopy(&encoded);
     ZX_ASSERT(decoded.ok());
     ZX_ASSERT(decoded.error() == nullptr);
     // Release the ownership of the primary object (the handles are closed by the LinearSnap

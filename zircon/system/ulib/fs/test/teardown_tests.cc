@@ -99,7 +99,7 @@ class AsyncTearDownVnode : public FdCountVnode {
 void SendSync(const zx::channel& client) {
   FIDL_ALIGNDECL
   llcpp::fuchsia::io::Node::SyncRequest request(5);
-  fidl::OwnedOutgoingMessage<llcpp::fuchsia::io::Node::SyncRequest> encoded(&request);
+  fidl::OwnedEncodedMessage<llcpp::fuchsia::io::Node::SyncRequest> encoded(&request);
   ASSERT_OK(encoded.status());
   encoded.Write(client.get());
   ASSERT_OK(encoded.status());

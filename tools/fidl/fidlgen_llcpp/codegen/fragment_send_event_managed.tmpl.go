@@ -11,7 +11,7 @@ Send{{ .Name }}Event(::zx::unowned_channel _channel {{- if .Response }}, {{ end 
 
 {{- define "SendEventManagedMethodDefinition" }}
 zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventManagedMethodSignature" . }} {
-  {{ .Name }}Response::OwnedOutgoingMessage _response{
+  {{ .Name }}Response::OwnedEncodedMessage _response{
   {{- template "PassthroughMessageParams" .Response -}}
   };
   _response.Write(_channel->get());

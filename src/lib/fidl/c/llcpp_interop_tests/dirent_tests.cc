@@ -88,7 +88,7 @@ class Server {
  private:
   template <typename FidlType>
   zx_status_t Reply(fidl_txn_t* txn, FidlType* value) {
-    fidl::OwnedOutgoingMessage<FidlType> encoded(value);
+    fidl::OwnedEncodedMessage<FidlType> encoded(value);
     zx_status_t status = txn->reply(txn, encoded.GetOutgoingMessage().message());
     encoded.GetOutgoingMessage().ReleaseHandles();
     return status;
@@ -96,7 +96,7 @@ class Server {
 
   zx_status_t DoCountNumDirectories(
       fidl_txn_t* txn,
-      fidl::IncomingMessage<gen::DirEntTestInterface::CountNumDirectoriesRequest>& decoded) {
+      fidl::DecodedMessage<gen::DirEntTestInterface::CountNumDirectoriesRequest>& decoded) {
     count_num_directories_num_calls_.fetch_add(1);
     const auto& request = *decoded.PrimaryObject();
     int64_t count = 0;
@@ -111,7 +111,7 @@ class Server {
   }
 
   zx_status_t DoReadDir(fidl_txn_t* txn,
-                        fidl::IncomingMessage<gen::DirEntTestInterface::ReadDirRequest>& decoded) {
+                        fidl::DecodedMessage<gen::DirEntTestInterface::ReadDirRequest>& decoded) {
     read_dir_num_calls_.fetch_add(1);
     auto golden = golden_dirents();
     gen::DirEntTestInterface::ReadDirResponse response(golden);
@@ -121,7 +121,7 @@ class Server {
 
   zx_status_t DoConsumeDirectories(
       fidl_txn_t* txn,
-      fidl::IncomingMessage<gen::DirEntTestInterface::ConsumeDirectoriesRequest>& decoded) {
+      fidl::DecodedMessage<gen::DirEntTestInterface::ConsumeDirectoriesRequest>& decoded) {
     consume_directories_num_calls_.fetch_add(1);
     EXPECT_EQ(decoded.PrimaryObject()->dirents.count(), 3);
     gen::DirEntTestInterface::ConsumeDirectoriesResponse response;
@@ -131,7 +131,7 @@ class Server {
 
   zx_status_t DoOneWayDirents(
       fidl_txn_t* txn,
-      fidl::IncomingMessage<gen::DirEntTestInterface::OneWayDirentsRequest>& decoded) {
+      fidl::DecodedMessage<gen::DirEntTestInterface::OneWayDirentsRequest>& decoded) {
     one_way_dirents_num_calls_.fetch_add(1);
     EXPECT_EQ(decoded.PrimaryObject()->dirents.count(), 3);
     EXPECT_OK(decoded.PrimaryObject()->ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED));
@@ -140,8 +140,8 @@ class Server {
   }
 
   template <typename FidlType>
-  static fidl::IncomingMessage<FidlType> DecodeAs(fidl_incoming_msg_t* msg) {
-    return fidl::IncomingMessage<FidlType>(msg);
+  static fidl::DecodedMessage<FidlType> DecodeAs(fidl_incoming_msg_t* msg) {
+    return fidl::DecodedMessage<FidlType>(msg);
   }
 
   static zx_status_t FidlDispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* msg,

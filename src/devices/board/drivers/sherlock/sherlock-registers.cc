@@ -56,7 +56,7 @@ zx_status_t Sherlock::RegistersInit() {
 
   auto metadata =
       registers::BuildMetadata(allocator, std::move(mmio_entries), std::move(register_entries));
-  fidl::OwnedOutgoingMessage<registers::Metadata> encoded_metadata(&metadata);
+  fidl::OwnedEncodedMessage<registers::Metadata> encoded_metadata(&metadata);
   if (!encoded_metadata.ok() || (encoded_metadata.error() != nullptr)) {
     zxlogf(ERROR, "%s: Could not build metadata %s\n", __FILE__, encoded_metadata.error());
     return encoded_metadata.status();

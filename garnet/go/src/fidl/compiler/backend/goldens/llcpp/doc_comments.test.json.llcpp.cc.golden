@@ -38,7 +38,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 
 }  // namespace
 Interface::ResultOf::Method::Method(zx_handle_t _client) {
-  MethodRequest::OwnedOutgoingMessage _request(zx_txid_t(0));
+  MethodRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -195,7 +195,7 @@ namespace entries {
 }
 
 zx_status_t Interface::SendOnEventEvent(::zx::unowned_channel _channel) {
-  OnEventResponse::OwnedOutgoingMessage _response{};
+  OnEventResponse::OwnedEncodedMessage _response{};
   _response.Write(_channel->get());
   return _response.status();
 }

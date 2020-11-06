@@ -31,7 +31,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     // decode time.
     fidl::aligned<FidlType> aligned_value = builder();
     // encode the value.
-    fidl::OwnedOutgoingMessage<FidlType> encoded(&aligned_value.value);
+    fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value.value);
     if (encoded.error() != nullptr) {
       std::cerr << "Unexpected error: " << encoded.error() << '\n';
     }
@@ -40,7 +40,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Decode.
 
     {
-      auto decoded = fidl::IncomingMessage<FidlType>::FromOutgoingWithRawHandleCopy(&encoded);
+      auto decoded = fidl::DecodedMessage<FidlType>::FromOutgoingWithRawHandleCopy(&encoded);
       ZX_ASSERT(decoded.ok());
     }
 

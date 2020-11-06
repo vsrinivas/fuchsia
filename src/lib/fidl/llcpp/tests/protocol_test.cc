@@ -201,7 +201,7 @@ TEST(MagicNumberTest, EventRead) {
   test::Frobinator::HrobResponse _response(fidl::unowned_str(s));
   // Set an incompatible magic number
   _response._hdr.magic_number = 0;
-  fidl::OwnedOutgoingMessage<test::Frobinator::HrobResponse> encoded(&_response);
+  fidl::OwnedEncodedMessage<test::Frobinator::HrobResponse> encoded(&_response);
   encoded.Write(h1.get());
   ASSERT_TRUE(encoded.ok());
 

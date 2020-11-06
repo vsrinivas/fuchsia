@@ -21,7 +21,7 @@ extern "C" const fidl_type_t
 
 }  // namespace
 Parent::ResultOf::First::First(zx_handle_t _client, ::zx::channel& request) {
-  FirstRequest::OwnedOutgoingMessage _request(zx_txid_t(0), request);
+  FirstRequest::OwnedEncodedMessage _request(zx_txid_t(0), request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -31,7 +31,7 @@ Parent::UnownedResultOf::First::First(zx_handle_t _client,
                                       uint8_t* _request_bytes,
                                       uint32_t _request_byte_capacity,
                                       ::zx::channel& request) {
-  FirstRequest::UnownedOutgoingMessage _request(
+  FirstRequest::UnownedEncodedMessage _request(
       _request_bytes, _request_byte_capacity, 0, request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
@@ -134,7 +134,7 @@ extern "C" const fidl_type_t
 
 }  // namespace
 Child::ResultOf::First::First(zx_handle_t _client, ::zx::channel& request) {
-  FirstRequest::OwnedOutgoingMessage _request(zx_txid_t(0), request);
+  FirstRequest::OwnedEncodedMessage _request(zx_txid_t(0), request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -144,7 +144,7 @@ Child::UnownedResultOf::First::First(zx_handle_t _client,
                                      uint8_t* _request_bytes,
                                      uint32_t _request_byte_capacity,
                                      ::zx::channel& request) {
-  FirstRequest::UnownedOutgoingMessage _request(
+  FirstRequest::UnownedEncodedMessage _request(
       _request_bytes, _request_byte_capacity, 0, request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
@@ -152,7 +152,7 @@ Child::UnownedResultOf::First::First(zx_handle_t _client,
 }
 
 Child::ResultOf::Second::Second(zx_handle_t _client, ::zx::channel& request) {
-  SecondRequest::OwnedOutgoingMessage _request(zx_txid_t(0), request);
+  SecondRequest::OwnedEncodedMessage _request(zx_txid_t(0), request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -162,7 +162,7 @@ Child::UnownedResultOf::Second::Second(zx_handle_t _client,
                                        uint8_t* _request_bytes,
                                        uint32_t _request_byte_capacity,
                                        ::zx::channel& request) {
-  SecondRequest::UnownedOutgoingMessage _request(
+  SecondRequest::UnownedEncodedMessage _request(
       _request_bytes, _request_byte_capacity, 0, request);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();

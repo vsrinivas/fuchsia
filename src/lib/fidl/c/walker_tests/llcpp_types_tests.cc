@@ -44,7 +44,7 @@ TEST(LlcppTypesTests, EncodedMessageTest) {
   EXPECT_EQ(zx::channel::create(0, &msg.channel, &channel_1), ZX_OK);
 
   {
-    fidl::OwnedOutgoingMessage<TypesTest::NonNullableChannelRequest> encoded(&msg);
+    fidl::OwnedEncodedMessage<TypesTest::NonNullableChannelRequest> encoded(&msg);
 
     HelperExpectPeerValid(channel_1);
   }
@@ -60,11 +60,11 @@ TEST(LlcppTypesTests, DecodedMessageTest) {
 
   EXPECT_EQ(zx::channel::create(0, &msg.channel, &channel_1), ZX_OK);
 
-  fidl::OwnedOutgoingMessage<TypesTest::NonNullableChannelRequest> encoded(&msg);
+  fidl::OwnedEncodedMessage<TypesTest::NonNullableChannelRequest> encoded(&msg);
 
   {
     auto decoded =
-        fidl::IncomingMessage<TypesTest::NonNullableChannelRequest>::FromOutgoingWithRawHandleCopy(
+        fidl::DecodedMessage<TypesTest::NonNullableChannelRequest>::FromOutgoingWithRawHandleCopy(
             &encoded);
 
     HelperExpectPeerValid(channel_1);
@@ -87,7 +87,7 @@ TEST(LlcppTypesTests, RoundTripTest) {
   // We need to define our own storage because it is used after encoded is deleted.
   FIDL_ALIGNDECL uint8_t storage[sizeof(TypesTest::NonNullableChannelRequest)];
 
-  auto encoded = new fidl::UnownedOutgoingMessage<TypesTest::NonNullableChannelRequest>(
+  auto encoded = new fidl::UnownedEncodedMessage<TypesTest::NonNullableChannelRequest>(
       storage, sizeof(storage), &msg);
   EXPECT_EQ(encoded->GetOutgoingMessage().byte_actual(),
             sizeof(TypesTest::NonNullableChannelRequest));
@@ -108,7 +108,7 @@ TEST(LlcppTypesTests, RoundTripTest) {
 
   // Decode
   auto decoded =
-      fidl::IncomingMessage<TypesTest::NonNullableChannelRequest>::FromOutgoingWithRawHandleCopy(
+      fidl::DecodedMessage<TypesTest::NonNullableChannelRequest>::FromOutgoingWithRawHandleCopy(
           encoded);
   EXPECT_TRUE(decoded.ok());
   EXPECT_NULL(decoded.error(), "%s", decoded.error());
@@ -124,7 +124,7 @@ TEST(LlcppTypesTests, RoundTripTest) {
 
   // Encode
   {
-    fidl::OwnedOutgoingMessage<TypesTest::NonNullableChannelRequest> encoded2(
+    fidl::OwnedEncodedMessage<TypesTest::NonNullableChannelRequest> encoded2(
         decoded.PrimaryObject());
     EXPECT_TRUE(encoded2.ok());
     EXPECT_NULL(encoded2.error(), "%s", encoded2.error());
@@ -191,13 +191,13 @@ TEST(LlcppTypesTests, ResponseStorageAllocationStrategyTest) {
 
   static_assert(sizeof(TypesTest::RequestOf512BytesRequest) == 512);
   // Buffers for messages no bigger than 512 bytes are embedded, for this request,
-  // OwnedOutgoingMessage size is bigger than 512 bytes.
-  static_assert(sizeof(fidl::OwnedOutgoingMessage<TypesTest::RequestOf512BytesRequest>) > 512);
+  // OwnedEncodedMessage size is bigger than 512 bytes.
+  static_assert(sizeof(fidl::OwnedEncodedMessage<TypesTest::RequestOf512BytesRequest>) > 512);
 
   static_assert(sizeof(TypesTest::RequestOf513BytesRequest) == 520);
   // Buffers for messages bigger than 512 bytes are store on the heap, for this request,
-  // OwnedOutgoingMessage size is smaller than 512 bytes.
-  static_assert(sizeof(fidl::OwnedOutgoingMessage<TypesTest::RequestOf513BytesRequest>) < 512);
+  // OwnedEncodedMessage size is smaller than 512 bytes.
+  static_assert(sizeof(fidl::OwnedEncodedMessage<TypesTest::RequestOf513BytesRequest>) < 512);
 }
 
 }  // namespace
