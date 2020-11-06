@@ -7,11 +7,9 @@ import("//build/dart/dart_library.gni")
 import("//build/dart/fidl_move.gni")
 import("//build/fidl/fidl.gni")
 import("//build/flutter/flutter_component.gni")
-import("//build/flutter/flutter_test_component.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/flutter_driver.gni")
 import("//src/sys/build/components.gni")
-import("//src/sys/build/fuchsia_test_package.gni")
 import("//topaz/runtime/dart/flutter_test.gni")
 
 dart_library("lib") {
@@ -107,26 +105,6 @@ flutter_test("simple_browser_unittests") {
     "//third_party/dart-pkg/pub/test",
     "//topaz/public/dart/fuchsia_logger",
   ]
-}
-
-flutter_test_component("target-test-component") {
-  component_name = "simple-browser-target-test"
-  manifest = "meta/simple_browser_target_test.cmx"
-  sources = [ "simple_browser_target_test.dart" ]
-
-  deps = [
-    ":lib",
-    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
-    "//third_party/dart-pkg/pub/test",
-  ]
-}
-
-# fx test simple-browser-target-test
-fuchsia_test_package("simple-browser-target-test") {
-  test_components = [ ":target-test-component" ]
-  test_specs = {
-    environments = basic_envs
-  }
 }
 
 config_data("web_engine_config") {

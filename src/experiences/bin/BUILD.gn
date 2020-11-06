@@ -9,7 +9,7 @@ group("bin") {
 group("dart_target_tests") {
   testonly = true
 
-  deps = [ "simple_browser:simple-browser-target-test" ]
+  deps = [ "simple_browser/target_test:simple-browser-target-test" ]
 }
 
 group("dart_unittests") {
@@ -18,7 +18,8 @@ group("dart_unittests") {
   # TODO(fxb/41505): Temporarily disable flutter_tester tests on mac hosts.
   _flutter_tester_tests = []
   if (host_os != "mac") {
-    _flutter_tester_tests += [ "simple_browser:simple_browser_unittests($host_toolchain)" ]
+    _flutter_tester_tests +=
+        [ "simple_browser:simple_browser_unittests($host_toolchain)" ]
   }
 
   deps = _flutter_tester_tests
