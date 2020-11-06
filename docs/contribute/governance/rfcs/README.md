@@ -19,7 +19,7 @@ RFC                                                     | Submitted  | Reviewed 
 [RFC-0007](0007_remove_thread_killing.md)               | 2020-09-25 | 2020-10-06 | Zircon Removal of Thread Killing
 [RFC-0008](0008_remove_zx_clock_get_and_adjust.md)      | 2020-10-21 | 2020-10-29 | Remove zx_clock_get and zx_clock_adjust
 [RFC-0009](0009_edge_triggered_async_wait.md)           | 2020-10-22 | 2020-11-04 | Edge triggered async_wait
-
+[RFC-0010](0010_channel_iovec.md)                       | 2020-10-01 | 2020-11-06 | zx_channel_iovec_t support for zx_channel_write and zx_channel_call
 
 ## Rejected proposals
 
