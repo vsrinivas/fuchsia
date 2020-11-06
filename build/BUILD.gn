@@ -355,7 +355,6 @@ group("deprecated_package_underscore") {
     "//src/lib/ui/fuchsia-framebuffer:fb_box_rs",
     "//src/lib/ui/fuchsia-framebuffer:fb_integration_test",
     "//src/lib/ui/input:input_unit_tests",
-    "//src/lib/url:url_tests",
     "//src/lib/uuid:uuid_tests",
     "//src/lib/waitgroup:waitgroup_tests",
     "//src/lib/zerocopy:zerocopy_tests",

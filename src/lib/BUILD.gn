@@ -42,7 +42,6 @@ group("lib") {
     "timekeeper",
     "trace",
     "ui",
-    "url",
     "usb_bulk",
     "uuid",
     "vmo_store",

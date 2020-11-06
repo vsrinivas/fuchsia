@@ -127,7 +127,6 @@ group("all") {
     "//src/lib/intl:tests",
     "//src/lib/pkg_url:pkg_url_unittests",
     "//src/lib/ui/base_view:base_view_unittests",
-    "//src/lib/url:url_tests",
     "//src/lib/uuid:uuid_tests",
     "//src/lib/vulkan:loader_and_validation_tests",
     "//src/lib/zircon/rust:fuchsia-zircon-tests",
