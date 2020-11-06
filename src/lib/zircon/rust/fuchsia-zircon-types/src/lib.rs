@@ -24,6 +24,7 @@ pub type zx_rsrc_kind_t = u32;
 pub type zx_signals_t = u32;
 pub type zx_ssize_t = isize;
 pub type zx_status_t = i32;
+pub type zx_rsrc_system_base_t = u64;
 pub type zx_ticks_t = i64;
 pub type zx_time_t = i64;
 pub type zx_vaddr_t = usize;
@@ -359,6 +360,12 @@ multiconst!(zx_rsrc_kind_t, [
     ZX_RSRC_KIND_ROOT       = 4;
     ZX_RSRC_KIND_VMEX       = 5;
     ZX_RSRC_KIND_SMC        = 6;
+    ZX_RSRC_KIND_SYSTEM     = 7;
+]);
+
+multiconst!(zx_rsrc_system_base_t, [
+    ZX_RSRC_SYSTEM_HYPERVISOR_BASE = 0;
+    ZX_RSRC_SYSTEM_VMEX_BASE       = 1;
 ]);
 
 pub const ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET: usize = 1;

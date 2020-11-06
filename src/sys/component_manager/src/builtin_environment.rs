@@ -7,6 +7,7 @@ use {
         builtin::{
             arguments::Arguments as BootArguments,
             capability::BuiltinCapability,
+            hypervisor_resource::HypervisorResource,
             ioport_resource::IoportResource,
             irq_resource::IrqResource,
             kernel_stats::KernelStats,
@@ -347,6 +348,7 @@ pub struct BuiltinEnvironment {
 
     // Framework capabilities.
     pub boot_args: Arc<BootArguments>,
+    pub hypervisor_resource: Option<Arc<HypervisorResource>>,
     #[cfg(target_arch = "x86_64")]
     pub ioport_resource: Option<Arc<IoportResource>>,
     pub irq_resource: Option<Arc<IrqResource>>,
@@ -430,6 +432,9 @@ impl BuiltinEnvironment {
 
         let root_resource_handle =
             take_startup_handle(HandleType::Resource.into()).map(zx::Resource::from);
+
+        let system_resource_handle =
+            take_startup_handle(HandleType::SystemResource.into()).map(zx::Resource::from);
 
         // Set up BootArguments service.
         let boot_args = BootArguments::new();
@@ -529,6 +534,27 @@ impl BuiltinEnvironment {
             }
         }
 
+        // Set up the HypervisorResource service.
+        let hypervisor_resource_handle = system_resource_handle
+            .as_ref()
+            .map(|handle| {
+                match handle.create_child(
+                    zx::ResourceKind::SYSTEM,
+                    None,
+                    zx::sys::ZX_RSRC_SYSTEM_HYPERVISOR_BASE,
+                    1,
+                    b"hypervisor",
+                ) {
+                    Ok(resource) => Some(resource),
+                    Err(_) => None,
+                }
+            })
+            .flatten();
+        let hypervisor_resource = hypervisor_resource_handle.map(HypervisorResource::new);
+        if let Some(hypervisor_resource) = hypervisor_resource.as_ref() {
+            model.root_realm.hooks.install(hypervisor_resource.hooks()).await;
+        }
+
         // Set up System Controller service.
         let system_controller = Arc::new(SystemController::new(model.clone(), SHUTDOWN_TIMEOUT));
         model.root_realm.hooks.install(system_controller.hooks()).await;
@@ -597,6 +623,7 @@ impl BuiltinEnvironment {
             read_only_log,
             write_only_log,
             mmio_resource,
+            hypervisor_resource,
             irq_resource,
             #[cfg(target_arch = "x86_64")]
             ioport_resource: _ioport_resource,

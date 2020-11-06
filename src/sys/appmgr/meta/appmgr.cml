@@ -166,6 +166,10 @@
             path: "/svc_for_sys/fuchsia.boot.WriteOnlyLog",
         },
         {
+            protocol: "fuchsia.kernel.HypervisorResource",
+            path: "/svc_for_sys/fuchsia.kernel.HypervisorResource",
+        },
+        {
             protocol: "fuchsia.kernel.IoportResource",
             path: "/svc_for_sys/fuchsia.kernel.IoportResource",
         },

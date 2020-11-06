@@ -122,6 +122,7 @@ bitflags! {
        const ROOT       = sys::ZX_RSRC_KIND_ROOT;
        const VMEX       = sys::ZX_RSRC_KIND_VMEX;
        const SMC        = sys::ZX_RSRC_KIND_SMC;
+       const SYSTEM     = sys::ZX_RSRC_KIND_SYSTEM;
     }
 }
 

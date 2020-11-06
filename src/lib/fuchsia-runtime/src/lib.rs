@@ -172,6 +172,11 @@ pub enum HandleType {
     /// Equivalent to PA_SMC_RESOURCE.
     SmcResource = 0x53,
 
+    /// A Handle to the System resource object.
+    ///
+    /// Equivalent to PA_SYSTEM_RESOURCE.
+    SystemResource = 0x54,
+
     /// A handle type with user-defined meaning.
     ///
     /// Equivalent to PA_USER0.
