@@ -330,9 +330,6 @@ bool VmMapping::ObjectRangeToVaddrRange(uint64_t offset, uint64_t len, vaddr_t* 
   DEBUG_ASSERT(base);
   DEBUG_ASSERT(virtual_len);
 
-  // TODO: Add annotations to remove this.
-  AssertHeld(object_->lock_ref());
-
   // Zero sized ranges are considered to have no overlap.
   if (len == 0) {
     *base = 0;
@@ -377,8 +374,6 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
   DEBUG_ASSERT(state_ == LifeCycleState::ALIVE);
 
   DEBUG_ASSERT(object_);
-  // TODO: Add annotations to remove this.
-  AssertHeld(object_->lock_ref());
 
   LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
           this, object_offset_locked_object(), size_, offset, len);
@@ -418,8 +413,6 @@ zx_status_t VmMapping::HarvestAccessVmoRangeLocked(
   DEBUG_ASSERT(state_ == LifeCycleState::ALIVE);
 
   DEBUG_ASSERT(object_);
-  // TODO: Add annotations to remove this.
-  AssertHeld(object_->lock_ref());
 
   LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
           this, object_offset_locked_object(), size_, offset, len);
@@ -468,9 +461,6 @@ zx_status_t VmMapping::RemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) 
   DEBUG_ASSERT(state_ == LifeCycleState::ALIVE);
 
   DEBUG_ASSERT(object_);
-
-  // TODO: Add annotations to remove this.
-  AssertHeld(object_->lock_ref());
 
   // If this doesn't support writing then nothing to be done, as we know we have no write mappings.
   if (!(flags_ & VMAR_FLAG_CAN_MAP_WRITE) ||
