@@ -369,6 +369,9 @@ void VmCowPages::AddChildLocked(VmCowPages* child, uint64_t offset, uint64_t roo
   AssertHeld(child->lock_ref());
   DEBUG_ASSERT(CheckedAdd(root_parent_offset_, offset) == root_parent_offset);
 
+  // The child should definitely stop seeing into the parent at the limit of its size.
+  DEBUG_ASSERT(parent_limit <= child->size_);
+
   // Write in the parent view values.
   child->root_parent_offset_ = root_parent_offset;
   child->parent_offset_ = offset;
@@ -2099,6 +2102,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // Remove any page that could be hanging around in the slot before we make it a marker.
     if (slot->IsPage()) {
       vm_page_t* page = slot->ReleasePage();
+      DEBUG_ASSERT(page->object.pin_count == 0);
       pmm_page_queues()->Remove(page);
       DEBUG_ASSERT(!list_in_list(&page->queue_node));
       list_add_tail(&free_list, &page->queue_node);
@@ -2591,6 +2595,7 @@ zx_status_t VmCowPages::TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpl
   page_list_.ForEveryPageInRange(
       [](const auto* p, uint64_t off) {
         if (p->IsPage()) {
+          DEBUG_ASSERT(p->Page()->object.pin_count == 0);
           pmm_page_queues()->Remove(p->Page());
         }
         return ZX_ERR_NEXT;
