@@ -14,8 +14,7 @@ TEST_F(NamespaceTest, NoAmbientExecutable) {
   ASSERT_EQ(ZX_OK, zx_vmo_create(PAGE_SIZE, 0, vmo.reset_and_get_address()));
 
   // set-exec with an invalid VMEX resource handle
-  ASSERT_EQ(ZX_OK, zx_handle_duplicate(vmo.get(), ZX_RIGHT_READ, vmo2.reset_and_get_address()));
-  ASSERT_EQ(ZX_ERR_ACCESS_DENIED, zx_vmo_replace_as_executable(vmo2.get(), ZX_HANDLE_INVALID,
-                                                               vmo3.reset_and_get_address()));
+  ASSERT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_READ, &vmo2));
+  ASSERT_EQ(ZX_ERR_ACCESS_DENIED, vmo2.replace_as_executable(zx::resource(), &vmo3));
   EXPECT_EQ(ZX_HANDLE_INVALID, vmo3);
 }
