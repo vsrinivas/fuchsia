@@ -556,9 +556,13 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
     size_t actual;
     auto result = GetDescriptor(USB_DT_STRING, 0, 0, &id_desc, sizeof(id_desc), &actual);
     if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
+      zxlogf(WARNING,
+             "Failed to get string descriptor language list due to error %s. Resetting endpoint.",
+             zx_status_get_string(result));
       // some devices do not support fetching language list
       // in that case assume US English (0x0409)
-      hci_.ResetEndpoint(device_id_, 0);
+      result = hci_.ResetEndpoint(device_id_, 0);
+      zxlogf(INFO, "Reset endpoint complete with status %s", zx_status_get_string(result));
       id_desc.bLength = 4;
       id_desc.wLangIds[0] = htole16(0x0409);
       actual = 4;
@@ -607,12 +611,14 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
   }
 
   usb_string_desc_t string_desc;
-
+  zxlogf(INFO, "Fetching string descriptor with lang_id %u", lang_id);
   size_t actual;
   auto result = GetDescriptor(USB_DT_STRING, desc_id, le16toh(lang_id), &string_desc,
                               sizeof(string_desc), &actual);
 
   if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
+    zxlogf(WARNING, "Fetching string descriptor failed with error %s",
+           zx_status_get_string(result));
     zx_status_t reset_result = hci_.ResetEndpoint(device_id_, 0);
     if (reset_result != ZX_OK) {
       zxlogf(ERROR, "failed to reset endpoint, err: %d", reset_result);
@@ -621,6 +627,8 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
     result = GetDescriptor(USB_DT_STRING, desc_id, le16toh(lang_id), &string_desc,
                            sizeof(string_desc), &actual);
     if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
+      zxlogf(WARNING, "Fetching string descriptor after reset failed with error %s",
+             zx_status_get_string(result));
       reset_result = hci_.ResetEndpoint(device_id_, 0);
       if (reset_result != ZX_OK) {
         zxlogf(ERROR, "failed to reset endpoint, err: %d", reset_result);
