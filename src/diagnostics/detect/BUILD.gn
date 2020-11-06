@@ -65,5 +65,8 @@ fuchsia_unittest_package("triage-detect-tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":triage-detect-tests" ]
+  deps = [
+    ":triage-detect-tests",
+    "//src/diagnostics/detect/integration",
+  ]
 }

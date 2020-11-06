@@ -1,0 +1,23 @@
+{
+    program: {
+        binary: "bin/triage_detect",
+        args: [
+            "--check-every",
+
+            // Keep this the same as CHECK_PERIOD_SECONDS in integration_test.rs
+            "Seconds(5)",
+            "--test-only",
+        ],
+    },
+    use: [
+        { runner: "elf" },
+        { protocol: "fuchsia.feedback.CrashReporter" },
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+        { protocol: "fuchsia.logger.LogSink" },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config",
+        },
+    ],
+}

@@ -48,7 +48,7 @@ struct CommandLine {
     test_only: bool,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Mode {
     Test,
     Production,
@@ -160,7 +160,7 @@ async fn main() -> Result<(), Error> {
     let mut diagnostic_source = diagnostics::DiagnosticFetcher::create(selectors)?;
     let snapshot_service = snapshot::CrashReportHandlerBuilder::new().build()?;
     let system_time = UtcTime::new();
-    let mut delay_tracker = DelayTracker::new(&system_time, mode);
+    let mut delay_tracker = DelayTracker::new(&system_time, &mode);
 
     // Start the first scan as soon as the program starts, via the "missed deadline" logic below.
     let mut next_check_time = fasync::Time::INFINITE_PAST;
@@ -188,7 +188,10 @@ async fn main() -> Result<(), Error> {
         let diagnostics = match diagnostics {
             Ok(diagnostics) => diagnostics,
             Err(e) => {
-                error!("Fetching diagnostics failed: {}", e);
+                // This happens when the integration tester runs out of Inspect data.
+                if mode != Mode::Test {
+                    error!("Fetching diagnostics failed: {}", e);
+                }
                 continue;
             }
         };

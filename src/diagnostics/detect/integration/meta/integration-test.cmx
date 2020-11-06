@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "bin/detect_integration_test"
+    },
+    "sandbox": {
+        "features": [
+            "build-info",
+            "config-data",
+            "hub"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

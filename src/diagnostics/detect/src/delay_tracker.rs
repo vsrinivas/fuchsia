@@ -19,8 +19,8 @@ pub struct DelayTracker<'a> {
 }
 
 impl<'a> DelayTracker<'a> {
-    pub fn new(time_source: &'a dyn TimeSource, program_mode: Mode) -> DelayTracker<'a> {
-        DelayTracker { last_sent: HashMap::new(), time_source, program_mode }
+    pub fn new(time_source: &'a dyn TimeSource, program_mode: &Mode) -> DelayTracker<'a> {
+        DelayTracker { last_sent: HashMap::new(), time_source, program_mode: *program_mode }
     }
 
     fn appropriate_report_interval(&self, desired_interval: i64) -> i64 {
@@ -63,7 +63,7 @@ mod test {
     #[test]
     fn verify_test_mode() {
         let time = FakeTime::new();
-        let mut tracker = DelayTracker::new(&time, Mode::Test);
+        let mut tracker = DelayTracker::new(&time, &Mode::Test);
         time.set(1);
         let trigger_slow = SnapshotTrigger { signature: "slow".to_string(), interval: 10 };
         let trigger_fast = SnapshotTrigger { signature: "fast".to_string(), interval: 1 };
@@ -86,8 +86,8 @@ mod test {
     fn verify_appropriate_report_interval() {
         assert!(MINIMUM_SIGNATURE_INTERVAL_NANOS > 1);
         let time = FakeTime::new();
-        let test_tracker = DelayTracker::new(&time, Mode::Test);
-        let production_tracker = DelayTracker::new(&time, Mode::Production);
+        let test_tracker = DelayTracker::new(&time, &Mode::Test);
+        let production_tracker = DelayTracker::new(&time, &Mode::Production);
 
         assert_eq!(test_tracker.appropriate_report_interval(1), 1);
         assert_eq!(
