@@ -146,13 +146,16 @@ config("compiler") {
   cflags_cc = [ "-fvisibility-inlines-hidden" ]
   cflags_objcc = [ "-fvisibility-inlines-hidden" ]
   configs = [
-    ":clang_defaults",
     ":color_diagnostics",
     ":crash-diagnostics-dir",
     ":rust_panic_cfg",
     ":time-trace",
     ":toolchain_version_stamp",
   ]
+
+  if (!is_gcc) {
+    configs += [ ":clang_defaults" ]
+  }
 
   if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:compiler" ]
@@ -173,6 +176,12 @@ config("clang_defaults") {
   cflags = [ "-fexperimental-new-pass-manager" ]
   asmflags = cflags
   ldflags = cflags
+  if (clang_embed_bitcode) {
+    cflags = [
+      "-Xclang",
+      "-fembed-bitcode=all",
+    ]
+  }
   if (current_cpu == "x64") {
     asmflags += [ "-Wa,--mrelax-relocations=yes" ]
   }

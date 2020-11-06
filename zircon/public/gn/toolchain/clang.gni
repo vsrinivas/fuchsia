@@ -15,6 +15,10 @@ declare_args() {
   # found.  If this is "", then the behavior depends on $use_prebuilt_clang.
   # This toolchain is expected to support both Fuchsia targets and the host.
   clang_tool_dir = ""
+
+  # Embed LLVM bitcode as .llvmbc section in ELF files. This is intended
+  # primarily for external tools that use bitcode for analysis.
+  clang_embed_bitcode = false
 }
 
 # This is a string identifying the particular toolchain version in use.  Its

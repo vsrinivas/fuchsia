@@ -10,6 +10,10 @@ declare_args() {
   # The default clang toolchain provided by the prebuilt. This variable is
   # additionally consumed by the Go toolchain.
   clang_prefix = default_clang_prefix
+
+  # Embed LLVM bitcode as .llvmbc section in ELF files. This is intended
+  # primarily for external tools that use bitcode for analysis.
+  clang_embed_bitcode = false
 }
 
 if (current_cpu == "arm64") {

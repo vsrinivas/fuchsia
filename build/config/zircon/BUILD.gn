@@ -60,6 +60,9 @@ config("clang_defaults") {
   cflags = [ "-fexperimental-new-pass-manager" ]
   asmflags = cflags
   ldflags = cflags
+  if (clang_embed_bitcode) {
+    cflags = [ "-Xclang", "-fembed-bitcode=all" ]
+  }
   if (current_cpu == "x64") {
     asmflags += [ "-Wa,--mrelax-relocations=yes" ]
   }
