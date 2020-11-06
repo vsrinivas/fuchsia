@@ -157,11 +157,6 @@ dart_test("legacy_metrics_test") {
         device_type = "Astro"
       }
     },
-    {
-      dimensions = {
-        device_type = "Sherlock"
-      }
-    },
   ]
 }
 

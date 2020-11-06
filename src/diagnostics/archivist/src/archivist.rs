@@ -274,7 +274,7 @@ impl Archivist {
         let legacy_metrics_inspect_repository =
             Arc::new(RwLock::new(DiagnosticsDataRepository::new(
                 log_manager.clone(),
-                match feedback_config.disable_filtering {
+                match legacy_config.disable_filtering {
                     false => legacy_config.take_inspect_selectors().map(|selectors| {
                         selectors
                             .into_iter()

@@ -43,5 +43,15 @@ void main() {
               pipeline: sl4f.InspectPipeline.legacyMetrics),
           multiValue(isNotNull, length: greaterThan(0)));
     });
+
+    test('legacy metrics filters are active', () async {
+      const filteredSelector =
+          'bootstrap/archivist:root/all_archive_accessor:archive_accessor_connections_opened';
+      expect(await getInspectValues(inspect, filteredSelector), isNotEmpty);
+      expect(
+          await getInspectValues(inspect, filteredSelector,
+              pipeline: sl4f.InspectPipeline.legacyMetrics),
+          isEmpty);
+    });
   });
 }
