@@ -47,8 +47,6 @@ fbl::RefPtr<VmObject> VmMapping::vmo() const {
 
 size_t VmMapping::AllocatedPagesLocked() const {
   canary_.Assert();
-  // TODO: Add annotations to remove this.
-  AssertHeld(lock_ref());
 
   if (state_ != LifeCycleState::ALIVE) {
     return 0;
@@ -119,8 +117,6 @@ zx_status_t ProtectOrUnmap(const fbl::RefPtr<VmAspace>& aspace, vaddr_t base, si
 }  // namespace
 
 zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
-  // TODO: Add annotations to remove this.
-  AssertHeld(lock_ref());
   DEBUG_ASSERT(size != 0 && IS_PAGE_ALIGNED(base) && IS_PAGE_ALIGNED(size));
 
   // Do not allow changing caching
@@ -170,6 +166,8 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
     arch_mmu_flags_ = new_arch_mmu_flags;
 
     size_ = size;
+    AssertHeld(mapping->lock_ref());
+    AssertHeld(*mapping->object_lock());
     mapping->ActivateLocked();
     return ZX_OK;
   }
@@ -189,6 +187,8 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
     LTRACEF("arch_mmu_protect returns %d\n", status);
 
     size_ -= size;
+    AssertHeld(mapping->lock_ref());
+    AssertHeld(*mapping->object_lock());
     mapping->ActivateLocked();
     return ZX_OK;
   }
@@ -217,7 +217,11 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
   // Turn us into the left half
   size_ = left_size;
 
+  AssertHeld(center_mapping->lock_ref());
+  AssertHeld(*center_mapping->object_lock());
   center_mapping->ActivateLocked();
+  AssertHeld(right_mapping->lock_ref());
+  AssertHeld(*right_mapping->object_lock());
   right_mapping->ActivateLocked();
   return ZX_OK;
 }
@@ -255,8 +259,6 @@ zx_status_t VmMapping::Unmap(vaddr_t base, size_t size) {
 
 zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
   canary_.Assert();
-  // TODO: Add annotations to remove this.
-  AssertHeld(lock_ref());
   DEBUG_ASSERT(size != 0 && IS_PAGE_ALIGNED(size) && IS_PAGE_ALIGNED(base));
   DEBUG_ASSERT(base >= base_ && base - base_ < size_);
   DEBUG_ASSERT(size_ - (base - base_) >= size);
@@ -319,6 +321,8 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
 
   // Turn us into the left half
   size_ = base - base_;
+  AssertHeld(mapping->lock_ref());
+  AssertHeld(*mapping->object_lock());
   mapping->ActivateLocked();
   return ZX_OK;
 }
@@ -564,8 +568,6 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
 
 zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
   canary_.Assert();
-  // TODO: Add annotations to remove this.
-  AssertHeld(lock_ref());
 
   len = ROUNDUP(len, PAGE_SIZE);
   if (len == 0) {
@@ -651,8 +653,6 @@ zx_status_t VmMapping::DecommitRange(size_t offset, size_t len) {
 
 zx_status_t VmMapping::DestroyLocked() {
   canary_.Assert();
-  // TODO: Add annotations to remove this.
-  AssertHeld(lock_ref());
   LTRACEF("%p\n", this);
 
   // Take a reference to ourself, so that we do not get destructed after
@@ -702,8 +702,6 @@ zx_status_t VmMapping::DestroyLocked() {
 
 zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* page_request) {
   canary_.Assert();
-  // TODO: Add annotations to remove this.
-  AssertHeld(lock_ref());
 
   DEBUG_ASSERT(va >= base_ && va <= base_ + size_ - 1);
 
@@ -860,11 +858,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
 
 void VmMapping::ActivateLocked() {
   DEBUG_ASSERT(state_ == LifeCycleState::NOT_READY);
-  // TODO: Add annotations to remove this.
-  AssertHeld(lock_ref());
-  DEBUG_ASSERT(object_->lock()->lock().IsHeld());
   DEBUG_ASSERT(parent_);
-  AssertHeld(*object_->lock());
 
   state_ = LifeCycleState::ALIVE;
   object_->AddMappingLocked(this);

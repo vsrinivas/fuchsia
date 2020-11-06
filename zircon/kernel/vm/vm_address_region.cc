@@ -186,6 +186,7 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     aspace_->vdso_code_mapping_ = fbl::RefPtr<VmMapping>::Downcast(vmar);
   }
 
+  AssertHeld(vmar->lock_ref());
   vmar->Activate();
   *out = ktl::move(vmar);
 
@@ -293,6 +294,7 @@ zx_status_t VmAddressRegion::OverwriteVmMapping(vaddr_t base, size_t size, uint3
     return status;
   }
 
+  AssertHeld(vmar->lock_ref());
   vmar->Activate();
   *out = ktl::move(vmar);
   return ZX_OK;
@@ -313,6 +315,7 @@ zx_status_t VmAddressRegion::DestroyLocked() {
     while (!cur->subregions_.IsEmpty() && !child_region) {
       VmAddressRegionOrMapping* child = &cur->subregions_.front();
       if (child->is_mapping()) {
+        AssertHeld(child->lock_ref());
         // DestroyLocked should remove this child from our list on success.
         zx_status_t status = child->DestroyLocked();
         if (status != ZX_OK) {
@@ -363,6 +366,7 @@ size_t VmAddressRegion::AllocatedPagesLocked() const {
 
   size_t sum = 0;
   for (const auto& child : subregions_) {
+    AssertHeld(child.lock_ref());
     sum += child.AllocatedPagesLocked();
   }
   return sum;
@@ -374,6 +378,7 @@ zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, PageRequest* p
 
   auto vmar = fbl::RefPtr(this);
   while (auto next = vmar->subregions_.FindRegion(va)) {
+    AssertHeld(next->lock_ref());
     if (next->is_mapping()) {
       return next->PageFault(va, pf_flags, page_request);
     }
@@ -751,11 +756,13 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
       // Create a copy of the iterator. It lives in this sub-scope as at the end we may have
       // destroyed. As such we stash a copy of its base in a variable in our outer scope.
       auto curr = itr++;
+      AssertHeld(curr->lock_ref());
       curr_base = curr->base();
       // The parent will keep living even if we destroy curr so can place that in the outer scope.
       up = curr->parent_;
 
       if (curr->is_mapping()) {
+        AssertHeld(curr->as_vm_mapping()->lock_ref());
         vaddr_t curr_end_byte = 0;
         DEBUG_ASSERT(curr->size() > 1);
         overflowed = add_overflow(curr->base(), curr->size() - 1, &curr_end_byte);
@@ -915,6 +922,7 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
     size_t protect_size;
     overflowed = add_overflow(protect_end_byte - protect_base, 1, &protect_size);
     ASSERT(!overflowed);
+    AssertHeld(itr->as_vm_mapping()->lock_ref());
 
     zx_status_t status =
         itr->as_vm_mapping()->ProtectLocked(protect_base, protect_size, new_arch_mmu_flags);

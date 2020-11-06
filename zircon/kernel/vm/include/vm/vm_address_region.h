@@ -108,7 +108,8 @@ class VmAddressRegionOrMapping
   // the regions to find the target mapping, if it exists.
   // If this returns ZX_ERR_SHOULD_WAIT, then the caller should wait on |page_request|
   // and try again.
-  virtual zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request) = 0;
+  virtual zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request)
+      TA_REQ(lock()) = 0;
 
   // WAVL tree key function
   vaddr_t GetKey() const { return base(); }
@@ -162,14 +163,14 @@ class VmAddressRegionOrMapping
   bool IsAliveLocked() const;
 
   // Version of Destroy() that does not acquire the aspace lock
-  virtual zx_status_t DestroyLocked() = 0;
+  virtual zx_status_t DestroyLocked() TA_REQ(lock()) = 0;
 
   // Version of AllocatedPages() that does not acquire the aspace lock
-  virtual size_t AllocatedPagesLocked() const = 0;
+  virtual size_t AllocatedPagesLocked() const TA_REQ(lock()) = 0;
 
   // Transition from NOT_READY to READY, and add references to self to related
   // structures.
-  virtual void Activate() = 0;
+  virtual void Activate() TA_REQ(lock()) = 0;
 
   // current state of the VMAR.  If LifeCycleState::DEAD, then all other
   // fields are invalid.
@@ -316,7 +317,8 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   bool has_parent() const;
 
   void Dump(uint depth, bool verbose) const override;
-  zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request) override;
+  zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request)
+      TA_REQ(lock()) override;
 
  protected:
   // constructor for use in creating a VmAddressRegionDummy
@@ -326,7 +328,7 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   // constructor for use in creating the kernel aspace singleton
   explicit VmAddressRegion(VmAspace& kernel_aspace);
   // Count the allocated pages, caller must be holding the aspace lock
-  size_t AllocatedPagesLocked() const override;
+  size_t AllocatedPagesLocked() const TA_REQ(lock()) override;
   // Used to implement VmAspace::EnumerateChildren.
   // |aspace_->lock()| must be held.
   virtual bool EnumerateChildrenLocked(VmEnumerator* ve, uint depth);
@@ -346,9 +348,9 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
                   const char* name);
 
   // Version of Destroy() that does not acquire the aspace lock
-  zx_status_t DestroyLocked() override;
+  zx_status_t DestroyLocked() TA_REQ(lock()) override;
 
-  void Activate() override;
+  void Activate() TA_REQ(lock()) override;
 
   // Helper to share code between CreateSubVmar and CreateVmMapping
   zx_status_t CreateSubVmarInternal(size_t offset, size_t size, uint8_t align_pow2,
@@ -470,7 +472,7 @@ class VmMapping final : public VmAddressRegionOrMapping,
 
   // Map in pages from the underlying vm object, optionally committing pages as it goes
   zx_status_t MapRange(size_t offset, size_t len, bool commit);
-  zx_status_t MapRangeLocked(size_t offset, size_t len, bool commit);
+  zx_status_t MapRangeLocked(size_t offset, size_t len, bool commit) TA_REQ(lock());
 
   // Unmap a subset of the region of memory in the containing address space,
   // returning it to the parent region to allocate.  If all of the memory is unmapped,
@@ -487,7 +489,8 @@ class VmMapping final : public VmAddressRegionOrMapping,
   bool is_mapping() const override { return true; }
 
   void Dump(uint depth, bool verbose) const override;
-  zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request) override;
+  zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request)
+      TA_REQ(lock()) override;
 
   // Apis intended for use by VmObject
 
@@ -524,24 +527,22 @@ class VmMapping final : public VmAddressRegionOrMapping,
             fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags);
 
   // Version of Destroy() that does not acquire the aspace lock
-  zx_status_t DestroyLocked() override;
+  zx_status_t DestroyLocked() TA_REQ(lock()) override;
 
   // Implementation for Unmap().  This does not acquire the aspace lock, and
   // supports partial unmapping.
-  zx_status_t UnmapLocked(vaddr_t base, size_t size);
+  zx_status_t UnmapLocked(vaddr_t base, size_t size) TA_REQ(lock());
 
   // Implementation for Protect().  This does not acquire the aspace lock.
-  zx_status_t ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_flags);
+  zx_status_t ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_flags) TA_REQ(lock());
 
   // Version of AllocatedPages() that does not acquire the aspace lock
-  size_t AllocatedPagesLocked() const override;
+  size_t AllocatedPagesLocked() const TA_REQ(lock()) override;
 
-  void Activate() override;
+  void Activate() TA_REQ(lock()) override;
 
   // Version of Activate that does not take the object_ lock.
-  // Should be annotated TA_REQ(object_->lock()), but due to limitations
-  // in Clang around capability aliasing, we need to relax the analysis.
-  void ActivateLocked();
+  void ActivateLocked() TA_REQ(lock()) TA_REQ(object_->lock());
 
   // Takes a range relative to the vmo object_ and converts it into a virtual address range relative
   // to aspace_. Returns true if a non zero sized intersection was found, false otherwise. If false

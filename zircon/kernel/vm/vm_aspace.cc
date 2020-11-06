@@ -245,6 +245,7 @@ zx_status_t VmAspace::Destroy() {
 
   // tear down and free all of the regions in our address space
   if (root_vmar_) {
+    AssertHeld(root_vmar_->lock_ref());
     zx_status_t status = root_vmar_->DestroyLocked();
     if (status != ZX_OK && status != ZX_ERR_BAD_STATE) {
       return status;
@@ -546,6 +547,7 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
       // the region out from underneath it
       Guard<Mutex> guard{&lock_};
 
+      AssertHeld(root_vmar_->lock_ref());
       status = root_vmar_->PageFault(va, flags, &page_request);
     }
 
@@ -626,6 +628,7 @@ size_t VmAspace::AllocatedPages() const {
   canary_.Assert();
 
   Guard<Mutex> guard{&lock_};
+  AssertHeld(root_vmar_->lock_ref());
   return root_vmar_->AllocatedPagesLocked();
 }
 
