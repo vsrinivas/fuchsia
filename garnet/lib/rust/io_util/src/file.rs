@@ -488,7 +488,11 @@ mod tests {
         let flags = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE | fidl_fuchsia_io::OPEN_FLAG_CREATE;
         let file = directory::open_file(&dir, "file", flags).await.unwrap();
 
-        let mut data = DataTable { num: Some(42), string: Some(DATA_FILE_CONTENTS.to_string()) };
+        let mut data = DataTable {
+            num: Some(42),
+            string: Some(DATA_FILE_CONTENTS.to_string()),
+            ..DataTable::empty()
+        };
 
         // Binary encoded FIDL message, with header and padding.
         let fidl_bytes = encode_persistent(&mut data).unwrap();
@@ -535,6 +539,7 @@ mod tests {
             num: Some(42),
             string: Some(DATA_FILE_CONTENTS.to_string()),
             new_field: None,
+            ..DataTable::empty()
         };
         assert_eq!(&contents, &data);
     }

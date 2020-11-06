@@ -4552,7 +4552,7 @@ mod test {
     #[test]
     fn table_encode_prefix_decode_full() {
         for ctx in CONTEXTS {
-            let mut table_prefix_in = TablePrefix { num: Some(5), num_none: None };
+            let mut table_prefix_in = TablePrefix { num: Some(5), ..TablePrefix::empty() };
             let mut table_out: MyTable = Decodable::new_empty();
 
             let buf = &mut Vec::new();
@@ -4579,6 +4579,7 @@ mod test {
                 num_none: None,
                 string: None,
                 handle: None,
+                ..MyTable::empty()
             };
             let mut table_prefix_out: TablePrefix = Decodable::new_empty();
 
@@ -4606,6 +4607,7 @@ mod test {
                 num_none: None,
                 string: Some("foo".to_string()),
                 handle: None,
+                ..MyTable::empty()
             };
             let mut table_prefix_out: TablePrefix = Decodable::new_empty();
 
@@ -4690,7 +4692,7 @@ mod test {
         for ctx in CONTEXTS {
             encode_assert_bytes(
                 ctx,
-                SimpleTable { x: Some(42), y: Some(67) },
+                SimpleTable { x: Some(42), y: Some(67), ..SimpleTable::empty() },
                 simple_table_with_xy,
             );
         }
@@ -4714,7 +4716,11 @@ mod test {
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
         ];
         for ctx in CONTEXTS {
-            encode_assert_bytes(ctx, SimpleTable { x: None, y: Some(67) }, simple_table_with_y);
+            encode_assert_bytes(
+                ctx,
+                SimpleTable { x: None, y: Some(67), ..SimpleTable::empty() },
+                simple_table_with_y,
+            );
         }
     }
 
@@ -4739,6 +4745,7 @@ mod test {
                     foo: Some("hello".to_string()),
                     bar: Some(27),
                     baz: None,
+                    ..TableWithStringAndVector::empty()
                 },
                 table_with_string_and_vector_hello_27,
             );
@@ -4753,7 +4760,7 @@ mod test {
         ];
 
         for ctx in CONTEXTS {
-            encode_assert_bytes(ctx, SimpleTable { x: None, y: None }, empty_table);
+            encode_assert_bytes(ctx, SimpleTable::empty(), empty_table);
         }
     }
 
@@ -4780,7 +4787,8 @@ mod test {
     #[test]
     fn encode_decode_table_with_gaps() {
         for ctx in CONTEXTS {
-            let mut table = TableWithGaps { second: Some(1), fourth: Some(2) };
+            let mut table =
+                TableWithGaps { second: Some(1), fourth: Some(2), ..TableWithGaps::empty() };
             let table_out = encode_decode(ctx, &mut table);
             assert_eq!(table_out.second, Some(1));
             assert_eq!(table_out.fourth, Some(2));
@@ -4790,7 +4798,8 @@ mod test {
     #[test]
     fn encode_empty_envelopes_for_reserved_table_fields() {
         for ctx in CONTEXTS {
-            let mut table = TableWithGaps { second: Some(1), fourth: Some(2) };
+            let mut table =
+                TableWithGaps { second: Some(1), fourth: Some(2), ..TableWithGaps::empty() };
             let buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, &mut Vec::new(), &mut table).unwrap();
 
@@ -4836,7 +4845,8 @@ mod test {
             // Field #1 is assumed to be a new field in a reserved slot (i.e.
             // the sender is newer than us), so it is ignored. Fields #3 and #4
             // are assumed to be None because the tail is omitted.
-            let mut table = TableWithoutGaps { first: Some(1), second: Some(2) };
+            let mut table =
+                TableWithoutGaps { first: Some(1), second: Some(2), ..TableWithoutGaps::empty() };
             let buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, &mut Vec::new(), &mut table).unwrap();
 
@@ -5245,6 +5255,7 @@ mod zx_test {
                 num_none: None,
                 string: Some("foo".to_string()),
                 handle: Some(handle.into_handle()),
+                ..MyTable::empty()
             };
             let table_out = encode_decode(ctx, &mut starting_table);
             assert_eq!(table_out.num, Some(5));
