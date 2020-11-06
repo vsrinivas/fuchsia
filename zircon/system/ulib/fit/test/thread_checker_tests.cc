@@ -2,32 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/fxl/synchronization/thread_checker.h"
+#include <lib/fit/thread_checker.h>
 
 #include <thread>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
-namespace fxl {
 namespace {
 
 TEST(ThreadCheckerTest, SameThread) {
-  ThreadChecker checker;
-  EXPECT_TRUE(checker.IsCreationThreadCurrent());
+  fit::thread_checker checker;
+  EXPECT_TRUE(checker.is_thread_valid());
 }
 
-// Note: This test depends on |std::thread| being compatible with
-// |pthread_self()|.
 TEST(ThreadCheckerTest, DifferentThreads) {
-  ThreadChecker checker1;
-  EXPECT_TRUE(checker1.IsCreationThreadCurrent());
+  fit::thread_checker checker1;
+  EXPECT_TRUE(checker1.is_thread_valid());
   checker1.lock();
   checker1.unlock();
 
   std::thread thread([&checker1]() {
-    ThreadChecker checker2;
-    EXPECT_TRUE(checker2.IsCreationThreadCurrent());
-    EXPECT_FALSE(checker1.IsCreationThreadCurrent());
+    fit::thread_checker checker2;
+    EXPECT_TRUE(checker2.is_thread_valid());
+    EXPECT_FALSE(checker1.is_thread_valid());
     checker2.lock();
     checker2.unlock();
   });
@@ -38,4 +35,3 @@ TEST(ThreadCheckerTest, DifferentThreads) {
 }
 
 }  // namespace
-}  // namespace fxl

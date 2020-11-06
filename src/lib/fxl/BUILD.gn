@@ -111,8 +111,6 @@ static_library("fxl") {
     "log_settings_command_line.cc",
     "log_settings_command_line.h",
     "observer_list.h",
-    "synchronization/thread_annotations.h",
-    "synchronization/thread_checker.h",
   ]
 
   public_deps = [
@@ -150,7 +148,6 @@ executable("fxl_unittests") {
     "strings/substitute_unittest.cc",
     "strings/trim_unittest.cc",
     "synchronization/thread_annotations_unittest.cc",
-    "synchronization/thread_checker_unittest.cc",
     "test/test_settings_unittest.cc",
   ]
 

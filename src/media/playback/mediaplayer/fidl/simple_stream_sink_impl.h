@@ -6,12 +6,12 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_SIMPLE_STREAM_SINK_IMPL_H_
 
 #include <fuchsia/media/playback/cpp/fidl.h>
+#include <lib/fit/thread_checker.h>
 
 #include <unordered_map>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fit/function.h"
-#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"
 
 namespace media_player {
@@ -88,7 +88,7 @@ class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSin
     uint32_t packet_count_{};
   };
 
-  FXL_DECLARE_THREAD_CHECKER(thread_checker_);
+  FIT_DECLARE_THREAD_CHECKER(thread_checker_);
 
   std::unique_ptr<StreamType> output_stream_type_;
   media::TimelineRate pts_rate_;

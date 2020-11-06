@@ -80,7 +80,7 @@ void InputNode::OnReadyToProcess(const frame_available_info_t* info) {
 }
 
 void InputNode::OnFrameAvailable(const frame_available_info_t* info) {
-  ZX_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_ASSERT(thread_checker_.is_thread_valid());
   TRACE_DURATION("camera", "InputNode::OnFrameAvailable", "buffer_index", info->buffer_id);
   if (shutdown_requested_ || info->frame_status != FRAME_STATUS_OK) {
     TRACE_INSTANT("camera", "bad_status", TRACE_SCOPE_THREAD, "frame_status",

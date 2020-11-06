@@ -29,6 +29,7 @@ zx_library("fit") {
     "lib/fit/storage_internal.h",
     "lib/fit/source_location.h",
     "lib/fit/string_view.h",
+    "lib/fit/thread_checker.h",
     "lib/fit/thread_safety.h",
     "lib/fit/traits.h",
     "lib/fit/utility_internal.h",

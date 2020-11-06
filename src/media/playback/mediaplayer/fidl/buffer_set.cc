@@ -237,7 +237,7 @@ fbl::RefPtr<PayloadBuffer> BufferSet::CreateBuffer(
 
 bool BufferSetManager::ApplyConstraints(const fuchsia::media::StreamBufferConstraints& constraints,
                                         bool prefer_single_vmo) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (!constraints.has_default_settings()) {
     FX_LOGS(ERROR) << "FIDL buffer constraints do not have default settings.";
@@ -263,7 +263,7 @@ bool BufferSetManager::ApplyConstraints(const fuchsia::media::StreamBufferConstr
 }
 
 void BufferSetManager::ReleaseBufferForProcessor(uint64_t lifetime_ordinal, uint32_t index) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (current_set_ && lifetime_ordinal == current_set_->lifetime_ordinal()) {
     // Release the buffer from the current set.

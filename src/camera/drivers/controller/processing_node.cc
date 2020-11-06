@@ -28,7 +28,7 @@ bool ProcessNode::NeedToDropFrame() {
 }
 
 void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
-  ZX_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_ASSERT(thread_checker_.is_thread_valid());
   ZX_ASSERT_MSG(type_ != NodeType::kOutputStream, "Invalid for OuputNode");
   TRACE_DURATION("camera", "ProcessNode::OnFrameAvailable");
 

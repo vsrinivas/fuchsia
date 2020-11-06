@@ -6,13 +6,13 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_BUFFER_SET_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/fit/thread_checker.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_buffer.h"
 
@@ -163,18 +163,18 @@ class BufferSetManager {
  public:
   BufferSetManager() = default;
 
-  ~BufferSetManager() { FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_); };
+  ~BufferSetManager() { FIT_DCHECK_IS_THREAD_VALID(thread_checker_); };
 
   // Determines whether this has a current buffer set.
   bool has_current_set() const {
-    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+    FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
     return !!current_set_;
   }
 
   // The current buffer set. Do not call this method when |has_current| returns
   // false.
   BufferSet& current_set() {
-    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+    FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
     FX_DCHECK(current_set_);
     return *current_set_;
   }
@@ -195,7 +195,7 @@ class BufferSetManager {
   void ReleaseBufferForProcessor(uint64_t lifetime_ordinal, uint32_t buffer_index);
 
  private:
-  FXL_DECLARE_THREAD_CHECKER(thread_checker_);
+  FIT_DECLARE_THREAD_CHECKER(thread_checker_);
 
   // The current |BufferSet| this is only null when |ApplyConstraints| has
   // never been called. It's important not to clear this arbitrarily, because

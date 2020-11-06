@@ -163,7 +163,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
 }
 
 void Ge2dNode::OnFrameAvailable(const frame_available_info_t* info) {
-  ZX_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_ASSERT(thread_checker_.is_thread_valid());
   TRACE_DURATION("camera", "Ge2dNode::OnFrameAvailable", "buffer_index", info->buffer_id);
 
   if (shutdown_requested_ || info->frame_status != FRAME_STATUS_OK) {

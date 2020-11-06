@@ -7,9 +7,9 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/thread_checker.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/playback/mediaplayer/metrics/packet_timing_tracker.h"
 #include "src/media/playback/mediaplayer/render/audio_renderer.h"
 
@@ -56,7 +56,7 @@ class FidlAudioRenderer : public AudioRenderer {
   void OnTimelineTransition() override;
 
  private:
-  FXL_DECLARE_THREAD_CHECKER(thread_checker_);
+  FIT_DECLARE_THREAD_CHECKER(thread_checker_);
 
   // Determines if more packets are needed.
   bool NeedMorePackets();

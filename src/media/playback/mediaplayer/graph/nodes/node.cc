@@ -123,7 +123,7 @@ void Node::RunTasks() {
 }
 
 void Node::Dump(std::ostream& os) const {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (inputs_.size() == 1) {
     os << fostr::NewLine << "input:";
@@ -151,7 +151,7 @@ void Node::Dump(std::ostream& os) const {
 }
 
 void Node::DumpInputDetail(std::ostream& os, const Input& input) const {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   os << fostr::Indent;
   if (input.connected()) {
@@ -170,7 +170,7 @@ void Node::DumpInputDetail(std::ostream& os, const Input& input) const {
 }
 
 void Node::DumpOutputDetail(std::ostream& os, const Output& output) const {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   os << fostr::Indent;
   if (output.connected()) {
@@ -201,23 +201,23 @@ void Node::DumpOutputDetail(std::ostream& os, const Output& output) const {
 }
 
 size_t Node::input_count() const {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   return inputs_.size();
 };
 
 Input& Node::input(size_t input_index) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(input_index < inputs_.size());
   return inputs_[input_index];
 }
 
 size_t Node::output_count() const {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   return outputs_.size();
 }
 
 Output& Node::output(size_t output_index) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(output_index < outputs_.size());
   return outputs_[output_index];
 }
@@ -226,7 +226,7 @@ void Node::NotifyInputConnectionReady(size_t index) {
   FX_DCHECK(index < inputs_.size());
 
   PostTask([this, index]() {
-    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+    FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
     OnInputConnectionReady(index);
     // We may be ready to move packets now.
     NeedsUpdate();
@@ -237,7 +237,7 @@ void Node::NotifyOutputConnectionReady(size_t index) {
   FX_DCHECK(index < outputs_.size());
 
   PostTask([this, index]() {
-    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+    FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
     OnOutputConnectionReady(index);
     // We may be ready to move packets now.
     NeedsUpdate();
@@ -248,7 +248,7 @@ void Node::NotifyNewInputSysmemToken(size_t index) {
   FX_DCHECK(index < inputs_.size());
 
   PostTask([this, index]() {
-    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+    FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
     OnNewInputSysmemToken(index);
     // We may be ready to move packets now.
     NeedsUpdate();
@@ -259,7 +259,7 @@ void Node::NotifyNewOutputSysmemToken(size_t index) {
   FX_DCHECK(index < outputs_.size());
 
   PostTask([this, index]() {
-    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+    FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
     OnNewOutputSysmemToken(index);
     // We may be ready to move packets now.
     NeedsUpdate();
@@ -267,7 +267,7 @@ void Node::NotifyNewOutputSysmemToken(size_t index) {
 }
 
 void Node::Update() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   for (auto& input : inputs_) {
     if (input.packet()) {
@@ -301,7 +301,7 @@ void Node::Update() {
 }
 
 bool Node::MaybeTakePacketForOutput(const Output& output, PacketPtr* packet_out) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(packet_out);
 
   if (!output.needs_packet()) {
@@ -327,7 +327,7 @@ bool Node::MaybeTakePacketForOutput(const Output& output, PacketPtr* packet_out)
 }
 
 void Node::FlushInputExternal(size_t input_index, bool hold_frame, fit::closure callback) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(input_index < inputs_.size());
 
   inputs_[input_index].Flush();
@@ -337,7 +337,7 @@ void Node::FlushInputExternal(size_t input_index, bool hold_frame, fit::closure 
 }
 
 void Node::FlushOutputExternal(size_t output_index, fit::closure callback) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(output_index < outputs_.size());
 
   FlushOutput(output_index, [this, output_index, callback = std::move(callback)]() mutable {
@@ -354,7 +354,7 @@ void Node::FlushOutputExternal(size_t output_index, fit::closure callback) {
 }
 
 void Node::ConfigureInputDeferred(size_t input_index) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   EnsureInput(input_index);
 }
 
@@ -421,7 +421,7 @@ void Node::ConfigureInputToUseSysmemVmos(ServiceProvider* service_provider,
                                          uint32_t max_payload_count, uint64_t max_payload_size,
                                          VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
                                          AllocateCallback allocate_callback, size_t input_index) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   EnsureInput(input_index);
   Input& input = inputs_[input_index];
@@ -485,7 +485,7 @@ void Node::RequestInputPacket(size_t input_index) {
 }
 
 void Node::ConfigureOutputDeferred(size_t output_index) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   EnsureOutput(output_index);
 }
 
@@ -581,7 +581,7 @@ void Node::ConfigureOutputToUseSysmemVmos(
     zx_vm_option_t map_flags,
     std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints,
     size_t output_index) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   EnsureOutput(output_index);
   Output& output = outputs_[output_index];
@@ -669,7 +669,7 @@ void Node::PutOutputPacket(PacketPtr packet, size_t output_index) {
 }
 
 void Node::EnsureInput(size_t input_index) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   while (inputs_.size() <= input_index) {
     inputs_.emplace_back(this, inputs_.size());  // node, index
@@ -677,7 +677,7 @@ void Node::EnsureInput(size_t input_index) {
 }
 
 void Node::EnsureOutput(size_t output_index) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   while (outputs_.size() <= output_index) {
     outputs_.emplace_back(this, outputs_.size());  // node, index

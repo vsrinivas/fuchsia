@@ -148,20 +148,20 @@ void PayloadManager::DumpInternal(std::ostream& os) const {
 }
 
 void PayloadManager::RegisterReadyCallbacks(fit::closure output, fit::closure input) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   ready_callback_for_output_ = std::move(output);
   ready_callback_for_input_ = std::move(input);
 }
 
 void PayloadManager::RegisterNewSysmemTokenCallbacks(fit::closure output, fit::closure input) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   new_sysmem_token_callback_for_output_ = std::move(output);
   new_sysmem_token_callback_for_input_ = std::move(input);
 }
 
 void PayloadManager::ApplyOutputConfiguration(const PayloadConfig& config,
                                               ServiceProvider* service_provider) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(config.mode_ != PayloadMode::kNotConfigured);
   FX_DCHECK((config.mode_ == PayloadMode::kUsesSysmemVmos) == !!service_provider);
 
@@ -215,7 +215,7 @@ void PayloadManager::ApplyOutputConfiguration(const PayloadConfig& config,
 void PayloadManager::ApplyInputConfiguration(const PayloadConfig& config,
                                              AllocateCallback allocate_callback,
                                              ServiceProvider* service_provider) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(config.mode_ != PayloadMode::kNotConfigured);
   FX_DCHECK(config.mode_ != PayloadMode::kProvidesLocalMemory);
   FX_DCHECK(allocate_callback == nullptr || config.mode_ == PayloadMode::kUsesVmos ||
@@ -446,7 +446,7 @@ void PayloadManager::ShareBufferCollection(
 }
 
 void PayloadManager::DecrementReadyDeferrals() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
@@ -468,7 +468,7 @@ void PayloadManager::DecrementReadyDeferrals() {
 }
 
 void PayloadManager::EnsureSysmemAllocator() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_CHECK(service_provider_);
   if (!sysmem_allocator_) {
     sysmem_allocator_ = service_provider_->ConnectToService<fuchsia::sysmem::Allocator>();
@@ -476,7 +476,7 @@ void PayloadManager::EnsureSysmemAllocator() {
 }
 
 void PayloadManager::UpdateAllocators() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(output_.config_.mode_ != PayloadMode::kNotConfigured);
   FX_DCHECK(input_.config_.mode_ != PayloadMode::kNotConfigured);
   FX_DCHECK(input_.config_.mode_ != PayloadMode::kProvidesLocalMemory);

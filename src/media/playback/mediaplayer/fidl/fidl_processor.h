@@ -6,8 +6,8 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_PROCESSOR_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/fit/thread_checker.h>
 
-#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/playback/mediaplayer/fidl/buffer_set.h"
 #include "src/media/playback/mediaplayer/process/processor.h"
 
@@ -102,7 +102,7 @@ class FidlProcessor : public Processor {
   // has.
   void HandlePossibleOutputStreamTypeChange(const StreamType& old_type, const StreamType& new_type);
 
-  FXL_DECLARE_THREAD_CHECKER(thread_checker_);
+  FIT_DECLARE_THREAD_CHECKER(thread_checker_);
 
   ServiceProvider* service_provider_;
   StreamType::Medium medium_;

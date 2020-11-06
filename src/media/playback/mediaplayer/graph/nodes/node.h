@@ -8,13 +8,13 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/fit/thread_checker.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <deque>
 #include <queue>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/playback/mediaplayer/graph/nodes/input.h"
 #include "src/media/playback/mediaplayer/graph/nodes/output.h"
 #include "src/media/playback/mediaplayer/graph/packet.h"
@@ -590,7 +590,7 @@ class Node : public std::enable_shared_from_this<Node> {
   void ApplyOutputConfiguration(Output* output, ServiceProvider* service_provider = nullptr);
 
   // The stage's thread is always the main graph thread.
-  FXL_DECLARE_THREAD_CHECKER(thread_checker_);
+  FIT_DECLARE_THREAD_CHECKER(thread_checker_);
 
   async_dispatcher_t* dispatcher_;
 

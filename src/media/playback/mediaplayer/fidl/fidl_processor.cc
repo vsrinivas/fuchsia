@@ -63,7 +63,7 @@ FidlProcessor::FidlProcessor(ServiceProvider* service_provider, StreamType::Medi
 
 void FidlProcessor::Init(fuchsia::media::StreamProcessorPtr processor,
                          fit::function<void(bool)> callback) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(processor);
 
   outboard_processor_ = std::move(processor);
@@ -89,7 +89,7 @@ void FidlProcessor::Init(fuchsia::media::StreamProcessorPtr processor,
   outboard_processor_->EnableOnStreamFailed();
 }
 
-FidlProcessor::~FidlProcessor() { FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_); }
+FidlProcessor::~FidlProcessor() { FIT_DCHECK_IS_THREAD_VALID(thread_checker_); }
 
 const char* FidlProcessor::label() const {
   switch (function_) {
@@ -128,7 +128,7 @@ void FidlProcessor::Dump(std::ostream& os) const {
 }
 
 void FidlProcessor::ConfigureConnectors() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   ConfigureInputDeferred();
   ConfigureOutputDeferred();
@@ -142,7 +142,7 @@ void FidlProcessor::OnInputConnectionReady(size_t input_index) {
 }
 
 void FidlProcessor::FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(input_index == 0);
   FX_DCHECK(callback);
 
@@ -160,7 +160,7 @@ void FidlProcessor::FlushInput(bool hold_frame, size_t input_index, fit::closure
 }
 
 void FidlProcessor::PutInputPacket(PacketPtr packet, size_t input_index) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(packet);
   FX_DCHECK(input_index == 0);
   FX_DCHECK(input_buffers_.has_current_set());
@@ -229,7 +229,7 @@ void FidlProcessor::OnOutputConnectionReady(size_t output_index) {
 }
 
 void FidlProcessor::FlushOutput(size_t output_index, fit::closure callback) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(output_index == 0);
   FX_DCHECK(callback);
 
@@ -240,7 +240,7 @@ void FidlProcessor::FlushOutput(size_t output_index, fit::closure callback) {
 }
 
 void FidlProcessor::RequestOutputPacket() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   flushing_ = false;
 
   MaybeRequestInputPacket();
@@ -278,13 +278,13 @@ void FidlProcessor::SetInputStreamType(const StreamType& stream_type) {
 }
 
 std::unique_ptr<StreamType> FidlProcessor::output_stream_type() const {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(output_stream_type_);
   return output_stream_type_->Clone();
 }
 
 void FidlProcessor::InitSucceeded() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (init_callback_) {
     auto callback = std::move(init_callback_);
@@ -293,7 +293,7 @@ void FidlProcessor::InitSucceeded() {
 }
 
 void FidlProcessor::InitFailed() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (init_callback_) {
     auto callback = std::move(init_callback_);
@@ -302,7 +302,7 @@ void FidlProcessor::InitFailed() {
 }
 
 void FidlProcessor::MaybeRequestInputPacket() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (!flushing_ && input_buffers_.has_current_set() && !end_of_input_stream_) {
     // |HasFreeBuffer| returns true if there's a free buffer. If there's no
@@ -317,7 +317,7 @@ void FidlProcessor::MaybeRequestInputPacket() {
 }
 
 void FidlProcessor::OnConnectionFailed(zx_status_t error) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   FX_PLOGS(ERROR, error) << "OnConnectionFailed";
 
@@ -327,14 +327,14 @@ void FidlProcessor::OnConnectionFailed(zx_status_t error) {
 
 void FidlProcessor::OnStreamFailed(uint64_t stream_lifetime_ordinal,
                                    fuchsia::media::StreamError error) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_LOGS(ERROR) << "OnStreamFailed: stream_lifetime_ordinal: " << stream_lifetime_ordinal
                  << " error: " << std::hex << static_cast<uint32_t>(error);
   // TODO(dalesat): Report failure.
 }
 
 void FidlProcessor::OnInputConstraints(fuchsia::media::StreamBufferConstraints constraints) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(!input_buffers_.has_current_set()) << "OnInputConstraints received more than once.";
 
   input_buffers_.ApplyConstraints(constraints, true);
@@ -365,7 +365,7 @@ void FidlProcessor::OnInputConstraints(fuchsia::media::StreamBufferConstraints c
 }
 
 void FidlProcessor::OnOutputConstraints(fuchsia::media::StreamOutputConstraints constraints) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (constraints.has_buffer_constraints_action_required() &&
       constraints.buffer_constraints_action_required() && !constraints.has_buffer_constraints()) {
@@ -464,7 +464,7 @@ void FidlProcessor::OnOutputFormat(fuchsia::media::StreamOutputFormat format) {
 
 void FidlProcessor::OnOutputPacket(fuchsia::media::Packet packet, bool error_detected_before,
                                    bool error_detected_during) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (!packet.has_header() || !packet.header().has_buffer_lifetime_ordinal() ||
       !packet.header().has_packet_index() || !packet.has_buffer_index() ||
@@ -539,7 +539,7 @@ void FidlProcessor::OnOutputPacket(fuchsia::media::Packet packet, bool error_det
       [this, shared_this = shared_from_this(), packet_index](Packet* packet) {
         PostTask([this, shared_this, packet_index,
                   buffer_lifetime_ordinal = packet->payload_buffer()->buffer_config()]() {
-          FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+          FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
           // |outboard_processor_| is always set after |Init| is called, so we
           // can rely on it here.
@@ -556,7 +556,7 @@ void FidlProcessor::OnOutputPacket(fuchsia::media::Packet packet, bool error_det
 
 void FidlProcessor::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
                                         bool error_detected_before) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (error_detected_before) {
     FX_LOGS(WARNING) << "OnOutputEndOfStream: error_detected_before";
@@ -566,7 +566,7 @@ void FidlProcessor::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
 }
 
 void FidlProcessor::OnFreeInputPacket(fuchsia::media::PacketHeader packet_header) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (!packet_header.has_buffer_lifetime_ordinal() || !packet_header.has_packet_index()) {
     FX_LOGS(ERROR) << "Freed packet missing ordinal or index.";

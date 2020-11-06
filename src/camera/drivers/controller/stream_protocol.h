@@ -7,11 +7,10 @@
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fit/thread_checker.h>
 #include <zircon/compiler.h>
 
 #include <ddktl/protocol/isp.h>
-
-#include "src/lib/fxl/synchronization/thread_checker.h"
 
 namespace camera {
 
@@ -49,7 +48,7 @@ class StreamImpl : public fuchsia::camera2::Stream {
   fidl::Binding<fuchsia::camera2::Stream> binding_;
   fit::function<void(void)> disconnect_handler_;
   ProcessNode& output_node_;
-  fxl::ThreadChecker thread_checker_;
+  fit::thread_checker thread_checker_;
 };
 
 }  // namespace camera

@@ -39,7 +39,7 @@ FidlAudioRenderer::FidlAudioRenderer(fuchsia::media::AudioRendererPtr audio_rend
   // |demand_task_| is used to wake up when demand might transition from
   // negative to positive.
   demand_task_.set_handler([this]() {
-    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+    FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
     SignalCurrentDemand();
   });
 
@@ -54,7 +54,7 @@ FidlAudioRenderer::FidlAudioRenderer(fuchsia::media::AudioRendererPtr audio_rend
   });
 
   audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_ns) {
-    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+    FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
     renderer_responding_ = true;
 
     if (min_lead_time_ns == 0) {
@@ -90,14 +90,14 @@ FidlAudioRenderer::FidlAudioRenderer(fuchsia::media::AudioRendererPtr audio_rend
 }
 
 FidlAudioRenderer::~FidlAudioRenderer() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   audio_renderer_.set_error_handler(nullptr);
 }
 
 const char* FidlAudioRenderer::label() const { return "audio_renderer"; }
 
 void FidlAudioRenderer::Dump(std::ostream& os) const {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   Renderer::Dump(os);
 
   os << fostr::Indent;
@@ -146,7 +146,7 @@ void FidlAudioRenderer::OnInputConnectionReady(size_t input_index) {
 
 void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
                                    fit::closure callback) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(input_index == 0);
   FX_DCHECK(callback);
 
@@ -161,7 +161,7 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
   expected_packet_size_ = 0;
 
   audio_renderer_->DiscardAllPackets([this, callback = std::move(callback)]() {
-    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+    FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
     last_supplied_pts_ns_ = Packet::kNoPts;
     last_departed_pts_ns_ = Packet::kNoPts;
     callback();
@@ -169,7 +169,7 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
 }
 
 void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(packet);
   FX_DCHECK(input_index == 0);
   FX_DCHECK(bytes_per_frame_ != 0);
@@ -271,7 +271,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     expected_packet_size_ = packet->size();
 
     audio_renderer_->SendPacket(audioPacket, [this, packet]() {
-      FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+      FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
       int64_t now = zx::clock::get_monotonic().get();
 
       int64_t start_pts = packet->GetPts(pts_rate_);
@@ -310,7 +310,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
 }
 
 void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(stream_type.audio());
 
   fuchsia::media::AudioStreamType audio_stream_type;
@@ -340,7 +340,7 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
 }
 
 void FidlAudioRenderer::Prime(fit::closure callback) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (prime_callback_) {
     FX_LOGS(WARNING) << "Prime requested when priming was already in progress.";
@@ -362,7 +362,7 @@ void FidlAudioRenderer::Prime(fit::closure callback) {
 
 void FidlAudioRenderer::SetTimelineFunction(media::TimelineFunction timeline_function,
                                             fit::closure callback) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   // AudioRenderer only fully supports 0/1 (paused) or 1/1 (normal playback rate). If the
   // playback rate isn't 1/1, packets are discarded rather than being renderered. This means
   // that if the |SetPlaybackRate| method is used on the player to set a rate other than 1.0,
@@ -392,7 +392,7 @@ void FidlAudioRenderer::BindGainControl(
 }
 
 void FidlAudioRenderer::OnTimelineTransition() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   auto& timeline = current_timeline_function();
   unsupported_rate_ =
@@ -405,7 +405,7 @@ void FidlAudioRenderer::OnTimelineTransition() {
 }
 
 bool FidlAudioRenderer::NeedMorePackets() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   demand_task_.Cancel();
 
@@ -452,7 +452,7 @@ bool FidlAudioRenderer::NeedMorePackets() {
 }
 
 bool FidlAudioRenderer::SignalCurrentDemand() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (input_packet_request_outstanding_) {
     return false;

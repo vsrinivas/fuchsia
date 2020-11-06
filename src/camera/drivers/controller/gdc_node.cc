@@ -137,7 +137,7 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
 }
 
 void GdcNode::OnFrameAvailable(const frame_available_info_t* info) {
-  ZX_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  ZX_ASSERT(thread_checker_.is_thread_valid());
   TRACE_DURATION("camera", "GdcNode::OnFrameAvailable", "buffer_index", info->buffer_id);
   if (shutdown_requested_ || info->frame_status != FRAME_STATUS_OK) {
     return;

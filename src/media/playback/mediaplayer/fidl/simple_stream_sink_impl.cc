@@ -57,12 +57,10 @@ SimpleStreamSinkImpl::SimpleStreamSinkImpl(
   // queued up in the channel until we're ready to process them.
 }
 
-SimpleStreamSinkImpl::~SimpleStreamSinkImpl() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-}
+SimpleStreamSinkImpl::~SimpleStreamSinkImpl() { FIT_DCHECK_IS_THREAD_VALID(thread_checker_); }
 
 void SimpleStreamSinkImpl::Dump(std::ostream& os) const {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   os << label() << fostr::Indent;
   Node::Dump(os);
   os << fostr::NewLine << "flushing: " << flushing_;
@@ -79,12 +77,12 @@ void SimpleStreamSinkImpl::Dump(std::ostream& os) const {
 }
 
 void SimpleStreamSinkImpl::ConfigureConnectors() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   ConfigureOutputToProvideVmos(VmoAllocation::kUnrestricted);
 }
 
 void SimpleStreamSinkImpl::OnOutputConnectionReady(size_t output_index) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(output_index == 0);
 
   if (binding_.is_bound() || !request_) {
@@ -101,7 +99,7 @@ void SimpleStreamSinkImpl::OnOutputConnectionReady(size_t output_index) {
 }
 
 void SimpleStreamSinkImpl::FlushOutput(size_t output_index, fit::closure callback) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(output_index == 0);
   FX_DCHECK(callback);
 
@@ -111,7 +109,7 @@ void SimpleStreamSinkImpl::FlushOutput(size_t output_index, fit::closure callbac
 }
 
 void SimpleStreamSinkImpl::RequestOutputPacket() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   if (flushing_) {
     // TODO(dalesat): The client will need to know about this.
     flushing_ = false;
@@ -122,7 +120,7 @@ void SimpleStreamSinkImpl::RequestOutputPacket() {
 }
 
 void SimpleStreamSinkImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (payload_vmo_infos_by_id_.find(id) != payload_vmo_infos_by_id_.end()) {
     FX_LOGS(ERROR) << "AddPayloadBuffer: payload buffer with id " << id
@@ -144,7 +142,7 @@ void SimpleStreamSinkImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer)
 }
 
 void SimpleStreamSinkImpl::RemovePayloadBuffer(uint32_t id) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   auto iter = payload_vmo_infos_by_id_.find(id);
   if (iter == payload_vmo_infos_by_id_.end()) {
@@ -169,7 +167,7 @@ void SimpleStreamSinkImpl::RemovePayloadBuffer(uint32_t id) {
 
 void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
                                       SendPacketCallback callback) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   // |callback| is nullptr when |SendPacketNoReply| calls this method.
 
   if (flushing_) {
@@ -232,17 +230,17 @@ void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
 }
 
 void SimpleStreamSinkImpl::SendPacketNoReply(fuchsia::media::StreamPacket packet) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   SendPacket(std::move(packet), nullptr);
 }
 
 void SimpleStreamSinkImpl::EndOfStream() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   PutOutputPacket(Packet::CreateEndOfStream(pts_, pts_rate_));
 }
 
 void SimpleStreamSinkImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
 
   if (discard_requested_callback_) {
     discard_requested_callback_();
@@ -254,7 +252,7 @@ void SimpleStreamSinkImpl::DiscardAllPackets(DiscardAllPacketsCallback callback)
 }
 
 void SimpleStreamSinkImpl::DiscardAllPacketsNoReply() {
-  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   DiscardAllPackets(nullptr);
 }
 

@@ -36,6 +36,7 @@ test("fit-unittest") {
   }
   sources = [
     "string_view_test.cc",
+    "thread_checker_tests.cc",
     "variant_tests.cc",
   ]
   deps = [
@@ -90,6 +91,7 @@ test("fit") {
     "single_threaded_executor_tests.cc",
     "source_location_tests.cc",
     "suspended_task_tests.cc",
+    "thread_checker_tests.cc",
     "traits_tests.cc",
     "utility_internal_tests.cc",
   ]

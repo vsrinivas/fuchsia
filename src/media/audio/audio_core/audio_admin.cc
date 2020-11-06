@@ -59,7 +59,7 @@ void AudioAdmin::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Us
   async::PostTask(fidl_dispatcher_, [this, active = std::move(active),
                                      affected = std::move(affected), behavior = behavior]() {
     TRACE_DURATION("audio", "AudioAdmin::SetInteraction");
-    std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+    std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
     if (active.Which() == fuchsia::media::Usage::Tag::kCaptureUsage &&
         affected.Which() == fuchsia::media::Usage::Tag::kCaptureUsage) {
       active_rules_.SetRule(active.capture_usage(), affected.capture_usage(), behavior);
@@ -80,21 +80,21 @@ void AudioAdmin::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Us
 
 bool AudioAdmin::IsActive(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::IsActive(Render)");
-  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
   auto usage_index = fidl::ToUnderlying(usage);
   return active_streams_playback_[usage_index].size() > 0;
 }
 
 bool AudioAdmin::IsActive(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::IsActive(Capture)");
-  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
   auto usage_index = fidl::ToUnderlying(usage);
   return active_streams_capture_[usage_index].size() > 0;
 }
 
 void AudioAdmin::SetUsageNone(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageNone(Render)");
-  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
   stream_volume_manager_.SetUsageGainAdjustment(
       fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage)), behavior_gain_.none_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::NONE);
@@ -102,7 +102,7 @@ void AudioAdmin::SetUsageNone(fuchsia::media::AudioRenderUsage usage) {
 
 void AudioAdmin::SetUsageNone(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageNone(Capture)");
-  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
   stream_volume_manager_.SetUsageGainAdjustment(
       fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(usage)), behavior_gain_.none_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::NONE);
@@ -110,7 +110,7 @@ void AudioAdmin::SetUsageNone(fuchsia::media::AudioCaptureUsage usage) {
 
 void AudioAdmin::SetUsageMute(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageMute(Render)");
-  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
   stream_volume_manager_.SetUsageGainAdjustment(
       fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage)), behavior_gain_.mute_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::MUTE);
@@ -118,7 +118,7 @@ void AudioAdmin::SetUsageMute(fuchsia::media::AudioRenderUsage usage) {
 
 void AudioAdmin::SetUsageMute(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageMute(Capture)");
-  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
   stream_volume_manager_.SetUsageGainAdjustment(
       fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(usage)), behavior_gain_.mute_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::MUTE);
@@ -126,7 +126,7 @@ void AudioAdmin::SetUsageMute(fuchsia::media::AudioCaptureUsage usage) {
 
 void AudioAdmin::SetUsageDuck(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageDuck(Render)");
-  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
   stream_volume_manager_.SetUsageGainAdjustment(
       fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage)), behavior_gain_.duck_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::DUCK);
@@ -134,7 +134,7 @@ void AudioAdmin::SetUsageDuck(fuchsia::media::AudioRenderUsage usage) {
 
 void AudioAdmin::SetUsageDuck(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageDuck(Capture)");
-  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
   stream_volume_manager_.SetUsageGainAdjustment(
       fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(usage)), behavior_gain_.duck_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::DUCK);
@@ -143,7 +143,7 @@ void AudioAdmin::SetUsageDuck(fuchsia::media::AudioCaptureUsage usage) {
 void AudioAdmin::ApplyNewPolicies(const RendererPolicies& new_renderer_policies,
                                   const CapturerPolicies& new_capturer_policies) {
   TRACE_DURATION("audio", "AudioAdmin::ApplyNewPolicies");
-  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; ++i) {
     auto usage = static_cast<fuchsia::media::AudioRenderUsage>(i);
     switch (new_renderer_policies[i]) {
@@ -183,7 +183,7 @@ void AudioAdmin::UpdatePolicy() {
   new_capturer_policies.fill(fuchsia::media::Behavior::NONE);
   // Lambda to set new renderer and capturer policies based on an active usage.
   auto set_new_policies = [this, &new_renderer_policies, &new_capturer_policies](auto& active) {
-    std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+    std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
     for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; ++i) {
       auto affected = static_cast<fuchsia::media::AudioRenderUsage>(i);
       new_renderer_policies[i] =
@@ -213,7 +213,7 @@ void AudioAdmin::UpdatePolicy() {
 
 void AudioAdmin::UpdateRenderActivity() {
   TRACE_DURATION("audio", "AudioAdmin::UpdateRenderActivity");
-  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
 
   std::bitset<fuchsia::media::RENDER_USAGE_COUNT> render_activity;
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
@@ -226,7 +226,7 @@ void AudioAdmin::UpdateRenderActivity() {
 
 void AudioAdmin::UpdateCaptureActivity() {
   TRACE_DURATION("audio", "AudioAdmin::UpdateCaptureActivity");
-  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
 
   std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> capture_activity;
   for (int i = 0; i < fuchsia::media::CAPTURE_USAGE_COUNT; i++) {
@@ -241,7 +241,7 @@ void AudioAdmin::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, boo
                                      fuchsia::media::AudioRenderer* renderer) {
   async::PostTask(fidl_dispatcher_, [this, usage = usage, active = active, renderer = renderer] {
     TRACE_DURATION("audio", "AudioAdmin::UpdateRendererState");
-    std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+    std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
     auto usage_index = fidl::ToUnderlying(usage);
     FX_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT);
     if (active) {
@@ -259,7 +259,7 @@ void AudioAdmin::UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bo
                                      fuchsia::media::AudioCapturer* capturer) {
   async::PostTask(fidl_dispatcher_, [this, usage = usage, active = active, capturer = capturer] {
     TRACE_DURATION("audio", "AudioAdmin::UpdateCapturerState");
-    std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+    std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
     auto usage_index = fidl::ToUnderlying(usage);
     FX_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT);
     if (active) {

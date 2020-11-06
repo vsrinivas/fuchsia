@@ -8,6 +8,7 @@
 #include <fuchsia/media/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fit/thread_checker.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <unordered_set>
@@ -15,7 +16,6 @@
 #include <fbl/unique_fd.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/audio/audio_core/policy_loader.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 
@@ -75,7 +75,7 @@ class AudioAdmin {
 
   // Clears all configured behaviors.
   void ResetInteractions() {
-    std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+    std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
     active_rules_.ResetInteractions();
   };
 
@@ -103,7 +103,7 @@ class AudioAdmin {
 
   // Ensures we are always on the thread on which the class was constructed, which should
   // be the FIDL thread.
-  fxl::ThreadChecker fidl_thread_checker_;
+  fit::thread_checker fidl_thread_checker_;
   async_dispatcher_t* fidl_dispatcher_;
 
   void UpdatePolicy();

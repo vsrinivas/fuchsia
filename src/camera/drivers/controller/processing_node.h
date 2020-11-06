@@ -7,6 +7,7 @@
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/thread_checker.h>
 #include <zircon/assert.h>
 
 #include <queue>
@@ -18,7 +19,6 @@
 #include <fbl/macros.h>
 
 #include "src/camera/drivers/controller/configs/internal_config.h"
-#include "src/lib/fxl/synchronization/thread_checker.h"
 
 namespace camera {
 
@@ -219,7 +219,7 @@ class ProcessNode {
   fit::function<void(void)> shutdown_callback_;
   bool shutdown_requested_ = false;
   uint32_t current_image_format_index_;
-  fxl::ThreadChecker thread_checker_;
+  fit::thread_checker thread_checker_;
 };
 
 }  // namespace camera
