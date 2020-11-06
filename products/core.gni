@@ -66,6 +66,9 @@ base_package_labels += [
   "//src/security/root_ssl_certificates",
   "//src/sys/appmgr",
   "//src/sys/appmgr:appmgr_scheme_config",
+  # All components are allowed to use isolated-persistent-storage, even if
+  # they're not in the component ID index.
+  "//src/sys/appmgr:component_id_index_no_restrict_storage",
   "//src/sys/appmgr:core_component_id_index",
   "//src/sys/core",
   "//src/sys/device_settings:device_settings_manager",

@@ -14,6 +14,7 @@ assemble_system("guest") {
     "//garnet/bin/vsock_service:vsock_service",
     "//src/sys/appmgr",
     "//src/sys/appmgr:appmgr_scheme_config",
+    "//src/sys/appmgr:component_id_index_no_restrict_storage",
     "//src/sys/core",
     "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",

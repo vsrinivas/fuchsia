@@ -12,6 +12,7 @@ assemble_system("overnet") {
     "//garnet/bin/vsock_service:vsock_service",
     "//src/sys/appmgr",
     "//src/sys/appmgr:appmgr_scheme_config",
+    "//src/sys/appmgr:component_id_index_no_restrict_storage",
     "//src/sys/core",
     "//src/sys/sysmgr",
     "//src/sys/sysmgr:services_config",

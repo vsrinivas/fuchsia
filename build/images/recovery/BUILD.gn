@@ -29,6 +29,7 @@ recovery_packages = [
   "//src/security/root_ssl_certificates",
   "//src/sys/appmgr",
   "//src/sys/appmgr:appmgr_scheme_config",
+  "//src/sys/appmgr:component_id_index_no_restrict_storage",
   "//src/sys/core",
   "//src/sys/pkg:recovery",
   "//src/sys/stash",

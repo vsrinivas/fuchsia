@@ -2,7 +2,7 @@
 // the option to disallow components from using storage if they are not part of
 // the index.
 {
-    appmgr_restrict_isolated_persistent_storage: true,
+    appmgr_restrict_isolated_persistent_storage: false,
     // The `instances` field is require, but please leave it empty here.
     instances: []
 }

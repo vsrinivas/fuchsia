@@ -237,11 +237,10 @@ component_id_index("core_component_id_index") {
   source = "config/core_component_id_index.json"
 }
 
-# If this target is included in the build, only components which are part of
-# the index are allowed to use `isolated-persistent-storage`. Otherwise, they
-# fail to launch.
-component_id_index("component_id_index_restrict_storage") {
-  source = "config/component_id_index_restrict_storage.json"
+# If this target is included in the build, all components are allowed to use
+# isolated-persistent-storage, even if they are not in the component ID index.
+component_id_index("component_id_index_no_restrict_storage") {
+  source = "config/component_id_index_no_restrict_storage.json"
 }
 
 group("unittests") {
