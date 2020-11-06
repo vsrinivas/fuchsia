@@ -161,12 +161,15 @@ void main(List<String> args) {
     });
 
     test('keyPress hidUsageId too large', () async {
-      expect(() async { return await input.keyPress(65536); }, throwsA(isA<ArgumentError>()));
+      expect(() async {
+        return await input.keyPress(65536);
+      }, throwsA(isA<ArgumentError>()));
     });
 
     test('keyPress hidUsageId too small', () async {
-      expect(() async { return await input.keyPress(-1); }, throwsA(isA<ArgumentError>()));
+      expect(() async {
+        return await input.keyPress(-1);
+      }, throwsA(isA<ArgumentError>()));
     });
-
   });
 }
