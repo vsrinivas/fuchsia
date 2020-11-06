@@ -1494,12 +1494,45 @@ action("flash_script") {
     image_suffix = "zbi"
   }
   image = "$root_out_dir/fuchsia.${image_suffix}"
+  vbmeta = "$root_out_dir/fuchsia.vbmeta"
 
   if (recovery_is_zedboot) {
     recovery_image = "$root_out_dir/zedboot.${image_suffix}"
+    recovery_vbmeta = "$root_out_dir/zedboot.vbmeta"
   } else {
     recovery_image = "$root_out_dir/recovery.zbi"
+    recovery_vbmeta = "$root_out_dir/recovery.vbmeta"
   }
+
+  # A list of partitions for the flash json manifest that will be
+  # generated.  The first item should be the partition name and the
+  # second should be the path to the image for the partition.
+  parts = [
+    [
+      zircon_a_partition,
+      rebase_path(image),
+    ],
+    [
+      zircon_b_partition,
+      rebase_path(image),
+    ],
+    [
+      zircon_r_partition,
+      rebase_path(recovery_image),
+    ],
+    [
+      vbmeta_a_partition,
+      rebase_path(vbmeta),
+    ],
+    [
+      vbmeta_b_partition,
+      rebase_path(vbmeta),
+    ],
+    [
+      vbmeta_r_partition,
+      rebase_path(recovery_vbmeta),
+    ],
+  ]
 
   host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
   args = [
@@ -1522,9 +1555,19 @@ action("flash_script") {
   }
   deps = [ ":fastboot" ]
 
+  # A list of partitions for the flash json manifest that will be
+  # generated.  The first item should be the partition name and the
+  # second should be the path to the image for the partition. These
+  # are the images flashed for the firmware/bootloader.
+  bootloader_parts = []
+
   foreach(info, firmware_info) {
     args += [ "--firmware=${info.partition}:${info.out_path}" ]
     deps += [ ":${info.name}" ]
+    bootloader_parts += [ [
+          info.partition,
+          rebase_path("$root_out_dir/${info.out_path}"),
+        ] ]
   }
 
   if (fvm_partition != "") {
@@ -1534,6 +1577,10 @@ action("flash_script") {
       "--fvm=${fvm_partition}",
     ]
     deps += [ ":fvm.fastboot.blk" ]
+    parts += [ [
+          fvm_partition,
+          rebase_path(image_path[0]),
+        ] ]
   }
 
   metadata = {
@@ -1545,7 +1592,29 @@ action("flash_script") {
       },
     ]
     image_paths = [ "IMAGE_FLASH_SH=netboot.sh" ]
+    flash_manifest = [
+      {
+        version = 1
+        manifest = [
+          {
+            name = "fuchsia"
+            bootloader_partitions = bootloader_parts
+            partitions = parts
+            oem_files = []
+          },
+        ]
+      },
+    ]
   }
+}
+
+fastboot_manifest_file = "$root_build_dir/flash.json"
+generated_file("fastboot_manifest") {
+  testonly = true
+  outputs = [ fastboot_manifest_file ]
+  output_conversion = "json"
+  data_keys = [ "flash_manifest" ]
+  deps = [ ":flash_script" ]
 }
 
 default_image_deps += [ recovery_label ]
@@ -2293,6 +2362,7 @@ group("default-images") {
   deps = [
     ":bootserver",
     ":fastboot",
+    ":fastboot_manifest",
     ":flash_script",
     ":paver-script",
     ":qemu-kernel",

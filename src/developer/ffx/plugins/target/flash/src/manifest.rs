@@ -82,8 +82,14 @@ impl OemFile {
 
 impl FlashManifest {
     pub(crate) fn load<R: Read>(reader: R) -> Result<Self> {
-        let manifest: ManifestFile = serde_json::from_reader::<R, ManifestFile>(reader)
+        let value: Value = serde_json::from_reader::<R, Value>(reader)
             .context("reading flash manifest from disk")?;
+        // GN generated JSON always comes from a list
+        let manifest: ManifestFile = match value {
+            Value::Array(v) => serde_json::from_value(v[0].clone())?,
+            Value::Object(_) => serde_json::from_value(value)?,
+            _ => ffx_bail!("Could not parse flash manifest."),
+        };
         match manifest.version {
             1 => Ok(Self::V1(from_value(manifest.manifest.clone())?)),
             _ => ffx_bail!("{}", UNKNOWN_VERSION),
@@ -252,6 +258,40 @@ mod test {
         ]
     }"#;
 
+    const ARRAY_MANIFEST: &'static str = r#"[{
+        "version": 1,
+        "manifest": [ 
+            {
+                "name": "zedboot", 
+                "bootloader_partitions": [
+                    ["test1", "path1"],
+                    ["test2", "path2"]
+                ],
+                "partitions": [
+                    ["test1", "path1"],
+                    ["test2", "path2"],
+                    ["test3", "path3"],
+                    ["test4", "path4"],
+                    ["test5", "path5"]
+                ],
+                "oem_files": [
+                    ["test1", "path1"],
+                    ["test2", "path2"]
+                ] 
+            },
+            {
+                "name": "product", 
+                "bootloader_partitions": [],
+                "partitions": [
+                    ["test10", "path10"],
+                    ["test20", "path20"],
+                    ["test30", "path30"]
+                ],
+                "oem_files": []
+            }
+        ]
+    }]"#;
+
     #[test]
     fn test_deserialization() -> Result<()> {
         let _manifest: ManifestFile = from_str(MANIFEST)?;
@@ -269,6 +309,54 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_loading_version_1() -> Result<()> {
         let manifest_contents = MANIFEST.to_string();
+        let manifest = FlashManifest::load(BufReader::new(manifest_contents.as_bytes()))?;
+        if let FlashManifest::V1(v) = manifest {
+            let zedboot: &Product = &v.0[0];
+            assert_eq!("zedboot", zedboot.name);
+            assert_eq!(2, zedboot.bootloader_partitions.len());
+            let bootloader_expected = [["test1", "path1"], ["test2", "path2"]];
+            for x in 0..bootloader_expected.len() {
+                assert_eq!(zedboot.bootloader_partitions[x].name(), bootloader_expected[x][0]);
+                assert_eq!(zedboot.bootloader_partitions[x].file(), bootloader_expected[x][1]);
+            }
+            assert_eq!(5, zedboot.partitions.len());
+            let expected = [
+                ["test1", "path1"],
+                ["test2", "path2"],
+                ["test3", "path3"],
+                ["test4", "path4"],
+                ["test5", "path5"],
+            ];
+            for x in 0..expected.len() {
+                assert_eq!(zedboot.partitions[x].name(), expected[x][0]);
+                assert_eq!(zedboot.partitions[x].file(), expected[x][1]);
+            }
+            assert_eq!(2, zedboot.oem_files.len());
+            let oem_files_expected = [["test1", "path1"], ["test2", "path2"]];
+            for x in 0..oem_files_expected.len() {
+                assert_eq!(zedboot.oem_files[x].command(), oem_files_expected[x][0]);
+                assert_eq!(zedboot.oem_files[x].file(), oem_files_expected[x][1]);
+            }
+            let product: &Product = &v.0[1];
+            assert_eq!("product", product.name);
+            assert_eq!(0, product.bootloader_partitions.len());
+            assert_eq!(3, product.partitions.len());
+            let expected2 = [["test10", "path10"], ["test20", "path20"], ["test30", "path30"]];
+            for x in 0..expected2.len() {
+                assert_eq!(product.partitions[x].name(), expected2[x][0]);
+                assert_eq!(product.partitions[x].file(), expected2[x][1]);
+            }
+            assert_eq!(0, product.oem_files.len());
+        } else {
+            bail!("Parsed incorrect version");
+        }
+        Ok(())
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_loading_version_1_from_array() -> Result<()> {
+        let manifest_contents = ARRAY_MANIFEST.to_string();
         let manifest = FlashManifest::load(BufReader::new(manifest_contents.as_bytes()))?;
         if let FlashManifest::V1(v) = manifest {
             let zedboot: &Product = &v.0[0];
