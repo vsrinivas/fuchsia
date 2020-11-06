@@ -186,7 +186,7 @@ zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_han
                                   uint64_t key, zx_signals_t signals, uint32_t options) {
   LTRACEF("handle %x\n", handle_value);
 
-  if ((options != 0u) && (options != ZX_WAIT_ASYNC_TIMESTAMP)) {
+  if ((options & ~(ZX_WAIT_ASYNC_TIMESTAMP | ZX_WAIT_ASYNC_EDGE)) != 0u) {
     return ZX_ERR_INVALID_ARGS;
   }
 

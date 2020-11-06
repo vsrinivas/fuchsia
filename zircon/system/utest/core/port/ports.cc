@@ -6,6 +6,7 @@
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
 #include <zircon/errors.h>
+#include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
@@ -468,6 +469,88 @@ TEST(PortTest, Timestamp) {
   EXPECT_GE(after, zx::time(packet[1].signal.timestamp));
 
   EXPECT_EQ(0u, packet[0].signal.timestamp);
+}
+
+TEST(PortTest, EdgeTriggerDetected) {
+  // Test ZX_WAIT_ASYNC_EDGE only generates a packet when a signal
+  // becomes active after the wait_async.
+  zx::port port;
+  zx::event event;
+  ASSERT_OK(zx::port::create(0u, &port));
+  ASSERT_OK(zx::event::create(0u, &event));
+
+  uint64_t key = 2u;
+  ASSERT_OK(event.wait_async(port, key, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_EDGE));
+
+  zx_handle_t main_thread = zx_thread_self();
+
+  auto loop_signal = [&event, main_thread]() {
+    zx_info_thread thd_info;
+    do {
+      // This sleep is to prevent repeated calls to zx_object_get_info.
+      // The test is deterministic.
+      zx_nanosleep(zx_deadline_after(ZX_USEC(600)));
+      EXPECT_OK(zx_object_get_info(main_thread, ZX_INFO_THREAD, &thd_info, sizeof(thd_info),
+                                   nullptr, nullptr));
+    } while (thd_info.state != ZX_THREAD_STATE_BLOCKED_PORT);
+    EXPECT_OK(event.signal(0u, ZX_EVENT_SIGNALED));
+  };
+  std::thread signal_thread(loop_signal);
+  zx_port_packet_t packet;
+  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(packet.status);
+  ASSERT_EQ(ZX_PKT_TYPE_SIGNAL_ONE, packet.type);
+  ASSERT_EQ(ZX_EVENT_SIGNALED, packet.signal.observed);
+  ASSERT_EQ(key, packet.key);
+
+  signal_thread.join();
+}
+
+TEST(PortTest, EdgeTriggerCancel) {
+  // This is the same as EdgeTriggerDetected, but the wait
+  // is cancelled before the signal is set.
+  zx::port port;
+  zx::event event;
+  ASSERT_OK(zx::port::create(0u, &port));
+  ASSERT_OK(zx::event::create(0u, &event));
+
+  uint64_t key1 = 42u;
+  uint64_t key2 = 999u;
+  uint64_t key3 = 2020u;
+
+  ASSERT_OK(event.wait_async(port, key1, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_EDGE));
+  ASSERT_OK(event.wait_async(port, key2, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_EDGE));
+  ASSERT_OK(event.wait_async(port, key3, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_EDGE));
+
+  EXPECT_OK(port.cancel(event, key2));
+  ASSERT_OK(event.signal(0u, ZX_EVENT_SIGNALED));
+  EXPECT_OK(port.cancel(event, key3));
+
+  zx_port_packet_t packet;
+  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(packet.status);
+  ASSERT_EQ(ZX_PKT_TYPE_SIGNAL_ONE, packet.type);
+  ASSERT_EQ(ZX_EVENT_SIGNALED, packet.signal.observed);
+  ASSERT_EQ(key1, packet.key);
+
+  // We cancelled key2 and key3, so they should not be queued.
+  ASSERT_EQ(ZX_ERR_TIMED_OUT, port.wait(zx::time(zx_deadline_after(ZX_USEC(600))), &packet));
+}
+
+TEST(PortTest, EdgeTriggerTimeout) {
+  // Test ZX_WAIT_ASYNC_EDGE only generates a packet when a signal
+  // becomes active after the wait_async.
+  zx::port port;
+  zx::event event;
+  ASSERT_OK(zx::port::create(0u, &port));
+  ASSERT_OK(zx::event::create(0u, &event));
+
+  // Call signal before wait, so no packet will be queued.
+  ASSERT_OK(event.signal(0u, ZX_EVENT_SIGNALED));
+  ASSERT_OK(event.wait_async(port, 1, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_EDGE));
+
+  zx_port_packet_t packet;
+  ASSERT_EQ(ZX_ERR_TIMED_OUT, port.wait(zx::time(zx_deadline_after(ZX_USEC(600))), &packet));
 }
 
 // Queue a packet while another thread is closing the port.  See that queuing thread observes

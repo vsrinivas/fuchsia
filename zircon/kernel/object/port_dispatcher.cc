@@ -418,7 +418,10 @@ zx_status_t PortDispatcher::MakeObserver(ktl::unique_ptr<PortObserverPlaceholder
     observers_.push_front(observer.get());
   }
 
-  return dispatcher->AddObserver(observer.release(), handle, signals);
+  Dispatcher::TriggerMode trigger_mode =
+      options & ZX_WAIT_ASYNC_EDGE ? Dispatcher::TriggerMode::Edge : Dispatcher::TriggerMode::Level;
+
+  return dispatcher->AddObserver(observer.release(), handle, signals, trigger_mode);
 }
 
 bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {

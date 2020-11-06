@@ -81,7 +81,7 @@ void Dispatcher::fbl_recycle() {
 }
 
 zx_status_t Dispatcher::AddObserver(SignalObserver* observer, const Handle* handle,
-                                    zx_signals_t signals) {
+                                    zx_signals_t signals, Dispatcher::TriggerMode trigger_mode) {
   canary_.Assert();
   ZX_DEBUG_ASSERT(observer != nullptr);
 
@@ -91,11 +91,13 @@ zx_status_t Dispatcher::AddObserver(SignalObserver* observer, const Handle* hand
 
   Guard<Mutex> guard{get_lock()};
 
-  // If the currently active signals already match the desired signals,
-  // just execute the match now.
-  if ((signals_ & signals) != 0) {
-    observer->OnMatch(signals_);
-    return ZX_OK;
+  if (trigger_mode == Dispatcher::TriggerMode::Level) {
+    // If the currently active signals already match the desired signals,
+    // just execute the match now.
+    if ((signals_ & signals) != 0) {
+      observer->OnMatch(signals_);
+      return ZX_OK;
+    }
   }
 
   // Otherwise, enqueue this observer.

@@ -135,13 +135,23 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
     return handle_count_.load(ktl::memory_order_relaxed);
   }
 
+  enum class TriggerMode : uint32_t {
+    Level = 0,
+    Edge,
+  };
+
   // Add a observer which will be triggered when any |signal| becomes active
   // or cancelled when |handle| is destroyed.
   //
   // |observer| must be non-null, and |is_waitable| must report true.
   //
   // Be sure to |RemoveObserver| before the Dispatcher is destroyed.
-  zx_status_t AddObserver(SignalObserver* observer, const Handle* handle, zx_signals_t signals);
+  //
+  // If |trigger_mode| is set to Edge, the signal state is not checked
+  // on entry and the observer is only triggered if a signal subsequently
+  // becomes active.
+  zx_status_t AddObserver(SignalObserver* observer, const Handle* handle, zx_signals_t signals,
+                          TriggerMode trigger_mode = TriggerMode::Level);
 
   // Remove an observer.
   //

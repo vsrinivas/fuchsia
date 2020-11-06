@@ -28,18 +28,32 @@ specified [signals] asserted. Use [`zx_port_wait()`] to retrieve the packets.
 
 *handle* points to the object that is to be watched for changes and must be a waitable object.
 
-The *options* argument can be 0 or it can be ZX_WAIT_ASYNC_TIMESTAMP which causes
-the system to capture a timestamp when the wait triggered.
+The *options* argument can be 0 or it can be one or more of
+  * ZX_WAIT_ASYNC_TIMESTAMP which causes the system to capture a timestamp when
+    the wait triggered.
+  * ZX_WAIT_ASYNC_EDGE causes the port to not enqueue a packet for signals active
+    at the time of the `zx_object_wait_async()` call.
 
 The *signals* argument is a bitmask indicating which [signals] on the object
-specified by *handle* will cause a packet to be enqueued. If **any** of those
-signals are asserted when `zx_object_wait_async()` is called or become asserted
-afterwards, a packet will be enqueued on *port* containing all of the
-currently-asserted signals (not just the ones listed in the *signals* argument).
-Once a packet has been enqueued the asynchronous waiting ends. No further
-packets will be enqueued. Note that signals are OR'd into the state maintained
-by the port thus you may see any combination of requested signals when
-[`zx_port_wait()`] returns.
+specified by *handle* will cause a packet to be enqueued.
+
+Without **ZX_WAIT_ASYNC_EDGE**, if **any** of the signals in *signals* are active
+when `zx_object_wait_async()` is called or become active afterwards, a packet will
+be enqueued on *port*.
+
+With **ZX_WAIT_ASYNC_EDGE**, a packet will be enqueued on *port* only after one or more
+signals in *signals* have transitioned from inactive to active. When using this option,
+care should be taken that an inactive signal becomes unexpectedly active before
+the call `zx_object_wait_async()` has completed. In such cases the transition can be missed
+and no packet will ever be queued to the port. For example, this is often used
+before performing non-blocking I/O until the signal becomes inatctive, ensuring that
+a subsequent transition from inactive to active will cause a packet to be queued.
+
+When a packet is enqueued, it will contain all of the currently-asserted signals
+(not just the ones listed in the *signals* argument).  Once a packet has been enqueued
+the asynchronous waiting ends. No further packets will be enqueued. Note that signals
+are OR'd into the state maintained by the port thus you may see any combination of requested
+signals when [`zx_port_wait()`] returns.
 
 [`zx_port_cancel()`] will terminate the operation and if a packet was
 in the queue on behalf of the operation, that packet will be removed from the queue.
@@ -81,7 +95,8 @@ Use the `zx_port_packet_t`'s *key* member to track what object this packet corre
 
 ## ERRORS
 
-**ZX_ERR_INVALID_ARGS**  *options* is not 0 or **ZX_WAIT_ASYNC_TIMESTAMP**.
+**ZX_ERR_INVALID_ARGS**  *options* has bits other than **ZX_WAIT_ASYNC_TIMESTAMP**
+and **ZX_WAIT_ASYNC_EDGE** set.
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle or *port* is not a valid handle.
 
