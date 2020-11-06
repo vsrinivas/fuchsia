@@ -227,6 +227,38 @@ sufficient tests. See
 more information on how to introduce testable and tested code in the Fuchsia
 project.
 
+## Contribute a change to the API
+
+To contribute to the
+[Fuchsia API Surface](/docs/glossary.md#fuchsia-api-surface), do the following:
+
+* Evaluate whether your change is large or small.
+
+    * If you have a small, incremental change to the API, contribute your
+    change by completing the steps in
+    [create a change in Gerrit](#create-a-change-in-gerrit), as you would for
+    any Fuchsia source code change.
+    * If you have a large change to the API, that is, a change that
+    significantly expands on the fuction of the API or modifies the
+    API extensively, do the following:
+        * Create an API Design Document that explains the design of your modification to the
+        API.
+        * Request a review of your API Design Document.
+        To read about the API Design Document and the API Design Document review
+        process, see [Decision process](/docs/contribute/governance/api_council.md#decision_process)
+        in the Fuchsia API Council Charter.
+        * After your API Design Document is approved, contribute your change by
+        completing the steps in
+        [create a change in Gerrit](#create-a-change-in-gerrit), as you would
+        for any Fuchsia source code change.
+
+* [Request a code review](#request_a_code_review) from an API council
+member. Select your API council reviewer based on the area of the
+Fuchsia API that you're modifying. For a list of API council members and their
+areas of focus, see
+[Membership](/docs/contribute/governance/api_council.md#membership) in the
+Fuchsia API Council Charter.
+
 ## Manage changes that span multiple repositories
 
 To understand how to manage changes that span different repositories (petals),
