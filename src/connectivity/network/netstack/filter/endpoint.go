@@ -8,6 +8,7 @@
 package filter
 
 import (
+	"fmt"
 	"sync/atomic"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/packetbuffer"
@@ -57,21 +58,40 @@ func (e *Endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddre
 		return
 	}
 
-	// The filter expects the packet's header to be in the packet buffer's header.
+	// The filter expects the packet's header to be in a single view.
 	//
-	// Since we are delivering the packet to a NetworkDispatcher, we do not need
-	// to allocate bytes for a LinkEndpoint's header.
+	// Since we are delivering the packet to a NetworkDispatcher, we know only the
+	// link header may be set - the rest of the packet will be in Data.
+	//
+	// Note, the ethernet and netdevice clients always provide a packet buffer
+	// that was created with a single view, so we will not incur any allocations
+	// or copies below when a packet is received from those clients.
 	//
 	// TODO(fxbug.dev/50424): Support using a buffer.VectorisedView when parsing packets
 	// so we don't need to create a single view here.
-	hdr := packetbuffer.ToView(pkt)
-	if e.filter.Run(Incoming, protocol, hdr, buffer.VectorisedView{}) != Pass {
+	if len(pkt.Data.Views()) == 0 {
+		panic("expected to receive a packet buffer with at least 1 remaining view in Data")
+	}
+
+	if len(pkt.Data.Views()) != 1 {
+		// If we have more than 1 view in Data, combine them into a single view.
+		// Note, the stack may be interested in the link headers so make sure to
+		// not throw it away.
+		linkHdrLen := len(pkt.LinkHeader().View())
+		pkt = stack.NewPacketBuffer(stack.PacketBufferOptions{
+			Data: packetbuffer.ToView(pkt).ToVectorisedView(),
+		})
+		_, ok := pkt.LinkHeader().Consume(linkHdrLen)
+		if !ok {
+			panic(fmt.Sprintf("failed to consume %d bytes for the link header", linkHdrLen))
+		}
+	}
+
+	if e.filter.Run(Incoming, protocol, pkt.Data.Views()[0], buffer.VectorisedView{}) != Pass {
 		return
 	}
 
-	e.Endpoint.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, stack.NewPacketBuffer(stack.PacketBufferOptions{
-		Data: hdr.ToVectorisedView(),
-	}))
+	e.Endpoint.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, pkt)
 }
 
 // WritePacket implements stack.LinkEndpoint.

@@ -414,6 +414,14 @@ func TestReceivePacket(t *testing.T) {
 		t.Fatalf("unexpected packet received: %v", args)
 	}
 
+	ethFields := header.EthernetFields{
+		SrcAddr: tcpip.LinkAddress(otherMac.Octets[:]),
+		DstAddr: tcpip.LinkAddress(tunMac.Octets[:]),
+		Type:    protocol,
+	}
+	wantLinkHdr := make(buffer.View, header.EthernetMinimumSize)
+	header.Ethernet(wantLinkHdr).Encode(&ethFields)
+
 	// Then test some valid configurations.
 	for _, extra := range []int{
 		// Test receiving a frame that is equal to the minimum frame size.
@@ -429,9 +437,18 @@ func TestReceivePacket(t *testing.T) {
 			SrcLinkAddr: tcpip.LinkAddress(otherMac.Octets[:]),
 			DstLinkAddr: tcpip.LinkAddress(tunMac.Octets[:]),
 			Protocol:    protocol,
-			Pkt: &stack.PacketBuffer{
-				Data: buffer.View(pktPayload[:extra]).ToVectorisedView(),
-			},
+			Pkt: func() *stack.PacketBuffer {
+				vv := wantLinkHdr.ToVectorisedView()
+				vv.AppendView(buffer.View(pktPayload[:extra]))
+				pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+					Data: vv,
+				})
+				_, ok := pkt.LinkHeader().Consume(header.EthernetMinimumSize)
+				if !ok {
+					t.Fatalf("failed to consume %d bytes for link header", header.EthernetMinimumSize)
+				}
+				return pkt
+			}(),
 		}, testutil.PacketBufferCmpTransformer); diff != "" {
 			t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 		}

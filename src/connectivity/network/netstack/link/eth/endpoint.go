@@ -43,12 +43,11 @@ func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.Packe
 }
 
 func (e *endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
-	ethBytes, ok := pkt.Data.PullUp(header.EthernetMinimumSize)
+	ethBytes, ok := pkt.LinkHeader().Consume(header.EthernetMinimumSize)
 	if !ok {
 		// TODO(fxbug.dev/42949): record this in statistics.
 		return
 	}
-	pkt.Data.TrimFront(header.EthernetMinimumSize)
 	eth := header.Ethernet(ethBytes)
 
 	if len(dstLinkAddr) == 0 {

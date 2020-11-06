@@ -390,15 +390,19 @@ func TestEndpoint(t *testing.T) {
 			t.Run("ReceivePacket", func(t *testing.T) {
 				const payload = "foobarbaz"
 
+				ethFields := header.EthernetFields{
+					SrcAddr: localLinkAddress,
+					DstAddr: remoteLinkAddress,
+					Type:    protocol,
+				}
+				wantLinkHdr := make(buffer.View, header.EthernetMinimumSize)
+				header.Ethernet(wantLinkHdr).Encode(&ethFields)
+
 				// Send the first sendSize bytes of a frame.
 				send := func(sendSize int) {
 					entry := &device.rxEntries[0]
 					buf := device.iob.BufferFromEntry(*entry)
-					header.Ethernet(buf).Encode(&header.EthernetFields{
-						SrcAddr: localLinkAddress,
-						DstAddr: remoteLinkAddress,
-						Type:    protocol,
-					})
+					header.Ethernet(buf).Encode(&ethFields)
 					if got, want := copy(buf[header.EthernetMinimumSize:], payload), len(payload); got != want {
 						t.Fatalf("got copy() = %d, want %d", got, want)
 					}
@@ -454,9 +458,18 @@ func TestEndpoint(t *testing.T) {
 							SrcLinkAddr: localLinkAddress,
 							DstLinkAddr: remoteLinkAddress,
 							Protocol:    protocol,
-							Pkt: &stack.PacketBuffer{
-								Data: buffer.View(payload[:extra]).ToVectorisedView(),
-							},
+							Pkt: func() *stack.PacketBuffer {
+								vv := wantLinkHdr.ToVectorisedView()
+								vv.AppendView(buffer.View(payload[:extra]))
+								pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+									Data: vv,
+								})
+								_, ok := pkt.LinkHeader().Consume(header.EthernetMinimumSize)
+								if !ok {
+									t.Fatalf("failed to consume %d bytes for link header", header.EthernetMinimumSize)
+								}
+								return pkt
+							}(),
 						}, args, testutil.PacketBufferCmpTransformer); diff != "" {
 							t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 						}
