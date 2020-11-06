@@ -48,7 +48,7 @@ package("wlan") {
   binaries = [
     {
       name = "wlan"
-      dest = "wlan"
+      dest = "wlan-dev"
       shell = true
     },
   ]
