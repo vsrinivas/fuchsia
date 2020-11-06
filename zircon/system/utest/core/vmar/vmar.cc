@@ -148,6 +148,7 @@ TEST(Vmar, MapInCompactTest) {
 
   EXPECT_EQ(zx_handle_close(region), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
+  EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
 }
 
@@ -510,7 +511,7 @@ TEST(Vmar, AlignmentVmarMapTest) {
 
   zx_handle_t vmo;
   ASSERT_EQ(zx_vmo_create(size, 0, &vmo), ZX_OK);
-  zx_handle_t vmar;
+  zx_handle_t vmar = ZX_HANDLE_INVALID;
   ASSERT_EQ(MakeManualAlignedVmar(vmar_size, &vmar), ZX_OK);
 
   // Specific base + offset does not meet the alignment, so it fails.
@@ -562,7 +563,7 @@ TEST(Vmar, AlignmentVmarAllocateTest) {
   const size_t size = PAGE_SIZE * 16;
   const auto vmar_size = (8ull * 1024 * 1024 * 1024);
 
-  zx_handle_t vmar;
+  zx_handle_t vmar = ZX_HANDLE_INVALID;
   ASSERT_EQ(MakeManualAlignedVmar(vmar_size, &vmar), ZX_OK);
 
   // Specific base + offset does not meet the alignment, so it fails.
@@ -1134,6 +1135,7 @@ TEST(Vmar, NestedRegionPermsTest) {
   EXPECT_EQ(zx_handle_close(region[0]), ZX_OK);
 
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
+  EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
 }
 
@@ -1811,6 +1813,7 @@ TEST(Vmar, RangeOpCommitVmoPages) {
   // Clean up the test VMAR and VMO.
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), vmar_base, kVmoSize), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
+  EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
 }
 
 // Verify vmar_range_op map range of committed mapped VMO pages.
