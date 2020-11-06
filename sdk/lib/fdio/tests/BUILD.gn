@@ -71,6 +71,7 @@ test("fdio") {
     "fdio_open_max.c",
     "fdio_path_canonicalize.c",
     "fdio_poll.cc",
+    "fdio_pty.cc",
     "fdio_root.c",
     "fdio_socket.cc",
     "fdio_socket_cleanup.cc",
@@ -83,6 +84,7 @@ test("fdio") {
     "memfd.h",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
     "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",

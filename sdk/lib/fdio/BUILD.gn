@@ -89,6 +89,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
     ]
     deps = [
       "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+      "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
       "//sdk/fidl/fuchsia.net:fuchsia.net_llcpp",

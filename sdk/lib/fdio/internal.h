@@ -189,7 +189,7 @@ zx::duration* fdio_get_sndtimeo(fdio_t* io);
 zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* out_pending);
 
 // Wraps a channel with an fdio_t using remote io.
-// Takes ownership of h and e.
+// Takes ownership of |h| and |event|.
 fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event);
 
 // creates a fdio that wraps a log object
@@ -206,6 +206,11 @@ fdio_t* fdio_dir_create(zx_handle_t control);
 //
 // Takes ownership of |control|, |event|, and |stream|.
 fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event, zx_handle_t stream);
+
+// Creates an |fdio_t| from a remote PTY connection.
+//
+// Takes ownership of |control| and |event|.
+fdio_t* fdio_pty_create(zx_handle_t control, zx_handle_t event);
 
 // Creates a pipe backed by a socket.
 //

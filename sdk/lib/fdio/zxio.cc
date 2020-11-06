@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
@@ -22,6 +23,7 @@
 #include "internal.h"
 
 namespace fio = ::llcpp::fuchsia::io;
+namespace fpty = ::llcpp::fuchsia::hardware::pty;
 
 static zx_status_t fdio_zxio_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode,
                                   fdio_t** out_io) {
@@ -390,6 +392,68 @@ fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event, zx_handle_t str
     return nullptr;
   }
   zx_status_t status = zxio_file_init(fdio_get_zxio_storage(io), control, event, stream);
+  if (status != ZX_OK) {
+    return nullptr;
+  }
+  return io;
+}
+
+zx_status_t fdio_pty_posix_ioctl(fdio_t* io, int request, va_list va) {
+  switch (request) {
+    case TIOCGWINSZ: {
+      zx::unowned_channel device(fdio_unsafe_borrow_channel(io));
+      if (!device->is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+
+      auto result = fpty::Device::Call::GetWindowSize(std::move(device));
+      if (result.status() != ZX_OK || result->status != ZX_OK) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+
+      struct winsize size = {};
+      size.ws_row = static_cast<unsigned short>(result->size.height);
+      size.ws_col = static_cast<unsigned short>(result->size.width);
+      struct winsize* out_size = va_arg(va, struct winsize*);
+      *out_size = size;
+      return ZX_OK;
+    }
+    case TIOCSWINSZ: {
+      zx::unowned_channel device(fdio_unsafe_borrow_channel(io));
+      if (!device->is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+
+      const struct winsize* in_size = va_arg(va, const struct winsize*);
+      fpty::WindowSize size = {};
+      size.width = in_size->ws_col;
+      size.height = in_size->ws_row;
+
+      auto result = fpty::Device::Call::SetWindowSize(std::move(device), size);
+      if (result.status() != ZX_OK || result->status != ZX_OK) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      return ZX_OK;
+    }
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+}
+
+static constexpr fdio_ops_t fdio_zxio_pty_ops = ([] {
+  fdio_ops_t remote_ops = fdio_zxio_remote_ops;
+  remote_ops.posix_ioctl = fdio_pty_posix_ioctl;
+  return remote_ops;
+})();
+
+fdio_t* fdio_pty_create(zx_handle_t control, zx_handle_t event) {
+  fdio_t* io = fdio_alloc(&fdio_zxio_pty_ops);
+  if (io == nullptr) {
+    zx_handle_close(control);
+    zx_handle_close(event);
+    return nullptr;
+  }
+  zx_status_t status = zxio_remote_init(fdio_get_zxio_storage(io), control, event);
   if (status != ZX_OK) {
     return nullptr;
   }

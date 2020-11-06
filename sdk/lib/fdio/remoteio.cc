@@ -263,7 +263,7 @@ zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t**
       io = fdio_remote_create(handle.release(), info.mutable_device().event.release());
       break;
     case fio::NodeInfo::Tag::kTty:
-      io = fdio_remote_create(handle.release(), info.mutable_tty().event.release());
+      io = fdio_pty_create(handle.release(), info.mutable_tty().event.release());
       break;
     case fio::NodeInfo::Tag::kVmofile: {
       fio::File::SyncClient control(std::move(handle));
