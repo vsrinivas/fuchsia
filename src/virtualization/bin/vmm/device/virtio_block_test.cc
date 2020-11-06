@@ -73,6 +73,8 @@ class VirtioBlockTest : public TestWithDevice {
   }
 
   fbl::unique_fd fd_;
+  // Note: use of sync can be problematic here if the test environment needs to handle
+  // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioBlockSyncPtr block_;
   VirtioQueueFake request_queue_;
 

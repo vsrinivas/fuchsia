@@ -36,6 +36,13 @@ zx_status_t TestWithDevice::LaunchDevice(
   fuchsia::sys::LaunchInfo launch_info{.url = url, .directory_request = std::move(request)};
   component_controller_ = enclosing_environment_->CreateComponent(std::move(launch_info));
 
+  // Wait for component to start; because tests may use synchronous bindings, this is necessary to
+  // avoid a race condition where appmgr sends a request to connect to the loader service in
+  // the env hosted in this test process, which won't be processed if the test is blocked in
+  // a sync call.
+  component_controller_.events().OnDirectoryReady = [this]() { QuitLoop(); };
+  RunLoop();
+
   // Setup device interrupt event.
   zx_status_t status = zx::event::create(0, &event_);
   if (status != ZX_OK) {

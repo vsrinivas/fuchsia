@@ -41,6 +41,8 @@ class VirtioInputTest : public TestWithDevice {
     }
   }
 
+  // Note: use of sync can be problematic here if the test environment needs to handle
+  // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioInputSyncPtr input_;
   fuchsia::virtualization::hardware::ViewListenerSyncPtr view_listener_;
   VirtioQueueFake event_queue_;

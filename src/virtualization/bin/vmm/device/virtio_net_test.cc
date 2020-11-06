@@ -125,6 +125,8 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::Netstack 
     eth_device_->Start([](zx_status_t status) { ASSERT_EQ(ZX_OK, status); });
   }
 
+  // Note: use of sync can be problematic here if the test environment needs to handle
+  // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioNetPtr net_;
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;

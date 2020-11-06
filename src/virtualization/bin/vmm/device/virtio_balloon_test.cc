@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <threads.h>
+
 #include <virtio/balloon.h>
 
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
@@ -46,6 +47,8 @@ class VirtioBalloonTest : public TestWithDevice {
   }
 
  public:
+  // Note: use of sync can be problematic here if the test environment needs to handle
+  // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioBalloonSyncPtr balloon_;
   VirtioQueueFake inflate_queue_;
   VirtioQueueFake deflate_queue_;

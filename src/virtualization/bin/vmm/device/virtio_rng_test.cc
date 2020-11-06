@@ -31,6 +31,8 @@ class VirtioRngTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
   }
 
+  // Note: use of sync can be problematic here if the test environment needs to handle
+  // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioRngSyncPtr rng_;
   VirtioQueueFake queue_;
 };

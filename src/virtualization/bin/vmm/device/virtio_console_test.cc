@@ -43,6 +43,8 @@ class VirtioConsoleTest : public TestWithDevice {
     }
   }
 
+  // Note: use of sync can be problematic here if the test environment needs to handle
+  // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioConsoleSyncPtr console_;
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;

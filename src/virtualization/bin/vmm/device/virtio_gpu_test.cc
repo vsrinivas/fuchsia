@@ -111,6 +111,8 @@ class VirtioGpuTest : public TestWithDevice {
     EXPECT_EQ(response_type, response->type);
   }
 
+  // Note: use of sync can be problematic here if the test environment needs to handle
+  // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioGpuSyncPtr gpu_;
   VirtioQueueFake control_queue_;
   VirtioQueueFake cursor_queue_;

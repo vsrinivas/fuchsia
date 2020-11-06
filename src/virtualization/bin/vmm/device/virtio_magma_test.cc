@@ -91,6 +91,8 @@ class VirtioMagmaTest : public TestWithDevice {
   }
 
  protected:
+  // Note: use of sync can be problematic here if the test environment needs to handle
+  // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioMagmaSyncPtr magma_;
   VirtioQueueFake out_queue_;
   WaylandImporterMock wayland_importer_mock_;
