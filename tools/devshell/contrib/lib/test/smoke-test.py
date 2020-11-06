@@ -40,14 +40,13 @@ def main():
         encoding="UTF-8").splitlines()[0]
     diff_base = (
         local_commit and subprocess.run(
-            ["git", "rev-parse", local_commit],
+            ["git", "rev-parse", local_commit + '^'],
             capture_output=True,
             encoding="UTF-8").stdout.strip() or "HEAD")
     modified = subprocess.check_output(
         ["git", "diff", "--name-only", diff_base], encoding="UTF-8")
     if not modified:
-        if args.verbose:
-            print("No modified files")
+        print("No modified files")
         return 0
     if args.verbose:
         print("Modified files:")
