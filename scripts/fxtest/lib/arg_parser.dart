@@ -161,4 +161,13 @@ command and not the tests.''')
   ..addOption('test-filter',
       defaultsTo: null, help: '''Runs specific test cases in v2 suite. Run
 'fx shell run-test-suite --help' for more info about this flag.''')
+  ..addOption('count',
+      defaultsTo: null, help: '''Number of times to run the test. Run
+'fx shell run-test-suite --help' for more info about this flag.''')
+  ..addFlag('also-run-disabled-tests',
+      defaultsTo: false,
+      help:
+          '''Whether to also run tests that have been marked disabled/ignored by
+the test author. Run 'fx shell run-test-suite --help' for more info about this
+flag.''')
   ..addFlag('verbose', abbr: 'v', defaultsTo: false, negatable: false);

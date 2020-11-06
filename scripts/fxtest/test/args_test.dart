@@ -447,9 +447,40 @@ void main() {
         fxEnv: FakeFxEnv.shared,
       );
       expect(testsConfig.flags.testFilter, 'mytest');
+      expect(testsConfig.flags.count, null);
+      expect(testsConfig.flags.runDisabledTests, false);
+
       expect(
           testsConfig.runnerTokens[TestType.suite], contains('--test-filter'));
       expect(testsConfig.runnerTokens[TestType.suite], contains('mytest'));
+      expect(
+          testsConfig.runnerTokens[TestType.suite], isNot(contains('--count')));
+      expect(testsConfig.runnerTokens[TestType.suite],
+          isNot(contains('--also-run-disabled-tests')));
+    });
+
+    test('with --count', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--count=22'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      expect(testsConfig.flags.count, '22');
+      expect(testsConfig.runnerTokens[TestType.suite],
+          isNot(contains('--test-filter')));
+      expect(testsConfig.runnerTokens[TestType.suite], contains('--count'));
+      expect(testsConfig.runnerTokens[TestType.suite], contains('22'));
+    });
+
+    test('with --also-run-disabled-tests', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--also-run-disabled-tests'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      expect(testsConfig.flags.runDisabledTests, true);
+      expect(testsConfig.runnerTokens[TestType.suite],
+          isNot(contains('--test-filter')));
+      expect(testsConfig.runnerTokens[TestType.suite],
+          contains('--also-run-disabled-tests'));
     });
   });
 

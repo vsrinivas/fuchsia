@@ -48,8 +48,10 @@ class Flags {
   final bool shouldUsePackageHash;
   final int slowThreshold;
 
-  // flags for v2 tests.
+  // flags for v2 tests
   final String testFilter;
+  final String count;
+  final bool runDisabledTests;
 
   Flags({
     this.dryRun = false,
@@ -78,40 +80,44 @@ class Flags {
     this.shouldUsePackageHash = true,
     this.slowThreshold = 0,
     this.testFilter,
+    this.count,
+    this.runDisabledTests = false,
   });
 
   factory Flags.fromArgResults(ArgResults argResults) {
     return Flags(
-      allOutput: argResults['output'],
-      dryRun: argResults['info'] || argResults['dry'],
-      e2e: argResults['e2e'] || argResults['only-e2e'],
-      fuzzyThreshold: int.parse(argResults['fuzzy']),
-      onlyE2e: argResults['only-e2e'],
-      infoOnly: argResults['info'],
-      isVerbose: argResults['verbose'] || argResults['output'],
-      limit: int.parse(argResults['limit'] ?? '0'),
-      logPath: argResults['logpath'],
-      matchLength: argResults['exact'] ? MatchLength.full : MatchLength.partial,
-      realm: argResults['realm'],
-      minSeverityLogs: argResults['min-severity-logs'],
-      simpleOutput: argResults['simple'],
-      shouldFailFast: argResults['fail'],
-      shouldLog: argResults['log'],
-      shouldOnlyRunDeviceTests: argResults['device'],
-      shouldOnlyRunHostTests: argResults['host'],
-      shouldRestrictLogs: argResults['restrict-logs'],
-      shouldPrintSkipped: argResults['skipped'],
-      testFilter: argResults['test-filter'],
+        allOutput: argResults['output'],
+        dryRun: argResults['info'] || argResults['dry'],
+        e2e: argResults['e2e'] || argResults['only-e2e'],
+        fuzzyThreshold: int.parse(argResults['fuzzy']),
+        onlyE2e: argResults['only-e2e'],
+        infoOnly: argResults['info'],
+        isVerbose: argResults['verbose'] || argResults['output'],
+        limit: int.parse(argResults['limit'] ?? '0'),
+        logPath: argResults['logpath'],
+        matchLength:
+            argResults['exact'] ? MatchLength.full : MatchLength.partial,
+        realm: argResults['realm'],
+        minSeverityLogs: argResults['min-severity-logs'],
+        simpleOutput: argResults['simple'],
+        shouldFailFast: argResults['fail'],
+        shouldLog: argResults['log'],
+        shouldOnlyRunDeviceTests: argResults['device'],
+        shouldOnlyRunHostTests: argResults['host'],
+        shouldRestrictLogs: argResults['restrict-logs'],
+        shouldPrintSkipped: argResults['skipped'],
+        testFilter: argResults['test-filter'],
 
-      // True (aka, yes rebuild) if `no-build` is missing or set to `False`
-      shouldRebuild: (!argResults['info'] && !argResults['dry']) &&
-          (argResults['build'] == null || argResults['build']),
-      shouldRandomizeTestOrder: argResults['random'],
-      shouldSilenceUnsupported: argResults['silenceunsupported'],
-      shouldUpdateIfInBase: argResults['updateifinbase'],
-      shouldUsePackageHash: argResults['use-package-hash'],
-      slowThreshold: int.parse(argResults['slow'] ?? '0'),
-    );
+        // True (aka, yes rebuild) if `no-build` is missing or set to `False`
+        shouldRebuild: (!argResults['info'] && !argResults['dry']) &&
+            (argResults['build'] == null || argResults['build']),
+        shouldRandomizeTestOrder: argResults['random'],
+        shouldSilenceUnsupported: argResults['silenceunsupported'],
+        shouldUpdateIfInBase: argResults['updateifinbase'],
+        shouldUsePackageHash: argResults['use-package-hash'],
+        slowThreshold: int.parse(argResults['slow'] ?? '0'),
+        count: argResults['count'],
+        runDisabledTests: argResults['also-run-disabled-tests']);
   }
 
   @override
@@ -141,6 +147,7 @@ class Flags {
   shouldUsePackageHash: $shouldUsePackageHash
   slowThreshold: $slowThreshold
   testFilter: $testFilter
+  count: $count
 >''';
 }
 
@@ -213,6 +220,12 @@ class TestsConfig {
     var v2runnerTokens = <String>[];
     if (flags.testFilter != null) {
       v2runnerTokens..add('--test-filter')..add(flags.testFilter);
+    }
+    if (flags.count != null) {
+      v2runnerTokens..add('--count')..add(flags.count);
+    }
+    if (flags.runDisabledTests) {
+      v2runnerTokens.add('--also-run-disabled-tests');
     }
 
     return TestsConfig(
