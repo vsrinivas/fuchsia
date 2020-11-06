@@ -1771,7 +1771,7 @@ FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::set_pasta(
   pasta_ = std::move(value);
   return *this;
 }
-FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::_experimental_set_unknown_data(
+FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::SetUnknownData(
     fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);
@@ -2158,8 +2158,8 @@ OlderSimpleUnion& OlderSimpleUnion::set_f(float value) {
   f_ = std::move(value);
   return *this;
 }
-OlderSimpleUnion& OlderSimpleUnion::_experimental_set_unknown_data(
-    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+OlderSimpleUnion& OlderSimpleUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
+                                                   std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);
   return *this;
@@ -2706,8 +2706,8 @@ NewerSimpleUnion& NewerSimpleUnion::set_v(::std::vector<::std::string> value) {
   v_ = std::move(value);
   return *this;
 }
-NewerSimpleUnion& NewerSimpleUnion::_experimental_set_unknown_data(
-    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+NewerSimpleUnion& NewerSimpleUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
+                                                   std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);
   return *this;
@@ -2956,8 +2956,8 @@ FlexibleUnion& FlexibleUnion::set_VectorStringAlsoNeedsConstructor(
   VectorStringAlsoNeedsConstructor_ = std::move(value);
   return *this;
 }
-FlexibleUnion& FlexibleUnion::_experimental_set_unknown_data(
-    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+FlexibleUnion& FlexibleUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
+                                             std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);
   return *this;
@@ -3163,8 +3163,8 @@ FlexibleFoo& FlexibleFoo::set_i(int32_t value) {
   i_ = std::move(value);
   return *this;
 }
-FlexibleFoo& FlexibleFoo::_experimental_set_unknown_data(
-    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+FlexibleFoo& FlexibleFoo::SetUnknownData(fidl_xunion_tag_t ordinal,
+                                         std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);
   return *this;
@@ -3497,8 +3497,8 @@ ExplicitXUnion& ExplicitXUnion::set_f(float value) {
   f_ = std::move(value);
   return *this;
 }
-ExplicitXUnion& ExplicitXUnion::_experimental_set_unknown_data(
-    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+ExplicitXUnion& ExplicitXUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
+                                               std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);
   return *this;
@@ -4048,8 +4048,8 @@ ExplicitFoo& ExplicitFoo::set_i(int32_t value) {
   i_ = std::move(value);
   return *this;
 }
-ExplicitFoo& ExplicitFoo::_experimental_set_unknown_data(
-    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+ExplicitFoo& ExplicitFoo::SetUnknownData(fidl_xunion_tag_t ordinal,
+                                         std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);
   return *this;
@@ -4254,8 +4254,7 @@ XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::set_empty(
   empty_ = std::move(value);
   return *this;
 }
-XUnionContainingEmptyStruct&
-XUnionContainingEmptyStruct::_experimental_set_unknown_data(
+XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::SetUnknownData(
     fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);

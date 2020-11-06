@@ -163,12 +163,12 @@ func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.Record
 			unknownData := field.Value.(gidlir.UnknownData)
 			if decl.IsResourceType() {
 				b.Builder.WriteString(fmt.Sprintf(
-					"%s%s_experimental_set_unknown_data(static_cast<fidl_xunion_tag_t>(%dlu), %s, %s);\n",
+					"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s, %s);\n",
 					containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes),
 					buildHandles(unknownData.Handles)))
 			} else {
 				b.Builder.WriteString(fmt.Sprintf(
-					"%s%s_experimental_set_unknown_data(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n",
+					"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n",
 					containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes)))
 			}
 			continue

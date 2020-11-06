@@ -249,8 +249,8 @@ ExampleXUnion& ExampleXUnion::set_variant(uint32_t value) {
   variant_ = std::move(value);
   return *this;
 }
-ExampleXUnion& ExampleXUnion::_experimental_set_unknown_data(
-    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+ExampleXUnion& ExampleXUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
+                                             std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);
   return *this;

@@ -69,9 +69,9 @@ class UnionWithHandle final {
     return h_;
   }
   UnionWithHandle& set_h(::zx::vmo value);
-  UnionWithHandle& _experimental_set_unknown_data(
-      fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes,
-      std::vector<zx::handle> handles);
+  UnionWithHandle& SetUnknownData(fidl_xunion_tag_t ordinal,
+                                  std::vector<uint8_t> bytes,
+                                  std::vector<zx::handle> handles);
 
   Tag Which() const {
     switch (tag_) {

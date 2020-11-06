@@ -887,8 +887,8 @@ class FlexiblePizzaOrPasta final {
     return pasta_;
   }
   FlexiblePizzaOrPasta& set_pasta(::fidl::test::union_::Pasta value);
-  FlexiblePizzaOrPasta& _experimental_set_unknown_data(
-      fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
+  FlexiblePizzaOrPasta& SetUnknownData(fidl_xunion_tag_t ordinal,
+                                       std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -1075,8 +1075,8 @@ class OlderSimpleUnion final {
     return f_;
   }
   OlderSimpleUnion& set_f(float value);
-  OlderSimpleUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                                   std::vector<uint8_t> bytes);
+  OlderSimpleUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
+                                   std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -1458,8 +1458,8 @@ class NewerSimpleUnion final {
     return v_;
   }
   NewerSimpleUnion& set_v(::std::vector<::std::string> value);
-  NewerSimpleUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                                   std::vector<uint8_t> bytes);
+  NewerSimpleUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
+                                   std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -1584,8 +1584,8 @@ class FlexibleUnion final {
   }
   FlexibleUnion& set_VectorStringAlsoNeedsConstructor(
       ::std::vector<::std::string> value);
-  FlexibleUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                                std::vector<uint8_t> bytes);
+  FlexibleUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
+                                std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -1689,8 +1689,8 @@ class FlexibleFoo final {
     return i_;
   }
   FlexibleFoo& set_i(int32_t value);
-  FlexibleFoo& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                              std::vector<uint8_t> bytes);
+  FlexibleFoo& SetUnknownData(fidl_xunion_tag_t ordinal,
+                              std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -1861,8 +1861,8 @@ class ExplicitXUnion final {
     return f_;
   }
   ExplicitXUnion& set_f(float value);
-  ExplicitXUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                                 std::vector<uint8_t> bytes);
+  ExplicitXUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
+                                 std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -2132,8 +2132,8 @@ class ExplicitFoo final {
     return i_;
   }
   ExplicitFoo& set_i(int32_t value);
-  ExplicitFoo& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                              std::vector<uint8_t> bytes);
+  ExplicitFoo& SetUnknownData(fidl_xunion_tag_t ordinal,
+                              std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {
@@ -2242,8 +2242,8 @@ class XUnionContainingEmptyStruct final {
     return empty_;
   }
   XUnionContainingEmptyStruct& set_empty(::fidl::test::union_::Empty value);
-  XUnionContainingEmptyStruct& _experimental_set_unknown_data(
-      fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
+  XUnionContainingEmptyStruct& SetUnknownData(fidl_xunion_tag_t ordinal,
+                                              std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {

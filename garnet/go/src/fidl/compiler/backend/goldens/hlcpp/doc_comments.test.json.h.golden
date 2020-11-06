@@ -728,8 +728,8 @@ class FlexibleUnion final {
     return Field_;
   }
   FlexibleUnion& set_Field(int32_t value);
-  FlexibleUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
-                                                std::vector<uint8_t> bytes);
+  FlexibleUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
+                                std::vector<uint8_t> bytes);
 
   Tag Which() const {
     switch (tag_) {

@@ -340,8 +340,8 @@ FlexibleFoo& FlexibleFoo::set_i(int32_t value) {
   i_ = std::move(value);
   return *this;
 }
-FlexibleFoo& FlexibleFoo::_experimental_set_unknown_data(
-    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+FlexibleFoo& FlexibleFoo::SetUnknownData(fidl_xunion_tag_t ordinal,
+                                         std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);
   return *this;

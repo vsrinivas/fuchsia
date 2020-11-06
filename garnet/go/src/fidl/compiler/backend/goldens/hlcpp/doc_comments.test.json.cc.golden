@@ -546,8 +546,8 @@ FlexibleUnion& FlexibleUnion::set_Field(int32_t value) {
   Field_ = std::move(value);
   return *this;
 }
-FlexibleUnion& FlexibleUnion::_experimental_set_unknown_data(
-    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+FlexibleUnion& FlexibleUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
+                                             std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);
   return *this;

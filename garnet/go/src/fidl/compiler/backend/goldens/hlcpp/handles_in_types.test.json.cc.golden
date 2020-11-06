@@ -139,7 +139,7 @@ UnionWithHandle& UnionWithHandle::set_h(::zx::vmo value) {
   h_ = std::move(value);
   return *this;
 }
-UnionWithHandle& UnionWithHandle::_experimental_set_unknown_data(
+UnionWithHandle& UnionWithHandle::SetUnknownData(
     fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes,
     std::vector<zx::handle> handles) {
   EnsureStorageInitialized(ordinal);

@@ -100,7 +100,7 @@ class {{ .Name }} final {
   {{- end }}
 
   {{- if .IsFlexible }}
-  {{ .Name }}& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes{{ if .IsResourceType }}, std::vector<zx::handle> handles{{ end }});
+  {{ .Name }}& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes{{ if .IsResourceType }}, std::vector<zx::handle> handles{{ end }});
   {{- end }}
 
   Tag Which() const {
@@ -379,7 +379,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 {{- end }}
 
 {{- if .IsFlexible }}
-{{ .Name }}& {{ .Name }}::_experimental_set_unknown_data(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes{{ if .IsResourceType }}, std::vector<zx::handle> handles{{ end }}) {
+{{ .Name }}& {{ .Name }}::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes{{ if .IsResourceType }}, std::vector<zx::handle> handles{{ end }}) {
   EnsureStorageInitialized(ordinal);
   unknown_data_.bytes = std::move(bytes);
   {{- if .IsResourceType }}
