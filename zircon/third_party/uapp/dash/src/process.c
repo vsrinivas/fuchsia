@@ -22,6 +22,7 @@
 #include "process.h"
 #include "options.h"
 #include "var.h"
+#include "pty_fuchsia.h"
 
 static zx_status_t launch(const char* filename, const char* const* argv,
                           const char* const* envp, zx_handle_t* process,
@@ -29,10 +30,8 @@ static zx_status_t launch(const char* filename, const char* const* argv,
     // cancel any ^c generated before running the command
     if (isatty(STDIN_FILENO)) {
         uint32_t events = 0;
-        zx_status_t status;
         fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-        fuchsia_hardware_pty_DeviceReadEvents(fdio_unsafe_borrow_channel(io), &status,
-                                              &events); // ignore any error
+        pty_read_events(fdio_unsafe_borrow_channel(io), &events); // ignore any error
         fdio_unsafe_release(io);
     }
 
@@ -197,10 +196,7 @@ int process_await_termination(zx_handle_t process, zx_handle_t job, bool blockin
         } else if (tty && (interrupt_event & POLLPRI)) {
             // interrupted - kill process
             uint32_t events = 0;
-            zx_status_t pty_status;
-
-            fuchsia_hardware_pty_DeviceReadEvents(fdio_unsafe_borrow_channel(tty), &pty_status,
-                                                  &events); // ignore any error
+            pty_read_events(fdio_unsafe_borrow_channel(tty), &events); // ignore any error
             if (events & fuchsia_hardware_pty_EVENT_INTERRUPT) {
                 // process belongs to job, so killing the job kills the process
                 status = zx_task_kill(job);

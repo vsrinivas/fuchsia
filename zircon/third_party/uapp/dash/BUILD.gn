@@ -50,6 +50,7 @@ executable("dash") {
     "src/output.h",
     "src/parser.c",
     "src/process.c",
+    "src/pty_fuchsia.cc",
     "src/redir.c",
     "src/show.c",
     "src/signames.c",
@@ -66,7 +67,7 @@ executable("dash") {
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_c",
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk:ddk-device-headers",
