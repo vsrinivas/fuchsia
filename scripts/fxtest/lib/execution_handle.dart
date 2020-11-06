@@ -101,7 +101,7 @@ class ExecutionHandle {
     } else if (testType == TestType.host) {
       return _getHostTokens();
     } else if (testType == TestType.suite) {
-      return _getSuiteTokens();
+      return _getSuiteTokens(runnerFlags);
     } else if (testType == TestType.e2e) {
       return _getEndToEndTokens();
     }
@@ -140,8 +140,8 @@ class ExecutionHandle {
 
   /// Handler for `tests.json` entries containing the `packageUrl` key ending
   /// in ".cm".
-  CommandTokens _getSuiteTokens() {
-    List<String> subCommand = ['shell', 'run-test-suite'];
+  CommandTokens _getSuiteTokens(List<String> runnerFlags) {
+    List<String> subCommand = ['shell', 'run-test-suite'] + runnerFlags;
     return CommandTokens(['fx', ...subCommand, ...flags, handle]);
   }
 

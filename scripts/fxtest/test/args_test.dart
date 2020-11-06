@@ -384,7 +384,8 @@ void main() {
       );
       expect(testsConfig.flags.realm, 'foo');
       expect(testsConfig.flags.shouldRestrictLogs, true);
-      expect(testsConfig.runnerTokens, ['--realm-label=foo']);
+      expect(
+          testsConfig.runnerTokens[TestType.component], ['--realm-label=foo']);
     });
 
     test('with no --restrict-logs', () {
@@ -394,7 +395,7 @@ void main() {
       );
       // Still true because that is the default
       expect(testsConfig.flags.shouldRestrictLogs, true);
-      expect(testsConfig.runnerTokens, []);
+      expect(testsConfig.runnerTokens[TestType.component], []);
     });
 
     test('with --no-restrict-logs', () {
@@ -403,7 +404,7 @@ void main() {
         fxEnv: FakeFxEnv.shared,
       );
       expect(testsConfig.flags.shouldRestrictLogs, false);
-      expect(testsConfig.runnerTokens, []);
+      expect(testsConfig.runnerTokens[TestType.component], []);
     });
 
     test('with --restrict-logs', () {
@@ -412,7 +413,7 @@ void main() {
         fxEnv: FakeFxEnv.shared,
       );
       expect(testsConfig.flags.shouldRestrictLogs, true);
-      expect(testsConfig.runnerTokens, []);
+      expect(testsConfig.runnerTokens[TestType.component], []);
     });
 
     test('with --restrict-logs and --realm', () {
@@ -425,7 +426,7 @@ void main() {
       );
       expect(testsConfig.flags.realm, 'bar');
       expect(testsConfig.flags.shouldRestrictLogs, true);
-      expect(testsConfig.runnerTokens, [
+      expect(testsConfig.runnerTokens[TestType.component], [
         '--realm-label=bar',
       ]);
     });
@@ -436,7 +437,19 @@ void main() {
         fxEnv: FakeFxEnv.shared,
       );
       expect(testsConfig.flags.minSeverityLogs, 'WARN');
-      expect(testsConfig.runnerTokens, contains('--min-severity-logs=WARN'));
+      expect(testsConfig.runnerTokens[TestType.component],
+          contains('--min-severity-logs=WARN'));
+    });
+
+    test('with --test-filter', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--test-filter=mytest'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      expect(testsConfig.flags.testFilter, 'mytest');
+      expect(
+          testsConfig.runnerTokens[TestType.suite], contains('--test-filter'));
+      expect(testsConfig.runnerTokens[TestType.suite], contains('mytest'));
     });
   });
 

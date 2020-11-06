@@ -140,17 +140,18 @@ class TestBundle {
     String fxPath,
   }) {
     List<String> _extraFlags = [];
-
     // for component tests pass test arguments separated by option delimiter(--).
-    if ((testDefinition.testType == TestType.component ||
-            testDefinition.testType == TestType.suite) &&
-        testsConfig.testArguments.passThroughArgs.isNotEmpty) {
-      _extraFlags
-        ..add('--')
-        ..addAll(testsConfig.testArguments.passThroughArgs);
+    if (testDefinition.testType == TestType.component ||
+        testDefinition.testType == TestType.suite) {
+      if (testsConfig.testArguments.passThroughArgs.isNotEmpty) {
+        _extraFlags
+          ..add('--')
+          ..addAll(testsConfig.testArguments.passThroughArgs);
+      }
     } else {
       _extraFlags = testsConfig.testArguments.passThroughArgs;
     }
+
     return TestBundle(
       testDefinition,
       confidence: confidence ?? 1,
@@ -161,7 +162,7 @@ class TestBundle {
       fxPath: fxPath,
       raiseOnFailure: testsConfig.flags.shouldFailFast,
       shouldRestrictLogs: testsConfig.flags.shouldRestrictLogs,
-      runnerFlags: testsConfig.runnerTokens,
+      runnerFlags: testsConfig.runnerTokens[testDefinition.testType] ?? [],
       realtimeOutputSink: realtimeOutputSink ?? (String val) => null,
       testRunner: testRunnerBuilder(testsConfig),
       timeElapsedSink: timeElapsedSink,

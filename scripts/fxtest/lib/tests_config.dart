@@ -48,6 +48,9 @@ class Flags {
   final bool shouldUsePackageHash;
   final int slowThreshold;
 
+  // flags for v2 tests.
+  final String testFilter;
+
   Flags({
     this.dryRun = false,
     this.isVerbose = false,
@@ -74,6 +77,7 @@ class Flags {
     this.shouldUpdateIfInBase = true,
     this.shouldUsePackageHash = true,
     this.slowThreshold = 0,
+    this.testFilter,
   });
 
   factory Flags.fromArgResults(ArgResults argResults) {
@@ -97,6 +101,7 @@ class Flags {
       shouldOnlyRunHostTests: argResults['host'],
       shouldRestrictLogs: argResults['restrict-logs'],
       shouldPrintSkipped: argResults['skipped'],
+      testFilter: argResults['test-filter'],
 
       // True (aka, yes rebuild) if `no-build` is missing or set to `False`
       shouldRebuild: (!argResults['info'] && !argResults['dry']) &&
@@ -135,6 +140,7 @@ class Flags {
   shouldUpdateIfInBase: $shouldUpdateIfInBase
   shouldUsePackageHash: $shouldUsePackageHash
   slowThreshold: $slowThreshold
+  testFilter: $testFilter
 >''';
 }
 
@@ -164,7 +170,7 @@ class Flags {
 /// parameters into a list of [PermutatedTestFlag] instances.
 class TestsConfig {
   final Flags flags;
-  final List<String> runnerTokens;
+  final Map<TestType, List<String>> runnerTokens;
   final TestArguments testArguments;
   final IFxEnv fxEnv;
   final List<List<MatchableArgument>> testArgumentGroups;
@@ -196,18 +202,26 @@ class TestsConfig {
     );
     Flags flags = Flags.fromArgResults(_testArguments.parsedArgs);
 
-    var runnerTokens = <String>[];
+    var v1runnerTokens = <String>[];
     if (flags.realm != null) {
-      runnerTokens.add('--realm-label=${flags.realm}');
+      v1runnerTokens.add('--realm-label=${flags.realm}');
     }
     if (flags.minSeverityLogs != null) {
-      runnerTokens.add('--min-severity-logs=${flags.minSeverityLogs}');
+      v1runnerTokens.add('--min-severity-logs=${flags.minSeverityLogs}');
+    }
+
+    var v2runnerTokens = <String>[];
+    if (flags.testFilter != null) {
+      v2runnerTokens..add('--test-filter')..add(flags.testFilter);
     }
 
     return TestsConfig(
       flags: flags,
       fxEnv: fxEnv,
-      runnerTokens: runnerTokens,
+      runnerTokens: {
+        TestType.component: v1runnerTokens,
+        TestType.suite: v2runnerTokens
+      },
       testArguments: _testArguments,
       testArgumentGroups: _testArgumentsCollector.collect(),
     );

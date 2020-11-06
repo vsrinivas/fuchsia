@@ -86,12 +86,20 @@ void main() {
         buildDir: '/whatever',
       );
 
-      // passed flag in should be ignored.
-      final commandTokens2 =
-          testDef2.createExecutionHandle().getInvocationTokens(['--some-flag']);
+      // passed flag should be present in command line
+      final commandTokens2 = testDef2
+          .createExecutionHandle()
+          .getInvocationTokens(['--some-flag', 'some_val']);
       expect(
         commandTokens2.fullCommand,
-        ['fx', 'shell', 'run-test-suite', componentUrl].join(' '),
+        [
+          'fx',
+          'shell',
+          'run-test-suite',
+          '--some-flag',
+          'some_val',
+          componentUrl
+        ].join(' '),
       );
     });
   });
