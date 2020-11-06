@@ -917,11 +917,11 @@ mod tests {
         };
         let result = proxy.check_now(options, Some(client_end)).await.unwrap();
         assert_matches!(result, Ok(()));
-        let mut expected_states = [
+        let expected_states = [
             update::State::CheckingForUpdates(CheckingForUpdatesData {}),
             update::State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData {}),
-        ]
-        .iter();
+        ];
+        let mut expected_states = expected_states.iter();
         while let Some(event) = stream.try_next().await.unwrap() {
             match event {
                 MonitorRequest::OnState { state, responder } => {
