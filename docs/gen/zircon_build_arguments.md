@@ -56,6 +56,14 @@ default format is used.
 
 From //public/gn/config/BUILD.zircon.gn:26
 
+### clang_embed_bitcode
+Embed LLVM bitcode as .llvmbc section in ELF files. This is intended
+primarily for external tools that use bitcode for analysis.
+
+**Current value (from the default):** `false`
+
+From //public/gn/toolchain/clang.gni:21
+
 ### clang_ml_inliner
 Controls whether to use the ML inliner in Clang to reduce size. Note that
 the option only takes effect when `optimize` is set to `"size"`.
