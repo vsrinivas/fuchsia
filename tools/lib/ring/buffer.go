@@ -82,7 +82,7 @@ func (b *Buffer) Write(p []byte) (int, error) {
 }
 
 // Bytes returns the number of unread bytes in the buffer.
-func (b Buffer) Bytes() []byte {
+func (b *Buffer) Bytes() []byte {
 	b.Lock()
 	defer b.Unlock()
 	p := make([]byte, b.write-b.read)
