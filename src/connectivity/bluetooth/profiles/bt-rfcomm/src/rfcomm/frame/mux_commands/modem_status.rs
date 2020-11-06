@@ -64,7 +64,7 @@ impl Default for ModemStatusSignals {
         signals.set_ready_to_communicate(true); // Ready to communicate.
         signals.set_ready_to_receive(true); // Ready to receive.
         signals.set_incoming_call(false); // No incoming call.
-        signals.set_data_valid(false); // No data is being sent yet.
+        signals.set_data_valid(true); // Valid data being sent.
         signals
     }
 }

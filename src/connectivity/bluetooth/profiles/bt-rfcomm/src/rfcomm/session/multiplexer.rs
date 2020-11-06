@@ -10,8 +10,8 @@ use {
 };
 
 use crate::rfcomm::{
-    channel::{FlowControlMode, FlowControlledData, SessionChannel},
     frame::Frame,
+    session::channel::{FlowControlMode, FlowControlledData, SessionChannel},
     types::{RfcommError, Role, DLCI, MAX_RFCOMM_FRAME_SIZE},
 };
 

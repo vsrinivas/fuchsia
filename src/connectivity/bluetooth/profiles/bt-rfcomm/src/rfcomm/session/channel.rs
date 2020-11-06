@@ -43,30 +43,24 @@ impl Credits {
         Self { local, remote }
     }
 
-    /// Returns the number of credits to replenish the remote with. Returns 0 if the remote
+    /// Returns the number of credits to replenish the remote with. Returns None if the remote
     /// has sufficient credits and does not need any more.
-    fn remote_replenish_amount(&self) -> u8 {
-        if self.remote >= HIGH_CREDIT_WATER_MARK {
-            return 0;
-        }
-        // This unwrap is OK due to the previous check. `self.remote` will always be less than
-        // `HIGH_CREDIT_WATER_MARK` if we get here.
-        (HIGH_CREDIT_WATER_MARK - self.remote).try_into().unwrap()
+    fn remote_replenish_amount(&self) -> Option<std::num::NonZeroU8> {
+        HIGH_CREDIT_WATER_MARK
+            .checked_sub(self.remote)
+            .map(|c| c.try_into().unwrap())
+            .and_then(std::num::NonZeroU8::new)
     }
 
     /// Reduces the local credit count by 1.
     fn decrement_local(&mut self) {
-        if self.local > 0 {
-            self.local -= 1;
-        }
+        self.local = self.local.checked_sub(1).unwrap_or(0)
     }
 
     /// Reduces the remote credit count by 1. Returns true if the remote credit count is
     /// low, false otherwise.
     fn decrement_remote(&mut self) -> bool {
-        if self.remote > 0 {
-            self.remote -= 1;
-        }
+        self.remote = self.remote.checked_sub(1).unwrap_or(0);
         self.remote <= LOW_CREDIT_WATER_MARK
     }
 }
@@ -78,7 +72,7 @@ trait FlowController {
     /// Send `data` received from the local RFCOMM client to the remote peer.
     async fn send_data_to_peer(&mut self, data: UserData);
 
-    /// Receive `data` from the remote peer to be relayed to the local RFCOMM client.
+    /// Receive `data` from the remote peer to be relayed to the provided RFCOMM `client`.
     async fn receive_data_from_peer(&mut self, data: FlowControlledData, client: &fidl::Socket);
 }
 
@@ -139,6 +133,7 @@ impl CreditFlowController {
         outgoing_sender: mpsc::Sender<Frame>,
         initial_credits: Credits,
     ) -> Self {
+        trace!("Creating credit flow controller with initial credits: {:?}", initial_credits);
         Self {
             role,
             dlci,
@@ -157,18 +152,15 @@ impl CreditFlowController {
             return;
         }
 
-        let credits_to_replenish = self.credits.remote_replenish_amount();
-        let frame = Frame::make_user_data_frame(
-            self.role,
-            self.dlci,
-            user_data,
-            Some(credits_to_replenish),
-        );
+        let credits_to_replenish =
+            self.credits.remote_replenish_amount().map(std::num::NonZeroU8::get);
+        let frame =
+            Frame::make_user_data_frame(self.role, self.dlci, user_data, credits_to_replenish);
         if self.outgoing_sender.send(frame).await.is_ok() {
             if contains_data {
                 self.credits.decrement_local();
             }
-            self.credits.remote += credits_to_replenish as usize;
+            self.credits.remote += credits_to_replenish.unwrap_or(0) as usize;
         }
     }
 
@@ -561,7 +553,7 @@ mod tests {
             &mut exec,
             &mut outgoing_frames,
             UserData { information: client_data },
-            Some(0),
+            None, // Don't expect to replenish remote.
         );
         let mut data_received_by_client = Box::pin(client.next());
         assert!(exec.run_until_stalled(&mut data_received_by_client).is_ready());
@@ -663,7 +655,7 @@ mod tests {
             let mut send_fut = Box::pin(flow_controller.send_data_to_peer(data2a.clone()));
             assert!(exec.run_until_stalled(&mut send_fut).is_pending());
             // We have sufficient local credits (2), so frame should be sent. No credits to refresh.
-            expect_frame_with_credits(&mut exec, &mut outgoing_frames, data2a, Some(0));
+            expect_frame_with_credits(&mut exec, &mut outgoing_frames, data2a, None);
             assert!(exec.run_until_stalled(&mut send_fut).is_ready());
         }
         // 2b. RFCOMM client sends more data.
@@ -672,7 +664,7 @@ mod tests {
             let mut send_fut = Box::pin(flow_controller.send_data_to_peer(data2b.clone()));
             assert!(exec.run_until_stalled(&mut send_fut).is_pending());
             // We have sufficient local credits (1), so frame should be sent. No credits to refresh.
-            expect_frame_with_credits(&mut exec, &mut outgoing_frames, data2b, Some(0));
+            expect_frame_with_credits(&mut exec, &mut outgoing_frames, data2b, None);
             assert!(exec.run_until_stalled(&mut send_fut).is_ready());
         }
 
@@ -710,14 +702,14 @@ mod tests {
                 &mut exec,
                 &mut outgoing_frames,
                 data2c,
-                Some(0), // Don't expect to replenish (remote = MAX).
+                None, // Don't expect to replenish (remote = MAX).
             );
             assert!(exec.run_until_stalled(&mut receive_fut).is_pending());
             expect_frame_with_credits(
                 &mut exec,
                 &mut outgoing_frames,
                 data2d,
-                Some(0), // Don't expect to replenish (remote = MAX).
+                None, // Don't expect to replenish (remote = MAX).
             );
 
             // `data3` should not be relayed to the client since it's empty.

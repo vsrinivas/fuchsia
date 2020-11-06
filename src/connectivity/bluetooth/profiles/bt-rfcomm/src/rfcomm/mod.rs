@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// RFCOMM channels used to communicate with profile clients.
-mod channel;
-
 /// The underlying frames used as units of data in RFCOMM.
 mod frame;
 

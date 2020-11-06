@@ -19,11 +19,16 @@ use {
     std::{collections::hash_map::Entry, collections::HashMap, convert::TryInto, sync::Arc},
 };
 
+/// RFCOMM channels used to communicate with profile clients.
+mod channel;
+
 /// The multiplexer that manages RFCOMM channels for this session.
 mod multiplexer;
 
-use self::multiplexer::{ParameterNegotiationState, SessionMultiplexer, SessionParameters};
-use crate::rfcomm::channel::{Credits, FlowControlMode, FlowControlledData};
+use self::{
+    channel::{Credits, FlowControlMode, FlowControlledData},
+    multiplexer::{ParameterNegotiationState, SessionMultiplexer, SessionParameters},
+};
 use crate::rfcomm::frame::{
     mux_commands::{
         CreditBasedFlowHandshake, ModemStatusParams, MuxCommand, MuxCommandIdentifier,
