@@ -14,11 +14,11 @@ func TestInitPartitionTables(t *testing.T) {
 	_ = bootservertest.StartQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
 
 	logPattern := []bootservertest.LogMatch{
-		{"Received request from ", true},
-		{"Proceeding with nodename ", true},
-		{"Transfer starts", true},
-		{"Transfer ends successfully", true},
-		{"Issued reboot command to", false},
+		{Pattern: "Received request from ", ShouldMatch: true},
+		{Pattern: "Proceeding with nodename ", ShouldMatch: true},
+		{Pattern: "Transfer starts", ShouldMatch: true},
+		{Pattern: "Transfer ends successfully", ShouldMatch: true},
+		{Pattern: "Issued reboot command to", ShouldMatch: false},
 	}
 
 	bootservertest.CmdSearchLog(

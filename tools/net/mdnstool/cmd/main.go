@@ -27,7 +27,7 @@ func mDNSResolve(ctx context.Context, domain string, port int, dur time.Duration
 	m.EnableIPv6()
 	out := make(chan net.IP)
 	// Add all of our handlers
-	m.AddHandler(func(iface net.Interface, addr net.Addr, packet mdns.Packet) {
+	m.AddHandler(func(addr net.Addr, packet mdns.Packet) {
 		for _, a := range packet.Answers {
 			if a.Class != mdns.IN || a.Domain != domain {
 				continue
@@ -53,7 +53,7 @@ func mDNSResolve(ctx context.Context, domain string, port int, dur time.Duration
 		return nil, fmt.Errorf("starting mdns: %v", err)
 	}
 	// Send a packet requesting an answer to "what is the IP of |domain|?"
-	m.Send(mdns.QuestionPacket(domain))
+	m.Send(ctx, mdns.QuestionPacket(domain))
 	// Now wait for either a timeout, an error, or an answer.
 	select {
 	case <-ctx.Done():
@@ -76,12 +76,12 @@ func mDNSPublish(ctx context.Context, domain string, port int, ip net.IP) error 
 	m.EnableIPv4()
 	m.EnableIPv6()
 	addrType := mdns.IpToDnsRecordType(ip)
-	m.AddHandler(func(iface net.Interface, addr net.Addr, packet mdns.Packet) {
+	m.AddHandler(func(addr net.Addr, packet mdns.Packet) {
 		log.Printf("from %v packet %v", addr, packet)
 		for _, q := range packet.Questions {
 			if q.Class == mdns.IN && q.Type == addrType && q.Domain == domain {
 				// We ignore the Unicast bit here but in theory this could be handled via SendTo and addr.
-				m.Send(mdns.AnswerPacket(domain, ip))
+				m.Send(ctx, mdns.AnswerPacket(domain, ip))
 			}
 		}
 	})

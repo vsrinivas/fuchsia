@@ -384,6 +384,5 @@ func toSize(subtype fidlir.PrimitiveSubtype) int {
 		return 8
 	default:
 		panic(fmt.Sprintf("unknown subtype: %v", subtype))
-		return 0
 	}
 }

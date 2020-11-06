@@ -312,7 +312,6 @@ func (n *Client) Discover(ctx context.Context, nodename string) (*net.UDPAddr, e
 				logger.Debugf(ctx, "found nodename %s", target.Nodename)
 			}
 			return &net.UDPAddr{IP: target.TargetAddress, Zone: ifaceName}, nil
-			continue
 		}
 	}
 }

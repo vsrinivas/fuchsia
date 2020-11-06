@@ -252,8 +252,7 @@ func (m *dnsSDFinder) close() {
 }
 
 func newDNSSDFinder(cmd *devFinderCmd) *dnsSDFinder {
-	var wg sync.WaitGroup
-	return &dnsSDFinder{deviceFinderBase{cmd: cmd}, nil, wg}
+	return &dnsSDFinder{deviceFinderBase{cmd: cmd}, nil, sync.WaitGroup{}}
 }
 
 func browseCallback(err dnsSDError, nodename string, dctx *dnsSDContext) {

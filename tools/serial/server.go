@@ -67,6 +67,7 @@ func NewServer(serial io.ReadWriteCloser, opts ServerOptions) *Server {
 // The listener is closed by the time Run returns.
 func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	if s.AuxiliaryOutput == nil {
 		f, err := ioutil.TempFile("", "tools-serial-aux-output")

@@ -17,7 +17,7 @@ import (
 // PrebuiltBinaries represents a set of prebuilt binaries.
 type PrebuiltBinaries struct {
 	// Name is the name of the set of prebuilt binaries.
-	Name string `json:"package_name`
+	Name string `json:"package_name"`
 
 	// DebugArchive is an optional pointer to an archive of debug binaries
 	// relating to the prebuilt package.

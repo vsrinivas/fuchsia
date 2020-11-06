@@ -23,7 +23,7 @@ type Data struct {
 
 type File struct {
 	Expansions []Expansion `json:"expansions,omitempty"`
-	Filename   string      `json:"filename`
+	Filename   string      `json:"filename"`
 	Segments   []Segment   `json:"segments"`
 	Summary    Summary     `json:"summary"`
 }

@@ -14,11 +14,11 @@ func TestWriteFirmwareWithType(t *testing.T) {
 	instance := bootservertest.StartQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
 
 	logPattern := []bootservertest.LogMatch{
-		{"Received request from ", true},
-		{"Proceeding with nodename ", true},
-		{"Transfer starts", true},
-		{"Transfer ends successfully", true},
-		{"Issued reboot command to", true},
+		{Pattern: "Received request from ", ShouldMatch: true},
+		{Pattern: "Proceeding with nodename ", ShouldMatch: true},
+		{Pattern: "Transfer starts", ShouldMatch: true},
+		{Pattern: "Transfer ends successfully", ShouldMatch: true},
+		{Pattern: "Issued reboot command to", ShouldMatch: true},
 	}
 
 	bootservertest.CmdSearchLog(

@@ -141,6 +141,7 @@ func (n *netbootFinder) resolve(ctx context.Context, f chan *fuchsiaDevice, node
 		return fmt.Errorf("netboot finder is ipv6 only")
 	}
 	ctx, cancel := context.WithTimeout(ctx, n.cmd.timeout)
+
 	// Timeout isn't really used for this application of the client, so
 	// just pick an arbitrary timeout.
 	c := n.cmd.newNetbootClient(time.Second)

@@ -76,7 +76,7 @@ func TestFPublish(t *testing.T) {
 	}
 	ExecCommand = helperCommandForFPublish
 	defer func() { ExecCommand = exec.Command }()
-	output, err := publish(&testSDK, "/fake/repo/amber-files", false)
+	output, err := publish(testSDK, "/fake/repo/amber-files", false)
 	if err != nil {
 		t.Fatalf("Error running fpublish: %v: %v",
 			output, err)

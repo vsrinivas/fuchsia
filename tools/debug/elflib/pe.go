@@ -88,7 +88,7 @@ func PEGetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
 			spos := pos + DebugDirectorySizeOffset
 			pdbaddr := binary.LittleEndian.Uint32(data[apos : apos+4])
 			pdbsize := binary.LittleEndian.Uint32(data[spos : spos+4])
-			pdbdata, err := loadData(filename, file, peFile, pe.DataDirectory{pdbaddr, pdbsize})
+			pdbdata, err := loadData(filename, file, peFile, pe.DataDirectory{VirtualAddress: pdbaddr, Size: pdbsize})
 			if err != nil {
 				return nil, err
 			}
