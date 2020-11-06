@@ -422,6 +422,7 @@ mod tests {
                 key: "foo".to_string(),
                 value: Some(Box::new(Value::Text("bar".to_string()))),
             }]),
+            ..Annotations::empty()
         };
         let _ = element_controller.set_annotations(new_annotations).await;
 
@@ -457,6 +458,7 @@ mod tests {
                     key: "foo".to_string(),
                     value: Some(Box::new(Value::Text("bar".to_string()))),
                 }]),
+                ..Annotations::empty()
             };
             let _ = element_controller.set_annotations(new_annotations).await;
         })
@@ -492,6 +494,7 @@ mod tests {
                 key: "foo".to_string(),
                 value: Some(Box::new(Value::Text("bar".to_string()))),
             }]),
+            ..Annotations::empty()
         };
 
         {
