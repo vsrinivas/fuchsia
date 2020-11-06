@@ -55,8 +55,8 @@ TEST_F(AgentSessionRestartTest, AgentCanRestartSession) {
   session_restart_controller->Restart();
 
   // Wait for the session shell to die (indicating a restart), then wait for it to come back.
-  RunLoopUntil([&] { return !session_shell->is_running(); });
-  RunLoopUntil([&] { return session_shell->is_running(); });
+  RunLoopUntil([&] { return !session_shell->is_running() && !agent->is_running(); });
+  RunLoopUntil([&] { return session_shell->is_running() && agent->is_running(); });
 }
 
 }  // namespace
