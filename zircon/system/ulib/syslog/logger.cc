@@ -114,6 +114,8 @@ SYSLOG_EXPORT
 zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logger_t** out_logger,
                                       bool connect) {
   if (config->num_tags > FX_LOG_MAX_TAGS) {
+    if (config->log_service_channel != ZX_HANDLE_INVALID)
+      zx_handle_close(config->log_service_channel);
     return ZX_ERR_INVALID_ARGS;
   }
   fx_logger_config_t c = *config;

@@ -311,3 +311,26 @@ TEST(SyslogTests, test_log_dont_dup) {
   // Cleanup
   fx_logger_destroy(logger);
 }
+
+TEST(SyslogTests, test_log_service_channel_closed_on_create_fail) {
+  const char* kTags[] = {"1", "2", "3", "4", "5", "6"};
+  const int kNumTags = 6;
+  EXPECT_LT(FX_LOG_MAX_TAGS, kNumTags);
+
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  const zx_handle_t passed_handle = remote.release();
+
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_service_channel = passed_handle,
+                               .tags = kTags,
+                               .num_tags = kNumTags};
+
+  // Creation should fail because there are too many tags, and closing the
+  // handle should fail because it is already closed.
+  fx_logger_t* logger;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_logger_create(&config, &logger));
+  EXPECT_NE(ZX_HANDLE_INVALID, passed_handle);
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(passed_handle));
+}
