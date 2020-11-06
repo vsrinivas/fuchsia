@@ -34,6 +34,11 @@ use crate::opts::*;
 type WlanSvc = DeviceServiceProxy;
 
 fn main() -> Result<(), Error> {
+    println!(
+        "Warning: this tool may cause state mismatches between layers of the WLAN \n\
+        subsystem. It is inteded for use by WLAN developers only. Please reach out \n\
+        to the WLAN team if your use case relies on it."
+    );
     let opt = Opt::from_args();
     println!("{:?}", opt);
 
