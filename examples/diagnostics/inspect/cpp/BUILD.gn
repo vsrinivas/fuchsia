@@ -14,7 +14,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/examples/fidl/services:echo",
+    "//examples/fidl/fuchsia.examples",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
@@ -40,7 +40,7 @@ executable("client") {
   sources = [ "example_client.cc" ]
 
   deps = [
-    "//garnet/examples/fidl/services:echo",
+    "//examples/fidl/fuchsia.examples",
     "//sdk/lib/fdio",
     "//src/lib/files",
   ]

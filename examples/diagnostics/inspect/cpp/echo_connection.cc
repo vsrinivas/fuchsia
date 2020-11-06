@@ -14,12 +14,12 @@ EchoConnection::EchoConnection(inspect::Node node, std::weak_ptr<EchoConnectionS
   requests_ = node_.CreateUint("requests", 0);
 }
 
-void EchoConnection::EchoString(fidl::StringPtr value, EchoStringCallback callback) {
+void EchoConnection::EchoString(std::string value, EchoStringCallback callback) {
   requests_.Add(1);
-  bytes_processed_.Add(value->size());
+  bytes_processed_.Add(value.size());
   auto stats = stats_.lock();
   if (stats) {
-    stats->request_size_histogram.Insert(value->size(), 1);
+    stats->request_size_histogram.Insert(value.size(), 1);
     stats->total_requests.Add(1);
   }
   callback(std::move(value));

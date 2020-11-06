@@ -7,7 +7,7 @@
 
 #include <lib/inspect/cpp/inspect.h>
 
-#include <fidl/examples/echo/cpp/fidl.h>
+#include <fuchsia/examples/cpp/fidl.h>
 
 namespace example {
 
@@ -18,10 +18,12 @@ struct EchoConnectionStats {
   EchoConnectionStats(EchoConnectionStats&&) = default;
 };
 
-class EchoConnection : public fidl::examples::echo::Echo {
+class EchoConnection : public fuchsia::examples::Echo {
  public:
   explicit EchoConnection(inspect::Node node, std::weak_ptr<EchoConnectionStats> stats);
-  virtual void EchoString(fidl::StringPtr value, EchoStringCallback callback);
+  virtual void EchoString(std::string value, EchoStringCallback callback);
+  // This method is unused for this example.
+  virtual void SendString(std::string value) {}
 
  private:
   EchoConnection(const EchoConnection&) = delete;

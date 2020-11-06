@@ -7,7 +7,7 @@
 #include <iostream>
 #include <string>
 
-#include <fidl/examples/echo/cpp/fidl.h>
+#include <fuchsia/examples/cpp/fidl.h>
 #include <src/lib/files/path.h>
 
 #include "lib/fidl/cpp/string.h"
@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  fidl::examples::echo::EchoSyncPtr echo;
+  fuchsia::examples::EchoSyncPtr echo;
 
   std::string file_name = files::AbsolutePath(argv[1]);
   zx_status_t status =
@@ -32,9 +32,9 @@ int main(int argc, const char** argv) {
   }
 
   for (int i = 2; i < argc; i++) {
-    fidl::StringPtr result;
+    std::string result;
     echo->EchoString(argv[i], &result);
-    printf("Response: %s\n", result->c_str());
+    printf("Response: %s\n", result.c_str());
   }
 
   printf("Done sending strings, close this component to disconnect.\n");

@@ -13,7 +13,7 @@
 namespace example {
 namespace testing {
 
-using namespace fidl::examples::echo;
+using namespace fuchsia::examples;
 using namespace inspect::testing;
 
 class EchoConnectionTest : public gtest::RealLoopFixture {
@@ -33,8 +33,8 @@ class EchoConnectionTest : public gtest::RealLoopFixture {
 };
 
 TEST_F(EchoConnectionTest, EchoString_MultipleRequests) {
-  ::fidl::StringPtr message = "bogus";
-  echo_->EchoString("Hello World!", [&](::fidl::StringPtr retval) { message = retval; });
+  std::string message = "bogus";
+  echo_->EchoString("Hello World!", [&](std::string retval) { message = retval; });
   RunLoopUntilIdle();
   EXPECT_EQ("Hello World!", message);
   auto hierarchy_result = inspect::ReadFromVmo(inspector_.DuplicateVmo());
@@ -46,7 +46,7 @@ TEST_F(EchoConnectionTest, EchoString_MultipleRequests) {
                                         UintIs("bytes_processed", 12), UintIs("requests", 1))))))));
 
   // Call the service again.
-  echo_->EchoString("Hello Again!", [&](::fidl::StringPtr retval) { message = retval; });
+  echo_->EchoString("Hello Again!", [&](std::string retval) { message = retval; });
   RunLoopUntilIdle();
   EXPECT_EQ("Hello Again!", message);
   hierarchy_result = inspect::ReadFromVmo(inspector_.DuplicateVmo());
@@ -60,8 +60,8 @@ TEST_F(EchoConnectionTest, EchoString_MultipleRequests) {
 
 // Answer "" with ""
 TEST_F(EchoConnectionTest, EchoString_Empty) {
-  fidl::StringPtr message = "bogus";
-  echo_->EchoString("", [&](::fidl::StringPtr retval) { message = retval; });
+  std::string message = "bogus";
+  echo_->EchoString("", [&](::std::string retval) { message = retval; });
   RunLoopUntilIdle();
   EXPECT_EQ("", message);
   auto hierarchy_result = inspect::ReadFromVmo(inspector_.DuplicateVmo());
