@@ -9,7 +9,7 @@ Fuchsia includes experimental support for writing FIDL fuzzers in the style of F
 
 ### Quick-start guide
 
-An example fuzzer is defined in [`//garnet/examples/fidl/echo_server_cpp/fuzzer`][example]. If you
+An example fuzzer is defined in [`//examples/fuzzers/fidl`][example]. If you
 are not familiar with fuzzers, see the [overview](overview.md). Fuzzing FIDL servers with libFuzzer
 on Fuchsia requires GN targets that will generate a fuzz target and writing some code to provide an
 instance of the server to be fuzzed.
@@ -20,7 +20,7 @@ instance of the server to be fuzzed.
       Use the `FIDL_FUZZER_DEFINITION()` macro in `//sdk/lib/fidl/cpp/fuzzing/server_provider.h` to
       define a server provider for your interface and server implementation class. This will
       automatically define the C symbols described below. See
-      `//garnet/examples/fidl/echo_server_cpp/fuzzer` for a reference example.
+      `//examples/fuzzers/fidl` for a reference example.
     * At the C level (hard mode):
       Implement a library that defines the following symbols:
       * `zx_status_t fuzzer_init()`: Instantiate server implementation.
@@ -133,4 +133,4 @@ $AFL_PATH/afl-fuzz -i tools/fidl/examples -o fidl-fuzz-out build-x86/tools/fidl 
 Running against the source from early May 2017, there were no crashes or hangs after two days
 of fuzzing on a fairly fast machine. It ran over 300 million executions.
 
-[example]: /garnet/examples/fidl/echo_server_cpp/fuzzer
+[example]: /examples/fuzzers/fidl

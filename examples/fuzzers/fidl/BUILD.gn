@@ -10,7 +10,7 @@ source_set("echo_server_provider") {
   sources = [ "echo_server_provider.cc" ]
 
   public_deps = [
-    "//garnet/examples/fidl/echo_server_cpp:lib",
+    "//examples/fidl/fuchsia.examples",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fidl/cpp/fuzzing",
     "//sdk/lib/sys/cpp",
@@ -18,7 +18,7 @@ source_set("echo_server_provider") {
 }
 
 fidl_protocol_fuzzer("echo-fuzzer") {
-  fidl = "//garnet/examples/fidl/services:echo"
-  protocol = "fidl.examples.echo.Echo"
+  fidl = "//examples/fidl/fuchsia.examples:fuchsia.examples"
+  protocol = "fuchsia.examples.Echo"
   deps = [ ":echo_server_provider" ]
 }

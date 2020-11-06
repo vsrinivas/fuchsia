@@ -12,4 +12,9 @@ fidl("fuchsia.examples") {
     "echo.test.fidl",
     "types.test.fidl",
   ]
+  fuzzers = [
+    {
+      protocol = "fuchsia.examples.Echo"
+    },
+  ]
 }

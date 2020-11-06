@@ -42,7 +42,7 @@ fuzzers_package("fuzzing-examples") {
     },
     {
       # Variables set here override those in the outer scope.
-      label = "//garnet/examples/fidl/echo_server_cpp/fuzzer:echo-fuzzer"
+      label = "fidl:echo-fuzzer"
       fuzz_host = false
     },
   ]

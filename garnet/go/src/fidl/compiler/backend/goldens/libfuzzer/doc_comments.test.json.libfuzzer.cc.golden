@@ -83,60 +83,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 
     uint8_t method_selector_ = data_[1];
     uint8_t method_selection_ = method_selector_ % 2;
-    if (method_selection_ == 0) {
-#if !(ALL_METHODS || defined(METHOD_Method))
-      // Selected method from protocol that is not part of this fuzzer.
-      xprintf("Early exit: Chose disabled method: Method\n");
-      return 0;
-#else
-      const size_t min_size_ = ;
-
-      // Must have enough bytes for input.
-      if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
-        return 0;
-      }
-
-      const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / 0;
-
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
-
-      size_t param_size_;
-
-      xprintf("Invoking method fidl_test_doccomments_Interface.Method\n");
-      protocol_->Method();
-#endif
-    }
-    if (method_selection_ == 1) {
-#if !(ALL_METHODS || defined(METHOD_OnEvent))
-      // Selected method from protocol that is not part of this fuzzer.
-      xprintf("Early exit: Chose disabled method: OnEvent\n");
-      return 0;
-#else
-      const size_t min_size_ = ;
-
-      // Must have enough bytes for input.
-      if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_,
-                min_size_);
-        return 0;
-      }
-
-      const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / 0;
-
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n",
-              slack_size_, slack_size_per_param);
-
-      size_t param_size_;
-
-      xprintf("Invoking method fidl_test_doccomments_Interface.OnEvent\n");
-      protocol_->OnEvent();
-#endif
-    }
 
     loop_->RunUntilIdle();
 

@@ -88,7 +88,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     uint8_t method_selector_ = data_[1];
     uint8_t method_selection_ = method_selector_ % {{ len $protocol.Methods }};
 
-  {{- range $methodIdx, $method := .Methods }}
+  {{- range $methodIdx, $method := .Methods }}{{- if len $method.Request }}
     if (method_selection_ == {{ $methodIdx }}) {
 #if !(ALL_METHODS || defined(METHOD_{{ $method.Name }}))
       // Selected method from protocol that is not part of this fuzzer.
@@ -137,7 +137,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       {{- end }});
 #endif
     }
-{{- end }}
+  {{- end }}{{- end }}
 
     loop_->RunUntilIdle();
 
