@@ -5,12 +5,14 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_net,
-    fidl_fuchsia_net_stack::StackMarker,
-    fidl_fuchsia_net_stack_ext::FidlReturn,
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
-    fidl_fuchsia_netstack::{InterfaceConfig, NetstackMarker},
+    fidl_fuchsia_netstack::{
+        InterfaceConfig, NetstackMarker, RouteTableEntry2, RouteTableTransactionMarker,
+    },
     fuchsia_async as fasync,
     fuchsia_component::client,
+    fuchsia_zircon as zx,
+    std::convert::TryFrom as _,
     structopt::StructOpt,
 };
 
@@ -72,8 +74,11 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             device
         ),
     };
+    let nicid_u32 =
+        u32::try_from(nicid).with_context(|| format!("{} does not fit in a u32", nicid))?;
 
-    let () = netstack.set_interface_status(nicid as u32, true)?;
+    let () =
+        netstack.set_interface_status(nicid_u32, true).context("error setting interface status")?;
     log::info!("Added ethernet to stack.");
 
     let subnet: Option<fidl_fuchsia_net::Subnet> = opt.ip.as_ref().map(|ip| {
@@ -82,7 +87,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
 
     if let Some(mut subnet) = subnet {
         let _ = netstack
-            .set_interface_address(nicid as u32, &mut subnet.addr, subnet.prefix_len)
+            .set_interface_address(nicid_u32, &mut subnet.addr, subnet.prefix_len)
             .await
             .context("set interface address error")?;
     } else {
@@ -120,15 +125,29 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         }
         .into();
 
-        let stack = client::connect_to_service::<StackMarker>()?;
-        let () = stack
-            .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
-                subnet: fidl_fuchsia_net::Subnet { addr: unspec_addr, prefix_len: 0 },
-                destination: fidl_fuchsia_net_stack::ForwardingDestination::NextHop(gw_addr),
-            })
+        let (route_proxy, server_end) =
+            fidl::endpoints::create_proxy::<RouteTableTransactionMarker>()
+                .context("error creating route proxy")?;
+        let () = netstack
+            .start_route_table_transaction(server_end)
             .await
-            .squash_result()
-            .context("failed to add forwarding entry for gateway")?;
+            .map(zx::Status::ok)
+            .context("fidl error calling route_proxy.start_route_table_transaction")?
+            .context("error starting route table transaction")?;
+
+        let mut entry = RouteTableEntry2 {
+            destination: unspec_addr,
+            netmask: unspec_addr,
+            gateway: Some(Box::new(gw_addr)),
+            nicid: nicid_u32,
+            metric: 0,
+        };
+        let () = route_proxy
+            .add_route(&mut entry)
+            .await
+            .map(zx::Status::ok)
+            .with_context(|| format!("fidl error calling route_proxy.add_route {:?}", entry))?
+            .with_context(|| format!("error adding route {:?}", entry))?;
 
         log::info!("Configured the default route with gateway address.");
     }
