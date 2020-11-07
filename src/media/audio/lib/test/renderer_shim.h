@@ -14,6 +14,7 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/test/test_fixture.h"
@@ -95,6 +96,8 @@ class RendererShimImpl {
   // For validating properties exported by inspect.
   size_t inspect_id() const { return inspect_id_; }
 
+  const zx::clock& reference_clock() const { return reference_clock_; }
+
  protected:
   RendererShimImpl(Format format, size_t payload_frame_count, size_t inspect_id)
       : format_(format),
@@ -108,6 +111,10 @@ class RendererShimImpl {
   void WatchEvents();
   VmoBackedBuffer& payload_buffer() { return payload_buffer_; }
   bool has_min_lead_time() const { return min_lead_time_.has_value(); }
+
+  void set_reference_clock(zx::clock reference_clock) {
+    reference_clock_ = std::move(reference_clock);
+  }
 
  private:
   const Format format_;
@@ -165,8 +172,6 @@ class UltrasoundRendererShim : public RendererShimImpl {
  public:
   using SampleT = typename AudioBuffer<SampleFormat>::SampleT;
 
-  const zx::clock& reference_clock() const { return reference_clock_; }
-
   PacketVector AppendPackets(const std::vector<AudioBufferSlice<SampleFormat>>& slices,
                              int64_t initial_pts = 0) {
     return RendererShimImpl::AppendPackets<SampleFormat>(slices, initial_pts);
@@ -180,7 +185,7 @@ class UltrasoundRendererShim : public RendererShimImpl {
     ultrasound_factory->CreateRenderer(
         fidl().NewRequest(), [this](auto ref_clock, auto stream_type) {
           created_ = true;
-          reference_clock_ = std::move(ref_clock);
+          set_reference_clock(std::move(ref_clock));
           EXPECT_EQ(stream_type.sample_format, format().sample_format());
           EXPECT_EQ(stream_type.channels, format().channels());
           EXPECT_EQ(stream_type.frames_per_second, format().frames_per_second());
@@ -203,7 +208,6 @@ class UltrasoundRendererShim : public RendererShimImpl {
  private:
   bool created_ = false;
   TestFixture* fixture_;
-  zx::clock reference_clock_;
 };
 
 }  // namespace media::audio::test

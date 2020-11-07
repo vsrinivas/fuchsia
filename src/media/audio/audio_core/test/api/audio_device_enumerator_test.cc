@@ -67,8 +67,10 @@ class AudioDeviceEnumeratorTest : public HermeticAudioTest {
     };
 
     // Create two unique devices.
-    auto d1 = (*this.*create_device)({0x01, 0x00}, kFormat, kFrameRate, plug_properties, 0);
-    auto d2 = (*this.*create_device)({0x02, 0x00}, kFormat, kFrameRate, plug_properties, 0);
+    auto d1 =
+        (*this.*create_device)({0x01, 0x00}, kFormat, kFrameRate, plug_properties, 0, std::nullopt);
+    auto d2 =
+        (*this.*create_device)({0x02, 0x00}, kFormat, kFrameRate, plug_properties, 0, std::nullopt);
 
     // Take control of these events.
     audio_dev_enum_.events().OnDeviceAdded = nullptr;
@@ -115,7 +117,8 @@ class AudioDeviceEnumeratorTest : public HermeticAudioTest {
     std::vector<uint64_t> known_tokens;
     // Too many iterations has a tendancy to time out on CQ.
     for (uint8_t k = 0; k < 25; k++) {
-      auto d = (*this.*create_device)({k, 0x00}, kFormat, kFrameRate, std::nullopt, 0);
+      auto d =
+          (*this.*create_device)({k, 0x00}, kFormat, kFrameRate, std::nullopt, 0, std::nullopt);
       known_tokens.push_back(d->token());
 
       // Test GetDevices().

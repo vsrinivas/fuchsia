@@ -38,7 +38,9 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
 
 }  // namespace
 
-// If position error is greater than this, we incur a discontinuity and 'snap' to the expected pos.
+// If source position error becomes greater than this, we stop trying to smoothly synchronize and
+// instead 'snap' to the expected pos (sometimes referred to as "jam sync"). This will surface as a
+// discontinuity (if jumping backward) or a dropout (if jumping forward), for this source stream.
 constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(5);
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
@@ -552,12 +554,8 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   FX_LOGS(TRACE) << clock::TimelineFunctionToString(dest_frames_to_clock_mono, "dest-to-mono");
 
   // ComposeDestToSource
-  // Compose our transformation from destination frames to source fractional frames.
   //
-  // Combine the job-supplied dest transformation, with the renderer-supplied mapping of
-  // monotonic-to-source-subframe, to produce a transformation which maps from dest frames to
-  // fractional source frames.
-
+  // Compose our transformation from destination frames to source fractional frames.
   info.dest_frames_to_frac_source_frames =
       info.clock_mono_to_frac_source_frames * dest_frames_to_clock_mono;
   FX_LOGS(TRACE) << clock::TimelineRateToString(info.dest_frames_to_frac_source_frames.rate(),
@@ -565,18 +563,52 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
 
   // ComputeFrameRateConversionRatio
   //
-  // Determine the appropriate TimelineRate for step_size. This based exclusively on the frame
-  // rates of the source and destination. If we happen to be applying "micro-SRC" for this
-  // source, then that will be included subsequently as a correction factor.
+  // Calculate the TimelineRate for step_size. No clock effects are included; any "micro-SRC" is
+  // applied separately as a subsequent correction factor.
   TimelineRate frac_src_frames_per_dest_frame =
       dest_frames_to_dest_ref.rate() * info.source_ref_clock_to_frac_source_frames.rate();
   FX_LOGS(TRACE) << clock::TimelineRateToString(frac_src_frames_per_dest_frame,
                                                 "dest-to-frac-src rate (no clock effects)");
 
-  // Check for dest position discontinuity
-  //
+  // Check for dest position discontinuity. If so, reset positions and rate adjustments.
   auto dest_frame = cur_mix_job_.dest_start_frame;
   auto mono_now_from_dest = zx::time{dest_frames_to_clock_mono.Apply(dest_frame)};
+
+  // TODO(fxbug.dev/63750): pass through a signal if we expect discontinuity (Play, Pause, packet
+  // discontinuity bit); use it to log (or report to inspect) only unexpected discontinuities.
+  // Add a test to validate that we log discontinuities only when we should.
+  if (!info.initial_position_is_set || info.next_dest_frame != dest_frame) {
+    // These are only needed for the FX_LOG
+    auto prev_running_dest_frame = info.next_dest_frame;
+    auto prev_running_frac_src_frame = info.next_frac_source_frame;
+    auto position_was_set = info.initial_position_is_set;
+
+    // Set new running positions, based on the E2E clock (not just from step_size)
+    info.ResetPositions(dest_frame, bookkeeping);
+
+    if (position_was_set) {
+      FX_LOGS(DEBUG) << "Dest discontinuity ["
+                     << (dest_clock.is_client_clock() ? "Client" : "Device")
+                     << (dest_clock.is_adjustable() ? "Adjustable" : "Fixed") << "] of "
+                     << dest_frame - prev_running_dest_frame << " frames (expect "
+                     << prev_running_dest_frame << ", actual " << dest_frame << ")";
+      FX_LOGS(DEBUG) << "Updated source [" << (source_clock.is_client_clock() ? "Client" : "Device")
+                     << (source_clock.is_adjustable() ? "Adjustable" : "Fixed")
+                     << "] position from " << prev_running_frac_src_frame.raw_value() << " to "
+                     << info.next_frac_source_frame.raw_value();
+    }
+
+    // If source/dest clocks are the same, they're always in-sync, but above we will still reset our
+    // dest offset (if we have not previously established this, or if there was a discontinuity).
+    if (source_clock != dest_clock) {
+      source_clock.ResetRateAdjustment(mono_now_from_dest);
+      dest_clock.ResetRateAdjustment(mono_now_from_dest);
+    }
+
+    SetStepSize(info, bookkeeping, frac_src_frames_per_dest_frame);
+    return;
+  }
+
   auto mono_now_from_src = zx::time{
       info.clock_mono_to_frac_source_frames.ApplyInverse(info.next_frac_source_frame.raw_value())};
 
@@ -584,31 +616,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
                  << info.next_frac_source_frame.raw_value() << ", mono_now_from_dest "
                  << mono_now_from_dest.get() << ", mono_now_from_src " << mono_now_from_src.get();
 
-  if (info.next_dest_frame != dest_frame || !info.running_pos_established) {
-    // Set new running positions, based on the E2E clock (not just from step_size)
-    auto prev_running_dest_frame = info.next_dest_frame;
-    auto prev_running_frac_src_frame = info.next_frac_source_frame;
-    info.ResetPositions(dest_frame, bookkeeping);
-
-    if (info.running_pos_established) {
-      FX_LOGS(DEBUG) << "Running dest position is discontinuous (expected "
-                     << prev_running_dest_frame << ", actual " << dest_frame
-                     << ") updating running source position from "
-                     << prev_running_frac_src_frame.raw_value() << " to "
-                     << info.next_frac_source_frame.raw_value();
-    } else {
-      info.running_pos_established = true;
-    }
-
-    source_clock.ResetRateAdjustment(mono_now_from_dest);
-    dest_clock.ResetRateAdjustment(mono_now_from_dest);
-
-    SetStepSize(info, bookkeeping, frac_src_frames_per_dest_frame);
-    return;
-  }
-
-  // Convert both positions to monotonic time and get the delta
-  //
+  // Convert both positions to monotonic time and get the delta -- this is source position error
   info.src_pos_error = mono_now_from_src - mono_now_from_dest;
   FX_LOGS(TRACE) << "mono_now_from_src " << mono_now_from_src.get() << ", mono_now_from_dest "
                  << mono_now_from_dest.get() << ", src_pos_err " << info.src_pos_error.get();

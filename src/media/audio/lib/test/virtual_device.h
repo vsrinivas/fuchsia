@@ -29,6 +29,11 @@ struct DevicePlugProperties {
   bool can_notify;
 };
 
+struct DeviceClockProperties {
+  int32_t domain;
+  int32_t initial_rate_adjustment_ppm;
+};
+
 // This class is thread hostile: none of its methods can be called concurrently.
 template <class Interface>
 class VirtualDevice {
@@ -65,7 +70,8 @@ class VirtualDevice {
   VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
                 const audio_stream_unique_id_t& device_id, Format format, size_t frame_count,
                 size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
-                float expected_gain_db);
+                float expected_gain_db,
+                std::optional<DeviceClockProperties> device_clock_properties);
 
   void ResetEvents();
   void WatchEvents();
@@ -107,9 +113,10 @@ class VirtualOutput : public VirtualOutputImpl {
   VirtualOutput(TestFixture* fixture, HermeticAudioEnvironment* environment,
                 const audio_stream_unique_id_t& device_id, Format format, size_t frame_count,
                 size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
-                float expected_gain_db)
+                float expected_gain_db,
+                std::optional<DeviceClockProperties> device_clock_properties)
       : VirtualDevice(fixture, environment, device_id, format, frame_count, inspect_id,
-                      plug_properties, expected_gain_db) {}
+                      plug_properties, expected_gain_db, device_clock_properties) {}
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -127,9 +134,9 @@ class VirtualInput : public VirtualInputImpl {
   VirtualInput(TestFixture* fixture, HermeticAudioEnvironment* environment,
                const audio_stream_unique_id_t& device_id, Format format, size_t frame_count,
                size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
-               float expected_gain_db)
+               float expected_gain_db, std::optional<DeviceClockProperties> device_clock_properties)
       : VirtualDevice(fixture, environment, device_id, format, frame_count, inspect_id,
-                      plug_properties, expected_gain_db) {}
+                      plug_properties, expected_gain_db, device_clock_properties) {}
 };
 
 }  // namespace media::audio::test

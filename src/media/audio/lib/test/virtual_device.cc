@@ -15,7 +15,8 @@ VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironme
                                     const audio_stream_unique_id_t& device_id, Format format,
                                     size_t frame_count, size_t inspect_id,
                                     std::optional<DevicePlugProperties> plug_properties,
-                                    float expected_gain_db)
+                                    float expected_gain_db,
+                                    std::optional<DeviceClockProperties> device_clock_properties)
     : format_(format),
       frame_count_(frame_count),
       inspect_id_(inspect_id),
@@ -50,6 +51,11 @@ VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironme
   auto ring_buffer_ms = static_cast<size_t>(
       static_cast<double>(frame_count) / static_cast<double>(format_.frames_per_second()) * 1000);
   fidl_->SetNotificationFrequency(ring_buffer_ms / kNotifyMs);
+
+  if (device_clock_properties) {
+    fidl_->SetClockProperties(device_clock_properties->domain,
+                              device_clock_properties->initial_rate_adjustment_ppm);
+  }
 
   fidl_->Add();
 }

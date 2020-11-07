@@ -119,7 +119,12 @@ class AudioClock {
     // If two clocks are identical or in the same clock domain, no synchronization is needed.
     None,
 
-    // We rate-adjust client clocks if they permit us to minimize cost.
+    // Immediately return an adjustable clock to monotonic rate (its sync target is now monotonic)
+    ResetSourceClock,
+    ResetDestClock,
+
+    // We rate-adjust client clocks if they permit us, to minimize cost.
+    // We also recover clocks, from devices running in non-MONOTONIC domains.
     AdjustSourceClock,
     AdjustDestClock,
 
@@ -129,13 +134,15 @@ class AudioClock {
   };
   static SyncMode SyncModeForClocks(AudioClock& source_clock, AudioClock& dest_clock);
 
-  int32_t ClampPpm(int32_t parts_per_million);
-
   static constexpr int32_t kMicroSrcAdjustmentPpmMax = 2500;
 
   AudioClock(zx::clock clock, Source source, bool adjustable)
       : AudioClock(std::move(clock), source, adjustable, kInvalidDomain) {}
   AudioClock(zx::clock clock, Source source, bool adjustable, uint32_t domain);
+
+  int32_t ClampPpm(int32_t parts_per_million);
+  void AdjustZxClock(int32_t rate_adjust_ppm);
+  void ReturnToMonotonic(zx::time reset_time);
 
   zx::clock clock_;
 

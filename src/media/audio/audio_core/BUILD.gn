@@ -5,6 +5,7 @@
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test/test_package.gni")
 import("//src/media/audio/audio_core_package.gni")
+import("//src/media/audio/hardware.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 action_foreach("json_schema_headers") {
@@ -231,7 +232,6 @@ executable("unittest_bin") {
     "audio_clock_unittest.cc",
     "audio_device_settings_unittest.cc",
     "audio_device_unittest.cc",
-    "audio_driver_clock_unittest.cc",
     "audio_driver_unittest.cc",
     "audio_input_unittest.cc",
     "audio_output_unittest.cc",
@@ -243,7 +243,6 @@ executable("unittest_bin") {
     "effects_stage_unittest.cc",
     "link_matrix_unittest.cc",
     "loudness_transform_unittest.cc",
-    "mix_stage_clock_unittest.cc",
     "mix_stage_unittest.cc",
     "output_pipeline_unittest.cc",
     "packet_queue_unittest.cc",
@@ -318,6 +317,38 @@ test_package("audio_core_unittests") {
   ]
 }
 
+executable("realtime_unittest_bin") {
+  visibility = [ ":*" ]
+  testonly = true
+  output_name = "audio-realtime-unittests"
+
+  sources = [
+    "audio_driver_clock_unittest.cc",
+    "mix_stage_clock_unittest.cc",
+  ]
+
+  deps = [
+    ":audio_core_lib",
+    "testing",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/media/audio/lib/clock/testing",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+# This must run on real hardware because it has hard real-time restraints. Emulators are too slow.
+test_package("audio-realtime-unittests") {
+  deps = [ ":realtime_unittest_bin" ]
+
+  tests = [
+    {
+      name = "audio-realtime-unittests"
+      environments = hardware_envs
+    },
+  ]
+}
+
 fuzzer("audio_core_fuzzer") {
   sources = [ "policy_loader_fuzzer.cc" ]
   deps = [ ":audio_core_lib" ]
@@ -334,4 +365,9 @@ group("tests") {
     # include this explicitly, in case product includes a custom audio_core package by other name
     "//src/media/audio/audio_core",
   ]
+
+  # This test must run on non-debug builds because it has hard real-time restraints.
+  if (!is_debug) {
+    deps += [ ":audio-realtime-unittests" ]
+  }
 }

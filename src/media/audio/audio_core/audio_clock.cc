@@ -60,6 +60,19 @@ AudioClock::SyncMode AudioClock::SyncModeForClocks(AudioClock& source_clock,
     return SyncMode::None;
   }
 
+  // If device clock is in MONOTONIC domain, ClientAdjustable (which prior to rate-adjustment runs
+  // at the monotonic rate) need not be adjusted -- so no sync is required.
+  if ((source_clock.is_client_clock() && source_clock.is_adjustable()) &&
+      (dest_clock.is_device_clock() && dest_clock.domain() == kMonotonicDomain)) {
+    return SyncMode::ResetSourceClock;
+  }
+
+  if ((dest_clock.is_client_clock() && dest_clock.is_adjustable()) &&
+      (source_clock.is_device_clock() && source_clock.domain() == kMonotonicDomain)) {
+    return SyncMode::ResetDestClock;
+  }
+
+  // Otherwise, a client adjustable clock should be adjusted
   if (source_clock.is_adjustable() && source_clock.is_client_clock()) {
     return SyncMode::AdjustSourceClock;
   }
@@ -82,6 +95,16 @@ int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest
       // Same clock, or device clocks in same domain. No need to adjust anything (or micro-SRC).
       return 0;
 
+    case SyncMode::ResetSourceClock:
+      // Immediately return the source clock to a monotonic rate, if it isn't already.
+      source_clock.ReturnToMonotonic(monotonic_time);
+      return 0;
+
+    case SyncMode::ResetDestClock:
+      // Immediately return the dest clock to a monotonic rate, if it isn't already.
+      dest_clock.ReturnToMonotonic(monotonic_time);
+      return 0;
+
     case SyncMode::AdjustSourceClock:
       // Adjust the source's zx::clock. No micro-SRC needed.
       source_clock.TuneForError(monotonic_time, src_pos_error);
@@ -98,6 +121,8 @@ int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest
       if (source_clock.is_client_clock()) {
         client_clock = &source_clock;
       } else {
+        // Although the design doesn't strictly require it, this CHECK (and other assumptions in
+        // AudioClock or MixStage) require is_client_clock() for one of the two clocks.
         FX_CHECK(dest_clock.is_client_clock());
         client_clock = &dest_clock;
       }
@@ -165,38 +190,6 @@ zx::time AudioClock::Read() const {
   return ref_now;
 }
 
-void AudioClock::ResetRateAdjustment(zx::time reset_time) { feedback_control_.Start(reset_time); }
-
-int32_t AudioClock::TuneForError(zx::time monotonic_time, zx::duration src_pos_error) {
-  // Tune the PID and retrieve the current correction (a zero-centric, rate-relative adjustment).
-  feedback_control_.TuneForError(monotonic_time, src_pos_error.get());
-  auto adjustment = feedback_control_.Read();
-  auto adjust_ppm = ClampPpm(round(adjustment * 1'000'000));
-
-  if (adjust_ppm != previous_adjustment_ppm_) {
-    FX_LOGS(TRACE) << (is_adjustable() ? "Adjustable " : "Fixed-rate ")
-                   << (is_client_clock() ? "client" : "device") << " clock changed from (ppm) "
-                   << std::setw(5) << previous_adjustment_ppm_ << " to " << std::setw(5)
-                   << adjust_ppm << "; src_pos_err " << std::setw(6) << src_pos_error.get();
-    previous_adjustment_ppm_ = adjust_ppm;
-  } else {
-    FX_LOGS(TRACE) << (is_adjustable() ? "Adjustable " : "Fixed-rate ")
-                   << (is_client_clock() ? "client" : "device")
-                   << " clock previous_adjustment_ppm_ still (ppm) " << std::setw(5)
-                   << previous_adjustment_ppm_ << "; src_pos_err " << std::setw(6)
-                   << src_pos_error.get();
-  }
-
-  if (is_adjustable()) {
-    zx::clock::update_args args;
-    args.reset().set_rate_adjust(adjust_ppm);
-    FX_CHECK(clock_.update(args) == ZX_OK) << "Adjustable clock could not be rate-adjusted";
-    return 0;
-  }
-
-  return adjust_ppm;
-}
-
 int32_t AudioClock::ClampPpm(int32_t parts_per_million) {
   if (!is_adjustable() && is_client_clock()) {
     return std::clamp<int32_t>(parts_per_million, -kMicroSrcAdjustmentPpmMax,
@@ -205,6 +198,52 @@ int32_t AudioClock::ClampPpm(int32_t parts_per_million) {
 
   return std::clamp<int32_t>(parts_per_million, ZX_CLOCK_UPDATE_MIN_RATE_ADJUST,
                              ZX_CLOCK_UPDATE_MAX_RATE_ADJUST);
+}
+
+void AudioClock::ResetRateAdjustment(zx::time reset_time) { feedback_control_.Start(reset_time); }
+
+int32_t AudioClock::TuneForError(zx::time monotonic_time, zx::duration src_pos_error) {
+  // Tune the PID and retrieve the current correction (a zero-centric, rate-relative adjustment).
+  feedback_control_.TuneForError(monotonic_time, src_pos_error.get());
+  double rate_adjustment = feedback_control_.Read();
+  int32_t rate_adjust_ppm = ClampPpm(round(rate_adjustment * 1'000'000.0));
+
+  if (rate_adjust_ppm != previous_adjustment_ppm_) {
+    FX_LOGS(TRACE) << (is_client_clock() ? "Client" : "Device")
+                   << (is_adjustable() ? "Adjustable" : "Fixed") << " clock changed from (ppm) "
+                   << std::setw(5) << previous_adjustment_ppm_ << " to " << std::setw(5)
+                   << rate_adjust_ppm << "; src_pos_err " << std::setw(6) << src_pos_error.get();
+
+    // If this is an actual clock, adjust it -- otherwise just return rate_adjust_ppm for micro-SRC
+    if (is_adjustable()) {
+      AdjustZxClock(rate_adjust_ppm);
+    }
+
+    previous_adjustment_ppm_ = rate_adjust_ppm;
+  } else {
+    FX_LOGS(TRACE) << (is_client_clock() ? "Client" : "Device")
+                   << (is_adjustable() ? "Adjustable" : "Fixed") << " adjust_ppm remains (ppm) "
+                   << std::setw(5) << previous_adjustment_ppm_ << " for the src pos error "
+                   << std::setw(6) << src_pos_error.get();
+  }
+
+  return rate_adjust_ppm;
+}
+
+void AudioClock::AdjustZxClock(int32_t rate_adjust_ppm) {
+  FX_CHECK(is_adjustable()) << "Cannot call ReturnToMonotonic on a fixed-rate clock";
+
+  zx::clock::update_args args;
+  args.reset().set_rate_adjust(rate_adjust_ppm);
+  FX_CHECK(clock_.update(args) == ZX_OK) << "Adjustable clock could not be rate-adjusted";
+}
+
+void AudioClock::ReturnToMonotonic(zx::time reset_time) {
+  // Return the zx::clock to the monotonic rate
+  AdjustZxClock(0);
+
+  // Return the PID to a zeroed-out state
+  ResetRateAdjustment(reset_time);
 }
 
 }  // namespace media::audio

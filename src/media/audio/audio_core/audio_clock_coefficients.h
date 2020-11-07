@@ -17,7 +17,7 @@ namespace media::audio {
 // determine a P factor (without I or D) leading to steady-state non-divergent oscillation, then
 // half it. Set I to ~(2P)/OscillationPeriod, and D to ~(P/8)*OscillationPeriod.
 //
-// Latest coefficient tuning: 2020-Oct-27.
+// Latest coefficient tuning: 2020-Oct-30.
 
 // Micro-SRC synchronization
 //
@@ -29,14 +29,20 @@ constexpr clock::PidControl::Coefficients kPidFactorsMicroSrc = {
     .derivative_factor = kMicroSrcPFactor * kMicroSrcOscillationPeriod / 8,
 };
 
+// Adjustable client clock
+//
+constexpr double kAdjustClientOscillationPeriod = ZX_MSEC(20);
+constexpr double kAdjustClientPFactor = 0.000000007998;
 constexpr clock::PidControl::Coefficients kPidFactorsAdjustClientClock = {
-    .proportional_factor = 0,
-    .integral_factor = 0,
-    .derivative_factor = 0,
+    .proportional_factor = kAdjustClientPFactor,
+    .integral_factor = kAdjustClientPFactor * 2 / kAdjustClientOscillationPeriod,
+    .derivative_factor = kAdjustClientPFactor * kAdjustClientOscillationPeriod / 8,
 };
 
+// Recovered device clock
+//
 constexpr double kAdjustDeviceOscillationPeriod = ZX_MSEC(1000);
-constexpr double kAdjustDevicePFactor = 0.000000001001;
+constexpr double kAdjustDevicePFactor = 0.0000000002001;
 constexpr clock::PidControl::Coefficients kPidFactorsAdjustDeviceClock = {
     .proportional_factor = kAdjustDevicePFactor,
     .integral_factor = kAdjustDevicePFactor * 2 / kAdjustDeviceOscillationPeriod,

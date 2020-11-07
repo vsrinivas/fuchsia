@@ -37,7 +37,6 @@ class Mixer {
     // based on the dest_frames_to_frac_source_frames transform. Pre-setting next_src_pos_modulo
     // here is only helpful for very high resolution scenarios (and is speculative at best); we base
     // it on rate_modulo and denominator, not the dest-to-source transform.
-    void ResetPositions(Bookkeeping& bookkeeping) { ResetPositions(0, bookkeeping); }
     void ResetPositions(int64_t target_dest_frame, Bookkeeping& bookkeeping) {
       bookkeeping.Reset();
 
@@ -49,6 +48,7 @@ class Mixer {
             (target_dest_frame * bookkeeping.rate_modulo) % bookkeeping.denominator;
       }
       src_pos_error = zx::duration(0);
+      initial_position_is_set = true;
     }
 
     // Only called by custom code when debugging, so can remain at INFO severity.
@@ -137,7 +137,7 @@ class Mixer {
     // only do this _once_, because thereafter we use ongoing step_size to track whether we are
     // drifting out of sync, rather than use a clock calculation each time (which would essentially
     // "jam-sync" each mix buffer, possibly creating gaps or overlaps in the process).
-    bool running_pos_established = false;
+    bool initial_position_is_set = false;
   };
 
   // Bookkeeping

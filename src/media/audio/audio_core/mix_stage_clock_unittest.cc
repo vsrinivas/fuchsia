@@ -2,18 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
-
 #include <fbl/string_printf.h>
 #include <gmock/gmock.h>
 
 #include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/mix_stage.h"
-#include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/packet_queue.h"
-#include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/testing/audio_clock_helper.h"
-#include "src/media/audio/audio_core/testing/fake_stream.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
@@ -27,6 +22,8 @@ namespace {
 
 enum class ClockMode { SAME, WITH_OFFSET, RATE_ADJUST };
 
+enum class Direction { Render, Capture };
+
 constexpr uint32_t kDefaultNumChannels = 2;
 constexpr uint32_t kDefaultFrameRate = 48000;
 const Format kDefaultFormat =
@@ -38,18 +35,19 @@ const Format kDefaultFormat =
         .take_value();
 
 //
-// MixStageClockTest (MicroSrcTest)
+// MixStageClockTest (MicroSrcTest, AdjustableClockTest)
 //
 // This set of tests validates how MixStage handles clock synchronization
 //
-// Currently, we tune PIDs by running all of these test cases.
-// Most recent tuning occurred 10/15/2020, having moved from frames/fixed-subframes to time units.
+// Currently, we tune PIDs by running these test cases. Most recent tuning occurred 11/01/2020.
 //
-// There are three synchronization scenarios to be validated:
+// Two synchronization scenarios are validated:
 //  1) Client and device clocks are non-adjustable -- apply micro-SRC (MicroSrcTest)
-//  2) Client clock is adjustable -- tune this adjustable client clock (not yet implemented)
-//  3) Device clock is adjustable -- trim the hardware clock (not yet implemented).
+//  2) Client clock is adjustable -- tune this adjustable client clock (AdjustableClockTest)
 //
+// A synchronization aspect using DeviceAdjustable clocks -- device clock recovery, from driver
+// position notifications -- is tested in audio_driver_clock_unittest.cc.
+// Another -- fine-tuning a hardware clock to match a fixed client clock, is not yet implemented.
 
 // With any error detection and adaptive convergence, an initial (primary) error is usually followed
 // by a smaller "correction overshoot" (secondary) error of opposite magnitude.
@@ -72,25 +70,35 @@ const Format kDefaultFormat =
 // converting dest frame through dest and source clocks to fractional source). Thus if our Expected
 // (clock-derived) source position is too high, we calculate a NEGATIVE position error.
 //
+// Why are MicroSrc/Adjustable different signs? For MicroSrc we rate-adjust a source (client) clock;
+// for Adjustable we rate-adjust a dest (device) clock. The error-causing effect of a fast clock,
+// when translating TO it, is the inverse of the error-causing effect when translating AWAY FROM it.
 static constexpr float kMicroSrcPrimaryErrPpmMultiplier = -10.01;  // positive err? consume slower
-
+static constexpr float kAdjustablePrimaryErrPpmMultiplier = 35.0;  // positive err? speed up source
+                                                                   // (or slow down dest)
 static constexpr float kMicroSrcSecondaryErrPpmMultiplier = 0.9;
-
-static constexpr int32_t kMicroSrcMixCountUntilSettled = 15;
-
-static constexpr int32_t kMicroSrcMixCountSettledVerificationPeriod = 1000;
-
-static constexpr auto kMicroSrcLimitSettledErr = zx::duration(15);
+static constexpr float kAdjustableSecondaryErrPpmMultiplier = -25;
 
 static constexpr int32_t kMicroSrcLimitMixCountOneUsecErr = 4;
+static constexpr int32_t kAdjustableLimitMixCountOneUsecErr = 100;
 
 static constexpr int32_t kMicroSrcLimitMixCountOnePercentErr = 12;
+static constexpr int32_t kAdjustableLimitMixCountOnePercentErr = 135;
+
+static constexpr int32_t kMicroSrcMixCountUntilSettled = 15;
+static constexpr int32_t kAdjustableMixCountUntilSettled = 180;
+
+// We validate Micro-SRC much faster than real-time, so we can test settling for much longer.
+static constexpr int32_t kMicroSrcMixCountSettledVerificationPeriod = 1000;
+static constexpr int32_t kAdjustableMixCountSettledVerificationPeriod = 20;
+
+// Error thresholds
+static constexpr auto kMicroSrcLimitSettledErr = zx::duration(15);
+static constexpr auto kAdjustableLimitSettledErr = zx::duration(50);
 
 // When tuning a new set of PID coefficients, set this to enable additional logging.
 constexpr bool kDisplayForPidCoefficientsTuning = false;
 constexpr bool kTraceClockSyncConvergence = false;
-
-enum class Direction { Render, Capture };
 
 class MixStageClockTest : public testing::ThreadingModelFixture {
  protected:
@@ -156,13 +164,8 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
   void SetRateLimits(int32_t rate_adjust_ppm) override {
     wait_for_mixes_ = false;  // no zx::clock rate_adjust usage: runs faster than real-time
 
-    if (direction_ == Direction::Render) {
-      primary_err_ppm_multiplier_ = kMicroSrcPrimaryErrPpmMultiplier;
-      secondary_err_ppm_multiplier_ = kMicroSrcSecondaryErrPpmMultiplier;
-    } else {
-      primary_err_ppm_multiplier_ = -kMicroSrcPrimaryErrPpmMultiplier;
-      secondary_err_ppm_multiplier_ = -kMicroSrcSecondaryErrPpmMultiplier;
-    }
+    primary_err_ppm_multiplier_ = kMicroSrcPrimaryErrPpmMultiplier;
+    secondary_err_ppm_multiplier_ = kMicroSrcSecondaryErrPpmMultiplier;
 
     limit_mix_count_settled_ = kMicroSrcMixCountUntilSettled;
     total_mix_count_ = limit_mix_count_settled_ + kMicroSrcMixCountSettledVerificationPeriod;
@@ -205,9 +208,73 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
   }
 };
 
+// AdjustableClockTest uses the AudioCore flexible client clock along with a non-adjustable device
+// clock. AudioCore will adjust the flexible clock to reconcile any rate differences.
+class AdjustableClockTest : public MixStageClockTest,
+                            public ::testing::WithParamInterface<Direction> {
+  static constexpr uint32_t kNonMonotonicDomain = 42;
+  static constexpr zx::duration kClockOffset = zx::sec(68);
+
+ protected:
+  void SetUp() override {
+    direction_ = GetParam();
+    MixStageClockTest::SetUp();
+  }
+
+  void SetRateLimits(int32_t rate_adjust_ppm) override {
+    wait_for_mixes_ = true;  // zx::clock rate_adjust can only be used in real time
+
+    primary_err_ppm_multiplier_ = kAdjustablePrimaryErrPpmMultiplier;
+    secondary_err_ppm_multiplier_ = kAdjustableSecondaryErrPpmMultiplier;
+
+    limit_mix_count_settled_ = kAdjustableMixCountUntilSettled;
+    total_mix_count_ = limit_mix_count_settled_ + kAdjustableMixCountSettledVerificationPeriod;
+
+    limit_mix_count_one_usec_err_ = kAdjustableLimitMixCountOneUsecErr;
+    limit_mix_count_one_percent_err_ = kAdjustableLimitMixCountOnePercentErr;
+
+    limit_settled_err_ = kAdjustableLimitSettledErr;
+
+    MixStageClockTest::SetRateLimits(rate_adjust_ppm);
+  }
+
+  // Establish reference clocks and ref-clock-to-fixed-frame transforms for both client and device,
+  // depending on which synchronization mode is being tested.
+  void SetClocks(ClockMode clock_mode, int32_t rate_adjust_ppm) override {
+    client_ref_to_fixed_ = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+        0, zx::clock::get_monotonic().get(), Fixed(kDefaultFormat.frames_per_second()).raw_value(),
+        zx::sec(1).to_nsecs()));
+
+    client_clock_ = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
+    audio_clock_helper::VerifyAdvances(client_clock_.value());
+
+    auto device_start = zx::clock::get_monotonic();
+    clock::testing::ClockProperties clock_props;
+    if (clock_mode == ClockMode::WITH_OFFSET) {
+      device_start += kClockOffset;
+      clock_props = {.start_val = device_start};
+    } else if (clock_mode == ClockMode::RATE_ADJUST) {
+      clock_props = {.rate_adjust_ppm = rate_adjust_ppm};
+    }
+
+    device_ref_to_fixed_ = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+        0, device_start.get(), Fixed(kDefaultFormat.frames_per_second()).raw_value(),
+        zx::sec(1).to_nsecs()));
+
+    auto raw_clock = clock::testing::CreateCustomClock(clock_props).take_value();
+    device_clock_ = AudioClock::DeviceFixed(std::move(raw_clock), kNonMonotonicDomain);
+    audio_clock_helper::VerifyAdvances(device_clock_.value());
+  }
+};
+
 // Set the limits for worst-case source position error during this mix interval
 //
 void MixStageClockTest::SetRateLimits(int32_t rate_adjust_ppm) {
+  if (direction_ == Direction::Capture) {
+    primary_err_ppm_multiplier_ = -primary_err_ppm_multiplier_;
+    secondary_err_ppm_multiplier_ = -secondary_err_ppm_multiplier_;
+  }
+
   // Set the limits for worst-case source position error during this mix interval
   // If clock runs fast, our initial error is negative (position too low), followed by smaller
   // positive error (position too high). These are reversed if clock runs slow.
@@ -413,13 +480,52 @@ TEST_P(MicroSrcTest, AdjustDown300) { VerifySync(ClockMode::RATE_ADJUST, -300); 
 TEST_P(MicroSrcTest, AdjustUp1000) { VerifySync(ClockMode::RATE_ADJUST, 1000); }
 TEST_P(MicroSrcTest, AdjustDown1000) { VerifySync(ClockMode::RATE_ADJUST, -1000); }
 
-std::string PrintDirectionParam(const ::testing::TestParamInfo<MicroSrcTest::ParamType>& info) {
+// Test cases that validate the MixStage+AudioClock "flexible clock" synchronization path.
+TEST_P(AdjustableClockTest, Basic) { VerifySync(ClockMode::SAME); }
+TEST_P(AdjustableClockTest, Offset) { VerifySync(ClockMode::WITH_OFFSET); }
+
+TEST_P(AdjustableClockTest, AdjustUp1) { VerifySync(ClockMode::RATE_ADJUST, 1); }
+TEST_P(AdjustableClockTest, AdjustDown1) { VerifySync(ClockMode::RATE_ADJUST, -1); }
+
+TEST_P(AdjustableClockTest, AdjustUp2) { VerifySync(ClockMode::RATE_ADJUST, 2); }
+TEST_P(AdjustableClockTest, AdjustDown2) { VerifySync(ClockMode::RATE_ADJUST, -2); }
+
+TEST_P(AdjustableClockTest, AdjustUp3) { VerifySync(ClockMode::RATE_ADJUST, 3); }
+TEST_P(AdjustableClockTest, AdjustDown3) { VerifySync(ClockMode::RATE_ADJUST, -3); }
+
+TEST_P(AdjustableClockTest, AdjustUp10) { VerifySync(ClockMode::RATE_ADJUST, 10); }
+TEST_P(AdjustableClockTest, AdjustDown10) { VerifySync(ClockMode::RATE_ADJUST, -10); }
+
+TEST_P(AdjustableClockTest, AdjustUp30) { VerifySync(ClockMode::RATE_ADJUST, 30); }
+TEST_P(AdjustableClockTest, AdjustDown30) { VerifySync(ClockMode::RATE_ADJUST, -30); }
+
+TEST_P(AdjustableClockTest, AdjustUp100) { VerifySync(ClockMode::RATE_ADJUST, 100); }
+TEST_P(AdjustableClockTest, AdjustDown100) { VerifySync(ClockMode::RATE_ADJUST, -100); }
+
+TEST_P(AdjustableClockTest, AdjustUp300) { VerifySync(ClockMode::RATE_ADJUST, 300); }
+TEST_P(AdjustableClockTest, AdjustDown300) { VerifySync(ClockMode::RATE_ADJUST, -300); }
+
+// Zircon clocks cannot adjust beyond [-1000, +1000] PPM, hindering our ability to chase device
+// clocks running close to that limit, but a reasonable validation outer limit is 750 PPM.
+// Because the micro-SRC technique uses no zx::clock, it has no such limitation.
+TEST_P(AdjustableClockTest, AdjustUp750) { VerifySync(ClockMode::RATE_ADJUST, 750); }
+TEST_P(AdjustableClockTest, AdjustDown750) { VerifySync(ClockMode::RATE_ADJUST, -750); }
+
+// Test subclasses are parameterized to run in render and capture directions.
+// Thus every clock type is tested as a source and as a destination.
+template <typename TestClass>
+std::string PrintDirectionParam(
+    const ::testing::TestParamInfo<typename TestClass::ParamType>& info) {
   return (info.param == Direction::Render ? "Render" : "Capture");
 }
 
-INSTANTIATE_TEST_SUITE_P(ClockSync, MicroSrcTest,
-                         ::testing::Values(Direction::Render, Direction::Capture),
-                         PrintDirectionParam);
+#define INSTANTIATE_SYNC_TEST_SUITE(_test_class_name)                                \
+  INSTANTIATE_TEST_SUITE_P(ClockSync, _test_class_name,                              \
+                           ::testing::Values(Direction::Render, Direction::Capture), \
+                           PrintDirectionParam<_test_class_name>)
+
+INSTANTIATE_SYNC_TEST_SUITE(MicroSrcTest);
+INSTANTIATE_SYNC_TEST_SUITE(AdjustableClockTest);
 
 }  // namespace
 

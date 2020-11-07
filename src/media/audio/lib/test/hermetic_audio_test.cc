@@ -96,14 +96,15 @@ void HermeticAudioTest::TearDown() {
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 VirtualOutput<SampleFormat>* HermeticAudioTest::CreateOutput(
     const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format, size_t frame_count,
-    std::optional<DevicePlugProperties> plug_properties, float device_gain_db) {
+    std::optional<DevicePlugProperties> plug_properties, float device_gain_db,
+    std::optional<DeviceClockProperties> device_clock_properties) {
   FX_CHECK(SampleFormat != fuchsia::media::AudioSampleFormat::UNSIGNED_8)
       << "hardware is not expected to support UNSIGNED_8";
   FX_CHECK(audio_dev_enum_.is_bound());
 
   auto ptr = std::make_unique<VirtualOutput<SampleFormat>>(
       static_cast<TestFixture*>(this), environment_.get(), device_id, format, frame_count,
-      virtual_output_next_inspect_id_++, plug_properties, device_gain_db);
+      virtual_output_next_inspect_id_++, plug_properties, device_gain_db, device_clock_properties);
   auto out = ptr.get();
   auto id = AudioDevice::UniqueIdToString(device_id);
   devices_[id].output = std::move(ptr);
@@ -120,14 +121,15 @@ VirtualOutput<SampleFormat>* HermeticAudioTest::CreateOutput(
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 VirtualInput<SampleFormat>* HermeticAudioTest::CreateInput(
     const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format, size_t frame_count,
-    std::optional<DevicePlugProperties> plug_properties, float device_gain_db) {
+    std::optional<DevicePlugProperties> plug_properties, float device_gain_db,
+    std::optional<DeviceClockProperties> device_clock_properties) {
   FX_CHECK(SampleFormat != fuchsia::media::AudioSampleFormat::UNSIGNED_8)
       << "hardware is not expected to support UNSIGNED_8";
   FX_CHECK(audio_dev_enum_.is_bound());
 
   auto ptr = std::make_unique<VirtualInput<SampleFormat>>(
       static_cast<TestFixture*>(this), environment_.get(), device_id, format, frame_count,
-      virtual_input_next_inspect_id_++, plug_properties, device_gain_db);
+      virtual_input_next_inspect_id_++, plug_properties, device_gain_db, device_clock_properties);
   auto out = ptr.get();
   auto id = AudioDevice::UniqueIdToString(device_id);
   devices_[id].input = std::move(ptr);
@@ -448,10 +450,10 @@ void HermeticAudioTest::ExpectInspectMetrics(const std::vector<std::string>& pat
 #define INSTANTIATE(T)                                                                     \
   template VirtualOutput<T>* HermeticAudioTest::CreateOutput<T>(                           \
       const audio_stream_unique_id_t&, TypedFormat<T>, size_t,                             \
-      std::optional<DevicePlugProperties>, float);                                         \
+      std::optional<DevicePlugProperties>, float, std::optional<DeviceClockProperties>);   \
   template VirtualInput<T>* HermeticAudioTest::CreateInput<T>(                             \
       const audio_stream_unique_id_t&, TypedFormat<T>, size_t,                             \
-      std::optional<DevicePlugProperties>, float);                                         \
+      std::optional<DevicePlugProperties>, float, std::optional<DeviceClockProperties>);   \
   template AudioRendererShim<T>* HermeticAudioTest::CreateAudioRenderer<T>(                \
       TypedFormat<T>, size_t, fuchsia::media::AudioRenderUsage, std::optional<zx::clock>); \
   template AudioCapturerShim<T>* HermeticAudioTest::CreateAudioCapturer<T>(                \

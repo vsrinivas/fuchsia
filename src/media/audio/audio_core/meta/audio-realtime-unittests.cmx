@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "test/audio-realtime-unittests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.scheduler.ProfileProvider"
+        ]
+    }
+}

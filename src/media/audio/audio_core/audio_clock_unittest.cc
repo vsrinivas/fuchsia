@@ -22,12 +22,20 @@ class AudioClockTest : public testing::Test {
   void ValidateSyncNone(AudioClock& source_clock, AudioClock& dest_clock) {
     EXPECT_EQ(AudioClock::SyncMode::None, AudioClock::SyncModeForClocks(source_clock, dest_clock));
   }
-  void ValidateSyncDestClock(AudioClock& source_clock, AudioClock& dest_clock) {
-    EXPECT_EQ(AudioClock::SyncMode::AdjustDestClock,
+  void ValidateSyncResetSource(AudioClock& source_clock, AudioClock& dest_clock) {
+    EXPECT_EQ(AudioClock::SyncMode::ResetSourceClock,
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
   }
-  void ValidateSyncSourceClock(AudioClock& source_clock, AudioClock& dest_clock) {
+  void ValidateSyncResetDest(AudioClock& source_clock, AudioClock& dest_clock) {
+    EXPECT_EQ(AudioClock::SyncMode::ResetDestClock,
+              AudioClock::SyncModeForClocks(source_clock, dest_clock));
+  }
+  void ValidateSyncAdjustSource(AudioClock& source_clock, AudioClock& dest_clock) {
     EXPECT_EQ(AudioClock::SyncMode::AdjustSourceClock,
+              AudioClock::SyncModeForClocks(source_clock, dest_clock));
+  }
+  void ValidateSyncAdjustDest(AudioClock& source_clock, AudioClock& dest_clock) {
+    EXPECT_EQ(AudioClock::SyncMode::AdjustDestClock,
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
   }
   void ValidateSyncMicroSrc(AudioClock& source_clock, AudioClock& dest_clock) {
@@ -120,7 +128,12 @@ TEST_F(AudioClockTest, SyncModeNone) {
 
   auto client_adjustable = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
 
-  auto device_fixed = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
+  auto device_monotonic =
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+  auto device_monotonic2 =
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+
+  auto device_non_monotonic = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
   auto device_fixed_same_domain = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
 
   auto device_adjustable =
@@ -131,50 +144,70 @@ TEST_F(AudioClockTest, SyncModeNone) {
   // No synchronization is needed, when reconciling any clock with itself.
   ValidateSyncNone(client_fixed, client_fixed);
   ValidateSyncNone(client_adjustable, client_adjustable);
-  ValidateSyncNone(device_fixed, device_fixed);
+  ValidateSyncNone(device_monotonic, device_monotonic);
+  ValidateSyncNone(device_monotonic, device_monotonic2);
+  ValidateSyncNone(device_non_monotonic, device_non_monotonic);
   ValidateSyncNone(device_adjustable, device_adjustable);
 
   // No synchronization is needed, when reconciling two device clocks in the same domain.
-  ValidateSyncNone(device_fixed, device_fixed_same_domain);
-  ValidateSyncNone(device_fixed, device_adjustable_same_domain);
+  ValidateSyncNone(device_non_monotonic, device_fixed_same_domain);
+  ValidateSyncNone(device_non_monotonic, device_adjustable_same_domain);
   ValidateSyncNone(device_adjustable, device_fixed_same_domain);
   ValidateSyncNone(device_adjustable, device_adjustable_same_domain);
 }
 
-// Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::AdjustSourceClock
-TEST_F(AudioClockTest, SyncModeAdjustSourceClock) {
-  auto client_fixed = AudioClock::ClientFixed(clock::CloneOfMonotonic());
+// Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::ResetSourceClock
+TEST_F(AudioClockTest, SyncModeResetSourceClock) {
+  auto client_adjustable = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
+
+  auto device_monotonic =
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+
+  // If device is in MONOTONIC domain, adjustable client clock can be reset to no-rate-adjustment
+  ValidateSyncResetSource(client_adjustable, device_monotonic);
+}
+
+// Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::ResetSourceClock
+TEST_F(AudioClockTest, SyncModeResetDestClock) {
+  auto device_monotonic =
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 
   auto client_adjustable = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
+
+  // If device is in MONOTONIC domain, adjustable client clock can be reset to no-rate-adjustment
+  ValidateSyncResetDest(device_monotonic, client_adjustable);
+}
+
+// Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::AdjustSourceClock
+TEST_F(AudioClockTest, SyncModeAdjustSourceClock) {
+  auto client_adjustable = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
+
+  auto client_fixed = AudioClock::ClientFixed(clock::CloneOfMonotonic());
   auto client_adjustable2 = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
-
-  auto device_fixed = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
-
+  auto device_non_monotonic = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
   auto device_adjustable =
       AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
 
   // If a client adjustable clock is used, adjust it so that it matches the other clock.
-  ValidateSyncSourceClock(client_adjustable, client_fixed);
-  ValidateSyncSourceClock(client_adjustable, client_adjustable2);
-  ValidateSyncSourceClock(client_adjustable, device_fixed);
-  ValidateSyncSourceClock(client_adjustable, device_adjustable);
+  ValidateSyncAdjustSource(client_adjustable, client_fixed);
+  ValidateSyncAdjustSource(client_adjustable, client_adjustable2);
+  ValidateSyncAdjustSource(client_adjustable, device_non_monotonic);
+  ValidateSyncAdjustSource(client_adjustable, device_adjustable);
 }
 
 // Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::AdjustSourceClock
 TEST_F(AudioClockTest, SyncModeAdjustDestClock) {
   auto client_fixed = AudioClock::ClientFixed(clock::CloneOfMonotonic());
-
-  auto client_adjustable = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
-
-  auto device_fixed = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
-
+  auto device_non_monotonic = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
   auto device_adjustable =
       AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
 
+  auto client_adjustable = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
+
   // If a client adjustable clock is used, adjust it so that it matches the other clock.
-  ValidateSyncDestClock(client_fixed, client_adjustable);
-  ValidateSyncDestClock(device_fixed, client_adjustable);
-  ValidateSyncDestClock(device_adjustable, client_adjustable);
+  ValidateSyncAdjustDest(client_fixed, client_adjustable);
+  ValidateSyncAdjustDest(device_non_monotonic, client_adjustable);
+  ValidateSyncAdjustDest(device_adjustable, client_adjustable);
 }
 
 // Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::MicroSrc
@@ -182,9 +215,10 @@ TEST_F(AudioClockTest, SyncModeMicroSrc) {
   auto client_fixed = AudioClock::ClientFixed(clock::CloneOfMonotonic());
   auto client_fixed2 = AudioClock::ClientFixed(clock::CloneOfMonotonic());
 
-  auto device_fixed = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
-  auto device_fixed_diff_domain =
-      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain2);
+  auto device_monotonic =
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+  auto device_non_monotonic = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
+  auto device_diff_domain = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain2);
 
   auto device_adjustable =
       AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
@@ -194,15 +228,22 @@ TEST_F(AudioClockTest, SyncModeMicroSrc) {
   // If neither is Flexible, and if the clock pair does not include both a adjustable device clock
   // and the software clock designated to control it, then reconcile them using micro-SRC.
   ValidateSyncMicroSrc(client_fixed, client_fixed2);
-  ValidateSyncMicroSrc(client_fixed, device_fixed);
+  ValidateSyncMicroSrc(client_fixed, device_monotonic);
+  ValidateSyncMicroSrc(client_fixed, device_non_monotonic);
   ValidateSyncMicroSrc(client_fixed, device_adjustable);
 
-  ValidateSyncMicroSrc(device_fixed, client_fixed);
-  ValidateSyncMicroSrc(device_fixed, device_fixed_diff_domain);
-  ValidateSyncMicroSrc(device_fixed, device_adjustable_diff_domain);
+  ValidateSyncMicroSrc(device_monotonic, client_fixed);
+  ValidateSyncMicroSrc(device_monotonic, device_non_monotonic);
+  ValidateSyncMicroSrc(device_monotonic, device_adjustable);
+
+  ValidateSyncMicroSrc(device_non_monotonic, client_fixed);
+  ValidateSyncMicroSrc(device_non_monotonic, device_monotonic);
+  ValidateSyncMicroSrc(device_non_monotonic, device_diff_domain);
+  ValidateSyncMicroSrc(device_non_monotonic, device_adjustable_diff_domain);
 
   ValidateSyncMicroSrc(device_adjustable, client_fixed);
-  ValidateSyncMicroSrc(device_adjustable, device_fixed_diff_domain);
+  ValidateSyncMicroSrc(device_adjustable, device_monotonic);
+  ValidateSyncMicroSrc(device_adjustable, device_diff_domain);
   ValidateSyncMicroSrc(device_adjustable, device_adjustable_diff_domain);
 }
 

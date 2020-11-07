@@ -50,13 +50,15 @@ class HermeticAudioTest : public TestFixture {
   VirtualOutput<SampleFormat>* CreateOutput(
       const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format,
       size_t frame_count, std::optional<DevicePlugProperties> plug_properties = std::nullopt,
-      float device_gain_db = 0);
+      float device_gain_db = 0,
+      std::optional<DeviceClockProperties> device_clock_properties = std::nullopt);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   VirtualInput<SampleFormat>* CreateInput(
       const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format,
       size_t frame_count, std::optional<DevicePlugProperties> plug_properties = std::nullopt,
-      float device_gain_db = 0);
+      float device_gain_db = 0,
+      std::optional<DeviceClockProperties> device_clock_properties = std::nullopt);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   AudioRendererShim<SampleFormat>* CreateAudioRenderer(
