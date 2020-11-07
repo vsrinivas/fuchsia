@@ -75,7 +75,7 @@ template("test_spec") {
   # tests.
   if (is_fuchsia) {
     if (!defined(environments)) {
-      environments = [ emu_env ]
+      environments = basic_envs
     }
   } else if (is_linux || is_mac) {
     if (!defined(environments)) {
