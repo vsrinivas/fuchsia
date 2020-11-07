@@ -497,57 +497,55 @@ sdk("firmware") {
   ]
 }
 
-if (!fuchsia_dart_sdk_in_topaz) {
-  # Tools and libraries to develop for Fuchsia with Dart.
-  sdk("fuchsia_dart") {
-    category = "partner"
+# Tools and libraries to develop for Fuchsia with Dart.
+sdk("fuchsia_dart") {
+  category = "partner"
 
-    id = sdk_id
+  id = sdk_id
 
-    api = "fuchsia_dart.manifest"
+  api = "fuchsia_dart.manifest"
 
-    deps = [
-      "//sdk/docs:modular_config_schema",
+  deps = [
+    "//sdk/docs:modular_config_schema",
 
-      # TODO(leetodd): remove, needed to soft transition
-      # https://fuchsia-review.googlesource.com/c/fuchsia/+/399537
-      "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_sdk",
+    # TODO(leetodd): remove, needed to soft transition
+    # https://fuchsia-review.googlesource.com/c/fuchsia/+/399537
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_sdk",
 
-      # TODO(viktard): remove, needed to soft transition
-      # https://fuchsia-review.googlesource.com/c/fuchsia/+/295264
-      "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_sdk",
-      "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2_sdk",
+    # TODO(viktard): remove, needed to soft transition
+    # https://fuchsia-review.googlesource.com/c/fuchsia/+/295264
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_sdk",
+    "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2_sdk",
 
-      # TODO(fxbug.dev/24537): Remove this temporary dependency.
-      # Temporarily added as a direct dependency so that it can be removed from
-      # //sdk/fidl/fuchsia.ui.views.
-      "//sdk/fidl/fuchsia.intl:fuchsia.intl_sdk",
+    # TODO(fxbug.dev/24537): Remove this temporary dependency.
+    # Temporarily added as a direct dependency so that it can be removed from
+    # //sdk/fidl/fuchsia.ui.views.
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_sdk",
 
-      # Direct FIDL deps.
-      # Relying on transitive deps originating in fuchsia.git
-      # makes it impossible to land certain changes without breaking
-      # //topaz.
-      # If a FIDL deps is part of the SDK, it should be explicitly listed here.
-      "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_sdk",
-      "//topaz/bin/fidlgen_dart:fidlgen_dart_sdk_legacy($host_toolchain)",
-      "//topaz/public/dart/composition_delegate:composition_delegate_sdk($dart_toolchain)",
-      get_label_info(dart_package_label.fidl, "dir") + ":" +
-          get_label_info(dart_package_label.fidl, "name") +
-          "_sdk($dart_toolchain)",
-      get_label_info(dart_package_label.fuchsia, "dir") + ":" +
-          get_label_info(dart_package_label.fuchsia, "name") +
-          "_sdk($dart_toolchain)",
-      "//topaz/public/dart/fuchsia_inspect:fuchsia_inspect_sdk($dart_toolchain)",
-      "//topaz/public/dart/fuchsia_logger:fuchsia_logger_sdk($dart_toolchain)",
-      "//topaz/public/dart/fuchsia_modular:fuchsia_modular_sdk($dart_toolchain)",
-      "//topaz/public/dart/fuchsia_modular_testing:fuchsia_modular_testing_sdk($dart_toolchain)",
-      "//topaz/public/dart/fuchsia_scenic:fuchsia_scenic_sdk($dart_toolchain)",
-      "//topaz/public/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_sdk($dart_toolchain)",
-      "//topaz/public/dart/fuchsia_services:fuchsia_services_sdk($dart_toolchain)",
-      "//topaz/public/dart/fuchsia_vfs:fuchsia_vfs_sdk($dart_toolchain)",
-      "//topaz/public/dart/fuchsia_webview_flutter:fuchsia_webview_flutter_sdk($dart_toolchain)",
-      "//topaz/runtime/dart:gen_snapshot_sdk($dart_toolchain)",
-      "//topaz/runtime/dart:kernel_compiler_sdk($host_toolchain)",
-    ]
-  }
+    # Direct FIDL deps.
+    # Relying on transitive deps originating in fuchsia.git
+    # makes it impossible to land certain changes without breaking
+    # //topaz.
+    # If a FIDL deps is part of the SDK, it should be explicitly listed here.
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_sdk",
+    "//topaz/bin/fidlgen_dart:fidlgen_dart_sdk_legacy($host_toolchain)",
+    "//topaz/public/dart/composition_delegate:composition_delegate_sdk($dart_toolchain)",
+    get_label_info(dart_package_label.fidl, "dir") + ":" +
+        get_label_info(dart_package_label.fidl, "name") +
+        "_sdk($dart_toolchain)",
+    get_label_info(dart_package_label.fuchsia, "dir") + ":" +
+        get_label_info(dart_package_label.fuchsia, "name") +
+        "_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_inspect:fuchsia_inspect_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_logger:fuchsia_logger_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_modular:fuchsia_modular_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_modular_testing:fuchsia_modular_testing_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_scenic:fuchsia_scenic_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_services:fuchsia_services_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_vfs:fuchsia_vfs_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_webview_flutter:fuchsia_webview_flutter_sdk($dart_toolchain)",
+    "//topaz/runtime/dart:gen_snapshot_sdk($dart_toolchain)",
+    "//topaz/runtime/dart:kernel_compiler_sdk($host_toolchain)",
+  ]
 }
