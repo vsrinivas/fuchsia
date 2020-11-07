@@ -204,7 +204,6 @@ TEST(ProcessTest, ProcessStartFail) {
   // Test that calling process_start() again for an existing process fails in a
   // reasonable way. Also test that the transferred object is closed.
   EXPECT_EQ(zx_process_start(process, other_thread, 0, 0, event2, 0), ZX_ERR_BAD_STATE);
-  EXPECT_EQ(zx_object_signal(event2, 0u, ZX_EVENT_SIGNALED), ZX_ERR_BAD_HANDLE);
 
   zx_handle_close(process);
   zx_handle_close(thread);
@@ -339,6 +338,7 @@ TEST(ProcessTest, InfoReflectsProcessState) {
   zx_handle_t proc;
   zx_handle_t vmar;
   ASSERT_OK(zx_process_create(job_child, "ttp", 4u, 0u, &proc, &vmar));
+  EXPECT_OK(zx_handle_close(job_child));
 
   zx_handle_t thread;
   ASSERT_OK(zx_thread_create(proc, "th", 3u, 0u, &thread));
@@ -387,12 +387,15 @@ class TestProcess {
   void CreateThread() {
     ASSERT_LT(num_threads_, kMaxThreads);
 
-    zx_handle_t thread;
     char name[32];
     size_t name_length = snprintf(name, sizeof(name), "test_thread_%d", num_threads_);
-    ASSERT_OK(zx_thread_create(process_, name, name_length, 0, &thread));
 
-    threads_[num_threads_++] = thread;
+    // Can not use a local variable here for the created thread based on clang static analyzer
+    // limitations. It currently cannot handle case where the local variable is assigned to another
+    // memregion.
+    // TODO(fxbug.dev/63653): rewrite this to use local variable once clang static analyzer is
+    // improved.
+    ASSERT_OK(zx_thread_create(process_, name, name_length, 0, &threads_[num_threads_++]));
   }
 
   // Starts the process and all child threads.
@@ -742,10 +745,10 @@ TEST(ProcessTest, CreateAndKillJobRaceStress) {
       zx_nanosleep(ZX_MSEC(10));
 
       status = zx_task_kill(handle);
+      zx_handle_close(handle);
       if (status != ZX_OK) {
         return status;
       }
-      zx_handle_close(handle);
       handle = ZX_HANDLE_INVALID;
       job->store(handle);
     }
