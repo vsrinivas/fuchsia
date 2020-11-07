@@ -12,6 +12,11 @@
 
 // clang-format off
 
+// Signals for synchronizing between devmgr and fshost during fshost launch
+#define FSHOST_SIGNAL_READY      ZX_USER_SIGNAL_0  // Signalled by fshost
+#define FSHOST_SIGNAL_EXIT       ZX_USER_SIGNAL_1  // Signalled by devmgr
+#define FSHOST_SIGNAL_EXIT_DONE  ZX_USER_SIGNAL_2  // Signalled by fshost
+
 // Flags for specifying what should be in a new process's namespace
 #define FS_SVC      0x0001
 #define FS_DEV      0x0002

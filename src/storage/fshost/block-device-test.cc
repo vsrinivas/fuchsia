@@ -56,6 +56,7 @@ class BlockDeviceHarness : public zxtest::Test {
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
     ASSERT_OK(fdio_ns_bind(ns, "/fs", client.release()));
+    manager_->WatchExit();
 
     // fshost uses hardcoded /boot/bin paths to launch filesystems, but this test is packaged now.
     // Make /boot redirect to /pkg in our namespace, which contains the needed binaries.
@@ -101,7 +102,7 @@ class BlockDeviceHarness : public zxtest::Test {
 
   fbl::unique_fd GetRamdiskFd() { return std::move(fd_); }
 
-  std::shared_ptr<FsManager> GetManager() { return manager_; }
+  std::unique_ptr<FsManager> TakeManager() { return std::move(manager_); }
 
   fbl::unique_fd devfs_root() { return devmgr_.devfs_root().duplicate(); }
 
@@ -110,13 +111,13 @@ class BlockDeviceHarness : public zxtest::Test {
   ramdisk_client_t* ramdisk_ = nullptr;
 
  private:
-  std::shared_ptr<FsManager> manager_;
+  std::unique_ptr<FsManager> manager_;
   IsolatedDevmgr devmgr_;
   fbl::unique_fd fd_;
 };
 
 TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
-  std::shared_ptr<FsManager> manager = GetManager();
+  std::unique_ptr<FsManager> manager = TakeManager();
   BlockWatcherOptions options = {};
   FilesystemMounter mounter(std::move(manager), options);
   fbl::unique_fd fd;
@@ -140,7 +141,7 @@ TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
 }
 
 TEST_F(BlockDeviceHarness, TestEmptyDevice) {
-  std::shared_ptr<FsManager> manager = GetManager();
+  std::unique_ptr<FsManager> manager = TakeManager();
   BlockWatcherOptions options = {};
   FilesystemMounter mounter(std::move(manager), options);
 
@@ -169,7 +170,7 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
 }
 
 TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
-  std::shared_ptr<FsManager> manager = GetManager();
+  std::unique_ptr<FsManager> manager = TakeManager();
   BlockWatcherOptions options = {};
   FilesystemMounter mounter(std::move(manager), options);
 
@@ -189,7 +190,7 @@ TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
 }
 
 TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
-  std::shared_ptr<FsManager> manager = GetManager();
+  std::unique_ptr<FsManager> manager = TakeManager();
 
   BlockWatcherOptions options = {};
   FilesystemMounter mounter(std::move(manager), options);
@@ -207,7 +208,7 @@ TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
 }
 
 TEST_F(BlockDeviceHarness, TestMinfsReformat) {
-  std::shared_ptr<FsManager> manager = GetManager();
+  std::unique_ptr<FsManager> manager = TakeManager();
 
   BlockWatcherOptions options = {};
   options.check_filesystems = true;
@@ -232,7 +233,7 @@ TEST_F(BlockDeviceHarness, TestMinfsReformat) {
 }
 
 TEST_F(BlockDeviceHarness, TestBlobfs) {
-  std::shared_ptr<FsManager> manager = GetManager();
+  std::unique_ptr<FsManager> manager = TakeManager();
 
   BlockWatcherOptions options = {};
   options.check_filesystems = true;
@@ -257,7 +258,7 @@ TEST_F(BlockDeviceHarness, TestBlobfs) {
 }
 
 TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
-  std::shared_ptr<FsManager> manager = GetManager();
+  std::unique_ptr<FsManager> manager = TakeManager();
 
   BlockWatcherOptions options = {};
   options.check_filesystems = true;

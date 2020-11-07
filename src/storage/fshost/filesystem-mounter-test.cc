@@ -29,12 +29,13 @@ class FilesystemMounterHarness : public zxtest::Test {
     zx::channel dir_request, lifecycle_request;
     ASSERT_OK(FsManager::Create(nullptr, std::move(dir_request), std::move(lifecycle_request),
                                 MakeMetrics(), &manager_));
+    manager_->WatchExit();
   }
 
-  std::shared_ptr<FsManager> GetManager() { return manager_; }
+  std::unique_ptr<FsManager> TakeManager() { return std::move(manager_); }
 
  private:
-  std::shared_ptr<FsManager> manager_;
+  std::unique_ptr<FsManager> manager_;
 };
 
 using MounterTest = FilesystemMounterHarness;
@@ -43,12 +44,12 @@ TEST_F(MounterTest, CreateFilesystemManager) {}
 
 TEST_F(MounterTest, CreateFilesystemMounter) {
   BlockWatcherOptions options = {};
-  FilesystemMounter mounter(GetManager(), options);
+  FilesystemMounter mounter(TakeManager(), options);
 }
 
 TEST_F(MounterTest, PkgfsWillNotMountBeforeBlobAndData) {
   BlockWatcherOptions options = {};
-  FilesystemMounter mounter(GetManager(), options);
+  FilesystemMounter mounter(TakeManager(), options);
 
   ASSERT_FALSE(mounter.BlobMounted());
   ASSERT_FALSE(mounter.DataMounted());
@@ -136,7 +137,7 @@ class TestMounter : public FilesystemMounter {
 
 TEST_F(MounterTest, DurableMount) {
   BlockWatcherOptions block_options = {};
-  TestMounter mounter(GetManager(), block_options);
+  TestMounter mounter(TakeManager(), block_options);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
@@ -146,7 +147,7 @@ TEST_F(MounterTest, DurableMount) {
 
 TEST_F(MounterTest, FactoryMount) {
   BlockWatcherOptions block_options = {};
-  TestMounter mounter(GetManager(), block_options);
+  TestMounter mounter(TakeManager(), block_options);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kFactoryfs);
@@ -158,7 +159,7 @@ TEST_F(MounterTest, FactoryMount) {
 TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
   BlockWatcherOptions block_options = {};
   block_options.wait_for_data = true;
-  TestMounter mounter(GetManager(), block_options);
+  TestMounter mounter(TakeManager(), block_options);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
@@ -173,7 +174,7 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
 TEST_F(MounterTest, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
   BlockWatcherOptions block_options = {};
   block_options.wait_for_data = false;
-  TestMounter mounter(GetManager(), block_options);
+  TestMounter mounter(TakeManager(), block_options);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
@@ -188,7 +189,7 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
 TEST_F(MounterTest, PkgfsWillNotMountBeforeBlob) {
   BlockWatcherOptions block_options = {};
   block_options.wait_for_data = true;
-  TestMounter mounter(GetManager(), block_options);
+  TestMounter mounter(TakeManager(), block_options);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
@@ -203,7 +204,7 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeBlob) {
 TEST_F(MounterTest, PkgfsMountsWithBlobAndData) {
   BlockWatcherOptions block_options = {};
   block_options.wait_for_data = true;
-  TestMounter mounter(GetManager(), block_options);
+  TestMounter mounter(TakeManager(), block_options);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);

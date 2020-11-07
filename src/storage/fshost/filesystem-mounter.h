@@ -24,7 +24,7 @@ namespace devmgr {
 // and helps clients mount filesystems within the fshost namespace.
 class FilesystemMounter {
  public:
-  FilesystemMounter(std::shared_ptr<FsManager> fshost, BlockWatcherOptions options)
+  FilesystemMounter(std::unique_ptr<FsManager> fshost, BlockWatcherOptions options)
       : fshost_(std::move(fshost)), options_(options) {}
 
   virtual ~FilesystemMounter() = default;
@@ -92,7 +92,7 @@ class FilesystemMounter {
   virtual zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                                size_t len, uint32_t fs_flags);
 
-  std::shared_ptr<FsManager> fshost_;
+  std::unique_ptr<FsManager> fshost_;
   const BlockWatcherOptions options_;
   bool data_mounted_ = false;
   bool durable_mounted_ = false;

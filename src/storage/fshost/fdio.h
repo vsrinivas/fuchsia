@@ -15,6 +15,11 @@ namespace devmgr {
 
 // clang-format off
 
+// Signals for synchronizing between devmgr and fshost during fshost launch
+#define FSHOST_SIGNAL_READY      ZX_USER_SIGNAL_0  // Signalled by fshost
+#define FSHOST_SIGNAL_EXIT       ZX_USER_SIGNAL_1  // Signalled by devmgr
+#define FSHOST_SIGNAL_EXIT_DONE  ZX_USER_SIGNAL_2  // Signalled by fshost
+
 // Flags for specifying what should be in a new process's namespace
 // Note that there were previously many more constants here, but this is now only used by fshost
 // which only needs to support the following

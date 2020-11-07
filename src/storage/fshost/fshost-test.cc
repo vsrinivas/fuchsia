@@ -99,41 +99,34 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   EXPECT_EQ(node->GetRemote(), vfs_client_value);
 }
 
-// Test that the manager performs the shutdown procedure correctly with respect to externally
-// observable behaviors.
-TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
-  std::shared_ptr<devmgr::FsManager> manager;
+// Test that the manager responds to external signals for unmounting.
+TEST(FsManagerTestCase, WatchExit) {
+  std::unique_ptr<devmgr::FsManager> manager;
   zx::channel dir_request, lifecycle_request;
   zx_status_t status =
       devmgr::FsManager::Create(nullptr, std::move(dir_request), std::move(lifecycle_request),
                                 devmgr::FsHostMetrics(MakeCollector()), &manager);
   ASSERT_OK(status);
+  manager->WatchExit();
 
-  // The manager should not have exited yet: No one has asked for the shutdown.
-  EXPECT_FALSE(manager->IsShutdown());
+  zx::event controller;
+  ASSERT_OK(manager->event()->duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
 
-  // Once we trigger shutdown, we expect a shutdown signal.
-  sync_completion_t callback_called;
-  manager->Shutdown([callback_called = &callback_called](zx_status_t status) {
-    EXPECT_OK(status);
-    sync_completion_signal(callback_called);
-  });
-  manager->WaitForShutdown();
-  EXPECT_OK(sync_completion_wait(&callback_called, ZX_TIME_INFINITE));
+  // The manager should not have exited yet: No one has asked for an unmount.
+  zx_signals_t pending;
+  auto deadline = zx::deadline_after(zx::msec(10));
+  ASSERT_EQ(ZX_ERR_TIMED_OUT, controller.wait_one(FSHOST_SIGNAL_EXIT_DONE, deadline, &pending));
 
-  // It's an error if shutdown gets called twice, but we expect the callback to still get called
-  // with the appropriate error message since the shutdown function has no return value.
-  sync_completion_reset(&callback_called);
-  manager->Shutdown([callback_called = &callback_called](zx_status_t status) {
-    EXPECT_EQ(status, ZX_ERR_INTERNAL);
-    sync_completion_signal(callback_called);
-  });
-  EXPECT_OK(sync_completion_wait(&callback_called, ZX_TIME_INFINITE));
+  // Once we "SIGNAL_EXIT", we expect an "EXIT_DONE" response.
+  ASSERT_OK(controller.signal(0, FSHOST_SIGNAL_EXIT));
+  deadline = zx::deadline_after(zx::sec(1));
+  EXPECT_OK(controller.wait_one(FSHOST_SIGNAL_EXIT_DONE, deadline, &pending));
+  EXPECT_TRUE(pending & FSHOST_SIGNAL_EXIT_DONE);
 }
 
 // Test that the manager shuts down the filesystems given a call on the lifecycle channel
 TEST(FsManagerTestCase, LifecycleStop) {
-  std::shared_ptr<devmgr::FsManager> manager;
+  std::unique_ptr<devmgr::FsManager> manager;
   zx::channel dir_request, lifecycle_request, lifecycle;
   zx_status_t status = zx::channel::create(0, &lifecycle_request, &lifecycle);
   ASSERT_OK(status);
@@ -141,9 +134,15 @@ TEST(FsManagerTestCase, LifecycleStop) {
   status = devmgr::FsManager::Create(nullptr, std::move(dir_request), std::move(lifecycle_request),
                                      devmgr::FsHostMetrics(MakeCollector()), &manager);
   ASSERT_OK(status);
+  manager->WatchExit();
+
+  zx::event controller;
+  ASSERT_OK(manager->event()->duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
 
   // The manager should not have exited yet: No one has asked for an unmount.
-  EXPECT_FALSE(manager->IsShutdown());
+  zx_signals_t pending;
+  auto deadline = zx::deadline_after(zx::msec(10));
+  ASSERT_EQ(ZX_ERR_TIMED_OUT, controller.wait_one(FSHOST_SIGNAL_EXIT_DONE, deadline, &pending));
 
   // Call stop on the lifecycle channel
   llcpp::fuchsia::process::lifecycle::Lifecycle::SyncClient client(std::move(lifecycle));
@@ -151,12 +150,12 @@ TEST(FsManagerTestCase, LifecycleStop) {
   ASSERT_OK(result.status());
 
   // the lifecycle channel should be closed now
-  zx_signals_t pending;
   EXPECT_OK(client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &pending));
   EXPECT_TRUE(pending & ZX_CHANNEL_PEER_CLOSED);
 
-  // Now we expect a shutdown signal.
-  manager->WaitForShutdown();
+  // Now we expect an "EXIT_DONE" signal.
+  EXPECT_OK(controller.wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::time::infinite(), &pending));
+  EXPECT_TRUE(pending & FSHOST_SIGNAL_EXIT_DONE);
 }
 
 struct Context {
