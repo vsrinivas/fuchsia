@@ -31,17 +31,26 @@ constexpr uint32_t kInputDefaultPacketCountForCodec = kInputPacketCountForCodecR
 constexpr uint32_t kInputPacketCountForClientMin = 1;
 constexpr uint32_t kInputPacketCountForClientMax = std::numeric_limits<uint32_t>::max();
 
-// This is fairly arbitrary, but rough speaking, 1 to be filling, 1 to be in
-// flight toward the codec, and 1 to be in flight from the codec.  This doesn't
-// intend to be large enough to ride out any hypothetical decoder performance
-// variability vs. needed decode rate.
-constexpr uint32_t kInputDefaultPacketCountForClient = 3;
+// Just 1 buffer to be in flight back to the client, filling, or in flight back to the codec.  Along
+// with the 1 buffer that'll be requested by the codec, this is just barely enough to keep the
+// codec busy assuming codec processing is slower than returning an input buffer to the client,
+// filling that buffer, and returning that buffer back to the codec server.
+//
+// This doesn't intend to be large enough to ride out any hypothetical codec performance variability
+// vs. needed processing rate.
+constexpr uint32_t kInputDefaultPacketCountForClient = 1;
 
 // TODO(dustingreen): Implement and permit single-buffer mode.  (The default
 // will probably remain buffer per packet mode though.)
 constexpr bool kInputSingleBufferModeAllowed = false;
 constexpr bool kInputDefaultSingleBufferMode = false;
 
+// These fields should soon be ignored by clients as these fields are being deprecated, so it's not
+// particularly important that they don't match what each CodecAdapter will tell sysmem via
+// SetConstraints().
+//
+// TODO(fxbug.dev/61424): Remove these when possible.
+//
 // A client using the min shouldn't necessarily expect performance to be
 // acceptable when running higher bit-rates.
 constexpr uint32_t kInputPerPacketBufferBytesMin = 8 * 1024;
@@ -57,7 +66,6 @@ constexpr uint32_t kInputPerPacketBufferBytesRecommended = 512 * 1024;
 // recommended is to allow some room to profile whether larger buffer space per
 // packet might be useful for performance.
 constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
-
 constexpr uint32_t kInputDefaultPerPacketBufferBytes = kInputPerPacketBufferBytesRecommended;
 
 }  // namespace

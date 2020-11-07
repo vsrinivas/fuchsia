@@ -36,13 +36,7 @@ constexpr uint32_t kInputMinBufferCountForDedicatedSlack = 2;
 constexpr bool kInputSingleBufferModeAllowed = false;
 constexpr bool kInputDefaultSingleBufferMode = false;
 
-// This is fairly arbitrary, but roughly speaking, ~266 KiB for an average frame
-// at 50 Mbps for 4k video, rounded up to 512 KiB buffer space per packet to
-// allow most but not all frames to fit in one packet.  It could be equally
-// reasonable to say the average-size compressed frame should barely fit in one
-// packet's buffer space, or the average-size compressed frame should split to
-// ~1.5 packets, but we don't want an excessive number of packets required per
-// frame (not even for I frames).
+// TODO(fxbug.dev/61424): Remove these when possible.
 constexpr uint32_t kInputPerPacketBufferBytesMin = 8 * 1024;
 constexpr uint32_t kInputPerPacketBufferBytesRecommended = 512 * 1024;
 constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
@@ -62,11 +56,11 @@ constexpr uint32_t kOutputPacketCountForClientMax = std::numeric_limits<uint32_t
 constexpr uint32_t kOutputDefaultPacketCountForClient = 5;
 
 constexpr uint32_t kOutputMinBufferCountForCamping = 1;
-constexpr uint32_t kOutputMinBufferCountForDedicatedSlack = 2;
 
 constexpr bool kOutputSingleBufferModeAllowed = false;
 constexpr bool kOutputDefaultSingleBufferMode = false;
 
+// TODO(fxbug.dev/61424): Remove these when possible.
 constexpr uint32_t kOutputPerPacketBufferBytesMin = 8 * 1024;
 constexpr uint32_t kOutputPerPacketBufferBytesRecommended = 512 * 1024;
 constexpr uint32_t kOutputPerPacketBufferBytesMax = 4 * 1024 * 1024;
@@ -153,11 +147,14 @@ DecryptorAdapter::CoreCodecGetBufferCollectionConstraints(
   // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
 
-  // We also ask for some dedicated slack, since decryption involves some per-buffer process hops
-  // per buffer.  Some slack should help avoid falling behind.
+  // We also ask for some dedicated slack on input, since decryption involves some per-buffer
+  // process hops per buffer.  Some slack should help avoid falling behind.
+  //
+  // We can't ask for slack on output because VDEC has limited space and the HW requires each buffer
+  // to be large enough to hold the largest compressed frame we might potentially see.
   if (port == kOutputPort) {
     result.min_buffer_count_for_camping = kOutputMinBufferCountForCamping;
-    result.min_buffer_count_for_dedicated_slack = kOutputMinBufferCountForDedicatedSlack;
+    ZX_DEBUG_ASSERT(result.min_buffer_count_for_dedicated_slack == 0);
   } else {
     result.min_buffer_count_for_camping = kInputMinBufferCountForCamping;
     result.min_buffer_count_for_dedicated_slack = kInputMinBufferCountForDedicatedSlack;

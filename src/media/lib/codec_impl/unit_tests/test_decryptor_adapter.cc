@@ -132,15 +132,19 @@ class ClearTextDecryptorAdapter : public FakeDecryptorAdapter {
                                                      const OutputBuffer& output,
                                                      CodecPacket* output_packet) override {
     if (!std::holds_alternative<ClearOutputBuffer>(output)) {
+      fprintf(stderr, "!std::holds_alternative<ClearOutputBuffer>(output)\n");
       return fuchsia::media::StreamError::DECRYPTOR_UNKNOWN;
     }
     auto& clear_output = std::get<ClearOutputBuffer>(output);
 
-    if (input.data_length != clear_output.data_length) {
+    if (input.data_length > clear_output.data_length) {
+      fprintf(stderr, "input.data_length > clear_output.data_length -- input: %u output: %u\n",
+              input.data_length, clear_output.data_length);
       return fuchsia::media::StreamError::DECRYPTOR_UNKNOWN;
     }
 
     if (!has_keys()) {
+      fprintf(stderr, "!has_keys()\n");
       return fuchsia::media::StreamError::DECRYPTOR_NO_KEY;
     }
 

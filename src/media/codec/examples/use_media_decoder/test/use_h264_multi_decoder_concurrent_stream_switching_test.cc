@@ -32,7 +32,7 @@ constexpr int kInputFileFrameCount = 300;
 
 const char* kGoldenSha256 = "1cc5002b6d68f34f601813c5bbed775eb1a1033a8109bdf2fed59160f2edc207";
 
-constexpr uint32_t kThreadCount = 3;
+constexpr uint32_t kThreadCount = 2;
 
 }  // namespace
 

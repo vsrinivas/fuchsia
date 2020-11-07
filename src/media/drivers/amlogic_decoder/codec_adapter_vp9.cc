@@ -72,17 +72,20 @@ constexpr uint32_t kFlushThroughBytes = 16384;
 constexpr uint32_t kEndOfStreamWidth = 42;
 constexpr uint32_t kEndOfStreamHeight = 52;
 
-// A client using the min shouldn't necessarily expect performance to be
-// acceptable when running higher bit-rates.
-//
-// TODO(fxbug.dev/13530): Set this to ~8k or so.  For now, we boost the
-// per-packet buffer size to avoid sysmem picking the min buffer size.  The VP9
-// conformance streams have AUs that are > 512KiB, so boosting this to 2MiB
-// until the decoder handles split AUs on input. We need to be able to fit at
-// least 3 of these in the 8MB vdec memory.
-constexpr uint32_t kInputPerPacketBufferBytesMin = 2 * 1024 * 1024;
-// This is an arbitrary cap for now.
-constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
+constexpr uint32_t kStreamBufferSize = 4 * 1024 * 1024;
+
+// For now, force the input buffer size to be exactly 1/2 VDEC so that exactly two buffers barely
+// fit in VDEC.  The HW requires a VP9 superframe to be in a single buffer.  At this size we can be
+// fairly confident that actual superframes we'll see will fit in a single buffer, but not certain
+// of it.  But even if we used all of VDEC instead of 1/2 of VDEC, we could still not be certain of
+// that.  By using 1/2 of VDEC for each of 2 buffers, we get performance benefits over using all of
+// VDEC for 1 buffer.
+constexpr uint32_t kInputPerPacketBufferBytesMin = 1024 * 1024 * 775 / 100 / 2;
+// The max is allowed to be up a size that consumes most of the stream buffer, but not all of the
+// stream buffer.  We might be able to subtract less than ZX_PAGE_SIZE here, but we do need to leave
+// room for kFlushThroughBytes.
+constexpr uint32_t kInputPerPacketBufferBytesMax =
+    kStreamBufferSize - kFlushThroughBytes - ZX_PAGE_SIZE;
 
 constexpr uint32_t kInputBufferCountForCodecMin = 1;
 constexpr uint32_t kInputBufferCountForCodecMax = 64;
@@ -489,7 +492,7 @@ void CodecAdapterVp9::CoreCodecStartStream() {
 
     auto instance = std::make_unique<DecoderInstance>(std::move(decoder), video_->hevc_core());
     // The video decoder can read from non-secure buffers even in secure mode.
-    status = video_->AllocateStreamBuffer(instance->stream_buffer(), 512 * PAGE_SIZE,
+    status = video_->AllocateStreamBuffer(instance->stream_buffer(), kStreamBufferSize,
                                           /*use_parser=*/use_parser_,
                                           /*is_secure=*/IsPortSecure(kInputPort));
     if (status != ZX_OK) {

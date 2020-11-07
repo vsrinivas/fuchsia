@@ -78,6 +78,7 @@ class H264MultiDecoder : public VideoDecoder {
     virtual bool HasMoreInputData() = 0;
     virtual void AsyncPumpDecoder() = 0;
     virtual void AsyncResetStreamAfterCurrentFrame() = 0;
+    virtual uint32_t InputBufferSize() { return 0; }
   };
 
   H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* frame_data_provider,

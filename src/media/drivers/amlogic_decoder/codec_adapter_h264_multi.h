@@ -84,6 +84,7 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
   bool HasMoreInputData() override;
   void AsyncPumpDecoder() override;
   void AsyncResetStreamAfterCurrentFrame() override;
+  uint32_t InputBufferSize() override;
 
  private:
   void QueueInputItem(CodecInputItem input_item, bool at_front = false);

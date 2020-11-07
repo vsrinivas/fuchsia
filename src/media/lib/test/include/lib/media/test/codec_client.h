@@ -53,6 +53,7 @@ class CodecClient {
 
   // Can optionally be called before Start(), to set the min buffer size that'll
   // be requested via sysmem.
+  void SetMinInputBufferSize(uint64_t min_input_buffer_size);
   void SetMinOutputBufferSize(uint64_t min_output_buffer_size);
 
   void SetMinOutputBufferCount(uint32_t min_buffer_count);
@@ -198,6 +199,7 @@ class CodecClient {
   thrd_t loop_thread_{};
   bool is_start_called_ = false;
   fuchsia::media::StreamProcessorPtr codec_;
+  uint64_t min_input_buffer_size_ = 0;
   uint64_t min_output_buffer_size_ = 0;
   uint32_t min_output_buffer_count_ = 0;
   // This only temporarily holds the Codec request that was created during the

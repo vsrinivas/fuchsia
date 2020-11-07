@@ -2482,7 +2482,19 @@ void H264MultiDecoder::PumpDecoder() {
     return;
   }
 
-  if (owner_->GetStreamBufferEmptySpace() <= GetStreamBufferSize() / 3) {
+  // If the ReadMoreInputData() below might give us more data than will fit in the stream buffer,
+  // require the read pointer to advance before adding more.  This leaves a reasonable amount of
+  // space for headers before the first frame, but not a huge amount of space.  In any case, it's
+  // possible for a stream with huge headers and/or zero padding to not be decodable with this HW
+  // decoder just due to the overall size of the stream buffer and the HW decoder not keeping any
+  // incremental progress until decode of a frame is complete.  We can never make the stream buffer
+  // large enough to successfully decode all streams with arbitrarily large headers or arbitrarily
+  // long runs of zero padding in between frames.  Such streams are not expected to be encountered
+  // from any normal source, but if a stream like that is seen, it'll hit the progress check in
+  // StartFrameDecode(), so we'll fail quickly instead of getting stuck.
+  uint32_t input_buffer_size = frame_data_provider_->InputBufferSize();
+  if (input_buffer_size != 0 &&
+      owner_->GetStreamBufferEmptySpace() <= input_buffer_size - kPaddingSize) {
     StartFrameDecode();
     return;
   }

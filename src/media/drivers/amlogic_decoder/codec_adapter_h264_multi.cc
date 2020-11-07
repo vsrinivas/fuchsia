@@ -26,23 +26,33 @@ static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, ui
          (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
 }
 
-// A client using the min shouldn't necessarily expect performance to be
-// acceptable when running higher bit-rates.
-//
-// TODO(fxbug.dev/13530): Set this to ~8k or so.  For now, we have to boost the
-// per-packet buffer size up to fit the largest AUs we expect to decode, until
-// fxbug.dev/13530 is fixed, in case avcC format is used.
-constexpr uint32_t kInputPerPacketBufferBytesMin = 512 * 1024;
-
-// For the moment we rely on this being < 1/3 of kStreamBufferSize.
-//
-// TODO(fxbug.dev/13483): Remove this restriction by doing the TODOs listed just before PumpDecoder.
-constexpr uint32_t kInputPerPacketBufferBytesMax = 1 * 1024 * 1024;
-
-// For the moment we rely on this being > 3 * kStreamBufferSize.
-//
-// TODO(fxbug.dev/13483): Remove this restriction by doing the TODOs listed just before PumpDecoder.
 constexpr uint32_t kStreamBufferSize = 4 * 1024 * 1024;
+
+// See VLD_PADDING_SIZE.
+constexpr uint32_t kPaddingSize = 1024;
+
+// For now we rely on a compressed input frame to be contained entirely in a single buffer.  While
+// this minimum size may work for some demo streams, for now clients are expected to set a larger
+// min_buffer_size for input, in their BufferCollectionConstraints.  A recommended expression for
+// min_buffer_size is max_width * max_height * 3 / 2 / 2 + 128 * 1024.  This recommended expression
+// accounts for MinCR (see h264 spec) of 2 which is worst-case, and allows for SEI/SPS/PPS that's up
+// to 128 KiB which is probably enough for those headers.
+constexpr uint32_t kInputPerPacketBufferBytesMin = 512 * 1024;
+// For experimentation purposes, allow buffers large enough for worst-case DCI 4k compressed input
+// frames, or the vast majority of kStreamBufferSize, whichever is smaller.  While the HW should be
+// able to decode such streams, the current vdec1 clock rate likely won't result in throughput
+// sufficient to keep up at 60 fps, and maybe not even at 30 fps.
+const uint32_t kInputPerPacketBufferBytesMax =
+    std::min(kStreamBufferSize - kPaddingSize - static_cast<uint32_t>(ZX_PAGE_SIZE),
+             4096u * 2160 * 3 / 2 / 2 + 128 * 1024);
+
+// This is accounting for 1024 bytes padding, and the fact that read and write pointers can't be
+// equal.
+constexpr uint32_t kMaxSupportedNonFrameDataBeforeFrameData = 128 * 1024 - 1024 - 1;
+// This is meant to alert anyone changing buffers sizes if the max non-frame data is being reduced,
+// which might risk not being able to decode some streams we could previously decode.
+static_assert(kStreamBufferSize - kInputPerPacketBufferBytesMin - 1024 - 1 >=
+              kMaxSupportedNonFrameDataBeforeFrameData);
 
 constexpr uint32_t kInputBufferCountForCodecMin = 1;
 constexpr uint32_t kInputBufferCountForCodecMax = 64;
@@ -270,8 +280,10 @@ std::list<CodecInputItem> CodecAdapterH264Multi::CoreCodecStopStreamInternal() {
   LOG(DEBUG, "RemoveDecoder()...");
   {
     std::lock_guard<std::mutex> decoder_lock(*video_->video_decoder_lock());
-    video_->RemoveDecoderLocked(decoder_);
-    decoder_ = nullptr;
+    if (decoder_) {
+      video_->RemoveDecoderLocked(decoder_);
+      decoder_ = nullptr;
+    }
   }
   LOG(DEBUG, "RemoveDecoder() done.");
   return leftover_input_items;
@@ -1260,6 +1272,11 @@ void CodecAdapterH264Multi::AsyncResetStreamAfterCurrentFrame() {
     is_stream_failed_ = true;
   }  // ~lock
   events_->onCoreCodecResetStreamAfterCurrentFrame();
+}
+
+uint32_t CodecAdapterH264Multi::InputBufferSize() {
+  ZX_DEBUG_ASSERT(buffer_settings_[kInputPort]);
+  return buffer_settings_[kInputPort]->buffer_settings.size_bytes;
 }
 
 void CodecAdapterH264Multi::CoreCodecResetStreamAfterCurrentFrame() {

@@ -92,8 +92,11 @@ fidl::InterfaceRequest<fuchsia::media::StreamProcessor> CodecClient::GetTheReque
   return std::move(temp_codec_request_);
 }
 
-// Can optionally be called before Start(), to set the min buffer size that'll
-// be requested via sysmem.
+void CodecClient::SetMinInputBufferSize(uint64_t min_input_buffer_size) {
+  ZX_DEBUG_ASSERT(!is_start_called_);
+  min_input_buffer_size_ = min_input_buffer_size;
+}
+
 void CodecClient::SetMinOutputBufferSize(uint64_t min_output_buffer_size) {
   ZX_DEBUG_ASSERT(!is_start_called_);
   min_output_buffer_size_ = min_output_buffer_size;
@@ -814,6 +817,8 @@ bool CodecClient::ConfigurePortBufferCollection(
   if (is_output) {
     constraints.buffer_memory_constraints.min_size_bytes = min_output_buffer_size_;
     constraints.min_buffer_count = min_output_buffer_count_;
+  } else {
+    constraints.buffer_memory_constraints.min_size_bytes = min_input_buffer_size_;
   }
   constraints.buffer_memory_constraints.max_size_bytes = std::numeric_limits<uint32_t>::max();
   constraints.buffer_memory_constraints.physically_contiguous_required = false;

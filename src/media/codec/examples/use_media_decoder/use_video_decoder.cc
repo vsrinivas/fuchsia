@@ -59,6 +59,20 @@ constexpr uint32_t kFirstValidImageId = 1;
 constexpr uint8_t kLongStartCodeArray[] = {0x00, 0x00, 0x00, 0x01};
 constexpr uint8_t kShortStartCodeArray[] = {0x00, 0x00, 0x01};
 
+// For now, we need to ensure we can process frames up to this large for h264.  This doesn't add in
+// the 128 * 1024 that we reserve for SEI/SPS/PPS that can be in the same buffer as a frame.
+constexpr uint32_t kInputLargeFrameSizeH264 = 1920 * 1080 * 3 / 2 / 2;
+constexpr uint32_t kInputReservedForBigHeadersSizeH264 = 128 * 1024;
+constexpr uint32_t kInputMinBufferSizeH264 =
+    kInputLargeFrameSizeH264 + kInputReservedForBigHeadersSizeH264;
+
+// We need to ensure we can process frames/superframes up to this large for VP9.  This is 1/2 the
+// size of VDEC on current HW.
+constexpr uint32_t kInputLargeFrameSizeVp9 = 1024 * 1024 * 775 / 100 / 2;
+constexpr uint32_t kInputMinBufferSizeVp9 = kInputLargeFrameSizeVp9;
+
+constexpr uint32_t kInputMinBufferSize = std::max(kInputMinBufferSizeH264, kInputMinBufferSizeVp9);
+
 // If readable_bytes is 0, that's considered a "start code", to allow the caller
 // to terminate a NAL the same way regardless of whether another start code is
 // found or the end of the buffer is found.
@@ -192,6 +206,11 @@ uint64_t VideoDecoderRunner::QueueH264Frames(uint64_t stream_lifetime_ordinal,
                             &accumulator](uint8_t* bytes, size_t byte_count) -> bool {
     auto tvp = params_.input_copier;
 
+    size_t start_code_size_bytes = 0;
+    ZX_ASSERT(is_start_code(bytes, byte_count, &start_code_size_bytes));
+    ZX_ASSERT(start_code_size_bytes < byte_count);
+    uint8_t nal_unit_type = bytes[start_code_size_bytes] & 0x1f;
+
     size_t insert_offset = accumulator.size();
     size_t new_size = insert_offset + byte_count;
     if (accumulator.capacity() < new_size) {
@@ -199,12 +218,15 @@ uint64_t VideoDecoderRunner::QueueH264Frames(uint64_t stream_lifetime_ordinal,
       accumulator.reserve(new_capacity);
     }
     accumulator.resize(insert_offset + byte_count);
+    // Zero pad IDR frames a lot to verify large frames can decode.
+    if (IsSliceNalUnitType(nal_unit_type) && frame_count < 5) {
+      ZX_DEBUG_ASSERT(byte_count < kInputLargeFrameSizeH264);
+      uint32_t zero_padding_bytes = kInputLargeFrameSizeH264 - byte_count;
+      accumulator.resize(accumulator.size() + zero_padding_bytes);
+      insert_offset += zero_padding_bytes;
+    }
     memcpy(accumulator.data() + insert_offset, bytes, byte_count);
 
-    size_t start_code_size_bytes = 0;
-    ZX_ASSERT(is_start_code(bytes, byte_count, &start_code_size_bytes));
-    ZX_ASSERT(start_code_size_bytes < byte_count);
-    uint8_t nal_unit_type = bytes[start_code_size_bytes] & 0x1f;
     if (!kH264SeparateSpsPps && !IsSliceNalUnitType(nal_unit_type)) {
       return true;
     }
@@ -381,7 +403,9 @@ uint64_t VideoDecoderRunner::QueueVp9Frames(uint64_t stream_lifetime_ordinal,
                                             uint64_t input_pts_counter_start) {
   // default -1
   int64_t input_pts_counter = input_pts_counter_start;
-  auto queue_access_unit = [this, stream_lifetime_ordinal, &input_pts_counter](size_t byte_count) {
+  uint32_t frame_ordinal = 0;
+  auto queue_access_unit = [this, stream_lifetime_ordinal, &input_pts_counter,
+                            &frame_ordinal](size_t byte_count) {
     auto in_stream = params_.in_stream;
     auto tvp = params_.input_copier;
     const int64_t skip_frame_ordinal = params_.test_params->skip_frame_ordinal;
@@ -472,7 +496,25 @@ uint64_t VideoDecoderRunner::QueueVp9Frames(uint64_t stream_lifetime_ordinal,
     }
 
     do_not_queue_input_packet_after_all.cancel();
+
+    // Ideally we'd figure out why this padding doesn't work / how to pad VP9 frames, if possible.
+#if 0
+    if (frame_ordinal <= 5) {
+      // Assert not a superframe.  If we have some of these in input, we can skip padding them
+      // instead, or find a way to pad a superframe.
+      ZX_DEBUG_ASSERT((*(buffer.base() + packet->valid_length_bytes() - 1) & 0xE0) != 0xC0);
+      ZX_DEBUG_ASSERT(buffer.size_bytes() >= kInputLargeFrameSizeVp9);
+      if (byte_count < kInputLargeFrameSizeVp9) {
+        uint32_t zero_bytes_count = kInputLargeFrameSizeVp9 - byte_count;
+        memset(buffer.base() + byte_count, 0, zero_bytes_count);
+        packet->set_valid_length_bytes(packet->valid_length_bytes() + zero_bytes_count);
+      }
+    }
+#endif
+
     codec_client_->QueueInputPacket(std::move(packet));
+
+    ++frame_ordinal;
 
     // ~increment_input_pts_counter
     return true;
@@ -550,6 +592,7 @@ void VideoDecoderRunner::Run() {
 
   VLOGF("before CodecClient::CodecClient()...");
   codec_client_.emplace(params_.fidl_loop, params_.fidl_thread, std::move(params_.sysmem));
+  codec_client_->SetMinInputBufferSize(kInputMinBufferSize);
   // no effect if 0
   codec_client_->SetMinOutputBufferSize(params_.min_output_buffer_size);
   // no effect if 0
