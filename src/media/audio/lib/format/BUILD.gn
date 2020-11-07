@@ -22,6 +22,7 @@ source_set("format") {
     "//sdk/lib/syslog/cpp",
     "//src/media/audio/lib/timeline",
     "//zircon/public/lib/ffl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace",
   ]
 

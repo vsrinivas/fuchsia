@@ -7,6 +7,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
+#include <string.h>
 
 #include <cmath>
 #include <memory>
@@ -15,6 +16,7 @@
 #include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/format/traits.h"
+#include "zircon/system/ulib/fbl/include/fbl/algorithm.h"
 
 namespace media::audio {
 
@@ -54,21 +56,34 @@ class AudioBuffer {
     samples_.insert(samples_.end(), slice_to_append.begin(), slice_to_append.end());
   }
 
-  // For debugging, display the given range of frames.
+  // For debugging, display a given range of frames in aligned columns. Column width is a power-of-2
+  // based on sample width and number of channels. For row 0, display space until the first frame.
   void Display(size_t start_frame, size_t end_frame) const {
     start_frame = std::min(start_frame, NumFrames());
     end_frame = std::min(end_frame, NumFrames());
     printf("\n\n Frames %zu to %zu: ", start_frame, end_frame);
 
-    for (auto frame = start_frame; frame < end_frame; ++frame) {
-      if (frame % 16 == 0) {
+    // Frames that fit in a 200-char row (9 for row label, 1 between samps, +1 between frames)...
+    size_t frames_per_row =
+        (200 - 9) /
+        ((format_.channels() * (SampleFormatTraits<SampleFormat>::kCharsPerSample + 1)) + 1);
+    // ...rounded _down_ to the closest power-of-2, for quick visual scanning.
+    frames_per_row = fbl::roundup_pow2(frames_per_row + 1) / 2;
+
+    for (auto frame = fbl::round_down(start_frame, frames_per_row); frame < end_frame; ++frame) {
+      if (frame % frames_per_row == 0) {
         printf("\n [%6lu] ", frame);
       } else {
         printf(" ");
       }
+
       for (auto chan = 0u; chan < format_.channels(); ++chan) {
         auto offset = frame * format_.channels() + chan;
-        printf("%s", SampleFormatTraits<SampleFormat>::ToString(samples_[offset]).c_str());
+        if (frame >= start_frame) {
+          printf(" %s", SampleFormatTraits<SampleFormat>::ToString(samples_[offset]).c_str());
+        } else {
+          printf(" %*s", static_cast<int>(SampleFormatTraits<SampleFormat>::kCharsPerSample), " ");
+        }
       }
     }
     printf("\n");
